@@ -161,7 +161,7 @@
 }
 
 // Dark Mode Support
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
   .unsaved-dialog-overlay {
     background: rgba(0, 0, 0, 0.7);
   }

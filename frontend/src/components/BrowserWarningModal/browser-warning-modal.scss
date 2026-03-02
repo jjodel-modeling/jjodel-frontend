@@ -169,7 +169,7 @@
 // ============================================
 // Dark Mode
 // ============================================
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
     .browser-warning-overlay {
         background: rgba(0, 0, 0, 0.7);
     }

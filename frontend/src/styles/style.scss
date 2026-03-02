@@ -32,6 +32,12 @@ button, input, select, textarea {
   font-size: inherit;
   line-height: inherit;
 }
+#root input._Input{
+  visibility: visible !important;
+  appearance: auto !important;
+  display: block !important;
+}
+
 /* classes */
 .round { border-radius: $radius; }
 .circle { border-radius: 999px !important; }
@@ -643,7 +649,7 @@ button:hover{// experimental, doesn't go well because it applies to N parent ele
 }
 
 // Dark mode - Monaco line highlight
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
   .monaco-editor {
     .view-overlays .current-line {
       background-color: rgba(148, 163, 184, 0.1) !important; // slate-400 @ 10%

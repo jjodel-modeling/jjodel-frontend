@@ -1246,7 +1246,7 @@ $transition-normal: 250ms ease;
    DARK MODE (if applicable)
    ============================================ */
 
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
   .console-tab-v2 {
     background: #0f172a;
   }

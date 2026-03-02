@@ -148,7 +148,7 @@
 // DARK MODE
 // ============================================
 
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
     .path-context-menu {
         background: #1e293b;
         border-color: #334155;

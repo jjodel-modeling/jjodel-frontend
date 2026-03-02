@@ -93,6 +93,7 @@ function PaletteDataComponent(props: AllProps) {
     const change = (value: string|undefined) => { if(value !== undefined) setCss(value); } // save in local state for frequent changes.
     const blur = () => view.css = css; // confirm in redux state for final state
 
+    const closestyle = {height: '1lh'};
     /* *** alfonso *** */
 
 
@@ -385,7 +386,7 @@ function PaletteDataComponent(props: AllProps) {
     let colors = Object.keys(palettes.color).sort();
     const lines = (Math.round(vcss.split(/\r|\r\n|\n/).length*1.8) < 5 ? 10 : Math.round(vcss.split(/\r|\r\n|\n/).length*1.8));
 
-    return(<section className={'p-3 style-tab style-tab-redesign' + (readOnly ? "disabled" : "")}>
+    return(<section className={'p-3 style-tab style-tab-redesign' + (readOnly ? " disabled" : "")}>
         {/* STYLE VARIABLES SECTION */}
         <div className="style-variables-section">
             <div className="style-section-header">
@@ -410,7 +411,7 @@ function PaletteDataComponent(props: AllProps) {
                                                             inputStyle ={{opacity: color.getAlpha()}}
                                                             childrenn={
                                                                 <div className={"content suggestions"} tabIndex={-1} style={{backgroundColor: "inherit"}} onClick={(e) => {e.preventDefault(); e.stopPropagation();}}>
-                                                                    {(()=>{ return <>
+                                                                    {(()=>{ return <section className={"suggestcontent"}>
                                                                         <h6 title={"Alter current color transparency"}>Opacity</h6>
 
                                                                         <input style={{width: "auto", marginLeft:"1em", marginRight:"1em"}}
@@ -421,7 +422,7 @@ function PaletteDataComponent(props: AllProps) {
                                                                         {/* Add all colors */}
                                                                         <h6 title={"Add all the colors"}>
                                                                             <CommandBar style={{float: 'left', paddingRight: '8px'}}>
-                                                                                <Btn icon={'add'} size={'x-small'}  action={()=>addColor(prefix, color.analogous(7, 30/1.5), i)} theme={'dark'} tip={'Add all the colors'}/>
+                                                                                <Btn icon={'add'} size={'x-small'} action={()=>addColor(prefix, color.analogous(7, 30/1.5), i)} theme={'dark'} tip={'Add all the colors'}/>
                                                                             </CommandBar>
                                                                             <span>Analogous</span>
                                                                         </h6>
@@ -557,7 +558,7 @@ function PaletteDataComponent(props: AllProps) {
                                                                             {color.tetrad().map ( (c) => <button style={{...style(c)}} className="btn color-suggestion"
                                                                                                                  onClick={(e)=>{addColor(prefix, c, i)}}><i style={style(c)} className="bi bi-plus-lg"></i></button>)}
                                                                         </div>
-                                                                    </>})()}
+                                                                    </section>})()}
 
 
                                                                     <button
@@ -698,7 +699,7 @@ function PaletteDataComponent(props: AllProps) {
                                     <i className="bi bi-pencil-square" />
                                     <span>Edit</span>
                                 </button>
-                                <Btn icon={"delete"} action={(e) => {removeControl(prefix)}} tip={'Remove path'} disabled={readOnly}/>
+                                <Btn icon={"delete"} style={closestyle} action={() => removeControl(prefix)} tip={'Remove path'} disabled={readOnly} />
                             </div>
 
                         </div>)
@@ -711,13 +712,11 @@ function PaletteDataComponent(props: AllProps) {
                         <div className="palette-row numeric">
                             {makeNumericInput(prefix, number, setNumber, setText, readOnly)}
                             <input className={"unit"} placeholder={"unit"} value={number.unit} pattern={CSS_Units.pattern} disabled={readOnly}
+                                   spellCheck={false}
                                    list={"__jodel_CSS_units"} onChange={e => {setUnit(e as any, prefix)}} />
 
                             {/* Numeric */}
-                            <CommandBar  style={{paddingRight: '4px', marginLeft: 'auto'}}>
-                                <Btn icon={'space'} />
-                                <Btn icon={"delete"} action={(e) => {removeControl(prefix)}} tip={'Remove number'}/>
-                            </CommandBar>
+                            <Btn icon={"delete"} style={closestyle} action={() => removeControl(prefix)} tip={'Remove number'} disabled={readOnly} />
                         </div>)
                 }
             )}
@@ -732,10 +731,7 @@ function PaletteDataComponent(props: AllProps) {
                                        if (e.key === Keystrokes.escape) (e.target as any).value = string.value; }} />
 
                             {/* Text */}
-                            <CommandBar  style={{paddingRight: '4px', marginLeft: 'auto'}}>
-                                <Btn icon={'space'} />
-                                <Btn icon={"delete"} action={(e) => {removeControl(prefix)}} tip={'Remove text'}/>
-                            </CommandBar>
+                            <Btn icon={"delete"} style={closestyle} action={() => removeControl(prefix)} tip={'Remove text'} disabled={readOnly} />
                         </div>)
                 }
             )}

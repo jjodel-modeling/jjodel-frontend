@@ -100,7 +100,7 @@
 }
 
 /* Dark mode support */
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
   .element-badge--metamodel {
     background-color: rgba(139, 92, 246, 0.15);
     color: #A78BFA;

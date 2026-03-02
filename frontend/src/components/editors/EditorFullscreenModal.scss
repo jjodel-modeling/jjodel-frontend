@@ -297,7 +297,7 @@ body.modal-fullscreen-open {
 // ============================================
 // DARK MODE SUPPORT
 // ============================================
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
   .editor-fullscreen-body .monaco-editor {
     .view-overlays .current-line {
       background-color: rgba(148, 163, 184, 0.1) !important; // slate-400 @ 10%

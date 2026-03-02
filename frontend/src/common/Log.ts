@@ -88,11 +88,13 @@ export class Log{
     static disableConsole(){
         // @ts-ignore
         console['logg'] = console.log;
-        console.log = () => {}; }
+        console.log = () => {};
+    }
 
     static enableConsole() {
         // @ts-ignore
-        if (console['logg']) console.log = console['logg']; }
+        if (console['logg']) console.log = console['logg'];
+    }
 
     private static log(prefix: string, category: LoggerType, originalFunc: typeof console.log, b: boolean, canthrow: boolean, ...restArgs: any[]): string {
         if (!b) { return ''; }
@@ -112,6 +114,7 @@ export class Log{
 
         Log.updateLoggerComponent(category, restArgs, str, category, exception);
         // merged loggers if (Log.loggerMapping[category]) for (const logger of Log.loggerMapping[category]) { logger.log(category, key, restArgs, str); }
+        console.log('log original func', {originalFunc, key, restArgs}, ...restArgs);
         originalFunc(key, ...restArgs);
         if (exception) throw exception;
         return prefixedstr;
@@ -210,6 +213,7 @@ export class Log{
             }*/
             return warn(...e);
         }
+        (console as any).err = console.error;
         console.error = (...e): void => {
             switch (e[0]) { // [0] {} bn
                 case "Warning: The tag <%s> is unrecognized in this browser. If you meant to render a React component, start its name with an uppercase letter.%s":
@@ -229,7 +233,7 @@ export class Log{
             }
 
             if (Array.isArray(e)) {
-                err(e);
+                err(...e);
             } else {
                 err(e);
             }

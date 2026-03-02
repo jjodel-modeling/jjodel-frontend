@@ -6,8 +6,9 @@
  */
 
 import React from 'react';
-import { useInterfaceMode } from '../../hooks/useInterfaceMode';
+import {isAdvancedMode, useInterfaceMode} from '../../hooks/useInterfaceMode';
 import './mode-system.scss';
+import {SetRootFieldAction, TRANSACTION} from "../../redux/action/action";
 
 interface LockedFeatureProps {
     /** Icon class (Bootstrap Icons without 'bi-' prefix) */
@@ -20,6 +21,7 @@ interface LockedFeatureProps {
     features: string[];
     /** Callback after unlock */
     onUnlock?: () => void;
+    advanced: boolean;
 }
 
 export const LockedFeature: React.FC<LockedFeatureProps> = ({
@@ -27,15 +29,18 @@ export const LockedFeature: React.FC<LockedFeatureProps> = ({
     title,
     description,
     features,
-    onUnlock
+    onUnlock,
+    advanced
 }) => {
-    const { setMode, isAdvanced } = useInterfaceMode();
-
     // Don't show if already in advanced mode
-    if (isAdvanced) return null;
+    if (advanced) return null;
 
+    console.log('nestedviewtab locked feature 2');
     const handleUnlock = () => {
-        setMode('advanced');
+        TRANSACTION((advanced ? 'un' : '') +'set advanced mode',
+            () => SetRootFieldAction.new('advanced', !advanced),
+            advanced, !advanced
+        );
         onUnlock?.();
     };
 

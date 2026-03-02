@@ -335,7 +335,7 @@
 }
 
 // Fallback for prefers-color-scheme
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
   .function-editor-root[data-mode="simpleMode"] {
     .simpleMode i.bi {
       color: #94a3b8;

@@ -176,6 +176,7 @@
         overflow-y: auto;
         white-space: pre-wrap;
         word-break: break-word;
+        user-select: text;
 
         a {
             color: #93c5fd;
@@ -462,7 +463,7 @@
 // ============================================
 // DARK MODE SUPPORT
 // ============================================
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
     .error-notification-portal {
         background: rgba(0, 0, 0, 0.6);
 

@@ -17,8 +17,6 @@ function ModelTabComponent(props: AllProps) {
         const graphid = Constructors.DGraph_makeID(model.id);
         if (!DPointerTargetable.pendingCreation[graphid]) {
             const dGraph = DGraph.new(0, model.id);
-            // Add graph to state.graphs (root) so mapStateToProps can find it
-            SetRootFieldAction.new('graphs', dGraph.id, '+=', true);
             console.log('create m1 graph', {model, graphId: dGraph.id});
         }
         return(<div style={{width: "100%", height: "100%", display: "flex"}}>

@@ -695,7 +695,7 @@ section.page-root {
   }
 }
 
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
   :root:not([data-theme="light"]) {
     .apply-to-tab {
       background-color: var(--color-bg-secondary, #1e293b) !important;
@@ -706,7 +706,7 @@ section.page-root {
       background-color: #475569 !important;
     }
 
-    // Applicable to MultiSelect dark mode for prefers-color-scheme
+    // Applicable to MultiSelect dark mode
     .form-field:has([class*="-control"]) {
       [class*="-control"] {
         background: #1e293b !important;

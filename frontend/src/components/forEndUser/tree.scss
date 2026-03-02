@@ -234,7 +234,7 @@ div.d-flex.tree {
 // ============================================
 // DARK MODE SUPPORT
 // ============================================
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
   .tree-item .name {
     color: #f1f5f9;
   }

@@ -103,13 +103,7 @@ export function InputComponent(props: AllProps) {
     };
 
     function valueDidChange(v1: any, v2: any): boolean {
-
         return serializeValue(v1) !== serializeValue(v2);
-        /*
-        let rawv1 = v1?.__raw || v1;
-        let rawv2 = v2?.__raw || v2;
-        if (rawv1 !== v1 || rawv2 !== v2) { return v1?.clonedCounter !== v2?.clonedCounter; }
-        return v1 !== v2;*/
     }
 
     // I check if the value that I have in my local state is being edited by other <Input />
@@ -136,7 +130,7 @@ export function InputComponent(props: AllProps) {
     let postlabel: ReactNode | undefined = props.postlabel;
     let tooltip: ReactNode|string|undefined = ((props.tooltip === true) ? data?.['__info_of__' + field]?.txt : props.tooltip) || '';
 
-    let classes = '';//'my-auto input ';
+    let classes = '_Input ';//'my-auto input ';
     //classes += (jsxLabel) ? 'ms-1' : (label) ? 'ms-auto' : '';
     classes += (props.hidden) ? ' hidden-input' : '';
     classes += (props.clickHidden) ? ' click-hidden-input' : '';
@@ -171,8 +165,6 @@ export function InputComponent(props: AllProps) {
             setIsTouched(true);     // I'm editing the element in my local state.
             // the actual set is done in onBlur
         }
-
-
     }
     const onKeyDown = (evt: React.KeyboardEvent<HTMLInputElement>) => {
         (props as any).onKeyDown?.(evt);
@@ -252,11 +244,15 @@ export function InputComponent(props: AllProps) {
     let inputProps: GObject = {...otherprops,
         className: [formClass, props.inputClassName||'', classes].join(' '),
         style: (props.inputStyle || {}),
-        spellCheck: (props as any).spellCkeck || false, readOnly, disabled: readOnly, type,
+        spellCheck: (props as any).spellCkeck || false,
+        readOnly,
+        disabled: readOnly,
+        type,
         value: serializeValue(value),
         checked,
         onDoubleClick,
         onChange, onBlur, onKeyDown} // key:`${field}.${data?.id}`
+    console.log('inputProps', {type, inputProps, formClass, props, classes});
     if (!inputProps.style.cursor) { inputProps.style.cursor = cursor; }
     switch (subtype) {
         case 'checkbox3': case 'switch': case 'slider': inputProps.className += ' ' + subtype + (oldValue===undefined?'undetermined':''); break;
@@ -303,7 +299,7 @@ export function InputComponent(props: AllProps) {
 
     switch (props.tag){
         case "textarea": input = <textarea {...inputProps}>{inputProps.value}</textarea>; break;
-        case "select": /* test */
+        case "select":
             if (props.isMultiSelect){
                 let options = props.options as any || getSelectOptions_raw(data, field);
                 if (U.isError(options)) throw errorUpdate("Error on <Multiselect> options getter", options);
@@ -377,7 +373,7 @@ export function InputComponent(props: AllProps) {
                 let options = getSelectOptions(data, field, props.options, props.children, props.id);
                 if (U.isError(options)) throw errorUpdate("Error on <Select> options getter", options);
                 input = <select {...inputProps}>
-                    <option value="" disabled selected>{props.placeholder ? props.placeholder : 'Select your option'}</option>
+                    <option value="" disabled selected>{props.placeholder || 'Select your option'}</option>
                     {options}
                 </select>;
             }

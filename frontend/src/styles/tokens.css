@@ -290,7 +290,7 @@
 /* ========================================
    DARK MODE SUPPORT (Optional)
    ======================================== */
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
   :root {
     --color-bg-primary: #0f172a;       /* slate-900 */
     --color-bg-secondary: #1e293b;     /* slate-800 */

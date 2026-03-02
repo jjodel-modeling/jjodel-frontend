@@ -201,7 +201,7 @@
 // DARK MODE SUPPORT (optional)
 // ============================================
 
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
     .jjscript-success-notification {
         // Green variant
         background: linear-gradient(135deg, #052e16 0%, #064e3b 100%);

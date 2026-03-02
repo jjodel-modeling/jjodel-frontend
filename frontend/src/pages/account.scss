@@ -439,7 +439,7 @@
 // ============================================
 // Dark Mode
 // ============================================
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
     .account-header {
         &__title {
             color: #f1f5f9;

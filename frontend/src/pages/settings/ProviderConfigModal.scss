@@ -426,7 +426,7 @@
 // DARK MODE
 // ============================================
 
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
     .provider-modal-overlay {
         background: rgba(0, 0, 0, 0.7);
     }

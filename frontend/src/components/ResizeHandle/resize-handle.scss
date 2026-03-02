@@ -84,7 +84,7 @@ $transition-normal: 250ms ease;
 // DARK MODE
 // ============================================
 
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
   .resize-handle {
     &:hover {
       .resize-handle__icon {

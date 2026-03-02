@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 
+type Theme = 'light' | 'dark';
 export function AppearanceSettings({onDirtyChange}: {onDirtyChange?:((b:boolean)=>any)}) {
-    const [theme, setThemeState] = useState<'light' | 'dark'>(() => {
-        const stored = localStorage.getItem('theme');
-        if (stored === 'dark' || stored === 'light') return stored;
-        return (document.documentElement.getAttribute('data-theme') as 'light' | 'dark') || 'light';
-    });
-
-    const setTheme = (newTheme: 'light' | 'dark') => {
+    const setTheme = (newTheme: Theme, init: boolean = false) => {
         document.documentElement.setAttribute('data-theme', newTheme);
         localStorage.setItem('theme', newTheme);
-        setThemeState(newTheme);
+        if (!init) setThemeState(newTheme);
     };
+    const [theme, setThemeState] = useState<Theme>(() => {
+        let theme: Theme = (localStorage.getItem('theme') as Theme | null) || 'light';
+        let oldTheme = document.documentElement.getAttribute('data-theme') as Theme | null;
+        if (theme !== oldTheme) setTheme(theme, true);
+        return theme;
+    });
+
 
     return (
         <div className="settings-section-content">

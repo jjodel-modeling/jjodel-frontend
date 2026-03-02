@@ -12,7 +12,7 @@ import {
     RuntimeAccessible,
     ShortAttribETypes as SAType,
     U, Draggable, Measurable,
-    Language
+    Language, bool
 } from '../joiner';
 import React, {ReactNode, useState} from "react";
 import {PaletteType} from "../view/viewElement/view";
@@ -562,87 +562,79 @@ end:`
     {decorators}
 </div>`
 ))}
+    static testt(){
+        let segments: any = null as any;
+        /*
+
+        */
+    }
     static edgePointViewSVG(): string { return beautify(
         `<ellipse stroke={"black"} fill={"red"} cx={"50"} cy={"50"} rx={"20"} ry={"20"} />`
         //`<ellipse stroke={"black"} fill={"red"} cx={props.node.x} cy={props.node.y} rx={props.node.w} ry={props.node.h} />`
     )}
 
-    static svgHeadTail(head: "head" | "tail", type: EdgeHead): string | undefined {
+    static svgHeadTail(head: "head" | "tail", type: EdgeHead): string | null {
         let ret: string;
-        let headstr = head==="head" ? "segments.head" : "segments.tail";
-        let styleTranslateRotate = 'transform:"translate(" + ' + headstr + '.x + "px, " + ' + headstr + '.y + "px) rotate(" + (' + headstr + '.rad) + "rad)",' +
-            ' "transformOrigin":'+headstr+'.w/2+"px "+ '+headstr+'.h/2+"px"';
-        let attrs = `\n\t\t\t\tstyle={{`+styleTranslateRotate +`}}\n\t\t\t\tclassName={"` + head + ` ` + type +` preview"} />\n`;
-        let path: string;
-        let hoverAttrs = `\n\t\t\t\tstyle={{`+styleTranslateRotate +`}}\n\t\t\t\tclassName={"` + head + ` ` + type +` clickable content"} tabIndex="-1" />\n`;
-        let d: string;
+        let headstr = head === "head" ? "segments.head" : "segments.tail";
+        let styleTranslateRotate = 'transform:`translate(${' + headstr + '.x}px, ${' + headstr + '.y}px) rotate(${' + headstr + '.rad}rad)`,' +
+            ' transformOrigin:`${'+headstr+'.w/2}px ${'+headstr+'.h/2}px`, d:"var(--'+head+')"';
+        let attrs = `\n\t\t\t\tstyle={{`+styleTranslateRotate +`}}\n\t\t\t\tclassName={"` + head + ` ` + type +` preview"}`;
+        let hoverAttrs = `\n\t\t\t\tstyle={{`+styleTranslateRotate +`}}\n\t\t\t\tclassName={"` + head + ` ` + type +` clickable content"} tabIndex="-1"`;
+        let d: string = '';
+        console.log('svgHeadTail', {head, type});
         switch (type) {
             default:
-                ret = "edge '" + head + "' with type: '" +type + "' not found";
-                break;
+                return "edge '" + head + "' with type: '" +type + "' not found";
             case EdgeHead.extend:
                 //if (head === "tail") return undefined;
                 d = `M 0 0   L x y/2   L 0 y   Z`;
-                path = `<path  `;
-                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.reference:
                 //if (head === "tail") return undefined;
                 //d = `M 0 0   L x y/2   L 0 y`;
                 d = `M3.7198-.2722c.5684-.4437 1.4898-.4437 2.0582 0l6.3853 4.9847c.5684.4437.5684 1.162 0 1.605L5.7781 11.3022c-.5684.4437-1.4888.4437-2.0562 0L-2.6656 6.3182a1.4505 1.1322 0 010-1.605zss`;
-                path = `<path  `;
-                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.aggregation:
                 //if (head === "head") return undefined;
                 d = `M 0 y/2   L x/2 0   L x y/2   L x/2 y   Z`;
-                path = `<path  `;
-                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.composition:
                 //if (head === "head") return undefined;
                 d = `M 0 y/2   L x/2 0   L x y/2   L x/2 y   Z`;
-                path = `<path  `;
-                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.zero:
                 //if (head === "head") return undefined;
                 d = `M 0 y/2   L x/2 0   L x y/2   L x/2 y   Z`;
-                path = `<path  `;
-                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.one:
                 //if (head === "head") return undefined;
                 d = `M 0 y/2   L x/2 0   L x y/2   L x/2 y   Z`;
-                path = `<path  `;
-                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.many:
                 //if (head === "head") return undefined;
                 d = `M 0 y/2   L x/2 0   L x y/2   L x/2 y   Z`;
-                path = `<path  `;
-                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.zeroOrOne:
                 //if (head === "head") return undefined;
                 d = `M 0 y/2   L x/2 0   L x y/2   L x/2 y   Z`;
-                path = `<path  `;
-                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.zeroOrMany:
                 //if (head === "head") return undefined;
                 d = `M 0 y/2   L x/2 0   L x y/2   L x/2 y   Z`;
-                path = `<path  `;
-                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
             case EdgeHead.oneOrMany:
                 //if (head === "head") return undefined;
                 d = `M 0 y/2   L x/2 0   L x y/2   L x/2 y   Z`;
-                path = `<path  `;
-                ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
                 break;
         }
 
+        d = '';
+
+        ret = `<path d="${d}" ${attrs} dataD="${d}" />\n\t\t\t<path ${hoverAttrs} />`;
+        console.log('svgHeadTail', {head, type, ret});
+
+        // path = `<path `;
+        // ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
         return ret; // no wrap because of .hoverable > .preview  on root & subelements must be consecutive
 
     }
@@ -935,6 +927,7 @@ foreignObject.label-end, foreignObject.label-start {
                     </foreignObject>
                 ])}
                 { /* edge head */ }
+                {console.error('edge jsx', {segments})}
                 ` + head + `
                 { /* edge tail */ }
                 ` + tail + `
@@ -1575,7 +1568,7 @@ public static enum(): string { return (
     <span style={{
         fontWeight: 500,
         color: '#334155'
-    }}>{data.name}{' =>'}</span>
+    }}>{data.name} =&gt; </span>
 
     {/* Right side: Return Type Select (smaller) */}
     <div style={{maxWidth: '110px', minWidth: '80px'}}>

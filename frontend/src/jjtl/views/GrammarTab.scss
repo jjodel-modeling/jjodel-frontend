@@ -333,7 +333,7 @@
 // DARK MODE
 // ============================================
 
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
     .grammar-tab {
         &__search {
             background: #0f172a;

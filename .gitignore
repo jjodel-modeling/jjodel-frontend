@@ -53,3 +53,4 @@ docker-compose.yml
 /build
 frontend/build.rar
 frontend/src/todo_others
+/cloudflare-worker/node_modules

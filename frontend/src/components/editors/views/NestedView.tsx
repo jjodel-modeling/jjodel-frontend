@@ -468,21 +468,23 @@ function renderEntry(d: DViewElement, childrens: GObject, isExpanded: boolean, t
     let [view, setView] = useStateIfMounted(undefined as (undefined | Pointer<DViewElement>));
 
     // Basic mode: show locked feature placeholder
+    console.log('nestedViewTab', {props, isad:props.isAdvanced});
     if (!props.isAdvanced) {
         return (
             <div className={"view-editor-root"}>
                 <section className={'viewpoint-tab'}>
-                    <LockedFeature
+                    {<LockedFeature
                         title="Viewpoints"
                         description="Viewpoints allow you to create custom visual representations for your metamodel elements. Switch to Advanced mode to access this feature."
                         icon="eye"
+                        advanced={props.isAdvanced}
                         features={[
-                            'Create custom visual templates',
-                            'Define conditional styling rules',
-                            'Configure element appearance',
-                            'Manage multiple viewpoints'
+                        'Create custom visual templates',
+                        'Define conditional styling rules',
+                        'Configure element appearance',
+                        'Manage multiple viewpoints'
                         ]}
-                    />
+                />}
                 </section>
             </div>
         );
@@ -504,16 +506,19 @@ function renderEntry(d: DViewElement, childrens: GObject, isExpanded: boolean, t
                         </button>
                     </div>
                 </div>
-                {vieweditor}
-                <ul className={"ps-2 pt-2"}>
-                    {viewpoints.map(vp=><GenericTree
-                        key={vp.id}
-                        data={vp.__raw}
-                        getSubElements={getSubElements}
-                        renderEntry={renderEntry}
-                        metadata={{setView, scoreBoost:0}}
-                        initialHidingState={vp.id === activeViewpointId} />)}
-                </ul>
+                {view ?
+                    vieweditor
+                    :
+                    <ul className={"ps-2 pt-2"}>
+                        {viewpoints.map(vp => <GenericTree
+                            key={vp.id}
+                            data={vp.__raw}
+                            getSubElements={getSubElements}
+                            renderEntry={renderEntry}
+                            metadata={{setView, scoreBoost: 0}}
+                            initialHidingState={vp.id === activeViewpointId}/>)}
+                    </ul>}
+                {}
             </div>
         </section>
     </div>);

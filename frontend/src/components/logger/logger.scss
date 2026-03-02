@@ -850,7 +850,7 @@ li.cat {
 // ============================================
 // DARK MODE SUPPORT
 // ============================================
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
   .logger-tab {
     background: #0f172a;
   }

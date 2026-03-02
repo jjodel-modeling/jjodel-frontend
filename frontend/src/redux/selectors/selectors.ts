@@ -364,42 +364,10 @@ export class Selectors{
         Log.exDev(!ThisClass, 'unable to find class type:', {v, data});
         let gotSubclassMatch: boolean = false;
         for (let classtarget of v.appliableToClasses) {
-            // Skip empty strings in appliableToClasses array
-            if (!classtarget) continue;
-
-            // First try direct string comparison (most reliable)
-            if (dataClassName === classtarget) {
-                return ViewEClassMatch.EXACT_MATCH;
-            }
-
-            // Then try class instance comparison (for subclass matching)
             const ClassTarget: typeof DPointerTargetable = RuntimeAccessibleClass.get(classtarget);
-            if (!ClassTarget) continue;
-
-            if (ThisClass === ClassTarget) {
-                return ViewEClassMatch.EXACT_MATCH;
-            }
-
-            // Check for inheritance
-            if (!gotSubclassMatch && ThisClass && U.classIsExtending(ThisClass, ClassTarget)) {
-                gotSubclassMatch = true;
-            }
+            if (ThisClass === ClassTarget) return ViewEClassMatch.EXACT_MATCH; // explicit exact match
+            if (!gotSubclassMatch && U.classIsExtending(ThisClass, ClassTarget)) gotSubclassMatch = true; // explicit subclass match
             if (gotSubclassMatch) return ViewEClassMatch.INHERITANCE_MATCH;
-        }
-        // If all appliableToClasses were empty/skipped, treat as implicit match
-        if (v.appliableToClasses.every(c => !c)) return ViewEClassMatch.IMPLICIT_MATCH;
-
-        // Debug: log when Attribute view doesn't match DAttribute (first occurrence only)
-        if (v.name === 'Attribute' && dataClassName === 'DAttribute' && !(Selectors as any)._loggedAttrMismatch) {
-            (Selectors as any)._loggedAttrMismatch = true;
-            console.warn('[matchesMetaClassTarget] Attribute view MISMATCH for DAttribute!', {
-                viewName: v.name,
-                viewId: v.id,
-                viewAppliableToClasses: v.appliableToClasses,
-                viewAppliableToClassesJSON: JSON.stringify(v.appliableToClasses),
-                dataClassName,
-                dataName: (data as any).name
-            });
         }
         return ViewEClassMatch.MISMATCH_PRECONDITIONS;
  }
@@ -600,19 +568,6 @@ export class Selectors{
             // check preconditions
             if (firstEvaluationForNodeView) {
                 const oldScore = tnv.metaclassScore;
-                // Debug: log when data className is DAttribute and view is Attribute
-                const dataClassName = data?.__raw?.className;
-                const dataName = (data?.__raw as any)?.name || '';
-                if (dataClassName === 'DAttribute' && dview.name === 'Attribute' && !(Selectors as any)._loggedDAttrAttributeView) {
-                    (Selectors as any)._loggedDAttrAttributeView = true;
-                    console.error('[updateScores] DAttribute + Attribute view match:', {
-                        dataClassName,
-                        dataName,
-                        nodeId: nid,
-                        viewAppliableToClasses: dview.appliableToClasses,
-                        viewId: vid
-                    });
-                }
                 tnv.metaclassScore = this.matchesMetaClassTarget(dview, data?.__raw);
                 needsorting = true; // sorting is mandatory here because it's the first evaluation of node-vie
                 // if mismatch i stop computing the score.

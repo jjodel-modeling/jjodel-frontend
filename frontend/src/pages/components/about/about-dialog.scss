@@ -192,7 +192,7 @@
 }
 
 // Dark mode support
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
   .about-dialog-overlay {
     background: rgba(0, 0, 0, 0.7);
   }

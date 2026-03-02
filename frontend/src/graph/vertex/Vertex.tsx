@@ -167,7 +167,6 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
                     })
                 },
                 drag: (evt: GObject<'mousemoveevent'>, ui: JQUIDragging) => {
-
                     if (dragCacheZoom) {
                         ui.offset.left = (ui.position.left /= dragCacheZoom.x);
                         ui.offset.top = (ui.position.top /= dragCacheZoom.y);
@@ -199,16 +198,15 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
 
                     // Apply zoom correction at stop (position is recalculated by jQuery UI)
                     if (dragCacheZoom){
-                        ui.offset.left = (ui.position.left /= dragCacheZoom.x);
-                        ui.offset.top = (ui.position.top /= dragCacheZoom.y);
+                        /*ui.offset.left = (ui.position.left /= dragCacheZoom.x);
+                        ui.offset.top = (ui.position.top /= dragCacheZoom.y);*/
+                        dragCacheZoom = null;
                     }
 
                     TRANSACTION('Vertex dragEnd ' + this.props.node.name, ()=>{
                         this.setSize({x:ui.position.left, y:ui.position.top});
                         for (let vid of allviews) this.doMeasurableEvent(EMeasurableEvents.onDragEnd, vid);
                     });
-
-                    dragCacheZoom = null;
                 }
             };
             $measurable.draggable(this.draggableOptions);
@@ -425,24 +423,7 @@ export class VertexComponent<AllProps extends AllPropss = AllPropss, ThisState e
     setSize(x_or_size_or_point: Partial<GraphPoint>): void;
     setSize(x_or_size_or_point: Partial<GraphSize>): void;
     // setSize(x_or_size_or_point: number | GraphSize | GraphPoint, y?: number, w?:number, h?:number): void;
-    setSize(size0: Partial<GraphSize> | Partial<GraphPoint>): void {
-        let size: {x?:number, y?: number, w?:number, h?:number} = size0;
-
-        // Clamp negative dimensions
-        if (size.w !== undefined && size.w < 0) size.w = 0;
-        if (size.h !== undefined && size.h < 0) size.h = 0;
-
-        // Preserve existing values if not provided
-        let olds = this.props.node.size;
-        if (olds) {
-            size.x = size.x === undefined ? olds.x : size.x;
-            size.y = size.y === undefined ? olds.y : size.y;
-            size.w = size.w === undefined ? olds.w : size.w;
-            size.h = size.h === undefined ? olds.h : size.h;
-        }
-
-        this.props.node.size = size as GraphSize;
-    }
+    setSize(size: Partial<GraphSize> | Partial<GraphPoint>): void { this.props.node.size = size as GraphSize; }
 
     oldHtml?: Element | null = null;
     // nodeType!: string;

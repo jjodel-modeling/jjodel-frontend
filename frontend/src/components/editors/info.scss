@@ -5,6 +5,7 @@
 
 /* Properties tab feature button */
 .properties-tab {
+  max-height: -webkit-fill-available;
   .input-container > b.me-2 {
     margin: auto 0;
   }
@@ -1018,7 +1019,7 @@
 }
 
 // Dark mode support
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
   .btn-generate-ai {
     background-color: #1e293b;
     border-color: #334155;

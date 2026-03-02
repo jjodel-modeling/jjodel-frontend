@@ -977,7 +977,7 @@ $font-mono: 'IBM Plex Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
     }
 }
 
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
     :root:not([data-theme="light"]) {
         .node-editor-redesign {
             background-color: #1e2024;

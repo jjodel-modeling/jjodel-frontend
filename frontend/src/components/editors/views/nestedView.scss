@@ -66,6 +66,19 @@ $color-parameter: #9ca3af;    // gray-400 (Parameters)
 // ============================================
 // VIEW EDITOR ROOT CONTAINER
 // ============================================
+#root{
+  .viewpoint-tab{
+    min-height: 100%;
+    max-height: 100%;
+    overflow: scroll;
+    &, .view-editor-fullsize-content{
+
+    }
+  }
+  .controls{
+    overflow: hidden !important;
+  }
+}
 .view-editor-root {
   --inner-page-padding: 16px;
   height: 100%;
@@ -86,8 +99,8 @@ $color-parameter: #9ca3af;    // gray-400 (Parameters)
   }
 
   .dock-content .dock-tabpane {
-    overflow: visible !important;
-    height: fit-content !important;
+    overflow: scroll;
+    height: 100%;
     background-color: none !important;
   }
 //.view-editor-root .dock-content .dock-tabpane
@@ -628,7 +641,7 @@ section.viewpoint-tab {
   }
 
   // Dark mode support for VP badges
-  @media (prefers-color-scheme: dark) {
+  html[data-theme="dark"] {
     .entry-root.DViewPoint.exclusive-vp > .inline-row .icon.type.DViewPoint,
     .icon.type.DViewPoint {
       background-color: #64748b; // slate-500
@@ -2010,7 +2023,7 @@ section.viewpoint-tab {
 
 
   // Dark mode support
-  @media (prefers-color-scheme: dark) {
+  html[data-theme="dark"] {
     .vp-toggle {
       background-color: #475569;
 
@@ -3289,8 +3302,7 @@ section.viewpoint-tab {
   }
 }
 
-// Also support prefers-color-scheme
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
   body:not([data-theme="light"]) {
     .viewpoint-box {
       background: #1e293b;
@@ -3319,7 +3331,7 @@ section.viewpoint-tab {
 // ============================================
 // DARK MODE SUPPORT
 // ============================================
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
   section.viewpoint-tab {
     background-color: #1e293b;  // Dark mode background
   }

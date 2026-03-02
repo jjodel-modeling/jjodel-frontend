@@ -500,7 +500,7 @@ $transition-normal: 250ms ease;
 }
 
 // === DARK MODE SUPPORT ===
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
   .modal-container {
     background: #1e293b; // slate-800
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);

@@ -251,7 +251,7 @@ $transition-smooth: 250ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 // Dark mode support (media query)
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
     .features-palette {
         background-color: #1e293b;
         border-right-color: #334155;

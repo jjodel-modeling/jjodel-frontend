@@ -188,14 +188,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (!ret.view) { // if view is not explicitly set or the assigned view is not found, match a new one.
             if (!scores) scores = getScores(ret, ownProps);
             ret.view = scores.mainView = LPointerTargetable.fromPointer((scores.mainView as any)?.id, state);
-
-            // todo: remove after Debug: log what view was matched for attr elements
-            const dName = (ret.data?.__raw as any)?.name || '';
-            if (dName.toLowerCase().includes('attr') && !(GraphElementComponent as any)._loggedAttrView) {
-                (GraphElementComponent as any)._loggedAttrView = true;
-                console.error(`[VIEW MATCH] For ${dName}: view=${ret.view?.__raw?.name ?? 'NONE'}, viewId=${ret.view?.id ?? 'NONE'}, mainViewId=${(scores.mainView as any)?.id ?? 'NONE'}`);
-            }
-
             Log.w(!!explicitView, "Requested main view "+ownProps.view+" not found. Another view got assigned: " + ret.view?.__raw.name, {requested: ownProps.view, props: ownProps, state: ret});
         }
 
@@ -211,17 +203,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             {data:ret.data, props: ownProps, state: ret, scores: (ret as any).viewScores,
                 nid: ownProps.nodeid, tn:transientProperties.node[ownProps.nodeid as any], ret, explicitView});
         if (!ret.view) {
-            {// todo: remove this inner block after Debug: log ALL fallback cases (first 3 only)
-            if (!(GraphElementComponent as any)._fallbackLogCount) (GraphElementComponent as any)._fallbackLogCount = 0;
-            if ((GraphElementComponent as any)._fallbackLogCount < 3) {
-                (GraphElementComponent as any)._fallbackLogCount++;
-                const dataName = (ret.data?.__raw as any)?.name ?? 'UNDEFINED';
-                const dataClassName = ret.data?.__raw?.className ?? 'UNDEFINED';
-                const nodeId = ownProps.nodeid ?? 'UNDEFINED';
-                const hasData = ret.data ? 'YES' : 'NO';
-                const viewScoresCount = tn?.viewScores ? Object.keys(tn.viewScores).length : 0;
-                console.error(`[FALLBACK DEBUG] #${(GraphElementComponent as any)._fallbackLogCount}: name=${dataName} class=${dataClassName} node=${nodeId} data=${hasData} scores=${viewScoresCount}`);
-            }}
             ret.view = LPointerTargetable.from(Defaults.Pointer_ViewFallback);
         }
 
@@ -667,7 +648,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let context: GObject = transientProperties.node[this.props.nodeid].viewScores[vid].evalContext;
         if (context && context.component) return context;
 
-        // else rebuild + update it
         let tnv = transientProperties.node[this.props.nodeid].viewScores[vid];
         let tv = transientProperties.view[vid];
         context = tnv.evalContext = {...this.props, ...tv.constants, ...tnv.usageDeclarations,
@@ -696,7 +676,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             let jsxString = view.jsxString;
             // let col = stackerrorlast.substring(icol+1);
             let irow = stackerrorlast.lastIndexOf(":", icol-1);
-            const offset={row:-2, col:1};
+            const offset = {row:-2, col:1};
             let stackerrorlinenum: GObject = {
                 row: Number.parseInt(stackerrorlast.substring(irow+1, icol)) + offset.row,
                 col: Number.parseInt(stackerrorlast.substring(icol+1)) + offset.col };
@@ -749,15 +729,14 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // console.log('gt3', tv.JSXFunction, context);
         tnv.contextMenu = []; // reset old entries, new ones are computed now.
         let ret = tnv.jsxOutput = (tv.JSXFunction ? tv.JSXFunction.call(context, context) : null);
-        // console.log('gt33', ret);
-        if (typeof ret === "object" && ret !== null && !React.isValidElement(ret)) {
+        /*if (typeof ret === "object" && ret !== null && !React.isValidElement(ret)) {
             // plain objects cannot be react nodes, but react nodes are objects. so i try serializing
             // this only happens if someone puts an object in jsx
             try{
                 ret = JSON.stringify(ret);
             }
             catch (e) { ret = "{__ Cyclic Object __}"; }
-        }
+        }*/
         return ret;
     }
 

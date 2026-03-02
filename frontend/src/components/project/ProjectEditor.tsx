@@ -1265,6 +1265,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         }
     };
 
+    const versionList = store.getState().version.conversionList;
     return (
         <div className="project-editor">
             {/* Header */}
@@ -1293,7 +1294,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     )}
                     <span
                         className="badge badge--engine"
-                        title="Jjodel platform version - Same for all projects"
+                        title={"Current Jjodel platform version - Same for all projects" + (versionList.length ? "\nProject Version history:" + (versionList.map(v=>"\n\t"+v)) : null)}
                     >
                         <i className="bi bi-gear" />
                         {getEngineVersion()}

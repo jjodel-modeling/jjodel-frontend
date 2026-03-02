@@ -484,14 +484,33 @@ $field-height: 28px;
 }
 
 // Ensure all parent containers allow overflow
-.style-tab-redesign,
-.style-tab {
-  // Main container must not clip
-  overflow: visible !important;
+#root {
+  .style-tab-redesign, .style-tab {
+    .style-variables-section,
+    .controls {
+      overflow: visible !important;
+      .color-picker-root{
+        border: none !important;
+        box-shadow: none !important;
+        height: 200% !important;
+        transform: translateY(-25%) !important;
+        input {
+          box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1) !important;
+          border: 2px solid white !important;
+          margin: auto !important;
+          min-width: 25px !important;
+          height: 25px !important;
+        }
+        .delete-color{
+          width: auto !important;
+        }
+        /*.content.suggestions{
+          max-height: 300px !important;
+          overflow-y: auto !important;
+        }*/
 
-  .style-variables-section,
-  .controls {
-    overflow: visible !important;
+      }
+    }
   }
 }
 
@@ -510,14 +529,11 @@ $field-height: 28px;
         position: absolute !important;
         z-index: 99999 !important;
         // Position below and centered
-        top: calc(100% + 8px) !important;
+        top: calc(100% - 5px) !important;
         left: 50% !important;
         transform: translateX(-50%) !important;
 
         // DIMENSIONS - Very compact
-        width: 220px !important; // Compact width
-        min-width: 220px !important;
-        max-width: 90vw !important;
         padding: 10px !important; // Compact padding
 
         // HEIGHT - Auto to fit all content, NO scrollbar
@@ -1716,8 +1732,7 @@ $field-height: 28px;
   }
 }
 
-// Fallback for prefers-color-scheme
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
   .style-section-header .section-title {
     color: #94a3b8;
   }

@@ -19,7 +19,7 @@
 }
 
 /* Dark mode support */
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
   .errorText {
     color: var(--color-red-400);
   }

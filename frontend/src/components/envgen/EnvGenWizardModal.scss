@@ -803,7 +803,7 @@ $transition-normal: 200ms ease-out;
 // DARK MODE
 // ============================================
 
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
     .envgen-modal {
         background: #1e293b;
     }

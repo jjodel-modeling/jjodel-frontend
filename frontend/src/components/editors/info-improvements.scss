@@ -652,7 +652,7 @@ select.form-select {
 /* ========================================
    DARK MODE SUPPORT
    ======================================== */
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
   .properties-tab {
     background: #111827;
   }

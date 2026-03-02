@@ -59,13 +59,15 @@
       width: max-content;
       text-shadow: var(--text-shadow-e);
       position: absolute;
-      content: '⚠️This element is read only⚠️';
-      top: -1lh;
-      display: inline-block;
+      content: '⚠️This view is read only⚠️';
+      top: -1.25lh;
       left: 0;
+      display: inline-block;
       font-size: 1.25em;
       font-weight: bold;
       z-index: 1111;
+      margin-left: 50%; // shift right by half of container input
+      transform: translateX(-50%); // shift left by half his size (combined with margin makes it centered)
     }
   }
 }
@@ -543,7 +545,7 @@
     }
     &> .unit {
       flex-basis:35px;
-      flex-grow:1;
+      // flex-grow:1;
       min-width:0px;
       margin-left: 0em;
     }

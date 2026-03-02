@@ -3958,16 +3958,10 @@ export class NodeTransientProperties{
         }
         decorativeViews.sort((s1, s2)=> s2.score - s1.score); // sorted from biggest to smallest
         mainViews.sort((s1, s2)=> s2.score - s1.score); // sorted from biggest to smallest
-
-        // Debug: log when no main view matches
-        if (!mainViews[0] && !(NodeTransientProperties as any)._loggedNoMainView) {
-            (NodeTransientProperties as any)._loggedNoMainView = true;
-            const scores = Object.entries(tn.viewScores).map(([vid, tnv]) => {
-                const dv = DPointerTargetable.fromPointer(vid, state) as any;
-                return { viewName: dv?.name, viewId: vid, metaclassScore: (tnv as any).metaclassScore, finalScore: (tnv as any).finalScore };
-            });
-            console.warn('[NodeTransientProperties.sort] No main view matched!', { scores: scores.slice(0, 10) });
-        }
+        /*
+         NB: if no view is matched, it's gonna call the fallback view so no need to throw errors
+         Log.exDev(!mainViews[0], 'cannot find a matching main view', {mainViews, decorativeViews, data0, scores: tn.viewScores})
+        */
         tn.mainView = mainViews[0]?.view;
         tn.validMainViews = mainViews.map((s)=> s.view); // this have duplicates of newly created elements
         tn.stackViews = decorativeViews.map((s)=> s.view);

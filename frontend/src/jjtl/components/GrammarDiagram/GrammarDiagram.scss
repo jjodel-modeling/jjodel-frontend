@@ -252,7 +252,7 @@
 // DARK MODE
 // ============================================
 
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
     .grammar-diagram {
         background: #1e293b;
         border-color: #334155;

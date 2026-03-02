@@ -114,7 +114,7 @@
 }
 
 // Dark Mode Support
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
   .project-loading-screen {
     background: #0f172a; // slate-900
 

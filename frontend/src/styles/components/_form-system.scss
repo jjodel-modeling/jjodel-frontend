@@ -683,7 +683,7 @@ input[type="number"] {
 .permissions-tab,
 .page-root {
   background-color: #f8fafc !important; // transparent!important; //  
-  min-height: 100% !important;
+  // min-height: 100% !important;
   height: fit-content !important;
   padding: 10px !important;
   box-sizing: border-box !important;
@@ -839,20 +839,18 @@ input[type="number"] {
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --form-input-border-color: #334155;
-    --form-input-border-color-hover: #475569;
-    --form-input-border-color-focus: #64748b; // Lighter slate for dark mode
-    --form-input-focus-shadow: 0 0 0 3px rgba(100, 116, 139, 0.25); // Dark mode shadow
-    --form-input-bg: #1e293b;
-    --form-input-color: #f1f5f9;
-    --form-input-placeholder: #64748b;
-    --form-label-color: #e2e8f0;
-    --form-hint-color: #94a3b8;
-    --form-toggle-bg: #475569;
-    --form-toggle-bg-active: #64748b;
-  }
+html[data-theme="dark"] {
+  --form-input-border-color: #334155;
+  --form-input-border-color-hover: #475569;
+  --form-input-border-color-focus: #64748b; // Lighter slate for dark mode
+  --form-input-focus-shadow: 0 0 0 3px rgba(100, 116, 139, 0.25); // Dark mode shadow
+  --form-input-bg: #1e293b;
+  --form-input-color: #f1f5f9;
+  --form-input-placeholder: #64748b;
+  --form-label-color: #e2e8f0;
+  --form-hint-color: #94a3b8;
+  --form-toggle-bg: #475569;
+  --form-toggle-bg-active: #64748b;
 }
 
 // ==============================================

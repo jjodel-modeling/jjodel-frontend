@@ -1328,6 +1328,7 @@ function NavbarComponent(props: AllProps) {
         );
     };
 
+    type Theme = 'light' | 'dark';
     const UserMenu = ()=> {
         const { openDrawer } = useGlobalDrawer();
         const { openSettings } = useSettingsModal();
@@ -1335,18 +1336,18 @@ function NavbarComponent(props: AllProps) {
         const userEmail = user?.email || '';
         const initials = userName.split(' ').map(n => n[0] || '').join('');
 
-        // Theme state - read from document attribute
-        const [theme, setThemeState] = useState<'light' | 'dark'>(() => {
-            const stored = localStorage.getItem('theme');
-            if (stored === 'dark' || stored === 'light') return stored;
-            return document.documentElement.getAttribute('data-theme') as 'light' | 'dark' || 'light';
-        });
-
-        const setTheme = (newTheme: 'light' | 'dark') => {
+        const setTheme = (newTheme: Theme, init: boolean = false) => {
             document.documentElement.setAttribute('data-theme', newTheme);
             localStorage.setItem('theme', newTheme);
-            setThemeState(newTheme);
+            if (!init) setThemeState(newTheme);
         };
+        const [theme, setThemeState] = useState<Theme>(() => {
+            let theme: Theme = (localStorage.getItem('theme') as Theme | null) || 'light';
+            let oldTheme = document.documentElement.getAttribute('data-theme') as Theme | null;
+            if (theme !== oldTheme) setTheme(theme, true);
+            return theme;
+        });
+
 
         return (
             <div className='user-menu-container' id={'navusermenu'}>

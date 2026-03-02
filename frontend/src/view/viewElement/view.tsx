@@ -830,7 +830,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                     // val = U.replaceAll(val, 'x', palette.x);
                     // val = U.replaceAll(val, 'y', palette.y);
                     let pathArr = U.parseParenthesis(val, '(', ')', true);
-                    console.log('evaluating path variables pre:', {val, pre: [...pathArr], post:pathArr});
+                    // console.log('evaluating path variables pre:', {val, pre: [...pathArr], post:pathArr});
                     pathArr.map(e=> {
                         e = Array.isArray(e) ? e.join('') : e;
                         if (e[0] !== '(') { // outside of parenthesis, i only replace x, y
@@ -1718,12 +1718,8 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
 
     static updateDefaultView(v: DViewElement | DViewPoint, state?: DState): void {
         let s = state || store.getState();
-        // Use fresh views cache first, fall back to defaultViewsMap
-        let newView: DViewElement | DViewPoint | undefined = Defaults.getFreshView(v.id);
-        if (!newView) {
-            Log.ee('[updateDefaultView] Skipping', v.id, '- no fresh view found');
-            return; // not a default view
-        }
+        let newView: DViewElement | DViewPoint = Defaults.defaultViewPointsMap[v.id]||Defaults.defaultViewsMap[v.id];
+        if (!newView) return; // not a default view
         newView = {...newView} as DViewElement & DViewPoint;
         newView.css_MUST_RECOMPILE = true;
         newView.pointedBy = PointedBy.merge(newView, v);

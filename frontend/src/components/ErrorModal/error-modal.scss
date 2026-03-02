@@ -304,7 +304,7 @@
 }
 
 // Dark Mode Support
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
   .error-modal-backdrop {
     background: rgba(0, 0, 0, 0.7);
   }

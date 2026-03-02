@@ -83,7 +83,7 @@ $color-text-tertiary: #9CA3AF;
 // DARK MODE
 // ============================================
 
-@media (prefers-color-scheme: dark) {
+html[data-theme="dark"] {
   .resizable-layout {
     background: #0f172a;
   }
