@@ -11,13 +11,16 @@ import {
     RuntimeAccessible,
     ShortAttribETypes as SAType,
     U, Draggable, Measurable,
-    Language, bool
+    Language,
+    store,
+    SetRootFieldAction,
+    bool,
 } from '../joiner';
 import React, {ReactNode, useState} from "react";
 import {PaletteType} from "../view/viewElement/view";
 import "./error.scss";
 import { ErrorDisplay } from "./ErrorPortal";
-import {LanguageObject} from "../joiner/classes";
+import { LanguageObject } from "../joiner/classes";
 
 const notificationType: 'classic'|'alert'|'notification' = 'classic';
 
@@ -27,13 +30,21 @@ let ShortAttribETypes: typeof SAType = (window as any).ShortAttribETypes;
 
 @RuntimeAccessible('DV')
 export class DV {
-    static defaultLanguages(): Dictionary<string, Language> {
+    // refreshes languages for rapid debug
+    public static refresh(){
+        let s = store.getState();
+        let newLanguages = DV.defaultLanguages();
+        if (!s.languages) s.languages = newLanguages;
+        SetRootFieldAction.new('clonedCounter', (s as any).clonedCounter + 1);
+        return newLanguages;
+    }
 
+    static defaultLanguages(): Dictionary<string, Language> {
         let m2t = undefined; //  {javascript:{__str:'function(model) {\n\treturn "Not implemented, this is a placeholder.";\n}'}};
         let t2m = undefined;
         let ret: Dictionary<string, Language> = {};
         ret.JSON = new Language(
-            {javascript:{allowPartials: true, __str:'function(modelData) {\n\treturn JSON.stringify(modelData.json, null, 4);\n}'}},
+            {javascript:{allowPartials: true, __str:'function(modelData) {\n\treturn JSON.stringify(modelData.deepJson, null, 4);\n}'}},
             {javascript:{allowPartials: true, __str:"function(text) {\n\treturn JSON.parse(text);\n}"}}
         );
         ret['Emfatic'] = new Language(
@@ -561,12 +572,6 @@ end:`
     {decorators}
 </div>`
 ))}
-    static testt(){
-        let segments: any = null as any;
-        /*
-
-        */
-    }
     static edgePointViewSVG(): string { return beautify(
         `<ellipse stroke={"black"} fill={"red"} cx={"50"} cy={"50"} rx={"20"} ry={"20"} />`
         //`<ellipse stroke={"black"} fill={"red"} cx={props.node.x} cy={props.node.y} rx={props.node.w} ry={props.node.h} />`
@@ -579,7 +584,6 @@ end:`
             ' transformOrigin:`${'+headstr+'.w/2}px ${'+headstr+'.h/2}px`';
         let attrs = `\n\t\t\t\tstyle={{`+styleTranslateRotate +`}}\n\t\t\t\tclassName={"` + head + ` ` + type +` preview"}`;
         let hoverAttrs = `\n\t\t\t\tstyle={{`+styleTranslateRotate +`}}\n\t\t\t\tclassName={"` + head + ` ` + type +` clickable content"} tabIndex="-1"`;
-        let d: string = '';
         console.log('svgHeadTail', {head, type});
         /*switch (type) {
             default:
@@ -627,9 +631,7 @@ end:`
                 break;
         }*/
 
-        d = '';
-
-        ret = `<path d="${d}" ${attrs} dataD="${d}" />\n\t\t\t<path ${hoverAttrs} />`;
+        ret = `<path ${attrs} />\n\t\t\t<path ${hoverAttrs} />`;
         console.log('svgHeadTail', {head, type, ret});
 
         // path = `<path `;
@@ -1117,7 +1119,7 @@ export class EdgeHead{
 
     static Head_composition = "";
     static Tail_composition = "M8.5776-.9085c.6316-.522 1.6553-.522 2.2869 0l7.0948 5.8644c.6316.522.6316 1.3671 0 1.8882L10.8645 12.7085c-.6316.522-1.6542.522-2.2847 0L1.4827 6.845a1.6117 1.332 0 010-1.8882z";
-    
+
     static Head_aggregation = "";
     static Tail_aggregation = EdgeHead.Tail_composition;
 

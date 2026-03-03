@@ -1,16 +1,19 @@
-import {
+import type {
     DocString,
-    DtoL, DtoW,
+    DtoL,
+    DtoW,
     GObject,
     Proxyfied,
-    DPointerTargetable,
-    LModelElement,
     Pointer,
     Dictionary,
-    DModelElement, transientProperties, Uobj,
 } from "../joiner";
 import {
     windoww,
+    DPointerTargetable,
+    LModelElement,
+    DModelElement,
+    transientProperties,
+    Uobj,
     L,
     Pointers,
     ABORT,
@@ -219,6 +222,10 @@ export let hiddenkeys = [
     "partialdefaultname", "isMirage",
     "inspect", "__random", '__serialize'];
 
+export let lang_hiddenkeys = [
+    'id',
+];
+
 @RuntimeAccessible('TargetableProxyHandler')
 export class TargetableProxyHandler<ME extends GObject = DModelElement, LE extends LPointerTargetable = LModelElement> extends MyProxyHandler<ME> {
     lg: LE & GObject; // to disable type check easily and access 'set_' + varname dynamically
@@ -308,11 +315,31 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
             case "_reload": return LPointerTargetable.wrap(targetObj.id);
             case '__Raw':
             case '__raw': return targetObj;
-            case 'json':
-            case '__json':
+            case 'json': // strictier with more stuff hidden for m2t, t2m.
+            case '__json': // with more stuff shown (like id's) for console.
+            case 'deepJson': // includes children.deepJson's
+            case '__deepJson': // includes children.deepJson's with full details (like id's)
                 let ret: GObject = {...targetObj};
                 if (ret._state) ret.state = ret._state;
                 for (let k of hiddenkeys) { delete ret[k]; }
+                if (propKey === 'json' || propKey === 'deepJson') for (let k of lang_hiddenkeys) { delete ret[k]; }
+                let childKeys_ = windoww.LPointerTargetable.childKeys;
+                let pointerKeys = windoww.LPointerTargetable.pointerKeys;
+                // replace children pointers with json or remove them
+                if (propKey === 'deepJson' || propKey === '__deepJson') {
+                    for (let k of childKeys_) {
+                        if (!(k in ret)) continue;
+                        if (!Array.isArray(ret[k])) ret[k] = (L.from(ret[k]) as any)?.[propKey];
+                        else ret[k] = ret[k].map(e=>(L.from(e) as any)?.[propKey]).filter(e=>!!e);
+                    }
+                }
+                else if (propKey !== '__json') for (let k of childKeys_) { delete ret[k]; }
+                // replace non-containing pointers (type) with names
+                if (propKey !== '__json') for (let k of pointerKeys) {
+                    if (!(k in ret)) continue;
+                    if (Array.isArray(ret[k])) ret[k] = ret[k].map(e => (L.from(e) as any)?.name).filter(e=>!!e);
+                    else ret[k] = ret[k] = (L.from(ret[k]) as any)?.name;
+                }
                 for (let k of Object.keys(ret)) {
                     let v = ret[k];
                     if ((Array.isArray(v) && v.length === 0) || U.isEmptyObject(v)) delete ret[k];
@@ -459,7 +486,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
     public deleteProperty(target: ME, key: string | symbol, proxyItself?: Proxyfied<any>): boolean {
         if (typeof key === "symbol") return false;
         this.set(target, key, undefined, proxyItself);
-        delete target[key];
+        // delete target[key]; must be done in redux action
         return true; }
 
     private mergedObject(target: ME): GObject{

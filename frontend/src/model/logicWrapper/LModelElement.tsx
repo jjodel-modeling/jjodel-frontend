@@ -615,7 +615,9 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         });
     }
     protected set_nodes(val: PackArr<this["nodes"]>, context: Context): boolean {
-        const list = val.map((lItem) => { return Pointers.from(lItem) });
+        const list = Pointers.fromArr(val, true);
+        const diff = Uarr.arrayDifference(list, c.data.nodes);
+        if (diff.added.length + diff.removed.length === 0) return true;
         SetFieldAction.new(context.data, 'nodes', list);
         return true;
     }
@@ -636,12 +638,28 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         return this.get_until_parent(context.proxyObject, context.data, DOperation);
     }
 
-    protected get_enum(context: Context): LEnumerator | null {
-        return this.get_until_parent(context.proxyObject, context.data, DEnumerator);
+    protected get_enum(c: Context): LEnumerator | null {
+        return this.get_until_parent(c.proxyObject, c.data, DEnumerator);
     }
 
-    protected get_father(context: Context): LModelElement {
-        return LPointerTargetable.from(context.data.father);
+    protected get_father(c: Context): LModelElement {
+        return LPointerTargetable.from(c.data.father);
+    }
+    protected set_father(val: Pointer<any>, c: Context): boolean {
+        if (!val || !Pointers.isPointer(val)) return false;
+        if (c.data.father === val) return false;
+        let old = c.data.father;
+        let newD: GObject<DPointerTargetable> = D.fromPointer(val);
+        TRANSACTION('change parent', ()=>{
+            if (!newD) return true;
+            let oldD: GObject<DPointerTargetable> | null = old && D.fromPointer(old) || null;
+            SetFieldAction.new(c.data, 'father', val, '', true);
+            let oldCollection = oldD ? LPointerTargetable.getCollection(c.data.className, oldD.className) : '';
+            let newCollection = LPointerTargetable.getCollection(c.data.className, newD.className);
+            if (oldD && Array.isArray((oldD)[oldCollection])) SetFieldAction.new(oldD, oldCollection as any, val, '-=', true);
+            if (newD && Array.isArray((newD)[newCollection])) SetFieldAction.new(newD, newCollection as any, val, '+=', true);
+        }, old, val);
+        return true;
     }
 
     protected get_children_idlist(context: Context): Pointer<DAnnotation | DPackage | DClassifier | DEnumerator | DEnumLiteral | DParameter | DStructuralFeature | DOperation | DObject | DValue, 1, 'N'> { // LPackage | LClassifier | LTypedElement | LAnnotation | LEnumLiteral | LParameter | LStructuralFeature | LOperation
@@ -666,6 +684,9 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         return true;
     }
     protected remove_parent(c: Context): boolean {
+        let list = Pointers.fromArr(val, true);
+        list = Uarr.arrayIntersection(list, c.data.parent);
+        if (list.length === 0) return true;
         return SetFieldAction.new(c.data, 'parent', [], '', true);
     }
 
@@ -674,10 +695,12 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     }*/
 
     protected set_parent(val: Pack<LAnnotation>, c: Context): boolean { // val: Pack<DModelElement>
-        const ptrs = Pointers.from(val);
+        const list = Pointers.fromArr(val, true);
+        const diff = Uarr.arrayDifference(list, c.data.parent);
+        if (diff.added.length + diff.removed.length === 0) return true;
         let ptr: Pointer;
-        if (Array.isArray(ptrs)) ptr = ptrs[0];
-        else ptr = ptrs;
+        if (Array.isArray(list)) ptr = list[0];
+        else ptr = list;
         if (c.data.father === ptr) return true;
         TRANSACTION(this.get_name(c)+'.parent', ()=>{
             SetFieldAction.new(c.data, 'father', ptr, '', true);
@@ -687,21 +710,22 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     }
 
     add_annotation(val: Pack<this["annotations"]>, c: Context): boolean {
-        const ptrs = Pointers.from(val);
+        const list = Pointers.fromArr(val, true);
+        const diff = Uarr.arrayDifference(list, c.data.annotations);
+        if (diff.added.length + diff.removed.length === 0) return true;
         TRANSACTION(this.get_name(c)+'.annotations+=', ()=>{
-            SetFieldAction.new(c.data, 'annotations', ptrs, '+=', true);
-        }, undefined, ptrs.length)
+            SetFieldAction.new(c.data, 'annotations', list, '+=', true);
+        }, undefined, list.length)
         return true;
     }
 
     remove_annotation(val: Pack<this["annotations"]>, c: Context): boolean { // todo: when this will be ever used? this should be triggered by LObject but only get_ / set_ and delete of whole elements should be triggerable.
-        let ptrs: Pointer<DAnnotation, 1, 'N', LAnnotation> = Pointers.from(val) as any;
-        if (!Array.isArray(ptrs)) ptrs = [ptrs] as any;
-        let indexes = ptrs.map(ptr => c.data.annotations.indexOf(ptr)).filter(p => p >= 0);
-        if (indexes.length === 0) return true;
+        let list = Pointers.fromArr(val, true);
+        list = Uarr.arrayIntersection(list, c.data.annotations);
+        if (list.length === 0) return true;
         TRANSACTION(this.get_name(c)+'.annotations-=', ()=>{
-            SetFieldAction.new(c.data, 'annotations', indexes, '-=', true);
-        }, undefined, ptrs.length)
+            SetFieldAction.new(c.data, 'annotations', list, '-=', true);
+        }, undefined, list.length)
         return true;
     }
 
@@ -712,12 +736,12 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     protected set_annotations(val: Pack<LAnnotation>, c: Context): boolean {
         //  if (!Array.isArray(val)) val = [val];
         //         val = val.map( v => (v instanceof LAnnotation ? v.id : ( Pointers.filterValid(v) ? v : null ))) as Pointer<DAnnotation>[];
-        let ptrs = Pointers.from(val);
-        if (!Array.isArray(ptrs)) ptrs = [ptrs] as any;
-        if (!ptrs.length) return true;
+        const list = Pointers.fromArr(val, true);
+        const diff = Uarr.arrayDifference(list, c.data.annotations);
+        if (diff.added.length + diff.removed.length === 0) return true;
         TRANSACTION(this.get_name(c)+'.annotations', ()=>{
-            SetFieldAction.new(c.data, 'annotations', ptrs, '', true);
-        }, undefined, ptrs.length)
+            SetFieldAction.new(c.data, 'annotations', list, '', true);
+        }, undefined, list.length)
         return true;
     }
 
@@ -1696,7 +1720,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
     // static logic: typeof LPackage;
     // static structure: typeof DPackage;
     // inherit redefine
-    parent!: (LPackage| LModel)[];  // ype 'LPackage' is missing the following properties from type 'LModelElement': get_set_parent, set_parent
+    parent!: (LPackage| LModel)[];
     father!: LPackage | LModel;
     annotations!: LAnnotation[];
     name!: string;
@@ -1883,16 +1907,19 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
     protected set_classes(val: PackArr<this["classes"]>, c: Context): boolean { return this._set_classifiers(val, c, 'classes'); }
     protected set_classifiers(val: PackArr<this["classifiers"]>, c: Context): boolean { return this.cannotSet('classifiers'); }
     protected _set_classifiers(val: PackArr<this["classifiers"]>, c: Context, kind: 'classes' | 'enumerators'): boolean {
-        const list: Pointer<DClassifier>[] = val.map((lItem) => { return Pointers.from(lItem) });
+        const list = Pointers.fromArr(val, true);
         const oldList = c.data[kind];
-        const diff = U.arrayDifference(oldList, list);
+        const diff = U.arrayDifference(oldList, list, true);
+        if (diff.added.length + diff.removed.length === 0) return true;
         TRANSACTION(''+this.get_name(c)+'.'+kind, ()=>{
             SetFieldAction.new(c.data, kind, list, "", true);
             for (let id of diff.added) {
+                if (!id) continue;
                 SetFieldAction.new(id, 'father', c.data.id, '', true);
                 SetFieldAction.new(id, 'parent', c.data.id, '+=', true);
             }
             for (let id of diff.removed as Pointer<DModelElement>[]) {
+                if (!id) continue;
                 SetFieldAction.new(id, 'father', undefined, '', true);
                 const parent = DPointerTargetable.from(id).parent;
                 U.arrayRemoveAll(parent, c.data.id);
@@ -1914,16 +1941,19 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         }).filter(e=>!!e) as any[];
     }
     protected set_subpackages(val: PackArr<this["subpackages"]>, c: Context): boolean {
-        const list = val.map((lItem) => { return Pointers.from(lItem) });
+        const list = Pointers.fromArr(val, true);
         const oldList = c.data.subpackages;
         const diff = U.arrayDifference(oldList, list);
+        if (diff.added.length + diff.removed.length === 0) return true;
         TRANSACTION(this.get_name(c)+'.packages', ()=>{
             SetFieldAction.new(c.data, 'subpackages', list, "", true);
             for (let id of diff.added) {
+                if (!id) continue;
                 SetFieldAction.new(id, 'father', c.data.id, '', true);
                 SetFieldAction.new(id, 'parent', c.data.id, '+=', true);
             }
             for (let id of diff.removed as Pointer<DModelElement>[]) {
+                if (!id) continue;
                 SetFieldAction.new(id, 'father', undefined, '', true);
                 const parent = DPointerTargetable.from(id).parent;
                 U.arrayRemoveAll(parent, c.data.id);
@@ -2059,13 +2089,17 @@ export class LStructuralFeature<Context extends LogicContext<DStructuralFeature>
     }
 
     protected set_instances(val: PackArr<this["instances"]>, c: Context): boolean {
-        const list = val.map((lItem) => { return Pointers.from(lItem) });
+        return this.cannotSet('instances');
+        /*
+        const list = Pointers.fromArr(val, true);
+        const diff = Uarr.arrayDifference(list, c.data.instances);
+        if (diff.added.length + diff.removed.length === 0) return true;
         TRANSACTION(this.get_name(c)+'.instances', ()=>{
             SetFieldAction.new(c.data, 'instances', list, "", true);
+            must also set instanceof of new elements, delete orphaned elements? or transform in shapeless?
         })
-        return true;
+        return true;*/
     }
-
 
     protected get_isUnique(c: Context): boolean { return this.get_unique(c); }
     protected get_isRequired(c: Context): boolean { return this.get_required(c); }
@@ -2327,7 +2361,9 @@ export class LOperation<Context extends LogicContext<DOperation, LOperation> = a
         });
     }
     protected set_exceptions(val: PackArr<this["exceptions"]>, c: Context): boolean {
-        const list = val.map((lItem) => { return Pointers.from(lItem) });
+        const list = Pointers.fromArr(val, true);
+        const diff = Uarr.arrayDifference(list, c.data.exceptions);
+        if (diff.added.length + diff.removed.length === 0) return true;
         TRANSACTION(this.get_name(c)+'.exceptions', ()=>{
             SetFieldAction.new(c.data, 'exceptions', list, "", true);
         })
@@ -2340,16 +2376,19 @@ export class LOperation<Context extends LogicContext<DOperation, LOperation> = a
         }).filter(e=>!!e) as any[];
     }
     protected set_parameters(val: PackArr<this["parameters"]>, c: Context): boolean {
-        const list = val.map((lItem) => { return Pointers.from(lItem) });
+        const list = Pointers.fromArr(val, true);
         const oldList = c.data.parameters;
         const diff = U.arrayDifference(oldList, list);
+        if (diff.added.length + diff.removed.length === 0) return true;
         TRANSACTION(this.get_name(c)+'.parameters', ()=>{
             SetFieldAction.new(c.data, 'parameters', list, "", true);
             for (let id of diff.added) {
+                if (!id) continue;
                 SetFieldAction.new(id, 'father', c.data.id, '', true);
                 SetFieldAction.new(id, 'parent', c.data.id, '+=', true);
             }
             for (let id of diff.removed as Pointer<DModelElement>[]) {
+                if (!id) continue;
                 SetFieldAction.new(id, 'father', undefined, '', true);
                 const parent = DPointerTargetable.from(id).parent;
                 U.arrayRemoveAll(parent, c.data.id);
@@ -2732,11 +2771,12 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     set_sealed(val: PackArr<LClass>, c: Context): boolean{
         if (!val) val = [];
         else if (!Array.isArray(val)) val = [val];
-        const ptrs = [...new Set(val.map((val) => { return val && Pointers.from(val) }).filter(e=>!!e))];
-        if (Uarr.equalsUnsorted(c.data.sealed, ptrs)) return true;
+        const list = Pointers.fromArr(val, true);
+        const diff = Uarr.arrayDifference(list, c.data.sealed);
+        if (diff.added.length + diff.removed.length === 0) return true;
         TRANSACTION(this.get_name(c)+'.sealed ', ()=>{
-            SetFieldAction.new(c.data, 'sealed', ptrs, '', true);
-            if (ptrs.length) {
+            SetFieldAction.new(c.data, 'sealed', list, '', true);
+            if (list.length) {
                 SetFieldAction.new(c.data, 'isSingleton', false);
                 SetFieldAction.new(c.data, 'final', false);
             } else {
@@ -3043,7 +3083,9 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         });
     }
     protected set_instances(val: PackArr<this["instances"]>, c: Context): boolean {
-        const list = val.map((lItem) => { return Pointers.from(lItem) });
+        const list = Pointers.fromArr(val, true);
+        const diff = Uarr.arrayDifference(list, c.data.instances);
+        if (diff.added.length + diff.removed.length === 0) return true;
         TRANSACTION(this.get_name(c)+'.instances', ()=>{
             SetFieldAction.new(c.data, 'instances', list, "", true);
         })
@@ -3056,17 +3098,19 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         }).filter(e=>!!e) as any;
     }
     protected set_operations(val: PackArr<this["operations"]>, context: Context): boolean {
-        const list: Pointer<DOperation>[] = val.map((lItem) => { return Pointers.from(lItem) })
-            .filter(e=>!!e) as any;
+        const list = Pointers.fromArr(val, true);
         const oldList = context.data.operations;
         const diff = U.arrayDifference(oldList, list);
+        if (diff.added.length + diff.removed.length === 0) return true;
         TRANSACTION(this.get_name(context)+'.operations', ()=>{
             SetFieldAction.new(context.data, 'operations', list, "", true);
             for (let id of diff.added) {
+                if (!id) continue;
                 SetFieldAction.new(id, 'father', context.data.id, '', true);
                 SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
             }
             for (let id of diff.removed as Pointer<DModelElement>[]) {
+                if (!id) continue;
                 SetFieldAction.new(id, 'father', undefined, '', true);
                 const parent = DPointerTargetable.from(id).parent;
                 U.arrayRemoveAll(parent, context.data.id);
@@ -3080,17 +3124,20 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         return context.data.features.map((pointer) => { return LPointerTargetable.from(pointer) });
     }
     protected set_features(val: PackArr<this["features"]>, context: Context): boolean {
-        const list = val.map((lItem) => { return Pointers.from(lItem) });
+        const list = Pointers.fromArr(val, true);
         const oldList = context.data.features;
         const diff = U.arrayDifference(oldList, list);
+        if (diff.added.length + diff.removed.length === 0) return true;
         let le: this = null as any;
         TRANSACTION(this.get_name(context)+'.features', ()=>{
             SetFieldAction.new(context.data, 'features', list, "", true);
             for (let id of diff.added) {
+                if (!id) continue;
                 SetFieldAction.new(id, 'father', context.data.id, '', true);
                 SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
             }
             for (let id of diff.removed as Pointer<DModelElement>[]) {
+                if (!id) continue;
                 SetFieldAction.new(id, 'father', undefined, '', true);
                 const parent = DPointerTargetable.from(id).parent;
                 U.arrayRemoveAll(parent, context.data.id);
@@ -3106,16 +3153,19 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         }).filter(e=>!!e) as any;
     }
     protected set_references(val: PackArr<this["references"]>, context: Context): boolean {
-        const list = val.map((lItem) => { return Pointers.from(lItem) });
+        const list = Pointers.fromArr(val, true);
         const oldList = context.data.references;
         const diff = U.arrayDifference(oldList, list);
+        if (diff.added.length + diff.removed.length === 0) return true;
         TRANSACTION(this.get_name(context)+'.references', ()=>{
             SetFieldAction.new(context.data, 'references', list, "", true);
             for (let id of diff.added) {
+                if (!id) continue;
                 SetFieldAction.new(id, 'father', context.data.id, '', true);
                 SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
             }
             for (let id of diff.removed as Pointer<DModelElement>[]) {
+                if (!id) continue;
                 SetFieldAction.new(id, 'father', undefined, '', true);
                 const parent = DPointerTargetable.from(id).parent;
                 U.arrayRemoveAll(parent, context.data.id);
@@ -3131,16 +3181,19 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         }).filter(e=>!!e) as any[];
     }
     protected set_attributes(val: PackArr<this["attributes"]>, context: Context): boolean {
-        const list = val.map((lItem) => { return Pointers.from(lItem) });
+        const list = Pointers.fromArr(val, true);
         const oldList = context.data.attributes;
         const diff = U.arrayDifference(oldList, list);
+        if (diff.added.length + diff.removed.length === 0) return true;
         TRANSACTION(this.get_name(context)+'.attributes', ()=>{
             SetFieldAction.new(context.data, 'attributes', list, "", true);
             for (let id of diff.added) {
+                if (!id) continue;
                 SetFieldAction.new(id, 'father', context.data.id, '', true);
                 SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
             }
             for (let id of diff.removed as Pointer<DModelElement>[]) {
+                if (!id) continue;
                 SetFieldAction.new(id, 'father', undefined, '', true);
                 const parent = DPointerTargetable.from(id).parent;
                 U.arrayRemoveAll(parent, context.data.id);
@@ -3178,8 +3231,8 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         return this.cannotSet('referencedBy', 'is automatically updated through pointedBy');
         /*if (!val) val = [];
         else if (!Array.isArray(val)) val = [val];
-        const ptrs = [...new Set(val.map((val) => { return val && Pointers.from(val) })).filter(e=>!!e)];
-        SetFieldAction.new(context.data, 'referencedBy', ptrs, "", true);
+        const list = Pointers.fromArr(val, true);
+        SetFieldAction.new(context.data, 'referencedBy', list, "", true);
         return true;*/
     }
 
@@ -3191,10 +3244,11 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     protected set_extends(val: PackArr<this["extends"]>, c: Context): boolean {
         if (!val) return true;
         if (!Array.isArray(val)) val = [val];
-        let ptrs: Pointer<DClass>[] = [...new Set(val.map((val) => { return val && Pointers.from(val) }).filter(e=>!!e))];
-        let diff = Uarr.arrayDifference(c.data.extends, ptrs);
+        let list = Pointers.fromArr(val, true);
+        let diff = Uarr.arrayDifference(c.data.extends, list);
         let invalid: GObject[] = [];
         let invalidPtrs: Pointer[] = [];
+        if (diff.added.length + diff.removed.length === 0) return true;
         for (let ptr of diff.added){
             let reason: GObject = {ptr};
             if (this.get_canExtend(c)(ptr as any, reason as any)) continue;
@@ -3203,15 +3257,15 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         }
         if (invalid.length) {
             Log.ww('tried to add invalid extends, they were ignored:', invalid);
-            ptrs = ptrs.filter(e=>!invalid.includes(e));
+            list = list.filter(e=>!invalid.includes(e));
         }
         if (diff.removed.length === 0 && diff.added.length === invalid.length) return true;
 
         TRANSACTION(this.get_name(c)+'.extends', ()=>{
             // adapt instances
-            this._fixExtendInstances(c, ptrs);
+            this._fixExtendInstances(c, list);
             // finalize
-            SetFieldAction.new(c.data, 'extends', ptrs, "", true);
+            SetFieldAction.new(c.data, 'extends', list, "", true);
         }, undefined, ('+'+diff.added.length+', -'+diff.removed.length))
         return true;
     }
@@ -3279,8 +3333,8 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             let newDeepExtends: Pointer<DClass>[] = this.get_superclasses(c2, true, ptrs).map(e=> {let id = e.id; idmap[id] = e; return id; });
             let oldDeepExtends: Pointer<DClass>[] = this.get_superclasses(c2, true).map(e=> {let id = e.id; if(!idmap[id]) idmap[id] = e; return id; });
             let deepDiff = U.arrayDifference(oldDeepExtends, newDeepExtends);
-            let deepAdded = deepDiff.added;
-            let deepRemoved = deepDiff.removed;
+            let deepAdded = deepDiff.added.filter(e=>!!e);
+            let deepRemoved = deepDiff.removed.filter(e=>!!e);
             let deepFeatureAdded = deepAdded.map(ptr=>[idmap[ptr].attributes, idmap[ptr].references]).flat(2);
             let deepFeatureRemoved = deepRemoved.map(ptr=>[idmap[ptr].attributes, idmap[ptr].references]).flat(2);
             let deepFeatureAddedID = deepFeatureAdded.map(l=>l.id);
@@ -3313,7 +3367,8 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         if (!val) val = [];
         else if (!Array.isArray(val)) val = [val];
         if (!val.length) return;
-        let ptrs: Pointer<DClass>[] = [...new Set(val.map((val) => { return val && Pointers.from(val) }).filter(e=>!!e && !c.data.extends.includes(e)))] as Pointer<DClass>[];
+        const list = Pointers.fromArr(val, true);
+        let ptrs: Pointer<DClass>[] = list.filter(e=>!!e && !c.data.extends.includes(e)) as Pointer<DClass>[];
 
         console.log('addExtend', {n:this.get_name(c), ptrs, val});
         let out0 = {reason: '', allTargetSuperClasses: []};
@@ -3356,7 +3411,6 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             let index: number = extendsarr.indexOf(superclassid);
             if (index < 0) return;
             // let extendedby = superclass.__raw.extendedBy;
-
             TRANSACTION(this.get_name(c)+'.extends-=', ()=>{
                 // @ts-ignore
                 SetFieldAction.new(thiss, 'extends', superclass.id, '-=', true);
@@ -3370,18 +3424,10 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         }
     }
 
-    protected remove_extends_unused(val: PackArr<this["extends"]> | number | number[], c: Context): void {
-        if (!val) val = [];
-        else if (!Array.isArray(val)) val = [val];
-        if (!val.length) return;
-        let finalVal: D["extends"];
-        if (typeof val[0] === "number") { finalVal = c.data.extends.filter((elem,index,arr)=> { return (val as any[]).includes(index); }); }
-        else {
-            finalVal = [...c.data.extends];
-            let ptrs: Pointer<DClass> = Pointers.from(val as PackArr<this["extends"]>) as any;
-            for (let v of ptrs) { U.arrayRemoveAll(finalVal, v); }
-        }
-
+    protected remove_extends(val: Pack1<this["extends"]>, c: Context): void {
+        let list = Pointers.fromArr(val, true);
+        const finalVal = Uarr.arraySubtract(c.data.extends, list, false);
+        if (finalVal.length === c.data.extends.length) return;
         TRANSACTION(this.get_name(c)+'.extends-=', ()=>{
             SetFieldAction.new(c.data, 'extends', finalVal, '', true);
         }, undefined, c.data.extends.length - finalVal.length)
@@ -3412,7 +3458,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         /*
         if (!val) val = [];
         else if (!Array.isArray(val)) val = [val];
-        const ptrs = [...new Set(val.map((val) => { return val && Pointers.from(val) }).filter(e=>!!e))];
+        const list = Pointers.fromArr(val, true);
         TRANSACTION(this.get_name(c)+'.extendedBy', ()=>{
             SetFieldAction.new(c.data, 'extendedBy', ptrs, "", true);
         })
@@ -3931,7 +3977,7 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
         /// todo: why this exist?  why not type?
         protected get_target(context: Context): this["target"] { return context.data.target.map(pointer => LPointerTargetable.from(pointer)); }
         protected set_target(val: PackArr<this["target"]>, context: Context): boolean {
-            const list = val.map((lItem) => { return Pointers.from(lItem) });
+            const list = Pointers.fromArr(val, true);
             SetFieldAction.new(context.data, 'target', list, "", true);
             return true;
         }*/
@@ -3939,10 +3985,12 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
     protected get_defaultValue(context: Context): this["defaultValue"] { return LPointerTargetable.fromPointer(context.data.defaultValue); }
     protected set_defaultValue(val: PackArr<this["defaultValue"]>, c: Context): boolean {
         // @ts-ignore
-        if (!val) (val) = []; else if (!Array.isArray(val)) val = [val];
-        let ptrs = Pointers.from(val);
+        // if (!val) (val) = []; else if (!Array.isArray(val)) val = [val];
+        let list = Pointers.fromArr(val, true); // list.filter(e=>!!e).map(e => { let ptr = Pointers.from(e); return ptr || e;}) as any;
+        // let list = list.filter(e=>!!e).map(e => { let ptr = Pointers.from(e); return ptr || e;}) as any;
+        if (Uarr.shallowEqual(list, c.data.defaultValue as any)) return true;
         TRANSACTION(this.get_name(c)+'.defaultValue', ()=>{
-            SetFieldAction.new(c.data, 'defaultValue', ptrs, '', false);
+            SetFieldAction.new(c.data, 'defaultValue', list as any, '', false);
         })
         return true; }
 
@@ -3952,7 +4000,9 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
         });
     }
     protected set_edges(val: PackArr<this["edges"]>, c: Context): boolean {
-        const list = val.map((lItem) => { return Pointers.from(lItem) });
+        const list = Pointers.fromArr(val, true);
+        const diff = Uarr.arrayDifference(list, c.data.edges);
+        if (diff.added.length + diff.removed.length === 0) return true;
         TRANSACTION(this.get_name(c)+'.edges', ()=>{
             SetFieldAction.new(c.data, 'edges', list, "", true);
         })
@@ -4424,16 +4474,19 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
         }).filter(e=>!!e) as any; }
 
     protected set_literals(val: PackArr<this["literals"]>, context: Context): boolean {
-        const list = val.map((lItem) => { return Pointers.from(lItem) });
+        const list = Pointers.fromArr(val, true);
         const oldList = context.data.literals;
         const diff = U.arrayDifference(oldList, list);
+        if (diff.added.length + diff.removed.length === 0) return true;
         TRANSACTION(this.get_name(context)+'.literals', ()=>{
             SetFieldAction.new(context.data, 'literals', list, "", true);
             for (let id of diff.added) {
+                if (!id) continue;
                 SetFieldAction.new(id, 'father', context.data.id, '', true);
                 SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
             }
             for (let id of diff.removed as Pointer<DModelElement>[]) {
+                if (!id) continue;
                 SetFieldAction.new(id, 'father', undefined, '', true);
                 const parent = DPointerTargetable.from(id).parent;
                 U.arrayRemoveAll(parent, context.data.id);
@@ -5146,16 +5199,19 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         return LModel.fromPointer(context.data.models);
     }
     protected set_models(val: PackArr<this['models']>, context: Context): boolean {
-        const list = val.map((lItem) => { return Pointers.from(lItem) });
+        const list = Pointers.fromArr(val, true);
         const oldList = context.data.models;
         const diff = U.arrayDifference(oldList, list);
+        if (diff.added.length + diff.removed.length === 0) return true;
         TRANSACTION(this.get_name(context)+'.models', ()=>{
             SetFieldAction.new(context.data, 'models', list, '', true);
             for (let id of diff.added) {
+                if (!id) continue;
                 SetFieldAction.new(id, 'father', context.data.id, '', true);
                 SetFieldAction.new(id, 'parent', context.data.id, '+=', true);
             }
             for (let id of diff.removed as Pointer<DModelElement>[]) {
+                if (!id) continue;
                 SetFieldAction.new(id, 'father', undefined, '', true);
                 const parent = DPointerTargetable.from(id).parent;
                 U.arrayRemoveAll(parent, context.data.id);
@@ -5173,7 +5229,9 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         TRANSACTION(this.get_name(c)+'.instanceof', ()=>{
             SetFieldAction.new(c.data.id, "instanceof", ptr, undefined, true);
             // update father's collections (pointedby's here are set automatically)
-            // todo: ptr && SetFieldAction.new(ptr, "instances", context.data.id, '+=', true);
+            const old = c.data.instanceof;
+            ptr && SetFieldAction.new(ptr as any, "instances", c.data.id, '+=', true);
+            old && SetFieldAction.new(old as any, "instances", c.data.id, '-=', true);
         }, this.get_instanceof(c)?.fullname, LPointerTargetable.wrap(ptr)?.fullname)
         return true; }
     protected get_instanceof(c: Context): this["instanceof"] {
@@ -5234,16 +5292,20 @@ instanceof === undefined or missing  --> auto-detect and assign the type
     }
 
     protected set_packages(val: PackArr<this["packages"]>, c: Context): boolean {
-        const list = val.map((lItem) => { return Pointers.from(lItem) });
+        const list = Pointers.fromArr(val, true);
         const oldList = c.data.packages;
         const diff = U.arrayDifference(oldList, list);
+        if (diff.added.length + diff.removed.length === 0) return true;
+        console.log('setpackages', diff);
         TRANSACTION(this.get_name(c)+'.packages', ()=>{
             SetFieldAction.new(c.data, 'packages', list, "", true);
             for (let id of diff.added) {
+                if (!id) continue;
                 SetFieldAction.new(id, 'father', c.data.id, '', true);
                 SetFieldAction.new(id, 'parent', c.data.id, '+=', true);
             }
             for (let id of diff.removed as Pointer<DModelElement>[]) {
+                if (!id) continue;
                 SetFieldAction.new(id, 'father', undefined, '', true);
                 const parent = DPointerTargetable.from(id).parent;
                 U.arrayRemoveAll(parent, c.data.id);
@@ -6698,7 +6760,6 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         return LPointerTargetable.from(pointer)
     }
     set_instanceof(val: Pack1<this["instanceof"]>, c: Context): boolean {
-        // const list = val.map((lItem) => { return Pointers.from(lItem) });
         let ptr = Pointers.from<DNamedElement>(val as any);
         if (ptr === c.data.instanceof) return true;
         TRANSACTION(this.get_name(c)+'.instanceof', ()=>{

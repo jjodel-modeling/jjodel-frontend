@@ -30,16 +30,18 @@ import Handlebars from "handlebars";
 import {getLanguageCache} from "../editors/MTM";
 
 
-export function parseT2M(language: string, text0: string, canThrow: boolean = false, errOutput?: {msg?:string, e?: GObject}, s?: DState): GObject | null{
-    let text: string = text0 = text0?.trim();
+export function parseT2M(language: string, text0: string, canThrow: boolean = false,
+                         errOutput?: {msg?:string, e?: GObject},
+                         s?: DState, className: string = ''): GObject | null {
     let LOG = canThrow ? Log.exx : Log.ee;
+    let text: string = text0 = text0?.trim();
     if (!text) { LOG('doT2M: missing text'); return null; }
+    if (className && className[0] === 'D') className = className.substring(1);
     if (!language) language = 'eCore/JSON';
+    if (!s) s = store.getState();
     // text = U.jsonSanitize_dangerous(text);
     let ret: GObject = null as any;
     let msg: string; // error message
-
-    if (!s) s = store.getState();
     if (!(language in s.languages)) {
         LOG(msg = 'M2T error, language "'+language+'" does not exist.');
         if (errOutput) errOutput.msg = msg;
@@ -70,6 +72,15 @@ export function parseT2M(language: string, text0: string, canThrow: boolean = fa
         return null;
     }
 
+    let getPartials = ()=> {
+        let fragments: Dictionary<string, string> = {};
+        for (let k in languageObj[engine]) {
+            if (k in notLanguageFragments || k === '+' || k === '__str') continue;
+            let v = languageObj[engine][k]?.trim();
+            if (v) fragments[k] = v;
+        }
+        return fragments;
+    }
     switch (engine) {
         default:
             LOG(msg = 'T2M transformation failed, unsupported parser: ' + languageObj.engine, {language, parser:languageObj.engine, languageObj});
@@ -80,12 +91,7 @@ export function parseT2M(language: string, text0: string, canThrow: boolean = fa
             let grammar = te.negrammar;
             if (!grammar) {
                 if (allowPartials) {
-                    let fragments: Dictionary<string, string> = {};
-                    for (let k in languageObj[engine]) {
-                        if (k in notLanguageFragments || k === '+' || k === '__str') continue;
-                        let v = languageObj[engine][k]?.trim();
-                        if (v) fragments[k] = v;
-                    }
+                    let fragments = getPartials();
                     te.negrammar = grammar = Nearley.compileGrammar(fragments) as any;
                 }
                 else {
@@ -102,23 +108,63 @@ export function parseT2M(language: string, text0: string, canThrow: boolean = fa
         case undefined:
         case 'javascript':
             if (allowPartials) {
-                Log.eDevv(language+' T2M with partials is not supported yet, please disable the checkbox.');
-                return null;
+                // Log.eDevv(language+' T2M with partials is not supported yet, please disable the checkbox.');
+                let fragments = getPartials();
+                let str = '';
+                let mapnames: Dictionary<string, string> = {};
+                for (let name0 in fragments) {
+                    let code = fragments[name0];
+                    if (!code) continue;
+                    // filter name to be a valid identifier.
+                    // 1) whitespaces become "_".
+                    // 2) invalid characters are removed.
+                    // 3) multiple "___" are condensed into a single "_".
+                    // 4) if the transformations are causing 2 names to collide or become empty, "_1" is appended.
+                    // 5) if the conflict persists, the final number is increased as much as necessary.
+                    let name = name0.replace(/\s/gmi, '_').replace(/[^a-z0-9_$]/gmi, "").replace(/_+/gmi, '_');
+                    while (U.isNumericString(name[0], false)) name = name.substring(1);
+                    if (!name) {
+                        name += '_1'
+                    }
+                    if (name in mapnames) name = U.increaseEndingNumber(name, false, false, (s)=> (s in mapnames));
+                    mapnames[name] = name0;
+                    code =  '(' + code + ')';
+                    try { new Function(code); }
+                    catch (e: any) {
+                        LOG('Invalid t2m fragment syntax "'+name0+" for " + language + " transformations.\n" + e.message, e);
+                        code = "function (txt) { Log.ee(`"+e.message+"`); return null; }";
+                    }
+                    str += 'let ' + name + ' = ' + code + ';\n';
+                }
+                let funcname = className in fragments ? className : 'Default';
+                func_str = "function (txt) {\n" + str + "\n return "+funcname+"(txt); }";
+            } else {
+                func_str = getMonoliticGlobalFunc() as any;
             }
-            func_str = getMonoliticGlobalFunc() as any;
             if (!func_str) return null;
             let t2m = "("+func_str+")";  // because "function(text){return "a"}" is invalid without a function name unless i wrap it in parenthesis and turn into expression.
-            let func = eval(t2m);
-            if (typeof func !== 'function') {
-                LOG(msg = 'The T2M transformation of "'+language+'" must be a parser function, please change the language definition. found instead:'+(typeof func), {ret:func});
-                if (errOutput) errOutput.msg = msg;
+            try {
+                let func = eval(t2m);
+                if (typeof func !== 'function') {
+                    LOG(msg = 'The T2M transformation of "'+language+'" must be a parser function, please change the language definition. found instead:'+(typeof func), {ret:func});
+                    if (errOutput) errOutput.msg = msg;
+                    return null;
+                }
+                try {
+                    ret = func(text);
+                } catch (e: any) {
+                    LOG(msg = 'T2M transformation of "'+language+'" failed:\n'+e.message, {e, func_str});
+                    return null;
+                }
+            } catch (e: any) {
+                LOG('Invalid t2m syntax for ' + language + " transformations.\n" + e.message, e);
+
                 return null;
             }
-            ret = func(text);
 
             if (typeof ret !== 'object') {
                 LOG(msg = 'The T2M transformation of "'+language+'" must be a parser function returning a plain object.' +
-                    '\nPlease change the language definition.', {ret, language, languageObj, func_str, func, text, text0});
+                    '\nPlease change the language definition.', {ret, language, languageObj, func_str, text, text0});
                 if (errOutput) errOutput.msg = msg;
                 return null;
             }
@@ -295,7 +341,7 @@ export function doT2M(data0: LPointerTargetable | Pointer | null | undefined, la
             return;
         }
     }
-    let ret: GObject = parseT2M(language, text, false, undefined, s) as any;
+    let ret: GObject = parseT2M(language, text, false, undefined, s, className) as any;
     if (!ret) return;
     if (Array.isArray(ret)) {
         if (ret.length === 1) ret = ret[0];

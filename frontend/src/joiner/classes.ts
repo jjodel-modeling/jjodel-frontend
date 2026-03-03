@@ -1347,6 +1347,24 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     static pendingCreation: Dictionary<Pointer, DPointerTargetable> = {};
+    public static childKeys = [
+        'annotations',
+        '__childrenToSort',
+        'packages',
+        'subpackages',
+        'classes',
+        'enumerators',
+        'attributes',
+        'references',
+        'operations',
+        'parameters',
+        'literals'];
+    public static pointerKeys = [
+        'exceptions',
+        'type',
+        'father'
+    ]
+
     clonedCounter?: number;
     _storePath?: string[];
     _subMaps?: Dictionary<string, boolean>;
@@ -1516,12 +1534,17 @@ export class Pointers{
         if (!pointerval) return null;
         return pointerval.id as P; }
 
-    static fromArr<D extends DPointerTargetable, L extends LPointerTargetable, P extends Pointer> (val: (P | D | L | null | undefined)[] |  (P | D | L | null | undefined)): P[] {
+    static fromArr<D extends DPointerTargetable, L extends LPointerTargetable, P extends Pointer> (
+        val: (P | D | L | null | undefined)[] |  (P | D | L | null | undefined),
+        unique: boolean = false): /*P[] |*/ Pointer<any, 1, 1, any>[] {
         if (!val) val = [];
         if (!Array.isArray(val)) { val = [val]; }
-        if (!val.length) { return []; }
-        if ((val[0] as any).id) { val = (val as any as (LModelElement | DModelElement)[]).filter(v => !!v).map( (v) => v.id) as any[]; }
-        return val.filter( v => !!v) as any[]; }
+        if (!val.length) { return val as any; }
+        val = val.map((lItem: any) => { return Pointers.from(lItem) }).filter(e=>!!e);
+        val = val.filter(v => !!v) as any[];
+        if (unique) val = [...new Set(val)];
+        return val as any;
+    }
 
     fromm<D extends DPointerTargetable, L extends LPointerTargetable, P extends Pointer> (val: (P | D | L)): P | null { return !val ? null : (val as any).id; }
 
@@ -2451,6 +2474,35 @@ WARNING! do not set proxies in the state, set pointers instead.<br/>
     public delete(): void {}
     protected get_delete(c: Context): () => void {
         return ()=>TRANSACTION('delete '+this.get_name(c), Dummy.get_delete(this, c));
+    }
+
+    static getCollection(data: string | Pointer<any> | LPointerTargetable | DPointerTargetable, parent: string | Pointer<any> | LPointerTargetable | DPointerTargetable): string {
+        let cname: string, parentCname: string;
+        let d: GObject<DPointerTargetable> = null as any;
+        if (typeof data === 'string') cname = (Pointers.isPointer(data) ? (d = D.fromPointer(data))?.className : '') || '';
+        else cname = (typeof data === 'object' && (d = data as any)?.className) || '';
+        if (typeof parent === 'string') parentCname = (Pointers.isPointer(parent) ? (d = D.fromPointer(parent))?.className : '') || '';
+        else parentCname = (typeof parent === 'object' && (parent as GObject)?.className) || '';
+
+        switch (cname) {
+            case '': return '';
+            default: Log.ee('unexpected element in getCollection(): ' + cname, {data, parent, cname, parentCname}); return '';
+            case 'DAttribute': return 'attributes';
+            case 'DReference': return 'references';
+            case 'DOperation': return 'operations';
+            case 'DParameter': return 'parameters';
+            case 'DValue': return 'features';
+            case 'DEnumLiteral': return 'literals';
+            case 'DEnumerator': return 'enumerators';
+            case 'DClass': return 'classes';
+            case 'DObject': return parentCname === 'DModel' ? 'objects' : (parentCname === 'DValue' ? 'values' : '');
+            case 'DModel':
+                let isMM = (d as any as DModel)?.isMetamodel;
+                return isMM === true ? 'metamodels' : (isMM === false ? 'models' : '');
+            case 'DPackage': return parentCname === 'DModel' ? 'packages' : (parentCname === 'DPackage' ? 'subPackages' : '');
+            case 'DAnnotation': return 'annotations';
+            case 'DProject': return 'projects';
+        }
     }
 }
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, LPointerTargetable);
@@ -3846,15 +3898,17 @@ export class Language {
     edited: boolean;
     v: number;
     constructor(m2t: Partial<Language['m2t']> = {}, t2m: Partial<Language['t2m']> = {}) {
-        this.t2m = t2m as any || {};// || m2t ? 'Not implemented, the m2t transformation will be unidirectional' : "Not implemented";
-        this.m2t = m2t as any || {};
-        if (!this.t2m.engine) this.t2m.engine = Object.keys(this.t2m)[0] || undefined as any;
-        if (!this.m2t.engine) this.m2t.engine = Object.keys(this.m2t)[0] || undefined as any;
+        this.t2m = t2m = t2m as any || {};// || m2t ? 'Not implemented, the m2t transformation will be unidirectional' : "Not implemented";
+        this.m2t = m2t = m2t as any || {};
+        if (!t2m.engine) t2m.engine = Object.keys(t2m)[0] || undefined as any;
+        if (!m2t.engine) m2t.engine = Object.keys(m2t)[0] || undefined as any;
         for (let k in m2t) {
+            console.log('new language m2t', {k, str:m2t[k]?.__str, def: m2t[k]?.Default, obj0: {...m2t[k]}, obj: m2t[k], part:m2t[k]?.allowPartials})
             if (typeof m2t[k] !== 'object') continue;
             if (m2t[k].allowPartials && m2t[k].__str && !m2t[k].Default) m2t[k].Default = m2t[k].__str;
         }
         for (let k in t2m) {
+            console.log('new language t2m', {k, str:t2m[k]?.__str, def: t2m[k]?.Default, obj0: {...t2m[k]}, obj: t2m[k], part: t2m[k]?.allowPartials})
             if (typeof t2m[k] !== 'object') continue;
             if (t2m[k].allowPartials && t2m[k].__str && !t2m[k].Default) t2m[k].Default = t2m[k].__str;
         }
