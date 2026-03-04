@@ -56,11 +56,13 @@ export type {Subtract, Class, Empty, Json, GObject, bool, Dictionary, Proxyfied,
     Function, Function2, InOutParam,
     unArr, orArr, PrimitiveType, CClass, NonEmptyString, Overlap,
     Constructor, AbstractConstructor, ApiResponse, Any, MultiSelectOptGroup, MultiSelectOption, NestedArray, TLCoord, TLCoordExtended,
-    ObjectWithoutPointers
+    ObjectWithoutPointers, FakeStateProps, DefaultProps, ubyte, byte, degree, double, float, radian, ratio, int, uint, Dependency,
+    NotBool, NodeTypes,
+
 } from "./types";
 
 export type {Pointer, PtrString, getWParams, WUser, WProject, WtoD, WtoL, DtoW, LtoW, LtoD, DtoL, PackArr, Pack, Pack1, EPSize,
-    TLObject,
+    TLObject, LanguageObject
 } from "./classes";
 export type { WAnnotation, WNamedElement, WFactory_useless_, WClass, WAttribute, WClassifier, WDataType, WMap, WModel,
     WModelElement, WEnumerator, WObject, WPackage, WOperation, WValue, WParameter, WReference, WTypedElement, WEnumLiteral, WStructuralFeature,
@@ -74,7 +76,7 @@ export type {PackagePointers, EdgePointers, AnnotationPointers, AttributePointer
 export type {LoggerCategoryState, LoggerType} from "../common/Log";
 
 
-export {windoww, EdgeBendingMode, EdgeGapMode, EMeasurableEvents} from './types';
+export {windoww, EdgeBendingMode, EdgeGapMode, EMeasurableEvents, GenericProps} from './types';
 export {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps,
     EdgeStateProps, EdgeOwnProps, VertexOwnProps, BasicReactOwnProps} from "../graph/graphElement/sharedTypes/sharedTypes";
 
@@ -87,7 +89,7 @@ export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable,
     UserHistory,
     Language,
     LUser, DUser, DProject, LProject, Pointers, PointedBy, PendingPointedByPaths, CoordinateMode, EGraphElements, EModelElements, transientProperties,
-    ViewEClassMatch
+    ViewEClassMatch, notLanguageFragments, LanguageCache, ParserData, ProjectPointers, UserPointers,
 } from "./classes";
 
 export {Info} from '../model/Info';
@@ -112,6 +114,7 @@ export var U = windoww.U as typeof UType;
 export {DLog} from "../model/classes/D";
 export {LLog} from "../model/classes/L";
 
+
 export {
     EcoreParser,
     AccessModifier,
@@ -132,6 +135,7 @@ export {
     ECoreOperation,
     ECoreParameter,
     ECoreObject,
+    EcoreXmiTags,
 } from "../api/data";
 // import domain-specific classes
 

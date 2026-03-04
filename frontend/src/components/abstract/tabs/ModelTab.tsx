@@ -1,8 +1,22 @@
 import React, {Dispatch, ReactElement, ReactNode} from "react";
 import {connect} from "react-redux";
-import {DModel, DPointerTargetable, Pointer, Try, U} from "../../../joiner";
-import {CreateElementAction, DGraph, DModelElement, DState, LGraph, LModel, LModelElement, Constructors, SetRootFieldAction} from "../../../joiner";
-import {DefaultNode} from "../../../joiner/components";
+import {
+    DModel,
+    DPointerTargetable,
+    Pointer,
+    Try,
+    U,
+    CreateElementAction,
+    DGraph,
+    DModelElement,
+    DState,
+    LGraph,
+    LModel,
+    LModelElement,
+    Constructors,
+    SetRootFieldAction,
+} from "../../../joiner";
+import {DefaultNode} from "../../../joiner";
 import ToolBar from "../../toolbar/ToolBar";
 import ContextMenu from "../../contextMenu/ContextMenu";
 import { EditorSwitch } from "./EditorSwitch";

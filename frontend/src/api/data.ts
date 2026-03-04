@@ -1215,3 +1215,9 @@ ECoreObject.xmlns_xmi = EcoreParser.XMLinlineMarker + 'xmlns:xmi'; // "http://ww
 XMIModel.type = EcoreParser.XMLinlineMarker + 'type';
 XMIModel.namee = EcoreParser.XMLinlineMarker + 'name';
 
+export const EcoreXmiTags = [
+    "xmi:version",
+    "xmlns:xmi",
+    "xmlns:xsi",
+    "xmlns:ecore",
+];

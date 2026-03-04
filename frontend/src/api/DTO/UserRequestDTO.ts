@@ -1,7 +1,6 @@
 import type {Dictionary, DocString, Json, Pointer, RawObject} from "../../joiner";
-import {DProject, DUser, Log} from "../../joiner";
+import {DProject, DUser, Log, ProjectPointers, UserPointers} from "../../joiner";
 import {Response_DTO} from "./DTO";
-import {ProjectPointers, UserPointers} from "../../joiner/classes";
 import {JwtClaims} from "./JwtClaims";
 import {TokenResponse} from "./TokenResponse";
 

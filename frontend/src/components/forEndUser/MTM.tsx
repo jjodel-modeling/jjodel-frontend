@@ -25,7 +25,7 @@ import { Tooltip } from './Tooltip';
 import Editor from "@monaco-editor/react";
 import {on} from "events";
 import {Nearley} from "../../DSL/nearley/nearley";
-import {LanguageCache, notLanguageFragments, ParserData,} from "../../joiner/classes";
+import {LanguageCache, notLanguageFragments, ParserData, GenericProps} from "../../joiner";
 import Handlebars from "handlebars";
 import {getLanguageCache} from "../editors/MTM";
 
@@ -361,7 +361,7 @@ export function T2M_Component(props: T2M_AllProps, child?: any): ReactNode {
     const language = props.language || 'JSON';
     console.log('T2M render called', {data, language, arguments});
     let debug = true;
-    function onBlur(e: Event){
+    function onBlur(e: any){
         props.onChange?.(e);
         props.onBlur?.(e);
         let value = (e.target as HTMLElement).innerText;
@@ -496,21 +496,14 @@ export function M2T_API(data: LModelElement, language: string): string{
 (window as any).M2T = M2T;
 (window as any).T2M = T2M;
 
-export interface T2M_OwnProps {
+export interface T2M_OwnProps extends GenericProps{
     data?: LPointerTargetable | DPointerTargetable | Pointer<DPointerTargetable, 1, 1, LPointerTargetable>;
     language: string;
     // DANGER: use the data provided in parameters instead of using js closure, as the proxy accessed from using closure won't be updated in rerenders.
     getter?: (data: any/*LPointerTargetable*/, language: string) => string | boolean | undefined;
     setter?: (text: string|boolean, data: any, language: string) => void;
-    className?: string;
-    style?: GObject;
     readOnly?: boolean;
-    key?: React.Key | null;
     placeholder?: string;
-    onChange?: (e: Event)=>void;
-    onBlur?: (e: Event)=>void;
-    onKeyPress?: (e: Event)=>void;
-    children?: ReactNode;
 }
 export interface M2T_OwnProps extends T2M_OwnProps{
 

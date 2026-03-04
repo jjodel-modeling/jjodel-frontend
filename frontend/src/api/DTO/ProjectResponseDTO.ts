@@ -1,7 +1,6 @@
 import type {Dictionary, DocString, Json, Pointer, RawObject} from "../../joiner";
-import {DProject, DUser, Log} from "../../joiner";
+import {DProject, DUser, Log, ProjectPointers} from "../../joiner";
 import {Response_DTO} from "./DTO";
-import {ProjectPointers} from "../../joiner/classes";
 
 export class ProjectResponseDTO extends Response_DTO<ProjectResponseDTO, DProject>{
     id!: Pointer<DProject>;

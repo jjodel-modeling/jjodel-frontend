@@ -190,9 +190,14 @@ function GenericInputComponent(props: AllProps): ReactNode {
         }
         let className = (props.className || '') + ' ' + ( props.rootClassName||'');
         // delete otherProps.field; delete otherProps.data; delete otherProps.infoof;
-        return <Input {...otherProps} className={className}
-                      data={props.data} field={props.field}
-                      jsxLabel={label} tooltip={props.tooltip} type={type as any}/>;
+        return <Input {...otherProps}
+                      className={className}
+                      data={props.data}
+                      field={props.field}
+                      jsxLabel={label}
+                      tooltip={props.tooltip}
+                      type={type as any}
+                />;
 }
 
 // private

@@ -1,7 +1,21 @@
-import {GObject, Temporary, TLCoord, TLObject, TODO, U} from "../joiner";
-import {DPointerTargetable, RuntimeAccessible, windoww, Log, RuntimeAccessibleClass, Dictionary} from "../joiner";
+import type {
+    radian,
+    GObject,
+    Dictionary,
+} from "../joiner";
+import {
+    Temporary,
+    TLCoord,
+    TLObject,
+    TODO,
+    DPointerTargetable,
+    RuntimeAccessible,
+    windoww,
+    Log,
+    RuntimeAccessibleClass,
+    U,
+} from "../joiner";
 import React from "react";
-import {radian} from "../joiner/types";
 
 @RuntimeAccessible('IPoint')
 export abstract class IPoint extends RuntimeAccessibleClass {

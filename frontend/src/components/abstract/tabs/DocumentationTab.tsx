@@ -14,8 +14,8 @@
 import React, { Dispatch, ReactElement, ReactNode, useMemo, useState, useCallback, useEffect } from 'react';
 import { connect } from 'react-redux';
 import Editor from '@monaco-editor/react';
+import type { FakeStateProps } from '../../../joiner';
 import { DState, LProject, LUser, DUser, LModel, U } from '../../../joiner';
-import type { FakeStateProps } from '../../../joiner/types';
 import DocumentationService from '../../../services/DocumentationService';
 import type { ProjectDocumentation } from '../../../services/DocumentationService';
 import {AI, AIConfig, AIProvider, JodieConfig, TAIProvider} from '../../../types/jodie';

@@ -1927,6 +1927,13 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     public state!: any;
     public r!:any;
 
+
+    static isL(val?: unknown): val is LPointerTargetable {
+        if (!val) return false;
+        return !!(val as any).__isProxy;
+    }
+
+
     private test(){
         let a: LPointerTargetable = null as any as LEnumLiteral;
         let c: LPointerTargetable = null as any as LParameter;
@@ -2508,8 +2515,8 @@ WARNING! do not set proxies in the state, set pointers instead.<br/>
 RuntimeAccessibleClass.set_extend(RuntimeAccessibleClass, LPointerTargetable);
 
 @RuntimeAccessible('D') export class D extends DPointerTargetable{}
+
 @RuntimeAccessible('L') export class L extends LPointerTargetable{
-    get_getByFullPath(c: any): this['getByFullPath'] { return this.wrongAccessMessage('L.getByFullPath'); }
 }
 @RuntimeAccessible('P') export class P extends Pointers{}
 

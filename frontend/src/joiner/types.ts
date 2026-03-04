@@ -25,8 +25,8 @@ import {
     LVoidEdge,
     LVoidVertex
 } from "../joiner";
+import type {ChangeEventHandler, FocusEventHandler, KeyboardEventHandler, MouseEventHandler, ReactNode} from "react";
 import type React from "react";
-import {ReactNode} from 'react';
 
 export type double = number;
 export type float = number;
@@ -70,12 +70,17 @@ export type PrimitiveType = string | number | boolean | null | undefined;
 type NotAFunction = NoCaller | NoBind | NoApply | NoCall;
 type NotFunction = GObject & NotAFunction | PrimitiveType;
 
-export interface GenericProps{
+export class GenericProps{
     id?: string;
     className?: string;
     style?: GObject;
     children?: ReactNode;
     key?: React.Key | null;
+    onBlur?: FocusEventHandler<Event>;
+    onFocus?: FocusEventHandler<Event>;
+    onClick?: MouseEventHandler<Event>;
+    onKeyPress?: KeyboardEventHandler<Event>;
+    onChange?: ChangeEventHandler<Event>;
 }
 
 export type NestedArray<T> = (T | NestedArray<T>)[];

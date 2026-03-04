@@ -30,7 +30,7 @@ import {
 import {useStateIfMounted} from 'use-state-if-mounted';
 import './inputselect.scss';
 import { Tooltip } from './Tooltip';
-import {GenericProps} from "../../joiner/types";
+import {GenericProps} from "../../joiner";
 
 export function getSelectOptions_raw(data: LPointerTargetable, field: string): MultiSelectOptGroup[] {
     if (!data) return [];

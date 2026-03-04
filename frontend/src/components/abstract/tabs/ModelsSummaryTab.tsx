@@ -1,8 +1,7 @@
-import {DState, LProject, windoww} from '../../../joiner';
-import {DUser, LUser} from '../../../joiner';
+import type {FakeStateProps} from '../../../joiner';
+import {DUser, LUser, DState, LProject, windoww} from '../../../joiner';
 import React, {Dispatch, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
-import type {FakeStateProps} from '../../../joiner/types';
 import {LeftBar} from '../../../pages/components';
 import ProjectEditor from '../../project/ProjectEditor';
 

@@ -1,35 +1,30 @@
 import {
-    Info, Json, ObjectWithoutPointers, orArr, PrimitiveType, unArr,
-    Any,
-    Dictionary,
-    Function2,
-    GObject,
-    DtoL,
-    DocString,
-    LtoD,
-    Pack,
-    Pack1,
-    PackArr,
-    Pointer, NodeTransientProperties, ViewScore, DataTransientProperties,
-} from "../../joiner";
-import {
-    ShortAttribETypes,
-    ShortAttribSuperTypes,
     Abstract,
+    Any,
     AttributePointers,
     ClassPointers,
     Constructor,
     Constructors,
     D,
+    DataTransientProperties,
     Debug,
     DEdge,
     Defaults as TDefaults,
+    Dictionary,
+    DocString,
     DPointerTargetable,
-    DState, ECoreObject, ECoreSubPackage,
+    DState,
+    DtoL, ECoreDetail,
+    ECoreObject,
+    ECoreSubPackage,
     EnumPointers,
+    Function2,
     getWParams,
+    GObject,
     GraphSize,
+    Info,
     Instantiable,
+    Json,
     L,
     Leaf,
     LEdge,
@@ -40,6 +35,7 @@ import {
     Log,
     LogicContext,
     LPointerTargetable,
+    LtoD,
     LVertex,
     LVoidVertex,
     ModelPointers,
@@ -47,22 +43,32 @@ import {
     MultiSelectOption,
     Node,
     ObjectPointers,
+    ObjectWithoutPointers,
     OperationPointers,
+    orArr,
+    Pack,
+    Pack1,
     PackagePointers,
+    PackArr,
     ParameterPointers,
     PointedBy,
+    Pointer,
     Pointers,
+    PrimitiveType,
     ReferencePointers,
     RuntimeAccessible,
     RuntimeAccessibleClass,
     Selectors,
     SetFieldAction,
     SetRootFieldAction,
+    ShortAttribETypes,
+    ShortAttribSuperTypes,
     store,
     TargetableProxyHandler,
     TRANSACTION,
     U,
     Uarr,
+    unArr,
     Uobj,
     UX,
     windoww,
@@ -270,8 +276,6 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         }
     }
 
-    ecore!:string;
-    __info_of__ecore: Info = {type: ShortAttribETypes.EString, txt: 'ecore textual representation of the current element and his subelements (a sub-tree)'}
     // abstract get_ecore(c: LogicContext<any, any>): string;
 
     /*i
@@ -303,6 +307,8 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         // todo
         return ecore;
     }
+
+    // used in Dummy.t2m()
     protected _convertEcoreToJom_m2(ecore: GObject): GObject{
         let ogKeys = Object.keys(ecore || {});
         console.log('pre convert ecore', JSON.parse(JSON.stringify(ecore||{})));
@@ -320,7 +326,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                 case ECoreClass.xsitype: case 'xsitype': case 'xsi:type':
                     if (v.indexOf('ecore:E') !== 0) Log.exDevv('unexpected XSI type: ' + v, {ecore});
                     delete ecore[k];
-                    ecore.className = v.substring('ecore:E'.length);
+                    ecore.className = 'D' + v.substring('ecore:E'.length);
                     break;
                 case ECorePackage.eAnnotations: todo(k); break;
                 // common to all features
@@ -332,8 +338,8 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                 case ECoreOperation.ordered:    delete ecore[k]; if (v || v === false) ecore.ordered = v;   break;
                 // individual properties
                 case ECorePackage.xmlnsecore:        todo(k); break;
-                case ECorePackage.nsURI:             delete ecore[k]; ecore.uri = v; break;
-                case ECorePackage.nsPrefix:          delete ecore[k]; ecore.prefix = v; break;
+                case ECorePackage.nsURI:             delete ecore[k]; ecore.uri = v;    ecore.className = 'DPackage'; break;
+                case ECorePackage.nsPrefix:          delete ecore[k]; ecore.prefix = v; ecore.className = 'DPackage'; break;
                 case ECoreClass.abstract:            delete ecore[k]; ecore.abstract = v; break;
                 case ECoreClass.interface:           delete ecore[k]; ecore.interface = v; break;
                 case ECoreClass.instanceTypeName:    todo(k); break;
@@ -419,22 +425,52 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     get_instantiable(c: Context): boolean { return LModelElement.M2InstantiableClasses.includes(c.data.className); }
 
     childNames!: string[];
-    __info_of__childNames: Info = {type: "(json: object, instanceof?: LClass) => LObject", txt: "Array containing the names of all children subelements."};
+    __info_of__childNames: Info = {type: "(json: object, instanceof?: LClass) => LObject", txt: "Array containing the names of all children sub-elements."};
     get_childNames(c: Context): string[] { return this.get_children(c).map( (c: GObject<LModelElement>) => c.name).filter(c=>!!c) as string[]; }
 
+    ecore!: Json;
+    eCore!: Json;
+    __info_of__ecore: Info = {type: 'Object', txt: 'ecore textual representation of the current element and his sub-elements (a sub-tree)' +
+            '\nIt includes cross-references and is equivalent to a serialized version of this.deepCrossEcore.'}
+    __info_of__eCore: Info = {type: 'Object', txt: 'Fault tolerance alias for this.ecore', isAlias: true}
     get_ecore(c: Context): GObject { return this.get_eCore(c); }
-    get_eCore(c: Context): GObject { return this.get_generateEcoreJson(c)(); }
+    get_eCore(c: Context): GObject { return this.get_deepCrossEcore(c); }
 
-    public generateEcoreJson(loopDetectionloopDetectionObj: Dictionary<Pointer, DModelElement> = {}): GObject { return this.cannotCall('generateEcoreJson'); }
+    ownEcore!: GObject;
+    crossEcore!: GObject;
+    __info_of__ownEcore: Info = {type: 'Object', txt: 'Alias for deepOwnEcore.'};
+    __info_of__crossEcore: Info = {type: 'Object', txt: 'Alias for deepCrossEcore.'};
+    get_ownEcore(c: Context): GObject { return this.get_deepOwnEcore(c); }
+    get_crossEcore(c: Context): GObject { return this.get_deepCrossEcore(c); }
 
-    private get_generateEcoreJson(context: Context): (loopdetectionobj?: Dictionary<Pointer, DModelElement>) => Json {
-        return (loopdetectionobj?: Dictionary<any>) => this.generateEcoreJson_impl(context, loopdetectionobj);
+    deepOwnEcore!: GObject;
+    deepCrossEcore!: GObject;
+    __info_of__deepOwnEcore: Info = {type: 'Object', txt: 'Returns an object having the same structure as an ecore file, it can be serialized as text to ecore/json or ecore/xmi formats with API.\n' +
+            'Model dependencies are merged in a single model. It includes cross-dependencies and nested elements.'};
+    __info_of__deepCrossEcore: Info = {type: 'Object', txt: 'Returns an object having the same structure as an ecore file, it can be serialized as text to ecore/json or ecore/xmi formats with API.\n' +
+            'Model dependencies are kept as dependency links in the root element. It includes cross-dependencies and nested elements.', isAlias: true};
+    get_deepOwnEcore(c: Context): GObject { return this.generateEcoreJson_impl(c, {}, true, false); }
+    get_deepCrossEcore(c: Context): GObject { return this.generateEcoreJson_impl(c, {}, true, true); }
+
+    shallowOwnEcore!: GObject;
+    shallowCrossEcore!: GObject;
+    __info_of__shallowOwnEcore: Info = {type: 'Object', txt: 'See deepOwnEcore description, the shallow version does not include subelements.'};
+    __info_of__shallowCrossEcore: Info = {type: 'Object', txt: 'See deepCrossEcore description, the shallow version does not include subelements.'};
+    get_shallowOwnEcore(c: Context): GObject { return this.generateEcoreJson_impl(c, {}, false, false); }
+    get_shallowCrossEcore(c: Context): GObject { return this.generateEcoreJson_impl(c, {}, false, true); }
+
+    protected generateEcoreJson_impl(c: Context, loopDetectionObj?: Dictionary<Pointer, DModelElement>, deep: boolean = true, crossRef: boolean = true): Json {
+        return this.cannotCall("generateEcoreJson_impl");
+    }
+    public generateEcoreJson(loopDetectionObj: Dictionary<Pointer, DModelElement> = {}, deep?: boolean, crossRef?: boolean): GObject { return this.cannotCall('generateEcoreJson'); }
+    private get_generateEcoreJson(context: Context): (...p:Parameters<this['generateEcoreJson']>) => Json {
+        return (loopDetectionObj?: Dictionary<Pointer, DModelElement>, deep: boolean = true, crossRef: boolean = true) => (
+            this.generateEcoreJson_impl(context, loopDetectionObj, deep, crossRef)
+        )
     }
 
-    protected generateEcoreJson_impl(context: Context, loopDetectionObj?: Dictionary<Pointer, DModelElement>): Json { return this.cannotCall("generateEcoreJson_impl"); }
-
     public duplicate(deep: boolean = true): this {
-        return this.cannotCall(((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + ".duplicate");
+        return this.cannotCall("duplicate");
     }
 
     public addAnnotation(source?: DAnnotation["source"], details?: DAnnotation["details"]): DAnnotation {
@@ -848,7 +884,8 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     // activated by user in JSX
     // todo: this.wrongAccessMessage("addClass");
     protected cannotCall(name: string, ...params: string[]): any {
-        Log.exDevv(name + ' should never be called directly, but should trigger get_' + name + '(' + params.join(', ') + '), this is only a signature for type checking.');
+        let cname = ((this.constructor as typeof RuntimeAccessibleClass)?.cname || this.constructor?.name);
+        Log.exDevv(cname+'.'+name + '() should never be called directly, but should trigger get_' + name + '(' + params.join(', ') + '), this is only a signature for type checking.');
     }
 
     public addClass(): void {
@@ -960,13 +997,14 @@ export class LAnnotation<Context extends LogicContext<DAnnotation> = any, D exte
     source!: string;
     details!: LAnnotationDetail[];// Dictionary<string, string> = {};
 
-    protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
+    protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}, deep: boolean = true, crossRef: boolean = true): Json {
         if (loopDetectionObj[c.data.id]) return Log.exx('Cannot serialize in ecore, found loop', {loopDetectionObj, c});
         loopDetectionObj[c.data.id] = c.data;
         const json: Json = {};
         EcoreParser.write(json, ECoreAnnotation.source, c.data.source);
         // EcoreParser.write(json, ECoreAnnotation.references, context.proxyObject.referencesStr);
-        EcoreParser.write(json, ECoreAnnotation.details, c.proxyObject.details.map(d => d.generateEcoreJson(loopDetectionObj)));
+        // keep sub-elements last
+        EcoreParser.write(json, ECoreAnnotation.details, c.proxyObject.details.map(d => d.generateEcoreJson(loopDetectionObj, deep , crossRef)));
         return json;
     }
 
@@ -1023,12 +1061,13 @@ RuntimeAccessibleClass.set_extend(LModelElement, LAnnotation);
 export class LAnnotationDetail<Context extends LogicContext<DAnnotationDetail> = any> extends LModelElement { // todo
     father!: LAnnotation;
 
-    protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
+    protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}, deep: boolean = true, crossRef: boolean = true): Json {
         if (loopDetectionObj[c.data.id]) return Log.exx('Cannot serialize in ecore, found loop', {loopDetectionObj, c});
         loopDetectionObj[c.data.id] = c.data;
         const json: Json = {'eAnnotationDetail':'todo'};
-        // if (context.data.name !== null) EcoreParser.write(json, ECoreDetail.key, context.data.name);
-        // if (context.data.value !== null) EcoreParser.write(json, ECoreDetail.value, context.data.value);
+        // keep sub-elements last
+        // if (c.data.name !== null) EcoreParser.write(json, ECoreDetail.key, c.data.name);
+        // if (c.data.value !== null) EcoreParser.write(json, ECoreDetail.value, c.data.value);
         return json;
     }
 
@@ -1756,32 +1795,29 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         }
         return ret;
     }
-    protected generateEcoreJson_impltemplate(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
-        if (loopDetectionObj[c.data.id]) return Log.exx('Cannot serialize in ecore, found loop', {loopDetectionObj, c});
-        loopDetectionObj[c.data.id] = c.data;
-        const d = c.data;
-        const json: GObject = {};
-        return json;
-    }
 
-    protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
+
+    protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}, deep: boolean = true, crossRef: boolean = true): Json {
         if (loopDetectionObj[c.data.id]) return Log.exx('Cannot serialize in ecore, found loop', {loopDetectionObj, c});
         loopDetectionObj[c.data.id] = c.data;
         const model: GObject = {};
         const d = c.data;
-        let classarr = this.get_classes(c).map(c => c.generateEcoreJson(loopDetectionObj));
-        let enumarr = this.get_enumerators(c).map(e => e.generateEcoreJson(loopDetectionObj));
-        const classifiers: Json[] = Array.prototype.concat.call(classarr, enumarr);
+        let classarr = deep ? this.get_classes(c).map(c => c.generateEcoreJson(loopDetectionObj, deep, crossRef)) : [];
+        let enumarr = deep ? this.get_enumerators(c).map(e => e.generateEcoreJson(loopDetectionObj, deep, crossRef)) : [];
+        const classifiers: Json[] = U.arrayMergeInPlace(classarr, enumarr);
+        const subpackages = deep ? this.get_subpackages(c).map(p => p.generateEcoreJson(loopDetectionObj, deep, crossRef)) : [];
         model[ECorePackage.xmiversion] = '2.0';
         model[ECorePackage.xmlnsxmi] = 'http://www.omg.org/XMI';
         model[ECorePackage.xmlnsxsi] = 'http://www.w3.org/2001/XMLSchema-instance';
         model[ECorePackage.xmlnsecore] = 'http://www.eclipse.org/emf/2002/Ecore';
         model[ECorePackage.namee] = d.name;
         model[ECorePackage.nsURI] = d.uri;
-        model[ECorePackage.nsPrefix] = d.prefix;//getModelRoot().namespace();
-        model[ECorePackage.eClassifiers] = classifiers;
-        model[ECorePackage.eSubpackages] = this.get_subpackages(c).map(p => p.generateEcoreJson(loopDetectionObj));
-        return model; }
+        model[ECorePackage.nsPrefix] = d.prefix; //getModelRoot().namespace();
+        // keep sub-elements last
+        if (classifiers.length) model[ECorePackage.eClassifiers] = classifiers;
+        if (subpackages.length) model[ECorePackage.eSubpackages] = subpackages;
+        return model;
+    }
 
     public duplicate(deep: boolean = true): this {
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
@@ -2282,11 +2318,11 @@ export class LOperation<Context extends LogicContext<DOperation, LOperation> = a
     defaultValue!: (Pointer<DObject, 1, 1, LObject> | PrimitiveType)[];
     __isLOperation!: boolean; // to avoid duck typing mistaking it for LStructuralFeature
 
-    protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
+    protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}, deep: boolean = true, crossRef: boolean = true): Json {
         if (loopDetectionObj[c.data.id]) return Log.exx('Cannot serialize in ecore, found loop', {loopDetectionObj, c});
         loopDetectionObj[c.data.id] = c.data;
         const json: Json = {};
-        json[ECoreOperation.eParameters] = c.proxyObject.parameters.map( par => par.generateEcoreJson(loopDetectionObj));
+        let params = deep ? c.proxyObject.parameters.map( par => par.generateEcoreJson(loopDetectionObj, deep, crossRef)) : [];
         EcoreParser.write(json, ECoreOperation.namee, c.data.name);
         EcoreParser.write(json, ECoreOperation.eType, c.proxyObject.type.typeEcoreString);
         EcoreParser.write(json, ECoreOperation.lowerBound, '' + c.data.lowerBound);
@@ -2294,6 +2330,8 @@ export class LOperation<Context extends LogicContext<DOperation, LOperation> = a
         EcoreParser.write(json, ECoreOperation.eexceptions, c.proxyObject.exceptions.map( (l: LClassifier) => l.typeEcoreString).join(' ')); // todo: not really sure it's this format
         EcoreParser.write(json, ECoreOperation.ordered, '' + c.data.ordered);
         EcoreParser.write(json, ECoreOperation.unique, '' + c.data.unique);
+        // keep sub-elements last
+        if (params.length) json[ECoreOperation.eParameters] = params;
         return json; }
 
     public duplicate(deep: boolean = true): this {
@@ -2492,7 +2530,7 @@ export class LParameter<Context extends LogicContext<DParameter> = any, C extend
     defaultValue!: any;
     allowCrossReference!: boolean;
 
-    protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
+    protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}, deep: boolean = true, crossRef: boolean = true): Json {
         if (loopDetectionObj[c.data.id]) return Log.exx('Cannot serialize in ecore, found loop', {loopDetectionObj, c});
         loopDetectionObj[c.data.id] = c.data;
         const json: Json = {};
@@ -2931,18 +2969,16 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         return U.arrayMergeInPlace<any>(this.get_ownChildren(context), this.get_inheritedChildren(context));
     }
 
-    protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
+    protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}, deep: boolean = true, crossRef: boolean = true): Json {
         if (loopDetectionObj[c.data.id]) return Log.exx('Cannot serialize in ecore, found loop', {loopDetectionObj, c});
         loopDetectionObj[c.data.id] = c.data;
         const json: GObject = {};
-        const featurearr: Json[] = [];
-        const operationsarr: Json[] = [];
-        let supertypesstr = [];
         const d = c.data;
         const l = c.proxyObject;
-        for (let att of l.attributes) { featurearr.push(att.generateEcoreJson(loopDetectionObj)); }
-        for (let ref of l.references) { featurearr.push(ref.generateEcoreJson(loopDetectionObj)); }
-        for (let op of l.operations) { operationsarr.push(op.generateEcoreJson(loopDetectionObj)); }
+        const attributes = deep ? l.attributes.map(a => a.generateEcoreJson(loopDetectionObj, deep, crossRef)) : [];
+        const references = deep ? l.references.map(a => a.generateEcoreJson(loopDetectionObj, deep, crossRef)) : [];
+        const operations = deep ? l.operations.map(a => a.generateEcoreJson(loopDetectionObj, deep, crossRef)) : [];
+        let features = deep ? U.arrayMergeInPlace(attributes, references) : [];
         let superClasses = l.extends.map( superclass => superclass.typeEcoreString);
 
         json[ECoreClass.xsitype] = 'ecore:EClass';
@@ -2951,8 +2987,9 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         json[ECoreClass.abstract] = U.toBoolString(d.abstract, false);
         if (d.instanceClassName) json[ECoreClass.instanceTypeName] = d.instanceClassName;
         if (superClasses.length) json[ECoreClass.eSuperTypes] = superClasses.join(" ");
-        if (featurearr.length) json[ECoreClass.eStructuralFeatures] = featurearr;
-        if (operationsarr.length) json[ECoreClass.eOperations] = operationsarr;
+        // keep sub-elements last
+        if (features.length) json[ECoreClass.eStructuralFeatures] = features;
+        if (operations.length) json[ECoreClass.eOperations] = operations;
         return json;
     }
 
@@ -3700,7 +3737,6 @@ export class DReference extends DModelElement { // DStructuralFeature
     composition: boolean = false;
     aggregation: boolean = false; // exist in uml but not in ecore
     container: boolean = false;
-    __info_of__container: Info = {type: 'boolean', txt: "A reference is a container if it has an opposite that is a containment."};
     opposite?: Pointer<DReference>;
     target: Pointer<DClass, 0, 'N', LClass> = [];
     edges: Pointer<DEdge, 0, 'N', LEdge> = [];
@@ -3805,6 +3841,7 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
     aggregation!: boolean;
     containment!: boolean;
     container!: boolean;
+    __info_of__container: Info = {type: 'boolean', txt: "A reference is a container if it has an opposite that is a containment."};
 
     rootable?:boolean;
     __info_of__rootable: Info = {type:"boolean | undefined",
@@ -3826,7 +3863,7 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
 
 
 
-    protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
+    protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}, deep: boolean = true, crossRef: boolean = true): Json {
         if (loopDetectionObj[c.data.id]) return Log.exx('Cannot serialize in ecore, found loop', {loopDetectionObj, c});
         loopDetectionObj[c.data.id] = c.data;
         const model: GObject = {};
@@ -4123,7 +4160,7 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
     isIoT: boolean = false;
     allowCrossReference!:boolean;
 
-    protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
+    protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}, deep: boolean = true, crossRef: boolean = true): Json {
         if (loopDetectionObj[c.data.id]) return Log.exx('Cannot serialize in ecore, found loop', {loopDetectionObj, c});
         loopDetectionObj[c.data.id] = c.data;
         const model = {};
@@ -4270,7 +4307,7 @@ export class LEnumLiteral<Context extends LogicContext<DEnumLiteral> = any, C ex
     ordinal!: this["value"];
     literal!: string;
 
-    protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
+    protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}, deep: boolean = true, crossRef: boolean = true): Json {
         if (loopDetectionObj[c.data.id]) return Log.exx('Cannot serialize in ecore, found loop', {loopDetectionObj, c});
         loopDetectionObj[c.data.id] = c.data;
         const json: Json = {};
@@ -4429,17 +4466,18 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
     literals!: LEnumLiteral[];
     ordinals!: LEnumLiteral[]; // literal array ordered by ordinal number
 
-    protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
+    protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}, deep: boolean = true, crossRef: boolean = true): Json {
         if (loopDetectionObj[c.data.id]) return Log.exx('Cannot serialize in ecore, found loop', {loopDetectionObj, c});
-        loopDetectionObj[c.data.id] = c.data;
         loopDetectionObj[c.data.id] = c.data;
         const json: Json = {};
         let d = c.data;
-        if (d.instanceClassName) json[ECoreEnum.instanceTypeName] = d.instanceClassName;
+        const literals = deep ? c.proxyObject.literals.map(l => l.generateEcoreJson(loopDetectionObj, deep, crossRef)) : [];
         json[ECoreEnum.xsitype] = 'ecore:EEnum';
         json[ECoreEnum.namee] = d.name;
+        if (d.instanceClassName) json[ECoreEnum.instanceTypeName] = d.instanceClassName;
         json[ECoreEnum.serializable] = d.serializable ? "true" : "false";
-        json[ECoreEnum.eLiterals] = c.proxyObject.literals.map(l => l.generateEcoreJson(loopDetectionObj));
+        // keep sub-elements last
+        if (literals.length) json[ECoreEnum.eLiterals] = literals;
         return json; }
 
     public duplicate(deep: boolean = true): this {
@@ -4744,33 +4782,22 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
             "<br/> EdgeStarter is a collection of data useful to start a &lt;Edge /&gt; in JSX."}
 
 
-    ownEcore!: GObject;
-    crossEcore!: GObject;
-    __info_of__ownEcore: Info = {type: 'Object', txt: 'Returns an object having the same structure as an ecore file, it can be serialized as text to ecore/json or ecore/xmi formats with API.\n' +
-            'Model dependencies are merged in a single model.'};
-    __info_of__crossEcore: Info = {type: 'Object', txt: 'Returns an object having the same structure as an ecore file, it can be serialized as text to ecore/json or ecore/xmi formats with API.\n' +
-            'Model dependencies are kept as dependency links in the root element.'};
-    get_ownEcore(c: Context): GObject { return this.generateEcoreJson_impl(c, {}, false); }
-    get_crossEcore(c: Context): GObject { return this.generateEcoreJson_impl(c, {}, true); }
-
-    protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}, crossRef: boolean = true): Json {
+    protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}, deep: boolean = true, crossRef: boolean = true): Json {
         if (loopDetectionObj[c.data.id]) return Log.exx('Cannot serialize in ecore, found loop', {loopDetectionObj, c});
         loopDetectionObj[c.data.id] = c.data;
         const json: GObject = {};
 
-        // if it's M2 metamodel
-        if (c.data.isMetamodel) {
-            const packageArr: Json[] = (crossRef ? this.get_crossPackages(c) : this.get_packages(c))
-                .map(p => p.generateEcoreJson(loopDetectionObj));
+        let packages: Json[] = [];
+        let isM2 = c.data.isMetamodel;
+        if (deep && isM2) {
+             packages = (crossRef ? this.get_crossPackages(c) : this.get_packages(c))
+                .map(p => p.generateEcoreJson(loopDetectionObj, deep, crossRef));
             // return (context.proxyObject.packages[0])?.generateEcoreJson(loopDetectionObj);
-            json[ECoreRoot.ecoreEPackage] = packageArr;
-            return json;
         }
 
-        // if it's M1 model
-        // let serializeasroot = context.proxyObject.isRoot && loopDetectionObj.length; // if rootobj is nested because you started the serialization from another node, i prevent it generating root content
-        for (let obj of c.proxyObject.roots) { json[obj.ecoreRootName] = obj.generateEcoreJson(loopDetectionObj); }
-
+        // keep sub-elements last
+        if (packages.length) json[ECoreRoot.ecoreEPackage] = packages;
+        if (deep && !isM2) for (let obj of c.proxyObject.roots) { json[obj.ecoreRootName] = obj.generateEcoreJson(loopDetectionObj, deep, crossRef); }
         return json; }
 
     public addPackage(name?: DPackage["name"], uri?: DPackage["uri"], prefix?: DPackage["prefix"]): LPackage { return this.cannotCall("addPackage"); }
@@ -5977,11 +6004,10 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     }
 
 
-    protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
+    protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}, deep: boolean = true, crossRef: boolean = true): Json {
         if (loopDetectionObj[c.data.id]) return Log.exx('Cannot serialize in ecore, found loop', {loopDetectionObj, c});
         loopDetectionObj[c.data.id] = c.data;
         let asEcoreRoot = (c.proxyObject.isRoot);
-        // todo: actually use this loopdetectionobj
         const json: GObject = {};
         if (asEcoreRoot) {
             console.log("generate object ecore", {c, asEcoreRoot, json});
@@ -5992,13 +6018,15 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
             json["xmlns:" + ( lc ? (lc.father.uri + "." +lc.father.name) : "shapeless.model.uri")] = 'http://www.eclipse.org/emf/2002/Ecore';
         }
 
-        let features = c.proxyObject.features || [];
+        let features = deep ? c.proxyObject.features : [];
         console.log("features", {features});
+
+        // keep sub-elements last
         for (let f of features) {
             if (!f) continue;
             let meta = f.instanceof;
             if (meta?.volatile) { continue; }
-            (!json[f.name]) && (json[f.name] = f.generateEcoreJson(loopDetectionObj));
+            (!json[f.name]) && (json[f.name] = f.generateEcoreJson(loopDetectionObj, deep, crossRef));
         }
         return json; }
 
@@ -7395,23 +7423,29 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         return U.arrayMergeInPlace(freeObjects, boundObjects, literals as any);
     }
 
-    protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}): Json {
+    protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}, deep: boolean = true, crossRef: boolean = true): Json {
         if (loopDetectionObj[c.data.id]) return Log.exx('Cannot serialize in ecore, found loop', {loopDetectionObj, c});
         loopDetectionObj[c.data.id] = c.data;
-        let values = this.get_values(c, true, false, true, false, false);//, false, undefined, "literal_str");
-        delete values["type"];
+        let values: any[] = deep ? this.get_values(c, true, false, true,
+            false, false, false, undefined, "literal_str") : [];
+        delete (values as any)["type"];
+        let mid = this.get_model(c)?.id;
+        if (!crossRef && mid) {
+            values = values.filter(v=> v !== undefined && v !== null).filter(v => L.isL(v) ? ((v as LModelElement)?.model?.id === mid) : true);
+        }
         let ret: any = [];
-        the_loop: for (let v of values){
+        the_loop: for (let v of values) {
             let l: LObject | LEnumLiteral = v as any;
             if (!l?.__isProxy) { ret.push(l); continue; }
             switch (l.className){
                 case "DOperation": continue the_loop;
                 case "DEnumLiteral": ret.push((l as LEnumLiteral).generateEcoreJsonM1()); break;
-                default: ret.push(l.generateEcoreJson(loopDetectionObj)); break;
+                default: ret.push(l.generateEcoreJson(loopDetectionObj, deep, crossRef)); break;
             }
         }
         // ret = ret.filter((j: any) => (j !== undefined || j !== ''));
-        return (ret.length <= 1) ? ret[0] : ret; }
+        return (ret.length <= 1) ? ret[0] : ret;
+    }
 
     protected get_toString(context: Context): () => string { return () => this._toString(context); }
     protected _toString(context: Context): string {

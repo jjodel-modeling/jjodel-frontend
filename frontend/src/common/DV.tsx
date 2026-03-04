@@ -1,26 +1,32 @@
+import type {
+    Pointer,
+    GObject,
+    Dictionary,
+} from '../joiner';
+
 import {
-    DGraphElement, Dictionary,
+    DGraphElement,
     DModelElement,
     DViewElement,
     DViewPoint,
     DVoidEdge,
     EdgeBendingMode,
-    GObject,
-    GraphPoint, LPointerTargetable, LViewElement,
-    Pointer,
+    GraphPoint,
+    LPointerTargetable,
+    LViewElement,
     RuntimeAccessible,
     ShortAttribETypes as SAType,
-    U, Draggable, Measurable,
+    U,
+    Draggable, Measurable,
     Language,
     store,
     SetRootFieldAction,
-    bool,
+    LanguageObject,
 } from '../joiner';
 import React, {ReactNode, useState} from "react";
 import {PaletteType} from "../view/viewElement/view";
 import "./error.scss";
 import { ErrorDisplay } from "./ErrorPortal";
-import { LanguageObject } from "../joiner/classes";
 
 const notificationType: 'classic'|'alert'|'notification' = 'classic';
 
@@ -34,8 +40,8 @@ export class DV {
     public static refresh(){
         let s = store.getState();
         let newLanguages = DV.defaultLanguages();
-        if (!s.languages) s.languages = newLanguages;
-        SetRootFieldAction.new('clonedCounter', (s as any).clonedCounter + 1);
+        s.languages = newLanguages;
+        SetRootFieldAction.new('clonedCounter', ((s as any).clonedCounter || 0) + 1);
         return newLanguages;
     }
 
@@ -375,10 +381,8 @@ strescape -> ["\\\\/bfnrt] {% id %}
 
         ret['eCore/JSON'] = new Language(
             {javascript:{allowPartials: true, __str: `function(modelData) {
-    let ecore = modelData.ecore;
-    let skipKeys = ['eStructuralFeatures', 'eParameters', 'eClassifiers', 'eOperations', 'eSubpackages', 'eLiterals'];
+    let ecore = modelData.ecore; // or: modelData.shallowEcore to exclude sub-elements.
     // remove sub-element collections to keep the scope limited to current element.
-    for (let key of skipKeys) { delete ecore[key]; }
     return JSON.stringify(ecore, null, 4);
 }`}},
             {javascript:{allowPartials: true, __str:`function(text) {

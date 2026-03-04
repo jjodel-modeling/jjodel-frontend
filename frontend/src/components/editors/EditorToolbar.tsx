@@ -6,7 +6,7 @@
 
 import React, { useState, useCallback, ReactNode } from 'react';
 import './EditorToolbar.scss';
-import {GenericProps} from "../../joiner/types";
+import {GenericProps} from "../../joiner";
 
 export interface EditorToolbarProps extends GenericProps {
   /** Titolo/label dell'editor (string o ReactNode per custom event name inputs) */

@@ -15,7 +15,8 @@ import {
     SetFieldAction,
     store,
     TRANSACTION,
-    U
+    U,
+    ProjectPointers
 } from '../../joiner';
 import Storage from "../../data/storage";
 
@@ -23,7 +24,6 @@ import {UpdateProjectRequest} from "../DTO/UpdateProjectRequest";
 import Api from "../api";
 import {duplicateProject} from "../../pages/components/Project";
 import {CollabClearHistoryAction, CollabRefreshAction, COMMIT} from "../../redux/action/action";
-import {ProjectPointers} from "../../joiner/classes";
 import {DTOProjectGetAll} from "../DTO/GetAllProjects";
 import {ProjectResponseDTO} from "../DTO/ProjectResponseDTO";
 import { getNextVersionNumber, formatVersion } from '../../utils/versionUtils';

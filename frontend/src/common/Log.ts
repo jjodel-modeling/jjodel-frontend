@@ -1,6 +1,6 @@
-import {Dictionary, MyError, RuntimeAccessible, windoww} from "../joiner";
-import {U} from "./U";
-import {NotBool} from "../joiner/types";
+import type {NotBool, Dictionary} from "../joiner";
+import { MyError, RuntimeAccessible, windoww, U} from "../joiner";
+
 
 export type LoggerType = "l" | "i" | "w" | "e" | "ex" | "eDev" | "exDev";
 export class LoggerCategoryState{

@@ -9,9 +9,7 @@ import {
     transientProperties,
     SetFieldAction,
     TRANSACTION,
-    Size
-} from "../../../joiner";
-import {
+    Size,
     DState,
     DGraph,
     LGraph,
@@ -22,7 +20,7 @@ import {
     Constructors,
     DPointerTargetable
 } from "../../../joiner";
-import {DefaultNode} from "../../../joiner/components";
+import {DefaultNode} from "../../../joiner";
 import ContextMenu from "../../contextMenu/ContextMenu";
 import { FeaturesPalette, getFeatureByDragType } from "../../FeaturesPalette";
 import { CanvasExportService, ExportFormat } from "../../../services/CanvasExportService";

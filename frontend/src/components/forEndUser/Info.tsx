@@ -2,7 +2,7 @@ import {ReactNode} from "react";
 import "./Info.scss"
 
 import type {GObject, Overlap} from "../../joiner";
-import {GenericProps} from "../../joiner/types";
+import {GenericProps} from "../../joiner";
 
 
 export function Info(props: AllProps) {

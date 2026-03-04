@@ -23,6 +23,7 @@ export class Info {
     positive?: boolean; // for numeric types
     digits?: number; // for decimal types validation
     step?: number; // for decimal types numeric spinner increase
+    isAlias?: boolean; // if the property is a fault-tolerance fallback, and should be excluded from console live documentation.
 
     static grid: Info = {type:`Point & {center: left|right|top|bottom|center|tl|tr|bl|br, visible: boolean, type: radial | cartesian}`, txt: `If present, sub-elements will align to a cartesian grid this.
 A grid must be applied to a graph. it will align his vertexes to rows and columns equally spaced.

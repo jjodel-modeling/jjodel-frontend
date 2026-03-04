@@ -1,5 +1,6 @@
 import React, { Dispatch, ReactElement, memo, useCallback, useMemo, useEffect, useRef } from 'react';
 import { connect } from 'react-redux';
+import type { FakeStateProps } from '../../joiner';
 import {
     DState,
     LModel,
@@ -7,7 +8,6 @@ import {
     LPointerTargetable,
     SetRootFieldAction,
 } from '../../joiner';
-import { FakeStateProps } from '../../joiner/types';
 import { useStateIfMounted } from 'use-state-if-mounted';
 import { useTreeViewPanel, ElementAction } from '../../contexts/TreeViewPanelContext';
 
