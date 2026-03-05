@@ -172,7 +172,6 @@ export class AI{
     }
 
     static getActiveVersion(provider?: TAIProvider): AIVersion | null {
-        console.log('getActiveVersion', {p0:provider, p1: JodieConfig.current.activeProvider});
         if (!provider) provider = JodieConfig.current.activeProvider;
         return AI[provider].versions[AIConfig.get(provider).model] || null;
     }

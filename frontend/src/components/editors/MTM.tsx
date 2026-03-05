@@ -30,7 +30,7 @@ import EditorToolbar from './EditorToolbar';
 import EditorFullscreenModal from './EditorFullscreenModal';
 
 // Use centralized Monaco configuration
-const monacooptions = baseMonacoOptions;
+const monacooptions = {...baseMonacoOptions, wordWrap: "on"} as const;
 
 let lastID: Pointer | undefined = undefined;
 export function T2MEditor(props: EditorProps & {onBlur?: (value: string|undefined, evt: Event) => void}){
@@ -192,18 +192,18 @@ export function MTMComponent(props: AllProps): JSX.Element{
 
 export const parsers = {
     'javascript': true,
-    'xtext': false,
-    'acceleo': false,
-    'langium': false,
     'nearley': true,
+    'ohm': true,
     'monarch': false,
+    'langium': false,
 };
 export const serializers = {
     'javascript': true,
     'handlebars': true,
-    'xtext': false,
-    'acceleo': false,
+    'eta': true,
+    'ohm': true,
 };
+
 const parsersArr = Object.keys(parsers);
 const serializersArr = Object.keys(serializers);
 
@@ -246,8 +246,8 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
     let defaultEnginem2t = 'handlebars';
     let m2tengine = langObj?.m2t?.engine || defaultEnginem2t;
     let t2mengine = langObj?.t2m?.engine || defaultEnginet2m;
-    let m2tobj: ParserData = langObj?.m2t?.[m2tengine];
-    let t2mobj: ParserData = langObj?.t2m?.[t2mengine];
+    let m2tobj: ParserData = (langObj?.m2t?.[m2tengine]) || {};
+    let t2mobj: ParserData = (langObj?.t2m?.[t2mengine]) || {};
 
     let t2m_placeholder: string;
     let m2t_placeholder: string;
@@ -421,7 +421,7 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
                                 a.allowPartials, val)}
                         /><span className={'my-auto ms-1'}> Allow partial {a.operation}s</span></label>
                     </Tooltip>
-                    {a.allowPartials ? <div className={'fragments d-flex ms-1'}><div className={'fill'}>{
+                    {a.allowPartials ? <div className={'fragments d-flex mx-1'}><div className={'fill'}>{
                         ['+', ...a.fragments].reverse().map(f=><div className={'fragment-btn '/* +(f === a.fragment ? 'selected btn-secondary' : 'btn-outline-secondary')*/}
                                               onClick={() => {a.setFragment(f); a.set_oldEngine('__jj_needs_reset__')}}>
                             {f === 'Default'? <span>Default</span> : <Input placeholder={'Confirm to delete'} key={f} getter={()=>f} tooltip={'double click to '+(f==='+'?'add':'rename')+' fragment'} setter={(v)=>{
@@ -457,7 +457,7 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
                             AT_TRANSACTION(()=>clearCache(language, a.engine));
                         })
                     }}>
-                        <Editor className={'mx-1'} options={monacooptions} defaultLanguage={'plaintext'} value={a.func}
+                        <Editor className={'mx-1'} options={{wordWrap: "on", wordWrapOverride1: "on", wordWrapOverride2: "on"}} defaultLanguage={'plaintext'} value={a.func}
                                 key={a.engine} onChange={(value) => a.setfunc(value || '') } />
                     </div>
                 </div>)}

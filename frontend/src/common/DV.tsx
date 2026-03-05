@@ -81,8 +81,8 @@ export class DV {
 {{>Annotations}}
 package {{name}};
 
-{{#each classes}}
-    {{>Class}}\n
+{{#each classes~}}
+    {{~>Class}}\n
 {{/each}}
 {{#each packages}}
     {{>Package}}\n
@@ -93,8 +93,8 @@ package {{name}};
 {{#each subPackages}}
     {{>Package}}\n
 {{/each}}
-{{#each classes}}
-    {{>Class}}\n
+{{#each classes~}}
+    {{~>Class}}\n
 {{/each}}
 }`,
 'Class':`{{>Annotations}}{{#if isAbstract}}abstract {{/if}}{{#if isInterface}}interface {{/if~}}
@@ -588,7 +588,6 @@ end:`
             ' transformOrigin:`${'+headstr+'.w/2}px ${'+headstr+'.h/2}px`';
         let attrs = `\n\t\t\t\tstyle={{`+styleTranslateRotate +`}}\n\t\t\t\tclassName={"` + head + ` ` + type +` preview"}`;
         let hoverAttrs = `\n\t\t\t\tstyle={{`+styleTranslateRotate +`}}\n\t\t\t\tclassName={"` + head + ` ` + type +` clickable content"} tabIndex="-1"`;
-        console.log('svgHeadTail', {head, type});
         /*switch (type) {
             default:
                 return "edge '" + head + "' with type: '" +type + "' not found";
@@ -636,8 +635,6 @@ end:`
         }*/
 
         ret = `<path ${attrs} />\n\t\t\t<path ${hoverAttrs} />`;
-        console.log('svgHeadTail', {head, type, ret});
-
         // path = `<path `;
         // ret = path + attrs + "\n\t\t\t\t" + path + hoverAttrs;
         return ret; // no wrap because of .hoverable > .preview  on root & subelements must be consecutive

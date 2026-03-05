@@ -3910,12 +3910,10 @@ export class Language {
         if (!t2m.engine) t2m.engine = Object.keys(t2m)[0] || undefined as any;
         if (!m2t.engine) m2t.engine = Object.keys(m2t)[0] || undefined as any;
         for (let k in m2t) {
-            console.log('new language m2t', {k, str:m2t[k]?.__str, def: m2t[k]?.Default, obj0: {...m2t[k]}, obj: m2t[k], part:m2t[k]?.allowPartials})
             if (typeof m2t[k] !== 'object') continue;
             if (m2t[k].allowPartials && m2t[k].__str && !m2t[k].Default) m2t[k].Default = m2t[k].__str;
         }
         for (let k in t2m) {
-            console.log('new language t2m', {k, str:t2m[k]?.__str, def: t2m[k]?.Default, obj0: {...t2m[k]}, obj: t2m[k], part: t2m[k]?.allowPartials})
             if (typeof t2m[k] !== 'object') continue;
             if (t2m[k].allowPartials && t2m[k].__str && !t2m[k].Default) t2m[k].Default = t2m[k].__str;
         }

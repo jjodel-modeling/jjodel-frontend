@@ -93,7 +93,7 @@ function JsxEditorComponent(props: AllProps) {
             onFullscreenOpen={() => setFullscreen(true)}
             initialExpanded={expand}
         />
-        {show && <div className={'mt-1'}>
+        {show && <div className={'mt-2'}>
             {/*
             Seems like this issue was fixed?
             jsx.match(/{\s*\(.+\?.+\:.+\)\s*}/gm) && <label>

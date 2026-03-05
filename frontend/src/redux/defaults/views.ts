@@ -106,9 +106,7 @@ let gridsObsolete = `
             'ret.firstPackage = packages[0]\n'+
             'ret.otherPackages = packages.slice(1)\n'+
             'ret.m1Objects = data && !data.isMetamodel ? data.allSubObjects : []\n'+
-            'console.log("[EdgeDebug] suggestedEdges:", suggestedEdges, "ref count:", (suggestedEdges.reference || []).length)\n'+
             'ret.refEdges = (suggestedEdges.reference || []).filter(e => !e.vertexOverlaps && e.sameGraph)\n'+
-            'console.log("[EdgeDebug] refEdges after filter:", ret.refEdges.length, "filtered out:", (suggestedEdges.reference || []).length - ret.refEdges.length)\n'+
             'ret.extendEdges = (suggestedEdges.extend || []).filter(e => !e.vertexOverlaps && e.sameGraph)\n'+
             udLevelG + udGridG + udSnapG +
             '}';

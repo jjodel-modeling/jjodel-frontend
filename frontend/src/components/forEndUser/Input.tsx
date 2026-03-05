@@ -280,7 +280,6 @@ export function InputComponent(props: AllProps) {
         checked,
         onDoubleClick,
         onChange, onBlur, onKeyDown} // key:`${field}.${data?.id}`
-    console.log('inputProps', {type, inputProps, formClass, props, classes});
     if (!inputProps.style.cursor) { inputProps.style.cursor = cursor; }
     switch (subtype) {
         case 'checkbox3': case 'switch': case 'slider': inputProps.className += ' ' + subtype + (oldValue===undefined?'undetermined':''); break;

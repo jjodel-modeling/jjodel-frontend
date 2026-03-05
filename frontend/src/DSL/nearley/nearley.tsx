@@ -1,12 +1,15 @@
 import {Dictionary, DModelElement, GObject, Log, RuntimeAccessible, windoww} from "../../joiner";
 
 import nearley, {Grammar, ParserOptions, Parser, Rule} from "nearley";
+
+import unparse from "./unparse_test"
 // @ts-ignore
 import compile from "nearley/lib/compile";
 // @ts-ignore
 import generate from "nearley/lib/generate";
 // @ts-ignore
 import nearleyGrammar from "nearley/lib/nearley-language-bootstrapped";
+(window as any).nearleyUnparse = unparse;
 /*
 
 const compile = require("nearley/lib/compile");

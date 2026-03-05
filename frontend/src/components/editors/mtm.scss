@@ -2,24 +2,18 @@
   display: flex;
   flex-flow: column;
 
-  label:has(input[type=checkbox])::before{
-    display: none;
-  }
-  input[type=checkbox]::after{
-    display: none;
-  }
-
   .monaco-editor-wrapper{
     flex-basis: 0;
     height: 0;
     flex-grow: 1;
   }
   .fragments{
-    height: 38px;
+    height: 2.75ic;
     overflow: hidden;
     &:hover{
       overflow: visible;
       z-index: 10000;
+      >.fill{ border-bottom: 1px solid gray; }
     }
 
     >.fill{
@@ -31,11 +25,12 @@
       justify-content: center;
       margin: auto 0;
       gap: 0.5em;
+      padding: .5em;
     }
 
     .fragment-btn:not(:has(input)) {
       height: 0;
-      padding: 0.85ic 0.516ic;
+      padding: 1ic 0.666ic;
       margin: auto;
       display: inline-flex;
       align-items: center;
@@ -100,4 +95,25 @@
       }
     }
   }
+}
+
+#root .MTM-tab {
+  label:has(input[type="checkbox"]){
+    &::before{ content: ''; display: none; }
+  }
+  input[type="checkbox"]{
+    /*background-image: url(data:image/svg+xml,%3Csvg viewBox='0 0 12 12' fill='none' stroke='white' stroke-width='2' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2 6l3 3 5-5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E);
+    appearance: none !important;
+    background-color: var(--color-accent, #475569);*/
+    &::after{ content: ''; display: none; }
+  }
+  input._Input{
+    visibility: visible !important;
+    appearance: auto !important;
+    display: block !important;
+    opacity: 1 !important;
+    margin: 0;
+    ::before, ::after { display: none !important; }
+  }
+
 }
