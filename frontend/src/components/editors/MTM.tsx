@@ -28,6 +28,8 @@ import {Tooltip} from "../forEndUser/Tooltip";
 import { baseMonacoOptions, withReadOnly } from './monacoConfig';
 import EditorToolbar from './EditorToolbar';
 import EditorFullscreenModal from './EditorFullscreenModal';
+import {ohm} from '../../DSL/ohm'
+(window as any).ohm2 = ohm;
 
 // Use centralized Monaco configuration
 const monacooptions = {...baseMonacoOptions, wordWrap: "on"} as const;

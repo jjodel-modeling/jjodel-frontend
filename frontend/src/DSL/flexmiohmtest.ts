@@ -1,5 +1,4 @@
 import * as ohm from 'ohm-js';
-import {Log, RuntimeAccessible} from "../joiner";
 
 (window as any).ohm = ohm;
 // Flexmi parser + serializers
@@ -11,6 +10,8 @@ import {Log, RuntimeAccessible} from "../joiner";
 //   flexmi.toXMI(ast)
 //   flexmi.toYAML(ast)
 //   flexmi.toFlexmi(ast)   // canonical round-trip
+
+
 // ---------------------------------------------------------------------------
 // AST TYPES
 // ---------------------------------------------------------------------------
@@ -86,43 +87,7 @@ export interface Document {
 // GRAMMAR
 // ---------------------------------------------------------------------------
 
-@RuntimeAccessible('Ohm')
-export class Ohm {
-    static flexmi_grammar: string;
-    static flexmi_semantic: string;
-    grammar: ohm.Grammar;
-    semantics: ohm.Semantics;
-
-    constructor(dsl_grammar: string) {
-        this.grammar = this.parse(dsl_grammar);
-        this.semantics = this.grammar.createSemantics();
-    }
-
-    parse(dsl_instanceText: string){
-        const match = this.grammar.match(dsl_instanceText);
-        if (match.failed()) Log.ee('Ohm grammar failed to match, reason: ' + match.message, {match});
-        return this.grammar;
-    }
-
-    addSemantics(sem: ohm.ActionDict<unknown>){
-        this.semantics.addOperation('ast', sem);
-    }
-
-    static usage_flexmi(flexmi: string){
-        let ohm = new Ohm('some grammar');
-        ohm.addSemantics({'some semantics to create proper ast well parsed': true as any});
-        return ohm.parse(flexmi)
-        /*
-        const m = grammar.match(source.trim());
-        if (m.failed()) throw new Error(m.message);
-        return sem(m).ast() as Document;
-        */
-    }
-
-}
-@RuntimeAccessible('OHM') export class OHM extends Ohm { }
-
-Ohm.flexmi_grammar = String.raw`
+const grammar = ohm.grammar(String.raw`
   Flexmi {
 
     Document
@@ -179,14 +144,15 @@ Ohm.flexmi_grammar = String.raw`
     space
      := " " | "\\t" | "\\n" | "\\r"
   }
-`;
+`);
 
 // ---------------------------------------------------------------------------
 // SEMANTICS  →  typed AST
 // ---------------------------------------------------------------------------
 
+const sem = grammar.createSemantics();
+
 // Helper used inside semantic actions — builds an ElementNode
-`
 function makeElement(
     nameNode: ohm.NonterminalNode,
     attrsIter: ohm.NonterminalNode,
@@ -196,12 +162,17 @@ function makeElement(
         type:     'Element',
         name:     nameNode.sourceString.trim(),
         attrs:    attrsIter.children.map((a) => a.ast() as Attr),
-        children: rawChildren.filter(x => x != null),
+        children: compact(rawChildren),
     };
 }
 
+function compact<T>(arr: Array<T | null | undefined>): T[] {
+    return arr.filter((x): x is T => x != null);
+}
 
-return {
+let e;
+sem.addOperation<unknown>('ast', {
+
     Document(pis, el) {
         return {
             type: 'Document',
@@ -209,10 +180,11 @@ return {
             root: el.ast() as RootNode,
         } satisfies Document;
     },
+
     Element_multiroot(_o, nodes, _c) {
         return {
             type:     'MultiRoot',
-            children: nodes.children.map(n => n.ast()).filter(x => x != null),
+            children: compact(nodes.children.map((n) => n.ast() as AnyNode | null)),
         } satisfies MultiRootNode;
     },
     Element_selfclose(_lt, name, attrs, _sl) {
@@ -261,14 +233,14 @@ return {
     TmplChild_content(_lt, nodes, _cl) {
         return {
             type:     'Content',
-            children: nodes.children.map(n => n.ast()).filter(x => x != null),
+            children: compact(nodes.children.map((n) => n.ast() as AnyNode | null)),
         } satisfies ContentNode;
     },
     TmplChild_selfclose(_lt, name, attrs, _sl) {
         return makeElement(name, attrs, []);
     },
     TmplChild_full(_lt, name, attrs, _gt, nodes, _cl, _cn, _cgt) {
-        return makeElement(name, attrs, nodes.children.map(n => n.ast()));
+        return makeElement(name, attrs, nodes.children.map((n) => n.ast() as AnyNode | null));
     },
 
     Attr(name, _eq, val) {
@@ -299,6 +271,23 @@ function rootNodes(doc: Document): AnyNode[] {
     return doc.root.type === 'MultiRoot' ? doc.root.children : [doc.root as ElementNode];
 }
 
+function findPI(doc: Document, target: string): string | null {
+    const p = doc.pis.find((pi) => pi.target === target);
+    return p ? p.content : null;
+}
+
+function attrStr(attrs: Attr[]): string {
+    return attrs.map((a) => `${a.name.raw}="${a.value}"`).join(' ');
+}
+
+function escXML(s: string): string {
+    return s
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
 // ---------------------------------------------------------------------------
 // SERIALIZER: JSON
 // ---------------------------------------------------------------------------
@@ -312,46 +301,6 @@ export function toJSON(doc: Document): string {
 // ---------------------------------------------------------------------------
 
 export function toXMI(doc: Document): string {
-    function findPI(doc: Document, target: string): string | null {
-        const p = doc.pis.find((pi) => pi.target === target);
-        return p ? p.content : null;
-    }
-    function xmiNodes(nodes: AnyNode[], out: string[], pad: string, ns: string): void {
-        function escXML(s: string): string {
-            return s
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;');
-        }
-        for (const n of nodes) {
-            if (!n) continue;
-            if (n.type === 'PI') {
-                out.push(`${pad}<!-- ?${n.target} ${n.content} -->`);
-            } else if (n.type === 'Element') {
-                const attrs = n.attrs
-                    .map((a) => {
-                        const k = a.name.exec ? `xmi:${a.name.raw.slice(1)}` : a.name.raw;
-                        return ` ${k}="${escXML(a.value)}"`;
-                    })
-                    .join('');
-                const kids = n.children.filter((c): c is ElementNode => c.type !== 'Text');
-                const text  = n.children.find((c): c is TextNode     => c.type === 'Text');
-                if (!kids.length && !text) {
-                    out.push(`${pad}<${ns}:${n.name}${attrs}/>`);
-                } else if (!kids.length && text) {
-                    out.push(`${pad}<${ns}:${n.name}${attrs}>${escXML(text.value)}</${ns}:${n.name}>`);
-                } else {
-                    out.push(`${pad}<${ns}:${n.name}${attrs}>`);
-                    xmiNodes(kids, out, pad + '  ', ns);
-                    out.push(`${pad}</${ns}:${n.name}>`);
-                }
-            } else if (n.type === 'TemplateDef') {
-                out.push(`${pad}<!-- :template (not expanded in XMI) -->`);
-            }
-        }
-    }
-
     const ns = findPI(doc, 'nsuri') ?? 'model';
     const lines: string[] = [
         `<?xml version="1.0" encoding="UTF-8"?>`,
@@ -362,42 +311,72 @@ export function toXMI(doc: Document): string {
     return lines.join('\n');
 }
 
+function xmiNodes(nodes: AnyNode[], out: string[], pad: string, ns: string): void {
+    for (const n of nodes) {
+        if (!n) continue;
+        if (n.type === 'PI') {
+            out.push(`${pad}<!-- ?${n.target} ${n.content} -->`);
+        } else if (n.type === 'Element') {
+            const attrs = n.attrs
+                .map((a) => {
+                    const k = a.name.exec ? `xmi:${a.name.raw.slice(1)}` : a.name.raw;
+                    return ` ${k}="${escXML(a.value)}"`;
+                })
+                .join('');
+            const kids = n.children.filter((c): c is ElementNode => c.type !== 'Text');
+            const text  = n.children.find((c): c is TextNode     => c.type === 'Text');
+            if (!kids.length && !text) {
+                out.push(`${pad}<${ns}:${n.name}${attrs}/>`);
+            } else if (!kids.length && text) {
+                out.push(`${pad}<${ns}:${n.name}${attrs}>${escXML(text.value)}</${ns}:${n.name}>`);
+            } else {
+                out.push(`${pad}<${ns}:${n.name}${attrs}>`);
+                xmiNodes(kids, out, pad + '  ', ns);
+                out.push(`${pad}</${ns}:${n.name}>`);
+            }
+        } else if (n.type === 'TemplateDef') {
+            out.push(`${pad}<!-- :template (not expanded in XMI) -->`);
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // SERIALIZER: YAML
 // ---------------------------------------------------------------------------
 
 export function toYAML(doc: Document): string {
-    function yamlNodes(nodes: AnyNode[], out: string[], pad: string): void {
-        for (const n of nodes) {
-            if (!n) continue;
-            if (n.type === 'PI') {
-                out.push(`${pad}- "?${n.target}": ${n.content}`);
-            } else if (n.type === 'Element') {
-                const kids = n.children.filter((c): c is ElementNode => c.type !== 'Text');
-                const text  = n.children.find((c): c is TextNode     => c.type === 'Text');
-                out.push(`${pad}- ${n.name}:`);
-                for (const a of n.attrs)
-                    out.push(`${pad}    ${a.name.raw}: "${a.value}"`);
-                if (text)
-                    out.push(`${pad}    _text: "${text.value}"`);
-                if (kids.length)
-                    yamlNodes(kids, out, pad + '    ');
-            } else if (n.type === 'TemplateDef') {
-                const name = n.attrs.find((a) => a.name.raw === 'name')?.value ?? '?';
-                out.push(`${pad}- ":template":`);
-                out.push(`${pad}    name: "${name}"`);
-                for (const p of n.params) {
-                    const pn = p.attrs.find((a) => a.name.raw === 'name')?.value ?? '?';
-                    out.push(`${pad}    - ":param": "${pn}"`);
-                }
-            }
-        }
-    }
     const lines: string[] = [];
     for (const pi of doc.pis) lines.push(`"?${pi.target}": ${pi.content}`);
     lines.push('nodes:');
     yamlNodes(rootNodes(doc), lines, '  ');
     return lines.join('\n');
+}
+
+function yamlNodes(nodes: AnyNode[], out: string[], pad: string): void {
+    for (const n of nodes) {
+        if (!n) continue;
+        if (n.type === 'PI') {
+            out.push(`${pad}- "?${n.target}": ${n.content}`);
+        } else if (n.type === 'Element') {
+            const kids = n.children.filter((c): c is ElementNode => c.type !== 'Text');
+            const text  = n.children.find((c): c is TextNode     => c.type === 'Text');
+            out.push(`${pad}- ${n.name}:`);
+            for (const a of n.attrs)
+                out.push(`${pad}    ${a.name.raw}: "${a.value}"`);
+            if (text)
+                out.push(`${pad}    _text: "${text.value}"`);
+            if (kids.length)
+                yamlNodes(kids, out, pad + '    ');
+        } else if (n.type === 'TemplateDef') {
+            const name = n.attrs.find((a) => a.name.raw === 'name')?.value ?? '?';
+            out.push(`${pad}- ":template":`);
+            out.push(`${pad}    name: "${name}"`);
+            for (const p of n.params) {
+                const pn = p.attrs.find((a) => a.name.raw === 'name')?.value ?? '?';
+                out.push(`${pad}    - ":param": "${pn}"`);
+            }
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -416,9 +395,6 @@ export function toFlexmi(doc: Document): string {
 }
 
 function flexmiNodes(nodes: AnyNode[], out: string[], pad: string): void {
-    function attrStr(attrs: Attr[]): string {
-        return attrs.map((a) => `${a.name.raw}="${a.value}"`).join(' ');
-    }
     for (const n of nodes) {
         if (!n) continue;
         if (n.type === 'PI') {
@@ -450,6 +426,16 @@ function flexmiNodes(nodes: AnyNode[], out: string[], pad: string): void {
             out.push(`${pad}</:template>`);
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// PUBLIC API
+// ---------------------------------------------------------------------------
+
+export function parse(source: string): Document {
+    const m = grammar.match(source.trim());
+    if (m.failed()) throw new Error(m.message);
+    return sem(m).ast() as Document;
 }
 
 export const flexmi = { parse, toJSON, toXMI, toYAML, toFlexmi };
