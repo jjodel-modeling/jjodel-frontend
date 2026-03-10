@@ -1476,7 +1476,15 @@ export class U {
             prefix = s.substring(0, i);
             num = 1 + (+matches[1]);
         }
-        if (increaseWhile) while (increaseWhile(prefix + num)) { num++; }
+        let limit = 10000;
+        if (increaseWhile) while (increaseWhile(prefix + num)) {
+            num++;
+            limit--;
+            if (limit <= 0) {
+                Log.eDevv('naming deduplicator stuck', {increaseWhile: increaseWhile?.toString(), s, prefix, num, allowLastNonNumberChars, allowDecimal});
+                return 'invalid_name_' + new Date().getTime();
+            }
+        }
         return prefix + num; }
 
 
@@ -1606,7 +1614,7 @@ export class U {
         return arr.reduce((acc, val, i) => {
             // @ts-ignore
             let key: string | number = null as any;
-            if (!getKey) key = val as any;
+            if (getKey === undefined) key = val as any;
             else if (typeof getKey === 'string') key = (val || {} as any)[getKey] as any;
             else if (typeof getKey === 'function') key = getKey(val);
             // else key = i;
@@ -1617,7 +1625,7 @@ export class U {
         }, {});
     }
 
-    static objectFromArrayValues<T extends any>(arr: (string | number)[], val: T = true as T): Dictionary<string | number, T> {
+    static objectFromArrayValues<K extends string | number, T extends any>(arr: K[], val: T = true as T): Dictionary<K, T> {
         // @ts-ignore
         return arr.reduce((acc, v) => { acc[v] = val; return acc; }, {});
         /*let ret: Dictionary = {};

@@ -1146,7 +1146,7 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
                 // console.log('redux init', {action, oldState, initialState});
                 return oldState;
             }
-            if (!(action?.className)) { Log.exDevv('unexpected action type:', action.type); return oldState; }
+            if (!(action?.className)) { Log.exDevv('unexpected action type:', action.type, action); return oldState; }
             let ret = doreducer(oldState, action);
             if (ret === oldState) { return ret; }
             ret.timestamp = Date.now();
@@ -1402,9 +1402,20 @@ function test(){
     console.log('t2m test', parseT2M('Emfatic', s, true, undefined, undefined, 'DModel'));
 }
 
+function fixEnv(){
+    console.log("fix env start", {meta: import.meta, menv:(import.meta as any).env, process:(window as any).process, penv:(window as any).env});
+    const process = (window as any).process.env = (import.meta as any).env;
+    const prefix = "VITE_";
+    for (const k in process) {
+        if (k.indexOf(prefix) === 0) process['JODEL_' + k.substring(prefix.length)] = process[k];
+    }
+    console.log("fix env end", {meta: import.meta, menv:(import.meta as any).env, process, penv:process.env});
+}
 export async function stateInitializer() {
     console.warn('stateinitializer');
     RuntimeAccessibleClass.fixStatics();
+    fixEnv();
+
     let dClassesMap: Dictionary<string, typeof DPointerTargetable> = {};
     let lClassesMap: Dictionary<string, typeof LPointerTargetable> = {};
     for (let name in RuntimeAccessibleClass.classes) {
@@ -1445,7 +1456,7 @@ export async function stateInitializer() {
         if (isProjectPage) {
             let pid: Pointer<DProject> = U.getProjectID_URL() as string;
             const project = await ProjectsApi.getOne(pid);
-            // console.log('11 project load api response', {project, isOff:U.isOffline(), userid:DUser.current, user:DUser.getUser()});
+            console.log('11 project load api response', {project, isOff:U.isOffline(), userid:DUser.current, user:DUser.getUser()});
             if (!project) {
                 // todo: maybe add a retry counter in hash params and reload?
                 console.error('failed to get project', {project});
@@ -1477,6 +1488,8 @@ export async function stateInitializer() {
                     // setTimeout(recursiveCheck, 0);
                 });
             }
+            console.log('12 project load api response', {project, isOff:U.isOffline(), userid:DUser.current, user:DUser.getUser()});
+
             if (!project.state) {
                 // state = {...store.getState()} as DState; // NEEDS TO BE SHALLOW COPIED or the state won't update. new project just created, never saved.
                 // }

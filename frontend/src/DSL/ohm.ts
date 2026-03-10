@@ -23,6 +23,7 @@ export interface AttrName {
 export interface Attr {
     name:  AttrName;
     value: string;
+    type?: string;
 }
 
 export interface PINode {
@@ -90,23 +91,31 @@ export interface Document {
 export class Ohm {
     static flexmi_grammar: string;
     static flexmi_semantic: string;
-    grammar: ohm.Grammar;
-    semantics: ohm.Semantics;
+    static exampleM1: string;
+    private grammar: ohm.Grammar;
+    private semantics: ohm.Semantics;
 
     constructor(dsl_grammar: string) {
-        this.grammar = this.parse(dsl_grammar);
+        this.grammar = ohm.grammar(dsl_grammar);
         this.semantics = this.grammar.createSemantics();
     }
 
-    parse(dsl_instanceText: string){
+    public parse(dsl_instanceText: string){
         const match = this.grammar.match(dsl_instanceText);
+        console.log('ohm', {match, t:this});
         if (match.failed()) Log.ee('Ohm grammar failed to match, reason: ' + match.message, {match});
-        return this.grammar;
+        let ret = this.semantics(match);
+        console.log('ohm 2', {ret, match, t:this});
+        let ast = ret.ast() as Document;
+        console.log('ohm 3', {ast, ret, match, t:this});
+        return ast;
     }
 
     addSemantics(sem: ohm.ActionDict<unknown>){
         this.semantics.addOperation('ast', sem);
+        return this;
     }
+
 
     static usage_flexmi(flexmi: string){
         let ohm = new Ohm('some grammar');
@@ -181,115 +190,128 @@ Ohm.flexmi_grammar = String.raw`
   }
 `;
 
-// ---------------------------------------------------------------------------
-// SEMANTICS  →  typed AST
-// ---------------------------------------------------------------------------
-
-// Helper used inside semantic actions — builds an ElementNode
-`
-function makeElement(
-    nameNode: ohm.NonterminalNode,
-    attrsIter: ohm.NonterminalNode,
-    rawChildren: Array<AnyNode | null>,
-): ElementNode {
+Ohm.flexmi_semantic = String.raw`
+() => {
+    function makeElement(nameNode, attrsIter = [], rawChildren = []) {
+        let obj = {
+            // type:     'Element',
+            _tagName:     nameNode.sourceString.trim(),
+        };
+        let attrs = attrsIter.children.map(a => a.ast());
+        console.log('makeelement ' + obj._tagName, {obj, attrs, rawChildren});
+        for (let attr of attrs) {
+           obj[attr.name] = attr.value;
+        }
+        for (let attr of rawChildren.filter(e=>!!e)) {
+           if (!obj[attr._tagName]) obj[attr._tagName] = [];
+           obj[attr._tagName].push(attr);
+           delete attr._tagName;
+        }
+        return obj;
+    }
+    
     return {
-        type:     'Element',
-        name:     nameNode.sourceString.trim(),
-        attrs:    attrsIter.children.map((a) => a.ast() as Attr),
-        children: rawChildren.filter(x => x != null),
-    };
-}
-
-
-return {
-    Document(pis, el) {
-        return {
-            type: 'Document',
-            pis:  pis.children.map((p) => p.ast() as PINode),
-            root: el.ast() as RootNode,
-        } satisfies Document;
-    },
-    Element_multiroot(_o, nodes, _c) {
-        return {
-            type:     'MultiRoot',
-            children: nodes.children.map(n => n.ast()).filter(x => x != null),
-        } satisfies MultiRootNode;
-    },
-    Element_selfclose(_lt, name, attrs, _sl) {
-        return makeElement(name, attrs, []);
-    },
-    Element_full(_lt, name, attrs, _gt, nodes, _cl, _cn, _cgt) {
-        return makeElement(name, attrs, nodes.children.map((n) => n.ast() as AnyNode | null));
-    },
-
-    Node_selfclose(_lt, name, attrs, _sl) {
-        return makeElement(name, attrs, []);
-    },
-    Node_full(_lt, name, attrs, _gt, nodes, _cl, _cn, _cgt) {
-        return makeElement(name, attrs, nodes.children.map((n) => n.ast() as AnyNode | null));
-    },
-    Node_text(chars) {
-        const v = chars.sourceString.trim();
-        return v ? ({ type: 'Text', value: v } satisfies TextNode) : null;
-    },
-    Node(n) { return n.ast(); },
-
-    PI(_lt, target, body, _close) {
-        return {
+        Document: (pis, el) => {
+            let root = el.ast();            
+            delete root._tagName;
+            return root;
+        },
+        /*Document(pis, el) {
+        // pis = processing instructions, like <?nsuri psl?, <?import some.model?>, <?include other.flexmi?>
+        // ignored in this version
+        return el.ast();
+            return {
+                type: 'Document',
+                pis:  pis.children.map(p => p.ast()),
+                root: el.ast(),
+            }
+        },*/
+        Element_multiroot(_o, nodes, _c) {
+            return {
+                type:     'MultiRoot',
+                children: nodes.children.map(n => n.ast()).filter(x => x != null),
+            };
+        },
+        Element_selfclose: (_lt, name, attrs, _sl) => makeElement(name, attrs, []),
+        Element_full: (_lt, name, attrs, _gt, nodes, _cl, _cn, _cgt) => (
+            makeElement(name, attrs, nodes.children.map(n => n.ast()))
+        ),
+    
+        Node_selfclose: (_lt, name, attrs, _sl) => makeElement(name, attrs, []),
+        Node_full: (_lt, name, attrs, _gt, nodes, _cl, _cn, _cgt) => (
+            makeElement(name, attrs, nodes.children.map(n => n.ast()))
+        ),
+        Node_text(chars) {
+            const v = chars.sourceString.trim();
+            return v ? ({ type: 'Text', value: v }) : null;
+        },
+        Node: n => n.ast(),
+    
+        PI: (_lt, target, body, _close) => ({
             type:    'PI',
             target:  target.sourceString.trim(),
             content: body.sourceString.trim(),
-        } satisfies PINode;
-    },
-
-    TemplateDef(_lt, attrs, _gt, children, _cl) {
-        const kids = children.children.map((c) => c.ast() as AnyNode);
-        return {
-            type:     'TemplateDef',
-            attrs:    attrs.children.map((a) => a.ast() as Attr),
-            params:   kids.filter((k): k is ParamNode   => k?.type === 'Param'),
-            content:  kids.filter((k): k is ContentNode => k?.type === 'Content'),
-            elements: kids.filter((k): k is ElementNode => k?.type === 'Element'),
-        } satisfies TemplateDefNode;
-    },
-    TmplChild_param(_lt, attrs, _sl) {
-        return {
+        }),
+    
+        TemplateDef(_lt, attrs, _gt, children, _cl) {
+            const kids = children.children.map(c => c.ast());
+            return {
+                type:     'TemplateDef',
+                attrs:    attrs.children.map(a => a.ast()),
+                params:   kids.filter(k => k?.type === 'Param'),
+                content:  kids.filter(k => k?.type === 'Content'),
+                elements: kids.filter(k => k?.type === 'Element'),
+            }
+        },
+        TmplChild_param: (_lt, attrs, _sl) => ({
             type:  'Param',
-            attrs: attrs.children.map((a) => a.ast() as Attr),
-        } satisfies ParamNode;
-    },
-    TmplChild_content(_lt, nodes, _cl) {
-        return {
+            attrs: attrs.children.map(n => a.ast())
+        }),
+        TmplChild_content: (_lt, nodes, _cl) => ({
             type:     'Content',
             children: nodes.children.map(n => n.ast()).filter(x => x != null),
-        } satisfies ContentNode;
-    },
-    TmplChild_selfclose(_lt, name, attrs, _sl) {
-        return makeElement(name, attrs, []);
-    },
-    TmplChild_full(_lt, name, attrs, _gt, nodes, _cl, _cn, _cgt) {
-        return makeElement(name, attrs, nodes.children.map(n => n.ast()));
-    },
+        }),
+        TmplChild_selfclose: (_lt, name, attrs, _sl) => makeElement(name, attrs, []),
+        TmplChild_full: (_lt, name, attrs, _gt, nodes, _cl, _cn, _cgt) => (
+            makeElement(name, attrs, nodes.children.map(n => n.ast()))
+        ),
+    
+        Attr(name, _eq, val) {
+            name = name.ast();
+            return { name: name.raw, value: val.ast(), ...(name.exec ? {type: 'Expression'} : {}) }
+        },
+        attrName_prefixed: (_c, name) => ({ exec: true, raw: name.sourceString.trim() }),
+        attrName_plain: (name) => ({ exec: false, raw: name.sourceString.trim() }),
+        attrValue: (_oq, chars, _cq) => chars.sourceString,
+    
+        _iter: (...children) => children.map((c) => c.ast()),
+        _terminal: ()         => this.sourceString,
+    }
+}`
 
-    Attr(name, _eq, val) {
-        return {
-            name:  name.ast() as AttrName,
-            value: val.ast()  as string,
-        } satisfies Attr;
-    },
-    attrName_prefixed(_c, name) {
-        return { exec: true, raw: ':' + name.sourceString.trim() } satisfies AttrName;
-    },
-    attrName_plain(name) {
-        return { exec: false, raw: name.sourceString.trim() } satisfies AttrName;
-    },
-    attrValue(_oq, chars, _cq) {
-        return chars.sourceString;
-    },
+// <?nsuri http://example.org/library?>
+Ohm.exampleM1 = String.raw`
+<Library name="CentralLibrary">
+    <authors name="George Orwell2">
+      <books title="19842" />
+    </authors>
+    <authors name="George Orwell">
+      <books title="1984" />
+    </authors>
+</Library>`;
 
-    _iter(...children) { return children.map((c) => c.ast()); },
-    _terminal()        { return this.sourceString; },
-});
+let exampleM1_old = String.raw`
+<Library name="CentralLibrary">
+
+  <books title="1984">
+    <author name="George Orwell"/>
+  </books>
+
+  <books title="Brave New World">
+    <author name="Aldous Huxley"/>
+  </books>
+
+</Library>`;
 
 // ---------------------------------------------------------------------------
 // SHARED HELPERS
@@ -328,10 +350,11 @@ export function toXMI(doc: Document): string {
             if (!n) continue;
             if (n.type === 'PI') {
                 out.push(`${pad}<!-- ?${n.target} ${n.content} -->`);
-            } else if (n.type === 'Element') {
-                const attrs = n.attrs
-                    .map((a) => {
-                        const k = a.name.exec ? `xmi:${a.name.raw.slice(1)}` : a.name.raw;
+                continue;
+            }
+            if (n.type === 'Element') {
+                const attrs = n.attrs.map((a) => {
+                        const k = (a.type === 'Expression' ? "xmi:" : "") + a.name;
                         return ` ${k}="${escXML(a.value)}"`;
                     })
                     .join('');
@@ -346,8 +369,7 @@ export function toXMI(doc: Document): string {
                     xmiNodes(kids, out, pad + '  ', ns);
                     out.push(`${pad}</${ns}:${n.name}>`);
                 }
-            } else if (n.type === 'TemplateDef') {
-                out.push(`${pad}<!-- :template (not expanded in XMI) -->`);
+                continue;
             }
         }
     }
@@ -452,7 +474,7 @@ function flexmiNodes(nodes: AnyNode[], out: string[], pad: string): void {
     }
 }
 
-export const flexmi = { parse, toJSON, toXMI, toYAML, toFlexmi };
+export const flexmi = { toJSON, toXMI, toYAML, toFlexmi };
 (window as any).ohm = ohm;
 (window as any).flexmi = flexmi;
 export {ohm};

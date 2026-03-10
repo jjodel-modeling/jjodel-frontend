@@ -28,9 +28,13 @@ export class ProjectResponseDTO extends Response_DTO<ProjectResponseDTO, DProjec
         let pointers: Partial<ProjectPointers> = {} as any;
         pointers.id = this.id;
         pointers.author = this.author;
+
+        console.log('api get one to jodelclass', {thiss:this, pointers});
         // projects.collaborators = [] no need, because reading a project directly from backend without a load/decrypt only
         // happens with new empty projects. which can have only author and id.
-        return DProject.new2(pointers, (d)=>{
+        let ret = DProject.new2(pointers, (d) => {
+            console.log('api get one to jodelclass ctor', {thiss:this, d, pointers});
+
             for (let key in this) {
                 if (key in pointers) continue;
                 if (key in d) { (d as any)[key] = this[key]; }
@@ -45,7 +49,12 @@ export class ProjectResponseDTO extends Response_DTO<ProjectResponseDTO, DProjec
             d.creation = (this.creation ? new Date(this.creation) : new Date()).getTime();
             d.lastModified = (this.lastModified ? new Date(this.lastModified) : new Date()).getTime();
             (d as any).convertedFromDto = true;
+
+            console.log('api get one to jodelclass ctor end', {thiss:this, d, pointers});
         }, [], false); // it is already persisted in ProjectComponent -> useEffect -> load
+
+        console.log('api get one to jodelclass end', {thiss:this, ret, pointers});
+        return ret;
     }
 }
 type Missing = Omit<ProjectResponseDTO, keyof DProject>;

@@ -63,7 +63,7 @@ export function MTMComponent(props: AllProps): JSX.Element{
     // let groupsarr = Object.keys(groups);
     let languages = props.languages;
     let [editor, setEditor] = useState<boolean>(false);
-    let [language, setLanguage] = useState('JSON');
+    let [language, setLanguage] = useState(languages._selected || 'JSON');
     let [showEditor, setShowEditor] = useState(true);
     let [expand, setExpand] = useState(false);
     let [wrap, setWrap] = useState(false);
@@ -118,7 +118,12 @@ export function MTMComponent(props: AllProps): JSX.Element{
         <h1 className={"rightbar-title"}>Languages (T2M, M2M, M2T)</h1>
         <label className={'d-flex'}>
             <span className={'my-auto'}>Language&nbsp;</span>
-            <select className={'my-auto'} onChange={(e) => setLanguage(e.target.value)} value={language}>
+            <select className={'my-auto'} onChange={(e) => {
+                setLanguage(e.target.value);
+                TRANSACTION('Set favorite language',
+                    () => SetRootFieldAction.new('languages._selected', e.target.value),
+                    languages._selected, e.target.value);
+            }} value={language}>
                 <optgroup label={"languages"}>{
                     Object.keys(languages).reverse().map(k=> k === 'clonedCounter' ? null : <option value={k}>{k}</option>)
                 }</optgroup>
@@ -495,15 +500,15 @@ interface T2MOwnProps {
 interface StateProps {
     dataid?: Pointer<DModelElement> | null;
     data?: LModelElement;
-    languages: Dictionary<string, Language>;
+    languages: Dictionary<string, Language> & {_selected: string};
 }
 interface M2TStateProps {
     data?: LModelElement;
-    languages: Dictionary<string, Language>;
+    languages: Dictionary<string, Language> & {_selected: string};
 }
 interface T2MStateProps {
     data?: LModelElement;
-    languages: Dictionary<string, Language>;
+    languages: Dictionary<string, Language> & {_selected: string};
 }
 
 

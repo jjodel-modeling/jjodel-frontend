@@ -5263,12 +5263,12 @@ instanceof === undefined or missing  --> auto-detect and assign the type
     }
 
     protected set_name(val: this['name'], c: Context): boolean {
+        if (c.data.name === val) return true;
         const models: LModel[] = LModel.fromPointer(store.getState()['models']);
 
         if (models.filter((model) => { return model.name === val }).length > 0) {
             U.alert('e', 'Cannot rename the selected model, this name is already taken.');
         } else {
-            if (c.data.name === val) return true;
             TRANSACTION(this.get_name(c)+'.name', ()=>{
                 SetFieldAction.new(c.data, 'name', val, '', false);
             }, undefined, val)
@@ -5813,8 +5813,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
                 let l = c.proxyObject;
                 let s = store.getState();
                 if (!json) { Log.eDevv('t2m deletion still unsupported'); return this; }
-
-                let childNames = this.get_childNames(c);
+                let childNames = U.objectFromArrayValues(this.get_childNames(c), true);
                 let isPartial: boolean = false;
                 switch (c.data.className) {
                     default: Log.ee('L'+c.data.className.substring(1)+'.t2m() todo, still unsupported.'); return this;
@@ -5825,7 +5824,8 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
                 let newFeatures: Dictionary< Pointer | DocString<'feature.name'>, LValue> = {};
                 // START: check if it's necessary to change type
                 let parent = this.get_father(c);
-                let validMatches: SchemaMatchingScore[] = (parent as LValue|LModel).instantiableClasses(json, true, undefined, undefined, false) as any;
+                let meta = this.get_instanceof(c);
+                let validMatches: SchemaMatchingScore[] = (parent as LValue|LModel).instantiableClasses(json, true, undefined, meta, false) as any;
                 /*LValue.getInstantiableClasses(this, c maybe real problem here, json, true, undefined, undefined, false) as any;*/
                 let bestmatch = validMatches[0];
 
@@ -5871,7 +5871,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
                         if (!(k in c.data) && k in childNames) isChildKey = true;
                         if (!(k in c.data) && k in newFeatures) isChildKey = true;
                     }
-                    console.log(c.data.className+'.t2m() subkey', {isChildKey, k, v});
+                    console.log(c.data.className+'.t2m() subkey', {isChildKey, k, v, childNames, newFeatures, c});
 
                     if (!isChildKey) {
                         console.log(c.data.className+'.t2m() set key', {k, k0: prefixed_k, isChildKey, json});
@@ -6395,7 +6395,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                         if (!child2) {
                             // create a subelement or update an existing one
                             let d = DObject.new3({id: v.id || undefined, father: c.data.id as Pointer<DValue>, 'instanceof': undefined}, ()=>{}, DValue);
-                            console.log('L'+c.data.className.substring(1)+'.t2m() sub-object NEW', {d, v});
+                            console.log('L'+c.data.className.substring(1)+'.t2m() sub-object NEW ' + d.name, {gn: json.name || json.title, json, d, v});
                             child2 = L.from(d); // (this as LValue).get_addObject(c)({});
                             if (!child2) continue;
                             out.objectCreated.push(child2);

@@ -2100,6 +2100,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
 
     protected set_name(val: this["name"], c: Context): boolean {
         let name = val;
+        if (c.data.name === name) return true;
         const father: LPointerTargetable = (c.proxyObject as LModelElement).father;
         if (father) {
             const check = (father as LModelElement).children?.filter((child) => {
@@ -2781,6 +2782,7 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
         return context.data.name;
     }
     protected set_name(val: this['name'], c: Context): boolean {
+        if (c.data.name === val) return true;
         TRANSACTION(this.get_name(c)+'.name', ()=>{
             SetFieldAction.new(c.data.id, 'name', val, '', false);
         }, undefined, val)
@@ -2965,13 +2967,14 @@ export class DProject extends DPointerTargetable {
         return new Constructors(new DProject('dwc'), undefined, true, undefined)
             .DPointerTargetable().DProject(type, name, state || '', m2 || [], m1 || [], id).end(); }
 
-    static new2(pointers: Partial<ProjectPointers> & {name?: string}, callback: undefined | ((d: DProject, c: Constructors) => void), otherProjects?:LProject[], persist: boolean = true): DProject {
+    static new2(pointers: Partial<ProjectPointers> & {name?: string}, callback: undefined | ((d: DProject, c: Constructors) => void),
+                otherProjects?:LProject[], persist: boolean = true): DProject {
         let name: string = (pointers as any).name || 'Project 1';
         delete (pointers as any).name;
         // fix name
         if (!otherProjects) otherProjects = (pointers.father ? L.from(pointers.father) as LUser : LUser.getUser())?.projects || [];
         let namesMap = U.objectFromArray(otherProjects, "name");
-        name = U.increaseEndingNumber(name, false, false, s=>!namesMap[s]);
+        name = U.increaseEndingNumber(name, false, false, s => !!namesMap[s]);
 
         return new Constructors(new DProject('dwc'), pointers.father, persist, undefined)
             .DPointerTargetable().DProject('private', name, '', [], [], pointers.id).end(callback); }

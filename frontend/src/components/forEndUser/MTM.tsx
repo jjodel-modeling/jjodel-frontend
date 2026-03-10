@@ -28,6 +28,7 @@ import {Nearley} from "../../DSL/nearley/nearley";
 import {LanguageCache, notLanguageFragments, ParserData, GenericProps} from "../../joiner";
 import Handlebars from "handlebars";
 import {getLanguageCache} from "../editors/MTM";
+import {Ohm} from "../../DSL/ohm";
 
 
 export function parseT2M(language: string, text0: string, canThrow: boolean = false,
@@ -86,6 +87,32 @@ export function parseT2M(language: string, text0: string, canThrow: boolean = fa
             LOG(msg = 'T2M transformation failed, unsupported parser: ' + languageObj.engine, {language, parser:languageObj.engine, languageObj});
             if (errOutput) errOutput.msg = msg;
             return null;
+        case 'ohm':
+            let cache = getLanguageCache(language, engine);
+            let [def, sem] = (getMonoliticGlobalFunc() || '').split('╗').map(e=>e?.trim());
+            let semObj: GObject = {};
+            sem = '('+sem+')';
+            let ohm = new Ohm(def);
+            if (sem) try {
+                semObj = eval(sem);
+                if (typeof semObj === 'function') semObj = semObj();
+            } catch (e) {
+                Log.ee('Invalid semantic in ohm "'+ language +'" transformation.', {e, sem});
+                // return null;
+            }
+            if (typeof semObj !== 'object') {
+                Log.ee('Invalid semantic "' + typeof semObj + '" in ohm, semantic must be an object or a function returning an object.', {semObj, sem});
+                // return null;
+            }
+            else ohm.addSemantics(semObj);
+            try { ret = ohm.parse(text0); }
+            catch (e) {
+                console.error('T2M ohm error: ', {ret, text0, e});
+                return null;
+            }
+            // ret = ret?.ast?.() || ret;
+            console.log('ohm ret', {ret})
+            break;
         case 'nearley':
             let te = getLanguageCache(language, engine);
             let grammar = te.negrammar;

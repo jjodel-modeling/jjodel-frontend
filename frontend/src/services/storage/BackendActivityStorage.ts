@@ -19,7 +19,7 @@ import type { IActivityStorage } from './IActivityStorage';
 import Api from '../../api/api';
 
 export class BackendActivityStorage implements IActivityStorage {
-    private readonly endpoint = `${Api.persistance}/activities`;
+    private readonly endpoint = `${process.env['JODEL_PERSISTANCE']}/activities`;
 
     /**
      * Log a new activity

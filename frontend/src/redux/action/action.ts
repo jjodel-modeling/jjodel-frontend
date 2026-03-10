@@ -309,7 +309,7 @@ export class Action extends RuntimeAccessibleClass {
         this.stack = new Error().stack?.split('\n').splice( 4);
         this.subType = subType;
         this.skipCollaborative = skipCollaborative;
-        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
+        this.className = Action.cname;
     }
 
     // forces the action to fire alone ignoring a TRANSACTION or BEGIN/END blocks
@@ -392,7 +392,7 @@ export class LoadAction extends Action {
 
     constructor(state: DState | GObject, fire: boolean = true) {
         super('', state, '');
-        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
+        this.className = LoadAction.cname;
         if (fire) {
             console.log('load action firing', {thiss:this, list: t.pendingActions, t});
             this.fire();
@@ -443,7 +443,7 @@ export class SetRootFieldAction extends Action {
         super(fullpath, value, undefined, skipCollaborative);
         this.accessModifier = accessModifier;
         this.isPointer = isPointer;
-        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
+        this.className = SetRootFieldAction.cname;
         if (fire) this.fire();
     }
 
@@ -479,6 +479,7 @@ export class SetRootFieldAction extends Action {
 
 @RuntimeAccessible('SetFieldAction')
 export class SetFieldAction extends SetRootFieldAction {
+    static cname: string = 'SetFieldAction';
     static type = 'SET_ME_FIELD';
 
     static create<
@@ -585,7 +586,7 @@ export class SetFieldAction extends SetRootFieldAction {
         super(fullpath, val, accessModifier, false, isPointer, skipCollaborative);
         this.me = me;
         this.me_field = field;
-        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
+        this.className = SetFieldAction.cname;
         if (fire) this.fire();
     }
 
@@ -618,13 +619,14 @@ export class SetFieldAction extends SetRootFieldAction {
 
 @RuntimeAccessible('CollabRefreshAction')
 export class CollabRefreshAction extends Action {
+    static cname = 'CollabRefreshAction';
     static type = 'COLLAB_REFRESH';
     static create(): CollabRefreshAction { return new CollabRefreshAction(); }
     static new(): boolean { return CollabRefreshAction.create().fire(); }
 
     protected constructor() {
         super('', '', '', false);
-        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
+        this.className = CollabRefreshAction.cname;
     }
 
     fire(forceRelaunch: boolean = false): boolean {
@@ -633,13 +635,14 @@ export class CollabRefreshAction extends Action {
 }
 @RuntimeAccessible('CollabClearHistoryAction')
 export class CollabClearHistoryAction extends Action {
+    static cname: string = 'CollabClearHistoryAction';
     static type = 'COLLAB_CLEAR';
     static create(): CollabClearHistoryAction { return new CollabClearHistoryAction(); }
     static new(): boolean { return CollabClearHistoryAction.create().fire(); }
 
     protected constructor() {
         super('', '', '', false);
-        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
+        this.className = CollabClearHistoryAction.cname;
     }
 
     fire(forceRelaunch: boolean = false): boolean {
@@ -676,7 +679,7 @@ export class RedoAction extends Action {
     private constructor(amount: number = 1, forUser:Pointer<DUser>) {
         super('', amount);
         this.forUser = forUser;
-        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
+        this.className = RedoAction.cname;
     }
 }
 
@@ -694,7 +697,7 @@ export class UndoAction extends Action {
     private constructor(amount: number = 1, forUser:Pointer<DUser>) {
         super('', amount);
         this.forUser = forUser;
-        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
+        this.className = UndoAction.cname;
     }
 }
 
@@ -710,7 +713,7 @@ export class CombineHistoryAction extends Action {
     }
     private constructor() {
         super('', '');
-        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
+        this.className = CombineHistoryAction.cname;
     }
 }
 
@@ -739,7 +742,7 @@ export class CreateElementAction extends Action {
     }
     private constructor(me: DPointerTargetable, fire: boolean = true) {
         super('idlookup.' + me.id, me);
-        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
+        this.className = CreateElementAction.cname;
         this.value = me;
         if (fire) this.fire();
     }
@@ -755,29 +758,20 @@ export class CreateElementAction extends Action {
 
 @RuntimeAccessible('DeleteElementAction')
 export class DeleteElementAction extends SetFieldAction {
+    static cname: string = "DeleteElementAction";
     static type = 'DELETE_ELEMENT';
     public static create(me: Pack1<LPointerTargetable>): DeleteElementAction { return new DeleteElementAction(me as any); }
     public static new(me: Pack1<LPointerTargetable>): boolean { return new DeleteElementAction(me as any).fire(); }
 
     constructor(me: Pack1<LPointerTargetable>) {
         super(Pointers.from(me), '', undefined, undefined);
-        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
+        this.className = DeleteElementAction.cname;
     }
 }
 
-
-/*
-
-@RuntimeAccessible
-export class IDLinkAction extends Action{
-    constructor() {
-        super(IDLinkAction.name,
-    }
-    nope, uso un proxy
-}*/
-
 @RuntimeAccessible('CompositeAction')
 export class CompositeAction extends Action {
+    static cname: string = 'CompositeAction';
     static type: string = 'COMPOSITE_ACTION';
     actions: Action[] = [];
     descriptor?: ActionDescriptor;
@@ -786,8 +780,9 @@ export class CompositeAction extends Action {
     public static new(actions: Action[], launch: boolean = true): CompositeAction { return new CompositeAction(actions, launch); }
     constructor(actions: Action[], launch: boolean = false) {
         super('', '');
+        console.log('compositeact2', JSON.parse(JSON.stringify(actions || [])));
         this.actions = actions;
-        this.className = (this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name;
+        this.className = CompositeAction.cname;
         this.fromCollaborative = false;
         if (launch) this.fire();
     }
@@ -798,7 +793,7 @@ export class CompositeAction extends Action {
 }
 
 @RuntimeAccessible('ParsedAction')
-export class ParsedAction extends SetRootFieldAction {
+export abstract class ParsedAction extends SetRootFieldAction {
     // NB: actually this is never created but "converted" from other actions by adding fields
     path!: string; // path to a property in the store "something.like.this"
     pathArray!: string[]; // path splitted "like.1.this"

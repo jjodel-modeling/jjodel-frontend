@@ -224,7 +224,7 @@ export class DState extends DPointerTargetable{
     dialog_response: string = '';
     action_description: string = '';
     action_title: string = '';
-    languages!: Dictionary<string, Language>;
+    languages!: Dictionary<string, Language> & {_selected: string};
 
 
     static fixcolors(){

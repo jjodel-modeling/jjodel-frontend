@@ -1,6 +1,84 @@
 import randexp from "randexp"
 import _ from "lodash"
 
+(() => {
+    function makeElement(nameNode, attrsIter, rawChildren) {
+        return {
+            type:     'Element',
+            name:     nameNode.sourceString.trim(),
+            attrs:    attrsIter.children.map(a => a.ast()),
+            children: rawChildren.filter(x => x != null),
+        };
+    }
+
+    return {
+        Document(pis, el) {
+            return {
+                type: 'Document',
+                pis:  pis.children.map(p => p.ast()),
+                root: el.ast(),
+            }
+        },
+        Element_multiroot(_o, nodes, _c) {
+            return {
+                type:     'MultiRoot',
+                children: nodes.children.map(n => n.ast()).filter(x => x != null),
+            };
+        },
+        Element_selfclose: (_lt, name, attrs, _sl) => makeElement(name, attrs, []),
+        Element_full: (_lt, name, attrs, _gt, nodes, _cl, _cn, _cgt) => (
+            makeElement(name, attrs, nodes.children.map(n => n.ast()))
+        ),
+
+        Node_selfclose: (_lt, name, attrs, _sl) => makeElement(name, attrs, []),
+        Node_full: (_lt, name, attrs, _gt, nodes, _cl, _cn, _cgt) => (
+            makeElement(name, attrs, nodes.children.map(n => n.ast()))
+        ),
+        Node_text(chars) {
+            const v = chars.sourceString.trim();
+            return v ? ({ type: 'Text', value: v }) : null;
+        },
+        Node: n => n.ast(),
+
+        PI: (_lt, target, body, _close) => ({
+            type:    'PI',
+            target:  target.sourceString.trim(),
+            content: body.sourceString.trim(),
+        }),
+
+        TemplateDef(_lt, attrs, _gt, children, _cl) {
+            const kids = children.children.map(c => c.ast());
+            return {
+                type:     'TemplateDef',
+                attrs:    attrs.children.map(a => a.ast()),
+                params:   kids.filter(k => k?.type === 'Param'),
+                content:  kids.filter(k => k?.type === 'Content'),
+                elements: kids.filter(k => k?.type === 'Element'),
+            }
+        },
+        TmplChild_param: (_lt, attrs, _sl) => ({
+            type:  'Param',
+            attrs: attrs.children.map(n => a.ast())
+        }),
+        TmplChild_content: (_lt, nodes, _cl) => ({
+            type:     'Content',
+            children: nodes.children.map(n => n.ast()).filter(x => x != null),
+        }),
+        TmplChild_selfclose: (_lt, name, attrs, _sl) => makeElement(name, attrs, []),
+        TmplChild_full: (_lt, name, attrs, _gt, nodes, _cl, _cn, _cgt) => (
+            makeElement(name, attrs, nodes.children.map(n => n.ast()))
+        ),
+
+        Attr: (name, _eq, val)=> ({ name:  name.ast(), value: val.ast() }),
+        attrName_prefixed: (_c, name) => ({ exec: true, raw: ':' + name.sourceString.trim() }),
+        attrName_plain: (name) => ({ exec: false, raw: name.sourceString.trim() }),
+        attrValue: (_oq, chars, _cq) => chars.sourceString,
+
+        _iter: (...children) => children.map((c) => c.ast()),
+        _terminal: ()         => this.sourceString,
+    }
+})
+
 function unparse(grammar, options){
     options = options || {};
 

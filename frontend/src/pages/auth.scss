@@ -234,6 +234,8 @@
   /* Sizing */
   width: 100%;
   max-width: 420px;
+  max-height: 100%;
+  overflow: auto;
 
   /* Spacing */
   padding: var(--space-10) var(--space-8);

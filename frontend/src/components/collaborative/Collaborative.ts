@@ -1,4 +1,4 @@
-import {io} from 'socket.io-client';
+import {io, Socket} from 'socket.io-client';
 import {
     Action,
     CompositeAction, Constructors, CreateElementAction,
@@ -34,7 +34,7 @@ const ignoredRootFields: (keyof DState)[] = [
 export class Collaborative {
     static cname: string = 'Collaborative';
     // static client = io('/', {path: '/collaborative', autoConnect: false});
-    static client = io(process.env['REACT_APP_COLLABORATIVE'], {path: '/collaborative', autoConnect: false});
+    static client: Socket;
     public static online: boolean = false;
 
     private static canSend(action: Action): boolean {
@@ -50,7 +50,10 @@ export class Collaborative {
         // action.sender !== 'Collaborative Server'
         return true;
     }
+
     static async connect(id: Pointer<DProject>){
+        if (!id) id = U.getProjectID_URL() || '';
+        Collaborative.client = io(process.env['JODEL_COLLABORATIVE'], {path: '/collaborative', autoConnect: false});
         Collaborative.client.io.opts.query = {'project': id};
         Collaborative.client.connect();
         // 20s timeout for server-side socket (server config) + 5s of extra transmission delay to client.
@@ -85,14 +88,28 @@ export class Collaborative {
         return true;
     }
 
+    private static filterSender(action: GObject<Action & CompositeAction>): boolean{
+        if (action.actions) {
+            let old = action.actions;
+            action.actions = action.actions.filter(a => a.sender !== DUser.current);
+            console.log('collaborative received composite', {actions:action.actions, old, diff: U.arrayDifference(action.actions, old)});
+            if (!action.actions.length) return false;
+        }
+        else {
+            console.log('collaborative received single', {action});
+            if (action.sender === DUser.current) return false;
+        }
+        return true;
+    }
+
     static receive(action: GObject<Action & CompositeAction>) {
         let session: number = new Date().getUTCMilliseconds();
         const receivedAction: Action | CompositeAction = action;
         let ca = receivedAction as CompositeAction;
+        if (!Collaborative.filterSender(action)) return;
         ca.fromCollaborative = true;
         if (!ca.actions) {
             firedActionsNCA.push(ca);
-            //if (receivedAction.type === CreateElementAction && Constructors.pending[receivedAction.id])...
             if (receivedAction.type === CreateElementAction.type && !Constructors.pending[receivedAction.value.id]) {
                 let a = receivedAction;
                 console.log('set2 pending', {a, p:Constructors.pending[a.value.id], dict:{...Constructors.pending}});

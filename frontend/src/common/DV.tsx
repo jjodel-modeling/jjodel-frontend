@@ -27,6 +27,7 @@ import React, {ReactNode, useState} from "react";
 import {PaletteType} from "../view/viewElement/view";
 import "./error.scss";
 import { ErrorDisplay } from "./ErrorPortal";
+import {Ohm} from "../DSL/ohm";
 
 const notificationType: 'classic'|'alert'|'notification' = 'classic';
 
@@ -45,10 +46,10 @@ export class DV {
         return newLanguages;
     }
 
-    static defaultLanguages(): Dictionary<string, Language> {
+    static defaultLanguages(): Dictionary<string, Language> & {_selected: string}{
         let m2t = undefined; //  {javascript:{__str:'function(model) {\n\treturn "Not implemented, this is a placeholder.";\n}'}};
         let t2m = undefined;
-        let ret: Dictionary<string, Language> = {};
+        let ret: Dictionary<string, Language> & {_selected: string} = { _selected: 'JSON' } as any;
         ret.JSON = new Language(
             {javascript:{allowPartials: true, __str:'function(modelData) {\n\treturn JSON.stringify(modelData.deepJson, null, 4);\n}'}},
             {javascript:{allowPartials: true, __str:"function(text) {\n\treturn JSON.parse(text);\n}"}}
@@ -377,7 +378,7 @@ strescape -> ["\\\\/bfnrt] {% id %}
 }},
 );
         ret['flexmi/YAML'] = new Language(m2t, t2m);
-        ret['flexmi/XMI'] = new Language(m2t, t2m);
+        ret['flexmi/XMI'] = new Language(m2t, {ohm: {__str: Ohm.flexmi_grammar+'╗' + Ohm.flexmi_semantic, allowPartials: true, test_text: Ohm.exampleM1}});
 
         ret['eCore/JSON'] = new Language(
             {javascript:{allowPartials: true, __str: `function(modelData) {
