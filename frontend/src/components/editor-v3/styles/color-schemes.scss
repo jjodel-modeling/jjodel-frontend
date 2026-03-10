@@ -3,6 +3,10 @@
  *
  * 9 color schemes that affect node header backgrounds and accent borders.
  * Applied via v3-cs--{scheme} class on the built-in view root element.
+ *
+ * NOTE: These colors are intentionally hardcoded — each scheme defines its own
+ * decorative palette. Dark mode variants use [data-theme="dark"] from the
+ * theming system.
  */
 
 // ---------------------------------------------------------------------------
@@ -24,7 +28,7 @@
     }
 }
 
-.v3-theme--dark .v3-cs--pastel {
+:root[data-theme="dark"] .v3-cs--pastel {
     .v3-uml-class__header,
     .v3-uml-enum__header,
     .v3-uml-datatype__header {
@@ -51,7 +55,7 @@
     .v3-simplified__badge--ref { background: rgba(20, 184, 166, 0.15); color: #0d9488; }
 }
 
-.v3-theme--dark .v3-cs--ocean {
+:root[data-theme="dark"] .v3-cs--ocean {
     .v3-uml-class__header,
     .v3-uml-enum__header,
     .v3-uml-datatype__header {
@@ -78,7 +82,7 @@
     .v3-simplified__badge--ref { background: rgba(101, 163, 13, 0.12); color: #65a30d; }
 }
 
-.v3-theme--dark .v3-cs--forest {
+:root[data-theme="dark"] .v3-cs--forest {
     .v3-uml-class__header,
     .v3-uml-enum__header,
     .v3-uml-datatype__header {
@@ -102,7 +106,7 @@
     .v3-simplified__badge--ref { background: rgba(234, 179, 8, 0.12); color: #ca8a04; }
 }
 
-.v3-theme--dark .v3-cs--sunset {
+:root[data-theme="dark"] .v3-cs--sunset {
     .v3-uml-class__header,
     .v3-uml-enum__header,
     .v3-uml-datatype__header {
@@ -126,7 +130,7 @@
     }
 }
 
-.v3-theme--dark .v3-cs--monochrome {
+:root[data-theme="dark"] .v3-cs--monochrome {
     .v3-uml-class__header,
     .v3-uml-enum__header,
     .v3-uml-datatype__header,
@@ -156,7 +160,7 @@
     .v3-simplified__badge--op { background: rgba(14, 165, 233, 0.15); color: #0ea5e9; }
 }
 
-.v3-theme--dark .v3-cs--neon {
+:root[data-theme="dark"] .v3-cs--neon {
     .v3-uml-class__header {
         background: rgba(124, 58, 237, 0.12);
     }
@@ -185,7 +189,7 @@
     }
 }
 
-.v3-theme--dark .v3-cs--earth {
+:root[data-theme="dark"] .v3-cs--earth {
     .v3-uml-class__header,
     .v3-uml-enum__header,
     .v3-uml-datatype__header {
@@ -209,7 +213,7 @@
     .v3-simplified__badge--ref { background: rgba(15, 118, 110, 0.12); color: #0f766e; }
 }
 
-.v3-theme--dark .v3-cs--nordic {
+:root[data-theme="dark"] .v3-cs--nordic {
     .v3-uml-class__header,
     .v3-uml-enum__header,
     .v3-uml-datatype__header {

@@ -9,11 +9,11 @@
  * Props:
  * - modelid: ID of the DModel to edit
  * - mode: 'metamodel' | 'model' (auto-detected if omitted)
- * - notation, colorScheme, theme: rendering preferences
+ * - notation, colorScheme: rendering preferences
  * - readOnly: disable editing
  */
 
-import React, { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { ReactFlowProvider, type Node, type Edge } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { EditorV3Context } from './contexts/EditorV3Context';
@@ -27,7 +27,6 @@ import type {
     EditorMode,
     NotationMode,
     ColorScheme,
-    ThemeMode,
     EditorV3ContextType,
 } from './types';
 import { DEFAULT_GRID_SIZE } from './constants';
@@ -39,7 +38,6 @@ export interface EditorV3ShellProps {
     viewpointId?: string;
     notation?: NotationMode;
     colorScheme?: ColorScheme;
-    theme?: ThemeMode;
     readOnly?: boolean;
 }
 
@@ -49,7 +47,6 @@ export function EditorV3Shell({
     viewpointId,
     notation: notationProp = 'uml',
     colorScheme: colorSchemeProp = 'default',
-    theme: themeProp = 'light',
     readOnly = false,
 }: EditorV3ShellProps) {
     // Standalone mode: auto-create model+graph when modelid is empty
@@ -62,7 +59,6 @@ export function EditorV3Shell({
     // Live-switchable state (initialized from props)
     const [notation, setNotation] = useState<NotationMode>(notationProp);
     const [colorScheme, setColorScheme] = useState<ColorScheme>(colorSchemeProp);
-    const [theme, setTheme] = useState<ThemeMode>(themeProp);
 
     // Selection state (for properties panel)
     const [selectedNodes, setSelectedNodes] = useState<Node[]>([]);
@@ -93,13 +89,12 @@ export function EditorV3Shell({
         viewpointId: viewpointId ?? null,
         notation,
         colorScheme,
-        theme,
         snapToGrid,
         gridSize: DEFAULT_GRID_SIZE,
         takeSnapshot,
         onAnchorRecalcNeeded,
         onLayoutChanged,
-    }), [mode, effectiveModelId, graphId, modeInfo.metamodelId, viewpointId, notation, colorScheme, theme,
+    }), [mode, effectiveModelId, graphId, modeInfo.metamodelId, viewpointId, notation, colorScheme,
          snapToGrid, takeSnapshot, onAnchorRecalcNeeded, onLayoutChanged]);
 
     const handleSyncResult = useCallback((result: any) => {
@@ -114,16 +109,14 @@ export function EditorV3Shell({
     }, []);
 
     return (
-        <div className={`editor-v3-shell v3-theme--${theme}`}>
+        <div className="editor-v3-shell">
             <EditorV3Context.Provider value={contextValue}>
                 <div className="editor-v3-shell__toolbar">
                     <NotationSelector
                         notation={notation}
                         colorScheme={colorScheme}
-                        theme={theme}
                         onNotationChange={setNotation}
                         onColorSchemeChange={setColorScheme}
-                        onThemeChange={setTheme}
                     />
                 </div>
                 <div className="editor-v3-shell__layout">

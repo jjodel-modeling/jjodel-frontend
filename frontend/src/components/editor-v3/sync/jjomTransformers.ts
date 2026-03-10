@@ -26,7 +26,6 @@ import type {
     FeatureValueInfo,
     NotationMode,
     ColorScheme,
-    ThemeMode,
     AnchorConfig,
     V3Node,
     V3Edge,
@@ -237,7 +236,6 @@ function extractCssState(vertex: any): Record<string, string | number> {
 
 const DEFAULT_NOTATION: NotationMode = 'uml';
 const DEFAULT_COLOR_SCHEME: ColorScheme = 'default';
-const DEFAULT_THEME: ThemeMode = 'light';
 
 // ---------------------------------------------------------------------------
 // Main vertex transformer
@@ -251,7 +249,6 @@ export function jjomVertexToV3Node(
     vertex: any,
     notation: NotationMode = DEFAULT_NOTATION,
     colorScheme: ColorScheme = DEFAULT_COLOR_SCHEME,
-    theme: ThemeMode = DEFAULT_THEME,
 ): V3Node | null {
     const model = vertex?.model;
     if (!model) return null;
@@ -305,7 +302,6 @@ export function jjomVertexToV3Node(
         modelSnapshot,
         notation,
         colorScheme,
-        theme,
         isGraphVertex: isDGraphVertex || undefined,
         isExpanded: isDGraphVertex ? false : undefined,
     };
@@ -383,7 +379,6 @@ export function jjomEdgeToV3Edge(
     edge: any,
     notation: NotationMode = DEFAULT_NOTATION,
     colorScheme: ColorScheme = DEFAULT_COLOR_SCHEME,
-    theme: ThemeMode = DEFAULT_THEME,
 ): V3Edge | null {
     if (!edge) return null;
 
@@ -411,7 +406,6 @@ export function jjomEdgeToV3Edge(
             targetAnchor: { ...defaultAnchor, side: handles.targetHandle.split('-')[0] as any },
             notation,
             colorScheme,
-            theme,
         };
 
         return {
@@ -450,7 +444,6 @@ export function jjomEdgeToV3Edge(
             targetAnchor: { ...defaultAnchor, side: handles.targetHandle.split('-')[0] as any },
             notation,
             colorScheme,
-            theme,
         };
 
         return {
@@ -476,7 +469,6 @@ export function jjomEdgeToV3Edge(
             targetAnchor: { ...defaultAnchor, side: handles.targetHandle.split('-')[0] as any },
             notation,
             colorScheme,
-            theme,
         };
 
         return {
@@ -501,7 +493,6 @@ export function jjomEdgeToV3Edge(
         targetAnchor: { ...defaultAnchor, side: handles.targetHandle.split('-')[0] as any },
         notation,
         colorScheme,
-        theme,
     };
 
     return {
@@ -527,18 +518,17 @@ export function transformJjomGraph(
     edges: any[],
     notation?: NotationMode,
     colorScheme?: ColorScheme,
-    theme?: ThemeMode,
 ): { nodes: V3Node[]; edges: V3Edge[] } {
     const rfNodes: V3Node[] = [];
     for (const v of vertices) {
-        const node = jjomVertexToV3Node(v, notation, colorScheme, theme);
+        const node = jjomVertexToV3Node(v, notation, colorScheme);
         if (node) rfNodes.push(node);
     }
 
     const nodeIds = new Set(rfNodes.map(n => n.id));
     const rfEdges: V3Edge[] = [];
     for (const e of edges) {
-        const edge = jjomEdgeToV3Edge(e, notation, colorScheme, theme);
+        const edge = jjomEdgeToV3Edge(e, notation, colorScheme);
         // Skip orphan edges (source/target vertex not in graph)
         if (edge && nodeIds.has(edge.source) && nodeIds.has(edge.target)) {
             rfEdges.push(edge);

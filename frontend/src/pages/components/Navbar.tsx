@@ -59,6 +59,7 @@ import { ShortcutsReference } from '../../components/ShortcutsReference';
 import { VerticalToggle } from '../../components/ui/VerticalToggle';
 import { useGlobalDrawer } from '../../contexts/GlobalDrawerContext';
 import { useSettingsModal } from '../../contexts/SettingsModalContext';
+import { useTheme } from '../../services/ThemeService';
 
 
 let windoww = window as any;
@@ -1334,18 +1335,8 @@ function NavbarComponent(props: AllProps) {
         const userEmail = user?.email || '';
         const initials = userName.split(' ').map(n => n[0] || '').join('');
 
-        // Theme state - read from document attribute
-        const [theme, setThemeState] = useState<'light' | 'dark'>(() => {
-            const stored = localStorage.getItem('theme');
-            if (stored === 'dark' || stored === 'light') return stored;
-            return document.documentElement.getAttribute('data-theme') as 'light' | 'dark' || 'light';
-        });
-
-        const setTheme = (newTheme: 'light' | 'dark') => {
-            document.documentElement.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
-            setThemeState(newTheme);
-        };
+        // Theme state - synced via ThemeService
+        const [theme, setTheme] = useTheme();
 
         return (
             <div className='user-menu-container' id={'navusermenu'}>

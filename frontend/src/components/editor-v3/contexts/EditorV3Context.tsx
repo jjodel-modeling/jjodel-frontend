@@ -1,7 +1,7 @@
 /**
  * Editor V3 — Main context.
  *
- * Provides editor-wide state (mode, notation, theme, etc.) to all child components.
+ * Provides editor-wide state (mode, notation, colorScheme, etc.) to all child components.
  */
 
 import { createContext, useContext } from 'react';

@@ -35,7 +35,7 @@ import {
     cleanupAll,
 } from './syncCoordinator';
 import { V3_GRAPH_STYLE } from '../constants';
-import type { V3Node, V3Edge, NotationMode, ColorScheme, ThemeMode } from '../types';
+import type { V3Node, V3Edge, NotationMode, ColorScheme } from '../types';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -105,7 +105,6 @@ export function useJjomSyncV3(
     setEdges: SetEdges,
     notation: NotationMode = 'uml',
     colorScheme: ColorScheme = 'default',
-    theme: ThemeMode = 'light',
     onInitialized?: () => void,
 ): UseJjomSyncV3Result {
     // ── rfCache: Map<elementId, RF Node | RF Edge> ─────────────────────
@@ -330,11 +329,11 @@ export function useJjomSyncV3(
             const edgeCache = new Map<string, V3Edge>();
 
             for (const v of vertices) {
-                const rfNode = jjomVertexToV3Node(v, notation, colorScheme, theme);
+                const rfNode = jjomVertexToV3Node(v, notation, colorScheme);
                 if (rfNode) nodeCache.set(rfNode.id, rfNode);
             }
             for (const e of edges) {
-                const rfEdge = jjomEdgeToV3Edge(e, notation, colorScheme, theme);
+                const rfEdge = jjomEdgeToV3Edge(e, notation, colorScheme);
                 if (rfEdge && nodeCache.has(rfEdge.source) && nodeCache.has(rfEdge.target)) {
                     edgeCache.set(rfEdge.id, rfEdge);
                 }
@@ -360,7 +359,7 @@ export function useJjomSyncV3(
             console.warn('[useJjomSyncV3] Initialization error:', err);
         }
     }, [isJjomMode, modelid, graphInfo, elementSnapshots, setNodes, setEdges,
-        subElementIds, notation, colorScheme, theme]);
+        subElementIds, notation, colorScheme]);
 
     // ── Incremental sync: JjOM → Canvas ────────────────────────────────
     useEffect(() => {
@@ -391,7 +390,7 @@ export function useJjomSyncV3(
                     if (isVertexClassName(className)) {
                         if (!isDropCreated && rfNodeCache.current.has(id)) continue;
 
-                        const rfNode = jjomVertexToV3Node(lProxy, notation, colorScheme, theme);
+                        const rfNode = jjomVertexToV3Node(lProxy, notation, colorScheme);
                         if (rfNode) {
                             if (isDropCreated) {
                                 rfNode.data = { ...rfNode.data, autoEdit: true };
@@ -402,7 +401,7 @@ export function useJjomSyncV3(
                     } else if (isEdgeClassName(className)) {
                         if (rfEdgeCache.current.has(id)) continue;
 
-                        const rfEdge = jjomEdgeToV3Edge(lProxy, notation, colorScheme, theme);
+                        const rfEdge = jjomEdgeToV3Edge(lProxy, notation, colorScheme);
                         if (rfEdge && currentIds.has(rfEdge.source) && currentIds.has(rfEdge.target)) {
                             rfEdgeCache.current.set(rfEdge.id, rfEdge);
                             if (!isDropCreated) addedEdges.push(rfEdge);
@@ -441,7 +440,7 @@ export function useJjomSyncV3(
                 const className = lProxy.className ?? lProxy.__raw?.className;
 
                 if (isVertexClassName(className)) {
-                    const rfNode = jjomVertexToV3Node(lProxy, notation, colorScheme, theme);
+                    const rfNode = jjomVertexToV3Node(lProxy, notation, colorScheme);
                     if (rfNode) {
                         const existing = rfNodeCache.current.get(id);
                         if (existing) rfNode.position = existing.position;
@@ -449,7 +448,7 @@ export function useJjomSyncV3(
                         patchedNodeData.set(id, rfNode.data);
                     }
                 } else if (isEdgeClassName(className)) {
-                    const rfEdge = jjomEdgeToV3Edge(lProxy, notation, colorScheme, theme);
+                    const rfEdge = jjomEdgeToV3Edge(lProxy, notation, colorScheme);
                     if (rfEdge) {
                         const existing = rfEdgeCache.current.get(id);
                         if (existing) {
@@ -526,7 +525,7 @@ export function useJjomSyncV3(
             });
         }
     }, [isJjomMode, elementSnapshots, subElementIds, setNodes, setEdges,
-        notation, colorScheme, theme]);
+        notation, colorScheme]);
 
     // ── Cleanup on unmount ─────────────────────────────────────────────
     useEffect(() => {

@@ -10,6 +10,15 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
   </head>
+  <script>
+    // Restore theme from localStorage BEFORE React mounts to prevent FOUC
+    (function() {
+      var t = localStorage.getItem('theme');
+      if (t === 'dark' || t === 'light') {
+        document.documentElement.setAttribute('data-theme', t);
+      }
+    })();
+  </script>
   <body style="height: 100vh; margin: 0">
     <div id="root"></div>
     <script type="module" src="/src/index.tsx"></script>

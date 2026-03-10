@@ -20,9 +20,6 @@ export type ColorScheme =
     | 'default' | 'pastel' | 'ocean' | 'forest'
     | 'sunset' | 'monochrome' | 'neon' | 'earth' | 'nordic';
 
-/** Theme mode */
-export type ThemeMode = 'light' | 'dark';
-
 // ---- Node Data ----
 
 /**
@@ -74,9 +71,6 @@ export interface ModelNodeData {
 
     /** Active color scheme */
     colorScheme: ColorScheme;
-
-    /** Theme */
-    theme: ThemeMode;
 
     /** Flag for auto-edit after creation from palette */
     autoEdit?: boolean;
@@ -218,10 +212,9 @@ export interface UnifiedEdgeData {
     sourceAnchor: AnchorConfig;
     targetAnchor: AnchorConfig;
 
-    /** Notation + theme (for edge styles) */
+    /** Notation + color scheme (for edge styles) */
     notation: NotationMode;
     colorScheme: ColorScheme;
-    theme: ThemeMode;
 
     /** Index signature required by React Flow's Record<string, unknown> constraint */
     [key: string]: unknown;
@@ -258,8 +251,6 @@ export interface EditorV3ContextType {
     notation: NotationMode;
     /** Color scheme */
     colorScheme: ColorScheme;
-    /** Theme */
-    theme: ThemeMode;
     /** Snap to grid */
     snapToGrid: boolean;
     /** Grid size */

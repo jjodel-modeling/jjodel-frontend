@@ -136,7 +136,7 @@ function App(props: AllProps): JSX.Element {
                             {/* Editor V3 - Viewpoint-first architecture */}
                             <Route path={'editor-v3'} element={
                                 <div style={{ width: '100vw', height: '100vh' }}>
-                                    <EditorV3Shell modelid="" notation="uml" theme="light" />
+                                    <EditorV3Shell modelid="" notation="uml" />
                                 </div>
                             }/>
                             {/* non functioning stuff */}

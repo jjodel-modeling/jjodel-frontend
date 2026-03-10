@@ -1,32 +1,20 @@
 /**
  * Editor V3 — Base styles.
+ *
+ * All colors use CSS custom properties from the theming system
+ * (defined in styles/tokens/_colors-light.scss and _colors-dark.scss).
+ * Theme switching is handled automatically via [data-theme] on <html>.
  */
 
 // ---------------------------------------------------------------------------
-// Variables
+// Non-color variables (keep as SCSS)
 // ---------------------------------------------------------------------------
 
-$v3-border-radius: 6px;
-$v3-font-family: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-$v3-font-size-sm: 11px;
-$v3-font-size-base: 12px;
-$v3-font-size-lg: 13px;
-
-// Theme colors (light)
-$v3-bg-canvas: #f8fafc;
-$v3-bg-node: #ffffff;
-$v3-border-node: #e2e8f0;
-$v3-border-selected: #06b6d4;
-$v3-text-primary: #1e293b;
-$v3-text-secondary: #64748b;
-$v3-text-muted: #94a3b8;
-
-// Dark theme
-$v3-dark-bg-canvas: #0f172a;
-$v3-dark-bg-node: #1e293b;
-$v3-dark-border-node: #334155;
-$v3-dark-text-primary: #f1f5f9;
-$v3-dark-text-secondary: #94a3b8;
+$editor-border-radius: 6px;
+$editor-font-family: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+$editor-font-size-sm: 11px;
+$editor-font-size-base: 12px;
+$editor-font-size-lg: 13px;
 
 // ---------------------------------------------------------------------------
 // Editor Shell
@@ -37,15 +25,11 @@ $v3-dark-text-secondary: #94a3b8;
     height: 100%;
     display: flex;
     flex-direction: column;
-    font-family: $v3-font-family;
+    font-family: $editor-font-family;
     position: relative;
 
     .react-flow {
-        background: $v3-bg-canvas;
-    }
-
-    &.v3-theme--dark .react-flow {
-        background: $v3-dark-bg-canvas;
+        background: var(--color-canvas-bg);
     }
 }
 
@@ -75,27 +59,20 @@ $v3-dark-text-secondary: #94a3b8;
 // ---------------------------------------------------------------------------
 
 .v3-node {
-    background: $v3-bg-node;
-    border: 1px solid $v3-border-node;
-    border-radius: $v3-border-radius;
-    font-family: $v3-font-family;
-    font-size: $v3-font-size-base;
-    color: $v3-text-primary;
+    background: var(--color-node-bg);
+    border: 1px solid var(--color-node-border);
+    border-radius: $editor-border-radius;
+    font-family: $editor-font-family;
+    font-size: $editor-font-size-base;
+    color: var(--color-node-text);
     min-width: 80px;
     overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 1px 3px var(--color-node-shadow);
     transition: box-shadow 0.15s ease, border-color 0.15s ease;
 
     &--selected {
-        border-color: $v3-border-selected;
-        box-shadow: 0 0 0 2px rgba($v3-border-selected, 0.2), 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-
-    // Dark theme
-    &.v3-theme--dark {
-        background: $v3-dark-bg-node;
-        border-color: $v3-dark-border-node;
-        color: $v3-dark-text-primary;
+        border-color: var(--color-node-border-selected);
+        box-shadow: 0 0 0 2px var(--color-node-shadow-selected), 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 }
 
@@ -114,31 +91,26 @@ $v3-dark-text-secondary: #94a3b8;
     flex-direction: column;
     align-items: center;
     padding: 6px 10px;
-    border-bottom: 1px solid $v3-border-node;
-    background: rgba(0, 0, 0, 0.02);
-
-    .v3-theme--dark & {
-        border-bottom-color: $v3-dark-border-node;
-        background: rgba(255, 255, 255, 0.02);
-    }
+    border-bottom: 1px solid var(--color-node-separator);
+    background: var(--color-canvas-tint);
 
     &--package {
-        background: rgba($v3-border-selected, 0.05);
+        background: var(--color-canvas-accent-muted);
         border-bottom: none;
         padding: 8px 12px;
     }
 }
 
 .v3-node__stereotype {
-    font-size: $v3-font-size-sm;
-    color: $v3-text-muted;
+    font-size: $editor-font-size-sm;
+    color: var(--color-node-text-muted);
     font-style: italic;
     line-height: 1.2;
 }
 
 .v3-node__name {
     font-weight: 600;
-    font-size: $v3-font-size-lg;
+    font-size: $editor-font-size-lg;
     line-height: 1.3;
     text-align: center;
 
@@ -149,14 +121,10 @@ $v3-dark-text-secondary: #94a3b8;
 
 .v3-node__section {
     padding: 4px 10px;
-    border-bottom: 1px solid $v3-border-node;
+    border-bottom: 1px solid var(--color-node-separator);
 
     &:last-child {
         border-bottom: none;
-    }
-
-    .v3-theme--dark & {
-        border-bottom-color: $v3-dark-border-node;
     }
 }
 
@@ -166,19 +134,15 @@ $v3-dark-text-secondary: #94a3b8;
 .v3-node__literal,
 .v3-node__feature {
     padding: 2px 0;
-    font-size: $v3-font-size-sm;
-    color: $v3-text-secondary;
+    font-size: $editor-font-size-sm;
+    color: var(--color-node-text-secondary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-
-    .v3-theme--dark & {
-        color: $v3-dark-text-secondary;
-    }
 }
 
 .v3-node__ref {
-    color: $v3-border-selected;
+    color: var(--color-canvas-accent);
 }
 
 .v3-node__op {
@@ -190,15 +154,15 @@ $v3-dark-text-secondary: #94a3b8;
 // ---------------------------------------------------------------------------
 
 .v3-node--class {
-    border-left: 3px solid #3b82f6;
+    border-left: 3px solid var(--color-type-class);
 }
 
 .v3-node--enumerator {
-    border-left: 3px solid #8b5cf6;
+    border-left: 3px solid var(--color-type-enum);
 }
 
 .v3-node--package {
-    border-left: 3px solid #10b981;
+    border-left: 3px solid var(--color-type-package);
     border-style: dashed;
     border-width: 1px;
     border-left-width: 3px;
@@ -206,11 +170,11 @@ $v3-dark-text-secondary: #94a3b8;
 }
 
 .v3-node--object {
-    border-left: 3px solid #f59e0b;
+    border-left: 3px solid var(--color-type-object);
 }
 
 .v3-node--datatype {
-    border-left: 3px solid #6366f1;
+    border-left: 3px solid var(--color-type-datatype);
 }
 
 // ---------------------------------------------------------------------------
@@ -230,8 +194,8 @@ $v3-dark-text-secondary: #94a3b8;
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    border: 1.5px solid $v3-border-selected;
-    background: $v3-bg-node;
+    border: 1.5px solid var(--color-handle-border);
+    background: var(--color-handle-bg);
     pointer-events: all;
     transition: opacity 0.15s ease, transform 0.15s ease;
 
@@ -255,14 +219,14 @@ $v3-dark-text-secondary: #94a3b8;
     &--named {
         opacity: 1;
         visibility: visible;
-        background: $v3-border-selected;
+        background: var(--color-handle-hover);
         width: 6px;
         height: 6px;
     }
 
     &:hover {
         transform: scale(1.5);
-        background: $v3-border-selected;
+        background: var(--color-handle-hover);
     }
 }
 
@@ -276,9 +240,9 @@ $v3-dark-text-secondary: #94a3b8;
     justify-content: center;
     width: 100%;
     height: 100%;
-    color: $v3-text-muted;
+    color: var(--color-node-text-muted);
     font-size: 14px;
-    font-family: $v3-font-family;
+    font-family: $editor-font-family;
 }
 
 // ---------------------------------------------------------------------------
@@ -286,12 +250,12 @@ $v3-dark-text-secondary: #94a3b8;
 // ---------------------------------------------------------------------------
 
 .v3-inline-editor {
-    border: 1px solid $v3-border-selected;
+    border: 1px solid var(--color-canvas-accent);
     border-radius: 3px;
-    background: $v3-bg-node;
-    color: $v3-text-primary;
-    font-family: $v3-font-family;
-    font-size: $v3-font-size-lg;
+    background: var(--color-node-bg);
+    color: var(--color-node-text);
+    font-family: $editor-font-family;
+    font-size: $editor-font-size-lg;
     padding: 2px 4px;
     outline: none;
     width: 100%;
@@ -301,11 +265,16 @@ $v3-dark-text-secondary: #94a3b8;
     &--name {
         font-weight: 600;
     }
+}
 
-    .v3-theme--dark & {
-        background: $v3-dark-bg-node;
-        color: $v3-dark-text-primary;
-        border-color: $v3-border-selected;
+// ---------------------------------------------------------------------------
+// React Flow overrides
+// ---------------------------------------------------------------------------
+
+.editor-v3-shell {
+    .react-flow__selection {
+        background: var(--color-canvas-accent-muted);
+        border: 1px solid var(--color-canvas-accent);
     }
 }
 

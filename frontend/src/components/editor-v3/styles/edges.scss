@@ -1,29 +1,20 @@
 /**
  * Editor V3 — Edge styles.
+ *
+ * All colors use CSS custom properties from the theming system.
  */
-
-// ---------------------------------------------------------------------------
-// Variables (shared with editor-v3.scss)
-// ---------------------------------------------------------------------------
-
-$v3-edge-color: #94a3b8;
-$v3-edge-selected: #06b6d4;
-$v3-edge-marker-stroke: #94a3b8;
-$v3-edge-marker-fill: #ffffff;
-$v3-dark-edge-color: #64748b;
-$v3-dark-edge-marker-fill: #1e293b;
 
 // ---------------------------------------------------------------------------
 // Edge path
 // ---------------------------------------------------------------------------
 
 .v3-edge {
-    stroke: $v3-edge-color;
+    stroke: var(--color-edge-default);
     stroke-width: 1;
     transition: stroke 0.15s ease;
 
     &.selected {
-        stroke: $v3-edge-selected;
+        stroke: var(--color-edge-selected);
         stroke-width: 1.5;
     }
 
@@ -37,15 +28,6 @@ $v3-dark-edge-marker-fill: #1e293b;
     &--value-link { stroke-width: 1; }
 }
 
-// Dark theme edge overrides
-.v3-theme--dark .v3-edge {
-    stroke: $v3-dark-edge-color;
-
-    &.selected {
-        stroke: $v3-edge-selected;
-    }
-}
-
 // ---------------------------------------------------------------------------
 // Edge markers
 // ---------------------------------------------------------------------------
@@ -56,73 +38,63 @@ $v3-dark-edge-marker-fill: #1e293b;
     // Arrow — open arrowhead (no fill)
     &--arrow {
         fill: none;
-        stroke: $v3-edge-marker-stroke;
+        stroke: var(--color-edge-default);
         stroke-width: 1.5;
 
         &.selected {
-            stroke: $v3-edge-selected;
+            stroke: var(--color-edge-selected);
         }
     }
 
     // Hollow triangle — inheritance target
     &--hollow-triangle {
-        fill: $v3-edge-marker-fill;
-        stroke: $v3-edge-marker-stroke;
+        fill: var(--color-edge-marker-fill);
+        stroke: var(--color-edge-default);
         stroke-width: 1;
 
         &.selected {
-            stroke: $v3-edge-selected;
+            stroke: var(--color-edge-selected);
         }
     }
 
     // Filled diamond — composition source
     &--filled-diamond {
-        fill: $v3-edge-marker-stroke;
-        stroke: $v3-edge-marker-stroke;
+        fill: var(--color-edge-default);
+        stroke: var(--color-edge-default);
         stroke-width: 1;
 
         &.selected {
-            fill: $v3-edge-selected;
-            stroke: $v3-edge-selected;
+            fill: var(--color-edge-selected);
+            stroke: var(--color-edge-selected);
         }
     }
 
     // Hollow diamond — aggregation source
     &--hollow-diamond {
-        fill: $v3-edge-marker-fill;
-        stroke: $v3-edge-marker-stroke;
+        fill: var(--color-edge-marker-fill);
+        stroke: var(--color-edge-default);
         stroke-width: 1.5;
 
         &.selected {
-            stroke: $v3-edge-selected;
+            stroke: var(--color-edge-selected);
         }
     }
 
     // Open arrow — dependency target
     &--open-arrow {
         fill: none;
-        stroke: $v3-edge-marker-stroke;
+        stroke: var(--color-edge-default);
         stroke-width: 1.5;
 
         &.selected {
-            stroke: $v3-edge-selected;
+            stroke: var(--color-edge-selected);
         }
     }
-}
 
-// Dark theme marker overrides
-.v3-theme--dark {
-    .v3-edge-marker {
-        &--arrow { stroke: $v3-dark-edge-color; }
-        &--hollow-triangle { fill: $v3-dark-edge-marker-fill; stroke: $v3-dark-edge-color; }
-        &--filled-diamond { fill: $v3-dark-edge-color; stroke: $v3-dark-edge-color; }
-        &--hollow-diamond { fill: $v3-dark-edge-marker-fill; stroke: $v3-dark-edge-color; }
-        &--open-arrow { stroke: $v3-dark-edge-color; }
-
-        &.selected {
-            stroke: $v3-edge-selected !important;
-            fill: $v3-edge-selected;
-        }
+    // Global selected override
+    &.selected {
+        stroke: var(--color-edge-selected) !important;
+        fill: var(--color-edge-selected);
     }
 }
 
@@ -133,17 +105,17 @@ $v3-dark-edge-marker-fill: #1e293b;
 .v3-edge-label {
     font-family: 'Inter Variable', 'Inter', -apple-system, sans-serif;
     font-size: 10px;
-    background: rgba(255, 255, 255, 0.9);
+    background: var(--color-edge-label-bg);
     padding: 1px 4px;
     border-radius: 3px;
-    color: #475569;
+    color: var(--color-edge-label-text);
     white-space: nowrap;
     user-select: none;
     z-index: 5;
 
     &.selected {
-        color: #0e7490;
-        background: rgba(255, 255, 255, 0.95);
+        color: var(--color-edge-label-text-selected);
+        background: var(--color-edge-label-bg-selected);
     }
 
     &__text {
@@ -153,30 +125,14 @@ $v3-dark-edge-marker-fill: #1e293b;
     &__input {
         font-family: inherit;
         font-size: 10px;
-        background: #ffffff;
-        border: 1px solid $v3-edge-selected;
-        color: #1e293b;
+        background: var(--color-panel-input-bg);
+        border: 1px solid var(--color-canvas-accent);
+        color: var(--color-panel-input-text);
         padding: 1px 4px;
         border-radius: 2px;
         width: 60px;
         text-align: center;
         outline: none;
-    }
-}
-
-// Dark theme labels
-.v3-theme--dark .v3-edge-label {
-    background: rgba(30, 41, 59, 0.9);
-    color: #94a3b8;
-
-    &.selected {
-        color: #22d3ee;
-    }
-
-    &__input {
-        background: #1e293b;
-        color: #f1f5f9;
-        border-color: $v3-edge-selected;
     }
 }
 
@@ -187,17 +143,12 @@ $v3-dark-edge-marker-fill: #1e293b;
 .v3-edge-cardinality {
     font-family: 'Inter Variable', 'Inter', -apple-system, sans-serif;
     font-size: 9px;
-    color: #94a3b8;
-    background: rgba(255, 255, 255, 0.85);
+    color: var(--color-edge-cardinality-text);
+    background: var(--color-edge-cardinality-bg);
     padding: 0 3px;
     border-radius: 2px;
     white-space: nowrap;
     z-index: 5;
-}
-
-.v3-theme--dark .v3-edge-cardinality {
-    background: rgba(30, 41, 59, 0.85);
-    color: #64748b;
 }
 
 // ---------------------------------------------------------------------------
@@ -205,21 +156,21 @@ $v3-dark-edge-marker-fill: #1e293b;
 // ---------------------------------------------------------------------------
 
 .v3-segment-handle {
-    fill: $v3-edge-selected;
-    stroke: #ffffff;
+    fill: var(--color-canvas-accent);
+    stroke: var(--color-segment-handle-stroke);
     stroke-width: 2;
     cursor: move;
     transition: r 0.1s ease;
 
     &:hover {
         r: 5;
-        fill: #22d3ee;
+        fill: var(--color-segment-handle-hover);
     }
 
     &--dragging {
-        fill: #22d3ee;
+        fill: var(--color-segment-handle-hover);
         r: 5;
-        filter: drop-shadow(0 0 3px rgba(14, 165, 233, 0.4));
+        filter: drop-shadow(0 0 3px var(--color-segment-handle-glow));
     }
 }
 
@@ -230,9 +181,9 @@ $v3-dark-edge-marker-fill: #1e293b;
 .v3-edge-type-popup {
     display: flex;
     flex-direction: column;
-    background: #ffffff;
+    background: var(--color-ctx-menu-bg);
     border-radius: 8px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 16px var(--color-ctx-menu-shadow-1), 0 1px 4px var(--color-ctx-menu-shadow-2);
     padding: 4px;
     z-index: 100;
     min-width: 140px;
@@ -248,12 +199,12 @@ $v3-dark-edge-marker-fill: #1e293b;
         border-radius: 4px;
         cursor: pointer;
         font-size: 12px;
-        color: #334155;
+        color: var(--color-ctx-menu-text);
         transition: background 0.1s ease;
 
         &:hover,
         &:focus {
-            background: #f1f5f9;
+            background: var(--color-ctx-menu-hover);
             outline: none;
         }
     }
@@ -262,29 +213,10 @@ $v3-dark-edge-marker-fill: #1e293b;
         font-size: 14px;
         width: 28px;
         text-align: center;
-        color: #64748b;
+        color: var(--color-ctx-menu-icon);
     }
 
     &__label {
         font-size: 12px;
-    }
-}
-
-// Dark theme popup
-.v3-theme--dark .v3-edge-type-popup {
-    background: #1e293b;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-
-    &__option {
-        color: #e2e8f0;
-
-        &:hover,
-        &:focus {
-            background: #334155;
-        }
-    }
-
-    &__icon {
-        color: #94a3b8;
     }
 }

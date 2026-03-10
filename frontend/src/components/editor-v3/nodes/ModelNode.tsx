@@ -26,7 +26,6 @@ function ModelNodeComponent({ id, data: rawData, selected }: NodeProps) {
         anchors,
         cssState,
         zoom,
-        theme,
     } = data;
 
     // Inline editing state
@@ -61,7 +60,7 @@ function ModelNodeComponent({ id, data: rawData, selected }: NodeProps) {
 
     return (
         <div
-            className={`v3-node ${typeClass} ${selected ? 'v3-node--selected' : ''} v3-theme--${theme}`}
+            className={`v3-node ${typeClass} ${selected ? 'v3-node--selected' : ''}`}
             style={{
                 ...cssState as React.CSSProperties,
                 transform: zoom.x !== 1 || zoom.y !== 1

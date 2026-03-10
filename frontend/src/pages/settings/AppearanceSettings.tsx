@@ -1,19 +1,10 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import type { ToastPosition, ToastPreferences } from '../../components/Toast/toastTypes';
 import { loadToastPrefs, saveToastPrefs } from '../../components/Toast/toastTypes';
+import { useTheme } from '../../services/ThemeService';
 
 export function AppearanceSettings() {
-    const [theme, setThemeState] = useState<'light' | 'dark'>(() => {
-        const stored = localStorage.getItem('theme');
-        if (stored === 'dark' || stored === 'light') return stored;
-        return (document.documentElement.getAttribute('data-theme') as 'light' | 'dark') || 'light';
-    });
-
-    const setTheme = (newTheme: 'light' | 'dark') => {
-        document.documentElement.setAttribute('data-theme', newTheme);
-        localStorage.setItem('theme', newTheme);
-        setThemeState(newTheme);
-    };
+    const [theme, setTheme] = useTheme();
 
     // ── Toast preferences ──
     const [toastPrefs, setToastPrefs] = useState<ToastPreferences>(loadToastPrefs);

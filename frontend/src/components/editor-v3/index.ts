@@ -7,7 +7,6 @@ export type {
     EditorMode,
     NotationMode,
     ColorScheme,
-    ThemeMode,
     ModelNodeData,
     UnifiedEdgeData,
     V3Node,

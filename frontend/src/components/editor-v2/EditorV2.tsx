@@ -77,6 +77,7 @@ import { rafThrottle, cancelThrottle } from '../../utils/DragThrottle';
 import { getCompositionChildOptions, getCompatibleReferences, type CompatibleReference } from './utils/compositionCompat';
 import { LPointerTargetable } from '../../joiner';
 import { jjomVertexToRFNode } from './utils/jjomTransformers';
+import { useTheme } from '../../services/ThemeService';
 import { getDraggedMetaclassId } from './utils/dragState';
 import { PolymetricView } from '../polymetric';
 
@@ -441,15 +442,8 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
     } | null>(null);
     const handleM1ReferenceSelectedRef = useRef<(ref: MetaclassReference, conn?: Connection) => void>(() => {});
 
-    // Theme state with localStorage persistence
-    const [theme, setTheme] = useState<'dark' | 'light'>(() => {
-        const saved = localStorage.getItem('editor-v2-theme');
-        return (saved === 'light' || saved === 'dark') ? saved : 'dark';
-    });
-
-    useEffect(() => {
-        localStorage.setItem('editor-v2-theme', theme);
-    }, [theme]);
+    // Theme state — follows global ThemeService (synced with Navbar/Settings)
+    const [theme] = useTheme();
 
     // Notation mode state with localStorage persistence
     const VALID_NOTATIONS: NotationMode[] = ['uml', 'simplified', 'compact', 'wireframe', 'er'];
@@ -492,10 +486,6 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
         window.addEventListener('jjodel:selectNode', handleSelectNode);
         return () => window.removeEventListener('jjodel:selectNode', handleSelectNode);
     }, [modelid, setNodes, setEdges, getNodes, getViewport, setViewport]);
-
-    const handleToggleTheme = useCallback(() => {
-        setTheme(prev => prev === 'dark' ? 'light' : 'dark');
-    }, []);
 
     // Polymetric view modal
     const [polymetricOpen, setPolymetricOpen] = useState(false);

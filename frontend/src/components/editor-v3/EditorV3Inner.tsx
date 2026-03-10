@@ -26,6 +26,7 @@ import {
     type OnConnect,
     type NodeMouseHandler,
 } from '@xyflow/react';
+import { useThemeColor } from './hooks/useThemeColor';
 import { ModelNode } from './nodes/ModelNode';
 import { UnifiedEdge } from './edges/UnifiedEdge';
 import { EdgeTypePopup, type EdgeTypeChoice } from './components/EdgeTypePopup';
@@ -69,6 +70,8 @@ interface EditorV3InnerProps {
 
 export function EditorV3Inner({ onSyncResult, onSelectionChange }: EditorV3InnerProps) {
     const ctx = useEditorV3Context();
+    const gridColor = useThemeColor('--color-canvas-grid');
+    const minimapBg = useThemeColor('--color-minimap-bg');
     const { fitView, screenToFlowPosition, getNodes, getEdges } = useReactFlow();
 
     const [nodes, setNodes, onNodesChange] = useNodesState([] as Node[]);
@@ -91,7 +94,6 @@ export function EditorV3Inner({ onSyncResult, onSelectionChange }: EditorV3Inner
         setEdges,
         ctx.notation,
         ctx.colorScheme,
-        ctx.theme,
         () => {
             // On initialized: fit view after a frame
             setTimeout(() => fitView({ padding: 0.15, duration: 300 }), 50);
@@ -175,7 +177,6 @@ export function EditorV3Inner({ onSyncResult, onSelectionChange }: EditorV3Inner
                 targetAnchor: { mode: 'auto', side: 'left' },
                 notation: ctx.notation,
                 colorScheme: ctx.colorScheme,
-                theme: ctx.theme,
                 autoEdit: kind !== 'inheritance',
             } as UnifiedEdgeData,
         };
@@ -191,7 +192,7 @@ export function EditorV3Inner({ onSyncResult, onSelectionChange }: EditorV3Inner
 
         setPopup(null);
         pendingConnectionRef.current = null;
-    }, [validateConnection, setEdges, ctx.notation, ctx.colorScheme, ctx.theme]);
+    }, [validateConnection, setEdges, ctx.notation, ctx.colorScheme]);
 
     // ── Cancel popup ──
     const handlePopupCancel = useCallback(() => {
@@ -349,20 +350,20 @@ export function EditorV3Inner({ onSyncResult, onSelectionChange }: EditorV3Inner
                 deleteKeyCode={['Backspace', 'Delete']}
                 multiSelectionKeyCode="Shift"
                 selectionKeyCode="Shift"
-                className={`v3-theme--${ctx.theme}`}
+                className="editor-v3-canvas"
             >
                 <Background
                     variant={BackgroundVariant.Dots}
                     gap={ctx.gridSize}
                     size={1}
-                    color={ctx.theme === 'dark' ? '#334155' : '#e2e8f0'}
+                    color={gridColor}
                 />
                 <MiniMap
                     nodeStrokeWidth={3}
                     zoomable
                     pannable
                     style={{
-                        background: ctx.theme === 'dark' ? '#1e293b' : '#f1f5f9',
+                        background: minimapBg,
                     }}
                 />
             </ReactFlow>

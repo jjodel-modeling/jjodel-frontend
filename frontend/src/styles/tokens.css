@@ -288,22 +288,8 @@
 }
 
 /* ========================================
-   DARK MODE SUPPORT (Optional)
+   DARK MODE SUPPORT
+   Handled by [data-theme="dark"] in _colors-dark.scss.
+   Do NOT use @media (prefers-color-scheme) here — it conflicts
+   with the explicit data-theme attribute system.
    ======================================== */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg-primary: #0f172a;       /* slate-900 */
-    --color-bg-secondary: #1e293b;     /* slate-800 */
-    --color-bg-tertiary: #334155;      /* slate-700 */
-
-    --color-text-primary: #f8fafc;     /* slate-50 */
-    --color-text-secondary: #cbd5e1;   /* slate-300 */
-    --color-text-tertiary: #64748b;    /* slate-500 */
-
-    --color-border-primary: #334155;   /* slate-700 */
-    --color-border-secondary: #475569; /* slate-600 */
-
-    --input-border-color: #475569;     /* slate-600 */
-    --input-border-color-hover: #64748b; /* slate-500 */
-  }
-}

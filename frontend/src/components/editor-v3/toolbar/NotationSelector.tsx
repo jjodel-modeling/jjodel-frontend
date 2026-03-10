@@ -5,16 +5,14 @@
  * When notation changes, all nodes re-render with the new built-in view.
  */
 
-import React, { useCallback } from 'react';
-import type { NotationMode, ColorScheme, ThemeMode } from '../types';
+import React from 'react';
+import type { NotationMode, ColorScheme } from '../types';
 
 export interface NotationSelectorProps {
     notation: NotationMode;
     colorScheme: ColorScheme;
-    theme: ThemeMode;
     onNotationChange: (notation: NotationMode) => void;
     onColorSchemeChange: (scheme: ColorScheme) => void;
-    onThemeChange: (theme: ThemeMode) => void;
 }
 
 const NOTATION_OPTIONS: { value: NotationMode; label: string; icon: string }[] = [
@@ -37,15 +35,9 @@ const COLOR_SCHEME_OPTIONS: { value: ColorScheme; label: string; color: string }
 export function NotationSelector({
     notation,
     colorScheme,
-    theme,
     onNotationChange,
     onColorSchemeChange,
-    onThemeChange,
 }: NotationSelectorProps) {
-    const toggleTheme = useCallback(() => {
-        onThemeChange(theme === 'light' ? 'dark' : 'light');
-    }, [theme, onThemeChange]);
-
     return (
         <div className="v3-notation-selector">
             {/* Notation toggle */}
@@ -81,15 +73,6 @@ export function NotationSelector({
                     ))}
                 </div>
             </div>
-
-            {/* Theme toggle */}
-            <button
-                className="v3-notation-selector__btn v3-notation-selector__btn--theme"
-                onClick={toggleTheme}
-                title={theme === 'light' ? 'Switch to dark' : 'Switch to light'}
-            >
-                <i className={theme === 'light' ? 'bi-moon' : 'bi-sun'} />
-            </button>
         </div>
     );
 }

@@ -89,13 +89,128 @@
 
   /* ============================================
      CANVAS & GRAPH COLORS
-     For metamodel/model nodes in dark mode
+     For metamodel/model nodes and editor-v3 in dark mode
      ============================================ */
-  --color-canvas-bg: #0f1012;         /* Canvas background - same as secondary */
-  --color-canvas-grid: rgba(255, 255, 255, 0.05);  /* Subtle grid lines */
-  --color-node-bg: #16181a;           /* Node background - tertiary */
-  --color-node-border: rgba(255, 255, 255, 0.1);   /* Slightly visible border */
-  --color-node-shadow: rgba(0, 0, 0, 0.4);  /* Stronger shadow for depth */
+
+  /* Canvas */
+  --color-canvas-bg: #0f172a;                     /* Canvas background (slate-950) */
+  --color-canvas-grid: #334155;                   /* Grid dots/lines (slate-700) */
+  --color-canvas-accent: #06b6d4;                 /* Selection, focus (same cyan) */
+  --color-canvas-accent-hover: #22d3ee;           /* Accent hover (cyan-300) */
+  --color-canvas-accent-subtle: rgba(6, 182, 212, 0.15);
+  --color-canvas-accent-muted: rgba(6, 182, 212, 0.08);
+  --color-canvas-tint: rgba(255, 255, 255, 0.02);
+  --color-canvas-tint-hover: rgba(255, 255, 255, 0.03);
+  --color-canvas-tint-active: rgba(255, 255, 255, 0.06);
+  --color-canvas-tint-strong: rgba(255, 255, 255, 0.08);
+
+  /* Nodes */
+  --color-node-bg: #1e293b;                      /* Node bg (slate-800) */
+  --color-node-border: #334155;                   /* Node border (slate-700) */
+  --color-node-border-selected: var(--color-canvas-accent);
+  --color-node-shadow: rgba(0, 0, 0, 0.3);
+  --color-node-shadow-selected: rgba(6, 182, 212, 0.2);
+  --color-node-text: #f1f5f9;                    /* Node primary text (slate-100) */
+  --color-node-text-secondary: #94a3b8;          /* Node secondary text (slate-400) */
+  --color-node-text-muted: #94a3b8;
+  --color-node-separator: #334155;
+
+  /* Type-specific node accent borders (brighter for dark bg) */
+  --color-type-class: #60a5fa;                   /* Blue-400 */
+  --color-type-enum: #a78bfa;                    /* Violet-400 */
+  --color-type-package: #34d399;                 /* Emerald-400 */
+  --color-type-object: #fbbf24;                  /* Amber-400 */
+  --color-type-datatype: #818cf8;                /* Indigo-400 */
+
+  /* Edges */
+  --color-edge-default: #64748b;                 /* Dark edge stroke (slate-500) */
+  --color-edge-selected: var(--color-canvas-accent);
+  --color-edge-marker-fill: #1e293b;             /* Dark marker fill */
+  --color-edge-label-bg: rgba(30, 41, 59, 0.9);
+  --color-edge-label-bg-selected: rgba(30, 41, 59, 0.95);
+  --color-edge-label-text: #94a3b8;
+  --color-edge-label-text-selected: #22d3ee;
+  --color-edge-cardinality-bg: rgba(30, 41, 59, 0.85);
+  --color-edge-cardinality-text: #64748b;
+
+  /* Handles / Anchors */
+  --color-handle-border: var(--color-canvas-accent);
+  --color-handle-bg: var(--color-node-bg);
+  --color-handle-hover: var(--color-canvas-accent);
+
+  /* Panels */
+  --color-panel-bg: #1e293b;
+  --color-panel-border: #334155;
+  --color-panel-header-bg: #0f172a;
+  --color-panel-header-text: #e2e8f0;
+  --color-panel-section-text: #94a3b8;
+  --color-panel-item-text: #e2e8f0;
+  --color-panel-item-hover: #334155;
+  --color-panel-item-active: #475569;
+  --color-panel-icon: #94a3b8;
+  --color-panel-muted: #64748b;
+  --color-panel-input-bg: #0f172a;
+  --color-panel-input-border: #334155;
+  --color-panel-input-text: #f1f5f9;
+  --color-panel-input-focus: var(--color-canvas-accent);
+  --color-panel-count-bg: #334155;
+  --color-panel-count-text: #94a3b8;
+  --color-panel-detail-border: #334155;
+
+  /* Toolbar */
+  --color-toolbar-bg: rgba(30, 41, 59, 0.95);
+  --color-toolbar-shadow: rgba(0, 0, 0, 0.3);
+  --color-toolbar-label: #94a3b8;
+  --color-toolbar-btn-group: rgba(255, 255, 255, 0.06);
+  --color-toolbar-btn-text: #64748b;
+  --color-toolbar-btn-hover-bg: rgba(255, 255, 255, 0.08);
+  --color-toolbar-btn-hover-text: #f1f5f9;
+  --color-toolbar-btn-active-bg: rgba(255, 255, 255, 0.1);
+  --color-toolbar-btn-active-text: #38bdf8;
+  --color-toolbar-btn-active-shadow: none;
+  --color-toolbar-swatch-active-border: #f1f5f9;
+
+  /* Context menu */
+  --color-ctx-menu-bg: #1e293b;
+  --color-ctx-menu-shadow-1: rgba(0, 0, 0, 0.3);
+  --color-ctx-menu-shadow-2: rgba(0, 0, 0, 0.2);
+  --color-ctx-menu-text: #e2e8f0;
+  --color-ctx-menu-hover: #334155;
+  --color-ctx-menu-icon: #94a3b8;
+  --color-ctx-menu-divider: #334155;
+
+  /* Minimap */
+  --color-minimap-bg: #1e293b;
+
+  /* Segment handles */
+  --color-segment-handle-stroke: #1e293b;
+  --color-segment-handle-hover: #22d3ee;
+  --color-segment-handle-glow: rgba(14, 165, 233, 0.4);
+
+  /* Viewpoint components */
+  --color-viewpoint-input-border: #334155;
+  --color-viewpoint-input-bg: #1e293b;
+  --color-viewpoint-focus-border: #3b82f6;
+  --color-viewpoint-focus-glow: rgba(59, 130, 246, 0.2);
+  --color-viewpoint-focus-glow-subtle: rgba(59, 130, 246, 0.15);
+  --color-viewpoint-toggle-inactive: #475569;
+  --color-viewpoint-toggle-active: #3b82f6;
+  --color-viewpoint-toggle-knob: #ffffff;
+  --color-viewpoint-label: #64748b;
+  --color-viewpoint-error-bg: #450a0a;
+  --color-viewpoint-error-border: #7f1d1d;
+  --color-viewpoint-error-text: #dc2626;
+  --color-viewpoint-error-pre: #fca5a5;
+
+  /* Badge colors */
+  --color-badge-attr-bg: rgba(59, 130, 246, 0.15);
+  --color-badge-attr-text: #60a5fa;
+  --color-badge-ref-bg: rgba(6, 182, 212, 0.15);
+  --color-badge-ref-text: #22d3ee;
+  --color-badge-op-bg: rgba(139, 92, 246, 0.15);
+  --color-badge-op-text: #a78bfa;
+  --color-badge-obj-bg: rgba(16, 185, 129, 0.15);
+  --color-badge-obj-text: #34d399;
 
   /* ============================================
      LEGACY COMPATIBILITY
