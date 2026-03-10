@@ -1,0 +1,592 @@
+/**
+ * Editor V3 — Notation-specific styles (UML, Simplified).
+ */
+
+// ---------------------------------------------------------------------------
+// Variables
+// ---------------------------------------------------------------------------
+
+$v3-font-family: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+$v3-font-size-sm: 11px;
+$v3-font-size-base: 12px;
+$v3-font-size-lg: 13px;
+$v3-border-radius: 6px;
+
+$v3-border-node: #e2e8f0;
+$v3-dark-border-node: #334155;
+$v3-text-primary: #1e293b;
+$v3-text-secondary: #64748b;
+$v3-text-muted: #94a3b8;
+$v3-dark-text-primary: #f1f5f9;
+$v3-dark-text-secondary: #94a3b8;
+
+// ---------------------------------------------------------------------------
+// UML Class
+// ---------------------------------------------------------------------------
+
+.v3-uml-class {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    font-family: $v3-font-family;
+
+    &__header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 6px 10px;
+        border-bottom: 1px solid $v3-border-node;
+        background: rgba(0, 0, 0, 0.02);
+    }
+
+    &__stereotype {
+        font-size: $v3-font-size-sm;
+        color: $v3-text-muted;
+        font-style: italic;
+        line-height: 1.2;
+    }
+
+    &__name {
+        font-weight: 600;
+        font-size: $v3-font-size-lg;
+        text-align: center;
+
+        &--abstract {
+            font-style: italic;
+        }
+    }
+
+    &__extends {
+        font-size: $v3-font-size-sm;
+        color: $v3-text-secondary;
+        margin-top: 2px;
+    }
+
+    &__compartment {
+        padding: 4px 10px;
+        border-bottom: 1px solid $v3-border-node;
+
+        &:last-child {
+            border-bottom: none;
+        }
+
+        &--refs {
+            border-top: 1px dashed $v3-border-node;
+        }
+    }
+
+    &__empty {
+        min-height: 8px;
+    }
+
+    &__attr,
+    &__op,
+    &__ref {
+        display: flex;
+        align-items: baseline;
+        gap: 2px;
+        padding: 1px 0;
+        font-size: $v3-font-size-sm;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        cursor: default;
+
+        &:hover {
+            background: rgba(0, 0, 0, 0.03);
+        }
+    }
+
+    &__visibility {
+        color: $v3-text-muted;
+        width: 12px;
+        flex-shrink: 0;
+        text-align: center;
+    }
+
+    &__attr-name,
+    &__op-name,
+    &__ref-name {
+        color: $v3-text-primary;
+    }
+
+    &__attr-sep {
+        color: $v3-text-muted;
+    }
+
+    &__attr-type,
+    &__op-return,
+    &__ref-target {
+        color: $v3-text-secondary;
+    }
+
+    &__attr-mult {
+        color: $v3-text-muted;
+        font-size: 10px;
+    }
+
+    &__attr-default {
+        color: $v3-text-muted;
+        font-style: italic;
+    }
+
+    &__op-params {
+        color: $v3-text-secondary;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// UML Enum
+// ---------------------------------------------------------------------------
+
+.v3-uml-enum {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    font-family: $v3-font-family;
+
+    &__header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 6px 10px;
+        border-bottom: 1px solid $v3-border-node;
+        background: rgba(0, 0, 0, 0.02);
+    }
+
+    &__stereotype {
+        font-size: $v3-font-size-sm;
+        color: $v3-text-muted;
+        font-style: italic;
+    }
+
+    &__name {
+        font-weight: 600;
+        font-size: $v3-font-size-lg;
+        text-align: center;
+    }
+
+    &__compartment {
+        padding: 4px 10px;
+    }
+
+    &__empty {
+        min-height: 8px;
+    }
+
+    &__literal {
+        padding: 1px 0;
+        font-size: $v3-font-size-sm;
+        color: $v3-text-primary;
+        cursor: default;
+
+        &:hover {
+            background: rgba(0, 0, 0, 0.03);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// UML Package
+// ---------------------------------------------------------------------------
+
+.v3-uml-package {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    font-family: $v3-font-family;
+
+    &__tab {
+        display: inline-flex;
+        align-self: flex-start;
+        padding: 4px 12px;
+        border: 1px solid $v3-border-node;
+        border-bottom: none;
+        border-radius: $v3-border-radius $v3-border-radius 0 0;
+        background: rgba(0, 0, 0, 0.02);
+        max-width: 60%;
+    }
+
+    &__name {
+        font-weight: 600;
+        font-size: $v3-font-size-lg;
+        cursor: default;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    &__body {
+        padding: 8px 10px;
+        min-height: 40px;
+        display: flex;
+        align-items: flex-start;
+        justify-content: flex-start;
+    }
+
+    &__badge {
+        font-size: $v3-font-size-sm;
+        color: $v3-text-muted;
+        background: rgba(0, 0, 0, 0.04);
+        padding: 2px 6px;
+        border-radius: 10px;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// UML DataType
+// ---------------------------------------------------------------------------
+
+.v3-uml-datatype {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    font-family: $v3-font-family;
+
+    &__header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 8px 10px;
+    }
+
+    &__stereotype {
+        font-size: $v3-font-size-sm;
+        color: $v3-text-muted;
+        font-style: italic;
+    }
+
+    &__name {
+        font-weight: 600;
+        font-size: $v3-font-size-lg;
+        text-align: center;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Simplified notation
+// ---------------------------------------------------------------------------
+
+.v3-simplified {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+    gap: 4px;
+    font-family: $v3-font-family;
+    width: 100%;
+
+    &__name {
+        font-weight: 600;
+        font-size: $v3-font-size-lg;
+        text-align: center;
+        cursor: default;
+    }
+
+    &__badges {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    &__badge {
+        font-size: 10px;
+        padding: 1px 6px;
+        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.06);
+        color: $v3-text-secondary;
+
+        &--attr { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+        &--ref { background: rgba(6, 182, 212, 0.1); color: #06b6d4; }
+        &--op { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
+        &--lit { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// UML Object (M1 instance)
+// ---------------------------------------------------------------------------
+
+.v3-uml-object {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    font-family: $v3-font-family;
+
+    &__header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 6px 10px;
+        border-bottom: 1px solid $v3-border-node;
+        background: rgba(0, 0, 0, 0.02);
+    }
+
+    &__title {
+        text-decoration: underline;
+        font-weight: 600;
+        font-size: $v3-font-size-lg;
+        text-align: center;
+    }
+
+    &__classname {
+        color: $v3-text-primary;
+    }
+
+    &__features {
+        padding: 4px 10px;
+    }
+
+    &__feature {
+        display: flex;
+        align-items: baseline;
+        gap: 4px;
+        padding: 1px 0;
+        font-size: $v3-font-size-sm;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        cursor: default;
+
+        &:hover {
+            background: rgba(0, 0, 0, 0.03);
+        }
+
+        &--ref {
+            .v3-uml-object__feature-value {
+                color: #3b82f6;
+                font-style: italic;
+            }
+        }
+    }
+
+    &__feature-name {
+        color: $v3-text-primary;
+        font-weight: 500;
+    }
+
+    &__feature-eq {
+        color: $v3-text-muted;
+    }
+
+    &__feature-value {
+        color: $v3-text-secondary;
+    }
+
+    &__empty {
+        padding: 4px 10px;
+        font-size: $v3-font-size-sm;
+        color: $v3-text-muted;
+        font-style: italic;
+        text-align: center;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Simplified Object (M1 instance — compact)
+// ---------------------------------------------------------------------------
+
+.v3-simplified-object {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+    gap: 4px;
+    font-family: $v3-font-family;
+    width: 100%;
+
+    &__header {
+        text-decoration: underline;
+        cursor: default;
+    }
+
+    &__classname {
+        font-weight: 600;
+        font-size: $v3-font-size-lg;
+        color: $v3-text-primary;
+    }
+
+    &__badges {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    &__badge {
+        font-size: 10px;
+        padding: 1px 6px;
+        border-radius: 8px;
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+
+        &--ref {
+            background: rgba(6, 182, 212, 0.1);
+            color: #06b6d4;
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Custom view placeholder
+// ---------------------------------------------------------------------------
+
+.v3-node__custom-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px;
+    gap: 4px;
+
+    .v3-node__viewid-tag {
+        font-size: 9px;
+        color: $v3-text-muted;
+        background: rgba(0, 0, 0, 0.04);
+        padding: 1px 6px;
+        border-radius: 6px;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Dark theme overrides for all notations
+// ---------------------------------------------------------------------------
+
+.v3-theme--dark {
+    .v3-uml-class,
+    .v3-uml-enum,
+    .v3-uml-package,
+    .v3-uml-datatype {
+        &__header {
+            border-bottom-color: $v3-dark-border-node;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        &__stereotype {
+            color: $v3-dark-text-secondary;
+        }
+
+        &__name {
+            color: $v3-dark-text-primary;
+        }
+    }
+
+    .v3-uml-class {
+        &__compartment {
+            border-bottom-color: $v3-dark-border-node;
+        }
+
+        &__visibility,
+        &__attr-sep,
+        &__attr-mult,
+        &__attr-default {
+            color: $v3-dark-text-secondary;
+        }
+
+        &__attr-name,
+        &__op-name,
+        &__ref-name {
+            color: $v3-dark-text-primary;
+        }
+
+        &__attr-type,
+        &__op-return,
+        &__op-params,
+        &__ref-target,
+        &__extends {
+            color: $v3-dark-text-secondary;
+        }
+
+        &__attr:hover,
+        &__op:hover,
+        &__ref:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+    }
+
+    .v3-uml-enum {
+        &__compartment {
+            border-bottom-color: $v3-dark-border-node;
+        }
+
+        &__literal {
+            color: $v3-dark-text-primary;
+
+            &:hover {
+                background: rgba(255, 255, 255, 0.03);
+            }
+        }
+    }
+
+    .v3-uml-package {
+        &__tab {
+            border-color: $v3-dark-border-node;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        &__badge {
+            background: rgba(255, 255, 255, 0.06);
+            color: $v3-dark-text-secondary;
+        }
+    }
+
+    .v3-simplified {
+        &__name {
+            color: $v3-dark-text-primary;
+        }
+
+        &__badge {
+            background: rgba(255, 255, 255, 0.08);
+            color: $v3-dark-text-secondary;
+        }
+    }
+
+    .v3-uml-object {
+        &__header {
+            border-bottom-color: $v3-dark-border-node;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        &__classname {
+            color: $v3-dark-text-primary;
+        }
+
+        &__feature:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        &__feature-name {
+            color: $v3-dark-text-primary;
+        }
+
+        &__feature-eq {
+            color: $v3-dark-text-secondary;
+        }
+
+        &__feature-value {
+            color: $v3-dark-text-secondary;
+        }
+
+        &__empty {
+            color: $v3-dark-text-secondary;
+        }
+    }
+
+    .v3-simplified-object {
+        &__classname {
+            color: $v3-dark-text-primary;
+        }
+
+        &__badge {
+            background: rgba(255, 255, 255, 0.08);
+            color: $v3-dark-text-secondary;
+        }
+    }
+
+    .v3-node__custom-placeholder .v3-node__viewid-tag {
+        background: rgba(255, 255, 255, 0.06);
+        color: $v3-dark-text-secondary;
+    }
+}

@@ -381,6 +381,7 @@ body.resizing-tree-view {
         cursor: pointer;
         color: $color-text-tertiary;
         padding: 0;
+        padding-left: 0px!important; // Align with icon
         flex-shrink: 0;
         transition: color $transition-fast;
 
@@ -514,7 +515,7 @@ body.resizing-tree-view {
         display: flex;
         align-items: center;
         gap: 2px;
-        padding: 4px 6px;
+        padding: 4px 6px 0 4px!important;
         border-radius: $radius-sm;
         cursor: pointer;
         transition: background-color $transition-fast;

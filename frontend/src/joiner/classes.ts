@@ -2050,7 +2050,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         const father: LPointerTargetable = (c.proxyObject as LModelElement).father;
         if (father) {
             const check = (father as LModelElement).children?.filter((child) => {
-                return (D.fromPointer(child.id) as DNamedElement).name === name;
+                return child.id !== c.data.id && (D.fromPointer(child.id) as DNamedElement).name === name;
             });
             if (check.length > 0) {
                 U.alert('e', 'Cannot rename the selected element since this name is already taken.');

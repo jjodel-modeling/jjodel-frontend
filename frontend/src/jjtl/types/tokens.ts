@@ -15,6 +15,12 @@ export enum TokenType {
     WHEN = 'WHEN',
     HELPER = 'HELPER',
 
+    // Iteration Keywords
+    FORALL = 'FORALL',
+    IN = 'IN',
+    SUCH = 'SUCH',
+    THAT = 'THAT',
+
     // Interactive Keywords
     ALERT = 'ALERT',
     NOTIFY = 'NOTIFY',
@@ -46,6 +52,7 @@ export enum TokenType {
     // ============================================
     // JjTL operators
     ARROW = 'ARROW',              // ->
+    FAT_ARROW = 'FAT_ARROW',      // =>
     COLON = 'COLON',              // :
     EQUALS = 'EQUALS',            // =
     DOT = 'DOT',                  // .
@@ -98,6 +105,10 @@ export const JJTL_KEYWORDS: Record<string, TokenType> = {
     'to': TokenType.TO,
     'when': TokenType.WHEN,
     'helper': TokenType.HELPER,
+    'forall': TokenType.FORALL,
+    'in': TokenType.IN,
+    'such': TokenType.SUCH,
+    'that': TokenType.THAT,
     'alert': TokenType.ALERT,
     'notify': TokenType.NOTIFY,
     'prompt': TokenType.PROMPT,

@@ -37,14 +37,11 @@ export function clearSyncModes(): void {
 const dropCreatedIds = new Set<string>();
 
 export function markDropCreated(id: string): void {
-    console.log('[syncState] markDropCreated:', id);
     dropCreatedIds.add(id);
 }
 
 export function consumeDropCreated(id: string): boolean {
-    const consumed = dropCreatedIds.delete(id);
-    if (consumed) console.log('[syncState] consumeDropCreated SUCCESS:', id);
-    return consumed;
+    return dropCreatedIds.delete(id);
 }
 
 export function clearDropCreated(): void {
@@ -62,14 +59,11 @@ export function clearDropCreated(): void {
 const edgeRefIds = new Map<string, string>();
 
 export function setEdgeRefId(edgeId: string, refId: string): void {
-    console.log('[syncState] setEdgeRefId:', { edgeId, refId });
     edgeRefIds.set(edgeId, refId);
 }
 
 export function getEdgeRefId(edgeId: string): string | undefined {
-    const refId = edgeRefIds.get(edgeId);
-    console.log('[syncState] getEdgeRefId:', { edgeId, refId: refId ?? 'NOT FOUND', registrySize: edgeRefIds.size });
-    return refId;
+    return edgeRefIds.get(edgeId);
 }
 
 export function clearEdgeRefIds(): void {
@@ -119,4 +113,29 @@ export function purgeExpired(): void {
     for (const [id, ts] of canvasUpdatedIds) {
         if (now - ts > BOUNCE_WINDOW_MS) canvasUpdatedIds.delete(id);
     }
+}
+
+// ---------------------------------------------------------------------------
+// Canvas-created edge pairs — tracks source→target pairs created by the
+// canvas (syncInheritanceEdge, syncReferenceEdge).
+//
+// The auto-populate effect in useJjomSync checks this set to avoid creating
+// duplicate DVoidEdges for edges that the canvas already created. This is
+// necessary because DVoidEdge.new2's internal TRANSACTION may not always
+// add the edge to the graph's subElements in time for the auto-populate
+// to see it.
+// ---------------------------------------------------------------------------
+
+const canvasEdgePairs = new Set<string>();
+
+export function markCanvasEdgePair(src: string, tgt: string): void {
+    canvasEdgePairs.add(`${src}→${tgt}`);
+}
+
+export function hasCanvasEdgePair(key: string): boolean {
+    return canvasEdgePairs.has(key);
+}
+
+export function clearCanvasEdgePairs(): void {
+    canvasEdgePairs.clear();
 }

@@ -10,11 +10,8 @@ import {
     parsePathPoints,
     parsePathSubPaths,
     pointsToPath,
-    updateTreeObstacles,
-    removeTreeObstacles,
     type TreeBranch,
 } from '../utils/edgeUtils';
-import { useObstacleGrid } from '../contexts/ObstacleGridContext';
 
 export interface TreeGeometry {
     trunkPath: string;
@@ -58,7 +55,6 @@ export function useTreeLayout(
     selected: boolean | undefined,
     isInheritance: boolean,
 ): TreeLayoutResult {
-    const { nodeRects, bumpVersion } = useObstacleGrid();
     const allNodes = useNodes();
     const allEdges = useEdges();
 
@@ -66,7 +62,15 @@ export function useTreeLayout(
     const group = useMemo(() => {
         if (!isInheritance) return [];
         return allEdges
-            .filter(e => e.type === 'inheritance' && e.target === target)
+            .filter(e => {
+                if (e.type !== 'inheritance' || e.target !== target) return false;
+                // Exclude edges with anchors pinned to non-standard sides from tree grouping
+                const srcAnchor = (e.data as any)?.sourceAnchor;
+                if (srcAnchor?.mode === 'pinned' && srcAnchor.side !== 'top') return false;
+                const tgtAnchor = (e.data as any)?.targetAnchor;
+                if (tgtAnchor?.mode === 'pinned' && tgtAnchor.side !== 'bottom') return false;
+                return true;
+            })
             .sort((a, b) => a.id.localeCompare(b.id));
     }, [allEdges, target, isInheritance]);
 
@@ -111,8 +115,8 @@ export function useTreeLayout(
             branches.push({ childX: childCenterX, childY, edgeId: edge.id });
         }
 
-        return computeTreeConnectorPath(targetX, targetY, branches, nodeRects, treeExcludeIds);
-    }, [isGrouped, group, allNodes, targetX, targetY, sourceSide, nodeRects, treeExcludeIds]);
+        return computeTreeConnectorPath(targetX, targetY, branches, [], treeExcludeIds);
+    }, [isGrouped, group, allNodes, targetX, targetY, sourceSide, treeExcludeIds]);
 
     // Register tree geometry paths for crossing detection.
     // All segments use treeGroupId = target (parent node ID) so that
@@ -145,39 +149,18 @@ export function useTreeLayout(
         return () => { treeIds.forEach(tid => unregisterEdgePath(tid)); };
     }, [edgeId, isPrimary, isGrouped, treeGeometry, source, target, treeGroupId]);
 
-    // Register tree segments as routing obstacles for other edges' A*
-    useEffect(() => {
-        if (!isPrimary || !isGrouped || !treeGeometry) {
-            removeTreeObstacles(`tree_${target}`);
-            return;
-        }
-
-        updateTreeObstacles(
-            `tree_${target}`,
-            treeGeometry.trunkPath,
-            treeGeometry.barAndBranchesPath,
-            target,
-        );
-        bumpVersion();
-
-        return () => {
-            removeTreeObstacles(`tree_${target}`);
-            bumpVersion();
-        };
-    }, [isPrimary, isGrouped, treeGeometry, target, bumpVersion]);
-
     // Compute crossings for tree segments so they also get bridge arcs
     const trunkPathFinal = useMemo(() => {
         if (!isPrimary || !isGrouped || !treeGeometry) return '';
         const trunkPts = parsePathPoints(treeGeometry.trunkPath);
         if (trunkPts.length < 2) return treeGeometry.trunkPath;
-        const trunkCrossings = getEdgeCrossings(`${edgeId}__trunk`, trunkPts, nodeRects);
+        const trunkCrossings = getEdgeCrossings(`${edgeId}__trunk`, trunkPts, []);
         if (trunkCrossings.length > 0) {
             return buildFinalPath(trunkPts, trunkCrossings, 4, 6);
         }
         return roundManhattanPath(treeGeometry.trunkPath, 4);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [edgeId, isPrimary, isGrouped, treeGeometry, allNodes, allEdges, nodeRects]);
+    }, [edgeId, isPrimary, isGrouped, treeGeometry, allNodes, allEdges]);
 
     const barBranchesPathFinal = useMemo(() => {
         if (!isPrimary || !isGrouped || !treeGeometry?.barAndBranchesPath) return treeGeometry?.barAndBranchesPath || '';
@@ -189,7 +172,7 @@ export function useTreeLayout(
                 finalParts.push(pointsToPath(pts));
                 continue;
             }
-            const segCrossings = getEdgeCrossings(`${edgeId}__tree_${idx}`, pts, nodeRects);
+            const segCrossings = getEdgeCrossings(`${edgeId}__tree_${idx}`, pts, []);
             if (segCrossings.length > 0) {
                 finalParts.push(buildFinalPath(pts, segCrossings, 4, 6));
             } else {
@@ -198,7 +181,7 @@ export function useTreeLayout(
         }
         return finalParts.join(' ');
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [edgeId, isPrimary, isGrouped, treeGeometry, allNodes, allEdges, nodeRects]);
+    }, [edgeId, isPrimary, isGrouped, treeGeometry, allNodes, allEdges]);
 
     return {
         isGrouped,

@@ -42,6 +42,7 @@ export interface ClassMappingAST extends ASTNode {
 // Union type for items that can appear in a mapping body
 export type MappingBodyItemAST =
     | AttributeMappingAST
+    | ForAllMappingAST
     | AlertStatementAST
     | NotifyStatementAST;
 
@@ -79,7 +80,16 @@ export interface ValueMappingAST extends ASTNode {
 export interface ObjectCreationAST extends ASTNode {
     type: 'ObjectCreation';
     targetClass: string;
-    body: AttributeMappingAST[];
+    body: MappingBodyItemAST[];
+}
+
+// ForAll mapping: forall x in collection such that predicate -> Type { ... }
+export interface ForAllMappingAST extends ASTNode {
+    type: 'ForAllMapping';
+    variable: string;
+    collection: ExpressionAST;
+    filter?: ExpressionAST;
+    objectCreation: ObjectCreationAST;
 }
 
 // Helper: helper formatName(s: String) -> String { ... }

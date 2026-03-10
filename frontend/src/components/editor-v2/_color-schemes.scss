@@ -15,6 +15,9 @@
         --class-abstract-header-bg: #353f4e;
         --enum-header-bg: #3d4b5c;
         --package-header-bg: #2d3a4a;
+        --object-header-bg: #3d4b5c;
+        --orphan-border-color: #94a3b8;
+        --orphan-header-bg: #454d58;
 
         --field-type-color: #94a3b8;
         --enum-accent: #64748b;
@@ -31,6 +34,9 @@
         --class-abstract-header-bg: #a8b5c4;
         --enum-header-bg: #94a3b8;
         --package-header-bg: #cbd5e1;
+        --object-header-bg: #94a3b8;
+        --orphan-border-color: #64748b;
+        --orphan-header-bg: #b0b8c4;
 
         --field-type-color: #475569;
         --enum-accent: #64748b;
@@ -44,36 +50,42 @@
 }
 
 // ════════════════════════════════════════════════
-// PASTEL PALETTES (5 variants)
+// CURATED PALETTES (5 variants)
 // ════════════════════════════════════════════════
 
-// ── Pastel: Lavender Dream ──
-// Purple/lilac tones with soft indigo accents
-.editor-v2.scheme-pastel-lavender {
+// ── Sapphire ──
+// Rich blue tones with steel/sky accents — corporate, clean
+.editor-v2.scheme-sapphire {
     &.theme-dark {
-        --class-header-bg: rgba(147, 130, 220, 0.24);
-        --class-abstract-header-bg: rgba(130, 140, 190, 0.2);
-        --enum-header-bg: rgba(170, 130, 210, 0.24);
-        --package-header-bg: rgba(100, 100, 150, 0.22);
+        --class-header-bg: rgba(37, 99, 235, 0.24);
+        --class-abstract-header-bg: rgba(51, 65, 85, 0.28);
+        --enum-header-bg: rgba(14, 165, 233, 0.22);
+        --package-header-bg: rgba(30, 41, 59, 0.3);
+        --object-header-bg: rgba(37, 99, 235, 0.18);
+        --orphan-border-color: #3b82f6;
+        --orphan-header-bg: rgba(110, 120, 145, 0.2);
 
-        --node-header-text: rgba(255, 255, 255, 0.9);
+        --node-header-text: rgba(255, 255, 255, 0.92);
         --stereotype-color: rgba(255, 255, 255, 0.55);
-        --field-type-color: #c4b5fd;
-        --enum-accent: #a78bfa;
-        --package-accent: #818cf8;
+        --field-type-color: #7dd3fc;
+        --enum-accent: #38bdf8;
+        --package-accent: #3b82f6;
     }
 
     &.theme-light {
-        --class-header-bg: #ddd6fe;
-        --class-abstract-header-bg: #e2e0f0;
-        --enum-header-bg: #ede9fe;
-        --package-header-bg: #eee8f8;
+        --class-header-bg: #dbeafe;
+        --class-abstract-header-bg: #e2e8f0;
+        --enum-header-bg: #e0f2fe;
+        --package-header-bg: #f1f5f9;
+        --object-header-bg: #dbeafe;
+        --orphan-border-color: #2563eb;
+        --orphan-header-bg: #e4e8ee;
 
-        --node-header-text: #4c1d95;
-        --stereotype-color: #6d28d9;
-        --field-type-color: #6d28d9;
-        --enum-accent: #7c3aed;
-        --package-accent: #6366f1;
+        --node-header-text: #1e3a5f;
+        --stereotype-color: #475569;
+        --field-type-color: #2563eb;
+        --enum-accent: #0284c7;
+        --package-accent: #1d4ed8;
 
         .mm-class.abstract {
             --node-header-text: #475569;
@@ -81,42 +93,195 @@
         }
 
         .mm-enum {
-            --node-header-text: #5b21b6;
+            --node-header-text: #075985;
         }
 
         .mm-package {
-            --package-header-text: #4338ca;
+            --package-header-text: #334155;
         }
     }
 }
 
-// ── Pastel: Rose Garden ──
-// Warm pink/rose tones with coral accents
-.editor-v2.scheme-pastel-rose {
+// ── Amethyst ──
+// Deep violet/purple jewel tones — elegant, rich
+.editor-v2.scheme-amethyst {
     &.theme-dark {
-        --class-header-bg: rgba(244, 143, 177, 0.22);
-        --class-abstract-header-bg: rgba(206, 162, 175, 0.2);
-        --enum-header-bg: rgba(240, 160, 150, 0.22);
-        --package-header-bg: rgba(150, 110, 120, 0.22);
+        --class-header-bg: rgba(124, 58, 237, 0.24);
+        --class-abstract-header-bg: rgba(88, 70, 130, 0.22);
+        --enum-header-bg: rgba(168, 85, 247, 0.22);
+        --package-header-bg: rgba(49, 46, 129, 0.25);
+        --object-header-bg: rgba(244, 114, 182, 0.2);
+        --orphan-border-color: #f472b6;
+        --orphan-header-bg: rgba(160, 130, 145, 0.2);
 
-        --node-header-text: rgba(255, 255, 255, 0.9);
+        --node-header-text: rgba(255, 255, 255, 0.92);
         --stereotype-color: rgba(255, 255, 255, 0.55);
-        --field-type-color: #fda4af;
-        --enum-accent: #fb7185;
-        --package-accent: #f472b6;
+        --field-type-color: #c4b5fd;
+        --enum-accent: #a78bfa;
+        --package-accent: #7c3aed;
     }
 
     &.theme-light {
-        --class-header-bg: #fce7f3;
-        --class-abstract-header-bg: #f5e6ee;
-        --enum-header-bg: #ffe4e6;
-        --package-header-bg: #fdf2f8;
+        --class-header-bg: #ede9fe;
+        --class-abstract-header-bg: #f5f3ff;
+        --enum-header-bg: #f3e8ff;
+        --package-header-bg: #faf5ff;
+        --object-header-bg: #fce7f3;
+        --orphan-border-color: #ec4899;
+        --orphan-header-bg: #ece6ea;
 
-        --node-header-text: #9d174d;
-        --stereotype-color: #be185d;
-        --field-type-color: #be185d;
+        --node-header-text: #4c1d95;
+        --stereotype-color: #6d28d9;
+        --field-type-color: #7c3aed;
+        --enum-accent: #9333ea;
+        --package-accent: #6d28d9;
+
+        .mm-class.abstract {
+            --node-header-text: #475569;
+            --stereotype-color: #64748b;
+        }
+
+        .mm-enum {
+            --node-header-text: #7e22ce;
+        }
+
+        .mm-package {
+            --package-header-text: #581c87;
+        }
+    }
+}
+
+// ── Jade ──
+// Deep emerald/teal greens — natural, sophisticated
+.editor-v2.scheme-jade {
+    &.theme-dark {
+        --class-header-bg: rgba(16, 185, 129, 0.22);
+        --class-abstract-header-bg: rgba(60, 100, 80, 0.22);
+        --enum-header-bg: rgba(20, 184, 166, 0.22);
+        --package-header-bg: rgba(22, 78, 70, 0.25);
+        --object-header-bg: rgba(16, 185, 129, 0.18);
+        --orphan-border-color: #10b981;
+        --orphan-header-bg: rgba(110, 140, 130, 0.18);
+
+        --node-header-text: rgba(255, 255, 255, 0.92);
+        --stereotype-color: rgba(255, 255, 255, 0.55);
+        --field-type-color: #6ee7b7;
+        --enum-accent: #2dd4bf;
+        --package-accent: #10b981;
+    }
+
+    &.theme-light {
+        --class-header-bg: #d1fae5;
+        --class-abstract-header-bg: #ecfdf5;
+        --enum-header-bg: #ccfbf1;
+        --package-header-bg: #f0fdfa;
+        --object-header-bg: #d1fae5;
+        --orphan-border-color: #059669;
+        --orphan-header-bg: #e0e8e4;
+
+        --node-header-text: #064e3b;
+        --stereotype-color: #065f46;
+        --field-type-color: #059669;
+        --enum-accent: #0d9488;
+        --package-accent: #047857;
+
+        .mm-class.abstract {
+            --node-header-text: #475569;
+            --stereotype-color: #64748b;
+        }
+
+        .mm-enum {
+            --node-header-text: #0f766e;
+        }
+
+        .mm-package {
+            --package-header-text: #115e59;
+        }
+    }
+}
+
+// ── Terracotta ──
+// Warm amber/copper/rust tones — refined, earthy
+.editor-v2.scheme-terracotta {
+    &.theme-dark {
+        --class-header-bg: rgba(180, 83, 9, 0.24);
+        --class-abstract-header-bg: rgba(140, 100, 70, 0.22);
+        --enum-header-bg: rgba(194, 65, 12, 0.22);
+        --package-header-bg: rgba(100, 60, 30, 0.25);
+        --object-header-bg: rgba(180, 83, 9, 0.18);
+        --orphan-border-color: #d97706;
+        --orphan-header-bg: rgba(145, 130, 110, 0.2);
+
+        --node-header-text: rgba(255, 255, 255, 0.92);
+        --stereotype-color: rgba(255, 255, 255, 0.55);
+        --field-type-color: #fdba74;
+        --enum-accent: #fb923c;
+        --package-accent: #d97706;
+    }
+
+    &.theme-light {
+        --class-header-bg: #fed7aa;
+        --class-abstract-header-bg: #ffedd5;
+        --enum-header-bg: #fde68a;
+        --package-header-bg: #fffbeb;
+        --object-header-bg: #fed7aa;
+        --orphan-border-color: #b45309;
+        --orphan-header-bg: #e8ddd0;
+
+        --node-header-text: #7c2d12;
+        --stereotype-color: #9a3412;
+        --field-type-color: #c2410c;
+        --enum-accent: #ea580c;
+        --package-accent: #b45309;
+
+        .mm-class.abstract {
+            --node-header-text: #78716c;
+            --stereotype-color: #78716c;
+        }
+
+        .mm-enum {
+            --node-header-text: #9a3412;
+        }
+
+        .mm-package {
+            --package-header-text: #854d0e;
+        }
+    }
+}
+
+// ── Crimson ──
+// Deep red/ruby/garnet tones — bold, dramatic
+.editor-v2.scheme-crimson {
+    &.theme-dark {
+        --class-header-bg: rgba(185, 28, 28, 0.24);
+        --class-abstract-header-bg: rgba(120, 50, 50, 0.22);
+        --enum-header-bg: rgba(190, 18, 60, 0.22);
+        --package-header-bg: rgba(80, 30, 30, 0.25);
+        --object-header-bg: rgba(185, 28, 28, 0.18);
+        --orphan-border-color: #ef4444;
+        --orphan-header-bg: rgba(145, 110, 110, 0.18);
+
+        --node-header-text: rgba(255, 255, 255, 0.92);
+        --stereotype-color: rgba(255, 255, 255, 0.55);
+        --field-type-color: #fca5a5;
+        --enum-accent: #fb7185;
+        --package-accent: #ef4444;
+    }
+
+    &.theme-light {
+        --class-header-bg: #fecaca;
+        --class-abstract-header-bg: #fee2e2;
+        --enum-header-bg: #fecdd3;
+        --package-header-bg: #fff1f2;
+        --object-header-bg: #fecaca;
+        --orphan-border-color: #dc2626;
+        --orphan-header-bg: #e6d8d8;
+
+        --node-header-text: #7f1d1d;
+        --stereotype-color: #991b1b;
+        --field-type-color: #dc2626;
         --enum-accent: #e11d48;
-        --package-accent: #db2777;
+        --package-accent: #b91c1c;
 
         .mm-class.abstract {
             --node-header-text: #475569;
@@ -128,136 +293,7 @@
         }
 
         .mm-package {
-            --package-header-text: #831843;
-        }
-    }
-}
-
-// ── Pastel: Ocean Breeze ──
-// Cool teal/aqua tones with seafoam accents
-.editor-v2.scheme-pastel-ocean {
-    &.theme-dark {
-        --class-header-bg: rgba(94, 234, 212, 0.18);
-        --class-abstract-header-bg: rgba(110, 200, 180, 0.16);
-        --enum-header-bg: rgba(103, 232, 249, 0.18);
-        --package-header-bg: rgba(80, 150, 150, 0.2);
-
-        --node-header-text: rgba(255, 255, 255, 0.9);
-        --stereotype-color: rgba(255, 255, 255, 0.55);
-        --field-type-color: #5eead4;
-        --enum-accent: #22d3ee;
-        --package-accent: #34d399;
-    }
-
-    &.theme-light {
-        --class-header-bg: #ccfbf1;
-        --class-abstract-header-bg: #d1fae5;
-        --enum-header-bg: #cffafe;
-        --package-header-bg: #e0f5f0;
-
-        --node-header-text: #115e59;
-        --stereotype-color: #0f766e;
-        --field-type-color: #0d9488;
-        --enum-accent: #0891b2;
-        --package-accent: #059669;
-
-        .mm-class.abstract {
-            --node-header-text: #475569;
-            --stereotype-color: #64748b;
-        }
-
-        .mm-enum {
-            --node-header-text: #0e7490;
-        }
-
-        .mm-package {
-            --package-header-text: #065f46;
-        }
-    }
-}
-
-// ── Pastel: Earthy Warmth ──
-// Warm sand/amber/terracotta tones
-.editor-v2.scheme-pastel-earth {
-    &.theme-dark {
-        --class-header-bg: rgba(251, 191, 36, 0.2);
-        --class-abstract-header-bg: rgba(200, 180, 150, 0.18);
-        --enum-header-bg: rgba(251, 146, 60, 0.2);
-        --package-header-bg: rgba(150, 130, 100, 0.2);
-
-        --node-header-text: rgba(255, 255, 255, 0.9);
-        --stereotype-color: rgba(255, 255, 255, 0.55);
-        --field-type-color: #fbbf24;
-        --enum-accent: #f97316;
-        --package-accent: #d97706;
-    }
-
-    &.theme-light {
-        --class-header-bg: #fef3c7;
-        --class-abstract-header-bg: #f5f0e4;
-        --enum-header-bg: #ffedd5;
-        --package-header-bg: #fefce8;
-
-        --node-header-text: #92400e;
-        --stereotype-color: #b45309;
-        --field-type-color: #b45309;
-        --enum-accent: #ea580c;
-        --package-accent: #ca8a04;
-
-        .mm-class.abstract {
-            --node-header-text: #475569;
-            --stereotype-color: #78716c;
-        }
-
-        .mm-enum {
-            --node-header-text: #c2410c;
-        }
-
-        .mm-package {
-            --package-header-text: #854d0e;
-        }
-    }
-}
-
-// ── Pastel: Spring Meadow ──
-// Fresh green/lime tones with natural accents
-.editor-v2.scheme-pastel-meadow {
-    &.theme-dark {
-        --class-header-bg: rgba(134, 239, 172, 0.18);
-        --class-abstract-header-bg: rgba(150, 210, 160, 0.16);
-        --enum-header-bg: rgba(190, 242, 100, 0.18);
-        --package-header-bg: rgba(100, 150, 100, 0.2);
-
-        --node-header-text: rgba(255, 255, 255, 0.9);
-        --stereotype-color: rgba(255, 255, 255, 0.55);
-        --field-type-color: #86efac;
-        --enum-accent: #a3e635;
-        --package-accent: #4ade80;
-    }
-
-    &.theme-light {
-        --class-header-bg: #dcfce7;
-        --class-abstract-header-bg: #e8f5e0;
-        --enum-header-bg: #ecfccb;
-        --package-header-bg: #f0fdf4;
-
-        --node-header-text: #166534;
-        --stereotype-color: #15803d;
-        --field-type-color: #15803d;
-        --enum-accent: #65a30d;
-        --package-accent: #16a34a;
-
-        .mm-class.abstract {
-            --node-header-text: #475569;
-            --stereotype-color: #64748b;
-        }
-
-        .mm-enum {
-            --node-header-text: #4d7c0f;
-        }
-
-        .mm-package {
-            --package-header-text: #14532d;
+            --package-header-text: #881337;
         }
     }
 }
@@ -270,6 +306,9 @@
         --class-abstract-header-bg: #4b5563;
         --enum-header-bg: #7c3aed;
         --package-header-bg: #334155;
+        --object-header-bg: #d97706;
+        --orphan-border-color: #f59e0b;
+        --orphan-header-bg: #7a7060;
 
         --node-header-text: #ffffff;
         --stereotype-color: rgba(255, 255, 255, 0.8);
@@ -287,6 +326,9 @@
         --class-abstract-header-bg: #374151;
         --enum-header-bg: #6d28d9;
         --package-header-bg: #e2e8f0;
+        --object-header-bg: #d97706;
+        --orphan-border-color: #d97706;
+        --orphan-header-bg: #b0a590;
 
         --node-header-text: #ffffff;
         --package-header-text: #0f172a;
@@ -309,6 +351,9 @@
         --class-abstract-header-bg: transparent;
         --enum-header-bg: transparent;
         --package-header-bg: transparent;
+        --object-header-bg: transparent;
+        --orphan-border-color: #999;
+        --orphan-header-bg: transparent;
 
         --node-bg: transparent;
         --node-shadow: transparent;
@@ -331,7 +376,10 @@
         --class-abstract-header-bg: transparent;
         --enum-header-bg: transparent;
         --package-header-bg: transparent;
+        --object-header-bg: transparent;
         --package-body-bg: transparent;
+        --orphan-border-color: #999;
+        --orphan-header-bg: transparent;
 
         --node-bg: #ffffff;
         --node-shadow: transparent;
@@ -354,7 +402,8 @@
     .mm-node,
     .mm-class,
     .mm-enum,
-    .mm-package {
+    .mm-package,
+    .mm-object {
         box-shadow: none !important;
     }
 
@@ -439,13 +488,20 @@
             background: var(--surface-hover);
         }
 
-        &.active {
-            color: var(--accent);
-
-            > i {
-                color: var(--accent);
-            }
+        &.active .scheme-selector__check {
+            visibility: visible;
         }
+    }
+
+    &__check {
+        margin-left: auto;
+        font-size: 13px;
+        flex-shrink: 0;
+        visibility: hidden;
+    }
+
+    &__option.active &__check {
+        visibility: visible;
     }
 
     &__option-name {
@@ -460,7 +516,7 @@
         margin-top: 1px;
     }
 
-    // ── Pastel group item (has submenu) ──
+    // ── Palette group item (has submenu) ──
     &__group-item {
         display: flex;
         align-items: center;
@@ -490,12 +546,8 @@
             background: var(--surface-hover);
         }
 
-        &.has-active-child {
-            color: var(--accent);
-
-            > i:first-child {
-                color: var(--accent);
-            }
+        &.has-active-child .scheme-selector__check {
+            visibility: visible;
         }
     }
 
@@ -507,7 +559,6 @@
     &__group-chevron {
         font-size: 10px;
         opacity: 0.6;
-        margin-left: auto;
     }
 
     // ── Submenu ──
@@ -550,11 +601,6 @@
         &:hover,
         &:focus-visible {
             background: var(--surface-hover);
-            color: #f1f5f9;
-        }
-
-        &.active {
-            color: #f1f5f9;
         }
     }
 

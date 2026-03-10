@@ -22,6 +22,10 @@ export type { ClassNodeData } from '../types';
 function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
     const { setNodes } = useReactFlow();
     const editorContext = useEditorContextSafe();
+
+    const attributes = data.attributes ?? [];
+    const operations = data.operations ?? [];
+
     const [editing, setEditing] = useState(false);
     const [name, setName] = useState(data.label);
     const [dragOver, setDragOver] = useState(false);
@@ -210,7 +214,7 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
 
     const notation = editorContext?.notation ?? 'uml';
     const isAbstract = data.isAbstract ?? false;
-    const hasContent = (data.attributes?.length || 0) > 0 || (data.operations?.length || 0) > 0;
+    const hasContent = attributes.length > 0 || operations.length > 0;
     const showBody = notation !== 'compact';
 
     // Format bounds for display
@@ -264,7 +268,7 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
             {showBody && hasContent && notation === 'er' && (
                 <div className="mm-node__body mm-node__body--er">
                     <span className="mm-node__er-attrs">
-                        {data.attributes?.map(a => a.name).join(', ')}
+                        {attributes.map(a => a.name).join(', ')}
                     </span>
                 </div>
             )}
@@ -272,9 +276,9 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
             {showBody && hasContent && notation !== 'er' && (
                 <div className="mm-node__body">
                     {/* Attributes */}
-                    {data.attributes && data.attributes.length > 0 && (
+                    {attributes.length > 0 && (
                         <div className="mm-node__fields">
-                            {data.attributes.map((attr) => {
+                            {attributes.map((attr) => {
                                 const bounds = formatBounds(attr.lowerBound ?? 0, attr.upperBound ?? 1);
                                 return (
                                     <div key={attr.id} className="mm-field">
@@ -338,14 +342,14 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                     )}
 
                     {/* Operations separator */}
-                    {(data.attributes?.length ?? 0) > 0 && (data.operations?.length ?? 0) > 0 && (
+                    {attributes.length > 0 && operations.length > 0 && (
                         <div className="mm-node__separator" />
                     )}
 
                     {/* Operations */}
-                    {data.operations && data.operations.length > 0 && (
+                    {operations.length > 0 && (
                         <div className="mm-node__fields">
-                            {data.operations.map((op) => (
+                            {operations.map((op) => (
                                 <div key={op.id} className="mm-field mm-operation">
                                     {editingField?.id === op.id && editingField.field === 'name' ? (
                                         <input

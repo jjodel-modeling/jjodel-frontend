@@ -293,14 +293,14 @@ export function JodieWindow({
 
             <ChatMessages messages={messages} isWaiting={isWaiting} onJjScriptExecuted={onJjScriptExecuted} />
 
-            <AIDisclaimer />
-
             <ChatInput
                 onSend={onSendMessage}
                 disabled={isWaiting}
                 supportsVision={supportsVision}
                 supportsPDF={supportsPDF}
             />
+
+            <AIDisclaimer />
         </div>
     );
 }

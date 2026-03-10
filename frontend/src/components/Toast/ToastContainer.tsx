@@ -1,31 +1,18 @@
 import React from 'react';
-import { Toast, ToastType } from './Toast';
+import { Toast } from './Toast';
+import type { ToastMessage, ToastPosition } from './toastTypes';
 import './toast.scss';
 
-export interface ToastData {
-    id: string;
-    type: ToastType;
-    title?: string;
-    message: string;
-    duration?: number;
-}
-
 interface ToastContainerProps {
-    toasts: ToastData[];
+    toasts: ToastMessage[];
     onRemove: (id: string) => void;
-    position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center' | 'bottom-center';
+    position?: ToastPosition;
 }
 
-/**
- * ToastContainer - Container for toast notifications
- *
- * Renders all active toasts in a fixed position.
- * Toasts stack vertically with newest on top.
- */
 export const ToastContainer: React.FC<ToastContainerProps> = ({
     toasts,
     onRemove,
-    position = 'top-right'
+    position = 'bottom-left',
 }) => {
     if (toasts.length === 0) return null;
 
@@ -34,7 +21,12 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
             {toasts.map(toast => (
                 <Toast
                     key={toast.id}
-                    {...toast}
+                    id={toast.id}
+                    type={toast.priority}
+                    title={toast.title}
+                    message={toast.message}
+                    dismiss={toast.dismiss}
+                    duration={toast.duration}
                     onClose={onRemove}
                 />
             ))}

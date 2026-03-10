@@ -8,6 +8,7 @@ import {
     ClassMappingAST,
     AttributeMappingAST,
     ConversionAST,
+    ForAllMappingAST,
     ExpressionAST,
     LiteralAST,
     IdentifierAST,
@@ -28,12 +29,15 @@ import {
 
 import {
     jjelEval,
+    JjelEvaluator,
     EvaluationContext,
     createFunction,
     toJjelValue,
     fromJjelValue,
 } from '../../jjel';
 import type { JjelValue, JjelFunction } from '../../jjel';
+
+import { toJjelAst } from './astBridge';
 
 import {
     TraceModel,
@@ -133,6 +137,7 @@ export interface ExecutionStats {
 export class JjtlExecutor {
     private ast: TransformationAST;
     private context!: ExecutionContext;
+    private jjelEvaluator: JjelEvaluator = new JjelEvaluator();
     private errors: string[] = [];
     private warnings: string[] = [];
     private stats: ExecutionStats = {
@@ -576,8 +581,9 @@ export class JjtlExecutor {
             if (item.type === 'AttributeMapping') {
                 this.executeAttributeMapping(item as AttributeMappingAST, sourceInstance, targetInstance);
                 this.stats.attributeMappingsExecuted++;
+            } else if (item.type === 'ForAllMapping') {
+                this.executeForAllMapping(item as ForAllMappingAST, sourceInstance, targetInstance);
             }
-            // Handle other statement types (Alert, Notify) if needed
         }
 
         console.log('[JjTL Executor] Target instance after mappings:', targetInstance);
@@ -603,6 +609,8 @@ export class JjtlExecutor {
                 const mapping = item as AttributeMappingAST;
                 this.executeAttributeMappingWithTrace(mapping, sourceInstance, targetInstance, traceLink);
                 this.stats.attributeMappingsExecuted++;
+            } else if (item.type === 'ForAllMapping') {
+                this.executeForAllMapping(item as ForAllMappingAST, sourceInstance, targetInstance);
             }
         }
 
@@ -890,20 +898,26 @@ export class JjtlExecutor {
      */
     private executeObjectCreation(
         creation: ObjectCreationAST,
-        sourceInstance: any
+        sourceInstance: any,
+        extraBindings?: Record<string, JjelValue>
     ): JjelValue {
         const newObject: Record<string, JjelValue> = {
             __type: creation.targetClass,
             className: creation.targetClass,
         };
 
-        // Execute nested attribute mappings
-        for (const attrMapping of creation.body) {
-            if (attrMapping.type === 'AttributeMapping') {
-                const ctx = this.createInstanceContext(sourceInstance);
+        // Execute nested body items (attribute mappings and forall mappings)
+        for (const item of creation.body) {
+            if (item.type === 'AttributeMapping') {
+                const attrMapping = item as AttributeMappingAST;
+                const ctx = extraBindings
+                    ? this.createInstanceContext(sourceInstance).child(extraBindings)
+                    : this.createInstanceContext(sourceInstance);
                 let value: JjelValue;
 
-                if (attrMapping.conversion?.expression) {
+                if (attrMapping.objectCreation) {
+                    value = this.executeObjectCreation(attrMapping.objectCreation, sourceInstance, extraBindings);
+                } else if (attrMapping.conversion?.expression) {
                     value = this.evaluateExpression(attrMapping.conversion.expression, ctx);
                 } else if (attrMapping.sourceAttribute) {
                     value = this.evaluatePropertyPath(attrMapping.sourceAttribute, ctx);
@@ -912,10 +926,149 @@ export class JjtlExecutor {
                 }
 
                 newObject[attrMapping.targetAttribute] = value;
+            } else if (item.type === 'ForAllMapping') {
+                this.executeForAllMappingOnObject(item as ForAllMappingAST, sourceInstance, newObject, extraBindings);
             }
         }
 
         return newObject;
+    }
+
+    /**
+     * Execute a forall mapping inside a class mapping body.
+     * Creates one object per element and appends results to the target instance.
+     */
+    private executeForAllMapping(
+        forall: ForAllMappingAST,
+        sourceInstance: any,
+        targetInstance: any
+    ): void {
+        const ctx = this.createInstanceContext(sourceInstance);
+        const collectionValue = this.evaluateExpression(forall.collection, ctx);
+        const collection = fromJjelValue(collectionValue);
+
+        if (!Array.isArray(collection)) {
+            if (collection != null) {
+                this.warnings.push(`ForAll collection is not an array: ${typeof collection}`);
+            }
+            return;
+        }
+
+        const results: any[] = [];
+
+        for (const item of collection) {
+            const itemBindings: Record<string, JjelValue> = {
+                [forall.variable]: toJjelValue(item),
+            };
+            // Also add item properties directly for unqualified access
+            if (item && typeof item === 'object') {
+                for (const [key, value] of Object.entries(item)) {
+                    if (!key.startsWith('__')) {
+                        itemBindings[key] = toJjelValue(value);
+                    }
+                }
+            }
+            const childCtx = ctx.child(itemBindings);
+
+            // Apply filter if present
+            if (forall.filter) {
+                const passes = this.evaluateExpression(forall.filter, childCtx);
+                if (!fromJjelValue(passes)) continue;
+            }
+
+            // Execute object creation with the forall variable in scope
+            const created = this.executeObjectCreation(
+                forall.objectCreation,
+                sourceInstance,
+                itemBindings
+            );
+            results.push(fromJjelValue(created));
+            this.stats.targetInstancesCreated++;
+        }
+
+        // Find the property name to attach results to on the target.
+        // The forall is typically nested inside `-> propName { forall ... }`.
+        // The created objects go into the target instance — the caller handles placement.
+        // For top-level forall in class mapping body, append to a property
+        // named after the target class (lowercased + 's') or use the targetClass directly.
+        const propName = forall.objectCreation.targetClass.charAt(0).toLowerCase()
+            + forall.objectCreation.targetClass.slice(1) + 's';
+
+        if (results.length > 0) {
+            const existing = targetInstance[propName];
+            if (Array.isArray(existing)) {
+                targetInstance[propName] = [...existing, ...results];
+            } else {
+                targetInstance[propName] = results;
+            }
+        }
+    }
+
+    /**
+     * Execute a forall mapping inside an object creation context (e.g., -> col { forall ... }).
+     * Results are added to the parent object.
+     */
+    private executeForAllMappingOnObject(
+        forall: ForAllMappingAST,
+        sourceInstance: any,
+        parentObject: Record<string, JjelValue>,
+        extraBindings?: Record<string, JjelValue>
+    ): void {
+        const baseCtx = extraBindings
+            ? this.createInstanceContext(sourceInstance).child(extraBindings)
+            : this.createInstanceContext(sourceInstance);
+        const collectionValue = this.evaluateExpression(forall.collection, baseCtx);
+        const collection = fromJjelValue(collectionValue);
+
+        if (!Array.isArray(collection)) {
+            if (collection != null) {
+                this.warnings.push(`ForAll collection is not an array: ${typeof collection}`);
+            }
+            return;
+        }
+
+        const results: any[] = [];
+
+        for (const item of collection) {
+            const itemBindings: Record<string, JjelValue> = {
+                ...(extraBindings || {}),
+                [forall.variable]: toJjelValue(item),
+            };
+            if (item && typeof item === 'object') {
+                for (const [key, value] of Object.entries(item)) {
+                    if (!key.startsWith('__')) {
+                        itemBindings[key] = toJjelValue(value);
+                    }
+                }
+            }
+            const childCtx = baseCtx.child({ [forall.variable]: toJjelValue(item) });
+
+            if (forall.filter) {
+                const passes = this.evaluateExpression(forall.filter, childCtx);
+                if (!fromJjelValue(passes)) continue;
+            }
+
+            const created = this.executeObjectCreation(
+                forall.objectCreation,
+                sourceInstance,
+                itemBindings
+            );
+            results.push(fromJjelValue(created));
+            this.stats.targetInstancesCreated++;
+        }
+
+        // For object-level forall, store results under the target class name (lowercased + 's')
+        const propName = forall.objectCreation.targetClass.charAt(0).toLowerCase()
+            + forall.objectCreation.targetClass.slice(1) + 's';
+
+        if (results.length > 0) {
+            const existing = parentObject[propName];
+            if (Array.isArray(existing)) {
+                parentObject[propName] = [...(existing as any[]), ...results];
+            } else {
+                parentObject[propName] = results as any;
+            }
+        }
     }
 
     /**
@@ -991,87 +1144,66 @@ export class JjtlExecutor {
     }
 
     /**
-     * Evaluate an expression AST node
+     * Evaluate an expression AST node.
+     *
+     * Delegates to the JjEL evaluator via the AST bridge (toJjelAst).
+     * This gives JjTL access to ALL JjEL builtins (snakeCase, camelCase,
+     * pascalCase, kebabCase, forall, exists, implies, etc.) without
+     * duplicating evaluation logic.
+     *
+     * Special cases handled before delegation:
+     * - FunctionCall with Identifier callee (standalone builtins/helpers)
+     *   must be handled here because JjEL doesn't have a standalone
+     *   function call AST node.
      */
     private evaluateExpression(expr: ExpressionAST, ctx: EvaluationContext): JjelValue {
-        switch (expr.type) {
-            case 'Literal':
-                return this.getLiteralValue(expr as LiteralAST);
-
-            case 'Identifier': {
-                const name = (expr as IdentifierAST).name;
-                const value = ctx.get(name) ?? null;
-                console.log('[JjTL Executor] Identifier lookup:', { name, value });
-                return value;
-            }
-
-            case 'MemberAccess': {
-                const memberExpr = expr as MemberAccessAST;
-                const obj = this.evaluateExpression(memberExpr.object, ctx);
-                if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
-                    return (obj as Record<string, JjelValue>)[memberExpr.property] ?? null;
+        // Special case: standalone function calls (builtins/helpers)
+        // JjEL doesn't have a "FunctionCall" node for standalone calls like resolve("x").
+        // We handle these by looking up the function in context and calling it directly.
+        if (expr.type === 'FunctionCall') {
+            const fc = expr as FunctionCallAST;
+            if (fc.callee.type === 'Identifier') {
+                const fnName = (fc.callee as IdentifierAST).name;
+                const builtin = ctx.getBuiltin(fnName);
+                if (builtin) {
+                    const args = fc.arguments.map(arg => this.evaluateExpression(arg, ctx));
+                    return builtin.call(args, ctx);
                 }
-                return null;
-            }
-
-            case 'NullSafeMemberAccess': {
-                const nullSafeExpr = expr as NullSafeMemberAccessAST;
-                const obj = this.evaluateExpression(nullSafeExpr.object, ctx);
-                if (obj === null || obj === undefined) return null;
-                if (typeof obj === 'object' && !Array.isArray(obj)) {
-                    return (obj as Record<string, JjelValue>)[nullSafeExpr.property] ?? null;
+                // Also check if it's a function value in context
+                const fnValue = ctx.get(fnName);
+                if (fnValue && typeof fnValue === 'object' && fnValue !== null && '__jjelFunction' in fnValue) {
+                    const fn = fnValue as JjelFunction;
+                    const args = fc.arguments.map(arg => this.evaluateExpression(arg, ctx));
+                    return fn.call(args, ctx);
                 }
-                return null;
             }
+            // For method calls (obj.method()), fall through to JjEL delegation below
+        }
 
-            case 'FunctionCall':
-                return this.evaluateFunctionCall(expr as FunctionCallAST, ctx);
-
-            case 'BinaryExpression':
-                return this.evaluateBinaryExpression(expr as BinaryExpressionAST, ctx);
-
-            case 'UnaryExpression':
-                return this.evaluateUnaryExpression(expr as UnaryExpressionAST, ctx);
-
-            case 'ConditionalExpression':
-                return this.evaluateConditionalExpression(expr as ConditionalExpressionAST, ctx);
-
-            case 'NullCoalesceExpression': {
-                const nullCoalesce = expr as NullCoalesceExpressionAST;
-                const left = this.evaluateExpression(nullCoalesce.left, ctx);
-                return left ?? this.evaluateExpression(nullCoalesce.right, ctx);
-            }
-
-            case 'IsTypeExpression': {
-                const isType = expr as IsTypeExpressionAST;
-                const value = this.evaluateExpression(isType.expression, ctx);
-                return this.checkType(value, isType.targetType);
-            }
-
-            case 'LambdaExpression':
-                return this.createLambdaFunction(expr as LambdaExpressionAST, ctx);
-
-            case 'ArrayLiteral': {
-                const arrayExpr = expr as ArrayLiteralAST;
-                return arrayExpr.elements.map(el => this.evaluateExpression(el, ctx));
-            }
-
-            case 'JjelExpression': {
-                // Direct JjEL expression - convert context and use jjelEval
-                const source = this.astToSource(expr);
-                return jjelEval(source, this.contextToRecord(ctx));
-            }
-
-            default:
-                this.warnings.push(`Unknown expression type: ${expr.type}`);
-                return null;
+        // Convert JjTL AST to JjEL AST and delegate to JjEL evaluator
+        try {
+            const jjelExpr = toJjelAst(expr);
+            return this.jjelEvaluator.evaluate(jjelExpr, ctx);
+        } catch (error) {
+            // Log and fall back to null on evaluation errors
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.warn(`[JjTL Executor] JjEL evaluation failed for ${expr.type}: ${errorMessage}`);
+            this.warnings.push(`Expression evaluation failed (${expr.type}): ${errorMessage}`);
+            return null;
         }
     }
 
+    // ============================================
+    // LEGACY — bypassed, kept for reference during migration
+    // All expression evaluation now delegates to JjEL via astBridge.
+    // The methods below are no longer called by evaluateExpression().
+    // ============================================
+
     /**
-     * Evaluate function call
+     * LEGACY — Evaluate function call
+     * @deprecated Replaced by JjEL evaluator delegation via astBridge
      */
-    private evaluateFunctionCall(expr: FunctionCallAST, ctx: EvaluationContext): JjelValue {
+    private _evaluateFunctionCallLegacy(expr: FunctionCallAST, ctx: EvaluationContext): JjelValue {
         // Get callee
         const callee = this.evaluateExpression(expr.callee, ctx);
 
@@ -1098,16 +1230,17 @@ export class JjtlExecutor {
             const obj = this.evaluateExpression(memberExpr.object, ctx);
             const method = memberExpr.property;
 
-            return this.evaluateMethodCall(obj, method, expr.arguments, ctx);
+            return this._evaluateMethodCallLegacy(obj, method, expr.arguments, ctx);
         }
 
         return null;
     }
 
     /**
-     * Evaluate method call on object/array
+     * LEGACY — Evaluate method call on object/array
+     * @deprecated Replaced by JjEL evaluator delegation via astBridge
      */
-    private evaluateMethodCall(
+    private _evaluateMethodCallLegacy(
         obj: JjelValue,
         method: string,
         args: ExpressionAST[],
@@ -1119,7 +1252,7 @@ export class JjtlExecutor {
                     if (args.length > 0) {
                         const predicate = this.evaluateExpression(args[0], ctx);
                         return obj.filter(item => {
-                            const result = this.applyFunction(predicate, [item], ctx);
+                            const result = this._applyFunctionLegacy(predicate, [item], ctx);
                             return Boolean(result);
                         });
                     }
@@ -1128,7 +1261,7 @@ export class JjtlExecutor {
                 case 'map': {
                     if (args.length > 0) {
                         const mapper = this.evaluateExpression(args[0], ctx);
-                        return obj.map(item => this.applyFunction(mapper, [item], ctx));
+                        return obj.map(item => this._applyFunctionLegacy(mapper, [item], ctx));
                     }
                     return obj;
                 }
@@ -1136,7 +1269,7 @@ export class JjtlExecutor {
                 case 'first': {
                     if (args.length > 0) {
                         const predicate = this.evaluateExpression(args[0], ctx);
-                        return obj.find(item => Boolean(this.applyFunction(predicate, [item], ctx))) ?? null;
+                        return obj.find(item => Boolean(this._applyFunctionLegacy(predicate, [item], ctx))) ?? null;
                     }
                     return obj.length > 0 ? obj[0] : null;
                 }
@@ -1144,7 +1277,7 @@ export class JjtlExecutor {
                 case 'some': {
                     if (args.length > 0) {
                         const predicate = this.evaluateExpression(args[0], ctx);
-                        return obj.some(item => Boolean(this.applyFunction(predicate, [item], ctx)));
+                        return obj.some(item => Boolean(this._applyFunctionLegacy(predicate, [item], ctx)));
                     }
                     return obj.length > 0;
                 }
@@ -1152,7 +1285,7 @@ export class JjtlExecutor {
                 case 'every': {
                     if (args.length > 0) {
                         const predicate = this.evaluateExpression(args[0], ctx);
-                        return obj.every(item => Boolean(this.applyFunction(predicate, [item], ctx)));
+                        return obj.every(item => Boolean(this._applyFunctionLegacy(predicate, [item], ctx)));
                     }
                     return true;
                 }
@@ -1173,7 +1306,7 @@ export class JjtlExecutor {
                     if (args.length > 0) {
                         const selector = this.evaluateExpression(args[0], ctx);
                         return obj.reduce((sum, item) => {
-                            const val = this.applyFunction(selector, [item], ctx);
+                            const val = this._applyFunctionLegacy(selector, [item], ctx);
                             return sum + (typeof val === 'number' ? val : 0);
                         }, 0);
                     }
@@ -1185,7 +1318,7 @@ export class JjtlExecutor {
                     if (args.length > 0) {
                         const selector = this.evaluateExpression(args[0], ctx);
                         const sum = obj.reduce((s, item) => {
-                            const val = this.applyFunction(selector, [item], ctx);
+                            const val = this._applyFunctionLegacy(selector, [item], ctx);
                             return s + (typeof val === 'number' ? val : 0);
                         }, 0);
                         return sum / obj.length;
@@ -1202,8 +1335,8 @@ export class JjtlExecutor {
                     if (args.length > 0) {
                         const selector = this.evaluateExpression(args[0], ctx);
                         return [...obj].sort((a, b) => {
-                            const valA = this.applyFunction(selector, [a], ctx);
-                            const valB = this.applyFunction(selector, [b], ctx);
+                            const valA = this._applyFunctionLegacy(selector, [a], ctx);
+                            const valB = this._applyFunctionLegacy(selector, [b], ctx);
                             if (valA < valB) return -1;
                             if (valA > valB) return 1;
                             return 0;
@@ -1277,9 +1410,10 @@ export class JjtlExecutor {
     }
 
     /**
-     * Apply a function value to arguments
+     * LEGACY — Apply a function value to arguments
+     * @deprecated Replaced by JjEL evaluator delegation via astBridge
      */
-    private applyFunction(fn: JjelValue, args: JjelValue[], ctx: EvaluationContext): JjelValue {
+    private _applyFunctionLegacy(fn: JjelValue, args: JjelValue[], ctx: EvaluationContext): JjelValue {
         if (fn && typeof fn === 'object' && '__jjelFunction' in fn) {
             return (fn as JjelFunction).call(args, ctx);
         }
@@ -1287,9 +1421,10 @@ export class JjtlExecutor {
     }
 
     /**
-     * Evaluate binary expression
+     * LEGACY — Evaluate binary expression
+     * @deprecated Replaced by JjEL evaluator delegation via astBridge
      */
-    private evaluateBinaryExpression(expr: BinaryExpressionAST, ctx: EvaluationContext): JjelValue {
+    private _evaluateBinaryExpressionLegacy(expr: BinaryExpressionAST, ctx: EvaluationContext): JjelValue {
         const left = this.evaluateExpression(expr.left, ctx);
         const right = this.evaluateExpression(expr.right, ctx);
 
@@ -1351,9 +1486,10 @@ export class JjtlExecutor {
     }
 
     /**
-     * Evaluate unary expression
+     * LEGACY — Evaluate unary expression
+     * @deprecated Replaced by JjEL evaluator delegation via astBridge
      */
-    private evaluateUnaryExpression(expr: UnaryExpressionAST, ctx: EvaluationContext): JjelValue {
+    private _evaluateUnaryExpressionLegacy(expr: UnaryExpressionAST, ctx: EvaluationContext): JjelValue {
         const operand = this.evaluateExpression(expr.operand, ctx);
 
         switch (expr.operator) {
@@ -1367,9 +1503,10 @@ export class JjtlExecutor {
     }
 
     /**
-     * Evaluate conditional expression (if-then-else)
+     * LEGACY — Evaluate conditional expression (if-then-else)
+     * @deprecated Replaced by JjEL evaluator delegation via astBridge
      */
-    private evaluateConditionalExpression(expr: ConditionalExpressionAST, ctx: EvaluationContext): JjelValue {
+    private _evaluateConditionalExpressionLegacy(expr: ConditionalExpressionAST, ctx: EvaluationContext): JjelValue {
         const condition = this.evaluateExpression(expr.condition, ctx);
         if (Boolean(condition)) {
             return this.evaluateExpression(expr.thenBranch, ctx);
@@ -1380,9 +1517,10 @@ export class JjtlExecutor {
     }
 
     /**
-     * Create lambda function value
+     * LEGACY — Create lambda function value
+     * @deprecated Replaced by JjEL evaluator delegation via astBridge
      */
-    private createLambdaFunction(expr: LambdaExpressionAST, ctx: EvaluationContext): JjelFunction {
+    private _createLambdaFunctionLegacy(expr: LambdaExpressionAST, ctx: EvaluationContext): JjelFunction {
         return createFunction(expr.params, (args: JjelValue[], callCtx: EvaluationContext) => {
             const bindings: Record<string, JjelValue> = {};
             expr.params.forEach((name, i) => {
@@ -1396,9 +1534,10 @@ export class JjtlExecutor {
     }
 
     /**
-     * Check if value is of given type
+     * LEGACY — Check if value is of given type
+     * @deprecated Replaced by JjEL evaluator delegation via astBridge
      */
-    private checkType(value: JjelValue, typeName: string): boolean {
+    private _checkTypeLegacy(value: JjelValue, typeName: string): boolean {
         // Check className for Jjodel objects
         if (value && typeof value === 'object' && !Array.isArray(value)) {
             const obj = value as Record<string, JjelValue>;

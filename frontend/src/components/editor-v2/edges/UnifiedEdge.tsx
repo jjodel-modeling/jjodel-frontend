@@ -6,7 +6,7 @@ import {
     useEdges,
     type EdgeProps,
 } from '@xyflow/react';
-import type { ReferenceEdgeData, InheritanceEdgeData, ReferenceKind } from '../types';
+import type { ReferenceEdgeData, InheritanceEdgeData, CompositionEdgeData, InstanceReferenceEdgeData, ReferenceKind } from '../types';
 import { formatCardinality } from '../types';
 import { syncEdgeRefProperty } from '../sync/canvasToJjom';
 import {
@@ -58,13 +58,18 @@ function UnifiedEdge(props: EdgeProps) {
         data,
         selected,
         label,
+        type: edgeType,
     } = props;
 
     // ─── Determine edge type ───
-    const edgeData = data as (ReferenceEdgeData & InheritanceEdgeData) | undefined;
-    const isInheritance = !edgeData?.reference;
+    // M1 edges (composition, instanceRef) use different data shapes than M2 edges
+    const isM1Edge = edgeType === 'composition' || edgeType === 'instanceRef';
+    const edgeData = data as (ReferenceEdgeData & InheritanceEdgeData & CompositionEdgeData & InstanceReferenceEdgeData) | undefined;
+    const isInheritance = edgeType === 'inheritance' || (!isM1Edge && !edgeData?.reference);
     const ref = edgeData?.reference;
-    const kind: ReferenceKind = ref?.kind || 'association';
+    const kind: ReferenceKind = isM1Edge
+        ? (edgeType === 'composition' ? 'composition' : 'association')
+        : (ref?.kind || 'association');
     const waypoints = edgeData?.waypoints || [];
     const autoEdit = edgeData?.autoEdit as boolean | undefined;
 
@@ -75,7 +80,8 @@ function UnifiedEdge(props: EdgeProps) {
 
     // ─── Label state (reference edges only) ───
     const [editing, setEditing] = useState(false);
-    const [labelText, setLabelText] = useState(String(label || ref?.name || ''));
+    const [labelText, setLabelText] = useState(String(label || ref?.name || edgeData?.referenceName || ''));
+    const [hovered, setHovered] = useState(false);
 
     useEffect(() => {
         if (!editing) {
@@ -131,10 +137,15 @@ function UnifiedEdge(props: EdgeProps) {
     const adjustedPath = useMemo(() => pointsToPath(adjustedPoints), [adjustedPoints]);
 
     // ─── Register path for crossing detection ───
+    // Grouped inheritance edges skip individual registration: their Manhattan
+    // paths are phantom (not rendered — the tree connector renders instead).
+    // The tree geometry (trunk + bar + branches) is registered separately
+    // by useTreeLayout, so crossing detection remains accurate.
     useEffect(() => {
+        if (isInheritance && isGrouped) return;
         registerEdgePath(id, adjustedPoints, source, target, treeGroupId);
         return () => unregisterEdgePath(id);
-    }, [id, adjustedPoints, source, target, treeGroupId]);
+    }, [id, adjustedPoints, source, target, treeGroupId, isInheritance, isGrouped]);
 
     // ─── Detect crossings with other edges ───
     const crossings = useMemo(
@@ -215,7 +226,6 @@ function UnifiedEdge(props: EdgeProps) {
     // 2. Write to JjOM via direct pointer access using the DReference ID
     const commitLabel = useCallback(() => {
         setEditing(false);
-        console.log('[DEBUG commitLabel]', { id, labelText, edgeType: data });
 
         // 1. Update RF edge: both label and data.reference.name
         setEdges((edges) =>
@@ -249,8 +259,8 @@ function UnifiedEdge(props: EdgeProps) {
     );
 
     // ─── Notation-dependent visibility ───
-    const showDiamonds = notation === 'uml' && !isInheritance;
-    const showCardinality = (notation === 'uml' || notation === 'wireframe') && !isInheritance;
+    const showDiamonds = notation === 'uml' && !isInheritance && !isM1Edge;
+    const showCardinality = (notation === 'uml' || notation === 'wireframe') && !isInheritance && !isM1Edge;
     const cardinality = ref ? formatCardinality(ref.lowerBound, ref.upperBound) : '';
 
     // ─── Marker IDs (unique per edge) ───
@@ -277,7 +287,7 @@ function UnifiedEdge(props: EdgeProps) {
                         <marker
                             id={treeMarkerId}
                             viewBox="0 0 12 10"
-                            refX="12"
+                            refX="7"
                             refY="5"
                             markerWidth="12"
                             markerHeight="10"
@@ -462,7 +472,7 @@ function UnifiedEdge(props: EdgeProps) {
                     <marker
                         id={markerTriangleId}
                         viewBox="0 0 12 10"
-                        refX="12"
+                        refX="7"
                         refY="5"
                         markerWidth="12"
                         markerHeight="10"
@@ -483,6 +493,8 @@ function UnifiedEdge(props: EdgeProps) {
                 stroke="transparent"
                 strokeWidth={20}
                 style={{ pointerEvents: 'stroke' }}
+                onMouseEnter={() => setHovered(true)}
+                onMouseLeave={() => setHovered(false)}
             />
 
             {/* Visible edge path */}
@@ -520,9 +532,10 @@ function UnifiedEdge(props: EdgeProps) {
 
             <EdgeLabelRenderer>
                 {/* Reference label — positioned on longest segment with smart offset */}
+                {/* M1 edges: label hidden by default, shown on hover via CSS */}
                 {!isInheritance && (
                     <div
-                        className={`edge-label ${selected ? 'selected' : ''}`}
+                        className={`edge-label ${selected ? 'selected' : ''} ${isM1Edge ? `edge-label--m1-hover${hovered || selected ? ' edge-label--m1-visible' : ''}` : ''}`}
                         style={{
                             position: 'absolute',
                             transform: `translate(-50%, -50%) translate(${labelPos.x + labelOffset.x}px, ${labelPos.y + labelOffset.y}px)`,

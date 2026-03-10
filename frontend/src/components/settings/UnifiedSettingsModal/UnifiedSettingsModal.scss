@@ -587,6 +587,47 @@ $transition-normal: 200ms ease-out;
 }
 
 // ============================================
+// INLINE ROW (label + control side by side)
+// ============================================
+
+.settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.settings-row-label {
+    font-size: 13px;
+    color: $color-text-primary;
+    font-weight: 500;
+}
+
+.settings-select {
+    appearance: none;
+    background: $color-bg-secondary;
+    border: 1px solid $color-border;
+    border-radius: 6px;
+    padding: 6px 28px 6px 10px;
+    font-size: 13px;
+    color: $color-text-primary;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M3 5l3 3 3-3'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    transition: border-color 150ms ease;
+
+    &:hover {
+        border-color: $color-text-secondary;
+    }
+
+    &:focus {
+        outline: none;
+        border-color: $color-primary;
+    }
+}
+
+// ============================================
 // STATUS BADGE
 // ============================================
 

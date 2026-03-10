@@ -1,0 +1,221 @@
+/**
+ * Editor V3 — Color Schemes.
+ *
+ * 9 color schemes that affect node header backgrounds and accent borders.
+ * Applied via v3-cs--{scheme} class on the built-in view root element.
+ */
+
+// ---------------------------------------------------------------------------
+// default — blue/cyan accent, white backgrounds
+// ---------------------------------------------------------------------------
+// No overrides needed — base styles are the default scheme.
+
+// ---------------------------------------------------------------------------
+// pastel — soft pastel tints
+// ---------------------------------------------------------------------------
+.v3-cs--pastel {
+    .v3-uml-class__header,
+    .v3-uml-enum__header,
+    .v3-uml-datatype__header {
+        background: #f0f4ff;
+    }
+    .v3-uml-package__tab {
+        background: #ecfdf5;
+    }
+}
+
+.v3-theme--dark .v3-cs--pastel {
+    .v3-uml-class__header,
+    .v3-uml-enum__header,
+    .v3-uml-datatype__header {
+        background: rgba(96, 165, 250, 0.08);
+    }
+    .v3-uml-package__tab {
+        background: rgba(52, 211, 153, 0.08);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// ocean — deep blue/teal
+// ---------------------------------------------------------------------------
+.v3-cs--ocean {
+    .v3-uml-class__header,
+    .v3-uml-enum__header,
+    .v3-uml-datatype__header {
+        background: #e0f2fe;
+    }
+    .v3-uml-package__tab {
+        background: #ccfbf1;
+    }
+    .v3-simplified__badge--attr { background: rgba(14, 165, 233, 0.15); color: #0284c7; }
+    .v3-simplified__badge--ref { background: rgba(20, 184, 166, 0.15); color: #0d9488; }
+}
+
+.v3-theme--dark .v3-cs--ocean {
+    .v3-uml-class__header,
+    .v3-uml-enum__header,
+    .v3-uml-datatype__header {
+        background: rgba(14, 165, 233, 0.1);
+    }
+    .v3-uml-package__tab {
+        background: rgba(20, 184, 166, 0.1);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// forest — green earth tones
+// ---------------------------------------------------------------------------
+.v3-cs--forest {
+    .v3-uml-class__header,
+    .v3-uml-enum__header,
+    .v3-uml-datatype__header {
+        background: #ecfdf5;
+    }
+    .v3-uml-package__tab {
+        background: #f0fdf4;
+    }
+    .v3-simplified__badge--attr { background: rgba(34, 197, 94, 0.12); color: #16a34a; }
+    .v3-simplified__badge--ref { background: rgba(101, 163, 13, 0.12); color: #65a30d; }
+}
+
+.v3-theme--dark .v3-cs--forest {
+    .v3-uml-class__header,
+    .v3-uml-enum__header,
+    .v3-uml-datatype__header {
+        background: rgba(34, 197, 94, 0.08);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// sunset — warm orange/amber
+// ---------------------------------------------------------------------------
+.v3-cs--sunset {
+    .v3-uml-class__header,
+    .v3-uml-enum__header,
+    .v3-uml-datatype__header {
+        background: #fff7ed;
+    }
+    .v3-uml-package__tab {
+        background: #fefce8;
+    }
+    .v3-simplified__badge--attr { background: rgba(249, 115, 22, 0.12); color: #ea580c; }
+    .v3-simplified__badge--ref { background: rgba(234, 179, 8, 0.12); color: #ca8a04; }
+}
+
+.v3-theme--dark .v3-cs--sunset {
+    .v3-uml-class__header,
+    .v3-uml-enum__header,
+    .v3-uml-datatype__header {
+        background: rgba(249, 115, 22, 0.08);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// monochrome — grayscale only
+// ---------------------------------------------------------------------------
+.v3-cs--monochrome {
+    .v3-uml-class__header,
+    .v3-uml-enum__header,
+    .v3-uml-datatype__header,
+    .v3-uml-package__tab {
+        background: #f8fafc;
+    }
+    .v3-simplified__badge {
+        background: rgba(0, 0, 0, 0.06) !important;
+        color: #64748b !important;
+    }
+}
+
+.v3-theme--dark .v3-cs--monochrome {
+    .v3-uml-class__header,
+    .v3-uml-enum__header,
+    .v3-uml-datatype__header,
+    .v3-uml-package__tab {
+        background: rgba(255, 255, 255, 0.03);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// neon — vivid saturated
+// ---------------------------------------------------------------------------
+.v3-cs--neon {
+    .v3-uml-class__header {
+        background: #ede9fe;
+    }
+    .v3-uml-enum__header {
+        background: #fce7f3;
+    }
+    .v3-uml-datatype__header {
+        background: #e0e7ff;
+    }
+    .v3-uml-package__tab {
+        background: #d1fae5;
+    }
+    .v3-simplified__badge--attr { background: rgba(124, 58, 237, 0.15); color: #7c3aed; }
+    .v3-simplified__badge--ref { background: rgba(236, 72, 153, 0.15); color: #ec4899; }
+    .v3-simplified__badge--op { background: rgba(14, 165, 233, 0.15); color: #0ea5e9; }
+}
+
+.v3-theme--dark .v3-cs--neon {
+    .v3-uml-class__header {
+        background: rgba(124, 58, 237, 0.12);
+    }
+    .v3-uml-enum__header {
+        background: rgba(236, 72, 153, 0.1);
+    }
+    .v3-uml-datatype__header {
+        background: rgba(99, 102, 241, 0.1);
+    }
+    .v3-uml-package__tab {
+        background: rgba(52, 211, 153, 0.1);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// earth — brown/terracotta warm neutrals
+// ---------------------------------------------------------------------------
+.v3-cs--earth {
+    .v3-uml-class__header,
+    .v3-uml-enum__header,
+    .v3-uml-datatype__header {
+        background: #fef3c7;
+    }
+    .v3-uml-package__tab {
+        background: #fef9c3;
+    }
+}
+
+.v3-theme--dark .v3-cs--earth {
+    .v3-uml-class__header,
+    .v3-uml-enum__header,
+    .v3-uml-datatype__header {
+        background: rgba(217, 119, 6, 0.08);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// nordic — cool blue-gray, muted Scandinavian palette
+// ---------------------------------------------------------------------------
+.v3-cs--nordic {
+    .v3-uml-class__header,
+    .v3-uml-enum__header,
+    .v3-uml-datatype__header {
+        background: #f1f5f9;
+    }
+    .v3-uml-package__tab {
+        background: #f0fdfa;
+    }
+    .v3-simplified__badge--attr { background: rgba(100, 116, 139, 0.12); color: #475569; }
+    .v3-simplified__badge--ref { background: rgba(15, 118, 110, 0.12); color: #0f766e; }
+}
+
+.v3-theme--dark .v3-cs--nordic {
+    .v3-uml-class__header,
+    .v3-uml-enum__header,
+    .v3-uml-datatype__header {
+        background: rgba(148, 163, 184, 0.06);
+    }
+    .v3-uml-package__tab {
+        background: rgba(94, 234, 212, 0.06);
+    }
+}

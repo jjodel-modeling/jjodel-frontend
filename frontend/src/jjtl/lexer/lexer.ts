@@ -85,10 +85,12 @@ export class JjtlLexer {
                 }
                 break;
 
-            // Equals and equality
+            // Equals, fat arrow, and equality
             case '=':
                 if (this.match('=')) {
                     this.addToken(TokenType.EQUALS_EQUALS); // ==
+                } else if (this.match('>')) {
+                    this.addToken(TokenType.FAT_ARROW);     // =>
                 } else {
                     this.addToken(TokenType.EQUALS);        // =
                 }

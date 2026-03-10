@@ -103,7 +103,6 @@ function InlineTypeSelect({ value, onChange, onClose }: InlineTypeSelectProps) {
                 ))}
                 {enums.length > 0 && (
                     <>
-                        {/* <div className="inline-type-select__group">Enumerations</div>*/}
                         {enums.map((enumName, i) => {
                             const idx = E_DATA_TYPES.length + i;
                             return (

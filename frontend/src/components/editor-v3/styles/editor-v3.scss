@@ -1,0 +1,321 @@
+/**
+ * Editor V3 — Base styles.
+ */
+
+// ---------------------------------------------------------------------------
+// Variables
+// ---------------------------------------------------------------------------
+
+$v3-border-radius: 6px;
+$v3-font-family: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+$v3-font-size-sm: 11px;
+$v3-font-size-base: 12px;
+$v3-font-size-lg: 13px;
+
+// Theme colors (light)
+$v3-bg-canvas: #f8fafc;
+$v3-bg-node: #ffffff;
+$v3-border-node: #e2e8f0;
+$v3-border-selected: #06b6d4;
+$v3-text-primary: #1e293b;
+$v3-text-secondary: #64748b;
+$v3-text-muted: #94a3b8;
+
+// Dark theme
+$v3-dark-bg-canvas: #0f172a;
+$v3-dark-bg-node: #1e293b;
+$v3-dark-border-node: #334155;
+$v3-dark-text-primary: #f1f5f9;
+$v3-dark-text-secondary: #94a3b8;
+
+// ---------------------------------------------------------------------------
+// Editor Shell
+// ---------------------------------------------------------------------------
+
+.editor-v3-shell {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    font-family: $v3-font-family;
+    position: relative;
+
+    .react-flow {
+        background: $v3-bg-canvas;
+    }
+
+    &.v3-theme--dark .react-flow {
+        background: $v3-dark-bg-canvas;
+    }
+}
+
+.editor-v3-shell__toolbar {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+}
+
+.editor-v3-shell__layout {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.editor-v3-shell__canvas {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+}
+
+// ---------------------------------------------------------------------------
+// Node base
+// ---------------------------------------------------------------------------
+
+.v3-node {
+    background: $v3-bg-node;
+    border: 1px solid $v3-border-node;
+    border-radius: $v3-border-radius;
+    font-family: $v3-font-family;
+    font-size: $v3-font-size-base;
+    color: $v3-text-primary;
+    min-width: 80px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
+
+    &--selected {
+        border-color: $v3-border-selected;
+        box-shadow: 0 0 0 2px rgba($v3-border-selected, 0.2), 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    // Dark theme
+    &.v3-theme--dark {
+        background: $v3-dark-bg-node;
+        border-color: $v3-dark-border-node;
+        color: $v3-dark-text-primary;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Node content
+// ---------------------------------------------------------------------------
+
+.v3-node__content {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.v3-node__header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 6px 10px;
+    border-bottom: 1px solid $v3-border-node;
+    background: rgba(0, 0, 0, 0.02);
+
+    .v3-theme--dark & {
+        border-bottom-color: $v3-dark-border-node;
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    &--package {
+        background: rgba($v3-border-selected, 0.05);
+        border-bottom: none;
+        padding: 8px 12px;
+    }
+}
+
+.v3-node__stereotype {
+    font-size: $v3-font-size-sm;
+    color: $v3-text-muted;
+    font-style: italic;
+    line-height: 1.2;
+}
+
+.v3-node__name {
+    font-weight: 600;
+    font-size: $v3-font-size-lg;
+    line-height: 1.3;
+    text-align: center;
+
+    &--abstract {
+        font-style: italic;
+    }
+}
+
+.v3-node__section {
+    padding: 4px 10px;
+    border-bottom: 1px solid $v3-border-node;
+
+    &:last-child {
+        border-bottom: none;
+    }
+
+    .v3-theme--dark & {
+        border-bottom-color: $v3-dark-border-node;
+    }
+}
+
+.v3-node__attr,
+.v3-node__ref,
+.v3-node__op,
+.v3-node__literal,
+.v3-node__feature {
+    padding: 2px 0;
+    font-size: $v3-font-size-sm;
+    color: $v3-text-secondary;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    .v3-theme--dark & {
+        color: $v3-dark-text-secondary;
+    }
+}
+
+.v3-node__ref {
+    color: $v3-border-selected;
+}
+
+.v3-node__op {
+    font-style: italic;
+}
+
+// ---------------------------------------------------------------------------
+// Type-specific colors
+// ---------------------------------------------------------------------------
+
+.v3-node--class {
+    border-left: 3px solid #3b82f6;
+}
+
+.v3-node--enumerator {
+    border-left: 3px solid #8b5cf6;
+}
+
+.v3-node--package {
+    border-left: 3px solid #10b981;
+    border-style: dashed;
+    border-width: 1px;
+    border-left-width: 3px;
+    border-left-style: solid;
+}
+
+.v3-node--object {
+    border-left: 3px solid #f59e0b;
+}
+
+.v3-node--datatype {
+    border-left: 3px solid #6366f1;
+}
+
+// ---------------------------------------------------------------------------
+// Anchors / Handles
+// ---------------------------------------------------------------------------
+
+.v3-anchors-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+}
+
+.v3-anchor {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 1.5px solid $v3-border-selected;
+    background: $v3-bg-node;
+    pointer-events: all;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+
+    &--connected {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    &--ghost {
+        opacity: 0.5;
+        visibility: visible;
+    }
+
+    &--pool {
+        opacity: 0;
+        visibility: hidden;
+        width: 1px;
+        height: 1px;
+    }
+
+    &--named {
+        opacity: 1;
+        visibility: visible;
+        background: $v3-border-selected;
+        width: 6px;
+        height: 6px;
+    }
+
+    &:hover {
+        transform: scale(1.5);
+        background: $v3-border-selected;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Empty state
+// ---------------------------------------------------------------------------
+
+.v3-empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    color: $v3-text-muted;
+    font-size: 14px;
+    font-family: $v3-font-family;
+}
+
+// ---------------------------------------------------------------------------
+// Inline editor
+// ---------------------------------------------------------------------------
+
+.v3-inline-editor {
+    border: 1px solid $v3-border-selected;
+    border-radius: 3px;
+    background: $v3-bg-node;
+    color: $v3-text-primary;
+    font-family: $v3-font-family;
+    font-size: $v3-font-size-lg;
+    padding: 2px 4px;
+    outline: none;
+    width: 100%;
+    box-sizing: border-box;
+    text-align: center;
+
+    &--name {
+        font-weight: 600;
+    }
+
+    .v3-theme--dark & {
+        background: $v3-dark-bg-node;
+        color: $v3-dark-text-primary;
+        border-color: $v3-border-selected;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Notation-specific styles and color schemes
+// ---------------------------------------------------------------------------
+
+@import './notations';
+@import './color-schemes';
+@import './toolbar';
+@import './edges';
+@import './panels';
+@import './viewpoint';

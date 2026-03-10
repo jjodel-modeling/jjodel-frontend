@@ -68,8 +68,15 @@ export class JjelLexer {
 
             // Multi-character operators
             case '-':
-                // Just minus (not arrow, arrow is JjTL specific)
-                this.addToken(JjelTokenType.MINUS);
+                if (this.match('-')) {
+                    // Line comment: -- skip to end of line
+                    while (!this.isAtEnd() && this.peek() !== '\n') {
+                        this.advance();
+                    }
+                    // No token emitted
+                } else {
+                    this.addToken(JjelTokenType.MINUS);
+                }
                 break;
 
             case '.':
@@ -97,9 +104,11 @@ export class JjelLexer {
             case '=':
                 if (this.match('=')) {
                     this.addToken(JjelTokenType.EQ);
+                } else if (this.match('>')) {
+                    this.addToken(JjelTokenType.ARROW);
                 } else {
                     // Single = is not valid in JjEL expressions
-                    this.error(`Unexpected '='. Did you mean '=='?`);
+                    this.error(`Unexpected '='. Did you mean '==' or '=>'?`);
                 }
                 break;
 

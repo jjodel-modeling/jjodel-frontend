@@ -138,17 +138,22 @@ export function AISettingsContent({
     }, [providers]);
 
     // Load existing configuration
+    // Uses SETTINGS_TO_PROVIDER to map form keys (e.g. 'anthropic') to AIProvider keys (e.g. 'claude')
     useEffect(() => {
         const loadConfig = () => {
-            const openai = JodieConfigService.getProvider('openai');
-            const anthropic = JodieConfigService.getProvider('anthropic');
-            const mistral = JodieConfigService.getProvider('mistral');
-            const gemini = JodieConfigService.getProvider('gemini');
-            const deepseek = JodieConfigService.getProvider('deepseek');
-            const groq = JodieConfigService.getProvider('groq');
-            const kimi = JodieConfigService.getProvider('kimi');
-            const ollama = JodieConfigService.getProvider('ollama');
-            const custom = JodieConfigService.getProvider('custom');
+            const getConfig = (settingsId: string) => {
+                const jodieProvider = SETTINGS_TO_PROVIDER[settingsId];
+                return jodieProvider ? JodieConfigService.getProviderConfig(jodieProvider) : null;
+            };
+
+            const openai = getConfig('openai');
+            const anthropic = getConfig('anthropic'); // maps to 'claude'
+            const mistral = getConfig('mistral');
+            const gemini = getConfig('gemini');
+            const deepseek = getConfig('deepseek');
+            const groq = getConfig('groq');
+            const kimi = getConfig('kimi');
+            const ollama = getConfig('ollama');
 
             const loadedProviders: ProviderFormState = {
                 openai: {
@@ -184,10 +189,10 @@ export function AISettingsContent({
                     model: ollama?.model || DEFAULT_MODELS.ollama
                 },
                 custom: {
-                    name: (custom as any)?.name || '',
-                    baseUrl: custom?.baseUrl || '',
-                    apiKey: custom?.apiKey || '',
-                    model: custom?.model || ''
+                    name: '',
+                    baseUrl: '',
+                    apiKey: '',
+                    model: ''
                 },
             };
             setProviders(loadedProviders);
@@ -205,94 +210,54 @@ export function AISettingsContent({
         }
     }, [providers, initialProviders, onDirtyChange]);
 
-    // Save configuration
+    // Save configuration using JodieConfigService.saveProviderConfig()
     const handleSave = async () => {
         setSaveStatus('saving');
 
         try {
-            // Save each provider
-            if (providers.openai.apiKey) {
-                JodieConfigService.setProvider('openai', {
-                    apiKey: providers.openai.apiKey,
-                    model: providers.openai.model,
+            // Helper: save or disable a provider using the SETTINGS_TO_PROVIDER mapping
+            const saveOrDisable = (
+                settingsId: string,
+                hasCredential: boolean,
+                config: { apiKey?: string; model?: string; baseUrl?: string },
+            ) => {
+                const jodieProvider = SETTINGS_TO_PROVIDER[settingsId];
+                if (!jodieProvider) return; // 'custom' has no mapping — skip
+                JodieConfigService.saveProviderConfig(jodieProvider, {
+                    ...config,
+                    enabled: hasCredential,
                 });
-            } else {
-                JodieConfigService.removeProvider('openai');
-            }
+            };
 
-            if (providers.anthropic.apiKey) {
-                JodieConfigService.setProvider('anthropic', {
-                    apiKey: providers.anthropic.apiKey,
-                    model: providers.anthropic.model,
-                });
-            } else {
-                JodieConfigService.removeProvider('anthropic');
-            }
+            // API-key based providers
+            saveOrDisable('openai', !!providers.openai.apiKey, {
+                apiKey: providers.openai.apiKey, model: providers.openai.model,
+            });
+            saveOrDisable('anthropic', !!providers.anthropic.apiKey, {
+                apiKey: providers.anthropic.apiKey, model: providers.anthropic.model,
+            });
+            saveOrDisable('mistral', !!providers.mistral.apiKey, {
+                apiKey: providers.mistral.apiKey, model: providers.mistral.model,
+            });
+            saveOrDisable('gemini', !!providers.gemini.apiKey, {
+                apiKey: providers.gemini.apiKey, model: providers.gemini.model,
+            });
+            saveOrDisable('deepseek', !!providers.deepseek.apiKey, {
+                apiKey: providers.deepseek.apiKey, model: providers.deepseek.model,
+            });
+            saveOrDisable('groq', !!providers.groq.apiKey, {
+                apiKey: providers.groq.apiKey, model: providers.groq.model,
+            });
+            saveOrDisable('kimi', !!providers.kimi.apiKey, {
+                apiKey: providers.kimi.apiKey, model: providers.kimi.model,
+            });
 
-            if (providers.mistral.apiKey) {
-                JodieConfigService.setProvider('mistral', {
-                    apiKey: providers.mistral.apiKey,
-                    model: providers.mistral.model,
-                });
-            } else {
-                JodieConfigService.removeProvider('mistral');
-            }
+            // Ollama uses baseUrl instead of apiKey
+            saveOrDisable('ollama', !!providers.ollama.baseUrl, {
+                baseUrl: providers.ollama.baseUrl, model: providers.ollama.model,
+            });
 
-            if (providers.gemini.apiKey) {
-                JodieConfigService.setProvider('gemini', {
-                    apiKey: providers.gemini.apiKey,
-                    model: providers.gemini.model,
-                });
-            } else {
-                JodieConfigService.removeProvider('gemini');
-            }
-
-            if (providers.deepseek.apiKey) {
-                JodieConfigService.setProvider('deepseek', {
-                    apiKey: providers.deepseek.apiKey,
-                    model: providers.deepseek.model,
-                });
-            } else {
-                JodieConfigService.removeProvider('deepseek');
-            }
-
-            if (providers.groq.apiKey) {
-                JodieConfigService.setProvider('groq', {
-                    apiKey: providers.groq.apiKey,
-                    model: providers.groq.model,
-                });
-            } else {
-                JodieConfigService.removeProvider('groq');
-            }
-
-            if (providers.kimi.apiKey) {
-                JodieConfigService.setProvider('kimi', {
-                    apiKey: providers.kimi.apiKey,
-                    model: providers.kimi.model,
-                });
-            } else {
-                JodieConfigService.removeProvider('kimi');
-            }
-
-            if (providers.ollama.baseUrl) {
-                JodieConfigService.setProvider('ollama', {
-                    baseUrl: providers.ollama.baseUrl,
-                    model: providers.ollama.model,
-                });
-            } else {
-                JodieConfigService.removeProvider('ollama');
-            }
-
-            if (providers.custom.baseUrl && providers.custom.apiKey) {
-                JodieConfigService.setProvider('custom' as any, {
-                    name: providers.custom.name,
-                    baseUrl: providers.custom.baseUrl,
-                    apiKey: providers.custom.apiKey,
-                    model: providers.custom.model,
-                });
-            } else {
-                JodieConfigService.removeProvider('custom' as any);
-            }
+            // 'custom' is not a supported AIProvider — skip for now
 
             // Update initial state to match saved state
             setInitialProviders({ ...providers });

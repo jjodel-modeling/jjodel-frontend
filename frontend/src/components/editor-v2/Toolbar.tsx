@@ -5,19 +5,16 @@ import ColorSchemeSelector from './components/ColorSchemeSelector';
 interface ToolbarProps {
     snapEnabled: boolean;
     onToggleSnap: () => void;
-    onZoomIn: () => void;
-    onZoomOut: () => void;
-    onResetZoom: () => void;
     onFitView: () => void;
     onDeleteSelected: () => void;
     onUndo: () => void;
     onRedo: () => void;
     canUndo: boolean;
     canRedo: boolean;
-    theme: 'dark' | 'light';
-    onToggleTheme: () => void;
     notation: NotationMode;
     onNotationChange: (notation: NotationMode) => void;
+    onAutoLayout?: () => void;
+    onPolymetricView?: () => void;
     colorScheme: ColorScheme;
     onColorSchemeChange: (scheme: ColorScheme) => void;
 }
@@ -37,19 +34,16 @@ const NOTATION_OPTIONS: Array<{ id: NotationMode; name: string; desc: string; ic
 function Toolbar({
     snapEnabled,
     onToggleSnap,
-    onZoomIn,
-    onZoomOut,
-    onResetZoom,
     onFitView,
     onDeleteSelected,
     onUndo,
     onRedo,
     canUndo,
     canRedo,
-    theme,
-    onToggleTheme,
     notation,
     onNotationChange,
+    onAutoLayout,
+    onPolymetricView,
     colorScheme,
     onColorSchemeChange,
 }: ToolbarProps) {
@@ -109,29 +103,8 @@ function Toolbar({
 
             <div className="toolbar-separator" />
 
-            {/* Zoom */}
+            {/* View */}
             <div className="toolbar-group">
-                <button
-                    className="toolbar-btn"
-                    onClick={onZoomIn}
-                    title="Zoom in"
-                >
-                    <i className="bi bi-zoom-in" />
-                </button>
-                <button
-                    className="toolbar-btn"
-                    onClick={onZoomOut}
-                    title="Zoom out"
-                >
-                    <i className="bi bi-zoom-out" />
-                </button>
-                <button
-                    className="toolbar-btn"
-                    onClick={onResetZoom}
-                    title="Reset zoom (100%)"
-                >
-                    <i className="bi bi-aspect-ratio" />
-                </button>
                 <button
                     className="toolbar-btn"
                     onClick={onFitView}
@@ -139,6 +112,15 @@ function Toolbar({
                 >
                     <i className="bi bi-arrows-fullscreen" />
                 </button>
+                {onAutoLayout && (
+                    <button
+                        className="toolbar-btn"
+                        onClick={onAutoLayout}
+                        title="Auto layout"
+                    >
+                        <i className="bi bi-diagram-3" />
+                    </button>
+                )}
             </div>
 
             <div className="toolbar-separator" />
@@ -164,19 +146,6 @@ function Toolbar({
                     title="Delete selected (Delete/Backspace)"
                 >
                     <i className="bi bi-trash" />
-                </button>
-            </div>
-
-            <div className="toolbar-separator" />
-
-            {/* Theme toggle */}
-            <div className="toolbar-group">
-                <button
-                    className="toolbar-btn"
-                    onClick={onToggleTheme}
-                    title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-                >
-                    <i className={theme === 'dark' ? 'bi bi-sun' : 'bi bi-moon'} />
                 </button>
             </div>
 
@@ -214,15 +183,28 @@ function Toolbar({
                 </div>
             </div>
 
-            <div className="toolbar-separator" />
-
-            {/* Color scheme selector */}
+            {/* Color scheme */}
             <div className="toolbar-group">
                 <ColorSchemeSelector
                     colorScheme={colorScheme}
                     onColorSchemeChange={onColorSchemeChange}
                 />
             </div>
+
+            {onPolymetricView && (
+                <>
+                    <div className="toolbar-separator" />
+                    <div className="toolbar-group">
+                        <button
+                            className="toolbar-btn"
+                            onClick={onPolymetricView}
+                            title="Polymetric View"
+                        >
+                            <i className="bi bi-grid-3x3-gap" />
+                        </button>
+                    </div>
+                </>
+            )}
 
             <div className="toolbar-spacer" />
 

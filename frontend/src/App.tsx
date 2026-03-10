@@ -31,6 +31,7 @@ import {
 } from "./pages";
 import { TestLayout } from "./components/TestLayout";
 import EditorV2 from "./components/editor-v2/EditorV2";
+import { EditorV3Shell } from "./components/editor-v3";
 
 import {ExternalLibraries} from "./components/forEndUser/ExternalLibraries";
 import {TooltipVisualizer} from "./components/forEndUser/Tooltip";
@@ -45,6 +46,7 @@ import { TreeViewPanelProvider } from './contexts/TreeViewPanelContext';
 import { GlobalDrawer } from './components/GlobalDrawer';
 import { JjtlDialogManager } from './jjtl/components';
 import { SettingsModalProvider } from './contexts/SettingsModalContext';
+import { ToastProvider } from './components/Toast';
 
 let firstLoading = true;
 let browserData = U.getOSBrowserData();
@@ -102,6 +104,7 @@ function App(props: AllProps): JSX.Element {
 
     return (<>
         <SettingsModalProvider>
+        <ToastProvider>
         <DevModeProvider>
         <GlobalDrawerProvider>
         <FeaturesPanelProvider>
@@ -130,6 +133,12 @@ function App(props: AllProps): JSX.Element {
                             <Route path={'test-resize'} element={<TestLayout/>}/>
                             {/* Editor V2 - React Flow PoC */}
                             <Route path={'editor-v2'} element={<EditorV2/>}/>
+                            {/* Editor V3 - Viewpoint-first architecture */}
+                            <Route path={'editor-v3'} element={
+                                <div style={{ width: '100vw', height: '100vh' }}>
+                                    <EditorV3Shell modelid="" notation="uml" theme="light" />
+                                </div>
+                            }/>
                             {/* non functioning stuff */}
                             <Route path={'settings'} element={<SettingsPage/>}/>
                             <Route path={'projectsInfo'} element={<ProjectsInfoPage_Obsolete/>}/>
@@ -160,6 +169,7 @@ function App(props: AllProps): JSX.Element {
         </FeaturesPanelProvider>
         </GlobalDrawerProvider>
         </DevModeProvider>
+        </ToastProvider>
         </SettingsModalProvider>
     </>);
 

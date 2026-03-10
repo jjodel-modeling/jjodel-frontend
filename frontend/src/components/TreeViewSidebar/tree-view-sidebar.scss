@@ -530,6 +530,63 @@ $color-parameter: #9ca3af;  // Gray (light) - Parameters
         background-color: rgba(107, 114, 128, 0.15);
         color: $color-object;
     }
+
+    // Nested M1 model icon (cyan, lowercase "m")
+    &.tree-nested-model {
+        background-color: rgba(14, 165, 233, 0.15);
+        color: #0ea5e9;
+        font-style: italic;
+    }
+}
+
+// ============================================
+// NESTED M1 MODEL + INSTANCE STYLES
+// ============================================
+
+.nested-model-tree {
+    // No border — indentation alone is sufficient
+}
+
+// M1 badge next to model name
+.tree-nested-model__badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    font-size: 9px;
+    font-weight: 700;
+    color: #0ea5e9;
+    background: rgba(14, 165, 233, 0.1);
+    border-radius: 3px;
+    margin-left: 6px;
+    letter-spacing: 0.3px;
+    flex-shrink: 0;
+    line-height: 16px;
+}
+
+// Instance icon (bi-app-fill square)
+.tree-instance__icon {
+    font-size: 10px;
+    color: $color-class;
+    flex-shrink: 0;
+    margin-right: 4px;
+    line-height: 1;
+}
+
+// Instance name styling
+.tree-instance__name {
+    font-size: 12px;
+    color: $color-text-primary;
+}
+
+// Metaclass name after the colon
+.tree-instance__metaclass {
+    font-size: 11px;
+    color: $color-text-tertiary;
+    margin-left: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .tree-node__name {
@@ -831,6 +888,28 @@ $color-highlight-unknown: #f59e0b; // Amber - unknown action
             background-color: rgba(107, 114, 128, 0.2);
             color: #9ca3af;
         }
+
+        &.tree-nested-model {
+            background-color: rgba(14, 165, 233, 0.2);
+            color: #38bdf8;
+        }
+    }
+
+    .tree-nested-model__badge {
+        color: #38bdf8;
+        background: rgba(14, 165, 233, 0.15);
+    }
+
+    .tree-instance__icon {
+        color: #38bdf8;
+    }
+
+    .tree-instance__name {
+        color: #e0e0e0;
+    }
+
+    .tree-instance__metaclass {
+        color: #6b7280;
     }
 }
 

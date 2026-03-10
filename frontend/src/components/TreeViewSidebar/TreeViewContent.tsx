@@ -2,7 +2,9 @@ import React, { Dispatch, ReactElement, memo, useCallback, useMemo, useEffect, u
 import { connect } from 'react-redux';
 import {
     DState,
+    DGraph,
     LModel,
+    LObject,
     LNamedElement,
     LPointerTargetable,
     SetRootFieldAction,
@@ -306,6 +308,123 @@ const MetamodelTree = memo(function MetamodelTree({
     );
 });
 
+interface ModelTreeProps {
+    model: TreeNodeData;
+    objects: TreeNodeData[];
+    selectedId?: string;
+    onSelect?: () => void;
+    defaultExpanded?: boolean;
+    highlightedElementId?: string | null;
+    highlightedAction?: ElementAction | null;
+    expandedNodeIds?: Set<string>;
+    isScriptExecuting?: boolean;
+}
+
+/**
+ * Memoized ModelTree — renders an M1 model with its objects
+ */
+const ModelTree = memo(function ModelTree({
+    model,
+    objects,
+    selectedId,
+    onSelect,
+    defaultExpanded = true,
+    highlightedElementId,
+    highlightedAction,
+    expandedNodeIds,
+    isScriptExecuting
+}: ModelTreeProps): ReactElement {
+    const [isExpanded, setIsExpanded] = useStateIfMounted(defaultExpanded);
+
+    const isHighlighted = highlightedElementId === model.id;
+
+    const hasHighlightedDescendant = useMemo(() => {
+        if (!highlightedElementId) return false;
+        const checkObjects = (objs: TreeNodeData[]): boolean => {
+            for (const obj of objs) {
+                if (obj.id === highlightedElementId) return true;
+                if (obj.children) {
+                    const checkChildren = (children: TreeNodeData[]): boolean => {
+                        for (const child of children) {
+                            if (child.id === highlightedElementId) return true;
+                            if (child.children && checkChildren(child.children)) return true;
+                        }
+                        return false;
+                    };
+                    if (checkChildren(obj.children)) return true;
+                }
+            }
+            return false;
+        };
+        return checkObjects(objects);
+    }, [highlightedElementId, objects]);
+
+    useEffect(() => {
+        if (hasHighlightedDescendant) {
+            setIsExpanded(true);
+        }
+    }, [hasHighlightedDescendant, setIsExpanded]);
+
+    const handleToggle = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        setIsExpanded(prev => !prev);
+    }, [setIsExpanded]);
+
+    const handleModelClick = useCallback(() => {
+        SetRootFieldAction.new('_lastSelected', {
+            node: model.nodeId,
+            view: model.viewId,
+            modelElement: model.id
+        }, '', false);
+        onSelect?.();
+    }, [model.id, model.nodeId, model.viewId, onSelect]);
+
+    const highlightClass = isHighlighted
+        ? `metamodel-tree__header--highlighted metamodel-tree__header--action-${highlightedAction || 'unknown'}`
+        : '';
+
+    return (
+        <div className="metamodel-tree" data-element-id={model.id}>
+            <div className={`metamodel-tree__header ${highlightClass}`}>
+                <button className="tree-node__toggle" onClick={handleToggle}>
+                    <i className={`bi bi-chevron-${isExpanded ? 'down' : 'right'}`} />
+                </button>
+                <div className="metamodel-tree__title" onClick={handleModelClick}>
+                    <span className="tree-node__icon tree-DModel" style={{ background: 'rgba(14, 165, 233, 0.15)', color: '#0ea5e9' }}>m</span>
+                    <span>{model.name || 'Unnamed Model'}</span>
+                    {isHighlighted && highlightedAction === 'create' && (
+                        <span className="tree-node__badge tree-node__badge--new">NEW</span>
+                    )}
+                </div>
+            </div>
+
+            {isExpanded && (
+                <div className="metamodel-tree__content">
+                    {objects.length > 0 ? (
+                        objects.map((obj) => (
+                            <TreeNode
+                                key={obj.id}
+                                data={obj}
+                                depth={1}
+                                selectedId={selectedId}
+                                onSelect={onSelect}
+                                highlightedElementId={highlightedElementId}
+                                highlightedAction={highlightedAction}
+                                expandedNodeIds={expandedNodeIds}
+                                isScriptExecuting={isScriptExecuting}
+                            />
+                        ))
+                    ) : (
+                        <div className="tree-empty-package">
+                            <span>No instances</span>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+});
+
 /**
  * Convert LModel element to simplified TreeNodeData (recursive)
  * Uses LNamedElement.fromPointer to ensure children getter works correctly
@@ -337,10 +456,166 @@ function convertToTreeData(element: any): TreeNodeData {
     return data;
 }
 
+/** Instance data for M1 objects displayed under a model in the tree */
+interface TreeInstanceData {
+    id: string;
+    objectId: string;
+    name: string;
+    metaclassName: string;
+    modelId: string;
+}
+
+/** M1 model displayed nested under its parent metamodel */
+interface TreeModelData {
+    id: string;
+    name: string;
+    metamodelId: string | null;
+    isActive: boolean;
+    instances: TreeInstanceData[];
+}
+
 interface ProcessedMetamodel {
     data: TreeNodeData;
     packages: TreeNodeData[];
+    /** M1 models that conform to this metamodel */
+    childModels: TreeModelData[];
 }
+
+interface ProcessedModel {
+    data: TreeNodeData;
+    objects: TreeNodeData[];
+}
+
+/**
+ * InstanceItem — renders a single M1 object instance in the tree.
+ * Click dispatches jjodel:selectNode to select it on the canvas.
+ */
+const InstanceItem = memo(function InstanceItem({
+    instance,
+    depth,
+    selectedId,
+    onSelect,
+}: {
+    instance: TreeInstanceData;
+    depth: number;
+    selectedId?: string;
+    onSelect?: () => void;
+}): ReactElement {
+    const isSelected = selectedId === instance.objectId;
+
+    const handleClick = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        // Dispatch custom event for EditorV2 to select the node on the canvas
+        window.dispatchEvent(new CustomEvent('jjodel:selectNode', {
+            detail: { nodeId: instance.id, modelId: instance.modelId }
+        }));
+        onSelect?.();
+    }, [instance.id, instance.modelId, onSelect]);
+
+    return (
+        <div className="tree-node" data-element-id={instance.objectId}>
+            <div
+                className={`tree-node__header ${isSelected ? 'tree-node__header--selected' : ''}`}
+                style={{ paddingLeft: `${depth * 12}px` }}
+            >
+                <span className="tree-node__spacer" style={{ width: 16 }} />
+                <div className="tree-node__content" onClick={handleClick}>
+                    <i className="bi bi-app-fill tree-instance__icon" />
+                    <span className="tree-node__name tree-instance__name">
+                        {instance.name}
+                    </span>
+                    <span className="tree-instance__metaclass">
+                        : {instance.metaclassName}
+                    </span>
+                </div>
+            </div>
+        </div>
+    );
+});
+
+/**
+ * NestedModelTree — renders an M1 model nested under its metamodel.
+ * Shows instances only when isActive.
+ */
+const NestedModelTree = memo(function NestedModelTree({
+    model,
+    depth,
+    selectedId,
+    onSelect,
+}: {
+    model: TreeModelData;
+    depth: number;
+    selectedId?: string;
+    onSelect?: () => void;
+}): ReactElement {
+    const [isExpanded, setIsExpanded] = useStateIfMounted(model.isActive);
+
+    // Auto-expand/collapse when active state changes
+    useEffect(() => {
+        if (model.isActive) setIsExpanded(true);
+    }, [model.isActive, setIsExpanded]);
+
+    const handleToggle = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (model.isActive && model.instances.length > 0) {
+            setIsExpanded(prev => !prev);
+        }
+    }, [model.isActive, model.instances.length, setIsExpanded]);
+
+    const handleModelClick = useCallback(() => {
+        SetRootFieldAction.new('_lastSelected', {
+            node: '',
+            view: '',
+            modelElement: model.id
+        }, '', false);
+        onSelect?.();
+    }, [model.id, onSelect]);
+
+    // Show chevron if instances exist (even when not active — just not expandable)
+    const hasChildren = model.instances.length > 0;
+    const canExpand = model.isActive && hasChildren;
+
+    return (
+        <div className="tree-node nested-model-tree" data-element-id={model.id}>
+            <div
+                className="tree-node__header"
+                style={{ paddingLeft: `${depth * 12}px` }}
+            >
+                <button
+                    className="tree-node__toggle"
+                    onClick={handleToggle}
+                    disabled={!canExpand}
+                >
+                    {hasChildren ? (
+                        <i className={`bi bi-chevron-${isExpanded && canExpand ? 'down' : 'right'}`} />
+                    ) : (
+                        <span className="tree-node__spacer" />
+                    )}
+                </button>
+
+                <div className="tree-node__content" onClick={handleModelClick}>
+                    <span className="tree-node__icon tree-nested-model">m</span>
+                    <span className="tree-node__name">{model.name || 'Unnamed Model'}</span>
+                    <span className="tree-nested-model__badge">M1</span>
+                </div>
+            </div>
+
+            {isExpanded && canExpand && (
+                <div className="tree-node__children">
+                    {model.instances.map((inst) => (
+                        <InstanceItem
+                            key={inst.id}
+                            instance={inst}
+                            depth={depth + 1}
+                            selectedId={selectedId}
+                            onSelect={onSelect}
+                        />
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+});
 
 function TreeViewContentComponent(props: AllProps & TreeViewContentProps) {
     const { processedMetamodels, selectedElementId, onSelect } = props;
@@ -382,7 +657,9 @@ function TreeViewContentComponent(props: AllProps & TreeViewContentProps) {
         };
     }, []);
 
-    if (!processedMetamodels || processedMetamodels.length === 0) {
+    const { standaloneModels } = props as AllProps;
+
+    if ((!processedMetamodels || processedMetamodels.length === 0) && standaloneModels.length === 0) {
         return (
             <div className="tree-view-empty">
                 <i className="bi bi-diagram-3" />
@@ -395,17 +672,39 @@ function TreeViewContentComponent(props: AllProps & TreeViewContentProps) {
     return (
         <div ref={containerRef} className="tree-view-content">
             {processedMetamodels.map((mm, index) => (
-                <MetamodelTree
-                    key={mm.data.id}
-                    metamodel={mm.data}
-                    packages={mm.packages}
+                <React.Fragment key={mm.data.id}>
+                    <MetamodelTree
+                        metamodel={mm.data}
+                        packages={mm.packages}
+                        selectedId={selectedElementId}
+                        onSelect={onSelect}
+                        defaultExpanded={index === 0}
+                        highlightedElementId={highlightedElementId}
+                        highlightedAction={highlightedAction}
+                        expandedNodeIds={expandedNodeIds}
+                        isScriptExecuting={isScriptExecuting}
+                    />
+                    {/* M1 models at same level as their parent metamodel */}
+                    {mm.childModels.map((model) => (
+                        <NestedModelTree
+                            key={model.id}
+                            model={model}
+                            depth={0}
+                            selectedId={selectedElementId}
+                            onSelect={onSelect}
+                        />
+                    ))}
+                </React.Fragment>
+            ))}
+
+            {/* Standalone M1 models (no metamodel parent open) */}
+            {standaloneModels.map((model) => (
+                <NestedModelTree
+                    key={model.id}
+                    model={model}
+                    depth={0}
                     selectedId={selectedElementId}
                     onSelect={onSelect}
-                    defaultExpanded={index === 0}
-                    highlightedElementId={highlightedElementId}
-                    highlightedAction={highlightedAction}
-                    expandedNodeIds={expandedNodeIds}
-                    isScriptExecuting={isScriptExecuting}
                 />
             ))}
         </div>
@@ -416,6 +715,7 @@ interface OwnProps extends TreeViewContentProps {}
 
 interface StateProps {
     processedMetamodels: ProcessedMetamodel[];
+    standaloneModels: TreeModelData[];
     selectedElementId?: string;
 }
 
@@ -423,12 +723,100 @@ interface DispatchProps {}
 
 type AllProps = OwnProps & StateProps & DispatchProps;
 
+/**
+ * Determine the "active" model ID from _lastSelected.
+ * Resolves the selected element's parent model.
+ */
+function resolveActiveModelId(state: DState): string | null {
+    const selectedPtr = state._lastSelected?.modelElement;
+    if (!selectedPtr) return null;
+    try {
+        const element = state.idlookup?.[selectedPtr] as any;
+        if (!element) return null;
+        // If the element IS a model, return its id
+        if (element.className === 'DModel') return element.id;
+        // Otherwise, traverse up to find the parent model
+        // For DObject, .father chain eventually reaches DModel
+        let current = element;
+        let depth = 0;
+        while (current && depth < 10) {
+            if (current.className === 'DModel') return current.id;
+            const fatherId = current.father || current.model;
+            if (!fatherId || typeof fatherId !== 'string') break;
+            current = state.idlookup?.[fatherId] as any;
+            depth++;
+        }
+    } catch { /* ignore */ }
+    return null;
+}
+
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
 
-    // Get metamodels fresh on each state change to ensure dynamic updates
+    // Determine which model is currently active (focused tab)
+    const activeModelId = resolveActiveModelId(state);
+
+    // Get metamodels
     const metamodelPointers = state.m2models || [];
     const metamodels: LModel[] = LPointerTargetable.fromPointer(metamodelPointers) || [];
+    const metamodelIdSet = new Set(metamodels.map(mm => mm.id));
+
+    // Get M1 models
+    const modelPointers = state.m1models || [];
+    const m1Models: LModel[] = LPointerTargetable.fromPointer(modelPointers) || [];
+
+    // Check which M1 models have a graph (tab has been opened)
+    const graphs: DGraph[] = DGraph.fromPointer(state.graphs || []);
+    const modelsWithGraph = new Set<string>();
+    for (const g of graphs) {
+        if (g.model) modelsWithGraph.add(g.model as string);
+    }
+
+    // Build M1 model data grouped by metamodel
+    const modelsByMetamodel = new Map<string, TreeModelData[]>();
+    const standaloneModels: TreeModelData[] = [];
+
+    for (const m1 of m1Models) {
+        // Only show models that have a graph (tab was opened at some point)
+        if (!modelsWithGraph.has(m1.id)) continue;
+
+        const metamodelId = (m1.instanceof as any)?.id || null;
+        const isActive = m1.id === activeModelId;
+
+        // Build instance list
+        const instances: TreeInstanceData[] = [];
+        if (isActive) {
+            try {
+                const objects: LObject[] = m1.objects || [];
+                for (const obj of objects) {
+                    const metaclass = (obj as any).instanceof;
+                    const metaclassName = metaclass?.name || 'Orphan';
+                    instances.push({
+                        id: obj.id,
+                        objectId: obj.id,
+                        name: obj.name || obj.id?.slice(0, 8) || 'unnamed',
+                        metaclassName,
+                        modelId: m1.id,
+                    });
+                }
+            } catch { /* ignore errors reading objects */ }
+        }
+
+        const modelData: TreeModelData = {
+            id: m1.id,
+            name: m1.name || 'Unnamed Model',
+            metamodelId,
+            isActive,
+            instances,
+        };
+
+        if (metamodelId && metamodelIdSet.has(metamodelId)) {
+            if (!modelsByMetamodel.has(metamodelId)) modelsByMetamodel.set(metamodelId, []);
+            modelsByMetamodel.get(metamodelId)!.push(modelData);
+        } else {
+            standaloneModels.push(modelData);
+        }
+    }
 
     ret.processedMetamodels = metamodels.map((mm) => ({
         data: {
@@ -438,9 +826,11 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
             nodeId: mm.node?.id,
             viewId: mm.node?.view?.id,
         },
-        packages: (mm.packages || []).map((pkg: any) => convertToTreeData(pkg))
+        packages: (mm.packages || []).map((pkg: any) => convertToTreeData(pkg)),
+        childModels: modelsByMetamodel.get(mm.id) || [],
     }));
 
+    ret.standaloneModels = standaloneModels;
     ret.selectedElementId = state._lastSelected?.modelElement || undefined;
 
     return ret;

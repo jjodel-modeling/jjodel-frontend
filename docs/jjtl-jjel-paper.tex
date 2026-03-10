@@ -1,0 +1,1634 @@
+\documentclass[11pt,a4paper]{article}
+
+% ============================================
+% PACKAGES
+% ============================================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{multirow}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{amsmath,amssymb}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{parskip}
+\usepackage{microtype}
+\usepackage{fancyhdr}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!60!black,
+    citecolor=green!50!black,
+    urlcolor=blue!70!black
+}
+
+% ============================================
+% LISTING STYLES
+% ============================================
+
+% Base style
+\lstdefinestyle{base}{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    breakatwhitespace=true,
+    columns=flexible,
+    keepspaces=true,
+    showstringspaces=false,
+    tabsize=2,
+    frame=single,
+    framerule=0.4pt,
+    rulecolor=\color{gray!50},
+    backgroundcolor=\color{gray!3},
+    xleftmargin=4pt,
+    xrightmargin=4pt,
+    aboveskip=8pt,
+    belowskip=8pt,
+    numberstyle=\tiny\color{gray},
+    numbers=left,
+    numbersep=6pt,
+}
+
+% JjTL
+\lstdefinelanguage{jjtl}{
+    morekeywords={transformation, from, to, when, helper, alert, notify, prompt, input},
+    morekeywords=[2]{forall, exists, implies, such, that, with, do, if, then, else, and, or, not, is, true, false, null, in},
+    sensitive=true,
+    morecomment=[l]{\#},
+    morecomment=[l]{--},
+    morestring=[b]",
+    morestring=[b]',
+}
+
+\lstdefinestyle{jjtl}{
+    style=base,
+    language=jjtl,
+    keywordstyle=\bfseries\color{blue!70!black},
+    keywordstyle=[2]\bfseries\color{purple!70!black},
+    commentstyle=\itshape\color{green!40!black},
+    stringstyle=\color{red!60!black},
+}
+
+% JjEL
+\lstdefinelanguage{jjel}{
+    morekeywords={forall, exists, implies, such, that, with, do, if, then, else, and, or, not, is, true, false, null, in},
+    sensitive=true,
+    morecomment=[l]{--},
+    morestring=[b]",
+}
+
+\lstdefinestyle{jjel}{
+    style=base,
+    language=jjel,
+    keywordstyle=\bfseries\color{purple!70!black},
+    commentstyle=\itshape\color{green!40!black},
+    stringstyle=\color{red!60!black},
+}
+
+% ATL
+\lstdefinelanguage{atl}{
+    morekeywords={module, create, rule, from, to, helper, context, def, using, lazy, unique, entrypoint, endpoint, do, let, in},
+    morekeywords=[2]{if, then, else, endif, not, and, or, implies, self, thisModule, true, false, OclUndefined},
+    sensitive=true,
+    morecomment=[l]{--},
+    morestring=[b]',
+}
+
+\lstdefinestyle{atl}{
+    style=base,
+    language=atl,
+    keywordstyle=\bfseries\color{orange!70!black},
+    keywordstyle=[2]\bfseries\color{purple!70!black},
+    commentstyle=\itshape\color{green!40!black},
+    stringstyle=\color{red!60!black},
+}
+
+% ETL (Epsilon)
+\lstdefinelanguage{etl}{
+    morekeywords={rule, transform, to, extends, guard, pre, post, operation, var, new, delete, return, throw},
+    morekeywords=[2]{if, else, for, in, while, switch, case, default, continue, break, and, or, not, implies, self, true, false, null},
+    sensitive=true,
+    morecomment=[l]{//},
+    morecomment=[s]{/*}{*/},
+    morestring=[b]",
+    morestring=[b]',
+    moredelim=[is][\color{gray}]{@}{\ },
+}
+
+\lstdefinestyle{etl}{
+    style=base,
+    language=etl,
+    keywordstyle=\bfseries\color{teal!80!black},
+    keywordstyle=[2]\bfseries\color{purple!70!black},
+    commentstyle=\itshape\color{green!40!black},
+    stringstyle=\color{red!60!black},
+}
+
+% QVT-R
+\lstdefinelanguage{qvtr}{
+    morekeywords={transformation, top, relation, checkonly, enforce, domain, when, where, key, query, primitive},
+    morekeywords=[2]{if, then, else, endif, not, and, or, implies, self, true, false, null, Set, Sequence, Bag, OrderedSet},
+    sensitive=true,
+    morecomment=[l]{--},
+    morestring=[b]',
+}
+
+\lstdefinestyle{qvtr}{
+    style=base,
+    language=qvtr,
+    keywordstyle=\bfseries\color{violet!80!black},
+    keywordstyle=[2]\bfseries\color{purple!70!black},
+    commentstyle=\itshape\color{green!40!black},
+    stringstyle=\color{red!60!black},
+}
+
+% QVT-O
+\lstdefinelanguage{qvto}{
+    morekeywords={modeltype, uses, transformation, main, mapping, query, constructor, helper, init, end, object, inout, result, intermediate, class, property},
+    morekeywords=[2]{if, then, else, endif, not, and, or, implies, self, true, false, null, in, var, return, while, forEach, when, where, new},
+    sensitive=true,
+    morecomment=[l]{--},
+    morestring=[b]',
+}
+
+\lstdefinestyle{qvto}{
+    style=base,
+    language=qvto,
+    keywordstyle=\bfseries\color{brown!80!black},
+    keywordstyle=[2]\bfseries\color{purple!70!black},
+    commentstyle=\itshape\color{green!40!black},
+    stringstyle=\color{red!60!black},
+}
+
+% Grammar
+\lstdefinestyle{grammar}{
+    style=base,
+    keywordstyle={},
+    basicstyle=\ttfamily\small,
+}
+
+% ============================================
+% CUSTOM COMMANDS
+% ============================================
+\newcommand{\jjel}{\textsf{JjEL}}
+\newcommand{\jjtl}{\textsf{JjTL}}
+\newcommand{\kw}[1]{\texttt{\textbf{#1}}}
+
+% ============================================
+% HEADER/FOOTER
+% ============================================
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textsf{JjTL \& JjEL: Language Design and Comparative Analysis}}
+\fancyhead[R]{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ============================================
+% DOCUMENT
+% ============================================
+
+\begin{document}
+
+% ============================================
+% TITLE
+% ============================================
+
+\begin{center}
+{\LARGE\bfseries JjTL and JjEL: A Set-Theoretic Approach to\\[4pt] Model Transformation and Expression Languages}
+
+\vspace{14pt}
+
+{\large Jjodel Project: Language Design Document}
+
+\vspace{10pt}
+
+{\today}
+\end{center}
+
+\vspace{6pt}
+
+\begin{abstract}
+This document presents the design and rationale of two domain-specific languages developed within the Jjodel ecosystem: \jjtl{} (Jjodel Transformation Language), a declarative Model-to-Model transformation language, and \jjel{} (Jjodel Expression Language), a set-theoretic expression language inspired by first-order logic. We describe the syntax, semantics, and, most importantly, the \emph{design motivations} behind each language construct, explaining \emph{why} certain decisions were made and what alternatives were considered. We then provide a detailed comparison with four established transformation languages: ATL, EOL/ETL, QVT Relations, and QVT Operational Mappings. Finally, we present a series of parallel transformation examples across ATL, ETL, and \jjtl{} to enable direct syntactic and conceptual comparison.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+% ============================================
+% 1. INTRODUCTION
+% ============================================
+\section{Introduction}\label{sec:intro}
+
+Model-Driven Engineering (MDE) relies on model transformations as a fundamental mechanism for bridging abstraction levels, synchronizing representations, and generating artifacts from high-level specifications. Over the past two decades, a rich ecosystem of transformation languages has emerged, from the OMG's standardized QVT family to community-driven tools like ATL and Epsilon. Despite this maturity, adoption of dedicated transformation languages in industrial practice remains limited, with many practitioners preferring general-purpose languages like Java or Kotlin.
+
+We identify three root causes for this adoption gap:
+
+\begin{enumerate}[label=(\roman*)]
+    \item \textbf{Cognitive overhead}: Existing languages require learning OCL, understanding complex execution semantics (e.g., ATL's two-phase execution, QVT-R's bidirectional pattern matching), and dealing with Eclipse-specific tooling.
+    \item \textbf{Syntax-semantics mismatch}: Languages like QVT-R use declarative syntax but require procedural reasoning about enforcement behavior; ATL mixes declarative bindings with imperative \kw{do} blocks under different execution models.
+    \item \textbf{Expression language limitations}: OCL, while mathematically rigorous, was designed for \emph{constraint specification} (what must be true), not for \emph{value computation} (which elements, which values), yet it serves as the expression sub-language for ATL, QVT-R, and QVT-O.
+\end{enumerate}
+
+The Jjodel project addresses these issues with two complementary languages:
+
+\begin{itemize}
+    \item \textbf{\jjel{}}, a set-theoretic expression language whose core construct, \kw{forall}, has \emph{set comprehension} semantics (it returns a set, not a boolean). This bridges the gap between formal logic and practical computation, providing a single primitive that replaces \texttt{filter}, \texttt{map}, and logical quantification.
+    \item \textbf{\jjtl{}}, a declarative M2M transformation language that uses \jjel{} as its expression sub-language, offering a simpler rule structure than ATL while maintaining automatic traceability and guard conditions.
+\end{itemize}
+
+\subsection{Design Criteria}
+
+Both languages were designed under three guiding principles, applied in strict priority order:
+
+\begin{enumerate}
+    \item \textbf{Maximum declarativity.} The user describes \emph{what} they want, never \emph{how} to compute it. No assignment, no loops, no mutation.
+    \item \textbf{Minimum cognitive load.} Few rules to remember, minimal syntax, no boilerplate. The most frequent MDE operations are available as native methods.
+    \item \textbf{Maximum intuitiveness.} Constructs should read almost like natural language. Textual operators (\kw{and}, \kw{or}, \kw{not}, \kw{implies}), first-order-logic-inspired quantifiers (\kw{forall}, \kw{exists}), and null-safe navigation (\texttt{?.}, \texttt{??}).
+\end{enumerate}
+
+\subsection{Document Structure}
+
+\Cref{sec:jjel} presents \jjel{} in detail, including its set-theoretic semantics and design motivations. \Cref{sec:jjtl} describes \jjtl{} and its transformation model. \Cref{sec:comparison} provides a detailed comparative analysis with ATL, EOL/ETL, QVT-R, and QVT-O. \Cref{sec:examples} presents parallel transformation examples across multiple languages. \Cref{sec:discussion} discusses open points and future directions.
+
+
+% ============================================
+% 2. JjEL
+% ============================================
+\section{JjEL: Jjodel Expression Language}\label{sec:jjel}
+
+\jjel{} is a pure, side-effect-free expression language designed for navigating, querying, and computing values over model graphs. Every \jjel{} expression produces a value; there are no statements.
+
+\subsection{Positioning and Scope}
+
+\jjel{} occupies a specific niche in the MDE language landscape:
+
+\begin{center}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{OCL} & \textbf{\jjel{}} & \textbf{EOL} & \textbf{JavaScript} \\
+\midrule
+Formal constraints & Set-theoretic expressions & Model scripting & General-purpose \\
+``what must be true'' & ``which elements, which values'' & ``manipulate the model'' & ``computation'' \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\jjel{} is \emph{not} a constraint language (it computes values, not assertions), not a programming language (no variables, loops, or I/O), and not a transformation language (it provides expressions \emph{inside} rules, not rules themselves). \jjel{} provides the expression sub-language for \jjtl{}, analogous to how OCL provides expressions for ATL and QVT.
+
+The scope boundary is precise: \jjtl{} handles Model-to-Model (M2M) transformations; Model-to-Text (M2T) generation is handled by a separate template engine.
+
+\subsection{Types and Values}
+
+\jjel{} supports five primitive types and three composite types:
+
+\begin{center}
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Category} & \textbf{Type} & \textbf{Literals} & \textbf{Examples} \\
+\midrule
+\multirow{5}{*}{Primitive} & \texttt{EString} & Double-quoted & \texttt{"hello"}, \texttt{"Customer"} \\
+& \texttt{EInt} & Integer & \texttt{0}, \texttt{42}, \texttt{-7} \\
+& \texttt{EDouble} & Decimal & \texttt{3.14}, \texttt{.5} \\
+& \texttt{EBoolean} & Keyword & \texttt{true}, \texttt{false} \\
+& \texttt{null} & Keyword & \texttt{null} \\
+\midrule
+\multirow{3}{*}{Composite} & Array & Bracket & \texttt{[]}, \texttt{[1, 2, 3]} \\
+& Object & (no literal) & Model elements \\
+& Function & Lambda & \texttt{a => a.name} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The type system includes aliases for interoperability: \texttt{EString}/\texttt{String}, \texttt{EInt}/\texttt{Integer}, \texttt{EDouble}/\texttt{Double}/\texttt{Number}, \texttt{EBoolean}/\texttt{Boolean}. The \kw{is} operator checks type membership including supertypes (kind-of semantics).
+
+
+\subsection{The Core Construct: \texttt{forall}}\label{sec:forall}
+
+The most important design decision in \jjel{} is the semantics of \kw{forall}.
+
+\subsubsection{Design Motivation}
+
+In classical first-order logic, the universal quantifier $\forall$ is an \emph{assertion}: $\forall x \in S : P(x)$ returns a boolean (true if $P$ holds for every $x$). In set theory, the set-builder notation $\{x \in S \mid P(x)\}$ \emph{selects} elements, returning a set.
+
+We chose \textbf{set-theoretic semantics}: \kw{forall} returns a \emph{set}, not a boolean. The rationale:
+
+\begin{enumerate}
+    \item \textbf{Computational utility}: In model transformations, we almost always need to \emph{select} elements and \emph{compute} values from them. A set-returning construct is directly useful; a boolean-returning one requires additional machinery.
+    \item \textbf{Unification}: With set-theoretic \kw{forall}, the \texttt{filter} and \texttt{map} collection methods become redundant; \kw{forall} subsumes both. This reduces the number of concepts a user must learn.
+    \item \textbf{Natural reading}: ``for all attributes such that they are public: get their name'' reads naturally and maps directly to the syntax.
+\end{enumerate}
+
+\subsubsection{Syntax and Forms}
+
+\kw{forall} has four forms, distinguished by three separators with distinct roles:
+
+\begin{lstlisting}[style=jjel,numbers=none]
+forall <var> in <collection> [such that <condition>] [: <projection>] [do <action>]
+\end{lstlisting}
+
+\begin{center}
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Form} & \textbf{Returns} & \textbf{Equivalent to} & \textbf{Example} \\
+\midrule
+\texttt{forall x in S such that P} & Set & \texttt{S.filter(P)} & \texttt{forall a in attrs such that a.isPublic} \\
+\texttt{forall x in S: expr} & Set & \texttt{S.map(expr)} & \texttt{forall a in attrs: a.name} \\
+\texttt{forall x in S such that P: expr} & Set & \texttt{S.filter(P).map(expr)} & \texttt{forall a in attrs such that a.isPublic: a.name} \\
+\texttt{forall x in S do action} & -- & Imperative loop & \texttt{forall a in attrs do createColumn(a)} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsubsection{Separator Design}
+
+The three separators are \emph{not} interchangeable; each has a precise role:
+
+\begin{itemize}
+    \item \kw{such that} introduces a \emph{boolean filter condition}. It reads as a natural qualifier: ``all attributes \emph{such that} they are public.''
+    \item \texttt{:} introduces a \emph{value projection}. It reads as ``give me'': ``all attributes: their name'' (i.e., the names of all attributes).
+    \item \kw{do} introduces an \emph{imperative action}. It is reserved for \jjtl{} transformation actions and is not available in pure \jjel{} expressions. This separation ensures \jjel{} remains side-effect-free.
+\end{itemize}
+
+The decision to use \kw{such that} (two words) rather than a symbol like \texttt{|} was deliberate: it prioritizes readability and matches the set-builder notation commonly taught in discrete mathematics courses ($\{x \in S \mid P(x)\}$ is read ``$x$ in $S$ \emph{such that} $P(x)$'').
+
+\subsubsection{Why Not \texttt{filter} and \texttt{map}?}
+
+The \texttt{filter}/\texttt{map} pair requires the user to:
+\begin{enumerate}
+    \item Know two distinct method names and their order (filter first, then map).
+    \item Write a lambda for each: \texttt{attrs.filter(a => a.isPublic).map(a => a.name)}.
+    \item Understand method chaining and intermediate collections.
+\end{enumerate}
+
+With \kw{forall}, the same expression becomes:
+\begin{lstlisting}[style=jjel,numbers=none]
+forall a in attrs such that a.isPublic: a.name
+\end{lstlisting}
+
+This is one concept instead of three, with a single binding variable (\texttt{a}) instead of two lambdas. The cognitive load reduction is significant, especially for domain experts who are not programmers.
+
+
+\subsection{Existential Check: \texttt{exists}}\label{sec:exists}
+
+While \kw{forall} returns a set, \kw{exists} returns a \textbf{boolean}: does at least one element satisfy the condition?
+
+\begin{lstlisting}[style=jjel,numbers=none]
+exists a in attributes: a.type == "String"
+exists a in attributes such that a.isPublic and not a.isDerived
+\end{lstlisting}
+
+\kw{exists} is semantically derived from \kw{forall}:
+\[
+\texttt{exists x in S: P} \equiv \texttt{(forall x in S such that P).isNotEmpty}
+\]
+
+For \kw{exists}, the separators \texttt{:} and \kw{such that} are \emph{synonyms}: both introduce the boolean predicate. This is because \kw{exists} has no projection: it always returns boolean. The synonym design avoids forcing users to remember which separator to use for \kw{exists}.
+
+
+\subsection{Logical Implication: \texttt{implies}}
+
+\begin{lstlisting}[style=jjel,numbers=none]
+isAbstract implies subClasses.isNotEmpty
+a.isPublic implies a.type != null
+\end{lstlisting}
+
+\kw{implies} is semantically equivalent to \texttt{not P or Q} but reads as natural language. It is right-associative, short-circuit evaluated, and has lower precedence than \kw{and}/\kw{or}.
+
+The motivation is direct: model validation invariants frequently express implications (``if a class is abstract, then it must have subclasses''). Without \kw{implies}, users must negate the antecedent manually (\texttt{not isAbstract or subClasses.isNotEmpty}), which is less readable and more error-prone.
+
+
+\subsection{Context Binding: \texttt{with...do}}
+
+\begin{lstlisting}[style=jjel,numbers=none]
+with selectedNode do name.pascalCase()
+with selectedNode do forall a in attributes such that a.isPublic: a.name
+\end{lstlisting}
+
+The \kw{with} construct establishes a context object whose properties become directly accessible in the body. This is essential in the Console REPL, where there is no implicit source element (unlike \jjtl{} rules where the matched element provides implicit context).
+
+The choice of \kw{do} as the body separator (rather than a block or colon) was deliberate: it reads naturally (``with this node, \emph{do} [evaluate] this expression'') and parallels the imperative \kw{do} in \kw{forall} by indicating ``what to compute in this context.''
+
+
+\subsection{Conditional: \texttt{if...then...else}}
+
+\begin{lstlisting}[style=jjel,numbers=none]
+if isAbstract then "abstract" else "concrete"
+if lowerBound == 0 then "NULL" else "NOT NULL"
+\end{lstlisting}
+
+This construct is retained from common expression languages. An alternative syntax (\texttt{when...then...otherwise}) was considered for its more declarative flavor, but \texttt{if/then/else} was kept for its universality and zero learning curve.
+
+When \kw{else} is omitted, the expression returns \texttt{null} for the false branch, maintaining the invariant that every expression produces a value.
+
+
+\subsection{Lambda Expressions}
+
+\begin{lstlisting}[style=jjel,numbers=none]
+a => a.name
+(a, b) => a + b
+\end{lstlisting}
+
+Lambdas use the \texttt{=>} arrow syntax. An earlier design used \texttt{:} as the lambda separator (\texttt{a: a.name}), but this conflicted with the projection role of \texttt{:} in \kw{forall}. The switch to \texttt{=>} freed \texttt{:} for its set-theoretic role and made the grammar LL(1)-parseable without backtracking.
+
+Lambdas are primarily used with collection methods not subsumed by \kw{forall}: \texttt{sortBy}, \texttt{groupBy}, \texttt{distinctBy}, etc.
+
+
+\subsection{Null Safety}
+
+\begin{lstlisting}[style=jjel,numbers=none]
+parent?.name                     -- null if parent is null
+parent?.name ?? "no parent"      -- "no parent" if chain is null
+element?.container?.package?.name ?? "default"
+\end{lstlisting}
+
+Two operators handle null propagation:
+\begin{itemize}
+    \item \texttt{?.} (null-safe navigation): returns \texttt{null} if the receiver is null, without throwing.
+    \item \texttt{??} (null coalesce): returns the right operand if the left is null.
+\end{itemize}
+
+Using \texttt{.} on a null value throws an error by design: this forces users to explicitly acknowledge potential nulls via \texttt{?.}, making null handling visible rather than silently propagating.
+
+
+\subsection{Operator Precedence}
+
+\begin{center}
+\begin{tabular}{@{}clc@{}}
+\toprule
+\textbf{Level} & \textbf{Construct} & \textbf{Associativity} \\
+\midrule
+1 (lowest) & \texttt{if ... then ... else ...} & right \\
+2 & \texttt{??} (null coalesce) & left \\
+3 & \texttt{implies} & right \\
+4 & \texttt{or} & left \\
+5 & \texttt{and} & left \\
+6 & \texttt{==}, \texttt{!=} & left \\
+7 & \texttt{<}, \texttt{>}, \texttt{<=}, \texttt{>=} & left \\
+8 & \texttt{is} & -- \\
+9 & \texttt{+}, \texttt{-} & left \\
+10 & \texttt{*}, \texttt{/}, \texttt{\%} & left \\
+11 & \texttt{not}, \texttt{-} (unary) & right \\
+12 (highest) & \texttt{.}, \texttt{?.}, \texttt{[index]} & left \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+
+\subsection{Built-in Methods}
+
+\jjel{} provides over 125 built-in methods organized by type. The guiding principle is that the most frequent MDE operations should be native, requiring no import or boilerplate.
+
+\begin{center}
+\begin{tabular}{@{}lrl@{}}
+\toprule
+\textbf{Category} & \textbf{Count} & \textbf{Highlights} \\
+\midrule
+String & 33 & \texttt{camelCase()}, \texttt{pascalCase()}, \texttt{snakeCase()}, \texttt{kebabCase()} \\
+Number & 30 & \texttt{abs()}, \texttt{clamp()}, \texttt{between()}, trigonometry \\
+Collection & 28 & \texttt{sortBy()}, \texttt{groupBy()}, \texttt{flatten()}, \texttt{distinct()} \\
+Date & 39 & \texttt{addDays()}, \texttt{diffMonths()}, \texttt{format()} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Naming convention methods (\texttt{camelCase}, \texttt{pascalCase}, \texttt{snakeCase}, \texttt{kebabCase}) are native because they are essential in model transformations (e.g., converting class names to table names, attribute names to column names). No other transformation language provides these natively.
+
+Note: \texttt{filter()} and \texttt{map()} are \emph{removed} from the collection methods, as they are replaced by the \kw{forall} construct. The remaining collection methods are those that \kw{forall} does not subsume: aggregation (\texttt{sum}, \texttt{avg}), ordering (\texttt{sortBy}), structure (\texttt{groupBy}, \texttt{flatten}), and boolean checks (\texttt{all}, \texttt{any}, \texttt{none}).
+
+
+\subsection{Evaluation Rules}
+
+\subsubsection{Short-Circuit Evaluation}
+
+\kw{and} and \kw{or} use \textbf{short-circuit} evaluation: the right operand is not evaluated if the result is determined by the left operand. This is essential for guard-like expressions:
+
+\begin{lstlisting}[style=jjel,numbers=none]
+parent != null and parent.name.isNotEmpty    -- safe: parent.name not reached if null
+\end{lstlisting}
+
+\subsubsection{Truthiness}
+
+\jjel{} uses a broad truthiness model: \texttt{null}, \texttt{false}, \texttt{0}, \texttt{""} (empty string), and \texttt{[]} (empty array) are all falsy. This enables concise guards (\texttt{if attributes then ...} instead of \texttt{if attributes.isNotEmpty then ...}).
+
+\subsubsection{Error Handling}
+
+\jjel{} distinguishes between recoverable and non-recoverable errors:
+\begin{itemize}
+    \item \textbf{Silent null}: undefined variables, property not found on object (with console warning and typo suggestions via Levenshtein distance), division by zero, type mismatches in arithmetic.
+    \item \textbf{Thrown error}: \texttt{.property} on \texttt{null} (forces use of \texttt{?.}), unknown method call (with suggestions).
+\end{itemize}
+
+
+% ============================================
+% 3. JjTL
+% ============================================
+\section{JjTL: Jjodel Transformation Language}\label{sec:jjtl}
+
+\jjtl{} is a declarative, rule-based Model-to-Model transformation language. It uses \jjel{} as its expression sub-language.
+
+\subsection{Design Philosophy}
+
+\jjtl{} targets the ``sweet spot'' between ATL's complexity and manual Java code:
+
+\begin{itemize}
+    \item \textbf{Simpler than ATL}: No two-phase execution, no \texttt{thisModule} reference, no distinction between matched/lazy/called rules. Every rule is a class mapping.
+    \item \textbf{More structured than ETL}: Attribute mappings use a declarative binding syntax (\texttt{->}) rather than imperative assignment. Guards are explicit (\kw{when}) rather than statement blocks.
+    \item \textbf{JjEL instead of OCL}: Expressions use \jjel{}'s set-theoretic semantics, null-safe navigation, and native naming conventions, features that OCL does not provide.
+\end{itemize}
+
+\subsection{Transformation Structure}
+
+A \jjtl{} transformation declares its name, source metamodel, target metamodel, and a set of class mappings and helper functions:
+
+\begin{lstlisting}[style=jjtl]
+transformation StateMachine2PetriNet
+
+from StateMachineMM
+to   PetriNetMM
+
+# Class mappings follow
+State -> Place {
+    name -> label
+    isInitial -> tokens : true=1, false=0
+}
+
+# Helper functions
+helper formatLabel(s: String) -> String {
+    s.toUpper()
+}
+\end{lstlisting}
+
+
+\subsection{Class Mappings}
+
+A class mapping specifies a correspondence between a source class and a target class:
+
+\begin{lstlisting}[style=jjtl,numbers=none]
+SourceClass -> TargetClass [multiplicity] when { guard } {
+    attributeMappings...
+}
+\end{lstlisting}
+
+\subsubsection{Multiplicity}
+
+Multiplicity controls how many target instances are created per source instance:
+\begin{itemize}
+    \item No multiplicity: one-to-one (default).
+    \item \texttt{[*]}: unbounded (used with collection sources).
+    \item \texttt{[n]}: exactly $n$ target instances per source.
+    \item \texttt{[m..n]}: between $m$ and $n$ instances.
+\end{itemize}
+
+\subsubsection{Guard Conditions}
+
+The \kw{when} clause filters which source instances are transformed. The guard is a \jjel{} expression evaluated with the source instance as implicit context:
+
+\begin{lstlisting}[style=jjtl,numbers=none]
+Class -> Table when { not isAbstract and attributes.isNotEmpty } {
+    ...
+}
+\end{lstlisting}
+
+The implicit context means property access is unqualified: \texttt{isAbstract} refers to \texttt{source.isAbstract}. This reduces verbosity compared to ATL (where the guard must use the bound variable: \texttt{c.isAbstract}) and QVT-O (where \texttt{self.isAbstract} is required).
+
+
+\subsection{Attribute Mappings}
+
+\subsubsection{Direct Mapping}
+
+The simplest form copies a value from source to target:
+\begin{lstlisting}[style=jjtl,numbers=none]
+name -> tableName
+\end{lstlisting}
+
+\subsubsection{Value Mapping (Enum Conversion)}
+
+Discrete value conversions use the \texttt{:} separator followed by comma-separated pairs:
+\begin{lstlisting}[style=jjtl,numbers=none]
+isInitial -> tokens : true=1, false=0
+status -> code : "active"=1, "inactive"=0, "deleted"=-1
+\end{lstlisting}
+
+Unmapped values pass through unchanged (fallback identity).
+
+\subsubsection{Expression Mapping}
+
+Arbitrary \jjel{} expressions compute the target value:
+\begin{lstlisting}[style=jjtl,numbers=none]
+name -> tableName : name.snakeCase()
+-> columnDefs : forall a in attributes: a.name + " " + a.type.toUpper()
+\end{lstlisting}
+
+\subsubsection{Object Creation}
+
+Nested target objects are created inline:
+\begin{lstlisting}[style=jjtl,numbers=none]
+-> inputArcs {
+    -> Arc {
+        place -> source
+        weight -> 1
+    }
+}
+\end{lstlisting}
+
+
+\subsection{Helper Functions}
+
+Helpers are named, reusable \jjel{} expressions:
+\begin{lstlisting}[style=jjtl,numbers=none]
+helper formatLabel(name: String, prefix: String) -> String {
+    prefix + "_" + name.snakeCase()
+}
+\end{lstlisting}
+
+Helpers are registered in the evaluation context and callable from any expression.
+
+
+\subsection{Trace Model}
+
+\jjtl{} automatically records a trace model during execution, linking each source element to its target element(s) with binding-level detail:
+
+\begin{itemize}
+    \item \textbf{Rule-level trace}: which class mapping produced which target instance.
+    \item \textbf{Binding-level trace}: for each attribute mapping, the source value, target value, expression used, and whether the mapping is \emph{invertible}.
+\end{itemize}
+
+\subsubsection{Invertibility Analysis}
+
+\jjtl{} automatically determines whether each attribute mapping can be reversed:
+\begin{itemize}
+    \item Direct mappings (\texttt{a -> b}): always invertible.
+    \item Value mappings (\texttt{true=1, false=0}): invertible if and only if the mapping is injective (no duplicate target values).
+    \item Expression mappings: invertible only for simple property references; function calls and arithmetic are marked non-invertible.
+\end{itemize}
+
+
+\subsection{Interactive Features}
+
+\jjtl{} supports user interaction during transformation execution via four built-in statements:
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Construct} & \textbf{Behavior} & \textbf{Returns} \\
+\midrule
+\texttt{alert(msg, type)} & Blocking modal & -- \\
+\texttt{notify(msg, duration)} & Non-blocking toast & -- \\
+\texttt{prompt(msg, default)} & Text input dialog & String \\
+\texttt{input(msg, type, options)} & Typed input dialog & Varies \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+These enable semi-automated transformations where certain decisions require human input, a feature absent from ATL, ETL, QVT-R, and QVT-O.
+
+
+\subsection{Execution Model}
+
+The \jjtl{} executor follows a simple pipeline:
+
+\begin{enumerate}
+    \item \textbf{Initialize}: bind source model elements in the evaluation context; register helpers.
+    \item \textbf{Match}: for each class mapping, find all source instances of the matching type.
+    \item \textbf{Guard}: filter instances through the \kw{when} condition.
+    \item \textbf{Create}: instantiate target elements according to multiplicity.
+    \item \textbf{Bind}: evaluate attribute mappings and assign values.
+    \item \textbf{Trace}: record the trace link with invertibility information.
+\end{enumerate}
+
+Unlike ATL's two-phase execution (where all bindings are computed before any imperative blocks run), \jjtl{} processes each rule atomically: match, create, bind. This simplifies reasoning about execution order.
+
+
+% ============================================
+% 4. COMPARISON
+% ============================================
+\section{Comparative Analysis}\label{sec:comparison}
+
+We now compare \jjtl{}/\jjel{} with four established transformation languages, examining both syntactic design and underlying philosophy.
+
+\subsection{ATL (Atlas Transformation Language)}
+
+\subsubsection{Overview}
+
+ATL is a hybrid declarative/imperative M2M transformation language developed at INRIA as part of the ATLAS group. It uses OCL as its expression sub-language and has been the most widely used academic transformation language since the mid-2000s.
+
+\subsubsection{Structural Comparison}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}lXX@{}}
+\toprule
+\textbf{Aspect} & \textbf{ATL} & \textbf{JjTL} \\
+\midrule
+Header & \texttt{module Name; create Out from In} & \texttt{transformation Name \textbackslash n from X \textbackslash n to Y} \\
+Rule type & Matched / Lazy / Called / Entrypoint & Single type: class mapping \\
+Binding & \texttt{targetAttr <- expr} & \texttt{sourceAttr -> targetAttr} \\
+Guard & OCL expression in \texttt{from} clause & \kw{when} block with \jjel{} \\
+Trace resolution & Implicit via matched rules & Implicit (like ATL) with per-binding invertibility \\
+Imperative block & \texttt{do \{ ... \}} (post-binding) & \kw{do} in \kw{forall} (per-element) \\
+Expression language & OCL & \jjel{} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsubsection{Key Design Differences}
+
+\paragraph{Binding direction.} ATL uses \texttt{<-} (``target receives from expression''), while \jjtl{} uses \texttt{->} (``source maps to target''). The \jjtl{} direction mirrors the natural reading of transformation rules: the \emph{source} drives the transformation. ATL's direction mirrors assignment (\texttt{x := expr}).
+
+\paragraph{Rule taxonomy.} ATL distinguishes four rule types (matched, lazy, called, entrypoint), each with different execution semantics. \jjtl{} has a single rule type with optional multiplicity and guard, reducing the conceptual surface.
+
+\paragraph{Two-phase execution.} ATL's matched rules execute in two phases: first, all target elements are created and bindings computed (declarative phase); then, \texttt{do} blocks run (imperative phase). This design enables inter-rule references during binding but makes execution order non-obvious. \jjtl{} processes each mapping atomically: match, create, bind.
+
+\paragraph{Expression language.} ATL uses OCL, which lacks null-safe navigation, naming convention methods, and set comprehension via \kw{forall}. OCL collection operations (\texttt{->select()}, \texttt{->collect()}) require lambda syntax (\texttt{e | expr}) and explicit collection type management (\texttt{Set}, \texttt{Sequence}, \texttt{Bag}, \texttt{OrderedSet}).
+
+
+\subsection{EOL / ETL (Epsilon Platform)}
+
+\subsubsection{Overview}
+
+EOL is the imperative base language of the Epsilon platform; ETL extends it for M2M transformations. EOL takes a pragmatic approach, designed to be familiar to Java/JavaScript developers.
+
+\subsubsection{Structural Comparison}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}lXX@{}}
+\toprule
+\textbf{Aspect} & \textbf{ETL} & \textbf{JjTL} \\
+\midrule
+Rule syntax & \texttt{rule Name transform s:T to t:T \{ ... \}} & \texttt{S -> T \{ ... \}} \\
+Binding & Imperative assignment: \texttt{t.x = s.y} & Declarative: \texttt{y -> x} \\
+Guard & \texttt{guard: expr} or \texttt{guard \{ block \}} & \texttt{when \{ expr \}} \\
+Trace resolution & \texttt{::=} operator / \texttt{equivalent()} & Implicit with per-binding invertibility \\
+Rule modifiers & \texttt{@abstract}, \texttt{@lazy}, \texttt{@primary}, \texttt{@greedy} & Multiplicity (\texttt{[*]}) \\
+Inheritance & \texttt{extends parentRule} & Not supported \\
+Control flow & \texttt{for}, \texttt{if/else}, \texttt{while}, \texttt{switch} & \kw{forall}, \texttt{if/then/else} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsubsection{Key Design Differences}
+
+\paragraph{Declarative vs.\ imperative bindings.} ETL attribute mappings are imperative assignments (\texttt{t.name = s.name.toUpperCase()}). \jjtl{} attribute mappings are declarative bindings (\texttt{name -> tableName : name.toUpper()}). The declarative approach enables automatic invertibility analysis, which is impossible with imperative assignments.
+
+\paragraph{Verbosity.} ETL requires explicit variable declarations, \texttt{new} for object creation, and method call syntax for collection operations. \jjtl{} infers targets from the rule header, creates objects implicitly, and uses \kw{forall} instead of explicit loops or lambda chains.
+
+\paragraph{Rule inheritance.} ETL supports \texttt{extends} for rule inheritance (abstract rules with shared logic). \jjtl{} does not have rule inheritance, favoring flat, self-contained rules. This is a deliberate simplicity trade-off.
+
+
+\subsection{QVT Relations (QVT-R)}
+
+\subsubsection{Overview}
+
+QVT-R is the declarative relational sub-language of the OMG QVT standard. Its distinguishing features are bidirectional specification and pattern-based relation declarations.
+
+\subsubsection{Structural Comparison}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}lXX@{}}
+\toprule
+\textbf{Aspect} & \textbf{QVT-R} & \textbf{JjTL} \\
+\midrule
+Paradigm & Fully declarative, bidirectional & Declarative, bidirectional (with unidirectional extension) \\
+Rule structure & \texttt{relation} with domain patterns & Class mapping with attribute bindings \\
+Directionality & \texttt{checkonly} / \texttt{enforce} per domain & Bidirectional core; unidirectional extension \\
+Precondition & \texttt{when \{ ... \}} (relation calls) & \texttt{when \{ JjEL expr \}} \\
+Postcondition & \texttt{where \{ ... \}} (relation calls) & Not explicit (sequential) \\
+Expression language & OCL & \jjel{} \\
+Variable binding & Implicit via pattern variables & Explicit via source property names \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsubsection{Key Design Differences}
+
+\paragraph{Bidirectionality.} QVT-R's core promise is that the same transformation can be executed in either direction. In practice, this creates significant complexity: users must reason about enforcement behavior in both directions simultaneously, and non-bijective mappings (common in real transformations like class-to-table) introduce semantic ambiguities. \jjtl{}'s declarative core is also bidirectional, but takes a different approach: invertibility is tracked per-binding rather than per-transformation, giving fine-grained control over which parts of a mapping can be reversed. Additionally, \jjtl{} provides a unidirectional extension for cases where source-to-target-only semantics are needed.
+
+\paragraph{Pattern matching vs.\ explicit mapping.} QVT-R uses pattern-based domain declarations where variables are bound across domains by name equality. This is elegant but hard to read: understanding which variables bind to what requires scanning the entire relation. \jjtl{} uses explicit \texttt{->} mappings, making the data flow immediately visible.
+
+\paragraph{Relation calls.} QVT-R's \texttt{when}/\texttt{where} clauses invoke other relations, creating a web of inter-dependent correspondences. This compositional power is also a source of complexity: debugging requires tracing through chains of relation calls. \jjtl{} guards are self-contained \jjel{} expressions.
+
+
+\subsection{QVT Operational (QVT-O)}
+
+\subsubsection{Overview}
+
+QVT-O is the imperative sub-language of the QVT standard. It uses \texttt{mapping} operations with automatic trace management, OCL-based expressions, and a three-section body (\texttt{init}/population/\texttt{end}).
+
+\subsubsection{Structural Comparison}
+
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}lXX@{}}
+\toprule
+\textbf{Aspect} & \textbf{QVT-O} & \textbf{JjTL} \\
+\midrule
+Entry point & Explicit \texttt{main()} & Implicit (all rules fire) \\
+Mapping syntax & \texttt{mapping T::op() : TT} & \texttt{S -> T \{ ... \}} \\
+Implicit context & \texttt{self} & Unqualified (source properties) \\
+Object creation & \texttt{object Type \{ ... \}} & Nested \texttt{-> Type \{ ... \}} \\
+Guard & \texttt{when \{ ... \}} & \texttt{when \{ ... \}} \\
+Trace resolution & Implicit via mapping invocation & Implicit with per-binding invertibility \\
+Assignment & \texttt{:=} & \texttt{->} \\
+Expression language & OCL & \jjel{} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsubsection{Key Design Differences}
+
+\paragraph{Entry point.} QVT-O requires an explicit \texttt{main()} that orchestrates the transformation by navigating the source model and invoking mappings. \jjtl{} fires all class mappings automatically for matching source instances (pattern-matched, like ATL). This reduces boilerplate but limits control over execution order.
+
+\paragraph{Self vs.\ implicit context.} QVT-O uses \texttt{self} to refer to the source element within a mapping. \jjtl{} uses an implicit context: properties of the source element are accessed without qualification. This is a significant verbosity reduction but requires clear scoping rules.
+
+
+\subsection{Feature Comparison Matrix}
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}l*{5}{c}@{}}
+\toprule
+\textbf{Feature} & \textbf{ATL} & \textbf{ETL} & \textbf{QVT-R} & \textbf{QVT-O} & \textbf{JjTL} \\
+\midrule
+Declarative rules & \checkmark & -- & \checkmark & -- & \checkmark \\
+Imperative blocks & \checkmark & \checkmark & -- & \checkmark & Limited$^a$ \\
+Bidirectional & -- & -- & \checkmark & -- & \checkmark$^e$ \\
+Automatic trace & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
+Invertibility tracking & -- & -- & -- & -- & \checkmark \\
+Guard conditions & \checkmark & \checkmark & \checkmark$^b$ & \checkmark & \checkmark \\
+Multiplicity & -- & -- & -- & -- & \checkmark \\
+Null-safe navigation & -- & \checkmark$^c$ & -- & -- & \checkmark \\
+Naming conventions & -- & -- & -- & -- & \checkmark \\
+Interactive (user input) & -- & -- & -- & -- & \checkmark \\
+Set comprehension (\kw{forall}) & -- & -- & -- & -- & \checkmark \\
+Rule inheritance & -- & \checkmark & -- & \checkmark$^d$ & -- \\
+Expression language & OCL & EOL & OCL & OCL & \jjel{} \\
+\bottomrule
+\end{tabularx}
+
+\vspace{4pt}
+\footnotesize
+$^a$ Via \kw{forall...do} in expressions. $^b$ Via \texttt{when}/\texttt{where} clauses. $^c$ Since Epsilon 2.1. $^d$ Via mapping inheritance. $^e$ Declarative core is bidirectional; also has a unidirectional extension.
+\end{center}
+
+
+\subsection{Expression Language Comparison}
+
+A critical differentiator is the expression sub-language. We compare equivalent expressions across OCL (used by ATL, QVT-R, QVT-O), EOL (used by ETL), and \jjel{} (used by \jjtl{}):
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}lXXX@{}}
+\toprule
+\textbf{Task} & \textbf{OCL} & \textbf{EOL} & \textbf{JjEL} \\
+\midrule
+Public attr. names &
+\texttt{self.attr->select(a|a.isPublic)->collect(a|a.name)} &
+\texttt{self.attr.select(a|a.isPublic).collect(a|a.name)} &
+\texttt{forall a in attr such that a.isPublic: a.name} \\
+\addlinespace
+Exists string attr &
+\texttt{self.attr->exists(a|a.type.name='String')} &
+\texttt{self.attr.exists(a|a.type.name='String')} &
+\texttt{exists a in attr: a.type == "String"} \\
+\addlinespace
+Abstract $\Rightarrow$ has children &
+\texttt{self.isAbstract implies self.subClasses->notEmpty()} &
+\texttt{self.isAbstract implies self.subClasses.notEmpty()} &
+\texttt{isAbstract implies subClasses.isNotEmpty} \\
+\addlinespace
+Null-safe name &
+\texttt{if self.parent.oclIsUndefined() then 'none' else self.parent.name endif} &
+\texttt{self.parent?.name ?: 'none'} &
+\texttt{parent?.name ?? "none"} \\
+\addlinespace
+To snake\_case &
+(no native support) &
+(no native support) &
+\texttt{name.snakeCase()} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Key observations:
+\begin{enumerate}
+    \item \jjel{}'s \kw{forall} replaces the \texttt{->select()->collect()} chain with a single construct.
+    \item OCL's null handling requires verbose \texttt{oclIsUndefined()} checks.
+    \item Naming convention methods (\texttt{snakeCase}, \texttt{camelCase}) are unique to \jjel{}.
+    \item \jjel{} uses implicit context (no \texttt{self}), reducing token count.
+\end{enumerate}
+
+
+% ============================================
+% 5. EXAMPLES
+% ============================================
+\section{Transformation Examples}\label{sec:examples}
+
+We present three transformations in parallel across ATL, ETL, and \jjtl{}, each demonstrating different language features.
+
+
+\subsection{Example 1: UML Class to Relational Table}
+
+This classic transformation maps UML classes to relational tables: each non-abstract class becomes a table, each single-valued attribute becomes a column, and each multi-valued attribute becomes a junction table.
+
+\subsubsection{ATL}
+
+\begin{lstlisting}[style=atl,caption={Class2Relational in ATL}]
+module Class2Relational;
+create OUT : Relational from IN : Class;
+
+helper context Class!Attribute def: isSingleValued() : Boolean =
+    not self.multiValued;
+
+rule Class2Table {
+    from
+        c : Class!Class (
+            not c.isAbstract
+        )
+    to
+        t : Relational!Table (
+            name <- c.name,
+            col  <- c.attr->select(a | a.isSingleValued())
+                           ->collect(a | thisModule.Attr2Col(a))
+                           ->union(Sequence{key}),
+            key  <- Set{key}
+        ),
+        key : Relational!Column (
+            name <- 'Id'
+        )
+}
+
+lazy rule Attr2Col {
+    from
+        a : Class!Attribute
+    to
+        c : Relational!Column (
+            name <- a.name,
+            type <- a.type.name
+        )
+}
+
+rule MultiAttr2Table {
+    from
+        a : Class!Attribute (
+            a.multiValued
+        )
+    to
+        t : Relational!Table (
+            name <- a.owner.name + '_' + a.name,
+            col  <- Sequence{id, val}
+        ),
+        id : Relational!Column (
+            name <- 'Id'
+        ),
+        val : Relational!Column (
+            name <- a.name,
+            type <- a.type.name
+        )
+}
+\end{lstlisting}
+
+\subsubsection{ETL}
+
+\begin{lstlisting}[style=etl,caption={Class2Relational in ETL}]
+rule Class2Table
+    transform c : Class!Class
+    to t : Relational!Table {
+
+    guard : not c.isAbstract
+
+    t.name = c.name;
+
+    // Primary key
+    var pk = new Relational!Column;
+    pk.name = "Id";
+    pk.type = "INTEGER";
+    t.col.add(pk);
+
+    // Single-valued attributes
+    for (a in c.attr.select(a | not a.multiValued)) {
+        var col = new Relational!Column;
+        col.name = a.name;
+        col.type = a.type.name;
+        t.col.add(col);
+    }
+}
+
+rule MultiAttr2Table
+    transform a : Class!Attribute
+    to t : Relational!Table {
+
+    guard : a.multiValued
+
+    t.name = a.owner.name + "_" + a.name;
+
+    var id = new Relational!Column;
+    id.name = "Id";
+    t.col.add(id);
+
+    var val = new Relational!Column;
+    val.name = a.name;
+    val.type = a.type.name;
+    t.col.add(val);
+}
+\end{lstlisting}
+
+\subsubsection{JjTL}
+
+\begin{lstlisting}[style=jjtl,caption={Class2Relational in JjTL}]
+transformation Class2Relational
+
+from ClassMM
+to   RelationalMM
+
+# Non-abstract classes become tables
+Class -> Table when { not isAbstract } {
+    name -> name : name.snakeCase()
+
+    # Primary key column
+    -> col {
+        -> Column {
+            -> name : "id"
+            -> type : "INTEGER"
+        }
+    }
+
+    # Single-valued attributes become columns
+    -> col {
+        forall a in attributes such that not a.multiValued
+        -> Column {
+            a.name -> name : a.name.snakeCase()
+            a.type.name -> type
+        }
+    }
+}
+
+# Multi-valued attributes become junction tables
+Attribute -> Table when { multiValued } {
+    -> name : owner.name.snakeCase() + "_" + name.snakeCase()
+
+    -> col {
+        -> Column {
+            -> name : "id"
+        }
+    }
+    -> col {
+        -> Column {
+            name -> name : name.snakeCase()
+            type.name -> type
+        }
+    }
+}
+\end{lstlisting}
+
+
+\subsection{Example 2: State Machine to Petri Net}
+
+This transformation converts a state machine (states and transitions) into a Petri net (places, transitions, and arcs).
+
+\subsubsection{ATL}
+
+\begin{lstlisting}[style=atl,caption={StateMachine2PetriNet in ATL}]
+module SM2PN;
+create OUT : PetriNet from IN : StateMachine;
+
+rule State2Place {
+    from
+        s : StateMachine!State
+    to
+        p : PetriNet!Place (
+            name   <- s.name,
+            tokens <- if s.isInitial then 1 else 0 endif
+        )
+}
+
+rule Transition2Transition {
+    from
+        t : StateMachine!Transition
+    to
+        pt : PetriNet!Transition (
+            name <- t.label
+        ),
+        inArc : PetriNet!Arc (
+            source    <- t.source,  -- resolved via trace
+            target    <- pt,
+            weight    <- 1
+        ),
+        outArc : PetriNet!Arc (
+            source    <- pt,
+            target    <- t.target,  -- resolved via trace
+            weight    <- 1
+        )
+}
+\end{lstlisting}
+
+\subsubsection{ETL}
+
+\begin{lstlisting}[style=etl,caption={StateMachine2PetriNet in ETL}]
+rule State2Place
+    transform s : SM!State
+    to p : PN!Place {
+
+    p.name   = s.name;
+    p.tokens = if (s.isInitial) 1 else 0;
+}
+
+rule Transition2Transition
+    transform t : SM!Transition
+    to pt : PN!Transition {
+
+    pt.name = t.label;
+
+    // Input arc: from source place to this transition
+    var inArc = new PN!Arc;
+    inArc.source = t.source.equivalent();
+    inArc.target = pt;
+    inArc.weight = 1;
+
+    // Output arc: from this transition to target place
+    var outArc = new PN!Arc;
+    outArc.source = pt;
+    outArc.target = t.target.equivalent();
+    outArc.weight = 1;
+}
+\end{lstlisting}
+
+\subsubsection{JjTL}
+
+\begin{lstlisting}[style=jjtl,caption={StateMachine2PetriNet in JjTL}]
+transformation StateMachine2PetriNet
+
+from StateMachineMM
+to   PetriNetMM
+
+State -> Place {
+    name -> name
+    isInitial -> tokens : true=1, false=0
+}
+
+Transition -> Transition [*] {
+    label -> name
+
+    # Input arc: source state -> this transition
+    -> inputArcs {
+        -> Arc {
+            source -> source
+            -> weight : 1
+        }
+    }
+
+    # Output arc: this transition -> target state
+    -> outputArcs {
+        -> Arc {
+            target -> target
+            -> weight : 1
+        }
+    }
+}
+\end{lstlisting}
+
+\paragraph{Comparison notes.}
+\begin{itemize}
+    \item ATL and \jjtl{} both use implicit trace resolution: when a source element (e.g., a \texttt{State}) is assigned to a target property that expects the corresponding target type (e.g., a \texttt{Place}), the engine automatically resolves the trace link. This keeps the mapping syntax clean and declarative.
+    \item ETL requires explicit \texttt{.equivalent()} calls to resolve trace links.
+    \item The value mapping \texttt{true=1, false=0} in \jjtl{} replaces ATL's verbose \texttt{if...then...else...endif}.
+\end{itemize}
+
+
+\subsection{Example 3: UML to Java (Structural)}
+
+This example maps UML classes to Java class definitions, demonstrating naming conventions, inheritance, and collection processing.
+
+\subsubsection{ATL}
+
+\begin{lstlisting}[style=atl,caption={UML2Java structural mapping in ATL}]
+module UML2Java;
+create OUT : Java from IN : UML;
+
+helper context UML!Class def: javaName() : String =
+    self.name;
+    -- Note: no native camelCase/PascalCase in OCL
+
+helper context UML!Attribute def: getterName() : String =
+    'get' + self.name;  -- cannot capitalize first letter natively
+
+rule Class2JavaClass {
+    from
+        c : UML!Class
+    to
+        j : Java!JavaClass (
+            name       <- c.javaName(),
+            isAbstract <- c.isAbstract,
+            superClass <- c.superClass,  -- trace-resolved
+            fields     <- c.attributes->select(a |
+                            not a.isDerived),
+            methods    <- c.attributes->select(a |
+                            not a.isDerived)
+                            ->collect(a | thisModule.Attr2Getter(a))
+        )
+}
+
+lazy rule Attr2Getter {
+    from
+        a : UML!Attribute
+    to
+        m : Java!Method (
+            name       <- a.getterName(),
+            returnType <- a.type,
+            body       <- 'return this.' + a.name + ';'
+        )
+}
+\end{lstlisting}
+
+\subsubsection{ETL}
+
+\begin{lstlisting}[style=etl,caption={UML2Java structural mapping in ETL}]
+rule Class2JavaClass
+    transform c : UML!Class
+    to j : Java!JavaClass {
+
+    j.name       = c.name;
+    j.isAbstract = c.isAbstract;
+    j.superClass ::= c.superClass;
+
+    for (a in c.attributes.select(a | not a.isDerived)) {
+        var field = new Java!Field;
+        field.name = a.name;
+        field.type ::= a.type;
+        j.fields.add(field);
+
+        var getter = new Java!Method;
+        getter.name = "get" + a.name.firstToUpperCase();
+        getter.returnType ::= a.type;
+        getter.body = "return this." + a.name + ";";
+        j.methods.add(getter);
+    }
+}
+\end{lstlisting}
+
+\subsubsection{JjTL}
+
+\begin{lstlisting}[style=jjtl,caption={UML2Java structural mapping in JjTL}]
+transformation UML2Java
+
+from UML_MM
+to   JavaMM
+
+Class -> JavaClass {
+    name -> name : name.pascalCase()
+    isAbstract -> isAbstract
+    superClass -> superClass
+
+    # Fields from non-derived attributes
+    -> fields {
+        forall a in attributes such that not a.isDerived
+        -> Field {
+            a.name -> name : a.name.camelCase()
+            a.type -> type
+        }
+    }
+
+    # Getter methods
+    -> methods {
+        forall a in attributes such that not a.isDerived
+        -> Method {
+            -> name : "get" + a.name.pascalCase()
+            a.type -> returnType
+            -> body : "return this." + a.name.camelCase() + ";"
+        }
+    }
+}
+\end{lstlisting}
+
+\paragraph{Comparison notes.}
+\begin{itemize}
+    \item \jjtl{}'s native \texttt{pascalCase()} and \texttt{camelCase()} methods eliminate the need for manual string manipulation helpers that ATL and ETL require.
+    \item ATL needs a lazy rule (\texttt{Attr2Getter}) invoked via \texttt{thisModule.Attr2Getter(a)}; \jjtl{} uses inline object creation.
+    \item ETL's imperative loop with explicit \texttt{new} and \texttt{.add()} is more verbose than \jjtl{}'s declarative \kw{forall} with nested object creation.
+    \item OCL's string handling is the weakest: there is no native method to capitalize the first letter, convert to camelCase, etc.
+\end{itemize}
+
+
+\subsection{Example 4: Validation Invariants}
+
+This example demonstrates \jjel{}'s expressiveness for model validation, compared to OCL.
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}p{3.5cm}XX@{}}
+\toprule
+\textbf{Invariant} & \textbf{OCL} & \textbf{JjEL} \\
+\midrule
+All classes have $\geq$1 attribute &
+\texttt{Class.allInstances()->forAll(c | c.attributes->notEmpty())} &
+\texttt{forall c in classes: c.attributes.isNotEmpty} \\
+\addlinespace
+Abstract $\Rightarrow$ has subclasses &
+\texttt{self.isAbstract implies self.subClasses->notEmpty()} &
+\texttt{isAbstract implies subClasses.isNotEmpty} \\
+\addlinespace
+Unique class names &
+\texttt{Class.allInstances()->isUnique(c | c.name)} &
+\texttt{(forall c in classes: c.name).distinct().size == classes.size} \\
+\addlinespace
+No attribute with null type &
+\texttt{self.attributes->forAll(a | not a.type.oclIsUndefined())} &
+\texttt{forall a in attributes: a.type != null} \\
+\addlinespace
+Public attributes $\Rightarrow$ typed &
+\texttt{self.attributes->select(a | a.isPublic)->forAll(a | not a.type.oclIsUndefined())} &
+\texttt{forall a in attributes such that a.isPublic: a.type != null} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+In \jjel{}, the same \kw{forall} construct serves for both selection and projection, while OCL requires different operations (\texttt{->forAll()} for assertion, \texttt{->select()} for filtering, \texttt{->collect()} for mapping). Note also that in \jjel{} validation, \kw{forall} with \texttt{:} returns a set of boolean values; the invariant holds if all values are \texttt{true}. An explicit \texttt{.all(x => x)} or wrapping with \kw{forall ... such that} can make the boolean intent more explicit.
+
+
+\subsection{Example 5: Guard Conditions}
+
+Guards in transformation rules demonstrate how expression languages handle complex selection criteria.
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}p{2.8cm}XXX@{}}
+\toprule
+\textbf{Guard} & \textbf{ATL (OCL)} & \textbf{ETL (EOL)} & \textbf{JjTL (JjEL)} \\
+\midrule
+Non-abstract with attributes &
+\texttt{not c.isAbstract and c.attr->notEmpty()} &
+\texttt{not c.isAbstract and c.attr.notEmpty()} &
+\texttt{not isAbstract and attributes.isNotEmpty} \\
+\addlinespace
+Has a string attribute &
+\texttt{c.attr->exists(a | a.type.name = 'String')} &
+\texttt{c.attr.exists(a | a.type.name = 'String')} &
+\texttt{exists a in attributes: a.type == "String"} \\
+\addlinespace
+All references are navigable &
+\texttt{c.refs->forAll(r | r.isNavigable)} &
+\texttt{c.refs.forAll(r | r.isNavigable)} &
+\texttt{forall r in references: r.isNavigable} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+
+% ============================================
+% 6. DISCUSSION
+% ============================================
+\section{Discussion}\label{sec:discussion}
+
+\subsection{Strengths of the JjTL/JjEL Approach}
+
+\begin{enumerate}
+    \item \textbf{Conceptual unification via \kw{forall}}: By giving \kw{forall} set-theoretic semantics, \jjel{} replaces three distinct concepts (filter, map, logical quantification) with one. This is a genuine reduction in cognitive load, not merely syntactic sugar.
+
+    \item \textbf{Domain-native operations}: Built-in naming convention methods (\texttt{camelCase}, \texttt{snakeCase}, etc.) and null-safe navigation address the most common pain points in model transformations, which no other transformation language handles natively.
+
+    \item \textbf{Invertibility tracking}: \jjtl{}'s automatic classification of attribute mappings as invertible or non-invertible is unique among the compared languages and enables downstream applications like bidirectional synchronization and transformation debugging.
+
+    \item \textbf{Interactive transformations}: The \texttt{prompt}/\texttt{input} mechanism supports semi-automated scenarios that other languages cannot express.
+
+    \item \textbf{Single execution model}: Unlike ATL's two-phase matched rules or QVT-R's complex enforcement semantics, \jjtl{}'s execution model is straightforward: match, create, bind.
+\end{enumerate}
+
+\subsection{Limitations and Trade-offs}
+
+\begin{enumerate}
+    \item \textbf{Limited imperative support}: \jjtl{}'s \texttt{do} blocks provide basic imperative capability, but lack the full expressiveness of ATL's called rules or QVT-O's mapping operations for complex procedural logic.
+
+    \item \textbf{No rule inheritance}: Unlike ETL's \texttt{extends} and QVT-O's mapping inheritance, \jjtl{} rules are flat. Complex transformations with shared logic across rules must use helper functions.
+
+    \item \textbf{No explicit entry point}: The automatic ``fire all matching rules'' execution model (like ATL) limits control over rule ordering. QVT-O's explicit \texttt{main()} provides more control.
+
+    \item \textbf{Maturity}: ATL and ETL have decades of academic use, extensive example repositories, and battle-tested implementations. \jjtl{}/\jjel{} are new and will require the same maturation process.
+\end{enumerate}
+
+\subsection{Open Design Points}
+
+Several aspects of \jjel{} are under active review:
+
+\begin{enumerate}
+    \item \textbf{\texttt{if/then/else} syntax}: The conditional has a procedural flavor. Alternatives like \texttt{when/then/otherwise} have been considered for their more declarative reading.
+
+    \item \textbf{String interpolation}: The lexer supports \texttt{\$\{...\}} syntax but the parser does not yet produce interpolated string nodes. This is planned as a future enhancement.
+
+    \item \textbf{Closure method}: A generic \texttt{closure()} method for transitive navigation would replace hardcoded properties like \texttt{allSuperclasses} and \texttt{allSubclasses}.
+
+    \item \textbf{\kw{forall} nesting}: The readability and semantics of nested \kw{forall} expressions need further validation.
+\end{enumerate}
+
+
+% ============================================
+% 7. CONCLUSION
+% ============================================
+\section{Conclusion}\label{sec:conclusion}
+
+This document has presented \jjtl{} and \jjel{} as a pair of complementary domain-specific languages for Model-Driven Engineering. The key contribution is \jjel{}'s set-theoretic approach to expressions: by reinterpreting \kw{forall} as a set comprehension rather than a logical assertion, we achieve a significant reduction in cognitive load while maintaining the declarative character valued in the MDE community.
+
+The comparative analysis with ATL, EOL/ETL, QVT-R, and QVT-O reveals that each language occupies a distinct design point:
+
+\begin{itemize}
+    \item ATL combines declarative rules with OCL expressions but suffers from two-phase execution complexity and limited tooling.
+    \item ETL prioritizes developer familiarity via an imperative style but sacrifices the declarative invertibility that enables advanced transformation analysis.
+    \item QVT-R achieves full declarativity and bidirectionality at the cost of practical usability.
+    \item QVT-O provides a pragmatic imperative approach with OCL's verbosity.
+\end{itemize}
+
+\jjtl{}/\jjel{} targets the space between ATL's declarative elegance and ETL's practical simplicity, aiming for a language that is \emph{declarative enough} for transformation analysis (invertibility, traceability) while being \emph{intuitive enough} for adoption by domain experts who may not have a formal logic background.
+
+
+% ============================================
+% APPENDIX
+% ============================================
+\appendix
+
+\section{JjEL Grammar (Complete)}\label{app:grammar}
+
+\begin{lstlisting}[style=grammar,caption={JjEL formal grammar in EBNF}]
+expression     = forallExpr | existsExpr | withExpr | ifThenElse
+
+forallExpr     = 'forall' IDENT 'in' expression
+                   ('such' 'that' expression)?
+                   (':' expression)?
+                   ('do' expression)?
+
+existsExpr     = 'exists' IDENT 'in' expression
+                   (':' | 'such' 'that') expression
+
+withExpr       = 'with' expression 'do' expression
+
+ifThenElse     = 'if' expression 'then' expression ('else' expression)?
+               | nullCoalesce
+
+nullCoalesce   = implies ('??' implies)*
+
+implies        = logicalOr ('implies' logicalOr)?
+
+logicalOr      = logicalAnd ('or' logicalAnd)*
+
+logicalAnd     = equality ('and' equality)*
+
+equality       = comparison (('==' | '!=') comparison)*
+
+comparison     = isType (('<' | '>' | '<=' | '>=') isType)*
+
+isType         = addition ('is' IDENT)?
+
+addition       = multiplication (('+' | '-') multiplication)*
+
+multiplication = unary (('*' | '/' | '%') unary)*
+
+unary          = 'not' unary
+               | '-' unary
+               | postfix
+
+postfix        = primary (
+                   '.' IDENT ('(' argList ')')?
+                 | '?.' IDENT ('(' argList ')')?
+                 | '[' expression ']'
+                 )*
+
+primary        = literal | IDENT | lambda | arrayLiteral
+               | '(' expression ')'
+
+lambda         = IDENT '=>' expression
+               | '(' IDENT (',' IDENT)* ')' '=>' expression
+
+arrayLiteral   = '[' (expression (',' expression)*)? ']'
+
+argList        = (expression (',' expression)*)?
+
+literal        = STRING | NUMBER | 'true' | 'false' | 'null'
+\end{lstlisting}
+
+
+\section{JjEL Built-in Methods (Complete)}\label{app:builtins}
+
+\subsection{String Methods (33)}
+
+\begin{longtable}{@{}lll@{}}
+\toprule
+\textbf{Method} & \textbf{Parameters} & \textbf{Description} \\
+\midrule
+\endhead
+\texttt{toUpper()} & -- & Uppercase \\
+\texttt{toLower()} & -- & Lowercase \\
+\texttt{capitalize()} & -- & First letter uppercase \\
+\texttt{uncapitalize()} & -- & First letter lowercase \\
+\texttt{camelCase()} & -- & \texttt{"my name"} $\to$ \texttt{"myName"} \\
+\texttt{pascalCase()} & -- & \texttt{"my name"} $\to$ \texttt{"MyName"} \\
+\texttt{snakeCase()} & -- & \texttt{"myName"} $\to$ \texttt{"my\_name"} \\
+\texttt{kebabCase()} & -- & \texttt{"myName"} $\to$ \texttt{"my-name"} \\
+\texttt{trim()} & -- & Remove surrounding whitespace \\
+\texttt{trimStart()} & -- & Remove leading whitespace \\
+\texttt{trimEnd()} & -- & Remove trailing whitespace \\
+\texttt{padStart(n, ch)} & length, char & Pad start to length \\
+\texttt{padEnd(n, ch)} & length, char & Pad end to length \\
+\texttt{contains(s)} & substring & Contains check \\
+\texttt{startsWith(s)} & prefix & Prefix check \\
+\texttt{endsWith(s)} & suffix & Suffix check \\
+\texttt{indexOf(s)} & substring & First occurrence index \\
+\texttt{lastIndexOf(s)} & substring & Last occurrence index \\
+\texttt{matches(r)} & regex & Regex match \\
+\texttt{replace(o, n)} & old, new & Replace first \\
+\texttt{replaceAll(o, n)} & old, new & Replace all \\
+\texttt{substring(s, e?)} & start, end? & Extract substring \\
+\texttt{slice(s, e?)} & start, end? & Slice (negative indices) \\
+\texttt{split(sep)} & separator & Split to array \\
+\texttt{repeat(n)} & count & Repeat string \\
+\texttt{reverse()} & -- & Reverse string \\
+\texttt{length} & -- & Character count \\
+\texttt{isEmpty} & -- & Length == 0 \\
+\texttt{isNotEmpty} & -- & Length > 0 \\
+\texttt{isBlank} & -- & Empty or whitespace only \\
+\texttt{isNotBlank} & -- & Not blank \\
+\texttt{charAt(i)} & index & Character at position \\
+\texttt{toNumber()} & -- & Parse as number \\
+\texttt{toInt()} & -- & Parse as integer \\
+\bottomrule
+\end{longtable}
+
+\subsection{Collection Methods (28)}
+
+After \kw{forall} replaces \texttt{filter()} and \texttt{map()}, the remaining collection methods are:
+
+\begin{longtable}{@{}lll@{}}
+\toprule
+\textbf{Method} & \textbf{Parameters} & \textbf{Description} \\
+\midrule
+\endhead
+\texttt{sum()} & -- & Numeric sum \\
+\texttt{avg()} & -- & Numeric average \\
+\texttt{min()} & -- & Minimum value \\
+\texttt{max()} & -- & Maximum value \\
+\texttt{count()} & -- & Element count \\
+\texttt{first} & -- & First element \\
+\texttt{last} & -- & Last element \\
+\texttt{at(i)} & index & Element at index \\
+\texttt{indexOf(x)} & item & Index of element \\
+\texttt{size} & -- & Collection size \\
+\texttt{length} & -- & Alias for size \\
+\texttt{isEmpty} & -- & Size == 0 \\
+\texttt{isNotEmpty} & -- & Size > 0 \\
+\texttt{contains(x)} & item & Membership test \\
+\texttt{distinct()} & -- & Remove duplicates \\
+\texttt{distinctBy(fn)} & lambda & Remove duplicates by key \\
+\texttt{sortBy(fn)} & lambda & Sort ascending \\
+\texttt{sortByDesc(fn)} & lambda & Sort descending \\
+\texttt{reverse()} & -- & Reverse order \\
+\texttt{flatten()} & -- & Flatten nested arrays \\
+\texttt{flatMap(fn)} & lambda & Map + flatten \\
+\texttt{groupBy(fn)} & lambda & Group by key \\
+\texttt{take(n)} & count & First $n$ elements \\
+\texttt{skip(n)} & count & Skip first $n$ \\
+\texttt{takeWhile(fn)} & predicate & Take while true \\
+\texttt{skipWhile(fn)} & predicate & Skip while true \\
+\texttt{join(sep)} & separator & Join to string \\
+\texttt{all(fn)} & predicate & All satisfy? \\
+\texttt{any(fn)} & predicate & Any satisfies? \\
+\texttt{none(fn)} & predicate & None satisfy? \\
+\bottomrule
+\end{longtable}
+
+
+\section{JjTL Token Types}\label{app:tokens}
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Category} & \textbf{Token} & \textbf{Example} \\
+\midrule
+\multirow{5}{*}{Keywords} & \texttt{TRANSFORMATION} & \texttt{transformation} \\
+& \texttt{FROM} & \texttt{from} \\
+& \texttt{TO} & \texttt{to} \\
+& \texttt{WHEN} & \texttt{when} \\
+& \texttt{HELPER} & \texttt{helper} \\
+\midrule
+\multirow{4}{*}{Interactive} & \texttt{ALERT} & \texttt{alert} \\
+& \texttt{NOTIFY} & \texttt{notify} \\
+& \texttt{PROMPT} & \texttt{prompt} \\
+& \texttt{INPUT} & \texttt{input} \\
+\midrule
+\multirow{4}{*}{Literals} & \texttt{STRING} & \texttt{"hello"} \\
+& \texttt{NUMBER} & \texttt{42}, \texttt{3.14} \\
+& \texttt{BOOLEAN} & \texttt{true}, \texttt{false} \\
+& \texttt{IDENTIFIER} & \texttt{name}, \texttt{State} \\
+\midrule
+\multirow{3}{*}{Operators} & \texttt{ARROW} & \texttt{->} \\
+& \texttt{DOT} & \texttt{.} \\
+& \texttt{QUESTION\_DOT} & \texttt{?.} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+
+\end{document}

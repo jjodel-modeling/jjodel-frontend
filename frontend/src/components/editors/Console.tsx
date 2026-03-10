@@ -169,7 +169,7 @@ class ThisState{
     // Footer resize state
     footerHeight: number = 200; // Default footer height
     // Language toggle state
-    language: ConsoleLanguage = 'js';
+    language: ConsoleLanguage = 'jjel';
 }
 
 // trasformato in class component così puoi usare il this nella console. e non usa accidentalmente window come contesto
@@ -282,7 +282,7 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
 
         // Load language preference from localStorage
         const storedLanguage = localStorage.getItem('jjodel_console_language') as ConsoleLanguage | null;
-        const language: ConsoleLanguage = storedLanguage === 'jjel' ? 'jjel' : 'js';
+        const language: ConsoleLanguage = storedLanguage === 'js' ? 'js' : 'jjel';
 
         const state = new ThisState();
         state.footerHeight = !isNaN(footerHeight) && footerHeight >= 100 && footerHeight <= 400 ? footerHeight : 200;
@@ -613,8 +613,15 @@ Tip: Click the keyboard icon in the toolbar for quick reference.`;
             // Execute as JjEL expression
             try {
                 console.log('[JjEL DEBUG] 1. Starting parse for:', code);
+                // Build implicit context: spread data properties as top-level variables
+                // so users can write `name` instead of `data.name`.
+                // Explicit context keys (data, node, view) override any same-named data properties.
+                const dataObj = this._context.data;
+                const jjelContext = (dataObj && typeof dataObj === 'object' && !Array.isArray(dataObj))
+                    ? { ...dataObj, ...this._context }
+                    : this._context;
                 // jjelEval throws on parse/evaluation errors, returns the value directly on success
-                output = jjelEval(code, this._context);
+                output = jjelEval(code, jjelContext);
                 console.log('[JjEL DEBUG] 2. jjelEval completed, output type:', typeof output);
                 console.log('[JjEL DEBUG] 2b. output isProxy:', output?.__isProxy);
                 console.log('[JjEL DEBUG] 2c. output isArray:', Array.isArray(output));

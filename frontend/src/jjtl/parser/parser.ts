@@ -35,6 +35,7 @@ import {
     ParserError,
     // Interactive types
     MappingBodyItemAST,
+    ForAllMappingAST,
     AlertStatementAST,
     NotifyStatementAST,
     PromptExpressionAST,
@@ -190,11 +191,13 @@ export class JjtlParser {
         this.skipNewlines();
 
         while (!this.check(TokenType.RBRACE) && !this.isAtEnd()) {
-            // Check for interactive statements first
+            // Check for interactive statements and forall first
             if (this.check(TokenType.ALERT)) {
                 items.push(this.alertStatement());
             } else if (this.check(TokenType.NOTIFY)) {
                 items.push(this.notifyStatement());
+            } else if (this.check(TokenType.FORALL)) {
+                items.push(this.forAllMapping());
             } else {
                 items.push(this.attributeMapping());
             }
@@ -285,12 +288,57 @@ export class JjtlParser {
         };
     }
 
+    // forAllMapping = "forall" IDENT "in" expression ("such" "that" expression)? objectCreationDirect
+    private forAllMapping(): ForAllMappingAST {
+        const startToken = this.consume(TokenType.FORALL, "Expected 'forall'");
+
+        const variable = this.consume(TokenType.IDENTIFIER, "Expected iteration variable name").value;
+
+        this.consume(TokenType.IN, "Expected 'in' after forall variable");
+
+        // Parse collection expression — stops naturally at SUCH or ARROW (not expression operators)
+        const collection = this.expression();
+
+        // Optional filter: 'such that' condition
+        let filter: ExpressionAST | undefined;
+        if (this.match(TokenType.SUCH)) {
+            this.consume(TokenType.THAT, "Expected 'that' after 'such'");
+            filter = this.expression();
+        }
+
+        // Required: object creation -> Type { ... }
+        this.consume(TokenType.ARROW, "Expected '->' for object creation in forall");
+        const targetClass = this.consume(TokenType.IDENTIFIER, "Expected target class name").value;
+        this.consume(TokenType.LBRACE, "Expected '{'");
+
+        const body = this.mappingBody();
+
+        this.consume(TokenType.RBRACE, "Expected '}'");
+
+        const objectCreation: ObjectCreationAST = {
+            type: 'ObjectCreation',
+            targetClass,
+            body,
+            location: this.makeLocation(startToken, this.previous()),
+        };
+
+        return {
+            type: 'ForAllMapping',
+            variable,
+            collection,
+            filter,
+            objectCreation,
+            location: this.makeLocation(startToken, this.previous()),
+        };
+    }
+
     // conversion = valueMapping ("," valueMapping)* | expression
     private conversion(): ConversionAST {
         const startToken = this.peek();
 
         // Try to parse as value mappings: true=1, false=0
-        if (this.check(TokenType.BOOLEAN) || this.check(TokenType.NUMBER) || this.check(TokenType.STRING)) {
+        // Lookahead: only if the first literal is followed by '='
+        if (this.isValueMappingStart()) {
             const mappings: ValueMappingAST[] = [];
 
             do {
@@ -320,6 +368,16 @@ export class JjtlParser {
             expression,
             location: this.makeLocation(startToken, this.previous()),
         };
+    }
+
+    // Check if current position starts a value mapping: literal = literal
+    private isValueMappingStart(): boolean {
+        if (!this.check(TokenType.BOOLEAN) && !this.check(TokenType.NUMBER) && !this.check(TokenType.STRING)) {
+            return false;
+        }
+        // Lookahead: is the token AFTER the literal an '='?
+        const next = this.peekNext();
+        return next !== undefined && next.type === TokenType.EQUALS;
     }
 
     // helper = "helper" IDENTIFIER "(" paramList? ")" "->" IDENTIFIER "{" expression "}"
@@ -672,8 +730,8 @@ export class JjtlParser {
 
         if (!this.check(TokenType.RPAREN)) {
             do {
-                // Check for lambda: identifier ":" expression
-                if (this.check(TokenType.IDENTIFIER) && this.peekNext()?.type === TokenType.COLON) {
+                // Check for lambda: identifier "=>" expression
+                if (this.check(TokenType.IDENTIFIER) && this.peekNext()?.type === TokenType.FAT_ARROW) {
                     args.push(this.lambda());
                 } else if (this.check(TokenType.LPAREN) && this.isLambdaStart()) {
                     args.push(this.lambda());
@@ -687,11 +745,11 @@ export class JjtlParser {
         return args;
     }
 
-    // Check if current position starts a multi-param lambda: (a, b): expr
+    // Check if current position starts a multi-param lambda: (a, b) => expr
     private isLambdaStart(): boolean {
         if (!this.check(TokenType.LPAREN)) return false;
 
-        // Look ahead to find matching ) and check if followed by :
+        // Look ahead to find matching ) and check if followed by =>
         let depth = 0;
         let i = this.current;
 
@@ -701,9 +759,9 @@ export class JjtlParser {
             else if (t.type === TokenType.RPAREN) {
                 depth--;
                 if (depth === 0) {
-                    // Check if followed by colon
+                    // Check if followed by fat arrow
                     const next = this.tokens[i + 1];
-                    return next && next.type === TokenType.COLON;
+                    return next && next.type === TokenType.FAT_ARROW;
                 }
             }
             i++;
@@ -712,13 +770,13 @@ export class JjtlParser {
         return false;
     }
 
-    // lambda = IDENTIFIER ":" expression | "(" paramList ")" ":" expression
+    // lambda = IDENTIFIER "=>" expression | "(" paramList ")" "=>" expression
     private lambda(): LambdaExpressionAST {
         const startToken = this.peek();
         const params: string[] = [];
 
         if (this.match(TokenType.LPAREN)) {
-            // Multi-param: (a, b): expr
+            // Multi-param: (a, b) => expr
             if (!this.check(TokenType.RPAREN)) {
                 do {
                     params.push(this.consume(TokenType.IDENTIFIER, "Expected parameter name").value);
@@ -726,11 +784,11 @@ export class JjtlParser {
             }
             this.consume(TokenType.RPAREN, "Expected ')' after parameters");
         } else {
-            // Single param: x: expr
+            // Single param: x => expr
             params.push(this.consume(TokenType.IDENTIFIER, "Expected parameter name").value);
         }
 
-        this.consume(TokenType.COLON, "Expected ':' in lambda");
+        this.consume(TokenType.FAT_ARROW, "Expected '=>' in lambda");
         const body = this.expression();
 
         return {

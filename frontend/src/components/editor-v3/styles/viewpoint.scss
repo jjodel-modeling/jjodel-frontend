@@ -1,0 +1,295 @@
+/**
+ * Editor V3 — Viewpoint styles (custom JSX views).
+ */
+
+// ---------------------------------------------------------------------------
+// Viewpoint view wrapper
+// ---------------------------------------------------------------------------
+
+.viewpoint-view {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    font-family: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 12px;
+}
+
+// ---------------------------------------------------------------------------
+// Viewpoint text
+// ---------------------------------------------------------------------------
+
+.viewpoint-text {
+    color: inherit;
+}
+
+// ---------------------------------------------------------------------------
+// Viewpoint field (editable on double-click)
+// ---------------------------------------------------------------------------
+
+.viewpoint-field {
+    display: inline-block;
+    padding: 1px 4px;
+    border-radius: 3px;
+    cursor: default;
+
+    &:hover {
+        background: rgba(0, 0, 0, 0.04);
+    }
+}
+
+.viewpoint-field-input {
+    width: 100%;
+    padding: 2px 4px;
+    border: 1px solid #3b82f6;
+    border-radius: 3px;
+    outline: none;
+    font-size: inherit;
+    font-family: inherit;
+    background: white;
+
+    &:focus {
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Viewpoint input
+// ---------------------------------------------------------------------------
+
+.viewpoint-input {
+    width: 100%;
+    padding: 4px 6px;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    font-size: inherit;
+    font-family: inherit;
+    background: white;
+    outline: none;
+
+    &:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Viewpoint toggle
+// ---------------------------------------------------------------------------
+
+.viewpoint-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+
+    &__label {
+        font-size: 11px;
+        color: #64748b;
+    }
+
+    &__switch {
+        width: 32px;
+        height: 18px;
+        border-radius: 9px;
+        background: #cbd5e1;
+        position: relative;
+        transition: background 0.2s;
+
+        &::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: white;
+            transition: transform 0.2s;
+        }
+
+        &--active {
+            background: #3b82f6;
+
+            &::after {
+                transform: translateX(14px);
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Viewpoint selector
+// ---------------------------------------------------------------------------
+
+.viewpoint-selector {
+    width: 100%;
+    padding: 4px 6px;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    font-size: inherit;
+    font-family: inherit;
+    background: white;
+    outline: none;
+
+    &:focus {
+        border-color: #3b82f6;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Viewpoint image
+// ---------------------------------------------------------------------------
+
+.viewpoint-image {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+}
+
+// ---------------------------------------------------------------------------
+// Viewpoint subview
+// ---------------------------------------------------------------------------
+
+.viewpoint-subview {
+    padding: 4px;
+    border: 1px dashed #e2e8f0;
+    border-radius: 4px;
+    margin: 2px 0;
+
+    &__placeholder {
+        color: #94a3b8;
+        font-size: 11px;
+        font-style: italic;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Viewpoint graph components
+// ---------------------------------------------------------------------------
+
+.viewpoint-graph {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 4px;
+}
+
+.viewpoint-vertex {
+    padding: 4px 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.01);
+}
+
+.viewpoint-edge {
+    font-size: 10px;
+    color: #94a3b8;
+    padding: 2px 4px;
+}
+
+// ---------------------------------------------------------------------------
+// Error display
+// ---------------------------------------------------------------------------
+
+.viewpoint-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 6px;
+    color: #dc2626;
+    font-size: 11px;
+
+    .bi-exclamation-triangle {
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+
+    &__msg {
+        flex: 1;
+        min-width: 0;
+
+        strong {
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        pre {
+            margin: 0;
+            font-size: 10px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: #991b1b;
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Dark theme overrides
+// ---------------------------------------------------------------------------
+
+.v3-theme--dark {
+    .viewpoint-field {
+        &:hover {
+            background: rgba(255, 255, 255, 0.04);
+        }
+    }
+
+    .viewpoint-field-input {
+        background: #1e293b;
+        color: #f1f5f9;
+        border-color: #3b82f6;
+    }
+
+    .viewpoint-input {
+        background: #1e293b;
+        color: #f1f5f9;
+        border-color: #334155;
+
+        &:focus {
+            border-color: #3b82f6;
+        }
+    }
+
+    .viewpoint-toggle__switch {
+        background: #475569;
+
+        &--active {
+            background: #3b82f6;
+        }
+    }
+
+    .viewpoint-selector {
+        background: #1e293b;
+        color: #f1f5f9;
+        border-color: #334155;
+    }
+
+    .viewpoint-subview {
+        border-color: #334155;
+
+        &__placeholder {
+            color: #64748b;
+        }
+    }
+
+    .viewpoint-vertex {
+        border-color: #334155;
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    .viewpoint-edge {
+        color: #64748b;
+    }
+
+    .viewpoint-error {
+        background: #450a0a;
+        border-color: #7f1d1d;
+
+        &__msg pre {
+            color: #fca5a5;
+        }
+    }
+}

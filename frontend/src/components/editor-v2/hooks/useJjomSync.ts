@@ -24,8 +24,10 @@ import {
     SetRootFieldAction,
     DVertex,
     DEdge,
+    DVoidEdge,
     GraphSize,
     TRANSACTION,
+    store,
 } from '../../../joiner';
 import { jjomVertexToRFNode, jjomEdgeToRFEdge } from '../utils/jjomTransformers';
 import {
@@ -36,6 +38,9 @@ import {
     consumeDropCreated,
     clearDropCreated,
     clearEdgeRefIds,
+    hasCanvasEdgePair,
+    markCanvasEdgePair,
+    clearCanvasEdgePairs,
 } from '../sync/syncState';
 
 // ---------------------------------------------------------------------------
@@ -49,7 +54,25 @@ interface UseJjomSyncResult {
     hasGraph: boolean;
     /** The JjOM graph ID (DGraph pointer), available when isJjomMode is true. */
     graphId: string | null;
+    /** Ref that is true when the graph was just auto-created (consumed once by EditorV2 for auto-layout). */
+    justCreatedGraphRef: React.MutableRefObject<boolean>;
 }
+
+/** Layout options for auto-created graph vertices. */
+export interface AutoLayoutOptions {
+    /** Number of columns in the grid (default: 3). */
+    cols?: number;
+    /** Horizontal spacing between columns in px (default: 420). */
+    colWidth?: number;
+    /** Vertical spacing between rows in px (default: 300). */
+    rowHeight?: number;
+}
+
+const DEFAULT_LAYOUT: Required<AutoLayoutOptions> = {
+    cols: 3,
+    colWidth: 420,
+    rowHeight: 300,
+};
 
 type SetNodes = React.Dispatch<React.SetStateAction<Node[]>>;
 type SetEdges = React.Dispatch<React.SetStateAction<Edge[]>>;
@@ -102,6 +125,22 @@ function isEdgeClassName(className: string | undefined): boolean {
     return className.includes('Edge');
 }
 
+/**
+ * Remove duplicate inheritance edges (same source→target).
+ * A class can only extend another class once, so duplicate inheritance
+ * edges are always erroneous. Keeps the first occurrence.
+ */
+function deduplicateInheritanceEdges(edges: Edge[]): Edge[] {
+    const seen = new Set<string>();
+    return edges.filter(e => {
+        if (e.type !== 'inheritance') return true;
+        const key = `inh:${e.source}→${e.target}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+}
+
 // ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
@@ -111,7 +150,11 @@ export function useJjomSync(
     setNodes: SetNodes,
     setEdges: SetEdges,
     onInitialized?: () => void,
+    layoutOptions?: AutoLayoutOptions,
 ): UseJjomSyncResult {
+    const layout = layoutOptions
+        ? { ...DEFAULT_LAYOUT, ...layoutOptions }
+        : DEFAULT_LAYOUT;
     // ── rfCache: Map<elementId, RF Node | RF Edge> ─────────────────────
     const rfNodeCache = useRef<Map<string, Node>>(new Map());
     const rfEdgeCache = useRef<Map<string, Edge>>(new Map());
@@ -153,96 +196,250 @@ export function useJjomSync(
     const isJjomMode = !!modelid && hasGraph;
     const subElementIds = graphInfo?.subElements ?? EMPTY_ARRAY;
 
-    // ── Auto-create v2-flow graph if none exists ───────────────────────
+    // ── Selector: watch model's class count (triggers repopulation when
+    //    model data arrives in store after script execution) ──────────
+    const modelClassCount = useSelector((state: DState) => {
+        if (!modelid) return 0;
+        const rawModel = state.idlookup?.[modelid] as any;
+        if (!rawModel) return 0;
+        let count = 0;
+        for (const pkgId of (rawModel.packages ?? [])) {
+            const pkg = state.idlookup?.[pkgId] as any;
+            if (!pkg) continue;
+            count += (pkg.classes ?? []).length + (pkg.enumerators ?? []).length;
+        }
+        return count;
+    });
+
+    // ── Auto-create / populate v2-flow graph ─────────────────────────
     const creatingGraphRef = useRef(false);
+    const justCreatedGraphRef = useRef(false);
 
     useEffect(() => {
-        if (!modelid || hasGraph || creatingGraphRef.current) return;
+        if (!modelid || creatingGraphRef.current) return;
 
+        // If no v2-flow graph exists yet, create one (even for empty metamodels).
+        // Previously we waited for modelClassCount > 0, which caused a chicken-
+        // and-egg problem: the graph is needed for JjOM mode, but JjOM mode is
+        // needed to create classes, which populate classCount. We only wait for
+        // classCount when the graph already exists (for incremental population).
+        const needsNewGraph = !hasGraph;
+        if (!needsNewGraph && modelClassCount === 0) return; // graph exists but model not ready
+
+        // ── Determine what needs to be created ──────────────────────────
+        // This effect is IDEMPOTENT: it checks existing graph elements and
+        // only creates what's missing. This handles the case where the model
+        // is built incrementally (e.g. Jjodie adds classes one at a time)
+        // and the effect runs multiple times with growing modelClassCount.
+
+        let graphId: any = graphInfo?.graphId ?? null;
+
+        // Read FRESH store state (raw D-objects, not LProxy)
+        const idlookup = store.getState()?.idlookup;
+        if (!idlookup) return;
+
+        const rawModel = idlookup[modelid] as any;
+        if (!rawModel) return;
+
+        // Recursively collect all classes/enums from model packages.
+        // Raw DModel has "packages", raw DPackage has "classes"/"enumerators"/"subpackages".
+        const classifierEntries: Array<{ id: string; raw: any }> = [];
+        const visited = new Set<string>();
+
+        const visitElement = (elemId: string) => {
+            if (!elemId || typeof elemId !== 'string' || visited.has(elemId)) return;
+            visited.add(elemId);
+            const elem = idlookup[elemId] as any;
+            if (!elem) return;
+
+            if (elem.className === 'DPackage') {
+                for (const classId of (elem.classes ?? [])) visitElement(classId);
+                for (const enumId of (elem.enumerators ?? [])) visitElement(enumId);
+                for (const subPkgId of (elem.subpackages ?? [])) visitElement(subPkgId);
+            } else if (elem.className === 'DClass' || elem.className === 'DEnumerator') {
+                classifierEntries.push({ id: elemId, raw: elem });
+            }
+        };
+
+        for (const pkgId of (rawModel.packages ?? [])) visitElement(pkgId);
+        // If no classifiers found AND we don't need a new graph, nothing to do.
+        // When needsNewGraph, we must still create the graph (empty metamodel scenario).
+        if (classifierEntries.length === 0 && !needsNewGraph) return;
+
+        // ── Check existing graph elements ───────────────────────────────
+        // Build maps of what already exists so we only create missing items.
+        const vertexIdByModelId = new Map<string, string>();
+        const existingEdgeKeys = new Set<string>();
+
+        if (graphId) {
+            const rawGraph = idlookup[graphId] as any;
+            for (const seId of (rawGraph?.subElements ?? [])) {
+                const se = idlookup[seId] as any;
+                if (!se) continue;
+                if (se.className?.includes('Vertex') && se.model) {
+                    vertexIdByModelId.set(se.model, seId);
+                }
+                if (se.className?.includes('Edge') && se.start && se.end) {
+                    existingEdgeKeys.add(`${se.start}→${se.end}`);
+                }
+            }
+        }
+
+        // Also check RF edge cache for existing edges. This handles the case
+        // where canvas-created DVoidEdges aren't yet in the graph's subElements
+        // (e.g. due to TRANSACTION nesting timing).
+        for (const [, rfEdge] of rfEdgeCache.current) {
+            if (rfEdge.source && rfEdge.target) {
+                existingEdgeKeys.add(`${rfEdge.source}→${rfEdge.target}`);
+            }
+        }
+
+        // Which classifiers still need vertices?
+        const missingClassifiers = classifierEntries.filter(e => !vertexIdByModelId.has(e.id));
+
+        // Which edges are missing? (check BEFORE creating vertices — we need
+        // vertex IDs for edges, and some may not exist yet)
+        let missingEdgeCount = 0;
+        for (const entry of classifierEntries) {
+            if (entry.raw.className !== 'DClass') continue;
+            for (const supId of (entry.raw.extends ?? [])) {
+                if (typeof supId !== 'string' || supId === entry.id) continue;
+                const s = vertexIdByModelId.get(entry.id);
+                const t = vertexIdByModelId.get(supId);
+                const ek = s && t ? `${s}→${t}` : '';
+                if (s && t && !existingEdgeKeys.has(ek) && !hasCanvasEdgePair(ek)) missingEdgeCount++;
+            }
+            for (const refId of (entry.raw.references ?? [])) {
+                const refObj = typeof refId === 'string' ? idlookup[refId] as any : null;
+                if (!refObj) continue;
+                const targetId = typeof refObj.type === 'string' ? refObj.type : null;
+                if (!targetId) continue;
+                const s = vertexIdByModelId.get(entry.id);
+                const t = vertexIdByModelId.get(targetId);
+                const ek = s && t ? `${s}→${t}` : '';
+                if (s && t && !existingEdgeKeys.has(ek) && !hasCanvasEdgePair(ek)) missingEdgeCount++;
+            }
+        }
+
+        // Nothing to do? Early exit.
+        if (!needsNewGraph && missingClassifiers.length === 0 && missingEdgeCount === 0) return;
+
+        // ── Create missing elements ─────────────────────────────────────
+        // Each DVertex.new / DVoidEdge.new2 has its own internal TRANSACTION,
+        // so they must NOT be wrapped in an outer TRANSACTION (nesting
+        // causes x/y coordinates to be lost).
         creatingGraphRef.current = true;
+        justCreatedGraphRef.current = true;
+
         try {
-            TRANSACTION('Create v2-flow graph', () => {
-                // 1. Create the graph
+            // Step 1: Create graph if needed
+            if (needsNewGraph) {
                 const dGraph = DGraph.new(0, modelid);
-                const graphId = dGraph.id;
-
-                // 2. Tag as v2-flow
-                SetFieldAction.new(graphId, 'graphStyle', 'v2-flow', '', false);
-
-                // 3. Add to state.graphs so selectors can find it
-                SetRootFieldAction.new('graphs', graphId, '+=', true);
-
-                // 3. Populate from model: scan classifiers and create vertices
-                const lModel: any = LPointerTargetable.fromPointer(modelid);
-                if (!lModel) return;
-
-                const allClassifiers: any[] = lModel.classifiers ?? lModel.children ?? [];
-                // Skip packages — in v2 they're created via palette drag only.
-                // This avoids the auto-created "default" package appearing.
-                const classifiers = allClassifiers.filter((c: any) => {
-                    const cn = c?.className ?? c?.__raw?.className ?? '';
-                    return cn !== 'DPackage';
+                graphId = dGraph.id;
+                TRANSACTION('Tag v2-flow graph', () => {
+                    SetFieldAction.new(graphId, 'graphStyle', 'v2-flow', '', false);
+                    SetRootFieldAction.new('graphs', graphId, '+=', true);
                 });
-                const COLS = 3;
-                const COL_W = 300;
-                const ROW_H = 220;
+            }
 
-                const vertexIdByModelId = new Map<string, string>();
+            // Step 2: Create missing vertices
+            if (missingClassifiers.length > 0) {
+                const existingCount = vertexIdByModelId.size;
+                const COLS = layout.cols;
+                const COL_W = layout.colWidth;
+                const ROW_H = layout.rowHeight;
 
-                for (let i = 0; i < classifiers.length; i++) {
-                    const cls = classifiers[i];
-                    if (!cls?.id) continue;
-
-                    const col = i % COLS;
-                    const row = Math.floor(i / COLS);
+                for (let i = 0; i < missingClassifiers.length; i++) {
+                    const entry = missingClassifiers[i];
+                    const globalIdx = existingCount + i;
+                    const col = globalIdx % COLS;
+                    const row = Math.floor(globalIdx / COLS);
                     const x = 50 + col * COL_W;
                     const y = 50 + row * ROW_H;
 
                     const size = new GraphSize(x, y, 200, 120);
-                    const dv = DVertex.new(0, cls.id, graphId, graphId, undefined, size);
-                    if (dv?.id) vertexIdByModelId.set(cls.id, dv.id);
+                    const dv = DVertex.new(0, entry.id, graphId, graphId, undefined, size);
+                    if (dv?.id) {
+                        vertexIdByModelId.set(entry.id, dv.id);
+                    }
                 }
+            }
 
-                // 4. Create edges for extends and references
-                for (const cls of classifiers) {
-                    if (!cls?.id) continue;
-                    const className = cls.className ?? cls.__raw?.className;
-
-                    if (className === 'DClass') {
-                        // Extends (inheritance)
-                        const supers: any[] = cls.extendedBy ?? cls.superClasses ?? [];
-                        for (const sup of supers) {
-                            const supId = typeof sup === 'string' ? sup : sup?.id;
-                            if (!supId || supId === cls.id) continue; // skip self-loop
-                            const srcVertex = vertexIdByModelId.get(cls.id);
-                            const tgtVertex = vertexIdByModelId.get(supId);
-                            if (srcVertex && tgtVertex && srcVertex !== tgtVertex) {
-                                DEdge.new(0, undefined, graphId, graphId, undefined, srcVertex, tgtVertex);
-                            }
+            // Step 3: Create missing edges (inheritance + references).
+            // Re-read store to get vertex IDs that were just created.
+            if (missingClassifiers.length > 0) {
+                const freshLookup = store.getState()?.idlookup;
+                if (freshLookup) {
+                    const freshGraph = freshLookup[graphId] as any;
+                    for (const seId of (freshGraph?.subElements ?? [])) {
+                        const se = freshLookup[seId] as any;
+                        if (!se) continue;
+                        if (se.className?.includes('Vertex') && se.model && !vertexIdByModelId.has(se.model)) {
+                            vertexIdByModelId.set(se.model, seId);
                         }
-
-                        // References
-                        const refs: any[] = cls.references ?? [];
-                        for (const ref of refs) {
-                            const targetType = ref.type;
-                            const targetId = typeof targetType === 'string' ? targetType : targetType?.id;
-                            if (!targetId) continue;
-                            const srcVertex = vertexIdByModelId.get(cls.id);
-                            const tgtVertex = vertexIdByModelId.get(targetId);
-                            if (srcVertex && tgtVertex && ref.id) {
-                                DEdge.new(0, ref.id, graphId, graphId, undefined, srcVertex, tgtVertex);
-                            }
+                        if (se.className?.includes('Edge') && se.start && se.end) {
+                            existingEdgeKeys.add(`${se.start}→${se.end}`);
                         }
                     }
                 }
-            });
+            }
+
+            for (const entry of classifierEntries) {
+                if (entry.raw.className !== 'DClass') continue;
+
+                // Extends (inheritance)
+                for (const supId of (entry.raw.extends ?? [])) {
+                    if (typeof supId !== 'string' || supId === entry.id) continue;
+                    const srcVertex = vertexIdByModelId.get(entry.id);
+                    const tgtVertex = vertexIdByModelId.get(supId);
+                    if (srcVertex && tgtVertex && srcVertex !== tgtVertex) {
+                        const ek = `${srcVertex}→${tgtVertex}`;
+                        if (!existingEdgeKeys.has(ek) && !hasCanvasEdgePair(ek)) {
+                            DVoidEdge.new2(
+                                undefined, graphId, graphId, undefined,
+                                srcVertex, tgtVertex,
+                                (d: DEdge) => { d.isExtend = true; }
+                            );
+                            existingEdgeKeys.add(ek);
+                            // Register pair so subsequent auto-populate runs
+                            // won't recreate this edge even if DVoidEdge.new2
+                            // didn't add it to the graph's subElements yet.
+                            markCanvasEdgePair(srcVertex, tgtVertex);
+                        }
+                    }
+                }
+
+                // References
+                for (const refId of (entry.raw.references ?? [])) {
+                    const refObj = typeof refId === 'string' ? idlookup[refId] as any : null;
+                    if (!refObj) continue;
+                    const targetId = typeof refObj.type === 'string' ? refObj.type : null;
+                    if (!targetId) continue;
+                    const srcVertex = vertexIdByModelId.get(entry.id);
+                    const tgtVertex = vertexIdByModelId.get(targetId);
+                    if (srcVertex && tgtVertex) {
+                        const ek = `${srcVertex}→${tgtVertex}`;
+                        if (!existingEdgeKeys.has(ek) && !hasCanvasEdgePair(ek)) {
+                            DVoidEdge.new2(
+                                refId, graphId, graphId, undefined,
+                                srcVertex, tgtVertex,
+                                (d: DEdge) => { d.isReference = true; }
+                            );
+                            existingEdgeKeys.add(ek);
+                            markCanvasEdgePair(srcVertex, tgtVertex);
+                        }
+                    }
+                }
+            }
         } catch (err) {
-            console.warn('[useJjomSync] Failed to create v2-flow graph:', err);
+            console.warn('[useJjomSync] Failed to create/populate v2-flow graph:', err);
         } finally {
-            // Reset after a tick so the selector can pick up the new graph
-            setTimeout(() => { creatingGraphRef.current = false; }, 100);
+            // Reset after a tick so selectors can pick up the new graph.
+            // The 150ms delay ensures React has time to process Redux updates
+            // before the effect can run again (avoids stale snapshots).
+            setTimeout(() => { creatingGraphRef.current = false; }, 150);
         }
-    }, [modelid, hasGraph]);
+    }, [modelid, hasGraph, subElementIds.length, modelClassCount]);
 
     // ── Selector 2: Per-element D-object references ────────────────────
     // For each ID in subElements, select state.idlookup[id].
@@ -265,7 +462,7 @@ export function useJjomSync(
                         // in Redux. A single number entry per vertex instead of
                         // dozens of child entries — avoids infinite re-render loops.
                         let ch = 0;
-                        for (const key of ['attributes', 'references', 'operations', 'literals']) {
+                        for (const key of ['attributes', 'references', 'operations', 'literals', 'features']) {
                             const arr = modelElem[key];
                             if (!Array.isArray(arr)) continue;
                             for (const childId of arr) {
@@ -330,12 +527,6 @@ export function useJjomSync(
             const vertices: any[] = lGraph.nodes ?? [];
             const edges: any[] = lGraph.edges ?? [];
 
-            console.log('[DEBUG useJjomSync edges]', {
-                edgeCount: edges.length,
-                edgeIds: edges.map((e: any) => e.id),
-                cacheSize: rfEdgeCache.current.size,
-            });
-
             const nodeCache = new Map<string, Node>();
             const edgeCache = new Map<string, Edge>();
 
@@ -362,7 +553,7 @@ export function useJjomSync(
 
             // Push to React Flow state
             setNodes(Array.from(nodeCache.values()));
-            setEdges(Array.from(edgeCache.values()));
+            setEdges(deduplicateInheritanceEdges(Array.from(edgeCache.values())));
 
             initializedRef.current = true;
 
@@ -391,6 +582,8 @@ export function useJjomSync(
         const removedEdgeIds = new Set<string>();
         // Map of nodeId → new data for property-changed nodes
         const patchedNodeData = new Map<string, any>();
+        const patchedNodePositions = new Map<string, { x: number; y: number }>();
+        const patchedNodeStyles = new Map<string, Record<string, any>>();
         const patchedEdges = new Map<string, Edge>();
 
         // --- Structural changes: additions ---
@@ -418,24 +611,33 @@ export function useJjomSync(
                     } else if (isEdgeClassName(className)) {
                         // Skip if already in cache (from a previous cycle's
                         // consumeDropCreated or ID replacement in setEdges).
-                        if (rfEdgeCache.current.has(id)) {
-                            console.log('[useJjomSync] EDGE SKIP (in cache):', id);
-                            continue;
-                        }
+                        const inCache = rfEdgeCache.current.has(id);
+                        if (inCache) continue;
 
                         const rfEdge = jjomEdgeToRFEdge(lProxy);
                         // Guard: skip orphan edges (source/target vertex deleted)
                         if (rfEdge && currentIds.has(rfEdge.source) && currentIds.has(rfEdge.target)) {
+                            // Deduplicate: skip if an RF edge with the same
+                            // source→target and type already exists in the cache.
+                            // This prevents duplicate edges caused by DVoidEdge.new2
+                            // not reliably adding edges to graph subElements.
+                            let isDuplicate = false;
+                            if (rfEdge.type === 'inheritance') {
+                                for (const [, existing] of rfEdgeCache.current) {
+                                    if (existing.source === rfEdge.source &&
+                                        existing.target === rfEdge.target &&
+                                        existing.type === 'inheritance') {
+                                        isDuplicate = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (isDuplicate) continue;
+
                             rfEdgeCache.current.set(rfEdge.id, rfEdge);
-                            console.log('[useJjomSync] EDGE ADD:', {
-                                id,
-                                isDropCreated,
-                                added: !isDropCreated,
-                                source: rfEdge.source,
-                                target: rfEdge.target,
-                                type: rfEdge.type,
-                            });
-                            if (!isDropCreated) addedEdges.push(rfEdge);
+                            if (!isDropCreated) {
+                                addedEdges.push(rfEdge);
+                            }
                         }
                     }
                 } catch { /* skip */ }
@@ -474,9 +676,25 @@ export function useJjomSync(
                     const rfNode = jjomVertexToRFNode(lProxy);
                     if (rfNode) {
                         const existing = rfNodeCache.current.get(id);
-                        if (existing) rfNode.position = existing.position;
+                        if (existing) {
+                            // Check if position changed in JjOM (external update)
+                            const posChanged = rfNode.position.x !== existing.position.x
+                                            || rfNode.position.y !== existing.position.y;
+                            // Check if size changed (packageNode uses style.width/height)
+                            const newW = (rfNode.style as any)?.width;
+                            const newH = (rfNode.style as any)?.height;
+                            const oldW = (existing.style as any)?.width;
+                            const oldH = (existing.style as any)?.height;
+                            const sizeChanged = (newW !== undefined || oldW !== undefined)
+                                             && (newW !== oldW || newH !== oldH);
+
+                            if (!posChanged) rfNode.position = existing.position;
+                            if (!sizeChanged && existing.style) rfNode.style = existing.style;
+
+                            if (posChanged) patchedNodePositions.set(id, rfNode.position);
+                            if (sizeChanged && rfNode.style) patchedNodeStyles.set(id, rfNode.style as Record<string, any>);
+                        }
                         rfNodeCache.current.set(id, rfNode);
-                        // Only patch data — preserves node identity → no RF re-measure
                         patchedNodeData.set(id, rfNode.data);
                     }
                 } else if (isEdgeClassName(className)) {
@@ -516,7 +734,8 @@ export function useJjomSync(
         // of every node → dimension changes → infinite loop), we patch
         // only what actually changed.
 
-        const hasNodeChanges = addedNodes.length > 0 || removedNodeIds.size > 0 || patchedNodeData.size > 0;
+        const hasNodeChanges = addedNodes.length > 0 || removedNodeIds.size > 0
+            || patchedNodeData.size > 0 || patchedNodePositions.size > 0 || patchedNodeStyles.size > 0;
         const hasEdgeChanges = addedEdges.length > 0 || removedEdgeIds.size > 0 || patchedEdges.size > 0;
 
         if (hasNodeChanges) {
@@ -527,12 +746,21 @@ export function useJjomSync(
                     result = result.filter(n => !removedNodeIds.has(n.id));
                 }
 
-                // Patch data on changed nodes (preserves node object identity
-                // for unchanged fields → RF skips re-measurement)
-                if (patchedNodeData.size > 0) {
+                // Patch data/position/style on changed nodes (preserves node object
+                // identity for unchanged fields → RF skips re-measurement)
+                if (patchedNodeData.size > 0 || patchedNodePositions.size > 0 || patchedNodeStyles.size > 0) {
                     result = result.map(n => {
                         const newData = patchedNodeData.get(n.id);
-                        if (newData) return { ...n, data: newData };
+                        const newPos = patchedNodePositions.get(n.id);
+                        const newStyle = patchedNodeStyles.get(n.id);
+                        if (newData || newPos || newStyle) {
+                            return {
+                                ...n,
+                                ...(newData ? { data: newData } : {}),
+                                ...(newPos ? { position: newPos } : {}),
+                                ...(newStyle ? { style: newStyle } : {}),
+                            };
+                        }
                         return n;
                     });
                 }
@@ -561,9 +789,10 @@ export function useJjomSync(
                         // cardinality) from newEdge, but preserve RF-side
                         // properties (kind, containment, handles) from current.
                         const merged = { ...newEdge };
-                        // Preserve handles (already done in patching, but safety)
-                        if (!merged.sourceHandle && e.sourceHandle) merged.sourceHandle = e.sourceHandle;
-                        if (!merged.targetHandle && e.targetHandle) merged.targetHandle = e.targetHandle;
+                        // RF-side handles (from getOptimalAnchors + applyDistribution) are
+                        // authoritative. Always preserve them over JjOM-computed handles.
+                        if (e.sourceHandle) merged.sourceHandle = e.sourceHandle;
+                        if (e.targetHandle) merged.targetHandle = e.targetHandle;
                         // Preserve jjomRefId (direct DReference ID for property writes)
                         const existingJjomRefId = (e.data as any)?.jjomRefId;
                         if (existingJjomRefId && !(merged.data as any)?.jjomRefId) {
@@ -586,13 +815,10 @@ export function useJjomSync(
                 }
 
                 if (addedEdges.length > 0) {
-                    console.log('[useJjomSync] PUSHING addedEdges:', addedEdges.map(e => ({
-                        id: e.id, type: e.type, source: e.source, target: e.target,
-                    })));
                     result = [...result, ...addedEdges];
                 }
 
-                return result;
+                return deduplicateInheritanceEdges(result);
             });
         }
     }, [isJjomMode, elementSnapshots, subElementIds, setNodes, setEdges]);
@@ -604,6 +830,7 @@ export function useJjomSync(
             clearSyncModes();
             clearDropCreated();
             clearEdgeRefIds();
+            clearCanvasEdgePairs();
             rfNodeCache.current.clear();
             rfEdgeCache.current.clear();
             prevElementsRef.current.clear();
@@ -611,5 +838,5 @@ export function useJjomSync(
         };
     }, []);
 
-    return { isJjomMode, hasGraph, graphId: graphInfo?.graphId ?? null };
+    return { isJjomMode, hasGraph, graphId: graphInfo?.graphId ?? null, justCreatedGraphRef };
 }

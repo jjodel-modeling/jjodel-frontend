@@ -37,6 +37,70 @@
 }
 
 // ============================================
+// ZOOM CONTROLS (pill overlay on canvas)
+// ============================================
+
+.canvas-zoom-controls { 
+    display: flex;
+
+    background: rgba(var(--surface-1-rgb, 255, 255, 255), 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+    pointer-events: auto;
+    overflow: hidden;
+    max-height: 20px!important; 
+
+    button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        border: none;
+        background: transparent;
+
+        
+        font-size: 18px;
+        cursor: pointer;
+        transition: color 0.15s;
+        line-height: 1;
+        user-select: none;
+        padding: 10px;
+
+        & .bi {
+            color: var(--text-dim) !important;
+        }
+
+        &:hover {
+            color: var(--text-primary);
+        }
+
+        
+
+        &:active {
+            color: var(--accent);
+        }
+    }
+
+    &__level {
+        width: 36px !important;
+        font-size: 10px !important;
+        font-weight: 500;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-dim) !important;
+        text-align: center;
+        letter-spacing: -0.01em;
+        border-top: none!important;
+
+        border-bottom: none!important;
+        border-left: 1px solid rgba(0, 0, 0, 0.06);
+        border-right: 1px solid rgba(0, 0, 0, 0.06);
+        border-radius: 0!important;
+    }
+}
+
+// ============================================
 // CANVAS CURSOR
 // ============================================
 
@@ -306,6 +370,14 @@
             // No special styling
         }
 
+        &--composition {
+            opacity: 0.85;
+
+            i {
+                color: var(--text-muted);
+            }
+        }
+
         &__hint {
             font-size: 9px;
             color: var(--text-dim);
@@ -353,20 +425,6 @@
 
     .react-flow__background {
         background: var(--canvas-bg);
-    }
-
-    .react-flow__minimap {
-        background: var(--surface-1);
-        border-radius: 8px;
-        overflow: hidden;
-        border: 1px solid var(--border-subtle);
-        z-index: 5;
-        bottom: 10px !important;
-        right: 10px !important;
-
-        .react-flow__minimap-node {
-            opacity: 0.4;
-        }
     }
 
     .react-flow__controls {
@@ -464,12 +522,23 @@
     min-height: 0 !important;
 }
 
-// Connected handles — ALWAYS visible where edges exist
+// Connected handles — hidden by default, visible on node hover/selection
 .mm-anchor.mm-anchor--connected {
     border: 1.5px solid var(--anchor-border) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    // IMPORTANT: transition must NOT include top/left — React Flow measures
+    // handle positions via getBoundingClientRect, and animating position
+    // causes stale measurements (edges connect at wrong anchor points).
+    // Only animate visual properties (opacity, transform, border, background).
+    transition: opacity 0.2s ease, transform 0.2s ease, border-color 0.2s ease, background 0.2s ease !important;
+}
+
+// Show connected handles on node hover or selection
+.react-flow__node:hover .mm-anchor.mm-anchor--connected,
+.react-flow__node.selected .mm-anchor.mm-anchor--connected {
     opacity: 1 !important;
     pointer-events: all !important;
-    transition: all 0.2s ease !important;
 }
 
 .mm-anchor.mm-anchor--connected:hover {
@@ -517,7 +586,8 @@
     box-shadow: none !important;
 }
 
-// Ghost visible during connection mode (user dragging from another node)
+// All handles visible during connection mode (user dragging from another node)
+.react-flow.connecting .mm-anchor.mm-anchor--connected,
 .react-flow.connecting .mm-anchor.mm-anchor--ghost,
 .react-flow.connecting .react-flow__handle.mm-anchor--pool-inactive {
     visibility: visible !important;
@@ -530,6 +600,7 @@
 }
 
 // Target node under mouse during connection — full opacity
+.react-flow.connecting .react-flow__node:hover .mm-anchor.mm-anchor--connected,
 .react-flow.connecting .react-flow__node:hover .mm-anchor.mm-anchor--ghost,
 .react-flow.connecting .react-flow__node:hover .react-flow__handle.mm-anchor--pool-inactive {
     visibility: visible !important;
@@ -797,6 +868,79 @@
         .mm-node__container {
             box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3), 0 2px 8px var(--node-shadow);
         }
+    }
+}
+
+// ============================================
+// MM-OBJECT (Object Instance Node — M1)
+// ============================================
+
+.mm-object {
+    min-width: 140px;
+
+    .mm-object__header {
+        background: var(--object-header-bg, rgba(180, 130, 50, 0.35));
+        border-bottom: 1px solid var(--node-separator);
+    }
+
+    .mm-object__name {
+        text-decoration: underline;           // UML instance convention
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .mm-object__instance-name {
+        font-weight: 600;
+    }
+
+    .mm-object__separator {
+        font-weight: 400;
+        opacity: 0.7;
+    }
+
+    .mm-object__class-name {
+        font-weight: 500;
+        opacity: 0.85;
+    }
+
+    .mm-object__feature-name {
+        font-weight: 500;
+    }
+
+    .mm-object__feature-value {
+        font-style: italic;
+        cursor: text;
+    }
+
+    .mm-object__feature--placeholder {
+        opacity: 0.45;
+        font-style: italic;
+        pointer-events: none;
+    }
+
+    // Orphan instance — dashed border (theme-aware) + desaturated header
+    &.mm-object--orphan {
+        border: 1.5px dashed var(--orphan-border-color, #f59e0b);
+
+        .mm-object__header {
+            background: var(--orphan-header-bg, rgba(150, 140, 120, 0.25));
+        }
+
+        .mm-object__class-name {
+            color: var(--orphan-border-color, #f59e0b);
+            font-weight: 600;
+        }
+    }
+
+    &.selected {
+        border-color: var(--object-accent, #f59e0b);
+        box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3), 0 2px 8px var(--node-shadow);
+    }
+
+    &.drop-target {
+        border-color: var(--object-accent, #f59e0b);
+        box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25), inset 0 0 16px rgba(245, 158, 11, 0.05);
     }
 }
 
@@ -1214,6 +1358,21 @@
 
         &::selection {
             background: var(--selection-bg);
+        }
+    }
+
+    // M1 edges: hide label by default, show on edge hover / selection with fade-in
+    &--m1-hover {
+        .edge-label__text {
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+        }
+
+        &:hover .edge-label__text,
+        &.edge-label--m1-visible .edge-label__text {
+            opacity: 1;
+            pointer-events: all;
         }
     }
 }
@@ -1890,7 +2049,7 @@
 }
 
 .context-menu {
-    position: fixed;
+    position: absolute;
     z-index: 1000;
     background: var(--menu-bg);
     border: 1px solid var(--border-default);
@@ -1916,6 +2075,12 @@
 
         &:hover {
             background: var(--surface-hover);
+        }
+
+        &.disabled {
+            opacity: 0.45;
+            cursor: default;
+            pointer-events: none;
         }
 
         &.danger {
@@ -2072,6 +2237,7 @@ body.header-variant-a {
         --class-abstract-header-bg: rgba(62, 74, 90, 0.6);   // #3e4a5a @ 60%
         --enum-header-bg: rgba(91, 74, 122, 0.6);            // #5b4a7a @ 60%
         --package-header-bg: rgba(45, 58, 74, 0.6);          // #2d3a4a @ 60%
+        --object-header-bg: rgba(180, 130, 50, 0.5);         // amber/gold @ 50%
     }
     // Light theme
     .editor-v2.theme-light {
@@ -2079,6 +2245,7 @@ body.header-variant-a {
         --class-abstract-header-bg: rgba(168, 181, 196, 0.65); // #a8b5c4 @ 65%
         --enum-header-bg: rgba(165, 149, 201, 0.65);         // #a595c9 @ 65%
         --package-header-bg: rgba(216, 222, 230, 0.65);      // #d8dee6 @ 65%
+        --object-header-bg: rgba(245, 158, 11, 0.35);        // amber @ 35%
     }
 }
 
@@ -2099,6 +2266,7 @@ body.header-variant-b {
         .mm-class .mm-node__header { --variant-b-accent: #5b8fb9; }
         .mm-class.abstract .mm-node__header { --variant-b-accent: #94a3b8; }
         .mm-enum .mm-node__header { --variant-b-accent: #8b7db8; }
+        .mm-object .mm-node__header { --variant-b-accent: #d97706; }
     }
 
     // Light theme
@@ -2106,12 +2274,14 @@ body.header-variant-b {
         --class-header-bg: #f8fafc;
         --class-abstract-header-bg: #f8fafc;
         --enum-header-bg: #f8fafc;
+        --object-header-bg: #f8fafc;
         --node-header-text: #334155;
         --stereotype-color: #64748b;
 
         .mm-class .mm-node__header { --variant-b-accent: #5b8fb9; }
         .mm-class.abstract .mm-node__header { --variant-b-accent: #94a3b8; }
         .mm-enum .mm-node__header { --variant-b-accent: #8b7db8; }
+        .mm-object .mm-node__header { --variant-b-accent: #d97706; }
     }
 }
 
@@ -2122,6 +2292,7 @@ body.header-variant-c {
         --class-header-bg: rgba(59, 130, 246, 0.2);          // blue tint
         --class-abstract-header-bg: rgba(148, 163, 184, 0.2); // gray tint
         --enum-header-bg: rgba(139, 92, 246, 0.2);           // purple tint
+        --object-header-bg: rgba(245, 158, 11, 0.2);         // amber tint
         --node-header-text: rgba(255, 255, 255, 0.9);
         --stereotype-color: rgba(255, 255, 255, 0.55);
     }
@@ -2131,6 +2302,7 @@ body.header-variant-c {
         --class-header-bg: #dbeafe;
         --class-abstract-header-bg: #e2e8f0;
         --enum-header-bg: #ede9fe;
+        --object-header-bg: #fef3c7;
         --node-header-text: #1e40af;
         --stereotype-color: #6366f1;
 
@@ -2143,3 +2315,22 @@ body.header-variant-c {
         }
     }
 }
+
+// ============================================
+// MINIMAP (portal — rendered in document.body)
+// ============================================
+
+.editor-v2-minimap-portal {
+    .react-flow__minimap {
+        background: var(--surface-1, #f8fafc);
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .react-flow__minimap-node {
+        opacity: 0.5;
+    }
+}
+

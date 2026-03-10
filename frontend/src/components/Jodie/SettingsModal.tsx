@@ -217,7 +217,14 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps): JSX.Elem
             },
         };
         setConfig(newConfig);
-        JodieConfigService.save(newConfig);
+
+        // Save per-provider using the actual API
+        const providerData = newConfig.providers[provider];
+        JodieConfigService.saveProviderConfig(provider, {
+            apiKey: providerData.apiKey,
+            model: providerData.model,
+            enabled: providerData.enabled,
+        });
     };
 
     const handleReset = () => {
@@ -225,7 +232,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps): JSX.Elem
     };
 
     const confirmReset = () => {
-        JodieConfigService.reset();
+        JodieConfigService.clearAllProviders();
         setConfig(JodieConfigService.load());
         setShowResetConfirm(false);
     };

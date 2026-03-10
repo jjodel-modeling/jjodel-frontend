@@ -33,6 +33,16 @@ export enum JjelTokenType {
     TRUE = 'TRUE',
     FALSE = 'FALSE',
 
+    // Set/quantifier operators
+    FORALL = 'FORALL',
+    EXISTS = 'EXISTS',
+    IN = 'IN',
+    SUCH = 'SUCH',
+    THAT = 'THAT',
+    IMPLIES = 'IMPLIES',
+    WITH = 'WITH',
+    DO = 'DO',
+
     // ============================================
     // ARITHMETIC OPERATORS
     // ============================================
@@ -51,6 +61,9 @@ export enum JjelTokenType {
     GT = 'GT',                   // >
     LTE = 'LTE',                 // <=
     GTE = 'GTE',                 // >=
+
+    // Lambda arrow
+    ARROW = 'ARROW',             // =>
 
     // ============================================
     // NAVIGATION & NULL-SAFE
@@ -98,6 +111,14 @@ export const JJEL_KEYWORDS: Record<string, JjelTokenType> = {
     'true': JjelTokenType.TRUE,
     'false': JjelTokenType.FALSE,
     'null': JjelTokenType.NULL,
+    'forall': JjelTokenType.FORALL,
+    'exists': JjelTokenType.EXISTS,
+    'in': JjelTokenType.IN,
+    'such': JjelTokenType.SUCH,
+    'that': JjelTokenType.THAT,
+    'implies': JjelTokenType.IMPLIES,
+    'with': JjelTokenType.WITH,
+    'do': JjelTokenType.DO,
 };
 
 /**

@@ -16,9 +16,14 @@ import {
     IfThenElseExpr,
     NullCoalesceExpr,
     IsTypeExpr,
+    ImpliesExpr,
     LambdaExpr,
     ArrayLiteralExpr,
     InterpolatedStringExpr,
+    ForAllExpr,
+    ExistsExpr,
+    WithDoExpr,
+    IndexAccessExpr,
     BinaryOperator,
     UnaryOperator
 } from '../types/ast';
@@ -141,6 +146,16 @@ export class JjelEvaluator {
                 return this.evaluateArrayLiteral(expr, evalCtx);
             case 'InterpolatedString':
                 return this.evaluateInterpolatedString(expr, evalCtx);
+            case 'Implies':
+                return this.evaluateImplies(expr, evalCtx);
+            case 'ForAll':
+                return this.evaluateForAll(expr, evalCtx);
+            case 'Exists':
+                return this.evaluateExists(expr, evalCtx);
+            case 'WithDo':
+                return this.evaluateWithDo(expr, evalCtx);
+            case 'IndexAccess':
+                return this.evaluateIndexAccess(expr, evalCtx);
             default:
                 throw new JjelEvaluationError(`Unknown expression type: ${(expr as any).type}`, expr);
         }
@@ -711,6 +726,86 @@ export class JjelEvaluator {
 
     private evaluateArrayLiteral(expr: ArrayLiteralExpr, ctx: EvaluationContext): JjelValue {
         return expr.elements.map(elem => this.evaluate(elem, ctx));
+    }
+
+    // ============================================
+    // IMPLIES
+    // ============================================
+
+    private evaluateImplies(expr: ImpliesExpr, ctx: EvaluationContext): JjelValue {
+        const left = this.evaluate(expr.left, ctx);
+        // false implies anything = true (vacuous truth)
+        if (!this.isTruthy(left)) return true;
+        // true implies x = x
+        return this.isTruthy(this.evaluate(expr.right, ctx));
+    }
+
+    // ============================================
+    // FORALL / EXISTS
+    // ============================================
+
+    private evaluateForAll(expr: ForAllExpr, ctx: EvaluationContext): JjelValue {
+        const collection = this.evaluate(expr.collection, ctx);
+        if (!Array.isArray(collection)) return [];
+
+        const results: JjelValue[] = [];
+        for (const item of collection) {
+            const childCtx = ctx.child({ [expr.variable]: item });
+
+            if (expr.filter) {
+                const passes = this.evaluate(expr.filter, childCtx);
+                if (!this.isTruthy(passes)) continue;
+            }
+
+            results.push(expr.projection ? this.evaluate(expr.projection, childCtx) : item);
+        }
+        return results;
+    }
+
+    private evaluateExists(expr: ExistsExpr, ctx: EvaluationContext): JjelValue {
+        const collection = this.evaluate(expr.collection, ctx);
+        if (!Array.isArray(collection)) return false;
+
+        for (const item of collection) {
+            const childCtx = ctx.child({ [expr.variable]: item });
+            if (this.isTruthy(this.evaluate(expr.predicate, childCtx))) return true;
+        }
+        return false;
+    }
+
+    // ============================================
+    // WITH...DO
+    // ============================================
+
+    private evaluateWithDo(expr: WithDoExpr, ctx: EvaluationContext): JjelValue {
+        const ctxObj = this.evaluate(expr.context, ctx);
+        const childCtx = ctx.child();
+
+        // Expose all properties of the context object as unqualified identifiers
+        if (isJjelObject(ctxObj)) {
+            for (const [key, val] of Object.entries(ctxObj)) {
+                if (!key.startsWith('__')) childCtx.set(key, val);
+            }
+        }
+
+        return this.evaluate(expr.body, childCtx);
+    }
+
+    // ============================================
+    // INDEX ACCESS
+    // ============================================
+
+    private evaluateIndexAccess(expr: IndexAccessExpr, ctx: EvaluationContext): JjelValue {
+        const obj = this.evaluate(expr.object, ctx);
+        const index = this.evaluate(expr.index, ctx);
+
+        if (Array.isArray(obj) && typeof index === 'number') {
+            return obj[Math.trunc(index)] ?? null;
+        }
+        if (isJjelObject(obj) && (typeof index === 'string' || typeof index === 'number')) {
+            return (obj as any)[String(index)] ?? null;
+        }
+        return null;
     }
 
     // ============================================
