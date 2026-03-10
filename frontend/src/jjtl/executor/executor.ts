@@ -63,6 +63,117 @@ export {
 export type { SourceElement, TargetElement } from './jjodelConverter';
 
 // ============================================
+// PROXY FLATTENING UTILITIES
+// ============================================
+
+/**
+ * Flatten a Jjodel L-layer proxy into a plain object.
+ *
+ * L-layer proxies (LClass, LObject, etc.) expose computed properties like
+ * `isAbstract`, `attributes`, `subClasses`, `references` via proxy getter traps.
+ * `Object.keys()`, `Object.entries()`, and the spread operator all call
+ * `getOwnPropertyDescriptor` which returns undefined for these trap-only keys,
+ * so they are silently dropped.
+ *
+ * `Reflect.ownKeys()` calls the proxy's `ownKeys` trap directly and returns
+ * ALL keys (D-layer own + L-layer getters), which we then read via the proxy's
+ * `get` trap to capture the computed values.
+ *
+ * If the input is not a proxy (plain object), this is equivalent to a shallow copy.
+ */
+function flattenProxy(obj: any): Record<string, any> {
+    if (obj == null || typeof obj !== 'object' || Array.isArray(obj)) {
+        return obj;
+    }
+
+    const result: Record<string, any> = {};
+    let keys: (string | symbol)[];
+    try {
+        keys = Reflect.ownKeys(obj);
+    } catch {
+        keys = Object.keys(obj);
+    }
+
+    for (const key of keys) {
+        if (typeof key === 'symbol') continue;
+        if (key === 'constructor' || key === '_proxied') continue;
+        try {
+            result[key] = obj[key];
+        } catch {
+            // Skip properties that throw on access
+        }
+    }
+
+    return result;
+}
+
+/**
+ * Iterate own properties of an object using Reflect.ownKeys (proxy-safe).
+ * Returns [key, value] pairs like Object.entries, but captures proxy getter keys.
+ */
+function proxyEntries(obj: any): [string, any][] {
+    if (obj == null || typeof obj !== 'object') return [];
+
+    let keys: (string | symbol)[];
+    try {
+        keys = Reflect.ownKeys(obj);
+    } catch {
+        keys = Object.keys(obj);
+    }
+
+    const entries: [string, any][] = [];
+    for (const key of keys) {
+        if (typeof key === 'symbol') continue;
+        if (key === 'constructor' || key === '_proxied') continue;
+        try {
+            entries.push([key, obj[key]]);
+        } catch {
+            // Skip
+        }
+    }
+    return entries;
+}
+
+/**
+ * Preprocess a source model to flatten any L-layer proxies into plain objects.
+ * This must run BEFORE JSON.parse(JSON.stringify()) deep copy, because
+ * JSON.stringify uses Object.keys internally and would lose proxy getter properties.
+ */
+function flattenSourceModel(sourceModel: any): any {
+    if (sourceModel == null) return sourceModel;
+
+    // Array of elements (most common format)
+    if (Array.isArray(sourceModel)) {
+        return sourceModel.map(item => {
+            if (item && typeof item === 'object') {
+                return flattenProxy(item);
+            }
+            return item;
+        });
+    }
+
+    // Object with classes/instances arrays
+    if (typeof sourceModel === 'object') {
+        const result: any = {};
+        for (const [key, value] of proxyEntries(sourceModel)) {
+            if (Array.isArray(value)) {
+                result[key] = value.map((item: any) => {
+                    if (item && typeof item === 'object') {
+                        return flattenProxy(item);
+                    }
+                    return item;
+                });
+            } else {
+                result[key] = value;
+            }
+        }
+        return result;
+    }
+
+    return sourceModel;
+}
+
+// ============================================
 // TYPES
 // ============================================
 
@@ -161,11 +272,16 @@ export class JjtlExecutor {
         console.log('[JjTL Executor] AST:', this.ast);
         console.log('[JjTL Executor] AST mappings count:', this.ast?.mappings?.length ?? 0);
 
-        // CRITICAL: Deep copy source model to prevent mutation of original data
-        // This ensures the source model remains intact after transformation
-        const sourceModelCopy = sourceModel ? JSON.parse(JSON.stringify(sourceModel)) : sourceModel;
+        // CRITICAL: Flatten L-layer proxies BEFORE deep copy.
+        // JSON.stringify uses Object.keys internally, which misses proxy getter properties
+        // (isAbstract, attributes, subClasses, references, etc.). Flattening first
+        // materializes all proxy properties into plain object keys.
+        const flattenedSource = sourceModel ? flattenSourceModel(sourceModel) : sourceModel;
 
-        console.log('[JjTL Executor] Source model (deep copy):', sourceModelCopy);
+        // Deep copy to prevent mutation of original data
+        const sourceModelCopy = flattenedSource ? JSON.parse(JSON.stringify(flattenedSource)) : flattenedSource;
+
+        console.log('[JjTL Executor] Source model (flattened + deep copy):', sourceModelCopy);
         console.log('[JjTL Executor] Target metamodel:', targetMetamodel);
 
         const startTime = performance.now();
@@ -961,8 +1077,9 @@ export class JjtlExecutor {
                 [forall.variable]: toJjelValue(item),
             };
             // Also add item properties directly for unqualified access
+            // Uses proxyEntries to capture L-layer proxy properties
             if (item && typeof item === 'object') {
-                for (const [key, value] of Object.entries(item)) {
+                for (const [key, value] of proxyEntries(item)) {
                     if (!key.startsWith('__')) {
                         itemBindings[key] = toJjelValue(value);
                     }
@@ -1034,8 +1151,9 @@ export class JjtlExecutor {
                 ...(extraBindings || {}),
                 [forall.variable]: toJjelValue(item),
             };
+            // Uses proxyEntries to capture L-layer proxy properties
             if (item && typeof item === 'object') {
-                for (const [key, value] of Object.entries(item)) {
+                for (const [key, value] of proxyEntries(item)) {
                     if (!key.startsWith('__')) {
                         itemBindings[key] = toJjelValue(value);
                     }
@@ -1072,7 +1190,9 @@ export class JjtlExecutor {
     }
 
     /**
-     * Create evaluation context with source instance bindings
+     * Create evaluation context with source instance bindings.
+     * Uses proxyEntries (Reflect.ownKeys) to capture L-layer computed properties
+     * like isAbstract, attributes, subClasses, references, etc.
      */
     private createInstanceContext(sourceInstance: any): EvaluationContext {
         const bindings: Record<string, JjelValue> = {
@@ -1081,9 +1201,9 @@ export class JjtlExecutor {
             it: toJjelValue(sourceInstance),
         };
 
-        // Add instance properties directly
+        // Add instance properties directly — use proxyEntries to capture proxy getter keys
         if (sourceInstance && typeof sourceInstance === 'object') {
-            for (const [key, value] of Object.entries(sourceInstance)) {
+            for (const [key, value] of proxyEntries(sourceInstance)) {
                 if (!key.startsWith('__')) {
                     bindings[key] = toJjelValue(value);
                 }
@@ -1619,10 +1739,11 @@ export class JjtlExecutor {
 
         // ★ CRITICAL FIX: Also extract instance properties from 'source'
         // createInstanceContext adds all source instance properties as bindings,
-        // but they need to be passed through to jjelEval for property path resolution
+        // but they need to be passed through to jjelEval for property path resolution.
+        // Uses proxyEntries (Reflect.ownKeys) to capture L-layer proxy properties.
         const source = ctx.get('source');
         if (source && typeof source === 'object' && !Array.isArray(source)) {
-            for (const [key, value] of Object.entries(source as Record<string, any>)) {
+            for (const [key, value] of proxyEntries(source)) {
                 if (!key.startsWith('__') && !(key in record)) {
                     record[key] = value as JjelValue;
                 }
@@ -1674,10 +1795,8 @@ export function execute(
     sourceModel: any,
     targetMetamodel?: any
 ): ExecutionResult {
-    // CRITICAL: Deep copy source model to prevent mutation of original data
-    // This ensures the source model remains intact after transformation
-    const sourceModelCopy = sourceModel ? JSON.parse(JSON.stringify(sourceModel)) : sourceModel;
-
+    // NOTE: The executor.execute() method handles flattening + deep copy internally,
+    // so we pass the original sourceModel directly (no double-copy needed).
     const executor = new JjtlExecutor(ast);
-    return executor.execute(sourceModelCopy, targetMetamodel);
+    return executor.execute(sourceModel, targetMetamodel);
 }
