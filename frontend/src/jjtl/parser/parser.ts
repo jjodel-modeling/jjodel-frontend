@@ -108,10 +108,18 @@ export class JjtlParser {
         };
     }
 
-    // classMapping = IDENTIFIER "->" IDENTIFIER multiplicity? condition? mappingBody?
+    // classMapping = IDENTIFIER [IDENTIFIER] "->" IDENTIFIER multiplicity? condition? mappingBody?
     private classMapping(): ClassMappingAST {
         const startToken = this.peek();
         const sourceClass = this.consume(TokenType.IDENTIFIER, "Expected source class name").value;
+
+        // Optional source alias: 'Person p -> Human'
+        // After the source class name, next token is an IDENT only if it's an alias
+        // (ARROW and COMMA are not IDENTs, so this is unambiguous)
+        let sourceAlias: string | undefined;
+        if (this.check(TokenType.IDENTIFIER)) {
+            sourceAlias = this.advance().value;
+        }
 
         this.consume(TokenType.ARROW, "Expected '->'");
 
@@ -132,7 +140,7 @@ export class JjtlParser {
             // The { is NOT consumed here — it's consumed below as the mapping body brace
         }
 
-        let body: AttributeMappingAST[] = [];
+        let body: MappingBodyItemAST[] = [];
         if (this.match(TokenType.LBRACE)) {
             body = this.mappingBody();
             this.consume(TokenType.RBRACE, "Expected '}'");
@@ -141,6 +149,7 @@ export class JjtlParser {
         return {
             type: 'ClassMapping',
             sourceClass,
+            sourceAlias,
             targetClass,
             targetMultiplicity,
             condition,

@@ -612,7 +612,7 @@ export class JjtlExecutor {
 
             // Check condition if present
             if (mapping.condition) {
-                const condResult = this.evaluateCondition(mapping.condition, sourceInstance);
+                const condResult = this.evaluateCondition(mapping.condition, sourceInstance, mapping.sourceAlias);
                 if (!condResult) {
                     console.log(`[JjTL Executor] Instance skipped due to condition`);
                     continue; // Skip this instance
@@ -646,7 +646,7 @@ export class JjtlExecutor {
 
             // Execute attribute mappings for each target instance with trace
             for (const targetInstance of targetInstances) {
-                this.executeAttributeMappingsWithTrace(mapping.body, sourceInstance, targetInstance, traceLink);
+                this.executeAttributeMappingsWithTrace(mapping.body, sourceInstance, targetInstance, traceLink, mapping.sourceAlias);
             }
 
             this.stats.classMappingsExecuted++;
@@ -656,8 +656,8 @@ export class JjtlExecutor {
     /**
      * Evaluate a condition expression
      */
-    private evaluateCondition(condition: ExpressionAST, sourceInstance: any): boolean {
-        const ctx = this.createInstanceContext(sourceInstance);
+    private evaluateCondition(condition: ExpressionAST, sourceInstance: any, alias?: string): boolean {
+        const ctx = this.createInstanceContext(sourceInstance, alias);
         const result = this.evaluateExpression(condition, ctx);
         return Boolean(result);
     }
@@ -737,7 +737,8 @@ export class JjtlExecutor {
     private executeAttributeMappings(
         body: any[],
         sourceInstance: any,
-        targetInstance: any
+        targetInstance: any,
+        alias?: string
     ): void {
         console.log('[JjTL Executor] executeAttributeMappings called:', {
             bodyLength: body?.length || 0,
@@ -762,7 +763,7 @@ export class JjtlExecutor {
             });
 
             if (item.type === 'AttributeMapping') {
-                this.executeAttributeMapping(item as AttributeMappingAST, sourceInstance, targetInstance);
+                this.executeAttributeMapping(item as AttributeMappingAST, sourceInstance, targetInstance, alias);
                 this.stats.attributeMappingsExecuted++;
             } else if (item.type === 'ForAllMapping') {
                 this.executeForAllMapping(item as ForAllMappingAST, sourceInstance, targetInstance);
@@ -779,7 +780,8 @@ export class JjtlExecutor {
         body: any[],
         sourceInstance: any,
         targetInstance: any,
-        traceLink: TraceLinkBuilder
+        traceLink: TraceLinkBuilder,
+        alias?: string
     ): void {
         console.log('[JjTL Executor] executeAttributeMappingsWithTrace called');
 
@@ -790,7 +792,7 @@ export class JjtlExecutor {
         for (const item of body) {
             if (item.type === 'AttributeMapping') {
                 const mapping = item as AttributeMappingAST;
-                this.executeAttributeMappingWithTrace(mapping, sourceInstance, targetInstance, traceLink);
+                this.executeAttributeMappingWithTrace(mapping, sourceInstance, targetInstance, traceLink, alias);
                 this.stats.attributeMappingsExecuted++;
             } else if (item.type === 'ForAllMapping') {
                 this.executeForAllMapping(item as ForAllMappingAST, sourceInstance, targetInstance);
@@ -807,7 +809,8 @@ export class JjtlExecutor {
         mapping: AttributeMappingAST,
         sourceInstance: any,
         targetInstance: any,
-        traceLink: TraceLinkBuilder
+        traceLink: TraceLinkBuilder,
+        alias?: string
     ): void {
         try {
             let value: JjelValue;
@@ -819,7 +822,7 @@ export class JjtlExecutor {
                 value = this.executeObjectCreation(mapping.objectCreation, sourceInstance);
             } else if (mapping.expression !== undefined) {
                 // New := syntax: evaluate expression, optionally apply value mapping
-                const ctx = this.createInstanceContext(sourceInstance);
+                const ctx = this.createInstanceContext(sourceInstance, alias);
                 value = this.evaluateExpression(mapping.expression, ctx);
                 sourceValue = fromJjelValue(value);
                 if (mapping.valueMapping && mapping.valueMapping.length > 0) {
@@ -831,12 +834,12 @@ export class JjtlExecutor {
             } else if (mapping.conversion) {
                 // Get source value before conversion (legacy)
                 if (mapping.sourceAttribute) {
-                    const ctx = this.createInstanceContext(sourceInstance);
+                    const ctx = this.createInstanceContext(sourceInstance, alias);
                     sourceValue = fromJjelValue(this.evaluatePropertyPath(mapping.sourceAttribute, ctx));
                 }
-                value = this.executeConversion(mapping.conversion, sourceInstance, mapping.sourceAttribute);
+                value = this.executeConversion(mapping.conversion, sourceInstance, mapping.sourceAttribute, alias);
             } else if (mapping.sourceAttribute) {
-                const ctx = this.createInstanceContext(sourceInstance);
+                const ctx = this.createInstanceContext(sourceInstance, alias);
                 value = this.evaluatePropertyPath(mapping.sourceAttribute, ctx);
                 sourceValue = fromJjelValue(value);
             } else {
@@ -987,7 +990,8 @@ export class JjtlExecutor {
     private executeAttributeMapping(
         mapping: AttributeMappingAST,
         sourceInstance: any,
-        targetInstance: any
+        targetInstance: any,
+        alias?: string
     ): void {
         console.log('[JjTL Executor] executeAttributeMapping:', {
             sourceAttribute: mapping.sourceAttribute,
@@ -1008,7 +1012,7 @@ export class JjtlExecutor {
             } else if (mapping.expression !== undefined) {
                 // New := syntax: evaluate expression, optionally apply value mapping
                 console.log('[JjTL Executor] New := syntax, expression type:', mapping.expression.type);
-                const ctx = this.createInstanceContext(sourceInstance);
+                const ctx = this.createInstanceContext(sourceInstance, alias);
                 value = this.evaluateExpression(mapping.expression, ctx);
                 if (mapping.valueMapping && mapping.valueMapping.length > 0) {
                     const match = mapping.valueMapping.find(vm =>
@@ -1020,12 +1024,12 @@ export class JjtlExecutor {
             } else if (mapping.conversion) {
                 // Handle conversion (legacy -> syntax)
                 console.log('[JjTL Executor] Handling conversion with expression or mappings');
-                value = this.executeConversion(mapping.conversion, sourceInstance, mapping.sourceAttribute);
+                value = this.executeConversion(mapping.conversion, sourceInstance, mapping.sourceAttribute, alias);
                 console.log('[JjTL Executor] Conversion result:', value);
             } else if (mapping.sourceAttribute) {
                 // Direct attribute mapping: source.attr -> target.attr (legacy)
                 console.log('[JjTL Executor] Direct attribute mapping');
-                const ctx = this.createInstanceContext(sourceInstance);
+                const ctx = this.createInstanceContext(sourceInstance, alias);
                 value = this.evaluatePropertyPath(mapping.sourceAttribute, ctx);
                 console.log('[JjTL Executor] Direct mapping result:', value);
             } else {
@@ -1053,7 +1057,8 @@ export class JjtlExecutor {
     private executeConversion(
         conversion: ConversionAST,
         sourceInstance: any,
-        sourceAttribute?: string
+        sourceAttribute?: string,
+        alias?: string
     ): JjelValue {
         console.log('[JjTL Executor] executeConversion:', {
             hasExpression: !!conversion.expression,
@@ -1066,7 +1071,7 @@ export class JjtlExecutor {
         if (conversion.expression) {
             // JjEL expression
             console.log('[JjTL Executor] Evaluating expression type:', conversion.expression?.type);
-            const ctx = this.createInstanceContext(sourceInstance);
+            const ctx = this.createInstanceContext(sourceInstance, alias);
             console.log('[JjTL Executor] Context bindings for expression:', {
                 name: ctx.get('name'),
                 source: ctx.get('source'),
@@ -1080,7 +1085,7 @@ export class JjtlExecutor {
         if (conversion.mappings && conversion.mappings.length > 0) {
             // Value mappings: true=1, false=0
             console.log('[JjTL Executor] Evaluating value mappings');
-            const ctx = this.createInstanceContext(sourceInstance);
+            const ctx = this.createInstanceContext(sourceInstance, alias);
             const sourceValue = sourceAttribute
                 ? this.evaluatePropertyPath(sourceAttribute, ctx)
                 : null;
@@ -1297,7 +1302,7 @@ export class JjtlExecutor {
      * loops from circular proxy references (e.g., LClass.attributes[0].owner → LClass).
      * The JjEL evaluator navigates objects lazily via property access.
      */
-    private createInstanceContext(sourceInstance: any): EvaluationContext {
+    private createInstanceContext(sourceInstance: any, alias?: string): EvaluationContext {
         const bindings: Record<string, JjelValue> = {
             source: shallowToJjelValue(sourceInstance),
             self: shallowToJjelValue(sourceInstance),
@@ -1316,6 +1321,11 @@ export class JjtlExecutor {
             // This allows transformations to access attribute values by name
             // (e.g., `surname` instead of `$surname.value`)
             extractAttributeValues(sourceInstance, bindings);
+        }
+
+        // Bind alias as an additional name for the source instance
+        if (alias) {
+            bindings[alias] = shallowToJjelValue(sourceInstance);
         }
 
         // === DEBUG: Step 2 — What does the context look like? ===
