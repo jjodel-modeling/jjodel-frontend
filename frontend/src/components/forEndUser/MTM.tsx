@@ -29,6 +29,7 @@ import {LanguageCache, notLanguageFragments, ParserData, GenericProps} from "../
 import Handlebars from "handlebars";
 import {getLanguageCache} from "../editors/MTM";
 import {Ohm} from "../../DSL/ohm";
+import {Eta, EtaConfig} from "eta";
 
 
 export function parseT2M(language: string, text0: string, canThrow: boolean = false,
@@ -281,6 +282,28 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
             Log.ee(msg, {language, engine, languageObj, data0});
             return msg;
         case undefined:
+        case 'eta':
+            let eta_str: string = '';
+            if (allowPartials) for (let name in m2tobj) {
+                if (name in notLanguageFragments) continue;
+                let v = m2tobj[name]?.trim();
+                // if (v) ETA.registerPartial(name, v);
+                eta_str += v;
+            }
+            let eta_template = (obj: GObject, config?: Partial<EtaConfig>)=> new Eta(config).renderString(eta_str, obj);
+            console.log('handlebars 2', {func_str, eta_template});
+            try { ret = eta_template(data); }
+            catch (e: any) {
+                ret = e.message;
+            }
+            // cleanup
+            /*for (let name in m2tobj) {
+                if (name in notFragments) continue;
+                Handlebars.unregisterPartial(name);
+            }*/
+            // Handlebars.partials = {}; // unofficial fallback to make sure i erase all partials
+            console.log('eta m2t', {func_str, eta_template, ret});
+            return ret;
         case 'handlebars':
             if (allowPartials) for (let name in m2tobj) {
                 if (name in notLanguageFragments) continue;

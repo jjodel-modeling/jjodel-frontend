@@ -28,6 +28,7 @@ import {PaletteType} from "../view/viewElement/view";
 import "./error.scss";
 import { ErrorDisplay } from "./ErrorPortal";
 import {Ohm} from "../DSL/ohm";
+import {ETA} from "../DSL/templates_t2m/ETA";
 
 const notificationType: 'classic'|'alert'|'notification' = 'classic';
 
@@ -377,8 +378,10 @@ strescape -> ["\\\\/bfnrt] {% id %}
 `
 }},
 );
+        const flexmim2t =  {eta:{__str: ETA.flexmi_attribute + "\n" + ETA.flexmi_object + "\n" + ETA.flexmi_model,
+                'Model': ETA.flexmi_model, 'Object': ETA.flexmi_object, 'Value': ETA.flexmi_attribute, allowPartials: true}};
         ret['flexmi/YAML'] = new Language(m2t, t2m);
-        ret['flexmi/XMI'] = new Language(m2t, {ohm: {__str: Ohm.flexmi_grammar+'╗' + Ohm.flexmi_semantic, allowPartials: true, test_text: Ohm.exampleM1}});
+        ret['flexmi/XMI'] = new Language(flexmim2t, {ohm: {__str: Ohm.flexmi_grammar+'╗' + Ohm.flexmi_semantic, allowPartials: true, test_text: Ohm.exampleM1}});
 
         ret['eCore/JSON'] = new Language(
             {javascript:{allowPartials: true, __str: `function(modelData) {
