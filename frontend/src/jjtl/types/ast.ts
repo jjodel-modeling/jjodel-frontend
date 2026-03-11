@@ -29,10 +29,18 @@ export interface TransformationAST extends ASTNode {
     helpers: HelperAST[];
 }
 
+// A single source pattern in a class mapping: ClassName [alias]
+export interface SourcePatternAST {
+    className: string;
+    alias?: string;
+}
+
 // Class mapping: State -> Place { ... }
+//   or: State s -> Place { ... }       (single source with alias)
+//   or: Class c, Package p -> Table { ... }  (multi-source, aliases mandatory)
 export interface ClassMappingAST extends ASTNode {
     type: 'ClassMapping';
-    sourceClass: string;
+    sources: SourcePatternAST[];     // one element for single-source, multiple for multi-source
     targetClass: string;
     targetMultiplicity?: MultiplicityAST;
     condition?: ExpressionAST;

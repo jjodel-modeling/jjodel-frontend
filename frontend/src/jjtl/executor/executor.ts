@@ -158,6 +158,18 @@ function shallowToJjelValue(value: unknown): JjelValue {
 }
 
 /**
+ * Compute the cartesian product of an array of arrays.
+ * e.g. cartesianProduct([[a,b],[1,2]]) → [[a,1],[a,2],[b,1],[b,2]]
+ */
+function cartesianProduct<T>(arrays: T[][]): T[][] {
+    if (arrays.length === 0) return [[]];
+    return arrays.reduce<T[][]>(
+        (acc, arr) => acc.flatMap(combo => arr.map(item => [...combo, item])),
+        [[]]
+    );
+}
+
+/**
  * Deep-copy a source model safely, handling circular references.
  * Falls back to the original value if serialization fails (e.g., due to proxies).
  */
@@ -577,7 +589,15 @@ export class JjtlExecutor {
         sourceInstances: Map<string, any[]>,
         targetModel: TargetModel
     ): void {
-        const sourceClassName = mapping.sourceClass;
+        if (mapping.sources.length > 1) {
+            this.executeMultiSourceClassMapping(mapping, sourceInstances, targetModel);
+            return;
+        }
+
+        // Single-source path
+        const src = mapping.sources[0];
+        const sourceClassName = src.className;
+        const sourceAlias = src.alias;
         const targetClassName = mapping.targetClass;
         const instances = sourceInstances.get(sourceClassName) || [];
         const ruleName = `${sourceClassName} -> ${targetClassName}`;
@@ -590,63 +610,111 @@ export class JjtlExecutor {
         for (const sourceInstance of instances) {
             this.stats.sourceInstancesProcessed++;
 
-            console.log(`[JjTL Executor] Processing source instance:`, {
-                id: sourceInstance?.id,
-                name: sourceInstance?.name,
-                className: sourceInstance?.className,
-                __type: sourceInstance?.__type,
-            });
-
-            // === DEBUG: Step 1 — What does the executor see as source instances? ===
-            console.log('=== SOURCE INSTANCE ===');
-            console.log('type:', typeof sourceInstance);
-            console.log('constructor:', sourceInstance?.constructor?.name);
-            console.log('keys:', Object.keys(sourceInstance));
-            console.log('ownKeys:', Reflect.ownKeys(sourceInstance));
-            console.log('has $surname:', '$surname' in sourceInstance);
-            console.log('$surname:', sourceInstance['$surname']);
-            console.log('has surname:', 'surname' in sourceInstance);
-            console.log('surname:', sourceInstance['surname']);
-            console.log('features:', sourceInstance['features']);
-            // === END DEBUG Step 1 ===
-
             // Check condition if present
             if (mapping.condition) {
-                const condResult = this.evaluateCondition(mapping.condition, sourceInstance, mapping.sourceAlias);
+                const condResult = this.evaluateCondition(mapping.condition, sourceInstance, sourceAlias);
                 if (!condResult) {
                     console.log(`[JjTL Executor] Instance skipped due to condition`);
-                    continue; // Skip this instance
+                    continue;
                 }
             }
 
-            // Create target instance(s) with the TARGET class name (not source!)
+            // Create target instance(s)
             const targetInstances = this.createTargetInstances(mapping, sourceInstance, targetModel);
-            console.log(`[JjTL Executor] Created ${targetInstances.length} target instance(s) of type "${targetClassName}"`);
-            console.log(`[JjTL Executor] Target instance(s):`, targetInstances.map(t => ({
-                id: t.id,
-                className: t.className,
-                __type: t.__type,
-            })));
 
-            // Create trace element references
+            // Trace refs
             const sourceRef: TraceElementRef = {
                 modelName: this.ast.sourceMetamodel || 'source',
                 elementName: sourceInstance.name || sourceInstance.id || `${sourceClassName}_${this.stats.sourceInstancesProcessed}`,
                 className: sourceClassName,
             };
-
             const targetRefs: TraceElementRef[] = targetInstances.map((t, i) => ({
                 modelName: this.ast.targetMetamodel || 'target',
                 elementName: t.name || t.id || `${targetClassName}_${i}`,
                 className: targetClassName,
             }));
-
-            // Add trace link
             const traceLink = this.context.traceBuilder.addLink(ruleName, sourceRef, targetRefs, hasGuard);
 
-            // Execute attribute mappings for each target instance with trace
             for (const targetInstance of targetInstances) {
-                this.executeAttributeMappingsWithTrace(mapping.body, sourceInstance, targetInstance, traceLink, mapping.sourceAlias);
+                this.executeAttributeMappingsWithTrace(mapping.body, sourceInstance, targetInstance, traceLink, sourceAlias);
+            }
+
+            this.stats.classMappingsExecuted++;
+        }
+    }
+
+    /**
+     * Execute a multi-source class mapping using cartesian product of all source instances.
+     * All sources must have aliases; missing aliases produce an error.
+     */
+    private executeMultiSourceClassMapping(
+        mapping: ClassMappingAST,
+        sourceInstances: Map<string, any[]>,
+        targetModel: TargetModel
+    ): void {
+        // Validate: every source must have an alias
+        for (const src of mapping.sources) {
+            if (!src.alias) {
+                this.errors.push(
+                    `Multi-source mapping to '${mapping.targetClass}' requires aliases on every source. ` +
+                    `'${src.className}' has no alias.`
+                );
+                return;
+            }
+        }
+
+        const targetClassName = mapping.targetClass;
+        const hasGuard = !!mapping.condition;
+        const ruleName = mapping.sources.map(s => `${s.className} ${s.alias}`).join(', ') + ` -> ${targetClassName}`;
+
+        // Collect instances per source (in declaration order)
+        const instanceArrays = mapping.sources.map(s => sourceInstances.get(s.className) || []);
+
+        // Cartesian product of all instance arrays
+        const combinations = cartesianProduct(instanceArrays);
+
+        for (const combo of combinations) {
+            this.stats.sourceInstancesProcessed++;
+
+            // Build a synthetic source object:
+            //   • alias names → the corresponding combo instances (for p.name, c.name)
+            //   • also spread the first source's own properties at the top level (implicit context)
+            const syntheticSource: Record<string, any> = {};
+            // Spread first source's own properties first (lowest priority)
+            if (combo[0] && typeof combo[0] === 'object') {
+                for (const [k, v] of proxyEntries(combo[0])) {
+                    if (!k.startsWith('__')) syntheticSource[k] = v;
+                }
+            }
+            // Then bind each alias (higher priority, may override)
+            for (let i = 0; i < mapping.sources.length; i++) {
+                syntheticSource[mapping.sources[i].alias!] = combo[i];
+            }
+
+            // Check condition
+            if (mapping.condition) {
+                const condResult = this.evaluateCondition(mapping.condition, syntheticSource);
+                if (!condResult) continue;
+            }
+
+            // Create target instance (use first combo element as "primary" source)
+            const targetInstances = this.createTargetInstances(mapping, combo[0], targetModel);
+
+            // Trace refs
+            const sourceRef: TraceElementRef = {
+                modelName: this.ast.sourceMetamodel || 'source',
+                elementName: mapping.sources.map((s, i) => combo[i]?.name || combo[i]?.id || s.alias!).join('+'),
+                className: mapping.sources.map(s => s.className).join(','),
+            };
+            const targetRefs: TraceElementRef[] = targetInstances.map((t, i) => ({
+                modelName: this.ast.targetMetamodel || 'target',
+                elementName: t.name || t.id || `${targetClassName}_${i}`,
+                className: targetClassName,
+            }));
+            const traceLink = this.context.traceBuilder.addLink(ruleName, sourceRef, targetRefs, hasGuard);
+
+            for (const targetInstance of targetInstances) {
+                this.executeAttributeMappingsWithTrace(mapping.body, syntheticSource, targetInstance, traceLink);
             }
 
             this.stats.classMappingsExecuted++;

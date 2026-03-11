@@ -1,3 +1,4 @@
+import { describe, it, test, expect } from 'vitest';
 /**
  * Executor-Bridge Integration Tests
  *
@@ -38,7 +39,7 @@ function makeClassMapping(
 ): ClassMappingAST {
     return {
         type: 'ClassMapping',
-        sourceClass,
+        sources: [{ className: sourceClass }],
         targetClass,
         body,
         condition,
@@ -409,5 +410,92 @@ describe('Trace model', () => {
         expect(result.traceModel).toBeDefined();
         expect(result.traceModel!.transformationName).toBe('SM_to_PN');
         expect(result.traceModel!.links.length).toBeGreaterThan(0);
+    });
+});
+
+// ============================================
+// Falsy value preservation
+// ============================================
+
+describe('Falsy value preservation', () => {
+    test('if/then/else returning false is preserved', () => {
+        const ast = makeTransformation('T', 'S', 'T', [
+            makeClassMapping('Person', 'Result', [
+                makeAttrMapping(undefined, 'hasLongName', {
+                    type: 'Conversion',
+                    expression: {
+                        type: 'ConditionalExpression',
+                        condition: {
+                            type: 'BinaryExpression',
+                            operator: '>',
+                            left: {
+                                type: 'MemberAccess',
+                                object: { type: 'Identifier', name: 'name', location: LOC },
+                                property: 'length',
+                                location: LOC,
+                            },
+                            right: { type: 'Literal', value: 8, literalType: 'number', location: LOC },
+                            location: LOC,
+                        },
+                        thenBranch: { type: 'Literal', value: true, literalType: 'boolean', location: LOC },
+                        elseBranch: { type: 'Literal', value: false, literalType: 'boolean', location: LOC },
+                        location: LOC,
+                    },
+                    location: LOC,
+                }),
+            ]),
+        ]);
+
+        const source = [
+            { className: 'Person', name: 'Pierantonio' },  // length 12 > 8 → true
+            { className: 'Person', name: 'Di Rocco' },     // length 8, NOT > 8 → false
+            { className: 'Person', name: 'Bucchiarone' },   // length 11 > 8 → true
+        ];
+        const result = execute(ast, source);
+
+        expect(result.success).toBe(true);
+        const results = result.targetModel!.instances.get('Result')!;
+        expect(results).toHaveLength(3);
+        expect(results[0].hasLongName).toBe(true);
+        expect(results[1].hasLongName).toBe(false);  // Must be false, NOT undefined/null
+        expect(results[2].hasLongName).toBe(true);
+    });
+
+    test('zero is preserved as attribute value', () => {
+        const ast = makeTransformation('T', 'S', 'T', [
+            makeClassMapping('Item', 'Output', [
+                makeAttrMapping(undefined, 'count', {
+                    type: 'Conversion',
+                    expression: { type: 'Literal', value: 0, literalType: 'number', location: LOC },
+                    location: LOC,
+                }),
+            ]),
+        ]);
+
+        const source = [{ className: 'Item', name: 'x' }];
+        const result = execute(ast, source);
+
+        expect(result.success).toBe(true);
+        const outputs = result.targetModel!.instances.get('Output')!;
+        expect(outputs[0].count).toBe(0);  // Must be 0, NOT undefined/null
+    });
+
+    test('empty string is preserved as attribute value', () => {
+        const ast = makeTransformation('T', 'S', 'T', [
+            makeClassMapping('Item', 'Output', [
+                makeAttrMapping(undefined, 'label', {
+                    type: 'Conversion',
+                    expression: { type: 'Literal', value: '', literalType: 'string', location: LOC },
+                    location: LOC,
+                }),
+            ]),
+        ]);
+
+        const source = [{ className: 'Item', name: 'x' }];
+        const result = execute(ast, source);
+
+        expect(result.success).toBe(true);
+        const outputs = result.targetModel!.instances.get('Output')!;
+        expect(outputs[0].label).toBe('');  // Must be '', NOT undefined/null
     });
 });

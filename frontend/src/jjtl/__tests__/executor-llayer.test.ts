@@ -1,3 +1,4 @@
+import { describe, it, test, expect } from 'vitest';
 /**
  * Executor L-Layer Proxy Tests
  *
@@ -41,7 +42,7 @@ function makeClassMapping(
 ): ClassMappingAST {
     return {
         type: 'ClassMapping',
-        sourceClass,
+        sources: [{ className: sourceClass }],
         targetClass,
         body,
         condition,

@@ -11,6 +11,7 @@ import {
     TokenType,
     TransformationAST,
     ClassMappingAST,
+    SourcePatternAST,
     AttributeMappingAST,
     ConversionAST,
     ValueMappingAST,
@@ -108,18 +109,22 @@ export class JjtlParser {
         };
     }
 
-    // classMapping = IDENTIFIER [IDENTIFIER] "->" IDENTIFIER multiplicity? condition? mappingBody?
+    // classMapping = sourcePattern ("," sourcePattern)* "->" IDENTIFIER multiplicity? condition? mappingBody?
+    // sourcePattern = IDENTIFIER [IDENTIFIER]
     private classMapping(): ClassMappingAST {
         const startToken = this.peek();
-        const sourceClass = this.consume(TokenType.IDENTIFIER, "Expected source class name").value;
 
-        // Optional source alias: 'Person p -> Human'
-        // After the source class name, next token is an IDENT only if it's an alias
-        // (ARROW and COMMA are not IDENTs, so this is unambiguous)
-        let sourceAlias: string | undefined;
-        if (this.check(TokenType.IDENTIFIER)) {
-            sourceAlias = this.advance().value;
-        }
+        // Parse one or more comma-separated source patterns
+        const sources: SourcePatternAST[] = [];
+        do {
+            const className = this.consume(TokenType.IDENTIFIER, "Expected source class name").value;
+            // Optional alias: next token is IDENT (not '->' or ',')
+            let alias: string | undefined;
+            if (this.check(TokenType.IDENTIFIER)) {
+                alias = this.advance().value;
+            }
+            sources.push({ className, alias });
+        } while (this.match(TokenType.COMMA));
 
         this.consume(TokenType.ARROW, "Expected '->'");
 
@@ -148,8 +153,7 @@ export class JjtlParser {
 
         return {
             type: 'ClassMapping',
-            sourceClass,
-            sourceAlias,
+            sources,
             targetClass,
             targetMultiplicity,
             condition,
