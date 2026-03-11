@@ -12,7 +12,7 @@ export enum TokenType {
     TRANSFORMATION = 'TRANSFORMATION',
     FROM = 'FROM',
     TO = 'TO',
-    WHEN = 'WHEN',
+    WHERE = 'WHERE',
     HELPER = 'HELPER',
 
     // Iteration Keywords
@@ -103,7 +103,7 @@ export const JJTL_KEYWORDS: Record<string, TokenType> = {
     'transformation': TokenType.TRANSFORMATION,
     'from': TokenType.FROM,
     'to': TokenType.TO,
-    'when': TokenType.WHEN,
+    'where': TokenType.WHERE,
     'helper': TokenType.HELPER,
     'forall': TokenType.FORALL,
     'in': TokenType.IN,

@@ -10,7 +10,7 @@ const KEYWORDS = [
     { label: 'transformation', detail: 'Define a new transformation', insertText: 'transformation ${1:Name}\n\nfrom ${2:SourceMetamodel}\nto   ${3:TargetMetamodel}\n\n$0' },
     { label: 'from', detail: 'Source metamodel', insertText: 'from ${1:Metamodel}' },
     { label: 'to', detail: 'Target metamodel', insertText: 'to ${1:Metamodel}' },
-    { label: 'when', detail: 'Conditional mapping', insertText: 'when { ${1:condition} }' },
+    { label: 'where', detail: 'Conditional mapping guard', insertText: 'where ${1:condition}' },
     { label: 'helper', detail: 'Define a helper function', insertText: 'helper ${1:name}(${2:param}: ${3:Type}) -> ${4:ReturnType} {\n    $0\n}' },
 ];
 
@@ -143,7 +143,7 @@ const SNIPPETS = [
     {
         label: 'conditional-mapping',
         detail: 'Mapping with condition',
-        insertText: '${1:SourceClass} -> ${2:TargetClass} when { ${3:condition} } {\n    $0\n}',
+        insertText: '${1:SourceClass} -> ${2:TargetClass} where ${3:condition} {\n    $0\n}',
     },
 ];
 

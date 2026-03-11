@@ -11,7 +11,7 @@ export const jjtlLanguageDefinition: monaco.languages.IMonarchLanguage = {
     tokenPostfix: '.jjtl',
 
     keywords: [
-        'transformation', 'from', 'to', 'when', 'helper',
+        'transformation', 'from', 'to', 'where', 'helper',
         'if', 'then', 'else', 'true', 'false', 'null',
     ],
 
@@ -43,7 +43,7 @@ export const jjtlLanguageDefinition: monaco.languages.IMonarchLanguage = {
             [/#.*$/, 'comment'],
 
             // Keywords
-            [/\b(transformation|from|to|when|helper|if|then|else)\b/, 'keyword'],
+            [/\b(transformation|from|to|where|helper|if|then|else)\b/, 'keyword'],
 
             // Interactive keywords - distinct purple color
             [/\b(alert|notify)\b/, 'keyword.interactive.statement'],

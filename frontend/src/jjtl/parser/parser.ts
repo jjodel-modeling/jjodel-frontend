@@ -43,15 +43,19 @@ import {
     ArrayLiteralAST,
     AlertType,
     InputType,
+    JjelExpressionWrapperAST,
 } from '../types';
+import { parseExpression as parseJjEL } from '../../jjel/parser';
 
 export class JjtlParser {
     private tokens: Token[] = [];
     private current: number = 0;
     private errors: ParserError[] = [];
+    private source: string | undefined;
 
-    constructor(tokens: Token[]) {
+    constructor(tokens: Token[], source?: string) {
         this.tokens = tokens;
+        this.source = source;
     }
 
     parse(): ParserResult {
@@ -119,10 +123,13 @@ export class JjtlParser {
         }
 
         let condition: ExpressionAST | undefined;
-        if (this.match(TokenType.WHEN)) {
-            this.consume(TokenType.LBRACE, "Expected '{' after 'when'");
-            condition = this.expression();
-            this.consume(TokenType.RBRACE, "Expected '}' after condition");
+        if (this.match(TokenType.WHERE)) {
+            // Guard expression: "where expr {" — no braces, stops at the opening { of the body
+            // Delegate to JjEL parser for full expression support (implies, exists, with...do, etc.)
+            condition = this.source !== undefined
+                ? this.parseJjELExpression([TokenType.LBRACE])
+                : this.expression();
+            // The { is NOT consumed here — it's consumed below as the mapping body brace
         }
 
         let body: AttributeMappingAST[] = [];
@@ -361,8 +368,10 @@ export class JjtlParser {
             };
         }
 
-        // Parse as expression
-        const expression = this.expression();
+        // Delegate to JjEL parser for full expression support (implies, exists, with...do, etc.)
+        const expression = this.source !== undefined
+            ? this.parseJjELExpression([TokenType.NEWLINE, TokenType.RBRACE])
+            : this.expression();
         return {
             type: 'Conversion',
             expression,
@@ -407,7 +416,10 @@ export class JjtlParser {
         const returnType = this.consume(TokenType.IDENTIFIER, "Expected return type").value;
         this.consume(TokenType.LBRACE, "Expected '{'");
 
-        const body = this.expression();
+        // Delegate to JjEL parser for full expression support (implies, exists, with...do, etc.)
+        const body = this.source !== undefined
+            ? this.parseJjELExpression([TokenType.RBRACE])
+            : this.expression();
 
         this.consume(TokenType.RBRACE, "Expected '}'");
 
@@ -422,8 +434,148 @@ export class JjtlParser {
     }
 
     // ============================================
-    // JJEL EXPRESSION PARSING
+    // JJEL EXPRESSION DELEGATION
     // ============================================
+
+    /**
+     * Delegates expression parsing to the JjEL parser.
+     * Collects tokens from the current position to a boundary token,
+     * extracts the source substring, and parses it with the JjEL parser.
+     *
+     * @param boundaryTokens - token types that mark the END of the expression
+     *                         (NOT consumed by this method)
+     */
+    private parseJjELExpression(
+        boundaryTokens: TokenType[],
+    ): JjelExpressionWrapperAST {
+        const startToken = this.peek();
+        const collectedTokens: Token[] = [];
+        let braceDepth = 0;
+        let parenDepth = 0;
+        let bracketDepth = 0;
+
+        while (!this.isAtEnd()) {
+            const current = this.peek();
+
+            // Handle LBRACE: check as boundary BEFORE incrementing depth.
+            // This allows "where expr {" to stop the expression before the body's {.
+            if (current.type === TokenType.LBRACE) {
+                if (boundaryTokens.includes(TokenType.LBRACE)
+                    && braceDepth === 0 && parenDepth === 0 && bracketDepth === 0) {
+                    break; // stop at top-level { (for "where expr {" pattern)
+                }
+                braceDepth++;
+            } else if (current.type === TokenType.LPAREN) {
+                parenDepth++;
+            } else if (current.type === TokenType.LBRACKET) {
+                bracketDepth++;
+            } else if (current.type === TokenType.RBRACE) {
+                if (braceDepth > 0) {
+                    braceDepth--;
+                } else if (boundaryTokens.includes(TokenType.RBRACE)) {
+                    break;
+                }
+            } else if (current.type === TokenType.RPAREN) {
+                if (parenDepth > 0) {
+                    parenDepth--;
+                } else if (boundaryTokens.includes(TokenType.RPAREN)) {
+                    break;
+                }
+            } else if (current.type === TokenType.RBRACKET) {
+                if (bracketDepth > 0) {
+                    bracketDepth--;
+                } else if (boundaryTokens.includes(TokenType.RBRACKET)) {
+                    break;
+                }
+            }
+
+            // Check for boundary at depth 0 (for non-bracket boundaries like NEWLINE, COLON)
+            if (braceDepth === 0 && parenDepth === 0 && bracketDepth === 0) {
+                if (boundaryTokens.includes(current.type)
+                    && current.type !== TokenType.LBRACE
+                    && current.type !== TokenType.RBRACE
+                    && current.type !== TokenType.LPAREN
+                    && current.type !== TokenType.RPAREN
+                    && current.type !== TokenType.LBRACKET
+                    && current.type !== TokenType.RBRACKET) {
+                    break;
+                }
+            }
+
+            collectedTokens.push(this.advance());
+        }
+
+        if (collectedTokens.length === 0) {
+            throw this.error(this.peek(), 'Expected expression');
+        }
+
+        // Extract source text: prefer original source (preserves whitespace, quotes)
+        let exprText: string;
+        if (this.source) {
+            const first = collectedTokens[0];
+            const last = collectedTokens[collectedTokens.length - 1];
+            exprText = this.source.substring(first.start, last.end);
+        } else {
+            // Fallback: reconstruct from token values
+            exprText = this.reconstructText(collectedTokens);
+        }
+
+        // Parse with JjEL parser
+        const jjelResult = parseJjEL(exprText);
+
+        if (jjelResult.errors.length > 0) {
+            // Report JjEL parse errors as JjTL parse errors
+            for (const err of jjelResult.errors) {
+                this.errors.push({
+                    message: `JjEL: ${err.message}`,
+                    line: startToken.line + (err.line - 1),
+                    column: err.line === 1 ? startToken.column + (err.column - 1) : err.column,
+                });
+            }
+        }
+
+        if (!jjelResult.expression) {
+            throw this.error(startToken, 'Failed to parse JjEL expression');
+        }
+
+        return {
+            type: 'JjelExpression',
+            expression: jjelResult.expression,
+            location: this.makeLocation(startToken, collectedTokens[collectedTokens.length - 1]),
+        };
+    }
+
+    /**
+     * Reconstruct source text from tokens (fallback when source string not available).
+     * Handles spacing: no space before/after dots, parens, brackets.
+     */
+    private reconstructText(tokens: Token[]): string {
+        let result = '';
+        for (let i = 0; i < tokens.length; i++) {
+            const token = tokens[i];
+            if (i > 0) {
+                const prev = tokens[i - 1];
+                const noSpaceBefore = ['.', '?.', ')', ']', ','].includes(token.value);
+                const noSpaceAfter = ['.', '?.', '(', '['].includes(prev.value);
+                if (!noSpaceBefore && !noSpaceAfter) {
+                    result += ' ';
+                }
+            }
+            // Re-quote string tokens for JjEL parser
+            if (token.type === TokenType.STRING) {
+                result += '"' + token.value.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+            } else {
+                result += token.value;
+            }
+        }
+        return result;
+    }
+
+    // ============================================
+    // LEGACY JJEL EXPRESSION PARSING
+    // ============================================
+    // LEGACY: Still used for forall collection/filter expressions.
+    // Guards, expression mappings, and helper bodies now use JjEL parser delegation.
     // Precedence (lowest to highest):
     // 1. if-then-else
     // 2. ?? (null coalesce)
@@ -1108,7 +1260,7 @@ export class JjtlParser {
     }
 }
 
-export function parse(tokens: Token[]): ParserResult {
-    const parser = new JjtlParser(tokens);
+export function parse(tokens: Token[], source?: string): ParserResult {
+    const parser = new JjtlParser(tokens, source);
     return parser.parse();
 }
