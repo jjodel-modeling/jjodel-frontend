@@ -214,11 +214,13 @@ export class JjtlParser {
         return items;
     }
 
-    // attributeMapping = (IDENTIFIER "->")? IDENTIFIER (":" conversion)? | "->" IDENTIFIER objectCreation
+    // attributeMapping = IDENTIFIER ":=" expression [":" valuePairs]   (new syntax)
+    //   or: (IDENTIFIER "->")? IDENTIFIER (":" conversion)?            (legacy syntax)
+    //   or: "->" IDENTIFIER objectCreation
     private attributeMapping(): AttributeMappingAST {
         const startToken = this.peek();
 
-        // Check for object creation: -> targetAttr { ... }
+        // Check for object creation: -> targetAttr { ... }  (unchanged)
         if (this.match(TokenType.ARROW)) {
             const targetAttribute = this.consume(TokenType.IDENTIFIER, "Expected target attribute name").value;
 
@@ -254,7 +256,41 @@ export class JjtlParser {
             };
         }
 
-        // Regular mapping: sourceAttr -> targetAttr : conversion
+        // New syntax: targetAttr := expr [: literal=literal, ...]
+        if (this.check(TokenType.IDENTIFIER) && this.peekNext()?.type === TokenType.ASSIGN) {
+            const targetAttribute = this.consume(TokenType.IDENTIFIER, "Expected target attribute name").value;
+            this.consume(TokenType.ASSIGN, "Expected ':='");
+
+            // Lookahead: is there a value-mapping colon ahead?
+            const hasValueMappingColon = this.findValueMappingColon();
+
+            let expression: ExpressionAST | undefined;
+            let valueMapping: ValueMappingAST[] | undefined;
+
+            if (hasValueMappingColon) {
+                // Parse expression up to the colon, then parse value pairs
+                expression = this.source !== undefined
+                    ? this.parseJjELExpression([TokenType.NEWLINE, TokenType.RBRACE, TokenType.COLON])
+                    : this.expression();
+                this.consume(TokenType.COLON, "Expected ':' before value mapping");
+                valueMapping = this.parseValueMappingPairs();
+            } else {
+                // Parse full expression (may contain forall : projections, etc.)
+                expression = this.source !== undefined
+                    ? this.parseJjELExpression([TokenType.NEWLINE, TokenType.RBRACE])
+                    : this.expression();
+            }
+
+            return {
+                type: 'AttributeMapping',
+                targetAttribute,
+                expression,
+                valueMapping,
+                location: this.makeLocation(startToken, this.previous()),
+            };
+        }
+
+        // Legacy syntax: sourceAttr -> targetAttr [: conversion]
         const sourceAttribute = this.consume(TokenType.IDENTIFIER, "Expected source attribute name").value;
         this.consume(TokenType.ARROW, "Expected '->'");
         const targetAttribute = this.consume(TokenType.IDENTIFIER, "Expected target attribute name").value;
@@ -272,6 +308,76 @@ export class JjtlParser {
             objectCreation: undefined,
             location: this.makeLocation(startToken, this.previous()),
         };
+    }
+
+    /**
+     * Lookahead: is there a value-mapping colon at depth 0 ahead?
+     * A value-mapping colon is a COLON followed by: literal EQUALS literal.
+     * e.g.: isInitial : true=1, false=0
+     * Returns true if found, false if the : is a JjEL forall/exists projection or absent.
+     */
+    private findValueMappingColon(): boolean {
+        let i = this.current;
+        let brace = 0, paren = 0, bracket = 0;
+
+        while (i < this.tokens.length) {
+            const tok = this.tokens[i];
+            switch (tok.type) {
+                case TokenType.EOF:
+                case TokenType.NEWLINE:
+                    return false;
+                case TokenType.LBRACE: brace++; break;
+                case TokenType.RBRACE:
+                    if (brace > 0) brace--;
+                    else return false;
+                    break;
+                case TokenType.LPAREN: paren++; break;
+                case TokenType.RPAREN:
+                    if (paren > 0) paren--;
+                    else return false;
+                    break;
+                case TokenType.LBRACKET: bracket++; break;
+                case TokenType.RBRACKET:
+                    if (bracket > 0) bracket--;
+                    else return false;
+                    break;
+                case TokenType.COLON:
+                    if (brace === 0 && paren === 0 && bracket === 0) {
+                        const next1 = i + 1 < this.tokens.length ? this.tokens[i + 1] : null;
+                        const next2 = i + 2 < this.tokens.length ? this.tokens[i + 2] : null;
+                        if (next1 && (next1.type === TokenType.BOOLEAN ||
+                                      next1.type === TokenType.NUMBER ||
+                                      next1.type === TokenType.STRING) &&
+                            next2 && next2.type === TokenType.EQUALS) {
+                            return true;
+                        }
+                    }
+                    break;
+            }
+            i++;
+        }
+        return false;
+    }
+
+    /**
+     * Parse value mapping pairs: literal=literal (, literal=literal)*
+     * Used by both new := syntax and legacy conversion() method.
+     */
+    private parseValueMappingPairs(): ValueMappingAST[] {
+        const startToken = this.peek();
+        const pairs: ValueMappingAST[] = [];
+        do {
+            const sourceValue = this.literal();
+            this.consume(TokenType.EQUALS, "Expected '=' in value mapping");
+            const targetValue = this.literal();
+            pairs.push({
+                type: 'ValueMapping',
+                sourceValue,
+                targetValue,
+                location: this.makeLocation(startToken, this.previous()),
+            });
+        } while (this.match(TokenType.COMMA));
+        return pairs;
     }
 
     // objectCreation = "{" "->" IDENTIFIER "{" attributeMapping* "}" "}"
@@ -346,21 +452,7 @@ export class JjtlParser {
         // Try to parse as value mappings: true=1, false=0
         // Lookahead: only if the first literal is followed by '='
         if (this.isValueMappingStart()) {
-            const mappings: ValueMappingAST[] = [];
-
-            do {
-                const sourceValue = this.literal();
-                this.consume(TokenType.EQUALS, "Expected '=' in value mapping");
-                const targetValue = this.literal();
-
-                mappings.push({
-                    type: 'ValueMapping',
-                    sourceValue,
-                    targetValue,
-                    location: this.makeLocation(startToken, this.previous()),
-                });
-            } while (this.match(TokenType.COMMA));
-
+            const mappings = this.parseValueMappingPairs();
             return {
                 type: 'Conversion',
                 mappings,

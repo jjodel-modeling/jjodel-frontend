@@ -49,7 +49,7 @@ describe('JjTL ForAll Mapping', () => {
 
                 MyClass -> MyTarget {
                     forall a in attributes such that not a.multiValued -> Column {
-                        -> name : a.name
+                        name := a.name
                     }
                 }
             `);
@@ -77,7 +77,7 @@ describe('JjTL ForAll Mapping', () => {
 
                 MyClass -> MyTarget {
                     forall a in attributes -> Column {
-                        -> name : a.name
+                        name := a.name
                     }
                 }
             `);
@@ -97,7 +97,7 @@ describe('JjTL ForAll Mapping', () => {
 
                 MyClass -> MyTarget {
                     forall a in source.attributes -> Column {
-                        -> name : a.name
+                        name := a.name
                     }
                 }
             `);
@@ -114,9 +114,9 @@ describe('JjTL ForAll Mapping', () => {
                 to Target
 
                 MyClass -> MyTarget {
-                    name -> targetName
+                    targetName := name
                     forall a in attributes -> Column {
-                        -> name : a.name
+                        name := a.name
                     }
                 }
             `);
@@ -138,7 +138,7 @@ describe('JjTL ForAll Mapping', () => {
 
                 MyClass -> MyTarget {
                     forall a in attributes -> Column {
-                        -> name : a.name
+                        name := a.name
                     }
                 }
             `, [
@@ -172,7 +172,7 @@ describe('JjTL ForAll Mapping', () => {
 
                 MyClass -> MyTarget {
                     forall a in attributes -> Column {
-                        -> name : a.name
+                        name := a.name
                     }
                 }
             `, [
@@ -197,7 +197,7 @@ describe('JjTL ForAll Mapping', () => {
 
                 MyClass -> MyTarget {
                     forall a in attributes -> Column {
-                        -> name : a.name
+                        name := a.name
                     }
                 }
             `, [
@@ -222,7 +222,7 @@ describe('JjTL ForAll Mapping', () => {
 
                 MyClass -> MyTarget {
                     forall a in attributes such that not a.multiValued -> Column {
-                        -> name : a.name
+                        name := a.name
                     }
                 }
             `, [
@@ -254,8 +254,8 @@ describe('JjTL ForAll Mapping', () => {
 
                 MyClass -> MyTarget {
                     forall a in attributes -> Column {
-                        -> name : a.name
-                        -> dataType : a.type
+                        name := a.name
+                        dataType := a.type
                     }
                 }
             `, [
@@ -283,7 +283,7 @@ describe('JjTL ForAll Mapping', () => {
 
                 MyClass -> MyTarget {
                     forall a in attributes -> Column {
-                        -> name : a.name + "_col"
+                        name := a.name + "_col"
                     }
                 }
             `, [
@@ -311,7 +311,7 @@ describe('JjTL ForAll Mapping', () => {
 
                 MyClass -> MyTarget {
                     forall a in attributes -> Column {
-                        -> name : a.name.snakeCase()
+                        name := a.name.snakeCase()
                     }
                 }
             `, [
@@ -338,10 +338,10 @@ describe('JjTL ForAll Mapping', () => {
                 to Relational
 
                 Class -> Table {
-                    name -> tableName : name.snakeCase()
+                    tableName := name.snakeCase()
                     forall a in attributes such that not a.multiValued -> Column {
-                        -> name : a.name.snakeCase()
-                        -> type : a.type
+                        name := a.name.snakeCase()
+                        type := a.type
                     }
                 }
             `, [

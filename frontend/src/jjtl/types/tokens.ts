@@ -53,6 +53,7 @@ export enum TokenType {
     // JjTL operators
     ARROW = 'ARROW',              // ->
     FAT_ARROW = 'FAT_ARROW',      // =>
+    ASSIGN = 'ASSIGN',            // :=
     COLON = 'COLON',              // :
     EQUALS = 'EQUALS',            // =
     DOT = 'DOT',                  // .

@@ -53,11 +53,16 @@ export interface MultiplicityAST extends ASTNode {
     upper: number; // -1 = unbounded (*)
 }
 
-// Attribute mapping: name -> label : expression
+// Attribute mapping: targetAttr := expr  (new syntax)
+//   or: sourceAttr -> targetAttr [: conversion]  (legacy syntax)
 export interface AttributeMappingAST extends ASTNode {
     type: 'AttributeMapping';
-    sourceAttribute?: string;        // undefined for creation (-> attr)
     targetAttribute: string;
+    // New := syntax fields
+    expression?: ExpressionAST;      // targetAttr := expr
+    valueMapping?: ValueMappingAST[]; // targetAttr := sourceExpr : true=1, false=0
+    // Legacy -> syntax fields (kept for backward compatibility)
+    sourceAttribute?: string;        // undefined for creation (-> attr)
     conversion?: ConversionAST;
     objectCreation?: ObjectCreationAST;
 }

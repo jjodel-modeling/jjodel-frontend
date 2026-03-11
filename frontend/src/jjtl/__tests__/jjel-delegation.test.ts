@@ -12,7 +12,6 @@ import { JjtlParser } from '../parser/parser';
 import type {
     TransformationAST,
     AttributeMappingAST,
-    ConversionAST,
     HelperAST,
 } from '../types/ast';
 import { toJjelAst } from '../executor/astBridge';
@@ -44,12 +43,10 @@ function getFirstMapping(source: string) {
     return ast!.mappings[0];
 }
 
-function getFirstConversion(source: string): ConversionAST {
+function getFirstAttrMapping(source: string): AttributeMappingAST {
     const mapping = getFirstMapping(source);
     expect(mapping.body.length).toBeGreaterThan(0);
-    const attrMapping = mapping.body[0] as AttributeMappingAST;
-    expect(attrMapping.conversion).toBeDefined();
-    return attrMapping.conversion!;
+    return mapping.body[0] as AttributeMappingAST;
 }
 
 function getFirstHelper(source: string): HelperAST {
@@ -64,14 +61,14 @@ describe('JjTL Parser — JjEL Expression Delegation', () => {
     describe('Guards with JjEL constructs', () => {
 
         it('parses simple guard (backward compat)', () => {
-            const source = HEADER + `A -> B where not isAbstract {\n  name -> label\n}`;
+            const source = HEADER + `A -> B where not isAbstract {\n  label := name\n}`;
             const mapping = getFirstMapping(source);
             expect(mapping.condition).toBeDefined();
             expect(mapping.condition!.type).toBe('JjelExpression');
         });
 
         it('parses guard with and/or', () => {
-            const source = HEADER + `A -> B where not isAbstract and attributes.isNotEmpty {\n  name -> label\n}`;
+            const source = HEADER + `A -> B where not isAbstract and attributes.isNotEmpty {\n  label := name\n}`;
             const mapping = getFirstMapping(source);
             expect(mapping.condition).toBeDefined();
             expect(mapping.condition!.type).toBe('JjelExpression');
@@ -83,14 +80,14 @@ describe('JjTL Parser — JjEL Expression Delegation', () => {
         });
 
         it('parses guard with equality', () => {
-            const source = HEADER + `A -> B where name != "Object" {\n  name -> label\n}`;
+            const source = HEADER + `A -> B where name != "Object" {\n  label := name\n}`;
             const mapping = getFirstMapping(source);
             expect(mapping.condition).toBeDefined();
             expect(mapping.condition!.type).toBe('JjelExpression');
         });
 
         it('parses implies in guard', () => {
-            const source = HEADER + `A -> B where isAbstract implies subClasses.isNotEmpty {\n  name -> label\n}`;
+            const source = HEADER + `A -> B where isAbstract implies subClasses.isNotEmpty {\n  label := name\n}`;
             const mapping = getFirstMapping(source);
             expect(mapping.condition).toBeDefined();
             expect(mapping.condition!.type).toBe('JjelExpression');
@@ -100,7 +97,7 @@ describe('JjTL Parser — JjEL Expression Delegation', () => {
         });
 
         it('parses exists in guard', () => {
-            const source = HEADER + `A -> B where exists a in attributes : a.type == "String" {\n  name -> label\n}`;
+            const source = HEADER + `A -> B where exists a in attributes : a.type == "String" {\n  label := name\n}`;
             const mapping = getFirstMapping(source);
             expect(mapping.condition).toBeDefined();
             expect(mapping.condition!.type).toBe('JjelExpression');
@@ -110,7 +107,7 @@ describe('JjTL Parser — JjEL Expression Delegation', () => {
         });
 
         it('parses with...do in guard', () => {
-            const source = HEADER + `A -> B where with superClass do attributes.isNotEmpty {\n  name -> label\n}`;
+            const source = HEADER + `A -> B where with superClass do attributes.isNotEmpty {\n  label := name\n}`;
             const mapping = getFirstMapping(source);
             expect(mapping.condition).toBeDefined();
             expect(mapping.condition!.type).toBe('JjelExpression');
@@ -121,7 +118,7 @@ describe('JjTL Parser — JjEL Expression Delegation', () => {
 
         it('parses complex guard with implies + exists (parenthesized)', () => {
             // In JjEL, exists has lower precedence than implies, so parentheses are needed
-            const source = HEADER + `A -> B where isAbstract implies (exists s in subClasses : not s.isAbstract) {\n  name -> label\n}`;
+            const source = HEADER + `A -> B where isAbstract implies (exists s in subClasses : not s.isAbstract) {\n  label := name\n}`;
             const mapping = getFirstMapping(source);
             expect(mapping.condition).toBeDefined();
 
@@ -130,7 +127,7 @@ describe('JjTL Parser — JjEL Expression Delegation', () => {
         });
 
         it('parses guard with if-then-else', () => {
-            const source = HEADER + `A -> B where if isAbstract then subClasses.size > 0 else true {\n  name -> label\n}`;
+            const source = HEADER + `A -> B where if isAbstract then subClasses.size > 0 else true {\n  label := name\n}`;
             const mapping = getFirstMapping(source);
             expect(mapping.condition).toBeDefined();
 
@@ -139,7 +136,7 @@ describe('JjTL Parser — JjEL Expression Delegation', () => {
         });
 
         it('parses guard with null coalesce', () => {
-            const source = HEADER + `A -> B where (parent ?? self).name == "Root" {\n  name -> label\n}`;
+            const source = HEADER + `A -> B where (parent ?? self).name == "Root" {\n  label := name\n}`;
             const mapping = getFirstMapping(source);
             expect(mapping.condition).toBeDefined();
             expect(mapping.condition!.type).toBe('JjelExpression');
@@ -148,95 +145,95 @@ describe('JjTL Parser — JjEL Expression Delegation', () => {
 
     describe('Expression mappings with JjEL constructs', () => {
 
-        it('parses simple expression (backward compat)', () => {
-            const source = HEADER + `A -> B {\n  name -> tableName : name.snakeCase()\n}`;
-            const conv = getFirstConversion(source);
-            expect(conv.expression).toBeDefined();
-            expect(conv.expression!.type).toBe('JjelExpression');
+        it('parses simple expression', () => {
+            const source = HEADER + `A -> B {\n  tableName := name.snakeCase()\n}`;
+            const attrMapping = getFirstAttrMapping(source);
+            expect(attrMapping.expression).toBeDefined();
+            expect(attrMapping.expression!.type).toBe('JjelExpression');
         });
 
         it('parses string concat expression', () => {
-            const source = HEADER + `A -> B {\n  name -> label : name + "_suffix"\n}`;
-            const conv = getFirstConversion(source);
-            expect(conv.expression).toBeDefined();
-            expect(conv.expression!.type).toBe('JjelExpression');
+            const source = HEADER + `A -> B {\n  label := name + "_suffix"\n}`;
+            const attrMapping = getFirstAttrMapping(source);
+            expect(attrMapping.expression).toBeDefined();
+            expect(attrMapping.expression!.type).toBe('JjelExpression');
 
-            const jjelExpr = toJjelAst(conv.expression!);
+            const jjelExpr = toJjelAst(attrMapping.expression!);
             expect(jjelExpr.type).toBe('Binary');
         });
 
         it('parses implies in expression mapping', () => {
-            const source = HEADER + `A -> B {\n  -> isLeaf : not isAbstract implies subClasses.isEmpty\n}`;
-            const conv = getFirstConversion(source);
-            expect(conv.expression).toBeDefined();
+            const source = HEADER + `A -> B {\n  isLeaf := not isAbstract implies subClasses.isEmpty\n}`;
+            const attrMapping = getFirstAttrMapping(source);
+            expect(attrMapping.expression).toBeDefined();
 
-            const jjelExpr = toJjelAst(conv.expression!);
+            const jjelExpr = toJjelAst(attrMapping.expression!);
             expect(jjelExpr.type).toBe('Implies');
         });
 
         it('parses forall (set comprehension) in expression mapping', () => {
-            const source = HEADER + `A -> B {\n  -> attrNames : forall a in attributes : a.name\n}`;
-            const conv = getFirstConversion(source);
-            expect(conv.expression).toBeDefined();
+            const source = HEADER + `A -> B {\n  attrNames := forall a in attributes : a.name\n}`;
+            const attrMapping = getFirstAttrMapping(source);
+            expect(attrMapping.expression).toBeDefined();
 
-            const jjelExpr = toJjelAst(conv.expression!);
+            const jjelExpr = toJjelAst(attrMapping.expression!);
             expect(jjelExpr.type).toBe('ForAll');
         });
 
         it('parses exists in expression mapping', () => {
-            const source = HEADER + `A -> B {\n  -> hasStrings : exists a in attributes : a.type == "String"\n}`;
-            const conv = getFirstConversion(source);
-            expect(conv.expression).toBeDefined();
+            const source = HEADER + `A -> B {\n  hasStrings := exists a in attributes : a.type == "String"\n}`;
+            const attrMapping = getFirstAttrMapping(source);
+            expect(attrMapping.expression).toBeDefined();
 
-            const jjelExpr = toJjelAst(conv.expression!);
+            const jjelExpr = toJjelAst(attrMapping.expression!);
             expect(jjelExpr.type).toBe('Exists');
         });
 
         it('parses with...do in expression mapping', () => {
-            const source = HEADER + `A -> B {\n  -> parentName : with parent do name ?? "root"\n}`;
-            const conv = getFirstConversion(source);
-            expect(conv.expression).toBeDefined();
+            const source = HEADER + `A -> B {\n  parentName := with parent do name ?? "root"\n}`;
+            const attrMapping = getFirstAttrMapping(source);
+            expect(attrMapping.expression).toBeDefined();
 
-            const jjelExpr = toJjelAst(conv.expression!);
+            const jjelExpr = toJjelAst(attrMapping.expression!);
             expect(jjelExpr.type).toBe('WithDo');
         });
 
         it('parses if-then-else in expression mapping', () => {
-            const source = HEADER + `A -> B {\n  -> display : if active then "yes" else "no"\n}`;
-            const conv = getFirstConversion(source);
-            expect(conv.expression).toBeDefined();
+            const source = HEADER + `A -> B {\n  display := if active then "yes" else "no"\n}`;
+            const attrMapping = getFirstAttrMapping(source);
+            expect(attrMapping.expression).toBeDefined();
 
-            const jjelExpr = toJjelAst(conv.expression!);
+            const jjelExpr = toJjelAst(attrMapping.expression!);
             expect(jjelExpr.type).toBe('IfThenElse');
         });
 
         it('parses literal true in expression mapping', () => {
-            const source = HEADER + `A -> B {\n  -> active : true\n}`;
-            const conv = getFirstConversion(source);
-            expect(conv.expression).toBeDefined();
+            const source = HEADER + `A -> B {\n  active := true\n}`;
+            const attrMapping = getFirstAttrMapping(source);
+            expect(attrMapping.expression).toBeDefined();
 
-            const jjelExpr = toJjelAst(conv.expression!);
+            const jjelExpr = toJjelAst(attrMapping.expression!);
             expect(jjelExpr.type).toBe('Literal');
         });
 
         it('parses method chain in expression mapping', () => {
-            const source = HEADER + `A -> B {\n  -> count : attributes.filter(a => a.isPublic).size\n}`;
-            const conv = getFirstConversion(source);
-            expect(conv.expression).toBeDefined();
-            expect(conv.expression!.type).toBe('JjelExpression');
+            const source = HEADER + `A -> B {\n  count := attributes.filter(a => a.isPublic).size\n}`;
+            const attrMapping = getFirstAttrMapping(source);
+            expect(attrMapping.expression).toBeDefined();
+            expect(attrMapping.expression!.type).toBe('JjelExpression');
         });
 
         it('handles multiple attribute mappings with expressions', () => {
-            const source = HEADER + `A -> B {\n  name -> label : name.toUpper()\n  -> count : attributes.size\n}`;
+            const source = HEADER + `A -> B {\n  label := name.toUpper()\n  count := attributes.size\n}`;
             const ast = parseWithDelegation(source);
             expect(ast).not.toBeNull();
             const body = ast!.mappings[0].body;
             expect(body.length).toBe(2);
 
-            const conv1 = (body[0] as AttributeMappingAST).conversion;
-            const conv2 = (body[1] as AttributeMappingAST).conversion;
-            expect(conv1?.expression?.type).toBe('JjelExpression');
-            expect(conv2?.expression?.type).toBe('JjelExpression');
+            const expr1 = (body[0] as AttributeMappingAST).expression;
+            const expr2 = (body[1] as AttributeMappingAST).expression;
+            expect(expr1?.type).toBe('JjelExpression');
+            expect(expr2?.type).toBe('JjelExpression');
         });
     });
 
@@ -290,19 +287,19 @@ describe('JjTL Parser — JjEL Expression Delegation', () => {
 
     describe('Value mappings still work', () => {
 
-        it('parses value mapping (not delegated)', () => {
-            const source = HEADER + `A -> B {\n  active -> enabled : true=1, false=0\n}`;
-            const conv = getFirstConversion(source);
-            expect(conv.mappings).toBeDefined();
-            expect(conv.mappings!.length).toBe(2);
-            expect(conv.expression).toBeUndefined();
+        it('parses value mapping', () => {
+            const source = HEADER + `A -> B {\n  enabled := active : true=1, false=0\n}`;
+            const attrMapping = getFirstAttrMapping(source);
+            expect(attrMapping.valueMapping).toBeDefined();
+            expect(attrMapping.valueMapping!.length).toBe(2);
+            expect(attrMapping.expression).toBeDefined(); // source expression: `active`
         });
     });
 
     describe('astBridge handles JjelExpressionWrapper', () => {
 
         it('unwraps JjelExpressionWrapper to inner JjEL expression', () => {
-            const source = HEADER + `A -> B where name == "test" {\n  name -> label\n}`;
+            const source = HEADER + `A -> B where name == "test" {\n  label := name\n}`;
             const mapping = getFirstMapping(source);
             expect(mapping.condition).toBeDefined();
             expect(mapping.condition!.type).toBe('JjelExpression');
@@ -317,7 +314,7 @@ describe('JjTL Parser — JjEL Expression Delegation', () => {
     describe('Backward compatibility without source', () => {
 
         it('parser works without source string (legacy path)', () => {
-            const source = HEADER + `A -> B where not isAbstract {\n  name -> label : name.snakeCase()\n}`;
+            const source = HEADER + `A -> B where not isAbstract {\n  label := name.snakeCase()\n}`;
             const lexer = new JjtlLexer(source);
             const { tokens } = lexer.tokenize();
 

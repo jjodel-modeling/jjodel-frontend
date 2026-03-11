@@ -38,6 +38,7 @@ import {
 import type { JjelValue, JjelFunction } from '../../jjel';
 
 import { toJjelAst } from './astBridge';
+import { extractAttributeValues } from '../../jjel/evaluator/modelContext';
 
 import {
     TraceModel,
@@ -63,11 +64,11 @@ export {
 export type { SourceElement, TargetElement } from './jjodelConverter';
 
 // ============================================
-// PROXY FLATTENING UTILITIES
+// PROXY-SAFE UTILITIES
 // ============================================
 
 /**
- * Flatten a Jjodel L-layer proxy into a plain object.
+ * Flatten a Jjodel L-layer proxy into a plain object (SHALLOW — one level only).
  *
  * L-layer proxies (LClass, LObject, etc.) expose computed properties like
  * `isAbstract`, `attributes`, `subClasses`, `references` via proxy getter traps.
@@ -79,7 +80,9 @@ export type { SourceElement, TargetElement } from './jjodelConverter';
  * ALL keys (D-layer own + L-layer getters), which we then read via the proxy's
  * `get` trap to capture the computed values.
  *
- * If the input is not a proxy (plain object), this is equivalent to a shallow copy.
+ * IMPORTANT: Only flattens ONE level. Property values are kept as-is (may still be
+ * proxies). This prevents infinite loops from circular proxy references
+ * (e.g., LClass.attributes[0].owner → LClass).
  */
 function flattenProxy(obj: any): Record<string, any> {
     if (obj == null || typeof obj !== 'object' || Array.isArray(obj)) {
@@ -135,14 +138,33 @@ function proxyEntries(obj: any): [string, any][] {
 }
 
 /**
- * Preprocess a source model to flatten any L-layer proxies into plain objects.
- * This must run BEFORE JSON.parse(JSON.stringify()) deep copy, because
- * JSON.stringify uses Object.keys internally and would lose proxy getter properties.
+ * Convert a value to JjelValue WITHOUT recursing into objects/arrays.
+ *
+ * Unlike `toJjelValue()` from JjEL (which recursively converts via Object.entries),
+ * this function passes objects and arrays through as-is. This prevents infinite loops
+ * when the value contains L-layer proxies with circular references
+ * (e.g., LClass.attributes[0].owner → LClass).
+ *
+ * The JjEL evaluator navigates objects lazily via MemberAccess (obj[prop]),
+ * which correctly triggers proxy getters on demand — no need to pre-flatten.
  */
-function flattenSourceModel(sourceModel: any): any {
+function shallowToJjelValue(value: unknown): JjelValue {
+    if (value === null || value === undefined) return null;
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') return value;
+    // Objects and arrays: pass through as-is, let JjEL navigate lazily
+    return value as JjelValue;
+}
+
+/**
+ * Deep-copy a source model safely, handling circular references.
+ * Falls back to the original value if serialization fails (e.g., due to proxies).
+ */
+function safeDeepCopy(sourceModel: any): any {
     if (sourceModel == null) return sourceModel;
 
-    // Array of elements (most common format)
+    // For arrays: shallow-copy each element via flattenProxy (captures proxy keys)
     if (Array.isArray(sourceModel)) {
         return sourceModel.map(item => {
             if (item && typeof item === 'object') {
@@ -152,7 +174,7 @@ function flattenSourceModel(sourceModel: any): any {
         });
     }
 
-    // Object with classes/instances arrays
+    // For objects with classes/instances arrays
     if (typeof sourceModel === 'object') {
         const result: any = {};
         for (const [key, value] of proxyEntries(sourceModel)) {
@@ -272,16 +294,48 @@ export class JjtlExecutor {
         console.log('[JjTL Executor] AST:', this.ast);
         console.log('[JjTL Executor] AST mappings count:', this.ast?.mappings?.length ?? 0);
 
-        // CRITICAL: Flatten L-layer proxies BEFORE deep copy.
-        // JSON.stringify uses Object.keys internally, which misses proxy getter properties
-        // (isAbstract, attributes, subClasses, references, etc.). Flattening first
-        // materializes all proxy properties into plain object keys.
-        const flattenedSource = sourceModel ? flattenSourceModel(sourceModel) : sourceModel;
+        // Flatten L-layer proxies into plain objects (shallow — one level only).
+        // JSON.parse(JSON.stringify()) is NOT used because L-layer proxies have
+        // circular references (e.g., LClass.attributes[0].owner → LClass) that
+        // cause infinite loops during serialization.
+        // safeDeepCopy uses flattenProxy (Reflect.ownKeys) to materialize proxy
+        // getter properties into plain object keys at the top level only.
+        const sourceModelCopy = sourceModel ? safeDeepCopy(sourceModel) : sourceModel;
 
-        // Deep copy to prevent mutation of original data
-        const sourceModelCopy = flattenedSource ? JSON.parse(JSON.stringify(flattenedSource)) : flattenedSource;
+        // === DEBUG: Step 4 — Source model pipeline ===
+        console.log('=== SOURCE MODEL ENTRY (before copy) ===');
+        if (Array.isArray(sourceModel) && sourceModel.length > 0) {
+            const first = sourceModel[0];
+            console.log('first instance type:', typeof first);
+            console.log('first instance constructor:', first?.constructor?.name);
+            console.log('first instance keys:', Object.keys(first));
+            console.log('first instance ownKeys:', Reflect.ownKeys(first));
+            console.log('first instance has $name:', '$name' in first);
+            console.log('first instance has $surname:', '$surname' in first);
+            if ('$surname' in first) {
+                console.log('first instance $surname:', first['$surname']);
+                console.log('first instance $surname.value:', first['$surname']?.value);
+            }
+        } else if (sourceModel && typeof sourceModel === 'object') {
+            console.log('sourceModel keys:', Object.keys(sourceModel));
+        }
+        console.log('=== SOURCE MODEL ENTRY (after copy) ===');
+        if (Array.isArray(sourceModelCopy) && sourceModelCopy.length > 0) {
+            const firstCopy = sourceModelCopy[0];
+            console.log('first copy type:', typeof firstCopy);
+            console.log('first copy constructor:', firstCopy?.constructor?.name);
+            console.log('first copy keys:', Object.keys(firstCopy));
+            console.log('first copy ownKeys:', Reflect.ownKeys(firstCopy));
+            console.log('first copy has $name:', '$name' in firstCopy);
+            console.log('first copy has $surname:', '$surname' in firstCopy);
+            if ('$surname' in firstCopy) {
+                console.log('first copy $surname:', firstCopy['$surname']);
+                console.log('first copy $surname.value:', firstCopy['$surname']?.value);
+            }
+        }
+        // === END DEBUG Step 4 ===
 
-        console.log('[JjTL Executor] Source model (flattened + deep copy):', sourceModelCopy);
+        console.log('[JjTL Executor] Source model (flattened):', sourceModelCopy);
         console.log('[JjTL Executor] Target metamodel:', targetMetamodel);
 
         const startTime = performance.now();
@@ -348,18 +402,18 @@ export class JjtlExecutor {
      * Initialize execution context
      */
     private initializeContext(sourceModel: any, targetMetamodel?: any): void {
-        // Create base bindings
+        // Create base bindings — use shallowToJjelValue to prevent circular ref loops
         const bindings: Record<string, JjelValue> = {
-            source: toJjelValue(sourceModel),
-            data: toJjelValue(sourceModel),
+            source: shallowToJjelValue(sourceModel),
+            data: shallowToJjelValue(sourceModel),
         };
 
         // Add model-specific bindings
         if (sourceModel?.classes) {
-            bindings.classes = toJjelValue(sourceModel.classes);
+            bindings.classes = shallowToJjelValue(sourceModel.classes);
         }
         if (sourceModel?.instances) {
-            bindings.instances = toJjelValue(sourceModel.instances);
+            bindings.instances = shallowToJjelValue(sourceModel.instances);
         }
 
         // Create trace model builder
@@ -531,7 +585,7 @@ export class JjtlExecutor {
 
         console.log(`[JjTL Executor] executeClassMapping: ${ruleName}`);
         console.log(`[JjTL Executor] Found ${instances.length} source instances of type "${sourceClassName}"`);
-        console.log(`[JjTL Executor] Class mapping body:`, JSON.stringify(mapping.body, null, 2));
+        console.log(`[JjTL Executor] Class mapping body items:`, mapping.body?.length ?? 0);
 
         for (const sourceInstance of instances) {
             this.stats.sourceInstancesProcessed++;
@@ -542,6 +596,19 @@ export class JjtlExecutor {
                 className: sourceInstance?.className,
                 __type: sourceInstance?.__type,
             });
+
+            // === DEBUG: Step 1 — What does the executor see as source instances? ===
+            console.log('=== SOURCE INSTANCE ===');
+            console.log('type:', typeof sourceInstance);
+            console.log('constructor:', sourceInstance?.constructor?.name);
+            console.log('keys:', Object.keys(sourceInstance));
+            console.log('ownKeys:', Reflect.ownKeys(sourceInstance));
+            console.log('has $surname:', '$surname' in sourceInstance);
+            console.log('$surname:', sourceInstance['$surname']);
+            console.log('has surname:', 'surname' in sourceInstance);
+            console.log('surname:', sourceInstance['surname']);
+            console.log('features:', sourceInstance['features']);
+            // === END DEBUG Step 1 ===
 
             // Check condition if present
             if (mapping.condition) {
@@ -750,8 +817,19 @@ export class JjtlExecutor {
 
             if (mapping.objectCreation) {
                 value = this.executeObjectCreation(mapping.objectCreation, sourceInstance);
+            } else if (mapping.expression !== undefined) {
+                // New := syntax: evaluate expression, optionally apply value mapping
+                const ctx = this.createInstanceContext(sourceInstance);
+                value = this.evaluateExpression(mapping.expression, ctx);
+                sourceValue = fromJjelValue(value);
+                if (mapping.valueMapping && mapping.valueMapping.length > 0) {
+                    const match = mapping.valueMapping.find(vm =>
+                        this.valuesEqual(value, this.getLiteralValue(vm.sourceValue))
+                    );
+                    if (match) value = this.getLiteralValue(match.targetValue);
+                }
             } else if (mapping.conversion) {
-                // Get source value before conversion
+                // Get source value before conversion (legacy)
                 if (mapping.sourceAttribute) {
                     const ctx = this.createInstanceContext(sourceInstance);
                     sourceValue = fromJjelValue(this.evaluatePropertyPath(mapping.sourceAttribute, ctx));
@@ -801,20 +879,24 @@ export class JjtlExecutor {
             return false;
         }
 
-        // No conversion = direct copy = invertible
+        // New := syntax
+        if (mapping.expression !== undefined) {
+            if (mapping.valueMapping && mapping.valueMapping.length > 0) {
+                const targetValues = mapping.valueMapping.map(m => JSON.stringify(m.targetValue.value));
+                return new Set(targetValues).size === mapping.valueMapping.length;
+            }
+            return this.isExpressionInvertible(mapping.expression);
+        }
+
+        // Legacy -> syntax
         if (!mapping.conversion) {
             return true;
         }
-
-        // Value mappings are invertible if they are 1:1
         if (mapping.conversion.mappings && mapping.conversion.mappings.length > 0) {
-            // Check for duplicate target values (would make reverse ambiguous)
             const targetValues = mapping.conversion.mappings.map(m => JSON.stringify(m.targetValue.value));
             const uniqueTargets = new Set(targetValues);
             return uniqueTargets.size === mapping.conversion.mappings.length;
         }
-
-        // Expression conversions - analyze for invertibility
         if (mapping.conversion.expression) {
             return this.isExpressionInvertible(mapping.conversion.expression);
         }
@@ -866,17 +948,12 @@ export class JjtlExecutor {
      * Compute inverse expression for invertible bindings
      */
     private computeInverseExpression(mapping: AttributeMappingAST): string | undefined {
-        if (!mapping.conversion) {
-            // Direct copy: inverse is also direct copy
-            return mapping.targetAttribute;
-        }
+        const inverseExpr = mapping.expression ?? mapping.conversion?.expression;
 
-        if (mapping.conversion.expression) {
-            const expr = mapping.conversion.expression;
-
+        if (inverseExpr) {
             // Handle name + '_suffix' -> strip suffix
-            if (expr.type === 'BinaryExpression') {
-                const binExpr = expr as BinaryExpressionAST;
+            if (inverseExpr.type === 'BinaryExpression') {
+                const binExpr = inverseExpr as BinaryExpressionAST;
                 if (binExpr.operator === '+' && binExpr.right.type === 'Literal') {
                     const suffix = (binExpr.right as LiteralAST).value;
                     if (typeof suffix === 'string') {
@@ -890,9 +967,11 @@ export class JjtlExecutor {
                     }
                 }
             }
+            return undefined;
         }
 
-        return undefined;
+        // Direct copy: inverse is also direct copy
+        return mapping.targetAttribute;
     }
 
     /**
@@ -926,13 +1005,25 @@ export class JjtlExecutor {
                 // Handle object creation: -> Arc { ... }
                 console.log('[JjTL Executor] Handling object creation');
                 value = this.executeObjectCreation(mapping.objectCreation, sourceInstance);
+            } else if (mapping.expression !== undefined) {
+                // New := syntax: evaluate expression, optionally apply value mapping
+                console.log('[JjTL Executor] New := syntax, expression type:', mapping.expression.type);
+                const ctx = this.createInstanceContext(sourceInstance);
+                value = this.evaluateExpression(mapping.expression, ctx);
+                if (mapping.valueMapping && mapping.valueMapping.length > 0) {
+                    const match = mapping.valueMapping.find(vm =>
+                        this.valuesEqual(value, this.getLiteralValue(vm.sourceValue))
+                    );
+                    if (match) value = this.getLiteralValue(match.targetValue);
+                }
+                console.log('[JjTL Executor] := result:', value);
             } else if (mapping.conversion) {
-                // Handle conversion
+                // Handle conversion (legacy -> syntax)
                 console.log('[JjTL Executor] Handling conversion with expression or mappings');
                 value = this.executeConversion(mapping.conversion, sourceInstance, mapping.sourceAttribute);
                 console.log('[JjTL Executor] Conversion result:', value);
             } else if (mapping.sourceAttribute) {
-                // Direct attribute mapping: source.attr -> target.attr
+                // Direct attribute mapping: source.attr -> target.attr (legacy)
                 console.log('[JjTL Executor] Direct attribute mapping');
                 const ctx = this.createInstanceContext(sourceInstance);
                 value = this.evaluatePropertyPath(mapping.sourceAttribute, ctx);
@@ -974,7 +1065,7 @@ export class JjtlExecutor {
 
         if (conversion.expression) {
             // JjEL expression
-            console.log('[JjTL Executor] Evaluating expression:', JSON.stringify(conversion.expression, null, 2));
+            console.log('[JjTL Executor] Evaluating expression type:', conversion.expression?.type);
             const ctx = this.createInstanceContext(sourceInstance);
             console.log('[JjTL Executor] Context bindings for expression:', {
                 name: ctx.get('name'),
@@ -1033,6 +1124,14 @@ export class JjtlExecutor {
 
                 if (attrMapping.objectCreation) {
                     value = this.executeObjectCreation(attrMapping.objectCreation, sourceInstance, extraBindings);
+                } else if (attrMapping.expression !== undefined) {
+                    value = this.evaluateExpression(attrMapping.expression, ctx);
+                    if (attrMapping.valueMapping && attrMapping.valueMapping.length > 0) {
+                        const match = attrMapping.valueMapping.find(vm =>
+                            this.valuesEqual(value, this.getLiteralValue(vm.sourceValue))
+                        );
+                        if (match) value = this.getLiteralValue(match.targetValue);
+                    }
                 } else if (attrMapping.conversion?.expression) {
                     value = this.evaluateExpression(attrMapping.conversion.expression, ctx);
                 } else if (attrMapping.sourceAttribute) {
@@ -1074,14 +1173,14 @@ export class JjtlExecutor {
 
         for (const item of collection) {
             const itemBindings: Record<string, JjelValue> = {
-                [forall.variable]: toJjelValue(item),
+                [forall.variable]: shallowToJjelValue(item),
             };
             // Also add item properties directly for unqualified access
             // Uses proxyEntries to capture L-layer proxy properties
             if (item && typeof item === 'object') {
                 for (const [key, value] of proxyEntries(item)) {
                     if (!key.startsWith('__')) {
-                        itemBindings[key] = toJjelValue(value);
+                        itemBindings[key] = shallowToJjelValue(value);
                     }
                 }
             }
@@ -1149,17 +1248,17 @@ export class JjtlExecutor {
         for (const item of collection) {
             const itemBindings: Record<string, JjelValue> = {
                 ...(extraBindings || {}),
-                [forall.variable]: toJjelValue(item),
+                [forall.variable]: shallowToJjelValue(item),
             };
             // Uses proxyEntries to capture L-layer proxy properties
             if (item && typeof item === 'object') {
                 for (const [key, value] of proxyEntries(item)) {
                     if (!key.startsWith('__')) {
-                        itemBindings[key] = toJjelValue(value);
+                        itemBindings[key] = shallowToJjelValue(value);
                     }
                 }
             }
-            const childCtx = baseCtx.child({ [forall.variable]: toJjelValue(item) });
+            const childCtx = baseCtx.child({ [forall.variable]: shallowToJjelValue(item) });
 
             if (forall.filter) {
                 const passes = this.evaluateExpression(forall.filter, childCtx);
@@ -1193,22 +1292,38 @@ export class JjtlExecutor {
      * Create evaluation context with source instance bindings.
      * Uses proxyEntries (Reflect.ownKeys) to capture L-layer computed properties
      * like isAbstract, attributes, subClasses, references, etc.
+     *
+     * IMPORTANT: Uses shallowToJjelValue instead of toJjelValue to prevent infinite
+     * loops from circular proxy references (e.g., LClass.attributes[0].owner → LClass).
+     * The JjEL evaluator navigates objects lazily via property access.
      */
     private createInstanceContext(sourceInstance: any): EvaluationContext {
         const bindings: Record<string, JjelValue> = {
-            source: toJjelValue(sourceInstance),
-            self: toJjelValue(sourceInstance),
-            it: toJjelValue(sourceInstance),
+            source: shallowToJjelValue(sourceInstance),
+            self: shallowToJjelValue(sourceInstance),
+            it: shallowToJjelValue(sourceInstance),
         };
 
         // Add instance properties directly — use proxyEntries to capture proxy getter keys
         if (sourceInstance && typeof sourceInstance === 'object') {
             for (const [key, value] of proxyEntries(sourceInstance)) {
                 if (!key.startsWith('__')) {
-                    bindings[key] = toJjelValue(value);
+                    bindings[key] = shallowToJjelValue(value);
                 }
             }
+
+            // Extract M1 attribute values from $attrName.value pattern
+            // This allows transformations to access attribute values by name
+            // (e.g., `surname` instead of `$surname.value`)
+            extractAttributeValues(sourceInstance, bindings);
         }
+
+        // === DEBUG: Step 2 — What does the context look like? ===
+        console.log('=== INSTANCE CONTEXT ===');
+        console.log('context keys:', Object.keys(bindings));
+        console.log('context.surname:', bindings['surname']);
+        console.log('context.name:', bindings['name']);
+        // === END DEBUG Step 2 ===
 
         return this.context.evalContext.child(bindings);
     }
@@ -1737,18 +1852,25 @@ export class JjtlExecutor {
             }
         }
 
-        // ★ CRITICAL FIX: Also extract instance properties from 'source'
-        // createInstanceContext adds all source instance properties as bindings,
-        // but they need to be passed through to jjelEval for property path resolution.
-        // Uses proxyEntries (Reflect.ownKeys) to capture L-layer proxy properties.
+        // Also extract instance properties from 'source'.
+        // Uses shallowToJjelValue to prevent infinite loops from circular proxy refs.
         const source = ctx.get('source');
         if (source && typeof source === 'object' && !Array.isArray(source)) {
             for (const [key, value] of proxyEntries(source)) {
                 if (!key.startsWith('__') && !(key in record)) {
-                    record[key] = value as JjelValue;
+                    record[key] = shallowToJjelValue(value);
                 }
             }
+
+            // Extract M1 attribute values from $attrName.value pattern
+            extractAttributeValues(source, record);
         }
+
+        // === DEBUG: Step 3 — What does contextToRecord produce? ===
+        console.log('=== CONTEXT RECORD ===');
+        console.log('record keys:', Object.keys(record));
+        console.log('record.surname:', record['surname']);
+        // === END DEBUG Step 3 ===
 
         return record;
     }
