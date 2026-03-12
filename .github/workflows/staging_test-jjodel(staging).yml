@@ -28,8 +28,7 @@ jobs:
         run: |
           npm i
           npm i react-json-view --force
-          export NODE_OPTIONS=--openssl-legacy-provider
-          CI='' npm run build
+          CI='' vite build --mode staging
 
       - name: Zip artifact for deployment
         run: zip release.zip ./* -r

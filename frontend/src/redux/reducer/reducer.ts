@@ -1403,8 +1403,10 @@ function test(){
 }
 
 function fixEnv(){
-    console.log("fix env start", {meta: import.meta, menv:(import.meta as any).env, process:(window as any).process, penv:(window as any).env});
-    const process = (window as any).process.env = (import.meta as any).env;
+    let windoww = window as any;
+    console.log("fix env start", {meta: import.meta, menv:(import.meta as any).env, process:windoww.process, penv:windoww.env});
+    if (!windoww.process) windoww.process = {};
+    const process = windoww.process.env = (import.meta as any).env;
     const prefix = "VITE_";
     for (const k in process) {
         if (k.indexOf(prefix) === 0) process['JODEL_' + k.substring(prefix.length)] = process[k];
