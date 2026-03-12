@@ -378,8 +378,14 @@ strescape -> ["\\\\/bfnrt] {% id %}
 `
 }},
 );
-        const flexmim2t =  {eta:{__str: ETA.flexmi_attribute + "\n" + ETA.flexmi_object + "\n" + ETA.flexmi_model,
-                'Model': ETA.flexmi_model, 'Object': ETA.flexmi_object, 'Value': ETA.flexmi_attribute, allowPartials: true}};
+        const flexmim2t =  {eta:{__str: 'Flexmi is usable only with partials so far.',
+                'Model': ETA.flexmi_model,
+                'Object': ETA.flexmi_object,
+                'Value': ETA.flexmi_value,
+                'ObjectChild': ETA.flexmi_ObjectChild,
+                'ValueChild': ETA.flexmi_ValueChild,
+                'ValueInline': ETA.flexmi_ValueInline,
+                allowPartials: true}};
         ret['flexmi/YAML'] = new Language(m2t, t2m);
         ret['flexmi/XMI'] = new Language(flexmim2t, {ohm: {__str: Ohm.flexmi_grammar+'╗' + Ohm.flexmi_semantic, allowPartials: true, test_text: Ohm.exampleM1}});
 
