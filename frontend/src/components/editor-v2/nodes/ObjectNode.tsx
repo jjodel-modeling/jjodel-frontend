@@ -297,7 +297,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                                         onDoubleClick={() => startEditFeature(feature.id, liveName, feature.value)}
                                         onClick={() => { if (selected) startEditFeature(feature.id, liveName, feature.value); }}
                                     >
-                                        {feature.value || '—'}
+                                        {feature.value != null ? String(feature.value) : '—'}
                                     </span>
                                 )}
                             </div>

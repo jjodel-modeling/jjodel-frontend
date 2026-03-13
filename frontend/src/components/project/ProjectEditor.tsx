@@ -11,6 +11,8 @@ import {
     DModel,
     DGraph,
     DObject,
+    DVertex,
+    GraphSize,
     Constructors,
     SetFieldAction,
     SetRootFieldAction,
@@ -30,6 +32,9 @@ import { execute as executeTransformation, ExecutionResult } from '../../jjtl/ex
 import { convertMetamodelToJjtl, findMetamodelById } from '../../jjtl/utils/metamodelConverter';
 import { EnvGenWizardModal, EnvGenPersistence, ENVGEN_CHANGE_EVENT, ENVGEN_OPEN_WIZARD_EVENT } from '../envgen';
 import type { EnvGenConfigSummary } from '../envgen';
+import { loadMegamodel, getSerializedMegamodel } from '../../model/megamodelPersistence';
+import { setRuntimeMegamodel, clearRuntimeMegamodel, getRuntimeMegamodel } from '../../model/megamodelRuntime';
+import MegamodelView from '../megamodel/MegamodelView';
 import './project-editor.scss';
 
 // Types for contextual menu
@@ -90,6 +95,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     const [newTag, setNewTag] = useState('');
     const [isAddingTag, setIsAddingTag] = useState(false);
     const [showShareModal, setShowShareModal] = useState(false);
+    const [showMegamodelModal, setShowMegamodelModal] = useState(false);
 
     // Contextual menu state
     const [openMenu, setOpenMenu] = useState<OpenMenu | null>(null);
@@ -233,6 +239,33 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         window.addEventListener(ENVGEN_OPEN_WIZARD_EVENT, handler);
         return () => window.removeEventListener(ENVGEN_OPEN_WIZARD_EVENT, handler);
     }, []);
+
+    // Megamodel: compute and register runtime megamodel whenever artifacts change
+    useEffect(() => {
+        const projectId = project.id;
+        if (!projectId) return;
+
+        const artifacts = {
+            metamodels: metamodels.map(mm => ({ id: mm.id, name: mm.name || '' })),
+            models: models.map(m => {
+                const rawInstanceof = (m.__raw as any)['instanceof'];
+                const instanceofMetamodelId = typeof rawInstanceof === 'string' ? rawInstanceof : undefined;
+                return { id: m.id, name: m.name || '', instanceofMetamodelId };
+            }),
+            transformations: transformations.map(t => ({
+                id: t.id,
+                name: t.name || '',
+                sourceMetamodelId: t.sourceMetamodelId,
+                targetMetamodelId: t.targetMetamodelId,
+            })),
+        };
+
+        const serialized = getSerializedMegamodel(projectId);
+        const megamodel = loadMegamodel(serialized, artifacts);
+        setRuntimeMegamodel(projectId, megamodel);
+
+        return () => { clearRuntimeMegamodel(projectId); };
+    }, [project.id, metamodels, models, transformations]);
 
     // Mark project as dirty (unsaved changes)
     // Sets both local state and global U.isProjectModified for consistency
@@ -521,7 +554,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             const name = jmmData.metadata?.name || file.name.replace(/\.jmm$/, '');
 
             // Create new metamodel in project using existing createM2
-            const newMM = createM2(project, name);
+            const newMM = createM2(project);
 
             // TODO: Populate metamodel with imported data
             // For now, just show success with the created metamodel
@@ -1028,6 +1061,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 let createdDModel: DModel | null = null;
                 let createdDGraph: DGraph | null = null;
                 let createdModelId: string | null = null;
+                let createdGraphId: string | null = null;
                 let instancesCreated = 0;
 
                 // Store object NAME (not ID!) with attributes — ID from DObject.new() is unreliable
@@ -1035,6 +1069,14 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     objectName: string;
                     className: string;
                     attributes: Record<string, any>;
+                }> = [];
+
+                // Collect object IDs + positions for DVertex creation AFTER the TRANSACTION
+                // (DVertex.new has its own internal TRANSACTION — nesting causes coordinates to be lost)
+                const pendingVertices: Array<{
+                    objectId: string;
+                    posX: number;
+                    posY: number;
                 }> = [];
 
                 TRANSACTION('Execute Transformation: Create Target Model', () => {
@@ -1056,7 +1098,11 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     const graphId = Constructors.DGraph_makeID(dModel.id);
                     const dGraph: DGraph = DGraph.new(0, dModel.id, undefined, undefined, graphId);
                     createdDGraph = dGraph;
+                    createdGraphId = dGraph.id;
                     console.log('[ProjectEditor] Created DGraph:', { id: dGraph.id });
+
+                    // Tag graph as v2-flow so EditorV2/useJjomSync can find it
+                    SetFieldAction.new(dGraph.id, 'graphStyle', 'v2-flow', '', false);
 
                     // STEP 3: Aggiungi model a project.models
                     SetFieldAction.new(project.id, 'models', dModel.id, '+=', true);
@@ -1084,12 +1130,30 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                 return;
                             }
 
+                            // Grid layout constants for DVertex positioning
+                            const GRID_COLS = 3;
+                            const NODE_W = 200;
+                            const NODE_H = 80;
+                            const GAP_X = 50;
+                            const GAP_Y = 50;
+                            const START_X = 50;
+                            const START_Y = 50;
+
                             for (const instanceData of instances) {
                                 console.log(`[ProjectEditor] instanceData from executor:`, instanceData);
 
                                 const objectName = instanceData.name || `${className}_${instancesCreated}`;
                                 const dObject = DObject.new(targetClass.id, dModel.id, DModel, objectName, true);
                                 console.log(`[ProjectEditor] Created instance:`, { name: objectName, class: className });
+
+                                // Collect for DVertex creation AFTER the TRANSACTION.
+                                // DVertex.new has its own internal TRANSACTION — nesting
+                                // causes coordinates to be lost (all positions become 0,0).
+                                const col = instancesCreated % GRID_COLS;
+                                const row = Math.floor(instancesCreated / GRID_COLS);
+                                const posX = START_X + col * (NODE_W + GAP_X);
+                                const posY = START_Y + row * (NODE_H + GAP_Y);
+                                pendingVertices.push({ objectId: dObject.id, posX, posY });
 
                                 // Collect attributes for deferred setting (after TRANSACTION)
                                 const attrs: Record<string, any> = {};
@@ -1115,6 +1179,46 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
 
                     console.log(`[ProjectEditor] Total instances created: ${instancesCreated}`);
                 });
+
+                // STEP 7: Open tab AFTER a delay for Redux (fire-and-forget)
+                // Schedule this FIRST so tab opens even if DVertex/attribute steps fail.
+                if (createdDModel) {
+                    const modelToOpen = createdDModel;
+                    const modelName = uniqueOutputName;
+                    const count = instancesCreated;
+
+                    setTimeout(() => {
+                        try {
+                            const tab = TabDataMaker.model(modelToOpen);
+                            DockManager.open('models', tab);
+                            U.alert('i', 'Transformation Executed',
+                                `Created model "${modelName}" with ${count} instances.`);
+                            markDirty();
+                        } catch (e) {
+                            console.error('[ProjectEditor] Error opening tab:', e);
+                        }
+                    }, 200);
+                }
+
+                // STEP 6b: Create DVertices OUTSIDE the TRANSACTION.
+                // DVertex.new has its own internal TRANSACTION — calling it inside
+                // another TRANSACTION causes nested transactions that lose coordinates.
+                // Same pattern as useJjomSync's auto-population.
+                // Wrapped in try-catch so vertex creation failures don't prevent tab opening.
+                if (pendingVertices.length > 0 && createdGraphId) {
+                    const gid = createdGraphId;
+                    const NODE_W = 200;
+                    const NODE_H = 80;
+                    try {
+                        for (const pv of pendingVertices) {
+                            const size = new GraphSize(pv.posX, pv.posY, NODE_W, NODE_H);
+                            DVertex.new(0, pv.objectId, gid, gid, undefined, size);
+                            console.log(`[ProjectEditor] Created DVertex for object at (${pv.posX}, ${pv.posY})`);
+                        }
+                    } catch (e) {
+                        console.error('[ProjectEditor] Error creating DVertices (non-fatal):', e);
+                    }
+                }
 
                 // STEP 8: Set attributes after delay — use LModel proxy to find objects by name
                 if (pendingAttributeSets.length > 0 && createdModelId) {
@@ -1172,25 +1276,6 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 // Tab opening and attribute setting happen in the background (fire-and-forget)
                 // Broadcast execution result via custom event (for JjtlDevelopmentEnv trace display)
                 window.dispatchEvent(new CustomEvent('jjtl-execution-result', { detail: result }));
-
-                // STEP 7: Open tab AFTER a delay for Redux (fire-and-forget, don't await)
-                if (createdDModel) {
-                    const modelToOpen = createdDModel;
-                    const modelName = uniqueOutputName;
-                    const count = instancesCreated;
-
-                    setTimeout(() => {
-                        try {
-                            const tab = TabDataMaker.model(modelToOpen);
-                            DockManager.open('models', tab);
-                            U.alert('i', 'Transformation Executed',
-                                `Created model "${modelName}" with ${count} instances.`);
-                            markDirty();
-                        } catch (e) {
-                            console.error('[ProjectEditor] Error opening tab:', e);
-                        }
-                    }, 200);
-                }
 
                 // Reset execution guard
                 isExecutingTransformation = false;
@@ -1402,6 +1487,18 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     <span>Created: {formatDate(project.creation)}</span>
                     <span className="project-dates__separator">·</span>
                     <span>Modified: {formatDate(project.lastModified)}</span>
+                </div>
+
+                {/* Quick actions */}
+                <div className="project-quickactions">
+                    <button
+                        className="megamodel-btn"
+                        onClick={() => setShowMegamodelModal(true)}
+                        title="View relationships between project artifacts"
+                    >
+                        <i className="bi bi-diagram-3" />
+                        View Megamodel
+                    </button>
                 </div>
             </div>
 
@@ -1891,6 +1988,23 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
 
             {/* Documentation Section */}
             <DocumentationSection project={project} />
+
+            {/* Megamodel Diagram View */}
+            {showMegamodelModal && (() => {
+                const megamodel = getRuntimeMegamodel(project.id);
+                if (!megamodel) return null;
+                return (
+                    <MegamodelView
+                        megamodel={megamodel}
+                        viewpoints={viewpoints.map(vp => ({
+                            id: vp.id || vp.name,
+                            name: vp.name || 'Unnamed',
+                            isOverlay: vp.isOverlay,
+                        }))}
+                        onClose={() => setShowMegamodelModal(false)}
+                    />
+                );
+            })()}
 
             {/* Share Modal */}
             <ShareProjectModal

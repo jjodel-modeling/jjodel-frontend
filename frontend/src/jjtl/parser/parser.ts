@@ -233,6 +233,14 @@ export class JjtlParser {
     private attributeMapping(): AttributeMappingAST {
         const startToken = this.peek();
 
+        // DEBUG: log what tokens are visible at this point
+        const debugTokens = this.tokens.slice(this.current, this.current + 6).map(
+            t => `[${t.type}:${JSON.stringify(t.value)}]`
+        );
+        console.log(`[JjtlParser] attributeMapping() at token ${this.current}: ${debugTokens.join(' ')}`);
+        console.log(`[JjtlParser]   source string available: ${this.source !== undefined}`);
+        console.log(`[JjtlParser]   check(IDENTIFIER)=${this.check(TokenType.IDENTIFIER)}, peekNext?.type=${this.peekNext()?.type}`);
+
         // Check for object creation: -> targetAttr { ... }  (unchanged)
         if (this.match(TokenType.ARROW)) {
             const targetAttribute = this.consume(TokenType.IDENTIFIER, "Expected target attribute name").value;
@@ -274,8 +282,16 @@ export class JjtlParser {
             const targetAttribute = this.consume(TokenType.IDENTIFIER, "Expected target attribute name").value;
             this.consume(TokenType.ASSIGN, "Expected ':='");
 
+            // DEBUG: log tokens AFTER consuming ':='
+            const afterAssignTokens = this.tokens.slice(this.current, this.current + 8).map(
+                t => `[${t.type}:${JSON.stringify(t.value)}]`
+            );
+            console.log(`[JjtlParser] := branch: targetAttr="${targetAttribute}", tokens after :=: ${afterAssignTokens.join(' ')}`);
+            console.log(`[JjtlParser]   using ${this.source !== undefined ? 'JjEL delegation (parseJjELExpression)' : 'OLD expression() path'}`);
+
             // Lookahead: is there a value-mapping colon ahead?
             const hasValueMappingColon = this.findValueMappingColon();
+            console.log(`[JjtlParser]   hasValueMappingColon=${hasValueMappingColon}`);
 
             let expression: ExpressionAST | undefined;
             let valueMapping: ValueMappingAST[] | undefined;
@@ -304,6 +320,9 @@ export class JjtlParser {
         }
 
         // Legacy syntax: sourceAttr -> targetAttr [: conversion]
+        // DEBUG: log when falling through to legacy path
+        console.warn(`[JjtlParser] LEGACY PATH: token=${this.peek().type}:${JSON.stringify(this.peek().value)}, peekNext=${this.peekNext()?.type}:${JSON.stringify(this.peekNext()?.value)}`);
+        console.warn(`[JjtlParser]   Full context: ${this.tokens.slice(Math.max(0, this.current - 2), this.current + 6).map(t => `[${t.type}:${JSON.stringify(t.value)}]`).join(' ')}`);
         const sourceAttribute = this.consume(TokenType.IDENTIFIER, "Expected source attribute name").value;
         this.consume(TokenType.ARROW, "Expected '->'");
         const targetAttribute = this.consume(TokenType.IDENTIFIER, "Expected target attribute name").value;

@@ -89,7 +89,7 @@ function M1PropertiesPanel({ selectedNode, onNodeChange }: M1PropertiesPanelProp
                     {references.map((ref) => (
                         <div key={ref.id} className="properties-field">
                             <label className="properties-field__label">{ref.featureName}</label>
-                            <span className="properties-field__value">{ref.value || '—'}</span>
+                            <span className="properties-field__value">{ref.value != null ? String(ref.value) : '—'}</span>
                         </div>
                     ))}
                 </div>

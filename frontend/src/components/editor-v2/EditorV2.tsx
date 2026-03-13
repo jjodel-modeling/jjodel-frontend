@@ -247,6 +247,10 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [edges, setEdgesRaw, _onEdgesChangeRaw] = useEdgesState(modelid ? [] : initialEdges);
 
+    useEffect(() => {
+    console.log('[DEBUG EditorV2 nodes state]', nodes.length, nodes.map(n => n.id));
+}, [nodes]);
+
     // Deduplicate an edge array, keeping the FIRST occurrence of each ID.
     const deduplicateEdges = useCallback((edgeArray: Edge[]): Edge[] => {
         const seen = new Set<string>();
@@ -296,6 +300,8 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
     setEdgesRef.current = setEdges;
     const autoLayoutRef = useRef<(() => Promise<void>) | null>(null);
     const { isJjomMode, graphId, justCreatedGraphRef } = useJjomSync(modelid, setNodes, setEdges, () => {
+    console.log('[DEBUG EditorV2] modelid:', modelid, 'isJjomMode:', isJjomMode, 'graphId:', graphId);
+
         // Delay slightly so RF has measured nodes before fitting
         setTimeout(async () => {
             // If the graph was just auto-created, apply ELK layout first

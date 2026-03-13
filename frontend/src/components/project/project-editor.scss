@@ -238,6 +238,13 @@
   }
 }
 
+.project-quickactions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
 // Badges - Uniform height for all badges
 // --------------------------------------
 .badge {

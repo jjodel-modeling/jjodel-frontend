@@ -262,6 +262,13 @@ export function useJjomSync(
         };
 
         for (const pkgId of (rawModel.packages ?? [])) visitElement(pkgId);
+
+        console.log('[DEBUG populate] modelid:', modelid);
+console.log('[DEBUG populate] rawModel.packages:', rawModel.packages);
+console.log('[DEBUG populate] classifierEntries:', classifierEntries.length, classifierEntries.map(e => e.raw.name));
+
+
+
         // If no classifiers found AND we don't need a new graph, nothing to do.
         // When needsNewGraph, we must still create the graph (empty metamodel scenario).
         if (classifierEntries.length === 0 && !needsNewGraph) return;
@@ -458,9 +465,9 @@ export function useJjomSync(
                     if (modelElem) {
                         result.set(`model:${id}`, modelElem);
                         // Lightweight hash of children properties (attr names,
-                        // types, bounds, etc.). Changes when any child is updated
-                        // in Redux. A single number entry per vertex instead of
-                        // dozens of child entries — avoids infinite re-render loops.
+                        // types, bounds, feature values, etc.). Changes when any
+                        // child is updated in Redux. A single number entry per
+                        // vertex — avoids infinite re-render loops.
                         let ch = 0;
                         for (const key of ['attributes', 'references', 'operations', 'literals', 'features']) {
                             const arr = modelElem[key];
@@ -482,6 +489,16 @@ export function useJjomSync(
                                 ch = (ch * 31 + (child.upperBound ?? 0)) | 0;
                                 ch = (ch * 31 + (child.abstract ? 1 : 0)) | 0;
                                 ch = (ch * 31 + (child.composition ? 1 : 0)) | 0;
+                                // Include feature values (DValue.values) for M1 instance nodes
+                                const vals = child.values;
+                                if (Array.isArray(vals)) {
+                                    for (const v of vals) {
+                                        const vs = String(v ?? '');
+                                        for (let j = 0; j < vs.length; j++) {
+                                            ch = ((ch << 5) - ch + vs.charCodeAt(j)) | 0;
+                                        }
+                                    }
+                                }
                                 ch = (ch * 31 + 7) | 0; // separator
                             }
                         }
@@ -522,10 +539,16 @@ export function useJjomSync(
         try {
             // Full transform using L-proxies
             const lGraph: any = LGraph.fromPointer(graphInfo!.graphId);
-            if (!lGraph) return;
+console.log('[DEBUG useJjomSync init] lGraph:', lGraph);
+console.log('[DEBUG useJjomSync init] nodes:', lGraph?.nodes?.length, lGraph?.nodes);
+console.log('[DEBUG useJjomSync init] edges:', lGraph?.edges?.length, lGraph?.edges);
+console.log('[DEBUG useJjomSync init] subElementIds:', subElementIds.length, subElementIds);
+if (!lGraph) return;
 
             const vertices: any[] = lGraph.nodes ?? [];
             const edges: any[] = lGraph.edges ?? [];
+
+
 
             const nodeCache = new Map<string, Node>();
             const edgeCache = new Map<string, Edge>();
@@ -553,6 +576,8 @@ export function useJjomSync(
 
             // Push to React Flow state
             setNodes(Array.from(nodeCache.values()));
+            console.log('[DEBUG setNodes]', nodeCache.size, 'nodes set:', Array.from(nodeCache.values()).map(n => n.id));
+
             setEdges(deduplicateInheritanceEdges(Array.from(edgeCache.values())));
 
             initializedRef.current = true;

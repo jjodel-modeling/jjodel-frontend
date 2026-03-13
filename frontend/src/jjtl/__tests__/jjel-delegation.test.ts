@@ -1,3 +1,4 @@
+import { describe, it, test, expect } from 'vitest';
 /**
  * JjTL Parser — JjEL Expression Delegation Tests
  *

@@ -11,6 +11,8 @@ import { Tooltip } from '../../components/forEndUser/Tooltip';
 import {SaveManager} from "../../components/topbar/SaveManager";
 import {Link, useNavigate, useSearchParams} from "react-router-dom";
 import { DevModeLabel } from '../../components/DevModeLabel/DevModeLabel';
+import { buildProjectExportJson } from '../../model/megamodelPersistence';
+import { getRuntimeMegamodel } from '../../model/megamodelRuntime';
 
 interface StateProps {
     projects: LProject[];
@@ -177,7 +179,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
     const exportProject = async() => {
         if(project) {
             await ProjectsApi.save(project);
-            U.download(`${project?.name}.jjodel`, JSON.stringify(project?.__raw));
+            U.download(`${project?.name}.jjodel`, JSON.stringify(buildProjectExportJson(project?.__raw as unknown as Record<string, unknown>, project ? getRuntimeMegamodel(project.id) : undefined)));
         }
     }
 

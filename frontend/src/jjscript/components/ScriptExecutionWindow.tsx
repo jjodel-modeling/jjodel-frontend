@@ -12,7 +12,8 @@ import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { ScriptTarget, ScriptLineResult } from './ScriptBlock';
-import { ExecutionErrorDialog, ExecutionErrorInfo, ExecutionStats } from './ExecutionErrorDialog';
+import { ExecutionErrorDialog } from './ExecutionErrorDialog';
+import { ExecutionPauseInfo, parseError } from '../executor/errors';
 import './ScriptExecutionWindow.scss';
 
 // ============================================
@@ -85,8 +86,7 @@ export const ScriptExecutionWindow: React.FC<ScriptExecutionWindowProps> = ({
 
     // Error dialog state
     const [errorDialogOpen, setErrorDialogOpen] = useState(false);
-    const [errorDialogInfo, setErrorDialogInfo] = useState<ExecutionErrorInfo | null>(null);
-    const [executionStats, setExecutionStats] = useState<ExecutionStats>({ commandsExecuted: 0, errors: 0, duration: 0 });
+    const [errorDialogInfo, setErrorDialogInfo] = useState<ExecutionPauseInfo | null>(null);
     const [executionStartTime, setExecutionStartTime] = useState<number>(0);
 
     // Refs
@@ -154,15 +154,10 @@ export const ScriptExecutionWindow: React.FC<ScriptExecutionWindowProps> = ({
             setErrorDialogInfo({
                 line: line.index + 1,
                 command: line.text.trim(),
-                errorMessage,
-                errorType: errorMessage.toLowerCase().includes('not found') ? 'not_found' :
-                           errorMessage.toLowerCase().includes('parse') ? 'parse' : 'execution',
-            });
-
-            setExecutionStats({
-                commandsExecuted,
-                errors,
-                duration,
+                error: parseError(errorMessage, line.text.trim()),
+                executedSoFar: commandsExecuted,
+                totalCommands: commandsExecuted + errors,
+                elapsedMs: Date.now() - executionStartTime,
             });
 
             errorActionResolverRef.current = resolve;
@@ -614,11 +609,9 @@ export const ScriptExecutionWindow: React.FC<ScriptExecutionWindowProps> = ({
             {errorDialogOpen && errorDialogInfo && (
                 <ExecutionErrorDialog
                     isOpen={errorDialogOpen}
-                    error={errorDialogInfo}
-                    stats={executionStats}
-                    onReEvaluate={handleErrorReEvaluate}
-                    onStop={handleErrorStop}
-                    onContinue={handleErrorContinue}
+                    onClose={handleErrorStop}
+                    pauseInfo={errorDialogInfo ?? undefined}
+                    onSkip={handleErrorContinue}
                 />
             )}
         </div>

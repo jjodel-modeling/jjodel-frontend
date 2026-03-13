@@ -1550,23 +1550,22 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         if (!newView) {
             // Fallback to old maps if fresh cache not initialized
             newView = Defaults.defaultViewPointsMap[v.id] || Defaults.defaultViewsMap[v.id];
-            console.log('[updateDefaultView] Using fallback for', v.id, 'newView:', typeof newView);
         }
         if (!newView || typeof newView !== 'object') {
-            console.log('[updateDefaultView] Skipping', v.id, '- no fresh view found');
             return; // not a default view or not initialized
-        }
-        // Debug log for key views
-        if ((newView as any).name === 'Attribute' || (newView as any).name === 'Class') {
-            console.log('[updateDefaultView] Updating', (newView as any).name,
-                'old appliableToClasses:', (v as any).appliableToClasses,
-                '-> new appliableToClasses:', (newView as any).appliableToClasses);
         }
         newView = {...newView} as any;
         newView.css_MUST_RECOMPILE = true;
         newView.pointedBy = PointedBy.merge(newView, v);
         newView.subViews = {...newView.subViews, ...v.subViews};
         s.idlookup[v.id] = newView;
+        // When called with explicit state (e.g. from VersionFixer during project load),
+        // skip dispatching to the live Redux store — the state object will be loaded
+        // via LoadAction later, and VIEWS_RECOMPILE is already set up by SaveManager.
+        if (state) {
+            // Only update the state object directly; recompile flags are already in `state`
+            return;
+        }
         transientProperties.view[v.id] = new ViewTransientProperties();
         SetRootFieldAction.new('VIEWS_RECOMPILE_all', v.id, '+=', false);
     }

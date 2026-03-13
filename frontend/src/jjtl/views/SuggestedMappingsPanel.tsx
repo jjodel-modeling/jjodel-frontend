@@ -79,7 +79,7 @@ function generateJjtlCode(mappings: MappingSuggestion[]): string {
         if (matchingAttrs.length > 0) {
             code += ' {\n';
             for (const attr of matchingAttrs) {
-                code += `    ${attr.sourceAttribute} -> ${attr.targetAttribute}`;
+                code += `    ${attr.targetAttribute} := ${attr.sourceAttribute}`;
                 if (attr.conversionHint) {
                     code += ` : ${attr.conversionHint}`;
                 }
@@ -100,7 +100,7 @@ function generateJjtlCode(mappings: MappingSuggestion[]): string {
 
         code += `${sourceClass} -> ${targetClass} {\n`;
         for (const attr of attrs) {
-            code += `    ${attr.sourceAttribute} -> ${attr.targetAttribute}`;
+            code += `    ${attr.targetAttribute} := ${attr.sourceAttribute}`;
             if (attr.conversionHint) {
                 code += ` : ${attr.conversionHint}`;
             }

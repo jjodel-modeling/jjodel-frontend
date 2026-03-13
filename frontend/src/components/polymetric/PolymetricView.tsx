@@ -70,14 +70,17 @@ export const PolymetricView: React.FC<PolymetricViewProps> = ({
     const [isAnimating, setIsAnimating] = useState(false);
 
     // Read all models from Redux store
+    
+
     const openModels: OpenModelItem[] = useSelector((_state: DState) => {
-        const dModels = Selectors.getModels();
-        return dModels.map(m => ({
-            id: m.id,
-            name: m.name || 'unnamed',
-            type: (m.isMetamodel ? 'metamodel' : 'model') as 'metamodel' | 'model',
-        }));
-    });
+    const dModels = Selectors.getModels();
+    console.log('[DEBUG PolymetricView] getModels():', dModels?.length, dModels?.map(m => m.name));
+    return dModels.map(m => ({
+        id: m.id,
+        name: m.name || 'unnamed',
+        type: (m.isMetamodel ? 'metamodel' : 'model') as 'metamodel' | 'model',
+    }));
+});
 
     // Selected target (model/metamodel)
     const [selectedTargetId, setSelectedTargetId] = useState<string>(initialModelId);

@@ -1,3 +1,4 @@
+import { describe, it, test, expect } from 'vitest';
 /**
  * AST Bridge Tests
  *

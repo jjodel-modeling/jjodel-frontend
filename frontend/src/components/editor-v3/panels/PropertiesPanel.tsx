@@ -485,7 +485,7 @@ function FeatureValueRow({ feature, objectVertexId }: { feature: FeatureValueInf
                 {isRef ? (
                     <div className="v3-props-field">
                         <span className="v3-props-field__label">Links to</span>
-                        <span className="v3-props-field__value">{currentValue || '—'}</span>
+                        <span className="v3-props-field__value">{currentValue != null ? String(currentValue) : '—'}</span>
                     </div>
                 ) : (
                     <EditableField

@@ -60,6 +60,8 @@ import { VerticalToggle } from '../../components/ui/VerticalToggle';
 import { useGlobalDrawer } from '../../contexts/GlobalDrawerContext';
 import { useSettingsModal } from '../../contexts/SettingsModalContext';
 import { useTheme } from '../../services/ThemeService';
+import { buildProjectExportJson } from '../../model/megamodelPersistence';
+import { getRuntimeMegamodel } from '../../model/megamodelRuntime';
 
 
 let windoww = window as any;
@@ -976,7 +978,7 @@ function NavbarComponent(props: AllProps) {
                 isDashboard ? null : {name: 'Download Project', function: async()=> {
                         if (project) {
                             let dproject = await ProjectsApi.save(project);
-                            U.download(`${project.name}.jjodel`, JSON.stringify(dproject));
+                            U.download(`${project.name}.jjodel`, JSON.stringify(buildProjectExportJson(dproject as unknown as Record<string, unknown>, getRuntimeMegamodel(project.id))));
                         }
                     }, icon: <i className="bi bi-download" />},
 

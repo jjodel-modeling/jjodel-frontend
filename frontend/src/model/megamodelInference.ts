@@ -1,0 +1,178 @@
+/**
+ * Megamodel Inference
+ *
+ * Derives megamodel edges from the current set of project artifacts.
+ * These edges are always re-computed and never persisted.
+ *
+ * Adaptation note:
+ *   JjtlTransformation in this codebase references metamodels (sourceMetamodelId /
+ *   targetMetamodelId), not specific model instances. Therefore:
+ *     - 'inputOf' edge:  metamodel → transformation  (this metamodel defines the input type)
+ *     - 'outputOf' edge: transformation → metamodel  (this metamodel defines the output type)
+ *   When instance-level input/output tracking is added in the future, a separate edge
+ *   type (e.g. 'instanceInputOf') should be introduced rather than changing 'inputOf'.
+ */
+
+import type { ArtifactRef, MegamodelEdge } from './megamodel'
+
+// ============================================================
+// Input types — lightweight POJOs, no Redux/LProxy dependency
+// ============================================================
+
+export interface MetamodelArtifact {
+    id: string
+    name: string
+}
+
+export interface ModelArtifact {
+    id: string
+    name: string
+    /** DModel.instanceof — the ID of the metamodel this model conforms to */
+    instanceofMetamodelId?: string | null
+}
+
+export interface TransformationArtifact {
+    id: string
+    name: string
+    /** JjtlTransformation.sourceMetamodelId */
+    sourceMetamodelId?: string
+    /** JjtlTransformation.targetMetamodelId */
+    targetMetamodelId?: string
+}
+
+export interface ProjectArtifacts {
+    metamodels: MetamodelArtifact[]
+    models: ModelArtifact[]
+    transformations: TransformationArtifact[]
+}
+
+// ============================================================
+// Inference
+// ============================================================
+
+/**
+ * Derives all megamodel edges that can be inferred from project artifacts.
+ * Returns only 'derived' edges — user-defined edges are handled separately.
+ */
+export function inferMegamodelEdges(artifacts: ProjectArtifacts): MegamodelEdge[] {
+    const edges: MegamodelEdge[] = []
+
+    const metamodelIndex = new Map<string, MetamodelArtifact>(
+        artifacts.metamodels.map(mm => [mm.id, mm])
+    )
+    const transformationIndex = new Map<string, TransformationArtifact>(
+        artifacts.transformations.map(t => [t.id, t])
+    )
+
+    // conformsTo: model → metamodel
+    for (const model of artifacts.models) {
+        if (!model.instanceofMetamodelId) continue
+        const mm = metamodelIndex.get(model.instanceofMetamodelId)
+        if (!mm) continue  // metamodel not found in current project — skip
+
+        const source: ArtifactRef = { id: model.id, type: 'model', name: model.name }
+        const target: ArtifactRef = { id: mm.id, type: 'metamodel', name: mm.name }
+
+        edges.push({
+            id: `derived_${source.id}_conformsTo_${target.id}`,
+            source,
+            target,
+            type: 'conformsTo',
+            origin: 'derived',
+        })
+    }
+
+    // inputOf: metamodel → transformation
+    for (const transformation of artifacts.transformations) {
+        if (!transformation.sourceMetamodelId) continue
+        const mm = metamodelIndex.get(transformation.sourceMetamodelId)
+        if (!mm) continue
+
+        const source: ArtifactRef = { id: mm.id, type: 'metamodel', name: mm.name }
+        const target: ArtifactRef = { id: transformation.id, type: 'transformation', name: transformation.name }
+
+        edges.push({
+            id: `derived_${source.id}_inputOf_${target.id}`,
+            source,
+            target,
+            type: 'inputOf',
+            origin: 'derived',
+        })
+    }
+
+    // outputOf: transformation → metamodel
+    for (const transformation of artifacts.transformations) {
+        if (!transformation.targetMetamodelId) continue
+        const mm = metamodelIndex.get(transformation.targetMetamodelId)
+        if (!mm) continue
+
+        const source: ArtifactRef = { id: transformation.id, type: 'transformation', name: transformation.name }
+        const target: ArtifactRef = { id: mm.id, type: 'metamodel', name: mm.name }
+
+        edges.push({
+            id: `derived_${source.id}_outputOf_${target.id}`,
+            source,
+            target,
+            type: 'outputOf',
+            origin: 'derived',
+        })
+    }
+
+    // Silence unused-variable warnings for indices not used yet
+    void transformationIndex
+
+    return edges
+}
+
+// ============================================================
+// Cycle detection
+// ============================================================
+
+/**
+ * Checks whether adding an edge from `from` to `to` would create a cycle
+ * in the subgraph of edges that have a TriggerConfig (reactive edges).
+ *
+ * Only triggered edges are considered because cycles are only dangerous
+ * when they could cause infinite reactive re-execution.
+ *
+ * Uses DFS: starting from `to`, search for a path back to `from`.
+ *
+ * @returns true if adding from→to would create a cycle, false otherwise
+ */
+export function wouldCreateCycle(
+    edges: MegamodelEdge[],
+    from: string,
+    to: string,
+): boolean {
+    // Build adjacency list from triggered edges only
+    const adjacency = new Map<string, Set<string>>()
+
+    for (const edge of edges) {
+        if (!edge.trigger) continue
+        const sources = adjacency.get(edge.source.id) ?? new Set<string>()
+        sources.add(edge.target.id)
+        adjacency.set(edge.source.id, sources)
+    }
+
+    // DFS from `to` — if we reach `from`, adding from→to would create a cycle
+    const visited = new Set<string>()
+    const stack: string[] = [to]
+
+    while (stack.length > 0) {
+        const current = stack.pop()!
+        if (current === from) return true
+        if (visited.has(current)) continue
+        visited.add(current)
+
+        const neighbors = adjacency.get(current)
+        if (neighbors) {
+            for (const neighbor of neighbors) {
+                if (!visited.has(neighbor)) {
+                    stack.push(neighbor)
+                }
+            }
+        }
+    }
+
+    return false
+}

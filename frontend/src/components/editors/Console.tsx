@@ -46,6 +46,7 @@ import type { ConsoleLanguage } from './Console/LanguageToggle';
 
 // Import JjEL for expression evaluation
 import { jjelEval } from '../../jjel';
+import { extractAttributeValues } from '../../jjel/evaluator/modelContext';
 
 /**
  * Flatten a Jjodel proxy's properties into a plain object for use as JjEL context.
@@ -673,10 +674,17 @@ Tip: Click the keyboard icon in the toolbar for quick reference.`;
                 // Build implicit context: flatten data properties (including prototype getters)
                 // as top-level variables so users can write `name` instead of `data.name`.
                 // Explicit context keys (data, node, view) override any same-named data properties.
+                // For M1 instances: also extract attribute values from $attrName.value pattern.
                 const dataObj = this._context.data;
-                const jjelContext = (dataObj && typeof dataObj === 'object' && !Array.isArray(dataObj))
-                    ? { ...flattenProxyContext(dataObj), ...this._context }
-                    : this._context;
+                let jjelContext: Record<string, any>;
+                if (dataObj && typeof dataObj === 'object' && !Array.isArray(dataObj)) {
+                    const flattened = flattenProxyContext(dataObj);
+                    // Extract M1 attribute values (overrides flattened props like DObject.name)
+                    extractAttributeValues(dataObj, flattened);
+                    jjelContext = { ...flattened, ...this._context };
+                } else {
+                    jjelContext = this._context;
+                }
                 // jjelEval throws on parse/evaluation errors, returns the value directly on success
                 output = jjelEval(code, jjelContext);
                 console.log('[JjEL DEBUG] 2. jjelEval completed, output type:', typeof output);

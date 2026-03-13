@@ -36,7 +36,7 @@ JjTL is a declarative model-to-model (M2M) transformation language. Its declarat
 |---|---|
 | `transformation` | Declaration |
 | `from`, `to` | Model references |
-| `when` | Guard |
+| `where` | Guard |
 | `helper` | Helper definition |
 | `rule` | Called rule definition (Phase 2) |
 | `lazy`, `unique` | Rule modifiers (Phase 2) |
@@ -57,7 +57,8 @@ Keywords are **case-insensitive** at the lexer level.
 | Token | Symbol | Token | Symbol |
 |---|---|---|---|
 | `ARROW` | `->` | `COLON` | `:` |
-| `EQUALS` | `=` | `DOT` | `.` |
+| `ASSIGN` | `:=` | `EQUALS` | `=` |
+| `DOT` | `.` | `QUESTION_DOT` | `?.` |
 | `COMMA` | `,` | `QUESTION_DOT` | `?.` |
 | `NULL_COALESCE` | `??` | `EQUALS_EQUALS` | `==` |
 | `NOT_EQUALS` | `!=` | `LESS_THAN` | `<` |
@@ -70,12 +71,12 @@ Brackets: `{ }`, `( )`, `[ ]`
 
 ### 2.3 Comments
 
-Line comments start with `#` and extend to end of line.
+Line comments start with `--` and extend to end of line.
 
 ```jjtl
-# This is a comment
-Class -> Table {  # inline comment
-    name -> tableName
+-- This is a comment
+Class -> Table {  -- inline comment
+    tableName := name
 }
 ```
 
@@ -116,16 +117,16 @@ to PetriNet
 ### 3.2 Class Mapping
 
 ```ebnf
-classMapping    = sourceType "->" targetType multiplicity? condition? mappingBody? ;
+classMapping    = sourceSpec ( "," sourceSpec )* "->" targetType multiplicity? condition? mappingBody? ;
 
-sourceType      = qualifiedType ;
+sourceSpec      = qualifiedType ( IDENTIFIER )? ;    -- optional alias
 targetType      = qualifiedType ;
 qualifiedType   = ( IDENTIFIER "." )? IDENTIFIER ;
 
 multiplicity    = "[" bound ( ".." bound )? "]" ;
 bound           = NUMBER | "*" ;
 
-condition       = "when" "{" expression "}" ;
+condition       = "where" expression ;               -- no braces
 
 mappingBody     = "{" mappingBodyItem* "}" ;
 mappingBodyItem = attributeMapping | alertStatement | notifyStatement ;
@@ -137,7 +138,9 @@ mappingBodyItem = attributeMapping | alertStatement | notifyStatement ;
 
 **Source matching:** Exact class name match (string equality on `className` or `__type`). No inheritance-based matching in current implementation.
 
-> **`when` syntax discrepancy:** The parser currently uses `when { expr }` (braces). The development plan specifies `when ( expr )` (parentheses). **Decision needed.** Braces are consistent with mapping body syntax; parentheses are more conventional for guards. The current implementation uses braces.
+**Source alias:** An optional identifier after the source class name binds the source instance to a name usable in the body and the `where` guard.
+
+**Multi-source:** Multiple comma-separated source specs allow joining source elements; the `where` guard typically constrains the join.
 
 **Examples:**
 ```jjtl
@@ -145,33 +148,42 @@ State -> Place { ... }
 
 State -> Place [*] { ... }
 
-State -> Place when { not isFinal } { ... }
+State -> Place where not isFinal { ... }
+
+-- With alias
+Person p -> Human where p.age > 18 {
+    name := p.fullName
+}
+
+-- Multi-source join
+Class c, Package p -> Table where c.package = p {
+    name := p.name + "." + c.name
+}
 ```
 
 ### 3.3 Attribute Mapping
 
 ```ebnf
-attributeMapping = sourceAttr? "->" targetAttr ( ":" conversion )?
+attributeMapping = targetAttr ":=" ( sourceAttr | expression ) ( ":" valueMappingList )?
                  | "->" targetAttr objectCreation ;
 
 sourceAttr       = IDENTIFIER ;
 targetAttr       = IDENTIFIER ;
 
-conversion       = valueMappingList | expression ;
 valueMappingList = valueMapping ( "," valueMapping )* ;
 valueMapping     = literal "=" literal ;
 
 objectCreation   = "{" ( "->" IDENTIFIER objectCreation | mappingBodyItem )* "}" ;
 ```
 
-**Five binding forms:**
+**Binding forms:**
 
 | Form | Syntax | Semantics |
 |---|---|---|
-| Direct | `name -> label` | `target.label = source.name` |
-| Expression | `name -> label : expr` | `target.label = eval(expr)` |
-| Value mapping | `isInitial -> tokens : true=1, false=0` | Lookup table |
-| Computed (no source) | `-> count : expr` | `target.count = eval(expr)` |
+| Direct copy | `label := name` | `target.label = source.name` |
+| Expression | `fullName := name + " " + surname` | `target.fullName = eval(expr)` |
+| Value mapping | `tokens := isInitial : true=1, false=0` | Lookup table |
+| Computed | `count := items.size()` | `target.count = eval(expr)` |
 | Object creation | `-> arcs { -> Arc { ... } }` | Create nested object |
 
 **Property resolution** (4-strategy fallback for reading source values):
@@ -249,7 +261,7 @@ Source Model → [Match] → [Guard] → [Create] → [Bind] → [Trace] → Tar
 4. **Extract source instances** from the source model (keyed by class name)
 5. **For each class mapping** (in declaration order):
    a. Look up all source instances matching the source class name
-   b. For each instance, evaluate the `when` guard; skip if falsy
+   b. For each instance, evaluate the `where` guard; skip if falsy
    c. Create target instance(s) according to multiplicity
    d. Execute attribute mappings (bindings)
    e. Record trace links
@@ -268,7 +280,7 @@ The executor accepts four input formats:
 
 ### 4.3 Guard Evaluation
 
-The `when` expression is evaluated with a per-instance context. Source instance properties are bound as context variables (all non-`__` prefixed properties). The result is coerced to boolean:
+The `where` expression is evaluated with a per-instance context. Source instance properties are bound as context variables (all non-`__` prefixed properties). The result is coerced to boolean:
 - `false`, `null`, `undefined`, `0`, `""` → skip
 - Everything else → proceed
 
@@ -303,7 +315,7 @@ For each `AttributeMappingAST` in the mapping body:
 1. If **object creation**: recursively create nested object and assign
 2. If **conversion with expression**: evaluate via JjEL and assign
 3. If **conversion with value mappings**: evaluate source attribute, look up in mapping table, assign
-4. If **direct mapping** (source -> target): resolve source property value via 4-strategy fallback, assign
+4. If **direct mapping** (`target := source`): resolve source property value via 4-strategy fallback, assign
 5. If **no source attribute** and **no conversion**: assign `null`
 
 Result is written as: `targetInstance[targetAttribute] = fromJjelValue(value)`
@@ -397,7 +409,7 @@ Each binding is classified at runtime:
 
 | Binding form | Invertible? | Inverse expression |
 |---|---|---|
-| Direct `name -> label` | Yes | `label -> name` |
+| Direct `label := name` | Yes | `name := label` |
 | Value mapping (all targets unique) | Yes | Reversed lookup table |
 | Value mapping (duplicate targets) | No | — |
 | `Identifier` expression | Yes | Direct reference |
@@ -594,7 +606,7 @@ interface ExecutionResult {
 | Parser (full grammar) | ✅ | `parser/parser.ts` |
 | AST types | ✅ | `types/ast.ts` |
 | Class mapping execution | ✅ | `executor/executor.ts` |
-| `when` guards | ✅ | `executor/executor.ts` lines 404-470 |
+| `where` guards | ✅ | `executor/executor.ts` lines 404-470 |
 | Direct attribute binding | ✅ | `executor/executor.ts` lines 619-673 |
 | Value mapping conversion | ✅ | `executor/executor.ts` |
 | Expression conversion (via JjEL) | ✅ | `executor/astBridge.ts` |
@@ -628,7 +640,7 @@ interface ExecutionResult {
 | 3 | **Prompt/Input execution** | Wire AST bridge to UIBridge for interactive expressions | High |
 | 4 | **Multiplicity `[*]`** | Define and implement unbounded creation semantics | Medium |
 | 5 | **Reference mapping** | Map reference-typed properties (not just primitives) | High |
-| 6 | **`when` syntax decision** | Decide `{ }` vs `( )` and update parser if needed | Low |
+| 6 | **Source alias** | Parse and bind `Person p -> Human` alias in executor | Medium |
 | 7 | **Multi-model** | `from A, B to C, D` with qualified types | Phase 1 |
 | 8 | **Called rules** | `rule name(params) -> Type { ... }` | Phase 2 |
 | 9 | **Lazy rules** | `lazy` / `unique lazy` keyword | Phase 2 |
@@ -651,29 +663,29 @@ transformation SM2PN
 from StateMachine
 to PetriNet
 
-# Simple 1:1 mapping
+-- Simple 1:1 mapping
 State -> Place {
-    name -> name
-    isInitial -> tokens : true=1, false=0
+    name := name
+    tokens := isInitial : true=1, false=0
 }
 
-# 1:1 mapping with nested object creation
+-- 1:1 mapping with nested object creation
 Transition -> Transition {
-    label -> name
+    name := label
 
-    # Input arc: source state -> this transition
+    -- Input arc: source state -> this transition
     -> inputArcs {
         -> Arc {
-            source -> source       # implicit trace resolution: State → Place
-            -> weight : 1
+            source := source       -- implicit trace resolution: State → Place
+            weight := 1
         }
     }
 
-    # Output arc: this transition -> target state
+    -- Output arc: this transition -> target state
     -> outputArcs {
         -> Arc {
-            target -> target       # implicit trace resolution: State → Place
-            -> weight : 1
+            target := target       -- implicit trace resolution: State → Place
+            weight := 1
         }
     }
 }
@@ -686,15 +698,15 @@ transformation Class2RDBMS
 from ClassDiagram
 to RDBMS
 
-# Only non-abstract, non-primitive classes become tables
-Class -> Table when { not isAbstract and not isPrimitive } {
-    name -> tableName : name.snakeCase()
+-- Only non-abstract, non-primitive classes become tables
+Class -> Table where not isAbstract and not isPrimitive {
+    tableName := name.snakeCase()
 }
 
-# Attributes become columns
+-- Attributes become columns
 Attribute -> Column {
-    name -> columnName : name.snakeCase()
-    type -> columnType : mapType(type)
+    columnName := name.snakeCase()
+    columnType := mapType(type)
 }
 
 helper mapType(umlType: String) -> String {
@@ -713,10 +725,10 @@ from Source
 to Target
 
 Element -> TargetElement {
-    name -> name
+    name := name
 
-    # Ask user for confirmation on ambiguous mappings
-    category -> category : prompt("Category for " + name + "?", source.category)
+    -- Ask user for confirmation on ambiguous mappings
+    category := prompt("Category for " + name + "?", source.category)
 
     alert("Processing element: " + name, "info")
 }

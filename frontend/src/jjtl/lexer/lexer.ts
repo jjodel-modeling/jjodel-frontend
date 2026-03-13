@@ -139,6 +139,8 @@ export class JjtlLexer {
             case '-':
                 if (this.match('>')) {
                     this.addToken(TokenType.ARROW);         // ->
+                } else if (this.match('-')) {
+                    this.comment();                         // -- line comment
                 } else {
                     this.addToken(TokenType.MINUS);         // -
                 }

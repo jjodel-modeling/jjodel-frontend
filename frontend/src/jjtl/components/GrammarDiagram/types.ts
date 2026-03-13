@@ -49,9 +49,9 @@ to   PetriNetMM`,
         id: 'classMapping',
         name: 'Class Mapping',
         description: 'Maps a source class to a target class',
-        ebnf: 'classMapping = ID "->" ID multiplicity? condition? mappingBody?',
+        ebnf: 'classMapping = (ID alias?)+ "->" ID multiplicity? condition? mappingBody?',
         example: `State -> Place {
-    name -> label
+    label := name
 }`,
     },
     {
@@ -65,8 +65,8 @@ to   PetriNetMM`,
         id: 'condition',
         name: 'Condition',
         description: 'Guards when a mapping should be applied',
-        ebnf: 'condition = "when" expression',
-        example: `State -> Place when isInitial { ... }`,
+        ebnf: 'condition = "where" expression',
+        example: `State -> Place where not isAbstract { ... }`,
     },
     {
         id: 'mappingBody',
@@ -74,24 +74,25 @@ to   PetriNetMM`,
         description: 'Contains attribute mappings for a class mapping',
         ebnf: 'mappingBody = "{" attributeMapping* "}"',
         example: `{
-    name -> label
-    isInitial -> tokens : true=1, false=0
+    label := name
+    tokens := isInitial : true=1, false=0
 }`,
     },
     {
         id: 'attributeMapping',
         name: 'Attribute Mapping',
-        description: 'Maps source attribute to target attribute',
-        ebnf: 'attributeMapping = ID "->" ID conversion? | "->" ID objectCreation?',
-        example: `name -> label
-isInitial -> tokens : true=1, false=0`,
+        description: 'Assigns a value to a target attribute',
+        ebnf: 'attributeMapping = ID ":=" expression conversion? | "->" ID objectCreation?',
+        example: `label := name
+tokens := isInitial : true=1, false=0
+fullName := name + " " + surname`,
     },
     {
         id: 'conversion',
         name: 'Conversion',
-        description: 'Converts values during mapping',
-        ebnf: 'conversion = ":" (valueMappings | expression)',
-        example: `isActive -> status : true="ON", false="OFF"`,
+        description: 'Value lookup table for attribute mapping',
+        ebnf: 'conversion = ":" valueMappings',
+        example: `status := isActive : true="ON", false="OFF"`,
     },
     {
         id: 'valueMapping',
@@ -107,7 +108,7 @@ isInitial -> tokens : true=1, false=0`,
         ebnf: 'objectCreation = "{" "->" ID "{" attributeMapping* "}" "}"',
         example: `-> metadata {
     -> Info {
-        value -> content
+        content := value
     }
 }`,
     },
@@ -179,14 +180,14 @@ notify("Done!", 3000)`,
         name: 'Prompt Expression',
         description: 'Asks user for text input, returns String',
         ebnf: '"prompt" "(" expression ("," expression)? ")"',
-        example: `-> prefix : prompt("Table prefix:", "tbl_")`,
+        example: `prefix := prompt("Table prefix:", "tbl_")`,
     },
     {
         id: 'inputExpression',
         name: 'Input Expression',
         description: 'Asks user for typed input (number, boolean, date, select)',
         ebnf: '"input" "(" expression "," inputType ("," defaultValue)? ")"',
-        example: `-> count : input("How many?", "number", 10)`,
+        example: `count := input("How many?", "number", 10)`,
     },
     {
         id: 'alertType',

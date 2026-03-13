@@ -1,0 +1,285 @@
+// Megamodel Modal
+// ===============
+
+// ─── Overlay & Shell ──────────────────────────────────────────────────────────
+
+.megamodel-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+    z-index: 10001;
+    display: flex;
+    flex-direction: column;
+    animation: mmFadeIn 0.15s ease;
+}
+
+.megamodel-modal {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    background: #0f172a;
+
+    &__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 16px;
+        background: #1e293b;
+        border-bottom: 1px solid #334155;
+        flex-shrink: 0;
+        gap: 16px;
+        min-height: 48px;
+    }
+
+    &__title {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #e2e8f0;
+        flex-shrink: 0;
+
+        i {
+            color: #0ea5e9;
+            font-size: 14px;
+        }
+    }
+
+    &__controls {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex: 1;
+        justify-content: flex-end;
+        overflow: hidden;
+    }
+
+    &__body {
+        flex: 1;
+        overflow: hidden;
+        position: relative;
+    }
+
+    &__close {
+        width: 28px;
+        height: 28px;
+        border: none;
+        background: transparent;
+        color: #64748b;
+        cursor: pointer;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        flex-shrink: 0;
+        transition: background 0.15s, color 0.15s;
+
+        &:hover {
+            background: #334155;
+            color: #e2e8f0;
+        }
+    }
+}
+
+// ─── Legend ───────────────────────────────────────────────────────────────────
+
+.mm-legend {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    overflow: hidden;
+
+    &__section {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    &__divider {
+        width: 1px;
+        height: 16px;
+        background: #334155;
+        flex-shrink: 0;
+    }
+
+    &__item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 10px;
+        color: #94a3b8;
+        white-space: nowrap;
+    }
+
+    &__node {
+        display: inline-block;
+        width: 14px;
+        height: 8px;
+        border-radius: 2px;
+        border: 1px solid;
+        flex-shrink: 0;
+
+        &--metamodel     { border-color: #0ea5e9; background: rgba(14, 165, 233, 0.1); }
+        &--model         { border-color: #475569; background: rgba(51, 65, 85, 0.35); }
+        &--transformation { border-color: #64748b; background: rgba(100, 116, 139, 0.15); border-radius: 3px; }
+    }
+}
+
+// ─── Graph container ──────────────────────────────────────────────────────────
+
+.mm-graph-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    background: #0f172a;
+}
+
+.mm-graph-svg {
+    display: block;
+
+    .mm-node {
+        cursor: pointer;
+    }
+}
+
+// ─── Empty state ──────────────────────────────────────────────────────────────
+
+.mm-empty-state {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+
+    &__icon {
+        font-size: 52px;
+        color: #1e293b;
+    }
+
+    &__title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #475569;
+    }
+
+    &__subtitle {
+        font-size: 13px;
+        color: #334155;
+        max-width: 380px;
+        text-align: center;
+        line-height: 1.6;
+    }
+}
+
+// ─── Loading state ────────────────────────────────────────────────────────────
+
+.mm-loading-state {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+
+    &__icon {
+        font-size: 32px;
+        color: #334155;
+        animation: mmSpin 1.2s linear infinite;
+    }
+
+    &__text {
+        font-size: 13px;
+        color: #475569;
+    }
+}
+
+// ─── Tooltip ──────────────────────────────────────────────────────────────────
+
+.mm-tooltip {
+    position: fixed;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    padding: 8px 10px;
+    pointer-events: none;
+    z-index: 10200;
+    min-width: 130px;
+    max-width: 220px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+
+    &__type {
+        font-size: 12px;
+        font-weight: 600;
+        color: #e2e8f0;
+        margin-bottom: 3px;
+    }
+
+    &__origin {
+        font-size: 10px;
+        color: #64748b;
+    }
+
+    &__trigger {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 10px;
+        color: #0ea5e9;
+        margin-top: 5px;
+
+        i { font-size: 10px; }
+    }
+
+    &__label {
+        font-size: 10px;
+        color: #94a3b8;
+        margin-top: 3px;
+        font-style: italic;
+    }
+}
+
+// ─── Megamodel button (in ProjectEditor header) ───────────────────────────────
+
+.megamodel-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 11px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #94a3b8;
+    background: transparent;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+
+    i { font-size: 13px; }
+
+    &:hover {
+        color: #e2e8f0;
+        border-color: #475569;
+        background: #1e293b;
+    }
+}
+
+// ─── Animations ───────────────────────────────────────────────────────────────
+
+@keyframes mmFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes mmSpin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}

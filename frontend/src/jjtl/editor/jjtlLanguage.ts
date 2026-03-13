@@ -12,6 +12,8 @@ export const jjtlLanguageDefinition: monaco.languages.IMonarchLanguage = {
 
     keywords: [
         'transformation', 'from', 'to', 'where', 'helper',
+        'forall', 'in', 'such', 'that', 'exists', 'implies', 'with', 'do', 'is',
+        'not', 'and', 'or',
         'if', 'then', 'else', 'true', 'false', 'null',
     ],
 
@@ -32,18 +34,18 @@ export const jjtlLanguageDefinition: monaco.languages.IMonarchLanguage = {
     ],
 
     operators: [
-        '->', ':', '=', '.', ',', '+', '-', '*', '/', '==', '!=', '<', '>', '<=', '>=',
+        '->', ':=', ':', '=', '.', ',', '+', '-', '*', '/', '==', '!=', '<', '>', '<=', '>=', '=>', '?.', '??',
     ],
 
     symbols: /[=><!~?:&|+\-*\/\^%]+/,
 
     tokenizer: {
         root: [
-            // Comments
-            [/#.*$/, 'comment'],
+            // Comments (-- line comments)
+            [/--.*$/, 'comment'],
 
             // Keywords
-            [/\b(transformation|from|to|where|helper|if|then|else)\b/, 'keyword'],
+            [/\b(transformation|from|to|where|helper|forall|in|such|that|exists|implies|with|do|is|not|and|or|if|then|else)\b/, 'keyword'],
 
             // Interactive keywords - distinct purple color
             [/\b(alert|notify)\b/, 'keyword.interactive.statement'],
@@ -67,14 +69,23 @@ export const jjtlLanguageDefinition: monaco.languages.IMonarchLanguage = {
             [/"(string|number|boolean|date|select)"/, 'string.inputtype'],
             [/"([^"\\]|\\.)*"/, 'string'],
 
-            // Arrow
+            // Assignment operator :=
+            [/:=/, 'operator.assignment'],
+
+            // Arrow operators
             [/->/, 'operator.arrow'],
+            [/=>/, 'operator.lambda'],
+
+            // Null-safe and null-coalesce
+            [/\?\./, 'operator'],
+            [/\?\?/, 'operator'],
 
             // Operators
             [/[{}()\[\]]/, '@brackets'],
             [/:/, 'delimiter'],
             [/,/, 'delimiter'],
             [/\./, 'delimiter'],
+            [/==|!=|<=|>=/, 'operator'],
             [/=/, 'operator'],
 
             // Whitespace
@@ -85,7 +96,7 @@ export const jjtlLanguageDefinition: monaco.languages.IMonarchLanguage = {
 
 export const jjtlLanguageConfiguration: monaco.languages.LanguageConfiguration = {
     comments: {
-        lineComment: '#',
+        lineComment: '--',
     },
     brackets: [
         ['{', '}'],

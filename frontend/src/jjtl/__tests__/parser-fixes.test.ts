@@ -1,3 +1,4 @@
+import { describe, it, test, expect } from 'vitest';
 /**
  * Parser Fixes Tests
  *
@@ -220,6 +221,67 @@ describe('JjTL Parser Fixes', () => {
             const attrMapping = getFirstAttrMapping(source);
             expect(attrMapping.valueMapping).toBeDefined();
             expect(attrMapping.valueMapping!.length).toBe(2);
+        });
+    });
+
+    describe('Comparison operators in := expressions', () => {
+        it('parses long := surname.length > 8', () => {
+            const source = `${HEADER}A -> B {\n  long := surname.length > 8\n}`;
+            const attrMapping = getFirstAttrMapping(source);
+            expect(attrMapping.expression).toBeDefined();
+            expect(attrMapping.valueMapping).toBeUndefined();
+            const expr = attrMapping.expression as BinaryExpressionAST;
+            expect(expr.type).toBe('BinaryExpression');
+            expect(expr.operator).toBe('>');
+        });
+
+        it('parses flag := count < 10', () => {
+            const source = `${HEADER}A -> B {\n  flag := count < 10\n}`;
+            const attrMapping = getFirstAttrMapping(source);
+            expect(attrMapping.expression).toBeDefined();
+            const expr = attrMapping.expression as BinaryExpressionAST;
+            expect(expr.type).toBe('BinaryExpression');
+            expect(expr.operator).toBe('<');
+        });
+
+        it('parses adult := age >= 18', () => {
+            const source = `${HEADER}A -> B {\n  adult := age >= 18\n}`;
+            const attrMapping = getFirstAttrMapping(source);
+            expect(attrMapping.expression).toBeDefined();
+            const expr = attrMapping.expression as BinaryExpressionAST;
+            expect(expr.type).toBe('BinaryExpression');
+            expect(expr.operator).toBe('>=');
+        });
+
+        it('parses multiple mappings where second uses >', () => {
+            const source = `${HEADER}A -> B {\n  label := name\n  long := surname.length > 8\n}`;
+            const ast = parseTransformation(source);
+            expect(ast).not.toBeNull();
+            const body = ast!.mappings[0].body;
+            expect(body.length).toBe(2);
+            const second = body[1] as AttributeMappingAST;
+            expect(second.expression).toBeDefined();
+            const expr = second.expression as BinaryExpressionAST;
+            expect(expr.type).toBe('BinaryExpression');
+            expect(expr.operator).toBe('>');
+        });
+
+        it('parses where clause with > condition', () => {
+            const source = `${HEADER}A -> B where name.length > 3 {\n  label := name\n}`;
+            const ast = parseTransformation(source);
+            expect(ast).not.toBeNull();
+            expect(ast!.mappings[0].condition).toBeDefined();
+        });
+    });
+
+    describe('Comments (-- line comments)', () => {
+        it('parses transformation with -- comment lines', () => {
+            const source = `${HEADER}A -> B {\n  -- this is a comment\n  label := name\n}`;
+            const ast = parseTransformation(source);
+            expect(ast).not.toBeNull();
+            const body = ast!.mappings[0].body;
+            expect(body.length).toBe(1);
+            expect((body[0] as AttributeMappingAST).targetAttribute).toBe('label');
         });
     });
 
