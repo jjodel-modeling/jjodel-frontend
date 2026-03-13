@@ -68,7 +68,8 @@ jobs:
         with:
           app-name: 'test-jjodel'
           slot-name: 'staging'
-          package: frontend/build/
+          package: frontend/dist/
 
           
+
 
