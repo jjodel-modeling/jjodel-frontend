@@ -313,6 +313,7 @@ export class U {
     };
 
     static publish(topic: string, value: unknown) {
+        if (!IoT.client) IoT.init();
         if(!IoT.client.connected) {
             SetRootFieldAction.new('alert', '3:Cannot connect to broker!:','');
             return;
