@@ -14,7 +14,6 @@ import {COMMIT} from "../../redux/action/action";
 (window as any).io = io;
 
 const ignoredRootFields: (keyof DState)[] = [
-    'env',
     'debug',
     'logs',
     'isEdgePending',

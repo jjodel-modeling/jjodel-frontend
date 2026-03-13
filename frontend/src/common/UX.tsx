@@ -118,9 +118,10 @@ export class UX{
         if (!re) return e;
         // @ts-ignore this
         // const parentComponent = this;
-        let type = (re.type as any).WrappedComponent?.name || re.type;
+        let type = (re.type as any).WrappedComponent?.cname || re.type;
         if (type && (typeof type == "object" || typeof type == "function")) type = (type as any).cname;
         if (type && type[type.length - 1] === '2') type = type.substring(0, type.length - 1); // vite is adding a "2" at the end of all my classes?
+        console.log("inject props type", {type, re, retype:re.type, rtn: (re.type as any).WrappedComponent?.name});
 
         let injectProps: GraphElementOwnProps = {} as any;
         /* if (false && injectOffset) {

@@ -1933,12 +1933,6 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         return !!(val as any).__isProxy;
     }
 
-
-    private test(){
-        let a: LPointerTargetable = null as any as LEnumLiteral;
-        let c: LPointerTargetable = null as any as LParameter;
-        let b: LPointerTargetable = null as any as LVertex;
-    }
     // public r!: this;
 
     private __info_of__id = {type:"Pointer&lt;this&gt;",
