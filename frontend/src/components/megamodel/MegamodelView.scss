@@ -1,95 +1,152 @@
-// MegamodelView — Interactive diagram styles
-// ============================================
+// MegamodelView — Interactive diagram styles (overlay modal)
+// ===========================================================
 
-// ─── View shell ──────────────────────────────────────────────────────────────
+// ─── Theme variables (light default) ────────────────────────────────────────
 
 .mm-view {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    height: 100%;
-    background: #0f172a;
+    // Canvas
+    --mm-canvas-bg: #f8fafc;
+    --mm-canvas-dots: rgba(0, 0, 0, 0.06);
+
+    // Header / footer surfaces
+    --mm-surface-bg: #ffffff;
+    --mm-surface-border: #e2e8f0;
+
+    // Node card
+    --mm-node-bg: #ffffff;
+    --mm-node-border: #e2e8f0;
+    --mm-node-border-hover: #cbd5e1;
+    --mm-node-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    --mm-node-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.1);
+    --mm-node-text: #1e293b;
+    --mm-node-subtitle: #64748b;
+
+    // Edge labels
+    --mm-edge-label-bg: #ffffff;
+    --mm-edge-label-text: #64748b;
+    --mm-edge-label-border: #e2e8f0;
+
+    // Controls & legend
+    --mm-control-color: #94a3b8;
+    --mm-control-hover-bg: rgba(0, 0, 0, 0.06);
+    --mm-control-hover-color: #1e293b;
+    --mm-legend-divider: #e2e8f0;
+    --mm-legend-text: #64748b;
+
+    // Empty / loading states
+    --mm-empty-icon: #cbd5e1;
+    --mm-empty-title: #475569;
+    --mm-empty-subtitle: #94a3b8;
+}
+
+// ─── Overlay (backdrop) ─────────────────────────────────────────────────────
+
+.mm-view {
     position: fixed;
     inset: 0;
     z-index: 10001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
     animation: mmViewFadeIn 0.15s ease;
+}
 
-    &__header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 10px 16px;
-        background: #1e293b;
-        border-bottom: 1px solid #334155;
-        flex-shrink: 0;
-        gap: 16px;
-        min-height: 48px;
-    }
+// ─── Modal container ────────────────────────────────────────────────────────
 
-    &__title {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 13px;
-        font-weight: 600;
-        color: #e2e8f0;
-        flex-shrink: 0;
+.mm-view__modal {
+    display: flex;
+    flex-direction: column;
+    width: 92vw;
+    height: 88vh;
+    max-width: 1600px;
+    background: var(--mm-canvas-bg);
+    border-radius: 12px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+    animation: mmViewSlideUp 0.2s ease-out;
+}
 
-        i {
-            color: #0ea5e9;
-            font-size: 14px;
-        }
-    }
+// ─── Header ─────────────────────────────────────────────────────────────────
 
-    &__controls {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        flex: 1;
-        justify-content: flex-end;
-        overflow: hidden;
-    }
+.mm-view__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: var(--mm-surface-bg);
+    border-bottom: 1px solid var(--mm-surface-border);
+    flex-shrink: 0;
+    gap: 16px;
+    min-height: 48px;
+}
 
-    &__btn {
-        width: 28px;
-        height: 28px;
-        border: none;
-        background: transparent;
-        color: #64748b;
-        cursor: pointer;
-        border-radius: 6px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 13px;
-        flex-shrink: 0;
-        transition: background 0.15s, color 0.15s;
+.mm-view__title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--mm-node-text);
+    flex-shrink: 0;
 
-        &:hover {
-            background: #334155;
-            color: #e2e8f0;
-        }
-    }
-
-    &__close {
-        @extend .mm-view__btn;
+    i {
+        color: #0ea5e9;
         font-size: 14px;
-    }
-
-    &__body {
-        flex: 1;
-        overflow: hidden;
-        position: relative;
-        background: #0f172a;
-        cursor: grab;
-
-        &:active {
-            cursor: grabbing;
-        }
     }
 }
 
-// ─── Canvas layers ───────────────────────────────────────────────────────────
+.mm-view__controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    justify-content: flex-end;
+    overflow: hidden;
+}
+
+.mm-view__btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: var(--mm-control-color);
+    cursor: pointer;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+    transition: background 0.15s, color 0.15s;
+
+    &:hover {
+        background: var(--mm-control-hover-bg);
+        color: var(--mm-control-hover-color);
+    }
+}
+
+.mm-view__close {
+    @extend .mm-view__btn;
+    font-size: 14px;
+}
+
+// ─── Canvas body ────────────────────────────────────────────────────────────
+
+.mm-view__body {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    background: var(--mm-canvas-bg);
+    cursor: grab;
+
+    &:active {
+        cursor: grabbing;
+    }
+}
+
+// ─── Canvas layers ──────────────────────────────────────────────────────────
 
 .mm-canvas {
     position: absolute;
@@ -107,7 +164,7 @@
     }
 }
 
-// ─── Node card ───────────────────────────────────────────────────────────────
+// ─── Node card ──────────────────────────────────────────────────────────────
 
 .megamodel-node {
     position: absolute;
@@ -117,16 +174,17 @@
     align-items: center;
     gap: 10px;
     padding: 0 12px;
-    background: #1e293b;
-    border: 1px solid #334155;
+    background: var(--mm-node-bg);
+    border: 1px solid var(--mm-node-border);
     border-radius: 8px;
+    box-shadow: var(--mm-node-shadow);
     cursor: grab;
     user-select: none;
     transition: border-color 0.15s, box-shadow 0.15s;
 
     &:hover {
-        border-color: #475569;
-        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+        border-color: var(--mm-node-border-hover);
+        box-shadow: var(--mm-node-shadow-hover);
     }
 
     &:active {
@@ -134,7 +192,7 @@
     }
 }
 
-// ─── Badge ───────────────────────────────────────────────────────────────────
+// ─── Badge ──────────────────────────────────────────────────────────────────
 
 .mm-badge {
     width: 28px;
@@ -176,7 +234,7 @@
     }
 }
 
-// ─── Node info ───────────────────────────────────────────────────────────────
+// ─── Node info ──────────────────────────────────────────────────────────────
 
 .mm-node-info {
     flex: 1;
@@ -189,7 +247,7 @@
 .mm-node-name {
     font-size: 12px;
     font-weight: 600;
-    color: #e2e8f0;
+    color: var(--mm-node-text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -197,13 +255,13 @@
 
 .mm-node-type {
     font-size: 10px;
-    color: #64748b;
+    color: var(--mm-node-subtitle);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-// ─── Legend (reused from megamodel-modal, extended) ───────────────────────────
+// ─── Legend ─────────────────────────────────────────────────────────────────
 
 .mm-view .mm-legend {
     display: flex;
@@ -222,7 +280,7 @@
     &__divider {
         width: 1px;
         height: 16px;
-        background: #334155;
+        background: var(--mm-legend-divider);
         flex-shrink: 0;
     }
 
@@ -231,12 +289,12 @@
         align-items: center;
         gap: 4px;
         font-size: 10px;
-        color: #94a3b8;
+        color: var(--mm-legend-text);
         white-space: nowrap;
     }
 }
 
-// ─── Empty state ─────────────────────────────────────────────────────────────
+// ─── Empty state ────────────────────────────────────────────────────────────
 
 .mm-view .mm-empty-state {
     width: 100%;
@@ -249,25 +307,25 @@
 
     &__icon {
         font-size: 52px;
-        color: #1e293b;
+        color: var(--mm-empty-icon);
     }
 
     &__title {
         font-size: 16px;
         font-weight: 600;
-        color: #475569;
+        color: var(--mm-empty-title);
     }
 
     &__subtitle {
         font-size: 13px;
-        color: #334155;
+        color: var(--mm-empty-subtitle);
         max-width: 380px;
         text-align: center;
         line-height: 1.6;
     }
 }
 
-// ─── Loading state ───────────────────────────────────────────────────────────
+// ─── Loading state ──────────────────────────────────────────────────────────
 
 .mm-view .mm-loading-state {
     width: 100%;
@@ -280,21 +338,26 @@
 
     &__icon {
         font-size: 32px;
-        color: #334155;
+        color: var(--mm-empty-icon);
         animation: mmViewSpin 1.2s linear infinite;
     }
 
     &__text {
         font-size: 13px;
-        color: #475569;
+        color: var(--mm-empty-subtitle);
     }
 }
 
-// ─── Animations ──────────────────────────────────────────────────────────────
+// ─── Animations ─────────────────────────────────────────────────────────────
 
 @keyframes mmViewFadeIn {
     from { opacity: 0; }
     to   { opacity: 1; }
+}
+
+@keyframes mmViewSlideUp {
+    from { opacity: 0; transform: translateY(12px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @keyframes mmViewSpin {

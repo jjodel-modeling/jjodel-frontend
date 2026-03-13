@@ -384,25 +384,84 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({ megamodel, viewpoints, on
         return () => document.removeEventListener('keydown', handleKey);
     }, [onClose]);
 
+    // ── Backdrop click ────────────────────────────────────────────────────────
+    const handleBackdropClick = useCallback((e: React.MouseEvent) => {
+        if (e.target === e.currentTarget) onClose();
+    }, [onClose]);
+
+    // ── Shared header ──────────────────────────────────────────────────────────
+    const header = (
+        <div className="mm-view__header">
+            <div className="mm-view__title">
+                <i className="bi bi-diagram-3" />
+                Megamodel
+            </div>
+            <div className="mm-view__controls">
+                {layoutReady && nodes.length > 0 && (
+                    <>
+                        {/* Legend */}
+                        <div className="mm-legend">
+                            <div className="mm-legend__section">
+                                <div className="mm-legend__item">
+                                    <span className="mm-badge mm-badge--metamodel mm-badge--legend">M</span>
+                                    <span>Metamodel</span>
+                                </div>
+                                <div className="mm-legend__item">
+                                    <span className="mm-badge mm-badge--model mm-badge--legend">m</span>
+                                    <span>Model</span>
+                                </div>
+                                <div className="mm-legend__item">
+                                    <span className="mm-badge mm-badge--transformation mm-badge--legend">⇌</span>
+                                    <span>Transformation</span>
+                                </div>
+                                <div className="mm-legend__item">
+                                    <span className="mm-badge mm-badge--viewpoint mm-badge--legend">V</span>
+                                    <span>Viewpoint</span>
+                                </div>
+                            </div>
+                            <div className="mm-legend__divider" />
+                            <div className="mm-legend__section">
+                                {Object.entries(EDGE_STYLES).map(([key, s]) => (
+                                    <div key={key} className="mm-legend__item">
+                                        <svg width="18" height="8" style={{ flexShrink: 0 }}>
+                                            <line
+                                                x1="0" y1="4" x2="18" y2="4"
+                                                stroke={s.color}
+                                                strokeWidth={s.strokeWidth}
+                                                strokeDasharray={s.dasharray}
+                                            />
+                                        </svg>
+                                        <span>{s.label}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <button className="mm-view__btn" onClick={handleFitView} title="Fit to view">
+                            <i className="bi bi-arrows-fullscreen" />
+                        </button>
+                    </>
+                )}
+                <button className="mm-view__close" onClick={onClose} title="Close (Esc)">
+                    <i className="bi bi-x-lg" />
+                </button>
+            </div>
+        </div>
+    );
+
     // ── Empty state ───────────────────────────────────────────────────────────
     if (layoutReady && nodes.length === 0) {
         return (
-            <div className="mm-view">
-                <div className="mm-view__header">
-                    <div className="mm-view__title">
-                        <i className="bi bi-diagram-3" />
-                        Megamodel
-                    </div>
-                    <button className="mm-view__close" onClick={onClose} title="Close (Esc)">
-                        <i className="bi bi-x-lg" />
-                    </button>
-                </div>
-                <div className="mm-view__body">
-                    <div className="mm-empty-state">
-                        <i className="bi bi-diagram-3 mm-empty-state__icon" />
-                        <div className="mm-empty-state__title">No artifacts yet</div>
-                        <div className="mm-empty-state__subtitle">
-                            Add metamodels, models, and transformations to see their relationships here.
+            <div className="mm-view" onClick={handleBackdropClick}>
+                <div className="mm-view__modal">
+                    {header}
+                    <div className="mm-view__body">
+                        <div className="mm-empty-state">
+                            <i className="bi bi-diagram-3 mm-empty-state__icon" />
+                            <div className="mm-empty-state__title">No artifacts yet</div>
+                            <div className="mm-empty-state__subtitle">
+                                Add metamodels, models, and transformations to see their relationships here.
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -411,164 +470,116 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({ megamodel, viewpoints, on
     }
 
     return (
-        <div className="mm-view">
-            {/* Header */}
-            <div className="mm-view__header">
-                <div className="mm-view__title">
-                    <i className="bi bi-diagram-3" />
-                    Megamodel
-                </div>
-                <div className="mm-view__controls">
-                    {/* Legend */}
-                    <div className="mm-legend">
-                        <div className="mm-legend__section">
-                            <div className="mm-legend__item">
-                                <span className="mm-badge mm-badge--metamodel mm-badge--legend">M</span>
-                                <span>Metamodel</span>
-                            </div>
-                            <div className="mm-legend__item">
-                                <span className="mm-badge mm-badge--model mm-badge--legend">m</span>
-                                <span>Model</span>
-                            </div>
-                            <div className="mm-legend__item">
-                                <span className="mm-badge mm-badge--transformation mm-badge--legend">⇌</span>
-                                <span>Transformation</span>
-                            </div>
-                            <div className="mm-legend__item">
-                                <span className="mm-badge mm-badge--viewpoint mm-badge--legend">V</span>
-                                <span>Viewpoint</span>
-                            </div>
+        <div className="mm-view" onClick={handleBackdropClick}>
+            <div className="mm-view__modal">
+                {header}
+
+                {/* Canvas */}
+                <div
+                    ref={containerRef}
+                    className="mm-view__body"
+                    onMouseDown={handleCanvasMouseDown}
+                    onMouseMove={handleMouseMove}
+                    onMouseUp={handleMouseUp}
+                    onMouseLeave={handleMouseUp}
+                    onWheel={handleWheel}
+                >
+                    {!layoutReady && (
+                        <div className="mm-loading-state">
+                            <i className="bi bi-hourglass-split mm-loading-state__icon" />
+                            <div className="mm-loading-state__text">Computing layout…</div>
                         </div>
-                        <div className="mm-legend__divider" />
-                        <div className="mm-legend__section">
-                            {Object.entries(EDGE_STYLES).map(([key, s]) => (
-                                <div key={key} className="mm-legend__item">
-                                    <svg width="18" height="8" style={{ flexShrink: 0 }}>
-                                        <line
-                                            x1="0" y1="4" x2="18" y2="4"
-                                            stroke={s.color}
-                                            strokeWidth={s.strokeWidth}
-                                            strokeDasharray={s.dasharray}
-                                        />
-                                    </svg>
-                                    <span>{s.label}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                    )}
 
-                    <button className="mm-view__btn" onClick={handleFitView} title="Fit to view">
-                        <i className="bi bi-arrows-fullscreen" />
-                    </button>
-                    <button className="mm-view__close" onClick={onClose} title="Close (Esc)">
-                        <i className="bi bi-x-lg" />
-                    </button>
-                </div>
-            </div>
-
-            {/* Canvas */}
-            <div
-                ref={containerRef}
-                className="mm-view__body"
-                onMouseDown={handleCanvasMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseUp}
-                onWheel={handleWheel}
-            >
-                {!layoutReady && (
-                    <div className="mm-loading-state">
-                        <i className="bi bi-hourglass-split mm-loading-state__icon" />
-                        <div className="mm-loading-state__text">Computing layout…</div>
-                    </div>
-                )}
-
-                {layoutReady && (
-                    <>
-                        {/* SVG layer for edges */}
-                        <svg className="mm-canvas mm-canvas--svg" style={{ pointerEvents: 'none' }}>
-                            <defs>
-                                {markerColors.map(color => (
-                                    <marker
-                                        key={color}
-                                        id={`mm-arr-${color.replace('#', '')}`}
-                                        markerWidth="10"
-                                        markerHeight="10"
-                                        refX="9"
-                                        refY="3.5"
-                                        orient="auto"
-                                    >
-                                        <path
-                                            d="M0,0 L9,3.5 L0,7"
-                                            fill="none"
-                                            stroke={color}
-                                            strokeWidth="1.5"
-                                            strokeLinejoin="round"
-                                        />
-                                    </marker>
-                                ))}
-                            </defs>
-                            <g transform={`translate(${pan.x * zoom},${pan.y * zoom}) scale(${zoom})`}>
-                                {edgePaths.map(({ edge, path, mid }) => (
-                                    <g key={edge.id}>
-                                        <path
-                                            d={path}
-                                            fill="none"
-                                            stroke={edge.style.color}
-                                            strokeWidth={edge.style.strokeWidth}
-                                            strokeDasharray={edge.style.dasharray}
-                                            markerEnd={`url(#mm-arr-${edge.style.color.replace('#', '')})`}
-                                            style={{ pointerEvents: 'none' }}
-                                        />
-                                        {/* Label */}
-                                        <g transform={`translate(${mid.x},${mid.y})`}>
-                                            <rect
-                                                x={-(edge.label.length * 3.2 + 6)}
-                                                y={-8}
-                                                width={edge.label.length * 6.4 + 12}
-                                                height={16}
-                                                rx={3}
-                                                fill="#f1f5f9"
+                    {layoutReady && (
+                        <>
+                            {/* SVG layer for edges */}
+                            <svg className="mm-canvas mm-canvas--svg" style={{ pointerEvents: 'none' }}>
+                                <defs>
+                                    {markerColors.map(color => (
+                                        <marker
+                                            key={color}
+                                            id={`mm-arr-${color.replace('#', '')}`}
+                                            markerWidth="10"
+                                            markerHeight="10"
+                                            refX="9"
+                                            refY="3.5"
+                                            orient="auto"
+                                        >
+                                            <path
+                                                d="M0,0 L9,3.5 L0,7"
+                                                fill="none"
+                                                stroke={color}
+                                                strokeWidth="1.5"
+                                                strokeLinejoin="round"
                                             />
-                                            <text
-                                                textAnchor="middle"
-                                                dominantBaseline="central"
-                                                fontSize={10}
-                                                fill="#64748b"
+                                        </marker>
+                                    ))}
+                                </defs>
+                                <g transform={`translate(${pan.x * zoom},${pan.y * zoom}) scale(${zoom})`}>
+                                    {edgePaths.map(({ edge, path, mid }) => (
+                                        <g key={edge.id}>
+                                            <path
+                                                d={path}
+                                                fill="none"
+                                                stroke={edge.style.color}
+                                                strokeWidth={edge.style.strokeWidth}
+                                                strokeDasharray={edge.style.dasharray}
+                                                markerEnd={`url(#mm-arr-${edge.style.color.replace('#', '')})`}
                                                 style={{ pointerEvents: 'none' }}
-                                            >
-                                                {edge.label}
-                                            </text>
+                                            />
+                                            {/* Label */}
+                                            <g transform={`translate(${mid.x},${mid.y})`}>
+                                                <rect
+                                                    x={-(edge.label.length * 3.2 + 6)}
+                                                    y={-8}
+                                                    width={edge.label.length * 6.4 + 12}
+                                                    height={16}
+                                                    rx={3}
+                                                    fill="#ffffff"
+                                                    stroke="#e2e8f0"
+                                                    strokeWidth={0.5}
+                                                />
+                                                <text
+                                                    textAnchor="middle"
+                                                    dominantBaseline="central"
+                                                    fontSize={10}
+                                                    fill="#64748b"
+                                                    style={{ pointerEvents: 'none' }}
+                                                >
+                                                    {edge.label}
+                                                </text>
+                                            </g>
                                         </g>
-                                    </g>
-                                ))}
-                            </g>
-                        </svg>
+                                    ))}
+                                </g>
+                            </svg>
 
-                        {/* HTML layer for nodes */}
-                        <div
-                            className="mm-canvas mm-canvas--nodes"
-                            style={{
-                                transform: `translate(${pan.x * zoom}px,${pan.y * zoom}px) scale(${zoom})`,
-                                transformOrigin: '0 0',
-                            }}
-                        >
-                            {nodes.map(node => (
-                                <MegamodelNode
-                                    key={node.id}
-                                    id={node.id}
-                                    kind={node.kind}
-                                    badgeLabel={node.badgeLabel}
-                                    name={node.name}
-                                    typeLabel={node.typeLabel}
-                                    x={node.x}
-                                    y={node.y}
-                                    onMouseDown={handleNodeMouseDown}
-                                />
-                            ))}
-                        </div>
-                    </>
-                )}
+                            {/* HTML layer for nodes */}
+                            <div
+                                className="mm-canvas mm-canvas--nodes"
+                                style={{
+                                    transform: `translate(${pan.x * zoom}px,${pan.y * zoom}px) scale(${zoom})`,
+                                    transformOrigin: '0 0',
+                                }}
+                            >
+                                {nodes.map(node => (
+                                    <MegamodelNode
+                                        key={node.id}
+                                        id={node.id}
+                                        kind={node.kind}
+                                        badgeLabel={node.badgeLabel}
+                                        name={node.name}
+                                        typeLabel={node.typeLabel}
+                                        x={node.x}
+                                        y={node.y}
+                                        onMouseDown={handleNodeMouseDown}
+                                    />
+                                ))}
+                            </div>
+                        </>
+                    )}
+                </div>
             </div>
         </div>
     );
