@@ -18,7 +18,6 @@ export type Response = {code: number, data: Json|null};
 @RuntimeAccessible('Api')
 export class Api {
     public static cname: string = 'Api';
-    public static persistance = `${U.env('JODEL_PERSISTANCE')}`;
     private static token: string | null = null;
     private static _refreshToken: string | null = null;
     private static refreshTokenTimer: number = -1;
