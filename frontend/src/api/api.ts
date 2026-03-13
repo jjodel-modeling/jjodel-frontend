@@ -106,7 +106,7 @@ export class Api {
             if (isRefreshToken || allowAnonymous || Api.checkToken()) {
                 console.log('post api call:', {obj, swap:Api.swapToGUID(obj)});
                 const response = await Axios.post(path, Api.swapToGUID(obj), isRefreshToken ? undefined : {headers: this.headers()});
-                console.log('Api response', {path, r:response});
+                console.trace('Api response', {path, r:response});
                 return {code: response.status, data: Api.swapToJodelID(response.data)};
             }
             return {code: 401, data: 'Login session expired.' as any};
