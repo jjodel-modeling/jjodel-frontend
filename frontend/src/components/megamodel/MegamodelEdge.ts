@@ -7,8 +7,8 @@
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-export const NODE_W = 188;
-export const NODE_H = 58;
+export const NODE_W = 220;
+export const NODE_H = 130;
 const CORNER_R = 4;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -22,6 +22,22 @@ export interface Point {
 
 export type MmNodeKind = 'metamodel' | 'model' | 'transformation' | 'viewpoint';
 
+export interface MmNodeStats {
+    classCount?: number;
+    referenceCount?: number;
+    attributeCount?: number;
+    objectCount?: number;
+    linkCount?: number;
+    ruleCount?: number;
+    mappingCount?: number;
+    completionPercent?: number;
+}
+
+export interface MmNodeStatus {
+    type: 'valid' | 'warning' | 'info';
+    label: string;
+}
+
 export interface MmNode {
     id: string;
     kind: MmNodeKind;
@@ -30,6 +46,9 @@ export interface MmNode {
     typeLabel: string;
     x: number;
     y: number;
+    stats: MmNodeStats;
+    status: MmNodeStatus;
+    previewBars: number[];
 }
 
 export type MmEdgeType = 'conformsTo' | 'inputOf' | 'outputOf' | 'definedOn' | 'renderedBy';
@@ -38,6 +57,7 @@ export interface MmEdgeStyle {
     color: string;
     dasharray?: string;
     strokeWidth: number;
+    opacity?: number;
 }
 
 export interface MmEdge {
@@ -54,11 +74,11 @@ export interface MmEdge {
 // ─── Style map ────────────────────────────────────────────────────────────────
 
 export const EDGE_STYLES: Record<MmEdgeType, MmEdgeStyle & { label: string }> = {
-    conformsTo:  { color: '#94a3b8', dasharray: '5,3', strokeWidth: 1.5, label: 'conformsTo' },
-    inputOf:     { color: '#0ea5e9', strokeWidth: 1.5, label: 'inputOf' },
-    outputOf:    { color: '#0d9488', strokeWidth: 1.5, label: 'outputOf' },
-    definedOn:   { color: '#7c3aed', dasharray: '5,3', strokeWidth: 1.5, label: 'definedOn' },
-    renderedBy:  { color: '#cbd5e1', strokeWidth: 1, label: 'renderedBy' },
+    conformsTo:  { color: '#888780', dasharray: '5,3',  strokeWidth: 1,   opacity: 0.6, label: 'conformsTo' },
+    inputOf:     { color: '#1D9E75',                     strokeWidth: 1.2, opacity: 1.0, label: 'inputOf' },
+    outputOf:    { color: '#D85A30',                     strokeWidth: 1.2, opacity: 1.0, label: 'outputOf' },
+    definedOn:   { color: '#7F77DD', dasharray: '3,3',   strokeWidth: 1,   opacity: 0.7, label: 'definedOn' },
+    renderedBy:  { color: '#888780', dasharray: '2,4',   strokeWidth: 1,   opacity: 0.5, label: 'renderedBy' },
 };
 
 // ─── Port / anchor helpers ────────────────────────────────────────────────────

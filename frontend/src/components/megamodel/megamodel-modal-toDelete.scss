@@ -247,31 +247,6 @@
     }
 }
 
-// ─── Megamodel button (in ProjectEditor header) ───────────────────────────────
-
-.megamodel-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 5px 11px;
-    font-size: 12px;
-    font-weight: 500;
-    color: #64748b;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: color 0.15s, border-color 0.15s, background 0.15s;
-
-    i { font-size: 13px; }
-
-    &:hover {
-        color: #334155;
-        border-color: #cbd5e1;
-        background: #f8fafc;
-    }
-}
-
 // ─── Animations ───────────────────────────────────────────────────────────────
 
 @keyframes mmFadeIn {

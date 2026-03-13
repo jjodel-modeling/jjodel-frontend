@@ -17,14 +17,12 @@
     --mm-node-border: #e2e8f0;
     --mm-node-border-hover: #cbd5e1;
     --mm-node-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-    --mm-node-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.1);
+    --mm-node-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.08);
     --mm-node-text: #1e293b;
-    --mm-node-subtitle: #64748b;
+    --mm-node-subtitle: #94a3b8;
 
-    // Edge labels
-    --mm-edge-label-bg: #ffffff;
-    --mm-edge-label-text: #64748b;
-    --mm-edge-label-border: #e2e8f0;
+    // Stat pills
+    --mm-stat-bg: #f1f5f9;
 
     // Controls & legend
     --mm-control-color: #94a3b8;
@@ -125,6 +123,11 @@
         background: var(--mm-control-hover-bg);
         color: var(--mm-control-hover-color);
     }
+
+    &--active {
+        color: var(--mm-control-hover-color);
+        background: var(--mm-control-hover-bg);
+    }
 }
 
 .mm-view__close {
@@ -140,6 +143,11 @@
     position: relative;
     background: var(--mm-canvas-bg);
     cursor: grab;
+
+    &--dots {
+        background-image: radial-gradient(var(--mm-canvas-dots) 1px, transparent 1px);
+        background-size: 16px 16px;
+    }
 
     &:active {
         cursor: grabbing;
@@ -164,22 +172,20 @@
     }
 }
 
-// ─── Node card ──────────────────────────────────────────────────────────────
+// ==========================================================================
+// NODE CARD — 3-zone rich card
+// ==========================================================================
 
-.megamodel-node {
+.mm-card {
     position: absolute;
-    width: 188px;
-    height: 58px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 0 12px;
+    width: 220px;
     background: var(--mm-node-bg);
-    border: 1px solid var(--mm-node-border);
-    border-radius: 8px;
+    border: 0.5px solid var(--mm-node-border);
+    border-radius: 10px;
     box-shadow: var(--mm-node-shadow);
     cursor: grab;
     user-select: none;
+    overflow: hidden;
     transition: border-color 0.15s, box-shadow 0.15s;
 
     &:hover {
@@ -192,76 +198,174 @@
     }
 }
 
-// ─── Badge ──────────────────────────────────────────────────────────────────
+// ─── Card header ────────────────────────────────────────────────────────────
 
-.mm-badge {
+.mm-card__header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 0.5px solid var(--mm-node-border);
+}
+
+.mm-card__badge {
     width: 28px;
     height: 28px;
-    border-radius: 6px;
+    border-radius: 7px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 600;
     flex-shrink: 0;
 
     &--metamodel {
-        background: #ede9fe;
-        color: #7c3aed;
+        background: #EEEDFE;
+        color: #534AB7;
     }
 
     &--model {
-        background: #fef3c7;
-        color: #d97706;
+        background: #FAEEDA;
+        color: #854F0B;
     }
 
     &--transformation {
-        background: #ccfbf1;
-        color: #0d9488;
+        background: #E1F5EE;
+        color: #0F6E56;
     }
 
     &--viewpoint {
-        background: #fef3c7;
-        color: #d97706;
-    }
-
-    // Legend-size variant
-    &--legend {
-        width: 16px;
-        height: 16px;
-        font-size: 9px;
-        border-radius: 3px;
+        background: #FAEEDA;
+        color: #854F0B;
     }
 }
 
-// ─── Node info ──────────────────────────────────────────────────────────────
-
-.mm-node-info {
+.mm-card__info {
     flex: 1;
     min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
 }
 
-.mm-node-name {
-    font-size: 12px;
-    font-weight: 600;
+.mm-card__name {
+    font-size: 13px;
+    font-weight: 500;
     color: var(--mm-node-text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.mm-node-type {
+.mm-card__type {
     font-size: 10px;
+    color: var(--mm-node-subtitle);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+// ─── Card body ──────────────────────────────────────────────────────────────
+
+.mm-card__body {
+    padding: 8px 12px;
+    min-height: 36px;
+}
+
+.mm-card__stats {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.mm-card__pill {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 10px;
+    background: var(--mm-stat-bg);
+    color: var(--mm-node-subtitle);
+}
+
+.mm-card__pill-value {
+    font-weight: 500;
+    color: var(--mm-node-text);
+}
+
+// Mini-preview bars
+.mm-card__preview {
+    margin-top: 6px;
+    display: flex;
+    gap: 3px;
+    align-items: flex-end;
+    height: 24px;
+}
+
+.mm-card__bar {
+    width: 4px;
+    border-radius: 2px 2px 0 0;
+    min-height: 4px;
+}
+
+// Progress bar (transformations)
+.mm-card__progress {
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mm-card__progress-track {
+    flex: 1;
+    height: 4px;
+    background: var(--mm-stat-bg);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.mm-card__progress-fill {
+    height: 100%;
+    background: #5DCAA5;
+    border-radius: 2px;
+}
+
+.mm-card__progress-label {
+    font-size: 10px;
+    color: var(--mm-node-subtitle);
+    min-width: 28px;
+    text-align: right;
+}
+
+// ─── Card footer ────────────────────────────────────────────────────────────
+
+.mm-card__footer {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    border-top: 0.5px solid var(--mm-node-border);
+    font-size: 10px;
+}
+
+.mm-card__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+
+    &--valid { background: #5DCAA5; }
+    &--warning { background: #EF9F27; }
+    &--info { background: #85B7EB; }
+}
+
+.mm-card__status {
     color: var(--mm-node-subtitle);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-// ─── Legend ─────────────────────────────────────────────────────────────────
+// ==========================================================================
+// LEGEND
+// ==========================================================================
 
 .mm-view .mm-legend {
     display: flex;
@@ -273,7 +377,7 @@
     &__section {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 14px;
         flex-wrap: wrap;
     }
 
@@ -288,9 +392,31 @@
         display: flex;
         align-items: center;
         gap: 4px;
-        font-size: 10px;
+        font-size: 11px;
         color: var(--mm-legend-text);
         white-space: nowrap;
+    }
+
+    &__swatch {
+        width: 10px;
+        height: 10px;
+        border-radius: 3px;
+        flex-shrink: 0;
+
+        &--metamodel {
+            background: #EEEDFE;
+            border: 1px solid #AFA9EC;
+        }
+
+        &--model {
+            background: #FAEEDA;
+            border: 1px solid #FAC775;
+        }
+
+        &--transformation {
+            background: #E1F5EE;
+            border: 1px solid #5DCAA5;
+        }
     }
 }
 
@@ -345,6 +471,31 @@
     &__text {
         font-size: 13px;
         color: var(--mm-empty-subtitle);
+    }
+}
+
+// ─── Megamodel button (in ProjectEditor header) ────────────────────────────
+
+.megamodel-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 11px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #64748b;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+
+    i { font-size: 13px; }
+
+    &:hover {
+        color: #334155;
+        border-color: #cbd5e1;
+        background: #f8fafc;
     }
 }
 

@@ -12,7 +12,7 @@ import type { Megamodel, MegamodelEdge as MegaEdge, ArtifactType } from '../../m
 import MegamodelNode from './MegamodelNode';
 import {
     NODE_W, NODE_H,
-    type MmNode, type MmEdge, type MmEdgeType, type MmNodeKind, type Side, type Point,
+    type MmNode, type MmEdge, type MmEdgeType, type MmNodeKind, type MmNodeStats, type MmNodeStatus, type Side, type Point,
     EDGE_STYLES,
     getPort, spreadAnchors, routePoints, buildRoundedPath, labelMidpoint,
 } from './MegamodelEdge';
@@ -20,9 +20,17 @@ import './MegamodelView.scss';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
+export interface ArtifactStats {
+    id: string;
+    stats: MmNodeStats;
+    status: MmNodeStatus;
+    previewBars: number[];
+}
+
 export interface MegamodelViewProps {
     megamodel: Megamodel;
     viewpoints?: Array<{ id: string; name: string; isOverlay?: boolean }>;
+    artifactStats?: ArtifactStats[];
     onClose: () => void;
 }
 
@@ -31,7 +39,7 @@ export interface MegamodelViewProps {
 const BADGE: Record<MmNodeKind, { label: string; typeLabel: string }> = {
     metamodel:       { label: 'M', typeLabel: 'Metamodel' },
     model:           { label: 'm', typeLabel: 'Model' },
-    transformation:  { label: '⇌', typeLabel: 'Transformation · JjTL' },
+    transformation:  { label: '⇌', typeLabel: 'Transformation' },
     viewpoint:       { label: 'V', typeLabel: 'Viewpoint' },
 };
 
@@ -52,11 +60,16 @@ function edgeSides(type: MmEdgeType): { fromSide: Side; toSide: Side } {
     }
 }
 
+// ─── Default stats/status ────────────────────────────────────────────────────
+
+const DEFAULT_STATUS: MmNodeStatus = { type: 'info', label: '' };
+
 // ─── Build nodes & edges from Megamodel ───────────────────────────────────────
 
 function buildGraph(
     megamodel: Megamodel,
     viewpoints: MegamodelViewProps['viewpoints'],
+    statsMap: Map<string, ArtifactStats>,
 ): { nodes: MmNode[]; edges: MmEdge[] } {
     const nodeMap = new Map<string, MmNode>();
 
@@ -66,6 +79,7 @@ function buildGraph(
             if (!nodeMap.has(ref.id)) {
                 const kind = artifactTypeToKind(ref.type);
                 const badge = BADGE[kind];
+                const artStats = statsMap.get(ref.id);
                 nodeMap.set(ref.id, {
                     id: ref.id,
                     kind,
@@ -73,6 +87,9 @@ function buildGraph(
                     badgeLabel: badge.label,
                     typeLabel: badge.typeLabel,
                     x: 0, y: 0,
+                    stats: artStats?.stats ?? {},
+                    status: artStats?.status ?? DEFAULT_STATUS,
+                    previewBars: artStats?.previewBars ?? [],
                 });
             }
         }
@@ -91,6 +108,9 @@ function buildGraph(
                     badgeLabel: badge.label,
                     typeLabel: badge.typeLabel,
                     x: 0, y: 0,
+                    stats: {},
+                    status: DEFAULT_STATUS,
+                    previewBars: [],
                 });
             }
         }
@@ -109,7 +129,12 @@ function buildGraph(
             to: edge.target.id,
             type: mmType,
             label: styleDef.label,
-            style: { color: styleDef.color, dasharray: styleDef.dasharray, strokeWidth: styleDef.strokeWidth },
+            style: {
+                color: styleDef.color,
+                dasharray: styleDef.dasharray,
+                strokeWidth: styleDef.strokeWidth,
+                opacity: styleDef.opacity,
+            },
             fromSide: sides.fromSide,
             toSide: sides.toSide,
         });
@@ -191,13 +216,22 @@ function computeAnchorTs(edges: MmEdge[]): Map<string, { fromT: number; toT: num
     return result;
 }
 
+// ─── Legend edge entries ─────────────────────────────────────────────────────
+
+const LEGEND_EDGES: Array<{ key: MmEdgeType; label: string }> = [
+    { key: 'conformsTo', label: 'conformsTo' },
+    { key: 'inputOf', label: 'inputOf' },
+    { key: 'outputOf', label: 'outputOf' },
+];
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
-const MegamodelView: React.FC<MegamodelViewProps> = ({ megamodel, viewpoints, onClose }) => {
+const MegamodelView: React.FC<MegamodelViewProps> = ({ megamodel, viewpoints, artifactStats, onClose }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [nodes, setNodes] = useState<MmNode[]>([]);
     const [edges, setEdges] = useState<MmEdge[]>([]);
     const [layoutReady, setLayoutReady] = useState(false);
+    const [showDots, setShowDots] = useState(true);
 
     // Pan & zoom
     const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -209,9 +243,18 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({ megamodel, viewpoints, on
     const draggingNode = useRef<string | null>(null);
     const dragOffset = useRef({ x: 0, y: 0 });
 
+    // ── Stats lookup map ────────────────────────────────────────────────────
+    const statsMap = useMemo(() => {
+        const map = new Map<string, ArtifactStats>();
+        if (artifactStats) {
+            for (const s of artifactStats) map.set(s.id, s);
+        }
+        return map;
+    }, [artifactStats]);
+
     // ── Build graph and run ELK layout ────────────────────────────────────────
     useEffect(() => {
-        const { nodes: builtNodes, edges: builtEdges } = buildGraph(megamodel, viewpoints);
+        const { nodes: builtNodes, edges: builtEdges } = buildGraph(megamodel, viewpoints, statsMap);
         if (builtNodes.length === 0) {
             setNodes([]);
             setEdges(builtEdges);
@@ -250,7 +293,7 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({ megamodel, viewpoints, on
                 setZoom(Math.max(newZoom, 0.3));
             }
         });
-    }, [megamodel, viewpoints]);
+    }, [megamodel, viewpoints, statsMap]);
 
     // ── Node map for fast lookup ──────────────────────────────────────────────
     const nodeMap = useMemo(() => {
@@ -299,10 +342,6 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({ megamodel, viewpoints, on
             return;
         }
         if (draggingNode.current) {
-            const nodeId = draggingNode.current;
-            const newX = (e.clientX - dragOffset.current.x) / zoom - pan.x + dragOffset.current.x / zoom;
-            const newY = (e.clientY - dragOffset.current.y) / zoom - pan.y + dragOffset.current.y / zoom;
-
             // Calculate position in canvas coords
             const rect = containerRef.current?.getBoundingClientRect();
             if (!rect) return;
@@ -310,7 +349,7 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({ megamodel, viewpoints, on
             const canvasY = (e.clientY - rect.top)  / zoom - pan.y;
 
             setNodes(prev => prev.map(n =>
-                n.id === nodeId
+                n.id === draggingNode.current
                     ? { ...n, x: canvasX - dragOffset.current.x, y: canvasY - dragOffset.current.y }
                     : n
             ));
@@ -403,40 +442,47 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({ megamodel, viewpoints, on
                         <div className="mm-legend">
                             <div className="mm-legend__section">
                                 <div className="mm-legend__item">
-                                    <span className="mm-badge mm-badge--metamodel mm-badge--legend">M</span>
+                                    <span className="mm-legend__swatch mm-legend__swatch--metamodel" />
                                     <span>Metamodel</span>
                                 </div>
                                 <div className="mm-legend__item">
-                                    <span className="mm-badge mm-badge--model mm-badge--legend">m</span>
+                                    <span className="mm-legend__swatch mm-legend__swatch--model" />
                                     <span>Model</span>
                                 </div>
                                 <div className="mm-legend__item">
-                                    <span className="mm-badge mm-badge--transformation mm-badge--legend">⇌</span>
+                                    <span className="mm-legend__swatch mm-legend__swatch--transformation" />
                                     <span>Transformation</span>
-                                </div>
-                                <div className="mm-legend__item">
-                                    <span className="mm-badge mm-badge--viewpoint mm-badge--legend">V</span>
-                                    <span>Viewpoint</span>
                                 </div>
                             </div>
                             <div className="mm-legend__divider" />
                             <div className="mm-legend__section">
-                                {Object.entries(EDGE_STYLES).map(([key, s]) => (
-                                    <div key={key} className="mm-legend__item">
-                                        <svg width="18" height="8" style={{ flexShrink: 0 }}>
-                                            <line
-                                                x1="0" y1="4" x2="18" y2="4"
-                                                stroke={s.color}
-                                                strokeWidth={s.strokeWidth}
-                                                strokeDasharray={s.dasharray}
-                                            />
-                                        </svg>
-                                        <span>{s.label}</span>
-                                    </div>
-                                ))}
+                                {LEGEND_EDGES.map(({ key, label }) => {
+                                    const s = EDGE_STYLES[key];
+                                    return (
+                                        <div key={key} className="mm-legend__item">
+                                            <svg width="20" height="8" style={{ flexShrink: 0 }}>
+                                                <line
+                                                    x1="0" y1="4" x2="20" y2="4"
+                                                    stroke={s.color}
+                                                    strokeWidth={s.strokeWidth}
+                                                    strokeDasharray={s.dasharray}
+                                                    opacity={s.opacity}
+                                                />
+                                            </svg>
+                                            <span>{label}</span>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
 
+                        <button
+                            className={`mm-view__btn${showDots ? ' mm-view__btn--active' : ''}`}
+                            onClick={() => setShowDots(d => !d)}
+                            title="Toggle grid dots"
+                        >
+                            <i className="bi bi-grid-3x3" />
+                        </button>
                         <button className="mm-view__btn" onClick={handleFitView} title="Fit to view">
                             <i className="bi bi-arrows-fullscreen" />
                         </button>
@@ -477,7 +523,7 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({ megamodel, viewpoints, on
                 {/* Canvas */}
                 <div
                     ref={containerRef}
-                    className="mm-view__body"
+                    className={`mm-view__body${showDots ? ' mm-view__body--dots' : ''}`}
                     onMouseDown={handleCanvasMouseDown}
                     onMouseMove={handleMouseMove}
                     onMouseUp={handleMouseUp}
@@ -525,17 +571,18 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({ megamodel, viewpoints, on
                                                 stroke={edge.style.color}
                                                 strokeWidth={edge.style.strokeWidth}
                                                 strokeDasharray={edge.style.dasharray}
+                                                opacity={edge.style.opacity ?? 1}
                                                 markerEnd={`url(#mm-arr-${edge.style.color.replace('#', '')})`}
                                                 style={{ pointerEvents: 'none' }}
                                             />
-                                            {/* Label */}
+                                            {/* Label pill */}
                                             <g transform={`translate(${mid.x},${mid.y})`}>
                                                 <rect
-                                                    x={-(edge.label.length * 3.2 + 6)}
-                                                    y={-8}
-                                                    width={edge.label.length * 6.4 + 12}
-                                                    height={16}
-                                                    rx={3}
+                                                    x={-(edge.label.length * 3.2 + 8)}
+                                                    y={-9}
+                                                    width={edge.label.length * 6.4 + 16}
+                                                    height={18}
+                                                    rx={4}
                                                     fill="#ffffff"
                                                     stroke="#e2e8f0"
                                                     strokeWidth={0.5}
@@ -573,6 +620,9 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({ megamodel, viewpoints, on
                                         typeLabel={node.typeLabel}
                                         x={node.x}
                                         y={node.y}
+                                        stats={node.stats}
+                                        status={node.status}
+                                        previewBars={node.previewBars}
                                         onMouseDown={handleNodeMouseDown}
                                     />
                                 ))}

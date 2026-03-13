@@ -34,7 +34,7 @@ import { EnvGenWizardModal, EnvGenPersistence, ENVGEN_CHANGE_EVENT, ENVGEN_OPEN_
 import type { EnvGenConfigSummary } from '../envgen';
 import { loadMegamodel, getSerializedMegamodel } from '../../model/megamodelPersistence';
 import { setRuntimeMegamodel, clearRuntimeMegamodel, getRuntimeMegamodel } from '../../model/megamodelRuntime';
-import MegamodelView from '../megamodel/MegamodelView';
+import MegamodelView, { type ArtifactStats } from '../megamodel/MegamodelView';
 import './project-editor.scss';
 
 // Types for contextual menu
@@ -1993,6 +1993,66 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             {showMegamodelModal && (() => {
                 const megamodel = getRuntimeMegamodel(project.id);
                 if (!megamodel) return null;
+
+                // Compute artifact stats for rich node cards
+                const artifactStats: ArtifactStats[] = [];
+                for (const mm of metamodels) {
+                    const classes = mm.classes || [];
+                    const attrs = mm.attributes || [];
+                    const refs = mm.references || [];
+                    artifactStats.push({
+                        id: mm.id,
+                        stats: {
+                            classCount: classes.length,
+                            attributeCount: attrs.length,
+                            referenceCount: refs.length,
+                        },
+                        status: {
+                            type: 'valid',
+                            label: `${classes.length} classes`,
+                        },
+                        previewBars: classes.slice(0, 8).map((c: any) => {
+                            const count = (c.attributes?.length ?? 0) + (c.references?.length ?? 0);
+                            return Math.min(1, count / 10);
+                        }),
+                    });
+                }
+                for (const m of models) {
+                    const objects = m.objects || [];
+                    const conformsToName = (m as any).instanceof?.name;
+                    artifactStats.push({
+                        id: m.id,
+                        stats: {
+                            objectCount: objects.length,
+                            linkCount: objects.reduce((sum: number, o: any) =>
+                                sum + (o.referenceFeatures?.length ?? 0), 0),
+                        },
+                        status: objects.length === 0
+                            ? { type: 'warning', label: 'Empty model' }
+                            : { type: 'valid', label: conformsToName ? `Conforms to ${conformsToName}` : `${objects.length} objects` },
+                        previewBars: objects.slice(0, 8).map((o: any) => {
+                            const count = o.features?.length ?? 0;
+                            return Math.min(1, count / 8);
+                        }),
+                    });
+                }
+                for (const t of transformations) {
+                    const ruleCount = t.ast?.mappings?.length ?? 0;
+                    const mappingCount = t.ast?.mappings?.reduce((sum: number, m: any) =>
+                        sum + (m.body?.length ?? 0), 0) ?? 0;
+                    artifactStats.push({
+                        id: t.id,
+                        stats: {
+                            ruleCount,
+                            mappingCount,
+                        },
+                        status: t.isValid === false
+                            ? { type: 'warning', label: `${t.errorCount ?? 0} errors` }
+                            : { type: 'info', label: `${ruleCount} rules` },
+                        previewBars: [],
+                    });
+                }
+
                 return (
                     <MegamodelView
                         megamodel={megamodel}
@@ -2001,6 +2061,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             name: vp.name || 'Unnamed',
                             isOverlay: vp.isOverlay,
                         }))}
+                        artifactStats={artifactStats}
                         onClose={() => setShowMegamodelModal(false)}
                     />
                 );
