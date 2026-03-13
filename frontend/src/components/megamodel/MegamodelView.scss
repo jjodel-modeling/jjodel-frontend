@@ -1,0 +1,303 @@
+// MegamodelView — Interactive diagram styles
+// ============================================
+
+// ─── View shell ──────────────────────────────────────────────────────────────
+
+.mm-view {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    background: #0f172a;
+    position: fixed;
+    inset: 0;
+    z-index: 10001;
+    animation: mmViewFadeIn 0.15s ease;
+
+    &__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 16px;
+        background: #1e293b;
+        border-bottom: 1px solid #334155;
+        flex-shrink: 0;
+        gap: 16px;
+        min-height: 48px;
+    }
+
+    &__title {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #e2e8f0;
+        flex-shrink: 0;
+
+        i {
+            color: #0ea5e9;
+            font-size: 14px;
+        }
+    }
+
+    &__controls {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex: 1;
+        justify-content: flex-end;
+        overflow: hidden;
+    }
+
+    &__btn {
+        width: 28px;
+        height: 28px;
+        border: none;
+        background: transparent;
+        color: #64748b;
+        cursor: pointer;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        flex-shrink: 0;
+        transition: background 0.15s, color 0.15s;
+
+        &:hover {
+            background: #334155;
+            color: #e2e8f0;
+        }
+    }
+
+    &__close {
+        @extend .mm-view__btn;
+        font-size: 14px;
+    }
+
+    &__body {
+        flex: 1;
+        overflow: hidden;
+        position: relative;
+        background: #0f172a;
+        cursor: grab;
+
+        &:active {
+            cursor: grabbing;
+        }
+    }
+}
+
+// ─── Canvas layers ───────────────────────────────────────────────────────────
+
+.mm-canvas {
+    position: absolute;
+    inset: 0;
+
+    &--svg {
+        width: 100%;
+        height: 100%;
+    }
+
+    &--nodes {
+        width: 0;
+        height: 0;
+        overflow: visible;
+    }
+}
+
+// ─── Node card ───────────────────────────────────────────────────────────────
+
+.megamodel-node {
+    position: absolute;
+    width: 188px;
+    height: 58px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 12px;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    cursor: grab;
+    user-select: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+
+    &:hover {
+        border-color: #475569;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    &:active {
+        cursor: grabbing;
+    }
+}
+
+// ─── Badge ───────────────────────────────────────────────────────────────────
+
+.mm-badge {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+
+    &--metamodel {
+        background: #ede9fe;
+        color: #7c3aed;
+    }
+
+    &--model {
+        background: #fef3c7;
+        color: #d97706;
+    }
+
+    &--transformation {
+        background: #ccfbf1;
+        color: #0d9488;
+    }
+
+    &--viewpoint {
+        background: #fef3c7;
+        color: #d97706;
+    }
+
+    // Legend-size variant
+    &--legend {
+        width: 16px;
+        height: 16px;
+        font-size: 9px;
+        border-radius: 3px;
+    }
+}
+
+// ─── Node info ───────────────────────────────────────────────────────────────
+
+.mm-node-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.mm-node-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #e2e8f0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mm-node-type {
+    font-size: 10px;
+    color: #64748b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+// ─── Legend (reused from megamodel-modal, extended) ───────────────────────────
+
+.mm-view .mm-legend {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    overflow: hidden;
+
+    &__section {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    &__divider {
+        width: 1px;
+        height: 16px;
+        background: #334155;
+        flex-shrink: 0;
+    }
+
+    &__item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 10px;
+        color: #94a3b8;
+        white-space: nowrap;
+    }
+}
+
+// ─── Empty state ─────────────────────────────────────────────────────────────
+
+.mm-view .mm-empty-state {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+
+    &__icon {
+        font-size: 52px;
+        color: #1e293b;
+    }
+
+    &__title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #475569;
+    }
+
+    &__subtitle {
+        font-size: 13px;
+        color: #334155;
+        max-width: 380px;
+        text-align: center;
+        line-height: 1.6;
+    }
+}
+
+// ─── Loading state ───────────────────────────────────────────────────────────
+
+.mm-view .mm-loading-state {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+
+    &__icon {
+        font-size: 32px;
+        color: #334155;
+        animation: mmViewSpin 1.2s linear infinite;
+    }
+
+    &__text {
+        font-size: 13px;
+        color: #475569;
+    }
+}
+
+// ─── Animations ──────────────────────────────────────────────────────────────
+
+@keyframes mmViewFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes mmViewSpin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
