@@ -215,6 +215,12 @@
   z-index: var(--z-dropdown);
   width: 230px;
   min-width: 200px;
+  &.right{
+    position: relative;
+  }
+  .hoverable>.content.right{
+    box-shadow: none;
+  }
 
   /* Visual */
   background: var(--color-bg-elevated);
@@ -239,8 +245,10 @@
   .name.model, .name.metamodel {
     padding-left: 32px;
     overflow: hidden;
-    height: 1lh;
     white-space: nowrap;
+    margin: auto;
+    width: min-content;
+    max-width: 100%;
     font-size: var(--text-sm);
     font-weight: var(--font-normal);
     align-items: center;
@@ -302,8 +310,19 @@
     }
 
     &>div {
-      display: inline;
       margin-left: auto;
+    }
+    .keystrokes{
+      display: flex;
+      i.bi, >* {
+        margin: auto;
+        width: 1.1ic;
+        font-size: 1rem;
+      }
+      >i.bi::before{
+        width: 1.1ic;
+        font-size: 1rem;
+      }
     }
   }
 }

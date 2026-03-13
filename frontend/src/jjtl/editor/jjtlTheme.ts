@@ -3,7 +3,7 @@
  * Based on Jjodel's slate/cyan color scheme
  */
 
-import * as monaco from 'monaco-editor';
+import {monaco} from "../../joiner";
 
 export const JJTL_THEME_ID = 'jjtl-theme';
 

@@ -15,8 +15,6 @@ import App from './App';
 import { createRoot } from "react-dom/client";
 
 // ✅ MONACO SETUP - IMPORTANTE: loader.config PRIMA di MonacoEnvironment
-import * as monaco from 'monaco-editor';
-import { loader } from '@monaco-editor/react';
 
 // Configura i workers per Vite
 (self as any).MonacoEnvironment = {

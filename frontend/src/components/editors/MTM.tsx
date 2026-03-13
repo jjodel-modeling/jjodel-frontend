@@ -1,4 +1,3 @@
-import type * as monaco from "monaco-editor";
 import {LanguageCache, notLanguageFragments, ParserData} from "../../joiner/classes";
 import {
     DataOutputComponent,
@@ -80,15 +79,12 @@ export function MTMComponent(props: AllProps): JSX.Element{
     let dataid: Pointer<DModelElement> | undefined;
     let t2mobj = languageObj.t2m[languageObj.t2m.engine];
     let m2tobj = languageObj.m2t[languageObj.m2t.engine];
-    console.log('check global transform', {data, cn:data?.className, t2mobj, m2tobj, t2:t2mobj?.allowPartials, m2:m2tobj?.allowPartials})
 
     if (data && data.className !== 'DModel' && (!t2mobj?.allowPartials || !m2tobj?.allowPartials)) {
-        console.log('check global transform --> GLOBAL');
         data = data.model;
         dataid = data.id;
     }
     else {
-        console.log('check global transform --> LOCAL');
         dataid = props.dataid || undefined;
     }
 

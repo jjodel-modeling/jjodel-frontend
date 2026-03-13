@@ -24,7 +24,26 @@ windoww.XML = XML;
 windoww.XMI = XMI;
 export const prxml2json = _pr_xml2json;
 windoww.prxml2json = prxml2json;
+//@ts-ignore
+import * as monaco_ from 'monaco-editor/esm/vs/editor/editor.main';
+windoww.monaco = monaco_;
+import { loader } from '@monaco-editor/react'
+export let monaco = monaco_;
+// Tell @monaco-editor/react to use local monaco instead of CDN
+loader.config({ monaco });
 
+/*
+let m = monaco2.;
+let monaco;
+const _define = (window as any).define;
+(()=>{
+    (window as any).define = undefined;
+    // @ts-ignore
+    monaco = await import('monaco-editor/esm/vs/editor/editor.main');
+    windoww.monaco = monaco;
+    (window as any).define = _define;
+})();
+export monaco;*/
 
 var pathDataPolyfill = require("path-data-polyfill") // needs to be required (and automatically executed) before the creation of any svg element
 let useless = pathDataPolyfill; // just to force compiler to not ignore the import for not being used

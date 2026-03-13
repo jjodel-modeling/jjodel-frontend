@@ -323,6 +323,11 @@ $transition: 150ms ease;
       background: #e2e8f0;
     }
 
+    .project-card__title{
+      flex-grow: 1;
+      flex-basis: 0;
+      width: 0;
+    }
     .project-card__title,
     .project-card__meta,
     .project-card__stats {
