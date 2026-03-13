@@ -110,7 +110,6 @@ export class DState extends DPointerTargetable{
     timestamp!: number;
     timestampdiff!: number;
 
-    env: Dictionary = process.env;  //damiano: this might make problems on load
     debug: boolean = false;
     logs: Pointer<DLog>[] = [];
     models: Pointer<DModel, 0, 'N'> = []; // Pointer<DModel, 0, 'N'>[] = [];

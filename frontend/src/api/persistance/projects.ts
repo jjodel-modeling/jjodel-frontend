@@ -281,11 +281,11 @@ class Online {
 
     static async create (project: DProject): Promise<void> {
         const creationProjectRequest : UpdateProjectRequest = new UpdateProjectRequest(project);
-        await Api.post(`${process.env['JODEL_PERSISTANCE']}/project`, creationProjectRequest);
+        await Api.post(`${U.env('JODEL_PERSISTANCE')}/project`, creationProjectRequest);
     }
 
     static async getAll(): Promise<void> {
-        const response = await Api.get(`${process.env['JODEL_PERSISTANCE']}/project/`);
+        const response = await Api.get(`${U.env('JODEL_PERSISTANCE')}/project/`);
         console.log('loading projects getall', {response, user: windoww.DUser.current, DUser:windoww});
         if (response.code !== 200) {
             Log.ee('Project.getAll() invalid token', {response});
@@ -337,12 +337,12 @@ class Online {
 
     static async delete(id :string): Promise<void> {
         console.log(id);
-        await Api.delete(`${process.env['JODEL_PERSISTANCE']}/project/${id}`);
+        await Api.delete(`${U.env('JODEL_PERSISTANCE')}/project/${id}`);
     }
 
 
     static async getOne(id: string): Promise<DProject|null> {
-        const response = await Api.get(`${process.env['JODEL_PERSISTANCE']}/project/jjodel/${id}`);
+        const response = await Api.get(`${U.env('JODEL_PERSISTANCE')}/project/jjodel/${id}`);
         if (response.code !== 200 || !response.data) {
             return null;
         }
@@ -359,7 +359,7 @@ class Online {
         if (!('_Id' in project)) (project as any)._Id = undefined;
         const updateProjectRequest = new UpdateProjectRequest(project);
         console.log('online save request: ', {updateProjectRequest});
-        const response = await Api.put(`${process.env['JODEL_PERSISTANCE']}/project/`, updateProjectRequest);
+        const response = await Api.put(`${U.env('JODEL_PERSISTANCE')}/project/`, updateProjectRequest);
 
         if (response.code !== 200) {
             U.alert('e', 'Cannot Save','Something went wrong ...');
@@ -378,7 +378,7 @@ class Online {
 
     static async favorite(project: DProject): Promise<void> {
         const updateProjectRequest = new UpdateProjectRequest(project);
-        const response = await Api.put(`${process.env['JODEL_PERSISTANCE']}/project/`, updateProjectRequest);
+        const response = await Api.put(`${U.env('JODEL_PERSISTANCE')}/project/`, updateProjectRequest);
 
         if(response.code !== 200) {
             U.alert('e', 'Cannot set the project as favorite!', 'Something went wrong ...');
@@ -389,7 +389,7 @@ class Online {
     static async updateTags(project: DProject, tags: string[]): Promise<void> {
         const updatedProject = {...project, tags};
         const updateProjectRequest = new UpdateProjectRequest(updatedProject);
-        const response = await Api.put(`${process.env['JODEL_PERSISTANCE']}/project/`, updateProjectRequest);
+        const response = await Api.put(`${U.env('JODEL_PERSISTANCE')}/project/`, updateProjectRequest);
 
         if(response.code !== 200) {
             U.alert('e', 'Cannot update tags!', 'Something went wrong ...');
@@ -400,7 +400,7 @@ class Online {
     static async import(project: DProject): Promise<void> {
         const updateProjectRequest = new UpdateProjectRequest(project);
         delete (updateProjectRequest as GObject)._Id;
-        const response = await Api.post(`${process.env['JODEL_PERSISTANCE']}/project/`, updateProjectRequest);
+        const response = await Api.post(`${U.env('JODEL_PERSISTANCE')}/project/`, updateProjectRequest);
         if (response.code === 200) {
             console.log('import', {project, updateProjectRequest, response});
         } else {

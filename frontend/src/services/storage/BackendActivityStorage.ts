@@ -17,9 +17,9 @@
 import { ActivityRecord, ActivityInput, generateActivityId } from '../../types/activity';
 import type { IActivityStorage } from './IActivityStorage';
 import Api from '../../api/api';
+import {U} from "../../joiner";
 
 export class BackendActivityStorage implements IActivityStorage {
-    private readonly endpoint = `${process.env['JODEL_PERSISTANCE']}/activities`;
 
     /**
      * Log a new activity
@@ -32,7 +32,7 @@ export class BackendActivityStorage implements IActivityStorage {
         };
 
         try {
-            const response = await Api.post(this.endpoint, newActivity);
+            const response = await Api.post(U.env("JODEL_PERSISTANCE")+"/activities", newActivity);
             if (response.code !== 200) {
                 console.error('[BackendActivityStorage] Failed to log activity:', response);
                 // Fall through and return the local activity anyway
@@ -49,7 +49,7 @@ export class BackendActivityStorage implements IActivityStorage {
      */
     async getRecent(limit: number = 20): Promise<ActivityRecord[]> {
         try {
-            const response = await Api.get(`${this.endpoint}?limit=${limit}&sort=desc`);
+            const response = await Api.get(`${U.env("JODEL_PERSISTANCE")}/activities?limit=${limit}&sort=desc`);
             if (response.code === 200 && Array.isArray(response.data)) {
                 return response.data.map((a: any) => ({
                     ...a,
@@ -67,7 +67,7 @@ export class BackendActivityStorage implements IActivityStorage {
      */
     async getByProject(projectId: string, limit: number = 10): Promise<ActivityRecord[]> {
         try {
-            const response = await Api.get(`${this.endpoint}/${projectId}?limit=${limit}`);
+            const response = await Api.get(`${U.env("JODEL_PERSISTANCE")}/activities/${projectId}?limit=${limit}`);
             if (response.code === 200 && Array.isArray(response.data)) {
                 return response.data.map((a: any) => ({
                     ...a,
@@ -85,7 +85,7 @@ export class BackendActivityStorage implements IActivityStorage {
      */
     async clear(): Promise<void> {
         try {
-            await Api.delete(this.endpoint);
+            await Api.delete(U.env("JODEL_PERSISTANCE")+"/activities");
         } catch (error) {
             console.error('[BackendActivityStorage] Error clearing activities:', error);
         }
@@ -96,7 +96,7 @@ export class BackendActivityStorage implements IActivityStorage {
      */
     async clearProject(projectId: string): Promise<void> {
         try {
-            await Api.delete(`${this.endpoint}/${projectId}`);
+            await Api.delete(`${U.env("JODEL_PERSISTANCE")+"/activities"}/${projectId}`);
         } catch (error) {
             console.error('[BackendActivityStorage] Error clearing project activities:', error);
         }

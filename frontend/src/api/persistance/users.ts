@@ -11,7 +11,7 @@ import {JwtClaims} from "../DTO/JwtClaims";
 class UsersApi {
 
     static async getUserByEmail(email: string): Promise<LUser|null> {
-        const response = await Api.get(`${process.env['JODEL_PERSISTANCE']}/users?email=${email}`);
+        const response = await Api.get(`${U.env('JODEL_PERSISTANCE')}/users?email=${email}`);
         if(response.code !== 200) return null;
         const user = response.data as any as DUser;
         const rawUser = DUser.new(user.name, user.surname, user.nickname, user.affiliation, user.country, user.newsletter, user.email, '', user.id, user._Id);
@@ -19,7 +19,7 @@ class UsersApi {
     }
 
     static async getAllEmails(): Promise<string[]> {
-        const response = await Api.get(`${process.env['JODEL_PERSISTANCE']}/users`);
+        const response = await Api.get(`${U.env('JODEL_PERSISTANCE')}/users`);
         if(response.code !== 200) return [];
         const users = U.wrapper<DUser[]>(response.data);
         return users.filter(u => u.id !== DUser.current).map(u => u.email);
@@ -27,7 +27,7 @@ class UsersApi {
 
 
     static async getUserByGUID(guid: string): Promise<DUser|null> {
-        let response: GObject = await Api.get(`${process.env['JODEL_PERSISTANCE']}/account/by-id/${guid}`);
+        let response: GObject = await Api.get(`${U.env('JODEL_PERSISTANCE')}/account/by-id/${guid}`);
         console.log('getUserByGUID', {guid, response, code:response.code, data:response.data});
 
         if ((response.code+'')[0] !== '2') {
@@ -41,7 +41,7 @@ class UsersApi {
     }
 
     static async updateUserById(updateUserRequest: UpdateUserRequest): Promise<boolean> {
-        const response: GObject = await Api.put(`${process.env['JODEL_PERSISTANCE']}/account/`, {...updateUserRequest});
+        const response: GObject = await Api.put(`${U.env('JODEL_PERSISTANCE')}/account/`, {...updateUserRequest});
         console.log('UpdateUserById', {updateUserRequest, code:response.code, data:response.data, response});
 
         if ((response.code+'')[0] !== '2') {
@@ -57,7 +57,7 @@ class UsersApi {
 
 
     static async updatePassword(changePasswordRequest: ChangePasswordRequest): Promise<number> {
-        const response: GObject = await Api.post(`${process.env['JODEL_PERSISTANCE']}/account/change-password`, changePasswordRequest);
+        const response: GObject = await Api.post(`${U.env('JODEL_PERSISTANCE')}/account/change-password`, changePasswordRequest);
         if ((response.code+'')[0] !== '2') {
             let title: string = response.data?.title;
             let msg: string = response.data?.description;

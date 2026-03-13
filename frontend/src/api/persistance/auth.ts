@@ -10,19 +10,18 @@ import {ResetPasswordRequest} from "../DTO/ResetPasswordRequest";
 import {ConfirmAccountRequest} from "../DTO/ConfirmAccountRequest"; //
 
 class AuthApi {
-
     static async login(loginRequest: LoginRequest): Promise<Response> {
         Storage.write('offline', false);
-        return await Api.post(`${process.env['JODEL_PERSISTANCE']}/account/login`, {...loginRequest}, true);
+        return await Api.post(`${U.env('JODEL_PERSISTANCE')}/account/login`, {...loginRequest}, true);
     }
   
     static async register(request: RegisterRequest): Promise<Response> {
         Storage.write('offline', false);
-        return await Api.post(`${process.env['JODEL_PERSISTANCE']}/account/register`, {...request}, true);
+        return await Api.post(`${U.env('JODEL_PERSISTANCE')}/account/register`, {...request}, true);
     }
 
     static async reset_password(request: ResetPasswordRequest): Promise<Response> {
-        return await Api.post(`${process.env['JODEL_PERSISTANCE']}/account/resetPasswordWithEmail`, {...request}, true);
+        return await Api.post(`${U.env('JODEL_PERSISTANCE')}/account/resetPasswordWithEmail`, {...request}, true);
     }
 
 
@@ -33,7 +32,7 @@ class AuthApi {
         R.navigate('/auth');
     }
     static async confirmAccount(request: ConfirmAccountRequest): Promise<Response> {
-        return await Api.post(`${process.env['JODEL_PERSISTANCE']}/account/confirm`, {...request}, true);
+        return await Api.post(`${U.env('JODEL_PERSISTANCE')}/account/confirm`, {...request}, true);
     }
 
 

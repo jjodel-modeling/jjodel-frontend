@@ -153,7 +153,7 @@ function AuthPage(): JSX.Element {
             const response: GObject = await AuthApi.login(loginRequest);
             const raw: TokenResponse | null = response.data;
 
-            console.log('login debug', {loginRequest, response, raw, env: process.env});
+            console.log('login debug', {loginRequest, response, raw, env: process.env, ue: U.env("")});
 
             if ((response.code+'')[0] !== '2') {
                 let title: string = response.data?.title;

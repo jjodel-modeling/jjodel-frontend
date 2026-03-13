@@ -15,7 +15,7 @@ export default class MemoRec {
         }
         const memorecModel: MemoRecModel = {name: model.name, methodDeclarations: memorecClasses};
         const memorecObject: MemoRecObject = {context: named.name, model: memorecModel};
-        const response = await Api.post(`${process.env['JODEL_MEMOREC']}/structuralFeatures`, U.wrapper<Json>(memorecObject));
+        const response = await Api.post(`${U.env('JODEL_MEMOREC')}/structuralFeatures`, U.wrapper<Json>(memorecObject));
         if(!response.data) return {data: [], type: 'class'}
         const data: GObject[] = U.wrapper<GObject[]>(response.data);
         data.sort((a, b) => b.score - a.score);
@@ -33,7 +33,7 @@ export default class MemoRec {
         }
         const memorecModel: MemoRecModel = {name: model.name, methodDeclarations: memorecPackages};
         const memorecObject: MemoRecObject = {context: named.name, model: memorecModel};
-        const response = await Api.post(`${process.env['JODEL_MEMOREC']}/classes`, U.wrapper<Json>(memorecObject));
+        const response = await Api.post(`${U.env('JODEL_MEMOREC')}/classes`, U.wrapper<Json>(memorecObject));
         if(!response.data) return {data: [], type: 'package'}
         const data: GObject[] = U.wrapper<GObject[]>(response.data);
         data.sort((a, b) => b.score - a.score);

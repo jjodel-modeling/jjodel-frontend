@@ -2911,6 +2911,11 @@ export class U {
         if (!s) return s;
         return s[0].toUpperCase() + s.substring(1);
     }
+
+    public static env(varr: string): string {
+        if (!varr) return window['process'].env as any;
+        return window['process'].env[varr] || '';
+    }
 }
 export type ThrottleState = {timerID: null|number, decay: number, initialDelay:number, currentDelay:number, minDelay: number,
     pending:Function[], cumulative: boolean};
