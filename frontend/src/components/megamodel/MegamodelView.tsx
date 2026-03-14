@@ -2,16 +2,16 @@
  * MegamodelView — Interactive diagram of all project artifacts.
  *
  * Reads from the runtime megamodel (metamodels, models, transformations) plus
- * viewpoints from the project. Uses ELK for initial layout and supports
- * drag-to-reposition, middle-click pan, and scroll zoom.
+ * viewpoints from the project. Uses dagre for layered auto-layout and supports
+ * drag-to-reposition, middle-click pan, scroll zoom, and auto-arrange.
  *
  * Phase 2: context menu (right-click) on nodes and canvas, inline rename,
  * delete confirmation dialog, keyboard shortcuts.
  */
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import ELK from 'elkjs/lib/elk.bundled.js';
 import type { Megamodel, MegamodelEdge as MegaEdge, ArtifactType } from '../../model/megamodel';
+import { computeDagreLayout } from './megamodelLayout';
 import MegamodelNode from './MegamodelNode';
 import MegamodelContextMenu, { type MenuItem } from './MegamodelContextMenu';
 import {
@@ -51,7 +51,7 @@ export interface MegamodelViewProps {
 const BADGE: Record<MmNodeKind, { label: string; typeLabel: string }> = {
     metamodel:       { label: 'M', typeLabel: 'Metamodel' },
     model:           { label: 'm', typeLabel: 'Model' },
-    transformation:  { label: '⇌', typeLabel: 'Transformation' },
+    transformation:  { label: '⇌', typeLabel: 'JjTL Transformation' },
     viewpoint:       { label: 'V', typeLabel: 'Viewpoint' },
 };
 
@@ -202,29 +202,14 @@ function mapEdgeType(type: MegaEdge['type']): MmEdgeType | null {
     }
 }
 
-// ─── ELK layout ───────────────────────────────────────────────────────────────
+// ─── Layout helper ───────────────────────────────────────────────────────────
 
-const elk = new ELK();
-
-async function computeElkLayout(nodes: MmNode[], edges: MmEdge[]): Promise<Map<string, { x: number; y: number }>> {
-    const graph = {
-        id: 'root',
-        layoutOptions: {
-            'elk.algorithm': 'layered',
-            'elk.direction': 'DOWN',
-            'elk.spacing.nodeNode': '60',
-            'elk.layered.spacing.nodeNodeBetweenLayers': '100',
-        },
-        children: nodes.map(n => ({ id: n.id, width: NODE_W, height: NODE_H })),
-        edges: edges.map(e => ({ id: e.id, sources: [e.from], targets: [e.to] })),
-    };
-
-    const layout = await elk.layout(graph);
-    const positions = new Map<string, { x: number; y: number }>();
-    for (const child of layout.children ?? []) {
-        positions.set(child.id, { x: child.x ?? 0, y: child.y ?? 0 });
-    }
-    return positions;
+function applyLayout(nodes: MmNode[], edges: MmEdge[]): MmNode[] {
+    const positions = computeDagreLayout(nodes, edges);
+    return nodes.map(n => {
+        const pos = positions.get(n.id);
+        return pos ? { ...n, x: pos.x, y: pos.y } : n;
+    });
 }
 
 // ─── Anchor spread computation ────────────────────────────────────────────────
@@ -332,7 +317,30 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
         return map;
     }, [artifactStats]);
 
-    // ── Build graph and run ELK layout ────────────────────────────────────────
+    // ── Fit-to-view helper ──────────────────────────────────────────────────
+    const fitToView = useCallback((laid: MmNode[]) => {
+        if (!containerRef.current || laid.length === 0) return;
+        const rect = containerRef.current.getBoundingClientRect();
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const n of laid) {
+            if (n.x < minX) minX = n.x;
+            if (n.y < minY) minY = n.y;
+            if (n.x + NODE_W > maxX) maxX = n.x + NODE_W;
+            if (n.y + NODE_H > maxY) maxY = n.y + NODE_H;
+        }
+        const contentW = maxX - minX + 80;
+        const contentH = maxY - minY + 80;
+        const scaleX = rect.width / contentW;
+        const scaleY = rect.height / contentH;
+        const newZoom = Math.min(scaleX, scaleY, 1.5);
+        setPan({
+            x: (rect.width / newZoom - contentW) / 2 - minX + 40,
+            y: (rect.height / newZoom - contentH) / 2 - minY + 40,
+        });
+        setZoom(Math.max(newZoom, 0.3));
+    }, []);
+
+    // ── Build graph and run dagre layout ──────────────────────────────────────
     useEffect(() => {
         const { nodes: builtNodes, edges: builtEdges } = buildGraph(megamodel, viewpoints, statsMap);
         if (builtNodes.length === 0) {
@@ -342,38 +350,14 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
             return;
         }
 
-        computeElkLayout(builtNodes, builtEdges).then(positions => {
-            const laid = builtNodes.map(n => {
-                const pos = positions.get(n.id);
-                return pos ? { ...n, x: pos.x, y: pos.y } : n;
-            });
-            setNodes(laid);
-            setEdges(builtEdges);
-            setLayoutReady(true);
+        const laid = applyLayout(builtNodes, builtEdges);
+        setNodes(laid);
+        setEdges(builtEdges);
+        setLayoutReady(true);
 
-            // Auto-fit after layout
-            if (containerRef.current && laid.length > 0) {
-                const rect = containerRef.current.getBoundingClientRect();
-                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-                for (const n of laid) {
-                    if (n.x < minX) minX = n.x;
-                    if (n.y < minY) minY = n.y;
-                    if (n.x + NODE_W > maxX) maxX = n.x + NODE_W;
-                    if (n.y + NODE_H > maxY) maxY = n.y + NODE_H;
-                }
-                const contentW = maxX - minX + 80;
-                const contentH = maxY - minY + 80;
-                const scaleX = rect.width / contentW;
-                const scaleY = rect.height / contentH;
-                const newZoom = Math.min(scaleX, scaleY, 1.5);
-                setPan({
-                    x: (rect.width / newZoom - contentW) / 2 - minX + 40,
-                    y: (rect.height / newZoom - contentH) / 2 - minY + 40,
-                });
-                setZoom(Math.max(newZoom, 0.3));
-            }
-        });
-    }, [megamodel, viewpoints, statsMap]);
+        // Auto-fit after layout (need a frame for containerRef to have dimensions)
+        requestAnimationFrame(() => fitToView(laid));
+    }, [megamodel, viewpoints, statsMap, fitToView]);
 
     // ── Node map for fast lookup ──────────────────────────────────────────────
     const nodeMap = useMemo(() => {
@@ -639,27 +623,15 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
     }, []);
 
     // ── Fit view ──────────────────────────────────────────────────────────────
-    const handleFitView = useCallback(() => {
-        if (nodes.length === 0 || !containerRef.current) return;
-        const rect = containerRef.current.getBoundingClientRect();
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        for (const n of nodes) {
-            if (n.x < minX) minX = n.x;
-            if (n.y < minY) minY = n.y;
-            if (n.x + NODE_W > maxX) maxX = n.x + NODE_W;
-            if (n.y + NODE_H > maxY) maxY = n.y + NODE_H;
-        }
-        const contentW = maxX - minX + 80;
-        const contentH = maxY - minY + 80;
-        const scaleX = rect.width / contentW;
-        const scaleY = rect.height / contentH;
-        const newZoom = Math.min(scaleX, scaleY, 1.5);
-        setPan({
-            x: (rect.width / newZoom - contentW) / 2 - minX + 40,
-            y: (rect.height / newZoom - contentH) / 2 - minY + 40,
-        });
-        setZoom(Math.max(newZoom, 0.3));
-    }, [nodes]);
+    const handleFitView = useCallback(() => fitToView(nodes), [nodes, fitToView]);
+
+    // ── Auto-arrange (re-run dagre layout) ───────────────────────────────────
+    const handleAutoArrange = useCallback(() => {
+        if (nodes.length === 0) return;
+        const laid = applyLayout(nodes, edges);
+        setNodes(laid);
+        requestAnimationFrame(() => fitToView(laid));
+    }, [nodes, edges, fitToView]);
 
     // ── Arrow markers ─────────────────────────────────────────────────────────
     const markerColors = useMemo(() => {
@@ -772,6 +744,9 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
                             </div>
                         </div>
 
+                        <button className="mm-view__btn" onClick={handleAutoArrange} title="Auto-arrange">
+                            <i className="bi bi-grid-3x3-gap" />
+                        </button>
                         <button
                             className={`mm-view__btn${showDots ? ' mm-view__btn--active' : ''}`}
                             onClick={() => setShowDots(d => !d)}

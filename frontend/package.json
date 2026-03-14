@@ -8,6 +8,7 @@
   "homepage-local-deploy": "https://mdegroup.github.io/",
   "homepage-gitpages-deploy": "https://mdegroup.github.io/jjodel/",
   "dependencies": {
+    "@dagrejs/dagre": "^2.0.4",
     "@fontsource-variable/inter": "^5.2.6",
     "@monaco-editor/react": "^4.7.0",
     "@popperjs/core": "^2.11.8",
