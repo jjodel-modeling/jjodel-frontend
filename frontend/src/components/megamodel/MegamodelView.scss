@@ -251,6 +251,11 @@
         background: #FAEEDA;
         color: #854F0B;
     }
+
+    &--generated {
+        background: #FAECE7;
+        color: #993C1D;
+    }
 }
 
 .mm-card__info {
@@ -272,6 +277,18 @@
     color: var(--mm-node-subtitle);
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+.mm-card__generated-pill {
+    display: inline-block;
+    padding: 0 5px;
+    margin-left: 4px;
+    border-radius: 3px;
+    font-size: 9px;
+    background: #FAECE7;
+    color: #993C1D;
+    text-transform: none;
+    letter-spacing: 0;
 }
 
 // ─── Card body ──────────────────────────────────────────────────────────────
@@ -414,6 +431,11 @@
         &--transformation {
             background: #E1F5EE;
             border: 1px solid #5DCAA5;
+        }
+
+        &--generated {
+            background: #FAECE7;
+            border: 1px solid #F0997B;
         }
     }
 }
