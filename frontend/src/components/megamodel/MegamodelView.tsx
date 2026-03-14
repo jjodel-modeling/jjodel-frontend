@@ -32,6 +32,7 @@ export interface MegamodelViewProps {
     viewpoints?: Array<{ id: string; name: string; isOverlay?: boolean }>;
     artifactStats?: ArtifactStats[];
     onClose: () => void;
+    onOpenNode?: (nodeId: string, nodeKind: MmNodeKind) => void;
 }
 
 // ─── Artifact → MmNode mapping ───────────────────────────────────────────────
@@ -226,7 +227,7 @@ const LEGEND_EDGES: Array<{ key: MmEdgeType; label: string }> = [
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-const MegamodelView: React.FC<MegamodelViewProps> = ({ megamodel, viewpoints, artifactStats, onClose }) => {
+const MegamodelView: React.FC<MegamodelViewProps> = ({ megamodel, viewpoints, artifactStats, onClose, onOpenNode }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [nodes, setNodes] = useState<MmNode[]>([]);
     const [edges, setEdges] = useState<MmEdge[]>([]);
@@ -376,6 +377,14 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({ megamodel, viewpoints, ar
         const canvasY = (e.clientY - rect.top)  / zoom - pan.y;
         dragOffset.current = { x: canvasX - node.x, y: canvasY - node.y };
     }, [nodeMap, pan, zoom]);
+
+    // ── Node double-click (open in editor) ──────────────────────────────────
+    const handleNodeDoubleClick = useCallback((nodeId: string) => {
+        const node = nodeMap.get(nodeId);
+        if (!node || !onOpenNode) return;
+        onOpenNode(nodeId, node.kind);
+        onClose();
+    }, [nodeMap, onOpenNode, onClose]);
 
     // ── Zoom ──────────────────────────────────────────────────────────────────
     const handleWheel = useCallback((e: React.WheelEvent) => {
@@ -624,6 +633,7 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({ megamodel, viewpoints, ar
                                         status={node.status}
                                         previewBars={node.previewBars}
                                         onMouseDown={handleNodeMouseDown}
+                                        onDoubleClick={onOpenNode ? handleNodeDoubleClick : undefined}
                                     />
                                 ))}
                             </div>

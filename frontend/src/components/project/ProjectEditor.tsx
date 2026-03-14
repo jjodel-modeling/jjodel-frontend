@@ -2063,6 +2063,15 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                         }))}
                         artifactStats={artifactStats}
                         onClose={() => setShowMegamodelModal(false)}
+                        onOpenNode={(nodeId, nodeKind) => {
+                            if (nodeKind === 'metamodel' || nodeKind === 'model') {
+                                const lModel = metamodels.find(mm => mm.id === nodeId) || models.find(m => m.id === nodeId);
+                                if (lModel) DockManager.open2(lModel);
+                            } else if (nodeKind === 'transformation') {
+                                const t = transformations.find(tr => tr.id === nodeId);
+                                if (t) handleOpenTransformation(t);
+                            }
+                        }}
                     />
                 );
             })()}

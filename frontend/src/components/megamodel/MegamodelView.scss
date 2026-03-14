@@ -183,7 +183,7 @@
     border: 0.5px solid var(--mm-node-border);
     border-radius: 10px;
     box-shadow: var(--mm-node-shadow);
-    cursor: grab;
+    cursor: pointer;
     user-select: none;
     overflow: hidden;
     transition: border-color 0.15s, box-shadow 0.15s;
@@ -195,6 +195,13 @@
 
     &:active {
         cursor: grabbing;
+    }
+
+    // Flash highlight on double-click before opening
+    &--opening {
+        border-color: #0ea5e9;
+        box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.3);
+        transition: border-color 0.1s, box-shadow 0.1s;
     }
 }
 

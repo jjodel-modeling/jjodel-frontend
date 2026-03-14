@@ -5,7 +5,7 @@
  * footer (status dot + label). Draggable via mousedown on the card.
  */
 
-import React from 'react';
+import React, { useCallback, useRef } from 'react';
 import type { MmNodeKind, MmNodeStats, MmNodeStatus } from './MegamodelEdge';
 
 export interface MegamodelNodeProps {
@@ -20,6 +20,7 @@ export interface MegamodelNodeProps {
     status: MmNodeStatus;
     previewBars: number[];
     onMouseDown: (e: React.MouseEvent, nodeId: string) => void;
+    onDoubleClick?: (nodeId: string) => void;
 }
 
 // ─── Stat pills per node kind ───────────────────────────────────────────────
@@ -59,17 +60,34 @@ const TransformIcon: React.FC = () => (
 // ─── Component ──────────────────────────────────────────────────────────────
 
 const MegamodelNode: React.FC<MegamodelNodeProps> = ({
-    id, kind, badgeLabel, name, typeLabel, x, y, stats, status, previewBars, onMouseDown,
+    id, kind, badgeLabel, name, typeLabel, x, y, stats, status, previewBars, onMouseDown, onDoubleClick,
 }) => {
+    const cardRef = useRef<HTMLDivElement>(null);
     const pills = getStatPills(kind, stats);
     const hasBars = previewBars.length > 0 && kind !== 'transformation';
     const hasProgress = kind === 'transformation' && stats.completionPercent != null;
 
+    const handleDoubleClick = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!onDoubleClick) return;
+        // Flash highlight before opening
+        const el = cardRef.current;
+        if (el) {
+            el.classList.add('mm-card--opening');
+            setTimeout(() => onDoubleClick(id), 150);
+        } else {
+            onDoubleClick(id);
+        }
+    }, [onDoubleClick, id]);
+
     return (
         <div
+            ref={cardRef}
             className={`mm-card mm-card--${kind}`}
             style={{ left: x, top: y }}
             onMouseDown={(e) => onMouseDown(e, id)}
+            onDoubleClick={handleDoubleClick}
+            title={onDoubleClick ? `Double-click to open ${name}` : undefined}
         >
             {/* Header */}
             <div className="mm-card__header">
