@@ -316,7 +316,16 @@ function DockComponent(props: AllProps) {
     // Note: JjTL editor hides this panel via DockManager.dock.loadLayout() in JjtlDevelopmentEnv.tsx
     layout.dockbox.children.push({tabs, size: rightSize});
 
-    return (<PinnableDock key={''+advanced} ref={dock => { DockManager.dock = dock }} defaultLayout={layout} groups={groups} />);
+    // Emit custom event when the active tab in the left panel changes
+    // so that StatusBar can switch between project stats and editor breadcrumb.
+    const handleLayoutChange = (newLayout: any) => {
+        const activeId = newLayout?.dockbox?.children?.[0]?.activeId;
+        if (activeId) {
+            window.dispatchEvent(new CustomEvent('jjodel:active-tab', { detail: { activeId } }));
+        }
+    };
+
+    return (<PinnableDock key={''+advanced} ref={dock => { DockManager.dock = dock }} defaultLayout={layout} groups={groups} onLayoutChange={handleLayoutChange} />);
 }
 interface OwnProps {}
 interface StateProps {

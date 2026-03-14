@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, type ReactNode } from 'react';
 import type { ToastDismiss, ToastPriority } from './toastTypes';
 import './toast.scss';
 
@@ -7,8 +7,8 @@ export type ToastType = ToastPriority;
 interface ToastProps {
     id: string;
     type: ToastType;
-    title?: string;
-    message: string;
+    title?: ReactNode;
+    message: ReactNode;
     dismiss?: ToastDismiss;
     duration?: number;
     onClose: (id: string) => void;

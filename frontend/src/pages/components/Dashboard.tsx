@@ -39,7 +39,7 @@ import { Tooltip } from '../../components/forEndUser/Tooltip';
 import { ProjectsApi } from '../../api/persistance';
 import {Cards} from "./cards/Cards";
 import {createM2} from "./Navbar";
-import {BottomToolbar} from "./BottomToolbar";
+import StatusBar from "../../components/StatusBar";
 
 
 type UserProps = {
@@ -201,7 +201,6 @@ const Title = (props: TitleProps) => {
                             {props.description && <Tooltip tooltip={'DoubleClick to edit'} inline={true} position={'left'} offsetX={10}>
                                 <h3 onDoubleClick={() => setEditDes(!editDes)}>{props.description}</h3>
                             </Tooltip>}
-                            <span className="project-version">v{props.version}</span>
                         </>
                     }
                     
@@ -336,6 +335,7 @@ function GenericDashboard(props: DashProps): any {
                 </div>
             )}
         </div>
+        <StatusBar />
     </>);
 }
 
@@ -543,7 +543,7 @@ function ProjectDashboard(props: DashProps): any {
         </Try>
         <Try><Navbar /></Try>
         <Try><Dock /></Try>
-        <Try><BottomToolbar /></Try>
+        <Try><StatusBar /></Try>
     </>);
 }
 

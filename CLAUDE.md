@@ -42,6 +42,8 @@
 
 ## 🎨 Design System
 
+> **Full design system spec:** [`docs/DESIGN-SYSTEM.md`](docs/DESIGN-SYSTEM.md) — single source of truth for artifact type colors, component catalog, layout patterns, and interaction behaviors.
+
 ### Colori
 ```scss
 // Base (Slate)

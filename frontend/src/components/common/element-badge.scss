@@ -18,16 +18,16 @@
   transition: background-color 150ms ease, color 150ms ease;
 }
 
-/* Metamodel - Lavender/Purple */
+/* Metamodel - Muted slate (letter M identifies it) */
 .element-badge--metamodel {
-  background-color: #E9D5FF;  /* Lavender */
-  color: #7C3AED;             /* Purple-600 */
+  background-color: rgba(100, 116, 139, 0.12);
+  color: #64748b;
 }
 
-/* Model - Amber/Yellow */
+/* Model - Muted slate (letter m identifies it) */
 .element-badge--model {
-  background-color: #FEF3C7;  /* Amber-100 */
-  color: #D97706;             /* Amber-600 */
+  background-color: rgba(100, 116, 139, 0.12);
+  color: #64748b;
 }
 
 /* Package - Blue */
@@ -92,23 +92,23 @@
   color: #DB2777;             /* Pink-600 */
 }
 
-/* Epsilon/Transformation - Orange */
+/* Epsilon/Transformation - Muted slate (even lighter) */
 .element-badge--epsilon,
 .element-badge--transformation {
-  background-color: #FFEDD5;  /* Orange-100 */
-  color: #EA580C;             /* Orange-600 */
+  background-color: rgba(100, 116, 139, 0.10);
+  color: #94a3b8;
 }
 
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
   .element-badge--metamodel {
-    background-color: rgba(139, 92, 246, 0.15);
-    color: #A78BFA;
+    background-color: rgba(148, 163, 184, 0.15);
+    color: #94a3b8;
   }
 
   .element-badge--model {
-    background-color: rgba(245, 158, 11, 0.15);
-    color: #FBBF24;
+    background-color: rgba(148, 163, 184, 0.15);
+    color: #94a3b8;
   }
 
   .element-badge--package {
@@ -165,7 +165,7 @@
 
   .element-badge--epsilon,
   .element-badge--transformation {
-    background-color: rgba(234, 88, 12, 0.15);
-    color: #FB923C;
+    background-color: rgba(148, 163, 184, 0.12);
+    color: #64748b;
   }
 }

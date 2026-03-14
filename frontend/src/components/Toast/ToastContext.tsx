@@ -5,20 +5,20 @@ import type { ToastMessage, ToastPreferences, ToastDismiss, JjodelToastDetail } 
 import { loadToastPrefs } from './toastTypes';
 
 interface ToastOptions {
-    title?: string;
+    title?: ReactNode;
     duration?: number;
     dismiss?: ToastDismiss;
 }
 
 interface ToastContextValue {
     toasts: ToastMessage[];
-    addToast: (message: string, type?: ToastType, options?: ToastOptions) => string;
+    addToast: (message: ReactNode, type?: ToastType, options?: ToastOptions) => string;
     removeToast: (id: string) => void;
     clearAll: () => void;
-    success: (message: string, options?: ToastOptions) => string;
-    error: (message: string, options?: ToastOptions) => string;
-    info: (message: string, options?: ToastOptions) => string;
-    warning: (message: string, options?: ToastOptions) => string;
+    success: (message: ReactNode, options?: ToastOptions) => string;
+    error: (message: ReactNode, options?: ToastOptions) => string;
+    info: (message: ReactNode, options?: ToastOptions) => string;
+    warning: (message: ReactNode, options?: ToastOptions) => string;
 }
 
 const MAX_TOASTS = 5;
@@ -38,7 +38,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }, []);
 
     const addToast = useCallback((
-        message: string,
+        message: ReactNode,
         type: ToastType = 'info',
         options: ToastOptions = {},
     ) => {
@@ -67,10 +67,10 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     const clearAll = useCallback(() => setToasts([]), []);
 
-    const success = useCallback((msg: string, opts?: ToastOptions) => addToast(msg, 'success', opts), [addToast]);
-    const error = useCallback((msg: string, opts?: ToastOptions) => addToast(msg, 'error', opts), [addToast]);
-    const info = useCallback((msg: string, opts?: ToastOptions) => addToast(msg, 'info', opts), [addToast]);
-    const warning = useCallback((msg: string, opts?: ToastOptions) => addToast(msg, 'warning', opts), [addToast]);
+    const success = useCallback((msg: ReactNode, opts?: ToastOptions) => addToast(msg, 'success', opts), [addToast]);
+    const error = useCallback((msg: ReactNode, opts?: ToastOptions) => addToast(msg, 'error', opts), [addToast]);
+    const info = useCallback((msg: ReactNode, opts?: ToastOptions) => addToast(msg, 'info', opts), [addToast]);
+    const warning = useCallback((msg: ReactNode, opts?: ToastOptions) => addToast(msg, 'warning', opts), [addToast]);
 
     // Stable ref so event listeners always use latest addToast
     const addToastRef = useRef(addToast);
@@ -96,13 +96,22 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     useEffect(() => {
         const handler = (e: Event) => {
             const detail = (e as CustomEvent<JjodelToastDetail>).detail;
+            console.log('[ToastContext] jjodel:toast event received:', detail);
             if (!detail) return;
 
             // Check per-type preference
             const p = prefsRef.current;
-            if (detail.priority === 'success' && !p.enableSuccess) return;
-            if (detail.priority === 'info' && !p.enableInfo) return;
+            console.log('[ToastContext] prefs:', { enableSuccess: p.enableSuccess, enableInfo: p.enableInfo, position: p.position });
+            if (detail.priority === 'success' && !p.enableSuccess) {
+                console.log('[ToastContext] Filtered: success disabled');
+                return;
+            }
+            if (detail.priority === 'info' && !p.enableInfo) {
+                console.log('[ToastContext] Filtered: info disabled');
+                return;
+            }
 
+            console.log('[ToastContext] Adding toast...');
             addToastRef.current(detail.message, detail.priority, {
                 title: detail.title,
                 dismiss: detail.dismiss,
@@ -110,6 +119,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
             });
         };
         window.addEventListener('jjodel:toast', handler);
+        console.log('[ToastContext] jjodel:toast listener registered');
         return () => window.removeEventListener('jjodel:toast', handler);
     }, []);
 

@@ -161,6 +161,14 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
         return () => window.removeEventListener('jjtl-execution-result', handler);
     }, [setResultFromExternal]);
 
+    // Notify the app StatusBar that JjTL editor is visible (so it hides itself)
+    useEffect(() => {
+        window.dispatchEvent(new CustomEvent('jjodel:jjtl-statusbar', { detail: { active: true } }));
+        return () => {
+            window.dispatchEvent(new CustomEvent('jjodel:jjtl-statusbar', { detail: { active: false } }));
+        };
+    }, []);
+
     // Convert parser errors to problems
     const problems: Problem[] = parserErrors.map((e, i) => parserErrorToProblem(e, i));
 

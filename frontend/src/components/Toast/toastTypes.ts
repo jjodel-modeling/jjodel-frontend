@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 export type ToastPriority = 'info' | 'success' | 'warning' | 'error';
 export type ToastPosition = 'bottom-left' | 'bottom-right' | 'top-right' | 'top-left';
 export type ToastDismiss = 'auto' | 'manual';
@@ -5,8 +7,8 @@ export type ToastDismiss = 'auto' | 'manual';
 export interface ToastMessage {
     id: string;
     priority: ToastPriority;
-    title?: string;
-    message: string;
+    title?: ReactNode;
+    message: ReactNode;
     dismiss: ToastDismiss;
     duration?: number; // ms, only for auto-dismiss
 }
@@ -44,8 +46,8 @@ export function saveToastPrefs(prefs: ToastPreferences): void {
 /** Detail payload for `jjodel:toast` CustomEvent */
 export interface JjodelToastDetail {
     priority: ToastPriority;
-    title?: string;
-    message: string;
+    title?: ReactNode;
+    message: ReactNode;
     dismiss?: ToastDismiss;
     duration?: number;
 }

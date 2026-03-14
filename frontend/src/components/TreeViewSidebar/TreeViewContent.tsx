@@ -1,4 +1,4 @@
-import React, { Dispatch, ReactElement, memo, useCallback, useMemo, useEffect, useRef } from 'react';
+import React, { Dispatch, ReactElement, memo, useCallback, useMemo, useEffect, useRef, useState } from 'react';
 import { connect } from 'react-redux';
 import {
     DState,
@@ -390,7 +390,7 @@ const ModelTree = memo(function ModelTree({
                     <i className={`bi bi-chevron-${isExpanded ? 'down' : 'right'}`} />
                 </button>
                 <div className="metamodel-tree__title" onClick={handleModelClick}>
-                    <span className="tree-node__icon tree-DModel" style={{ background: 'rgba(14, 165, 233, 0.15)', color: '#0ea5e9' }}>m</span>
+                    <span className="tree-node__icon tree-nested-model">m</span>
                     <span>{model.name || 'Unnamed Model'}</span>
                     {isHighlighted && highlightedAction === 'create' && (
                         <span className="tree-node__badge tree-node__badge--new">NEW</span>
@@ -617,6 +617,125 @@ const NestedModelTree = memo(function NestedModelTree({
     );
 });
 
+// ─── Transformation data received via CustomEvent from ProjectEditor ────────
+
+interface TreeTransformationData {
+    id: string;
+    name: string;
+    sourceMMName?: string;
+    targetMMName?: string;
+}
+
+/**
+ * MegamodelEntry — top-level entry that opens the Megamodel view on click
+ */
+const MegamodelEntry = memo(function MegamodelEntry(): ReactElement {
+    const handleClick = useCallback(() => {
+        window.dispatchEvent(new CustomEvent('jjodel:openMegamodel'));
+    }, []);
+
+    return (
+        <div className="megamodel-entry" onClick={handleClick}>
+            <div className="megamodel-entry__header">
+                <span className="megamodel-entry__icon">
+                    <i className="bi bi-diagram-3-fill" />
+                </span>
+                <span className="megamodel-entry__label">Megamodel</span>
+            </div>
+        </div>
+    );
+});
+
+/**
+ * TransformationItem — a single transformation entry in the tree
+ */
+const TransformationItem = memo(function TransformationItem({
+    transformation,
+    selectedId,
+    onSelect,
+}: {
+    transformation: TreeTransformationData;
+    selectedId?: string;
+    onSelect?: () => void;
+}): ReactElement {
+    const isSelected = selectedId === transformation.id;
+
+    const handleClick = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        SetRootFieldAction.new('_lastSelected', {
+            node: '',
+            view: '',
+            modelElement: transformation.id
+        }, '', false);
+        onSelect?.();
+    }, [transformation.id, onSelect]);
+
+    return (
+        <div className="tree-node" data-element-id={transformation.id}>
+            <div
+                className={`tree-node__header ${isSelected ? 'tree-node__header--selected' : ''}`}
+                style={{ paddingLeft: '12px' }}
+            >
+                <span className="tree-node__spacer" style={{ width: 16 }} />
+                <div className="tree-node__content" onClick={handleClick}>
+                    <span className="tree-node__icon tree-transformation">
+                        <i className="bi bi-arrow-left-right" />
+                    </span>
+                    <span className="tree-node__name">{transformation.name}</span>
+                </div>
+            </div>
+        </div>
+    );
+});
+
+/**
+ * TransformationSection — collapsable section listing all JjTL transformations
+ */
+const TransformationSection = memo(function TransformationSection({
+    transformations,
+    selectedId,
+    onSelect,
+}: {
+    transformations: TreeTransformationData[];
+    selectedId?: string;
+    onSelect?: () => void;
+}): ReactElement {
+    const [isExpanded, setIsExpanded] = useStateIfMounted(true);
+
+    const handleToggle = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        setIsExpanded(prev => !prev);
+    }, [setIsExpanded]);
+
+    return (
+        <div className="transformation-section">
+            <div className="transformation-section__header" onClick={handleToggle}>
+                <button className="tree-node__toggle">
+                    <i className={`bi bi-chevron-${isExpanded ? 'down' : 'right'}`} />
+                </button>
+                <span className="transformation-section__icon">
+                    <i className="bi bi-arrow-left-right" />
+                </span>
+                <span className="transformation-section__label">Transformations</span>
+                <span className="transformation-section__count">{transformations.length}</span>
+            </div>
+
+            {isExpanded && (
+                <div className="transformation-section__content">
+                    {transformations.map((t) => (
+                        <TransformationItem
+                            key={t.id}
+                            transformation={t}
+                            selectedId={selectedId}
+                            onSelect={onSelect}
+                        />
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+});
+
 function TreeViewContentComponent(props: AllProps & TreeViewContentProps) {
     const { processedMetamodels, selectedElementId, onSelect } = props;
     const containerRef = useRef<HTMLDivElement>(null);
@@ -628,6 +747,18 @@ function TreeViewContentComponent(props: AllProps & TreeViewContentProps) {
         expandedNodeIds,
         isScriptExecuting
     } = useTreeViewPanel();
+
+    // Transformations received via CustomEvent from ProjectEditor
+    const [transformations, setTransformations] = useState<TreeTransformationData[]>([]);
+
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const detail = (e as CustomEvent).detail as TreeTransformationData[] | undefined;
+            setTransformations(detail || []);
+        };
+        window.addEventListener('jjodel:transformations', handler);
+        return () => window.removeEventListener('jjodel:transformations', handler);
+    }, []);
 
     // Listen for scroll-to-element events
     useEffect(() => {
@@ -659,18 +790,25 @@ function TreeViewContentComponent(props: AllProps & TreeViewContentProps) {
 
     const { standaloneModels } = props as AllProps;
 
-    if ((!processedMetamodels || processedMetamodels.length === 0) && standaloneModels.length === 0) {
+    const hasContent = (processedMetamodels && processedMetamodels.length > 0) || standaloneModels.length > 0;
+
+    if (!hasContent && transformations.length === 0) {
         return (
-            <div className="tree-view-empty">
-                <i className="bi bi-diagram-3" />
-                <p>No metamodels</p>
-                <span>Create a metamodel to see the hierarchy</span>
+            <div ref={containerRef} className="tree-view-content">
+                <MegamodelEntry />
+                <div className="tree-view-empty">
+                    <i className="bi bi-diagram-3" />
+                    <p>No metamodels</p>
+                    <span>Create a metamodel to see the hierarchy</span>
+                </div>
             </div>
         );
     }
 
     return (
         <div ref={containerRef} className="tree-view-content">
+            <MegamodelEntry />
+
             {processedMetamodels.map((mm, index) => (
                 <React.Fragment key={mm.data.id}>
                     <MetamodelTree
@@ -707,6 +845,14 @@ function TreeViewContentComponent(props: AllProps & TreeViewContentProps) {
                     onSelect={onSelect}
                 />
             ))}
+
+            {transformations.length > 0 && (
+                <TransformationSection
+                    transformations={transformations}
+                    selectedId={selectedElementId}
+                    onSelect={onSelect}
+                />
+            )}
         </div>
     );
 }

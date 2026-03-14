@@ -250,19 +250,6 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                     <Item action={closeProject} icon={icon['close']}>Close project </Item>
                 </Menu>
 
-                {/* Footer - Version Only */}
-                <div className="leftbar-footer">
-                    <span className="version-text">Jjodel v2.0</span>
-                    <a
-                        href="https://opensource.org/licenses/MIT"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="license-badge"
-                    >
-                        <span className="license-label">License</span>
-                        <span className="license-type">MIT</span>
-                    </a>
-                </div>
             </div>
             :
             <div className={'leftbar'}>
@@ -346,20 +333,6 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                         icon={<i className="bi bi-github" />}
                     >GitHub</Item>
                 </Menu>
-
-                {/* Footer - Version Only */}
-                <div className="leftbar-footer">
-                    <span className="version-text">Jjodel v2.0</span>
-                    <a
-                        href="https://opensource.org/licenses/MIT"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="license-badge"
-                    >
-                        <span className="license-label">License</span>
-                        <span className="license-type">MIT</span>
-                    </a>
-                </div>
 
             </div>
         }

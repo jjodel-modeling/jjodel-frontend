@@ -734,7 +734,7 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     background-color: $color-accent;
     color: white;
     font-size: $font-size-xs;
-    height: 24px;
+    height: 32px;
 }
 
 .jjtl-statusbar-section {
@@ -816,6 +816,16 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
 
 .jjtl-statusbar-language {
     font-weight: 600;
+}
+
+// Separator between JjTL-specific items and the shared right-zone
+.jjtl-statusbar-rz-sep {
+    display: inline-block;
+    width: 1px;
+    height: 16px;
+    background: rgba(255, 255, 255, 0.25);
+    margin: 0 10px;
+    flex-shrink: 0;
 }
 
 // ============================================

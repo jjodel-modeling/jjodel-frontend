@@ -1,0 +1,215 @@
+/**
+ * StatusBarRightZone Styles
+ * Shared right-zone for app StatusBar (light) and JjTL status bar (dark).
+ * Prefix: sb-rz
+ */
+
+.sb-rz {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-shrink: 0;
+
+    // ── Separator ──
+
+    &__sep {
+        display: inline-block;
+        width: 1px;
+        height: 16px;
+        background: #e2e8f0;
+        margin: 0 8px;
+        flex-shrink: 0;
+    }
+
+    // ── Mode toggle ──
+
+    &__mode {
+        display: inline-flex;
+        align-items: center;
+        background: none;
+        border: 1px solid #cbd5e1;
+        border-radius: 4px;
+        padding: 1px 8px;
+        font-size: 11px;
+        font-weight: 500;
+        color: #64748b;
+        cursor: pointer;
+        line-height: 18px;
+        transition: border-color 150ms ease, color 150ms ease;
+
+        &:hover {
+            border-color: #0ea5e9;
+            color: #0ea5e9;
+        }
+
+        &--adv {
+            color: #0ea5e9;
+            border-color: #0ea5e9;
+        }
+    }
+
+    // ── Jjodie AI icon ──
+
+    &__jjodie {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: none;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        position: relative;
+    }
+
+    &__jjodie-icon {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+
+        i {
+            font-size: 17px;
+            color: #334155;
+            transition: color 150ms ease;
+        }
+
+        &:hover i {
+            color: #0ea5e9;
+        }
+
+        &--off {
+            filter: grayscale(1) opacity(0.5);
+
+            &:hover {
+                filter: none;
+            }
+        }
+    }
+
+    // ── Status dot ──
+
+    &__dot {
+        position: absolute;
+        bottom: -1px;
+        right: -1px;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        border: 1.5px solid #f8fafc;
+
+        &--green { background: #22c55e; }
+        &--gray  { background: #94a3b8; }
+    }
+
+    // ── Notification bell ──
+
+    &__bell-wrapper {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    &__bell {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: none;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        position: relative;
+
+        i {
+            font-size: 15px;
+            color: #94a3b8;
+            transition: color 150ms ease;
+        }
+
+        &:hover i {
+            color: #334155;
+        }
+    }
+
+    &__bell-dot {
+        position: absolute;
+        top: -1px;
+        right: -2px;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #0ea5e9;
+    }
+
+    // ── Version ──
+
+    &__version {
+        font-size: 10px;
+        color: #94a3b8;
+        white-space: nowrap;
+    }
+
+    // ══════════════════════════════════════════
+    // Dark variant (JjTL status bar)
+    // ══════════════════════════════════════════
+
+    &--dark {
+        .sb-rz__sep {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .sb-rz__mode {
+            color: rgba(255, 255, 255, 0.85);
+            border-color: rgba(255, 255, 255, 0.35);
+
+            &:hover {
+                border-color: white;
+                color: white;
+            }
+
+            &--adv {
+                color: white;
+                border-color: rgba(255, 255, 255, 0.6);
+            }
+        }
+
+        .sb-rz__jjodie-icon {
+            i {
+                color: rgba(255, 255, 255, 0.85);
+            }
+
+            &:hover i {
+                color: white;
+            }
+
+            &--off {
+                filter: opacity(0.5);
+
+                &:hover {
+                    filter: none;
+                }
+            }
+        }
+
+        .sb-rz__dot {
+            border-color: #475569;
+        }
+
+        .sb-rz__bell i {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .sb-rz__bell:hover i {
+            color: white;
+        }
+
+        .sb-rz__bell-dot {
+            background: #22d3ee;
+        }
+
+        .sb-rz__version {
+            color: rgba(255, 255, 255, 0.6);
+        }
+    }
+}

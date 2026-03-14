@@ -16,6 +16,8 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
 }) => {
     if (toasts.length === 0) return null;
 
+    console.log('[ToastContainer] Rendering', toasts.length, 'toasts, position:', position);
+
     return (
         <div className={`toast-container toast-container--${position}`}>
             {toasts.map(toast => (

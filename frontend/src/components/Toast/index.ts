@@ -11,3 +11,4 @@ export type {
     JjodelToastDetail,
 } from './toastTypes';
 export { loadToastPrefs, saveToastPrefs, DEFAULT_TOAST_PREFS, TOAST_PREFS_KEY } from './toastTypes';
+export { toast } from './toastDispatch';
