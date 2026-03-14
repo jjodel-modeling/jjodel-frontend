@@ -425,6 +425,26 @@
         font-size: 11px;
         color: var(--mm-legend-text);
         white-space: nowrap;
+
+        &--toggle {
+            cursor: pointer;
+            border-radius: 3px;
+            padding: 2px 4px;
+            margin: -2px -4px;
+            transition: opacity 0.2s;
+
+            &:hover {
+                background: var(--mm-control-hover-bg);
+            }
+        }
+
+        &--hidden {
+            opacity: 0.35;
+
+            span {
+                text-decoration: line-through;
+            }
+        }
     }
 
     &__swatch {

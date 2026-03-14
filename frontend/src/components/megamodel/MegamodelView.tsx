@@ -293,6 +293,27 @@ function clearPositions(projectId: string): void {
     localStorage.removeItem(POSITIONS_KEY_PREFIX + projectId);
 }
 
+// ─── Hidden edge types persistence (localStorage) ────────────────────────────
+
+const HIDDEN_EDGES_KEY_PREFIX = 'megamodel-hidden-edges-';
+const DEFAULT_HIDDEN_EDGES = ['instanceInputOf', 'sourceOf'];
+
+function saveHiddenEdges(projectId: string, hidden: Set<string>): void {
+    try {
+        localStorage.setItem(HIDDEN_EDGES_KEY_PREFIX + projectId, JSON.stringify([...hidden]));
+    } catch { /* ignore quota errors */ }
+}
+
+function loadHiddenEdges(projectId: string): Set<string> | null {
+    try {
+        const raw = localStorage.getItem(HIDDEN_EDGES_KEY_PREFIX + projectId);
+        if (!raw) return null;
+        return new Set(JSON.parse(raw));
+    } catch {
+        return null;
+    }
+}
+
 // ─── Context menu state type ────────────────────────────────────────────────
 
 interface ContextMenuState {
@@ -345,6 +366,25 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
     const [spotlightNodeId, setSpotlightNodeId] = useState<string | null>(null);
     const spotlightClickTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    // Edge type visibility (legend toggles)
+    const [hiddenEdgeTypes, setHiddenEdgeTypes] = useState<Set<string>>(() => {
+        if (projectId) {
+            const saved = loadHiddenEdges(projectId);
+            if (saved) return saved;
+        }
+        return new Set(DEFAULT_HIDDEN_EDGES);
+    });
+
+    const toggleEdgeType = useCallback((edgeType: string) => {
+        setHiddenEdgeTypes(prev => {
+            const next = new Set(prev);
+            if (next.has(edgeType)) next.delete(edgeType);
+            else next.add(edgeType);
+            if (projectId) saveHiddenEdges(projectId, next);
+            return next;
+        });
+    }, [projectId]);
+
     const connectedNodeIds = useMemo(() => {
         if (!spotlightNodeId) return null;
         const connected = new Set<string>();
@@ -365,7 +405,7 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
         return map;
     }, [artifactStats]);
 
-    // ── Fit-to-view helper ──────────────────────────────────────────────────
+    // ── Fit-to-view helper (used only by explicit "Fit to view" button) ────
     const fitToView = useCallback((laid: MmNode[]) => {
         if (!containerRef.current || laid.length === 0) return;
         const rect = containerRef.current.getBoundingClientRect();
@@ -386,6 +426,26 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
             y: (rect.height / newZoom - contentH) / 2 - minY + 40,
         });
         setZoom(Math.max(newZoom, 0.3));
+    }, []);
+
+    // ── Center at 1:1 zoom (used for initial open and auto-arrange) ─────────
+    const centerAtZoom1 = useCallback((laid: MmNode[]) => {
+        if (!containerRef.current || laid.length === 0) return;
+        const rect = containerRef.current.getBoundingClientRect();
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const n of laid) {
+            if (n.x < minX) minX = n.x;
+            if (n.y < minY) minY = n.y;
+            if (n.x + NODE_W > maxX) maxX = n.x + NODE_W;
+            if (n.y + NODE_H > maxY) maxY = n.y + NODE_H;
+        }
+        const centerX = (minX + maxX) / 2;
+        const centerY = (minY + maxY) / 2;
+        setPan({
+            x: rect.width / 2 - centerX,
+            y: rect.height / 2 - centerY,
+        });
+        setZoom(1);
     }, []);
 
     // ── Build graph and run dagre layout ──────────────────────────────────────
@@ -430,9 +490,9 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
         setEdges(builtEdges);
         setLayoutReady(true);
 
-        // Auto-fit after layout (need a frame for containerRef to have dimensions)
-        requestAnimationFrame(() => fitToView(laid));
-    }, [megamodel, viewpoints, statsMap, fitToView, projectId]);
+        // Center at 1:1 zoom after layout (need a frame for containerRef to have dimensions)
+        requestAnimationFrame(() => centerAtZoom1(laid));
+    }, [megamodel, viewpoints, statsMap, centerAtZoom1, projectId]);
 
     // ── Node map for fast lookup ──────────────────────────────────────────────
     const nodeMap = useMemo(() => {
@@ -441,13 +501,19 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
         return map;
     }, [nodes]);
 
+    // ── Visible edges (filtered by legend toggles) ─────────────────────────
+    const visibleEdges = useMemo(
+        () => edges.filter(e => !hiddenEdgeTypes.has(e.type)),
+        [edges, hiddenEdgeTypes],
+    );
+
     // ── Computed edge paths ───────────────────────────────────────────────────
     const edgePaths = useMemo(() => {
         if (!layoutReady) return [];
 
-        const anchorTs = computeAnchorTs(edges);
+        const anchorTs = computeAnchorTs(visibleEdges);
 
-        return edges.map(edge => {
+        return visibleEdges.map(edge => {
             const fromNode = nodeMap.get(edge.from);
             const toNode   = nodeMap.get(edge.to);
             if (!fromNode || !toNode) return null;
@@ -466,7 +532,7 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
 
             return { edge, path, mid, pts };
         }).filter(Boolean) as Array<{ edge: MmEdge; path: string; mid: Point; pts: Point[] }>;
-    }, [edges, nodeMap, layoutReady]);
+    }, [visibleEdges, nodeMap, layoutReady]);
 
     // ── Pan handlers (middle-click or left-click on background) ───────────────
     const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
@@ -493,15 +559,20 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
         }
         if (draggingNode.current) {
             nodeDragged.current = true;
-            // Calculate position in canvas coords
+            // Calculate position in canvas coords, snapped to grid
             const rect = containerRef.current?.getBoundingClientRect();
             if (!rect) return;
             const canvasX = (e.clientX - rect.left) / zoom - pan.x;
             const canvasY = (e.clientY - rect.top)  / zoom - pan.y;
+            const SNAP = 20;
+            const rawX = canvasX - dragOffset.current.x;
+            const rawY = canvasY - dragOffset.current.y;
+            const snappedX = Math.round(rawX / SNAP) * SNAP;
+            const snappedY = Math.round(rawY / SNAP) * SNAP;
 
             setNodes(prev => prev.map(n =>
                 n.id === draggingNode.current
-                    ? { ...n, x: canvasX - dragOffset.current.x, y: canvasY - dragOffset.current.y }
+                    ? { ...n, x: snappedX, y: snappedY }
                     : n
             ));
         }
@@ -749,8 +820,8 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
         setNodes(laid);
         // Save the new auto-layout positions
         if (projectId) savePositions(projectId, laid);
-        requestAnimationFrame(() => fitToView(laid));
-    }, [nodes, edges, fitToView, projectId]);
+        requestAnimationFrame(() => centerAtZoom1(laid));
+    }, [nodes, edges, centerAtZoom1, projectId]);
 
     // ── Arrow markers ─────────────────────────────────────────────────────────
     const markerColors = useMemo(() => {
@@ -845,8 +916,14 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
                             <div className="mm-legend__section">
                                 {LEGEND_EDGES.map(({ key, label }) => {
                                     const s = EDGE_STYLES[key];
+                                    const isHidden = hiddenEdgeTypes.has(key);
                                     return (
-                                        <div key={key} className="mm-legend__item">
+                                        <div
+                                            key={key}
+                                            className={`mm-legend__item mm-legend__item--toggle${isHidden ? ' mm-legend__item--hidden' : ''}`}
+                                            onClick={() => toggleEdgeType(key)}
+                                            title={isHidden ? `Show ${label} edges` : `Hide ${label} edges`}
+                                        >
                                             <svg width="20" height="8" style={{ flexShrink: 0 }}>
                                                 <line
                                                     x1="0" y1="4" x2="20" y2="4"
