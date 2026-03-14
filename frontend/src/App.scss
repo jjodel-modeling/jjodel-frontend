@@ -74,21 +74,56 @@ font-weight: var(--font-extrabold) !important;
 .hoverable{
   position: relative;
   &>.content, &>svg>.content{
-    display: none;
+    display: none !important;
   }
 }
 .hoverable:hover, .hoverable:focus, .hoverable:focus-within, .hoverable:active, .hoverable.pinned{
   &>.preview, &>svg>.preview{
-    display: none;
+    display: none !important;
   }
 
   &>.content, &>svg>.content{
-    display: block;
+    &.d-flex{
+      display: flex !important;
+    }
+    &.d-inline{
+      display: inline !important;
+    }
+    &.d-block{
+      display: block !important;
+    }
+    display: block !important;
     z-index:1;
     position: absolute;
     box-shadow: var(--smart-elevation-8);
     &.fixed{
       position: fixed;
+    }
+
+    &.bottom {
+      left: 50%;
+      top: 100%; // calc(100% - 5px);
+      transform: translate(-50%, 0);
+    }
+    &.top {
+      left: 50%;
+      transform: translate(-50%, -100%);
+    }
+    &.right {
+      min-height: 100%;
+      left: calc(100% - 20px);
+      padding-left: 30px;
+      background-color: transparent;
+      top: 0px;
+      box-shadow: none;
+      // navbar stuff, needs to be moved
+      ul { position: relative; }
+      box-shadow: none;
+
+      & .keystroke {
+        float: right;
+        margin-right: 10px;
+      }
     }
   }
 

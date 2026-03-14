@@ -88,7 +88,6 @@ button, input, select, textarea {
   }
 }
 .input[type="checkbox"]:focus, .input[type="radio"]:focus { border: none; }
-.autosize-input { flex-grow: 1; flex-basis: 10px; }
 /*
 textarea.autosize{ not possible in pure css, need to add a :after element mimicking text, updated with js.
     display: grid;
@@ -104,31 +103,32 @@ textarea.autosize{ not possible in pure css, need to add a :after element mimick
 .w-fill { width: $fill; }
 .h-fill { height: $fill; }
 
-.autosize-input{
+.GraphContainer{
+  input, select {
+    background-color: inherit;
+    &:empty{
+      font-style: italic;
+    }
+    &.autosize-input {
+      background-color: transparent;
+      color: transparent;
+    }
+  }
+
+}
+input.autosize-input{
   // opacity:0;
-  background: transparent;
+  background-color: transparent;
   color: transparent;
   caret-color: var(--color-text-primary);
   position: absolute;
   width: 100%;
+  min-width: 0;
+  flex-grow: 1;
+  flex-basis: 10px;
   border-color: transparent !important;
   &:focus{ border: 1px solid transparent; }
   outline: none;
-
-}
-.autosize-input-container.labelstyle{
-
-  &>input,
-  &::after{
-    margin: 0 !important;
-    padding: 0 !important;
-    font-weight: var(--font-light);
-    height: 21.61px;
-  }
-  &::after{
-    display: block;
-    left: -0.91px;
-  }
 }
 
 [disabled], .disabled{
@@ -142,32 +142,47 @@ textarea.autosize{ not possible in pure css, need to add a :after element mimick
     //padding: 0 2.5px; /* input have some margin and border that cannot be erased? always 5?*/
     margin: 0 5px; /* input have some margin and border that cannot be erased? always 5?*/
   }
+  &>input{
+    color: transparent !important;
+  }
+  &::after{
+    content: attr(data-value) ' ';
+    color: inherit !important;
+    // left: -0.91px;
+  }
   &>input,
   &::after{ // input and fake element must have same sizes
     // todo: maybe they can be css variables injected with jsx, so can change ::after css rendering from jsx
-    content: attr(data-value) ' ';
-    color: inherit !important;
-    border: 1px solid transparent;
     white-space: pre;
+    font-size: inherit;
+    font-family: inherit;
+    line-height: inherit;
+    font-style: inherit !important;
+
+    // border: 1px solid transparent;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 0.5em !important;
+    padding-bottom: 1px !important; // no idea why, or it doesnt' align vertically
+    font-weight: var(--font-light);
+    height: 1lh;
+    max-height: 1lh !important;
+    min-height: 1lh !important;
 
     // below are only necessary for max width
     display: inline-flex;
     max-width: 200px;
     overflow: hidden;
     text-overflow: ellipsis;
+    //
+
+  }
+  :focus-within{
+    &>input,
+    &::after{ max-width: 9999px; }
   }
 }
 
-.autosize-input-container > input, .autosize-input-container::after{
-  display: flex;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: none !important;
-  height: 1lh;
-  max-height: 1lh !important;
-  min-height: 1lh !important;
-  font-style: inherit !important;
-}
 input[type="color"] {
   cursor: pointer;
   width: 24px;

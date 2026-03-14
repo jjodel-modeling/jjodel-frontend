@@ -289,14 +289,6 @@ export class DState extends DPointerTargetable{
   }
   
 
-  /* style inputs */
-  select, input{
-    background: inherit;
-    color: inherit;
-    &:empty{
-      font-style: italic;
-    }
-  }
 }
 
 /* normally hide overflow on all nodes */

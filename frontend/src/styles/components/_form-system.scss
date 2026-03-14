@@ -48,24 +48,23 @@ input[type="url"],
 input[type="tel"],
 input[type="date"],
 input[type="time"],
-textarea,
 .form-input, .form-input.form-input-fix,
 .form-textarea {
-  width: 100% !important;
-  height: var(--form-input-height) !important;
-  padding: var(--form-input-padding-y) var(--form-input-padding-x) !important;
-  font-family: var(--font-sans, 'Inter Variable', -apple-system, sans-serif) !important;
-  font-size: var(--form-input-font-size) !important;
-  color: var(--form-input-color) !important;
-  background: var(--form-input-bg) !important;
-  border: 1px solid var(--form-input-border-color) !important;
-  border-radius: var(--form-input-border-radius) !important;
-  outline: none !important;
-  box-sizing: border-box !important;
-  transition: border-color 150ms ease, box-shadow 150ms ease !important;
+  min-width: 35px;
+  height: var(--form-input-height);
+  padding: var(--form-input-padding-y) var(--form-input-padding-x);
+  font-family: var(--font-sans, 'Inter Variable', -apple-system, sans-serif);
+  font-size: var(--form-input-font-size);
+  color: var(--form-input-color);
+  background: var(--form-input-bg);
+  border: 1px solid var(--form-input-border-color);
+  border-radius: var(--form-input-border-radius);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
 
   &:hover:not(:disabled):not(:focus) {
-    border-color: var(--form-input-border-color-hover) !important;
+    border-color: var(--form-input-border-color-hover);
   }
 
   &:focus {
@@ -930,13 +929,10 @@ html[data-theme="dark"] {
 // ==============================================
 
 .monaco-editor-wrapper {
-  min-height: 150px !important;
-}
-
-// Specific contexts may need larger minimum heights
-.template-tab .monaco-editor-wrapper,
-.jsx-editor .monaco-editor-wrapper {
   min-height: 200px !important;
+  >*{
+    min-height: 200px;
+  }
 }
 
 // Function component editors (Constants, Observed properties)

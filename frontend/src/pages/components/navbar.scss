@@ -807,24 +807,6 @@
 
 
 
-/*.nav-container */.content.right {
-   min-height: 100%;
-   left: calc(100% - 20px);
-   padding-left: 30px;
-   background-color: transparent;
-   top: 0px;
-   box-shadow: none;
-   ul {
-     position: relative;
-   }
-   box-shadow: none;
-
-   & .keystroke {
-     float: right;
-     margin-right: 10px;
-
-   }
-}
 
 /* ============================================
    MENU BAR - NEW LIGHT THEME
