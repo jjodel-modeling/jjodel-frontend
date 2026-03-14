@@ -25,8 +25,8 @@ interface LayoutOptions {
 
 const DEFAULT_OPTIONS: Required<LayoutOptions> = {
     direction: 'TB',
-    rankSep: 80,
-    nodeSep: 40,
+    rankSep: 100,
+    nodeSep: 30,
     edgeSep: 20,
     marginX: 40,
     marginY: 40,
@@ -63,6 +63,7 @@ export function computeDagreLayout(
         edgesep: opts.edgeSep,
         marginx: opts.marginX,
         marginy: opts.marginY,
+        ranker: 'network-simplex',
     });
 
     // Add nodes with dimensions
@@ -70,10 +71,13 @@ export function computeDagreLayout(
         g.setNode(node.id, { width: NODE_W, height: NODE_H });
     }
 
-    // Add only structural edges for hierarchy
+    // Add structural edges with reversed direction for dagre.
+    // In the megamodel, edges like conformsTo point from model → metamodel
+    // (model conforms TO metamodel), but in dagre TB mode sources are placed
+    // above targets. We reverse them so metamodels get higher ranks (top).
     for (const edge of edges) {
         if (STRUCTURAL_EDGE_TYPES.has(edge.type)) {
-            g.setEdge(edge.from, edge.to);
+            g.setEdge(edge.to, edge.from);
         }
     }
 

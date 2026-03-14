@@ -380,6 +380,11 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
             const ts = anchorTs.get(edge.id) ?? { fromT: 0.5, toT: 0.5 };
             const p1 = getPort(fromNode, edge.fromSide, ts.fromT);
             const p2 = getPort(toNode, edge.toSide, ts.toT);
+
+            // Guard against NaN / undefined coordinates (layout not ready or missing positions)
+            if (!Number.isFinite(p1.x) || !Number.isFinite(p1.y) ||
+                !Number.isFinite(p2.x) || !Number.isFinite(p2.y)) return null;
+
             const pts = routePoints(p1, edge.fromSide, p2, edge.toSide);
             const path = buildRoundedPath(pts);
             const mid = labelMidpoint(pts);
@@ -615,11 +620,17 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
         onRunTransformation, onCreateMetamodel, onCreateModel, onImport,
         startRenaming, showDeleteConfirmation]);
 
-    // ── Zoom ──────────────────────────────────────────────────────────────────
-    const handleWheel = useCallback((e: React.WheelEvent) => {
-        e.preventDefault();
-        const factor = e.deltaY > 0 ? 0.9 : 1.1;
-        setZoom(prev => Math.min(Math.max(prev * factor, 0.15), 4));
+    // ── Zoom (imperative listener for { passive: false }) ──────────────────
+    useEffect(() => {
+        const el = containerRef.current;
+        if (!el) return;
+        const handler = (e: WheelEvent) => {
+            e.preventDefault();
+            const factor = e.deltaY > 0 ? 0.9 : 1.1;
+            setZoom(prev => Math.min(Math.max(prev * factor, 0.15), 4));
+        };
+        el.addEventListener('wheel', handler, { passive: false });
+        return () => el.removeEventListener('wheel', handler);
     }, []);
 
     // ── Fit view ──────────────────────────────────────────────────────────────
@@ -808,7 +819,6 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
                     onMouseMove={handleMouseMove}
                     onMouseUp={handleMouseUp}
                     onMouseLeave={handleMouseUp}
-                    onWheel={handleWheel}
                     onContextMenu={handleCanvasContextMenu}
                 >
                     {!layoutReady && (
