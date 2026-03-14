@@ -25,6 +25,10 @@ export interface MegamodelNodeProps {
     generatedLabel?: string;
     selected?: boolean;
     isRenaming?: boolean;
+    /** Spotlight: node is dimmed (not connected to spotlighted node) */
+    dimmed?: boolean;
+    /** Spotlight: this node is the spotlighted one */
+    spotlighted?: boolean;
     onMouseDown: (e: React.MouseEvent, nodeId: string) => void;
     onDoubleClick?: (nodeId: string) => void;
     onContextMenu?: (e: React.MouseEvent, nodeId: string) => void;
@@ -62,7 +66,7 @@ const TransformIcon: React.FC = () => (
 
 const MegamodelNode: React.FC<MegamodelNodeProps> = ({
     id, kind, badgeLabel, name, typeLabel, x, y, stats, status,
-    generated, generatedLabel, selected, isRenaming,
+    generated, generatedLabel, selected, isRenaming, dimmed, spotlighted,
     onMouseDown, onDoubleClick, onContextMenu, onRename,
 }) => {
     const badgeClass = generated ? 'mm-card__badge--generated' : `mm-card__badge--${kind}`;
@@ -117,7 +121,7 @@ const MegamodelNode: React.FC<MegamodelNodeProps> = ({
     return (
         <div
             ref={cardRef}
-            className={`mm-card mm-card--${kind}${selected ? ' mm-card--selected' : ''}`}
+            className={`mm-card mm-card--${kind}${selected ? ' mm-card--selected' : ''}${dimmed ? ' mm-card--dimmed' : ''}${spotlighted ? ' mm-card--spotlighted' : ''}`}
             style={{ left: x, top: y }}
             onMouseDown={(e) => onMouseDown(e, id)}
             onDoubleClick={handleDoubleClick}

@@ -2058,6 +2058,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 return (
                     <MegamodelView
                         megamodel={megamodel}
+                        projectId={project.id}
                         viewpoints={viewpoints.map(vp => ({
                             id: vp.id || vp.name,
                             name: vp.name || 'Unnamed',

@@ -186,7 +186,7 @@
     cursor: pointer;
     user-select: none;
     overflow: hidden;
-    transition: border-color 0.15s, box-shadow 0.15s;
+    transition: border-color 0.15s, box-shadow 0.15s, opacity 0.3s, transform 0.3s, filter 0.3s;
 
     &:hover {
         border-color: var(--mm-node-border-hover);
@@ -208,6 +208,21 @@
     &--selected {
         border-color: var(--mm-node-border-hover);
         box-shadow: 0 0 0 1.5px var(--mm-node-border-hover);
+    }
+
+    // Spotlight: dimmed (not connected to spotlighted node)
+    &--dimmed {
+        opacity: 0.15;
+        pointer-events: none;
+        filter: grayscale(1);
+    }
+
+    // Spotlight: the spotlighted node itself
+    &--spotlighted {
+        border-color: #0ea5e9;
+        box-shadow: 0 0 0 2px #0ea5e9, 0 4px 16px rgba(14, 165, 233, 0.2);
+        transform: scale(1.02);
+        z-index: 10;
     }
 }
 

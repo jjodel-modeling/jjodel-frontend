@@ -11,7 +11,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { Megamodel, MegamodelEdge as MegaEdge, ArtifactType } from '../../model/megamodel';
-import { computeDagreLayout } from './megamodelLayout';
+import { computeMegamodelLayout } from './megamodelLayout';
 import MegamodelNode from './MegamodelNode';
 import MegamodelContextMenu, { type MenuItem } from './MegamodelContextMenu';
 import {
@@ -32,6 +32,7 @@ export interface ArtifactStats {
 
 export interface MegamodelViewProps {
     megamodel: Megamodel;
+    projectId?: string;
     viewpoints?: Array<{ id: string; name: string; isOverlay?: boolean }>;
     artifactStats?: ArtifactStats[];
     onClose: () => void;
@@ -65,12 +66,13 @@ function artifactTypeToKind(type: ArtifactType): MmNodeKind {
 function edgeSides(type: MmEdgeType): { fromSide: Side; toSide: Side } {
     switch (type) {
         case 'conformsTo':  return { fromSide: 'top',    toSide: 'bottom' };
-        case 'inputOf':     return { fromSide: 'right',  toSide: 'left' };
-        case 'outputOf':    return { fromSide: 'right',  toSide: 'left' };
+        case 'inputOf':     return { fromSide: 'right',  toSide: 'left' };   // MM → transformation
+        case 'outputOf':    return { fromSide: 'right',  toSide: 'left' };   // transformation → MM
         case 'definedOn':   return { fromSide: 'top',    toSide: 'bottom' };
         case 'renderedBy':  return { fromSide: 'bottom', toSide: 'top' };
-        case 'generatedBy': return { fromSide: 'bottom', toSide: 'top' };
-        case 'sourceOf':    return { fromSide: 'left',   toSide: 'right' };
+        case 'generatedBy':    return { fromSide: 'left',   toSide: 'right' };  // generated model ← transformation
+        case 'sourceOf':       return { fromSide: 'right',  toSide: 'left' };   // transformation → source model
+        case 'instanceInputOf': return { fromSide: 'right',  toSide: 'left' };  // source model → transformation
     }
 }
 
@@ -196,8 +198,9 @@ function mapEdgeType(type: MegaEdge['type']): MmEdgeType | null {
         case 'conformsTo':  return 'conformsTo';
         case 'inputOf':     return 'inputOf';
         case 'outputOf':    return 'outputOf';
-        case 'generatedBy': return 'generatedBy';
-        case 'sourceOf':    return 'sourceOf';
+        case 'generatedBy':    return 'generatedBy';
+        case 'sourceOf':       return 'sourceOf';
+        case 'instanceInputOf': return 'instanceInputOf';
         default:            return null; // tracedBy, user-defined → skip for now
     }
 }
@@ -205,7 +208,7 @@ function mapEdgeType(type: MegaEdge['type']): MmEdgeType | null {
 // ─── Layout helper ───────────────────────────────────────────────────────────
 
 function applyLayout(nodes: MmNode[], edges: MmEdge[]): MmNode[] {
-    const positions = computeDagreLayout(nodes, edges);
+    const positions = computeMegamodelLayout(nodes, edges);
     return nodes.map(n => {
         const pos = positions.get(n.id);
         return pos ? { ...n, x: pos.x, y: pos.y } : n;
@@ -259,7 +262,36 @@ const LEGEND_EDGES: Array<{ key: MmEdgeType; label: string }> = [
     { key: 'outputOf', label: 'outputOf' },
     { key: 'generatedBy', label: 'generatedBy' },
     { key: 'sourceOf', label: 'sourceOf' },
+    { key: 'instanceInputOf', label: 'instanceInputOf' },
 ];
+
+// ─── Position persistence (localStorage) ─────────────────────────────────────
+
+const POSITIONS_KEY_PREFIX = 'megamodel-positions-';
+
+function savePositions(projectId: string, nodes: MmNode[]): void {
+    const positions: Record<string, { x: number; y: number }> = {};
+    for (const node of nodes) {
+        positions[node.id] = { x: node.x, y: node.y };
+    }
+    try {
+        localStorage.setItem(POSITIONS_KEY_PREFIX + projectId, JSON.stringify(positions));
+    } catch { /* ignore quota errors */ }
+}
+
+function loadPositions(projectId: string): Record<string, { x: number; y: number }> | null {
+    try {
+        const raw = localStorage.getItem(POSITIONS_KEY_PREFIX + projectId);
+        if (!raw) return null;
+        return JSON.parse(raw);
+    } catch {
+        return null;
+    }
+}
+
+function clearPositions(projectId: string): void {
+    localStorage.removeItem(POSITIONS_KEY_PREFIX + projectId);
+}
 
 // ─── Context menu state type ────────────────────────────────────────────────
 
@@ -275,7 +307,7 @@ interface ContextMenuState {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const MegamodelView: React.FC<MegamodelViewProps> = ({
-    megamodel, viewpoints, artifactStats, onClose, onOpenNode,
+    megamodel, projectId, viewpoints, artifactStats, onClose, onOpenNode,
     onDeleteNode, onRenameNode, onDuplicateNode, onRunTransformation,
     onCreateMetamodel, onCreateModel, onImport,
 }) => {
@@ -294,6 +326,7 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
     // Node drag
     const draggingNode = useRef<string | null>(null);
     const dragOffset = useRef({ x: 0, y: 0 });
+    const nodeDragged = useRef(false);
 
     // Selection
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -307,6 +340,21 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
 
     // Delete confirmation
     const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string; kind: MmNodeKind } | null>(null);
+
+    // Spotlight mode
+    const [spotlightNodeId, setSpotlightNodeId] = useState<string | null>(null);
+    const spotlightClickTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const connectedNodeIds = useMemo(() => {
+        if (!spotlightNodeId) return null;
+        const connected = new Set<string>();
+        connected.add(spotlightNodeId);
+        for (const edge of edges) {
+            if (edge.from === spotlightNodeId) connected.add(edge.to);
+            if (edge.to === spotlightNodeId) connected.add(edge.from);
+        }
+        return connected;
+    }, [spotlightNodeId, edges]);
 
     // ── Stats lookup map ────────────────────────────────────────────────────
     const statsMap = useMemo(() => {
@@ -350,14 +398,41 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
             return;
         }
 
-        const laid = applyLayout(builtNodes, builtEdges);
+        // Try to restore saved positions
+        const savedPositions = projectId ? loadPositions(projectId) : null;
+        let laid: MmNode[];
+
+        if (savedPositions) {
+            // Apply saved positions for known nodes; auto-layout any new nodes
+            let hasNewNodes = false;
+            laid = builtNodes.map(n => {
+                const saved = savedPositions[n.id];
+                if (saved) return { ...n, x: saved.x, y: saved.y };
+                hasNewNodes = true;
+                return n;
+            });
+            // If some nodes are new (no saved position), run layout on just those
+            // but keep saved positions for existing ones
+            if (hasNewNodes) {
+                const fullLayout = applyLayout(builtNodes, builtEdges);
+                laid = laid.map(n => {
+                    if (savedPositions[n.id]) return n; // keep saved position
+                    const layoutNode = fullLayout.find(ln => ln.id === n.id);
+                    return layoutNode ?? n;
+                });
+            }
+        } else {
+            // No saved positions — run auto-layout
+            laid = applyLayout(builtNodes, builtEdges);
+        }
+
         setNodes(laid);
         setEdges(builtEdges);
         setLayoutReady(true);
 
         // Auto-fit after layout (need a frame for containerRef to have dimensions)
         requestAnimationFrame(() => fitToView(laid));
-    }, [megamodel, viewpoints, statsMap, fitToView]);
+    }, [megamodel, viewpoints, statsMap, fitToView, projectId]);
 
     // ── Node map for fast lookup ──────────────────────────────────────────────
     const nodeMap = useMemo(() => {
@@ -403,8 +478,9 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
             e.preventDefault();
             isPanning.current = true;
             panStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
-            // Deselect on canvas click
+            // Deselect and clear spotlight on canvas click
             setSelectedNodeId(null);
+            setSpotlightNodeId(null);
         }
     }, [pan, contextMenu, closeContextMenu]);
 
@@ -416,6 +492,7 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
             return;
         }
         if (draggingNode.current) {
+            nodeDragged.current = true;
             // Calculate position in canvas coords
             const rect = containerRef.current?.getBoundingClientRect();
             if (!rect) return;
@@ -432,10 +509,18 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
 
     const handleMouseUp = useCallback(() => {
         isPanning.current = false;
+        // Save positions after a node drag completes
+        if (draggingNode.current && nodeDragged.current && projectId) {
+            // Read current nodes from state via a functional update trick
+            setNodes(prev => {
+                savePositions(projectId, prev);
+                return prev;
+            });
+        }
         draggingNode.current = null;
-    }, []);
+    }, [projectId]);
 
-    // ── Node drag ─────────────────────────────────────────────────────────────
+    // ── Node drag + spotlight click ─────────────────────────────────────────
     const handleNodeMouseDown = useCallback((e: React.MouseEvent, nodeId: string) => {
         if (e.button !== 0) return;
         e.stopPropagation();
@@ -451,13 +536,32 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
         if (!rect) return;
 
         draggingNode.current = nodeId;
+        nodeDragged.current = false;
         const canvasX = (e.clientX - rect.left) / zoom - pan.x;
         const canvasY = (e.clientY - rect.top)  / zoom - pan.y;
         dragOffset.current = { x: canvasX - node.x, y: canvasY - node.y };
+
+        // Delayed spotlight toggle (cancelled by double-click or drag)
+        if (spotlightClickTimeout.current) {
+            clearTimeout(spotlightClickTimeout.current);
+            spotlightClickTimeout.current = null;
+        }
+        spotlightClickTimeout.current = setTimeout(() => {
+            // Only toggle if we didn't drag
+            if (!nodeDragged.current) {
+                setSpotlightNodeId(prev => prev === nodeId ? null : nodeId);
+            }
+            spotlightClickTimeout.current = null;
+        }, 250);
     }, [nodeMap, pan, zoom, contextMenu, closeContextMenu]);
 
     // ── Node double-click (open in editor) ──────────────────────────────────
     const handleNodeDoubleClick = useCallback((nodeId: string) => {
+        // Cancel the spotlight timeout — this is a double-click
+        if (spotlightClickTimeout.current) {
+            clearTimeout(spotlightClickTimeout.current);
+            spotlightClickTimeout.current = null;
+        }
         const node = nodeMap.get(nodeId);
         if (!node || !onOpenNode) return;
         onOpenNode(nodeId, node.kind);
@@ -639,10 +743,14 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
     // ── Auto-arrange (re-run dagre layout) ───────────────────────────────────
     const handleAutoArrange = useCallback(() => {
         if (nodes.length === 0) return;
+        // Clear saved positions so layout is fresh
+        if (projectId) clearPositions(projectId);
         const laid = applyLayout(nodes, edges);
         setNodes(laid);
+        // Save the new auto-layout positions
+        if (projectId) savePositions(projectId, laid);
         requestAnimationFrame(() => fitToView(laid));
-    }, [nodes, edges, fitToView]);
+    }, [nodes, edges, fitToView, projectId]);
 
     // ── Arrow markers ─────────────────────────────────────────────────────────
     const markerColors = useMemo(() => {
@@ -854,42 +962,59 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
                                     ))}
                                 </defs>
                                 <g transform={`translate(${pan.x * zoom},${pan.y * zoom}) scale(${zoom})`}>
-                                    {edgePaths.map(({ edge, path, mid }) => (
-                                        <g key={edge.id}>
-                                            <path
-                                                d={path}
-                                                fill="none"
-                                                stroke={edge.style.color}
-                                                strokeWidth={edge.style.strokeWidth}
-                                                strokeDasharray={edge.style.dasharray}
-                                                opacity={edge.style.opacity ?? 1}
-                                                markerEnd={`url(#mm-arr-${edge.style.color.replace('#', '')})`}
-                                                style={{ pointerEvents: 'none' }}
-                                            />
-                                            {/* Label pill */}
-                                            <g transform={`translate(${mid.x},${mid.y})`}>
-                                                <rect
-                                                    x={-(edge.label.length * 3.2 + 8)}
-                                                    y={-9}
-                                                    width={edge.label.length * 6.4 + 16}
-                                                    height={18}
-                                                    rx={4}
-                                                    fill="#ffffff"
-                                                    stroke="#e2e8f0"
-                                                    strokeWidth={0.5}
+                                    {edgePaths.map(({ edge, path, mid }) => {
+                                        const isEdgeDimmed = connectedNodeIds !== null &&
+                                            !(edge.from === spotlightNodeId || edge.to === spotlightNodeId);
+                                        const isEdgeHighlighted = spotlightNodeId !== null &&
+                                            (edge.from === spotlightNodeId || edge.to === spotlightNodeId);
+                                        const edgeOpacity = isEdgeDimmed ? 0.06
+                                            : isEdgeHighlighted ? 1
+                                            : (edge.style.opacity ?? 1);
+                                        const edgeStrokeWidth = isEdgeHighlighted
+                                            ? Math.max(edge.style.strokeWidth, 1.6)
+                                            : edge.style.strokeWidth;
+
+                                        return (
+                                            <g key={edge.id} className="mm-edge" style={{ transition: 'opacity 0.3s' }}>
+                                                <path
+                                                    d={path}
+                                                    fill="none"
+                                                    stroke={edge.style.color}
+                                                    strokeWidth={edgeStrokeWidth}
+                                                    strokeDasharray={edge.style.dasharray}
+                                                    opacity={edgeOpacity}
+                                                    markerEnd={`url(#mm-arr-${edge.style.color.replace('#', '')})`}
+                                                    style={{ pointerEvents: 'none', transition: 'opacity 0.3s, stroke-width 0.3s' }}
                                                 />
-                                                <text
-                                                    textAnchor="middle"
-                                                    dominantBaseline="central"
-                                                    fontSize={10}
-                                                    fill="#64748b"
-                                                    style={{ pointerEvents: 'none' }}
+                                                {/* Label pill — hidden when dimmed */}
+                                                <g
+                                                    transform={`translate(${mid.x},${mid.y})`}
+                                                    opacity={isEdgeDimmed ? 0 : 1}
+                                                    style={{ transition: 'opacity 0.3s' }}
                                                 >
-                                                    {edge.label}
-                                                </text>
+                                                    <rect
+                                                        x={-(edge.label.length * 3.2 + 8)}
+                                                        y={-9}
+                                                        width={edge.label.length * 6.4 + 16}
+                                                        height={18}
+                                                        rx={4}
+                                                        fill="#ffffff"
+                                                        stroke="#e2e8f0"
+                                                        strokeWidth={0.5}
+                                                    />
+                                                    <text
+                                                        textAnchor="middle"
+                                                        dominantBaseline="central"
+                                                        fontSize={10}
+                                                        fill="#64748b"
+                                                        style={{ pointerEvents: 'none' }}
+                                                    >
+                                                        {edge.label}
+                                                    </text>
+                                                </g>
                                             </g>
-                                        </g>
-                                    ))}
+                                        );
+                                    })}
                                 </g>
                             </svg>
 
@@ -917,6 +1042,8 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
                                         generatedLabel={node.generatedLabel}
                                         selected={selectedNodeId === node.id}
                                         isRenaming={renamingNodeId === node.id}
+                                        dimmed={connectedNodeIds !== null && !connectedNodeIds.has(node.id)}
+                                        spotlighted={spotlightNodeId === node.id}
                                         onMouseDown={handleNodeMouseDown}
                                         onDoubleClick={onOpenNode ? handleNodeDoubleClick : undefined}
                                         onContextMenu={handleNodeContextMenu}
