@@ -54,7 +54,7 @@ export interface MmNode {
     generatedLabel?: string;
 }
 
-export type MmEdgeType = 'conformsTo' | 'inputOf' | 'outputOf' | 'definedOn' | 'renderedBy' | 'generatedBy' | 'sourceOf';
+export type MmEdgeType = 'conformsTo' | 'inputOf' | 'outputOf' | 'definedOn' | 'renderedBy' | 'generatedBy' | 'sourceOf' | 'instanceInputOf';
 
 export interface MmEdgeStyle {
     color: string;
@@ -83,7 +83,8 @@ export const EDGE_STYLES: Record<MmEdgeType, MmEdgeStyle & { label: string }> = 
     definedOn:   { color: '#7F77DD', dasharray: '3,3',   strokeWidth: 1,   opacity: 0.7, label: 'definedOn' },
     renderedBy:  { color: '#888780', dasharray: '2,4',   strokeWidth: 1,   opacity: 0.5, label: 'renderedBy' },
     generatedBy: { color: '#7F77DD', dasharray: '5,3',   strokeWidth: 1.2, opacity: 0.8, label: 'generatedBy' },
-    sourceOf:    { color: '#378ADD', dasharray: '5,3',   strokeWidth: 1.2, opacity: 0.8, label: 'sourceOf' },
+    sourceOf:        { color: '#378ADD', dasharray: '5,3',   strokeWidth: 1.2, opacity: 0.8, label: 'sourceOf' },
+    instanceInputOf: { color: '#1D9E75', dasharray: '5,3',  strokeWidth: 1,   opacity: 0.7, label: 'instanceInputOf' },
 };
 
 // ─── Port / anchor helpers ────────────────────────────────────────────────────

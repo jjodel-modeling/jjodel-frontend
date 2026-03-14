@@ -35,6 +35,7 @@ export type EdgeType =
     | 'outputOf'      // transformation → metamodel  (the transformation produces models of this type)
     | 'generatedBy'   // generated model → transformation  (instance-level: this model was produced by this transformation)
     | 'sourceOf'      // generated model → source model  (instance-level: this model was produced from this source model)
+    | 'instanceInputOf' // source model → transformation  (instance-level: this model was used as input for this transformation run)
     | 'tracedBy'      // transformation → trace (execution record)
     | 'user-defined'  // explicit relationship added by the user
 

@@ -163,6 +163,19 @@ export function inferMegamodelEdges(artifacts: ProjectArtifacts): MegamodelEdge[
                 origin: 'derived',
             })
         }
+
+        // instanceInputOf: source model → transformation (this model was used as input)
+        if (sourceModel && transformation) {
+            const source: ArtifactRef = { id: sourceModel.id, type: 'model', name: sourceModel.name }
+            const target: ArtifactRef = { id: transformation.id, type: 'transformation', name: transformation.name }
+            edges.push({
+                id: `derived_${sourceModel.id}_instanceInputOf_${transformation.id}`,
+                source,
+                target,
+                type: 'instanceInputOf',
+                origin: 'derived',
+            })
+        }
     }
 
     return edges
