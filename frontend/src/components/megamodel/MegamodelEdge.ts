@@ -48,7 +48,6 @@ export interface MmNode {
     y: number;
     stats: MmNodeStats;
     status: MmNodeStatus;
-    previewBars: number[];
 }
 
 export type MmEdgeType = 'conformsTo' | 'inputOf' | 'outputOf' | 'definedOn' | 'renderedBy';

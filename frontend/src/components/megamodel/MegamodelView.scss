@@ -203,6 +203,12 @@
         box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.3);
         transition: border-color 0.1s, box-shadow 0.1s;
     }
+
+    // Selected state (keyboard shortcuts target selected node)
+    &--selected {
+        border-color: var(--mm-node-border-hover);
+        box-shadow: 0 0 0 1.5px var(--mm-node-border-hover);
+    }
 }
 
 // ─── Card header ────────────────────────────────────────────────────────────
@@ -295,21 +301,6 @@
 .mm-card__pill-value {
     font-weight: 500;
     color: var(--mm-node-text);
-}
-
-// Mini-preview bars
-.mm-card__preview {
-    margin-top: 6px;
-    display: flex;
-    gap: 3px;
-    align-items: flex-end;
-    height: 24px;
-}
-
-.mm-card__bar {
-    width: 4px;
-    border-radius: 2px 2px 0 0;
-    min-height: 4px;
 }
 
 // Progress bar (transformations)
@@ -503,6 +494,169 @@
         color: #334155;
         border-color: #cbd5e1;
         background: #f8fafc;
+    }
+}
+
+// ==========================================================================
+// INLINE RENAME INPUT
+// ==========================================================================
+
+.mm-card__name-input {
+    width: 100%;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--mm-node-text);
+    background: var(--mm-stat-bg);
+    border: 1px solid #0ea5e9;
+    border-radius: 4px;
+    padding: 1px 4px;
+    outline: none;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+// ==========================================================================
+// CONTEXT MENU
+// ==========================================================================
+
+.mm-context-menu {
+    min-width: 180px;
+    background: var(--mm-node-bg, #ffffff);
+    border: 0.5px solid var(--mm-node-border, #e2e8f0);
+    border-radius: 8px;
+    padding: 4px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+    font-family: inherit;
+    animation: mmMenuIn 0.1s ease-out;
+
+    &__item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 6px 10px;
+        border: none;
+        border-radius: 5px;
+        background: transparent;
+        font-size: 12px;
+        color: var(--mm-node-text, #1e293b);
+        cursor: pointer;
+        text-align: left;
+        transition: background 0.1s;
+
+        &:hover:not(:disabled) {
+            background: var(--mm-stat-bg, #f1f5f9);
+        }
+
+        &:disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
+
+        &--danger {
+            color: #e24b4a;
+
+            &:hover:not(:disabled) {
+                background: #fcebeb;
+            }
+        }
+
+        i {
+            font-size: 13px;
+            width: 16px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+    }
+
+    &__label {
+        flex: 1;
+    }
+
+    &__shortcut {
+        font-size: 10px;
+        color: var(--mm-node-subtitle, #94a3b8);
+        margin-left: auto;
+    }
+
+    &__sep {
+        height: 1px;
+        background: var(--mm-node-border, #e2e8f0);
+        margin: 4px 8px;
+    }
+}
+
+@keyframes mmMenuIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+// ==========================================================================
+// DELETE CONFIRMATION DIALOG
+// ==========================================================================
+
+.mm-confirm-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100002;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.4);
+    animation: mmViewFadeIn 0.1s ease;
+}
+
+.mm-confirm-dialog {
+    background: var(--mm-node-bg, #ffffff);
+    border-radius: 10px;
+    padding: 20px 24px;
+    max-width: 340px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15);
+    animation: mmViewSlideUp 0.15s ease-out;
+
+    p {
+        font-size: 14px;
+        color: var(--mm-node-text, #1e293b);
+        margin: 0;
+
+        strong { font-weight: 600; }
+    }
+
+    &__subtitle {
+        font-size: 12px !important;
+        color: var(--mm-node-subtitle, #64748b) !important;
+        margin-top: 4px !important;
+    }
+
+    &__actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 16px;
+    }
+
+    &__btn {
+        padding: 6px 14px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 500;
+        border: none;
+        cursor: pointer;
+        transition: background 0.15s;
+
+        &--cancel {
+            background: var(--mm-stat-bg, #f1f5f9);
+            color: var(--mm-node-text, #1e293b);
+
+            &:hover { background: var(--mm-node-border, #e2e8f0); }
+        }
+
+        &--delete {
+            background: #e24b4a;
+            color: white;
+
+            &:hover { background: #c93a39; }
+        }
     }
 }
 

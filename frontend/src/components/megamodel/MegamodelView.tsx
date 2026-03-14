@@ -4,12 +4,16 @@
  * Reads from the runtime megamodel (metamodels, models, transformations) plus
  * viewpoints from the project. Uses ELK for initial layout and supports
  * drag-to-reposition, middle-click pan, and scroll zoom.
+ *
+ * Phase 2: context menu (right-click) on nodes and canvas, inline rename,
+ * delete confirmation dialog, keyboard shortcuts.
  */
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import ELK from 'elkjs/lib/elk.bundled.js';
 import type { Megamodel, MegamodelEdge as MegaEdge, ArtifactType } from '../../model/megamodel';
 import MegamodelNode from './MegamodelNode';
+import MegamodelContextMenu, { type MenuItem } from './MegamodelContextMenu';
 import {
     NODE_W, NODE_H,
     type MmNode, type MmEdge, type MmEdgeType, type MmNodeKind, type MmNodeStats, type MmNodeStatus, type Side, type Point,
@@ -24,7 +28,6 @@ export interface ArtifactStats {
     id: string;
     stats: MmNodeStats;
     status: MmNodeStatus;
-    previewBars: number[];
 }
 
 export interface MegamodelViewProps {
@@ -33,6 +36,14 @@ export interface MegamodelViewProps {
     artifactStats?: ArtifactStats[];
     onClose: () => void;
     onOpenNode?: (nodeId: string, nodeKind: MmNodeKind) => void;
+    // Phase 2: action callbacks
+    onDeleteNode?: (nodeId: string, nodeKind: MmNodeKind) => void;
+    onRenameNode?: (nodeId: string, nodeKind: MmNodeKind, newName: string) => void;
+    onDuplicateNode?: (nodeId: string, nodeKind: MmNodeKind) => void;
+    onRunTransformation?: (nodeId: string) => void;
+    onCreateMetamodel?: () => void;
+    onCreateModel?: () => void;
+    onImport?: () => void;
 }
 
 // ─── Artifact → MmNode mapping ───────────────────────────────────────────────
@@ -90,7 +101,6 @@ function buildGraph(
                     x: 0, y: 0,
                     stats: artStats?.stats ?? {},
                     status: artStats?.status ?? DEFAULT_STATUS,
-                    previewBars: artStats?.previewBars ?? [],
                 });
             }
         }
@@ -111,7 +121,6 @@ function buildGraph(
                     x: 0, y: 0,
                     stats: {},
                     status: DEFAULT_STATUS,
-                    previewBars: [],
                 });
             }
         }
@@ -225,9 +234,24 @@ const LEGEND_EDGES: Array<{ key: MmEdgeType; label: string }> = [
     { key: 'outputOf', label: 'outputOf' },
 ];
 
+// ─── Context menu state type ────────────────────────────────────────────────
+
+interface ContextMenuState {
+    x: number;
+    y: number;
+    type: 'node' | 'canvas';
+    nodeId?: string;
+    nodeKind?: MmNodeKind;
+    nodeName?: string;
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
-const MegamodelView: React.FC<MegamodelViewProps> = ({ megamodel, viewpoints, artifactStats, onClose, onOpenNode }) => {
+const MegamodelView: React.FC<MegamodelViewProps> = ({
+    megamodel, viewpoints, artifactStats, onClose, onOpenNode,
+    onDeleteNode, onRenameNode, onDuplicateNode, onRunTransformation,
+    onCreateMetamodel, onCreateModel, onImport,
+}) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [nodes, setNodes] = useState<MmNode[]>([]);
     const [edges, setEdges] = useState<MmEdge[]>([]);
@@ -243,6 +267,19 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({ megamodel, viewpoints, ar
     // Node drag
     const draggingNode = useRef<string | null>(null);
     const dragOffset = useRef({ x: 0, y: 0 });
+
+    // Selection
+    const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+
+    // Context menu
+    const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+    const closeContextMenu = useCallback(() => setContextMenu(null), []);
+
+    // Inline rename
+    const [renamingNodeId, setRenamingNodeId] = useState<string | null>(null);
+
+    // Delete confirmation
+    const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string; kind: MmNodeKind } | null>(null);
 
     // ── Stats lookup map ────────────────────────────────────────────────────
     const statsMap = useMemo(() => {
@@ -327,13 +364,18 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({ megamodel, viewpoints, ar
 
     // ── Pan handlers (middle-click or left-click on background) ───────────────
     const handleCanvasMouseDown = useCallback((e: React.MouseEvent) => {
+        // Close context menu on any canvas click
+        if (contextMenu) closeContextMenu();
+
         // Middle-click or left-click on the canvas (not on a node)
         if (e.button === 1 || (e.button === 0 && (e.target as HTMLElement).classList.contains('mm-canvas'))) {
             e.preventDefault();
             isPanning.current = true;
             panStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
+            // Deselect on canvas click
+            setSelectedNodeId(null);
         }
-    }, [pan]);
+    }, [pan, contextMenu, closeContextMenu]);
 
     const handleMouseMove = useCallback((e: React.MouseEvent) => {
         if (isPanning.current) {
@@ -369,6 +411,11 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({ megamodel, viewpoints, ar
         const node = nodeMap.get(nodeId);
         if (!node) return;
 
+        // Select node on click
+        setSelectedNodeId(nodeId);
+        // Close context menu if open
+        if (contextMenu) closeContextMenu();
+
         const rect = containerRef.current?.getBoundingClientRect();
         if (!rect) return;
 
@@ -376,7 +423,7 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({ megamodel, viewpoints, ar
         const canvasX = (e.clientX - rect.left) / zoom - pan.x;
         const canvasY = (e.clientY - rect.top)  / zoom - pan.y;
         dragOffset.current = { x: canvasX - node.x, y: canvasY - node.y };
-    }, [nodeMap, pan, zoom]);
+    }, [nodeMap, pan, zoom, contextMenu, closeContextMenu]);
 
     // ── Node double-click (open in editor) ──────────────────────────────────
     const handleNodeDoubleClick = useCallback((nodeId: string) => {
@@ -385,6 +432,162 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({ megamodel, viewpoints, ar
         onOpenNode(nodeId, node.kind);
         onClose();
     }, [nodeMap, onOpenNode, onClose]);
+
+    // ── Node context menu ──────────────────────────────────────────────────
+    const handleNodeContextMenu = useCallback((e: React.MouseEvent, nodeId: string) => {
+        const node = nodeMap.get(nodeId);
+        if (!node) return;
+        setSelectedNodeId(nodeId);
+        setContextMenu({
+            x: e.clientX,
+            y: e.clientY,
+            type: 'node',
+            nodeId: node.id,
+            nodeKind: node.kind,
+            nodeName: node.name,
+        });
+    }, [nodeMap]);
+
+    // ── Canvas context menu (right-click on empty space) ──────────────────
+    const handleCanvasContextMenu = useCallback((e: React.MouseEvent) => {
+        // Only trigger on the canvas itself, not on nodes
+        const target = e.target as HTMLElement;
+        if (!target.classList.contains('mm-canvas') && !target.classList.contains('mm-view__body')) return;
+        e.preventDefault();
+        setContextMenu({
+            x: e.clientX,
+            y: e.clientY,
+            type: 'canvas',
+        });
+    }, []);
+
+    // ── Inline rename ─────────────────────────────────────────────────────────
+    const startRenaming = useCallback((nodeId: string) => {
+        setRenamingNodeId(nodeId);
+    }, []);
+
+    const handleNodeRename = useCallback((nodeId: string, newName: string) => {
+        setRenamingNodeId(null);
+        const node = nodeMap.get(nodeId);
+        if (!node) return;
+        if (newName !== node.name && newName.trim()) {
+            // Update local node name for immediate feedback
+            setNodes(prev => prev.map(n =>
+                n.id === nodeId ? { ...n, name: newName.trim() } : n
+            ));
+            onRenameNode?.(nodeId, node.kind, newName.trim());
+        }
+    }, [nodeMap, onRenameNode]);
+
+    // ── Delete with confirmation ─────────────────────────────────────────────
+    const showDeleteConfirmation = useCallback((nodeId: string) => {
+        const node = nodeMap.get(nodeId);
+        if (!node) return;
+        setDeleteConfirm({ id: node.id, name: node.name, kind: node.kind });
+    }, [nodeMap]);
+
+    const handleConfirmDelete = useCallback(() => {
+        if (!deleteConfirm) return;
+        onDeleteNode?.(deleteConfirm.id, deleteConfirm.kind);
+        setDeleteConfirm(null);
+        setSelectedNodeId(null);
+    }, [deleteConfirm, onDeleteNode]);
+
+    // ── Context menu items ───────────────────────────────────────────────────
+    const contextMenuItems = useMemo((): MenuItem[] => {
+        if (!contextMenu) return [];
+
+        if (contextMenu.type === 'canvas') {
+            return [
+                {
+                    label: 'New metamodel',
+                    icon: 'bi-plus-circle',
+                    action: () => onCreateMetamodel?.(),
+                    disabled: !onCreateMetamodel,
+                },
+                {
+                    label: 'New model',
+                    icon: 'bi-plus-square',
+                    action: () => onCreateModel?.(),
+                    disabled: !onCreateModel,
+                },
+                { separator: true, label: '', icon: '', action: () => {} },
+                {
+                    label: 'Import...',
+                    icon: 'bi-download',
+                    action: () => onImport?.(),
+                    disabled: !onImport,
+                },
+            ];
+        }
+
+        // Node context menu
+        const items: MenuItem[] = [
+            {
+                label: 'Open in editor',
+                icon: 'bi-box-arrow-up-right',
+                shortcut: 'Enter',
+                action: () => {
+                    if (contextMenu.nodeId && onOpenNode && contextMenu.nodeKind) {
+                        onOpenNode(contextMenu.nodeId, contextMenu.nodeKind);
+                        onClose();
+                    }
+                },
+                disabled: !onOpenNode,
+            },
+            {
+                label: 'Rename',
+                icon: 'bi-pencil',
+                shortcut: 'F2',
+                action: () => {
+                    if (contextMenu.nodeId) startRenaming(contextMenu.nodeId);
+                },
+                disabled: !onRenameNode,
+            },
+            {
+                label: 'Duplicate',
+                icon: 'bi-copy',
+                action: () => {
+                    if (contextMenu.nodeId && contextMenu.nodeKind) {
+                        onDuplicateNode?.(contextMenu.nodeId, contextMenu.nodeKind);
+                    }
+                },
+                disabled: !onDuplicateNode,
+            },
+        ];
+
+        // Add "Run transformation" for transformation nodes
+        if (contextMenu.nodeKind === 'transformation') {
+            items.push({ separator: true, label: '', icon: '', action: () => {} });
+            items.push({
+                label: 'Run transformation',
+                icon: 'bi-play-fill',
+                action: () => {
+                    if (contextMenu.nodeId) {
+                        onRunTransformation?.(contextMenu.nodeId);
+                    }
+                },
+                disabled: !onRunTransformation,
+            });
+        }
+
+        // Separator + Delete (always last)
+        items.push({ separator: true, label: '', icon: '', action: () => {} });
+        items.push({
+            label: 'Delete',
+            icon: 'bi-trash3',
+            shortcut: 'Del',
+            danger: true,
+            action: () => {
+                if (contextMenu.nodeId) showDeleteConfirmation(contextMenu.nodeId);
+            },
+            disabled: !onDeleteNode,
+        });
+
+        return items;
+    }, [contextMenu, onOpenNode, onClose, onRenameNode, onDuplicateNode, onDeleteNode,
+        onRunTransformation, onCreateMetamodel, onCreateModel, onImport,
+        startRenaming, showDeleteConfirmation]);
 
     // ── Zoom ──────────────────────────────────────────────────────────────────
     const handleWheel = useCallback((e: React.WheelEvent) => {
@@ -423,14 +626,52 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({ megamodel, viewpoints, ar
         return Array.from(colors);
     }, [edges]);
 
-    // ── ESC to close ──────────────────────────────────────────────────────────
+    // ── Keyboard shortcuts (ESC, Enter, F2, Delete) ─────────────────────────
     useEffect(() => {
         const handleKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onClose();
+            // Don't handle keys when rename input is focused
+            if (renamingNodeId) return;
+            // Don't handle keys when delete dialog is open (except Escape)
+            if (deleteConfirm && e.key !== 'Escape') return;
+
+            if (e.key === 'Escape') {
+                if (deleteConfirm) {
+                    setDeleteConfirm(null);
+                } else if (contextMenu) {
+                    // Context menu handles its own Escape
+                } else {
+                    onClose();
+                }
+                return;
+            }
+
+            // Node-specific shortcuts require a selected node
+            const selNode = selectedNodeId ? nodeMap.get(selectedNodeId) : null;
+            if (!selNode) return;
+
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (onOpenNode) {
+                    onOpenNode(selNode.id, selNode.kind);
+                    onClose();
+                }
+            }
+
+            if (e.key === 'F2') {
+                e.preventDefault();
+                if (onRenameNode) startRenaming(selNode.id);
+            }
+
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                e.preventDefault();
+                if (onDeleteNode) showDeleteConfirmation(selNode.id);
+            }
         };
+
         document.addEventListener('keydown', handleKey);
         return () => document.removeEventListener('keydown', handleKey);
-    }, [onClose]);
+    }, [onClose, selectedNodeId, nodeMap, onOpenNode, onRenameNode, onDeleteNode,
+        renamingNodeId, deleteConfirm, contextMenu, startRenaming, showDeleteConfirmation]);
 
     // ── Backdrop click ────────────────────────────────────────────────────────
     const handleBackdropClick = useCallback((e: React.MouseEvent) => {
@@ -510,7 +751,7 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({ megamodel, viewpoints, ar
             <div className="mm-view" onClick={handleBackdropClick}>
                 <div className="mm-view__modal">
                     {header}
-                    <div className="mm-view__body">
+                    <div className="mm-view__body" onContextMenu={handleCanvasContextMenu}>
                         <div className="mm-empty-state">
                             <i className="bi bi-diagram-3 mm-empty-state__icon" />
                             <div className="mm-empty-state__title">No artifacts yet</div>
@@ -520,6 +761,15 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({ megamodel, viewpoints, ar
                         </div>
                     </div>
                 </div>
+                {/* Context menu (canvas) */}
+                {contextMenu && (
+                    <MegamodelContextMenu
+                        x={contextMenu.x}
+                        y={contextMenu.y}
+                        items={contextMenuItems}
+                        onClose={closeContextMenu}
+                    />
+                )}
             </div>
         );
     }
@@ -538,6 +788,7 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({ megamodel, viewpoints, ar
                     onMouseUp={handleMouseUp}
                     onMouseLeave={handleMouseUp}
                     onWheel={handleWheel}
+                    onContextMenu={handleCanvasContextMenu}
                 >
                     {!layoutReady && (
                         <div className="mm-loading-state">
@@ -631,9 +882,12 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({ megamodel, viewpoints, ar
                                         y={node.y}
                                         stats={node.stats}
                                         status={node.status}
-                                        previewBars={node.previewBars}
+                                        selected={selectedNodeId === node.id}
+                                        isRenaming={renamingNodeId === node.id}
                                         onMouseDown={handleNodeMouseDown}
                                         onDoubleClick={onOpenNode ? handleNodeDoubleClick : undefined}
+                                        onContextMenu={handleNodeContextMenu}
+                                        onRename={handleNodeRename}
                                     />
                                 ))}
                             </div>
@@ -641,6 +895,44 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({ megamodel, viewpoints, ar
                     )}
                 </div>
             </div>
+
+            {/* Context menu */}
+            {contextMenu && (
+                <MegamodelContextMenu
+                    x={contextMenu.x}
+                    y={contextMenu.y}
+                    items={contextMenuItems}
+                    onClose={closeContextMenu}
+                />
+            )}
+
+            {/* Delete confirmation dialog */}
+            {deleteConfirm && (
+                <div className="mm-confirm-overlay" onClick={() => setDeleteConfirm(null)}>
+                    <div className="mm-confirm-dialog" onClick={(e) => e.stopPropagation()}>
+                        <p>
+                            Delete <strong>{deleteConfirm.name}</strong>?
+                        </p>
+                        <p className="mm-confirm-dialog__subtitle">
+                            This action cannot be undone.
+                        </p>
+                        <div className="mm-confirm-dialog__actions">
+                            <button
+                                className="mm-confirm-dialog__btn mm-confirm-dialog__btn--cancel"
+                                onClick={() => setDeleteConfirm(null)}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="mm-confirm-dialog__btn mm-confirm-dialog__btn--delete"
+                                onClick={handleConfirmDelete}
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

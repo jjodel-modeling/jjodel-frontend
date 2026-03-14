@@ -1,11 +1,12 @@
 /**
  * MegamodelNode — Rich card node for the Megamodel diagram.
  *
- * Three-zone layout: header (badge + name), body (stat pills + mini-preview),
+ * Three-zone layout: header (badge + name), body (stat pills),
  * footer (status dot + label). Draggable via mousedown on the card.
+ * Supports right-click context menu and inline rename (F2).
  */
 
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useRef, useState, useEffect } from 'react';
 import type { MmNodeKind, MmNodeStats, MmNodeStatus } from './MegamodelEdge';
 
 export interface MegamodelNodeProps {
@@ -18,9 +19,12 @@ export interface MegamodelNodeProps {
     y: number;
     stats: MmNodeStats;
     status: MmNodeStatus;
-    previewBars: number[];
+    selected?: boolean;
+    isRenaming?: boolean;
     onMouseDown: (e: React.MouseEvent, nodeId: string) => void;
     onDoubleClick?: (nodeId: string) => void;
+    onContextMenu?: (e: React.MouseEvent, nodeId: string) => void;
+    onRename?: (nodeId: string, newName: string) => void;
 }
 
 // ─── Stat pills per node kind ───────────────────────────────────────────────
@@ -41,13 +45,6 @@ function getStatPills(kind: MmNodeKind, stats: MmNodeStats): Array<{ value: numb
     return pills;
 }
 
-const BAR_COLORS: Record<MmNodeKind, string> = {
-    metamodel: '#AFA9EC',
-    model: '#FAC775',
-    transformation: '#5DCAA5',
-    viewpoint: '#FAC775',
-};
-
 // ─── Transform icon SVG ─────────────────────────────────────────────────────
 
 const TransformIcon: React.FC = () => (
@@ -60,16 +57,38 @@ const TransformIcon: React.FC = () => (
 // ─── Component ──────────────────────────────────────────────────────────────
 
 const MegamodelNode: React.FC<MegamodelNodeProps> = ({
-    id, kind, badgeLabel, name, typeLabel, x, y, stats, status, previewBars, onMouseDown, onDoubleClick,
+    id, kind, badgeLabel, name, typeLabel, x, y, stats, status,
+    selected, isRenaming, onMouseDown, onDoubleClick, onContextMenu, onRename,
 }) => {
     const cardRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
     const pills = getStatPills(kind, stats);
-    const hasBars = previewBars.length > 0 && kind !== 'transformation';
     const hasProgress = kind === 'transformation' && stats.completionPercent != null;
+
+    // Inline rename state
+    const [editName, setEditName] = useState(name);
+
+    useEffect(() => {
+        if (isRenaming) {
+            setEditName(name);
+            // Focus after render
+            requestAnimationFrame(() => {
+                inputRef.current?.focus();
+                inputRef.current?.select();
+            });
+        }
+    }, [isRenaming, name]);
+
+    const commitRename = useCallback(() => {
+        const trimmed = editName.trim();
+        if (trimmed && trimmed !== name) {
+            onRename?.(id, trimmed);
+        }
+    }, [editName, name, id, onRename]);
 
     const handleDoubleClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
-        if (!onDoubleClick) return;
+        if (!onDoubleClick || isRenaming) return;
         // Flash highlight before opening
         const el = cardRef.current;
         if (el) {
@@ -78,16 +97,23 @@ const MegamodelNode: React.FC<MegamodelNodeProps> = ({
         } else {
             onDoubleClick(id);
         }
-    }, [onDoubleClick, id]);
+    }, [onDoubleClick, id, isRenaming]);
+
+    const handleContextMenu = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onContextMenu?.(e, id);
+    }, [onContextMenu, id]);
 
     return (
         <div
             ref={cardRef}
-            className={`mm-card mm-card--${kind}`}
+            className={`mm-card mm-card--${kind}${selected ? ' mm-card--selected' : ''}`}
             style={{ left: x, top: y }}
             onMouseDown={(e) => onMouseDown(e, id)}
             onDoubleClick={handleDoubleClick}
-            title={onDoubleClick ? `Double-click to open ${name}` : undefined}
+            onContextMenu={handleContextMenu}
+            title={onDoubleClick && !isRenaming ? `Double-click to open ${name}` : undefined}
         >
             {/* Header */}
             <div className="mm-card__header">
@@ -95,7 +121,32 @@ const MegamodelNode: React.FC<MegamodelNodeProps> = ({
                     {kind === 'transformation' ? <TransformIcon /> : badgeLabel}
                 </div>
                 <div className="mm-card__info">
-                    <div className="mm-card__name" title={name}>{name}</div>
+                    <div className="mm-card__name" title={isRenaming ? undefined : name}>
+                        {isRenaming ? (
+                            <input
+                                ref={inputRef}
+                                className="mm-card__name-input"
+                                value={editName}
+                                onChange={(e) => setEditName(e.target.value)}
+                                onKeyDown={(e) => {
+                                    e.stopPropagation();
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        commitRename();
+                                    }
+                                    if (e.key === 'Escape') {
+                                        e.preventDefault();
+                                        setEditName(name);
+                                        onRename?.(id, name); // signal cancel (no change)
+                                    }
+                                }}
+                                onBlur={commitRename}
+                                onMouseDown={(e) => e.stopPropagation()} // prevent drag
+                            />
+                        ) : (
+                            <span>{name}</span>
+                        )}
+                    </div>
                     <div className="mm-card__type">{typeLabel}</div>
                 </div>
             </div>
@@ -109,20 +160,6 @@ const MegamodelNode: React.FC<MegamodelNodeProps> = ({
                                 <span className="mm-card__pill-value">{p.value}</span>
                                 {' '}{p.label}
                             </div>
-                        ))}
-                    </div>
-                )}
-                {hasBars && (
-                    <div className="mm-card__preview">
-                        {previewBars.map((h, i) => (
-                            <div
-                                key={i}
-                                className="mm-card__bar"
-                                style={{
-                                    height: `${Math.max(4, h * 22)}px`,
-                                    background: BAR_COLORS[kind],
-                                }}
-                            />
                         ))}
                     </div>
                 )}

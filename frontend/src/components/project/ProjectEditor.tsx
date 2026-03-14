@@ -2011,10 +2011,6 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             type: 'valid',
                             label: `${classes.length} classes`,
                         },
-                        previewBars: classes.slice(0, 8).map((c: any) => {
-                            const count = (c.attributes?.length ?? 0) + (c.references?.length ?? 0);
-                            return Math.min(1, count / 10);
-                        }),
                     });
                 }
                 for (const m of models) {
@@ -2030,10 +2026,6 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                         status: objects.length === 0
                             ? { type: 'warning', label: 'Empty model' }
                             : { type: 'valid', label: conformsToName ? `Conforms to ${conformsToName}` : `${objects.length} objects` },
-                        previewBars: objects.slice(0, 8).map((o: any) => {
-                            const count = o.features?.length ?? 0;
-                            return Math.min(1, count / 8);
-                        }),
                     });
                 }
                 for (const t of transformations) {
@@ -2049,7 +2041,6 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                         status: t.isValid === false
                             ? { type: 'warning', label: `${t.errorCount ?? 0} errors` }
                             : { type: 'info', label: `${ruleCount} rules` },
-                        previewBars: [],
                     });
                 }
 
@@ -2071,6 +2062,56 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                 const t = transformations.find(tr => tr.id === nodeId);
                                 if (t) handleOpenTransformation(t);
                             }
+                        }}
+                        onDeleteNode={(nodeId, nodeKind) => {
+                            if (nodeKind === 'metamodel') {
+                                const mm = metamodels.find(m => m.id === nodeId);
+                                if (mm) handleDeleteMetamodel(mm);
+                            } else if (nodeKind === 'model') {
+                                const m = models.find(mod => mod.id === nodeId);
+                                if (m) handleDeleteModel(m);
+                            } else if (nodeKind === 'transformation') {
+                                handleDeleteTransformation(nodeId);
+                            }
+                            setShowMegamodelModal(false);
+                        }}
+                        onRenameNode={(nodeId, nodeKind, newName) => {
+                            if (nodeKind === 'metamodel') {
+                                const mm = metamodels.find(m => m.id === nodeId);
+                                if (mm && newName !== mm.name) {
+                                    mm.name = newName;
+                                    markDirty();
+                                }
+                            } else if (nodeKind === 'model') {
+                                const m = models.find(mod => mod.id === nodeId);
+                                if (m && newName !== m.name) {
+                                    m.name = newName;
+                                    markDirty();
+                                }
+                            } else if (nodeKind === 'transformation') {
+                                handleRenameTransformation(nodeId, newName);
+                            }
+                        }}
+                        onDuplicateNode={(nodeId, nodeKind) => {
+                            if (nodeKind === 'transformation') {
+                                handleDuplicateTransformation(nodeId);
+                            }
+                            // TODO: duplicate for metamodels/models
+                        }}
+                        onRunTransformation={(nodeId) => {
+                            const t = transformations.find(tr => tr.id === nodeId);
+                            if (t) {
+                                setShowMegamodelModal(false);
+                                handleOpenTransformation(t);
+                            }
+                        }}
+                        onCreateMetamodel={() => {
+                            handleCreateMetamodel();
+                            setShowMegamodelModal(false);
+                        }}
+                        onCreateModel={() => {
+                            handleNewModelClick();
+                            setShowMegamodelModal(false);
                         }}
                     />
                 );
