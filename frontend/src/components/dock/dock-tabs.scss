@@ -225,13 +225,18 @@ $transition: 150ms ease;
 }
 
 // ============================================
-// EDITORS PANEL (Right panel with Properties, Tree View, etc.)
+// EDITORS PANEL (Right panel - Properties only, no tab bar)
 // ============================================
 
+// Hide the tab bar since Properties is the sole tab.
+// This gives the full panel height to Properties content.
 .not-strip .dock-panel.dock-style-editors .dock-bar {
-    .dock-nav-wrap {
-        background: $tabs-bg;
-    }
+    display: none !important;
+}
+
+// Ensure content fills the full height when tab bar is hidden
+.not-strip .dock-panel.dock-style-editors > .dock-content-holder {
+    height: 100% !important;
 }
 
 // ============================================

@@ -245,88 +245,23 @@
   margin-top: 4px;
 }
 
-// Badges - Uniform height for all badges
-// --------------------------------------
-.badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 6px 12px;          // Uniform padding
-  min-height: 28px;           // Fixed height for all badges
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1.2;
+// Badges — uses unified jj-badge system (Badge component)
+// Overrides for interactive and layout-specific badges
+// -----------------------------------------------------
+.badge--clickable {
+  cursor: pointer;
+  transition: all 0.15s ease;
   border: none;
-  white-space: nowrap;
+  background: none;
+  text-transform: capitalize;
 
-  i {
-    font-size: 12px;
-    flex-shrink: 0;
+  &:hover {
+    background: #e2e8f0;
   }
+}
 
-  &--type {
-    background: #f1f5f9;
-    color: #64748b;
-    text-transform: capitalize;
-    min-width: 85px;          // Fixed width to prevent layout shift
-  }
-
-  &--clickable {
-    cursor: pointer;
-    transition: all 0.15s ease;
-
-    i {
-      opacity: 0.7;
-    }
-
-    &:hover {
-      background: #e2e8f0;
-
-      i {
-        opacity: 1;
-      }
-    }
-  }
-
-  &--public {
-    background: #d1fae5;      // green-100
-    color: #065f46;           // green-800
-
-    &:hover {
-      background: #a7f3d0;
-    }
-  }
-
-  &--version {
-    background: #94a3b8;
-    color: #ffffff;
-    font-family: 'IBM Plex Mono', Monaco, 'Cascadia Code', monospace;
-    font-size: 11px;
-  }
-
-  // Engine Version - Neutral grey, shows Jjodel platform version
-  &--engine {
-    background: #64748b;
-    color: #ffffff;
-    font-family: 'IBM Plex Mono', Monaco, 'Cascadia Code', monospace;
-    font-size: 11px;
-    cursor: help;
-
-    i {
-      color: #ffffff;
-    }
-  }
-
-  // Content Version - Green accent, shows project revision
-  &--content {
-    background: #d1fae5;      // green-100
-    color: #065f46;           // green-800
-    font-family: 'IBM Plex Mono', Monaco, 'Cascadia Code', monospace;
-    font-size: 11px;
-    cursor: help;
-  }
+.badge--engine {
+  cursor: help;
 }
 
 // Badge Toggle Button (for making public projects private)
@@ -383,127 +318,7 @@
   }
 }
 
-// Empty States - Simple & Clean
-// ------------------------------
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding: 40px 24px;
-  background: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
-  font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif;
-
-  // Secondary variant (for Models section)
-  &--secondary {
-    background: transparent;
-    border: 2px dashed #cbd5e1;
-    padding: 32px 20px;
-    box-shadow: none;
-  }
-
-  // Subtle variant (for Viewpoints section - minimal inline)
-  &--subtle {
-    background: transparent;
-    padding: 16px;
-    box-shadow: none;
-  }
-
-  // Icon
-  &__icon {
-    width: 64px;
-    height: 64px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 16px;
-    border-radius: 50%;
-    background: #f8fafc;
-    border: 2px solid #e2e8f0;
-
-    i {
-      font-size: 28px;
-      color: #64748b;
-    }
-
-    // Smaller icon for secondary state
-    &--small {
-      width: 56px;
-      height: 56px;
-      background: #f1f5f9;
-
-      i {
-        font-size: 24px;
-        color: #94a3b8;
-      }
-    }
-  }
-
-  // Title
-  &__title {
-    font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif;
-    font-size: 16px;
-    font-weight: 600;
-    color: #1e293b;
-    margin: 0 0 8px;
-    line-height: 1.3;
-  }
-
-  // Description
-  &__description {
-    font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif;
-    font-size: 14px;
-    color: #64748b;
-    line-height: 1.5;
-    max-width: 400px;
-    margin: 0 0 20px;
-  }
-
-  // Hint box (for Models pointing to Metamodels)
-  &__hint {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 16px;
-    background: #eff6ff;
-    border: 1px solid #bfdbfe;
-    border-radius: 8px;
-    font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif;
-    font-size: 13px;
-    font-weight: 500;
-    color: #1d4ed8;
-
-    i {
-      font-size: 16px;
-      color: #3b82f6;
-    }
-
-    span {
-      font-family: inherit;
-    }
-  }
-
-  // Legacy support
-  &__text {
-    margin: 0;
-    font-size: 13px;
-    color: #64748b;
-  }
-
-  &__text-inline {
-    margin: 0;
-    font-size: 13px;
-    color: #94a3b8;
-  }
-}
-
-// Empty state button modifier
-.btn--empty-state {
-  padding: 10px 20px;
-  font-size: 14px;
-}
+// Empty states now use unified .jj-empty-state component (ui/EmptyState)
 
 // List Cards
 // ----------
@@ -990,26 +805,15 @@
     }
   }
 
-  .badge {
-    &--type {
-      background: #334155;
-      color: #94a3b8;
-    }
+  .jj-badge--state {
+    background: #334155;
+    color: #94a3b8;
+    border-color: #475569;
+  }
 
-    &--version {
-      background: #475569;
-      color: #e2e8f0;
-    }
-
-    &--engine {
-      background: #475569;
-      color: #e2e8f0;
-    }
-
-    &--content {
-      background: #065f46;  // green-800 for dark mode
-      color: #d1fae5;       // green-100 for dark mode
-    }
+  .jj-badge--version {
+    background: #065f46;
+    color: #d1fae5;
   }
 
   .project-section__title {
@@ -1246,49 +1050,11 @@
     }
   }
 
-  // EnvGen status badge dark mode
-  .envgen-status-badge {
-    &--ready {
-      background: rgba(34, 197, 94, 0.15);
-    }
-    &--draft {
-      background: #334155;
-      color: #64748b;
-    }
-    &--generating {
-      background: rgba(14, 165, 233, 0.15);
-    }
-  }
 }
 
-// ============================================
-// Environment Generation Status Badges
-// ============================================
-.envgen-status-badge {
-  display: inline-flex;
-  align-items: center;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 4px;
-  white-space: nowrap;
-  margin-left: auto;
-
-  &--ready {
-    background: rgba(34, 197, 94, 0.1);
-    color: #16a34a;
-  }
-
-  &--draft {
-    background: #f1f5f9;
-    color: #94a3b8;
-  }
-
-  &--generating {
-    background: rgba(14, 165, 233, 0.1);
-    color: #0ea5e9;
-    animation: envgen-pulse 1.5s ease-in-out infinite;
-  }
+// EnvGen pulse animation (used via className on Badge)
+.envgen-pulse {
+  animation: envgen-pulse 1.5s ease-in-out infinite;
 }
 
 @keyframes envgen-pulse {

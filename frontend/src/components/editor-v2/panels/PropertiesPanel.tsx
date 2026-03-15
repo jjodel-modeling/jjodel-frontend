@@ -1,4 +1,5 @@
 import { useCallback, useState, useEffect, useMemo } from 'react';
+import { Badge } from '../../common/Badge';
 import type { Node, Edge } from '@xyflow/react';
 import { useNodes } from '@xyflow/react';
 import type {
@@ -466,7 +467,7 @@ function ClassNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onUpd
         <>
             <div className="properties-panel__header">
                 <i className="bi bi-diagram-3" />
-                <span className="properties-panel__title">Class</span>
+                <Badge category="type">Class</Badge>
                 <span className="properties-panel__subtitle">{node.id}</span>
             </div>
 
@@ -716,7 +717,7 @@ function EnumNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onUpda
         <>
             <div className="properties-panel__header">
                 <i className="bi bi-list-ol" />
-                <span className="properties-panel__title">Enumeration</span>
+                <Badge category="type">Enumeration</Badge>
                 <span className="properties-panel__subtitle">{node.id}</span>
             </div>
 
@@ -796,7 +797,7 @@ function PackageNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onU
         <>
             <div className="properties-panel__header">
                 <i className="bi bi-folder" />
-                <span className="properties-panel__title">Package</span>
+                <Badge category="type">Package</Badge>
                 <span className="properties-panel__subtitle">{node.id}</span>
             </div>
 

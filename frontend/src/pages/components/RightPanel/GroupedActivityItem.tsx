@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { R } from '../../../joiner';
+import { Badge } from '../../../components/common/Badge';
 import { GroupedActivity, formatRelativeTime } from '../../../types/activity';
 import { getActivityDisplayConfig } from '../../../constants/activityTypes';
 import { getGroupSummaryLabel } from '../../../utils/activityGrouping';
@@ -46,9 +47,9 @@ export const GroupedActivityItem = (props: GroupedActivityItemProps) => {
             <div className="timeline-content">
                 <div className="timeline-header">
                     <span className="timeline-project">{activity.entityName || activity.projectName}</span>
-                    <span className="timeline-badge info grouped-badge">
+                    <Badge category="state">
                         {activity.count}x Modified
-                    </span>
+                    </Badge>
                 </div>
                 <div className="timeline-summary">{summaryLabel}</div>
                 <span className="timeline-time">Latest: {latestTime}</span>

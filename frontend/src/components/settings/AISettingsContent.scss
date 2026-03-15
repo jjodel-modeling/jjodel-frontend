@@ -233,24 +233,7 @@
     }
 }
 
-.status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 500;
-
-    i {
-        font-size: 10px;
-    }
-
-    &.configured {
-        background: #dcfce7;
-        color: #15803d;
-    }
-}
+// Status badges now use unified jj-badge system (Badge component)
 
 // ============================================
 // PROVIDER CONTENT (Expanded)
@@ -681,31 +664,4 @@
     gap: 6px;
 }
 
-.capability-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 500;
-
-    i {
-        font-size: 12px;
-    }
-
-    &.vision {
-        background: #dbeafe;
-        color: #1d4ed8;
-    }
-
-    &.pdf {
-        background: #fce7f3;
-        color: #be185d;
-    }
-
-    &.text-only {
-        background: var(--bg-tertiary, #f1f5f9);
-        color: var(--text-tertiary, #64748b);
-    }
-}
+// Capability badges now use unified jj-badge system (Badge component)

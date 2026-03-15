@@ -35,6 +35,9 @@ export type { FieldProps } from './Field';
 export { FormSection } from './FormSection';
 export type { FormSectionProps } from './FormSection';
 
+export { EmptyState } from './EmptyState';
+export type { EmptyStateProps, EmptyStateHint, EmptyStateAction } from './EmptyState';
+
 // Additional components can be exported here as they are created:
 // export { Card } from './Card';
 // export { Badge } from './Badge';

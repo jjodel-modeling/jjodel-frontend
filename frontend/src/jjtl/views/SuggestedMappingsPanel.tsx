@@ -9,6 +9,7 @@
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { EmptyState as JjEmptyState } from '../../components/ui/EmptyState';
 import { MetamodelElement } from './MetamodelTreeView';
 import {
     MappingSuggestion,
@@ -432,11 +433,11 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
 
                             {/* Empty State */}
                             {visibleSuggestions.length === 0 && (
-                                <div className="empty-state">
-                                    <i className="bi bi-inbox" />
-                                    <p>No mappings suggested</p>
-                                    <span>Try using AI mode for semantic analysis</span>
-                                </div>
+                                <JjEmptyState
+                                    icon="bi-inbox"
+                                    title="No mappings suggested"
+                                    description="Try using AI mode for semantic analysis."
+                                />
                             )}
                         </div>
                     )}

@@ -10,6 +10,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { EmptyState as JjEmptyState } from '../ui/EmptyState';
 import type { Megamodel, MegamodelEdge as MegaEdge, ArtifactType } from '../../model/megamodel';
 import { computeMegamodelLayout } from './megamodelLayout';
 import MegamodelNode from './MegamodelNode';
@@ -969,13 +970,11 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
                 <div className="mm-view__modal">
                     {header}
                     <div className="mm-view__body" onContextMenu={handleCanvasContextMenu}>
-                        <div className="mm-empty-state">
-                            <i className="bi bi-diagram-3 mm-empty-state__icon" />
-                            <div className="mm-empty-state__title">No artifacts yet</div>
-                            <div className="mm-empty-state__subtitle">
-                                Add metamodels, models, and transformations to see their relationships here.
-                            </div>
-                        </div>
+                        <JjEmptyState
+                            icon="bi-diagram-3"
+                            title="No artifacts yet"
+                            description="Add metamodels, models, and transformations to see their relationships here."
+                        />
                     </div>
                 </div>
                 {/* Context menu (canvas) */}

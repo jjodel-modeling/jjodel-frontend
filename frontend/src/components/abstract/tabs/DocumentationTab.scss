@@ -292,38 +292,7 @@ $transition: 0.15s ease;
     }
 }
 
-// ============================================
-// STATUS BADGES
-// ============================================
-
-.status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 8px;
-    border-radius: $radius-sm;
-    font-size: 11px;
-    font-weight: 500;
-    
-    i {
-        font-size: 12px;
-    }
-    
-    &.status-outdated {
-        background: rgba($color-warning, 0.12);
-        color: darken($color-warning, 15%);
-    }
-    
-    &.status-synced {
-        background: rgba($color-success, 0.12);
-        color: darken($color-success, 10%);
-    }
-    
-    &.status-editing {
-        background: rgba($color-accent, 0.12);
-        color: darken($color-accent, 10%);
-    }
-}
+// Status badges now use unified jj-badge system (Badge component)
 
 .status-timestamp {
     font-size: 12px;

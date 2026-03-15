@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { JodieConfigService } from '../../services/JodieConfig';
 import { AIProviderPreferences } from '../../services/AIProviderPreferences';
 import { PROVIDER_MODELS, ModelInfo, AIProvider } from '../../types/jodie';
+import { Badge } from '../common/Badge';
+import { Button } from '../common/Button';
 import './AISettingsContent.scss';
 
 // Provider logo imports
@@ -77,22 +79,22 @@ function ModelCapabilitiesBadges({ model }: { model: ModelInfo | undefined }): J
     return (
         <div className="model-capabilities">
             {capabilities.vision && (
-                <span className="capability-badge vision" title="Supports image upload">
+                <Badge category="type">
                     <i className="bi bi-image" />
                     Images
-                </span>
+                </Badge>
             )}
             {capabilities.pdf && (
-                <span className="capability-badge pdf" title="Supports PDF upload">
+                <Badge category="type">
                     <i className="bi bi-file-earmark-pdf" />
                     PDF
-                </span>
+                </Badge>
             )}
             {!capabilities.vision && !capabilities.pdf && (
-                <span className="capability-badge text-only" title="Text only">
+                <Badge category="state">
                     <i className="bi bi-fonts" />
                     Text only
-                </span>
+                </Badge>
             )}
         </div>
     );
@@ -365,10 +367,10 @@ export function AISettingsContent({
                     </div>
                     <div className="provider-status">
                         {isConfigured && (
-                            <span className="status-badge configured">
+                            <Badge category="version">
                                 <i className="bi bi-check-circle-fill" />
                                 Configured
-                            </span>
+                            </Badge>
                         )}
                         <i className={`bi bi-chevron-${isExpanded ? 'up' : 'down'} chevron`} />
                     </div>
@@ -576,19 +578,20 @@ export function AISettingsContent({
                 </div>
                 <div className="footer-actions">
                     {onClose && (
-                        <button className="btn-secondary" onClick={onClose}>
+                        <Button variant="secondary" onClick={onClose}>
                             Cancel
-                        </button>
+                        </Button>
                     )}
-                    <button
-                        className={`btn-primary ${saveStatus}`}
+                    <Button
+                        variant="primary"
+                        className={saveStatus}
                         onClick={handleSave}
                         disabled={saveStatus === 'saving'}
                     >
                         {saveStatus === 'saving' && <><i className="bi bi-arrow-repeat spinning" /> Saving...</>}
                         {saveStatus === 'saved' && <><i className="bi bi-check-lg" /> Saved!</>}
                         {saveStatus === 'idle' && 'Save Changes'}
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>

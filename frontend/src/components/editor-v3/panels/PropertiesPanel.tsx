@@ -11,6 +11,7 @@
  */
 
 import React, { useCallback, useState, useEffect, memo } from 'react';
+import { EmptyState as JjEmptyState } from '../../ui/EmptyState';
 import type { Node, Edge } from '@xyflow/react';
 import type {
     ModelNodeData,
@@ -564,11 +565,17 @@ function EdgeProperties({ edge }: { edge: Edge }) {
 // Empty State
 // ---------------------------------------------------------------------------
 
-function EmptyState() {
+function EmptyStatePanel() {
     return (
         <div className="v3-props-empty-state">
-            <i className="bi bi-cursor" />
-            <p>Select a node or edge to view its properties</p>
+            <JjEmptyState
+                icon="bi-cursor"
+                title="No element selected"
+                description="Select a node or edge to view its properties."
+                hints={[
+                    { icon: 'bi-mouse', text: 'Click an element to select it' },
+                ]}
+            />
         </div>
     );
 }
@@ -597,7 +604,7 @@ function PropertiesPanelInner({ selectedNodes, selectedEdges }: PropertiesPanelP
     let content: React.ReactNode;
 
     if (totalSelected === 0) {
-        content = <EmptyState />;
+        content = <EmptyStatePanel />;
     } else if (totalSelected > 1) {
         content = <MultiSelection nodeCount={selectedNodes.length} edgeCount={selectedEdges.length} />;
     } else if (selectedNodes.length === 1) {

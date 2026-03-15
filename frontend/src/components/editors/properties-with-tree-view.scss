@@ -540,9 +540,77 @@ body.resizing-tree-view {
 // DARK MODE SUPPORT
 // ============================================
 
+// ============================================
+// NODE SECTION (Expert mode — collapsible at bottom of Properties)
+// ============================================
+
+.properties-node-section {
+    border-top: 1px solid $color-border;
+    flex-shrink: 0;
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: 100%;
+        padding: 10px 12px;
+        background: $color-bg-secondary;
+        border: none;
+        cursor: pointer;
+        font-size: 11px;
+        font-weight: 600;
+        color: $color-text-secondary;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        transition: background $transition-fast;
+
+        &:hover {
+            background: $color-bg-tertiary;
+        }
+
+        i {
+            font-size: 12px;
+            color: $color-accent;
+        }
+
+        i:first-child {
+            font-size: 10px;
+            color: $color-text-tertiary;
+        }
+    }
+
+    &__content {
+        // Hide the redundant NodeEditor header (we have our own section header)
+        .node-header {
+            display: none;
+        }
+    }
+}
+
+// ============================================
+// DARK MODE SUPPORT
+// ============================================
+
 [data-theme="dark"] {
     .properties-with-tree-view {
         background-color: #1e1e1e;
+    }
+
+    .properties-node-section {
+        border-top-color: #333;
+
+        &__header {
+            background: #252525;
+            color: #888;
+
+            &:hover {
+                background: #2a2a2a;
+            }
+
+            i {
+                color: #6b7280;
+            }
+        }
     }
 
     .resize-grip-icon-vertical {

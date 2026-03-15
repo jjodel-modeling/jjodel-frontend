@@ -9,6 +9,7 @@ import Storage from '../data/storage';
 import {UpdateUserRequest} from "../api/DTO/UpdateUserRequest";
 import {ChangePasswordRequest} from "../api/DTO/ChangePasswordRequest";
 import {U} from '../joiner';
+import { Button } from '../components/common/Button';
 import './account.scss';
 
 // Country options extracted for reuse
@@ -393,8 +394,8 @@ function AccountComponent(props: AllProps): JSX.Element {
                             </div>
 
                             <div className="account-card__footer">
-                                <button
-                                    className="btn btn--primary"
+                                <Button
+                                    variant="primary"
                                     onClick={updateProfile}
                                     disabled={!isProfileDirty || isSavingProfile}
                                 >
@@ -409,7 +410,7 @@ function AccountComponent(props: AllProps): JSX.Element {
                                             Save Changes
                                         </>
                                     )}
-                                </button>
+                                </Button>
                             </div>
                         </div>
 
@@ -545,8 +546,8 @@ function AccountComponent(props: AllProps): JSX.Element {
                             </div>
 
                             <div className="account-card__footer">
-                                <button
-                                    className="btn btn--primary"
+                                <Button
+                                    variant="primary"
                                     onClick={updatePassword}
                                     disabled={isSavingPassword}
                                 >
@@ -561,7 +562,7 @@ function AccountComponent(props: AllProps): JSX.Element {
                                             Change Password
                                         </>
                                     )}
-                                </button>
+                                </Button>
                             </div>
                         </div>
 
@@ -633,14 +634,14 @@ function AccountComponent(props: AllProps): JSX.Element {
                             </div>
 
                             <div className="account-card__footer">
-                                <button
-                                    className="btn btn--primary"
+                                <Button
+                                    variant="primary"
                                     onClick={updateProfile}
                                     disabled={!isProfileDirty || isSavingProfile}
                                 >
                                     <i className="bi bi-check-lg"/>
                                     Save Preferences
-                                </button>
+                                </Button>
                             </div>
                         </div>
                     </div>

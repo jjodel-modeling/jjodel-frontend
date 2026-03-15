@@ -1,5 +1,7 @@
-import React, { useEffect, useCallback, useRef } from 'react';
+import React, { useEffect, useCallback, useRef, useState } from 'react';
+import { useSelector } from 'react-redux';
 import { Info } from './Info';
+import { NodeEditor } from './NodeEditor';
 import { TreeViewContent } from '../TreeViewSidebar/TreeViewContent';
 import { useTreeViewPanel } from '../../contexts/TreeViewPanelContext';
 import './properties-with-tree-view.scss';
@@ -37,6 +39,10 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     const isResizing = useRef(false);
     const startXRef = useRef(0);
     const startWidthRef = useRef(0);
+
+    // Expert/Advanced mode — controls visibility of NODE section
+    const advanced = useSelector((state: any) => state.advanced);
+    const [nodeOpen, setNodeOpen] = useState(false);
 
     // Get tree view state from context
     const {
@@ -151,6 +157,26 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
             {/* Properties Panel (Left) - FLUID */}
             <div className="properties-panel-container">
                 <Info mode={mode} />
+
+                {/* NODE section — Expert mode only */}
+                {advanced && (
+                    <div className="properties-node-section">
+                        <button
+                            className="properties-node-section__header"
+                            onClick={() => setNodeOpen(!nodeOpen)}
+                            type="button"
+                        >
+                            <i className={`bi bi-chevron-${nodeOpen ? 'down' : 'right'}`} />
+                            <i className="bi bi-bounding-box-circles" />
+                            <span>NODE</span>
+                        </button>
+                        {nodeOpen && (
+                            <div className="properties-node-section__content">
+                                <NodeEditor />
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Tree View Panel (Right) - Expanded */}

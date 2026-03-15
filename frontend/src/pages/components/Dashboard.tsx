@@ -17,6 +17,7 @@ import {
 } from '../../joiner';
 import {LeftBar, Navbar} from './';
 import { RightPanel } from './RightPanel';
+import { Badge } from '../../components/common/Badge';
 
 import '../dashboard.scss'
 import React, {JSX, ReactElement, useRef, useState} from "react";
@@ -100,7 +101,7 @@ const Title = (props: TitleProps) => {
             return (<><label className='text-end nav-commands d-flex' 
                         style={{float: `${props.type === 'public' ? 'left': 'none'}`}}>
                 {props.type && <>
-                    <span className={"my-auto me-1"}>{props.type === "public" ? "public" : props.type === "private" ? "private" : "collaborative"}</span>
+                    <Badge category="state" className="my-auto me-1">{props.type === "public" ? "Public" : props.type === "private" ? "Private" : "Collaborative"}</Badge>
                     
                     {props.type !== "collaborative" && 
                         <Input type="toggle"

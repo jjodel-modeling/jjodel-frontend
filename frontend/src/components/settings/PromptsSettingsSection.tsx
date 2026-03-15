@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import { EmptyState as JjEmptyState } from '../ui/EmptyState';
 import { PromptType, PROMPT_REGISTRY } from '../../types/prompts';
 import { PromptService } from '../../services/PromptService';
 import { PromptEditor } from './PromptEditor';
@@ -130,16 +131,12 @@ export function PromptsSettingsSection({
 
             {/* Empty state */}
             {filteredPrompts.length === 0 && (
-                <div className="prompts-empty-state">
-                    <i className="bi bi-file-text" />
-                    <p>No customized prompts yet</p>
-                    <button
-                        className="btn btn--ghost"
-                        onClick={() => setShowCustomOnly(false)}
-                    >
-                        Show all prompts
-                    </button>
-                </div>
+                <JjEmptyState
+                    icon="bi-file-text"
+                    title="No customized prompts yet"
+                    description="Customize prompts to tailor AI responses."
+                    action={{ label: 'Show all prompts', onClick: () => setShowCustomOnly(false) }}
+                />
             )}
         </div>
     );

@@ -35,6 +35,9 @@ import type { EnvGenConfigSummary } from '../envgen';
 import { loadMegamodel, getSerializedMegamodel } from '../../model/megamodelPersistence';
 import { setRuntimeMegamodel, clearRuntimeMegamodel, getRuntimeMegamodel } from '../../model/megamodelRuntime';
 import MegamodelView, { type ArtifactStats } from '../megamodel/MegamodelView';
+import { Badge } from '../common/Badge';
+import { Button } from '../common/Button';
+import { EmptyState } from '../ui/EmptyState';
 import './project-editor.scss';
 
 // Types for contextual menu
@@ -1386,7 +1389,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             <div className="project-header">
                 <div className="project-header__badges">
                     <button
-                        className={`badge badge--type badge--clickable ${project.type === 'public' ? 'badge--public' : ''}`}
+                        className="jj-badge jj-badge--state badge--clickable"
                         onClick={handleVisibilityBadgeClick}
                         title={project.type === 'public' ? 'Click to get share link' : 'Click to make public'}
                     >
@@ -1406,19 +1409,13 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             <i className="bi bi-lock" />
                         </button>
                     )}
-                    <span
-                        className="badge badge--engine"
-                        title="Jjodel platform version - Same for all projects"
-                    >
+                    <Badge category="version" className="badge--engine">
                         <i className="bi bi-gear" />
                         {getEngineVersion()}
-                    </span>
-                    <span
-                        className="badge badge--content"
-                        title="Project revision - Auto-increments on each save"
-                    >
+                    </Badge>
+                    <Badge category="version">
                         Rev {formatVersionNumber(project.version)}
-                    </span>
+                    </Badge>
                 </div>
 
                 {/* Editable Name */}
@@ -1521,14 +1518,15 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
 
                 {/* Quick actions */}
                 <div className="project-quickactions">
-                    <button
+                    <Button
+                        variant="secondary"
                         className="megamodel-btn"
                         onClick={() => setShowMegamodelModal(true)}
                         title="View relationships between project artifacts"
                     >
                         <i className="bi bi-diagram-3" />
                         View Megamodel
-                    </button>
+                    </Button>
                 </div>
             </div>
 
@@ -1539,14 +1537,14 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     <div className="project-section__actions">
                         {/* Import button with dropdown */}
                         <div className="import-button-wrapper" ref={importMenuRef}>
-                            <button
-                                className="btn btn--secondary"
+                            <Button
+                                variant="secondary"
                                 onClick={() => setShowImportMenu(!showImportMenu)}
                             >
                                 <i className="bi bi-upload" />
                                 Import
                                 <i className={`bi bi-chevron-${showImportMenu ? 'up' : 'down'} btn-chevron`} />
-                            </button>
+                            </Button>
 
                             {showImportMenu && (
                                 <div className="import-select-menu">
@@ -1569,28 +1567,19 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                         </div>
 
                         {/* New button */}
-                        <button className="btn btn--primary" onClick={handleCreateMetamodel}>
+                        <Button variant="primary" onClick={handleCreateMetamodel}>
                             + New
-                        </button>
+                        </Button>
                     </div>
                 </div>
 
                 {metamodels.length === 0 ? (
-                    <div className="empty-state">
-                        <div className="empty-state__icon">
-                            <i className="bi bi-diagram-3" />
-                        </div>
-                        <h3 className="empty-state__title">No metamodels yet</h3>
-                        <p className="empty-state__description">
-                            Create a metamodel to define the structure and rules for your domain models.
-                        </p>
-                        <button
-                            className="btn btn--primary btn--empty-state"
-                            onClick={handleCreateMetamodel}
-                        >
-                            Create Your First Metamodel
-                        </button>
-                    </div>
+                    <EmptyState
+                        icon="bi-diagram-3"
+                        title="No metamodels yet"
+                        description="Create a metamodel to define the structure and rules for your domain models."
+                        action={{ label: 'Create Your First Metamodel', onClick: handleCreateMetamodel }}
+                    />
                 ) : (
                     <div className="list-card">
                         {metamodels.map((mm) => (
@@ -1701,8 +1690,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 <div className="project-section__header">
                     <h2 className="project-section__title">MODELS</h2>
                     <div className="new-model-button-wrapper" ref={metamodelMenuRef}>
-                        <button
-                            className="btn btn--primary"
+                        <Button
+                            variant="primary"
                             disabled={metamodels.length === 0}
                             title={metamodels.length === 0 ? 'Create a metamodel first' : 'Create new model'}
                             onClick={handleNewModelClick}
@@ -1711,7 +1700,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             {metamodels.length > 1 && (
                                 <i className={`bi bi-chevron-${showMetamodelMenu ? 'up' : 'down'} btn-chevron`} />
                             )}
-                        </button>
+                        </Button>
 
                         {/* Metamodel selection dropdown */}
                         {showMetamodelMenu && metamodels.length > 1 && (
@@ -1736,25 +1725,16 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 </div>
 
                 {models.length === 0 ? (
-                    <div className="empty-state empty-state--secondary">
-                        <div className="empty-state__icon empty-state__icon--small">
-                            <i className="bi bi-box" />
-                        </div>
-                        <h3 className="empty-state__title">
-                            {metamodels.length === 0 ? 'Create a metamodel first' : 'No models yet'}
-                        </h3>
-                        <p className="empty-state__description">
-                            {metamodels.length === 0
-                                ? 'Models are instances of metamodels. You need to create a metamodel structure before you can create models.'
-                                : 'Create a model to instantiate your metamodel.'}
-                        </p>
-                        {metamodels.length === 0 && (
-                            <div className="empty-state__hint">
-                                <i className="bi bi-arrow-up" />
-                                <span>Create your first metamodel in the section above</span>
-                            </div>
-                        )}
-                    </div>
+                    <EmptyState
+                        icon="bi-box"
+                        title={metamodels.length === 0 ? 'Create a metamodel first' : 'No models yet'}
+                        description={metamodels.length === 0
+                            ? 'Models are instances of metamodels. You need to create a metamodel structure before you can create models.'
+                            : 'Create a model to instantiate your metamodel.'}
+                        hints={metamodels.length === 0
+                            ? [{ icon: 'bi-arrow-up', text: 'Create your first metamodel in the section above' }]
+                            : undefined}
+                    />
                 ) : (
                     <div className="list-card">
                         {models.map((model) => (
@@ -1868,26 +1848,22 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     <h2 className="project-section__title">
                         ENVIRONMENT GENERATION {envGenConfigs.length > 0 && `(${envGenConfigs.length})`}
                     </h2>
-                    <button
-                        className="btn btn--primary"
+                    <Button
+                        variant="primary"
                         disabled={metamodels.length === 0}
                         title={metamodels.length === 0 ? 'Create a metamodel first' : 'Generate new environment'}
                         onClick={() => { setEditingEnvGenId(undefined); setShowEnvGenWizard(true); }}
                     >
                         + New
-                    </button>
+                    </Button>
                 </div>
 
                 {envGenConfigs.length === 0 ? (
-                    <div className="empty-state empty-state--secondary">
-                        <div className="empty-state__icon empty-state__icon--small">
-                            <i className="bi bi-box-seam" />
-                        </div>
-                        <h3 className="empty-state__title">No environments generated yet</h3>
-                        <p className="empty-state__description">
-                            Generate standalone modeling environments from your metamodels with AI-assisted prompt generation.
-                        </p>
-                    </div>
+                    <EmptyState
+                        icon="bi-box-seam"
+                        title="No environments generated yet"
+                        description="Generate standalone modeling environments from your metamodels with AI-assisted prompt generation."
+                    />
                 ) : (
                     <div className="list-card">
                         {envGenConfigs.map((cfg) => (
@@ -1915,9 +1891,9 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                         {cfg.techStackSummary} {cfg.metamodelName ? `· ${cfg.metamodelName}` : ''}
                                     </div>
                                 </div>
-                                <span className={`envgen-status-badge envgen-status-badge--${cfg.status}`}>
+                                <Badge category={cfg.status === 'ready' ? 'version' : 'state'} className={cfg.status === 'generating' ? 'envgen-pulse' : ''}>
                                     {cfg.status === 'ready' ? 'Ready' : cfg.status === 'generating' ? 'Generating...' : 'Draft'}
-                                </span>
+                                </Badge>
                             </div>
                         ))}
                     </div>
@@ -1930,24 +1906,20 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     <h2 className="project-section__title">
                         TRANSFORMATIONS {transformations.length > 0 && `(${transformations.length})`}
                     </h2>
-                    <button
-                        className="btn btn--primary"
+                    <Button
+                        variant="primary"
                         onClick={() => setShowNewTransformationDialog(true)}
                     >
                         + New
-                    </button>
+                    </Button>
                 </div>
 
                 {transformations.length === 0 ? (
-                    <div className="empty-state empty-state--secondary">
-                        <div className="empty-state__icon empty-state__icon--small">
-                            <i className="bi bi-arrow-left-right" />
-                        </div>
-                        <h3 className="empty-state__title">No transformations yet</h3>
-                        <p className="empty-state__description">
-                            Create model-to-model transformations using JjTL to automate conversions between metamodels.
-                        </p>
-                    </div>
+                    <EmptyState
+                        icon="bi-arrow-left-right"
+                        title="No transformations yet"
+                        description="Create model-to-model transformations using JjTL to automate conversions between metamodels."
+                    />
                 ) : (
                     <TransformationsList
                         transformations={transformations}
@@ -1965,15 +1937,17 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     <h2 className="project-section__title">
                         VIEWPOINTS {viewpoints.length > 0 && `(${viewpoints.length})`}
                     </h2>
-                    <button className="btn btn--secondary" disabled>
+                    <Button variant="secondary" disabled>
                         + Add
-                    </button>
+                    </Button>
                 </div>
 
                 {viewpoints.length === 0 ? (
-                    <div className="empty-state empty-state--subtle">
-                        <p className="empty-state__text-inline">No viewpoints defined</p>
-                    </div>
+                    <EmptyState
+                        icon="bi-eye"
+                        title="No viewpoints defined"
+                        description="Viewpoints let you define custom perspectives on your models."
+                    />
                 ) : (
                     <div className="list-card">
                         {viewpoints.map((vp) => {

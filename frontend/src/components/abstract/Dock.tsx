@@ -298,21 +298,17 @@ function DockComponent(props: AllProps) {
     // Left panel (Models Summary / Canvas)
     layout.dockbox.children.push({tabs: [ModelsSummary], size: leftSize});
 
-    // Fixed tab order: Properties, Viewpoints, Node (Advanced), Console
-    // Tree View is now inside PropertiesWithTreeView component
-    // This order is locked (tabLocked:true in editors group)
+    // Properties is the sole right-panel content.
+    // Viewpoints editing → accessible via toolbar viewpoint selector (Prompt 6)
+    // Node → collapsible section inside Properties (advanced mode only)
+    // Console → will become bottom drawer (Prompt 7)
+    // Components are kept intact, only removed from tab navigation.
     const tabs = [];
-    tabs.push(structure);  // Properties
-    tabs.push(views);      // Viewpoints
-    if (advanced) tabs.push(node);  // Node (Advanced only)
-    tabs.push(console);    // Console
-    // Languages and Logger tabs removed from UI (kept components for future use)
-    // if (advanced) tabs.push(mtm);
-    // if (advanced) tabs.push(logger);
+    tabs.push(structure);  // Properties (sole content)
 
     if (false && user?.project?.type === 'collaborative') tabs.push(permissions);
 
-    // Right panel (Editors) - Properties, Viewpoints, Node, Console
+    // Right panel (Editors) - Properties only
     // Note: JjTL editor hides this panel via DockManager.dock.loadLayout() in JjtlDevelopmentEnv.tsx
     layout.dockbox.children.push({tabs, size: rightSize});
 

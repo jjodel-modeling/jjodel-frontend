@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
+import { Badge } from '../common/Badge';
 import './MetamodelOverview.css';
 
 interface MetamodelClass {
@@ -187,7 +188,7 @@ function HierarchyNodeComponent({ node, level }: HierarchyNodeComponentProps): J
                 {!hasChildren && <span className="node-spacer"></span>}
                 <i className={`node-icon bi ${getClassIcon(node)}`}></i>
                 <span className="node-name">{node.name}</span>
-                {node.isAbstract && <span className="node-badge abstract">abstract</span>}
+                {node.isAbstract && <Badge category="type">abstract</Badge>}
                 <span className="node-count">
                     ({node.attributeCount} attr, {node.referenceCount} ref)
                 </span>

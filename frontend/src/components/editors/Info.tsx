@@ -26,7 +26,7 @@ import { Tooltip } from '../forEndUser/Tooltip';
 import { icon } from '../../pages/components/icons/Icons';
 import { Toggle } from '../../joiner/components';
 import { UpgradePrompt } from '../ModeSystem';
-import { Button } from '../ui';
+import { Button, EmptyState } from '../ui';
 import { M2AnalyticsModal, M2AnalyticsData } from '../M2AnalyticsModal';
 
 // Custom toggle switch component (div-based horizontal switch)
@@ -1097,15 +1097,11 @@ function InfoComponent(props: AllProps) {
                             {advancedStateOpen && (
                                 <div className="properties-section-content">
                                     {!ddata || Object.keys(ddata._state).length === 0 ? (
-                                        <div className="empty-state">
-                                            <div className="empty-state-icon">
-                                                <i className="bi bi-code-slash" />
-                                            </div>
-                                            <div className="empty-state-title">No custom state defined</div>
-                                            <div className="empty-state-description">
-                                                Advanced state properties are empty. This is normal for most elements.
-                                            </div>
-                                        </div>
+                                        <EmptyState
+                                            icon="bi-code-slash"
+                                            title="No custom state defined"
+                                            description="Advanced state properties are empty. This is normal for most elements."
+                                        />
                                     ) : (
                                         <div className="object-state" style={{ margin: 0, border: 'none' }}>
                                             <ReactJson

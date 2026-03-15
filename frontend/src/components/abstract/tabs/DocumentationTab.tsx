@@ -13,6 +13,7 @@
 
 import React, { Dispatch, ReactElement, ReactNode, useMemo, useState, useCallback, useEffect } from 'react';
 import { connect } from 'react-redux';
+import { EmptyState } from '../../ui/EmptyState';
 import Editor from '@monaco-editor/react';
 import { DState, LProject, LUser, DUser, LModel } from '../../../joiner';
 import type { FakeStateProps } from '../../../joiner/types';
@@ -25,6 +26,7 @@ import { useSettingsModalSafe } from '../../../contexts/SettingsModalContext';
 import { DocumentationStatus } from '../../../types/jodie';
 import { markdownMonacoOptions } from '../../editors/monacoConfig';
 import { AIDisclaimer } from '../../common/AIDisclaimer';
+import { Badge } from '../../common/Badge';
 import './DocumentationTab.scss';
 
 // ============================================
@@ -908,11 +910,11 @@ function DocumentationTabComponent(props: AllProps) {
     if (!project) {
         return (
             <div className="documentation-tab documentation-empty">
-                <div className="empty-state">
-                    <i className="bi bi-file-text" />
-                    <h3>No Project Loaded</h3>
-                    <p>Load a project to generate documentation.</p>
-                </div>
+                <EmptyState
+                    icon="bi-file-text"
+                    title="No Project Loaded"
+                    description="Load a project to generate documentation."
+                />
             </div>
         );
     }
@@ -921,31 +923,12 @@ function DocumentationTabComponent(props: AllProps) {
     if (!documentation && status === 'never_generated') {
         return (
             <div className="documentation-tab documentation-empty">
-                <div className="empty-state">
-                    <i className="bi bi-file-earmark-text" />
-                    <h3>No Documentation Yet</h3>
-                    <p>
-                        Generate comprehensive documentation for your metamodel including 
-                        domain analysis, class descriptions, and confidence scoring.
-                    </p>
-                    <button
-                        className="generate-btn"
-                        onClick={handleGenerate}
-                        disabled={isGenerating}
-                    >
-                        {isGenerating ? (
-                            <>
-                                <i className="bi bi-arrow-repeat spinning" />
-                                Generating...
-                            </>
-                        ) : (
-                            <>
-                                <i className="bi bi-magic" />
-                                Generate Documentation
-                            </>
-                        )}
-                    </button>
-                </div>
+                <EmptyState
+                    icon="bi-file-earmark-text"
+                    title="No Documentation Yet"
+                    description="Generate comprehensive documentation for your metamodel including domain analysis, class descriptions, and confidence scoring."
+                    action={{ label: isGenerating ? 'Generating...' : 'Generate Documentation', onClick: handleGenerate }}
+                />
             </div>
         );
     }
@@ -968,10 +951,10 @@ function DocumentationTabComponent(props: AllProps) {
                     {/* Status Badge with Timestamp */}
                     {status === 'outdated' && (
                         <>
-                            <span className="status-badge status-outdated" title="Project has been modified since documentation was generated">
+                            <Badge category="state-danger">
                                 <i className="bi bi-exclamation-triangle" />
                                 Outdated
-                            </span>
+                            </Badge>
                             {documentation?.generatedAt && (
                                 <span className="status-timestamp" title={`Last generated: ${new Date(documentation.generatedAt).toLocaleString()}`}>
                                     Last: {formatDateTime(documentation.generatedAt)}
@@ -981,10 +964,10 @@ function DocumentationTabComponent(props: AllProps) {
                     )}
                     {status === 'up_to_date' && (
                         <>
-                            <span className="status-badge status-synced" title="Documentation is up to date">
+                            <Badge category="version">
                                 <i className="bi bi-check-circle" />
                                 Synced
-                            </span>
+                            </Badge>
                             {documentation?.generatedAt && (
                                 <span className="status-timestamp" title={`Generated: ${new Date(documentation.generatedAt).toLocaleString()}`}>
                                     {formatDateTime(documentation.generatedAt)}
@@ -993,10 +976,10 @@ function DocumentationTabComponent(props: AllProps) {
                         </>
                     )}
                     {status === 'editing' && (
-                        <span className="status-badge status-editing" title="Currently editing">
+                        <Badge category="state">
                             <i className="bi bi-pencil" />
                             Editing
-                        </span>
+                        </Badge>
                     )}
                 </div>
 

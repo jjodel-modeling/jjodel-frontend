@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { U } from '../../joiner';
+import { Button } from '../common/Button';
 import './error-modal.scss';
 
 interface TechnicalDetails {
@@ -85,15 +86,15 @@ export const ErrorModal: React.FC<ErrorModalProps> = ({
           {/* Primary Actions */}
           <div className="error-modal__actions">
             {onRetry && (
-              <button className="btn btn--primary" onClick={onRetry}>
+              <Button variant="primary" onClick={onRetry}>
                 <i className="bi bi-arrow-clockwise" />
                 Try Again
-              </button>
+              </Button>
             )}
 
-            <button className="btn btn--secondary" onClick={onClose}>
+            <Button variant="secondary" onClick={onClose}>
               {onRetry ? 'Back to Projects' : 'Close'}
-            </button>
+            </Button>
           </div>
 
           {/* Technical Details (Collapsible) */}

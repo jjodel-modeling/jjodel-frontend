@@ -55,31 +55,10 @@
     text-overflow: ellipsis;
 }
 
-.status-badge {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 3px 8px;
-    border-radius: 12px;
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
+// Status badges now use unified jj-badge system (Badge component)
+// Override flex-shrink for chat header layout
+.jj-badge {
     flex-shrink: 0;
-
-    i {
-        font-size: 12px;
-    }
-
-    &--success {
-        background: #22c55e;
-        color: #ffffff;
-    }
-
-    &--error {
-        background: #ef4444;
-        color: #ffffff;
-    }
 }
 
 // Main message
