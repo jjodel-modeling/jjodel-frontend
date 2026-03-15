@@ -173,6 +173,7 @@
   border: none;
   background: transparent;
   padding: 0;
+  overflow: visible;  // Override info.scss overflow:hidden that clips toggles
 }
 
 .overview-section {
@@ -195,7 +196,7 @@
   font-size: 14px;
   font-weight: 500;
   color: #1f2937;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 
   .form-label-required {
     color: #ef4444;
@@ -365,8 +366,8 @@ select.form-select {
 .form-field--toggle {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
+  justify-content: flex-start;
+  gap: 12px;
   padding: 12px 16px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
@@ -810,5 +811,463 @@ select.form-select {
 
   .properties-actions-bar {
     border-top-color: #374151;
+  }
+
+  .props-header__icon {
+    background: #1e293b;
+
+    .bi { color: #94a3b8; }
+  }
+
+  .props-section__header {
+    border-bottom-color: #334155;
+
+    &:hover { background: #1e293b; }
+  }
+
+  .props-section__title {
+    color: #94a3b8;
+  }
+
+  .props-section__chevron {
+    color: #64748b;
+  }
+
+  .props-actions {
+    border-top-color: #334155;
+  }
+
+  .props-actions__hint {
+    color: #64748b;
+  }
+
+  .props-empty-state {
+    color: #64748b;
+  }
+
+  .props-checkbox {
+    border-color: #475569 !important;
+    background-color: #1e293b !important;
+
+    &:checked {
+      background-color: #0ea5e9 !important;
+      border-color: #0ea5e9 !important;
+    }
+  }
+}
+
+/* ========================================
+   RESTYLED PROPERTIES PANEL
+   Collapsible sections, styled checkboxes,
+   compact header, action buttons
+   ======================================== */
+
+/* --- Header --- */
+.props-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 4px;
+}
+
+.props-header__icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  .bi {
+    font-size: 16px;
+    color: #475569;
+  }
+}
+
+.props-header__name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1e293b;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.props-header__badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  flex-shrink: 0;
+  background-color: #e0f2fe;
+  color: #0369a1;
+}
+
+/* --- Collapsible Sections --- */
+.props-section {
+  margin-bottom: 2px;
+}
+
+.props-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 6px 14px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-bottom: 1px solid transparent;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: #f8fafc;
+  }
+}
+
+.props-section__title {
+  font-size: 13px;
+  font-weight: 500!important;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  line-height: 1;
+}
+
+.props-section__chevron {
+  font-size: 10px;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+
+  &--open {
+    transform: rotate(90deg);
+  }
+}
+
+.props-section__body {
+  padding: 4px 14px 12px;
+}
+
+/* --- Field rows inside sections --- */
+.properties-panel .props-section__body .input-container,
+.properties-panel .properties-fields .input-container {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 5px 0;
+  border-bottom: none;
+  margin: 0;
+  gap: 4px;
+
+  &::before {
+    display: none !important;
+    content: none !important;
+  }
+
+  /* Toggle/checkbox rows stay horizontal — checkbox LEFT, label RIGHT */
+  &:has(.properties-toggle),
+  &:has(.jjodel-switch),
+  &:has(input[type="checkbox"]),
+  &:has(.props-checkbox),
+  &:has(.props-custom-checkbox) {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    min-height: 28px;
+  }
+
+  > b.me-2 {
+    font-family: var(--font-sans);
+    font-size: 13px !important;
+    font-weight: 400 !important;
+    color: #64748b !important;
+    margin: 0 !important;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  input[type="text"],
+  input[type="number"] {
+    font-size: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    padding: 4px 8px;
+    height: 28px;
+    width: 100%;
+    max-width: none;
+    outline: none;
+    background: #fff;
+    color: #1e293b;
+
+    &:focus {
+      border-color: #0ea5e9;
+      box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.15);
+    }
+  }
+
+  input[type="number"] {
+    width: 60px;
+    min-width: 60px;
+    max-width: 60px;
+    text-align: center;
+  }
+
+  select {
+    font-size: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    padding: 4px 8px;
+    height: 28px;
+    width: 100%;
+    max-width: none;
+    outline: none;
+    background: #fff;
+    color: #1e293b;
+
+    &:focus {
+      border-color: #0ea5e9;
+    }
+  }
+}
+
+/* --- Toggle switches inside property rows --- */
+.properties-panel .props-section__body .input-container .jjodel-switch,
+.properties-panel .properties-fields .input-container .jjodel-switch {
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+/* --- Styled Checkbox (NOT toggle) --- */
+.props-checkbox {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  width: 16px !important;
+  height: 16px !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 3px !important;
+  background: #fff !important;
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transition: all 0.15s ease;
+
+  &:hover {
+    border-color: #94a3b8 !important;
+  }
+
+  &:checked {
+    background-color: #0ea5e9 !important;
+    border-color: #0ea5e9 !important;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 12 12' fill='none' stroke='white' stroke-width='2' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2 6l3 3 5-5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    background-size: 10px 10px !important;
+  }
+
+  &:focus {
+    box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2) !important;
+  }
+}
+
+/* Also style regular checkboxes in sections (Input type=checkbox from joiner) */
+.properties-panel .props-section__body input[type="checkbox"]:not(.props-checkbox) {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  width: 16px !important;
+  height: 16px !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 3px !important;
+  background: #fff !important;
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transition: all 0.15s ease;
+
+  &:hover { border-color: #94a3b8 !important; }
+
+  &:checked {
+    background-color: #0ea5e9 !important;
+    border-color: #0ea5e9 !important;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 12 12' fill='none' stroke='white' stroke-width='2' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2 6l3 3 5-5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    background-size: 10px 10px !important;
+  }
+
+  &:focus { box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2) !important; }
+}
+
+/* --- Action buttons at bottom --- */
+.props-actions {
+  padding: 10px 14px;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 8px;
+}
+
+.props-actions__buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.props-actions__hint {
+  display: block;
+  font-size: 10px;
+  color: #94a3b8;
+  text-align: center;
+  margin-top: 6px;
+}
+
+/* --- jj-btn styles for action buttons --- */
+.jj-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+
+  .bi { font-size: 12px; }
+
+  &--sm {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+
+  &--secondary {
+    background: transparent;
+    color: #334155;
+    border: 1px solid #e2e8f0;
+
+    &:hover { background: #f8fafc; border-color: #cbd5e1; }
+  }
+
+  &--danger {
+    background: transparent;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+
+    &:hover { background: #fef2f2; border-color: #fca5a5; }
+  }
+}
+
+/* --- Empty state within sections --- */
+.props-empty-state {
+  font-size: 12px;
+  color: #94a3b8;
+  text-align: center;
+  padding: 12px;
+  font-style: italic;
+}
+
+/* --- Properties fields container (removes Details wrapper) --- */
+.properties-fields {
+  padding: 0;
+}
+
+/* ========================================
+   CUSTOM CHECKBOX (14×14px, shadcn/ui style)
+   ======================================== */
+.props-custom-checkbox {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+
+  input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+  }
+
+  &__indicator {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid #cbd5e1;
+    background: transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background-color 0.15s, border-color 0.15s;
+    cursor: pointer;
+
+    svg {
+      width: 10px;
+      height: 10px;
+      stroke: white;
+      stroke-width: 2.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+  }
+
+  // Hover
+  &:hover .props-custom-checkbox__indicator {
+    border-color: #94a3b8;
+  }
+
+  // Checked state
+  input:checked + .props-custom-checkbox__indicator {
+    background-color: #0ea5e9;
+    border-color: #0ea5e9;
+
+    svg {
+      opacity: 1;
+    }
+  }
+
+  // Focus state
+  input:focus-visible + .props-custom-checkbox__indicator {
+    box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.25);
+    border-color: #0ea5e9;
+  }
+
+  // Disabled state
+  &.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// Dark mode
+@media (prefers-color-scheme: dark) {
+  .props-custom-checkbox__indicator {
+    border-color: #475569;
+    background: transparent;
+  }
+
+  .props-custom-checkbox:hover .props-custom-checkbox__indicator {
+    border-color: #64748b;
+  }
+
+  .props-custom-checkbox input:checked + .props-custom-checkbox__indicator {
+    background-color: #0ea5e9;
+    border-color: #0ea5e9;
   }
 }

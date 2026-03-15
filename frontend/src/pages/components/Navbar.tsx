@@ -56,7 +56,6 @@ import { formatShortcutPills, getRedoShortcutPills, SHORTCUTS, matchesShortcut, 
 import { AdvancedModeTutorial, shouldShowAdvancedModeTutorial } from '../../components/AdvancedModeTutorial';
 import { M2AnalyticsModal, M2AnalyticsData } from '../../components/M2AnalyticsModal';
 import { ShortcutsReference } from '../../components/ShortcutsReference';
-import { VerticalToggle } from '../../components/ui/VerticalToggle';
 import { useGlobalDrawer } from '../../contexts/GlobalDrawerContext';
 import { useSettingsModal } from '../../contexts/SettingsModalContext';
 import { useTheme } from '../../services/ThemeService';
@@ -1085,6 +1084,14 @@ function NavbarComponent(props: AllProps) {
                 {name: 'Show/Hide Sidebar', function: placeholder, icon: <i className="bi bi-layout-sidebar" />, disabled: true},
                 {name: 'Show/Hide Toolbar', function: placeholder, icon: <i className="bi bi-menu-button" />, disabled: true},
                 {name: `${isFullscreen ? 'Exit Fullscreen Mode' : 'Fullscreen Mode [F11]'}`, function: toggleFullScreen, icon: <i className="bi bi-arrows-fullscreen" />},
+                {name: 'divisor', function: placeholder},
+                {name: props.debug ? 'Debug Mode  \u2713' : 'Debug Mode',
+                    function: () => {
+                        TRANSACTION('debug', ()=>SetRootFieldAction.new('debug', !props.debug), props.debug, !props.debug);
+                        U.debug = !props.debug;
+                    },
+                    icon: <i className={`bi ${props.debug ? 'bi-bug-fill' : 'bi-bug'}`} />
+                },
             ]
         },
 
@@ -1112,15 +1119,15 @@ function NavbarComponent(props: AllProps) {
                     icon: <i className="bi bi-box-seam" />,
                     disabled: isDashboard || metamodels.length === 0
                 },
-                // Debug Mode toggle - always visible (independent from Advanced Mode)
                 {name: 'divisor'},
-                {name: props.debug ? 'Disable Debug Mode' : 'Enable Debug Mode',
+                {name: 'Polymetric View',
+                    jsx: <span>Polymetric View <span style={{ fontSize: '10px', color: '#94a3b8', marginLeft: '4px', fontWeight: 400 }}>(beta)</span></span>,
                     function: () => {
-                        TRANSACTION('debug', ()=>SetRootFieldAction.new('debug', !props.debug), props.debug, !props.debug);
-                        U.debug = !props.debug;
+                        window.dispatchEvent(new CustomEvent('jjodel:open-polymetric'));
                     },
-                    icon: <i className={`bi ${props.debug ? 'bi-bug-fill' : 'bi-bug'}`} />
-                }
+                    icon: <i className="bi bi-grid-3x3-gap" />,
+                    disabled: isDashboard || metamodels.length === 0
+                },
             ]
         },
 
@@ -1150,19 +1157,8 @@ function NavbarComponent(props: AllProps) {
     Keystrokes.register('#root', keybindings);
 
 
-    const MainLogo = ()=> {
-        return (
-        <div className='nav-logo' onClick={() => R.navigate('/allProjects')}>
-            <div className={"aligner"}>
-                <img
-                    src={jjodelLogo}
-                    alt="Jjodel"
-                    className="nav-logo__image"
-                />
-            </div>
-        </div>
-        );
-    }
+    // MainLogo inlined below — defining it as a function component inside render
+    // caused React to unmount/remount it on every re-render, making the <img> flicker.
 
     // Help dropdown menu - matches spec design
     const HelpMenu = () => {
@@ -1392,38 +1388,280 @@ function NavbarComponent(props: AllProps) {
         );
     }
 
+    // ─── Custom Tab Strip synced with DockManager ───
+    const [openTabs, setOpenTabs] = useState<Array<{id: string; title: string; type: string; active: boolean; closable: boolean}>>([]);
+
+    // Sync tabs from DockManager on layout changes
+    useEffect(() => {
+        const syncTabs = () => {
+            if (!DockManager.dock) return;
+            try {
+                const layout = DockManager.dock.getLayout();
+                const modelsPanel = layout?.dockbox?.children?.[0];
+                if (!modelsPanel || !('tabs' in modelsPanel)) return;
+
+                const tabs = (modelsPanel as any).tabs || [];
+                const activeId = (modelsPanel as any).activeId || tabs[0]?.id;
+                const state = store.getState();
+
+                const tabList = tabs.map((tab: any) => {
+                    const id = tab.id || '';
+                    let title = '';
+                    let type = 'project';
+                    const closable = tab.closable !== false;
+
+                    // Determine type and title from tab ID
+                    if (id.startsWith('DockComponent_rightbar_')) {
+                        // Project summary tab
+                        title = project?.name || 'Project';
+                        type = 'project';
+                    } else if (id.startsWith('jjtl_')) {
+                        type = 'transformation';
+                        // Try to find transformation name
+                        const rawTitle = tab.title;
+                        if (typeof rawTitle === 'string') {
+                            title = rawTitle;
+                        } else if (rawTitle?.props?.children) {
+                            // React element — extract text
+                            const children = rawTitle.props.children;
+                            if (Array.isArray(children)) {
+                                title = children.filter((c: any) => typeof c === 'string').join('');
+                            } else if (typeof children === 'string') {
+                                title = children;
+                            }
+                        }
+                        if (!title) title = 'Transformation';
+                    } else if (id.startsWith('doc_')) {
+                        type = 'documentation';
+                        title = 'Documentation';
+                    } else {
+                        // Model/Metamodel — look up in state
+                        const raw = (state as any)[id] || (state as any).idlookup?.[id];
+                        if (raw) {
+                            title = raw.name || 'Unnamed';
+                            type = raw.isMetamodel ? 'metamodel' : 'model';
+                        } else {
+                            title = 'Unnamed';
+                            type = 'metamodel';
+                        }
+                    }
+
+                    return { id, title, type, active: id === activeId, closable };
+                });
+
+                setOpenTabs(tabList);
+            } catch (e) {
+                // Ignore errors during sync
+            }
+        };
+
+        // Sync on layout changes
+        const handleActiveTab = () => setTimeout(syncTabs, 50);
+        window.addEventListener('jjodel:active-tab', handleActiveTab);
+
+        // Initial sync
+        const initialTimer = setTimeout(syncTabs, 200);
+        // Periodic sync (layout changes don't always fire events)
+        const interval = setInterval(syncTabs, 1000);
+
+        return () => {
+            window.removeEventListener('jjodel:active-tab', handleActiveTab);
+            clearTimeout(initialTimer);
+            clearInterval(interval);
+        };
+    }, [project]);
+
+    const handleTabClick = useCallback((tabId: string) => {
+        if (!DockManager.dock) return;
+        try {
+            const layout = DockManager.dock.getLayout();
+            const modelsPanel = layout?.dockbox?.children?.[0];
+            if (modelsPanel) {
+                const updated = JSON.parse(JSON.stringify(layout));
+                updated.dockbox.children[0].activeId = tabId;
+                DockManager.dock.loadLayout(updated);
+            }
+        } catch (e) {
+            console.warn('[Navbar] Error switching tab:', e);
+        }
+    }, []);
+
+    const handleTabClose = useCallback((tabId: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        DockManager.closeTab(tabId);
+    }, []);
+
+    // Tab type badge letter
+    const getTabBadge = (type: string): { letter: string; className: string } => {
+        switch (type) {
+            case 'metamodel': return { letter: 'M', className: 'appbar-tab__badge--metamodel' };
+            case 'model': return { letter: 'm', className: 'appbar-tab__badge--model' };
+            case 'transformation': return { letter: 'T', className: 'appbar-tab__badge--transformation' };
+            case 'documentation': return { letter: 'D', className: 'appbar-tab__badge--documentation' };
+            default: return { letter: '', className: '' };
+        }
+    };
+
+    // Overflow logic
+    const MAX_VISIBLE_TABS = 6;
+    const visibleTabs = openTabs.filter(t => t.type !== 'project'); // Don't show project summary in navbar
+    const tabsToShow = visibleTabs.length > MAX_VISIBLE_TABS
+        ? [...visibleTabs.slice(0, MAX_VISIBLE_TABS)]
+        : visibleTabs;
+    const overflowTabs = visibleTabs.length > MAX_VISIBLE_TABS
+        ? visibleTabs.slice(MAX_VISIBLE_TABS)
+        : [];
+    // Ensure active tab is always visible
+    const activeTab = visibleTabs.find(t => t.active);
+    if (activeTab && !tabsToShow.find(t => t.id === activeTab.id)) {
+        tabsToShow.pop();
+        tabsToShow.push(activeTab);
+    }
+
+    const [showOverflow, setShowOverflow] = useState(false);
+
+    // Level badge component
+    const LevelBadge = () => {
+        const { openSettings } = useSettingsModal();
+        const level = props.advanced ? 'Advanced' : 'Basic';
+
+        return (
+            <button
+                className={`appbar-level-badge ${props.advanced ? 'appbar-level-badge--advanced' : ''}`}
+                onClick={() => openSettings('profile')}
+                title="Click to change in Settings"
+            >
+                <span className="appbar-level-badge__dot" />
+                {level}
+            </button>
+        );
+    };
+
     return(<>
-        <nav id={'navbar'} className={'w-100 nav-container d-flex'} style={{zIndex: 99}}>
-            <MainLogo />
-            <MainMenu items={items} />
-            <Commands />
-            <div className="main-header-right">
-                {/* Vertical Toggles - Debug and Mode */}
-                <div className="navbar-toggles">
-                    <VerticalToggle
-                        isActive={props.debug}
-                        onToggle={() => {
-                            TRANSACTION('debug', ()=>SetRootFieldAction.new('debug', !props.debug), props.debug, !props.debug);
-                            U.debug = !props.debug;
-                        }}
-                        labelOn="debug on"
-                        labelOff="debug off"
-                        variant="debug"
-                    />
-                    <VerticalToggle
-                        isActive={props.advanced}
-                        onToggle={toggleAdvancedMode}
-                        labelOn="advanced"
-                        labelOff="basic"
-                        variant="default"
+        <nav id={'navbar'} className={'w-100 nav-container d-flex appbar'} style={{zIndex: 99}}>
+            <div className='nav-logo' onClick={() => R.navigate('/allProjects')}>
+                <div className={"aligner"}>
+                    <img
+                        src={jjodelLogo}
+                        alt="Jjodel"
+                        className="nav-logo__image"
                     />
                 </div>
-                {/* Layout Controls Group */}
-                <LayoutControls />
+            </div>
+            <div className="appbar__sep" />
+            <MainMenu items={items} />
+            <Commands />
+
+            {/* Project link */}
+            {project && (<>
+                <div className="appbar__sep" />
+                <button
+                    className="appbar-project-link"
+                    onClick={() => {
+                        // Navigate to project overview (first tab)
+                        const dock = DockManager.dock;
+                        if (dock) {
+                            const layout = dock.getLayout();
+                            const modelsPanel = layout?.dockbox?.children?.[0];
+                            if (modelsPanel && 'tabs' in modelsPanel && (modelsPanel as any).tabs?.length > 0) {
+                                const firstTabId = (modelsPanel as any).tabs[0].id;
+                                handleTabClick(firstTabId);
+                            }
+                        }
+                    }}
+                    title={project.name || 'Project'}
+                >
+                    <span className="appbar-project-link__icon">
+                        {(project.name || 'J')[0].toUpperCase()}
+                    </span>
+                    <span className="appbar-project-link__name">{project.name || 'Unnamed'}</span>
+                </button>
+            </>)}
+
+            {/* Custom Tab Strip */}
+            {visibleTabs.length > 0 && (<>
+                <div className="appbar__sep" />
+                <div className="appbar-tabs">
+                    {tabsToShow.map(tab => {
+                        const badge = getTabBadge(tab.type);
+                        return (
+                            <button
+                                key={tab.id}
+                                className={`appbar-tab ${tab.active ? 'appbar-tab--active' : ''}`}
+                                onClick={() => handleTabClick(tab.id)}
+                                title={tab.title}
+                            >
+                                {badge.letter && (
+                                    <span className={`appbar-tab__badge ${badge.className}`}>
+                                        {badge.letter}
+                                    </span>
+                                )}
+                                <span className="appbar-tab__name">{tab.title}</span>
+                                {tab.closable && (
+                                    <span
+                                        className="appbar-tab__close"
+                                        onClick={(e) => handleTabClose(tab.id, e)}
+                                        title="Close"
+                                    >
+                                        &times;
+                                    </span>
+                                )}
+                            </button>
+                        );
+                    })}
+                    {overflowTabs.length > 0 && (
+                        <div className="appbar-tabs__overflow" style={{ position: 'relative' }}>
+                            <button
+                                className="appbar-tabs__overflow-btn"
+                                onClick={() => setShowOverflow(!showOverflow)}
+                            >
+                                +{overflowTabs.length} &#x25BE;
+                            </button>
+                            {showOverflow && (
+                                <div className="appbar-tabs__overflow-dropdown">
+                                    {overflowTabs.map(tab => {
+                                        const badge = getTabBadge(tab.type);
+                                        return (
+                                            <button
+                                                key={tab.id}
+                                                className="appbar-tabs__overflow-item"
+                                                onClick={() => { handleTabClick(tab.id); setShowOverflow(false); }}
+                                            >
+                                                {badge.letter && (
+                                                    <span className={`appbar-tab__badge ${badge.className}`}>
+                                                        {badge.letter}
+                                                    </span>
+                                                )}
+                                                <span>{tab.title}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    {/* New tab button */}
+                    {project && (
+                        <button
+                            className="appbar-tabs__new"
+                            onClick={() => project && createM2(project)}
+                            title="New metamodel"
+                        >
+                            +
+                        </button>
+                    )}
+                </div>
+            </>)}
+
+            <div className="main-header-right">
+                {/* Level badge (read-only) */}
+                <LevelBadge />
+                <div className="appbar__sep" />
+                {/* Layout Controls moved to EditorV2 Toolbar */}
                 {/* Tree View Toggle - only in editor context */}
                 {project && metamodels.length > 0 && !isProjectOverviewPage() && <TreeViewToggle />}
                 {/* Divider */}
-                {project && <div className="navbar__divider" />}
+                {project && <div className="appbar__sep" />}
                 {/* User Controls */}
                 <HelpMenu />
                 <UserMenu />

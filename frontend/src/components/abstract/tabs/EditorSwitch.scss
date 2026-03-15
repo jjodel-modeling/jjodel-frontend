@@ -5,18 +5,9 @@
     overflow: hidden;
 }
 
-// Floating syntax mode badge — top-right corner of canvas
+// Floating syntax mode badge — hidden (now shown in toolbar)
 .editor-switch-syntax {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    z-index: 500;
-
-    .jj-badge {
-        box-shadow:
-            0 1px 3px rgba(0, 0, 0, 0.08),
-            0 4px 12px rgba(0, 0, 0, 0.04);
-    }
+    display: none;
 }
 
 // v2/v3 editor fills the entire container

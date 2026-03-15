@@ -44,10 +44,63 @@ interface PropertiesPanelProps {
     onEdgeChange: (edgeId: string, data: Partial<Edge>) => void;
     onConvertToInheritance?: (edgeId: string) => void;
     onConvertToReference?: (edgeId: string) => void;
+    onDeleteNode?: (nodeId: string) => void;
+    onDuplicateNode?: (nodeId: string) => void;
+    onDeleteEdge?: (edgeId: string) => void;
     isJjomMode?: boolean;
     modelInfo?: ModelInfo | null;
     onModelNameChange?: (name: string) => void;
     onModelUriChange?: (uri: string) => void;
+}
+
+// Icon mapping for element types
+const ELEMENT_ICONS: Record<string, string> = {
+    metamodel: 'bi-diagram-3',
+    class: 'bi-box',
+    attribute: 'bi-list-ul',
+    reference: 'bi-link-45deg',
+    operation: 'bi-gear',
+    enum: 'bi-list-ol',
+    literal: 'bi-hash',
+    package: 'bi-folder',
+    inheritance: 'bi-triangle',
+    node: 'bi-box',
+    model: 'bi-box',
+};
+
+// Styled header for the properties panel
+function PanelHeader({ icon, name, badgeLabel }: { icon: string; name: string; badgeLabel: string }) {
+    return (
+        <div className="jj-properties__header">
+            <div className="jj-properties__icon-box">
+                <i className={`bi ${icon}`} />
+            </div>
+            <span className="jj-properties__name">{name}</span>
+            <Badge category="type">{badgeLabel}</Badge>
+        </div>
+    );
+}
+
+// Action buttons at bottom of panel
+function PanelActions({ onDuplicate, onDelete }: { onDuplicate?: () => void; onDelete?: () => void }) {
+    if (!onDuplicate && !onDelete) return null;
+    return (
+        <div className="jj-properties__actions">
+            <div className="jj-properties__action-buttons">
+                {onDuplicate && (
+                    <button className="jj-btn jj-btn--secondary jj-btn--sm" onClick={onDuplicate}>
+                        <i className="bi bi-copy" /> Duplicate
+                    </button>
+                )}
+                {onDelete && (
+                    <button className="jj-btn jj-btn--danger jj-btn--sm" onClick={onDelete}>
+                        <i className="bi bi-trash" /> Delete
+                    </button>
+                )}
+            </div>
+            <span className="jj-properties__hint">Right-click for more actions</span>
+        </div>
+    );
 }
 
 // Collapsible section component
@@ -67,21 +120,21 @@ function Section({
     const [open, setOpen] = useState(defaultOpen);
 
     return (
-        <div className="prop-section">
+        <div className="jj-properties__section">
             <div
-                className={`prop-section__header ${!open ? 'collapsed' : ''}`}
+                className={`jj-properties__section-header ${!open ? 'jj-properties__section-header--collapsed' : ''}`}
                 onClick={() => setOpen(!open)}
             >
-                <i className="bi bi-chevron-down chevron" />
-                <span className="prop-section__title">{title}</span>
-                {count !== undefined && <span className="prop-section__count">{count}</span>}
+                <span className="jj-properties__section-title">{title}</span>
+                {count !== undefined && <span className="jj-properties__section-count">{count}</span>}
                 {action && (
-                    <div className="prop-section__actions" onClick={(e) => e.stopPropagation()}>
+                    <div className="jj-properties__section-actions" onClick={(e) => e.stopPropagation()}>
                         {action}
                     </div>
                 )}
+                <i className={`bi bi-chevron-right jj-properties__section-chevron ${open ? 'jj-properties__section-chevron--open' : ''}`} />
             </div>
-            {open && <div className="prop-section__body">{children}</div>}
+            {open && <div className="jj-properties__section-body">{children}</div>}
         </div>
     );
 }
@@ -133,28 +186,25 @@ function ModelProperties({
     const typeIcon = isModel ? 'bi-box' : isPackage ? 'bi-folder' : 'bi-diagram-3';
 
     return (
-        <aside className="properties-panel">
-            <div className="properties-panel__header">
-                <i className={`bi ${typeIcon}`} />
-                <span className="properties-panel__title">{typeLabel}</span>
-            </div>
+        <aside className="jj-properties">
+            <PanelHeader icon={typeIcon} name={modelInfo.name || typeLabel} badgeLabel={typeLabel.toUpperCase()} />
 
-            <div className="properties-panel__body">
+            <div className="jj-properties__body">
                 <Section title="GENERAL">
-                    <div className="prop-field">
-                        <label className="prop-label">Name</label>
+                    <div className="jj-properties__field">
+                        <label className="jj-properties__label">Name</label>
                         <input
-                            className="prop-input"
+                            className="jj-properties__input"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             onBlur={commitName}
                             onKeyDown={(e) => { if (e.key === 'Enter') commitName(); }}
                         />
                     </div>
-                    <div className="prop-field">
-                        <label className="prop-label">URI</label>
+                    <div className="jj-properties__field">
+                        <label className="jj-properties__label">URI</label>
                         <input
-                            className="prop-input"
+                            className="jj-properties__input"
                             value={uri}
                             onChange={(e) => setUri(e.target.value)}
                             onBlur={commitUri}
@@ -220,6 +270,9 @@ function PropertiesPanel({
     onEdgeChange,
     onConvertToInheritance,
     onConvertToReference,
+    onDeleteNode,
+    onDuplicateNode,
+    onDeleteEdge,
     isJjomMode,
     modelInfo,
     onModelNameChange,
@@ -234,12 +287,14 @@ function PropertiesPanel({
             return <ModelProperties modelInfo={modelInfo} onNameChange={onModelNameChange} onUriChange={onModelUriChange} />;
         }
         return (
-            <aside className="properties-panel">
-                <div className="properties-panel__header">
-                    <i className="bi bi-sliders" />
-                    <span className="properties-panel__title">Properties</span>
+            <aside className="jj-properties">
+                <div className="jj-properties__header">
+                    <div className="jj-properties__icon-box">
+                        <i className="bi bi-sliders" />
+                    </div>
+                    <span className="jj-properties__name">Properties</span>
                 </div>
-                <div className="properties-panel__empty">
+                <div className="jj-properties__empty">
                     <i className="bi bi-cursor" />
                     <span>Select a node or edge to view its properties</span>
                 </div>
@@ -251,12 +306,14 @@ function PropertiesPanel({
     if (selectedNodes.length > 1 || selectedEdges.length > 1 || (selectedNodes.length > 0 && selectedEdges.length > 0)) {
         const count = selectedNodes.length + selectedEdges.length;
         return (
-            <aside className="properties-panel">
-                <div className="properties-panel__header">
-                    <i className="bi bi-collection" />
-                    <span className="properties-panel__title">Selection</span>
+            <aside className="jj-properties">
+                <div className="jj-properties__header">
+                    <div className="jj-properties__icon-box">
+                        <i className="bi bi-collection" />
+                    </div>
+                    <span className="jj-properties__name">Selection</span>
                 </div>
-                <div className="properties-panel__empty">
+                <div className="jj-properties__empty">
                     <i className="bi bi-collection" />
                     <span>{count} items selected</span>
                 </div>
@@ -266,34 +323,39 @@ function PropertiesPanel({
 
     // Single node selected - route by type
     if (selectedNode) {
+        const nodeActions = {
+            onDelete: onDeleteNode ? () => onDeleteNode(selectedNode.id) : undefined,
+            onDuplicate: onDuplicateNode ? () => onDuplicateNode(selectedNode.id) : undefined,
+        };
+
         switch (selectedNode.type) {
             case 'classNode':
                 return (
-                    <aside className="properties-panel">
-                        <ClassNodeProperties node={selectedNode} onUpdate={onNodeChange} isJjomMode={isJjomMode} />
+                    <aside className="jj-properties">
+                        <ClassNodeProperties node={selectedNode} onUpdate={onNodeChange} isJjomMode={isJjomMode} {...nodeActions} />
                     </aside>
                 );
             case 'enumNode':
                 return (
-                    <aside className="properties-panel">
-                        <EnumNodeProperties node={selectedNode} onUpdate={onNodeChange} isJjomMode={isJjomMode} />
+                    <aside className="jj-properties">
+                        <EnumNodeProperties node={selectedNode} onUpdate={onNodeChange} isJjomMode={isJjomMode} {...nodeActions} />
                     </aside>
                 );
             case 'packageNode':
                 return (
-                    <aside className="properties-panel">
-                        <PackageNodeProperties node={selectedNode} onUpdate={onNodeChange} isJjomMode={isJjomMode} />
+                    <aside className="jj-properties">
+                        <PackageNodeProperties node={selectedNode} onUpdate={onNodeChange} isJjomMode={isJjomMode} {...nodeActions} />
                     </aside>
                 );
             case 'objectNode':
                 return (
-                    <aside className="properties-panel">
+                    <aside className="jj-properties">
                         <M1PropertiesPanel selectedNode={selectedNode as any} onNodeChange={onNodeChange} />
                     </aside>
                 );
             default:
                 return (
-                    <aside className="properties-panel">
+                    <aside className="jj-properties">
                         <GenericNodeProperties node={selectedNode} onUpdate={onNodeChange} />
                     </aside>
                 );
@@ -302,24 +364,30 @@ function PropertiesPanel({
 
     // Single edge selected
     if (selectedEdge) {
+        const edgeActions = {
+            onDelete: onDeleteEdge ? () => onDeleteEdge(selectedEdge.id) : undefined,
+        };
+
         if (selectedEdge.type === 'inheritance') {
             return (
-                <aside className="properties-panel">
+                <aside className="jj-properties">
                     <InheritanceEdgeProperties
                         edge={selectedEdge}
                         onEdgeChange={onEdgeChange}
                         onConvertToReference={onConvertToReference}
+                        {...edgeActions}
                     />
                 </aside>
             );
         }
         return (
-            <aside className="properties-panel">
+            <aside className="jj-properties">
                 <ReferenceEdgeProperties
                     edge={selectedEdge}
                     onUpdate={onEdgeChange}
                     onConvertToInheritance={onConvertToInheritance}
                     isJjomMode={isJjomMode}
+                    {...edgeActions}
                 />
             </aside>
         );
@@ -329,7 +397,7 @@ function PropertiesPanel({
 }
 
 // === Class Node Properties ===
-function ClassNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onUpdate: (id: string, data: any) => void; isJjomMode?: boolean }) {
+function ClassNodeProperties({ node, onUpdate, isJjomMode, onDelete, onDuplicate }: { node: Node; onUpdate: (id: string, data: any) => void; isJjomMode?: boolean; onDelete?: () => void; onDuplicate?: () => void }) {
     const nodeData = node.data as ClassNodeData;
     const [name, setName] = useState(nodeData.label);
 
@@ -465,40 +533,97 @@ function ClassNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onUpd
 
     return (
         <>
-            <div className="properties-panel__header">
-                <i className="bi bi-diagram-3" />
-                <Badge category="type">Class</Badge>
-                <span className="properties-panel__subtitle">{node.id}</span>
-            </div>
+            <PanelHeader icon={ELEMENT_ICONS.class} name={name} badgeLabel="CLASS" />
 
-            <div className="properties-panel__scroll">
-                <Section title="General">
-                    <div className="prop-field">
-                        <label className="prop-label">Name</label>
+            <div className="jj-properties__scroll">
+                <Section title="GENERAL">
+                    <div className="jj-properties__field">
+                        <label className="jj-properties__label">Name</label>
                         <input
-                            className="prop-input"
+                            className="jj-properties__input"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             onBlur={commitName}
                             onKeyDown={(e) => e.key === 'Enter' && commitName()}
                         />
                     </div>
-                    <label className="prop-checkbox">
+                </Section>
+
+                <Section title="INHERITANCE">
+                    <label className="jj-properties__field jj-properties__field--row">
                         <input
                             type="checkbox"
+                            className="jj-checkbox"
                             checked={isAbstract}
                             onChange={(e) => toggleAbstract(e.target.checked)}
                         />
-                        Abstract
+                        <span className="jj-properties__label">Abstract</span>
+                    </label>
+                    <label className="jj-properties__field jj-properties__field--row">
+                        <input
+                            type="checkbox"
+                            className="jj-checkbox"
+                            checked={!!(nodeData as any).isInterface}
+                            onChange={(e) => commit({ isInterface: e.target.checked } as any)}
+                        />
+                        <span className="jj-properties__label">Interface</span>
+                    </label>
+                    <label className="jj-properties__field jj-properties__field--row">
+                        <input
+                            type="checkbox"
+                            className="jj-checkbox"
+                            checked={!!(nodeData as any).allowCrossExtend}
+                            onChange={(e) => commit({ allowCrossExtend: e.target.checked } as any)}
+                        />
+                        <span className="jj-properties__label">Allow cross-extend</span>
+                    </label>
+                </Section>
+
+                <Section title="FLAGS">
+                    <label className="jj-properties__field jj-properties__field--row">
+                        <input
+                            type="checkbox"
+                            className="jj-checkbox"
+                            checked={!!(nodeData as any).isFinal}
+                            onChange={(e) => commit({ isFinal: e.target.checked } as any)}
+                        />
+                        <span className="jj-properties__label">Final</span>
+                    </label>
+                    <label className="jj-properties__field jj-properties__field--row">
+                        <input
+                            type="checkbox"
+                            className="jj-checkbox"
+                            checked={!!(nodeData as any).isSingleton}
+                            onChange={(e) => commit({ isSingleton: e.target.checked } as any)}
+                        />
+                        <span className="jj-properties__label">Singleton</span>
+                    </label>
+                    <label className="jj-properties__field jj-properties__field--row">
+                        <input
+                            type="checkbox"
+                            className="jj-checkbox"
+                            checked={!!(nodeData as any).isRootable}
+                            onChange={(e) => commit({ isRootable: e.target.checked } as any)}
+                        />
+                        <span className="jj-properties__label">Rootable</span>
+                    </label>
+                    <label className="jj-properties__field jj-properties__field--row">
+                        <input
+                            type="checkbox"
+                            className="jj-checkbox"
+                            checked={!!(nodeData as any).isPartial}
+                            onChange={(e) => commit({ isPartial: e.target.checked } as any)}
+                        />
+                        <span className="jj-properties__label">Partial</span>
                     </label>
                 </Section>
 
                 <Section
-                    title="Attributes"
+                    title="ATTRIBUTES"
                     count={attributes.length}
                     action={
                         <button
-                            className="prop-section-add-btn"
+                            className="jj-properties__add-btn"
                             onClick={addAttribute}
                             title="Add attribute"
                         >
@@ -507,12 +632,12 @@ function ClassNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onUpd
                     }
                 >
                     {attributes.length === 0 && (
-                        <div className="prop-empty">Drop attributes from palette or click +</div>
+                        <div className="jj-properties__empty">Drop attributes from palette or click +</div>
                     )}
                     {attributes.map((attr) => (
-                        <div key={attr.id} className="prop-list-item">
+                        <div key={attr.id} className="jj-properties__list-item">
                             <input
-                                className="prop-input prop-input--sm"
+                                className="jj-properties__input jj-properties__input--sm"
                                 value={getEditValue(attr.id, 'name', attr.name)}
                                 onChange={(e) => setEditValue(attr.id, 'name', e.target.value)}
                                 onBlur={(e) => commitAttrField(attr.id, 'name', e.target.value)}
@@ -520,7 +645,7 @@ function ClassNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onUpd
                                 placeholder="name"
                             />
                             <select
-                                className="prop-select"
+                                className="jj-properties__select"
                                 value={attr.type}
                                 onChange={(e) => handleAttrTypeChange(attr.id, e.target.value)}
                             >
@@ -528,7 +653,7 @@ function ClassNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onUpd
                                     <option key={t} value={t}>{t}</option>
                                 ))}
                             </select>
-                            <button className="prop-remove-btn" onClick={() => removeAttribute(attr.id)} title="Remove">
+                            <button className="jj-properties__remove-btn" onClick={() => removeAttribute(attr.id)} title="Remove">
                                 <i className="bi bi-x" />
                             </button>
                         </div>
@@ -536,12 +661,12 @@ function ClassNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onUpd
                 </Section>
 
                 <Section
-                    title="References"
+                    title="REFERENCES"
                     count={references.length}
                     action={
                         !isJjomMode ? (
                             <button
-                                className="prop-section-add-btn"
+                                className="jj-properties__add-btn"
                                 onClick={addReference}
                                 title="Add reference"
                             >
@@ -553,31 +678,30 @@ function ClassNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onUpd
                     {isJjomMode ? (
                         <>
                             {references.length === 0 && (
-                                <div className="prop-empty">Draw reference edges between classes</div>
+                                <div className="jj-properties__empty">Draw reference edges between classes</div>
                             )}
                             {references.map((ref) => (
-                                <div key={ref.id} className="prop-list-item prop-list-item--readonly">
-                                    <span className="prop-info">{ref.name}</span>
-                                    <span className="prop-info prop-info--type">{'\u2192'} {ref.type?.name ?? '?'}</span>
-                            
+                                <div key={ref.id} className="jj-properties__list-item jj-properties__list-item--readonly">
+                                    <span className="jj-properties__info">{ref.name}</span>
+                                    <span className="jj-properties__info jj-properties__info--type">{'\u2192'} {ref.type?.name ?? '?'}</span>
                                 </div>
                             ))}
                         </>
                     ) : (
                         <>
                             {references.length === 0 && (
-                                <div className="prop-empty">Click + to add a reference</div>
+                                <div className="jj-properties__empty">Click + to add a reference</div>
                             )}
                             {references.map((ref, i) => (
-                                <div key={ref.id} className="prop-list-item">
+                                <div key={ref.id} className="jj-properties__list-item">
                                     <input
-                                        className="prop-input prop-input--sm"
+                                        className="jj-properties__input jj-properties__input--sm"
                                         value={ref.name}
                                         onChange={(e) => updateReference(i, 'name', e.target.value)}
                                         placeholder="refName"
                                     />
                                     <select
-                                        className="prop-select"
+                                        className="jj-properties__select"
                                         value={ref.targetClassId}
                                         onChange={(e) => updateReference(i, 'targetClassId', e.target.value)}
                                     >
@@ -586,7 +710,7 @@ function ClassNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onUpd
                                             <option key={cls.id} value={cls.id}>{cls.name}</option>
                                         ))}
                                     </select>
-                                    <button className="prop-remove-btn" onClick={() => removeReference(i)} title="Remove">
+                                    <button className="jj-properties__remove-btn" onClick={() => removeReference(i)} title="Remove">
                                         <i className="bi bi-x" />
                                     </button>
                                 </div>
@@ -596,11 +720,11 @@ function ClassNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onUpd
                 </Section>
 
                 <Section
-                    title="Operations"
+                    title="OPERATIONS"
                     count={operations.length}
                     action={
                         <button
-                            className="prop-section-add-btn"
+                            className="jj-properties__add-btn"
                             onClick={addOperation}
                             title="Add operation"
                         >
@@ -609,12 +733,12 @@ function ClassNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onUpd
                     }
                 >
                     {operations.length === 0 && (
-                        <div className="prop-empty">Drop operations from palette or click +</div>
+                        <div className="jj-properties__empty">Drop operations from palette or click +</div>
                     )}
                     {operations.map((op) => (
-                        <div key={op.id} className="prop-list-item">
+                        <div key={op.id} className="jj-properties__list-item">
                             <input
-                                className="prop-input prop-input--sm"
+                                className="jj-properties__input jj-properties__input--sm"
                                 value={getEditValue(op.id, 'name', op.name)}
                                 onChange={(e) => setEditValue(op.id, 'name', e.target.value)}
                                 onBlur={(e) => commitOpField(op.id, 'name', e.target.value)}
@@ -622,7 +746,7 @@ function ClassNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onUpd
                                 placeholder="name"
                             />
                             <select
-                                className="prop-select"
+                                className="jj-properties__select"
                                 value={op.returnType}
                                 onChange={(e) => handleOpReturnTypeChange(op.id, e.target.value)}
                             >
@@ -631,26 +755,21 @@ function ClassNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onUpd
                                     <option key={t} value={t}>{t}</option>
                                 ))}
                             </select>
-                            <button className="prop-remove-btn" onClick={() => removeOperation(op.id)} title="Remove">
+                            <button className="jj-properties__remove-btn" onClick={() => removeOperation(op.id)} title="Remove">
                                 <i className="bi bi-x" />
                             </button>
                         </div>
                     ))}
                 </Section>
-
-                <Section title="Layout" defaultOpen={false}>
-                    <div className="prop-row">
-                        <span className="prop-badge">x: {Math.round(node.position.x)}</span>
-                        <span className="prop-badge">y: {Math.round(node.position.y)}</span>
-                    </div>
-                </Section>
             </div>
+
+            <PanelActions onDuplicate={onDuplicate} onDelete={onDelete} />
         </>
     );
 }
 
 // === Enum Node Properties ===
-function EnumNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onUpdate: (id: string, data: any) => void; isJjomMode?: boolean }) {
+function EnumNodeProperties({ node, onUpdate, isJjomMode, onDelete, onDuplicate }: { node: Node; onUpdate: (id: string, data: any) => void; isJjomMode?: boolean; onDelete?: () => void; onDuplicate?: () => void }) {
     const nodeData = node.data as EnumNodeData;
     const [name, setName] = useState(nodeData.label);
     const literals = nodeData.literals || [];
@@ -715,18 +834,14 @@ function EnumNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onUpda
 
     return (
         <>
-            <div className="properties-panel__header">
-                <i className="bi bi-list-ol" />
-                <Badge category="type">Enumeration</Badge>
-                <span className="properties-panel__subtitle">{node.id}</span>
-            </div>
+            <PanelHeader icon={ELEMENT_ICONS.enum} name={name} badgeLabel="ENUM" />
 
-            <div className="properties-panel__scroll">
-                <Section title="General">
-                    <div className="prop-field">
-                        <label className="prop-label">Name</label>
+            <div className="jj-properties__scroll">
+                <Section title="GENERAL">
+                    <div className="jj-properties__field">
+                        <label className="jj-properties__label">Name</label>
                         <input
-                            className="prop-input"
+                            className="jj-properties__input"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             onBlur={commitName}
@@ -736,11 +851,11 @@ function EnumNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onUpda
                 </Section>
 
                 <Section
-                    title="Literals"
+                    title="LITERALS"
                     count={literals.length}
                     action={
                         <button
-                            className="prop-section-add-btn"
+                            className="jj-properties__add-btn"
                             onClick={addLiteral}
                             title="Add literal"
                         >
@@ -749,38 +864,33 @@ function EnumNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onUpda
                     }
                 >
                     {literals.length === 0 && (
-                        <div className="prop-empty">Drop literals from palette or click +</div>
+                        <div className="jj-properties__empty">Drop literals from palette or click +</div>
                     )}
                     {literals.map((lit) => (
-                        <div key={lit.id} className="prop-list-item">
+                        <div key={lit.id} className="jj-properties__list-item">
                             <input
-                                className="prop-input prop-input--sm prop-input--mono"
+                                className="jj-properties__input jj-properties__input--sm jj-properties__input--mono"
                                 value={getEditValue(lit.id, 'name', lit.name)}
                                 onChange={(e) => setEditValue(lit.id, 'name', e.target.value)}
                                 onBlur={(e) => commitLitField(lit.id, 'name', e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && commitLitField(lit.id, 'name', (e.target as HTMLInputElement).value)}
                                 placeholder="NAME"
                             />
-                            <button className="prop-remove-btn" onClick={() => removeLiteral(lit.id)} title="Remove">
+                            <button className="jj-properties__remove-btn" onClick={() => removeLiteral(lit.id)} title="Remove">
                                 <i className="bi bi-x" />
                             </button>
                         </div>
                     ))}
                 </Section>
-
-                <Section title="Layout" defaultOpen={false}>
-                    <div className="prop-row">
-                        <span className="prop-badge">x: {Math.round(node.position.x)}</span>
-                        <span className="prop-badge">y: {Math.round(node.position.y)}</span>
-                    </div>
-                </Section>
             </div>
+
+            <PanelActions onDuplicate={onDuplicate} onDelete={onDelete} />
         </>
     );
 }
 
 // === Package Node Properties ===
-function PackageNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onUpdate: (id: string, data: any) => void; isJjomMode?: boolean }) {
+function PackageNodeProperties({ node, onUpdate, isJjomMode, onDelete, onDuplicate }: { node: Node; onUpdate: (id: string, data: any) => void; isJjomMode?: boolean; onDelete?: () => void; onDuplicate?: () => void }) {
     const nodeData = node.data as PackageNodeData;
     const [name, setName] = useState(nodeData.label);
 
@@ -795,18 +905,14 @@ function PackageNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onU
 
     return (
         <>
-            <div className="properties-panel__header">
-                <i className="bi bi-folder" />
-                <Badge category="type">Package</Badge>
-                <span className="properties-panel__subtitle">{node.id}</span>
-            </div>
+            <PanelHeader icon={ELEMENT_ICONS.package} name={name} badgeLabel="PACKAGE" />
 
-            <div className="properties-panel__scroll">
-                <Section title="General">
-                    <div className="prop-field">
-                        <label className="prop-label">Name</label>
+            <div className="jj-properties__scroll">
+                <Section title="GENERAL">
+                    <div className="jj-properties__field">
+                        <label className="jj-properties__label">Name</label>
                         <input
-                            className="prop-input"
+                            className="jj-properties__input"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             onBlur={commitName}
@@ -814,20 +920,9 @@ function PackageNodeProperties({ node, onUpdate, isJjomMode }: { node: Node; onU
                         />
                     </div>
                 </Section>
-
-                <Section title="Layout" defaultOpen={false}>
-                    <div className="prop-row">
-                        <span className="prop-badge">x: {Math.round(node.position.x)}</span>
-                        <span className="prop-badge">y: {Math.round(node.position.y)}</span>
-                    </div>
-                    {node.measured && (
-                        <div className="prop-row">
-                            <span className="prop-badge">w: {Math.round(node.measured.width || 0)}</span>
-                            <span className="prop-badge">h: {Math.round(node.measured.height || 0)}</span>
-                        </div>
-                    )}
-                </Section>
             </div>
+
+            <PanelActions onDuplicate={onDuplicate} onDelete={onDelete} />
         </>
     );
 }
@@ -847,22 +942,18 @@ function GenericNodeProperties({ node, onUpdate }: { node: Node; onUpdate: (id: 
 
     return (
         <>
-            <div className="properties-panel__header">
-                <i className="bi bi-box" />
-                <span className="properties-panel__title">Node</span>
-                <span className="properties-panel__subtitle">{node.id}</span>
-            </div>
+            <PanelHeader icon={ELEMENT_ICONS.node} name={name || 'Node'} badgeLabel="NODE" />
 
-            <div className="properties-panel__scroll">
-                <Section title="General">
-                    <div className="prop-field">
-                        <label className="prop-label">Type</label>
-                        <div className="prop-info">{node.type}</div>
+            <div className="jj-properties__scroll">
+                <Section title="GENERAL">
+                    <div className="jj-properties__field">
+                        <label className="jj-properties__label">Type</label>
+                        <div className="jj-properties__info">{node.type}</div>
                     </div>
-                    <div className="prop-field">
-                        <label className="prop-label">Label</label>
+                    <div className="jj-properties__field">
+                        <label className="jj-properties__label">Label</label>
                         <input
-                            className="prop-input"
+                            className="jj-properties__input"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             onBlur={commitName}
@@ -951,10 +1042,12 @@ function InheritanceEdgeProperties({
     edge,
     onEdgeChange,
     onConvertToReference,
+    onDelete,
 }: {
     edge: Edge;
     onEdgeChange: (edgeId: string, data: Partial<Edge>) => void;
     onConvertToReference?: (edgeId: string) => void;
+    onDelete?: () => void;
 }) {
     const edgeData = edge.data as InheritanceEdgeData | undefined;
     const sourceAnchor: AnchorConfig = edgeData?.sourceAnchor || { mode: 'auto', side: (edge.sourceHandle || 'top') as AnchorSide };
@@ -973,14 +1066,10 @@ function InheritanceEdgeProperties({
     }, [edge.id, edgeData, onEdgeChange]);
     return (
         <>
-            <div className="properties-panel__header">
-                <i className="bi bi-triangle" />
-                <span className="properties-panel__title">Inheritance</span>
-                <span className="properties-panel__subtitle">{edge.id}</span>
-            </div>
+            <PanelHeader icon={ELEMENT_ICONS.inheritance} name="Inheritance" badgeLabel="INHERITANCE" />
 
-            <div className="properties-panel__scroll">
-                <Section title="Type">
+            <div className="jj-properties__scroll">
+                <Section title="TYPE">
                     <div className="prop-edge-type-selector">
                         <button className="prop-edge-type active" disabled>
                             <i className="bi bi-triangle" />
@@ -996,24 +1085,18 @@ function InheritanceEdgeProperties({
                     </div>
                 </Section>
 
-                <Section title="Connection">
-                    <div className="prop-field">
-                        <label className="prop-label">Child (subclass)</label>
+                <Section title="CONNECTION">
+                    <div className="jj-properties__field">
+                        <label className="jj-properties__label">Child (subclass)</label>
                         <span className="prop-badge" style={{ width: '100%' }}>{edge.source}</span>
                     </div>
-                    <div className="prop-field">
-                        <label className="prop-label">Parent (superclass)</label>
+                    <div className="jj-properties__field">
+                        <label className="jj-properties__label">Parent (superclass)</label>
                         <span className="prop-badge" style={{ width: '100%' }}>{edge.target}</span>
                     </div>
                 </Section>
 
-                <Section title="Semantics" defaultOpen={false}>
-                    <div className="prop-info">
-                        The child class inherits all attributes, operations, and references from the parent class.
-                    </div>
-                </Section>
-
-                <Section title="Anchors" defaultOpen={false}>
+                <Section title="ANCHORS" defaultOpen={false}>
                     <div className="prop-anchors-row">
                         <AnchorSelector
                             label="Source"
@@ -1030,6 +1113,8 @@ function InheritanceEdgeProperties({
                     </div>
                 </Section>
             </div>
+
+            <PanelActions onDelete={onDelete} />
         </>
     );
 }
@@ -1040,11 +1125,13 @@ function ReferenceEdgeProperties({
     onUpdate,
     onConvertToInheritance,
     isJjomMode,
+    onDelete,
 }: {
     edge: Edge;
     onUpdate: (id: string, data: Partial<Edge>) => void;
     onConvertToInheritance?: (edgeId: string) => void;
     isJjomMode?: boolean;
+    onDelete?: () => void;
 }) {
     const edgeData = edge.data as ReferenceEdgeData | undefined;
     const ref = edgeData?.reference;
@@ -1130,14 +1217,10 @@ function ReferenceEdgeProperties({
 
     return (
         <>
-            <div className="properties-panel__header">
-                <i className="bi bi-arrow-right" />
-                <span className="properties-panel__title">Reference</span>
-                <span className="properties-panel__subtitle">{edge.id}</span>
-            </div>
+            <PanelHeader icon={ELEMENT_ICONS.reference} name={name || 'Reference'} badgeLabel="REFERENCE" />
 
-            <div className="properties-panel__scroll">
-                <Section title="Type">
+            <div className="jj-properties__scroll">
+                <Section title="TYPE">
                     <div className="prop-edge-type-selector">
                         <button
                             className="prop-edge-type"
@@ -1153,11 +1236,11 @@ function ReferenceEdgeProperties({
                     </div>
                 </Section>
 
-                <Section title="General">
-                    <div className="prop-field">
-                        <label className="prop-label">Name</label>
+                <Section title="GENERAL">
+                    <div className="jj-properties__field">
+                        <label className="jj-properties__label">Name</label>
                         <input
-                            className="prop-input"
+                            className="jj-properties__input"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             onBlur={commitName}
@@ -1166,7 +1249,7 @@ function ReferenceEdgeProperties({
                     </div>
                 </Section>
 
-                <Section title="Kind">
+                <Section title="KIND">
                     <div className="prop-kind-selector">
                         {(['association', 'composition', 'aggregation'] as ReferenceKind[]).map(k => (
                             <button
@@ -1183,11 +1266,11 @@ function ReferenceEdgeProperties({
                     </div>
                 </Section>
 
-                <Section title="Cardinality">
+                <Section title="CARDINALITY">
                     <div className="prop-cardinality">
                         <div className="prop-cardinality__inputs">
                             <input
-                                className="prop-input prop-input--xs"
+                                className="jj-properties__input jj-properties__input--xs"
                                 type="number"
                                 min="0"
                                 value={lowerBound}
@@ -1196,7 +1279,7 @@ function ReferenceEdgeProperties({
                             />
                             <span className="prop-cardinality__dot">..</span>
                             <input
-                                className="prop-input prop-input--xs"
+                                className="jj-properties__input jj-properties__input--xs"
                                 type="number"
                                 min="-1"
                                 value={upperBound}
@@ -1208,10 +1291,10 @@ function ReferenceEdgeProperties({
                             {formatCardinality(lowerBound, upperBound)}
                         </span>
                     </div>
-                    <div className="prop-hint">Use -1 for unbounded (*)</div>
+                    <div className="jj-properties__hint">Use -1 for unbounded (*)</div>
                 </Section>
 
-                <Section title="Connection" defaultOpen={false}>
+                <Section title="CONNECTION" defaultOpen={false}>
                     <div className="prop-row">
                         <span className="prop-badge">source: {edge.source}</span>
                     </div>
@@ -1220,7 +1303,7 @@ function ReferenceEdgeProperties({
                     </div>
                 </Section>
 
-                <Section title="Anchors" defaultOpen={false}>
+                <Section title="ANCHORS" defaultOpen={false}>
                     <div className="prop-anchors-row">
                         <AnchorSelector
                             label="Source"
@@ -1237,6 +1320,8 @@ function ReferenceEdgeProperties({
                     </div>
                 </Section>
             </div>
+
+            <PanelActions onDelete={onDelete} />
         </>
     );
 }

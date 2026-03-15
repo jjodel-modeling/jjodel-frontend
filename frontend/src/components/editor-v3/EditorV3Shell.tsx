@@ -20,7 +20,8 @@ import { EditorV3Context } from './contexts/EditorV3Context';
 import { EditorV3Inner } from './EditorV3Inner';
 import { NotationSelector } from './toolbar/NotationSelector';
 import { AdaptivePalette } from './panels/AdaptivePalette';
-import { PropertiesPanel } from './panels/PropertiesPanel';
+// V3 PropertiesPanel hidden — replaced by restyled V2 panel
+// import { PropertiesPanel } from './panels/PropertiesPanel';
 import { useEditorMode } from './hooks/useEditorMode';
 import { useStandaloneMode } from './hooks/useStandaloneMode';
 import type {
@@ -129,12 +130,7 @@ export function EditorV3Shell({
                             />
                         </ReactFlowProvider>
                     </div>
-                    {!readOnly && (
-                        <PropertiesPanel
-                            selectedNodes={selectedNodes}
-                            selectedEdges={selectedEdges}
-                        />
-                    )}
+                    {/* V3 PropertiesPanel hidden — replaced by restyled V2 panel */}
                 </div>
             </EditorV3Context.Provider>
         </div>

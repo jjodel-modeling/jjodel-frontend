@@ -29,24 +29,52 @@ import { UpgradePrompt } from '../ModeSystem';
 import { Button, EmptyState } from '../ui';
 import { M2AnalyticsModal, M2AnalyticsData } from '../M2AnalyticsModal';
 
-// Custom toggle switch component (div-based horizontal switch)
-function PropertiesToggle(props: { data: LModelElement; field: string }) {
+// Collapsible section for properties panel grouping
+function CollapsibleSection(props: { title: string; defaultOpen?: boolean; children: React.ReactNode }) {
+    const { title, defaultOpen = true, children } = props;
+    const [open, setOpen] = useState(defaultOpen);
+
+    return (
+        <div className={`props-section ${open ? 'props-section--open' : 'props-section--closed'}`}>
+            <button
+                type="button"
+                className="props-section__header"
+                onClick={() => setOpen(!open)}
+            >
+                <span className="props-section__title">{title}</span>
+                <i className={`bi bi-chevron-right props-section__chevron ${open ? 'props-section__chevron--open' : ''}`} />
+            </button>
+            {open && (
+                <div className="props-section__body">
+                    {children}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// Custom checkbox component for boolean properties (14×14px, shadcn/ui style)
+function PropertiesCheckbox(props: { data: LModelElement; field: string }) {
     const { data, field } = props;
     const value = !!(data as any)[field];
 
-    const handleToggle = () => {
+    const handleChange = () => {
         (data as any)[field] = !value;
     };
 
     return (
-        <button
-            type="button"
-            role="switch"
-            aria-checked={value}
-            aria-label={field}
-            className={`jjodel-switch ${value ? 'active' : ''}`}
-            onClick={handleToggle}
-        />
+        <span className="props-custom-checkbox">
+            <input
+                type="checkbox"
+                checked={value}
+                onChange={handleChange}
+            />
+            <span className="props-custom-checkbox__indicator">
+                <svg viewBox="0 0 12 12" fill="none">
+                    <path d="M2.5 6.5L5 9L9.5 3.5" />
+                </svg>
+            </span>
+        </span>
     );
 }
 
@@ -55,27 +83,10 @@ class builder {
         return (<>
             {!skipTitle && <h1>{data.name}</h1>}
             {!skipTitle && data.state.description && <><h2>{data.state.description}</h2></>}
-            <div className={'form-field'}>
-                <label className={'form-label'}>
-                    Name
-                    <span className="form-label-required">*</span>
-                </label>
+            <label className={'input-container'}>
+                <b className={'me-2'}>Name</b>
                 <Input data={data} field={'name'} type={'text'} />
-                <div className="form-hint">
-                    <i className="bi bi-info-circle" />
-                    Must be unique. Used as identifier in code generation.
-                </div>
-            </div>
-
-            <div className="form-toggle-container">
-                <div className="form-toggle-header">
-                    <div className="form-toggle-content">
-                        <h4 className="form-toggle-title">Read-only</h4>
-                        <p className="form-toggle-description">Prevent modifications to this element</p>
-                    </div>
-                    <PropertiesToggle data={data} field={'__readonly'} />
-                </div>
-            </div>
+            </label>
         </>);
     }
 
@@ -93,350 +104,228 @@ class builder {
             multiselectValue.push(opt);
             return undefined;
         }).filter(e=>!!e) as {value: string, label: string}[];
-        // <Select data={data} isMulti={true} field={'dependencies'}/>
 
         return (<>
-            {this.named(data, advanced, skipTitle)}
+            <CollapsibleSection title="GENERAL">
+                {this.named(data, advanced, true)}
+            </CollapsibleSection>
 
-            <div className={'form-field'}>
-                <label className={'form-label'}>
-                    Model Dependencies
-                    <span className="form-label-badge">Optional</span>
+            <CollapsibleSection title="DEPENDENCIES">
+                <label className={'input-container'}>
+                    <b className={'me-2'}>Depends from models</b>
+                    <MultiSelect
+                        isMulti={true}
+                        options={multiselectOptions as any}
+                        value={multiselectValue}
+                        placeholder="Select dependent models..."
+                        onChange={(v) => {
+                            console.log('setting model dependencies', v);
+                            l.dependencies = v.map(e => e.value) as Any<string[]>;
+                        }}
+                    />
                 </label>
-                <MultiSelect
-                    isMulti={true}
-                    options={multiselectOptions as any}
-                    value={multiselectValue}
-                    placeholder="Select dependent models..."
-                    onChange={(v) => {
-                        console.log('setting model dependencies', v);
-                        l.dependencies = v.map(e => e.value) as Any<string[]>;
-                    }}
-                />
-                <div className="form-hint">
-                    <i className="bi bi-info-circle" />
-                    This model will import types from selected models
-                </div>
-            </div>
+            </CollapsibleSection>
         </>);
     }
 
     static package(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
-            {!skipTitle && <h1>{data.name}</h1>}
-            {this.named(data, advanced, skipTitle)}
-            <label className={'input-container'}>
-                <b className={'me-2'}>Uri:</b>
-                <Input data={data} field={'uri'} type={'text'}/>
-            </label>
-            <label className={'input-container'}>
-                <b className={'me-2'}>Prefix:</b>
-                <Input data={data} field={'prefix'} type={'text'}/>
-            </label>
+            <CollapsibleSection title="GENERAL">
+                {this.named(data, advanced, true)}
+                <label className={'input-container'}>
+                    <b className={'me-2'}>Uri</b>
+                    <Input data={data} field={'uri'} type={'text'}/>
+                </label>
+                <label className={'input-container'}>
+                    <b className={'me-2'}>Prefix</b>
+                    <Input data={data} field={'prefix'} type={'text'}/>
+                </label>
+            </CollapsibleSection>
         </>);
     }
     
 
     static class(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         let lclass: LClass = data as any;
-        let dclass = lclass.__raw;
-        /*
-        let extendOptions: {value: string, label: string}[] lclass.extends.map(lsubclass=> ({value: lsubclass.id, label: lsubclass.name}));
-        let m2: LModel = lclass.model;
-        // let pkgs = lclass.allowCrossReference ? m2.allCrossSubPackages : m2.allSubPackages;
-        let pkgs = lclass.validTargets;
-        let extendsarr = dclass.extends;
-        let extendValue: {value: string, label: string}[] = [];
-        let extendOptions: {label: string, options: {value: string, label: string}[]}[] = pkgs.map(p => (
-            {label: p.fullname, options: p.classes.map(c=> {
-                let opt = {value:c.id, label: c.name};
-                if (opt.value === dclass.id) return undefined;
-                if (!extendsarr.includes(opt.value)) return opt;
-                extendValue.push(opt);
-                return undefined;
-            }).filter(e=>!!e) as {value: string, label: string}[]}));*/
-        //let extendOptions = pkgs.map(p => ({label: p.fullname, options: p.classes.map(c=> ({value:c.id as string, label:c.name}))}));
 
         let extendValue: {value: string, label: string}[] = lclass.extends.map(c=>({value:c.id, label:c.name}));
         let extendOptions = lclass.validTargetOptions;
 
-        type WikidataSearchItem = {
-            [x: string]: any;
-            id: string;
-            label: string;
-            description?: string;
-        };
-
-        type WikidataSearchResponse = {
-            search?: WikidataSearchItem[];
-        };
-        
-
-        async function lookupWikidataTerm(term: string, language: string = "en"): Promise<WikidataSearchItem | null> {
-            const params = new URLSearchParams({
-                action: "wbsearchentities",
-                search: term,
-                language,
-                format: "json",
-                origin: "*" // <<< THIS IS CRITICAL FOR BROWSER CALLS
-            });  
-
-            lclass.state = {count: lclass.state.count||0};
-
-            const incrementCount = (length: int) => {
-                if (lclass.state.count||0 + 1 === length) {
-                    lclass.state = {count: 0}      
-                } else {
-                    lclass.state = {count: lclass.state.count||0+1}
-                }
-            }
-
-            const url = "https://www.wikidata.org/w/api.php?" + params.toString();
-
-            try {
-                const response = await fetch(url, {
-                    method: "GET",
-                    headers: { Accept: "application/json" }
-                    // no need to set mode explicitly; default is fine
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error ${response.status}`);
-                }
-
-                const data: WikidataSearchResponse = await response.json();
-
-                if (!data.search || data.search.length === 0) {
-                    return null;
-                }
-
-                const results = data.search.filter(
-                    r => r.label.toLowerCase() === term.toLowerCase() && r.description !== 'family name'
-                ).sort();
-
-                if (!results || results.length === 0) {
-                    return null;
-                }
-
-                const best = results[lclass.state.count||0];
-                lclass.state = {description: best.description};
-                // lclass.state = {label: best.label};
-                lclass.state = {wikidataId: best.id};
-                incrementCount(results.length);
-
-                return best;
-            } catch (error) {
-                console.error("Error calling Wikidata:", error);
-                return null;
-            }
-        }
-
-      
-
         return (<>
-            {this.named(data, advanced, skipTitle)}
-            <label className={'input-container'}>
-                <b className={'me-2'}>Class Description:</b>
+            <CollapsibleSection title="GENERAL">
+                {this.named(data, advanced, true)}
+            </CollapsibleSection>
 
+            <CollapsibleSection title="INHERITANCE">
+                <label className={'input-container'}>
+                    <PropertiesCheckbox data={lclass} field={'abstract'} />
+                    <b className={'me-2'}>Abstract</b>
+                </label>
+                <label className={'input-container'}>
+                    <PropertiesCheckbox data={lclass} field={'interface'} />
+                    <b className={'me-2'}>Interface</b>
+                </label>
+                <label className={'input-container'}>
+                    <b className={'me-2'}>Extends</b>
+                    <MultiSelect isMulti={true} options={extendOptions as any} value={extendValue} onChange={(v) => {
+                        console.log('setting extend', v);
+                        lclass.extends = v.map(e => e.value) as Any<string[]>;
+                    }} />
+                </label>
+                <label className={'input-container'}>
+                    <PropertiesCheckbox data={lclass} field={'allowCrossReference'} />
+                    <b className={'me-2'}>Allow cross-extend</b>
+                </label>
+            </CollapsibleSection>
 
-                <Input
-	                type="text"
-                    getter={() => lclass.state.description||''}
-                    setter={(value) => (lclass.state = { description: value })}
-                />
-
-            </label>
-            <label className={'input-container'}>
-                <b className={'me-2'}></b>
-
-                <button className="btn-generate-ai" onClick={() => lookupWikidataTerm(lclass.name)}>
-                    <i className="bi bi-magic" />
-                    Generate with AI
-                </button>
-            </label>
-
-            <div className={'input-container'}>
-                <b className={'me-2'}>Abstract:
-                    <Tooltip tooltip="Prevents direct instantiation. This class can only be inherited by other classes.">
-                        <i className="bi bi-info-circle" style={{marginLeft: '6px', fontSize: '14px', color: '#94a3b8', cursor: 'help'}} />
-                    </Tooltip>
-                </b>
-                <PropertiesToggle data={lclass} field={'abstract'} />
-            </div>
-            <div className={'input-container'}>
-                <b className={'me-2'}>Interface:
-                    <Tooltip tooltip="Defines a contract that other classes must implement. Cannot contain method implementations.">
-                        <i className="bi bi-info-circle" style={{marginLeft: '6px', fontSize: '14px', color: '#94a3b8', cursor: 'help'}} />
-                    </Tooltip>
-                </b>
-                <PropertiesToggle data={lclass} field={'interface'} />
-            </div>
-
-            <label className={'input-container'}>
-                <b className={'me-2'}>Extends:</b>
-                <MultiSelect isMulti={true} options={extendOptions as any} value={extendValue} onChange={(v) => {
-                    console.log('setting extend', v);
-                    lclass.extends = v.map(e => e.value) as Any<string[]>;
-                }} />
-            </label>
-
-            {advanced && (
-                <>
-                    <div className={'input-container'}>
-                        <b className={'me-2'}>Allow extension from other packages:
-                            <Tooltip tooltip="Classes in other packages can extend this class.">
-                                <i className="bi bi-info-circle" style={{marginLeft: '6px', fontSize: '14px', color: '#94a3b8', cursor: 'help'}} />
-                            </Tooltip>
-                        </b>
-                        <PropertiesToggle data={lclass} field={'allowCrossReference'} />
-                    </div>
-
-                    <div className={'input-container'}>
-                        <b className={'me-2'}>Final:
-                            <Tooltip tooltip="Prevents this class from being extended by other classes (opposite of Abstract).">
-                                <i className="bi bi-info-circle" style={{marginLeft: '6px', fontSize: '14px', color: '#94a3b8', cursor: 'help'}} />
-                            </Tooltip>
-                        </b>
-                        <PropertiesToggle data={lclass} field={'final'} />
-                    </div>
-
-                    <div className={'input-container'}>
-                        <b className={'me-2'}>Singleton:
-                            <Tooltip tooltip="Only one instance of this class can exist at runtime (Singleton pattern).">
-                                <i className="bi bi-info-circle" style={{marginLeft: '6px', fontSize: '14px', color: '#94a3b8', cursor: 'help'}} />
-                            </Tooltip>
-                        </b>
-                        <PropertiesToggle data={data} field={'singleton'} />
-                    </div>
-
-                    <div className={'input-container'}>
-                        <b className={'me-2'}>Rootable:
-                            <Tooltip tooltip="This element can be used as the root element in models (appears in toolbar).">
-                                <i className="bi bi-info-circle" style={{marginLeft: '6px', fontSize: '14px', color: '#94a3b8', cursor: 'help'}} />
-                            </Tooltip>
-                        </b>
-                        <PropertiesToggle data={data} field={'rootable'} />
-                    </div>
-
-                    <div className={'input-container'}>
-                        <b className={'me-2'}>Partial:</b>
-                        <PropertiesToggle data={data} field={'partial'} />
-                    </div>
-                </>
-            )}
+            <CollapsibleSection title="FLAGS">
+                <label className={'input-container'}>
+                    <PropertiesCheckbox data={lclass} field={'final'} />
+                    <b className={'me-2'}>Final</b>
+                </label>
+                <label className={'input-container'}>
+                    <PropertiesCheckbox data={data} field={'singleton'} />
+                    <b className={'me-2'}>Singleton</b>
+                </label>
+                <label className={'input-container'}>
+                    <PropertiesCheckbox data={data} field={'rootable'} />
+                    <b className={'me-2'}>Rootable</b>
+                </label>
+                <label className={'input-container'}>
+                    <PropertiesCheckbox data={data} field={'partial'} />
+                    <b className={'me-2'}>Partial</b>
+                </label>
+            </CollapsibleSection>
         </>);
     }
 
     static enum(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
-            {this.named(data, advanced, skipTitle)}
-            {advanced && <label className={'input-container'}>
-                <b className={'me-2'}>Serializable:</b>
-                <Input data={data} field={'serializable'} type={'checkbox'}/>
-            </label>}
+            <CollapsibleSection title="GENERAL">
+                {this.named(data, advanced, true)}
+                {advanced && <label className={'input-container'}>
+                    <PropertiesCheckbox data={data} field={'serializable'} />
+                    <b className={'me-2'}>Serializable</b>
+                </label>}
+            </CollapsibleSection>
         </>);
     }
 
     static feature(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
-            {this.named(data, advanced, skipTitle)}
-            <label className={'input-container'}>
-                <b className={'me-2'}>Type:</b>
-                <Select data={data} field={'type'} />
-            </label>
-            <label className={'input-container'}>
-                <b className={'me-2'}>Lower Bound:</b>
-                <Input data={data} field={'lowerBound'} type={'number'} />
-            </label>
-            <label className={'input-container'}>
-                <b className={'me-2'}>Upper Bound:</b>
-                <Input data={data} field={'upperBound'} type={'number'} />
-            </label>
-            {advanced && <>
+            <CollapsibleSection title="GENERAL">
+                {this.named(data, advanced, true)}
+            </CollapsibleSection>
+
+            <CollapsibleSection title="TYPE &amp; BOUNDS">
                 <label className={'input-container'}>
-                    <b className={'me-2'}>Unique:</b>
-                    <Input data={data} field={'unique'} type={'checkbox'}/>
+                    <b className={'me-2'}>Type</b>
+                    <Select data={data} field={'type'} />
                 </label>
                 <label className={'input-container'}>
-                    <b className={'me-2'}>Ordered:</b>
-                    <Input data={data} field={'ordered'} type={'checkbox'}/>
+                    <b className={'me-2'}>Lower bound</b>
+                    <Input data={data} field={'lowerBound'} type={'number'} />
                 </label>
                 <label className={'input-container'}>
-                    <b className={'me-2'}>Changeable:</b>
-                    <Input data={data} field={'changeable'} type={'checkbox'}/>
+                    <b className={'me-2'}>Upper bound</b>
+                    <Input data={data} field={'upperBound'} type={'number'} />
+                </label>
+            </CollapsibleSection>
+
+            {advanced && <CollapsibleSection title="ADVANCED" defaultOpen={false}>
+                <label className={'input-container'}>
+                    <PropertiesCheckbox data={data} field={'unique'} />
+                    <b className={'me-2'}>Unique</b>
                 </label>
                 <label className={'input-container'}>
-                    <b className={'me-2'}>Volatile:</b>
-                    <Input data={data} field={'volatile'} type={'checkbox'}/>
+                    <PropertiesCheckbox data={data} field={'ordered'} />
+                    <b className={'me-2'}>Ordered</b>
                 </label>
                 <label className={'input-container'}>
-                    <b className={'me-2'}>Transient:</b>
-                    <Input data={data} field={'transient'} type={'checkbox'}/>
+                    <PropertiesCheckbox data={data} field={'changeable'} />
+                    <b className={'me-2'}>Changeable</b>
                 </label>
                 <label className={'input-container'}>
-                    <b className={'me-2'}>Unsettable:</b>
-                    <Input data={data} field={'unsettable'} type={'checkbox'}/>
+                    <PropertiesCheckbox data={data} field={'volatile'} />
+                    <b className={'me-2'}>Volatile</b>
                 </label>
                 <label className={'input-container'}>
-                    <b className={'me-2'}>Derived:</b>
-                    <Input data={data} field={'derived'} type={'checkbox'}/>
+                    <PropertiesCheckbox data={data} field={'transient'} />
+                    <b className={'me-2'}>Transient</b>
                 </label>
                 <label className={'input-container'}>
-                    <b className={'me-2'}>Cross Reference:</b>
-                    <Input data={data} field={'allowCrossReference'} type={'checkbox'}/>
+                    <PropertiesCheckbox data={data} field={'unsettable'} />
+                    <b className={'me-2'}>Unsettable</b>
                 </label>
-            </>}
+                <label className={'input-container'}>
+                    <PropertiesCheckbox data={data} field={'derived'} />
+                    <b className={'me-2'}>Derived</b>
+                </label>
+                <label className={'input-container'}>
+                    <PropertiesCheckbox data={data} field={'allowCrossReference'} />
+                    <b className={'me-2'}>Cross Reference</b>
+                </label>
+            </CollapsibleSection>}
         </>);
     }
 
     static attribute(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
-            {this.feature(data, advanced, skipTitle)}
-            {advanced && <>
+            {this.feature(data, advanced, true)}
+            {advanced && <CollapsibleSection title="FLAGS" defaultOpen={false}>
                 <label className={'input-container'}>
-                    <b className={'me-2'}>ID:</b>
-                    <Input data={data} field={'isID'} type={'checkbox'} />
+                    <PropertiesCheckbox data={data} field={'isID'} />
+                    <b className={'me-2'}>ID</b>
                 </label>
                 <label className={'input-container'}>
-                    <b className={'me-2'}>IoT:</b>
-                    <Input data={data} field={'isIoT'} type={'checkbox'} />
+                    <PropertiesCheckbox data={data} field={'isIoT'} />
+                    <b className={'me-2'}>IoT</b>
                 </label>
-            </>}
+            </CollapsibleSection>}
         </>);
     }
     static reference(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
-            {this.feature(data, advanced, skipTitle)}
-            <label className={'input-container'}>
-                <b className={'me-2'}>Composition:</b>
-                <Input data={data} field={'composition'} type={'checkbox'} />
-            </label>
-            <label className={'input-container'}>
-                <b className={'me-2'}>Aggregation:</b>
-                <Input data={data} field={'aggregation'} type={'checkbox'} />
-            </label>
-            <label className={'input-container'}>
-                <b className={'me-2'}>Container:</b>
-                <Input data={data} field={'container'} type={'checkbox'} />
-            </label>
+            {this.feature(data, advanced, true)}
+
+            <CollapsibleSection title="FLAGS">
+                <label className={'input-container'}>
+                    <PropertiesCheckbox data={data} field={'composition'} />
+                    <b className={'me-2'}>Composition</b>
+                </label>
+                <label className={'input-container'}>
+                    <PropertiesCheckbox data={data} field={'aggregation'} />
+                    <b className={'me-2'}>Aggregation</b>
+                </label>
+            </CollapsibleSection>
         </>);
     }
     static operation(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
-            {this.named(data, advanced, skipTitle)}
-            <label className={'input-container'}>
-                <b className={'me-2'}>Return:</b>
-                <Select data={data} field={'type'} />
-            </label>
+            <CollapsibleSection title="GENERAL">
+                {this.named(data, advanced, true)}
+            </CollapsibleSection>
+
+            <CollapsibleSection title="RETURN">
+                <label className={'input-container'}>
+                    <b className={'me-2'}>Return type</b>
+                    <Select data={data} field={'type'} />
+                </label>
+            </CollapsibleSection>
         </>);
     }
     static literal(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
-            {this.named(data, advanced, skipTitle)}
-            <label className={'input-container'}>
-                <b className={'me-2'}>Ordinal:</b>
-                <Input data={data} field={'ordinal'} type={'number'} />
-            </label>
+            <CollapsibleSection title="GENERAL">
+                {this.named(data, advanced, true)}
+            </CollapsibleSection>
+
+            <CollapsibleSection title="VALUE">
+                <label className={'input-container'}>
+                    <b className={'me-2'}>Ordinal</b>
+                    <Input data={data} field={'ordinal'} type={'number'} />
+                </label>
+            </CollapsibleSection>
         </>);
     }
     static object(data: LModelElement, topics: Dictionary<string, unknown>, advanced: boolean, mode: 'popup'|'tab'|'inline'): JSX.Element {
@@ -498,7 +387,7 @@ class builder {
         let mm: LModel = Selectors.getLastSelectedModel().m2 as LModel;
         if (!mm) return <></>
         return(<label className={'input-container'}>
-            <b className={'me-2'}>Force Type:</b>
+            <b className={'me-2'}>Force Type</b>
             <select className={'my-auto ms-auto select'} onChange={ (event)=>{
                 (window as any).debugmm = mm;
                 (window as any).debugm = me;
@@ -703,7 +592,7 @@ class builder {
            
             {valueslist}
             {value.instanceof?.className === 'DAttribute' && (value.instanceof as LAttribute).isIoT && <label className={'mt-2 input-container'}>
-                <b className={'me-2'}>Topic:</b>
+                <b className={'me-2'}>Topic</b>
                 <select className={'my-auto ms-auto select'} defaultValue={value.topic} onChange={e => value.topic = e.target.value}>
                     <optgroup label={'topics'}>
                         <option value={''}>------</option>
@@ -727,7 +616,7 @@ function getElementTypeInfo(className: string): { badge: string; badgeClass: str
         case 'DEnumerator':
             return { badge: 'Enum', badgeClass: 'class', icon: 'bi-list-ol' };
         case 'DAttribute':
-            return { badge: 'Attribute', badgeClass: 'attribute', icon: 'bi-type' };
+            return { badge: 'Attribute', badgeClass: 'attribute', icon: 'bi-list-ul' };
         case 'DReference':
             return { badge: 'Reference', badgeClass: 'reference', icon: 'bi-link-45deg' };
         case 'DOperation':
@@ -745,28 +634,20 @@ function getElementTypeInfo(className: string): { badge: string; badgeClass: str
     }
 }
 
-// Header component for the new design
+// Header component with icon, name, and badge
 function PropertiesHeader(props: { data: LModelElement; className: string }) {
     const { data, className } = props;
     const typeInfo = getElementTypeInfo(className);
-    const description = data.state?.description || '';
 
     return (
-        <div className="properties-header">
-            <div className="properties-header-icon">
+        <div className="props-header">
+            <div className="props-header__icon">
                 <i className={`bi ${typeInfo.icon}`} />
             </div>
-            <div className="properties-header-content">
-                <div className="properties-header-top">
-                    <h1 className="properties-header-name">{data.name || 'Unnamed'}</h1>
-                    <span className={`properties-header-badge ${typeInfo.badgeClass}`}>
-                        {typeInfo.badge}
-                    </span>
-                </div>
-                {description && (
-                    <p className="properties-header-description">{description}</p>
-                )}
-            </div>
+            <span className="props-header__name">{data.name || 'Unnamed'}</span>
+            <span className={`props-header__badge ${typeInfo.badgeClass}`}>
+                {typeInfo.badge.toUpperCase()}
+            </span>
         </div>
     );
 }
@@ -1058,7 +939,7 @@ function InfoComponent(props: AllProps) {
 
         // Element selected - show full properties panel
         const showOverview = ddata.className === 'DModel';
-        const showActions = ['DModel', 'DClass', 'DEnumerator', 'DAttribute', 'DReference', 'DOperation'].includes(ddata.className);
+        const showActions = ['DModel', 'DClass', 'DEnumerator', 'DAttribute', 'DReference', 'DOperation', 'DEnumLiteral', 'DPackage'].includes(ddata.className);
 
         return (
             <>
@@ -1069,72 +950,56 @@ function InfoComponent(props: AllProps) {
                     {/* Overview - only for Models */}
                     {showOverview && <PropertiesOverview data={data as LModel} onViewAnalytics={openM2Analytics} />}
 
-                    {/* Details Section */}
-                    <div className="properties-section">
-                        <div className="properties-section-header">
-                            <h3 className="properties-section-title">Details</h3>
-                        </div>
-                        <div className="properties-section-content">
-                            {jsx}
-                        </div>
+                    {/* Fields (builder methods now include their own CollapsibleSections) */}
+                    <div className="properties-fields">
+                        {jsx}
                     </div>
 
-                    {/* State Section - Advanced Mode Only (Collapsible) */}
+                    {/* Advanced State — collapsed by default, advanced mode only */}
                     {advanced && (
-                        <div className="properties-section properties-section--collapsible">
-                            <button
-                                className="properties-section-header"
-                                onClick={() => setAdvancedStateOpen(!advancedStateOpen)}
-                            >
-                                <div className="properties-section-title">
-                                    <i className={`bi ${advancedStateOpen ? 'bi-chevron-down' : 'bi-chevron-right'}`} />
-                                    <i className="bi bi-braces" />
-                                    Advanced State
-                                </div>
-                                <span className="properties-section-badge advanced">Optional</span>
-                            </button>
-
-                            {advancedStateOpen && (
-                                <div className="properties-section-content">
-                                    {!ddata || Object.keys(ddata._state).length === 0 ? (
-                                        <EmptyState
-                                            icon="bi-code-slash"
-                                            title="No custom state defined"
-                                            description="Advanced state properties are empty. This is normal for most elements."
-                                        />
-                                    ) : (
-                                        <div className="object-state" style={{ margin: 0, border: 'none' }}>
-                                            <ReactJson
-                                                src={ddata._state}
-                                                collapsed={1}
-                                                collapseStringsAfterLength={20}
-                                                displayDataTypes={true}
-                                                displayObjectSize={true}
-                                                enableClipboard={true}
-                                                groupArraysAfterLength={100}
-                                                indentWidth={4}
-                                                name={"state"}
-                                                iconStyle={"triangle"}
-                                                quotesOnKeys={true}
-                                                shouldCollapse={false}
-                                                sortKeys={false}
-                                                theme={"rjv-default"}
-                                            />
-                                        </div>
-                                    )}
+                        <CollapsibleSection title="ADVANCED STATE" defaultOpen={false}>
+                            {!ddata || Object.keys(ddata._state).length === 0 ? (
+                                <div className="props-empty-state">No custom state defined</div>
+                            ) : (
+                                <div className="object-state" style={{ margin: 0, border: 'none' }}>
+                                    <ReactJson
+                                        src={ddata._state}
+                                        collapsed={1}
+                                        collapseStringsAfterLength={20}
+                                        displayDataTypes={true}
+                                        displayObjectSize={true}
+                                        enableClipboard={true}
+                                        groupArraysAfterLength={100}
+                                        indentWidth={4}
+                                        name={"state"}
+                                        iconStyle={"triangle"}
+                                        quotesOnKeys={true}
+                                        shouldCollapse={false}
+                                        sortKeys={false}
+                                        theme={"rjv-default"}
+                                    />
                                 </div>
                             )}
-                        </div>
+                        </CollapsibleSection>
                     )}
 
-                    {/* Actions */}
+                    {/* Action Buttons */}
                     {showActions && (
-                        <PropertiesActions
-                            data={data}
-                            onEdit={node?.select ? () => node?.select() : undefined}
-                            onDuplicate={data?.duplicate ? () => data?.duplicate?.() : undefined}
-                            onDelete={data?.delete ? () => data?.delete?.() : undefined}
-                        />
+                        <div className="props-actions">
+                            <div className="props-actions__buttons">
+                                {data?.duplicate && (
+                                    <button className="jj-btn jj-btn--secondary jj-btn--sm" onClick={() => data?.duplicate?.()}>
+                                        <i className="bi bi-copy" /> Duplicate
+                                    </button>
+                                )}
+                                {data?.delete && (
+                                    <button className="jj-btn jj-btn--danger jj-btn--sm" onClick={() => data?.delete?.()}>
+                                        <i className="bi bi-trash" /> Delete
+                                    </button>
+                                )}
+                            </div>
+                            <span className="props-actions__hint">Right-click for more actions</span>
+                        </div>
                     )}
 
                     {/* Upgrade Prompt - Basic Mode Only */}

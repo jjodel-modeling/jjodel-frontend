@@ -176,7 +176,7 @@
 
   /* Sizing - 60px as per design spec */
   height: 60px;
-  padding: 0 var(--space-6);
+  padding: 0 var(--space-6) 0 20px; /* left 20px aligns logo with palette "Structure" label below */
 
   /* Typography */
   font-family: var(--font-sans);
@@ -228,7 +228,7 @@
     .logo-text {
       font-size: 22px;
       font-weight: 700;
-      color: #374151; /* Brand color */
+      color: var(--color-text-primary); /* Brand color — slate-900 */
       cursor: pointer;
       text-decoration: none;
       white-space: nowrap;
@@ -386,7 +386,7 @@
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background-color: #374151; // Brand color
+    background-color: var(--color-accent); // Brand color — slate-700
     color: white;
     font-size: var(--text-sm);
     font-weight: var(--font-semibold);
@@ -397,7 +397,7 @@
     transition: var(--transition-fast);
 
     &:hover {
-      background-color: #1f2937; // Darker brand
+      background-color: var(--color-accent-hover); // Darker brand — slate-800
       transform: scale(1.05);
     }
   }
@@ -832,7 +832,7 @@
    ============================================ */
 
 // Variables
-$menu-font: 'Inter Variable', -apple-system, sans-serif;
+$menu-font: var(--font-sans);
 $menu-bg: #ffffff;
 $menu-border: #e2e4e8;
 $menu-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
@@ -1115,7 +1115,7 @@ $transition-menu: 150ms ease;
   border-radius: 6px;
 
   // Typography
-  font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-sans);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.5px;
@@ -1238,7 +1238,7 @@ $transition-menu: 150ms ease;
   height: 28px;
   padding: 0 12px;
   border-radius: 6px;
-  font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-sans);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -1347,7 +1347,7 @@ $transition-menu: 150ms ease;
   margin-right: 12px;
 
   // Typography
-  font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-sans);
   font-size: 12px;
   font-weight: 500;
 
@@ -1388,7 +1388,7 @@ $transition-menu: 150ms ease;
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  font-family: 'Inter Variable', -apple-system, sans-serif;
+  font-family: var(--font-sans);
   font-size: 13px;
   font-weight: 500;
   color: var(--color-text-primary);
@@ -1576,5 +1576,465 @@ $transition-menu: 150ms ease;
     left: auto;
     // Ensure menu is above tree view sidebar (z-index: 100)
     z-index: 200;
+  }
+}
+
+// ============================================
+// APP BAR — 2-ROW HEADER REDESIGN
+// 50px app bar replacing old 60px navbar
+// ============================================
+
+.nav-container.appbar {
+  height: 50px !important;
+  padding: 0 16px 0 20px !important;
+  border-bottom: 0.5px solid var(--color-border-tertiary, #e2e8f0);
+  box-shadow: none !important;
+
+  // Compact logo
+  .nav-logo {
+    margin-right: 0 !important;
+    padding: 6px 8px;
+
+    div.logo, div.logo-on {
+      background-size: 45px 20px;
+      width: 55px;
+      height: 22px;
+    }
+  }
+
+  // Compact menu items
+  .nav-hamburger.inline {
+    margin-right: 2px;
+  }
+
+  & span.menu-title {
+    font-size: 12px !important;
+    padding: 6px 8px !important;
+    color: var(--color-text-secondary, #64748b);
+    font-weight: 500;
+
+    &:hover {
+      color: var(--color-text-primary);
+      background-color: var(--color-bg-secondary);
+    }
+  }
+
+  // Compact user
+  .user-badge {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
+  }
+
+  .user {
+    min-width: auto;
+    padding-right: 0;
+    margin-left: 8px;
+  }
+
+  // Right section
+  .main-header-right {
+    gap: 4px !important;
+  }
+}
+
+// ============================================
+// APP BAR SEPARATOR
+// ============================================
+
+.appbar__sep {
+  width: 0.5px;
+  height: 24px;
+  background: var(--color-border-tertiary, #e2e8f0);
+  margin: 0 8px;
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .appbar__sep {
+  background: #334155;
+}
+
+// ============================================
+// APP BAR — PROJECT LINK
+// ============================================
+
+.appbar-project-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 150ms ease;
+  flex-shrink: 0;
+
+  &:hover {
+    background: var(--color-bg-secondary, #f1f5f9);
+
+    .appbar-project-link__name {
+      color: var(--color-text-primary, #111418);
+    }
+  }
+
+  &__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: var(--color-bg-secondary, #f1f5f9);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-text-secondary, #64748b);
+    flex-shrink: 0;
+  }
+
+  &__name {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-secondary, #64748b);
+    white-space: nowrap;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+// ============================================
+// APP BAR — CUSTOM TAB STRIP
+// ============================================
+
+.appbar-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.appbar-tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 150ms ease;
+  flex-shrink: 1;
+  min-width: 60px;
+  max-width: 160px;
+  overflow: hidden;
+
+  &:hover {
+    background: var(--color-bg-secondary, #f1f5f9);
+
+    .appbar-tab__close {
+      opacity: 1;
+    }
+  }
+
+  &--active {
+    background: rgba(14, 165, 233, 0.08);
+    flex-shrink: 0.5;
+
+    .appbar-tab__name {
+      color: #0ea5e9;
+      font-weight: 500;
+    }
+
+    .appbar-tab__badge {
+      opacity: 1;
+    }
+  }
+
+  &__badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    border-radius: 3px;
+    font-size: 9px;
+    font-weight: 700;
+    flex-shrink: 0;
+    line-height: 1;
+
+    &--metamodel {
+      background-color: #E9D5FF;
+      color: #7C3AED;
+    }
+
+    &--model {
+      background-color: #FEF3C7;
+      color: #D97706;
+      text-transform: none;
+    }
+
+    &--transformation {
+      background-color: #D1FAE5;
+      color: #059669;
+    }
+
+    &--documentation {
+      background-color: #bfdbfe;
+      color: #1e40af;
+    }
+  }
+
+  &__name {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--color-text-secondary, #64748b);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    min-width: 14px;
+    font-size: 10px;
+    color: var(--color-text-tertiary, #94a3b8);
+    opacity: 0;
+    transition: opacity 150ms ease, color 150ms ease;
+    flex-shrink: 0;
+    line-height: 1;
+    border-radius: 2px;
+
+    &:hover {
+      color: #ef4444;
+      background: rgba(239, 68, 68, 0.08);
+    }
+  }
+}
+
+// Overflow button
+.appbar-tabs__overflow-btn {
+  display: flex;
+  align-items: center;
+  padding: 3px 8px;
+  background: var(--color-bg-secondary, #f1f5f9);
+  border: 0.5px solid var(--color-border-tertiary, #e2e8f0);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-secondary, #64748b);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  &:hover {
+    border-color: var(--color-text-tertiary, #94a3b8);
+    color: var(--color-text-primary, #475569);
+  }
+}
+
+.appbar-tabs__overflow-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 180px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  padding: 4px;
+  z-index: 1000;
+}
+
+.appbar-tabs__overflow-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #374151;
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    background: #f1f5f9;
+  }
+}
+
+// New tab button
+.appbar-tabs__new {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  color: var(--color-text-tertiary, #94a3b8);
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-left: 2px;
+
+  &:hover {
+    background: var(--color-bg-secondary, #f1f5f9);
+    color: var(--color-text-primary, #475569);
+  }
+}
+
+// ============================================
+// APP BAR — LEVEL BADGE (read-only)
+// ============================================
+
+.appbar-level-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  background: var(--color-bg-secondary, #f8fafc);
+  border: 0.5px solid var(--color-border-tertiary, #e2e8f0);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-tertiary, #94a3b8);
+  cursor: pointer;
+  transition: all 150ms ease;
+  flex-shrink: 0;
+
+  &:hover {
+    border-color: var(--color-text-tertiary, #94a3b8);
+    color: var(--color-text-secondary, #64748b);
+  }
+
+  &__dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+
+  &--advanced {
+    color: var(--color-text-secondary, #64748b);
+    border-color: #cbd5e1;
+
+    &:hover {
+      color: var(--color-text-primary, #475569);
+      border-color: var(--color-text-tertiary, #94a3b8);
+    }
+  }
+}
+
+// ============================================
+// HIDE RC-DOCK LEFT PANEL TAB BAR
+// Tabs are now rendered in the app bar
+// ============================================
+
+.not-strip .dock-panel.dock-style-models .dock-bar {
+  display: none !important;
+}
+
+// Ensure content fills the full height when models tab bar is hidden
+.not-strip .dock-panel.dock-style-models > .dock-content-holder {
+  height: 100% !important;
+}
+
+// ============================================
+// DARK MODE — App Bar
+// ============================================
+
+[data-theme="dark"] {
+  .nav-container.appbar {
+    border-bottom-color: #334155;
+  }
+
+  .appbar-project-link {
+    &:hover {
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    &__icon {
+      background: #334155;
+      color: #94a3b8;
+    }
+
+    &__name {
+      color: #94a3b8;
+    }
+  }
+
+  .appbar-tab {
+    &:hover {
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    &--active {
+      background: rgba(14, 165, 233, 0.12);
+    }
+
+    &__name {
+      color: #94a3b8;
+    }
+
+    &__close:hover {
+      background: rgba(239, 68, 68, 0.15);
+    }
+  }
+
+  .appbar-tabs__overflow-btn {
+    background: #334155;
+    border-color: #475569;
+    color: #94a3b8;
+  }
+
+  .appbar-tabs__overflow-dropdown {
+    background: #1e293b;
+    border-color: #334155;
+  }
+
+  .appbar-tabs__overflow-item {
+    color: #e2e8f0;
+
+    &:hover {
+      background: #334155;
+    }
+  }
+
+  .appbar-tabs__new {
+    color: #64748b;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.06);
+      color: #94a3b8;
+    }
+  }
+
+  .appbar-level-badge {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: #475569;
+    color: #64748b;
+
+    &:hover {
+      border-color: #64748b;
+      color: #94a3b8;
+    }
+
+    &--advanced {
+      color: #94a3b8;
+      border-color: #64748b;
+    }
   }
 }

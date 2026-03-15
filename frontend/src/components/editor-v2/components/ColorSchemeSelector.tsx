@@ -107,13 +107,12 @@ function ColorSchemeSelector({ colorScheme, onColorSchemeChange }: ColorSchemeSe
     return (
         <div className="scheme-selector" ref={dropdownRef}>
             <button
-                className="toolbar-btn scheme-selector__trigger"
+                className="toolbar-dropdown-btn scheme-selector__trigger"
                 onClick={() => setOpen(prev => !prev)}
                 title="Color scheme"
             >
-                <i className={`bi ${current.icon}`} />
-                <span className="scheme-selector__label">{current.name}</span>
-                <i className="bi bi-chevron-down scheme-selector__chevron" />
+                <span>Theme: {current.name}</span>
+                <i className="bi bi-chevron-down toolbar-dropdown-btn__chevron" />
             </button>
             {open && (
                 <div className="scheme-selector__dropdown">

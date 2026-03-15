@@ -32,9 +32,9 @@ import PackageNode from './nodes/PackageNode';
 import ObjectNode from './nodes/ObjectNode';
 import UnifiedEdge from './edges/UnifiedEdge';
 import PalettePanel from './panels/PalettePanel';
-import PropertiesPanel from './panels/PropertiesPanel';
+// PropertiesPanel removed — properties editing is handled by the dock-based Info panel
+// import PropertiesPanel from './panels/PropertiesPanel';
 import Toolbar from './Toolbar';
-import AlignmentToolbar from './AlignmentToolbar';
 import ContextMenu, { type ContextMenuItem } from './ContextMenu';
 import { useHistory } from './hooks/useHistory';
 import { useAlignment } from './hooks/useAlignment';
@@ -493,8 +493,16 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
         return () => window.removeEventListener('jjodel:selectNode', handleSelectNode);
     }, [modelid, setNodes, setEdges, getNodes, getViewport, setViewport]);
 
-    // Polymetric view modal
+    // Polymetric view modal (triggered via Tools menu CustomEvent)
     const [polymetricOpen, setPolymetricOpen] = useState(false);
+
+    useEffect(() => {
+        const handlePolymetric = () => {
+            if (modelid) setPolymetricOpen(true);
+        };
+        window.addEventListener('jjodel:open-polymetric', handlePolymetric);
+        return () => window.removeEventListener('jjodel:open-polymetric', handlePolymetric);
+    }, [modelid]);
 
     // History for undo/redo
     const { takeSnapshot, undo, redo, canUndo, canRedo } = useHistory(getNodes, getEdges);
@@ -1339,6 +1347,15 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
         },
         [getNodes, setNodes, takeSnapshot]
     );
+
+    // Duplicate all selected nodes
+    const duplicateSelected = useCallback(() => {
+        const selected = getNodes().filter((n) => n.selected);
+        if (selected.length === 0) return;
+        for (const node of selected) {
+            duplicateNode(node.id);
+        }
+    }, [getNodes, duplicateNode]);
 
     // Undo handler
     const handleUndo = useCallback(() => {
@@ -2191,6 +2208,7 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                         onToggleSnap={handleToggleSnap}
                         onFitView={handleFitView}
                         onAutoLayout={handleAutoLayout}
+                        onDuplicateSelected={duplicateSelected}
                         onDeleteSelected={deleteSelected}
                         onUndo={handleUndo}
                         onRedo={handleRedo}
@@ -2200,9 +2218,10 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                         onNotationChange={setNotation}
                         colorScheme={colorScheme}
                         onColorSchemeChange={setColorScheme}
-                        onPolymetricView={modelid ? () => setPolymetricOpen(true) : undefined}
-                    />
-                    <AlignmentToolbar
+                        zoomLevel={zoomLevel}
+                        onZoomIn={handleZoomIn}
+                        onZoomOut={handleZoomOut}
+                        onResetZoom={handleResetZoom}
                         selectedCount={selectedNodes.length}
                         onAlignLeft={() => withSnapshot(alignLeft)}
                         onAlignCenterV={() => withSnapshot(alignCenterVertical)}
@@ -2258,12 +2277,7 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                                 size={1}
                                 color={theme === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'}
                             />
-                            {/* Zoom controls — pill overlay */}
-                            <div className="canvas-zoom-controls" style={{ position: 'absolute', top: '12px', right: '12px', zIndex: 50 }}>
-                                <button onClick={handleZoomOut} title="Zoom out"><i className="bi bi-dash" /></button>
-                                <button className="canvas-zoom-controls__level" onClick={handleResetZoom} title="Reset zoom">{zoomLevel}%</button>
-                                <button onClick={handleZoomIn} title="Zoom in"><i className="bi bi-plus" /></button>
-                            </div>
+                            {/* Zoom controls moved to toolbar */}
                             <MiniMap
                                     style={{ position: 'absolute', margin: 0, right: '20px', bottom: '180px', borderRadius: '4px', opacity: 0.8 }}
                                     nodeStrokeWidth={3}
@@ -2300,18 +2314,7 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                     </div>
                 </div>
 
-                <PropertiesPanel
-                    selectedNodes={selectedNodes}
-                    selectedEdges={selectedEdges}
-                    onNodeChange={handleNodeChange}
-                    onEdgeChange={handleEdgeChange}
-                    onConvertToInheritance={convertToInheritance}
-                    onConvertToReference={convertToReference}
-                    isJjomMode={isJjomMode}
-                    modelInfo={modelInfoData}
-                    onModelNameChange={handleModelNameChange}
-                    onModelUriChange={handleModelUriChange}
-                />
+                {/* PropertiesPanel removed — properties editing handled by dock-based Info panel */}
 
                 {contextMenu && (
                     <ContextMenu

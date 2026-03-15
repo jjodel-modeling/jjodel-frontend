@@ -461,38 +461,16 @@
   font-weight: var(--font-medium);
   padding: 2px 8px;
   border-radius: var(--radius-sm);
-  background-color: #f1f5f9; // Neutral gray, not cyan
-  color: #374151; // Brand color
   text-transform: uppercase;
   letter-spacing: 0.02em;
   white-space: nowrap;
+  // Uniform cyan for all type badges
+  background-color: #e0f2fe;
+  color: #0369a1;
 
-  // Semantic colors per type - per color guidelines
-  &.metamodel {
-    background-color: #dbeafe; // Blue for metamodel
-    color: #1e40af;
-  }
-
-  &.model {
-    background-color: #dcfce7; // Green for model/package
-    color: #166534;
-  }
-
-  &.class {
-      font-size: 11px;
-    border: none!important;
-    background-color: #fef3c7; // Amber for class
-    color: #92400e;
-  }
-
-  &.attribute {
-    background-color: rgba(249, 115, 22, 0.1);
-    color: #f97316;
-  }
-
-  &.reference {
-    background-color: rgba(34, 197, 94, 0.1);
-    color: #22c55e;
+  &.metamodel, &.model, &.class, &.attribute, &.reference {
+    background-color: #e0f2fe;
+    color: #0369a1;
   }
 }
 
@@ -759,13 +737,25 @@
    ======================================== */
 .properties-panel .input-container {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: stretch;
   padding: var(--space-2) var(--space-4);
   border-bottom: 1px solid var(--color-border-tertiary);
   margin: 0;
-  min-height: 44px;
-  gap: var(--space-3);
+  gap: 4px;
+
+  /* Toggle/checkbox rows stay horizontal — checkbox LEFT, label RIGHT */
+  &:has(.properties-toggle),
+  &:has(.jjodel-switch),
+  &:has(input[type="checkbox"]),
+  &:has(.props-checkbox),
+  &:has(.props-custom-checkbox) {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--space-3);
+    min-height: 44px;
+  }
 
   /* CRITICAL: Hide the global checkbox ::before pseudo-element (ghost checkbox) */
   &::before {
@@ -793,11 +783,9 @@
     border: 1px solid var(--color-border-secondary);
     border-radius: var(--radius-md);
     padding: var(--space-2) var(--space-3);
-    min-width: 140px;
-    flex: 1;
-    max-width: 200px;
+    width: 100%;
+    max-width: none;
     outline: none;
-    margin-left: auto;
     height: 36px;
 
     &:focus {
@@ -819,7 +807,6 @@
     background-color: #e2e4e8 !important;
     cursor: pointer;
     transition: background-color 0.25s ease;
-    margin-left: auto;
     flex-shrink: 0;
     padding: 2px;
 
@@ -873,7 +860,6 @@
     background-color: var(--color-bg-elevated, #ffffff) !important;
     cursor: pointer;
     transition: all 0.15s ease;
-    margin-left: auto;
     flex-shrink: 0;
 
     &:hover {
@@ -901,11 +887,9 @@
     border: 1px solid var(--color-border-secondary);
     border-radius: var(--radius-md);
     padding: var(--space-2) var(--space-3);
-    min-width: 140px;
-    flex: 1;
-    max-width: 200px;
+    width: 100%;
+    max-width: none;
     outline: none;
-    margin-left: auto;
     height: 36px;
 
     &:focus {
@@ -948,7 +932,6 @@
   transition: background-color 0.25s ease;
   position: relative;
   flex-shrink: 0;
-  margin-left: auto;
 
   &:hover {
     background-color: #d0d3d8;
