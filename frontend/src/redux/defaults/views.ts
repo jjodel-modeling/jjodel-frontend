@@ -179,13 +179,16 @@ border-radius: var(--radius);
             view.css = `
 /* class */
 
-border-radius: 3px;
+border-radius: 6px;
 .class {
-    border-radius: 3px;
+    border-radius: inherit;
     background: var(--model-background);
     color:var(--model-color);
     min-width: 160px;
     border: 1px solid var(--borderColor)!important;
+    >*{
+        border-radius: inherit;
+    }
     
     &>.header{
         padding: 3px 6px;
@@ -339,12 +342,13 @@ div.header:has(.open:hover) {
 // `
 
             view.css = `
-border-radius: 3px;
+border-radius: 6px;
 .enumerator {
-    border-radius: 3px;
+    border-radius: inherit;
     background: white;
     color:var(--model-color);
     min-width: 140px;
+    &>*{ border-radius: inherit; }
 
     &>.header{
         padding: 3px 6px;
@@ -419,9 +423,9 @@ border-radius: 3px;
 .feature{
     display: flex;
     padding: 2px 5px;
-    select {
+    select, input {
         margin-left: auto;
-        width: max(33%, 75px);
+        width: 100px;
     }
 }`;
         }, false, Defaults.Pointer_ViewAttribute);

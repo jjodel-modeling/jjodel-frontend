@@ -45,6 +45,10 @@ $transition-normal: 250ms ease;
   background: $color-bg-primary;
   font-family: $font-family;
   overflow: hidden;
+
+  .console-btn{
+    width: min-content;
+  }
 }
 
 /* ============================================

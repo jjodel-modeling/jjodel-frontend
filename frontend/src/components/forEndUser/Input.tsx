@@ -158,7 +158,7 @@ export function InputComponent(props: AllProps) {
     let postlabel: ReactNode | undefined = props.postlabel;
     let tooltip: ReactNode|string|undefined = ((props.tooltip === true) ? data?.['__info_of__' + field]?.txt : props.tooltip) || '';
 
-    let classes = '_Input ';//'my-auto input ';
+    let classes = ' ';//'my-auto input ';
     //classes += (jsxLabel) ? 'ms-1' : (label) ? 'ms-auto' : '';
     classes += (props.hidden) ? ' hidden-input' : '';
     classes += (props.clickHidden) ? ' click-hidden-input' : '';
@@ -265,9 +265,9 @@ export function InputComponent(props: AllProps) {
 
     // Add form design system classes based on input type
     let formClass = '';
-    if (props.tag === 'textarea') formClass = 'form-textarea';
+    /*if (props.tag === 'textarea') formClass = 'form-textarea';
     else if (props.tag === 'select') formClass = 'form-select';
-    else if (!isBoolean && type !== 'range') formClass = 'form-input';
+    else if (!isBoolean && type !== 'range') formClass = 'form-input';*/
 
     let inputProps: GObject = {...otherprops,
         className: [formClass, props.inputClassName||'', classes].join(' '),

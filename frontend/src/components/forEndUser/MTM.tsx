@@ -294,13 +294,36 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
         case undefined:
         case 'eta':
             let eta_partials: Dictionary<string, string> = {};
-            let eta = new Eta();
-
+            let eta = new Eta({
+                views: '/',            // dummy value — satisfies the resolver check
+            });
+            eta.readFile = (name: string, ...a: any) => {  // intercepts all include() calls
+                console.log("eta custom read file", {name, a});
+                if (name[0] === '/' || name[0] === '@') { name = name.substring(1); }
+                if (name[0] === '/' || name[0] === '@') { name = name.substring(1); }
+                if (name[name.length -1] === '/') name = name.substring(0, name.length - 1);
+                if (name.endsWith(".eta")) name = name.substring(0, name.length - 4);
+                let key = name;
+                let ret: string = '';
+                if (eta_partials[key]) ret = eta_partials[key];
+                if (!ret) throw new Error(`Eta Partial not found: ${name}`);
+                return `<%
+    try {
+  %>
+  ${ret}
+  <%
+    } catch(e) {
+      e.message = '[template: ${key}] ' + e.message;
+      throw e;
+    }
+  %>`;
+            }
             if (allowPartials) for (let name in m2tobj) {
                 if (name in notLanguageFragments) continue;
                 let v = m2tobj[name]?.trim();
                 // @prefix is mandatory for templates dynamically loaded (not from file system) it is not part of the template name
-                eta.loadTemplate("@"+name, v);
+                // but i changed eta.loadFromFile function so it always read from eta_partials and @ is NOT NEEDED, actually harmful
+                eta.loadTemplate(name, v);
                 eta_partials[name] = v;
             }
             for (let k in eta_partials) {
@@ -337,6 +360,7 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
             }
             catch (e: any) {
                 ret = e.message;
+                console.log('eta m2t error', {e, selectedPartial, eta});
             }
             // cleanup
             /*for (let name in m2tobj) {

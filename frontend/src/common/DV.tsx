@@ -379,6 +379,7 @@ strescape -> ["\\\\/bfnrt] {% id %}
 }},
 );
         const flexmim2t =  {eta:{__str: 'Flexmi is usable only with partials so far.',
+                'Default': "Flexmi has no default, it uses Model, Object, Value fragments as entry points.",
                 'Model': ETA.flexmi_model,
                 'Object': ETA.flexmi_object,
                 'Value': ETA.flexmi_value,
@@ -901,7 +902,6 @@ foreignObject.label-end, foreignObject.label-start {
                     </foreignObject>
                 ])}
                 { /* edge head */ }
-                {console.error('edge jsx', {segments})}
                 ` + head + `
                 { /* edge tail */ }
                 ` + tail + `
@@ -1565,7 +1565,7 @@ public static enum(): string { return (
     transition: 'background 0.15s ease'
 }}>
     {/* Left side: Name with colon */}
-    <div style={{display: 'flex', alignItems: 'center', gap: '4px'}}>
+    <div className={"me-1"}>
         {/* External indicator */}
         {(data.type && data.type.model && data.type.model.id !== data.model.id) &&
             <i className="bi bi-box-arrow-up-right" style={{
@@ -1580,10 +1580,7 @@ public static enum(): string { return (
     </div>
 
     {/* Right side: Type Select (smaller) */}
-    <div style={{maxWidth: '110px', minWidth: '80px'}}>
-        <Select data={data} field={'type'} />
-    </div>
-
+    <Select data={data} field={'type'} />
     {decorators}
 </View>`
 );}

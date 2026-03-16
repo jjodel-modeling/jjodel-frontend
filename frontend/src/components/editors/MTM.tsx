@@ -425,7 +425,7 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
                         /><span className={'my-auto ms-1'}> Allow partial {a.operation}s</span></label>
                     </Tooltip>
                     {a.allowPartials ? <div className={'fragments d-flex mx-1'}><div className={'fill'}>{
-                        ['+', ...a.fragments].reverse().map(f=><div className={'fragment-btn '/* +(f === a.fragment ? 'selected btn-secondary' : 'btn-outline-secondary')*/}
+                        [...a.fragments, "+"].map(f=><div className={'fragment-btn '/* +(f === a.fragment ? 'selected btn-secondary' : 'btn-outline-secondary')*/}
                                               onClick={() => {a.setFragment(f); a.set_oldEngine('__jj_needs_reset__')}}>
                             {f === 'Default'? <span>Default</span> : <Input placeholder={'Confirm to delete'} key={f} getter={()=>f} tooltip={'double click to '+(f==='+'?'add':'rename')+' fragment'} setter={(v)=>{
                                 if (!v) {
