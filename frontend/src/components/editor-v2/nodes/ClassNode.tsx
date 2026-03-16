@@ -121,6 +121,11 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
         }
     }, [commitFieldEdit]);
 
+    // Select a child element (attribute/operation) in the Properties panel
+    const handleChildClick = useCallback((childId: string) => {
+        editorContext?.selectChildElement?.(childId);
+    }, [editorContext]);
+
     const handleDoubleClick = useCallback(() => {
         setEditing(true);
     }, []);
@@ -281,7 +286,7 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                             {attributes.map((attr) => {
                                 const bounds = formatBounds(attr.lowerBound ?? 0, attr.upperBound ?? 1);
                                 return (
-                                    <div key={attr.id} className="mm-field">
+                                    <div key={attr.id} className="mm-field" onClick={() => handleChildClick(attr.id)}>
                                         {editingField?.id === attr.id && editingField.field === 'name' ? (
                                             <input
                                                 className="mm-field__input"
@@ -350,7 +355,7 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                     {operations.length > 0 && (
                         <div className="mm-node__fields">
                             {operations.map((op) => (
-                                <div key={op.id} className="mm-field mm-operation">
+                                <div key={op.id} className="mm-field mm-operation" onClick={() => handleChildClick(op.id)}>
                                     {editingField?.id === op.id && editingField.field === 'name' ? (
                                         <input
                                             className="mm-field__input"

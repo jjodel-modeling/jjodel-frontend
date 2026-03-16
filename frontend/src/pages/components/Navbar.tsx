@@ -61,6 +61,7 @@ import { useSettingsModal } from '../../contexts/SettingsModalContext';
 import { useTheme } from '../../services/ThemeService';
 import { buildProjectExportJson } from '../../model/megamodelPersistence';
 import { getRuntimeMegamodel } from '../../model/megamodelRuntime';
+import { useAvatarColor } from '../../hooks/useAvatarColor';
 
 
 let windoww = window as any;
@@ -182,9 +183,10 @@ function makeEntry(i: MenuEntry|null|undefined, index: number) {
 
 
 /* User badge component - now used as menu trigger */
-const UserBadge = (props: {name: string, initials: string}) => {
+const UserBadge = (props: {name: string, initials: string, color?: string}) => {
     return (
-        <div className={'user-badge'} title={props.name}>
+        <div className={'user-badge'} title={props.name}
+             style={props.color ? { backgroundColor: props.color } : undefined}>
             {props.initials.toUpperCase()}
         </div>
     );
@@ -1335,12 +1337,13 @@ function NavbarComponent(props: AllProps) {
 
         // Theme state - synced via ThemeService
         const [theme, setTheme] = useTheme();
+        const [avatarColor] = useAvatarColor();
 
         return (
             <div className='user-menu-container' id={'navusermenu'}>
                 <Menu
                     position={'left'}
-                    trigger={<UserBadge name={userName} initials={initials} />}
+                    trigger={<UserBadge name={userName} initials={initials} color={avatarColor.hex} />}
                 >
                     <UserHeader name={userName} email={userEmail} />
                     <Item icon={<i className="bi bi-grid" />} action={async()=> {

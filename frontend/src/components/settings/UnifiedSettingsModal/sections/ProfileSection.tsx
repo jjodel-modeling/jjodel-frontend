@@ -11,6 +11,8 @@ import { UpdateUserRequest } from '../../../../api/DTO/UpdateUserRequest';
 import Storage from '../../../../data/storage';
 import { U } from '../../../../joiner';
 import { FakeStateProps } from '../../../../joiner/types';
+import { AVATAR_COLORS } from '../../../../constants/avatarColors';
+import { useAvatarColor } from '../../../../hooks/useAvatarColor';
 
 // Country options
 const COUNTRIES = [
@@ -42,6 +44,9 @@ interface ProfileSectionProps {
 }
 
 function ProfileSectionComponent({ user }: ProfileSectionProps): JSX.Element {
+    // Avatar color
+    const [avatarColor, setAvatarColor] = useAvatarColor();
+
     // Form state
     const [name, setName] = useState(user.name || '');
     const [surname, setSurname] = useState(user.surname || '');
@@ -170,6 +175,36 @@ function ProfileSectionComponent({ user }: ProfileSectionProps): JSX.Element {
                     </span>
                 )}
             </div>
+
+            {/* Avatar color picker */}
+            <div className="settings-field">
+                <label className="settings-field-label">Avatar color</label>
+                <div className="avatar-color-section">
+                    <div className="avatar-color-preview"
+                         style={{ backgroundColor: avatarColor.hex }}>
+                        {`${user.name || ''}${user.surname ? ' ' + user.surname : ''}`
+                            .trim().split(' ').map(n => n[0] || '').join('').toUpperCase() || '?'}
+                    </div>
+                    <div className="avatar-color-grid">
+                        {AVATAR_COLORS.map(color => (
+                            <button
+                                key={color.name}
+                                className={`avatar-color-swatch ${avatarColor.name === color.name ? 'selected' : ''}`}
+                                style={{ backgroundColor: color.hex }}
+                                onClick={() => setAvatarColor(color)}
+                                title={color.name}
+                                aria-label={`Select ${color.name} avatar color`}
+                            >
+                                {avatarColor.name === color.name && (
+                                    <i className="bi bi-check-lg" />
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            <div className="settings-divider" />
 
             <div className="settings-form-row">
                 {/* Name */}

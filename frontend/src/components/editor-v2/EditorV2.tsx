@@ -75,7 +75,7 @@ import {
 import { computeElkLayout } from './utils/elkLayout';
 import { rafThrottle, cancelThrottle } from '../../utils/DragThrottle';
 import { getCompositionChildOptions, getCompatibleReferences, type CompatibleReference } from './utils/compositionCompat';
-import { LPointerTargetable } from '../../joiner';
+import { LPointerTargetable, store, DState, SetRootFieldAction } from '../../joiner';
 import { jjomVertexToRFNode } from './utils/jjomTransformers';
 import { useTheme } from '../../services/ThemeService';
 import { getDraggedMetaclassId } from './utils/dragState';
@@ -2178,7 +2178,21 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
         [nodes, setEdges, applyDistribution]
     );
 
-    const editorContextValue = useMemo(() => ({ takeSnapshot, notation, onEdgeDataChange: handleEdgeChange, recalculateAnchors }), [takeSnapshot, notation, handleEdgeChange, recalculateAnchors]);
+    // Update Properties panel to show a child element (attr/op/literal) without changing graph selection.
+    // Uses requestAnimationFrame so it runs AFTER onNodeClick's selectElement sets modelElement to parent.
+    const selectChildElement = useCallback((childModelElementId: string) => {
+        requestAnimationFrame(() => {
+            const st: DState = store.getState() as DState;
+            const currentNode = (st as any)._lastSelected?.node ?? '';
+            SetRootFieldAction.new('_lastSelected' as any, {
+                node: currentNode,
+                view: '',
+                modelElement: childModelElementId,
+            });
+        });
+    }, []);
+
+    const editorContextValue = useMemo(() => ({ takeSnapshot, notation, onEdgeDataChange: handleEdgeChange, recalculateAnchors, selectChildElement }), [takeSnapshot, notation, handleEdgeChange, recalculateAnchors, selectChildElement]);
 
     // Model info for PropertiesPanel (when nothing is selected)
     const modelInfoData = useMemo(() => {

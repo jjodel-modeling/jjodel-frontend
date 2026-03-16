@@ -89,6 +89,11 @@ function EnumNode({ id, data, selected }: NodeProps<EnumNodeType>) {
         setEditingLit(null);
     }, [editingLit, editValue, data.literals, id, setNodes, editorContext]);
 
+    // Select a child element (literal) in the Properties panel
+    const handleChildClick = useCallback((childId: string) => {
+        editorContext?.selectChildElement?.(childId);
+    }, [editorContext]);
+
     const handleLitKeyDown = useCallback((e: React.KeyboardEvent) => {
         if (e.key === 'Enter') {
             commitLitEdit();
@@ -183,7 +188,7 @@ function EnumNode({ id, data, selected }: NodeProps<EnumNodeType>) {
                 <div className="mm-node__body">
                     <div className="mm-node__fields">
                         {data.literals.map((lit) => (
-                            <div key={lit.id} className="mm-literal">
+                            <div key={lit.id} className="mm-literal" onClick={() => handleChildClick(lit.id)}>
                                 {editingLit === lit.id ? (
                                     <input
                                         className="mm-literal__input"
