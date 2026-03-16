@@ -25,7 +25,7 @@ import { CommandBar, Btn } from '../commandbar/CommandBar';
 import { Tooltip } from '../forEndUser/Tooltip';
 import { icon } from '../../pages/components/icons/Icons';
 import { Toggle } from '../../joiner/components';
-import { UpgradePrompt } from '../ModeSystem';
+// import { UpgradePrompt } from '../ModeSystem'; // TODO: reintroduce as toast or first-visit hint
 import { Button, EmptyState } from '../ui';
 import { M2AnalyticsModal, M2AnalyticsData } from '../M2AnalyticsModal';
 
@@ -165,6 +165,7 @@ class builder {
                     <PropertiesCheckbox data={lclass} field={'interface'} />
                     <b className={'me-2'}>Interface</b>
                 </label>
+                {/* TODO: mostrare in Advanced mode
                 <label className={'input-container'}>
                     <b className={'me-2'}>Extends</b>
                     <MultiSelect isMulti={true} options={extendOptions as any} value={extendValue} onChange={(v) => {
@@ -172,6 +173,7 @@ class builder {
                         lclass.extends = v.map(e => e.value) as Any<string[]>;
                     }} />
                 </label>
+                */}
                 <label className={'input-container'}>
                     <PropertiesCheckbox data={lclass} field={'allowCrossReference'} />
                     <b className={'me-2'}>Allow cross-extend</b>
@@ -939,7 +941,7 @@ function InfoComponent(props: AllProps) {
 
         // Element selected - show full properties panel
         const showOverview = ddata.className === 'DModel';
-        const showActions = ['DModel', 'DClass', 'DEnumerator', 'DAttribute', 'DReference', 'DOperation', 'DEnumLiteral', 'DPackage'].includes(ddata.className);
+        // const showActions = ['DModel', 'DClass', 'DEnumerator', 'DAttribute', 'DReference', 'DOperation', 'DEnumLiteral', 'DPackage'].includes(ddata.className);
 
         return (
             <>
@@ -983,35 +985,8 @@ function InfoComponent(props: AllProps) {
                         </CollapsibleSection>
                     )}
 
-                    {/* Action Buttons */}
-                    {showActions && (
-                        <div className="props-actions">
-                            <div className="props-actions__buttons">
-                                {data?.duplicate && (
-                                    <button className="jj-btn jj-btn--secondary jj-btn--sm" onClick={() => data?.duplicate?.()}>
-                                        <i className="bi bi-copy" /> Duplicate
-                                    </button>
-                                )}
-                                {data?.delete && (
-                                    <button className="jj-btn jj-btn--danger jj-btn--sm" onClick={() => data?.delete?.()}>
-                                        <i className="bi bi-trash" /> Delete
-                                    </button>
-                                )}
-                            </div>
-                            <span className="props-actions__hint">Right-click for more actions</span>
-                        </div>
-                    )}
-
-                    {/* Upgrade Prompt - Basic Mode Only */}
-                    {!advanced && (
-                        <UpgradePrompt
-                            features={[
-                                'View and edit element state',
-                                'Access advanced class options',
-                                'Configure OCL constraints'
-                            ]}
-                        />
-                    )}
+                    {/* TODO: Duplicate/Delete available via toolbar and context menu.
+                         UpgradePrompt can return as toast or first-visit hint. */}
                 </section>
 
                 {/* M2 Analytics Modal */}

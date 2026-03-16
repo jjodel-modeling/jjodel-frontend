@@ -14,7 +14,7 @@
 - Manipolare metamodelli via scripting (JjScript)
 - Valutare espressioni sui modelli (JjEL)
 
-**Status UI Redesign:** ~50% completato
+**Status UI Redesign:** ~60% completato (header redesign completato 2026-03-15)
 **Focus:** Ridurre cognitive load mantenendo full functionality
 **Users:** Ricercatori, educatori, studenti (beginner to expert)
 
@@ -870,6 +870,62 @@ astRef.current = currentAST;
 
 ---
 
+## 🖥 Header Layout (aggiornato 2026-03-15)
+
+### Struttura: 2 righe (~84px totali)
+- **Riga 1 — App bar (50px)**: Logo | Menu 12px | Project link | Tab (overflow Chrome-style) | Level badge (read-only) | Help | Avatar
+- **Riga 2 — Toolbar (34px)**: [undo][redo][duplicate][delete] | VIEW [Notation ▾] [Theme: X ▾] | LAYOUT [grid][autolayout] | [● Abstract syntax] | spacer | [−] 100% [+] [⤢] | [panel toggle]
+
+### Toolbar — Multi-selezione
+Quando 2+ elementi selezionati, il primo gruppo della toolbar fa swap:
+- Normale: undo, redo, duplicate, delete
+- Multi-selezione: ALIGN [6 icone allineamento] + "N selected"
+Zero layout shift — stesso spazio, altezza invariata.
+
+### Toolbar — Regole anti-shift
+- Dropdown notation: `min-width: 120px` (per "Structured")
+- Zoom value: `min-width: 44px`, `text-align: center`, `font-variant-numeric: tabular-nums`
+- Abstract syntax pill: `white-space: nowrap`, `flex-shrink: 0`
+- Tutti i bottoni icon: 28×28px fissi
+
+### Debug mode
+- NON nella app bar — accessibile da menu View → ☑ Debug Mode
+- Quasi solo per sviluppatori
+
+### Progressive disclosure
+- 3 livelli: Basic, Intermediate, Advanced
+- Selezionabili nei Settings, badge read-only nella app bar
+- Click badge → Settings
+
+### Polymetric view
+- NON nella toolbar — accessibile da menu Tools con label "(beta)"
+
+### Panel toggle
+- 1 solo bottone (non 3) — alterna fullscreen ↔ split con properties
+- Icona contestuale: mostra l'azione disponibile
+
+---
+
+## 📋 Properties Panel (aggiornato 2026-03-15)
+
+### Form layout
+- Label SOPRA i campi input (layout verticale stacked)
+- Nessun ":" dopo le label
+- Gap label↔input: 4px
+- Gap tra campi: 12-16px
+
+### Campi booleani
+- Checkbox custom 14×14px, stile shadcn/ui
+- Unchecked: border `#cbd5e1`, bg trasparente
+- Checked: bg `#0ea5e9` (cyan), check SVG bianco
+- Posizione: checkbox a sinistra, label a destra (pattern Bootstrap)
+- Componente: `PropertiesCheckbox` in Info.tsx
+
+### Container
+- `properties-panel-container`: margin 0 (adiacente al canvas, no gap)
+
+---
+
 ## 🔄 Workflow Preferito
 
 - Al termine di ogni task che introduce nuovi pattern o convenzioni, proponi un aggiornamento a questo file.
@@ -936,6 +992,9 @@ astRef.current = currentAST;
 | `MappingLinesOverlay.tsx` | Frecce di mapping |
 | `DualMetamodelPanel.tsx` | Vista side-by-side metamodelli |
 | `ExecuteTransformationDialog.tsx` | Dialog esecuzione |
+| `Navbar.tsx` + `navbar.scss` | App bar (riga 1 header) |
+| `Toolbar.tsx` | Toolbar (riga 2 header) |
+| `Info.tsx` + `info.scss` | Properties panel (form layout, checkbox custom) |
 
 ---
 

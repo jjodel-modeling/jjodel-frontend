@@ -32,6 +32,7 @@
   margin: var(--space-2) !important;
   padding: var(--space-2) !important;
   background-color: var(--color-bg-secondary);
+  margin-top: 0 !important;
 
   & section {
   }
@@ -39,6 +40,11 @@
 
 /* Properties tab React Select overrides */
 .properties-tab {
+  padding-left: 0!important;
+  margin-top: 0!important;
+
+
+
   & .css-b62m3t-container {
   }
 
@@ -391,10 +397,11 @@
    Modern card-based layout with sections
    ============================================ */
 
-.properties-panel {
+.properties-panel { /* *** */
   padding: var(--space-3);
   height: 100%;
   overflow: auto;
+  margin:0!important;
 
   // Empty state variant - no element selected
   &--empty {
