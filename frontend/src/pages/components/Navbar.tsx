@@ -1396,7 +1396,7 @@ function NavbarComponent(props: AllProps) {
                             const modelsPanel = layout?.dockbox?.children?.[0];
                             if (modelsPanel && 'tabs' in modelsPanel && (modelsPanel as any).tabs?.length > 0) {
                                 const firstTabId = (modelsPanel as any).tabs[0].id;
-                                handleTabClick(firstTabId);
+                                dock.updateTab(firstTabId, null, true);
                             }
                         }
                     }}
