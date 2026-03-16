@@ -1,12 +1,12 @@
 import {
     Any,
     DAttribute, DClass, DEnumerator, Dictionary, DModel, DocString, DReference,
-    DState,
+    DPackage, DState,
     Input, LAttribute, LClass, LClassifier, LEnumerator,
     LGraphElement,
     LModel,
     LModelElement,
-    LObject, LPointerTargetable, LReference, LStructuralFeature, LValue,
+    LObject, LPackage, LPointerTargetable, LReference, LStructuralFeature, LValue,
     LViewElement, MultiSelect, Pointer, Pointers,
     Select,
     Selectors, SetFieldAction, SetRootFieldAction, store, TRANSACTION, U, ValueDetail
@@ -62,8 +62,14 @@ function PropertiesToggle(props: { data: LModelElement; field: string; label: st
         (data as any)[field] = checked;
     };
 
+    const handleRowClick = (e: React.MouseEvent) => {
+        // Avoid double-trigger if user clicked directly on the toggle button
+        if ((e.target as HTMLElement).closest('button[role="switch"]')) return;
+        handleChange(!value);
+    };
+
     return (
-        <div className="jj-toggle-row">
+        <div className="jj-toggle-row" onClick={handleRowClick}>
             <span className="jj-toggle-row__label">{label}</span>
             <Toggle checked={value} onChange={handleChange} size="xs" />
         </div>
@@ -82,6 +88,125 @@ function PropertiesNumberInput(props: { data: LModelElement; field: string; min?
 
     return (
         <NumberInput value={value} onChange={handleChange} min={min} max={max} />
+    );
+}
+
+// Contents list for Metamodel — classes, enums, packages
+function MetamodelContents(props: { data: LModel }) {
+    const { data } = props;
+    const d = data.__raw;
+    const classes = data.classes || [];
+    const enumerators = data.enumerators || [];
+    const packages = data.packages || [];
+
+    const handleSelect = (elementId: string) => {
+        SetRootFieldAction.new('_lastSelected' as any, {
+            node: '',
+            view: '',
+            modelElement: elementId,
+        });
+    };
+
+    const parentId = d.id as any;
+
+    const handleAddClass = () => {
+        DClass.new('NewClass', false, false, false, undefined, undefined, parentId, true);
+    };
+
+    const handleAddEnum = () => {
+        DEnumerator.new('NewEnumerator', parentId, true);
+    };
+
+    const handleAddPackage = () => {
+        DPackage.new('NewPackage', '', '', parentId, true);
+    };
+
+    return (
+        <>
+            {/* Classes */}
+            <div className="jj-contents-group">
+                <div className="jj-contents-group-header">
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <span className="jj-section-title">Classes</span>
+                        <span className="jj-contents-count">({classes.length})</span>
+                    </div>
+                    <button className="jj-contents-add" onClick={handleAddClass}>+ Add</button>
+                </div>
+                {classes.length > 0 ? (
+                    <div className="jj-contents-list">
+                        {classes.map((cls: any) => (
+                            <div
+                                key={cls.id}
+                                className="jj-contents-item"
+                                onClick={() => handleSelect(cls.__raw?.id || cls.id)}
+                            >
+                                <div className="jj-contents-icon jj-contents-icon--class">C</div>
+                                <span className="jj-contents-name">{cls.name}</span>
+                                {cls.abstract && <span className="jj-contents-tag">abstract</span>}
+                                {cls.interface && <span className="jj-contents-tag">interface</span>}
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="jj-contents-empty">No classes yet</div>
+                )}
+            </div>
+
+            {/* Enumerators */}
+            <div className="jj-contents-group">
+                <div className="jj-contents-group-header">
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <span className="jj-section-title">Enumerators</span>
+                        <span className="jj-contents-count">({enumerators.length})</span>
+                    </div>
+                    <button className="jj-contents-add" onClick={handleAddEnum}>+ Add</button>
+                </div>
+                {enumerators.length > 0 ? (
+                    <div className="jj-contents-list">
+                        {enumerators.map((en: any) => (
+                            <div
+                                key={en.id}
+                                className="jj-contents-item"
+                                onClick={() => handleSelect(en.__raw?.id || en.id)}
+                            >
+                                <div className="jj-contents-icon jj-contents-icon--enum">E</div>
+                                <span className="jj-contents-name">{en.name}</span>
+                                <span className="jj-contents-detail">{en.literals?.length || 0} literals</span>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="jj-contents-empty">No enumerators yet</div>
+                )}
+            </div>
+
+            {/* Packages */}
+            <div className="jj-contents-group">
+                <div className="jj-contents-group-header">
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <span className="jj-section-title">Packages</span>
+                        <span className="jj-contents-count">({packages.length})</span>
+                    </div>
+                    <button className="jj-contents-add" onClick={handleAddPackage}>+ Add</button>
+                </div>
+                {packages.length > 0 ? (
+                    <div className="jj-contents-list">
+                        {packages.map((pkg: any) => (
+                            <div
+                                key={pkg.id}
+                                className="jj-contents-item"
+                                onClick={() => handleSelect(pkg.__raw?.id || pkg.id)}
+                            >
+                                <div className="jj-contents-icon jj-contents-icon--package">P</div>
+                                <span className="jj-contents-name">{pkg.name}</span>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="jj-contents-empty">No packages yet</div>
+                )}
+            </div>
+        </>
     );
 }
 
@@ -131,6 +256,10 @@ class builder {
                         }}
                     />
                 </label>
+            </CollapsibleSection>
+
+            <CollapsibleSection title="CONTENTS">
+                <MetamodelContents data={l} />
             </CollapsibleSection>
         </>);
     }
@@ -908,19 +1037,30 @@ function InfoComponent(props: AllProps) {
         const showOverview = ddata.className === 'DModel';
         // const showActions = ['DModel', 'DClass', 'DEnumerator', 'DAttribute', 'DReference', 'DOperation', 'DEnumLiteral', 'DPackage'].includes(ddata.className);
 
-        // Build breadcrumb path
-        const breadcrumbParts: string[] = [];
+        // Build breadcrumb path with type icons and element IDs for navigation
+        const breadcrumbParts: Array<{ name: string; icon: string; elementId?: string }> = [];
         try {
             const father = (data as any).father;
             if (father && father.name) {
                 const grandFather = (father as any).father;
                 if (grandFather && grandFather.name) {
-                    breadcrumbParts.push(grandFather.name);
+                    const gfClass = grandFather.__raw?.className || '';
+                    breadcrumbParts.push({ name: grandFather.name, icon: getElementTypeInfo(gfClass).icon, elementId: grandFather.__raw?.id || grandFather.id });
                 }
-                breadcrumbParts.push(father.name);
+                const fClass = father.__raw?.className || '';
+                breadcrumbParts.push({ name: father.name, icon: getElementTypeInfo(fClass).icon, elementId: father.__raw?.id || father.id });
             }
-            breadcrumbParts.push(data.name || 'Unnamed');
+            breadcrumbParts.push({ name: data.name || 'Unnamed', icon: getElementTypeInfo(ddata.className).icon });
         } catch { /* breadcrumb not available */ }
+
+        const handleBreadcrumbClick = (elementId?: string) => {
+            if (!elementId) return;
+            SetRootFieldAction.new('_lastSelected' as any, {
+                node: '',
+                view: '',
+                modelElement: elementId,
+            });
+        };
 
         return (
             <>
@@ -931,12 +1071,21 @@ function InfoComponent(props: AllProps) {
                     {/* Breadcrumb */}
                     {breadcrumbParts.length > 1 && (
                         <div className="jj-context-bar">
-                            {breadcrumbParts.map((part, i) => (
-                                <React.Fragment key={i}>
-                                    {i > 0 && <span className="jj-context-bar__sep">›</span>}
-                                    {part}
-                                </React.Fragment>
-                            ))}
+                            {breadcrumbParts.map((part, i) => {
+                                const isCurrent = i === breadcrumbParts.length - 1;
+                                return (
+                                    <React.Fragment key={i}>
+                                        {i > 0 && <span className="jj-context-bar__sep">›</span>}
+                                        <span
+                                            className={`jj-context-bar__segment${isCurrent ? ' jj-context-bar__segment--current' : ''}`}
+                                            onClick={!isCurrent ? () => handleBreadcrumbClick(part.elementId) : undefined}
+                                        >
+                                            <i className={`bi ${part.icon}`} />
+                                            {part.name}
+                                        </span>
+                                    </React.Fragment>
+                                );
+                            })}
                         </div>
                     )}
 
