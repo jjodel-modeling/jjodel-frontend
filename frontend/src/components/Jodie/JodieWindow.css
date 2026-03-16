@@ -405,12 +405,11 @@
     font-size: var(--text-xs);
 }
 
-/* User avatar — color set inline from Settings avatar color */
+/* User avatar with blue gradient */
 .jodie-user-avatar {
-    font-weight: 600;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    font-weight: 700;
     font-size: 11px;
-    color: #ffffff;
-    letter-spacing: 0.3px;
 }
 
 .jodie-message-content {

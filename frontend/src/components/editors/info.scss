@@ -1007,49 +1007,6 @@
   }
 }
 
-/* ========================================
-   MULTIPLICITY ROW (Lower + Upper inline)
-   ======================================== */
-.multiplicity-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: var(--space-2) var(--space-4);
-  border-bottom: 1px solid var(--color-border-tertiary);
-  min-height: 44px;
-}
-
-.multiplicity-field {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-
-  .multiplicity-label {
-    font-size: 11px;
-    color: var(--color-text-secondary, #64748b);
-    white-space: nowrap;
-  }
-
-  input {
-    width: 52px;
-    text-align: center;
-  }
-}
-
-.multiplicity-display {
-  margin-left: auto;
-  font-size: 13px;
-  font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
-  color: var(--color-text-secondary, #64748b);
-  background: var(--color-bg-secondary, #f1f5f9);
-  padding: 4px 10px;
-  border-radius: 4px;
-  white-space: nowrap;
-  letter-spacing: 0.5px;
-  user-select: all;
-  flex-shrink: 0;
-}
-
 // Dark mode support
 @media (prefers-color-scheme: dark) {
   .btn-generate-ai {
