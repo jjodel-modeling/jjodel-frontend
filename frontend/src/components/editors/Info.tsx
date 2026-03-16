@@ -24,9 +24,9 @@ import {Empty} from "./Empty";
 import { CommandBar, Btn } from '../commandbar/CommandBar';
 import { Tooltip } from '../forEndUser/Tooltip';
 import { icon } from '../../pages/components/icons/Icons';
-import { Toggle } from '../../joiner/components';
+import { Toggle as JoinerToggle } from '../../joiner/components';
 // import { UpgradePrompt } from '../ModeSystem'; // TODO: reintroduce as toast or first-visit hint
-import { Button, EmptyState } from '../ui';
+import { Button, EmptyState, Toggle, NumberInput } from '../ui';
 import { M2AnalyticsModal, M2AnalyticsData } from '../M2AnalyticsModal';
 
 // Collapsible section for properties panel grouping
@@ -53,28 +53,35 @@ function CollapsibleSection(props: { title: string; defaultOpen?: boolean; child
     );
 }
 
-// Custom checkbox component for boolean properties (14×14px, shadcn/ui style)
-function PropertiesCheckbox(props: { data: LModelElement; field: string }) {
-    const { data, field } = props;
+// Toggle component for boolean properties (uses ui/Toggle)
+function PropertiesToggle(props: { data: LModelElement; field: string; label: string }) {
+    const { data, field, label } = props;
     const value = !!(data as any)[field];
 
-    const handleChange = () => {
-        (data as any)[field] = !value;
+    const handleChange = (checked: boolean) => {
+        (data as any)[field] = checked;
     };
 
     return (
-        <span className="props-custom-checkbox">
-            <input
-                type="checkbox"
-                checked={value}
-                onChange={handleChange}
-            />
-            <span className="props-custom-checkbox__indicator">
-                <svg viewBox="0 0 12 12" fill="none">
-                    <path d="M2.5 6.5L5 9L9.5 3.5" />
-                </svg>
-            </span>
-        </span>
+        <div className="jj-toggle-row">
+            <span className="jj-toggle-row__label">{label}</span>
+            <Toggle checked={value} onChange={handleChange} size="xs" />
+        </div>
+    );
+}
+
+// Number input for numeric properties (uses ui/NumberInput)
+function PropertiesNumberInput(props: { data: LModelElement; field: string; min?: number; max?: number }) {
+    const { data, field, min, max } = props;
+    const rawValue = (data as any)[field];
+    const value = typeof rawValue === 'number' ? rawValue : parseInt(rawValue) || 0;
+
+    const handleChange = (newVal: number) => {
+        (data as any)[field] = newVal;
+    };
+
+    return (
+        <NumberInput value={value} onChange={handleChange} min={min} max={max} />
     );
 }
 
@@ -83,10 +90,10 @@ class builder {
         return (<>
             {!skipTitle && <h1>{data.name}</h1>}
             {!skipTitle && data.state.description && <><h2>{data.state.description}</h2></>}
-            <label className={'input-container'}>
-                <b className={'me-2'}>Name</b>
+            <div className="jj-field">
+                <div className="jj-field-label">Name <span className="jj-field-required">*</span></div>
                 <Input data={data} field={'name'} type={'text'} />
-            </label>
+            </div>
         </>);
     }
 
@@ -132,14 +139,16 @@ class builder {
         return (<>
             <CollapsibleSection title="GENERAL">
                 {this.named(data, advanced, true)}
-                <label className={'input-container'}>
-                    <b className={'me-2'}>Uri</b>
+                <div className="jj-field">
+                    <div className="jj-field-label">Uri</div>
                     <Input data={data} field={'uri'} type={'text'}/>
-                </label>
-                <label className={'input-container'}>
-                    <b className={'me-2'}>Prefix</b>
+                    <div className="jj-field-hint">Unique identifier for this package</div>
+                </div>
+                <div className="jj-field">
+                    <div className="jj-field-label">Prefix</div>
                     <Input data={data} field={'prefix'} type={'text'}/>
-                </label>
+                    <div className="jj-field-hint">Short prefix used in qualified names</div>
+                </div>
             </CollapsibleSection>
         </>);
     }
@@ -157,14 +166,9 @@ class builder {
             </CollapsibleSection>
 
             <CollapsibleSection title="INHERITANCE">
-                <label className={'input-container'}>
-                    <PropertiesCheckbox data={lclass} field={'abstract'} />
-                    <b className={'me-2'}>Abstract</b>
-                </label>
-                <label className={'input-container'}>
-                    <PropertiesCheckbox data={lclass} field={'interface'} />
-                    <b className={'me-2'}>Interface</b>
-                </label>
+                <PropertiesToggle data={lclass} field={'abstract'} label="Abstract" />
+                <div className="jj-divider" />
+                <PropertiesToggle data={lclass} field={'interface'} label="Interface" />
                 {/* TODO: mostrare in Advanced mode
                 <label className={'input-container'}>
                     <b className={'me-2'}>Extends</b>
@@ -174,29 +178,18 @@ class builder {
                     }} />
                 </label>
                 */}
-                <label className={'input-container'}>
-                    <PropertiesCheckbox data={lclass} field={'allowCrossReference'} />
-                    <b className={'me-2'}>Allow cross-extend</b>
-                </label>
+                <div className="jj-divider" />
+                <PropertiesToggle data={lclass} field={'allowCrossReference'} label="Allow cross-extend" />
             </CollapsibleSection>
 
             <CollapsibleSection title="FLAGS">
-                <label className={'input-container'}>
-                    <PropertiesCheckbox data={lclass} field={'final'} />
-                    <b className={'me-2'}>Final</b>
-                </label>
-                <label className={'input-container'}>
-                    <PropertiesCheckbox data={data} field={'singleton'} />
-                    <b className={'me-2'}>Singleton</b>
-                </label>
-                <label className={'input-container'}>
-                    <PropertiesCheckbox data={data} field={'rootable'} />
-                    <b className={'me-2'}>Rootable</b>
-                </label>
-                <label className={'input-container'}>
-                    <PropertiesCheckbox data={data} field={'partial'} />
-                    <b className={'me-2'}>Partial</b>
-                </label>
+                <PropertiesToggle data={lclass} field={'final'} label="Final" />
+                <div className="jj-divider" />
+                <PropertiesToggle data={data} field={'singleton'} label="Singleton" />
+                <div className="jj-divider" />
+                <PropertiesToggle data={data} field={'rootable'} label="Rootable" />
+                <div className="jj-divider" />
+                <PropertiesToggle data={data} field={'partial'} label="Partial" />
             </CollapsibleSection>
         </>);
     }
@@ -205,10 +198,7 @@ class builder {
         return (<>
             <CollapsibleSection title="GENERAL">
                 {this.named(data, advanced, true)}
-                {advanced && <label className={'input-container'}>
-                    <PropertiesCheckbox data={data} field={'serializable'} />
-                    <b className={'me-2'}>Serializable</b>
-                </label>}
+                {advanced && <PropertiesToggle data={data} field={'serializable'} label="Serializable" />}
             </CollapsibleSection>
         </>);
     }
@@ -220,53 +210,38 @@ class builder {
             </CollapsibleSection>
 
             <CollapsibleSection title="TYPE &amp; BOUNDS">
-                <label className={'input-container'}>
-                    <b className={'me-2'}>Type</b>
+                <div className="jj-field">
+                    <div className="jj-field-label">Type <span className="jj-field-required">*</span></div>
                     <Select data={data} field={'type'} />
-                </label>
-                <label className={'input-container'}>
-                    <b className={'me-2'}>Lower bound</b>
-                    <Input data={data} field={'lowerBound'} type={'number'} />
-                </label>
-                <label className={'input-container'}>
-                    <b className={'me-2'}>Upper bound</b>
-                    <Input data={data} field={'upperBound'} type={'number'} />
-                </label>
+                </div>
+                <div className="jj-field">
+                    <div className="jj-field-label">Lower bound</div>
+                    <PropertiesNumberInput data={data} field={'lowerBound'} min={-1} />
+                    <div className="jj-field-hint">Use -1 for unbounded. 0..1 = optional, 1..1 = required</div>
+                </div>
+                <div className="jj-field">
+                    <div className="jj-field-label">Upper bound</div>
+                    <PropertiesNumberInput data={data} field={'upperBound'} min={-1} />
+                    <div className="jj-field-hint">Use -1 for unbounded. 0..1 = optional, 1..1 = required</div>
+                </div>
             </CollapsibleSection>
 
             {advanced && <CollapsibleSection title="ADVANCED" defaultOpen={false}>
-                <label className={'input-container'}>
-                    <PropertiesCheckbox data={data} field={'unique'} />
-                    <b className={'me-2'}>Unique</b>
-                </label>
-                <label className={'input-container'}>
-                    <PropertiesCheckbox data={data} field={'ordered'} />
-                    <b className={'me-2'}>Ordered</b>
-                </label>
-                <label className={'input-container'}>
-                    <PropertiesCheckbox data={data} field={'changeable'} />
-                    <b className={'me-2'}>Changeable</b>
-                </label>
-                <label className={'input-container'}>
-                    <PropertiesCheckbox data={data} field={'volatile'} />
-                    <b className={'me-2'}>Volatile</b>
-                </label>
-                <label className={'input-container'}>
-                    <PropertiesCheckbox data={data} field={'transient'} />
-                    <b className={'me-2'}>Transient</b>
-                </label>
-                <label className={'input-container'}>
-                    <PropertiesCheckbox data={data} field={'unsettable'} />
-                    <b className={'me-2'}>Unsettable</b>
-                </label>
-                <label className={'input-container'}>
-                    <PropertiesCheckbox data={data} field={'derived'} />
-                    <b className={'me-2'}>Derived</b>
-                </label>
-                <label className={'input-container'}>
-                    <PropertiesCheckbox data={data} field={'allowCrossReference'} />
-                    <b className={'me-2'}>Cross Reference</b>
-                </label>
+                <PropertiesToggle data={data} field={'unique'} label="Unique" />
+                <div className="jj-divider" />
+                <PropertiesToggle data={data} field={'ordered'} label="Ordered" />
+                <div className="jj-divider" />
+                <PropertiesToggle data={data} field={'changeable'} label="Changeable" />
+                <div className="jj-divider" />
+                <PropertiesToggle data={data} field={'volatile'} label="Volatile" />
+                <div className="jj-divider" />
+                <PropertiesToggle data={data} field={'transient'} label="Transient" />
+                <div className="jj-divider" />
+                <PropertiesToggle data={data} field={'unsettable'} label="Unsettable" />
+                <div className="jj-divider" />
+                <PropertiesToggle data={data} field={'derived'} label="Derived" />
+                <div className="jj-divider" />
+                <PropertiesToggle data={data} field={'allowCrossReference'} label="Cross Reference" />
             </CollapsibleSection>}
         </>);
     }
@@ -275,14 +250,9 @@ class builder {
         return (<>
             {this.feature(data, advanced, true)}
             {advanced && <CollapsibleSection title="FLAGS" defaultOpen={false}>
-                <label className={'input-container'}>
-                    <PropertiesCheckbox data={data} field={'isID'} />
-                    <b className={'me-2'}>ID</b>
-                </label>
-                <label className={'input-container'}>
-                    <PropertiesCheckbox data={data} field={'isIoT'} />
-                    <b className={'me-2'}>IoT</b>
-                </label>
+                <PropertiesToggle data={data} field={'isID'} label="ID" />
+                <div className="jj-divider" />
+                <PropertiesToggle data={data} field={'isIoT'} label="IoT" />
             </CollapsibleSection>}
         </>);
     }
@@ -291,14 +261,9 @@ class builder {
             {this.feature(data, advanced, true)}
 
             <CollapsibleSection title="FLAGS">
-                <label className={'input-container'}>
-                    <PropertiesCheckbox data={data} field={'composition'} />
-                    <b className={'me-2'}>Composition</b>
-                </label>
-                <label className={'input-container'}>
-                    <PropertiesCheckbox data={data} field={'aggregation'} />
-                    <b className={'me-2'}>Aggregation</b>
-                </label>
+                <PropertiesToggle data={data} field={'composition'} label="Composition" />
+                <div className="jj-divider" />
+                <PropertiesToggle data={data} field={'aggregation'} label="Aggregation" />
             </CollapsibleSection>
         </>);
     }
@@ -309,10 +274,10 @@ class builder {
             </CollapsibleSection>
 
             <CollapsibleSection title="RETURN">
-                <label className={'input-container'}>
-                    <b className={'me-2'}>Return type</b>
+                <div className="jj-field">
+                    <div className="jj-field-label">Return type</div>
                     <Select data={data} field={'type'} />
-                </label>
+                </div>
             </CollapsibleSection>
         </>);
     }
@@ -323,10 +288,10 @@ class builder {
             </CollapsibleSection>
 
             <CollapsibleSection title="VALUE">
-                <label className={'input-container'}>
-                    <b className={'me-2'}>Ordinal</b>
-                    <Input data={data} field={'ordinal'} type={'number'} />
-                </label>
+                <div className="jj-field">
+                    <div className="jj-field-label">Ordinal</div>
+                    <PropertiesNumberInput data={data} field={'ordinal'} min={0} />
+                </div>
             </CollapsibleSection>
         </>);
     }
@@ -612,27 +577,27 @@ function getElementTypeInfo(className: string): { badge: string; badgeClass: str
         case 'DModel':
             return { badge: 'Metamodel', badgeClass: 'metamodel', icon: 'bi-diagram-3' };
         case 'DPackage':
-            return { badge: 'Package', badgeClass: 'model', icon: 'bi-folder' };
+            return { badge: 'Package', badgeClass: 'package', icon: 'bi-folder' };
         case 'DClass':
             return { badge: 'Class', badgeClass: 'class', icon: 'bi-box' };
         case 'DEnumerator':
-            return { badge: 'Enum', badgeClass: 'class', icon: 'bi-list-ol' };
+            return { badge: 'Enum', badgeClass: 'enum', icon: 'bi-list-ol' };
         case 'DAttribute':
             return { badge: 'Attribute', badgeClass: 'attribute', icon: 'bi-list-ul' };
         case 'DReference':
             return { badge: 'Reference', badgeClass: 'reference', icon: 'bi-link-45deg' };
         case 'DOperation':
-            return { badge: 'Operation', badgeClass: 'attribute', icon: 'bi-gear' };
+            return { badge: 'Operation', badgeClass: 'operation', icon: 'bi-gear' };
         case 'DParameter':
             return { badge: 'Parameter', badgeClass: 'attribute', icon: 'bi-three-dots' };
         case 'DEnumLiteral':
-            return { badge: 'Literal', badgeClass: 'attribute', icon: 'bi-hash' };
+            return { badge: 'Literal', badgeClass: 'literal', icon: 'bi-hash' };
         case 'DObject':
-            return { badge: 'Object', badgeClass: 'model', icon: 'bi-circle' };
+            return { badge: 'Object', badgeClass: 'class', icon: 'bi-circle' };
         case 'DValue':
             return { badge: 'Value', badgeClass: 'attribute', icon: 'bi-pencil' };
         default:
-            return { badge: 'Element', badgeClass: 'model', icon: 'bi-square' };
+            return { badge: 'Element', badgeClass: 'class', icon: 'bi-square' };
     }
 }
 
@@ -647,8 +612,8 @@ function PropertiesHeader(props: { data: LModelElement; className: string }) {
                 <i className={`bi ${typeInfo.icon}`} />
             </div>
             <span className="props-header__name">{data.name || 'Unnamed'}</span>
-            <span className={`props-header__badge ${typeInfo.badgeClass}`}>
-                {typeInfo.badge.toUpperCase()}
+            <span className={`jj-type-badge jj-type-badge--${typeInfo.badgeClass}`}>
+                {typeInfo.badge}
             </span>
         </div>
     );
@@ -943,11 +908,37 @@ function InfoComponent(props: AllProps) {
         const showOverview = ddata.className === 'DModel';
         // const showActions = ['DModel', 'DClass', 'DEnumerator', 'DAttribute', 'DReference', 'DOperation', 'DEnumLiteral', 'DPackage'].includes(ddata.className);
 
+        // Build breadcrumb path
+        const breadcrumbParts: string[] = [];
+        try {
+            const father = (data as any).father;
+            if (father && father.name) {
+                const grandFather = (father as any).father;
+                if (grandFather && grandFather.name) {
+                    breadcrumbParts.push(grandFather.name);
+                }
+                breadcrumbParts.push(father.name);
+            }
+            breadcrumbParts.push(data.name || 'Unnamed');
+        } catch { /* breadcrumb not available */ }
+
         return (
             <>
                 <section className="properties-tab properties-panel">
                     {/* Header */}
                     <PropertiesHeader data={data} className={ddata.className} />
+
+                    {/* Breadcrumb */}
+                    {breadcrumbParts.length > 1 && (
+                        <div className="jj-context-bar">
+                            {breadcrumbParts.map((part, i) => (
+                                <React.Fragment key={i}>
+                                    {i > 0 && <span className="jj-context-bar__sep">›</span>}
+                                    {part}
+                                </React.Fragment>
+                            ))}
+                        </div>
+                    )}
 
                     {/* Overview - only for Models */}
                     {showOverview && <PropertiesOverview data={data as LModel} onViewAnalytics={openM2Analytics} />}
