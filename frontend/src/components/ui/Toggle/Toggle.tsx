@@ -1,7 +1,7 @@
 import React from 'react';
 import styles from './Toggle.module.css';
 
-export type ToggleSize = 'sm' | 'md';
+export type ToggleSize = 'xs' | 'sm' | 'md';
 
 export interface ToggleProps {
   /**
@@ -86,6 +86,7 @@ export const Toggle: React.FC<ToggleProps> = ({
   };
 
   const sizeClass = {
+    xs: styles.toggleXs,
     sm: styles.toggleSm,
     md: styles.toggleMd,
   }[size];

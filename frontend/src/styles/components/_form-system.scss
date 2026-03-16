@@ -951,3 +951,122 @@ input[type="number"] {
 .console-tab .monaco-editor-wrapper {
   min-height: 300px !important;
 }
+
+// ==============================================
+// FORM SYSTEM HELPERS (jj-* prefix)
+// Used by Properties panel form components
+// ==============================================
+
+// Field wrapper
+.jj-field {
+  margin-bottom: 14px;
+  &:last-child { margin-bottom: 0; }
+}
+
+// Label
+.jj-field-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+  margin-bottom: 5px;
+}
+
+// Required indicator
+.jj-field-required {
+  color: #ef4444;
+  font-size: 10px;
+}
+
+// Hint text below fields
+.jj-field-hint {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+// Section header (collapsible)
+.jj-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.1s;
+
+  &:hover { background: #f1f5f9; }
+}
+
+.jj-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.jj-section-chevron {
+  font-size: 12px;
+  color: #94a3b8;
+  transition: transform 0.15s ease;
+
+  &--collapsed { transform: rotate(-90deg); }
+}
+
+// Toggle row (label + toggle on same line)
+.jj-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 0;
+}
+
+.jj-toggle-row__label {
+  font-size: 13px;
+  color: #334155;
+}
+
+// Context breadcrumb
+.jj-context-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #f1f5f9;
+  font-size: 11px;
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.jj-context-bar__sep {
+  color: #94a3b8;
+}
+
+// Type badge in panel header
+.jj-type-badge {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.jj-type-badge--package { background: #f1f5f9; color: #475569; }
+.jj-type-badge--class { background: #e0f2fe; color: #0369a1; }
+.jj-type-badge--attribute { background: #fef3c7; color: #92400e; }
+.jj-type-badge--reference { background: #fce7f3; color: #9d174d; }
+.jj-type-badge--operation { background: #ede9fe; color: #6d28d9; }
+.jj-type-badge--enum { background: #d1fae5; color: #065f46; }
+.jj-type-badge--literal { background: #e0e7ff; color: #3730a3; }
+
+// Divider between toggle rows
+.jj-divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 2px 0;
+}

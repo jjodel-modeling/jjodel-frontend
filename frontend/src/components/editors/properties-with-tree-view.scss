@@ -74,6 +74,8 @@ body.resizing-tree-view {
     height: 100%;
     overflow: hidden;
     min-width: 300px; // Don't let it get too narrow
+    background: #f8fafc; // slate-50, visually distinct from white canvas
+    border-left: 1px solid #e2e8f0; // slate-200, separates from canvas
 
     // The Info component styles already handle scrolling
     .properties-tab,
