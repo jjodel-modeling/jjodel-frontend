@@ -1313,7 +1313,7 @@ function NavbarComponent(props: AllProps) {
         };
     }, [project]);
 
-    const handleTabClick = useCallback((tabId: string) => {
+    const handleTabClick2 = useCallback((tabId: string) => {
         if (!DockManager.dock) return;
         try {
             const layout = DockManager.dock.getLayout();
@@ -1326,6 +1326,11 @@ function NavbarComponent(props: AllProps) {
         } catch (e) {
             console.warn('[Navbar] Error switching tab:', e);
         }
+    }, []);
+
+    const handleTabClick = useCallback((tabId: string) => {
+        if (!DockManager.dock) return;
+        DockManager.dock.updateTab(tabId, null, true);
     }, []);
 
     const handleTabClose = useCallback((tabId: string, e: React.MouseEvent) => {
