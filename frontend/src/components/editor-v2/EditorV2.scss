@@ -2023,7 +2023,7 @@
 }
 
 // Outline button styles for properties panel actions
-.jj-btn {
+.editor-v2 .jj-btn {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -2039,30 +2039,30 @@
     i {
         font-size: 12px;
     }
+}
 
-    &--secondary {
-        border-color: #64748b;
-        color: #64748b;
+.editor-v2 .jj-btn--secondary {
+    border-color: #64748b;
+    color: #64748b;
 
-        &:hover {
-            background: #f1f5f9;
-            color: #334155;
-        }
+    &:hover {
+        background: #f1f5f9;
+        color: #334155;
     }
+}
 
-    &--danger {
-        border-color: #ef4444;
-        color: #ef4444;
+.editor-v2 .jj-btn--danger {
+    border-color: #ef4444;
+    color: #ef4444;
 
-        &:hover {
-            background: #fef2f2;
-        }
+    &:hover {
+        background: #fef2f2;
     }
+}
 
-    &--sm {
-        padding: 5px 12px;
-        font-size: 12px;
-    }
+.editor-v2 .jj-btn--sm {
+    padding: 5px 12px;
+    font-size: 12px;
 }
 
 // Model/Metamodel stats
