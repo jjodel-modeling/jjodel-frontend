@@ -1389,7 +1389,17 @@ function NavbarComponent(props: AllProps) {
                 <div className="appbar__sep" />
                 <button
                     className={`appbar-project-link ${isProjectSelected ? 'appbar-project-link--selected' : 'appbar-project-link--unselected'}`}
-                    onClick={() => { R.navigate('/project?id=' + project.id); }}
+                    onClick={() => {
+                        const dock = DockManager.dock;
+                        if (dock) {
+                            const layout = dock.getLayout();
+                            const modelsPanel = layout?.dockbox?.children?.[0];
+                            if (modelsPanel && 'tabs' in modelsPanel && (modelsPanel as any).tabs?.length > 0) {
+                                const firstTabId = (modelsPanel as any).tabs[0].id;
+                                handleTabClick(firstTabId);
+                            }
+                        }
+                    }}
                     title="Project overview"
                 >
                     <JjodelProjectIcon className="appbar-project-link__icon" />
