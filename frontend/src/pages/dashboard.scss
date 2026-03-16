@@ -38,6 +38,16 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
+
+  /* Ensure primary button (New Project) is always visible */
+  .jj-btn--primary {
+    background: linear-gradient(135deg, #334155, #1e293b) !important;
+    color: #ffffff !important;
+
+    &:hover:not(:disabled) {
+      background: linear-gradient(135deg, #475569, #334155) !important;
+    }
+  }
 }
 
 /* Secondary Button (outlined) - Import */

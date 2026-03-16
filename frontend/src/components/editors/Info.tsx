@@ -53,6 +53,14 @@ function CollapsibleSection(props: { title: string; defaultOpen?: boolean; child
     );
 }
 
+function formatMultiplicity(lower: number, upper: number): string {
+    const hi = upper === -1 ? '*' : String(upper);
+    const lo = String(lower);
+    if (lower === upper) return `[${lo}]`;
+    if (lower === 0 && upper === -1) return '[*]';
+    return `[${lo} .. ${hi}]`;
+}
+
 // Custom checkbox component for boolean properties (14×14px, shadcn/ui style)
 function PropertiesCheckbox(props: { data: LModelElement; field: string }) {
     const { data, field } = props;
@@ -224,14 +232,19 @@ class builder {
                     <b className={'me-2'}>Type</b>
                     <Select data={data} field={'type'} />
                 </label>
-                <label className={'input-container'}>
-                    <b className={'me-2'}>Lower bound</b>
-                    <Input data={data} field={'lowerBound'} type={'number'} />
-                </label>
-                <label className={'input-container'}>
-                    <b className={'me-2'}>Upper bound</b>
-                    <Input data={data} field={'upperBound'} type={'number'} />
-                </label>
+                <div className={'multiplicity-row'}>
+                    <div className={'multiplicity-field'}>
+                        <label className={'multiplicity-label'}>Lower</label>
+                        <Input data={data} field={'lowerBound'} type={'number'} />
+                    </div>
+                    <div className={'multiplicity-field'}>
+                        <label className={'multiplicity-label'}>Upper</label>
+                        <Input data={data} field={'upperBound'} type={'number'} />
+                    </div>
+                    <span className={'multiplicity-display'}>
+                        {formatMultiplicity((data as any).lowerBound, (data as any).upperBound)}
+                    </span>
+                </div>
             </CollapsibleSection>
 
             {advanced && <CollapsibleSection title="ADVANCED" defaultOpen={false}>

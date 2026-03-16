@@ -95,7 +95,7 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
 
             // Also ensure Properties panel doesn't get too narrow
             const containerWidth = containerRef.current.getBoundingClientRect().width;
-            const maxTreeWidth = containerWidth - PROPERTIES_MIN_WIDTH - 8; // 8px for resizer
+            const maxTreeWidth = containerWidth - PROPERTIES_MIN_WIDTH - 1; // 1px for resizer
             newWidth = Math.min(newWidth, maxTreeWidth);
 
             setTreeViewWidth(newWidth);
@@ -186,14 +186,13 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                     <div
                         className="panel-resizer"
                         onMouseDown={handleResizeStart}
-                        title="Drag to resize - Double-click to reset"
+                        title="Drag to resize"
                         role="separator"
                         aria-orientation="vertical"
                         aria-label="Resize tree view"
                         tabIndex={0}
-                    >
-                        <i className="bi bi-grip-vertical resize-grip-icon-vertical" />
-                    </div>
+                    />
+
 
                     {/* Tree View - FIXED WIDTH with transitions */}
                     <div

@@ -1389,8 +1389,8 @@ function NavbarComponent(props: AllProps) {
                 <div className="appbar__sep" />
                 <button
                     className={`appbar-project-link ${isProjectSelected ? 'appbar-project-link--selected' : 'appbar-project-link--unselected'}`}
-                    onClick={() => { R.navigate('/allProjects'); }}
-                    title="Back to project dashboard"
+                    onClick={() => { R.navigate('/project?id=' + project.id); }}
+                    title="Project overview"
                 >
                     <JjodelProjectIcon className="appbar-project-link__icon" />
                     <span className="appbar-project-link__name">{project.name || 'Unnamed'}</span>

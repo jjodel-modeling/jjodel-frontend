@@ -56,9 +56,14 @@ body.resizing-tree-view {
             user-select: none;
         }
 
-        .resize-grip-icon-vertical {
-            color: #0ea5e9;
-            background-color: rgba(14, 165, 233, 0.06);
+        .panel-resizer {
+            background: #0ea5e9;
+
+            &::after {
+                background: #0ea5e9;
+                opacity: 0.9;
+                width: 3px;
+            }
         }
     }
 }
@@ -89,50 +94,69 @@ body.resizing-tree-view {
 // ============================================
 
 .panel-resizer {
-    flex: 0 0 12px;
-    width: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    flex: 0 0 1px;
+    width: 1px;
+    background: var(--border-color, #e2e8f0);
     cursor: col-resize;
-    background-color: transparent;
     position: relative;
     z-index: 10;
     user-select: none;
     flex-shrink: 0;
+    transition: background 0.15s ease;
 
-    // Expand hit area for easier grabbing
+    // Hit area (invisible, wider than the hairline)
     &::before {
         content: '';
         position: absolute;
         top: 0;
         bottom: 0;
         left: -4px;
-        right: -4px;
+        width: 9px; // 4 + 1 + 4
         cursor: col-resize;
     }
 
-    // Focus state for keyboard accessibility
+    // Grip indicator (centered pill)
+    &::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 5px;
+        height: 32px;
+        border-radius: 3px;
+        background: var(--text-tertiary, #94a3b8);
+        opacity: 0.25;
+        transition: all 0.15s ease;
+    }
+
     &:focus {
         outline: none;
+        background: #0ea5e9;
 
-        .resize-grip-icon-vertical {
-            color: #0ea5e9;
-            background-color: rgba(14, 165, 233, 0.06);
+        &::after {
+            background: #0ea5e9;
+            opacity: 0.6;
+            width: 3px;
         }
     }
 
-    &:hover,
+    &:hover {
+        background: #0ea5e9;
+
+        &::after {
+            background: #0ea5e9;
+            opacity: 0.6;
+            width: 3px;
+        }
+    }
+
     &:active {
-        .resize-grip-icon-vertical {
-            color: #0ea5e9;
-            background-color: rgba(14, 165, 233, 0.06);
+        &::after {
+            opacity: 0.9;
         }
     }
 }
-
-// Icon styles are handled by .resize-grip-icon-vertical class in console-tab.scss
-// The icon inherits pointer-events: none from parent behavior
 
 // ============================================
 // TREE VIEW PANEL (RIGHT) - FIXED WIDTH
@@ -614,15 +638,22 @@ body.resizing-tree-view {
         }
     }
 
-    .resize-grip-icon-vertical {
-        color: #64748b;
-    }
+    .panel-resizer {
+        background: #333;
 
-    .panel-resizer:hover .resize-grip-icon-vertical,
-    .panel-resizer:active .resize-grip-icon-vertical,
-    .panel-resizer:focus .resize-grip-icon-vertical {
-        color: #60a5fa;
-        background-color: rgba(96, 165, 250, 0.1);
+        &::after {
+            background: #64748b;
+        }
+
+        &:hover,
+        &:active,
+        &:focus {
+            background: #60a5fa;
+
+            &::after {
+                background: #60a5fa;
+            }
+        }
     }
 
     .tree-view-panel-container {

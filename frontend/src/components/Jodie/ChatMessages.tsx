@@ -10,6 +10,7 @@ import { executeCommand, ScriptLineResult } from '../../jjscript';
 import { DUser, L, LUser, LProject, LModel, store } from '../../joiner';
 import { Selectors } from '../../redux/selectors/selectors';
 import { ProviderIcon } from '../icons';
+import { useAvatarColor } from '../../hooks/useAvatarColor';
 
 interface ChatMessagesProps {
     messages: ChatMessage[];
@@ -27,7 +28,7 @@ function getInitials(name: string): string {
     return name.split(' ').map(n => n[0] || '').join('').toUpperCase().slice(0, 2) || 'U';
 }
 
-function MessageBubble({ message, onJjScriptExecute }: { message: ChatMessage; onJjScriptExecute?: (commands: string[]) => Promise<ScriptLineResult[]> }): JSX.Element {
+function MessageBubble({ message, onJjScriptExecute, avatarColorHex }: { message: ChatMessage; onJjScriptExecute?: (commands: string[]) => Promise<ScriptLineResult[]>; avatarColorHex: string }): JSX.Element {
     const isUser = message.role === 'user';
     const providerInfo = message.provider ? PROVIDER_INFO[message.provider] : null;
     const displayName = message.userName || 'You';
@@ -38,7 +39,7 @@ function MessageBubble({ message, onJjScriptExecute }: { message: ChatMessage; o
         <div className={`jodie-message ${isUser ? 'jodie-message-user' : 'jodie-message-assistant'}`}>
             {/* User avatar with initials */}
             {isUser && (
-                <div className="jodie-message-avatar jodie-user-avatar">
+                <div className="jodie-message-avatar jodie-user-avatar" style={{ background: avatarColorHex }}>
                     <span>{getInitials(displayName)}</span>
                 </div>
             )}
@@ -136,6 +137,7 @@ function TypingIndicator(): JSX.Element {
 
 export function ChatMessages({ messages, isWaiting, onJjScriptExecuted }: ChatMessagesProps): JSX.Element {
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const [avatarColor] = useAvatarColor();
 
     // Auto-scroll to bottom when new messages arrive
     useEffect(() => {
@@ -271,6 +273,7 @@ export function ChatMessages({ messages, isWaiting, onJjScriptExecuted }: ChatMe
                             key={message.id}
                             message={message}
                             onJjScriptExecute={handleJjScriptExecute}
+                            avatarColorHex={avatarColor.hex}
                         />
                     ))}
                     {isWaiting && <TypingIndicator />}
