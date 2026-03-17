@@ -1150,3 +1150,72 @@
     color: #ef4444 !important;
   }
 }
+
+.jj-select__input-container {
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 13px !important;
+  color: #1e293b !important;
+}
+
+.jj-select__input-container input {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    height: auto !important;
+    min-height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    width: 100% !important;
+    border: 1px solid red!important;
+}
+
+.jj-select__value-container.jj-select__value-container--is-multi {
+
+  padding: 0 0 0 8px!important;
+  border-right: 1px solid #e2e8f0 !important;
+
+  input {
+    border: none !important;
+
+    background: transparent !important;
+    box-shadow: none !important;
+    height: 100% !important;
+    min-height: auto !important;
+    padding: 0 !important;
+
+    border-radius: 0 !important;
+    width: 100% !important;
+  }
+}
+.jj-select__input-container {
+
+  outline: none !important;
+  padding-left: 3px!important;
+
+
+  & input.jj-select__input {
+
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    outline: none !important;
+
+
+      
+      box-shadow: none !important;
+      height: auto !important;
+      min-height: auto !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      border-radius: 0 !important;
+      width: 100% !important;
+    }
+
+    & input:focus.jj-select__input {
+      outline: none !important;
+      box-shadow: none !important;
+    }
+  }
+
