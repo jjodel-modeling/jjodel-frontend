@@ -3010,7 +3010,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     // stringify state
     state!: string;
     version!: number;
-    tags!: string[];
+    tagNames!: string[];
 
     /* DATA */
     readonly packages!: LPackage[];

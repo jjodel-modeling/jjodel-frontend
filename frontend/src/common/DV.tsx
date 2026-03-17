@@ -838,8 +838,6 @@ foreignObject.label{
 foreignObject.label-end, foreignObject.label-start {
 	overflow: visible;
 	color: var(--stroke-color);
-	width: 0;
-	height: 0;
 	white-space: pre;
 
 	> div{
@@ -851,12 +849,10 @@ foreignObject.label-end, foreignObject.label-start {
 	& .left {
 		display: flex;
 		justify-content: flex-start!important;
-		width: 0px;
 	}
 	& .right {
 		display: flex;
 		justify-content: flex-end!important;
-		width: 0px;
 	}
 }
 

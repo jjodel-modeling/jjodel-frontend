@@ -328,7 +328,7 @@ class builder {
             {this.named(data, advanced, skipTitle)}
             {advanced && <label className={'input-container'}>
                 <b className={'me-2'}>Serializable:</b>
-                <Input data={data} field={'serializable'} type={'checkbox'}/>
+                <Input data={data} field={'serializable'} type={'switch'}/>
             </label>}
         </>);
     }
@@ -351,35 +351,35 @@ class builder {
             {advanced && <>
                 <label className={'input-container'}>
                     <b className={'me-2'}>Unique:</b>
-                    <Input data={data} field={'unique'} type={'checkbox'}/>
+                    <Input data={data} field={'unique'} type={'switch'}/>
                 </label>
                 <label className={'input-container'}>
                     <b className={'me-2'}>Ordered:</b>
-                    <Input data={data} field={'ordered'} type={'checkbox'}/>
+                    <Input data={data} field={'ordered'} type={'switch'}/>
                 </label>
                 <label className={'input-container'}>
                     <b className={'me-2'}>Changeable:</b>
-                    <Input data={data} field={'changeable'} type={'checkbox'}/>
+                    <Input data={data} field={'changeable'} type={'switch'}/>
                 </label>
                 <label className={'input-container'}>
                     <b className={'me-2'}>Volatile:</b>
-                    <Input data={data} field={'volatile'} type={'checkbox'}/>
+                    <Input data={data} field={'volatile'} type={'switch'}/>
                 </label>
                 <label className={'input-container'}>
                     <b className={'me-2'}>Transient:</b>
-                    <Input data={data} field={'transient'} type={'checkbox'}/>
+                    <Input data={data} field={'transient'} type={'switch'}/>
                 </label>
                 <label className={'input-container'}>
                     <b className={'me-2'}>Unsettable:</b>
-                    <Input data={data} field={'unsettable'} type={'checkbox'}/>
+                    <Input data={data} field={'unsettable'} type={'switch'}/>
                 </label>
                 <label className={'input-container'}>
                     <b className={'me-2'}>Derived:</b>
-                    <Input data={data} field={'derived'} type={'checkbox'}/>
+                    <Input data={data} field={'derived'} type={'switch'}/>
                 </label>
                 <label className={'input-container'}>
                     <b className={'me-2'}>Cross Reference:</b>
-                    <Input data={data} field={'allowCrossReference'} type={'checkbox'}/>
+                    <Input data={data} field={'allowCrossReference'} type={'switch'}/>
                 </label>
             </>}
         </>);
@@ -391,11 +391,11 @@ class builder {
             {advanced && <>
                 <label className={'input-container'}>
                     <b className={'me-2'}>ID:</b>
-                    <Input data={data} field={'isID'} type={'checkbox'} />
+                    <Input data={data} field={'isID'} type={'switch'} />
                 </label>
                 <label className={'input-container'}>
                     <b className={'me-2'}>IoT:</b>
-                    <Input data={data} field={'isIoT'} type={'checkbox'} />
+                    <Input data={data} field={'isIoT'} type={'switch'} />
                 </label>
             </>}
         </>);
@@ -405,15 +405,15 @@ class builder {
             {this.feature(data, advanced, skipTitle)}
             <label className={'input-container'}>
                 <b className={'me-2'}>Composition:</b>
-                <Input data={data} field={'composition'} type={'checkbox'} />
+                <Input data={data} field={'composition'} type={'switch'} />
             </label>
             <label className={'input-container'}>
                 <b className={'me-2'}>Aggregation:</b>
-                <Input data={data} field={'aggregation'} type={'checkbox'} />
+                <Input data={data} field={'aggregation'} type={'switch'} />
             </label>
             <label className={'input-container'}>
                 <b className={'me-2'}>Container:</b>
-                <Input data={data} field={'container'} type={'checkbox'} />
+                <Input data={data} field={'container'} type={'switch'} />
             </label>
         </>);
     }

@@ -1,6 +1,7 @@
 export class test{
 
     static debugcompile(){
+
 let include = (__eta_t, __eta_d) => this.render(__eta_t, {...it, ...(__eta_d ?? {})}, options);
 let includeAsync = (__eta_t, __eta_d) => this.renderAsync(__eta_t, {...it, ...(__eta_d ?? {})}, options);
 
@@ -13,36 +14,23 @@ function layout(path, data) {
 
 function output(s){__eta.res+=s;}
 
-/* ── Partial: render one object as a Flexmi tag ─────────────────────── */
-const pad      = " ".repeat(indent);
-const attrs    = Object.entries(obj).filter(([k,v]) => typeof v === "string" || typeof v === "number");
-const children = Object.entries(obj).filter(([k,v]) => Array.isArray(v));
-__eta.res+=__eta.e(pad);
-__eta.res+='<';
-__eta.res+=__eta.e(tagName);
-for (const [k,v] of attrs) {
-__eta.res+=include("ValueInline", { key: k, val: v });
+/* ── Root render ─────────────────────────────────────────────────────── */
+/*~ `<?xml version="1.0" encoding="UTF-8"?>` */
+let model = it.ecore;
+model = Object.values(model)[0]; // strip first root
+let tagName = it.instanceof?.name || "Value";
+let children = Object.entries(model).filter( ([k, v]) => typeof v === "object");
+console.log("model eta", {model, it, children});
+let multiRoot = children.reduce( (sum, [k, v]) => sum + v?.length, 0) > 1;
+
+if (multiRoot) {
+__eta.res+='<_>';
+for (let [tagName, arr] of children) {
+    if (!arr) arr = [];
+    if (!Array.isArray(arr)) arr = [arr];
+
 }
-if (children.length === 0) {
-__eta.res+='/>';
-} else {
-__eta.res+='>\n';
-for (const [k, arr] of children) {
-       for (const child of arr) {
-           if (typeof child === 'object') {
-__eta.res+=include("ObjectChild", { tagName: k, obj: child, indent: indent + 2 });
-} else {
-__eta.res+=__eta.e(include("ValueChild", { tagName: k, val: child, indent: indent + 2 }));
-}
-       }
-__eta.res+=__eta.e(pad);
-__eta.res+='</';
-__eta.res+=__eta.e(tagName);
-__eta.res+='>';
-}
+
 
 return __eta.res;
-
-
-    }
 }

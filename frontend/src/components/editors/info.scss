@@ -806,59 +806,6 @@
     }
   }
 
-  /* Toggle switch styling - override global hidden checkbox */
-  input[type="checkbox"].switch {
-    position: relative !important;
-    opacity: 1 !important;
-    width: 40px !important;
-    height: 22px !important;
-    pointer-events: auto !important;
-    appearance: none !important;
-    -webkit-appearance: none !important;
-    border: none !important;
-    border-radius: 11px !important;
-    background-color: #e2e4e8 !important;
-    cursor: pointer;
-    transition: background-color 0.25s ease;
-    margin-left: auto;
-    flex-shrink: 0;
-    padding: 2px;
-
-    /* Toggle thumb using ::after pseudo-element */
-    &::after {
-      content: '' !important;
-      position: absolute !important;
-      top: 2px !important;
-      left: 2px !important;
-      width: 18px !important;
-      height: 18px !important;
-      border-radius: 50% !important;
-      background-color: #ffffff !important;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
-      transition: transform 0.25s ease !important;
-      display: block !important;
-    }
-
-    &:checked {
-      background-color: var(--color-accent, #475569) !important;
-
-      &::after {
-        transform: translateX(18px) !important;
-      }
-    }
-
-    &:focus {
-      box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.25) !important;
-    }
-
-    &:hover {
-      background-color: #d0d3d8 !important;
-
-      &:checked {
-        background-color: var(--color-accent-hover, #334155) !important;
-      }
-    }
-  }
 
   /* Regular checkbox styling (fallback) - override global hidden checkbox */
   input[type="checkbox"]:not(.switch) {

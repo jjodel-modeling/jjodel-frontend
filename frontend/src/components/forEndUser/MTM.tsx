@@ -309,9 +309,7 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
                 if (!ret) throw new Error(`Eta Partial not found: ${name}`);
                 return `<%
     try {
-  %>
-  ${ret}
-  <%
+  %>${ret}<%
     } catch(e) {
       e.message = '[template: ${key}] ' + e.message;
       throw e;
@@ -330,13 +328,12 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
                 let k2 = k.toLowerCase();
                 if (!(k2 in eta_partials)) eta_partials[k2] = eta_partials[k];
             }
-            console.log('eta', {eta, eta_partials});
-            let selectedPartial: string;
+            console.log('eta m2t', {eta, eta_partials, cname});
+            let selectedPartial: string = '';
             // try to find correct partial name
             switch (cname) {
                 default:
                     Log.eDevv("unexpected object type found in m1 M2T: " + cname, {data, cname});
-                    selectedPartial = '';
                     break;
                 case "Model": case "DModel": selectedPartial = fixPartialName("DModel", eta_partials, true); break;
                 case 'Value': case "DValue": {
@@ -348,8 +345,10 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
                     let meta = (data as LObject).instanceof;
                     let name = meta?.name;
                     let ambiguousNames = ["Value", "DValue", "Model", "DModel", "Object", "DObject", "Attribute", "DAttribute", "Reference", "DReference"];
+                    /*console.log("eta m2t object attempt 1: ", {name, eta_partials, ret: fixPartialName(name, eta_partials, false)});
+                    console.log("eta m2t object attempt 2: ", {name, eta_partials, ret: fixPartialName("DObject", eta_partials, true)});*/
                     if (!ambiguousNames.includes(name || '')) selectedPartial = fixPartialName(name, eta_partials, false);
-                    else selectedPartial = fixPartialName("DObject", eta_partials, true);
+                    if (!selectedPartial) selectedPartial = fixPartialName("DObject", eta_partials, true);
                     break;
             }
             if (!selectedPartial) selectedPartial = "Default";

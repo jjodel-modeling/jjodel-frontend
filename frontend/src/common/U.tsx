@@ -1642,13 +1642,14 @@ export class U {
 
     static fromBoolString<T extends any>(str: string | boolean): boolean;
     static fromBoolString<T extends any>(str: string | boolean, defaultVal?: T): boolean | T;
-    static fromBoolString<T extends any>(str: string | boolean, defaultVal?: T, allowNull?: boolean): boolean | null | T;
-    static fromBoolString<T extends any>(str: string | boolean, defaultVal: T = false as any, allowNull: boolean = false, allowUndefined: boolean = false): boolean | null | undefined | T {
+    static fromBoolString<T extends any>(str: string | boolean, defaultVal?: T, nullValue?: T): boolean | T;
+    static fromBoolString<T extends any>(str: string | boolean, defaultVal?: T, nullValue?: T, undefValue?: T): boolean | T;
+    static fromBoolString<T extends any>(str: string | boolean, defaultVal: T = false as any, nullValue: T = null as any, undefValue: T = undefined as any): boolean | T {
         if (str === false) return false;
         if (str === true) return true;
-        str = ('' + str).toLowerCase();
-        if (allowNull && (str === 'null')) return null;
-        if (allowUndefined && (str === 'undefined')) return undefined;
+        str = ('' + str).toLowerCase().trim();
+        if ((str === 'null')) return nullValue;
+        if ((str === 'undefined')) return undefValue;
 
         if (str === "true" || str === 't' || str === '1') return true;
         // if (defaultVal === true) return str === "false" || str === 'f' || str === '0'; // false solo se è esplicitamente false, true se ambiguo.
