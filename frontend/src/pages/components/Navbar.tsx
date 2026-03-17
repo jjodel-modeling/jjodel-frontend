@@ -62,7 +62,8 @@ import { useSettingsModal } from '../../contexts/SettingsModalContext';
 import { useTheme } from '../../services/ThemeService';
 import { buildProjectExportJson } from '../../model/megamodelPersistence';
 import { getRuntimeMegamodel } from '../../model/megamodelRuntime';
-import { useAvatarColor } from '../../hooks/useAvatarColor';
+import { useAvatar } from '../../hooks/useAvatar';
+import { AVATAR_COLORS, AVATAR_ICONS } from '../../constants/avatarConfig';
 
 
 let windoww = window as any;
@@ -184,11 +185,14 @@ function makeEntry(i: MenuEntry|null|undefined, index: number) {
 
 
 /* User badge component - now used as menu trigger */
-const UserBadge = (props: {name: string, initials: string, color?: string}) => {
+const UserBadge = (props: {name: string, initials: string, color?: string, icon?: string | null}) => {
     return (
         <div className={'user-badge'} title={props.name}
              style={props.color ? { backgroundColor: props.color } : undefined}>
-            {props.initials.toUpperCase()}
+            {props.icon
+                ? <i className={`bi ${props.icon}`} style={{ fontSize: 16 }} />
+                : props.initials.toUpperCase()
+            }
         </div>
     );
 };
@@ -364,7 +368,7 @@ function NavbarComponent(props: AllProps) {
     const { openDrawer } = useGlobalDrawer();
     const { openSettings } = useSettingsModal();
     const [theme, setTheme] = useTheme();
-    const [avatarColor] = useAvatarColor();
+    const [avatarConfig] = useAvatar();
 
     // TreeViewToggle state (hoisted)
     const [isTreeViewOpen, setIsTreeViewOpen] = useState(() => {
@@ -1225,7 +1229,7 @@ function NavbarComponent(props: AllProps) {
     // (TreeView renders nothing, LayoutControls moved to EditorV2 Toolbar).
 
     // UserMenu — inlined below to avoid inner component flicker.
-    // Hooks (useGlobalDrawer, useSettingsModal, useTheme, useAvatarColor) are hoisted above.
+    // Hooks (useGlobalDrawer, useSettingsModal, useTheme, useAvatar) are hoisted above.
     const userName = `${user?.name || ''} ${user?.surname || ''}`.trim();
     const userEmail = user?.email || '';
     const userInitials = userName.split(' ').map(n => n[0] || '').join('');
@@ -1518,7 +1522,7 @@ function NavbarComponent(props: AllProps) {
                 <div className='user-menu-container' id={'navusermenu'}>
                     <Menu
                         position={'left'}
-                        trigger={<UserBadge name={userName} initials={userInitials} color={avatarColor.hex} />}
+                        trigger={<UserBadge name={userName} initials={userInitials} color={AVATAR_COLORS[avatarConfig.colorIndex].hex} icon={AVATAR_ICONS[avatarConfig.iconIndex]} />}
                     >
                         <UserHeader name={userName} email={userEmail} />
                         <Item icon={<i className="bi bi-grid" />} action={async()=> {

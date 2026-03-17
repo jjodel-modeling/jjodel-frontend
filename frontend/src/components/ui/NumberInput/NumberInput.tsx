@@ -9,6 +9,7 @@ export interface NumberInputProps {
     step?: number;
     disabled?: boolean;
     className?: string;
+    style?: React.CSSProperties;
 }
 
 export function NumberInput({
@@ -64,6 +65,7 @@ export function NumberInput({
                 value={value}
                 onChange={handleInput}
                 disabled={disabled}
+
             />
             <button
                 type="button"

@@ -876,62 +876,136 @@ $transition-normal: 200ms ease-out;
     animation: spin 1s linear infinite;
 }
 
-/* Avatar color picker */
-.avatar-color-section {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.avatar-color-preview {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    font-weight: 500;
-    color: #ffffff;
-    transition: background-color 0.2s ease;
-    flex-shrink: 0;
-    letter-spacing: 0.5px;
-}
-
-.avatar-color-grid {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.avatar-color-swatch {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    border: 2px solid transparent;
-    cursor: pointer;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.15s ease, border-color 0.15s ease;
-    outline: none;
-
-    &:hover {
-        transform: scale(1.15);
+/* Avatar customizer */
+.avatar-customizer {
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 20px;
     }
 
-    &:focus-visible {
-        box-shadow: 0 0 0 2px #334155, 0 0 0 4px rgba(51, 65, 85, 0.3);
+    &__preview {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff;
+        transition: background-color 0.25s ease;
+        flex-shrink: 0;
+        overflow: hidden;
+        position: relative;
     }
 
-    &.selected {
-        border-color: #334155;
-        box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #334155;
+    &__preview-content {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
 
-        i {
-            color: #ffffff;
-            font-size: 12px;
+        i { font-size: 22px; color: #ffffff; }
+    }
+
+    &__initials {
+        font-size: 20px;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+    }
+
+    &__info {
+        font-size: 13px;
+        color: var(--text-secondary, #64748b);
+        line-height: 1.4;
+
+        strong {
+            color: var(--text-primary, #1e293b);
+            font-weight: 500;
+            display: block;
+            font-size: 14px;
+            margin-bottom: 2px;
         }
     }
+
+    &__label {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-tertiary, #94a3b8);
+        margin-bottom: 8px;
+        margin-top: 14px;
+    }
+
+    &__style-grid {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+
+    &__style-option {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        border: 1.5px solid var(--border-color, #e2e8f0);
+        background: var(--bg-primary, #ffffff);
+        color: var(--text-secondary, #64748b);
+        transition: all 0.15s ease;
+        font-size: 14px;
+        font-weight: 500;
+        padding: 0;
+
+        i { font-size: 16px; color: inherit; }
+
+        &:hover {
+            border-color: var(--border-hover, #cbd5e1);
+            color: var(--text-primary, #1e293b);
+        }
+
+        &:focus-visible {
+            box-shadow: 0 0 0 2px #334155, 0 0 0 4px rgba(51, 65, 85, 0.3);
+        }
+
+        &.selected {
+            // border-color, background, and color set via inline style
+            box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
+
+            i { color: #ffffff; }
+        }
+    }
+
+    &__color-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    &__color-swatch {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: all 0.15s ease;
+        padding: 0;
+        outline: none;
+
+        &:hover { transform: scale(1.15); }
+
+        &:focus-visible {
+            box-shadow: 0 0 0 2px #334155, 0 0 0 4px rgba(51, 65, 85, 0.3);
+        }
+
+        &.selected {
+            border-color: #334155;
+            box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #334155;
+        }
+    }
+
 }

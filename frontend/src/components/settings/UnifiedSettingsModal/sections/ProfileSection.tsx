@@ -5,14 +5,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { connect } from 'react-redux';
-import { DState, DUser, LUser } from '../../../../joiner';
+import { DState, DUser, LUser, SetRootFieldAction } from '../../../../joiner';
 import { UsersApi } from '../../../../api/persistance';
 import { UpdateUserRequest } from '../../../../api/DTO/UpdateUserRequest';
 import Storage from '../../../../data/storage';
 import { U } from '../../../../joiner';
 import { FakeStateProps } from '../../../../joiner/types';
-import { AVATAR_COLORS } from '../../../../constants/avatarColors';
-import { useAvatarColor } from '../../../../hooks/useAvatarColor';
+import { AVATAR_COLORS, AVATAR_ICONS } from '../../../../constants/avatarConfig';
+import { useAvatar } from '../../../../hooks/useAvatar';
+
+const windoww = window as any;
 
 // Country options
 const COUNTRIES = [
@@ -41,11 +43,14 @@ interface ValidationErrors {
 
 interface ProfileSectionProps {
     user: LUser;
+    advanced: boolean;
 }
 
-function ProfileSectionComponent({ user }: ProfileSectionProps): JSX.Element {
-    // Avatar color
-    const [avatarColor, setAvatarColor] = useAvatarColor();
+function ProfileSectionComponent({ user, advanced }: ProfileSectionProps): JSX.Element {
+    // Avatar config
+    const [avatarConfig, setAvatarConfig] = useAvatar();
+    const currentColor = AVATAR_COLORS[avatarConfig.colorIndex];
+    const currentIcon = AVATAR_ICONS[avatarConfig.iconIndex];
 
     // Form state
     const [name, setName] = useState(user.name || '');
@@ -176,31 +181,69 @@ function ProfileSectionComponent({ user }: ProfileSectionProps): JSX.Element {
                 )}
             </div>
 
-            {/* Avatar color picker */}
-            <div className="settings-field">
-                <label className="settings-field-label">Avatar color</label>
-                <div className="avatar-color-section">
-                    <div className="avatar-color-preview"
-                         style={{ backgroundColor: avatarColor.hex }}>
-                        {`${user.name || ''}${user.surname ? ' ' + user.surname : ''}`
-                            .trim().split(' ').map(n => n[0] || '').join('').toUpperCase() || '?'}
+            {/* Avatar customizer */}
+            <div className="avatar-customizer">
+                {/* Preview + info */}
+                <div className="avatar-customizer__header">
+                    <div
+                        className="avatar-customizer__preview"
+                        style={{ backgroundColor: currentColor.hex }}
+                    >
+                        <span className="avatar-customizer__preview-content">
+                            {currentIcon === null
+                                ? <span className="avatar-customizer__initials">
+                                    {`${user.name || ''}${user.surname ? ' ' + user.surname : ''}`
+                                        .trim().split(' ').map(n => n[0] || '').join('').toUpperCase() || '?'}
+                                  </span>
+                                : <i className={`bi ${currentIcon}`} />
+                            }
+                        </span>
                     </div>
-                    <div className="avatar-color-grid">
-                        {AVATAR_COLORS.map(color => (
+                    <div className="avatar-customizer__info">
+                        <strong>{`${user.name || ''} ${user.surname || ''}`.trim() || 'User'}</strong>
+                        Customize your avatar style and color
+                    </div>
+                </div>
+
+                {/* Style — initials + icons */}
+                <div className="avatar-customizer__label">Style</div>
+                <div className="avatar-customizer__style-grid">
+                    {AVATAR_ICONS.map((icon, index) => {
+                        const isSelected = avatarConfig.iconIndex === index;
+                        return (
                             <button
-                                key={color.name}
-                                className={`avatar-color-swatch ${avatarColor.name === color.name ? 'selected' : ''}`}
-                                style={{ backgroundColor: color.hex }}
-                                onClick={() => setAvatarColor(color)}
-                                title={color.name}
-                                aria-label={`Select ${color.name} avatar color`}
+                                key={index}
+                                className={`avatar-customizer__style-option ${isSelected ? 'selected' : ''}`}
+                                style={isSelected
+                                    ? { backgroundColor: currentColor.hex, color: '#ffffff', borderColor: currentColor.hex }
+                                    : { color: currentColor.hex }
+                                }
+                                onClick={() => setAvatarConfig({ ...avatarConfig, iconIndex: index })}
+                                title={icon === null ? 'Initials' : icon.replace('bi-', '').replace(/-/g, ' ')}
                             >
-                                {avatarColor.name === color.name && (
-                                    <i className="bi bi-check-lg" />
-                                )}
+                                {icon === null
+                                    ? <span>{`${user.name || ''}${user.surname ? ' ' + user.surname : ''}`
+                                        .trim().split(' ').map(n => n[0] || '').join('').toUpperCase().slice(0, 2) || '?'}</span>
+                                    : <i className={`bi ${icon}`} />
+                                }
                             </button>
-                        ))}
-                    </div>
+                        );
+                    })}
+                </div>
+
+                {/* Color */}
+                <div className="avatar-customizer__label">Color</div>
+                <div className="avatar-customizer__color-row">
+                    {AVATAR_COLORS.map((color, index) => (
+                        <button
+                            key={color.name}
+                            className={`avatar-customizer__color-swatch ${avatarConfig.colorIndex === index ? 'selected' : ''}`}
+                            style={{ backgroundColor: color.hex }}
+                            onClick={() => setAvatarConfig({ ...avatarConfig, colorIndex: index })}
+                            title={color.name}
+                            aria-label={`Select ${color.name} avatar color`}
+                        />
+                    ))}
                 </div>
             </div>
 
@@ -341,6 +384,38 @@ function ProfileSectionComponent({ user }: ProfileSectionProps): JSX.Element {
                 </div>
             </div>
 
+            <div
+                className="settings-toggle"
+                onClick={() => {
+                    const newMode = !advanced;
+                    SetRootFieldAction.new('advanced', newMode);
+                    windoww.advanced = newMode;
+                    localStorage.setItem('jjodel.interfaceMode', newMode ? 'advanced' : 'basic');
+                    U.interfaceMode = newMode ? 'advanced' : 'basic';
+                }}
+            >
+                <div className="settings-toggle-content">
+                    <div className="settings-toggle-title">Editor mode</div>
+                    <div className="settings-toggle-description">
+                        {advanced
+                            ? 'All options visible — includes inheritance, expert features, and debug tools'
+                            : 'Essential options only — simplified interface for common tasks'}
+                    </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{
+                        fontSize: 12,
+                        color: advanced ? '#475569' : '#94a3b8',
+                        fontWeight: advanced ? 500 : 400,
+                    }}>
+                        {advanced ? 'Advanced' : 'Basic'}
+                    </span>
+                    <div className={`settings-toggle-switch ${advanced ? 'active' : ''}`}>
+                        <div className="settings-toggle-thumb" />
+                    </div>
+                </div>
+            </div>
+
             {/* Actions */}
             <div className="settings-form-actions">
                 <button
@@ -368,11 +443,13 @@ function ProfileSectionComponent({ user }: ProfileSectionProps): JSX.Element {
 // Redux connection
 interface StateProps {
     user: LUser;
+    advanced: boolean;
 }
 
 function mapStateToProps(state: DState): StateProps {
     const ret: StateProps = {} as FakeStateProps;
     ret.user = LUser.fromPointer(DUser.current);
+    ret.advanced = state.advanced;
     return ret;
 }
 

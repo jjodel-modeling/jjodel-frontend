@@ -1100,13 +1100,15 @@
   &--is-focused {
     background: #f1f5f9 !important;
     color: #1e293b !important;
+
   }
 
-  &--is-selected {
-    background: #e2e8f0 !important;
-    color: #1e293b !important;
-  }
+
 }
+
+.jj-select__option:hover {
+    color: white !important;
+  }
 
 .jj-select__menu-notice--no-options {
   font-size: 12px !important;
@@ -1115,15 +1117,15 @@
 }
 
 .jj-select__multi-value {
+
   background: #f1f5f9 !important;
   border-radius: 4px !important;
-  border: 1px solid #e2e8f0 !important;
 }
 
 .jj-select__multi-value__label {
   font-size: 12px !important;
-  color: #334155 !important;
-  padding: 1px 6px !important;
+  color: white !important;
+  padding: 5px 6px !important;
 }
 
 .jj-select__multi-value__remove {
@@ -1140,6 +1142,7 @@
 .jj-select__single-value {
   font-size: 13px !important;
   color: #1e293b !important;
+  
 }
 
 .jj-select__clear-indicator {
@@ -1219,3 +1222,32 @@
     }
   }
 
+/* ==============================================
+   BOUNDS ROW (Lower + Upper + Badge inline)
+   ============================================== */
+
+.jj-bounds-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.jj-bounds-field {
+  flex: 0 0 auto;
+
+}
+
+.jj-bounds-badge {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  background: #f1f5f9;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+  white-space: nowrap;
+  flex-shrink: 0;
+}

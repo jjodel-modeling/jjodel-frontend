@@ -147,7 +147,7 @@
 .form-section {
   margin-bottom: 32px;
   border: none;
-  padding: 0;
+  padding: 12px;
 
   &:last-child {
     margin-bottom: 0;
@@ -1282,4 +1282,201 @@ section .property-panel {
     background-color: #334155;
     border-color: #334155;
   }
+}
+
+/* ==============================================
+   CONFORMANCE BANNER
+   ============================================== */
+
+.jj-conformance-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #f0fdf4;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 12px;
+  color: #166534;
+
+  strong {
+    font-weight: 500;
+  }
+
+  &--error {
+    background: #fef2f2;
+    color: #991b1b;
+  }
+
+  &--warning {
+    background: #fffbeb;
+    color: #92400e;
+  }
+}
+
+.jj-conformance-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  flex-shrink: 0;
+
+  &--error {
+    background: #ef4444;
+  }
+
+  &--warning {
+    background: #f59e0b;
+  }
+}
+
+/* ==============================================
+   OBJECT SLOTS
+   ============================================== */
+
+.jj-slot {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 10px 16px;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.jj-slot-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.jj-slot-header-left {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.jj-slot-header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.jj-slot-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: #475569;
+}
+
+.jj-slot-multiplicity {
+  font-size: 10px;
+  color: #94a3b8;
+  font-family: monospace;
+}
+
+.jj-slot-type {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.jj-slot-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #475569;
+  background: transparent;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 2px 6px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.1s;
+
+  &:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.jj-slot-values {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.jj-slot-value-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.jj-slot-value-input {
+  flex: 1;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  font-size: 12px;
+  color: #1e293b;
+  background: #ffffff;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.15s;
+
+  &:focus {
+    border-color: #94a3b8;
+    box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.08);
+  }
+}
+
+.jj-slot-value-select {
+  flex: 1;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  font-size: 12px;
+  color: #1e293b;
+  background: #ffffff;
+  box-sizing: border-box;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  outline: none;
+  cursor: pointer;
+}
+
+.jj-slot-value-delete {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #cbd5e1;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  flex-shrink: 0;
+  transition: all 0.1s;
+  padding: 0;
+
+  &:hover {
+    color: #ef4444;
+    background: #fef2f2;
+  }
+}
+
+.jj-slot-empty {
+  font-size: 11px;
+  color: #cbd5e1;
+  font-style: italic;
+  padding: 2px 0;
 }

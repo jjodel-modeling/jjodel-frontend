@@ -2293,7 +2293,7 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                             />
                             {/* Zoom controls moved to toolbar */}
                             <MiniMap
-                                    style={{ position: 'absolute', margin: 0, right: '20px', bottom: '180px', borderRadius: '4px', opacity: 0.8 }}
+                                    style={{ position: 'absolute', margin: 0, right: '20px', bottom: '100px', borderRadius: '4px', opacity: 0.8 }}
                                     nodeStrokeWidth={3}
                                     nodeColor={(node) => {
                                         if (node.type === 'classNode') return theme === 'dark' ? '#0ea5e9' : '#0284c7';

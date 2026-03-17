@@ -396,6 +396,8 @@
     cursor: pointer;
     transition: var(--transition-fast);
 
+    i { color: inherit; }
+
     &:hover {
       background-color: var(--color-accent-hover); // Darker brand — slate-800
       transform: scale(1.05);
