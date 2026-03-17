@@ -246,10 +246,11 @@ class builder {
                 <label className={'input-container'}>
                     <b className={'me-2'}>Depends from models</b>
                     <MultiSelect
+                        classNamePrefix="jj-select"
                         isMulti={true}
                         options={multiselectOptions as any}
                         value={multiselectValue}
-                        placeholder="Select dependent models..."
+                        placeholder="Select models..."
                         onChange={(v) => {
                             console.log('setting model dependencies', v);
                             l.dependencies = v.map(e => e.value) as Any<string[]>;
@@ -301,7 +302,7 @@ class builder {
                 {/* TODO: mostrare in Advanced mode
                 <label className={'input-container'}>
                     <b className={'me-2'}>Extends</b>
-                    <MultiSelect isMulti={true} options={extendOptions as any} value={extendValue} onChange={(v) => {
+                    <MultiSelect classNamePrefix="jj-select" isMulti={true} options={extendOptions as any} value={extendValue} onChange={(v) => {
                         console.log('setting extend', v);
                         lclass.extends = v.map(e => e.value) as Any<string[]>;
                     }} />

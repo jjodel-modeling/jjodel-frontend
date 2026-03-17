@@ -1020,3 +1020,133 @@
     }
   }
 }
+
+/* ==============================================
+   REACT-SELECT OVERRIDE (MultiSelect)
+   ============================================== */
+
+.jj-select__control {
+  min-height: 32px !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 6px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  font-size: 13px !important;
+  cursor: pointer !important;
+  transition: border-color 0.15s !important;
+
+  &:hover {
+    border-color: #cbd5e1 !important;
+  }
+
+  &--is-focused {
+    border-color: #94a3b8 !important;
+    box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.08) !important;
+  }
+}
+
+.jj-select__value-container {
+  padding: 0 10px !important;
+  font-size: 13px !important;
+}
+
+.jj-select__placeholder {
+  color: #94a3b8 !important;
+  font-size: 13px !important;
+}
+
+.jj-select__input-container {
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 13px !important;
+  color: #1e293b !important;
+}
+
+.jj-select__indicator {
+  padding: 4px 8px !important;
+  color: #94a3b8 !important;
+
+  &:hover {
+    color: #64748b !important;
+  }
+}
+
+.jj-select__indicator-separator {
+  display: none !important;
+}
+
+.jj-select__menu {
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+  overflow: hidden !important;
+  z-index: 10 !important;
+  margin-top: 4px !important;
+  background: #ffffff !important;
+}
+
+.jj-select__menu-list {
+  padding: 4px !important;
+}
+
+.jj-select__option {
+  font-size: 13px !important;
+  padding: 6px 10px !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  color: #334155 !important;
+  transition: background 0.1s !important;
+
+  &--is-focused {
+    background: #f1f5f9 !important;
+    color: #1e293b !important;
+  }
+
+  &--is-selected {
+    background: #e2e8f0 !important;
+    color: #1e293b !important;
+  }
+}
+
+.jj-select__menu-notice--no-options {
+  font-size: 12px !important;
+  color: #94a3b8 !important;
+  padding: 12px 10px !important;
+}
+
+.jj-select__multi-value {
+  background: #f1f5f9 !important;
+  border-radius: 4px !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.jj-select__multi-value__label {
+  font-size: 12px !important;
+  color: #334155 !important;
+  padding: 1px 6px !important;
+}
+
+.jj-select__multi-value__remove {
+  color: #94a3b8 !important;
+  padding: 0 4px !important;
+  border-radius: 0 3px 3px 0 !important;
+
+  &:hover {
+    background: #fee2e2 !important;
+    color: #991b1b !important;
+  }
+}
+
+.jj-select__single-value {
+  font-size: 13px !important;
+  color: #1e293b !important;
+}
+
+.jj-select__clear-indicator {
+  padding: 4px !important;
+  color: #94a3b8 !important;
+
+  &:hover {
+    color: #ef4444 !important;
+  }
+}
