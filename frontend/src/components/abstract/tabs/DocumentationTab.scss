@@ -139,6 +139,9 @@ $transition: 0.15s ease;
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-shrink: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
 }
 
 .toolbar-title {
@@ -190,9 +193,12 @@ $transition: 0.15s ease;
     font-weight: 500;
     cursor: pointer;
     transition: all $transition;
-    
+    white-space: nowrap;
+    flex-shrink: 0;
+
     i {
         font-size: 14px;
+        flex-shrink: 0;
     }
     
     .chevron-icon {
@@ -306,6 +312,7 @@ $transition: 0.15s ease;
 
 .provider-selector {
     position: relative;
+    flex-shrink: 0;
 }
 
 .provider-btn {
@@ -320,6 +327,7 @@ $transition: 0.15s ease;
     color: $color-text-secondary;
     cursor: pointer;
     transition: all $transition;
+    white-space: nowrap;
 
     &:hover {
         background: $color-bg-tertiary;

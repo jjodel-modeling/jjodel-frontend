@@ -318,6 +318,14 @@ function DockComponent(props: AllProps) {
         const activeId = newLayout?.dockbox?.children?.[0]?.activeId;
         if (activeId) {
             window.dispatchEvent(new CustomEvent('jjodel:active-tab', { detail: { activeId } }));
+
+            // Hide properties panel when Documentation tab is active
+            const isDocTab = activeId === 'documentation' || activeId.startsWith('doc_');
+            if (isDocTab) {
+                document.body.setAttribute('data-active-tab', 'documentation');
+            } else {
+                document.body.removeAttribute('data-active-tab');
+            }
         }
     };
 
