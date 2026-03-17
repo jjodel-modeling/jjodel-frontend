@@ -132,7 +132,7 @@ export async function duplicateProject(project: DProject, pnames?: Dictionary<st
 function Project(props: Props): JSX.Element {
     const {data} = props;
     console.log('[DEBUG Project] Card props:', props);
-    console.log('[DEBUG Project] data.tags:', data.tags);
+    console.log('[DEBUG Project] data.tagNames:', data.tagNames);
 
     const toggleFavorite = async(project: LProject) => {
         await ProjectsApi.favorite(project.__raw as DProject);
@@ -157,7 +157,7 @@ function Project(props: Props): JSX.Element {
         console.log('[DEBUG saveTag] Project __raw:', data.__raw);
 
         if (input && input.trim()) {
-            const currentTags = data.tags || [];
+            const currentTags = data.tagNames || [];
             console.log('[DEBUG saveTag] Current tags:', currentTags);
 
             // Split by comma, trim, lowercase, remove empty and duplicates
@@ -217,7 +217,7 @@ function Project(props: Props): JSX.Element {
         const suggestions = tagInput.trim()
             ? (props.allTags || []).filter(tag =>
                 tag.toLowerCase().includes(tagInput.toLowerCase()) &&
-                !(data.tags || []).includes(tag)
+                !(data.tagNames || []).includes(tag)
               )
             : [];
 
@@ -325,14 +325,14 @@ function Project(props: Props): JSX.Element {
                     </div>
 
                     {/* Tags Row (if present) */}
-                    {data.tags && data.tags.length > 0 && (
+                    {data.tagNames && data.tagNames.length > 0 && (
                         <div className="project-card__tags">
-                            {data.tags.slice(0, 3).map(tag => (
+                            {data.tagNames.slice(0, 3).map(tag => (
                                 <span key={tag} className="project-card__tag">{tag}</span>
                             ))}
-                            {data.tags.length > 3 && (
+                            {data.tagNames.length > 3 && (
                                 <span className="project-card__tag-more">
-                                    +{data.tags.length - 3} more
+                                    +{data.tagNames.length - 3} more
                                     <span className="project-card__tag-tooltip">
                                         <svg
                                             className="project-card__tag-tooltip-icon"
@@ -344,7 +344,7 @@ function Project(props: Props): JSX.Element {
                                             <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/>
                                             <line x1="7" y1="7" x2="7.01" y2="7"/>
                                         </svg>
-                                        {data.tags.slice(3).join(', ')}
+                                        {data.tagNames.slice(3).join(', ')}
                                     </span>
                                 </span>
                             )}
@@ -410,7 +410,7 @@ function Project(props: Props): JSX.Element {
         const suggestions = tagInput.trim()
             ? (props.allTags || []).filter(tag =>
                 tag.toLowerCase().includes(tagInput.toLowerCase()) &&
-                !(data.tags || []).includes(tag)
+                !(data.tagNames || []).includes(tag)
               )
             : [];
 
@@ -497,12 +497,12 @@ function Project(props: Props): JSX.Element {
 
                 {/* Tags - max 2 with tooltip for hidden tags */}
                 <div className="project-row__tags">
-                    {data.tags?.slice(0, 2).map((tag: string) => (
+                    {data.tagNames?.slice(0, 2).map((tag: string) => (
                         <span key={tag} className="project-row__tag">{tag}</span>
                     ))}
-                    {data.tags && data.tags.length > 2 && (
+                    {data.tagNames && data.tagNames.length > 2 && (
                         <span className="project-row__tag-more">
-                            +{data.tags.length - 2}
+                            +{data.tagNames.length - 2}
                             <span className="project-row__tag-tooltip">
                                 <svg
                                     className="project-row__tag-tooltip-icon"
@@ -514,7 +514,7 @@ function Project(props: Props): JSX.Element {
                                     <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/>
                                     <line x1="7" y1="7" x2="7.01" y2="7"/>
                                 </svg>
-                                {data.tags.slice(2).join(', ')}
+                                {data.tagNames.slice(2).join(', ')}
                             </span>
                         </span>
                     )}

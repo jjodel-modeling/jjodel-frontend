@@ -310,11 +310,12 @@ function PaletteDataComponent(props: AllProps) {
         console.log("set transparency", {color, tinycolor, oldcolor: tmp[prefix].value[index]});
         view.palette = palette = tmp;
     }
-    const removeColor = (prefix: string, index: number) => {
+    const removeColor = (prefix: string, index?: number) => {
         if (readOnly || !palette[prefix]) return;
 
         let tmp: Dictionary<string, PaletteControl> = {...palette} as any;
         tmp[prefix].value = [...tmp[prefix].value];
+        if (index === undefined) index = tmp[prefix].value.length -1;
         tmp[prefix].value = tmp[prefix].value.filter((c, i) => i !== index);
         view.palette = palette = tmp;
     }
@@ -375,7 +376,6 @@ function PaletteDataComponent(props: AllProps) {
                             colors.map((color, i) => <Color key={prefix+i} readOnly={readOnly}
                                                             data={view} field={'palette'} canDelete={!readOnly}
                                                             getter={()=>colors[i].toHexString()} setter={(newVal) => { setColor(prefix, i, newVal) }}
-                                                            style ={{background: 'white'}}
                                                             inputStyle ={{opacity: color.getAlpha()}}
                                                             childrenn={
                                                                 <div className={"content suggestions"} tabIndex={-1} style={{backgroundColor: "inherit"}} onClick={(e) => {e.preventDefault(); e.stopPropagation();}}>
@@ -547,9 +547,9 @@ function PaletteDataComponent(props: AllProps) {
                                 {/* Palette */}
                                 <CommandBar style={{float: 'right'}}>
                                     <Btn icon={'add'} tip={'Add color to palette'} action={() => addColor(prefix, c)} />
-                                    <Btn icon={'delete'} tip={'Remove color from palette'} action={() => {
+                                    <Btn icon={'delete'} tip={'Remove last color from palette'} action={() => {
                                         if (Array.isArray(palette[prefix].value) && (palette[prefix].value as any).length) {
-                                            removeColor(prefix, i)
+                                            removeColor(prefix)
                                         } else {
                                             removeControl(prefix);
                                         }

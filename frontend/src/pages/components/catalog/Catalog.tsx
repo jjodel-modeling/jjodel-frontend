@@ -300,9 +300,9 @@ const Catalog = (props: ChildrenType) => {
         setShowAddTagDialog(false);
 
         try {
-            const projectsToTag = props.projects?.filter((p: LProject) => selectedProjects.has(p.id)) || [];
+            const projectsToTag: LProject[] = props.projects?.filter((p: LProject) => selectedProjects.has(p.id)) || [];
             for (const project of projectsToTag) {
-                const currentTags = project.tags || [];
+                const currentTags = project.tagNames || [];
                 if (!currentTags.includes(tagName)) {
                     const updatedTags = [...currentTags, tagName];
                     await ProjectsApi.updateTags(project.__raw as DProject, updatedTags);
@@ -337,8 +337,8 @@ const Catalog = (props: ChildrenType) => {
         const tagCounts = new Map<string, number>();
 
         props.projects.forEach((p: LProject) => {
-            if (p.tags && Array.isArray(p.tags)) {
-                p.tags.forEach((t: string) => {
+            if (p.tagNames && Array.isArray(p.tagNames)) {
+                p.tagNames.forEach((t: string) => {
                     tagCounts.set(t, (tagCounts.get(t) || 0) + 1);
                 });
             }
@@ -382,7 +382,7 @@ const Catalog = (props: ChildrenType) => {
         // Filter by active tag (single-select)
         if (activeTag) {
             items = items.filter((p: LProject) =>
-                p.tags && p.tags.includes(activeTag)
+                p.tagNames && p.tagNames.includes(activeTag)
             );
         }
 

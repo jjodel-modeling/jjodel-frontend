@@ -423,9 +423,13 @@ border-radius: 6px;
 .feature{
     display: flex;
     padding: 2px 5px;
-    select, input {
+    
+    input,
+    select {
         margin-left: auto;
-        width: 100px;
+        width: 125px;
+        max-width: 55%;
+        flex-basis: 0;
     }
 }`;
         }, false, Defaults.Pointer_ViewAttribute);
@@ -443,9 +447,12 @@ border-radius: 6px;
 .feature{
     display: flex;
     padding: 2px 5px;
+    input,
     select {
         margin-left: auto;
-        width: max(33%, 75px);
+        width: 125px;
+        max-width: 55%;
+        flex-basis: 0;
     }
 }`;
         }, false, Defaults.Pointer_ViewReference);
@@ -475,9 +482,13 @@ border-radius: 6px;
 .operation{
     display: flex;
     padding: 2px 5px;
+    
+    input,
     select {
         margin-left: auto;
-        width: max(33%, 75px);
+        width: 125px;
+        max-width: 55%;
+        flex-basis: 0;
     }
     .parameters{
         background-color: var(--background-2);

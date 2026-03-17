@@ -168,7 +168,7 @@ $color-exception-text: #581c87;    // purple-900
   }
 
   // New toolbar checkbox - checkbox LEFT of label
-  .toolbar-checkbox {
+  .logger-checkbox {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -910,9 +910,13 @@ html[data-theme="dark"] {
   }
 
   .search-row {
-    .toolbar-checkbox {
+    .logger-checkbox {
       color: #94a3b8;
 
+      >*{
+        margin-top: auto;
+        margin-bottom: auto;
+      }
       input[type="checkbox"] {
         border-color: #475569;
         background: #1e293b;
@@ -1038,7 +1042,7 @@ html[data-theme="dark"] {
       color: #94a3b8;
     }
 
-    .toolbar-checkbox {
+    .logger-checkbox {
       color: #94a3b8;
 
       input[type="checkbox"] {

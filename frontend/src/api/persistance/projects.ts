@@ -196,7 +196,7 @@ class Offline {
         console.log('[DEBUG Offline.getAll] Projects from localStorage:', projects);
         TRANSACTION('loading projects (offline)', () => {
             for (const project of projects) {
-                console.log('[DEBUG Offline.getAll] Loading project:', project.name, 'tags:', project.tags);
+                console.log('[DEBUG Offline.getAll] Loading project:', project.name, 'tags:', project.tagNames);
                 /*if (!project._Id || !project.id && project.state) {
                    let decompressed = U.decompressState(project.state);
                    decompressed it is pointless, the db does not have the jid anyway and cannot single get it.
@@ -210,7 +210,7 @@ class Offline {
                 SetFieldAction.new(project.id, 'metamodelsNumber', project.metamodelsNumber, '', false);
                 SetFieldAction.new(project.id, 'modelsNumber', project.modelsNumber, '', false);
                 SetFieldAction.new(project.id, 'isFavorite', project.isFavorite, '', false);
-                SetFieldAction.new(project.id, 'tags', project.tags || [], '', false);
+                SetFieldAction.new(project.id, 'tagNames', project.tagNames || [], '', false);
                 // Load version from saved project, default to 1.0 if not present
                 SetFieldAction.new(project.id, 'version', project.version || 1.0, '', false);
             }
@@ -264,7 +264,7 @@ class Offline {
         Storage.write('projects', newProjectsList);
         console.log('[DEBUG Offline.updateTags] Storage.write completed');
 
-        SetFieldAction.new(project.id, 'tags', tags, '', false);
+        SetFieldAction.new(project.id, 'tagNames', tags, '', false);
         console.log('[DEBUG Offline.updateTags] SetFieldAction completed');
     }
 
@@ -394,7 +394,7 @@ class Online {
         if(response.code !== 200) {
             U.alert('e', 'Cannot update tags!', 'Something went wrong ...');
         }
-        SetFieldAction.new(project.id, 'tags', tags, '', false);
+        SetFieldAction.new(project.id, 'tagNames', tags, '', false);
     }
 
     static async import(project: DProject): Promise<void> {

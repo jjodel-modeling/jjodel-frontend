@@ -48,9 +48,10 @@ function errorUpdate(msg: string, e: Error){
 }
 
 export function getSelectOptions(data: LPointerTargetable, field: string, options: ReactNode, children?: ReactNode, id_debug?:string): ReactNode {
-    if (options && React.isValidElement(options) && (options as any)?.length !== 0) {
-        if (Array.isArray(options)) {
-            return options.map(d => {
+    let asArr: any[] | null = Array.isArray(options) ? options : null;
+    if (options && (asArr || React.isValidElement(options)) && asArr?.length !== 0) {
+        if (asArr) {
+            return asArr.map(d => {
                 if (DPointerTargetable.isD(d)) return <option value={d.id}>d.name</option>;
                 if (Pointers.isPointer(d)) {
                     let d2 = L.fromPointer(d) as DPointerTargetable;
@@ -61,9 +62,10 @@ export function getSelectOptions(data: LPointerTargetable, field: string, option
         }
         return options;
     }
-    if (children && React.isValidElement(children) && (children as any)?.length !== 0) {
-        if (Array.isArray(children)) {
-            return children.map(d => {
+    asArr = Array.isArray(children) ? children : null;
+    if (children && (asArr || React.isValidElement(children)) && asArr?.length !== 0) {
+        if (asArr) {
+            return asArr.map(d => {
                 if (DPointerTargetable.isD(d)) return <option value={d.id}>d.name</option>;
                 if (Pointers.isPointer(d)) {
                     let d2 = L.fromPointer(d) as DPointerTargetable;
