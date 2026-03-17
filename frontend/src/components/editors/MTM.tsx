@@ -187,8 +187,8 @@ export function MTMComponent(props: AllProps): JSX.Element{
             language={language.toLowerCase()}
         />
         <div className={'export-row'}>
-            <button>Export</button>
-            <button>Import</button>
+            <button disabled>Export</button>
+            <button disabled>Import</button>
         </div>
     </section>;
 }
