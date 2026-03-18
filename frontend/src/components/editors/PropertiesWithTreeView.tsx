@@ -53,7 +53,10 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
         width: treeViewWidth,
         setWidth: setTreeViewWidth,
         isScriptExecuting,
+        activeEditorType,
     } = useTreeViewPanel();
+
+    const isModelingEditor = activeEditorType === 'model' || activeEditorType === 'metamodel';
 
     // Listen for external toggle events (e.g., from keyboard shortcut)
     useEffect(() => {
@@ -154,30 +157,32 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
             ref={containerRef}
             className={`properties-with-tree-view ${isTreeViewVisible ? 'tree-visible' : 'tree-hidden'}`}
         >
-            {/* Properties Panel (Left) - FLUID */}
-            <div className="properties-panel-container">
-                <Info mode={mode} />
+            {/* Properties Panel (Left) - FLUID, only for modeling editors */}
+            {isModelingEditor && (
+                <div className="properties-panel-container">
+                    <Info mode={mode} />
 
-                {/* NODE section — Expert mode only */}
-                {advanced && (
-                    <div className="properties-node-section">
-                        <button
-                            className="properties-node-section__header"
-                            onClick={() => setNodeOpen(!nodeOpen)}
-                            type="button"
-                        >
-                            <i className={`bi bi-chevron-${nodeOpen ? 'down' : 'right'}`} />
-                            <i className="bi bi-bounding-box-circles" />
-                            <span>NODE</span>
-                        </button>
-                        {nodeOpen && (
-                            <div className="properties-node-section__content">
-                                <NodeEditor />
-                            </div>
-                        )}
-                    </div>
-                )}
-            </div>
+                    {/* NODE section — Expert mode only */}
+                    {advanced && (
+                        <div className="properties-node-section">
+                            <button
+                                className="properties-node-section__header"
+                                onClick={() => setNodeOpen(!nodeOpen)}
+                                type="button"
+                            >
+                                <i className={`bi bi-chevron-${nodeOpen ? 'down' : 'right'}`} />
+                                <i className="bi bi-bounding-box-circles" />
+                                <span>NODE</span>
+                            </button>
+                            {nodeOpen && (
+                                <div className="properties-node-section__content">
+                                    <NodeEditor />
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Tree View Panel (Right) - Expanded */}
             {isTreeViewVisible ? (

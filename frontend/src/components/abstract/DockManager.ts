@@ -91,6 +91,10 @@ class DockManager {
     static async open2(me: LModel): Promise<void> {
         const tab = (me.isMetamodel) ? TabDataMaker.metamodel(me) : TabDataMaker.model(me);
         await DockManager.open('models', tab);
+        const editorType = me.isMetamodel ? 'metamodel' : 'model';
+        window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
+            detail: { editorType }
+        }));
     }
 
     /**
@@ -118,6 +122,9 @@ class DockManager {
             if (existingTab) {
                 console.log('[DockManager] Activating existing documentation tab');
                 DockManager.dock.updateTab(tabId, null as any, true);
+                window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
+                    detail: { editorType: 'summary' }
+                }));
                 return;
             }
 
@@ -137,6 +144,9 @@ class DockManager {
             if (layout?.dockbox?.children?.[0]) {
                 console.log('[DockManager] Creating new documentation tab');
                 DockManager.dock.dockMove(tab, layout.dockbox.children[0], 'middle');
+                window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
+                    detail: { editorType: 'summary' }
+                }));
             } else {
                 console.warn('[DockManager] Dock layout not ready');
                 U.alert('w', 'Cannot open documentation', 'The editor layout is not ready. Please try again.');
@@ -217,6 +227,9 @@ class DockManager {
                 console.log('[DockManager] Updating and activating existing transformation tab');
                 // CRITICAL: Update tab content with fresh callbacks to avoid stale closures
                 DockManager.dock.updateTab(tabId, { content: tabContent }, true);
+                window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
+                    detail: { editorType: 'transformation' }
+                }));
                 return;
             }
 
@@ -243,6 +256,9 @@ class DockManager {
             if (layout?.dockbox?.children?.[0]) {
                 console.log('[DockManager] Creating new transformation tab');
                 DockManager.dock.dockMove(tab, layout.dockbox.children[0], 'middle');
+                window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
+                    detail: { editorType: 'transformation' }
+                }));
             } else {
                 console.warn('[DockManager] Dock layout not ready');
                 U.alert('w', 'Cannot open transformation', 'The editor layout is not ready. Please try again.');

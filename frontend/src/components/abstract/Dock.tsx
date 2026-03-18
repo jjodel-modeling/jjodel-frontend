@@ -241,6 +241,50 @@ function DockComponent(props: AllProps) {
         };
     }, []);
 
+    const THIN_STRIP_WIDTH = 40;
+
+    // Listen for editor type changes to resize right panel per visibility matrix
+    useEffect(() => {
+        const handleEditorTypeChange = (event: Event) => {
+            const { editorType } = (event as CustomEvent).detail;
+            if (!DockManager.dock) return;
+
+            const layout = DockManager.dock.getLayout();
+            if (!layout?.dockbox?.children || layout.dockbox.children.length < 2) return;
+
+            const updatedLayout = JSON.parse(JSON.stringify(layout));
+
+            // Check if project has artifacts
+            const project = user?.project;
+            const hasArtifacts = (project?.metamodels?.length ?? 0) > 0
+                              || (project?.models?.length ?? 0) > 0;
+
+            if (!hasArtifacts) {
+                // No artifacts → hide right panel completely
+                updatedLayout.dockbox.children[1].size = 0;
+                updatedLayout.dockbox.children[0].size = window.innerWidth;
+            } else if (editorType === 'model' || editorType === 'metamodel') {
+                // Modeling editor → restore normal saved size
+                const rightRatio = getSavedDockPanelRatio(getSavedLayoutMode());
+                const rightPx = Math.max(300, Math.floor(window.innerWidth * (rightRatio / 100)));
+                updatedLayout.dockbox.children[1].size = rightPx;
+                updatedLayout.dockbox.children[0].size = window.innerWidth - rightPx;
+            } else {
+                // transformation, summary, null → thin strip
+                updatedLayout.dockbox.children[1].size = THIN_STRIP_WIDTH;
+                updatedLayout.dockbox.children[0].size = window.innerWidth - THIN_STRIP_WIDTH;
+            }
+
+            DockManager.dock.loadLayout(updatedLayout);
+            setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+        };
+
+        window.addEventListener('jjodel:editor-type-change', handleEditorTypeChange);
+        return () => {
+            window.removeEventListener('jjodel:editor-type-change', handleEditorTypeChange);
+        };
+    }, [user?.project]);
+
     const groups = {
         'models': {floatable: true, maximizable: false},
         // editors group: tabLocked=true disables drag-and-drop reordering

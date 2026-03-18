@@ -9,6 +9,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 
 export type ElementAction = 'create' | 'modify' | 'delete' | 'unknown';
+export type EditorType = 'model' | 'metamodel' | 'transformation' | 'summary' | null;
 
 interface TreeViewPanelContextType {
     /** Panel is visible/expanded */
@@ -47,6 +48,10 @@ interface TreeViewPanelContextType {
     collapseNode: (nodeId: string) => void;
     /** Toggle node expansion */
     toggleNode: (nodeId: string) => void;
+    /** Currently active editor type (drives panel visibility matrix) */
+    activeEditorType: EditorType;
+    /** Set active editor type */
+    setActiveEditorType: (type: EditorType) => void;
 }
 
 const TreeViewPanelContext = createContext<TreeViewPanelContextType | null>(null);
@@ -82,6 +87,9 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const [isHighlighted, setIsHighlighted] = useState(false);
     const [isScriptExecuting, setIsScriptExecuting] = useState(false);
+
+    // Active editor type (drives panel visibility matrix)
+    const [activeEditorType, setActiveEditorType] = useState<EditorType>(null);
 
     // Element highlighting state
     const [highlightedElementId, setHighlightedElementId] = useState<string | null>(null);
@@ -184,6 +192,23 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
             }
             return newSet;
         });
+    }, []);
+
+    // Listen for editor type changes (drives panel visibility matrix)
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const { editorType } = (e as CustomEvent).detail;
+            setActiveEditorType(editorType);
+            // Apply visibility matrix rules
+            if (editorType === 'model' || editorType === 'metamodel') {
+                setIsVisible(true); // tree open by default for modeling editors
+            } else {
+                // transformation, summary, null → tree closed (user can still open manually)
+                setIsVisible(false);
+            }
+        };
+        window.addEventListener('jjodel:editor-type-change', handler);
+        return () => window.removeEventListener('jjodel:editor-type-change', handler);
     }, []);
 
     // Listen for JjScript execution events
@@ -306,6 +331,8 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
             expandNode,
             collapseNode,
             toggleNode,
+            activeEditorType,
+            setActiveEditorType,
         }}>
             {children}
         </TreeViewPanelContext.Provider>
