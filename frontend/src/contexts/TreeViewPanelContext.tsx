@@ -199,12 +199,9 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
         const handler = (e: Event) => {
             const { editorType } = (e as CustomEvent).detail;
             setActiveEditorType(editorType);
-            // Apply visibility matrix rules
+            // Auto-open tree view for modeling editors; don't force-close for others
             if (editorType === 'model' || editorType === 'metamodel') {
-                setIsVisible(true); // tree open by default for modeling editors
-            } else {
-                // transformation, summary, null → tree closed (user can still open manually)
-                setIsVisible(false);
+                setIsVisible(true);
             }
         };
         window.addEventListener('jjodel:editor-type-change', handler);
