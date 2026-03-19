@@ -117,6 +117,8 @@ $transition: 0.15s ease;
 // TOOLBAR
 // ============================================
 
+// Scoped under .documentation-toolbar to win specificity over
+// global .toolbar-btn definitions in EditorV2.scss, catalog.scss, etc.
 .documentation-toolbar {
     display: flex;
     align-items: center;
@@ -126,134 +128,135 @@ $transition: 0.15s ease;
     border-bottom: 1px solid $color-border;
     gap: 12px;
     flex-wrap: wrap;
-}
 
-.toolbar-left {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-.toolbar-right {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-}
-
-.toolbar-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 16px;
-    font-weight: 600;
-    color: $color-text-primary;
-    margin: 0;
-    
-    i {
-        color: $color-text-secondary;
+    .toolbar-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
     }
-}
 
-.toolbar-subtitle {
-    font-size: 13px;
-    color: $color-text-tertiary;
-    font-weight: 400;
-}
-
-.toolbar-hint {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    color: $color-text-tertiary;
-
-    i {
-        font-size: 12px;
-    }
-}
-
-// ============================================
-// TOOLBAR BUTTONS
-// ============================================
-
-.toolbar-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 12px;
-    background: $color-bg-primary;
-    color: $color-text-secondary;
-    border: 1px solid $color-border;
-    border-radius: $radius-md;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all $transition;
-    white-space: nowrap;
-    flex-shrink: 0;
-
-    i {
-        font-size: 14px;
+    .toolbar-right {
+        display: flex;
+        align-items: center;
+        gap: 8px;
         flex-shrink: 0;
+        flex-wrap: nowrap;
     }
-    
-    .chevron-icon {
-        font-size: 10px;
-        margin-left: 2px;
-    }
-    
-    &:hover:not(:disabled) {
-        background: $color-bg-tertiary;
-        border-color: darken($color-border, 5%);
+
+    .toolbar-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 16px;
+        font-weight: 600;
         color: $color-text-primary;
-    }
-    
-    &:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-    
-    // Dark button variant (for Export)
-    &.toolbar-btn-dark {
-        background: $color-text-primary;
-        color: white;
-        border-color: $color-text-primary;
-        
+        margin: 0;
+
         i {
+            color: $color-text-secondary;
+        }
+    }
+
+    .toolbar-subtitle {
+        font-size: 13px;
+        color: $color-text-tertiary;
+        font-weight: 400;
+    }
+
+    .toolbar-hint {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: $color-text-tertiary;
+
+        i {
+            font-size: 12px;
+        }
+    }
+
+    // ============================================
+    // TOOLBAR BUTTONS (scoped)
+    // ============================================
+
+    .toolbar-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 12px;
+        width: auto;
+        height: auto;
+        background: $color-bg-primary;
+        color: $color-text-secondary;
+        border: 1px solid $color-border;
+        border-radius: $radius-md;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all $transition;
+        white-space: nowrap;
+        flex-shrink: 0;
+
+        i {
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .chevron-icon {
+            font-size: 10px;
+            margin-left: 2px;
+        }
+
+        &:hover:not(:disabled) {
+            background: $color-bg-tertiary;
+            border-color: darken($color-border, 5%);
+            color: $color-text-primary;
+        }
+
+        &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        // Dark button variant (for Export)
+        &.toolbar-btn-dark {
+            background: $color-text-primary;
             color: white;
+            border-color: $color-text-primary;
+
+            i {
+                color: white;
+            }
+
+            &:hover:not(:disabled) {
+                background: darken($color-text-primary, 10%);
+                border-color: darken($color-text-primary, 10%);
+            }
         }
-        
-        &:hover:not(:disabled) {
-            background: darken($color-text-primary, 10%);
-            border-color: darken($color-text-primary, 10%);
+
+        &.toolbar-btn-primary {
+            background: #334155;  // slate-700
+            color: white;
+            border-color: #334155;
+
+            &:hover:not(:disabled) {
+                background: #1e293b;  // slate-800
+                border-color: #1e293b;
+            }
+        }
+
+        &.toolbar-btn-warning {
+            background: rgba(51, 65, 85, 0.1);  // slate with opacity
+            color: #334155;
+            border-color: rgba(51, 65, 85, 0.3);
+
+            &:hover:not(:disabled) {
+                background: rgba(51, 65, 85, 0.2);
+            }
         }
     }
-    
-    &.toolbar-btn-primary {
-        background: #334155;  // slate-700
-        color: white;
-        border-color: #334155;
-
-        &:hover:not(:disabled) {
-            background: #1e293b;  // slate-800
-            border-color: #1e293b;
-        }
-    }
-
-    &.toolbar-btn-warning {
-        background: rgba(51, 65, 85, 0.1);  // slate with opacity
-        color: #334155;
-        border-color: rgba(51, 65, 85, 0.3);
-
-        &:hover:not(:disabled) {
-            background: rgba(51, 65, 85, 0.2);
-        }
-    }
-}
+} // end .documentation-toolbar
 
 // ============================================
 // CONFIDENCE INDICATOR
@@ -1421,45 +1424,47 @@ $transition: 0.15s ease;
         border-color: #334155;
     }
     
-    .toolbar-title {
-        color: #f1f5f9;
-    }
-    
-    .toolbar-subtitle {
-        color: #64748b;
-    }
-
-    .toolbar-hint {
-        color: #64748b;
-    }
-    
-    .toolbar-btn {
-        background: #1e293b;
-        color: #94a3b8;
-        border-color: #334155;
-        
-        &:hover:not(:disabled) {
-            background: #334155;
+    .documentation-toolbar {
+        .toolbar-title {
             color: #f1f5f9;
         }
-        
-        &.toolbar-btn-dark {
-            background: #f1f5f9;
-            color: #0f172a;
-            border-color: #f1f5f9;
-            
-            &:hover:not(:disabled) {
-                background: #e2e8f0;
-            }
+
+        .toolbar-subtitle {
+            color: #64748b;
         }
-        
-        &.toolbar-btn-primary {
-            background: #64748b;  // slate-500 (lighter in dark mode)
-            border-color: #64748b;
+
+        .toolbar-hint {
+            color: #64748b;
+        }
+
+        .toolbar-btn {
+            background: #1e293b;
+            color: #94a3b8;
+            border-color: #334155;
 
             &:hover:not(:disabled) {
-                background: #475569;  // slate-600
-                border-color: #475569;
+                background: #334155;
+                color: #f1f5f9;
+            }
+
+            &.toolbar-btn-dark {
+                background: #f1f5f9;
+                color: #0f172a;
+                border-color: #f1f5f9;
+
+                &:hover:not(:disabled) {
+                    background: #e2e8f0;
+                }
+            }
+
+            &.toolbar-btn-primary {
+                background: #64748b;  // slate-500 (lighter in dark mode)
+                border-color: #64748b;
+
+                &:hover:not(:disabled) {
+                    background: #475569;  // slate-600
+                    border-color: #475569;
+                }
             }
         }
     }

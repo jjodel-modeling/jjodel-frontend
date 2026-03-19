@@ -988,5 +988,10 @@ i.bi {
     }
   }
 
+// Hide rc-dock divider on right panel (prevent external resize)
+.dock-style-editors > .dock-divider {
+  display: none !important;
+  pointer-events: none !important;
+}
 
 }

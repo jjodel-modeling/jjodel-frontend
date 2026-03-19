@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Info } from './Info';
 import { NodeEditor } from './NodeEditor';
@@ -13,22 +13,13 @@ import '../TreeViewSidebar/tree-view-sidebar.scss';
  *
  * A split panel that combines:
  * - Left: Properties of the selected element (FLUID - takes remaining space)
- * - Right: Tree View of the metamodel hierarchy (FIXED WIDTH in pixels)
+ * - Right: Tree View of the metamodel hierarchy (FIXED 260px)
  *
  * The Tree View can be toggled on/off with a button in the header.
- * The Tree View width is resizable via a draggable divider.
  * Auto-expands when JjScript execution starts.
  */
 
-// Tree View width constraints (in pixels)
-const TREE_VIEW_MIN_WIDTH = 200;
-const TREE_VIEW_MAX_WIDTH = 500;
-
-// Minimum Properties panel width (in pixels)
-const PROPERTIES_MIN_WIDTH = 300;
-
-// Auto-hide threshold: if container is narrower than this, hide Tree View
-const AUTO_HIDE_THRESHOLD = 650;
+const TREE_VIEW_WIDTH = 260;
 
 interface PropertiesWithTreeViewProps {
     mode: 'popup' | 'tab' | 'inline';
@@ -36,9 +27,6 @@ interface PropertiesWithTreeViewProps {
 
 export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ mode }) => {
     const containerRef = useRef<HTMLDivElement>(null);
-    const isResizing = useRef(false);
-    const startXRef = useRef(0);
-    const startWidthRef = useRef(0);
 
     // Expert/Advanced mode — controls visibility of NODE section
     const advanced = useSelector((state: any) => state.advanced);
@@ -48,15 +36,9 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     const {
         isVisible: isTreeViewVisible,
         toggle: toggleTreeView,
-        hide: hideTreeView,
         isHighlighted,
-        width: treeViewWidth,
-        setWidth: setTreeViewWidth,
         isScriptExecuting,
-        activeEditorType,
     } = useTreeViewPanel();
-
-    const isModelingEditor = activeEditorType === 'model' || activeEditorType === 'metamodel';
 
     // Listen for external toggle events (e.g., from keyboard shortcut)
     useEffect(() => {
@@ -69,146 +51,51 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
         };
     }, [toggleTreeView]);
 
-    // Handle resize start
-    const handleResizeStart = useCallback((e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        isResizing.current = true;
-        startXRef.current = e.clientX;
-        startWidthRef.current = treeViewWidth;
-
-        document.body.style.cursor = 'col-resize';
-        document.body.style.userSelect = 'none';
-        document.body.classList.add('resizing-tree-view');
-        // Add class to container for visual feedback
-        containerRef.current?.classList.add('is-resizing');
-    }, [treeViewWidth]);
-
-    // Handle resize move and end
-    useEffect(() => {
-        const handleMouseMove = (e: MouseEvent) => {
-            if (!isResizing.current || !containerRef.current) return;
-
-            // Calculate delta (negative = dragging left = wider tree)
-            const deltaX = startXRef.current - e.clientX;
-            let newWidth = startWidthRef.current + deltaX;
-
-            // Clamp between min and max
-            newWidth = Math.max(TREE_VIEW_MIN_WIDTH, Math.min(TREE_VIEW_MAX_WIDTH, newWidth));
-
-            // Also ensure Properties panel doesn't get too narrow
-            const containerWidth = containerRef.current.getBoundingClientRect().width;
-            const maxTreeWidth = containerWidth - PROPERTIES_MIN_WIDTH - 8; // 8px for resizer
-            newWidth = Math.min(newWidth, maxTreeWidth);
-
-            setTreeViewWidth(newWidth);
-        };
-
-        const handleMouseUp = () => {
-            if (isResizing.current) {
-                isResizing.current = false;
-                document.body.style.cursor = '';
-                document.body.style.userSelect = '';
-                document.body.classList.remove('resizing-tree-view');
-                containerRef.current?.classList.remove('is-resizing');
-            }
-        };
-
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
-
-        return () => {
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-            document.body.style.cursor = '';
-            document.body.style.userSelect = '';
-            document.body.classList.remove('resizing-tree-view');
-        };
-    }, [setTreeViewWidth]);
-
-    // Auto-hide Tree View when container is too narrow
-    useEffect(() => {
-        const checkWidth = () => {
-            if (!containerRef.current) return;
-            const containerWidth = containerRef.current.getBoundingClientRect().width;
-
-            // Auto-hide if too narrow and tree is visible
-            if (containerWidth < AUTO_HIDE_THRESHOLD && isTreeViewVisible) {
-                hideTreeView();
-            }
-        };
-
-        // Check on mount and on resize
-        checkWidth();
-        window.addEventListener('resize', checkWidth);
-
-        return () => {
-            window.removeEventListener('resize', checkWidth);
-        };
-    }, [isTreeViewVisible, hideTreeView]);
-
     // For non-tab modes, just render Info without the split
     if (mode !== 'tab') {
         return <Info mode={mode} />;
     }
+
+    // Right panel visibility is controlled by CSS via body[data-editor-type].
+    // Always render content so it's ready when the panel becomes visible.
 
     return (
         <div
             ref={containerRef}
             className={`properties-with-tree-view ${isTreeViewVisible ? 'tree-visible' : 'tree-hidden'}`}
         >
-            {/* Properties Panel (Left) - FLUID, only for modeling editors */}
-            {isModelingEditor && (
-                <div className="properties-panel-container">
-                    <Info mode={mode} />
+            {/* Properties Panel (Left) - FLUID */}
+            <div className="properties-panel-container">
+                <Info mode={mode} />
 
-                    {/* NODE section — Expert mode only */}
-                    {advanced && (
-                        <div className="properties-node-section">
-                            <button
-                                className="properties-node-section__header"
-                                onClick={() => setNodeOpen(!nodeOpen)}
-                                type="button"
-                            >
-                                <i className={`bi bi-chevron-${nodeOpen ? 'down' : 'right'}`} />
-                                <i className="bi bi-bounding-box-circles" />
-                                <span>NODE</span>
-                            </button>
-                            {nodeOpen && (
-                                <div className="properties-node-section__content">
-                                    <NodeEditor />
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-            )}
+                {/* NODE section — Expert mode only */}
+                {advanced && (
+                    <div className="properties-node-section">
+                        <button
+                            className="properties-node-section__header"
+                            onClick={() => setNodeOpen(!nodeOpen)}
+                            type="button"
+                        >
+                            <i className={`bi bi-chevron-${nodeOpen ? 'down' : 'right'}`} />
+                            <i className="bi bi-bounding-box-circles" />
+                            <span>NODE</span>
+                        </button>
+                        {nodeOpen && (
+                            <div className="properties-node-section__content">
+                                <NodeEditor />
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
 
             {/* Tree View Panel (Right) - Expanded */}
             {isTreeViewVisible ? (
                 <>
-                    {/* Resizable Divider */}
-                    <div
-                        className="panel-resizer"
-                        onMouseDown={handleResizeStart}
-                        title="Drag to resize - Double-click to reset"
-                        role="separator"
-                        aria-orientation="vertical"
-                        aria-label="Resize tree view"
-                        tabIndex={0}
-                    >
-                        <i className="bi bi-grip-vertical resize-grip-icon-vertical" />
-                    </div>
-
-                    {/* Tree View - FIXED WIDTH with transitions */}
+                    {/* Tree View - FIXED WIDTH */}
                     <div
                         className={`tree-view-panel-container ${isHighlighted ? 'tree-view-panel-container--highlighted' : ''} ${isScriptExecuting ? 'tree-view-panel-container--executing' : ''}`}
-                        style={{
-                            flexBasis: `${treeViewWidth}px`,
-                            width: `${treeViewWidth}px`,
-                            minWidth: `${TREE_VIEW_MIN_WIDTH}px`,
-                            maxWidth: `${TREE_VIEW_MAX_WIDTH}px`
-                        }}
+                        style={{ width: `${TREE_VIEW_WIDTH}px`, minWidth: `${TREE_VIEW_WIDTH}px`, maxWidth: `${TREE_VIEW_WIDTH}px` }}
                     >
                         <div className="tree-view-panel-header">
                             <i className="bi bi-diagram-2" />

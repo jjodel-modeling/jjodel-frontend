@@ -83,8 +83,15 @@ class DockManager {
 
     static async open(group: 'models'|'editors', tab: TabData): Promise<void> {
         if(!DockManager.dock) return;
+        // Guard: if a tab with this ID already exists, just activate it
+        if (tab.id) {
+            const existing = DockManager.dock.find(tab.id);
+            if (existing && 'content' in existing) {
+                DockManager.dock.updateTab(tab.id, null as any, true);
+                return;
+            }
+        }
         const index = (group === 'models') ? 0 : 1;
-        console.log("TabManager open()", group, tab);
         DockManager.dock.dockMove(tab, DockManager.dock.getLayout().dockbox.children[index], 'middle');
     }
 
@@ -92,6 +99,7 @@ class DockManager {
         const tab = (me.isMetamodel) ? TabDataMaker.metamodel(me) : TabDataMaker.model(me);
         await DockManager.open('models', tab);
         const editorType = me.isMetamodel ? 'metamodel' : 'model';
+        console.log('[OPEN2] about to dispatch', { editorType });
         window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
             detail: { editorType }
         }));

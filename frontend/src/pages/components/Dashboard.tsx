@@ -20,7 +20,7 @@ import { RightPanel } from './RightPanel';
 import { Badge } from '../../components/common/Badge';
 
 import '../dashboard.scss'
-import React, {JSX, ReactElement, useRef, useState} from "react";
+import React, {JSX, ReactElement, useEffect, useRef, useState} from "react";
 import {Btn, CommandBar, Sep} from '../../components/commandbar/CommandBar';
 
 import colors000 from '../../static/img/colors-000.png';
@@ -253,6 +253,14 @@ function GenericDashboard(props: DashProps): any {
     const user: LUser = LPointerTargetable.fromPointer(DUser.current);
     const [isDragging, setIsDragging] = useState(false);
 
+    // Dashboard is not a rc-dock tab, so Dock's handleLayoutChange never fires.
+    // Dispatch 'summary' so panels hide correctly.
+    useEffect(() => {
+        window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
+            detail: { editorType: 'summary' }
+        }));
+    }, []);
+
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
         const items = e.dataTransfer.items;
@@ -410,7 +418,9 @@ function ProjectCatalog(props: ProjectProps) {
                 let name = mm.name
                 return (
                 <div className="row data" key={mm.id}>
-                    <div className={'col-4 '} onClick={async () => await DockManager.open2(mm)}>
+                    <div className={'col-4 '} onClick={async () => {
+                        await DockManager.open2(mm);
+                    }}>
                         <ElementBadge type="metamodel" /> {name}</div>
                     <div className={'col-2 artifact-type'}>Metamodel</div>
                     <div className={'buttons'}>
