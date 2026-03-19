@@ -10,6 +10,7 @@ import {
     Point,
     RuntimeAccessible,
     Size,
+    store,
     Try,
     U,
     windoww
@@ -474,6 +475,8 @@ export class PinnableDock extends DockLayout{
         }
     }
 
+    private _lastActiveId: string | undefined = undefined;
+
     constructor(props: any) {
         super(props);
         //Log.exDevv(PinnableDock.instance, "current PinnableDock is a singleton, cannot make 2 instances", {thiss:this, oldnstance: PinnableDock.instance});
@@ -554,8 +557,43 @@ export class PinnableDock extends DockLayout{
         return tabdata;
     }
 
+    /**
+     * Detect when the active tab in the left (models) panel changes,
+     * and dispatch jjodel:editor-type-change so panels update accordingly.
+     * This catches tab clicks that bypass DockManager entirely.
+     */
+    private _detectActiveTabChange(): void {
+        const layout = this.getLayout();
+        const firstPanel = layout?.dockbox?.children?.[0] as PanelData | undefined;
+        const activeId = (firstPanel as any)?.activeId as string | undefined;
+
+        console.log('[DETECT] called', { lastActiveId: this._lastActiveId, currentActiveId: activeId });
+
+        if (!activeId || activeId === this._lastActiveId) return;
+        this._lastActiveId = activeId;
+
+        let editorType: string;
+        if (activeId.startsWith('jjtl_')) {
+            editorType = 'transformation';
+        } else if (activeId.startsWith('doc_') || activeId.startsWith('DockComponent_rightbar_')) {
+            editorType = 'summary';
+        } else {
+            const rawModel = store.getState().idlookup[activeId] as any;
+            if (rawModel?.className === 'DModel') {
+                editorType = rawModel.isMetamodel ? 'metamodel' : 'model';
+            } else {
+                editorType = 'summary';
+            }
+        }
+
+        window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
+            detail: { editorType }
+        }));
+    }
+
     componentDidUpdate(prevProps: Readonly<LayoutProps>, prevState: Readonly<LayoutState>, snapshot?: any) {
         super.componentDidUpdate(prevProps, prevState, snapshot);
+        this._detectActiveTabChange();
         if (this.state.dropRect) {
             let droparea = this.state.dropRect.element;
             if (!droparea || droparea.classList.contains('dock-style-models')) return;
