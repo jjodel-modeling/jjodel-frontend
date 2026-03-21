@@ -66,6 +66,8 @@ import {
     syncCreateCompositionLink,
     syncCreateReferenceLink,
     syncEdgeRefKind,
+    syncRemoveAttribute,
+    syncRemoveOperation,
     nextUniqueName,
     getModelInfo,
     setModelName,
@@ -213,6 +215,8 @@ interface ContextMenuState {
     y: number;
     nodeId?: string;
     edgeId?: string;
+    childId?: string;
+    childKind?: 'attr' | 'op';
     isMultiSelect?: boolean;
     selectedCount?: number;
 }
@@ -1594,6 +1598,23 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
         setContextMenu(null);
     }, []);
 
+    // Listen for child-element context menu events from ClassNode
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const { childId, childKind, nodeId, x, y } = (e as CustomEvent).detail;
+            const rect = editorContainerRef.current?.getBoundingClientRect();
+            setContextMenu({
+                x: x - (rect?.left ?? 0),
+                y: y - (rect?.top ?? 0),
+                nodeId,
+                childId,
+                childKind,
+            });
+        };
+        window.addEventListener('jjodel:child-context-menu', handler);
+        return () => window.removeEventListener('jjodel:child-context-menu', handler);
+    }, []);
+
     // Shared helper: create a composition child on a parent node
     const createCompositionChild = (parentNode: Node, childClass: MetaclassInfo, refName: string) => {
         if (!graphId) return;
@@ -1680,6 +1701,42 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
             );
 
             return items;
+        }
+
+        // Child element context menu (attribute/operation)
+        if (contextMenu?.nodeId && contextMenu.childId) {
+            const childLabel = contextMenu.childKind === 'attr' ? 'Attribute' : 'Operation';
+            return [
+                {
+                    label: `Delete ${childLabel}`,
+                    icon: 'bi-trash',
+                    danger: true,
+                    onClick: () => {
+                        takeSnapshot();
+                        if (contextMenu.childKind === 'attr') {
+                            syncRemoveAttribute(contextMenu.childId!, contextMenu.nodeId!);
+                        } else {
+                            syncRemoveOperation(contextMenu.childId!, contextMenu.nodeId!);
+                        }
+                        setNodes(nds => nds.map(n => {
+                            if (n.id !== contextMenu.nodeId) return n;
+                            const data = n.data as ClassNodeData;
+                            return {
+                                ...n,
+                                data: {
+                                    ...data,
+                                    attributes: contextMenu.childKind === 'attr'
+                                        ? data.attributes.filter(a => a.id !== contextMenu.childId)
+                                        : data.attributes,
+                                    operations: contextMenu.childKind === 'op'
+                                        ? (data.operations || []).filter(o => o.id !== contextMenu.childId)
+                                        : data.operations,
+                                },
+                            };
+                        }));
+                    },
+                },
+            ];
         }
 
         // Single node context menu

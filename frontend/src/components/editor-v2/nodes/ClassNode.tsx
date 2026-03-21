@@ -286,7 +286,14 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                             {attributes.map((attr) => {
                                 const bounds = formatBounds(attr.lowerBound ?? 0, attr.upperBound ?? 1);
                                 return (
-                                    <div key={attr.id} className="mm-field" onClick={() => handleChildClick(attr.id)}>
+                                    <div key={attr.id} className="mm-field" onClick={() => handleChildClick(attr.id)}
+                                        onContextMenu={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            window.dispatchEvent(new CustomEvent('jjodel:child-context-menu', {
+                                                detail: { childId: attr.id, childKind: 'attr', nodeId: id, x: e.clientX, y: e.clientY }
+                                            }));
+                                        }}>
                                         {editingField?.id === attr.id && editingField.field === 'name' ? (
                                             <input
                                                 className="mm-field__input"
@@ -355,7 +362,14 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                     {operations.length > 0 && (
                         <div className="mm-node__fields">
                             {operations.map((op) => (
-                                <div key={op.id} className="mm-field mm-operation" onClick={() => handleChildClick(op.id)}>
+                                <div key={op.id} className="mm-field mm-operation" onClick={() => handleChildClick(op.id)}
+                                    onContextMenu={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        window.dispatchEvent(new CustomEvent('jjodel:child-context-menu', {
+                                            detail: { childId: op.id, childKind: 'op', nodeId: id, x: e.clientX, y: e.clientY }
+                                        }));
+                                    }}>
                                     {editingField?.id === op.id && editingField.field === 'name' ? (
                                         <input
                                             className="mm-field__input"
