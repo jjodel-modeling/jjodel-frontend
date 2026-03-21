@@ -1,7 +1,7 @@
 import './style.scss';
 import React, {Dispatch, ReactElement, ReactNode, useEffect, useState} from 'react';
 import {connect} from 'react-redux';
-import {DState, DUser, LProject, LUser, store} from '../../joiner';
+import {DState, DUser, LUser} from '../../joiner';
 import {FakeStateProps, windoww} from '../../joiner/types';
 import {LayoutData} from 'rc-dock';
 import {Collaborative, Console, Logger, MetaData, NestedView} from "../editors";
@@ -252,29 +252,6 @@ function DockComponent(props: AllProps) {
 
         window.addEventListener('jjodel:editor-type-change', handleEditorTypeChange);
 
-        // Fire initial editor type based on currently active tab
-        // (the event is only fired on tab change, not on initial load)
-        setTimeout(() => {
-            const initialLayout = DockManager.dock?.getLayout();
-            const firstChild = initialLayout?.dockbox?.children?.[0] as any;
-            const activeId = firstChild?.activeId;
-            let initialType = 'summary';
-            if (activeId && typeof activeId === 'string') {
-                if (activeId.startsWith('jjtl_')) {
-                    initialType = 'transformation';
-                } else if (!activeId.startsWith('doc_') && !activeId.startsWith('DockComponent_rightbar_')) {
-                    const state = store.getState() as any;
-                    const element = state[activeId];
-                    if (element?.className === 'DModel') {
-                        initialType = element.isMetamodel ? 'metamodel' : 'model';
-                    }
-                }
-            }
-            window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
-                detail: { editorType: initialType }
-            }));
-        }, 0);
-
         return () => {
             window.removeEventListener('jjodel:editor-type-change', handleEditorTypeChange);
             document.body.removeAttribute('data-editor-type');
@@ -358,7 +335,7 @@ function DockComponent(props: AllProps) {
         const activeId = newLayout?.dockbox?.children?.[0]?.activeId;
         if (!activeId) return;
 
-        // Evento già esistente per StatusBar — mantenerlo
+        // Evento per StatusBar — mantenerlo
         window.dispatchEvent(new CustomEvent('jjodel:active-tab', { detail: { activeId } }));
 
         // Hide properties panel when Documentation tab is active
@@ -368,31 +345,6 @@ function DockComponent(props: AllProps) {
         } else {
             document.body.removeAttribute('data-active-tab');
         }
-
-        // Determine editor type from active tab ID and update data-editor-type
-        let editorType: string;
-        if (activeId.startsWith('jjtl_')) {
-            editorType = 'transformation';
-        } else if (activeId.startsWith('doc_')) {
-            editorType = 'summary';
-        } else if (activeId.startsWith('DockComponent_rightbar_')) {
-            editorType = 'summary';
-        } else {
-            const state = store.getState() as any;
-            const rawModel = state[activeId];
-            if (rawModel?.className === 'DModel' && rawModel?.isMetamodel === true) {
-                editorType = 'metamodel';
-            } else if (rawModel?.className === 'DModel' && rawModel?.isMetamodel === false) {
-                editorType = 'model';
-            } else {
-                editorType = 'summary';
-            }
-        }
-
-        document.body.setAttribute('data-editor-type', editorType);
-        window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
-            detail: { editorType }
-        }));
     };
 
     return (<PinnableDock key={''+advanced} ref={dock => { DockManager.dock = dock }} defaultLayout={layout} groups={groups} onLayoutChange={handleLayoutChange} />);

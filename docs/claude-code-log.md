@@ -1,5 +1,105 @@
 # Claude Code Session Log
 
+## 2026-03-19 — Fix: Properties panel empty when metamodel is empty or nothing selected
+
+### Problem
+When a metamodel had no elements (empty) or when clicking the canvas to deselect, the Properties panel showed nothing. `_lastSelected.modelElement` was either `undefined` (deselectAll else branch) or not set at all (useEffect guard skipped when `findModelElement` returned falsy for empty models).
+
+### Root Cause
+1. **useEffect:** `findModelElement()` returns a class/package ID, but for empty metamodels there are none. The `if (modelElement)` guard prevented setting `_lastSelected` at all.
+2. **deselectAll else branch:** When `findModelElement` returned null/undefined, the code set `_lastSelected` to `undefined`, which meant Info.tsx received no `dataID` and rendered the empty state.
+
+### Fix (useJjomSelection.ts only)
+1. **useEffect:** Removed the `if (modelElement)` guard. Now always sets `_lastSelected` with `modelElement ?? modelid` — falls back to the model ID itself.
+2. **deselectAll else branch:** Instead of setting `undefined`, sets `modelElement: modelid` — points to the model itself.
+
+### Why it works
+`Info.tsx` receives `dataID = modelid`, resolves it via `LModelElement.fromPointer(modelid)` which returns the `LModel` root, and renders `PropertiesOverview` with the metamodel stats.
+
+### Files Modified
+- `frontend/src/components/editor-v2/hooks/useJjomSelection.ts` — two changes (useEffect fallback + deselectAll else branch)
+
+### Build Verification
+- TypeScript: no new errors (`npx tsc --noEmit`)
+- Pre-existing errors in DockManager.ts:237, MetamodelTab.tsx unchanged
+
+---
+
+## 2026-03-19 — Rollback: revert "Properties panel shows model overview" (caused white page)
+
+### What happened
+The previous change added a DockManager-based fallback in `mapStateToProps` (Info.tsx) to show the active model's overview when nothing was selected. This caused a white page on load — `LModel.fromPointer(activeId)` likely threw before DockManager was fully initialized, despite the try/catch.
+
+### Rollback
+- Removed the `// When nothing is selected` block from `mapStateToProps`
+- Removed the `DockManager` import
+- `mapStateToProps` restored to its original form (just nodeID/viewID/dataID + topics + advanced)
+
+### Files Modified
+- `frontend/src/components/editors/Info.tsx` — reverted to original `mapStateToProps`
+
+---
+
+## 2026-03-19 — UI polish: empty state scrollbar + minimal resize handle
+
+### Fix 1: No scrollbar when "No element selected"
+**Problem:** The Properties panel showed a scrollbar even when displaying the empty state (no element selected). The `.properties-panel` rule had `overflow-y: auto` which created a scrollbar when the empty state content was slightly taller than the container.
+**Fix:** Added `.properties-panel--empty { overflow: hidden; }` inside `.properties-panel-container` in `properties-with-tree-view.scss`. The `--empty` class is already applied by Info.tsx when no element is selected.
+
+### Fix 2: Minimal resize handle
+**Problem:** The resize handle used a 16px grip icon with cyan hover effects — visually heavy and inconsistent with the app's minimal aesthetic.
+**Fix:** Replaced with a 1px line design:
+- Visually: 1px line in `#e2e8f0` (slate-200), becomes `#94a3b8` (slate-400) on hover
+- Hit area: 5px (transparent padding around the line)
+- Supports both `horizontal` (row-resize) and `vertical` (col-resize) orientations via `orientation` prop
+- No decorative elements (no grip dots, no icon, no shadow)
+- Removed debug console.log statements
+- Simplified keyboard handling (removed synthetic mouse event hack)
+
+### Files Modified
+- `frontend/src/components/editors/properties-with-tree-view.scss` — added `overflow: hidden` for empty state
+- `frontend/src/components/ResizeHandle/ResizeHandle.tsx` — simplified to minimal divider with orientation prop
+- `frontend/src/components/ResizeHandle/resize-handle.scss` — rewritten: 1px line + 5px hit area
+
+---
+
+## 2026-03-19 — Refactor: remove duplicate editor-type-change dispatch from Dock.tsx
+
+### Problem
+`editor-type-change` was dispatched from three places: `DockManager.open2()`, `_detectActiveTabChange()` in MyRcDock.tsx, and `handleLayoutChange` in Dock.tsx. The Dock.tsx dispatch was redundant (and had the same `state[activeId]` bug) now that MyRcDock catches all tab switches via `componentDidUpdate`.
+
+### Changes
+- Removed the `editor-type-change` dispatch block from `handleLayoutChange` in Dock.tsx. Kept only `jjodel:active-tab` (StatusBar) and `data-active-tab` (documentation panel hiding).
+- Removed the `setTimeout` initial dispatch block — `_detectActiveTabChange()` fires on first `componentDidUpdate` and handles initial detection.
+- Removed unused `store` and `LProject` imports.
+
+### Dispatch points after this change
+- `DockManager.open2()` — card click opens model/metamodel
+- `DockManager.openDocumentation()` — opens documentation tab
+- `DockManager.openTransformation()` — opens transformation tab
+- `_detectActiveTabChange()` in MyRcDock.tsx — all tab switches (componentDidUpdate)
+
+### Files Modified
+- `frontend/src/components/abstract/Dock.tsx` — removed redundant dispatch, cleaned imports
+
+---
+
+## 2026-03-19 — Fix: click on active tab hides panels
+
+### Problem
+Clicking the already-active tab caused panels (TreeView, Properties) to disappear. The `_detectActiveTabChange()` method treated `DockComponent_rightbar_*` IDs as real editor switches, dispatching `editorType: 'summary'` which collapsed the panels via CSS.
+
+### Root Cause
+When rc-dock internally refocuses the first panel, `activeId` can momentarily resolve to a `DockComponent_rightbar_*` tab. `_detectActiveTabChange()` processed this as a real tab change and dispatched a `summary` editor type, triggering the CSS rules that hide TreeView and Properties panels.
+
+### Fix
+Added an early return guard in `_detectActiveTabChange()` to ignore `DockComponent_rightbar_*` IDs entirely — these are internal rc-dock artifacts, not real editor switches.
+
+### Files Modified
+- `frontend/src/components/dock/MyRcDock.tsx` — added `DockComponent_rightbar_` guard
+
+---
+
 ## 2026-03-19 — Fix: _detectActiveTabChange resolves metamodel/model correctly
 
 ### Problem

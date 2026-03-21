@@ -2,73 +2,40 @@ import React from 'react';
 import './resize-handle.scss';
 
 interface ResizeHandleProps {
-  onMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void;  // ✅ Required event parameter
+  onMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void;
   isDragging: boolean;
+  orientation?: 'horizontal' | 'vertical';
   onDoubleClick?: () => void;
   className?: string;
 }
 
 /**
- * ResizeHandle - Draggable handle for resizing console
- *
- * Features:
- * - Horizontal bar with indicator
- * - Hover and dragging visual feedback
- * - Double-click to reset (optional)
- * - Keyboard support for accessibility
- * - Prevents default drag behavior
+ * ResizeHandle - Minimal draggable divider for resizing panels.
+ * Visually a 1px line; hit area is 5px for usability.
  */
 export const ResizeHandle: React.FC<ResizeHandleProps> = ({
   onMouseDown,
   isDragging,
+  orientation = 'horizontal',
   onDoubleClick,
   className = ''
 }) => {
-  // ✅ Internal wrapper that prevents default and passes event
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    console.log('[ResizeHandle] handleMouseDown called');
-    e.preventDefault();      // Prevent text selection
-    e.stopPropagation();     // Stop event bubbling
-    console.log('[ResizeHandle] calling parent onMouseDown');
-    onMouseDown(e);          // Pass event to parent callback
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    // Keyboard support for accessibility
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      // Create a synthetic mouse event for keyboard activation
-      const syntheticEvent = {
-        preventDefault: () => {},
-        stopPropagation: () => {},
-        clientY: window.innerHeight / 2
-      } as React.MouseEvent<HTMLDivElement>;
-      onMouseDown(syntheticEvent);  // Call with synthetic event
-    }
-
-    if (e.key === 'Escape' && isDragging) {
-      e.preventDefault();
-      // Dragging will be stopped by mouseup event
-    }
+    e.preventDefault();
+    e.stopPropagation();
+    onMouseDown(e);
   };
 
   return (
     <div
-      className={`resize-handle ${isDragging ? 'dragging' : ''} ${className}`}
-      onMouseDown={handleMouseDown}  // ✅ Use wrapper
+      className={`resize-handle resize-handle--${orientation} ${isDragging ? 'dragging' : ''} ${className}`}
+      onMouseDown={handleMouseDown}
       onDoubleClick={onDoubleClick}
       role="separator"
-      aria-orientation="horizontal"
-      aria-label="Resize console panel"
-      aria-valuenow={isDragging ? 1 : 0}
+      aria-orientation={orientation}
+      aria-label="Resize panel"
       tabIndex={0}
-      onKeyDown={handleKeyDown}
-      title="Drag to resize - Double-click to reset"
-    >
-      <div className="resize-handle__track">
-        <i className="bi bi-grip-horizontal resize-handle__icon" />
-      </div>
-    </div>
+    />
   );
 };
 

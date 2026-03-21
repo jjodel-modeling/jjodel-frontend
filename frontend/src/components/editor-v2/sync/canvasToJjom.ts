@@ -401,11 +401,23 @@ export function syncUpdateAttribute(
     _vertexId: string,
 ): void {
     try {
-        // Don't markCanvasUpdated here — the sync should re-transform this
-        // vertex from JjOM so the cache stays fresh. The local setNodes()
-        // in ClassNode provides immediate feedback; the sync confirms it.
         const lAttr: any = LPointerTargetable.fromPointer(attrId);
-        if (lAttr) {
+        if (!lAttr) return;
+
+        if (field === 'type' && typeof value === 'string') {
+            const options = lAttr.validTargetOptions || [];
+            let pointerId: string | null = null;
+            for (const group of options) {
+                if (group.options) {
+                    const match = group.options.find((opt: any) => opt.label === value);
+                    if (match) { pointerId = match.value; break; }
+                } else if (group.value && group.label === value) {
+                    pointerId = group.value;
+                    break;
+                }
+            }
+            lAttr.type = pointerId || value;
+        } else {
             (lAttr as any)[field] = value;
         }
     } catch (err) {
@@ -471,9 +483,23 @@ export function syncUpdateOperation(
     vertexId: string,
 ): void {
     try {
-
         const lOp: any = LPointerTargetable.fromPointer(opId);
-        if (lOp) {
+        if (!lOp) return;
+
+        if (field === 'returnType' && typeof value === 'string') {
+            const options = lOp.validTargetOptions || [];
+            let pointerId: string | null = null;
+            for (const group of options) {
+                if (group.options) {
+                    const match = group.options.find((opt: any) => opt.label === value);
+                    if (match) { pointerId = match.value; break; }
+                } else if (group.value && group.label === value) {
+                    pointerId = group.value;
+                    break;
+                }
+            }
+            lOp.returnType = pointerId || value;
+        } else {
             (lOp as any)[field] = value;
         }
     } catch (err) {

@@ -113,7 +113,7 @@ Respond ONLY with a JSON array of mapping suggestions. No explanation, no markdo
         "targetAttribute": "attrName",
         "confidence": "medium",
         "reason": "Explanation",
-        "conversionHint": "optional conversion hint"
+        "conversionHint": "sourceAttr.toUpper()"
     }
 ]
 
@@ -121,7 +121,8 @@ Notes:
 - sourceAttribute/targetAttribute should be null for class-level mappings
 - confidence should be "high", "medium", or "low"
 - Only suggest mappings you are confident about
-- Quality over quantity`;
+- Quality over quantity
+- conversionHint MUST be a valid JjEL expression (e.g., "name.toUpper()", "value.toString()", "true=1, false=0") or omitted entirely. NEVER put human-readable text or notes in conversionHint — use the "reason" field for explanations instead. If no conversion is needed, omit conversionHint.`;
     }
 
     /**

@@ -144,7 +144,11 @@ function deselectAll(modelid: string): void {
                     modelElement,
                 });
             } else {
-                SetRootFieldAction.new('_lastSelected' as any, undefined as any);
+                SetRootFieldAction.new('_lastSelected' as any, {
+                    node: '',
+                    view: '',
+                    modelElement: modelid,  // punta al model stesso invece di undefined
+                });
             }
         });
     } catch (err) {
@@ -180,28 +184,28 @@ export function useJjomSelection(
     useEffect(() => {
         if (!modelid) return;
         const modelElement = findModelElement(modelid);
-        if (modelElement) {
-            SetRootFieldAction.new('_lastSelected' as any, {
-                node: '',
-                view: '',
-                modelElement,
-            });
-        }
+        SetRootFieldAction.new('_lastSelected' as any, {
+            node: '',
+            view: '',
+            modelElement: modelElement ?? modelid,  // fallback al model stesso
+        });
     }, [modelid]);
 
     const onNodeClick = useCallback(
-        (_event: React.MouseEvent, node: Node) => {
-            if (isJjomMode && modelid) selectElement(node.id, modelid);
-        },
-        [isJjomMode, modelid],
-    );
+    (_event: React.MouseEvent, node: Node) => {
+        _event.stopPropagation();  // ← aggiungi questo
+        if (isJjomMode && modelid) selectElement(node.id, modelid);
+    },
+    [isJjomMode, modelid],
+);
 
-    const onEdgeClick = useCallback(
-        (_event: React.MouseEvent, edge: Edge) => {
-            if (isJjomMode && modelid) selectElement(edge.id, modelid);
-        },
-        [isJjomMode, modelid],
-    );
+const onEdgeClick = useCallback(
+    (_event: React.MouseEvent, edge: Edge) => {
+        _event.stopPropagation();  // ← aggiungi questo
+        if (isJjomMode && modelid) selectElement(edge.id, modelid);
+    },
+    [isJjomMode, modelid],
+);
 
     const onPaneClick = useCallback(() => {
         if (!modelid) return;

@@ -40,6 +40,7 @@ function CollapsibleSection(props: { title: string; defaultOpen?: boolean; child
                 type="button"
                 className="props-section__header"
                 onClick={() => setOpen(!open)}
+                tabIndex={-1}
             >
                 <span className="props-section__title">{title}</span>
                 <i className={`bi bi-chevron-right props-section__chevron ${open ? 'props-section__chevron--open' : ''}`} />
@@ -691,7 +692,8 @@ class builder {
                         </div>
                         <div className="jj-slot-header-right">
                             <span className="jj-slot-type">{typeName}</span>
-                            {isMultiValued && (
+
+                            {(upperBound === -1 || filteredValues.length < upperBound) && (
                                 <button className="jj-slot-add" onClick={add} disabled={filteredValues.length >= upperBound} title={`Add ${data.name} value`}>+</button>
                             )}
                         </div>

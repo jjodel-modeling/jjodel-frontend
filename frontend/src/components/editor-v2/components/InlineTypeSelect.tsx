@@ -80,13 +80,20 @@ function InlineTypeSelect({ value, onChange, onClose }: InlineTypeSelectProps) {
     };
 
     return (
+
         <div
             ref={containerRef}
             className="inline-type-select"
             onKeyDown={handleKeyDown}
+            onClick={(e) => e.stopPropagation()}  // ← aggiungi questo
+            onMouseDown={(e) => e.stopPropagation()}  // ← e questo
             tabIndex={0}
             autoFocus
         >
+
+
+
+
             <div ref={listRef} className="inline-type-select__list">
                 {E_DATA_TYPES.length > 0 && (
                     <div className="inline-type-select__group">Primitives</div>

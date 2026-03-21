@@ -217,13 +217,81 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
         setEditingFeature(null);
     }, [editingFeature, editValue, data.features, id, setNodes, editorContext]);
 
+    const commitPlaceholderEdit = useCallback((attr: { id: string; name: string }) => {
+        if (!editingFeature || editValue === '') {
+            setEditingFeature(null);
+            return;
+        }
+        editorContext?.takeSnapshot();
+        // Add the feature to node data for immediate UI feedback
+        setNodes(nds => nds.map(n => {
+            if (n.id !== id) return n;
+            const nodeData = n.data as ObjectNodeData;
+            return {
+                ...n,
+                data: {
+                    ...nodeData,
+                    features: [
+                        ...nodeData.features,
+                        { id: attr.id, featureName: attr.name, featureKind: 'attribute' as const, value: editValue },
+                    ],
+                },
+            };
+        }));
+        // Sync to JjOM model
+        syncUpdateFeatureValue(id, attr.name, editValue);
+        setEditingFeature(null);
+    }, [editingFeature, editValue, id, setNodes, editorContext]);
+
+    // Build ordered list of all editable slots for Tab navigation
+    const allEditableSlots = useMemo(() => {
+        const slots: Array<{ editId: string; featureName: string; value: string; isPlaceholder: boolean; placeholderAttr?: { id: string; name: string } }> = [];
+        const attrs = data.features?.filter(f => f.featureKind === 'attribute') ?? [];
+        for (const f of attrs) {
+            slots.push({ editId: f.id, featureName: f.featureName, value: f.value, isPlaceholder: false });
+        }
+        for (const attr of missingAttributes) {
+            slots.push({ editId: `placeholder_${attr.id}`, featureName: attr.name, value: '', isPlaceholder: true, placeholderAttr: attr });
+        }
+        return slots;
+    }, [data.features, missingAttributes]);
+
+    const advanceToNextSlot = useCallback((currentEditId: string) => {
+        const idx = allEditableSlots.findIndex(s => s.editId === currentEditId);
+        if (idx < 0 || idx >= allEditableSlots.length - 1) {
+            setEditingFeature(null);
+            return;
+        }
+        const next = allEditableSlots[idx + 1];
+        setEditingFeature({ id: next.editId, featureName: next.featureName });
+        setEditValue(next.isPlaceholder ? '' : next.value);
+    }, [allEditableSlots]);
+
     const handleFeatureKeyDown = useCallback((e: React.KeyboardEvent) => {
         if (e.key === 'Enter') {
             commitFeatureEdit();
         } else if (e.key === 'Escape') {
             setEditingFeature(null);
+        } else if (e.key === 'Tab') {
+            e.preventDefault();
+            const currentId = editingFeature?.id;
+            commitFeatureEdit();
+            if (currentId) advanceToNextSlot(currentId);
         }
-    }, [commitFeatureEdit]);
+    }, [commitFeatureEdit, editingFeature, advanceToNextSlot]);
+
+    const handlePlaceholderKeyDown = useCallback((e: React.KeyboardEvent, attr: { id: string; name: string }) => {
+        if (e.key === 'Enter') {
+            commitPlaceholderEdit(attr);
+        } else if (e.key === 'Escape') {
+            setEditingFeature(null);
+        } else if (e.key === 'Tab') {
+            e.preventDefault();
+            const currentId = `placeholder_${attr.id}`;
+            commitPlaceholderEdit(attr);
+            advanceToNextSlot(currentId);
+        }
+    }, [commitPlaceholderEdit, advanceToNextSlot]);
 
     // ── Render ───────────────────────────────────────────────────────
 
@@ -303,17 +371,45 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                             </div>
                         )})}
                         {/* Lazy co-evolution: optional attributes not yet valorized */}
-                        {missingAttributes.map((attr) => (
-                            <div key={`ph_${attr.id}`} className="mm-field mm-object__feature mm-object__feature--placeholder">
-                                <span className="mm-field__name mm-object__feature-name">
-                                    {attr.name}
-                                </span>
-                                <span className="mm-field__separator">=</span>
-                                <span className="mm-field__type mm-object__feature-value">
-                                    {attr.defaultDisplay}
-                                </span>
-                            </div>
-                        ))}
+                        {missingAttributes.map((attr) => {
+                            const placeholderId = `placeholder_${attr.id}`;
+                            const isEditingThis = editingFeature?.id === placeholderId;
+                            return (
+                                <div key={`ph_${attr.id}`} className={`mm-field mm-object__feature ${isEditingThis ? '' : 'mm-object__feature--placeholder'}`}>
+                                    <span className="mm-field__name mm-object__feature-name">
+                                        {attr.name}
+                                    </span>
+                                    <span className="mm-field__separator">=</span>
+                                    {isEditingThis ? (
+                                        <input
+                                            className="mm-field__input"
+                                            autoFocus
+                                            value={editValue}
+                                            onChange={(e) => setEditValue(e.target.value)}
+                                            onFocus={(e) => e.target.select()}
+                                            onBlur={() => commitPlaceholderEdit(attr)}
+                                            onKeyDown={(e) => handlePlaceholderKeyDown(e, attr)}
+                                        />
+                                    ) : (
+                                        <span
+                                            className="mm-field__type mm-object__feature-value"
+                                            onDoubleClick={() => {
+                                                setEditingFeature({ id: placeholderId, featureName: attr.name });
+                                                setEditValue('');
+                                            }}
+                                            onClick={() => {
+                                                if (selected) {
+                                                    setEditingFeature({ id: placeholderId, featureName: attr.name });
+                                                    setEditValue('');
+                                                }
+                                            }}
+                                        >
+                                            {attr.defaultDisplay}
+                                        </span>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             )}

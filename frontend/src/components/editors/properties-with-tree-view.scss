@@ -59,7 +59,11 @@ $radius-md: 6px;
     .properties-panel {
         height: 100%;
         overflow-y: auto;
+    }
 
+    // Empty state: no scrollbar needed
+    .properties-panel--empty {
+        overflow: hidden;
     }
 }
 

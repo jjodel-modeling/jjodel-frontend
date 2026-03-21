@@ -47,6 +47,31 @@ export interface SuggestedMappingsPanelProps {
 }
 
 /**
+ * Check if a conversionHint looks like a valid JjEL expression.
+ * Plain English text (prose) should be emitted as a -- comment instead of : expr.
+ */
+function isJjelExpression(hint: string): boolean {
+    // Must contain at least one code-like character: operator, paren, dot, digit, bracket, or =
+    return /[().=\[\]><!+\-*/%&|0-9]/.test(hint);
+}
+
+/**
+ * Format a single attribute mapping line in JjTL syntax.
+ * conversionHint is either a JjEL expression (: expr) or falls back to a -- comment.
+ */
+function formatAttrMapping(attr: MappingSuggestion): string {
+    let line = `    ${attr.targetAttribute} := ${attr.sourceAttribute}`;
+    if (attr.conversionHint) {
+        if (isJjelExpression(attr.conversionHint)) {
+            line += ` : ${attr.conversionHint}`;
+        } else {
+            line += `  -- ${attr.conversionHint}`;
+        }
+    }
+    return line;
+}
+
+/**
  * Generate JjTL code from toInsert mapping suggestions
  */
 function generateJjtlCode(mappings: MappingSuggestion[]): string {
@@ -80,11 +105,7 @@ function generateJjtlCode(mappings: MappingSuggestion[]): string {
         if (matchingAttrs.length > 0) {
             code += ' {\n';
             for (const attr of matchingAttrs) {
-                code += `    ${attr.targetAttribute} := ${attr.sourceAttribute}`;
-                if (attr.conversionHint) {
-                    code += ` : ${attr.conversionHint}`;
-                }
-                code += '\n';
+                code += formatAttrMapping(attr) + '\n';
             }
             code += '}';
         }
@@ -101,11 +122,7 @@ function generateJjtlCode(mappings: MappingSuggestion[]): string {
 
         code += `${sourceClass} -> ${targetClass} {\n`;
         for (const attr of attrs) {
-            code += `    ${attr.targetAttribute} := ${attr.sourceAttribute}`;
-            if (attr.conversionHint) {
-                code += ` : ${attr.conversionHint}`;
-            }
-            code += '\n';
+            code += formatAttrMapping(attr) + '\n';
         }
         code += '}\n\n';
     }

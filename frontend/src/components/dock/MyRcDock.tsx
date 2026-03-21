@@ -563,33 +563,33 @@ export class PinnableDock extends DockLayout{
      * This catches tab clicks that bypass DockManager entirely.
      */
     private _detectActiveTabChange(): void {
-        const layout = this.getLayout();
-        const firstPanel = layout?.dockbox?.children?.[0] as PanelData | undefined;
-        const activeId = (firstPanel as any)?.activeId as string | undefined;
+    const layout = this.getLayout();
+    const firstPanel = layout?.dockbox?.children?.[0] as PanelData | undefined;
+    const activeId = (firstPanel as any)?.activeId as string | undefined;
 
-        console.log('[DETECT] called', { lastActiveId: this._lastActiveId, currentActiveId: activeId });
+    // Ignore missing or transient rightbar IDs — do NOT update _lastActiveId
+    // so the real editor tab is still detected on the next call
+    if (!activeId || activeId.startsWith('DockComponent_rightbar_')) return;
 
-        if (!activeId || activeId === this._lastActiveId) return;
-        this._lastActiveId = activeId;
+    if (activeId === this._lastActiveId) return;
+    this._lastActiveId = activeId;
 
-        let editorType: string;
-        if (activeId.startsWith('jjtl_')) {
-            editorType = 'transformation';
-        } else if (activeId.startsWith('doc_') || activeId.startsWith('DockComponent_rightbar_')) {
-            editorType = 'summary';
-        } else {
-            const rawModel = store.getState().idlookup[activeId] as any;
-            if (rawModel?.className === 'DModel') {
-                editorType = rawModel.isMetamodel ? 'metamodel' : 'model';
-            } else {
-                editorType = 'summary';
-            }
-        }
-
-        window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
-            detail: { editorType }
-        }));
+    let editorType: string;
+    if (activeId.startsWith('jjtl_')) {
+        editorType = 'transformation';
+    } else if (activeId.startsWith('doc_')) {
+        editorType = 'summary';
+    } else {
+        const rawModel = store.getState().idlookup[activeId] as any;
+        editorType = rawModel?.className === 'DModel'
+            ? (rawModel.isMetamodel ? 'metamodel' : 'model')
+            : 'summary';
     }
+
+    window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
+        detail: { editorType }
+    }));
+}
 
     componentDidUpdate(prevProps: Readonly<LayoutProps>, prevState: Readonly<LayoutState>, snapshot?: any) {
         super.componentDidUpdate(prevProps, prevState, snapshot);
