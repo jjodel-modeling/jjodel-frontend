@@ -19,6 +19,7 @@ import type {
     AnchorConfig,
 } from '../types';
 import M1PropertiesPanel from './M1PropertiesPanel';
+import HelpButton from '../../HelpButton';
 import { createAttribute, createLiteral, createReference, createOperation, formatCardinality, E_DATA_TYPES } from '../types';
 import {
     syncClassAbstract,
@@ -77,6 +78,7 @@ function PanelHeader({ icon, name, badgeLabel }: { icon: string; name: string; b
             </div>
             <span className="jj-properties__name">{name}</span>
             <Badge category="type">{badgeLabel}</Badge>
+            <HelpButton helpKey="properties-panel" />
         </div>
     );
 }

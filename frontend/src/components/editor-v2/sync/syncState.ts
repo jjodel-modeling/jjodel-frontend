@@ -139,3 +139,34 @@ export function hasCanvasEdgePair(key: string): boolean {
 export function clearCanvasEdgePairs(): void {
     canvasEdgePairs.clear();
 }
+
+// ---------------------------------------------------------------------------
+// Suppressed singleton vertex IDs — tracks DVertex IDs that should NOT be
+// rendered as RF nodes because the user toggled "Show singleton instances" off.
+//
+// When singletons are hidden, their DVertices remain in the Redux store (so
+// positions are preserved), but useJjomSync skips them during both init and
+// incremental sync.
+// ---------------------------------------------------------------------------
+
+const suppressedSingletonIds = new Set<string>();
+
+export function suppressSingleton(id: string): void {
+    suppressedSingletonIds.add(id);
+}
+
+export function unsuppressSingleton(id: string): void {
+    suppressedSingletonIds.delete(id);
+}
+
+export function isSingletonSuppressed(id: string): boolean {
+    return suppressedSingletonIds.has(id);
+}
+
+export function clearSuppressedSingletons(): void {
+    suppressedSingletonIds.clear();
+}
+
+export function getSuppressedSingletonIds(): ReadonlySet<string> {
+    return suppressedSingletonIds;
+}

@@ -41,6 +41,7 @@ import {
     hasCanvasEdgePair,
     markCanvasEdgePair,
     clearCanvasEdgePairs,
+    isSingletonSuppressed,
 } from '../sync/syncState';
 
 // ---------------------------------------------------------------------------
@@ -581,6 +582,7 @@ if (!lGraph) return;
             const edgeCache = new Map<string, Edge>();
 
             for (const v of vertices) {
+                if (isSingletonSuppressed(v.id)) continue;
                 const rfNode = jjomVertexToRFNode(v);
                 if (rfNode) nodeCache.set(rfNode.id, rfNode);
             }
@@ -649,6 +651,8 @@ if (!lGraph) return;
                     const className = lProxy.className ?? lProxy.__raw?.className;
 
                     if (isVertexClassName(className)) {
+                        // Skip suppressed singleton vertices
+                        if (isSingletonSuppressed(id)) continue;
                         // Skip if already in cache (previous cycle's consumeDropCreated)
                         if (!isDropCreated && rfNodeCache.current.has(id)) continue;
 

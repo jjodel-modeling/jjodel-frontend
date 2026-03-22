@@ -394,6 +394,49 @@ function NavbarComponent(props: AllProps) {
         };
     }, []);
 
+    // ─── Show singleton instances toggle (per-model, localStorage-backed) ───
+    const getActiveModelTab = useCallback((): { id: string; isModel: boolean } | null => {
+        if (!DockManager.dock) return null;
+        try {
+            const layout = DockManager.dock.getLayout();
+            const modelsPanel = layout?.dockbox?.children?.[0];
+            const tabs = (modelsPanel as any)?.tabs || [];
+            const activeId: string = (modelsPanel as any)?.activeId || tabs[0]?.id;
+            if (!activeId) return null;
+            const state = store.getState() as any;
+            const raw = state[activeId] || state.idlookup?.[activeId];
+            if (!raw) return null;
+            return { id: activeId, isModel: raw.isMetamodel === false };
+        } catch { return null; }
+    }, []);
+
+    const [showSingletons, setShowSingletons] = useState<boolean>(() => {
+        const tab = getActiveModelTab();
+        if (!tab) return false;
+        return localStorage.getItem(`jjodel.showSingletons.${tab.id}`) === 'true';
+    });
+
+    // Sync singleton toggle when active tab changes
+    useEffect(() => {
+        const syncSingletonState = () => {
+            const tab = getActiveModelTab();
+            if (!tab) { setShowSingletons(false); return; }
+            setShowSingletons(localStorage.getItem(`jjodel.showSingletons.${tab.id}`) === 'true');
+        };
+        window.addEventListener('jjodel:active-tab', syncSingletonState);
+        return () => window.removeEventListener('jjodel:active-tab', syncSingletonState);
+    }, [getActiveModelTab]);
+
+    const toggleShowSingletons = useCallback(() => {
+        const tab = getActiveModelTab();
+        if (!tab || !tab.isModel) return;
+        const newVal = !showSingletons;
+        localStorage.setItem(`jjodel.showSingletons.${tab.id}`, String(newVal));
+        setShowSingletons(newVal);
+        console.log(`[singleton] show=${newVal}, modelId=${tab.id}`);
+        window.dispatchEvent(new CustomEvent('jjodel:toggle-singletons', { detail: { modelId: tab.id, show: newVal } }));
+    }, [getActiveModelTab, showSingletons]);
+
     // Function to open M2 Analytics with computed data
     const openM2Analytics = () => {
         if (!project || metamodels.length === 0) return;
@@ -938,6 +981,7 @@ function NavbarComponent(props: AllProps) {
         }
     }
 
+    const isActiveTabModel = getActiveModelTab()?.isModel === true;
     const isDashboard = !project;
     const isProject = !!project;
     const isFavorite = project?.isFavorite;
@@ -1123,6 +1167,11 @@ function NavbarComponent(props: AllProps) {
                 {name: 'Show/Hide Sidebar', function: placeholder, icon: <i className="bi bi-layout-sidebar" />, disabled: true},
                 {name: 'Show/Hide Toolbar', function: placeholder, icon: <i className="bi bi-menu-button" />, disabled: true},
                 {name: `${isFullscreen ? 'Exit Fullscreen Mode' : 'Fullscreen Mode [F11]'}`, function: toggleFullScreen, icon: <i className="bi bi-arrows-fullscreen" />},
+                {name: showSingletons ? 'Show singleton instances  \u2713' : 'Show singleton instances',
+                    function: toggleShowSingletons,
+                    icon: <i className={`bi ${showSingletons ? 'bi-diamond-fill' : 'bi-diamond'}`} />,
+                    disabled: isDashboard || !isActiveTabModel
+                },
                 {name: 'divisor', function: placeholder},
                 {name: props.debug ? 'Debug Mode  \u2713' : 'Debug Mode',
                     function: () => {

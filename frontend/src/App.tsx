@@ -47,6 +47,7 @@ import { JjtlDialogManager } from './jjtl/components';
 import { SettingsModalProvider } from './contexts/SettingsModalContext';
 import { ToastProvider } from './components/Toast';
 import { DonationBanner } from './components/DonationBanner/DonationBanner';
+import HelpDrawer from './components/HelpDrawer';
 
 let firstLoading = true;
 let browserData = U.getOSBrowserData();
@@ -157,6 +158,7 @@ function App(props: AllProps): JSX.Element {
                     {user && <Try><Jodie/></Try>}
                 </HashRouter>
                 {user && <Try><GlobalDrawer/></Try>}
+                {user && <Try><HelpDrawer/></Try>}
                 {user && <Try><DonationBanner/></Try>}
 
             </div>

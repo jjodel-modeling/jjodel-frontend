@@ -48,7 +48,7 @@ import { useEditorMode, type MetaclassInfo, type MetaclassReference } from './ho
 import { useClassRemoval } from './hooks/useClassRemoval';
 import { useConformanceGuard } from '../../model/conformance/useConformanceGuard';
 import { useOrphanFeatures } from './hooks/useOrphanFeatures';
-import { getSyncMode, markDropCreated } from './sync/syncState';
+import { getSyncMode, markDropCreated, suppressSingleton, unsuppressSingleton, clearSuppressedSingletons, getSuppressedSingletonIds } from './sync/syncState';
 import {
     syncPositionToJjom,
     syncPositionBatchToJjom,
@@ -75,7 +75,7 @@ import {
 import { computeElkLayout } from './utils/elkLayout';
 import { rafThrottle, cancelThrottle } from '../../utils/DragThrottle';
 import { getCompositionChildOptions, getCompatibleReferences, type CompatibleReference } from './utils/compositionCompat';
-import { LPointerTargetable, store, DState, SetRootFieldAction } from '../../joiner';
+import { LPointerTargetable, store, DState, SetRootFieldAction, DVertex, GraphSize } from '../../joiner';
 import { jjomVertexToRFNode } from './utils/jjomTransformers';
 import { useTheme } from '../../services/ThemeService';
 import { getDraggedMetaclassId } from './utils/dragState';
@@ -429,6 +429,160 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
             return next;
         });
     }, []);
+
+    // ── Singleton instance toggle ──────────────────────────────────────
+    // Listens for the View menu toggle and shows/hides singleton instance
+    // nodes on the M1 canvas. DVertices persist in Redux (positions preserved);
+    // hiding only suppresses RF rendering via syncState.
+    useEffect(() => {
+        if (!isJjomMode || !graphId || !isModelMode) return;
+
+        const handleToggleSingletons = (e: Event) => {
+            const { show, modelId: eventModelId } = (e as CustomEvent).detail;
+            if (eventModelId !== modelid) return;
+
+            const state = store.getState() as any;
+            const lookup = state.idlookup ?? {};
+            const mi = modeInfoRef.current;
+
+            // Find singleton classes from the metamodel
+            const singletonClassIds = new Set<string>();
+            for (const cls of mi.allClasses) {
+                const dClass = lookup[cls.id] as any;
+                if (dClass?.isSingleton) singletonClassIds.add(cls.id);
+            }
+            if (singletonClassIds.size === 0) return;
+
+            if (show) {
+                // ── SHOW: reveal or create singleton instances ──
+                // 1. Find existing DVertices for singleton instances in this graph
+                const graph = lookup[graphId] as any;
+                const subElements = graph?.subElements ?? [];
+                const existingVertexIds = new Map<string, string>(); // metaclassId → vertexId
+
+                for (const seId of subElements) {
+                    const se = lookup[seId] as any;
+                    if (!se?.className?.includes('Vertex')) continue;
+                    const obj = lookup[se.model] as any;
+                    if (!obj) continue;
+                    const instOf = typeof obj.instanceof === 'string' ? obj.instanceof
+                        : Array.isArray(obj.instanceof) ? obj.instanceof[0] : null;
+                    if (instOf && singletonClassIds.has(instOf)) {
+                        existingVertexIds.set(instOf, seId);
+                    }
+                }
+
+                // 2. Clear suppression for existing vertices and add RF nodes
+                for (const [metaclassId, vertexId] of existingVertexIds) {
+                    unsuppressSingleton(vertexId);
+                    // Transform and add RF node if not already present
+                    try {
+                        const lProxy: any = LPointerTargetable.fromPointer(vertexId);
+                        if (lProxy) {
+                            const rfNode = jjomVertexToRFNode(lProxy);
+                            if (rfNode) {
+                                setNodes(nds => {
+                                    if (nds.some(n => n.id === rfNode.id)) return nds;
+                                    return [...nds, rfNode];
+                                });
+                            }
+                        }
+                    } catch { /* skip */ }
+                }
+
+                // 3. For singleton classes without a DVertex, create DObject + DVertex
+                const existingNodes = getNodes();
+                let maxY = 0;
+                for (const n of existingNodes) {
+                    const bottom = n.position.y + (n.measured?.height ?? 80);
+                    if (bottom > maxY) maxY = bottom;
+                }
+                let nextX = 40;
+                const startY = maxY + 60;
+
+                for (const metaclassId of singletonClassIds) {
+                    if (existingVertexIds.has(metaclassId)) continue;
+                    const dClass = lookup[metaclassId] as any;
+                    const className = dClass?.name ?? 'Singleton';
+                    const objName = `${className.charAt(0).toLowerCase()}${className.slice(1)}_s`;
+
+                    const vertexId = syncCreateObject(graphId, metaclassId, nextX, startY, objName);
+                    if (vertexId) {
+                        markDropCreated(vertexId);
+                        const newNode: Node = {
+                            id: vertexId,
+                            type: 'objectNode',
+                            position: { x: nextX, y: startY },
+                            data: {
+                                label: objName,
+                                instanceOfClassName: className,
+                                instanceOfClassId: metaclassId,
+                                features: [],
+                            } as ObjectNodeData,
+                        };
+                        setNodes(nds => [...nds, newNode]);
+                        nextX += 220;
+                    }
+                }
+                console.log(`[singleton] shown ${singletonClassIds.size} singleton class(es) for model ${modelid}`);
+            } else {
+                // ── HIDE: suppress singleton instance vertices ──
+                const graph = lookup[graphId] as any;
+                const subElements = graph?.subElements ?? [];
+                const vertexIdsToHide: string[] = [];
+
+                for (const seId of subElements) {
+                    const se = lookup[seId] as any;
+                    if (!se?.className?.includes('Vertex')) continue;
+                    const obj = lookup[se.model] as any;
+                    if (!obj) continue;
+                    const instOf = typeof obj.instanceof === 'string' ? obj.instanceof
+                        : Array.isArray(obj.instanceof) ? obj.instanceof[0] : null;
+                    if (instOf && singletonClassIds.has(instOf)) {
+                        vertexIdsToHide.push(seId);
+                    }
+                }
+
+                for (const vid of vertexIdsToHide) {
+                    suppressSingleton(vid);
+                }
+                setNodes(nds => nds.filter(n => !vertexIdsToHide.includes(n.id)));
+                console.log(`[singleton] hidden ${vertexIdsToHide.length} singleton node(s) for model ${modelid}`);
+            }
+        };
+
+        // Read initial state from localStorage
+        const initialShow = localStorage.getItem(`jjodel.showSingletons.${modelid}`) === 'true';
+        if (!initialShow) {
+            // Suppress any existing singleton vertices on mount when toggle is off
+            const state = store.getState() as any;
+            const lookup = state.idlookup ?? {};
+            const mi = modeInfoRef.current;
+            const graph = lookup[graphId] as any;
+            const subElements = graph?.subElements ?? [];
+
+            for (const seId of subElements) {
+                const se = lookup[seId] as any;
+                if (!se?.className?.includes('Vertex')) continue;
+                const obj = lookup[se.model] as any;
+                if (!obj) continue;
+                const instOf = typeof obj.instanceof === 'string' ? obj.instanceof
+                    : Array.isArray(obj.instanceof) ? obj.instanceof[0] : null;
+                if (!instOf) continue;
+                const dClass = lookup[instOf] as any;
+                if (dClass?.isSingleton) {
+                    suppressSingleton(seId);
+                }
+            }
+        }
+
+        window.addEventListener('jjodel:toggle-singletons', handleToggleSingletons);
+        return () => {
+            window.removeEventListener('jjodel:toggle-singletons', handleToggleSingletons);
+            clearSuppressedSingletons();
+        };
+    }, [isJjomMode, graphId, isModelMode, modelid, setNodes, getNodes]);
+
     const clipboard = useRef<ClipboardState>({ nodes: [], edges: [] });
 
     // Temporal guard: edges created in the last 300ms are protected from

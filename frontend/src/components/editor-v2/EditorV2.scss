@@ -1106,6 +1106,25 @@
         border-color: var(--object-accent, #f59e0b);
         box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25), inset 0 0 16px rgba(245, 158, 11, 0.05);
     }
+
+    // Singleton badge — small diamond icon in top-right corner
+    .singleton-badge {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        background: #334155;
+        border-radius: 3px;
+        font-size: 9px;
+        color: #fff;
+        pointer-events: none;
+
+        i { font-size: 9px; }
+    }
 }
 
 // ============================================

@@ -15,6 +15,7 @@ import {FakeStateProps, int, windoww} from '../../joiner/types';
 
 import ReactJson from 'react-json-view' // npm i react-json-view --force
 import React, {Component, Dispatch, JSX, ReactElement, ReactNode, useState} from 'react';
+import HelpButton from '../HelpButton';
 import {connect} from 'react-redux';
 import './editors.scss';
 import './info.scss';
@@ -839,6 +840,7 @@ function PropertiesHeader(props: { data: LModelElement; className: string; isMet
             <span className={`jj-type-badge jj-type-badge--${badgeClass}`}>
                 {badge}
             </span>
+            <HelpButton helpKey="properties-panel" />
         </div>
     );
 }

@@ -32,12 +32,15 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
     const { setNodes } = useReactFlow();
     const editorContext = useEditorContextSafe();
 
-    // Live metaclass name from Redux (reacts to metamodel renames)
-    const liveMetaclassName = useSelector((state: any) => {
+    // Live metaclass name + singleton flag from Redux (reacts to metamodel changes)
+    const liveMetaclassInfo = useSelector((state: any) => {
         const classId = data.instanceOfClassId;
-        if (!classId) return null;
-        return (state.idlookup?.[classId] as any)?.name ?? null;
+        if (!classId) return { name: null, isSingleton: false };
+        const dClass = (state.idlookup?.[classId] as any);
+        return { name: dClass?.name ?? null, isSingleton: !!dClass?.isSingleton };
     });
+    const liveMetaclassName = liveMetaclassInfo.name;
+    const isSingleton = liveMetaclassInfo.isSingleton;
     const metaclassName = liveMetaclassName
         ?? (data.instanceOfClassId ? data.instanceOfClassName : 'Orphan');
 
@@ -335,6 +338,12 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
             />
 
             <DynamicHandles nodeId={id} />
+
+            {isSingleton && (
+                <span className="singleton-badge">
+                    <i className="bi bi-diamond-fill" />
+                </span>
+            )}
 
             {/* Header: objectName : ClassName — underlined per UML convention */}
             <div
