@@ -967,6 +967,12 @@
             font-style: italic;
         }
     }
+
+    &.singleton {
+        .mm-node__name {
+            text-decoration: underline;
+        }
+    }
 }
 
 // ============================================

@@ -219,6 +219,7 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
 
     const notation = editorContext?.notation ?? 'uml';
     const isAbstract = data.isAbstract ?? false;
+    const isSingleton = data.isSingleton ?? false;
     const hasContent = attributes.length > 0 || operations.length > 0;
     const showBody = notation !== 'compact';
 
@@ -233,7 +234,7 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
 
     return (
         <div
-            className={`mm-node mm-class ${selected ? 'selected' : ''} ${isAbstract ? 'abstract' : ''} ${dragOver ? 'drop-target' : ''}`}
+            className={`mm-node mm-class ${selected ? 'selected' : ''} ${isAbstract ? 'abstract' : ''} ${isSingleton ? 'singleton' : ''} ${dragOver ? 'drop-target' : ''}`}
             onDragOver={(e) => { handleDragOver(e); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}

@@ -119,6 +119,7 @@ function classVertexToRFNode(vertex: any): Node<ClassNodeData> {
         data: {
             label: lClass?.name ?? 'Class',
             isAbstract: !!lClass?.abstract,
+            isSingleton: !!lClass?.isSingleton,
             attributes: attrs,
             references: refs.length > 0 ? refs : undefined,
             operations: ops.length > 0 ? ops : undefined,

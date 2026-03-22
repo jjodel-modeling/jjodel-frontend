@@ -1,5 +1,24 @@
 # Claude Code Session Log
 
+## 2026-03-22 — Singleton class underline on canvas
+
+### What
+Added visual indicator for singleton classes on the editor-v2 canvas: the class name appears underlined when `isSingleton === true`, following UML convention.
+
+### Files changed
+| File | Change |
+|------|--------|
+| `frontend/src/components/editor-v2/types.ts` | Added optional `isSingleton` to `ClassNodeData` |
+| `frontend/src/components/editor-v2/utils/jjomTransformers.ts` | Pass `isSingleton` from LClass proxy to node data |
+| `frontend/src/components/editor-v2/nodes/ClassNode.tsx` | Read `isSingleton`, add `singleton` CSS class |
+| `frontend/src/components/editor-v2/EditorV2.scss` | `.singleton .mm-node__name { text-decoration: underline }` |
+| `frontend/src/components/editor-v2/EditorV2.tsx` | Added `isSingleton: false` to new class node data |
+
+### Pattern
+Follows the same pattern as `isAbstract` → `.abstract` → italic name. Singleton uses `.singleton` → underline name.
+
+---
+
 ## 2026-03-21 — Surface hierarchy variables in editor-v2 _themes.scss
 
 ### What

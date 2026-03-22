@@ -1122,13 +1122,13 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                             defaultLabel = nextUniqueName(graphId, 'NewClass');
                             vertexId = syncCreateClass(graphId, position.x, position.y, false, defaultLabel);
                             nodeType = 'classNode';
-                            nodeData = { label: defaultLabel, isAbstract: false, attributes: [], autoEdit: true };
+                            nodeData = { label: defaultLabel, isAbstract: false, isSingleton: false, attributes: [], autoEdit: true };
                             break;
                         case 'classNode:abstract':
                             defaultLabel = nextUniqueName(graphId, 'NewAbstractClass');
                             vertexId = syncCreateClass(graphId, position.x, position.y, true, defaultLabel);
                             nodeType = 'classNode';
-                            nodeData = { label: defaultLabel, isAbstract: true, attributes: [], autoEdit: true };
+                            nodeData = { label: defaultLabel, isAbstract: true, isSingleton: false, attributes: [], autoEdit: true };
                             break;
                         case 'enumNode':
                             defaultLabel = nextUniqueName(graphId, 'NewEnum');

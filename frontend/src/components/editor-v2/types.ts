@@ -64,6 +64,7 @@ export interface MetaReference {
 export interface ClassNodeData {
     label: string;
     isAbstract: boolean;
+    isSingleton?: boolean;
     attributes: MetaAttribute[];
     references?: MetaReference[];
     operations?: MetaOperation[];
