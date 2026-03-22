@@ -1,46 +1,46 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useNodes } from '@xyflow/react';
-import { E_DATA_TYPES } from '../types';
-import type { EnumNodeData } from '../types';
 
-interface InlineTypeSelectProps {
+interface EnumLiteral {
+    name: string;
+}
+
+interface InlineEnumSelectProps {
     value: string;
+    enumName: string;
+    literals: EnumLiteral[];
+    isStale?: boolean;
     onChange: (value: string) => void;
     onClose: () => void;
 }
 
 /**
- * Compact inline dropdown for selecting attribute types.
- * Shows primitive types and enumerations from the current metamodel.
+ * Popover dropdown for selecting enum literal values.
+ * Reuses the same visual style as InlineTypeSelect (`.inline-type-select` classes).
  */
-function InlineTypeSelect({ value, onChange, onClose }: InlineTypeSelectProps) {
-    const [isOpen, setIsOpen] = useState(true);
+function InlineEnumSelect({ value, enumName, literals, isStale, onChange, onClose }: InlineEnumSelectProps) {
     const [highlighted, setHighlighted] = useState(0);
     const containerRef = useRef<HTMLDivElement>(null);
     const listRef = useRef<HTMLDivElement>(null);
-    const nodes = useNodes();
 
-    // Get enumerations from current metamodel
-    const enums = nodes
-        .filter(n => n.type === 'enumNode')
-        .map(n => (n.data as EnumNodeData).label);
-
-    // Build options list: primitives first, then enums
-    const options = [
-        ...E_DATA_TYPES,
-        ...enums,
-    ];
+    // Options: empty (clear) + literals; if stale, add the invalid value
+    const options: Array<{ value: string; label: string; stale?: boolean }> = [];
+    options.push({ value: '', label: '(none)' });
+    if (isStale && value) {
+        options.push({ value, label: `${value} (invalid)`, stale: true });
+    }
+    for (const lit of literals) {
+        options.push({ value: lit.name, label: lit.name });
+    }
 
     // Find initial highlighted index
-useEffect(() => {
-    const idx = options.indexOf(value);
-    if (idx >= 0) setHighlighted(idx);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-}, []);
+    useEffect(() => {
+        const idx = options.findIndex(o => o.value === value);
+        if (idx >= 0) setHighlighted(idx);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Focus container on mount so keyboard events work
     useEffect(() => {
-        // Use rAF to ensure the DOM is ready after React Flow node rendering
         const raf = requestAnimationFrame(() => containerRef.current?.focus());
         return () => cancelAnimationFrame(raf);
     }, []);
@@ -68,7 +68,7 @@ useEffect(() => {
     // Scroll highlighted item into view
     useEffect(() => {
         if (listRef.current) {
-            const items = listRef.current.children;
+            const items = listRef.current.querySelectorAll('.inline-type-select__option');
             if (items[highlighted]) {
                 (items[highlighted] as HTMLElement).scrollIntoView({ block: 'nearest' });
             }
@@ -85,66 +85,43 @@ useEffect(() => {
             setHighlighted(h => Math.max(h - 1, 0));
         } else if (e.key === 'Enter') {
             e.preventDefault();
-            onChange(options[highlighted]);
+            onChange(options[highlighted].value);
         } else if (e.key === 'Escape') {
             e.preventDefault();
             onClose();
         }
     }, [highlighted, options, onChange, onClose]);
 
-    const handleSelect = (type: string) => {
-        onChange(type);
-    };
-
     return (
-
         <div
             ref={containerRef}
             className="inline-type-select"
             onKeyDown={handleKeyDown}
-            onClick={(e) => e.stopPropagation()}  // ← aggiungi questo
-            onMouseDown={(e) => e.stopPropagation()}  // ← e questo
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
             tabIndex={0}
             autoFocus
         >
-
-
-
-
             <div ref={listRef} className="inline-type-select__list">
-                {E_DATA_TYPES.length > 0 && (
-                    <div className="inline-type-select__group">Primitives</div>
-                )}
-                {E_DATA_TYPES.map((type, idx) => (
+                <div className="inline-type-select__group">{enumName}</div>
+                {options.map((opt, idx) => (
                     <div
-                        key={type}
-                        className={`inline-type-select__option ${value === type ? 'selected' : ''} ${highlighted === idx ? 'highlighted' : ''}`}
-                        onClick={() => handleSelect(type)}
+                        key={opt.value || '__none__'}
+                        className={
+                            `inline-type-select__option` +
+                            (value === opt.value ? ' selected' : '') +
+                            (highlighted === idx ? ' highlighted' : '') +
+                            (opt.stale ? ' inline-type-select__option--stale' : '')
+                        }
+                        onClick={() => onChange(opt.value)}
                         onMouseEnter={() => setHighlighted(idx)}
                     >
-                        {type}
+                        {opt.label}
                     </div>
                 ))}
-                {enums.length > 0 && (
-                    <>
-                        {enums.map((enumName, i) => {
-                            const idx = E_DATA_TYPES.length + i;
-                            return (
-                                <div
-                                    key={enumName}
-                                    className={`inline-type-select__option ${value === enumName ? 'selected' : ''} ${highlighted === idx ? 'highlighted' : ''}`}
-                                    onClick={() => handleSelect(enumName)}
-                                    onMouseEnter={() => setHighlighted(idx)}
-                                >
-                                    {enumName}
-                                </div>
-                            );
-                        })}
-                    </>
-                )}
             </div>
         </div>
     );
 }
 
-export default InlineTypeSelect;
+export default InlineEnumSelect;

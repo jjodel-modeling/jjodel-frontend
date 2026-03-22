@@ -97,13 +97,18 @@ export class JjelLexer {
                 } else if (this.match('?')) {
                     this.addToken(JjelTokenType.NULL_COALESCE);
                 } else {
-                    this.error(`Unexpected character: ${c}. Did you mean '?.' or '??'?`);
+                    this.error("Ternary operator '?:' is not supported. Use 'if condition then value1 else value2' instead.");
                 }
                 break;
 
             case '=':
                 if (this.match('=')) {
-                    this.addToken(JjelTokenType.EQ);
+                    if (this.peek() === '=') {
+                        this.advance();
+                        this.error("Strict equality '===' is not supported. Use '==' instead.");
+                    } else {
+                        this.addToken(JjelTokenType.EQ);
+                    }
                 } else if (this.match('>')) {
                     this.addToken(JjelTokenType.ARROW);
                 } else {

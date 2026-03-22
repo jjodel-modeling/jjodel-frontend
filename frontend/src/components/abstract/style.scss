@@ -572,12 +572,12 @@ body.dock-dragging iframe {
 
 .dock-divider {
   box-sizing: border-box;
-  flex: 0 0 4px;
-  background: transparent;
-  border-left: 1px solid var(--color-border-primary);
+  flex: 0 0 1px;
+  background: trasparent;
+  border-left: 1px solid #e2e4e8; // var(--surface-3);
   border-right: none;
   z-index: 1;
-  transition: var(--transition-fast);
+  transition: var(--transition-fast)!important;
   position: relative;
 }
 
@@ -1044,6 +1044,7 @@ body[data-layout-mode="split"] {
   .dock-hbox > .dock-box:last-child {
     min-width: 400px;
     transition: opacity 200ms ease;
+    max-width: 710px
   }
 }
 

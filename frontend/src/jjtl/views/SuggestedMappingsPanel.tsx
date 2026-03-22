@@ -102,6 +102,10 @@ function generateJjtlCode(mappings: MappingSuggestion[]): string {
 
         code += `${classMapping.sourceClass} -> ${classMapping.targetClass}`;
 
+        if (classMapping.guardHint) {
+            code += ` where ${classMapping.guardHint}`;
+        }
+
         if (matchingAttrs.length > 0) {
             code += ' {\n';
             for (const attr of matchingAttrs) {

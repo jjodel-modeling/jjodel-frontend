@@ -9,6 +9,7 @@ import {
     LPointerTargetable,
     SetRootFieldAction,
 } from '../../joiner';
+import { resolveEntityType, entityLetter, entityIcon } from '../../common/entityMeta';
 import { FakeStateProps } from '../../joiner/types';
 import { useStateIfMounted } from 'use-state-if-mounted';
 import { useTreeViewPanel, ElementAction } from '../../contexts/TreeViewPanelContext';
@@ -112,10 +113,10 @@ const TreeNode = memo(function TreeNode({
         setIsExpanded(prev => !prev);
     }, [setIsExpanded]);
 
-    // Get icon letter based on class type
+    // Get icon letter from centralized entityMeta
     const iconLetter = useMemo(() => {
-        if (data.className === 'DEnumLiteral') return 'L';
-        return data.className.slice(1, 2);
+        const resolved = resolveEntityType(data.className);
+        return resolved ? entityLetter(resolved) : data.className.slice(1, 2);
     }, [data.className]);
 
     // Build highlight class name
@@ -679,7 +680,7 @@ const TransformationItem = memo(function TransformationItem({
                 <span className="tree-node__spacer" style={{ width: 16 }} />
                 <div className="tree-node__content" onClick={handleClick}>
                     <span className="tree-node__icon tree-transformation">
-                        <i className="bi bi-arrow-left-right" />
+                        <i className={`bi ${entityIcon('transformation')}`} />
                     </span>
                     <span className="tree-node__name">{transformation.name}</span>
                 </div>
@@ -714,7 +715,7 @@ const TransformationSection = memo(function TransformationSection({
                     <i className={`bi bi-chevron-${isExpanded ? 'down' : 'right'}`} />
                 </button>
                 <span className="transformation-section__icon">
-                    <i className="bi bi-arrow-left-right" />
+                    <i className={`bi ${entityIcon('transformation')}`} />
                 </span>
                 <span className="transformation-section__label">Transformations</span>
                 <span className="transformation-section__count">{transformations.length}</span>

@@ -1032,6 +1032,8 @@ input[type="number"] {
 }
 
 .jj-toggle-row__label {
+  display: inline-flex;
+  align-items: center;
   font-size: 13px;
   color: #334155;
   cursor: pointer;

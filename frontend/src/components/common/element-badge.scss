@@ -18,16 +18,16 @@
   transition: background-color 150ms ease, color 150ms ease;
 }
 
-/* Metamodel - Muted slate (letter M identifies it) */
+/* Metamodel - Violet (DESIGN-SYSTEM.md §2.2) */
 .element-badge--metamodel {
-  background-color: rgba(100, 116, 139, 0.12);
-  color: #64748b;
+  background-color: #EEEDFE;  /* Violet bg light */
+  color: #534AB7;             /* Violet text on light bg */
 }
 
-/* Model - Muted slate (letter m identifies it) */
+/* Model - Amber (DESIGN-SYSTEM.md §2.2) */
 .element-badge--model {
-  background-color: rgba(100, 116, 139, 0.12);
-  color: #64748b;
+  background-color: #FAEEDA;  /* Amber bg light */
+  color: #854F0B;             /* Amber text on light bg */
 }
 
 /* Package - Blue */
@@ -92,23 +92,23 @@
   color: #DB2777;             /* Pink-600 */
 }
 
-/* Epsilon/Transformation - Muted slate (even lighter) */
+/* Epsilon/Transformation - Teal (DESIGN-SYSTEM.md §2.2) */
 .element-badge--epsilon,
 .element-badge--transformation {
-  background-color: rgba(100, 116, 139, 0.10);
-  color: #94a3b8;
+  background-color: #E1F5EE;  /* Teal bg light */
+  color: #0F6E56;             /* Teal text on light bg */
 }
 
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
   .element-badge--metamodel {
-    background-color: rgba(148, 163, 184, 0.15);
-    color: #94a3b8;
+    background-color: rgba(127, 119, 221, 0.2);  /* Violet (DESIGN-SYSTEM.md) */
+    color: #AFA9EC;                               /* Violet text on dark bg */
   }
 
   .element-badge--model {
-    background-color: rgba(148, 163, 184, 0.15);
-    color: #94a3b8;
+    background-color: rgba(186, 117, 23, 0.2);   /* Amber (DESIGN-SYSTEM.md) */
+    color: #FAC775;                               /* Amber text on dark bg */
   }
 
   .element-badge--package {
@@ -165,7 +165,7 @@
 
   .element-badge--epsilon,
   .element-badge--transformation {
-    background-color: rgba(148, 163, 184, 0.12);
-    color: #64748b;
+    background-color: rgba(29, 158, 117, 0.2);  /* Teal (DESIGN-SYSTEM.md) */
+    color: #5DCAA5;                              /* Teal text on dark bg */
   }
 }

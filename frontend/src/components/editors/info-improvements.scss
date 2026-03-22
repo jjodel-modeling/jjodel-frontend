@@ -869,7 +869,7 @@ select.form-select {
   height: 40px;
   padding: 0 12px;
   background: var(--color-bg-elevated);
-  border-bottom: 1px solid var(--color-border-primary);
+  border-bottom: 0px solid var(--color-border-primary);
   margin-bottom: 0;
   position: sticky;
   top: 0;
@@ -923,7 +923,8 @@ select.form-select {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   padding: 6px 14px;
   border: none;
   background: none;
@@ -955,8 +956,123 @@ select.form-select {
   }
 }
 
+.props-section__header-row {
+  display: flex;
+  align-items: center;
+}
+
+.props-section__header-right {
+  margin-left: auto;
+  padding-right: 14px;
+  flex-shrink: 0;
+}
+
 .props-section__body {
   padding: 4px 14px 12px;
+}
+
+/* --- Info tooltip icon --- */
+.jj-info-icon-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 5px;
+  cursor: help;
+}
+
+.jj-info-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 1px solid #cbd5e1;
+  font-size: 9px;
+  font-weight: 600;
+  font-style: italic;
+  color: #94a3b8;
+  line-height: 1;
+  user-select: none;
+}
+
+.jj-info-tooltip {
+  position: absolute;
+  left: calc(100% + 6px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  padding: 5px 8px;
+  font-size: 11px;
+  color: #475569;
+  max-width: 220px;
+  white-space: normal;
+  line-height: 1.4;
+  z-index: 20;
+  pointer-events: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+/* --- Toggle row badge --- */
+.jj-toggle-row__badge {
+  display: inline-block;
+  margin-left: 5px;
+  padding: 0 4px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: #94a3b8;
+  background: #f1f5f9;
+  border-radius: 3px;
+  line-height: 16px;
+  vertical-align: middle;
+}
+
+/* --- Segmented control (Basic/Advanced) --- */
+.jj-segmented-control {
+  display: inline-flex;
+  background: #f1f5f9;
+  border-radius: 5px;
+  padding: 1px;
+  gap: 1px;
+
+  &__btn {
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 500;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    line-height: 18px;
+
+    &:hover:not(&--active) {
+      color: #64748b;
+    }
+
+    &--active {
+      background: #ffffff;
+      color: #334155;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+    }
+  }
+}
+
+/* --- Animated toggle row (for cross-extend hide/show) --- */
+.jj-toggle-row-animated {
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.2s ease, opacity 0.2s ease;
+
+  &--visible {
+    max-height: 60px;
+    opacity: 1;
+  }
 }
 
 /* --- Field rows inside sections --- */

@@ -217,6 +217,10 @@ function objectVertexToRFNode(vertex: any): Node<ObjectNodeData> {
             const featureKind: 'attribute' | 'reference' = isRef ? 'reference' : 'attribute';
 
             let value = '';
+            let featureTypeId = '';
+            let typeName = '';
+            let enumLiterals: Array<{ name: string; value: number }> | undefined;
+
             if (isRef) {
                 // Reference: show resolved target names (handle both pointer IDs and objects)
                 try {
@@ -234,13 +238,36 @@ function objectVertexToRFNode(vertex: any): Node<ObjectNodeData> {
                     const vals = fv.values ?? [];
                     value = vals.length > 0 ? String(vals[0] ?? '') : '';
                 } catch { value = ''; }
+
+                // Resolve enum literals if the attribute type is an enumeration
+                try {
+                    const featureType = feature?.type;
+                    featureTypeId = featureType?.id ?? '';
+                    typeName = featureType?.name ?? '';
+                    if (featureType?.isEnum) {
+                        const lits = featureType.literals ?? [];
+                        if (lits.length > 0) {
+                            enumLiterals = [];
+                            for (let i = 0; i < lits.length; i++) {
+                                const lit = lits[i];
+                                enumLiterals.push({
+                                    name: lit.name ?? `VALUE_${i}`,
+                                    value: lit.value ?? i,
+                                });
+                            }
+                        }
+                    }
+                } catch { /* proxy access can throw */ }
             }
 
             features.push({
                 id: fv.id ?? `fv_${features.length}`,
                 featureName: feature?.name ?? 'unnamed',
                 featureKind,
+                featureTypeId,
+                typeName: typeName || undefined,
                 value,
+                enumLiterals,
             });
         }
     } catch { /* proxy access can throw */ }

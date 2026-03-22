@@ -40,6 +40,7 @@ import { Button } from '../common/Button';
 import { EmptyState } from '../ui/EmptyState';
 import './project-editor.scss';
 
+
 // Types for contextual menu
 type MenuType = 'metamodel' | 'model' | 'transformation' | null;
 interface OpenMenu {

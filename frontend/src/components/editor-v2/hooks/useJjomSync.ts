@@ -502,6 +502,33 @@ console.log('[DEBUG populate] classifierEntries:', classifierEntries.length, cla
                                 ch = (ch * 31 + 7) | 0; // separator
                             }
                         }
+                        // M1 co-evolution: hash enum literals from the metaclass so
+                        // that changes to enumerations trigger a re-sync.
+                        const instOfPtr = modelElem.instanceof;
+                        const metaclassId = typeof instOfPtr === 'string' ? instOfPtr
+                            : (Array.isArray(instOfPtr) ? instOfPtr[0] : null);
+                        if (metaclassId && typeof metaclassId === 'string') {
+                            const mc = state.idlookup[metaclassId] as any;
+                            if (mc?.attributes) {
+                                for (const mAttrId of mc.attributes) {
+                                    if (typeof mAttrId !== 'string') continue;
+                                    const mAttr = state.idlookup[mAttrId] as any;
+                                    const mTypeId = typeof mAttr?.type === 'string' ? mAttr.type : null;
+                                    if (!mTypeId) continue;
+                                    const mType = state.idlookup[mTypeId] as any;
+                                    if (mType?.className === 'DEnumerator' && Array.isArray(mType.literals)) {
+                                        for (const litId of mType.literals) {
+                                            if (typeof litId !== 'string') continue;
+                                            const lit = state.idlookup[litId] as any;
+                                            const ln = lit?.name ?? '';
+                                            for (let k = 0; k < ln.length; k++) {
+                                                ch = ((ch << 5) - ch + ln.charCodeAt(k)) | 0;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         result.set(`ch:${id}`, ch);
                     }
                 }

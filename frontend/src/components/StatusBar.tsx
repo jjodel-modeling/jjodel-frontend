@@ -46,7 +46,7 @@ interface SelectedElement {
 }
 
 type EditorStats =
-    | { type: 'metamodel'; classCount: number; attrCount: number; refCount: number }
+    | { type: 'metamodel'; classCount: number; attrCount: number; opCount: number; enumCount: number; refCount: number }
     | { type: 'model'; objectCount: number; conformsTo: string };
 
 // ─── Equality helpers ────────────────────────────────────────────────
@@ -57,7 +57,8 @@ function statsEqual(a: EditorStats | null, b: EditorStats | null): boolean {
     if (!a || !b) return false;
     if (a.type !== b.type) return false;
     if (a.type === 'metamodel' && b.type === 'metamodel') {
-        return a.classCount === b.classCount && a.attrCount === b.attrCount && a.refCount === b.refCount;
+        return a.classCount === b.classCount && a.attrCount === b.attrCount
+            && a.opCount === b.opCount && a.enumCount === b.enumCount && a.refCount === b.refCount;
     }
     if (a.type === 'model' && b.type === 'model') {
         return a.objectCount === b.objectCount && a.conformsTo === b.conformsTo;
@@ -157,13 +158,16 @@ function useModelStats(modelId: string | null, isMetamodel: boolean): EditorStat
 
             if (isMetamodel) {
                 const classes = (lModel as any).classes || [];
+                const enums = (lModel as any).enumerators || [];
                 let totalAttrs = 0;
+                let totalOps = 0;
                 let totalRefs = 0;
                 for (const cls of classes) {
                     totalAttrs += ((cls as any).attributes?.length || 0);
+                    totalOps += ((cls as any).operations?.length || 0);
                     totalRefs += ((cls as any).references?.length || 0);
                 }
-                return { type: 'metamodel' as const, classCount: classes.length, attrCount: totalAttrs, refCount: totalRefs };
+                return { type: 'metamodel' as const, classCount: classes.length, attrCount: totalAttrs, opCount: totalOps, enumCount: enums.length, refCount: totalRefs };
             } else {
                 const objects = (lModel as any).objects || [];
                 const instanceOf = (lModel as any).instanceof;
@@ -325,11 +329,15 @@ const StatusBar: React.FC = () => {
                                 <span className="app-statusbar__stats">
                                     {editorStats.type === 'metamodel' ? (
                                         <>
-                                            {editorStats.classCount} class{editorStats.classCount !== 1 ? 'es' : ''}
+                                            {editorStats.classCount} {editorStats.classCount === 1 ? 'class' : 'classes'}
                                             <span className="app-statusbar__middot">·</span>
-                                            {editorStats.attrCount} attribute{editorStats.attrCount !== 1 ? 's' : ''}
+                                            {editorStats.attrCount} {editorStats.attrCount === 1 ? 'attribute' : 'attributes'}
                                             <span className="app-statusbar__middot">·</span>
-                                            {editorStats.refCount} reference{editorStats.refCount !== 1 ? 's' : ''}
+                                            {editorStats.opCount} {editorStats.opCount === 1 ? 'operation' : 'operations'}
+                                            <span className="app-statusbar__middot">·</span>
+                                            {editorStats.enumCount} {editorStats.enumCount === 1 ? 'enumeration' : 'enumerations'}
+                                            <span className="app-statusbar__middot">·</span>
+                                            {editorStats.refCount} {editorStats.refCount === 1 ? 'reference' : 'references'}
                                         </>
                                     ) : (
                                         <>

@@ -339,3 +339,35 @@ describe('real-world expressions', () => {
         parseOk('isAbstract implies subClasses?.isNotEmpty');
     });
 });
+
+// ============================================================
+// UNSUPPORTED SYNTAX — helpful error messages
+// ============================================================
+
+describe('unsupported syntax errors', () => {
+    test('ternary ?: produces helpful error', () => {
+        const result = parseExpression('gender == "Male" ? "Male" : "Female"');
+        expect(result.errors.length).toBeGreaterThan(0);
+        expect(result.errors[0].message).toContain("Ternary operator '?:'");
+        expect(result.errors[0].message).toContain('if condition then value1 else value2');
+    });
+
+    test('=== produces helpful error', () => {
+        const result = parseExpression('a === b');
+        expect(result.errors.length).toBeGreaterThan(0);
+        expect(result.errors[0].message).toContain("Strict equality '==='");
+        expect(result.errors[0].message).toContain("Use '=='");
+    });
+
+    test('?. still works', () => {
+        parseOk('parent?.name');
+    });
+
+    test('?? still works', () => {
+        parseOk('parent?.name ?? "none"');
+    });
+
+    test('== still works', () => {
+        parseOk('a == b');
+    });
+});

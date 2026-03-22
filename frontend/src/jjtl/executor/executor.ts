@@ -368,6 +368,20 @@ export class JjtlExecutor {
             // Get all source instances from the COPY
             const sourceInstances = this.extractSourceInstances(sourceModelCopy);
 
+            // Validate target classes (e.g. reject abstract targets)
+            this.validateTargetClasses();
+
+            // If validation errors, return early
+            if (this.errors.length > 0) {
+                this.stats.executionTimeMs = performance.now() - startTime;
+                return {
+                    success: false,
+                    errors: this.errors,
+                    warnings: this.warnings,
+                    stats: this.stats,
+                };
+            }
+
             // Execute class mappings
             for (const mapping of this.ast.mappings) {
                 this.executeClassMapping(mapping, sourceInstances, targetModel);
@@ -407,6 +421,82 @@ export class JjtlExecutor {
                 warnings: this.warnings,
                 stats: this.stats,
             };
+        }
+    }
+
+    /**
+     * Validate target classes in all mappings.
+     * Rejects abstract classes as transformation targets.
+     */
+    private validateTargetClasses(): void {
+        const tm = this.context.targetMetamodel;
+        if (!tm) return;
+
+        // Extract all classes from target metamodel
+        const allClasses: Array<{ name: string; isAbstract?: boolean }> = [];
+        const traverse = (el: any) => {
+            if (el?.type === 'class' || el?.className === 'DClass') {
+                allClasses.push(el);
+            }
+            if (el?.children && Array.isArray(el.children)) {
+                el.children.forEach(traverse);
+            }
+        };
+        if (Array.isArray(tm)) {
+            tm.forEach(traverse);
+        } else if (tm?.classes && Array.isArray(tm.classes)) {
+            tm.classes.forEach((el: any) => traverse(el));
+        }
+
+        const classMap = new Map(allClasses.map(c => [c.name, c]));
+        const abstractNames = new Set(allClasses.filter(c => c.isAbstract).map(c => c.name));
+
+        if (abstractNames.size === 0) return;
+
+        // Find concrete subclasses for helpful messages
+        const findConcreteSubclasses = (abstractName: string): string[] => {
+            // Simple heuristic: non-abstract classes in the same metamodel
+            // A full implementation would check inheritance; for now list all concrete classes
+            return allClasses
+                .filter(c => !c.isAbstract && c.name !== abstractName)
+                .map(c => c.name);
+        };
+
+        // Check class mappings
+        const checkTarget = (targetClass: string, context: string) => {
+            if (abstractNames.has(targetClass)) {
+                const concrete = findConcreteSubclasses(targetClass);
+                const suggestion = concrete.length > 0
+                    ? ` Use concrete subclasses: ${concrete.join(', ')}`
+                    : '';
+                this.errors.push(
+                    `Cannot use abstract class '${targetClass}' as transformation target in ${context}.${suggestion}`
+                );
+            }
+        };
+
+        const checkBody = (body: any[], parentContext: string) => {
+            for (const item of body) {
+                if (item.type === 'ForAllMapping' && item.objectCreation) {
+                    checkTarget(item.objectCreation.targetClass, `forall in ${parentContext}`);
+                    if (item.objectCreation.body) {
+                        checkBody(item.objectCreation.body, item.objectCreation.targetClass);
+                    }
+                }
+                if (item.type === 'AttributeMapping' && item.objectCreation) {
+                    checkTarget(item.objectCreation.targetClass, `object creation in ${parentContext}`);
+                    if (item.objectCreation.body) {
+                        checkBody(item.objectCreation.body, item.objectCreation.targetClass);
+                    }
+                }
+            }
+        };
+
+        for (const mapping of this.ast.mappings) {
+            checkTarget(mapping.targetClass, `${mapping.sources.map(s => s.className).join(', ')} -> ${mapping.targetClass}`);
+            if (mapping.body) {
+                checkBody(mapping.body, mapping.targetClass);
+            }
         }
     }
 

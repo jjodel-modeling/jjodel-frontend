@@ -89,7 +89,7 @@
 
   /* ============================================
      CANVAS & GRAPH COLORS
-     For metamodel/model nodes and editor-v3 in dark mode
+     For metamodel/model nodes in dark mode
      ============================================ */
 
   /* Canvas */
@@ -140,9 +140,11 @@
 
   /* Panels */
   --color-panel-bg: #1e293b;
+  --color-palette-bg: #1e293b;                    /* Left sidebar / palette background */
   --color-panel-border: #334155;
   --color-panel-header-bg: #0f172a;
   --color-panel-header-text: #e2e8f0;
+  --color-panel-header-border: #334155;           /* Border for dark headers */
   --color-panel-section-text: #94a3b8;
   --color-panel-item-text: #e2e8f0;
   --color-panel-item-hover: #334155;
@@ -159,6 +161,7 @@
 
   /* Toolbar */
   --color-toolbar-bg: rgba(30, 41, 59, 0.95);
+  --color-toolbar-border: #334155;
   --color-toolbar-shadow: rgba(0, 0, 0, 0.3);
   --color-toolbar-label: #94a3b8;
   --color-toolbar-btn-group: rgba(255, 255, 255, 0.06);

@@ -336,7 +336,6 @@
     transition: all 0.2s ease;
     cursor: pointer;
     position: relative;
-
     &:last-child {
       border-bottom: none;
     }
@@ -383,21 +382,29 @@
     &--mm {
       background: rgba(100, 116, 139, 0.12);  // Muted slate — letter M identifies it
       color: #64748b;
+      background-color: #EEEDFE;  /* Violet bg light */
+      color: #534AB7;     
     }
 
     &--model {
       background: rgba(100, 116, 139, 0.12);  // Muted slate — letter m identifies it
       color: #64748b;
+      background-color: #FEF3C7;  /* Amber bg light */
+  color: #D97706;  
     }
 
     &--vp {
       background: rgba(100, 116, 139, 0.12);
       color: #64748b;
+      background-color: #FCE7F3;  /* Pink-100 */
+  color: #DB2777;   
     }
 
     &--transformation {
       background: rgba(100, 116, 139, 0.10);  // Muted slate — even lighter
       color: #94a3b8;
+      background-color: #E1F5EE;  /* Teal bg light */
+  color: #0F6E56;  
     }
 
     &--envgen {
@@ -529,8 +536,9 @@
 }
 
 // Contextual Menu (3-dot dropdown)
+// Scoped under .project-editor to win over generic .context-menu from contextMenu/style.scss
 // --------------------------------
-.context-menu {
+.project-editor .context-menu {
   position: absolute;
   top: calc(100% + 4px);  // Default: open downward
   right: 0;               // Default: align to right
@@ -943,7 +951,7 @@
     }
   }
 
-  .context-menu {
+  .project-editor .context-menu {
     background: #1e293b;
     border-color: #334155;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);

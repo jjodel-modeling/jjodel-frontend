@@ -3,7 +3,6 @@ import { useSelector } from 'react-redux';
 import { createPortal } from 'react-dom';
 import {
     ReactFlow,
-    Background,
     MiniMap,
     useNodesState,
     useEdgesState,
@@ -22,7 +21,6 @@ import {
     type Connection,
     type NodeTypes,
     type EdgeTypes,
-    BackgroundVariant,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -421,6 +419,16 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
     fitViewRef.current = () => fitView({ padding: 0.2, maxZoom: 1 });
     const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
     const [snapEnabled, setSnapEnabled] = useState(true);
+    const [gridVisible, setGridVisible] = useState(() => {
+        try { return localStorage.getItem('jjodel.showGrid') !== 'false'; } catch { return true; }
+    });
+    const handleToggleGrid = useCallback(() => {
+        setGridVisible(prev => {
+            const next = !prev;
+            try { localStorage.setItem('jjodel.showGrid', String(next)); } catch {}
+            return next;
+        });
+    }, []);
     const clipboard = useRef<ClipboardState>({ nodes: [], edges: [] });
 
     // Temporal guard: edges created in the last 300ms are protected from
@@ -2277,6 +2285,8 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                     <Toolbar
                         snapEnabled={snapEnabled}
                         onToggleSnap={handleToggleSnap}
+                        gridVisible={gridVisible}
+                        onToggleGrid={handleToggleGrid}
                         onFitView={handleFitView}
                         onAutoLayout={handleAutoLayout}
                         onDuplicateSelected={duplicateSelected}
@@ -2342,12 +2352,17 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                             deleteKeyCode={null}
                             connectionRadius={40}
                         >
-                            <Background
-                                variant={BackgroundVariant.Dots}
-                                gap={16}
-                                size={1}
-                                color={theme === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'}
-                            />
+                            <svg className="editor-v2__dot-grid" style={{ opacity: gridVisible ? 1 : 0 }}>
+                                <defs>
+                                    <pattern id="dot-grid-pattern" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
+                                        <circle cx="12" cy="12" r="1"
+                                            fill={theme === 'dark' ? '#334155' : '#cbd5e1'}
+                                            fillOpacity={theme === 'dark' ? 0.6 : 0.55}
+                                        />
+                                    </pattern>
+                                </defs>
+                                <rect width="100%" height="100%" fill="url(#dot-grid-pattern)" />
+                            </svg>
                             {/* Zoom controls moved to toolbar */}
                             <MiniMap
                                     style={{ position: 'absolute', margin: 0, right: '20px', bottom: '100px', borderRadius: '4px', opacity: 0.8 }}

@@ -145,7 +145,11 @@ export interface FeatureValueRow {
     id: string;                       // DValue id or feature id
     featureName: string;
     featureKind: 'attribute' | 'reference';
+    featureTypeId?: string;           // DClassifier id (for enum co-evolution)
+    typeName?: string;                // DClassifier name (e.g. "Gender" for enum header)
     value: string;                    // display value
+    /** For enum-typed attributes: allowed literal names */
+    enumLiterals?: Array<{ name: string; value: number }>;
 }
 
 // === M1 Edge Data ===

@@ -7,6 +7,8 @@ import { isProjectOverviewPage } from '../../utils/navigationUtils';
 interface ToolbarProps {
     snapEnabled: boolean;
     onToggleSnap: () => void;
+    gridVisible: boolean;
+    onToggleGrid: () => void;
     onFitView: () => void;
     onDeleteSelected: () => void;
     onUndo: () => void;
@@ -115,6 +117,8 @@ const AlignIcons = {
 function Toolbar({
     snapEnabled,
     onToggleSnap,
+    gridVisible,
+    onToggleGrid,
     onFitView,
     onDeleteSelected,
     onUndo,
@@ -323,6 +327,23 @@ function Toolbar({
             {/* ── LAYOUT group (with label) ── */}
             <div className="toolbar-group toolbar-group--labeled">
                 <span className="toolbar-group__label">LAYOUT</span>
+                <button
+                    className={`toolbar-btn ${gridVisible ? 'active' : ''}`}
+                    onClick={onToggleGrid}
+                    title={gridVisible ? 'Hide dot grid' : 'Show dot grid'}
+                >
+                    <svg width="11" height="11" viewBox="0 0 11 11" fill="currentColor">
+                        <circle cx="1.5" cy="1.5" r="1.2" />
+                        <circle cx="5.5" cy="1.5" r="1.2" />
+                        <circle cx="9.5" cy="1.5" r="1.2" />
+                        <circle cx="1.5" cy="5.5" r="1.2" />
+                        <circle cx="5.5" cy="5.5" r="1.2" />
+                        <circle cx="9.5" cy="5.5" r="1.2" />
+                        <circle cx="1.5" cy="9.5" r="1.2" />
+                        <circle cx="5.5" cy="9.5" r="1.2" />
+                        <circle cx="9.5" cy="9.5" r="1.2" />
+                    </svg>
+                </button>
                 <button
                     className={`toolbar-btn ${snapEnabled ? 'active' : ''}`}
                     onClick={onToggleSnap}

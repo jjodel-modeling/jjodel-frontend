@@ -1,5 +1,160 @@
 # Claude Code Session Log
 
+## 2026-03-21 — Surface hierarchy variables in editor-v2 _themes.scss
+
+### What
+Added surface hierarchy CSS variables (`--topbar-bg`, `--topbar-border`, `--topbar-text`, `--panel-bg`, `--panel-border`, `--sidebar-bg`, `--sidebar-border`) to both dark and light theme blocks in `_themes.scss`. Also updated light theme canvas: `--canvas-bg` from `#f8fafc` → `#f1f5f9`, `--canvas-dots` from `rgba(0,0,0,0.08)` → `rgba(100,116,139,0.25)` for more visible dot grid.
+
+### Light theme surface values
+| Variable | Value | Purpose |
+|----------|-------|---------|
+| `--topbar-bg` | `#1e293b` | Dark topbar (slate-800) |
+| `--topbar-border` | `#334155` | Topbar bottom border |
+| `--topbar-text` | `#94a3b8` | Muted topbar text |
+| `--panel-bg` | `#ffffff` | White properties panel |
+| `--panel-border` | `#e2e8f0` | Panel divider |
+| `--sidebar-bg` | `#f8fafc` | Sidebar (slate-50) |
+| `--sidebar-border` | `#e2e8f0` | Sidebar divider |
+
+### Dark theme surface values
+| Variable | Value |
+|----------|-------|
+| `--topbar-bg` | `#0f172a` |
+| `--topbar-border` | `#1e293b` |
+| `--topbar-text` | `#64748b` |
+| `--panel-bg` | `#1e293b` |
+| `--panel-border` | `rgba(255,255,255,0.08)` |
+| `--sidebar-bg` | `#253347` |
+| `--sidebar-border` | `rgba(255,255,255,0.06)` |
+
+### STEP 4 note
+Grep found no hardcoded panel/sidebar/topbar backgrounds in editor-v2 or abstract SCSS that needed migration — existing rules already use `var(--surface-*)` CSS variables. The new variables are ready for consumption by future component work.
+
+### Files Modified
+- `frontend/src/components/editor-v2/_themes.scss` — both theme blocks updated
+
+---
+
+## 2026-03-21 — Remove editor-v3
+
+### What
+Removed `src/components/editor-v3/` entirely and cleaned up all external references. Editor V3 was a viewpoint-first architecture experiment; editor-v2 remains the active editor.
+
+### Deleted
+- `frontend/src/components/editor-v3/` — entire directory (EditorV3Shell, EditorV3Inner, contexts, hooks, nodes, edges, panels, styles, sync, toolbar, viewpoint, types, constants)
+
+### Modified
+| File | Change |
+|------|--------|
+| `frontend/src/App.tsx` | Removed `EditorV3Shell` import and `editor-v3` route |
+| `frontend/src/components/abstract/tabs/EditorSwitch.tsx` | Removed `EditorV3Shell` import, `'v3'` from `EditorMode` type, localStorage v3 override, and v3 render branch |
+| `frontend/src/styles/tokens/_colors-dark.scss` | Removed "editor-v3" from comment |
+| `frontend/src/styles/tokens/_colors-light.scss` | Removed "editor-v3" from comment |
+
+### Verification
+- `npx tsc --noEmit`: no new errors introduced (all errors are pre-existing)
+
+## 2026-03-21 — Editor Surface Hierarchy (visual depth)
+
+### What
+Applied visual surface hierarchy to the editor-v3 surfaces: canvas, palette, properties panel, toolbar, tree view, and panel headers. Creates clear visual layering between zones.
+
+### Surface map applied (light theme)
+
+| Zone | Background | Border | Notes |
+|------|-----------|--------|-------|
+| Canvas | `#f1f5f9` (slate-100) | — | Dot grid: `#cbd5e1` 0.8px / 14px |
+| Left sidebar (palette) | `#f8fafc` (slate-50) | right `#e2e8f0` | New `--color-palette-bg` token |
+| Properties panel | `#ffffff` | left `#e2e8f0` | Unchanged `--color-panel-bg` |
+| Panel headers | `#1e293b` (dark) | bottom `#334155` | Text `#94a3b8` |
+| Canvas toolbar | `#f8fafc` (slate-50) | `#e2e8f0` all-around | Plus existing shadow |
+| Tree view panel | `#f8fafc` | left `#e2e8f0` | Updated `$color-bg-primary` |
+| Nodes on canvas | `#ffffff` | — | Shadow already `rgba(0,0,0,0.06)` ✓ |
+
+### Files modified (SCSS only)
+
+| File | Changes |
+|------|---------|
+| `styles/tokens/_colors-light.scss` | `--color-canvas-bg` → slate-100, `--color-canvas-grid` → slate-300, `--color-panel-header-bg` → #1e293b (dark), `--color-panel-header-text` → #94a3b8, new `--color-palette-bg`, `--color-panel-header-border`, `--color-toolbar-border`, `--color-toolbar-bg` → slate-50 |
+| `styles/tokens/_colors-dark.scss` | Added matching `--color-palette-bg`, `--color-panel-header-border`, `--color-toolbar-border` tokens |
+| `editor-v3/styles/editor-v3.scss` | Canvas `.react-flow` now uses `background-color` + `background-image` (radial dot grid) + `background-size` |
+| `editor-v3/styles/panels.scss` | `.v3-palette` uses `--color-palette-bg`, header borders use `--color-panel-header-border`, added `.v3-properties__type-badge` styles |
+| `editor-v3/styles/toolbar.scss` | Added `border: 1px solid var(--color-toolbar-border)` |
+| `TreeViewSidebar/tree-view-sidebar.scss` | `$color-bg-primary` → #f8fafc, `$color-border` → #e2e8f0 |
+
+### TSX notes (not modified per constraints)
+- **Entity type badge** (`.v3-properties__type-badge`): CSS class added but needs TSX wiring in `PropertiesPanel.tsx` to render `<span class="v3-properties__type-badge">MODEL</span>` in the header
+- Editor-v2 does not use CSS custom properties from the token system — no regression risk
+
+### Build
+SCSS compiles cleanly. Pre-existing build error (Vite `import.meta.url` in react-scripts webpack) unchanged.
+
+---
+
+## 2026-03-21 — Centralized Entity Icons & Colors (`entityMeta.ts`)
+
+### What
+Created `frontend/src/common/entityMeta.ts` as the single source of truth for entity type icons (Bootstrap Icon names), colors, and badge letters. Migrated three high-priority files to consume it.
+
+### New file: `frontend/src/common/entityMeta.ts`
+- `EntityType` union type (15 types: metamodel, model, class, attribute, etc.)
+- `ENTITY_META` record with icon, color, badgeBg/badgeText (light+dark), letter per type
+- Colors sourced from `docs/DESIGN-SYSTEM.md` §2.2 (artifact types) and `tree-view-sidebar.scss` $color-* variables (sub-entity types)
+- `resolveEntityType(raw)` — maps D-prefixed class names, ElementBadge strings, and palette action types to canonical `EntityType`
+- Helpers: `entityIcon()`, `entityColor()`, `entityLetter()`, `entityIsAbstract()`
+
+### Files migrated
+| File | What changed |
+|------|-------------|
+| `TreeViewContent.tsx` | Icon letter derivation now uses `resolveEntityType()` + `entityLetter()` instead of `className.slice(1,2)`. Transformation icon uses `entityIcon('transformation')`. |
+| `AdaptivePalette.tsx` | All hardcoded `bi-*` icon strings in M2_SECTIONS replaced with `entityIcon()` calls. M1 instance icon also migrated. |
+| `ElementBadge.tsx` | Removed `TYPE_LETTERS` record; now uses `resolveEntityType()` + `entityLetter()` from entityMeta. |
+
+### NOT migrated (noted for future)
+- **Tree View colors** (`tree-view-sidebar.scss`): uses SCSS $color-* variables and CSS classes (`.tree-DClass`, etc.) — separate SCSS migration needed
+- **element-badge.scss**: badge bg/text colors are hardcoded in SCSS, not inline — separate migration to CSS custom properties from `ENTITY_META` needed
+- **tab-title.scss**: uses `::before` pseudo-elements with hardcoded colors — SCSS migration
+- **Icons.tsx** (`pages/components/icons/`): action icons (undo, redo, delete), not entity types — no migration needed
+- **Project.tsx**: project type icons (public/private/collaborative), not entity types — no migration needed
+
+### Build
+Zero TypeScript errors in modified files. Pre-existing errors unchanged.
+
+---
+
+## 2026-03-21 — Fix: Restore colored badges in Project Dashboard
+
+### Problem
+`ElementBadge` for metamodel, model, and transformation types used muted slate gray in the dashboard. The design system (`docs/DESIGN-SYSTEM.md` §2.2) defines distinct artifact type colors that should be used consistently across the UI.
+
+### Fix (element-badge.scss only)
+Updated badge colors to match **DESIGN-SYSTEM.md §2.2** canonical artifact type colors:
+- **Metamodel (Violet):** `#EEEDFE` / `#534AB7` (light), `rgba(127,119,221,0.2)` / `#AFA9EC` (dark)
+- **Model (Amber):** `#FAEEDA` / `#854F0B` (light), `rgba(186,117,23,0.2)` / `#FAC775` (dark)
+- **Transformation (Teal):** `#E1F5EE` / `#0F6E56` (light), `rgba(29,158,117,0.2)` / `#5DCAA5` (dark)
+- Viewpoint (Pink) was already correct — no change needed
+
+### Files Modified
+- `frontend/src/components/common/element-badge.scss` — updated metamodel, model, transformation/epsilon colors (light + dark mode)
+
+---
+
+## 2026-03-21 — Fix: Context menu missing background/border in Project Dashboard
+
+### Problem
+The ⋮ context menu on metamodel/model rows in the project dashboard rendered without background, border, or box-shadow — text was unreadable over the list content.
+
+### Root Cause
+CSS specificity collision: `contextMenu/style.scss` defines a generic `.context-menu` using CSS custom properties (`var(--color-bg-elevated)`, etc.) that aren't defined in the project dashboard context. Since both definitions have equal specificity, load order determined the winner, and the generic one (with unresolved variables) won.
+
+### Fix (project-editor.scss only)
+Scoped `.context-menu` under `.project-editor` (both light and dark mode blocks) to increase specificity and guarantee the hardcoded project-dashboard styles always win.
+
+### Files Modified
+- `frontend/src/components/project/project-editor.scss` — changed `.context-menu` to `.project-editor .context-menu` (lines 535 and 949)
+
+---
+
 ## 2026-03-19 — Fix: Properties panel empty when metamodel is empty or nothing selected
 
 ### Problem

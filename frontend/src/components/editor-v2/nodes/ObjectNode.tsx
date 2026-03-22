@@ -21,6 +21,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { NodeResizer, useReactFlow, type NodeProps, type Node } from '@xyflow/react';
 import DynamicHandles from '../components/DynamicHandles';
+import InlineEnumSelect from '../components/InlineEnumSelect';
 import { useEditorContextSafe } from '../contexts/EditorContext';
 import { syncNodeLabel, syncUpdateFeatureValue } from '../sync/canvasToJjom';
 import type { ObjectNodeData } from '../types';
@@ -92,30 +93,51 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
             if (!dAttr) continue;
             // Resolve type name for default value inference
             const typeId = typeof dAttr.type === 'string' ? dAttr.type : null;
-            const typeName = typeId ? (lookup[typeId] as any)?.name ?? '' : '';
-            // encode: attrId;name;lowerBound;defaultValueLiteral;typeName
-            parts.push(`${attrId};${dAttr.name ?? ''};${dAttr.lowerBound ?? 0};${dAttr.defaultValueLiteral ?? ''};${typeName}`);
+            const typeObj = typeId ? (lookup[typeId] as any) : null;
+            const typeName = typeObj?.name ?? '';
+            // Check if type is an enumeration and encode literal names
+            let enumLitStr = '';
+            if (typeObj?.className === 'DEnumerator' && typeObj.literals) {
+                const litNames: string[] = [];
+                for (const litId of typeObj.literals) {
+                    if (typeof litId !== 'string') continue;
+                    const dLit = lookup[litId] as any;
+                    if (dLit?.name) litNames.push(dLit.name);
+                }
+                if (litNames.length > 0) enumLitStr = litNames.join(',');
+            }
+            // encode: attrId;name;lowerBound;defaultValueLiteral;typeName;enumLiterals
+            parts.push(`${attrId};${dAttr.name ?? ''};${dAttr.lowerBound ?? 0};${dAttr.defaultValueLiteral ?? ''};${typeName};${enumLitStr}`);
         }
         return parts.join('|');
     });
 
     const missingAttributes = useMemo(() => {
         if (!metaclassAttrSig) return [];
-        const result: Array<{ id: string; name: string; defaultDisplay: string }> = [];
+        const result: Array<{ id: string; name: string; defaultDisplay: string; enumLiterals?: Array<{ name: string; value: number }> }> = [];
         for (const entry of metaclassAttrSig.split('|')) {
-            const [attrId, name, lbStr, defaultLiteral, typeName] = entry.split(';');
+            const [attrId, name, lbStr, defaultLiteral, typeName, enumLitStr] = entry.split(';');
             if (coveredAttrIds.has(attrId)) continue;
             const lb = parseInt(lbStr, 10);
             if (lb > 0) continue; // required — not a lazy placeholder
+            // Parse enum literals if present
+            let enumLiterals: Array<{ name: string; value: number }> | undefined;
+            if (enumLitStr) {
+                enumLiterals = enumLitStr.split(',').map((n, i) => ({ name: n, value: i }));
+            }
             // Determine display value
             let defaultDisplay = defaultLiteral;
             if (!defaultDisplay) {
-                const tn = typeName.toLowerCase();
-                if (tn === 'eint' || tn === 'eintegerobject' || tn === 'efloat' || tn === 'edouble' || tn === 'elong' || tn === 'eshort' || tn === 'ebyte') defaultDisplay = '0';
-                else if (tn === 'eboolean' || tn === 'ebooleanobject') defaultDisplay = 'false';
-                else defaultDisplay = '""';
+                if (enumLiterals && enumLiterals.length > 0) {
+                    defaultDisplay = '-- Select --';
+                } else {
+                    const tn = typeName.toLowerCase();
+                    if (tn === 'eint' || tn === 'eintegerobject' || tn === 'efloat' || tn === 'edouble' || tn === 'elong' || tn === 'eshort' || tn === 'ebyte') defaultDisplay = '0';
+                    else if (tn === 'eboolean' || tn === 'ebooleanobject') defaultDisplay = 'false';
+                    else defaultDisplay = '""';
+                }
             }
-            result.push({ id: attrId, name, defaultDisplay });
+            result.push({ id: attrId, name, defaultDisplay, enumLiterals });
         }
         return result;
     }, [metaclassAttrSig, coveredAttrIds]);
@@ -130,6 +152,9 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
         featureName: string;
     } | null>(null);
     const [editValue, setEditValue] = useState('');
+
+    // Enum popover: tracks which feature ID has its popover open (null = none)
+    const [openEnumId, setOpenEnumId] = useState<string | null>(null);
 
     useEffect(() => {
         setName(data.label);
@@ -349,31 +374,76 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                                     {liveName}
                                 </span>
                                 <span className="mm-field__separator">=</span>
-                                {editingFeature?.id === feature.id ? (
-                                    <input
-                                        className="mm-field__input"
-                                        autoFocus
-                                        value={editValue}
-                                        onChange={(e) => setEditValue(e.target.value)}
-                                        onFocus={(e) => e.target.select()}
-                                        onBlur={commitFeatureEdit}
-                                        onKeyDown={handleFeatureKeyDown}
-                                    />
-                                ) : (
-                                    <span
-                                        className="mm-field__type mm-object__feature-value"
-                                        onDoubleClick={() => startEditFeature(feature.id, liveName, feature.value)}
-                                        onClick={() => { if (selected) startEditFeature(feature.id, liveName, feature.value); }}
-                                    >
-                                        {feature.value != null ? String(feature.value) : '—'}
-                                    </span>
-                                )}
+                                {(() => {
+                                    const hasEnum = feature.enumLiterals && feature.enumLiterals.length > 0;
+                                    const isStaleEnum = hasEnum
+                                        && feature.value != null && feature.value !== ''
+                                        && !feature.enumLiterals!.some(l => l.name === feature.value);
+
+                                    // Enum attributes: click to open popover (no inline <select>)
+                                    if (hasEnum) {
+                                        return (
+                                            <span
+                                                className={`mm-field__type mm-object__feature-value mm-field__enum-value${isStaleEnum ? ' mm-field__enum-stale' : ''}`}
+                                                onClick={(e) => { e.stopPropagation(); setOpenEnumId(openEnumId === feature.id ? null : feature.id); }}
+                                                title={isStaleEnum ? `"${feature.value}" is no longer a valid enum literal` : 'Click to change'}
+                                            >
+                                                {isStaleEnum && <i className="bi bi-exclamation-triangle-fill mm-field__enum-stale-icon" />}
+                                                {feature.value || '(none)'}
+                                                <i className="bi bi-chevron-down mm-field__enum-chevron" />
+                                                {openEnumId === feature.id && (
+                                                    <InlineEnumSelect
+                                                        value={feature.value}
+                                                        enumName={feature.typeName ?? 'Enum'}
+                                                        literals={feature.enumLiterals!}
+                                                        isStale={!!isStaleEnum}
+                                                        onChange={(val) => {
+                                                            if (val !== feature.value) {
+                                                                editorContext?.takeSnapshot();
+                                                                setNodes(nds => nds.map(n => {
+                                                                    if (n.id !== id) return n;
+                                                                    const nd = n.data as ObjectNodeData;
+                                                                    return { ...n, data: { ...nd, features: nd.features.map(f => f.id === feature.id ? { ...f, value: val } : f) } };
+                                                                }));
+                                                                syncUpdateFeatureValue(id, liveName, val);
+                                                            }
+                                                            setOpenEnumId(null);
+                                                        }}
+                                                        onClose={() => setOpenEnumId(null)}
+                                                    />
+                                                )}
+                                            </span>
+                                        );
+                                    }
+
+                                    // Non-enum attributes: existing inline edit behavior
+                                    return editingFeature?.id === feature.id ? (
+                                        <input
+                                            className="mm-field__input"
+                                            autoFocus
+                                            value={editValue}
+                                            onChange={(e) => setEditValue(e.target.value)}
+                                            onFocus={(e) => e.target.select()}
+                                            onBlur={commitFeatureEdit}
+                                            onKeyDown={handleFeatureKeyDown}
+                                        />
+                                    ) : (
+                                        <span
+                                            className="mm-field__type mm-object__feature-value"
+                                            onDoubleClick={() => startEditFeature(feature.id, liveName, feature.value)}
+                                            onClick={() => { if (selected) startEditFeature(feature.id, liveName, feature.value); }}
+                                        >
+                                            {feature.value != null ? String(feature.value) : '—'}
+                                        </span>
+                                    );
+                                })()}
                             </div>
                         )})}
                         {/* Lazy co-evolution: optional attributes not yet valorized */}
                         {missingAttributes.map((attr) => {
                             const placeholderId = `placeholder_${attr.id}`;
                             const isEditingThis = editingFeature?.id === placeholderId;
+                            const hasEnumLits = attr.enumLiterals && attr.enumLiterals.length > 0;
                             return (
                                 <div key={`ph_${attr.id}`} className={`mm-field mm-object__feature ${isEditingThis ? '' : 'mm-object__feature--placeholder'}`}>
                                     <span className="mm-field__name mm-object__feature-name">
@@ -381,15 +451,45 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                                     </span>
                                     <span className="mm-field__separator">=</span>
                                     {isEditingThis ? (
-                                        <input
-                                            className="mm-field__input"
-                                            autoFocus
-                                            value={editValue}
-                                            onChange={(e) => setEditValue(e.target.value)}
-                                            onFocus={(e) => e.target.select()}
-                                            onBlur={() => commitPlaceholderEdit(attr)}
-                                            onKeyDown={(e) => handlePlaceholderKeyDown(e, attr)}
-                                        />
+                                        hasEnumLits ? (
+                                            <select
+                                                className="mm-field__input mm-field__enum-select"
+                                                autoFocus
+                                                value={editValue}
+                                                onChange={(e) => {
+                                                    setEditValue(e.target.value);
+                                                    if (e.target.value) {
+                                                        // Auto-commit placeholder with selected enum value
+                                                        const val = e.target.value;
+                                                        editorContext?.takeSnapshot();
+                                                        setNodes(nds => nds.map(n => {
+                                                            if (n.id !== id) return n;
+                                                            const nd = n.data as ObjectNodeData;
+                                                            return { ...n, data: { ...nd, features: [...nd.features, { id: attr.id, featureName: attr.name, featureKind: 'attribute' as const, value: val, enumLiterals: attr.enumLiterals }] } };
+                                                        }));
+                                                        syncUpdateFeatureValue(id, attr.name, val);
+                                                        setEditingFeature(null);
+                                                    }
+                                                }}
+                                                onBlur={() => commitPlaceholderEdit(attr)}
+                                                onKeyDown={(e) => handlePlaceholderKeyDown(e, attr)}
+                                            >
+                                                <option value="">-- Select --</option>
+                                                {attr.enumLiterals!.map(lit => (
+                                                    <option key={lit.name} value={lit.name}>{lit.name}</option>
+                                                ))}
+                                            </select>
+                                        ) : (
+                                            <input
+                                                className="mm-field__input"
+                                                autoFocus
+                                                value={editValue}
+                                                onChange={(e) => setEditValue(e.target.value)}
+                                                onFocus={(e) => e.target.select()}
+                                                onBlur={() => commitPlaceholderEdit(attr)}
+                                                onKeyDown={(e) => handlePlaceholderKeyDown(e, attr)}
+                                            />
+                                        )
                                     ) : (
                                         <span
                                             className="mm-field__type mm-object__feature-value"

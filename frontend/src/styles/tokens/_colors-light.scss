@@ -183,12 +183,12 @@ $gradient-hover: linear-gradient(180deg, $slate-100 0%, $slate-200 100%);
 
   /* ============================================
      CANVAS & GRAPH COLORS
-     For metamodel/model nodes and editor-v3
+     For metamodel/model nodes
      ============================================ */
 
   /* Canvas */
-  --color-canvas-bg: #{$slate-50};                /* Canvas background */
-  --color-canvas-grid: #{$slate-200};             /* Grid dots/lines */
+  --color-canvas-bg: #{$slate-100};               /* Canvas background (subtle gray) */
+  --color-canvas-grid: #{$slate-300};             /* Grid dots/lines */
   --color-canvas-accent: #06b6d4;                 /* Selection, focus, active (cyan-500) */
   --color-canvas-accent-hover: #22d3ee;           /* Accent hover (cyan-300) */
   --color-canvas-accent-subtle: rgba(6, 182, 212, 0.1);  /* Accent tint */
@@ -234,9 +234,11 @@ $gradient-hover: linear-gradient(180deg, $slate-100 0%, $slate-200 100%);
 
   /* Panels (palette, properties) */
   --color-panel-bg: #ffffff;
+  --color-palette-bg: #{$slate-50};               /* Left sidebar / palette background */
   --color-panel-border: #{$slate-200};
-  --color-panel-header-bg: #{$slate-50};
-  --color-panel-header-text: #{$slate-700};
+  --color-panel-header-bg: #1e293b;               /* Dark panel headers */
+  --color-panel-header-text: #94a3b8;             /* Light text on dark headers */
+  --color-panel-header-border: #334155;           /* Border for dark headers */
   --color-panel-section-text: #{$slate-500};
   --color-panel-item-text: #{$slate-700};
   --color-panel-item-hover: #{$slate-100};
@@ -252,7 +254,8 @@ $gradient-hover: linear-gradient(180deg, $slate-100 0%, $slate-200 100%);
   --color-panel-detail-border: #{$slate-100};
 
   /* Toolbar */
-  --color-toolbar-bg: rgba(255, 255, 255, 0.95);
+  --color-toolbar-bg: #{$slate-50};
+  --color-toolbar-border: #{$slate-200};
   --color-toolbar-shadow: rgba(0, 0, 0, 0.08);
   --color-toolbar-label: #{$slate-400};
   --color-toolbar-btn-group: rgba(0, 0, 0, 0.04);

@@ -28,23 +28,27 @@ import { Toggle as JoinerToggle } from '../../joiner/components';
 // import { UpgradePrompt } from '../ModeSystem'; // TODO: reintroduce as toast or first-visit hint
 import { Button, EmptyState, Toggle, NumberInput } from '../ui';
 import { M2AnalyticsModal, M2AnalyticsData } from '../M2AnalyticsModal';
+import { useInterfaceMode } from '../../hooks/useInterfaceMode';
 
 // Collapsible section for properties panel grouping
-function CollapsibleSection(props: { title: string; defaultOpen?: boolean; children: React.ReactNode }) {
-    const { title, defaultOpen = true, children } = props;
+function CollapsibleSection(props: { title: string; defaultOpen?: boolean; headerRight?: React.ReactNode; children: React.ReactNode }) {
+    const { title, defaultOpen = true, headerRight, children } = props;
     const [open, setOpen] = useState(defaultOpen);
 
     return (
         <div className={`props-section ${open ? 'props-section--open' : 'props-section--closed'}`}>
-            <button
-                type="button"
-                className="props-section__header"
-                onClick={() => setOpen(!open)}
-                tabIndex={-1}
-            >
-                <span className="props-section__title">{title}</span>
-                <i className={`bi bi-chevron-right props-section__chevron ${open ? 'props-section__chevron--open' : ''}`} />
-            </button>
+            <div className="props-section__header-row">
+                <button
+                    type="button"
+                    className="props-section__header"
+                    onClick={() => setOpen(!open)}
+                    tabIndex={-1}
+                >
+                    <span className="props-section__title">{title}</span>
+                    <i className={`bi bi-chevron-right props-section__chevron ${open ? 'props-section__chevron--open' : ''}`} />
+                </button>
+                {headerRight && <div className="props-section__header-right" onClick={e => e.stopPropagation()}>{headerRight}</div>}
+            </div>
             {open && (
                 <div className="props-section__body">
                     {children}
@@ -54,9 +58,23 @@ function CollapsibleSection(props: { title: string; defaultOpen?: boolean; child
     );
 }
 
+// Inline info icon with hover tooltip
+function InfoTooltip(props: { text: string }) {
+    const [show, setShow] = useState(false);
+    return (
+        <span className="jj-info-icon-wrapper"
+            onMouseEnter={() => setShow(true)}
+            onMouseLeave={() => setShow(false)}
+        >
+            <span className="jj-info-icon">i</span>
+            {show && <span className="jj-info-tooltip">{props.text}</span>}
+        </span>
+    );
+}
+
 // Toggle component for boolean properties (uses ui/Toggle)
-function PropertiesToggle(props: { data: LModelElement; field: string; label: string }) {
-    const { data, field, label } = props;
+function PropertiesToggle(props: { data: LModelElement; field: string; label: string; tooltip?: string; badge?: string }) {
+    const { data, field, label, tooltip, badge } = props;
     const value = !!(data as any)[field];
 
     const handleChange = (checked: boolean) => {
@@ -71,9 +89,50 @@ function PropertiesToggle(props: { data: LModelElement; field: string; label: st
 
     return (
         <div className="jj-toggle-row" onClick={handleRowClick}>
-            <span className="jj-toggle-row__label">{label}</span>
+            <span className="jj-toggle-row__label">
+                {label}
+                {badge && <span className="jj-toggle-row__badge">{badge}</span>}
+                {tooltip && <InfoTooltip text={tooltip} />}
+            </span>
             <Toggle checked={value} onChange={handleChange} size="xs" />
         </div>
+    );
+}
+
+// Inheritance section — cross-extend visibility driven by global interface mode
+function InheritanceSection(props: {
+    lclass: LClass; advanced: boolean; hasDependencies: boolean;
+    extendValue: {value: string; label: string}[];
+    extendOptions: any;
+}) {
+    const { lclass, advanced, hasDependencies, extendValue, extendOptions } = props;
+    const { isAdvanced: globalAdvanced } = useInterfaceMode();
+
+    return (
+        <CollapsibleSection title="INHERITANCE">
+            <PropertiesToggle data={lclass} field={'abstract'} label="Abstract"
+                tooltip="Cannot be instantiated directly; must be subclassed" />
+            <div className="jj-divider" />
+            <PropertiesToggle data={lclass} field={'interface'} label="Interface"
+                tooltip="Defines a contract without implementation" />
+            {advanced && hasDependencies && <>
+                <div className="jj-divider" />
+                <div className="jj-field" style={{marginTop: 4}}>
+                    <div className="jj-field-label">Extends</div>
+                    <MultiSelect classNamePrefix="jj-select" isMulti={true} options={extendOptions as any} value={extendValue}
+                        placeholder="Select superclass..."
+                        onChange={(v: any) => {
+                            lclass.extends = v.map((e: any) => e.value) as Any<string[]>;
+                        }} />
+                    <div className="jj-field-hint">Inherit from classes in dependent metamodels</div>
+                </div>
+            </>}
+            <div className={`jj-toggle-row-animated ${globalAdvanced ? 'jj-toggle-row-animated--visible' : ''}`}>
+                <div className="jj-divider" />
+                <PropertiesToggle data={lclass} field={'allowCrossReference'} label="Allow cross-extend"
+                    tooltip="Allows extending classifiers from other metamodels" />
+            </div>
+        </CollapsibleSection>
     );
 }
 
@@ -306,25 +365,8 @@ class builder {
                 {this.named(data, advanced, true)}
             </CollapsibleSection>
 
-            <CollapsibleSection title="INHERITANCE">
-                <PropertiesToggle data={lclass} field={'abstract'} label="Abstract" />
-                <div className="jj-divider" />
-                <PropertiesToggle data={lclass} field={'interface'} label="Interface" />
-                {advanced && hasDependencies && <>
-                    <div className="jj-divider" />
-                    <div className="jj-field" style={{marginTop: 4}}>
-                        <div className="jj-field-label">Extends</div>
-                        <MultiSelect classNamePrefix="jj-select" isMulti={true} options={extendOptions as any} value={extendValue}
-                            placeholder="Select superclass..."
-                            onChange={(v) => {
-                                lclass.extends = v.map(e => e.value) as Any<string[]>;
-                            }} />
-                        <div className="jj-field-hint">Inherit from classes in dependent metamodels</div>
-                    </div>
-                </>}
-                <div className="jj-divider" />
-                <PropertiesToggle data={lclass} field={'allowCrossReference'} label="Allow cross-extend" />
-            </CollapsibleSection>
+            <InheritanceSection lclass={lclass} advanced={advanced} hasDependencies={hasDependencies}
+                extendValue={extendValue} extendOptions={extendOptions} />
 
             <CollapsibleSection title="FLAGS">
                 <PropertiesToggle data={lclass} field={'final'} label="Final" />

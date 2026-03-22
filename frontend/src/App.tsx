@@ -31,7 +31,6 @@ import {
 } from "./pages";
 import { TestLayout } from "./components/TestLayout";
 import EditorV2 from "./components/editor-v2/EditorV2";
-import { EditorV3Shell } from "./components/editor-v3";
 
 import {ExternalLibraries} from "./components/forEndUser/ExternalLibraries";
 import {TooltipVisualizer} from "./components/forEndUser/Tooltip";
@@ -134,12 +133,6 @@ function App(props: AllProps): JSX.Element {
                             <Route path={'test-resize'} element={<TestLayout/>}/>
                             {/* Editor V2 - React Flow PoC */}
                             <Route path={'editor-v2'} element={<EditorV2/>}/>
-                            {/* Editor V3 - Viewpoint-first architecture */}
-                            <Route path={'editor-v3'} element={
-                                <div style={{ width: '100vw', height: '100vh' }}>
-                                    <EditorV3Shell modelid="" notation="uml" />
-                                </div>
-                            }/>
                             {/* non functioning stuff */}
                             <Route path={'settings'} element={<SettingsPage/>}/>
                             <Route path={'projectsInfo'} element={<ProjectsInfoPage_Obsolete/>}/>

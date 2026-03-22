@@ -51,6 +51,7 @@ $radius-md: 6px;
     height: 100%;
     overflow: hidden;
     min-width: 300px; // Don't let it get too narrow
+    max-width: 450px;
     background: #f8fafc; // slate-50, visually distinct from white canvas
     border-left: 1px solid #e2e8f0; // slate-200, separates from canvas
 
@@ -153,8 +154,8 @@ $radius-md: 6px;
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 12px;
-    border-bottom: 1px solid $color-border;
+    padding: 0px 12px;
+    border-bottom: 1px solid #f1f5f9; // var(--color-border-primary);
     background-color: $color-bg-primary;
     font-size: 12px;
     font-weight: 600;
@@ -162,6 +163,7 @@ $radius-md: 6px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     flex-shrink: 0;
+    height: 41px;
     transition: background $transition-fast;
 
     > i {

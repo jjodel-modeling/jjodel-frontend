@@ -73,6 +73,7 @@ export class AIMatcher {
         targetName: string
     ): string {
         return `You are an expert in model-driven engineering and metamodel transformations.
+You generate mappings for JjTL (Jjodel Transformation Language).
 
 Analyze these two metamodels and suggest semantic mappings between them.
 
@@ -93,6 +94,30 @@ Consider:
 3. Type compatibility
 4. Common modeling patterns
 
+## JjTL Syntax Rules (MUST follow)
+
+conversionHint values MUST be valid JjEL expressions following these rules:
+- Equality uses '==' (NOT '===' or '=')
+- Inequality uses '!='
+- Conditionals: if x == 1 then "a" else "b" (NOT ternary '?:')
+- Boolean operators: and, or, not, implies
+- Null-safe navigation: parent?.name
+- Null coalesce: parent?.name ?? "default"
+- Value mappings: true=1, false=0
+- Comments use '--' (NOT '#' or '//')
+
+DO NOT use in conversionHint:
+- Ternary '?:' — use if/then/else instead
+- Triple equals '===' — use == instead
+- Hash '#' or '//' for comments — use -- instead
+- JavaScript/TypeScript syntax
+
+## Metamodel Rules
+
+- NEVER use abstract classes as target classes — abstract classes cannot be instantiated
+- If the target metamodel has an abstract class with concrete subclasses, create SEPARATE mappings for each concrete subclass
+- When mapping to different concrete subclasses, provide a "guardHint" explaining the distinguishing condition
+
 ## Response Format
 
 Respond ONLY with a JSON array of mapping suggestions. No explanation, no markdown code blocks, just the raw JSON array:
@@ -101,15 +126,16 @@ Respond ONLY with a JSON array of mapping suggestions. No explanation, no markdo
     {
         "sourceClass": "ClassName",
         "sourceAttribute": null,
-        "targetClass": "ClassName",
+        "targetClass": "ConcreteClassName",
         "targetAttribute": null,
         "confidence": "high",
-        "reason": "Explanation"
+        "reason": "Explanation",
+        "guardHint": "optional: condition for choosing this target subclass"
     },
     {
         "sourceClass": "ClassName",
         "sourceAttribute": "attrName",
-        "targetClass": "ClassName",
+        "targetClass": "ConcreteClassName",
         "targetAttribute": "attrName",
         "confidence": "medium",
         "reason": "Explanation",
@@ -122,7 +148,8 @@ Notes:
 - confidence should be "high", "medium", or "low"
 - Only suggest mappings you are confident about
 - Quality over quantity
-- conversionHint MUST be a valid JjEL expression (e.g., "name.toUpper()", "value.toString()", "true=1, false=0") or omitted entirely. NEVER put human-readable text or notes in conversionHint — use the "reason" field for explanations instead. If no conversion is needed, omit conversionHint.`;
+- conversionHint MUST be a valid JjEL expression (e.g., "name.toUpper()", "value.toString()", "true=1, false=0") or omitted entirely. NEVER put human-readable text or notes in conversionHint — use the "reason" field for explanations instead. If no conversion is needed, omit conversionHint.
+- guardHint is optional — use it when the same source class maps to different target subclasses to explain the distinguishing condition`;
     }
 
     /**
@@ -226,7 +253,8 @@ Notes:
                     confidence: this.normalizeConfidence(item.confidence),
                     reason: 'ai-inferred' as const,
                     reasonText: item.reason || 'AI suggested mapping',
-                    conversionHint: item.conversionHint,
+                    conversionHint: item.conversionHint ? this.sanitizeConversionHint(item.conversionHint) : undefined,
+                    guardHint: item.guardHint,
                     status: 'pending',
                 };
             });
@@ -271,6 +299,17 @@ Notes:
             c => (c.type === 'attribute' || c.type === 'reference') &&
                  c.name.toLowerCase() === lowerName
         );
+    }
+
+    /**
+     * Sanitize a conversionHint from LLM output to valid JjEL syntax
+     */
+    private sanitizeConversionHint(hint: string): string {
+        return hint
+            .replace(/===/g, '==')       // === -> ==
+            .replace(/!==/g, '!=')       // !== -> !=
+            .replace(/#\s/g, '-- ')      // # comments -> -- comments
+            .replace(/\/\/\s/g, '-- ');  // // comments -> -- comments
     }
 
     /**

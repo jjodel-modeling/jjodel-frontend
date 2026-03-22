@@ -344,6 +344,7 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                                                 onClick={() => { if (selected) startEditField(attr.id, 'type', attr.type, 'attr'); }}
                                             >
                                                 {attr.type}
+                                                <i className="bi bi-chevron-down mm-field__type-chevron" />
                                             </span>
                                         )}
                                         {bounds ? <span className="mm-field__bound">{bounds}</span> : <span />}
@@ -420,6 +421,7 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                                             onClick={() => { if (selected) startEditField(op.id, 'returnType', op.returnType, 'op'); }}
                                         >
                                             {op.returnType}
+                                            <i className="bi bi-chevron-down mm-field__type-chevron" />
                                         </span>
                                     )}
                                     <span />
