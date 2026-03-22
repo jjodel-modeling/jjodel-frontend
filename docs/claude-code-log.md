@@ -1,5 +1,105 @@
 # Claude Code Session Log
 
+## 2026-03-22 — JjEL integration in JjScript (forall, exists, with)
+
+### What
+Added JjEL expression evaluation support to JjScript. Users can now type `forall`, `exists`, and `with` expressions directly in the JjScript console/chat, and the expression is evaluated against the active metamodel context via JjEL delegation (same pattern as JjTL).
+
+### How it works
+1. **Parser detection:** When the first token is `forall`, `exists`, or `with`, the parser captures the entire input as a raw JjEL expression string (no AST construction — JjEL has its own parser).
+2. **Executor delegation:** The new `executeEval` command handler builds an `EvaluationContext` from the active metamodel (classes, attributes, metamodel, project), then calls `jjelEval(expression, variables)`.
+3. **Context building:** L-layer proxy objects are converted to plain JjelValue objects using shallow conversion to avoid circular reference issues. Available context variables: `classes`, `attributes`, `metamodel`, `project`.
+4. **Result display:** Array results are shown as bulleted lists; scalars are shown directly; errors show the JjEL error message with a syntax hint.
+
+### Examples
+- `forall c in classes : c.name` → list of class names
+- `forall c in classes such that c.isAbstract : c.name` → abstract class names only
+- `forall c in classes such that exists a in c.attributes : a.name == "pippo"` → classes with attribute "pippo"
+- `eval 2 + 3` → `5` (explicit eval command also supported)
+
+### Files changed
+| File | Change |
+|------|--------|
+| `frontend/src/jjscript/types.ts` | Added `'eval'` to `CommandType`, `COMMANDS`, `CommandArgs`; added `EvalArgs` interface |
+| `frontend/src/jjscript/parser/parser.ts` | Added JjEL trigger detection (`forall`/`exists`/`with`); added `parseEvalCommand()` for explicit `eval` syntax |
+| `frontend/src/jjscript/executor/commands/eval.ts` | Created — `executeEval` with context building and `jjelEval` delegation |
+| `frontend/src/jjscript/executor/executor.ts` | Added `case 'eval'` dispatch |
+| `frontend/src/jjscript/services/JjScriptService.ts` | Added JjEL trigger detection in `startsWithCommand`; added `formatEvalResult` for chat display |
+| `docs/claude-code-log.md` | Updated with this entry |
+
+---
+
+## 2026-03-22 — JjEL delegation architecture exploration (JjTL → JjScript)
+
+### What
+Read-only exploration of how JjTL delegates expression evaluation to JjEL, to plan replicating the same mechanism in JjScript.
+
+### Key findings
+- **Delegation pattern:** JjTL executor holds a persistent `JjelEvaluator` instance. All expressions pass through `evaluateExpression()` → `toJjelAst()` (bridge) → `jjelEvaluator.evaluate(jjelExpr, ctx)`. The same `EvaluationContext` object is shared by reference.
+- **Standalone function calls bypass the bridge** — executor intercepts `FunctionCall` with `Identifier` callee and calls builtins directly via `ctx.getBuiltin()`.
+- **JjScript has zero JjEL integration** — no imports, no expression evaluation, no variable bindings. The `ExecutionContext.variables` map exists but is never used.
+- **Integration is surgical, not a refactoring** — JjEL's `EvaluationContext.child()` and `JjelEvaluator.evaluate(expr, ctx)` are already designed for external consumers. JjScript can use the JjEL parser directly (no bridge needed). Estimated ~200-300 lines of new code.
+
+### Output
+- Created `docs/jjel-delegation-architecture.md` — full report with exact signatures, context flow, gap analysis, and recommended integration approach.
+
+### Files changed
+| File | Change |
+|------|--------|
+| `docs/jjel-delegation-architecture.md` | Created — delegation architecture report |
+| `docs/claude-code-log.md` | Updated with this entry |
+
+---
+
+## 2026-03-22 — Singleton instances rendering on M1 canvas (Phase 2)
+
+### What
+Connected the View menu "Show singleton instances" toggle to the EditorV2 canvas. When enabled, singleton class instances are created/revealed on the M1 canvas with a diamond badge; when disabled, they are hidden (DVertices persist in Redux for position preservation).
+
+### Architecture
+- **syncState.ts**: New `suppressedSingletonIds` Set — module-level coordination between EditorV2 and useJjomSync. When singletons are hidden, their DVertex IDs are added to this set so both init and incremental sync paths skip them.
+- **useJjomSync.ts**: Checks `isSingletonSuppressed(id)` in both the full init path (mount/modelid change) and the incremental additions path. Suppressed vertices are skipped entirely.
+- **EditorV2.tsx**: Listens for `jjodel:toggle-singletons` custom event. On show: clears suppression, transforms existing DVertices to RF nodes (or creates new DObject+DVertex via `syncCreateObject` for singletons without instances). On hide: suppresses vertex IDs, removes RF nodes. On mount with toggle off: pre-suppresses existing singleton vertices.
+- **ObjectNode.tsx**: Reads `isSingleton` flag from metaclass in Redux, renders diamond badge in top-right corner.
+
+### Files changed
+| File | Change |
+|------|--------|
+| `frontend/src/components/editor-v2/sync/syncState.ts` | Added `suppressedSingletonIds` Set with suppress/unsuppress/clear/get functions |
+| `frontend/src/components/editor-v2/hooks/useJjomSync.ts` | Import `isSingletonSuppressed`, skip suppressed vertices in init + incremental sync |
+| `frontend/src/components/editor-v2/EditorV2.tsx` | Added singleton toggle event listener, show/hide logic, initial suppression on mount |
+| `frontend/src/components/editor-v2/nodes/ObjectNode.tsx` | Read `isSingleton` from Redux metaclass, render diamond badge conditionally |
+| `frontend/src/components/editor-v2/EditorV2.scss` | Added `.singleton-badge` styles (16×16px slate badge with white diamond icon) |
+
+### Key decisions
+- **DVertices persist when hidden** — positions preserved in Redux store, no localStorage backup needed
+- **Suppression set** pattern (not RF node filtering) — integrates cleanly with existing anti-bounce coordination in syncState.ts
+- **New instances auto-positioned** — below existing nodes (y = maxY + 60), spaced horizontally (gap 220px)
+- **Badge uses same slate style** (#334155) as other UI indicators per design system
+
+---
+
+## 2026-03-22 — "Show singleton instances" toggle in View menu (Phase 1)
+
+### What
+Added a per-model toggle "Show singleton instances" to the View menu (between Fullscreen Mode and Debug Mode). The toggle is disabled when the active tab is a metamodel or the dashboard — only enabled for M1 model tabs.
+
+### State management
+- **Per-model localStorage**: key `jjodel.showSingletons.<modelId>`
+- Syncs on active tab change via `jjodel:active-tab` event
+- Dispatches `jjodel:toggle-singletons` custom event with `{ modelId, show }` for canvas consumption
+- Console logs `[singleton] show=<bool>, modelId=<id>` for Phase 2 verification
+
+### Files changed
+| File | Change |
+|------|--------|
+| `frontend/src/pages/components/Navbar.tsx` | Added singleton toggle state, `getActiveModelTab()` helper, `toggleShowSingletons()`, menu item with diamond icon and contextual disable |
+
+### Pattern
+Follows the TreeView toggle pattern: localStorage-backed `useState` + custom event for cross-component sync. Menu item uses the Debug Mode checkmark pattern (`✓` suffix + filled/outline icon).
+
+---
+
 ## 2026-03-22 — Singleton class underline on canvas
 
 ### What

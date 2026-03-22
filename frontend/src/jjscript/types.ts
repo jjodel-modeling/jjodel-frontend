@@ -55,7 +55,8 @@ export type CommandType =
     | 'export'
     | 'import'
     | 'validate'
-    | 'extends';
+    | 'extends'
+    | 'eval';
 
 export type ElementType =
     | 'class'
@@ -111,7 +112,8 @@ export type CommandArgs =
     | UndoRedoArgs
     | ClearArgs
     | ValidateArgs
-    | ExtendsArgs;
+    | ExtendsArgs
+    | EvalArgs;
 
 // CREATE command
 export interface CreateArgs {
@@ -268,6 +270,12 @@ export interface ExtendsArgs {
     command: 'extends';
     childClass: QualifiedName;
     parentClass: QualifiedName;
+}
+
+// EVAL command (JjEL expression evaluation)
+export interface EvalArgs {
+    command: 'eval';
+    expression: string;
 }
 
 // ============================================
@@ -515,7 +523,7 @@ export const TYPE_ALIASES: Record<string, PrimitiveTypeName> = {
 export const COMMANDS: CommandType[] = [
     'create', 'delete', 'rename', 'set', 'add', 'remove',
     'move', 'copy', 'list', 'show', 'help', 'undo', 'redo',
-    'clear', 'export', 'import', 'validate', 'extends'
+    'clear', 'export', 'import', 'validate', 'extends', 'eval'
 ];
 
 export const ELEMENT_TYPES: ElementType[] = [

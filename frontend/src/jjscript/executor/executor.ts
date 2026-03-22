@@ -27,6 +27,7 @@ import { executeUndo, executeRedo } from './commands/undoredo';
 import { executeClear } from './commands/clear';
 import { executeValidate } from './commands/validate';
 import { executeExtends } from './commands/extends';
+import { executeEval } from './commands/eval';
 import { extractDependencies } from './dependencies';
 import { waitForDependencies } from './elementWaiter';
 
@@ -143,6 +144,9 @@ export class JjScriptExecutor {
                     break;
                 case 'extends':
                     result = await executeExtends(ast.args as any, this.context);
+                    break;
+                case 'eval':
+                    result = await executeEval(ast.args as any, this.context);
                     break;
                 default:
                     result = {
