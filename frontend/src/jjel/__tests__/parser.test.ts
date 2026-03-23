@@ -252,10 +252,14 @@ describe('forall', () => {
 // ============================================================
 
 describe('exists', () => {
-    test('colon separator', () => {
-        const ast = parse('exists a in attrs : a.type == "String"') as any;
+    test('pipe separator', () => {
+        const ast = parse('exists a in attrs | a.type == "String"') as any;
         expect(ast.type).toBe('Exists');
         expect(ast.variable).toBe('a');
+    });
+
+    test('colon separator is rejected', () => {
+        expect(() => parse('exists a in attrs : a.type == "String"')).toThrow();
     });
 
     test('such that separator', () => {
@@ -332,11 +336,86 @@ describe('real-world expressions', () => {
     });
 
     test('exists with nested navigation', () => {
-        parseOk('exists a in attributes : a.type.name == "String"');
+        parseOk('exists a in attributes such that a.type.name == "String"');
     });
 
     test('complex: forall + implies + null-safe', () => {
         parseOk('isAbstract implies subClasses?.isNotEmpty');
+    });
+});
+
+// ============================================================
+// NEW: OBJECT LITERALS
+// ============================================================
+
+describe('object literals', () => {
+    test('empty object', () => {
+        const ast = parse('{}') as any;
+        expect(ast.type).toBe('ObjectLiteral');
+        expect(ast.entries).toEqual([]);
+    });
+
+    test('single entry with identifier key', () => {
+        const ast = parse('{name: "hello"}') as any;
+        expect(ast.type).toBe('ObjectLiteral');
+        expect(ast.entries).toHaveLength(1);
+        expect(ast.entries[0].key).toBe('name');
+        expect(ast.entries[0].value).toMatchObject({ type: 'Literal', value: 'hello' });
+    });
+
+    test('multiple entries', () => {
+        const ast = parse('{name: "hello", count: 42}') as any;
+        expect(ast.type).toBe('ObjectLiteral');
+        expect(ast.entries).toHaveLength(2);
+        expect(ast.entries[0].key).toBe('name');
+        expect(ast.entries[1].key).toBe('count');
+    });
+
+    test('string keys', () => {
+        const ast = parse('{"my-key": "value"}') as any;
+        expect(ast.type).toBe('ObjectLiteral');
+        expect(ast.entries[0].key).toBe('my-key');
+    });
+
+    test('expression values', () => {
+        const ast = parse('{sum: 1 + 2, neg: not true}') as any;
+        expect(ast.type).toBe('ObjectLiteral');
+        expect(ast.entries[0].value.type).toBe('Binary');
+        expect(ast.entries[1].value.type).toBe('Unary');
+    });
+
+    test('nested object', () => {
+        const ast = parse('{outer: {inner: 1}}') as any;
+        expect(ast.type).toBe('ObjectLiteral');
+        expect(ast.entries[0].value.type).toBe('ObjectLiteral');
+    });
+
+    test('dot access on object literal', () => {
+        const ast = parse('{name: "hello"}.name') as any;
+        expect(ast.type).toBe('MemberAccess');
+        expect(ast.object.type).toBe('ObjectLiteral');
+        expect(ast.property).toBe('name');
+    });
+
+    test('index access on object literal', () => {
+        const ast = parse('{"my-key": 1}["my-key"]') as any;
+        expect(ast.type).toBe('IndexAccess');
+        expect(ast.object.type).toBe('ObjectLiteral');
+    });
+
+    test('object in array', () => {
+        const ast = parse('[{a: 1}, {a: 2}]') as any;
+        expect(ast.type).toBe('ArrayLiteral');
+        expect(ast.elements[0].type).toBe('ObjectLiteral');
+        expect(ast.elements[1].type).toBe('ObjectLiteral');
+    });
+
+    test('object with member access value', () => {
+        parseOk('{cls: c.name, attr: a.name}');
+    });
+
+    test('object as forall projection', () => {
+        parseOk('forall c in classes : {name: c.name}');
     });
 });
 

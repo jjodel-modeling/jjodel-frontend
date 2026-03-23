@@ -1,5 +1,139 @@
 # Claude Code Session Log
 
+## 2026-03-23 — Fix: white page — U.toHtml() undefined at module load (MyRcDock.tsx)
+
+### Problem
+App shows white page with error loop: `MyRcDock.tsx: Cannot read properties of undefined (reading 'toHtml')` — first at line 308 (`dropIndicator`), then at line 419 (`makeAnchorControl` → `anchorControls`).
+
+### Root cause
+Two top-level variable initializers called `U.toHtml(...)` at **module scope**:
+1. `dropIndicator` (line 308) — dead code, never used elsewhere
+2. `anchorControls` array (lines 421-426) — calls `makeAnchorControl()` which uses `U.toHtml()`
+
+`U` is resolved from `windoww.U` at import time (`joiner/index.ts:105`). Due to module load order, `U` can be `undefined` when `MyRcDock.tsx` is first evaluated, crashing the app before any component renders.
+
+### Fix
+Deferred both into lazy-init getter functions:
+- `getDropIndicator()` — creates `dropIndicator` on first access
+- `getAnchorControls()` — creates `anchorControls` array on first access, updated the one call site (line 614)
+
+### Files changed
+| File | Change |
+|------|--------|
+| `frontend/src/components/dock/MyRcDock.tsx` | Lazy-init `dropIndicator` and `anchorControls`; updated call site at line 614 |
+
+### Verification
+- Vite dev server starts cleanly
+
+---
+
+## 2026-03-23 — Fix: white page regression (ansi-to-html require)
+
+### Problem
+After the scoping fix commit, the app showed a white page with error loop:
+`MyRcDock.tsx:308: Cannot read properties of undefined (reading 'toHtml')`
+
+### Root cause
+`UX.tsx` imported `ansi-to-html` via `require()` (line 23), which returns `{}` in the Vite/browser environment. This could cause module initialization failures cascading to other components. Additionally, `U.objectInspect()` had a typo: it cached the `Convert` instance under `window.ansiconvert` (lowercase) but read from `window.ansiConvert` (uppercase), so the instance was never cached and recreated on every call.
+
+### Fix
+1. **UX.tsx**: Removed unused `require('ansi-to-html')` — `Convert` was imported but never referenced in UX.
+2. **U.tsx `objectInspect()`**: Fixed cache key typo (`ansiconvert` → `ansiConvert`) and added null-check safety net — if `ansiConvert.toHtml` is not a function, falls back to plain `util.inspect()` without ANSI colors.
+
+### Files changed
+| File | Change |
+|------|--------|
+| `frontend/src/common/UX.tsx` | Removed unused `require('ansi-to-html')` |
+| `frontend/src/common/U.tsx` | Fixed `objectInspect()` cache key typo + null-check on `toHtml` |
+
+### Verification
+- Vite dev server starts cleanly
+- Zero TypeScript errors
+- Scoping fix (commit `7bd2bd05f`) untouched — it did not modify UX.tsx, U.tsx, or MyRcDock.tsx
+
+---
+
+## 2026-03-23 — Fix: `classes` scoped to active metamodel tab
+
+### Problem
+`forall c in classes : c.name` returned classes from the wrong metamodel (metamodel_1) when the user was viewing metamodel_3 — because both code paths (`getActiveMetamodel()` and Console `getFallbackModel()`) relied on `_lastSelected` which tracks the last clicked element, NOT the currently visible tab.
+
+### Root cause
+Two independent code paths build the JjEL evaluation context:
+1. **JjScript executor** (`eval.ts` → `buildEvalContext` → `getTargetMetamodel` → `getActiveMetamodel`)
+2. **Console component** (`Console.tsx` → `mapStateToProps` + `getFallbackModel` → `jjelEval`)
+
+Both used `state._lastSelected` (stale after tab switch without clicking an element) and fell back to `m2models[0]` / first metamodel.
+
+### Fix
+Use **DockManager active tab ID** as primary source of truth (tab IDs = metamodel pointer IDs):
+
+1. `getActiveMetamodel()` now queries `DockManager.dock.getLayout().dockbox.children[0].activeId` first, falling back to `_lastSelected` only when dock is unavailable.
+2. Console `getFallbackModel()` similarly uses DockManager active tab before falling back to `m2models[0]`.
+3. Console `mapStateToProps` clears stale `_lastSelected.node` when the node belongs to a different metamodel than the active tab.
+
+### Files changed
+| File | Change |
+|------|--------|
+| `frontend/src/jjscript/executor/utils.ts` | `getActiveMetamodel()` uses DockManager active tab; added helper `getActiveTabMetamodel()` |
+| `frontend/src/components/editors/Console.tsx` | `getFallbackModel()` uses DockManager; `mapStateToProps` clears cross-tab stale node |
+
+### Tests
+329 tests passing (172 JjEL + 157 JjTL), unchanged.
+
+---
+
+## 2026-03-23 — JjEL: object literals
+
+### What
+Added object literal syntax to JjEL: `{key: value, ...}`. Keys can be identifiers or quoted strings. Supports empty objects `{}`, dot access `{name: "x"}.name`, index access `{"my-key": v}["my-key"]`, nesting, and use as forall projections.
+
+### Files changed
+| File | Change |
+|------|--------|
+| `frontend/src/jjel/types/ast.ts` | Added `ObjectLiteralExpr`, `ObjectLiteralEntry` types to union |
+| `frontend/src/jjel/types/tokens.ts` | Added `LBRACE` token type |
+| `frontend/src/jjel/lexer/lexer.ts` | Handle `{` → `LBRACE` token |
+| `frontend/src/jjel/parser/parser.ts` | Added `objectLiteral()` production in `primary()` |
+| `frontend/src/jjel/evaluator/evaluator.ts` | Added `evaluateObjectLiteral()` — produces plain JS objects |
+| `frontend/src/jjel/__tests__/parser.test.ts` | 11 new parser tests for object literals |
+| `frontend/src/jjel/__tests__/evaluator.test.ts` | 16 new evaluator tests (dot/index access, sortBy, groupBy, forall) |
+| `frontend/src/jjel/SPEC.md` | Updated grammar, composite types table, operators |
+
+### Tests
+172 JjEL tests passing (was 145), 157 JjTL tests passing (unchanged).
+
+---
+
+## 2026-03-23 — JjEL grammar update: `|` as alias, `:` reserved for projection
+
+### What
+Updated JjEL grammar with three changes:
+1. **`|` added as alias for `such that`** — works in both `forall` and `exists` filter clauses
+2. **`:` removed from `exists`** — `:` is now reserved exclusively for `forall` projections (breaking change)
+3. **Nested parenthesized expressions** work correctly: `forall c in classes | (exists a in c.attrs | a.isPublic) : c.name`
+
+### Breaking change
+`exists x in S : pred` is no longer valid syntax. Must use `exists x in S such that pred` or `exists x in S | pred`.
+
+### Files changed
+| File | Change |
+|------|--------|
+| `frontend/src/jjel/types/tokens.ts` | Added `PIPE` token type |
+| `frontend/src/jjel/lexer/lexer.ts` | Handle `\|` → `PIPE` token |
+| `frontend/src/jjel/parser/parser.ts` | `exists()`: reject `:`, accept `\|`; `forAll()`: accept `\|` as alias |
+| `frontend/src/jjel/types/ast.ts` | Updated doc comments |
+| `frontend/src/jjel/__tests__/parser.test.ts` | Updated exists tests, added rejection test |
+| `frontend/src/jjel/__tests__/evaluator.test.ts` | Changed `exists ... :` → `exists ... such that` |
+| `frontend/src/jjtl/__tests__/jjel-delegation.test.ts` | Changed 4 exists expressions |
+| `frontend/src/jjel/SPEC.md` | Updated exists syntax, examples, summary table |
+| `CLAUDE.md` | Updated core constructs table |
+| `docs/jjel-jjtl-audit.md` | Updated exists example |
+| `docs/jjtl-jjel-paper.tex` | Updated 3 exists examples + description |
+| `docs/claude-code-log.md` | This entry |
+
+---
+
 ## 2026-03-22 — JjEL integration in JjScript (forall, exists, with)
 
 ### What
@@ -14,7 +148,7 @@ Added JjEL expression evaluation support to JjScript. Users can now type `forall
 ### Examples
 - `forall c in classes : c.name` → list of class names
 - `forall c in classes such that c.isAbstract : c.name` → abstract class names only
-- `forall c in classes such that exists a in c.attributes : a.name == "pippo"` → classes with attribute "pippo"
+- `forall c in classes | (exists a in c.attributes | a.name == "pippo")` → classes with attribute "pippo"
 - `eval 2 + 3` → `5` (explicit eval command also supported)
 
 ### Files changed

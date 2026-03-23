@@ -20,7 +20,7 @@ import {
 } from "../joiner";
 import {AllPropss} from "../graph/vertex/Vertex";
 
-var Convert = require('ansi-to-html');
+// ansi-to-html: removed unused require() — Convert is not used in UX
 
 // U-functions that require jsx
 @RuntimeAccessible('UX')

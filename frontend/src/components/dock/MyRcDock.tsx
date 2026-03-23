@@ -305,7 +305,11 @@ interface LayoutState {
 let currentDropRect!: LayoutState["dropRect"];
 let currentDropArea!: Element;
 let dockLayout!: Element;
-let dropIndicator: Element = U.toHtml('<div class="dock-drop-indicator" style="left: 0px; top: 0px; width: 0px; height: 60px; display: block;')
+let dropIndicator: Element | undefined;
+function getDropIndicator(): Element {
+    if (!dropIndicator) dropIndicator = U.toHtml('<div class="dock-drop-indicator" style="left: 0px; top: 0px; width: 0px; height: 60px; display: block;">');
+    return dropIndicator;
+}
 
 function getStrip(side: string): PinnableStrip {
     let s = side[0];
@@ -414,12 +418,16 @@ function makeAnchorControl(side: string){
 </div>`;
     return U.toHtml(str);
 }
-const anchorControls = [
-    makeAnchorControl('top'),
-    makeAnchorControl('bottom'),
-    makeAnchorControl('left'),
-    makeAnchorControl('right'),
-];
+let anchorControls: Element[];
+function getAnchorControls(): Element[] {
+    if (!anchorControls) anchorControls = [
+        makeAnchorControl('top'),
+        makeAnchorControl('bottom'),
+        makeAnchorControl('left'),
+        makeAnchorControl('right'),
+    ];
+    return anchorControls;
+}
 
 // todo: how to drop pinned tabs in the main layout https://github.com/ticlo/rc-dock/issues/97there is also an official example with a different strat
 @RuntimeAccessible('PinnableDock')
@@ -603,7 +611,7 @@ export class PinnableDock extends DockLayout{
             dockLayout = windoww.htmldockLayout = this._ref;
             currentDropRect = this.state.dropRect;
             if (!droplayer) return;
-            droplayer.append(...anchorControls);
+            droplayer.append(...getAnchorControls());
             let tab = PinnableDock.getTabFromDropRect(droparea);
             console.log('activating pin buttons', {tab, currentDropRect, dockLayout, droparea, prevProps, prevState, snapshot}, );
             // todo: tabfocus but not the active one, the clicked one

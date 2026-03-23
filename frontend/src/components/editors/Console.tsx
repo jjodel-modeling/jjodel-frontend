@@ -47,6 +47,7 @@ import type { ConsoleLanguage } from './Console/LanguageToggle';
 // Import JjEL for expression evaluation
 import { jjelEval } from '../../jjel';
 import { extractAttributeValues } from '../../jjel/evaluator/modelContext';
+import DockManager from '../abstract/DockManager';
 
 /**
  * Flatten a Jjodel proxy's properties into a plain object for use as JjEL context.
@@ -833,10 +834,25 @@ Tip: Click the keyboard icon in the toolbar for quick reference.`;
         }
     };
 
-    // Get the fallback LModel when no node is selected
+    // Get the fallback LModel when no node is selected.
+    // Prefers the currently active DockManager tab (= the metamodel the user is viewing).
     private getFallbackModel(): LModel | null {
+        // 1. Try DockManager active tab — most reliable indicator of current metamodel
+        try {
+            if (DockManager.dock) {
+                const layout = DockManager.dock.getLayout();
+                const modelsPanel = layout?.dockbox?.children?.[0];
+                const tabs = (modelsPanel as any)?.tabs || [];
+                const activeId: string = (modelsPanel as any)?.activeId || tabs[0]?.id;
+                if (activeId) {
+                    const model = LPointerTargetable.fromPointer(activeId) as LModel | null;
+                    if (model) return model;
+                }
+            }
+        } catch { /* dock not available */ }
+
+        // 2. Fall back to first metamodel/model pointer
         const { m2models, m1models } = this.props;
-        // Prefer metamodels, fall back to models
         const pointers = (m2models && m2models.length > 0) ? m2models
             : (m1models && m1models.length > 0) ? m1models
             : [];
@@ -1029,7 +1045,25 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
     const nodeid = state._lastSelected?.node;
-    const node: LGraphElement|null = (nodeid) ? LGraphElement.fromPointer(nodeid) : null;
+    let node: LGraphElement|null = (nodeid) ? LGraphElement.fromPointer(nodeid) : null;
+
+    // If the selected node belongs to a different metamodel than the active tab,
+    // treat it as "no node selected" so the Console scopes to the active tab's metamodel.
+    if (node) {
+        try {
+            if (DockManager.dock) {
+                const layout = DockManager.dock.getLayout();
+                const modelsPanel = layout?.dockbox?.children?.[0];
+                const tabs = (modelsPanel as any)?.tabs || [];
+                const activeId: string = (modelsPanel as any)?.activeId || tabs[0]?.id;
+                if (activeId && node.model && node.model.id !== activeId) {
+                    // Node is from a different metamodel — clear it
+                    node = null;
+                }
+            }
+        } catch { /* dock not available */ }
+    }
+
     ret.node = node;
     ret.data = (node?.model) ? node.model : null;
     ret.view = (node?.view) ? node.view : null;

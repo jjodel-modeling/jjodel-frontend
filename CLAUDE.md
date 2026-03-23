@@ -347,8 +347,8 @@ frontend/src/jjel/
 | Type check | `x is Type` | `value is String` |
 | Implication | `a implies b` | `isAbstract implies hasSubclasses` |
 | Lambda | `x => expr` | `x => x.name` |
-| ForAll (set comp.) | `forall x in S [such that P] [: proj]` | `forall a in attrs such that a.isPublic : a.name` |
-| Exists | `exists x in S : pred` | `exists a in attrs : a.type == "String"` |
+| ForAll (set comp.) | `forall x in S [such that / \| P] [: proj]` | `forall a in attrs \| a.isPublic : a.name` |
+| Exists | `exists x in S (such that / \|) pred` | `exists a in attrs such that a.type == "String"` |
 | With...do | `with expr do body` | `with parent do name.camelCase()` |
 | Array literal | `[a, b, c]` | `["red", "green"]` |
 | Index access | `arr[index]` | `items[0]` |

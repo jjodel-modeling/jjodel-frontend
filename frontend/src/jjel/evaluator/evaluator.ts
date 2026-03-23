@@ -24,6 +24,7 @@ import {
     ExistsExpr,
     WithDoExpr,
     IndexAccessExpr,
+    ObjectLiteralExpr,
     BinaryOperator,
     UnaryOperator
 } from '../types/ast';
@@ -156,6 +157,8 @@ export class JjelEvaluator {
                 return this.evaluateWithDo(expr, evalCtx);
             case 'IndexAccess':
                 return this.evaluateIndexAccess(expr, evalCtx);
+            case 'ObjectLiteral':
+                return this.evaluateObjectLiteral(expr, evalCtx);
             default:
                 throw new JjelEvaluationError(`Unknown expression type: ${(expr as any).type}`, expr);
         }
@@ -726,6 +729,18 @@ export class JjelEvaluator {
 
     private evaluateArrayLiteral(expr: ArrayLiteralExpr, ctx: EvaluationContext): JjelValue {
         return expr.elements.map(elem => this.evaluate(elem, ctx));
+    }
+
+    // ============================================
+    // OBJECT LITERAL
+    // ============================================
+
+    private evaluateObjectLiteral(expr: ObjectLiteralExpr, ctx: EvaluationContext): JjelValue {
+        const result: Record<string, JjelValue> = {};
+        for (const entry of expr.entries) {
+            result[entry.key] = this.evaluate(entry.value, ctx);
+        }
+        return result;
     }
 
     // ============================================

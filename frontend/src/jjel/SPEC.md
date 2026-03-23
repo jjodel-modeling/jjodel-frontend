@@ -55,7 +55,7 @@ JjEL has a **set-theoretic** semantics: its core construct (`forall`) selects an
 | Type | Literal | Examples |
 |------|---------|---------|
 | Array | `[elements]` | `[]`, `[1, 2, 3]`, `["a", "b"]` |
-| Object | *(no literal syntax)* | Model elements, JjOM proxies |
+| Object | `{key: value, ...}` | `{}`, `{name: "hello", count: 42}` |
 | Function | Lambda expressions | `a => a.name` |
 
 ### Type Hierarchy (for `is` operator)
@@ -92,7 +92,7 @@ The `is` operator checks type membership including supertypes:
 | Navigation | `.` (member access), `?.` (null-safe) |
 | Null handling | `??` (null coalesce) |
 | Lambda | `=>` |
-| Grouping | `(`, `)`, `[`, `]` |
+| Grouping | `(`, `)`, `[`, `]`, `{`, `}` |
 | Separator | `:`, `,` |
 
 ### Operator Semantics
@@ -173,12 +173,16 @@ primary        = literal
                | IDENT
                | lambda
                | arrayLiteral
+               | objectLiteral
                | '(' expression ')'
 
 lambda         = IDENT '=>' expression
                | '(' IDENT (',' IDENT)* ')' '=>' expression
 
 arrayLiteral   = '[' (expression (',' expression)*)? ']'
+
+objectLiteral  = '{' (objectEntry (',' objectEntry)*)? '}'
+objectEntry    = (IDENT | STRING) ':' expression
 
 argList        = (expression (',' expression)*)?
 
@@ -246,17 +250,18 @@ forall a in attributes do createColumn(a)
 ```
 exists <var> in <collection> : <condition>
 exists <var> in <collection> such that <condition>
+exists <var> in <collection> | <condition>
 ```
 
-Note: for `exists`, `:` and `such that` **are** synonyms — both introduce the boolean predicate. This is because `exists` has no projection (it always returns boolean).
+Note: `|` is an alias for `such that`. The `:` separator is **NOT** accepted for `exists` — it is reserved exclusively for `forall` projections. This avoids ambiguity in nested expressions like `forall c in classes | (exists a in c.attrs | a.isPublic) : c.name`.
 
 **Semantics:**
-`exists x in S: P` is equivalent to `(forall x in S such that P).isNotEmpty`
+`exists x in S such that P` is equivalent to `(forall x in S such that P).isNotEmpty`
 
 **Examples:**
 ```
-exists a in attributes: a.type == "String"
-exists a in attributes such that a.isPublic and not a.isDerived
+exists a in attributes such that a.type == "String"
+exists a in attributes | a.isPublic and not a.isDerived
 ```
 
 ### 5.3 `implies` — Logical Implication
@@ -485,7 +490,7 @@ Guards select which source elements a transformation rule applies to. The source
 rule ClassToTable {
   from: DClass
   guard: not isAbstract
-         and exists a in attributes: not a.isDerived
+         and exists a in attributes | not a.isDerived
          and forall r in references such that r.target != null
 }
 ```
@@ -628,7 +633,7 @@ forall a in (forall p in packages: p.attributes) such that a.isPublic: a.name
 |--------|---------|-----|
 | Lambda syntax | `a: expr` | `a => expr` |
 | Set comprehension | — | `forall x in S such that P: expr` |
-| Existential check | — | `exists x in S: P` |
+| Existential check | — | `exists x in S such that P` (or `exists x in S \| P`) |
 | Implication | — | `P implies Q` |
 | Context binding | — | `with obj do expr` |
 | Index access | `.at(index)` only | `collection[index]` (+ `.at()`) |

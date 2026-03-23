@@ -40,7 +40,8 @@ export type JjelExpression =
     | ForAllExpr
     | ExistsExpr
     | WithDoExpr
-    | IndexAccessExpr;
+    | IndexAccessExpr
+    | ObjectLiteralExpr;
 
 // ============================================
 // LITERALS
@@ -252,11 +253,12 @@ export interface ForAllExpr extends JjelASTNode {
 }
 
 /**
- * Existential quantifier: exists x in S (: | such that) predicate
+ * Existential quantifier: exists x in S (such that | |) predicate
  * Returns true if any element satisfies the predicate.
+ * NOTE: ':' is NOT accepted for exists — use 'such that' or '|'.
  * Examples:
- *   exists a in attrs : a.type == "String"
- *   exists a in attrs such that a.isPublic
+ *   exists a in attrs such that a.type == "String"
+ *   exists a in attrs | a.isPublic
  */
 export interface ExistsExpr extends JjelASTNode {
     type: 'Exists';
@@ -305,6 +307,25 @@ export interface IndexAccessExpr extends JjelASTNode {
 export interface ArrayLiteralExpr extends JjelASTNode {
     type: 'ArrayLiteral';
     elements: JjelExpression[];
+}
+
+// ============================================
+// OBJECT LITERAL
+// ============================================
+
+/**
+ * Object literal: {key1: expr1, key2: expr2, ...}
+ * Keys can be identifiers or strings.
+ * Examples: {name: "hello", count: 42}, {"my-key": value}, {}
+ */
+export interface ObjectLiteralExpr extends JjelASTNode {
+    type: 'ObjectLiteral';
+    entries: ObjectLiteralEntry[];
+}
+
+export interface ObjectLiteralEntry {
+    key: string;
+    value: JjelExpression;
 }
 
 // ============================================

@@ -383,16 +383,16 @@ This is one concept instead of three, with a single binding variable (\texttt{a}
 While \kw{forall} returns a set, \kw{exists} returns a \textbf{boolean}: does at least one element satisfy the condition?
 
 \begin{lstlisting}[style=jjel,numbers=none]
-exists a in attributes: a.type == "String"
-exists a in attributes such that a.isPublic and not a.isDerived
+exists a in attributes such that a.type == "String"
+exists a in attributes | a.isPublic and not a.isDerived
 \end{lstlisting}
 
 \kw{exists} is semantically derived from \kw{forall}:
 \[
-\texttt{exists x in S: P} \equiv \texttt{(forall x in S such that P).isNotEmpty}
+\texttt{exists x in S such that P} \equiv \texttt{(forall x in S such that P).isNotEmpty}
 \]
 
-For \kw{exists}, the separators \texttt{:} and \kw{such that} are \emph{synonyms}: both introduce the boolean predicate. This is because \kw{exists} has no projection: it always returns boolean. The synonym design avoids forcing users to remember which separator to use for \kw{exists}.
+For \kw{exists}, the accepted separators are \kw{such that} and \texttt{|} (pipe, as an alias). The \texttt{:} separator is \textbf{not} accepted for \kw{exists}---it is reserved exclusively for \kw{forall} projections. This avoids ambiguity in nested expressions such as \texttt{forall c in classes | (exists a in c.attrs | a.isPublic) : c.name}.
 
 
 \subsection{Logical Implication: \texttt{implies}}
@@ -897,7 +897,7 @@ Public attr. names &
 Exists string attr &
 \texttt{self.attr->exists(a|a.type.name='String')} &
 \texttt{self.attr.exists(a|a.type.name='String')} &
-\texttt{exists a in attr: a.type == "String"} \\
+\texttt{exists a in attr | a.type == "String"} \\
 \addlinespace
 Abstract $\Rightarrow$ has children &
 \texttt{self.isAbstract implies self.subClasses->notEmpty()} &
@@ -1370,7 +1370,7 @@ Non-abstract with attributes &
 Has a string attribute &
 \texttt{c.attr->exists(a | a.type.name = 'String')} &
 \texttt{c.attr.exists(a | a.type.name = 'String')} &
-\texttt{exists a in attributes: a.type == "String"} \\
+\texttt{exists a in attributes | a.type == "String"} \\
 \addlinespace
 All references are navigable &
 \texttt{c.refs->forAll(r | r.isNavigable)} &

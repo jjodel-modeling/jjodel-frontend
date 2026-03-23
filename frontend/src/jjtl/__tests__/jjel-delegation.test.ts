@@ -98,7 +98,7 @@ describe('JjTL Parser — JjEL Expression Delegation', () => {
         });
 
         it('parses exists in guard', () => {
-            const source = HEADER + `A -> B where exists a in attributes : a.type == "String" {\n  label := name\n}`;
+            const source = HEADER + `A -> B where exists a in attributes such that a.type == "String" {\n  label := name\n}`;
             const mapping = getFirstMapping(source);
             expect(mapping.condition).toBeDefined();
             expect(mapping.condition!.type).toBe('JjelExpression');
@@ -119,7 +119,7 @@ describe('JjTL Parser — JjEL Expression Delegation', () => {
 
         it('parses complex guard with implies + exists (parenthesized)', () => {
             // In JjEL, exists has lower precedence than implies, so parentheses are needed
-            const source = HEADER + `A -> B where isAbstract implies (exists s in subClasses : not s.isAbstract) {\n  label := name\n}`;
+            const source = HEADER + `A -> B where isAbstract implies (exists s in subClasses such that not s.isAbstract) {\n  label := name\n}`;
             const mapping = getFirstMapping(source);
             expect(mapping.condition).toBeDefined();
 
@@ -182,7 +182,7 @@ describe('JjTL Parser — JjEL Expression Delegation', () => {
         });
 
         it('parses exists in expression mapping', () => {
-            const source = HEADER + `A -> B {\n  hasStrings := exists a in attributes : a.type == "String"\n}`;
+            const source = HEADER + `A -> B {\n  hasStrings := exists a in attributes such that a.type == "String"\n}`;
             const attrMapping = getFirstAttrMapping(source);
             expect(attrMapping.expression).toBeDefined();
 
@@ -259,7 +259,7 @@ describe('JjTL Parser — JjEL Expression Delegation', () => {
         });
 
         it('parses exists in helper body', () => {
-            const source = HEADER + `helper hasStringAttr(c: Class) -> Boolean { exists a in c.attributes : a.type == "String" }`;
+            const source = HEADER + `helper hasStringAttr(c: Class) -> Boolean { exists a in c.attributes such that a.type == "String" }`;
             const helper = getFirstHelper(source);
             expect(helper.body.type).toBe('JjelExpression');
 

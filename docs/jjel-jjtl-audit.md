@@ -259,7 +259,7 @@ App.tsx
 | Construct | Example | Notes |
 |-----------|---------|-------|
 | `forall` | `forall x in S such that P : expr` | Not in lexer/parser |
-| `exists` | `exists x in S : pred` | Not in lexer/parser |
+| `exists` | `exists x in S such that pred` (or `\| pred`) | Not in lexer/parser |
 | `implies` | `p implies q` | Not in lexer/parser |
 | `with...do` | `with obj do expr` | Not in lexer/parser |
 | Line comment | `-- this is a comment` | Not in lexer |

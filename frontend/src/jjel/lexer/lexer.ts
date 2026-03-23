@@ -58,6 +58,7 @@ export class JjelLexer {
             case ')': this.addToken(JjelTokenType.RPAREN); break;
             case '[': this.addToken(JjelTokenType.LBRACKET); break;
             case ']': this.addToken(JjelTokenType.RBRACKET); break;
+            case '{': this.addToken(JjelTokenType.LBRACE); break;
             case '}': this.addToken(JjelTokenType.RBRACE); break;
             case ':': this.addToken(JjelTokenType.COLON); break;
             case ',': this.addToken(JjelTokenType.COMMA); break;
@@ -65,6 +66,7 @@ export class JjelLexer {
             case '*': this.addToken(JjelTokenType.STAR); break;
             case '/': this.addToken(JjelTokenType.SLASH); break;
             case '%': this.addToken(JjelTokenType.PERCENT); break;
+            case '|': this.addToken(JjelTokenType.PIPE); break;
 
             // Multi-character operators
             case '-':

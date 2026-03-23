@@ -161,19 +161,19 @@ describe('forall', () => {
 
 describe('exists', () => {
     test('returns true when match found', () => {
-        expect(eval_('exists x in [1,2,3] : x > 2')).toBe(true);
+        expect(eval_('exists x in [1,2,3] such that x > 2')).toBe(true);
     });
 
     test('returns false when no match', () => {
-        expect(eval_('exists x in [1,2,3] : x > 10')).toBe(false);
+        expect(eval_('exists x in [1,2,3] such that x > 10')).toBe(false);
     });
 
     test('returns false for empty collection', () => {
-        expect(eval_('exists x in [] : x > 0')).toBe(false);
+        expect(eval_('exists x in [] such that x > 0')).toBe(false);
     });
 
     test('returns false for non-array', () => {
-        expect(eval_('exists x in null : x > 0')).toBe(false);
+        expect(eval_('exists x in null such that x > 0')).toBe(false);
     });
 
     test('with such that variant', () => {
@@ -220,6 +220,105 @@ describe('array indexing', () => {
     });
     test('index after method call', () => {
         expect(eval_('items.sortBy(x => x)[0]', { items: [3, 1, 2] } as any)).toBe(1);
+    });
+});
+
+// ============================================================
+// OBJECT LITERALS
+// ============================================================
+
+describe('object literals', () => {
+    test('simple object', () => {
+        expect(eval_('{name: "hello", count: 42}')).toEqual({ name: 'hello', count: 42 });
+    });
+
+    test('empty object', () => {
+        expect(eval_('{}')).toEqual({});
+    });
+
+    test('dot access', () => {
+        expect(eval_('{name: "hello"}.name')).toBe('hello');
+    });
+
+    test('index access with string key', () => {
+        expect(eval_('{"my-key": "hello"}["my-key"]')).toBe('hello');
+    });
+
+    test('nested object', () => {
+        expect(eval_('{a: {b: 42}}.a.b')).toBe(42);
+    });
+
+    test('object with expressions', () => {
+        expect(eval_('{sum: 1 + 2, upper: "hi".toUpper()}')).toEqual({ sum: 3, upper: 'HI' });
+    });
+
+    test('object with context variables', () => {
+        expect(eval_('{n: x + 1}', { x: 10 } as any)).toEqual({ n: 11 });
+    });
+
+    test('array of objects', () => {
+        expect(eval_('[{a: 1}, {a: 2}]')).toEqual([{ a: 1 }, { a: 2 }]);
+    });
+
+    test('sortBy on array of objects', () => {
+        const result = eval_('[{n: "B"}, {n: "A"}].sortBy(x => x.n)') as any[];
+        expect(result).toEqual([{ n: 'A' }, { n: 'B' }]);
+    });
+
+    test('filter on array of objects', () => {
+        const result = eval_('[{v: 1}, {v: 2}, {v: 3}].filter(x => x.v > 1)') as any[];
+        expect(result).toEqual([{ v: 2 }, { v: 3 }]);
+    });
+
+    test('map on array of objects', () => {
+        const result = eval_('[{n: "a"}, {n: "b"}].map(x => x.n)') as any[];
+        expect(result).toEqual(['a', 'b']);
+    });
+
+    test('groupBy on array of objects', () => {
+        const result = eval_('[{type: "A", n: 1}, {type: "A", n: 2}, {type: "B", n: 3}].groupBy(x => x.type)') as any[];
+        expect(result).toHaveLength(2);
+        expect(result[0]).toMatchObject({ key: 'A', items: [{ type: 'A', n: 1 }, { type: 'A', n: 2 }] });
+        expect(result[1]).toMatchObject({ key: 'B', items: [{ type: 'B', n: 3 }] });
+    });
+
+    test('distinctBy on array of objects', () => {
+        const result = eval_('[{c: "A"}, {c: "B"}, {c: "A"}].distinctBy(x => x.c)') as any[];
+        expect(result).toEqual([{ c: 'A' }, { c: 'B' }]);
+    });
+
+    test('forall projection to object', () => {
+        const ctx = {
+            classes: [
+                { name: 'Person', count: 3 },
+                { name: 'Animal', count: 1 },
+            ],
+        } as any;
+        const result = eval_('forall c in classes : {cls: c.name, n: c.count}', ctx) as any[];
+        expect(result).toEqual([
+            { cls: 'Person', n: 3 },
+            { cls: 'Animal', n: 1 },
+        ]);
+    });
+
+    test('nested forall with object projection', () => {
+        const ctx = {
+            classes: [
+                { name: 'Person', attributes: [{ name: 'age' }, { name: 'name' }] },
+            ],
+        } as any;
+        const result = eval_(
+            'forall c in classes : forall a in c.attributes : {class: c.name, attribute: a.name}',
+            ctx
+        ) as any[];
+        expect(result).toEqual([
+            [{ class: 'Person', attribute: 'age' }, { class: 'Person', attribute: 'name' }],
+        ]);
+    });
+
+    test('object equality', () => {
+        expect(eval_('{a: 1, b: 2} == {a: 1, b: 2}')).toBe(true);
+        expect(eval_('{a: 1} == {a: 2}')).toBe(false);
     });
 });
 

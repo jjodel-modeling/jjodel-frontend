@@ -76,11 +76,13 @@ export enum JjelTokenType {
     // PUNCTUATION
     // ============================================
     COLON = 'COLON',             // :
+    PIPE = 'PIPE',               // | (alias for 'such that')
     COMMA = 'COMMA',             // ,
     LPAREN = 'LPAREN',           // (
     RPAREN = 'RPAREN',           // )
     LBRACKET = 'LBRACKET',       // [
     RBRACKET = 'RBRACKET',       // ]
+    LBRACE = 'LBRACE',           // {
 
     // ============================================
     // STRING INTERPOLATION
