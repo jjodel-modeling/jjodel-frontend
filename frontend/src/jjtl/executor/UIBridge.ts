@@ -43,12 +43,13 @@ export interface UIBridge {
     showNotify(message: string, duration?: number): void;
 
     /**
-     * Show a prompt dialog for text input
+     * Show a prompt dialog for typed input
      * @param message - The prompt message
+     * @param typeRef - Type reference (e.g. 'EString', 'EInt', 'EBoolean', 'EDate')
      * @param defaultValue - Optional default value
      * @returns Promise with user input or cancelled flag
      */
-    showPrompt(message: string, defaultValue?: string): Promise<InputResult<string>>;
+    showPrompt(message: string, typeRef: string, defaultValue?: string): Promise<InputResult<string>>;
 
     /**
      * Show an input dialog for typed input
@@ -79,7 +80,7 @@ export class NoopUIBridge implements UIBridge {
         // No-op
     }
 
-    async showPrompt(_message: string, defaultValue?: string): Promise<InputResult<string>> {
+    async showPrompt(_message: string, _typeRef: string, defaultValue?: string): Promise<InputResult<string>> {
         return { value: defaultValue ?? '', cancelled: false };
     }
 
@@ -112,8 +113,8 @@ export class ConsoleUIBridge implements UIBridge {
         console.log(`[JjTL] 📢 NOTIFY (${duration ?? 3000}ms): ${message}`);
     }
 
-    async showPrompt(message: string, defaultValue?: string): Promise<InputResult<string>> {
-        console.log(`[JjTL] ❓ PROMPT: ${message} (default: "${defaultValue ?? ''}")`);
+    async showPrompt(message: string, typeRef: string, defaultValue?: string): Promise<InputResult<string>> {
+        console.log(`[JjTL] ❓ PROMPT: ${message} [type: ${typeRef}] (default: "${defaultValue ?? ''}")`);
         return { value: defaultValue ?? '', cancelled: false };
     }
 

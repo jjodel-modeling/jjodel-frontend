@@ -25,7 +25,13 @@ import {
     ObjectCreationAST,
     HelperAST,
     ArrayLiteralAST,
+    AlertStatementAST,
+    NotifyStatementAST,
+    PromptExpressionAST,
+    InputExpressionAST,
 } from '../types';
+
+import { getUIBridge } from './UIBridge';
 
 import {
     jjelEval,
@@ -301,7 +307,7 @@ export class JjtlExecutor {
      * Execute the transformation on a source model
      * NOTE: Creates a deep copy of sourceModel to prevent mutation of the original data
      */
-    execute(sourceModel: any, targetMetamodel?: any): ExecutionResult {
+    async execute(sourceModel: any, targetMetamodel?: any): Promise<ExecutionResult> {
         console.log('[JjTL Executor] Starting execution...');
         console.log('[JjTL Executor] AST:', this.ast);
         console.log('[JjTL Executor] AST mappings count:', this.ast?.mappings?.length ?? 0);
@@ -384,7 +390,7 @@ export class JjtlExecutor {
 
             // Execute class mappings
             for (const mapping of this.ast.mappings) {
-                this.executeClassMapping(mapping, sourceInstances, targetModel);
+                await this.executeClassMapping(mapping, sourceInstances, targetModel);
             }
 
             this.stats.executionTimeMs = performance.now() - startTime;
@@ -674,13 +680,13 @@ export class JjtlExecutor {
     /**
      * Execute a class mapping for all matching source instances
      */
-    private executeClassMapping(
+    private async executeClassMapping(
         mapping: ClassMappingAST,
         sourceInstances: Map<string, any[]>,
         targetModel: TargetModel
-    ): void {
+    ): Promise<void> {
         if (mapping.sources.length > 1) {
-            this.executeMultiSourceClassMapping(mapping, sourceInstances, targetModel);
+            await this.executeMultiSourceClassMapping(mapping, sourceInstances, targetModel);
             return;
         }
 
@@ -726,7 +732,7 @@ export class JjtlExecutor {
             const traceLink = this.context.traceBuilder.addLink(ruleName, sourceRef, targetRefs, hasGuard);
 
             for (const targetInstance of targetInstances) {
-                this.executeAttributeMappingsWithTrace(mapping.body, sourceInstance, targetInstance, traceLink, sourceAlias);
+                await this.executeAttributeMappingsWithTrace(mapping.body, sourceInstance, targetInstance, traceLink, sourceAlias);
             }
 
             this.stats.classMappingsExecuted++;
@@ -737,11 +743,11 @@ export class JjtlExecutor {
      * Execute a multi-source class mapping using cartesian product of all source instances.
      * All sources must have aliases; missing aliases produce an error.
      */
-    private executeMultiSourceClassMapping(
+    private async executeMultiSourceClassMapping(
         mapping: ClassMappingAST,
         sourceInstances: Map<string, any[]>,
         targetModel: TargetModel
-    ): void {
+    ): Promise<void> {
         // Validate: every source must have an alias
         for (const src of mapping.sources) {
             if (!src.alias) {
@@ -804,7 +810,7 @@ export class JjtlExecutor {
             const traceLink = this.context.traceBuilder.addLink(ruleName, sourceRef, targetRefs, hasGuard);
 
             for (const targetInstance of targetInstances) {
-                this.executeAttributeMappingsWithTrace(mapping.body, syntheticSource, targetInstance, traceLink);
+                await this.executeAttributeMappingsWithTrace(mapping.body, syntheticSource, targetInstance, traceLink);
             }
 
             this.stats.classMappingsExecuted++;
@@ -892,12 +898,12 @@ export class JjtlExecutor {
     /**
      * Execute attribute mappings on a target instance
      */
-    private executeAttributeMappings(
+    private async executeAttributeMappings(
         body: any[],
         sourceInstance: any,
         targetInstance: any,
         alias?: string
-    ): void {
+    ): Promise<void> {
         console.log('[JjTL Executor] executeAttributeMappings called:', {
             bodyLength: body?.length || 0,
             bodyTypes: body?.map(b => b?.type) || [],
@@ -921,10 +927,20 @@ export class JjtlExecutor {
             });
 
             if (item.type === 'AttributeMapping') {
-                this.executeAttributeMapping(item as AttributeMappingAST, sourceInstance, targetInstance, alias);
+                await this.executeAttributeMapping(item as AttributeMappingAST, sourceInstance, targetInstance, alias);
                 this.stats.attributeMappingsExecuted++;
             } else if (item.type === 'ForAllMapping') {
-                this.executeForAllMapping(item as ForAllMappingAST, sourceInstance, targetInstance);
+                await this.executeForAllMapping(item as ForAllMappingAST, sourceInstance, targetInstance);
+            } else if (item.type === 'AlertStatement') {
+                const alertItem = item as AlertStatementAST;
+                const ctx = this.createInstanceContext(sourceInstance, alias);
+                const msg = this.evaluateExpression(alertItem.message, ctx);
+                await getUIBridge().showAlert(String(msg ?? ''), alertItem.alertType ?? 'info');
+            } else if (item.type === 'NotifyStatement') {
+                const notifyItem = item as NotifyStatementAST;
+                const ctx = this.createInstanceContext(sourceInstance, alias);
+                const msg = this.evaluateExpression(notifyItem.message, ctx);
+                getUIBridge().showNotify(String(msg ?? ''), notifyItem.duration ?? 3000);
             }
         }
 
@@ -934,13 +950,13 @@ export class JjtlExecutor {
     /**
      * Execute attribute mappings with trace recording
      */
-    private executeAttributeMappingsWithTrace(
+    private async executeAttributeMappingsWithTrace(
         body: any[],
         sourceInstance: any,
         targetInstance: any,
         traceLink: TraceLinkBuilder,
         alias?: string
-    ): void {
+    ): Promise<void> {
         console.log('[JjTL Executor] executeAttributeMappingsWithTrace called');
 
         if (!body || body.length === 0) {
@@ -950,10 +966,20 @@ export class JjtlExecutor {
         for (const item of body) {
             if (item.type === 'AttributeMapping') {
                 const mapping = item as AttributeMappingAST;
-                this.executeAttributeMappingWithTrace(mapping, sourceInstance, targetInstance, traceLink, alias);
+                await this.executeAttributeMappingWithTrace(mapping, sourceInstance, targetInstance, traceLink, alias);
                 this.stats.attributeMappingsExecuted++;
             } else if (item.type === 'ForAllMapping') {
-                this.executeForAllMapping(item as ForAllMappingAST, sourceInstance, targetInstance);
+                await this.executeForAllMapping(item as ForAllMappingAST, sourceInstance, targetInstance);
+            } else if (item.type === 'AlertStatement') {
+                const alertItem = item as AlertStatementAST;
+                const ctx = this.createInstanceContext(sourceInstance, alias);
+                const msg = this.evaluateExpression(alertItem.message, ctx);
+                await getUIBridge().showAlert(String(msg ?? ''), alertItem.alertType ?? 'info');
+            } else if (item.type === 'NotifyStatement') {
+                const notifyItem = item as NotifyStatementAST;
+                const ctx = this.createInstanceContext(sourceInstance, alias);
+                const msg = this.evaluateExpression(notifyItem.message, ctx);
+                getUIBridge().showNotify(String(msg ?? ''), notifyItem.duration ?? 3000);
             }
         }
 
@@ -963,13 +989,13 @@ export class JjtlExecutor {
     /**
      * Execute a single attribute mapping with trace recording
      */
-    private executeAttributeMappingWithTrace(
+    private async executeAttributeMappingWithTrace(
         mapping: AttributeMappingAST,
         sourceInstance: any,
         targetInstance: any,
         traceLink: TraceLinkBuilder,
         alias?: string
-    ): void {
+    ): Promise<void> {
         try {
             let value: JjelValue;
             let sourceValue: any = null;
@@ -977,11 +1003,11 @@ export class JjtlExecutor {
             const expressionSource = hasExpression ? this.getExpressionSource(mapping.conversion!.expression!) : undefined;
 
             if (mapping.objectCreation) {
-                value = this.executeObjectCreation(mapping.objectCreation, sourceInstance);
+                value = await this.executeObjectCreation(mapping.objectCreation, sourceInstance);
             } else if (mapping.expression !== undefined) {
                 // New := syntax: evaluate expression, optionally apply value mapping
                 const ctx = this.createInstanceContext(sourceInstance, alias);
-                value = this.evaluateExpression(mapping.expression, ctx);
+                value = await this.evaluateExpressionAsync(mapping.expression, ctx);
                 sourceValue = fromJjelValue(value);
                 if (mapping.valueMapping && mapping.valueMapping.length > 0) {
                     const match = mapping.valueMapping.find(vm =>
@@ -995,7 +1021,7 @@ export class JjtlExecutor {
                     const ctx = this.createInstanceContext(sourceInstance, alias);
                     sourceValue = fromJjelValue(this.evaluatePropertyPath(mapping.sourceAttribute, ctx));
                 }
-                value = this.executeConversion(mapping.conversion, sourceInstance, mapping.sourceAttribute, alias);
+                value = await this.executeConversion(mapping.conversion, sourceInstance, mapping.sourceAttribute, alias);
             } else if (mapping.sourceAttribute) {
                 const ctx = this.createInstanceContext(sourceInstance, alias);
                 value = this.evaluatePropertyPath(mapping.sourceAttribute, ctx);
@@ -1011,6 +1037,11 @@ export class JjtlExecutor {
             // Determine invertibility
             const invertible = this.isBindingInvertible(mapping);
 
+            // Determine if the value was provided by the user via prompt()/input()
+            const userProvided = mapping.expression !== undefined
+                ? this.isUserProvidedExpression(mapping.expression)
+                : false;
+
             // Record binding in trace
             traceLink.addBinding(
                 mapping.sourceAttribute || null,
@@ -1019,7 +1050,8 @@ export class JjtlExecutor {
                 sourceValue,
                 finalValue,
                 invertible,
-                invertible ? this.computeInverseExpression(mapping) : undefined
+                invertible ? this.computeInverseExpression(mapping) : undefined,
+                userProvided || undefined
             );
 
             console.log(`[JjTL Executor] Set ${mapping.targetAttribute} = ${JSON.stringify(finalValue)} (invertible: ${invertible})`);
@@ -1145,12 +1177,12 @@ export class JjtlExecutor {
     /**
      * Execute a single attribute mapping
      */
-    private executeAttributeMapping(
+    private async executeAttributeMapping(
         mapping: AttributeMappingAST,
         sourceInstance: any,
         targetInstance: any,
         alias?: string
-    ): void {
+    ): Promise<void> {
         console.log('[JjTL Executor] executeAttributeMapping:', {
             sourceAttribute: mapping.sourceAttribute,
             targetAttribute: mapping.targetAttribute,
@@ -1166,12 +1198,12 @@ export class JjtlExecutor {
             if (mapping.objectCreation) {
                 // Handle object creation: -> Arc { ... }
                 console.log('[JjTL Executor] Handling object creation');
-                value = this.executeObjectCreation(mapping.objectCreation, sourceInstance);
+                value = await this.executeObjectCreation(mapping.objectCreation, sourceInstance);
             } else if (mapping.expression !== undefined) {
                 // New := syntax: evaluate expression, optionally apply value mapping
                 console.log('[JjTL Executor] New := syntax, expression type:', mapping.expression.type);
                 const ctx = this.createInstanceContext(sourceInstance, alias);
-                value = this.evaluateExpression(mapping.expression, ctx);
+                value = await this.evaluateExpressionAsync(mapping.expression, ctx);
                 if (mapping.valueMapping && mapping.valueMapping.length > 0) {
                     const match = mapping.valueMapping.find(vm =>
                         this.valuesEqual(value, this.getLiteralValue(vm.sourceValue))
@@ -1182,7 +1214,7 @@ export class JjtlExecutor {
             } else if (mapping.conversion) {
                 // Handle conversion (legacy -> syntax)
                 console.log('[JjTL Executor] Handling conversion with expression or mappings');
-                value = this.executeConversion(mapping.conversion, sourceInstance, mapping.sourceAttribute, alias);
+                value = await this.executeConversion(mapping.conversion, sourceInstance, mapping.sourceAttribute, alias);
                 console.log('[JjTL Executor] Conversion result:', value);
             } else if (mapping.sourceAttribute) {
                 // Direct attribute mapping: source.attr -> target.attr (legacy)
@@ -1212,12 +1244,12 @@ export class JjtlExecutor {
     /**
      * Execute a conversion (value mappings or expression)
      */
-    private executeConversion(
+    private async executeConversion(
         conversion: ConversionAST,
         sourceInstance: any,
         sourceAttribute?: string,
         alias?: string
-    ): JjelValue {
+    ): Promise<JjelValue> {
         console.log('[JjTL Executor] executeConversion:', {
             hasExpression: !!conversion.expression,
             expressionType: conversion.expression?.type,
@@ -1235,7 +1267,7 @@ export class JjtlExecutor {
                 source: ctx.get('source'),
                 self: ctx.get('self')
             });
-            const result = this.evaluateExpression(conversion.expression, ctx);
+            const result = await this.evaluateExpressionAsync(conversion.expression, ctx);
             console.log('[JjTL Executor] Expression result:', result);
             return result;
         }
@@ -1266,17 +1298,17 @@ export class JjtlExecutor {
     /**
      * Execute object creation
      */
-    private executeObjectCreation(
+    private async executeObjectCreation(
         creation: ObjectCreationAST,
         sourceInstance: any,
         extraBindings?: Record<string, JjelValue>
-    ): JjelValue {
+    ): Promise<JjelValue> {
         const newObject: Record<string, JjelValue> = {
             __type: creation.targetClass,
             className: creation.targetClass,
         };
 
-        // Execute nested body items (attribute mappings and forall mappings)
+        // Execute nested body items (attribute mappings, forall mappings, and interactive statements)
         for (const item of creation.body) {
             if (item.type === 'AttributeMapping') {
                 const attrMapping = item as AttributeMappingAST;
@@ -1286,9 +1318,9 @@ export class JjtlExecutor {
                 let value: JjelValue;
 
                 if (attrMapping.objectCreation) {
-                    value = this.executeObjectCreation(attrMapping.objectCreation, sourceInstance, extraBindings);
+                    value = await this.executeObjectCreation(attrMapping.objectCreation, sourceInstance, extraBindings);
                 } else if (attrMapping.expression !== undefined) {
-                    value = this.evaluateExpression(attrMapping.expression, ctx);
+                    value = await this.evaluateExpressionAsync(attrMapping.expression, ctx);
                     if (attrMapping.valueMapping && attrMapping.valueMapping.length > 0) {
                         const match = attrMapping.valueMapping.find(vm =>
                             this.valuesEqual(value, this.getLiteralValue(vm.sourceValue))
@@ -1296,7 +1328,7 @@ export class JjtlExecutor {
                         if (match) value = this.getLiteralValue(match.targetValue);
                     }
                 } else if (attrMapping.conversion?.expression) {
-                    value = this.evaluateExpression(attrMapping.conversion.expression, ctx);
+                    value = await this.evaluateExpressionAsync(attrMapping.conversion.expression, ctx);
                 } else if (attrMapping.sourceAttribute) {
                     value = this.evaluatePropertyPath(attrMapping.sourceAttribute, ctx);
                 } else {
@@ -1305,7 +1337,21 @@ export class JjtlExecutor {
 
                 newObject[attrMapping.targetAttribute] = value;
             } else if (item.type === 'ForAllMapping') {
-                this.executeForAllMappingOnObject(item as ForAllMappingAST, sourceInstance, newObject, extraBindings);
+                await this.executeForAllMappingOnObject(item as ForAllMappingAST, sourceInstance, newObject, extraBindings);
+            } else if (item.type === 'AlertStatement') {
+                const alertItem = item as AlertStatementAST;
+                const ctx = extraBindings
+                    ? this.createInstanceContext(sourceInstance).child(extraBindings)
+                    : this.createInstanceContext(sourceInstance);
+                const msg = this.evaluateExpression(alertItem.message, ctx);
+                await getUIBridge().showAlert(String(msg ?? ''), alertItem.alertType ?? 'info');
+            } else if (item.type === 'NotifyStatement') {
+                const notifyItem = item as NotifyStatementAST;
+                const ctx = extraBindings
+                    ? this.createInstanceContext(sourceInstance).child(extraBindings)
+                    : this.createInstanceContext(sourceInstance);
+                const msg = this.evaluateExpression(notifyItem.message, ctx);
+                getUIBridge().showNotify(String(msg ?? ''), notifyItem.duration ?? 3000);
             }
         }
 
@@ -1316,11 +1362,11 @@ export class JjtlExecutor {
      * Execute a forall mapping inside a class mapping body.
      * Creates one object per element and appends results to the target instance.
      */
-    private executeForAllMapping(
+    private async executeForAllMapping(
         forall: ForAllMappingAST,
         sourceInstance: any,
         targetInstance: any
-    ): void {
+    ): Promise<void> {
         const ctx = this.createInstanceContext(sourceInstance);
         const collectionValue = this.evaluateExpression(forall.collection, ctx);
         const collection = fromJjelValue(collectionValue);
@@ -1356,7 +1402,7 @@ export class JjtlExecutor {
             }
 
             // Execute object creation with the forall variable in scope
-            const created = this.executeObjectCreation(
+            const created = await this.executeObjectCreation(
                 forall.objectCreation,
                 sourceInstance,
                 itemBindings
@@ -1387,12 +1433,12 @@ export class JjtlExecutor {
      * Execute a forall mapping inside an object creation context (e.g., -> col { forall ... }).
      * Results are added to the parent object.
      */
-    private executeForAllMappingOnObject(
+    private async executeForAllMappingOnObject(
         forall: ForAllMappingAST,
         sourceInstance: any,
         parentObject: Record<string, JjelValue>,
         extraBindings?: Record<string, JjelValue>
-    ): void {
+    ): Promise<void> {
         const baseCtx = extraBindings
             ? this.createInstanceContext(sourceInstance).child(extraBindings)
             : this.createInstanceContext(sourceInstance);
@@ -1428,7 +1474,7 @@ export class JjtlExecutor {
                 if (!fromJjelValue(passes)) continue;
             }
 
-            const created = this.executeObjectCreation(
+            const created = await this.executeObjectCreation(
                 forall.objectCreation,
                 sourceInstance,
                 itemBindings
@@ -1594,6 +1640,52 @@ export class JjtlExecutor {
             this.warnings.push(`Expression evaluation failed (${expr.type}): ${errorMessage}`);
             return null;
         }
+    }
+
+    /**
+     * Check if an expression is a top-level user-input expression (prompt/input).
+     */
+    private isUserProvidedExpression(expr: ExpressionAST): boolean {
+        return expr.type === 'PromptExpression' || expr.type === 'InputExpression';
+    }
+
+    /**
+     * Async wrapper around evaluateExpression that handles interactive expressions
+     * (PromptExpression, InputExpression) which require awaiting user input via UIBridge.
+     * Falls through to the synchronous evaluateExpression for all other expression types.
+     */
+    private async evaluateExpressionAsync(expr: ExpressionAST, ctx: EvaluationContext): Promise<JjelValue> {
+        if (expr.type === 'PromptExpression') {
+            const pe = expr as PromptExpressionAST;
+            const msg = this.evaluateExpression(pe.message, ctx);
+            const defaultVal = pe.defaultValue
+                ? this.evaluateExpression(pe.defaultValue, ctx)
+                : undefined;
+            const result = await getUIBridge().showPrompt(
+                String(msg ?? ''),
+                pe.typeRef,
+                defaultVal !== undefined ? String(defaultVal) : undefined
+            );
+            if (result.cancelled) return null;
+            return result.value;
+        }
+        if (expr.type === 'InputExpression') {
+            const ie = expr as InputExpressionAST;
+            const msg = this.evaluateExpression(ie.message, ctx);
+            const typeHint = ie.inputType ?? 'EString';
+            const opts = ie.options
+                ? ie.options.map(o => fromJjelValue(this.evaluateExpression(o, ctx)))
+                : undefined;
+            const result = await getUIBridge().showInput(
+                String(msg ?? ''),
+                typeHint,
+                undefined,
+                Array.isArray(opts) ? opts.map(String) : undefined
+            );
+            if (result.cancelled) return null;
+            return result.value as unknown as JjelValue;
+        }
+        return this.evaluateExpression(expr, ctx);
     }
 
     // ============================================
@@ -2080,11 +2172,11 @@ export class JjtlExecutor {
  * Execute a transformation
  * NOTE: Creates a deep copy of sourceModel to prevent mutation of the original data
  */
-export function execute(
+export async function execute(
     ast: TransformationAST,
     sourceModel: any,
     targetMetamodel?: any
-): ExecutionResult {
+): Promise<ExecutionResult> {
     // NOTE: The executor.execute() method handles flattening + deep copy internally,
     // so we pass the original sourceModel directly (no double-copy needed).
     const executor = new JjtlExecutor(ast);

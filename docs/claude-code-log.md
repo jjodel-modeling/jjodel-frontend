@@ -1,5 +1,102 @@
 # Claude Code Session Log
 
+## 2026-03-24 — Fix: prompt dialog passes typeRef, renders correct widget, validates by type
+
+### Goal
+Fix JjtlPromptDialog so it receives the `typeRef` from the DialogRequest and uses it to:
+- Render the appropriate input widget (text, number, date, checkbox)
+- Validate input on submit (reject non-numeric for EInt/EFloat)
+- Show inline error message without closing the dialog
+
+### Changes
+- `JjtlDialogManager.tsx`: pass `typeRef={request.typeRef}` to JjtlPromptDialog
+- `JjtlPromptDialog.tsx`: add `typeRef` prop; render `<input type="number">` for EInt/EFloat, `<input type="date">` for EDate, `<input type="checkbox">` for EBoolean, `<input type="text">` for everything else; validate EInt (parseInt) and EFloat (parseFloat) on submit with inline red error; return string values in all cases
+
+### Files changed
+- `frontend/src/jjtl/components/dialogs/JjtlDialogManager.tsx`
+- `frontend/src/jjtl/components/dialogs/JjtlPromptDialog.tsx`
+
+---
+
+## 2026-03-24 — Feat: trace shows rule name and userProvided flag per binding
+
+### Goal
+Enhance trace model and MappingTraceView to:
+1. Show `TraceLink.rule` (e.g. "Person -> Human") — already wired, confirmed visible
+2. Add `userProvided` flag to `BindingTrace` for prompt()/input() values
+3. Show a "user input" badge (cyan, `bi-person-fill` icon) next to user-provided binding values
+
+### Changes
+- `traceModel.ts`: added `userProvided?: boolean` to `BindingTrace` interface and `TraceLinkBuilder.addBinding()` parameter
+- `executor.ts`: added `isUserProvidedExpression()` helper; passes `userProvided` to `addBinding()` when the top-level expression is `PromptExpression` or `InputExpression`
+- `MappingTraceView.tsx`: added `userProvided?: boolean` to `AttributeMapping` interface; renders "user input" badge with `bi-person-fill` icon when `binding.userProvided === true`
+- `MappingTraceView.scss`: added `.trace-binding-user-provided` style (cyan badge, 10px font)
+- `useJjtlExecutor.ts`: both adapter paths now pass `invertible`, `expression`, and `userProvided` from `BindingTrace` to `AttributeMapping`
+
+### Files changed
+- `frontend/src/jjtl/executor/traceModel.ts`
+- `frontend/src/jjtl/executor/executor.ts`
+- `frontend/src/jjtl/views/MappingTraceView.tsx`
+- `frontend/src/jjtl/views/MappingTraceView.scss`
+- `frontend/src/jjtl/hooks/useJjtlExecutor.ts`
+
+---
+
+## 2026-03-24 — Fix: prompt() shows typeRef as default value in dialog
+
+### Bug
+`prompt('Age', EInt)` pre-filled the input field with "EInt" because `ReactUIBridge.showPrompt` had a 2-param signature `(message, defaultValue?)` while `UIBridge` interface had 3 params `(message, typeRef, defaultValue?)`. The executor passed `typeRef` as the second arg, which ReactUIBridge treated as `defaultValue`.
+
+### Fix
+- `ReactUIBridge.ts`: added `typeRef` parameter to `showPrompt` signature and to the emitted `DialogRequest`
+- `DialogRequest` prompt type: added `typeRef: string` as a separate field from `defaultValue`
+- `JjtlPromptDialog` and `JjtlDialogManager` already correctly use only `defaultValue` — no changes needed
+
+### Files changed
+- `frontend/src/jjtl/executor/ReactUIBridge.ts`
+
+---
+
+## 2026-03-24 — Feat: wire JjTL interactive commands to executor
+
+### Goal
+Connect the 4 interactive AST nodes (AlertStatement, NotifyStatement, PromptExpression, InputExpression) — already parsed but not executed — to the UIBridge so they actually trigger UI dialogs during transformation execution.
+
+### Design decisions
+- `evaluateExpression` stays synchronous (JjelFunction.call returns JjelValue, not Promise)
+- New `evaluateExpressionAsync` wrapper handles PromptExpression/InputExpression via UIBridge
+- Body iteration methods and the execution chain up to `execute()` are now async
+- AlertStatement/NotifyStatement handled directly in the 3 body iteration loops
+- PromptExpression/InputExpression intercepted at the attribute mapping level via evaluateExpressionAsync
+
+### Changes
+- `executor.ts`: added imports for interactive AST types + getUIBridge
+- `executor.ts`: added `evaluateExpressionAsync()` — async wrapper that intercepts Prompt/Input, delegates rest to sync evaluateExpression
+- `executor.ts`: added AlertStatement + NotifyStatement handling in executeAttributeMappings, executeAttributeMappingsWithTrace, executeObjectCreation
+- `executor.ts`: made execution chain async: execute → executeClassMapping → executeMultiSourceClassMapping → executeAttributeMappings/WithTrace → executeAttributeMapping/WithTrace → executeConversion, executeObjectCreation, executeForAllMapping, executeForAllMappingOnObject
+- `ProjectEditor.tsx`: added `await` to executeTransformation call (already in async function)
+
+### Files changed
+- `frontend/src/jjtl/executor/executor.ts`
+- `frontend/src/components/project/ProjectEditor.tsx` (1 line: added await)
+
+---
+
+## 2026-03-24 — Fix: context menu icon color inherits from text
+
+### Goal
+Icon color in context menu items must match text color, not be dimmed independently.
+
+### Change
+- Removed hardcoded `color: #64748b` on `.item i.bi` — now uses `color: inherit`
+- Removed separate `:hover i.bi` color override (no longer needed)
+- Icons now match text color in all states: normal (`#cbd5e1`), danger, muted, hover
+
+### Files changed
+- `frontend/src/components/contextMenu/style.scss` — 2 lines removed, 1 changed
+
+---
+
 ## 2026-03-24 — Style: unified dark slate floating surfaces
 
 ### Goal

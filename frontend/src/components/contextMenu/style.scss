@@ -317,11 +317,7 @@
     i.bi, span.empty {
       font-size: 13px;
       width: 1.5em;
-      color: #64748b;
-    }
-
-    &:hover i.bi {
-      color: #cbd5e1;
+      color: inherit!important;
     }
 
     &>div {

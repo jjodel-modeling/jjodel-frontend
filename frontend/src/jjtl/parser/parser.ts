@@ -1236,12 +1236,16 @@ export class JjtlParser {
     // INTERACTIVE EXPRESSIONS
     // ============================================
 
-    // promptExpression = "prompt" "(" expression ("," expression)? ")"
+    // promptExpression = "prompt" "(" expression "," IDENTIFIER ("," expression)? ")"
     private promptExpression(): PromptExpressionAST {
         const startToken = this.consume(TokenType.PROMPT, "Expected 'prompt'");
         this.consume(TokenType.LPAREN, "Expected '(' after 'prompt'");
 
         const message = this.expression();
+
+        this.consume(TokenType.COMMA, "Expected ',' after prompt message");
+        const typeToken = this.consume(TokenType.IDENTIFIER, "Expected type reference (e.g. EString, EInt, EBoolean)");
+        const typeRef = typeToken.value;
 
         let defaultValue: ExpressionAST | undefined;
         if (this.match(TokenType.COMMA)) {
@@ -1253,6 +1257,7 @@ export class JjtlParser {
         return {
             type: 'PromptExpression',
             message,
+            typeRef,
             defaultValue,
             location: this.makeLocation(startToken, this.previous()),
         };

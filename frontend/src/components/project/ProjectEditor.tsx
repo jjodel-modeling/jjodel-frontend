@@ -1034,7 +1034,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
 
                 const sourceModelDataCopy = JSON.parse(JSON.stringify(sourceModelData));
                 // Execute transformation
-                const result: ExecutionResult = executeTransformation(ast, sourceModelDataCopy, targetMetamodel);
+                const result: ExecutionResult = await executeTransformation(ast, sourceModelDataCopy, targetMetamodel);
 
                 if (!result.success) {
                     U.alert('e', 'Transformation Failed', result.errors.join('\n'));

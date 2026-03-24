@@ -262,12 +262,13 @@ export interface NotifyStatementAST extends ASTNode {
 }
 
 /**
- * Prompt expression - asks user for text input, returns String
- * prompt("message", "default")
+ * Prompt expression - asks user for typed input
+ * prompt("message", EString, "default")
  */
 export interface PromptExpressionAST extends ASTNode {
     type: 'PromptExpression';
     message: ExpressionAST;
+    typeRef: string;            // 'EString' | 'EInt' | 'EFloat' | 'EBoolean' | 'EDate' | any IDENTIFIER
     defaultValue?: ExpressionAST;
 }
 

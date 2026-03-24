@@ -74,6 +74,7 @@ export const JjtlDialogManager: React.FC = () => {
                 return (
                     <JjtlPromptDialog
                         message={request.message}
+                        typeRef={request.typeRef}
                         defaultValue={request.defaultValue}
                         onSubmit={(result) => {
                             request.resolve(result);

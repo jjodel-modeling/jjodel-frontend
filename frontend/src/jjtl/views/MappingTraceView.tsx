@@ -13,6 +13,7 @@ export interface AttributeMapping {
     targetValue: any;
     invertible?: boolean;
     expression?: string;
+    userProvided?: boolean;
 }
 
 export interface TraceEntry {
@@ -369,6 +370,12 @@ export const MappingTraceView: React.FC<MappingTraceViewProps> = ({
                                                                 <span className="trace-binding-value trace-binding-value--target">
                                                                     {formatValue(binding.targetValue)}
                                                                 </span>
+                                                                {binding.userProvided && (
+                                                                    <span className="trace-binding-user-provided" title="Value provided by user">
+                                                                        <i className="bi bi-person-fill" />
+                                                                        user input
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                             {binding.expression && (
                                                                 <div className="trace-binding-expression">

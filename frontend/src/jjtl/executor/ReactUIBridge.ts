@@ -14,7 +14,7 @@ import { UIBridge, InputResult, SelectOption } from './UIBridge';
 export type DialogRequest =
     | { type: 'alert'; message: string; alertType: AlertType; resolve: () => void }
     | { type: 'notify'; message: string; duration: number }
-    | { type: 'prompt'; message: string; defaultValue?: string; resolve: (result: InputResult<string>) => void }
+    | { type: 'prompt'; message: string; typeRef: string; defaultValue?: string; resolve: (result: InputResult<string>) => void }
     | { type: 'input'; message: string; inputType: InputType; defaultValue?: unknown; options?: SelectOption[] | string[]; resolve: (result: InputResult<unknown>) => void };
 
 /**
@@ -85,11 +85,12 @@ export class ReactUIBridge implements UIBridge {
         });
     }
 
-    async showPrompt(message: string, defaultValue?: string): Promise<InputResult<string>> {
+    async showPrompt(message: string, typeRef: string, defaultValue?: string): Promise<InputResult<string>> {
         return new Promise((resolve) => {
             this.manager.emit({
                 type: 'prompt',
                 message,
+                typeRef,
                 defaultValue,
                 resolve,
             });

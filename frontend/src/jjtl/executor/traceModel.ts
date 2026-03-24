@@ -52,6 +52,8 @@ export interface BindingTrace {
     invertible: boolean;
     /** The inverse expression, if invertible (for future reverse execution) */
     inverseExpression?: string;
+    /** true if the value was provided by the user via prompt()/input() */
+    userProvided?: boolean;
 }
 
 /**
@@ -283,7 +285,8 @@ export class TraceLinkBuilder {
         sourceValue: any,
         targetValue: any,
         invertible: boolean,
-        inverseExpression?: string
+        inverseExpression?: string,
+        userProvided?: boolean
     ): this {
         this.link.bindings.push({
             sourceAttribute,
@@ -293,6 +296,7 @@ export class TraceLinkBuilder {
             targetValue,
             invertible,
             inverseExpression,
+            userProvided,
         });
 
         // If any binding is non-invertible, the whole link is non-invertible
