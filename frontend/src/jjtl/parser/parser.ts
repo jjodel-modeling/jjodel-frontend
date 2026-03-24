@@ -37,6 +37,7 @@ import {
     // Interactive types
     MappingBodyItemAST,
     ForAllMappingAST,
+    LetStatementAST,
     AlertStatementAST,
     NotifyStatementAST,
     PromptExpressionAST,
@@ -212,8 +213,10 @@ export class JjtlParser {
         this.skipNewlines();
 
         while (!this.check(TokenType.RBRACE) && !this.isAtEnd()) {
-            // Check for interactive statements and forall first
-            if (this.check(TokenType.ALERT)) {
+            // Check for interactive statements, let, and forall first
+            if (this.check(TokenType.LET)) {
+                items.push(this.letStatement());
+            } else if (this.check(TokenType.ALERT)) {
                 items.push(this.alertStatement());
             } else if (this.check(TokenType.NOTIFY)) {
                 items.push(this.notifyStatement());
@@ -429,6 +432,39 @@ export class JjtlParser {
         return {
             type: 'ObjectCreation',
             targetClass,
+            body,
+            location: this.makeLocation(startToken, this.previous()),
+        };
+    }
+
+    // letStatement = "let" "$ident" "=" expression ("," "$ident" "=" expression)* "in" "{" mappingBody "}"
+    private letStatement(): LetStatementAST {
+        const startToken = this.consume(TokenType.LET, "Expected 'let'");
+
+        const bindings: Array<{ name: string; value: ExpressionAST }> = [];
+        do {
+            this.skipNewlines();
+            const dollarToken = this.consume(TokenType.DOLLAR_IDENT, "Expected '$identifier' after 'let'");
+            this.consume(TokenType.EQUALS, "Expected '=' after variable name");
+            // Use parseJjELExpression with boundary tokens so the expression stops
+            // at COMMA (next binding) or IN (end of bindings) instead of consuming them.
+            // Falls back to expression() when source string is unavailable.
+            const value = this.source !== undefined
+                ? this.parseJjELExpression([TokenType.COMMA, TokenType.IN, TokenType.NEWLINE, TokenType.RBRACE])
+                : this.expression();
+            bindings.push({ name: dollarToken.value, value });
+            this.skipNewlines();
+        } while (this.match(TokenType.COMMA));
+
+        this.skipNewlines();
+        this.consume(TokenType.IN, "Expected 'in' after let bindings");
+        this.consume(TokenType.LBRACE, "Expected '{' after 'in'");
+        const body = this.mappingBody();
+        this.consume(TokenType.RBRACE, "Expected '}' after let body");
+
+        return {
+            type: 'LetStatement',
+            bindings,
             body,
             location: this.makeLocation(startToken, this.previous()),
         };
@@ -1105,6 +1141,16 @@ export class JjtlParser {
         // Check for array literal
         if (this.check(TokenType.LBRACKET)) {
             return this.arrayLiteral();
+        }
+
+        // Dollar-prefixed variable ($varName) — treat as identifier
+        if (this.check(TokenType.DOLLAR_IDENT)) {
+            const token = this.advance();
+            return {
+                type: 'Identifier',
+                name: token.value,
+                location: this.makeLocation(token, token),
+            } as IdentifierAST;
         }
 
         // Check for identifier or function call

@@ -1,5 +1,100 @@
 # Claude Code Session Log
 
+## 2026-03-25 — Fix: `let` binding expression stops at COMMA and IN
+
+### Bug
+`let $name = prompt('Name', EString), $upper = $name.toUpper() in { ... }` failed with "Expected '$identifier' after 'let'" because `expression()` is greedy and consumed the comma/`in` as part of the binding value.
+
+### Fix
+In `letStatement()`, replaced `this.expression()` with `this.parseJjELExpression([COMMA, IN, NEWLINE, RBRACE])` (when source string is available) so the expression parser stops at binding separators. Added `skipNewlines()` calls to support multi-line binding lists.
+
+### Files changed
+- `frontend/src/jjtl/parser/parser.ts` — boundary-aware expression parsing in `letStatement()`
+- `frontend/src/jjtl/__tests__/let-prompt-bug.test.ts` — updated JjEL delegation test expectation, added 4 new test cases (multi-binding, multi-line, newline-before-in, source-string path)
+
+### Tests
+- 9/9 let-prompt-bug tests passing
+- 232 total JjTL+JjEL tests passing (no regressions)
+
+---
+
+## 2026-03-24 — Feat: implement `let` statement in JjTL (Phase 2 of JjLet)
+
+### Changes
+- Added `LET` token type and `DOLLAR_IDENT` token type to JjTL `TokenType` enum and `JJTL_KEYWORDS` map
+- Added `$identifier` scanning in JjTL lexer (`case '$'` handler)
+- Added `LetStatementAST` interface to AST types; updated `MappingBodyItemAST` union
+- Added `letStatement()` parser method with support for multiple bindings and `in { body }` block
+- Added `LET` dispatch in `mappingBody()` (before forall/alert/notify)
+- Added `LetStatement` handling in all 3 executor body-iteration methods:
+  - `executeAttributeMappings()` — delegates to new `executeLetBody()` helper
+  - `executeAttributeMappingsWithTrace()` — delegates to new `executeLetBodyWithTrace()` helper
+  - `executeObjectCreation()` — inline let body execution on the parent object
+- Both helpers support nested `let` statements recursively
+
+### Syntax
+```jjtl
+let $var = expr (, $var2 = expr2)* in {
+    -- body items use $var in JjEL expressions
+}
+```
+
+### Files changed
+- `frontend/src/jjtl/types/tokens.ts` — LET + DOLLAR_IDENT tokens
+- `frontend/src/jjtl/types/ast.ts` — LetStatementAST interface
+- `frontend/src/jjtl/lexer/lexer.ts` — `$identifier` scanning
+- `frontend/src/jjtl/parser/parser.ts` — letStatement() + mappingBody() dispatch
+- `frontend/src/jjtl/executor/executor.ts` — LetStatement execution in 3 methods + 2 helpers
+
+### TypeScript
+- `npx tsc --noEmit` — zero new errors (all errors are pre-existing legacy)
+
+---
+
+## 2026-03-24 — Feat: add $identifier (DOLLAR_IDENT) token to JjEL lexer/parser
+
+### Changes
+- Added `DOLLAR_IDENT` token type to `JjelTokenType` enum in `tokens.ts`
+- Modified lexer `case '$'` to recognize `$letter...` sequences as `DOLLAR_IDENT` tokens (bare `$` and `${` behavior unchanged)
+- Added `DOLLAR_IDENT` handling in parser `primary()` — produces `Identifier` AST node with `$`-prefixed name (e.g. `$name`)
+- Added 4 tests in `parser.test.ts`: simple `$name`, binary expression with `$prefix`, `$my_var2` with mixed chars, bare `$` error
+
+### Files changed
+- `frontend/src/jjel/types/tokens.ts`
+- `frontend/src/jjel/lexer/lexer.ts`
+- `frontend/src/jjel/parser/parser.ts`
+- `frontend/src/jjel/__tests__/parser.test.ts`
+
+### Tests
+- 176/176 passing (89 parser + 87 evaluator)
+
+---
+
+## 2026-03-24 — Docs: add JjLet chapter to jjtl-jjel-paper.tex
+
+### Changes
+- Added `\jjlet` macro to preamble alongside existing `\jjmodal`
+- Added `let` keyword to `jjtl` and `jjel` listing language definitions
+- Updated Document Structure paragraph in Introduction to reference `\cref{sec:jjmodal}` and `\cref{sec:jjlet}`
+- Inserted full JjLet section (§5) after JjModal (§4) and before Comparative Analysis (now §6)
+  - Subsections: Motivation, Design Position and Architecture, Variable Sigil, Syntax, Semantics, Usage Examples, Implementation Plan, Design Tensions
+- Updated comment section numbers for Examples (→7), Discussion (→8), Conclusion (→9)
+
+### Files changed
+- `docs/jjtl-jjel-paper.tex`
+
+---
+
+## 2026-03-24 — Feat: add confirm() to JjTL Monaco autocomplete
+
+### Changes
+- `jjtlCompletions.ts`: added `confirm` entry to `INTERACTIVE_FUNCTIONS` array with label, detail, documentation, and snippet insertText
+
+### Files changed
+- `frontend/src/jjtl/editor/jjtlCompletions.ts`
+
+---
+
 ## 2026-03-24 — Feat: show rule + instance context in prompt() and confirm() dialogs
 
 ### Goal
