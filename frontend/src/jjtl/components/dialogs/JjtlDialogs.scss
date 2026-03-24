@@ -359,3 +359,12 @@ $transition-normal: 250ms ease;
         }
     }
 }
+
+// Execution context subtitle for prompt/confirm dialogs
+.jjtl-dialog-context {
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 4px;
+    margin-bottom: 12px;
+    font-style: italic;
+}

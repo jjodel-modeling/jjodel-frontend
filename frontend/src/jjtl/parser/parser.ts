@@ -41,6 +41,7 @@ import {
     NotifyStatementAST,
     PromptExpressionAST,
     InputExpressionAST,
+    ConfirmExpressionAST,
     ArrayLiteralAST,
     AlertType,
     InputType,
@@ -1097,6 +1098,10 @@ export class JjtlParser {
             return this.inputExpression();
         }
 
+        if (this.check(TokenType.CONFIRM)) {
+            return this.confirmExpression();
+        }
+
         // Check for array literal
         if (this.check(TokenType.LBRACKET)) {
             return this.arrayLiteral();
@@ -1259,6 +1264,19 @@ export class JjtlParser {
             message,
             typeRef,
             defaultValue,
+            location: this.makeLocation(startToken, this.previous()),
+        };
+    }
+
+    // confirmExpression = "confirm" "(" expression ")"
+    private confirmExpression(): ConfirmExpressionAST {
+        const startToken = this.consume(TokenType.CONFIRM, "Expected 'confirm'");
+        this.consume(TokenType.LPAREN, "Expected '(' after 'confirm'");
+        const message = this.expression();
+        this.consume(TokenType.RPAREN, "Expected ')' after confirm message");
+        return {
+            type: 'ConfirmExpression',
+            message,
             location: this.makeLocation(startToken, this.previous()),
         };
     }

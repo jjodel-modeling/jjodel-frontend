@@ -29,6 +29,7 @@ import {
     NotifyStatementAST,
     PromptExpressionAST,
     InputExpressionAST,
+    ConfirmExpressionAST,
 } from '../types';
 
 import { getUIBridge } from './UIBridge';
@@ -233,6 +234,10 @@ export interface ExecutionContext {
     helpers: Map<string, JjelFunction>;
     /** Trace model builder for recording execution trace */
     traceBuilder: TraceModelBuilder;
+    /** Current rule name for dialog context (e.g. "Person -> Human") */
+    currentRuleName?: string;
+    /** Current source instance name for dialog context (e.g. "Mario") */
+    currentInstanceName?: string;
 }
 
 /**
@@ -703,7 +708,14 @@ export class JjtlExecutor {
         console.log(`[JjTL Executor] Found ${instances.length} source instances of type "${sourceClassName}"`);
         console.log(`[JjTL Executor] Class mapping body items:`, mapping.body?.length ?? 0);
 
+        this.context.currentRuleName = ruleName;
+
         for (const sourceInstance of instances) {
+            this.context.currentInstanceName =
+                sourceInstance?.name ??
+                sourceInstance?.$name?.value ??
+                (sourceInstance != null ? String(sourceInstance) : undefined);
+
             this.stats.sourceInstancesProcessed++;
 
             // Check condition if present
@@ -735,8 +747,12 @@ export class JjtlExecutor {
                 await this.executeAttributeMappingsWithTrace(mapping.body, sourceInstance, targetInstance, traceLink, sourceAlias);
             }
 
+            this.context.currentInstanceName = undefined;
+
             this.stats.classMappingsExecuted++;
         }
+
+        this.context.currentRuleName = undefined;
     }
 
     /**
@@ -1646,7 +1662,7 @@ export class JjtlExecutor {
      * Check if an expression is a top-level user-input expression (prompt/input).
      */
     private isUserProvidedExpression(expr: ExpressionAST): boolean {
-        return expr.type === 'PromptExpression' || expr.type === 'InputExpression';
+        return expr.type === 'PromptExpression' || expr.type === 'InputExpression' || expr.type === 'ConfirmExpression';
     }
 
     /**
@@ -1654,6 +1670,14 @@ export class JjtlExecutor {
      * (PromptExpression, InputExpression) which require awaiting user input via UIBridge.
      * Falls through to the synchronous evaluateExpression for all other expression types.
      */
+    private buildDialogContext(): string | undefined {
+        const { currentRuleName, currentInstanceName } = this.context;
+        if (!currentRuleName) return undefined;
+        const rule = currentRuleName.replace('->', '\u2192');
+        if (!currentInstanceName) return rule;
+        return `${rule} :: ${currentInstanceName}`;
+    }
+
     private async evaluateExpressionAsync(expr: ExpressionAST, ctx: EvaluationContext): Promise<JjelValue> {
         if (expr.type === 'PromptExpression') {
             const pe = expr as PromptExpressionAST;
@@ -1661,13 +1685,21 @@ export class JjtlExecutor {
             const defaultVal = pe.defaultValue
                 ? this.evaluateExpression(pe.defaultValue, ctx)
                 : undefined;
+            const executionContext = this.buildDialogContext();
             const result = await getUIBridge().showPrompt(
                 String(msg ?? ''),
                 pe.typeRef,
-                defaultVal !== undefined ? String(defaultVal) : undefined
+                defaultVal !== undefined ? String(defaultVal) : undefined,
+                executionContext
             );
             if (result.cancelled) return null;
             return result.value;
+        }
+        if (expr.type === 'ConfirmExpression') {
+            const ce = expr as ConfirmExpressionAST;
+            const msg = this.evaluateExpression(ce.message, ctx);
+            const executionContext = this.buildDialogContext();
+            return await getUIBridge().showConfirm(String(msg ?? ''), executionContext);
         }
         if (expr.type === 'InputExpression') {
             const ie = expr as InputExpressionAST;

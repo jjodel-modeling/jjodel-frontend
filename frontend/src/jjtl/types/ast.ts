@@ -139,6 +139,7 @@ export type ExpressionAST =
     | LambdaExpressionAST
     | PromptExpressionAST
     | InputExpressionAST
+    | ConfirmExpressionAST
     | ArrayLiteralAST
     // JjEL expression wrapper (for direct JjEL integration)
     | JjelExpressionWrapperAST;
@@ -282,6 +283,15 @@ export interface InputExpressionAST extends ASTNode {
     inputType: InputType;
     defaultValue?: ExpressionAST;
     options?: ExpressionAST[]; // For 'select' type
+}
+
+/**
+ * Confirm expression - blocking Yes/No dialog returning boolean
+ * confirm("message")
+ */
+export interface ConfirmExpressionAST extends ASTNode {
+    type: 'ConfirmExpression';
+    message: ExpressionAST;
 }
 
 /**

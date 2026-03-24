@@ -10,6 +10,7 @@ interface JjtlPromptDialogProps {
     message: string;
     typeRef?: string;
     defaultValue?: string;
+    executionContext?: string;
     onSubmit: (result: InputResult<string>) => void;
 }
 
@@ -29,6 +30,7 @@ export const JjtlPromptDialog: React.FC<JjtlPromptDialogProps> = ({
     message,
     typeRef,
     defaultValue = '',
+    executionContext,
     onSubmit,
 }) => {
     const isBoolean = typeRef === 'EBoolean';
@@ -92,6 +94,9 @@ export const JjtlPromptDialog: React.FC<JjtlPromptDialogProps> = ({
                 </div>
                 <div className="jjtl-dialog__body">
                     <p className="jjtl-dialog__body-message">{message}</p>
+                    {executionContext && (
+                        <div className="jjtl-dialog-context">{executionContext}</div>
+                    )}
                     {isBoolean ? (
                         <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                             <input

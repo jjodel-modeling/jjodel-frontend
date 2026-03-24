@@ -26,6 +26,7 @@ export enum TokenType {
     NOTIFY = 'NOTIFY',
     PROMPT = 'PROMPT',
     INPUT = 'INPUT',
+    CONFIRM = 'CONFIRM',
 
     // ============================================
     // JJEL KEYWORDS (for expressions)
@@ -114,6 +115,7 @@ export const JJTL_KEYWORDS: Record<string, TokenType> = {
     'notify': TokenType.NOTIFY,
     'prompt': TokenType.PROMPT,
     'input': TokenType.INPUT,
+    'confirm': TokenType.CONFIRM,
 
     // JjEL keywords
     'if': TokenType.IF,

@@ -1,5 +1,62 @@
 # Claude Code Session Log
 
+## 2026-03-24 — Feat: show rule + instance context in prompt() and confirm() dialogs
+
+### Goal
+When `prompt()` or `confirm()` is called during a JjTL transformation, the dialog shows a subtitle with execution context: e.g. "Person → Human :: Mario" (rule → source instance name).
+
+### Approach
+Added `currentRuleName` and `currentInstanceName` optional fields to `ExecutionContext`. The executor populates them during `executeClassMapping`. A new `buildDialogContext()` helper formats them as a display string and passes it through the UIBridge → ReactUIBridge → DialogManager → dialog component chain.
+
+### Changes
+- `executor.ts`: added `currentRuleName`/`currentInstanceName` to `ExecutionContext`, populated in `executeClassMapping` loop, added `buildDialogContext()` helper, passed `executionContext` to `showPrompt`/`showConfirm` calls
+- `UIBridge.ts`: added optional `executionContext` parameter to `showPrompt` and `showConfirm` in interface + `NoopUIBridge` + `ConsoleUIBridge`
+- `ReactUIBridge.ts`: added `executionContext` to `DialogRequest` prompt/confirm variants, propagated in `showPrompt`/`showConfirm`
+- `JjtlDialogManager.tsx`: passes `executionContext` prop to `JjtlPromptDialog` and `JjtlConfirmDialog`
+- `JjtlPromptDialog.tsx`: added `executionContext` prop, renders `.jjtl-dialog-context` subtitle
+- `JjtlConfirmDialog.tsx`: added `executionContext` prop, renders `.jjtl-dialog-context` subtitle
+- `JjtlDialogs.scss`: added `.jjtl-dialog-context` style (11px, slate-500, italic)
+
+### Files changed
+- `frontend/src/jjtl/executor/executor.ts`
+- `frontend/src/jjtl/executor/UIBridge.ts`
+- `frontend/src/jjtl/executor/ReactUIBridge.ts`
+- `frontend/src/jjtl/components/dialogs/JjtlDialogManager.tsx`
+- `frontend/src/jjtl/components/dialogs/JjtlPromptDialog.tsx`
+- `frontend/src/jjtl/components/dialogs/JjtlConfirmDialog.tsx`
+- `frontend/src/jjtl/components/dialogs/JjtlDialogs.scss`
+
+---
+
+## 2026-03-24 — Feat: implement confirm() command — full stack
+
+### Goal
+Add `confirm(label)` — a JjModal command that opens a Yes/No dialog and returns a boolean.
+
+### Changes
+- `tokens.ts`: added `CONFIRM` to `TokenType` enum and `JJTL_KEYWORDS`
+- `ast.ts`: added `ConfirmExpressionAST` interface and union member in `ExpressionAST`
+- `parser.ts`: imported `ConfirmExpressionAST`, added `TokenType.CONFIRM` check in `primary()`, added `confirmExpression()` method
+- `UIBridge.ts`: added `showConfirm(message): Promise<boolean>` to interface + `NoopUIBridge` (returns false) + `ConsoleUIBridge` (logs and returns false)
+- `ReactUIBridge.ts`: added `{ type: 'confirm' }` variant to `DialogRequest` union + `showConfirm()` implementation
+- `executor.ts`: imported `ConfirmExpressionAST`, added to `isUserProvidedExpression()`, added `ConfirmExpression` case in `evaluateExpressionAsync()`
+- `JjtlConfirmDialog.tsx`: new component — Yes/No buttons, Enter=Yes, Escape=No, `bi-question-circle` icon
+- `JjtlDialogManager.tsx`: imported `JjtlConfirmDialog`, added `'confirm'` case in `renderDialog()`
+- `dialogs/index.ts`: exported `JjtlConfirmDialog`
+
+### Files changed
+- `frontend/src/jjtl/types/tokens.ts`
+- `frontend/src/jjtl/types/ast.ts`
+- `frontend/src/jjtl/parser/parser.ts`
+- `frontend/src/jjtl/executor/UIBridge.ts`
+- `frontend/src/jjtl/executor/ReactUIBridge.ts`
+- `frontend/src/jjtl/executor/executor.ts`
+- `frontend/src/jjtl/components/dialogs/JjtlConfirmDialog.tsx` (new)
+- `frontend/src/jjtl/components/dialogs/JjtlDialogManager.tsx`
+- `frontend/src/jjtl/components/dialogs/index.ts`
+
+---
+
 ## 2026-03-24 — Fix: prompt dialog passes typeRef, renders correct widget, validates by type
 
 ### Goal

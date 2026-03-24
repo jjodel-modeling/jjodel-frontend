@@ -49,7 +49,7 @@ export interface UIBridge {
      * @param defaultValue - Optional default value
      * @returns Promise with user input or cancelled flag
      */
-    showPrompt(message: string, typeRef: string, defaultValue?: string): Promise<InputResult<string>>;
+    showPrompt(message: string, typeRef: string, defaultValue?: string, executionContext?: string): Promise<InputResult<string>>;
 
     /**
      * Show an input dialog for typed input
@@ -65,6 +65,14 @@ export interface UIBridge {
         defaultValue?: T,
         options?: SelectOption[] | string[]
     ): Promise<InputResult<T>>;
+
+    /**
+     * Show a blocking confirm dialog (Yes/No)
+     * @param message - The question to display
+     * @param executionContext - Optional rule/instance context string
+     * @returns Promise with true (Yes) or false (No/dismissed)
+     */
+    showConfirm(message: string, executionContext?: string): Promise<boolean>;
 }
 
 /**
@@ -80,7 +88,7 @@ export class NoopUIBridge implements UIBridge {
         // No-op
     }
 
-    async showPrompt(_message: string, _typeRef: string, defaultValue?: string): Promise<InputResult<string>> {
+    async showPrompt(_message: string, _typeRef: string, defaultValue?: string, _executionContext?: string): Promise<InputResult<string>> {
         return { value: defaultValue ?? '', cancelled: false };
     }
 
@@ -91,6 +99,10 @@ export class NoopUIBridge implements UIBridge {
         _options?: SelectOption[] | string[]
     ): Promise<InputResult<T>> {
         return { value: defaultValue as T, cancelled: false };
+    }
+
+    async showConfirm(_message: string, _executionContext?: string): Promise<boolean> {
+        return false;
     }
 }
 
@@ -113,7 +125,7 @@ export class ConsoleUIBridge implements UIBridge {
         console.log(`[JjTL] 📢 NOTIFY (${duration ?? 3000}ms): ${message}`);
     }
 
-    async showPrompt(message: string, typeRef: string, defaultValue?: string): Promise<InputResult<string>> {
+    async showPrompt(message: string, typeRef: string, defaultValue?: string, _executionContext?: string): Promise<InputResult<string>> {
         console.log(`[JjTL] ❓ PROMPT: ${message} [type: ${typeRef}] (default: "${defaultValue ?? ''}")`);
         return { value: defaultValue ?? '', cancelled: false };
     }
@@ -130,6 +142,11 @@ export class ConsoleUIBridge implements UIBridge {
         }
         console.log(`[JjTL]    Default: ${JSON.stringify(defaultValue)}`);
         return { value: defaultValue as T, cancelled: false };
+    }
+
+    async showConfirm(message: string, _executionContext?: string): Promise<boolean> {
+        console.log(`[JjTL] ❓ CONFIRM: ${message}`);
+        return false;
     }
 }
 
