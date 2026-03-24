@@ -463,6 +463,16 @@ export class JjelParser {
             return this.parenthesizedOrLambda();
         }
 
+        // $identifier (dollar-prefixed variable)
+        if (this.match(JjelTokenType.DOLLAR_IDENT)) {
+            const token = this.previous();
+            return {
+                type: 'Identifier',
+                name: token.value,
+                location: this.makeLocation(token, token),
+            } as IdentifierExpr;
+        }
+
         // Identifier or single-param lambda
         if (this.match(JjelTokenType.IDENTIFIER)) {
             const token = this.previous();

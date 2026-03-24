@@ -12,6 +12,7 @@ export enum JjelTokenType {
     BOOLEAN = 'BOOLEAN',
     NULL = 'NULL',
     IDENTIFIER = 'IDENTIFIER',
+    DOLLAR_IDENT = 'DOLLAR_IDENT',
 
     // ============================================
     // KEYWORDS

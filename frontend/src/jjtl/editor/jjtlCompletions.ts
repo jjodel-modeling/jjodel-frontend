@@ -63,6 +63,12 @@ const INTERACTIVE_FUNCTIONS = [
         insertText: 'alert("${1:message}", "success")',
     },
     {
+        label: 'confirm',
+        detail: 'Ask user for yes/no confirmation',
+        documentation: 'confirm(message: EString) → EBoolean\nOpens a Yes/No dialog. Returns true if confirmed, false otherwise.',
+        insertText: 'confirm(\'${1:message}\')',
+    },
+    {
         label: 'notify',
         detail: 'Show non-blocking toast notification',
         documentation: 'Displays a toast notification that auto-dismisses.\nDuration in milliseconds (default: 3000)',

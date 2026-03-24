@@ -51,6 +51,7 @@ export interface ClassMappingAST extends ASTNode {
 export type MappingBodyItemAST =
     | AttributeMappingAST
     | ForAllMappingAST
+    | LetStatementAST
     | AlertStatementAST
     | NotifyStatementAST;
 
@@ -93,6 +94,16 @@ export interface ValueMappingAST extends ASTNode {
 export interface ObjectCreationAST extends ASTNode {
     type: 'ObjectCreation';
     targetClass: string;
+    body: MappingBodyItemAST[];
+}
+
+// Let statement: let $x = expr (, $y = expr)* in { body }
+export interface LetStatementAST extends ASTNode {
+    type: 'LetStatement';
+    bindings: Array<{
+        name: string;        // e.g. '$p' — sigil included
+        value: ExpressionAST;
+    }>;
     body: MappingBodyItemAST[];
 }
 

@@ -27,6 +27,8 @@ import {
     ArrayLiteralAST,
     AlertStatementAST,
     NotifyStatementAST,
+    LetStatementAST,
+    MappingBodyItemAST,
     PromptExpressionAST,
     InputExpressionAST,
     ConfirmExpressionAST,
@@ -957,6 +959,15 @@ export class JjtlExecutor {
                 const ctx = this.createInstanceContext(sourceInstance, alias);
                 const msg = this.evaluateExpression(notifyItem.message, ctx);
                 getUIBridge().showNotify(String(msg ?? ''), notifyItem.duration ?? 3000);
+            } else if (item.type === 'LetStatement') {
+                const letItem = item as LetStatementAST;
+                let letCtx = this.createInstanceContext(sourceInstance, alias);
+                for (const binding of letItem.bindings) {
+                    const value = await this.evaluateExpressionAsync(binding.value, letCtx);
+                    letCtx = letCtx.child({ [binding.name]: value });
+                }
+                // Execute let body with enriched context — delegate to a helper
+                await this.executeLetBody(letItem.body, sourceInstance, targetInstance, letCtx);
             }
         }
 
@@ -996,6 +1007,14 @@ export class JjtlExecutor {
                 const ctx = this.createInstanceContext(sourceInstance, alias);
                 const msg = this.evaluateExpression(notifyItem.message, ctx);
                 getUIBridge().showNotify(String(msg ?? ''), notifyItem.duration ?? 3000);
+            } else if (item.type === 'LetStatement') {
+                const letItem = item as LetStatementAST;
+                let letCtx = this.createInstanceContext(sourceInstance, alias);
+                for (const binding of letItem.bindings) {
+                    const value = await this.evaluateExpressionAsync(binding.value, letCtx);
+                    letCtx = letCtx.child({ [binding.name]: value });
+                }
+                await this.executeLetBodyWithTrace(letItem.body, sourceInstance, targetInstance, letCtx, traceLink);
             }
         }
 
@@ -1368,6 +1387,43 @@ export class JjtlExecutor {
                     : this.createInstanceContext(sourceInstance);
                 const msg = this.evaluateExpression(notifyItem.message, ctx);
                 getUIBridge().showNotify(String(msg ?? ''), notifyItem.duration ?? 3000);
+            } else if (item.type === 'LetStatement') {
+                const letItem = item as LetStatementAST;
+                let letCtx = extraBindings
+                    ? this.createInstanceContext(sourceInstance).child(extraBindings)
+                    : this.createInstanceContext(sourceInstance);
+                for (const binding of letItem.bindings) {
+                    const value = await this.evaluateExpressionAsync(binding.value, letCtx);
+                    letCtx = letCtx.child({ [binding.name]: value });
+                }
+                // Execute let body items inline on the same newObject
+                for (const bodyItem of letItem.body) {
+                    if (bodyItem.type === 'AttributeMapping') {
+                        const attrMapping = bodyItem as AttributeMappingAST;
+                        let value: JjelValue;
+                        if (attrMapping.objectCreation) {
+                            value = await this.executeObjectCreation(attrMapping.objectCreation, sourceInstance, extraBindings);
+                        } else if (attrMapping.expression !== undefined) {
+                            value = await this.evaluateExpressionAsync(attrMapping.expression, letCtx);
+                            if (attrMapping.valueMapping && attrMapping.valueMapping.length > 0) {
+                                const match = attrMapping.valueMapping.find(vm =>
+                                    this.valuesEqual(value, this.getLiteralValue(vm.sourceValue))
+                                );
+                                if (match) value = this.getLiteralValue(match.targetValue);
+                            }
+                        } else if (attrMapping.conversion?.expression) {
+                            value = await this.evaluateExpressionAsync(attrMapping.conversion.expression, letCtx);
+                        } else if (attrMapping.sourceAttribute) {
+                            value = this.evaluatePropertyPath(attrMapping.sourceAttribute, letCtx);
+                        } else {
+                            value = null;
+                        }
+                        newObject[attrMapping.targetAttribute] = value;
+                    } else if (bodyItem.type === 'ForAllMapping') {
+                        await this.executeForAllMappingOnObject(bodyItem as ForAllMappingAST, sourceInstance, newObject, extraBindings);
+                    }
+                    // Nested let, alert, notify inside object creation let body are handled recursively
+                }
             }
         }
 
@@ -1509,6 +1565,142 @@ export class JjtlExecutor {
                 parentObject[propName] = [...(existing as any[]), ...results];
             } else {
                 parentObject[propName] = results as any;
+            }
+        }
+    }
+
+    /**
+     * Execute a let body with a pre-built context (used by executeAttributeMappings).
+     * Each body item uses the enriched letCtx instead of creating a fresh instance context.
+     */
+    private async executeLetBody(
+        body: MappingBodyItemAST[],
+        sourceInstance: any,
+        targetInstance: any,
+        letCtx: EvaluationContext
+    ): Promise<void> {
+        for (const item of body) {
+            if (item.type === 'AttributeMapping') {
+                const mapping = item as AttributeMappingAST;
+                let value: JjelValue;
+                if (mapping.objectCreation) {
+                    value = await this.executeObjectCreation(mapping.objectCreation, sourceInstance);
+                } else if (mapping.expression !== undefined) {
+                    value = await this.evaluateExpressionAsync(mapping.expression, letCtx);
+                    if (mapping.valueMapping && mapping.valueMapping.length > 0) {
+                        const match = mapping.valueMapping.find(vm =>
+                            this.valuesEqual(value, this.getLiteralValue(vm.sourceValue))
+                        );
+                        if (match) value = this.getLiteralValue(match.targetValue);
+                    }
+                } else if (mapping.conversion) {
+                    value = mapping.conversion.expression
+                        ? await this.evaluateExpressionAsync(mapping.conversion.expression, letCtx)
+                        : null;
+                } else if (mapping.sourceAttribute) {
+                    value = this.evaluatePropertyPath(mapping.sourceAttribute, letCtx);
+                } else {
+                    value = null;
+                }
+                targetInstance[mapping.targetAttribute] = fromJjelValue(value);
+                this.stats.attributeMappingsExecuted++;
+            } else if (item.type === 'ForAllMapping') {
+                await this.executeForAllMapping(item as ForAllMappingAST, sourceInstance, targetInstance);
+            } else if (item.type === 'AlertStatement') {
+                const msg = this.evaluateExpression((item as AlertStatementAST).message, letCtx);
+                await getUIBridge().showAlert(String(msg ?? ''), (item as AlertStatementAST).alertType ?? 'info');
+            } else if (item.type === 'NotifyStatement') {
+                const msg = this.evaluateExpression((item as NotifyStatementAST).message, letCtx);
+                getUIBridge().showNotify(String(msg ?? ''), (item as NotifyStatementAST).duration ?? 3000);
+            } else if (item.type === 'LetStatement') {
+                // Nested let
+                const nested = item as LetStatementAST;
+                let nestedCtx = letCtx;
+                for (const binding of nested.bindings) {
+                    const value = await this.evaluateExpressionAsync(binding.value, nestedCtx);
+                    nestedCtx = nestedCtx.child({ [binding.name]: value });
+                }
+                await this.executeLetBody(nested.body, sourceInstance, targetInstance, nestedCtx);
+            }
+        }
+    }
+
+    /**
+     * Execute a let body with trace recording (used by executeAttributeMappingsWithTrace).
+     */
+    private async executeLetBodyWithTrace(
+        body: MappingBodyItemAST[],
+        sourceInstance: any,
+        targetInstance: any,
+        letCtx: EvaluationContext,
+        traceLink: TraceLinkBuilder
+    ): Promise<void> {
+        for (const item of body) {
+            if (item.type === 'AttributeMapping') {
+                const mapping = item as AttributeMappingAST;
+                let value: JjelValue;
+                let sourceValue: any = null;
+                const hasExpression = !!mapping.conversion?.expression;
+                const expressionSource = hasExpression ? this.getExpressionSource(mapping.conversion!.expression!) : undefined;
+
+                if (mapping.objectCreation) {
+                    value = await this.executeObjectCreation(mapping.objectCreation, sourceInstance);
+                } else if (mapping.expression !== undefined) {
+                    value = await this.evaluateExpressionAsync(mapping.expression, letCtx);
+                    sourceValue = fromJjelValue(value);
+                    if (mapping.valueMapping && mapping.valueMapping.length > 0) {
+                        const match = mapping.valueMapping.find(vm =>
+                            this.valuesEqual(value, this.getLiteralValue(vm.sourceValue))
+                        );
+                        if (match) value = this.getLiteralValue(match.targetValue);
+                    }
+                } else if (mapping.conversion) {
+                    if (mapping.sourceAttribute) {
+                        sourceValue = fromJjelValue(this.evaluatePropertyPath(mapping.sourceAttribute, letCtx));
+                    }
+                    value = mapping.conversion.expression
+                        ? await this.evaluateExpressionAsync(mapping.conversion.expression, letCtx)
+                        : null;
+                } else if (mapping.sourceAttribute) {
+                    value = this.evaluatePropertyPath(mapping.sourceAttribute, letCtx);
+                    sourceValue = fromJjelValue(value);
+                } else {
+                    value = null;
+                }
+
+                const finalValue = fromJjelValue(value);
+                targetInstance[mapping.targetAttribute] = finalValue;
+                const invertible = this.isBindingInvertible(mapping);
+                const userProvided = mapping.expression !== undefined
+                    ? this.isUserProvidedExpression(mapping.expression)
+                    : false;
+                traceLink.addBinding(
+                    mapping.sourceAttribute || null,
+                    mapping.targetAttribute,
+                    expressionSource,
+                    sourceValue,
+                    finalValue,
+                    invertible,
+                    invertible ? this.computeInverseExpression(mapping) : undefined,
+                    userProvided || undefined
+                );
+                this.stats.attributeMappingsExecuted++;
+            } else if (item.type === 'ForAllMapping') {
+                await this.executeForAllMapping(item as ForAllMappingAST, sourceInstance, targetInstance);
+            } else if (item.type === 'AlertStatement') {
+                const msg = this.evaluateExpression((item as AlertStatementAST).message, letCtx);
+                await getUIBridge().showAlert(String(msg ?? ''), (item as AlertStatementAST).alertType ?? 'info');
+            } else if (item.type === 'NotifyStatement') {
+                const msg = this.evaluateExpression((item as NotifyStatementAST).message, letCtx);
+                getUIBridge().showNotify(String(msg ?? ''), (item as NotifyStatementAST).duration ?? 3000);
+            } else if (item.type === 'LetStatement') {
+                const nested = item as LetStatementAST;
+                let nestedCtx = letCtx;
+                for (const binding of nested.bindings) {
+                    const value = await this.evaluateExpressionAsync(binding.value, nestedCtx);
+                    nestedCtx = nestedCtx.child({ [binding.name]: value });
+                }
+                await this.executeLetBodyWithTrace(nested.body, sourceInstance, targetInstance, nestedCtx, traceLink);
             }
         }
     }

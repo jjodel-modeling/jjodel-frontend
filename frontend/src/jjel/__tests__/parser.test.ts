@@ -44,6 +44,17 @@ describe('Identifiers', () => {
     test('underscore', () => { expect(parse('_x')).toMatchObject({ type: 'Identifier', name: '_x' }); });
 });
 
+describe('Dollar identifiers ($variable)', () => {
+    test('simple $name', () => { expect(parse('$name')).toMatchObject({ type: 'Identifier', name: '$name' }); });
+    test('$prefix in binary expression', () => {
+        const ast = parse('$prefix + ".tbl"');
+        expect(ast).toMatchObject({ type: 'Binary', operator: '+' });
+        expect((ast as any).left).toMatchObject({ type: 'Identifier', name: '$prefix' });
+    });
+    test('$var with underscore and digits', () => { expect(parse('$my_var2')).toMatchObject({ type: 'Identifier', name: '$my_var2' }); });
+    test('bare $ fails', () => { parseFails('$ + 1'); });
+});
+
 describe('Member access', () => {
     test('dot access', () => { expect(parse('a.b')).toMatchObject({ type: 'MemberAccess', property: 'b' }); });
     test('chain', () => { expect(parse('a.b.c')).toMatchObject({ type: 'MemberAccess', property: 'c' }); });

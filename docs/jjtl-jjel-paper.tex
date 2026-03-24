@@ -26,8 +26,9 @@
 \usepackage{microtype}
 \usepackage{fancyhdr}
 
-% New macro
+% New macros
 \newcommand{\jjmodal}{\textsf{JjModal}}
+\newcommand{\jjlet}{\textsf{JjLet}}
  
 % JjModal listing language (for standalone grammar/example fragments)
 
@@ -67,7 +68,7 @@
 
 % JjTL
 \lstdefinelanguage{jjtl}{
-    morekeywords={transformation, from, to, when, helper, alert, notify, prompt, input},
+    morekeywords={transformation, from, to, when, helper, alert, notify, prompt, input, let},
     morekeywords=[2]{forall, exists, implies, such, that, with, do, if, then, else, and, or, not, is, true, false, null, in},
     sensitive=true,
     morecomment=[l]{\#},
@@ -87,7 +88,7 @@
 
 % JjEL
 \lstdefinelanguage{jjel}{
-    morekeywords={forall, exists, implies, such, that, with, do, if, then, else, and, or, not, is, true, false, null, in},
+    morekeywords={forall, exists, implies, such, that, with, do, if, then, else, and, or, not, is, true, false, null, in, let},
     sensitive=true,
     morecomment=[l]{--},
     morestring=[b]",
@@ -285,7 +286,7 @@ Both languages were designed under three guiding principles, applied in strict p
 
 \subsection{Document Structure}
 
-\Cref{sec:jjel} presents \jjel{} in detail, including its set-theoretic semantics and design motivations. \Cref{sec:jjtl} describes \jjtl{} and its transformation model. \Cref{sec:comparison} provides a detailed comparative analysis with ATL, EOL/ETL, QVT-R, and QVT-O. \Cref{sec:examples} presents parallel transformation examples across multiple languages. \Cref{sec:discussion} discusses open points and future directions.
+\Cref{sec:jjel} presents \jjel{} in detail, including its set-theoretic semantics and design motivations. \Cref{sec:jjtl} describes \jjtl{} and its transformation model. \Cref{sec:jjmodal} introduces \jjmodal{}, the interaction sub-language for user-facing commands. \Cref{sec:jjlet} presents \jjlet{}, a let-binding construct that bridges asynchronous interaction with synchronous expression evaluation. \Cref{sec:comparison} provides a detailed comparative analysis with ATL, EOL/ETL, QVT-R, and QVT-O. \Cref{sec:examples} presents parallel transformation examples across multiple languages. \Cref{sec:discussion} discusses open points and future directions.
 
 
 % ============================================
@@ -1190,7 +1191,340 @@ invertibility tracking and set-theoretic expression semantics that
 distinguish \jjtl{}/\jjel{} from existing languages.
 
 % ============================================
-% 4. COMPARISON
+% 5. JjLet
+% ============================================
+\section{JjLet: Let-Binding for Interactive Transformations}\label{sec:jjlet}
+
+\jjlet{} extends the Jjodel language family with a \emph{let-binding}
+construct that introduces lexically scoped, named variables into \jjtl{}
+transformation rules and \textsf{JjScript} commands. While its design is
+general---the bound value can be any expression---its primary motivation
+is the combination of \jjmodal{} commands with the rest of the expression
+language: a \kw{prompt} or \kw{confirm} call is evaluated \emph{once},
+its result bound to a variable, and that variable is then available
+throughout the scoped body without re-prompting the user.
+
+\subsection{Motivation}
+
+Without \jjlet{}, reusing the result of a \jjmodal{} command requires
+calling \kw{prompt} multiple times, which opens the dialog once per
+occurrence:
+
+\begin{lstlisting}[style=jjtl,numbers=none]
+-- Without let: dialog opened twice (undesirable)
+Class -> Table when { not isAbstract } {
+    name  -> name  : prompt('Column prefix', EString) + name.snakeCase()
+    label -> label : prompt('Column prefix', EString) + name.toUpper()
+}
+\end{lstlisting}
+
+With \jjlet{}, the dialog is opened once and the result is reused:
+
+\begin{lstlisting}[style=jjtl,numbers=none]
+-- With let: dialog opened once, $p reused in two bindings
+Class -> Table when { not isAbstract } {
+    let $p = prompt('Column prefix', EString, 'col_') in {
+        name  -> name  : $p + name.snakeCase()
+        label -> label : $p + name.toUpper()
+    }
+}
+\end{lstlisting}
+
+Beyond \jjmodal{}, \jjlet{} is useful for naming any intermediate
+computed value, reducing repetition and improving readability:
+
+\begin{lstlisting}[style=jjtl,numbers=none]
+let $derived = forall a in attributes such that a.isDerived in
+    $derived.size > 0 implies $derived: a.name
+\end{lstlisting}
+
+
+\subsection{Design Position and Architecture}
+
+\jjlet{} occupies a precise architectural layer. The \jjel{} evaluator
+is \emph{synchronous} by design, and \jjmodal{} commands are
+\emph{asynchronous} (they await user input). Rather than making \jjel{}
+async---which would cascade through every caller in the system---\jjlet{}
+is placed \emph{above} \jjel{}: it lives in the \jjtl{} executor and
+the \textsf{JjScript} executor, both of which are already async.
+
+The execution model is:
+\begin{enumerate}
+    \item The async executor encounters a \kw{let} construct.
+    \item It \texttt{await}s the evaluation of each binding expression
+          (which may invoke \jjmodal{} via \texttt{UIBridge}).
+    \item It injects the resolved values into the \jjel{} evaluation
+          context as named entries.
+    \item It delegates the body to \jjel{}, which evaluates it
+          synchronously, looking up \texttt{\$name} as a plain
+          context variable.
+\end{enumerate}
+
+From the transformation author's perspective, the execution is
+synchronous: \texttt{\$p} is available immediately after the dialog
+closes, and the body evaluates as if \texttt{\$p} had always been
+a constant.
+
+\begin{lstlisting}[style=grammar,caption={JjLet execution flow}]
+JjTL executor (async)
+  let $p = prompt('Prefix', EString)
+    await UIBridge.showPrompt(...)  -> "col_"
+      ctx.child({ "$p": "col_" })
+        JjEL evaluates body
+          "$p" -> context lookup -> "col_"  [sync]
+\end{lstlisting}
+
+This design avoids any modification to the \jjel{} evaluator
+(\texttt{evaluator.ts}) and preserves full backward compatibility.
+
+
+\subsection{Variable Sigil}
+
+Variables introduced by \kw{let} are always prefixed with \texttt{\$}:
+
+\begin{lstlisting}[style=jjel,numbers=none]
+let $name = prompt('Name', EString) in ...   -- valid
+let name  = prompt('Name', EString) in ...   -- parse error: missing $
+\end{lstlisting}
+
+The sigil serves two purposes. First, it provides a clear visual
+distinction between user-defined variables (\texttt{\$name}) and
+metamodel properties (\texttt{name}), preventing silent shadowing of
+source element attributes. Second, it disambiguates variable references
+from identifiers in the JjEL expression grammar, which are always
+unqualified metamodel property names.
+
+The \texttt{\$} sigil requires a surgical extension to the \jjel{}
+lexer: the token sequence \texttt{\$}\,\textit{letter\ldots} is
+recognised as a \texttt{DOLLAR\_IDENT} token, which the \jjel{} parser
+treats as an identifier expression. This does not conflict with the
+existing string interpolation syntax \texttt{\$\{expr\}}, since
+\texttt{\$\{} (dollar followed by brace) is recognised first.
+
+
+\subsection{Syntax}
+
+\subsubsection{Single binding}
+
+\begin{lstlisting}[style=jjel,numbers=none]
+let $identifier = expression in body
+\end{lstlisting}
+
+\subsubsection{Multiple bindings}
+
+Multiple bindings are introduced with a comma-separated list and desugar
+to nested single bindings evaluated left-to-right. Later bindings may
+reference earlier ones:
+
+\begin{lstlisting}[style=jjel,numbers=none]
+let $x = e1, $y = e2 in body
+-- desugars to:
+let $x = e1 in let $y = e2 in body
+\end{lstlisting}
+
+\begin{lstlisting}[style=jjel,numbers=none]
+-- Later binding references earlier one
+let $base = prompt('Base name', EString),
+    $full = $base + "_tbl" in
+    forall c in classes such that c.name == $full
+\end{lstlisting}
+
+\subsubsection{Block body in JjTL}
+
+In a \jjtl{} mapping body, the \kw{in} clause may be a brace-delimited
+block of attribute mappings:
+
+\begin{lstlisting}[style=jjtl,numbers=none]
+let $p = prompt('Prefix', EString, 'col_') in {
+    name  -> name  : $p + name.snakeCase()
+    label -> label : $p + name.toUpper()
+    -> tag         : $p + "meta"
+}
+\end{lstlisting}
+
+\subsubsection{Formal grammar}
+
+\begin{lstlisting}[style=grammar,caption={JjLet grammar in EBNF}]
+LetExpr      = 'let' BindingList 'in' LetBody
+
+BindingList  = Binding (',' Binding)*
+
+Binding      = '$' IDENTIFIER '=' expression
+
+LetBody      = expression              -- in JjEL expression contexts
+             | '{' MappingBody '}'     -- in JjTL binding block context
+             | JjScriptCommand         -- in JjScript command context
+
+expression   = LetExpr | ...           -- LetExpr is lowest precedence
+\end{lstlisting}
+
+\kw{let} has the lowest precedence of all \jjel{} constructs (below
+\kw{if/then/else} and \texttt{??}), so its body extends as far right as
+possible.
+
+
+\subsection{Semantics}
+
+\subsubsection{Evaluation order}
+
+Bindings are evaluated \textbf{sequentially, left-to-right}. Each
+binding value is evaluated once; the result is immutable within the
+scope:
+
+\begin{lstlisting}[style=jjel,numbers=none]
+let $x = prompt('X', EInt), $y = $x * 2 in $x + $y
+-- prompt shown once; $y computed immediately after
+\end{lstlisting}
+
+\subsubsection{Lexical scope}
+
+The variable \texttt{\$identifier} is visible \textbf{only within
+\texttt{body}}---it is not accessible outside the \kw{let} expression.
+Re-binding via nested \kw{let} is allowed and shadows the outer binding:
+
+\begin{lstlisting}[style=jjel,numbers=none]
+let $x = 1 in
+let $x = $x + 1 in   -- inner $x = 2, outer $x = 1
+    $x               -- returns 2
+\end{lstlisting}
+
+\subsubsection{Cancellation handling}
+
+If the user cancels a \kw{prompt}, the variable is bound to
+\texttt{null}. The body still executes; null-safe operators handle the
+absent value gracefully:
+
+\begin{lstlisting}[style=jjtl,numbers=none]
+let $prefix = prompt('Prefix', EString) in
+    forall c in classes: ($prefix ?? "") + c.name
+\end{lstlisting}
+
+If the user selects \emph{No} on a \kw{confirm}, the variable is bound
+to \texttt{false}:
+
+\begin{lstlisting}[style=jjtl,numbers=none]
+let $ok = confirm('Proceed with deletion?') in
+    if $ok then forall c in classes: c.delete() else null
+\end{lstlisting}
+
+
+\subsection{Usage Examples}
+
+\subsubsection{JjTL --- shared prompt across bindings}
+
+\begin{lstlisting}[style=jjtl,caption={JjLet with block body in JjTL}]
+transformation EnrichSchema
+
+from UML_MM
+to   Relational_MM
+
+Class -> Table when { not isAbstract } {
+    let $prefix = prompt('Column prefix', EString, 'col_') in {
+        name  -> name  : $prefix + name.snakeCase()
+        label -> label : $prefix + name.toUpper()
+    }
+}
+\end{lstlisting}
+
+\subsubsection{JjTL --- confirm before transformation}
+
+\begin{lstlisting}[style=jjtl,caption={JjLet with confirm in a guard}]
+Attribute -> Attribute
+    when {
+        let $ok = confirm('Map derived attribute ' + name + '?') in
+            not isDerived or $ok
+    } {
+    name -> name
+    type -> type
+}
+\end{lstlisting}
+
+\subsubsection{JjTL --- multi-step interactive mapping}
+
+\begin{lstlisting}[style=jjtl,caption={JjLet with multiple bindings}]
+Class -> Table when { not isAbstract } {
+    let $prefix = prompt('Table prefix', EString, 'tbl_'),
+        $suffix = prompt('Table suffix', EString, '') in {
+        name -> name : $prefix + name.snakeCase() + $suffix
+    }
+}
+\end{lstlisting}
+
+\subsubsection{JjScript --- interactive bulk operation}
+
+\begin{lstlisting}[style=jjel,caption={JjLet in JjScript (planned)}]
+let $target = prompt('Rename all instances to', EString) in
+let $ok = confirm('Rename ' + (list Person).size + ' instances to '
+                  + $target + '?') in
+    if $ok then
+        forall p in (list Person): rename p to $target
+    end
+\end{lstlisting}
+
+
+\subsection{Implementation Plan}
+
+\jjlet{} is implemented in three phases, each building on the previous.
+
+\paragraph{Phase 1 --- \texttt{\$identifier} token in \jjel{} lexer.}
+This is the only modification to the \jjel{} layer. The lexer is
+extended to recognise \texttt{\$letter\ldots} as a
+\texttt{DOLLAR\_IDENT} token (before the existing bare-\texttt{\$}
+error branch). The \jjel{} parser adds \texttt{DOLLAR\_IDENT} as a
+valid primary expression. The \jjel{} evaluator requires no changes:
+\texttt{\$name} is looked up in the scope stack like any other
+identifier. Three files: \texttt{jjel/lexer/lexer.ts},
+\texttt{jjel/types/tokens.ts}, \texttt{jjel/parser/parser.ts}.
+
+\paragraph{Phase 2 --- \kw{let} in JjTL.}
+The \jjtl{} parser is extended to recognise
+\texttt{let \$x = e in \{ mappings \}} as a mapping body item.
+The \jjtl{} executor evaluates each binding asynchronously (enabling
+\jjmodal{} commands as binding values), injects results into a child
+\jjel{} context, and dispatches the body (expression or mapping block)
+within that context. Three files: \texttt{jjtl/types/ast.ts},
+\texttt{jjtl/parser/parser.ts}, \texttt{jjtl/executor/executor.ts}.
+
+\paragraph{Phase 3 --- \kw{let} in \textsf{JjScript}.}
+\kw{let} becomes a new command type in the \textsf{JjScript} command
+taxonomy. Its handler evaluates bindings asynchronously and executes the
+body command with an enriched context. Five files:
+\texttt{jjscript/types.ts}, \texttt{jjscript/parser/parser.ts},
+\texttt{jjscript/executor/executor.ts},
+\texttt{jjscript/executor/commands/let.ts},
+\texttt{jjscript/index.ts}.
+
+
+\subsection{Design Tensions}
+
+\paragraph{\kw{in} keyword collision.}
+\kw{in} is already used in \jjel{} quantifiers (\texttt{forall x in S}).
+In \jjtl{}, the \texttt{parseJjELExpression()} function collects tokens
+up to a boundary set; \kw{in} after a \kw{let} binding must be
+recognised as the \kw{let} separator rather than consumed as part of the
+binding expression. Since \kw{let} is parsed at the \jjtl{} layer (not
+inside \jjel{}'s own grammar), the boundary rule can be extended without
+modifying the \jjel{} parser.
+
+\paragraph{Context key convention.}
+Variables must be stored in the \jjel{} context under a consistent key.
+Two conventions are possible: store \texttt{\$name} as the key
+\texttt{"\$name"} (sigil kept), or strip the sigil and store as
+\texttt{"name"}. Keeping the sigil is simpler (no transformation
+required) and avoids any risk of collision with metamodel property
+names---which are always sigil-free.
+
+\paragraph{Block body boundary.}
+The \texttt{\{~mappings~\}} body is a \jjtl{}-specific construct. The
+\jjtl{} parser must distinguish \texttt{let \$x = e in \{~...\}} (block
+body) from \texttt{let \$x = \{~...\} in expr} (object literal as
+binding value, if supported). The disambiguation is straightforward:
+after parsing the \kw{in} token, if the next token is \texttt{\{} and
+the context is a mapping body, a block body is assumed.
+
+
+% ============================================
+% 6. COMPARISON
 % ============================================
 \section{Comparative Analysis}\label{sec:comparison}
 
@@ -1407,7 +1741,7 @@ Key observations:
 
 
 % ============================================
-% 5. EXAMPLES
+% 7. EXAMPLES
 % ============================================
 \section{Transformation Examples}\label{sec:examples}
 
@@ -1862,7 +2196,7 @@ All references are navigable &
 
 
 % ============================================
-% 6. DISCUSSION
+% 8. DISCUSSION
 % ============================================
 \section{Discussion}\label{sec:discussion}
 
@@ -1908,7 +2242,7 @@ Several aspects of \jjel{} are under active review:
 
 
 % ============================================
-% 7. CONCLUSION
+% 9. CONCLUSION
 % ============================================
 \section{Conclusion}\label{sec:conclusion}
 

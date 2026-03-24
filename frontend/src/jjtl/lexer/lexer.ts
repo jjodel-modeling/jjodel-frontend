@@ -175,6 +175,23 @@ export class JjtlLexer {
                 this.singleQuotedString();
                 break;
 
+            // Dollar-prefixed identifiers: $varName
+            case '$':
+                if (this.isAlpha(this.peek())) {
+                    while (this.isAlphaNumeric(this.peek())) {
+                        this.advance();
+                    }
+                    this.addToken(TokenType.DOLLAR_IDENT);
+                } else {
+                    this.errors.push({
+                        message: "Unexpected '$'. Expected identifier after '$'.",
+                        line: this.line,
+                        column: this.column - 1,
+                    });
+                    this.addToken(TokenType.UNKNOWN);
+                }
+                break;
+
             default:
                 if (this.isDigit(c)) {
                     this.number();

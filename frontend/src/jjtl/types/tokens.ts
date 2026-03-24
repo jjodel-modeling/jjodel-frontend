@@ -20,6 +20,7 @@ export enum TokenType {
     IN = 'IN',
     SUCH = 'SUCH',
     THAT = 'THAT',
+    LET = 'LET',
 
     // Interactive Keywords
     ALERT = 'ALERT',
@@ -88,6 +89,7 @@ export enum TokenType {
     // ============================================
     // SPECIAL
     // ============================================
+    DOLLAR_IDENT = 'DOLLAR_IDENT', // $varName
     COMMENT = 'COMMENT',          // # ...
     NEWLINE = 'NEWLINE',
     WHITESPACE = 'WHITESPACE',
@@ -111,6 +113,7 @@ export const JJTL_KEYWORDS: Record<string, TokenType> = {
     'in': TokenType.IN,
     'such': TokenType.SUCH,
     'that': TokenType.THAT,
+    'let': TokenType.LET,
     'alert': TokenType.ALERT,
     'notify': TokenType.NOTIFY,
     'prompt': TokenType.PROMPT,

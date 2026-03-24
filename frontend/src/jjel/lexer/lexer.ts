@@ -147,6 +147,12 @@ export class JjelLexer {
             case '$':
                 if (this.match('{')) {
                     this.addToken(JjelTokenType.DOLLAR_LBRACE);
+                } else if (this.isAlpha(this.peek())) {
+                    // $identifier → DOLLAR_IDENT (e.g. $name, $prefix)
+                    while (this.isAlphaNumeric(this.peek())) {
+                        this.advance();
+                    }
+                    this.addToken(JjelTokenType.DOLLAR_IDENT);
                 } else {
                     this.error(`Unexpected '$'. Did you mean '\${' for interpolation?`);
                 }
@@ -167,6 +173,11 @@ export class JjelLexer {
             // String literals
             case '"':
                 this.string();
+                break;
+
+            // Single-quoted strings (same semantics as double-quoted)
+            case "'":
+                this.singleQuotedString();
                 break;
 
             default:
@@ -280,6 +291,48 @@ export class JjelLexer {
         } else if (currentText) {
             this.addTokenWithValue(JjelTokenType.STRING_PART, currentText);
         }
+    }
+
+    /**
+     * Parse a single-quoted string literal (no interpolation)
+     */
+    private singleQuotedString(): void {
+        let text = '';
+
+        while (this.peek() !== "'" && !this.isAtEnd()) {
+            const c = this.peek();
+            if (c === '\n') {
+                this.line++;
+                this.lineStart = this.current + 1;
+                text += c;
+                this.advance();
+            } else if (c === '\\') {
+                this.advance();
+                const escaped = this.peek();
+                this.advance();
+                switch (escaped) {
+                    case 'n': text += '\n'; break;
+                    case 't': text += '\t'; break;
+                    case 'r': text += '\r'; break;
+                    case "'": text += "'"; break;
+                    case '\\': text += '\\'; break;
+                    default:
+                        this.error(`Unknown escape sequence: \\${escaped}`);
+                        text += escaped;
+                }
+            } else {
+                text += c;
+                this.advance();
+            }
+        }
+
+        if (this.isAtEnd()) {
+            this.error('Unterminated string');
+            return;
+        }
+
+        this.advance(); // closing '
+        this.addTokenWithValue(JjelTokenType.STRING, text);
     }
 
     /**

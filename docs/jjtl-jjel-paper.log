@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.12.4)  24 MAR 2026 16:00
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.12.4)  24 MAR 2026 23:22
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -543,7 +543,7 @@ Package: fancyhdr 2025/02/07 v5.2 Extensive control of page headers and footers
 \f@nch@widthR=\skip78
 \@temptokenb=\toks35
 )
-Package hyperref Info: Option `colorlinks' set `true' on input line 40.
+Package hyperref Info: Option `colorlinks' set `true' on input line 41.
 
 (/usr/local/texlive/2025/texmf-dist/tex/latex/l3backend/l3backend-pdftex.def
 File: l3backend-pdftex.def 2024-05-08 L3 backend support: PDF output (pdfTeX)
@@ -553,24 +553,24 @@ File: l3backend-pdftex.def 2024-05-08 L3 backend support: PDF output (pdfTeX)
 (./jjtl-jjel-paper.aux)
 \openout1 = `jjtl-jjel-paper.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 227.
-LaTeX Font Info:    ... okay on input line 227.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 227.
-LaTeX Font Info:    ... okay on input line 227.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 227.
-LaTeX Font Info:    ... okay on input line 227.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 227.
-LaTeX Font Info:    ... okay on input line 227.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 227.
-LaTeX Font Info:    ... okay on input line 227.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 227.
-LaTeX Font Info:    ... okay on input line 227.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 227.
-LaTeX Font Info:    ... okay on input line 227.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 227.
-LaTeX Font Info:    ... okay on input line 227.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 227.
-LaTeX Font Info:    ... okay on input line 227.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 228.
+LaTeX Font Info:    ... okay on input line 228.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 228.
+LaTeX Font Info:    ... okay on input line 228.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 228.
+LaTeX Font Info:    ... okay on input line 228.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 228.
+LaTeX Font Info:    ... okay on input line 228.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 228.
+LaTeX Font Info:    ... okay on input line 228.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 228.
+LaTeX Font Info:    ... okay on input line 228.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 228.
+LaTeX Font Info:    ... okay on input line 228.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 228.
+LaTeX Font Info:    ... okay on input line 228.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 228.
+LaTeX Font Info:    ... okay on input line 228.
 
 *geometry* driver: auto-detecting
 *geometry* detected driver: pdftex
@@ -629,7 +629,7 @@ File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Liv
 e
 ))
 \c@lstlisting=\count334
-Package hyperref Info: Link coloring ON on input line 227.
+Package hyperref Info: Link coloring ON on input line 228.
 
 (./jjtl-jjel-paper.out) (./jjtl-jjel-paper.out)
 \@outlinefile=\write3
@@ -638,20 +638,20 @@ Package hyperref Info: Link coloring ON on input line 227.
 Package caption Info: Begin \AtBeginDocument code.
 Package caption Info: float package is loaded.
 Package caption Info: End \AtBeginDocument code.
-LaTeX Info: Redefining \microtypecontext on input line 227.
-Package microtype Info: Applying patch `item' on input line 227.
-Package microtype Info: Applying patch `toc' on input line 227.
-Package microtype Info: Applying patch `eqnum' on input line 227.
-Package microtype Info: Applying patch `footnote' on input line 227.
-Package microtype Info: Applying patch `verbatim' on input line 227.
-LaTeX Info: Redefining \microtypesetup on input line 227.
+LaTeX Info: Redefining \microtypecontext on input line 228.
+Package microtype Info: Applying patch `item' on input line 228.
+Package microtype Info: Applying patch `toc' on input line 228.
+Package microtype Info: Applying patch `eqnum' on input line 228.
+Package microtype Info: Applying patch `footnote' on input line 228.
+Package microtype Info: Applying patch `verbatim' on input line 228.
+LaTeX Info: Redefining \microtypesetup on input line 228.
 Package microtype Info: Generating PDF output.
 Package microtype Info: Character protrusion enabled (level 2).
 Package microtype Info: Using default protrusion set `alltext'.
 Package microtype Info: Automatic font expansion enabled (level 2),
 (microtype)             stretch: 20, shrink: 20, step: 1, non-selected.
 Package microtype Info: Using default expansion set `alltext-nott'.
-LaTeX Info: Redefining \showhyphens on input line 227.
+LaTeX Info: Redefining \showhyphens on input line 228.
 Package microtype Info: No adjustment of tracking.
 Package microtype Info: No adjustment of interword spacing.
 Package microtype Info: No adjustment of character kerning.
@@ -701,17 +701,17 @@ ocal/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc}
 
 [3]
 LaTeX Font Info:    Font shape `T1/cmtt/bx/n' in size <10.95> not available
-(Font)              Font shape `T1/cmtt/m/n' tried instead on input line 265.
+(Font)              Font shape `T1/cmtt/m/n' tried instead on input line 266.
 
 
 [4{/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-ts1.enc
 }]
-Overfull \hbox (14.49425pt too wide) in paragraph at lines 303--311
+Overfull \hbox (14.49425pt too wide) in paragraph at lines 304--312
  [] 
  []
 
 
-Overfull \hbox (65.76237pt too wide) in paragraph at lines 339--340
+Overfull \hbox (65.76237pt too wide) in paragraph at lines 340--341
 []\T1/cmr/m/n/10.95 (-20) The type sys-tem in-cludes aliases for in-ter-op-er-a
 bil-ity: \T1/cmtt/m/n/10.95 EString\T1/cmr/m/n/10.95 (-20) /\T1/cmtt/m/n/10.95 
 String\T1/cmr/m/n/10.95 (-20) , \T1/cmtt/m/n/10.95 EInt\T1/cmr/m/n/10.95 (-20) 
@@ -721,21 +721,21 @@ cmtt/m/n/10.95 Number\T1/cmr/m/n/10.95 (-20) ,
  []
 
 LaTeX Font Info:    Font shape `T1/cmtt/bx/n' in size <12> not available
-(Font)              Font shape `T1/cmtt/m/n' tried instead on input line 342.
+(Font)              Font shape `T1/cmtt/m/n' tried instead on input line 343.
 
 
 [5]
 LaTeX Font Info:    Font shape `T1/cmtt/bx/n' in size <10> not available
-(Font)              Font shape `T1/cmtt/m/n' tried instead on input line 363.
+(Font)              Font shape `T1/cmtt/m/n' tried instead on input line 364.
 
-Overfull \hbox (184.81908pt too wide) in paragraph at lines 367--377
+Overfull \hbox (184.81908pt too wide) in paragraph at lines 368--378
  [] 
  []
 
 
 
 [6]
-Overfull \hbox (70.42242pt too wide) in paragraph at lines 456--457
+Overfull \hbox (70.42242pt too wide) in paragraph at lines 457--458
 []\T1/cmr/m/n/10.95 (-20) This con-struct is re-tained from com-mon ex-pres-sio
 n lan-guages. An al-ter-na-tive syn-tax (\T1/cmtt/m/n/10.95 when...then...other
 wise\T1/cmr/m/n/10.95 (-20) )
@@ -746,7 +746,7 @@ wise\T1/cmr/m/n/10.95 (-20) )
 [7]
 
 [8]
-Overfull \hbox (16.62392pt too wide) in paragraph at lines 548--549
+Overfull \hbox (16.62392pt too wide) in paragraph at lines 549--550
 \T1/cmr/m/n/10.95 (-20) falsy. This en-ables con-cise guards (\T1/cmtt/m/n/10.9
 5 if attributes then ... \T1/cmr/m/n/10.95 (-20) in-stead of \T1/cmtt/m/n/10.95
  if attributes.isNotEmpty
@@ -755,7 +755,7 @@ Overfull \hbox (16.62392pt too wide) in paragraph at lines 548--549
 
 
 [9]
-Overfull \hbox (8.02307pt too wide) in paragraph at lines 629--630
+Overfull \hbox (8.02307pt too wide) in paragraph at lines 630--631
 []\T1/cmr/m/n/10.95 (-20) The im-plicit con-text means prop-erty ac-cess is un-
 qual-i-fied: \T1/cmtt/m/n/10.95 isAbstract \T1/cmr/m/n/10.95 (-20) refers to \T
 1/cmtt/m/n/10.95 source.isAbstract\T1/cmr/m/n/10.95 (-20) .
@@ -771,7 +771,7 @@ qual-i-fied: \T1/cmtt/m/n/10.95 isAbstract \T1/cmr/m/n/10.95 (-20) refers to \T
 
 [13]
 Package hyperref Info: bookmark level for unknown lstlisting defaults to 0 on i
-nput line 890.
+nput line 891.
 
 
 [14]
@@ -783,24 +783,40 @@ nput line 890.
 [17]
 
 [18]
-Underfull \hbox (badness 10000) in paragraph at lines 1220--1220
+
+[19]
+
+[20]
+
+[21]
+
+[22]
+Overfull \hbox (79.03642pt too wide) in paragraph at lines 1489--1496
+\T1/cmr/m/n/10.95 (-20) riched con-text. Five files: \T1/cmtt/m/n/10.95 jjscrip
+t/types.ts\T1/cmr/m/n/10.95 (-20) , \T1/cmtt/m/n/10.95 jjscript/parser/parser.t
+s\T1/cmr/m/n/10.95 (-20) , \T1/cmtt/m/n/10.95 jjscript/executor/executor.ts\T1/
+cmr/m/n/10.95 (-20) ,
+ []
+
+
+
+[23]
+Underfull \hbox (badness 10000) in paragraph at lines 1554--1554
 []|\T1/cmtt/m/n/10.95 module Name; create Out from
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1220--1220
+Underfull \hbox (badness 10000) in paragraph at lines 1554--1554
 []|\T1/cmtt/m/n/10.95 transformation Name \n from X
  []
 
 
-
-[19]
-Underfull \hbox (badness 10000) in paragraph at lines 1255--1255
+Underfull \hbox (badness 10000) in paragraph at lines 1589--1589
 []|\T1/cmtt/m/n/10.95 rule Name transform s:T to t:T
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1255--1255
+Underfull \hbox (badness 10000) in paragraph at lines 1589--1589
 []|\T1/cmtt/m/n/10.95 @abstract\T1/cmr/m/n/10.95 (+20) , \T1/cmtt/m/n/10.95 @la
 zy\T1/cmr/m/n/10.95 (+20) , \T1/cmtt/m/n/10.95 @primary\T1/cmr/m/n/10.95 (+20) 
 ,
@@ -808,141 +824,142 @@ zy\T1/cmr/m/n/10.95 (+20) , \T1/cmtt/m/n/10.95 @primary\T1/cmr/m/n/10.95 (+20)
 
 
 
-[20]
-Overfull \hbox (0.37589pt too wide) in paragraph at lines 1304--1305
+[24]
+
+[25]
+Overfull \hbox (0.37589pt too wide) in paragraph at lines 1638--1639
 \T1/cmr/m/n/10.95 (-20) matic trace man-age-ment, OCL-based ex-pres-sions, and 
 a three-section body (\T1/cmtt/m/n/10.95 init\T1/cmr/m/n/10.95 (-20) /populatio
 n/\T1/cmtt/m/n/10.95 end\T1/cmr/m/n/10.95 (-20) ). 
  []
 
 
-
-[21]
-Underfull \hbox (badness 10000) in alignment at lines 1354--1354
+Underfull \hbox (badness 10000) in alignment at lines 1688--1688
 [][][][][][] 
  []
 
-LaTeX Font Info:    Font shape `T1/cmtt/bx/n' in size <9> not available
-(Font)              Font shape `T1/cmtt/m/n' tried instead on input line 1358.
 
-Overfull \hbox (158.47626pt too wide) in paragraph at lines 1397--1397
+
+[26]
+LaTeX Font Info:    Font shape `T1/cmtt/bx/n' in size <9> not available
+(Font)              Font shape `T1/cmtt/m/n' tried instead on input line 1692.
+
+Overfull \hbox (158.47626pt too wide) in paragraph at lines 1731--1731
 []|\T1/cmtt/m/n/10 self.attr->select(a|a.isPublic)->collect(a|a.name)| 
  []
 
 
-Overfull \hbox (147.97882pt too wide) in paragraph at lines 1397--1397
+Overfull \hbox (147.97882pt too wide) in paragraph at lines 1731--1731
 []|\T1/cmtt/m/n/10 self.attr.select(a|a.isPublic).collect(a|a.name)| 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1397--1397
+Underfull \hbox (badness 10000) in paragraph at lines 1731--1731
 []|\T1/cmtt/m/n/10 forall a in
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1397--1397
+Underfull \hbox (badness 10000) in paragraph at lines 1731--1731
 \T1/cmtt/m/n/10 attr such that
  []
 
 
-Overfull \hbox (111.2378pt too wide) in paragraph at lines 1397--1397
+Overfull \hbox (111.2378pt too wide) in paragraph at lines 1731--1731
 []|\T1/cmtt/m/n/10 self.attr->exists(a|a.type.name='String')| 
  []
 
 
-Overfull \hbox (105.98907pt too wide) in paragraph at lines 1397--1397
+Overfull \hbox (105.98907pt too wide) in paragraph at lines 1731--1731
 []|\T1/cmtt/m/n/10 self.attr.exists(a|a.type.name='String')| 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1397--1397
+Underfull \hbox (badness 10000) in paragraph at lines 1731--1731
 []|\T1/cmtt/m/n/10 exists a in attr |
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1397--1397
+Underfull \hbox (badness 10000) in paragraph at lines 1731--1731
 []|\T1/cmtt/m/n/10 self.isAbstract
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1397--1397
+Underfull \hbox (badness 10000) in paragraph at lines 1731--1731
 \T1/cmtt/m/n/10 implies
  []
 
 
-Overfull \hbox (37.75574pt too wide) in paragraph at lines 1397--1397
+Overfull \hbox (37.75574pt too wide) in paragraph at lines 1731--1731
 \T1/cmtt/m/n/10 self.subClasses->notEmpty()| 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1397--1397
+Underfull \hbox (badness 10000) in paragraph at lines 1731--1731
 []|\T1/cmtt/m/n/10 self.isAbstract
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1397--1397
+Underfull \hbox (badness 10000) in paragraph at lines 1731--1731
 \T1/cmtt/m/n/10 implies
  []
 
 
-Overfull \hbox (32.50702pt too wide) in paragraph at lines 1397--1397
+Overfull \hbox (32.50702pt too wide) in paragraph at lines 1731--1731
 \T1/cmtt/m/n/10 self.subClasses.notEmpty()| 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1397--1397
+Underfull \hbox (badness 10000) in paragraph at lines 1731--1731
 []|\T1/cmtt/m/n/10 isAbstract implies
  []
 
 
-Overfull \hbox (6.26343pt too wide) in paragraph at lines 1397--1397
+Overfull \hbox (6.26343pt too wide) in paragraph at lines 1731--1731
 \T1/cmtt/m/n/10 subClasses.isNotEmpty| 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1397--1397
+Underfull \hbox (badness 10000) in paragraph at lines 1731--1731
 []|\T1/cmtt/m/n/10 if
  []
 
 
-Overfull \hbox (41.95471pt too wide) in paragraph at lines 1397--1397
+Overfull \hbox (41.95471pt too wide) in paragraph at lines 1731--1731
 \T1/cmtt/m/n/10 self.parent.oclIsUndefined()
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1397--1397
+Underfull \hbox (badness 10000) in paragraph at lines 1731--1731
 \T1/cmtt/m/n/10 then 'none' else
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1397--1397
+Underfull \hbox (badness 10000) in paragraph at lines 1731--1731
 \T1/cmtt/m/n/10 self.parent.name
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1397--1397
+Underfull \hbox (badness 10000) in paragraph at lines 1731--1731
 []|\T1/cmtt/m/n/10 self.parent?.name ?:
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1397--1397
+Underfull \hbox (badness 10000) in paragraph at lines 1731--1731
 []|\T1/cmtt/m/n/10 parent?.name ??
  []
 
 
 
-[22]
-
-[23]
-
-[24]
-
-[25]
-
-[26]
-
 [27]
-Overfull \hbox (27.85693pt too wide) in paragraph at lines 1681--1682
+
+[28]
+
+[29]
+
+[30]
+
+[31]
+Overfull \hbox (27.85693pt too wide) in paragraph at lines 2015--2016
 []\T1/cmr/m/n/10.95 (-20) The value map-ping \T1/cmtt/m/n/10.95 true=1, false=0
  \T1/cmr/m/n/10.95 (-20) in \T1/cmss/m/n/10.95 (-20) JjTL \T1/cmr/m/n/10.95 (-2
 0) re-places ATL's ver-bose \T1/cmtt/m/n/10.95 if...then...else...endif\T1/cmr/
@@ -951,152 +968,154 @@ m/n/10.95 (-20) .
 
 
 
-[28]
+[32]
 
-[29]
-Underfull \hbox (badness 10000) in paragraph at lines 1829--1829
+[33]
+Underfull \hbox (badness 10000) in paragraph at lines 2163--2163
 []|\T1/cmtt/m/n/10 Class.allInstances()->forAll(c
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1829--1829
+Underfull \hbox (badness 10000) in paragraph at lines 2163--2163
 []|\T1/cmtt/m/n/10 forall c in classes:
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1829--1829
+Underfull \hbox (badness 10000) in paragraph at lines 2163--2163
 []|\T1/cmtt/m/n/10 self.isAbstract implies
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1829--1829
+Underfull \hbox (badness 10000) in paragraph at lines 2163--2163
 []|\T1/cmtt/m/n/10 isAbstract implies
  []
 
 
-Overfull \hbox (2.12924pt too wide) in paragraph at lines 1829--1829
+Overfull \hbox (2.12924pt too wide) in paragraph at lines 2163--2163
 []|\T1/cmtt/m/n/10 Class.allInstances()->isUnique(c
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1829--1829
+Underfull \hbox (badness 10000) in paragraph at lines 2163--2163
 []|\T1/cmtt/m/n/10 (forall c in classes:
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1829--1829
+Underfull \hbox (badness 10000) in paragraph at lines 2163--2163
 \T1/cmtt/m/n/10 c.name).distinct().size ==
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1829--1829
+Underfull \hbox (badness 10000) in paragraph at lines 2163--2163
 []|\T1/cmtt/m/n/10 self.attributes->forAll(a | not
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1829--1829
+Underfull \hbox (badness 10000) in paragraph at lines 2163--2163
 []|\T1/cmtt/m/n/10 forall a in attributes: a.type
  []
 
 
-Underfull \hbox (badness 3343) in paragraph at lines 1829--1829
+Underfull \hbox (badness 3343) in paragraph at lines 2163--2163
 []|\T1/cmr/m/n/10 (+20) Public at-tributes $\OMS/cmsy/m/n/10 )$
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1829--1829
+Underfull \hbox (badness 10000) in paragraph at lines 2163--2163
 []|\T1/cmtt/m/n/10 self.attributes->select(a |
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1829--1829
+Underfull \hbox (badness 10000) in paragraph at lines 2163--2163
 \T1/cmtt/m/n/10 a.isPublic)->forAll(a | not
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1829--1829
+Underfull \hbox (badness 10000) in paragraph at lines 2163--2163
 []|\T1/cmtt/m/n/10 forall a in attributes such
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1829--1829
+Underfull \hbox (badness 10000) in paragraph at lines 2163--2163
 \T1/cmtt/m/n/10 that a.isPublic: a.type !=
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1860--1860
+
+[34]
+Underfull \hbox (badness 10000) in paragraph at lines 2194--2194
 []|\T1/cmtt/m/n/10 not c.isAbstract and
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1860--1860
+Underfull \hbox (badness 10000) in paragraph at lines 2194--2194
 []|\T1/cmtt/m/n/10 not c.isAbstract and
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1860--1860
+Underfull \hbox (badness 10000) in paragraph at lines 2194--2194
 []|\T1/cmtt/m/n/10 not isAbstract and
  []
 
 
-Underfull \hbox (badness 1194) in paragraph at lines 1860--1860
+Underfull \hbox (badness 1194) in paragraph at lines 2194--2194
 []|\T1/cmr/m/n/10 (+20) Has a string at-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1860--1860
+Underfull \hbox (badness 10000) in paragraph at lines 2194--2194
 []|\T1/cmtt/m/n/10 c.attr->exists(a
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1860--1860
+Underfull \hbox (badness 10000) in paragraph at lines 2194--2194
 \T1/cmtt/m/n/10 | a.type.name =
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1860--1860
+Underfull \hbox (badness 10000) in paragraph at lines 2194--2194
 []|\T1/cmtt/m/n/10 c.attr.exists(a
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1860--1860
+Underfull \hbox (badness 10000) in paragraph at lines 2194--2194
 \T1/cmtt/m/n/10 | a.type.name =
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1860--1860
+Underfull \hbox (badness 10000) in paragraph at lines 2194--2194
 []|\T1/cmtt/m/n/10 exists a in
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1860--1860
+Underfull \hbox (badness 10000) in paragraph at lines 2194--2194
 \T1/cmtt/m/n/10 attributes | a.type
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1860--1860
+Underfull \hbox (badness 10000) in paragraph at lines 2194--2194
 []|\T1/cmtt/m/n/10 c.refs->forAll(r |
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1860--1860
+Underfull \hbox (badness 10000) in paragraph at lines 2194--2194
 []|\T1/cmtt/m/n/10 c.refs.forAll(r |
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1860--1860
+Underfull \hbox (badness 10000) in paragraph at lines 2194--2194
 []|\T1/cmtt/m/n/10 forall r in
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1860--1860
+Underfull \hbox (badness 10000) in paragraph at lines 2194--2194
 \T1/cmtt/m/n/10 references:
  []
 
 
 
-[30]
-Overfull \hbox (55.55505pt too wide) in paragraph at lines 1900--1901
+[35]
+Overfull \hbox (55.55505pt too wide) in paragraph at lines 2234--2235
 []\T1/cmtt/m/n/10.95 if/then/else \T1/cmr/bx/n/10.95 (-20) syn-tax\T1/cmr/m/n/1
 0.95 (-20) : The con-di-tional has a pro-ce-du-ral fla-vor. Al-ter-na-tives lik
 e \T1/cmtt/m/n/10.95 when/then/otherwise
@@ -1104,26 +1123,30 @@ e \T1/cmtt/m/n/10.95 when/then/otherwise
 
 
 
-[31]
+[36]
 
-[32] [33] [34]
+[37]
 
-[35] (./jjtl-jjel-paper.aux)
+[38]
+
+[39]
+
+[40] (./jjtl-jjel-paper.aux)
  ***********
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
  ***********
 Package rerunfilecheck Info: File `jjtl-jjel-paper.out' has not changed.
-(rerunfilecheck)             Checksum: 1D53C0930F73A21A7A0C2469816ABDE5;17056.
+(rerunfilecheck)             Checksum: E80B265A048FD9D2FBE497EF319E4D60;20595.
  ) 
 Here is how much of TeX's memory you used:
- 21188 strings out of 473190
- 345484 string characters out of 5715800
- 1084934 words of memory out of 5000000
- 43183 multiletter control sequences out of 15000+600000
- 594620 words of font info for 241 fonts, out of 8000000 for 9000
+ 21419 strings out of 473190
+ 348702 string characters out of 5715800
+ 1117078 words of memory out of 5000000
+ 43259 multiletter control sequences out of 15000+600000
+ 595386 words of font info for 249 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 75i,13n,79p,1012b,2182s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 75i,13n,79p,1012b,2232s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb
 ></usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb><
 /usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></u
@@ -1151,10 +1174,10 @@ fonts/type1/public/cm-super/sftt0900.pfb></usr/local/texlive/2025/texmf-dist/fo
 nts/type1/public/cm-super/sftt1000.pfb></usr/local/texlive/2025/texmf-dist/font
 s/type1/public/cm-super/sftt1095.pfb></usr/local/texlive/2025/texmf-dist/fonts/
 type1/public/cm-super/sftt1200.pfb>
-Output written on jjtl-jjel-paper.pdf (35 pages, 653721 bytes).
+Output written on jjtl-jjel-paper.pdf (40 pages, 683441 bytes).
 PDF statistics:
- 1557 PDF objects out of 1728 (max. 8388607)
- 1450 compressed objects within 15 object streams
- 719 named destinations out of 1000 (max. 500000)
- 59705 words of extra memory for PDF output out of 61914 (max. 10000000)
+ 1826 PDF objects out of 2073 (max. 8388607)
+ 1711 compressed objects within 18 object streams
+ 858 named destinations out of 1000 (max. 500000)
+ 59865 words of extra memory for PDF output out of 61914 (max. 10000000)
 
