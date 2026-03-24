@@ -998,6 +998,28 @@ Zero layout shift — stesso spazio, altezza invariata.
 
 ---
 
+## Known Gotchas
+
+### Monaco Editor intercetta F1 e altri shortcut
+Monaco registra listener `keydown` in bubble phase sul suo elemento DOM.
+Chiama `stopPropagation()`, quindi gli eventi non raggiungono `window`.
+**Fix**: usare sempre la capture phase per shortcut globali che devono
+coesistere con Monaco:
+```typescript
+window.addEventListener('keydown', handler, true) // true = capture
+```
+Shortcut noti intercettati da Monaco: F1 (command palette), F12
+(go to definition), altri shortcut editor standard.
+
+### ContextMenu è clippato dall'overflow:hidden del tab container
+`MetamodelTab` e `ModelTab` renderizzano `<ContextMenu>` dentro un
+`<div style={{overflow:'hidden'}}>`. Voci in fondo al menu possono
+essere off-screen su schermi normali.
+**Fix**: posizionare le voci importanti nei primi 5-6 slot del menu,
+non in fondo.
+
+---
+
 ## 📅 Ultimo Aggiornamento
 
 **Data:** Marzo 2026

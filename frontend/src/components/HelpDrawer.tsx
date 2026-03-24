@@ -62,11 +62,10 @@ const HelpDrawer: React.FC = () => {
             // Try GitHub first
             try {
                 const res = await fetch(resolvedUrl);
-                if (res.ok) {
-                    const text = await res.text();
-                    if (!cancelled) { setContent(text); setLoading(false); }
-                    return;
-                }
+                if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+                const text = await res.text();
+                if (!cancelled) { setContent(text); setLoading(false); }
+                return;
             } catch { /* fallback to local */ }
 
             // Fallback: local docs
@@ -82,6 +81,21 @@ const HelpDrawer: React.FC = () => {
         fetchContent();
         return () => { cancelled = true; };
     }, [isOpen, resolvedUrl, resolvedPath]);
+
+    // F1 or Cmd+/ — open with default key (always active, regardless of drawer state)
+    useEffect(() => {
+        const handleF1 = (e: KeyboardEvent) => {
+            const isCmdSlash = (e.key === '/' && e.metaKey);
+            const isF1 = e.key === 'F1';
+            if (!isCmdSlash && !isF1) return;
+            e.preventDefault();
+            window.dispatchEvent(
+                new CustomEvent('jjodel:help-open', { detail: { helpKey: 'properties-panel' } })
+            );
+        };
+        window.addEventListener('keydown', handleF1, true);
+        return () => window.removeEventListener('keydown', handleF1, true);
+    }, []);
 
     // Close on Escape
     useEffect(() => {

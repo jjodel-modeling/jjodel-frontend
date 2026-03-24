@@ -432,6 +432,7 @@ $radius-md: 6px;
         border-radius: $radius-sm;
         cursor: pointer;
         transition: background-color $transition-fast;
+        bordr: 1px solid red;
 
         &:hover {
             background-color: $color-bg-secondary;

@@ -9,14 +9,23 @@ const DOCS_BASE = 'https://raw.githubusercontent.com/jjodel-modeling/jjodel-docs
 const WEB_BASE = 'https://github.com/jjodel-modeling/jjodel-docs/blob/main';
 
 const HELP_MAP: Record<string, string> = {
-    'properties-panel': 'panels/properties.md',
-    'properties-panel-advanced': 'panels/properties-advanced.md',
-    'transformation-panel': 'panels/transformation.md',
-    'palette': 'panels/palette.md',
-    'canvas-metamodel': 'panels/canvas-metamodel.md',
-    'canvas-model': 'panels/canvas-model.md',
-    'jjel-editor': 'reference/jjel/overview.md',
-    'jjtl-editor': 'reference/jjtl/overview.md',
+    // Panels
+    'properties-panel':      'panels/properties.md',
+    'transformation-panel':  'panels/transformation.md',
+    'canvas-metamodel':      'panels/canvas-metamodel.md',
+    'canvas-model':          'panels/canvas-model.md',
+    'palette':               'panels/palette.md',
+    'jjel-editor':           'reference/jjel/overview.md',
+    'jjtl-editor':           'reference/jjtl/overview.md',
+    // M2 elements
+    'element-class':         'concepts/classes-attributes.md',
+    'element-attribute':     'concepts/classes-attributes.md',
+    'element-reference':     'concepts/references.md',
+    'element-enum':          'concepts/enumerations.md',
+    'element-operation':     'concepts/classes-attributes.md',
+    'element-package':       'panels/properties.md',
+    // M1 elements
+    'element-object':        'panels/canvas-model.md',
 };
 
 export interface HelpResolved {

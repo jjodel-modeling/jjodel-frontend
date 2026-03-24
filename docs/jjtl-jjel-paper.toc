@@ -38,61 +38,85 @@
 \contentsline {subsubsection}{\numberline {3.6.1}Invertibility Analysis}{11}{subsubsection.3.6.1}%
 \contentsline {subsection}{\numberline {3.7}Interactive Features}{12}{subsection.3.7}%
 \contentsline {subsection}{\numberline {3.8}Execution Model}{12}{subsection.3.8}%
-\contentsline {section}{\numberline {4}Comparative Analysis}{12}{section.4}%
-\contentsline {subsection}{\numberline {4.1}ATL (Atlas Transformation Language)}{12}{subsection.4.1}%
-\contentsline {subsubsection}{\numberline {4.1.1}Overview}{12}{subsubsection.4.1.1}%
-\contentsline {subsubsection}{\numberline {4.1.2}Structural Comparison}{13}{subsubsection.4.1.2}%
-\contentsline {subsubsection}{\numberline {4.1.3}Key Design Differences}{13}{subsubsection.4.1.3}%
-\contentsline {paragraph}{Binding direction.}{13}{section*.2}%
-\contentsline {paragraph}{Rule taxonomy.}{13}{section*.3}%
-\contentsline {paragraph}{Two-phase execution.}{13}{section*.4}%
-\contentsline {paragraph}{Expression language.}{13}{section*.5}%
-\contentsline {subsection}{\numberline {4.2}EOL / ETL (Epsilon Platform)}{13}{subsection.4.2}%
-\contentsline {subsubsection}{\numberline {4.2.1}Overview}{13}{subsubsection.4.2.1}%
-\contentsline {subsubsection}{\numberline {4.2.2}Structural Comparison}{14}{subsubsection.4.2.2}%
-\contentsline {subsubsection}{\numberline {4.2.3}Key Design Differences}{14}{subsubsection.4.2.3}%
-\contentsline {paragraph}{Declarative vs.\ imperative bindings.}{14}{section*.6}%
-\contentsline {paragraph}{Verbosity.}{14}{section*.7}%
-\contentsline {paragraph}{Rule inheritance.}{14}{section*.8}%
-\contentsline {subsection}{\numberline {4.3}QVT Relations (QVT-R)}{14}{subsection.4.3}%
-\contentsline {subsubsection}{\numberline {4.3.1}Overview}{14}{subsubsection.4.3.1}%
-\contentsline {subsubsection}{\numberline {4.3.2}Structural Comparison}{14}{subsubsection.4.3.2}%
-\contentsline {subsubsection}{\numberline {4.3.3}Key Design Differences}{15}{subsubsection.4.3.3}%
-\contentsline {paragraph}{Bidirectionality.}{15}{section*.9}%
-\contentsline {paragraph}{Pattern matching vs.\ explicit mapping.}{15}{section*.10}%
-\contentsline {paragraph}{Relation calls.}{15}{section*.11}%
-\contentsline {subsection}{\numberline {4.4}QVT Operational (QVT-O)}{15}{subsection.4.4}%
-\contentsline {subsubsection}{\numberline {4.4.1}Overview}{15}{subsubsection.4.4.1}%
-\contentsline {subsubsection}{\numberline {4.4.2}Structural Comparison}{15}{subsubsection.4.4.2}%
-\contentsline {subsubsection}{\numberline {4.4.3}Key Design Differences}{15}{subsubsection.4.4.3}%
-\contentsline {paragraph}{Entry point.}{15}{section*.12}%
-\contentsline {paragraph}{Self vs.\ implicit context.}{15}{section*.13}%
-\contentsline {subsection}{\numberline {4.5}Feature Comparison Matrix}{16}{subsection.4.5}%
-\contentsline {subsection}{\numberline {4.6}Expression Language Comparison}{16}{subsection.4.6}%
-\contentsline {section}{\numberline {5}Transformation Examples}{16}{section.5}%
-\contentsline {subsection}{\numberline {5.1}Example 1: UML Class to Relational Table}{17}{subsection.5.1}%
-\contentsline {subsubsection}{\numberline {5.1.1}ATL}{17}{subsubsection.5.1.1}%
-\contentsline {subsubsection}{\numberline {5.1.2}ETL}{18}{subsubsection.5.1.2}%
-\contentsline {subsubsection}{\numberline {5.1.3}JjTL}{18}{subsubsection.5.1.3}%
-\contentsline {subsection}{\numberline {5.2}Example 2: State Machine to Petri Net}{19}{subsection.5.2}%
-\contentsline {subsubsection}{\numberline {5.2.1}ATL}{19}{subsubsection.5.2.1}%
-\contentsline {subsubsection}{\numberline {5.2.2}ETL}{20}{subsubsection.5.2.2}%
-\contentsline {subsubsection}{\numberline {5.2.3}JjTL}{20}{subsubsection.5.2.3}%
-\contentsline {paragraph}{Comparison notes.}{21}{section*.14}%
-\contentsline {subsection}{\numberline {5.3}Example 3: UML to Java (Structural)}{21}{subsection.5.3}%
-\contentsline {subsubsection}{\numberline {5.3.1}ATL}{21}{subsubsection.5.3.1}%
-\contentsline {subsubsection}{\numberline {5.3.2}ETL}{22}{subsubsection.5.3.2}%
-\contentsline {subsubsection}{\numberline {5.3.3}JjTL}{23}{subsubsection.5.3.3}%
-\contentsline {paragraph}{Comparison notes.}{23}{section*.15}%
-\contentsline {subsection}{\numberline {5.4}Example 4: Validation Invariants}{23}{subsection.5.4}%
-\contentsline {subsection}{\numberline {5.5}Example 5: Guard Conditions}{24}{subsection.5.5}%
-\contentsline {section}{\numberline {6}Discussion}{24}{section.6}%
-\contentsline {subsection}{\numberline {6.1}Strengths of the JjTL/JjEL Approach}{24}{subsection.6.1}%
-\contentsline {subsection}{\numberline {6.2}Limitations and Trade-offs}{25}{subsection.6.2}%
-\contentsline {subsection}{\numberline {6.3}Open Design Points}{25}{subsection.6.3}%
-\contentsline {section}{\numberline {7}Conclusion}{25}{section.7}%
-\contentsline {section}{\numberline {A}JjEL Grammar (Complete)}{26}{appendix.A}%
-\contentsline {section}{\numberline {B}JjEL Built-in Methods (Complete)}{27}{appendix.B}%
-\contentsline {subsection}{\numberline {B.1}String Methods (33)}{27}{subsection.B.1}%
-\contentsline {subsection}{\numberline {B.2}Collection Methods (28)}{27}{subsection.B.2}%
-\contentsline {section}{\numberline {C}JjTL Token Types}{29}{appendix.C}%
+\contentsline {section}{\numberline {4}JjModal: Jjodel Interaction Language}{12}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Motivation and Design Position}{12}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Commands}{13}{subsection.4.2}%
+\contentsline {subsubsection}{\numberline {4.2.1}\texttt {prompt}}{13}{subsubsection.4.2.1}%
+\contentsline {paragraph}{Design rationale.}{13}{section*.2}%
+\contentsline {subsubsection}{\numberline {4.2.2}\texttt {confirm}}{13}{subsubsection.4.2.2}%
+\contentsline {paragraph}{Design rationale.}{13}{section*.3}%
+\contentsline {subsection}{\numberline {4.3}Type System}{14}{subsection.4.3}%
+\contentsline {paragraph}{Ecore primitive types.}{14}{section*.4}%
+\contentsline {paragraph}{Metamodel-relative references.}{14}{section*.5}%
+\contentsline {subsection}{\numberline {4.4}Grammar}{14}{subsection.4.4}%
+\contentsline {subsection}{\numberline {4.5}Embedding and Transparent Recognition}{15}{subsection.4.5}%
+\contentsline {subsection}{\numberline {4.6}Usage Examples}{15}{subsection.4.6}%
+\contentsline {subsubsection}{\numberline {4.6.1}Prompt in an attribute binding}{15}{subsubsection.4.6.1}%
+\contentsline {subsubsection}{\numberline {4.6.2}Prompt with a metamodel-relative type}{16}{subsubsection.4.6.2}%
+\contentsline {subsubsection}{\numberline {4.6.3}Confirm in a guard condition}{16}{subsubsection.4.6.3}%
+\contentsline {subsubsection}{\numberline {4.6.4}Confirm in JjScript}{16}{subsubsection.4.6.4}%
+\contentsline {subsection}{\numberline {4.7}Execution Semantics}{16}{subsection.4.7}%
+\contentsline {subsubsection}{\numberline {4.7.1}Blocking from the author's perspective}{16}{subsubsection.4.7.1}%
+\contentsline {subsubsection}{\numberline {4.7.2}Async/await implementation}{17}{subsubsection.4.7.2}%
+\contentsline {subsubsection}{\numberline {4.7.3}Serialisation of interactions}{17}{subsubsection.4.7.3}%
+\contentsline {subsection}{\numberline {4.8}UI Manifestation}{17}{subsection.4.8}%
+\contentsline {subsection}{\numberline {4.9}Relationship to the \textsf {JjTL}{} Interactive Feature Table}{18}{subsection.4.9}%
+\contentsline {subsection}{\numberline {4.10}Comparison with Related Work}{18}{subsection.4.10}%
+\contentsline {section}{\numberline {5}Comparative Analysis}{19}{section.5}%
+\contentsline {subsection}{\numberline {5.1}ATL (Atlas Transformation Language)}{19}{subsection.5.1}%
+\contentsline {subsubsection}{\numberline {5.1.1}Overview}{19}{subsubsection.5.1.1}%
+\contentsline {subsubsection}{\numberline {5.1.2}Structural Comparison}{19}{subsubsection.5.1.2}%
+\contentsline {subsubsection}{\numberline {5.1.3}Key Design Differences}{19}{subsubsection.5.1.3}%
+\contentsline {paragraph}{Binding direction.}{19}{section*.6}%
+\contentsline {paragraph}{Rule taxonomy.}{19}{section*.7}%
+\contentsline {paragraph}{Two-phase execution.}{19}{section*.8}%
+\contentsline {paragraph}{Expression language.}{19}{section*.9}%
+\contentsline {subsection}{\numberline {5.2}EOL / ETL (Epsilon Platform)}{20}{subsection.5.2}%
+\contentsline {subsubsection}{\numberline {5.2.1}Overview}{20}{subsubsection.5.2.1}%
+\contentsline {subsubsection}{\numberline {5.2.2}Structural Comparison}{20}{subsubsection.5.2.2}%
+\contentsline {subsubsection}{\numberline {5.2.3}Key Design Differences}{20}{subsubsection.5.2.3}%
+\contentsline {paragraph}{Declarative vs.\ imperative bindings.}{20}{section*.10}%
+\contentsline {paragraph}{Verbosity.}{20}{section*.11}%
+\contentsline {paragraph}{Rule inheritance.}{20}{section*.12}%
+\contentsline {subsection}{\numberline {5.3}QVT Relations (QVT-R)}{20}{subsection.5.3}%
+\contentsline {subsubsection}{\numberline {5.3.1}Overview}{20}{subsubsection.5.3.1}%
+\contentsline {subsubsection}{\numberline {5.3.2}Structural Comparison}{21}{subsubsection.5.3.2}%
+\contentsline {subsubsection}{\numberline {5.3.3}Key Design Differences}{21}{subsubsection.5.3.3}%
+\contentsline {paragraph}{Bidirectionality.}{21}{section*.13}%
+\contentsline {paragraph}{Pattern matching vs.\ explicit mapping.}{21}{section*.14}%
+\contentsline {paragraph}{Relation calls.}{21}{section*.15}%
+\contentsline {subsection}{\numberline {5.4}QVT Operational (QVT-O)}{21}{subsection.5.4}%
+\contentsline {subsubsection}{\numberline {5.4.1}Overview}{21}{subsubsection.5.4.1}%
+\contentsline {subsubsection}{\numberline {5.4.2}Structural Comparison}{22}{subsubsection.5.4.2}%
+\contentsline {subsubsection}{\numberline {5.4.3}Key Design Differences}{22}{subsubsection.5.4.3}%
+\contentsline {paragraph}{Entry point.}{22}{section*.16}%
+\contentsline {paragraph}{Self vs.\ implicit context.}{22}{section*.17}%
+\contentsline {subsection}{\numberline {5.5}Feature Comparison Matrix}{22}{subsection.5.5}%
+\contentsline {subsection}{\numberline {5.6}Expression Language Comparison}{22}{subsection.5.6}%
+\contentsline {section}{\numberline {6}Transformation Examples}{23}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Example 1: UML Class to Relational Table}{23}{subsection.6.1}%
+\contentsline {subsubsection}{\numberline {6.1.1}ATL}{23}{subsubsection.6.1.1}%
+\contentsline {subsubsection}{\numberline {6.1.2}ETL}{24}{subsubsection.6.1.2}%
+\contentsline {subsubsection}{\numberline {6.1.3}JjTL}{25}{subsubsection.6.1.3}%
+\contentsline {subsection}{\numberline {6.2}Example 2: State Machine to Petri Net}{26}{subsection.6.2}%
+\contentsline {subsubsection}{\numberline {6.2.1}ATL}{26}{subsubsection.6.2.1}%
+\contentsline {subsubsection}{\numberline {6.2.2}ETL}{27}{subsubsection.6.2.2}%
+\contentsline {subsubsection}{\numberline {6.2.3}JjTL}{27}{subsubsection.6.2.3}%
+\contentsline {paragraph}{Comparison notes.}{28}{section*.18}%
+\contentsline {subsection}{\numberline {6.3}Example 3: UML to Java (Structural)}{28}{subsection.6.3}%
+\contentsline {subsubsection}{\numberline {6.3.1}ATL}{28}{subsubsection.6.3.1}%
+\contentsline {subsubsection}{\numberline {6.3.2}ETL}{29}{subsubsection.6.3.2}%
+\contentsline {subsubsection}{\numberline {6.3.3}JjTL}{29}{subsubsection.6.3.3}%
+\contentsline {paragraph}{Comparison notes.}{30}{section*.19}%
+\contentsline {subsection}{\numberline {6.4}Example 4: Validation Invariants}{30}{subsection.6.4}%
+\contentsline {subsection}{\numberline {6.5}Example 5: Guard Conditions}{30}{subsection.6.5}%
+\contentsline {section}{\numberline {7}Discussion}{31}{section.7}%
+\contentsline {subsection}{\numberline {7.1}Strengths of the JjTL/JjEL Approach}{31}{subsection.7.1}%
+\contentsline {subsection}{\numberline {7.2}Limitations and Trade-offs}{31}{subsection.7.2}%
+\contentsline {subsection}{\numberline {7.3}Open Design Points}{31}{subsection.7.3}%
+\contentsline {section}{\numberline {8}Conclusion}{32}{section.8}%
+\contentsline {section}{\numberline {A}JjEL Grammar (Complete)}{32}{appendix.A}%
+\contentsline {section}{\numberline {B}JjEL Built-in Methods (Complete)}{33}{appendix.B}%
+\contentsline {subsection}{\numberline {B.1}String Methods (33)}{33}{subsection.B.1}%
+\contentsline {subsection}{\numberline {B.2}Collection Methods (28)}{34}{subsection.B.2}%
+\contentsline {section}{\numberline {C}JjTL Token Types}{35}{appendix.C}%

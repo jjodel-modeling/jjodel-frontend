@@ -131,6 +131,21 @@
   --panel-border: rgba(255, 255, 255, 0.08);
   --sidebar-bg: #253347;
   --sidebar-border: rgba(255, 255, 255, 0.06);
+
+  // Floating surfaces (context menu, edge type popup, popovers)
+  --float-bg: #1e293b;
+  --float-border: #334155;
+  --float-shadow: rgba(0, 0, 0, 0.3);
+  --float-text: #cbd5e1;
+  --float-text-muted: #475569;
+  --float-text-section: #475569;
+  --float-icon: #64748b;
+  --float-hover: rgba(255, 255, 255, 0.06);
+  --float-active-bg: rgba(14, 165, 233, 0.12);
+  --float-active-text: #38bdf8;
+  --float-danger: #f87171;
+  --float-danger-bg: rgba(239, 68, 68, 0.12);
+  --float-divider: rgba(255, 255, 255, 0.08);
 }
 
 // === LIGHT THEME ===
@@ -262,4 +277,19 @@
   --panel-border: #e2e8f0;
   --sidebar-bg: #f8fafc;
   --sidebar-border: #e2e8f0;
+
+  // Floating surfaces (dark in both themes)
+  --float-bg: #1e293b;
+  --float-border: #334155;
+  --float-shadow: rgba(0, 0, 0, 0.2);
+  --float-text: #cbd5e1;
+  --float-text-muted: #475569;
+  --float-text-section: #475569;
+  --float-icon: #64748b;
+  --float-hover: rgba(255, 255, 255, 0.06);
+  --float-active-bg: rgba(14, 165, 233, 0.12);
+  --float-active-text: #38bdf8;
+  --float-danger: #f87171;
+  --float-danger-bg: rgba(239, 68, 68, 0.12);
+  --float-divider: rgba(255, 255, 255, 0.08);
 }

@@ -2642,30 +2642,30 @@
 .context-menu {
     position: absolute;
     z-index: 1000;
-    background: var(--menu-bg);
-    border: 1px solid var(--border-default);
+    background: var(--float-bg);
+    border: 1px solid var(--float-border);
     border-radius: 8px;
     padding: 4px;
     min-width: 160px;
-    box-shadow: 0 8px 24px var(--menu-shadow);
+    box-shadow: 0 2px 12px var(--float-shadow);
 
     &__item {
         display: flex;
         align-items: center;
         gap: 8px;
         width: 100%;
-        padding: 8px 12px;
+        padding: 5px 8px;
         border: none;
         background: transparent;
-        color: var(--text-secondary);
-        font-size: 13px;
+        color: var(--float-text);
+        font-size: 12px;
         border-radius: 4px;
         cursor: pointer;
         text-align: left;
         transition: background 0.15s;
 
         &:hover {
-            background: var(--surface-hover);
+            background: var(--float-hover);
         }
 
         &.disabled {
@@ -2675,24 +2675,25 @@
         }
 
         &.danger {
-            color: var(--danger);
+            color: var(--float-danger);
 
             &:hover {
-                background: var(--danger-bg);
+                background: var(--float-danger-bg);
             }
         }
 
         i {
-            font-size: 14px;
+            font-size: 13px;
             width: 16px;
             text-align: center;
+            color: var(--float-icon);
         }
     }
 
     &__divider {
-        height: 1px;
-        background: var(--border-subtle);
-        margin: 3px 8px;
+        height: 0.5px;
+        background: var(--float-divider);
+        margin: 3px 0;
     }
 }
 

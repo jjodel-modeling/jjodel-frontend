@@ -1,5 +1,46 @@
 # Claude Code Session Log
 
+## 2026-03-24 — Style: unified dark slate floating surfaces
+
+### Goal
+Unify all floating surfaces (context menus, edge type popup) to a single dark slate style with consistent design tokens.
+
+### Design tokens applied
+- background: `#1e293b`, border: `1px solid #334155`, border-radius: `8px`
+- box-shadow: `0 2px 12px rgba(0,0,0,0.2)`
+- item: 12px, `#cbd5e1`, padding `5px 8px`, border-radius `4px`
+- item icon: `#64748b`, 13px
+- hover: `rgba(255,255,255,0.06)`
+- active: `#38bdf8` text, `rgba(14,165,233,0.12)` bg
+- danger: `#f87171`, hover `rgba(239,68,68,0.12)`
+- divider: `0.5px solid rgba(255,255,255,0.08)`
+- section label: 10px, `#475569`, uppercase, letter-spacing `.08em`
+
+### Files changed
+- `frontend/src/components/editor-v2/_themes.scss` — added `--float-*` CSS variables to both theme-dark and theme-light (identical dark floating surface in both themes, except shadow intensity)
+- `frontend/src/components/editor-v2/EditorV2.scss` — editor-v2 `.context-menu` now uses `var(--float-*)` tokens
+- `frontend/src/components/editor-v2/components/EdgeTypePopup.scss` — replaced hardcoded dark values with `var(--float-*)` tokens; unified border-radius to 8px, padding to 4px
+- `frontend/src/components/contextMenu/style.scss` — legacy context menu updated to dark slate (hardcoded values since it's outside editor-v2 scope)
+
+### Notes
+- **FeaturesPalette** is a sidebar panel (not a floating surface) — left unchanged. If "primitives popover" refers to a different component, it should be identified separately.
+- **No TSX changes** — all three surfaces use CSS classes (no inline styles for the floating container itself).
+- **No class renames** — existing class names preserved.
+- Pre-existing TS errors unrelated to this change (GraphDataElements, EcoreService, view.tsx).
+
+---
+
+## 2026-03-24 — Style: context menu visual polish
+
+### Changes
+- Reduced border-radius from `var(--radius-lg)` (12px) to 8px for a tighter look
+- Reduced `<hr>` separator margin from `var(--space-1)` to 2px to tighten vertical spacing
+- Added subtle 0.5px divider before Delete item (targeted via `[data-cannotdelete]` attribute)
+- Added subtle 0.5px divider before Help item (targeted via `:has(> .bi-question-circle)`)
+
+### Files changed
+- `frontend/src/components/contextMenu/style.scss`
+
 ## 2026-03-23 — Fix: white page — U.toHtml() undefined at module load (MyRcDock.tsx)
 
 ### Problem

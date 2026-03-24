@@ -26,6 +26,12 @@
 \usepackage{microtype}
 \usepackage{fancyhdr}
 
+% New macro
+\newcommand{\jjmodal}{\textsf{JjModal}}
+ 
+% JjModal listing language (for standalone grammar/example fragments)
+
+
 \hypersetup{
     colorlinks=true,
     linkcolor=blue!60!black,
@@ -94,6 +100,27 @@
     commentstyle=\itshape\color{green!40!black},
     stringstyle=\color{red!60!black},
 }
+
+% JjModal
+
+\lstdefinelanguage{jjmodal}{
+    morekeywords={prompt, confirm},
+    morekeywords=[2]{EString, EInt, EFloat, EBoolean, EDate, EClass, true, false, null},
+    sensitive=true,
+    morecomment=[l]{--},
+    morestring=[b]",
+    morestring=[b]',
+}
+ 
+\lstdefinestyle{jjmodal}{
+    style=base,
+    language=jjmodal,
+    keywordstyle=\bfseries\color{teal!80!black},
+    keywordstyle=[2]\bfseries\color{blue!60!black},
+    commentstyle=\itshape\color{green!40!black},
+    stringstyle=\color{red!60!black},
+}
+ 
 
 % ATL
 \lstdefinelanguage{atl}{
@@ -708,6 +735,459 @@ The \jjtl{} executor follows a simple pipeline:
 
 Unlike ATL's two-phase execution (where all bindings are computed before any imperative blocks run), \jjtl{} processes each rule atomically: match, create, bind. This simplifies reasoning about execution order.
 
+% ============================================
+% CHAPTER BODY
+% Insert as \section{...} after Section 3 (JjTL)
+% and before the current Section 4 (Comparative Analysis).
+% Update \label references in subsequent sections accordingly.
+% ============================================
+ 
+% ============================================
+% 4. JjModal
+% ============================================
+\section{JjModal: Jjodel Interaction Language}\label{sec:jjmodal}
+ 
+\jjmodal{} is a minimal command language for human-in-the-loop model
+transformations. It provides a small set of \emph{interaction commands}
+that, when evaluated, suspend execution, present a dialog to the user,
+and resume with the supplied value. \jjmodal{} commands are embedded
+transparently in \jjtl{} transformation rules and \textsf{JjScript}
+expressions, following the same delegation pattern used by \jjel{}.
+ 
+\subsection{Motivation and Design Position}
+ 
+Model transformations are commonly described as fully automated processes:
+given a source model, a rule engine deterministically produces a target
+model. In practice, however, many real-world transformation scenarios
+involve decisions that cannot be encoded in the metamodel:
+ 
+\begin{itemize}
+    \item A class name is ambiguous and the modeller must choose among
+          several candidate target names.
+    \item A transformation parameter (e.g., a database prefix, a version
+          string) is only known at run time.
+    \item A destructive action (delete all derived elements) requires
+          explicit user confirmation before proceeding.
+\end{itemize}
+ 
+Existing transformation languages---ATL, ETL, QVT-R, QVT-O---provide no
+mechanism for this class of semi-automated transformation. The canonical
+workaround is to pre-configure transformations via external property files
+or to stop execution and restart after manual editing, both of which break
+the transformation workflow.
+ 
+\jjmodal{} addresses this gap with a principled design governed by three
+criteria, listed in priority order:
+ 
+\begin{enumerate}
+    \item \textbf{Minimal surface.} The language exposes the smallest
+          possible number of commands. Each command corresponds to a
+          distinct, irreducible interaction archetype: \emph{ask for a
+          value} (\kw{prompt}) and \emph{ask for a decision}
+          (\kw{confirm}).
+    \item \textbf{Transparent embedding.} Commands are recognised by name
+          at the call site, without syntactic delimiters. A user reading a
+          \jjtl{} rule encounters \texttt{prompt(...)} in the same
+          position as any other \jjel{} expression; no visual noise is
+          added.
+    \item \textbf{Blocking semantics.} From the author's perspective,
+          commands are synchronous: execution halts, the user responds,
+          execution resumes with the typed value. The async/await
+          implementation detail is hidden from the transformation author.
+\end{enumerate}
+ 
+\subsection{Commands}
+ 
+\jjmodal{} v0.1 defines two commands. Additional commands may be added in
+future versions following the same structural pattern.
+ 
+\subsubsection{\texttt{prompt}}
+ 
+\begin{lstlisting}[style=jjmodal,numbers=none]
+prompt(label: EString, type: TypeRef, defaultValue?: any) -> any
+\end{lstlisting}
+ 
+\kw{prompt} opens a modal dialog containing a labelled input field typed
+according to \texttt{type}. If \texttt{defaultValue} is supplied, the
+field is pre-populated with that value. The dialog blocks interaction
+until the user submits a value or cancels. On submit, the entered value is
+validated against \texttt{type} and returned to the caller. On cancel, the
+expression evaluates to \texttt{null}.
+ 
+\paragraph{Design rationale.} The command was named \kw{prompt} rather
+than \kw{input} to align with the established semantics of
+\texttt{window.prompt()} in browser environments, where the term denotes
+``ask the user for a string value,'' and to avoid collision with the
+\texttt{input} token used in \jjtl{} transformation headers (\texttt{from
+MM}). The optional third argument, \texttt{defaultValue}, reduces friction
+in the common case where a reasonable default exists---the user can
+confirm it with a single keystroke.
+ 
+\subsubsection{\texttt{confirm}}
+ 
+\begin{lstlisting}[style=jjmodal,numbers=none]
+confirm(label: EString) -> EBoolean
+\end{lstlisting}
+ 
+\kw{confirm} opens a modal dialog containing the message \texttt{label}
+and two buttons labelled \emph{Yes} and \emph{No}. It returns
+\texttt{true} if the user selects \emph{Yes} and \texttt{false}
+otherwise. The dialog is always dismissible via \emph{No}; \jjmodal{}
+does not provide a non-dismissible confirmation.
+ 
+\paragraph{Design rationale.} \kw{confirm} is kept strictly boolean. An
+earlier design considered a three-way \texttt{choose(label, options)}
+command for arbitrary enumerated choices, but this was deferred: the
+\kw{prompt} command with a \texttt{MetaclassRef} type (see
+\cref{sec:jjmodal-types}) already covers the selection-from-set use case
+via a dropdown rendered by the UI layer. \kw{confirm} is reserved
+exclusively for the binary yes/no decision archetype.
+ 
+\subsection{Type System}\label{sec:jjmodal-types}
+ 
+The \texttt{type} argument of \kw{prompt} is drawn from two sources:
+ 
+\paragraph{Ecore primitive types.} The standard Ecore scalar types are
+accepted directly as type references:
+ 
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Type} & \textbf{Input widget} & \textbf{Validation} \\
+\midrule
+\texttt{EString}  & Text field   & Always valid (empty string allowed) \\
+\texttt{EInt}     & Number field & \texttt{parseInt}; error if NaN or non-integer \\
+\texttt{EFloat}   & Number field & \texttt{parseFloat}; error if NaN \\
+\texttt{EBoolean} & Checkbox     & No validation required \\
+\texttt{EDate}    & Date picker  & Valid ISO date required \\
+\bottomrule
+\end{tabular}
+\end{center}
+ 
+\paragraph{Metamodel-relative references.} An \texttt{IDENTIFIER} that is
+not a primitive Ecore type is resolved against the metamodel currently in
+scope. If the identifier refers to an \texttt{EEnum}, a dropdown is
+rendered with the enum literals as options. If it refers to an
+\texttt{EClass}, a selector is rendered over all model elements of that
+type currently loaded in the workspace. This enables prompts such as:
+ 
+\begin{lstlisting}[style=jjtl,numbers=none]
+-- Ask the user to pick an existing Package from the source model
+prompt('Target package', Package)
+-- Ask the user to pick a Visibility literal
+prompt('Visibility', VisibilityKind)
+\end{lstlisting}
+ 
+Validation in both cases is structural: the value returned is always a
+valid member of the declared type. The user cannot dismiss the dialog with
+\emph{OK} while the field contains an invalid value; instead the input
+widget is decorated with an inline error indicator. Toast notifications
+are not used for validation errors, as they are easily missed and do not
+prevent submission.
+ 
+\subsection{Grammar}
+ 
+\begin{lstlisting}[style=grammar,caption={JjModal formal grammar in EBNF}]
+JjModalExpr  = PromptExpr | ConfirmExpr
+ 
+PromptExpr   = 'prompt' '(' StringLit ',' TypeRef (',' DefaultExpr)? ')'
+ 
+ConfirmExpr  = 'confirm' '(' StringLit ')'
+ 
+TypeRef      = EcoreType | MetaclassRef
+ 
+EcoreType    = 'EString' | 'EInt' | 'EFloat' | 'EBoolean' | 'EDate'
+ 
+MetaclassRef = IDENTIFIER   (* resolved in metamodel scope at runtime *)
+ 
+DefaultExpr  = Literal | JjELExpr   (* JjELExpr parsed by JjEL if not Literal *)
+ 
+Literal      = NUMBER | StringLit | 'true' | 'false' | 'null'
+ 
+StringLit    = '"' .* '"' | "'" .* "'"
+\end{lstlisting}
+ 
+The grammar is deliberately LL(1)-parseable without lookahead beyond the
+command name: \kw{prompt} and \kw{confirm} are both distinguishable at
+the identifier token. The \texttt{DefaultExpr} rule attempts literal
+parsing first; if the argument is not a literal, it is delegated to the
+\jjel{} parser. This delegation strategy is identical to the one used
+when \jjel{} expressions appear inside \jjtl{} bindings, and preserves
+the composability of the language family without introducing circular
+parser dependencies.
+ 
+\subsection{Embedding and Transparent Recognition}\label{sec:jjmodal-embed}
+ 
+\jjmodal{} commands are not wrapped in any syntactic delimiter. The
+parser of the host language (\jjtl{} or \textsf{JjScript}) recognises the
+tokens \kw{prompt} and \kw{confirm} followed by \texttt{(} as
+\jjmodal{} call sites and delegates parsing and evaluation accordingly.
+ 
+The choice of transparent embedding over a delimited form (e.g.,
+\texttt{\$modal\{...\}} or \texttt{?\{...\}}) was motivated by two
+considerations. First, \jjmodal{} expressions appear in positions that
+already accept \jjel{} value expressions (attribute bindings, guard
+conditions, variable initialisers); adding a delimiter would create
+visual discontinuity at precisely the point where the syntactic context
+is already well-established. Second, the command names \kw{prompt} and
+\kw{confirm} are semantically unambiguous in the MDE domain: no
+\jjel{} built-in method and no \jjtl{} structural keyword shares these
+names, making collision-free recognition reliable.
+ 
+The only naming constraint imposed by this design is that \jjmodal{}
+command names are \emph{reserved identifiers} in \jjtl{} and
+\textsf{JjScript}: a metamodel element named \texttt{prompt} or
+\texttt{confirm} would be shadowed by the \jjmodal{} command. In
+practice this is not a concern, as both names are uncommon in Ecore
+metamodels; should a collision arise, the source element can be accessed
+via an explicit qualified reference.
+ 
+\subsection{Usage Examples}
+ 
+\subsubsection{Prompt in an attribute binding}
+ 
+The most common use case is supplying a run-time value for a target
+attribute whose source has no direct counterpart:
+ 
+\begin{lstlisting}[style=jjtl,caption={JjModal prompt in a JjTL binding}]
+transformation EnrichModel
+ 
+from UML_MM
+to   UML_MM
+ 
+-- Add a database prefix to every Table, chosen at run time
+Class -> Table when { not isAbstract } {
+    name -> name : prompt('Table prefix', EString, "tbl_") + name.snakeCase()
+    -- The default "tbl_" is pre-filled; the user may override it
+}
+\end{lstlisting}
+ 
+Note that the \texttt{defaultValue} argument \texttt{"tbl\_"} is a
+\jjmodal{} literal; it could equally be a \jjel{} expression evaluated
+against the source element:
+ 
+\begin{lstlisting}[style=jjtl,numbers=none]
+name -> name : prompt('Table prefix', EString, owner.package?.name ?? "tbl_")
+               + name.snakeCase()
+\end{lstlisting}
+ 
+Here \texttt{owner.package?.name ?? "tbl\_"} is a \jjel{} expression
+(null-safe navigation and null coalesce) passed as the default value;
+it is evaluated once, before the dialog is opened, and its result
+pre-populates the field.
+ 
+\subsubsection{Prompt with a metamodel-relative type}
+ 
+\begin{lstlisting}[style=jjtl,caption={JjModal prompt with MetaclassRef type}]
+transformation MergePackages
+ 
+from UML_MM
+to   UML_MM
+ 
+-- The user selects the target Package from a dropdown of all Package instances
+Class -> Class {
+    name -> name
+    -> package : prompt('Move to package', Package, owner)
+}
+\end{lstlisting}
+ 
+\subsubsection{Confirm in a guard condition}
+ 
+\begin{lstlisting}[style=jjtl,caption={JjModal confirm as a guard}]
+transformation PruneModel
+ 
+from UML_MM
+to   UML_MM
+ 
+-- Only proceed with derived-attribute removal after explicit confirmation
+Attribute -> Attribute
+    when { not isDerived or confirm('Remove derived attribute ' + name + '?') } {
+    name -> name
+    type -> type
+}
+\end{lstlisting}
+ 
+The \kw{confirm} command is short-circuit evaluated here: if
+\texttt{isDerived} is \texttt{false}, the attribute is always transferred
+without interrupting the user. Only derived attributes trigger the dialog.
+This pattern uses \jjel{}'s short-circuit \kw{or} semantics to provide
+selective interactivity at no syntactic cost.
+ 
+\subsubsection{Confirm in JjScript}
+ 
+\begin{lstlisting}[style=jjel,caption={JjModal confirm in a JjScript block}]
+-- Bulk delete: ask once before iterating
+if confirm('Delete all derived attributes in the model?') then
+    forall a in (forall c in classes: c.attributes) such that a.isDerived
+    do a.delete()
+end
+\end{lstlisting}
+ 
+\subsection{Execution Semantics}\label{sec:jjmodal-exec}
+ 
+\subsubsection{Blocking from the author's perspective}
+ 
+The \jjmodal{} design contract is that commands are \emph{synchronous}
+from the transformation author's perspective. The transformation text
+reads left-to-right, top-to-bottom; a \kw{prompt} or \kw{confirm} call
+produces a value that is immediately available to the enclosing
+expression. No explicit continuation, callback, or \texttt{await}
+keyword is required in the transformation source.
+ 
+\subsubsection{Async/await implementation}
+ 
+In the JavaScript/TypeScript runtime of Jjodel, true synchronous blocking
+of the UI thread is not available without web workers, and even then it
+would freeze the interface. \jjmodal{} is therefore implemented using
+\textbf{native async/await}: the \jjtl{} and \textsf{JjScript} executors
+are async end-to-end, and each \jjmodal{} call site is compiled to an
+\texttt{await} on a \texttt{Promise} resolved by the modal dialog.
+ 
+\begin{lstlisting}[style=grammar,caption={JjModal execution interface (TypeScript)}]
+interface JjModalExecutor {
+  prompt<T>(
+    label:        string,
+    type:         EType | MetaclassRef,
+    defaultValue?: T
+  ): Promise<T | null>
+ 
+  confirm(
+    label: string
+  ): Promise<boolean>
+}
+\end{lstlisting}
+ 
+The executor is injected into the \jjtl{}/\textsf{JjScript} evaluation
+context at transformation startup. The transformation author is shielded
+from this interface entirely; they write \kw{prompt}(\ldots) and observe
+synchronous semantics.
+ 
+\subsubsection{Serialisation of interactions}
+ 
+Because the execution model is sequential (no parallel rule firing in
+\jjtl{} v0.1), at most one \jjmodal{} dialog is open at any given time.
+The UI layer enforces this invariant: a second dialog cannot be opened
+while one is already active. If the executor were extended to support
+parallel rule evaluation in a future version, queuing or grouping of
+pending prompts would be required; this is an open design point noted in
+\cref{sec:discussion}.
+ 
+\subsection{UI Manifestation}
+ 
+All \jjmodal{} commands render through a single, centralised React
+component, \texttt{<JjModalDialog>}, mounted at the root of the
+application above all other layers. This architecture ensures:
+ 
+\begin{itemize}
+    \item \textbf{Consistent visual treatment.} Every interaction command
+          shares the same modal chrome (header, input area, action
+          buttons), regardless of which rule or script triggered it.
+    \item \textbf{No z-index conflicts.} Being mounted at the root, the
+          dialog is always rendered above the transformation editor,
+          property panels, and canvas.
+    \item \textbf{Context display.} The dialog header can display the
+          name of the transformation currently executing, providing the
+          user with orientation during a multi-step semi-automated
+          transformation.
+\end{itemize}
+ 
+The interaction channel between the executor and the React component is
+an \emph{imperative handle}: the executor calls
+\texttt{modalChannel.openPrompt(config)} or
+\texttt{modalChannel.openConfirm(config)}, which sets component state
+and returns a \texttt{Promise}. The \texttt{Promise} is resolved by the
+component's submit/cancel handlers.
+ 
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Command} & \textbf{Widget} & \textbf{Cancel behaviour} \\
+\midrule
+\texttt{prompt(..., EString)}      & Text input        & Returns \texttt{null} \\
+\texttt{prompt(..., EInt)}         & Number input      & Returns \texttt{null} \\
+\texttt{prompt(..., EFloat)}       & Number input      & Returns \texttt{null} \\
+\texttt{prompt(..., EBoolean)}     & Checkbox          & Returns \texttt{null} \\
+\texttt{prompt(..., EDate)}        & Date picker       & Returns \texttt{null} \\
+\texttt{prompt(..., EEnum)}        & Dropdown          & Returns \texttt{null} \\
+\texttt{prompt(..., EClass)}       & Element selector  & Returns \texttt{null} \\
+\texttt{confirm(...)}              & Yes / No buttons  & Returns \texttt{false} \\
+\bottomrule
+\end{tabular}
+\end{center}
+ 
+Cancel is always available and always produces a well-typed result
+(\texttt{null} for \kw{prompt}, \texttt{false} for \kw{confirm}), so the
+enclosing transformation expression is never left with an unresolved
+value. Transformation authors who need to distinguish ``user provided
+null'' from ``user cancelled'' can do so by checking the return value of
+\kw{prompt} with \jjel{}'s null-safe operators (\texttt{??}).
+ 
+\subsection{Relationship to the \jjtl{} Interactive Feature Table}
+ 
+\cref{sec:jjtl} (\cref*{sec:jjtl}, §3.6) presents a preliminary table of
+interactive constructs (\texttt{alert}, \texttt{notify}, \texttt{prompt},
+\texttt{input}) as \jjtl{} built-in statements. \jjmodal{} formalises and
+narrows this set:
+ 
+\begin{itemize}
+    \item \texttt{alert} and \texttt{notify} are \emph{output} commands
+          (they present information, not request it). They do not belong
+          to \jjmodal{}, whose scope is strictly \emph{input
+          acquisition}. \texttt{alert} and \texttt{notify} remain
+          \jjtl{}-level built-ins and are not part of the \jjmodal{}
+          grammar.
+    \item \texttt{input} is subsumed by the typed \kw{prompt} command:
+          \texttt{prompt(label, type)} replaces both
+          \texttt{input(label, type, options)} and the untyped
+          \texttt{prompt(label, default)} from the preliminary table.
+    \item \kw{confirm} is a new command not present in the preliminary
+          table; it formalises the binary decision pattern that
+          previously had no dedicated construct.
+\end{itemize}
+ 
+\begin{center}
+\small
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Preliminary (§3.6)} & \textbf{Category} & \textbf{JjModal status} & \textbf{Note} \\
+\midrule
+\texttt{alert(msg, type)}       & Output & Out of scope & Remains \jjtl{} built-in \\
+\texttt{notify(msg, duration)}  & Output & Out of scope & Remains \jjtl{} built-in \\
+\texttt{prompt(msg, default)}   & Input  & $\to$ \kw{prompt}(label, type, default?) & Typed, extended \\
+\texttt{input(msg, type, opts)} & Input  & $\to$ \kw{prompt}(label, type, default?) & Merged \\
+\texttt{confirm(label)}         & Input  & \kw{confirm}(label) & New \\
+\bottomrule
+\end{tabular}
+\end{center}
+ 
+\subsection{Comparison with Related Work}
+ 
+No published M2M transformation language provides a dedicated
+interaction sub-language. The closest analogues are found in adjacent
+domains:
+ 
+\begin{itemize}
+    \item \textbf{Wizard-based transformation tools} (e.g., Eclipse
+          model wizards) externalise all user interaction into a
+          preprocessing phase: the wizard collects parameters, then a
+          conventional automated transformation runs. This clean
+          separation avoids the complexity of mid-execution interaction
+          but cannot express \emph{per-element} decisions (e.g., confirm
+          the removal of each derived attribute individually), only
+          \emph{global} parameters.
+    \item \textbf{QVT-O \texttt{assert} / \texttt{log}} provide
+          diagnostic output but no input facility. The modeller has
+          no means to influence execution after the transformation starts.
+    \item \textbf{ATL refining mode} allows transformations to be
+          interrupted and restarted, but this is a debug mechanism, not
+          an interaction design pattern.
+\end{itemize}
+ 
+\jjmodal{}'s approach---embedding blocking interaction commands directly
+in the transformation rule language---is therefore a novel contribution
+to the transformation language design space, complementing the
+invertibility tracking and set-theoretic expression semantics that
+distinguish \jjtl{}/\jjel{} from existing languages.
 
 % ============================================
 % 4. COMPARISON

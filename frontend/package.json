@@ -85,7 +85,7 @@
     "serve": "serve -s build",
     "posti": "npm i react-json-view --force --no-save",
     "______________________________________deploy________________________________": "",
-    "build": "react-app-rewired build",
+    "build": "vite build",
     "postbuild": "",
     "dev": "docker-compose -f docker-compose.dev.yml up",
     "________________________________other_build_modes___________________________": "",

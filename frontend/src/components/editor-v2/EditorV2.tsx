@@ -1898,6 +1898,15 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                         }));
                     },
                 },
+                { divider: true },
+                {
+                    label: 'Help',
+                    icon: 'bi-question-circle',
+                    onClick: () => {
+                        const helpKey = contextMenu.childKind === 'attr' ? 'element-attribute' : 'element-operation';
+                        window.dispatchEvent(new CustomEvent('jjodel:help-open', { detail: { helpKey } }));
+                    },
+                },
             ];
         }
 
@@ -1959,6 +1968,20 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                     icon: 'bi-trash',
                     danger: true,
                     onClick: () => deleteNode(contextMenu.nodeId!),
+                },
+                { divider: true },
+                {
+                    label: 'Help',
+                    icon: 'bi-question-circle',
+                    onClick: () => {
+                        const helpKey =
+                            node?.type === 'classNode'   ? 'element-class'
+                          : node?.type === 'enumNode'    ? 'element-enum'
+                          : node?.type === 'packageNode' ? 'element-package'
+                          : node?.type === 'objectNode'  ? 'element-object'
+                          : 'properties-panel';
+                        window.dispatchEvent(new CustomEvent('jjodel:help-open', { detail: { helpKey } }));
+                    },
                 },
             );
             return items;

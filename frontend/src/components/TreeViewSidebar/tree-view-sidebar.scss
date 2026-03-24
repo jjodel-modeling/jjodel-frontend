@@ -349,9 +349,11 @@ $color-parameter: #9ca3af;  // Gray (light) - Parameters
     align-items: center;
     gap: 2px;
     padding: 4px 6px;
+    margin-left: 8px;
     border-radius: $radius-sm;
     cursor: pointer;
     transition: background-color $transition-fast;
+
 
     &:hover {
         background-color: $color-bg-secondary;
@@ -369,7 +371,9 @@ $color-parameter: #9ca3af;  // Gray (light) - Parameters
 }
 
 .metamodel-tree__content {
-    padding-left: 4px;
+    padding-left: 6px;
+
+
 }
 
 .tree-empty-package {
@@ -388,10 +392,11 @@ $color-parameter: #9ca3af;  // Gray (light) - Parameters
     display: flex;
     align-items: center;
     gap: 2px;
-    padding: 3px 6px;
+    padding: 3px 27px!important; // Large right padding to allow space for badges/icons without affecting text layout
     border-radius: $radius-sm;
     cursor: pointer;
     transition: background-color $transition-fast;
+
 
     &:hover {
         background-color: $color-bg-secondary;
@@ -444,6 +449,7 @@ $color-parameter: #9ca3af;  // Gray (light) - Parameters
     gap: 5px;
     flex: 1;
     min-width: 0;
+    padding-left: 10px;
 }
 
 // ============================================
@@ -545,6 +551,7 @@ $color-parameter: #9ca3af;  // Gray (light) - Parameters
 
 .nested-model-tree {
     // No border — indentation alone is sufficient
+    padding-left: 6px;
 }
 
 // M1 badge next to model name — very subtle slate hint
@@ -595,6 +602,7 @@ $color-parameter: #9ca3af;  // Gray (light) - Parameters
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+
 }
 
 .tree-node__extends {

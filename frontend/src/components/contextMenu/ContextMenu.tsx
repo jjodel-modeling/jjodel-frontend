@@ -216,6 +216,25 @@ function ContextMenuComponentInner(props: AllProps) {
                     {icon['edit']} Edit
                 </div>
             );
+            jsxList.push(
+                <div key='help' onClick={() => {
+                    const helpKey =
+                        ddata?.className === 'DClass'        ? 'element-class'
+                      : ddata?.className === 'DAttribute'    ? 'element-attribute'
+                      : ddata?.className === 'DReference'    ? 'element-reference'
+                      : ddata?.className === 'DEnumerator'   ? 'element-enum'
+                      : ddata?.className === 'DEnumLiteral'  ? 'element-enum'
+                      : ddata?.className === 'DOperation'    ? 'element-operation'
+                      : ddata?.className === 'DParameter'    ? 'element-operation'
+                      : ddata?.className === 'DPackage'      ? 'element-package'
+                      : ddata?.className === 'DObject'       ? 'element-object'
+                      : 'properties-panel';
+                    window.dispatchEvent(new CustomEvent('jjodel:help-open', { detail: { helpKey } }));
+                    close();
+                }} className={'col item'} tabIndex={0}>
+                    <i className='bi bi-question-circle' /> Help
+                </div>
+            );
             jsxList.push(<hr key={hri++} className={'my-1'}/>);
         }
 
@@ -359,6 +378,7 @@ function ContextMenuComponentInner(props: AllProps) {
         jsxList.push(<div key='view+' onClick={async () => {close(); addView();}} className={'col item'} tabIndex={0}>{icon['view']} Add View
             <div><i className='bi bi-alt' /> <i className='bi bi-command' /> A</div>
         </div>);
+
     }
 
     /*const edit_x = data.node?.x || 0;
