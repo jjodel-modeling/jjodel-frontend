@@ -26,8 +26,28 @@ export async function executeEval(
         // Build evaluation context from active metamodel
         const variables = buildEvalContext(context);
 
+        // Also include context variables (from let bindings, forall, etc.)
+        for (const [key, value] of context.variables) {
+            variables[key] = value;
+        }
+
         // Evaluate the JjEL expression
         const result = jjelEval(expression, variables);
+
+        // Detect undefined bare identifiers: if expression is a simple word
+        // not in context, the evaluator returns null silently — treat as error
+        if (result === null && isBareIdentifier(expression) && !(expression in variables)) {
+            return {
+                success: false,
+                command: 'eval',
+                message: `Unknown identifier: '${expression}'`,
+                errors: [{
+                    code: 'UNDEFINED_VARIABLE',
+                    message: `'${expression}' is not a recognized variable or command`,
+                    suggestion: 'Available variables: classes, attributes, metamodel, project. Try: help'
+                }]
+            };
+        }
 
         // Format the result for display
         const formatted = formatJjelResult(result);
@@ -208,6 +228,15 @@ function formatJjelResult(result: JjelValue): FormattedResult {
     }
 
     return { message: String(result), type: 'primitive' };
+}
+
+/**
+ * Check if an expression is a bare identifier (single word, no dots/operators/parens).
+ * Used to detect undefined variable references vs valid null-returning expressions.
+ */
+function isBareIdentifier(expr: string): boolean {
+    const trimmed = expr.trim();
+    return /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(trimmed);
 }
 
 function formatSingleValue(value: JjelValue): string {

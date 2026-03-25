@@ -56,6 +56,69 @@ const getEngineVersion = (): string => {
     return `v${state.version?.n || '2.0'}`;
 };
 
+// ============================================
+// SectionHeader — Standardized section header
+// ============================================
+interface SectionHeaderProps {
+    title: string;
+    count: number;
+    primaryAction?: {
+        label: string;
+        onClick: () => void;
+        disabled?: boolean;
+        disabledTitle?: string;
+        hasDropdown?: boolean;
+        isDropdownOpen?: boolean;
+    };
+    secondaryAction?: {
+        label: string;
+        onClick: () => void;
+        icon?: string;
+        hasDropdown?: boolean;
+        isDropdownOpen?: boolean;
+    };
+    children?: React.ReactNode;
+}
+
+function SectionHeader({ title, count, primaryAction, secondaryAction, children }: SectionHeaderProps) {
+    return (
+        <div className="project-section-header">
+            <h2 className="project-section-header__title">
+                {title}
+                <span className="project-section-header__count">({count})</span>
+            </h2>
+            <div className="project-section-header__actions">
+                {secondaryAction && (
+                    <button
+                        className="btn btn--ghost btn--xs"
+                        onClick={secondaryAction.onClick}
+                    >
+                        {secondaryAction.icon && <i className={`bi bi-${secondaryAction.icon}`} />}
+                        {secondaryAction.label}
+                        {secondaryAction.hasDropdown && (
+                            <i className={`bi bi-chevron-${secondaryAction.isDropdownOpen ? 'up' : 'down'} btn-chevron`} />
+                        )}
+                    </button>
+                )}
+                {primaryAction && (
+                    <button
+                        className="btn btn--ghost btn--sm"
+                        onClick={primaryAction.onClick}
+                        disabled={primaryAction.disabled}
+                        title={primaryAction.disabled ? primaryAction.disabledTitle : undefined}
+                    >
+                        {primaryAction.label}
+                        {primaryAction.hasDropdown && (
+                            <i className={`bi bi-chevron-${primaryAction.isDropdownOpen ? 'up' : 'down'} btn-chevron`} />
+                        )}
+                    </button>
+                )}
+                {children}
+            </div>
+        </div>
+    );
+}
+
 interface ProjectEditorProps {
     project: LProject;
     onNavigateBack?: () => void;  // Optional callback when user wants to navigate back
@@ -98,6 +161,14 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     const [editedDescription, setEditedDescription] = useState(project.description || '');
     const [newTag, setNewTag] = useState('');
     const [isAddingTag, setIsAddingTag] = useState(false);
+
+    // Project menu (⋮) state
+    const [showProjectMenu, setShowProjectMenu] = useState(false);
+    const projectMenuRef = useRef<HTMLDivElement>(null);
+
+    // Section navigator — active section tracking
+    const [activeSection, setActiveSection] = useState('metamodels');
+    const mainContentRef = useRef<HTMLDivElement>(null);
     const [showShareModal, setShowShareModal] = useState(false);
     const [showMegamodelModal, setShowMegamodelModal] = useState(false);
 
@@ -207,6 +278,42 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             return () => document.removeEventListener('mousedown', handleClickOutside);
         }
     }, [showImportMenu]);
+
+    // Click-outside handler for project menu (⋮)
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (projectMenuRef.current && !projectMenuRef.current.contains(event.target as Node)) {
+                setShowProjectMenu(false);
+            }
+        };
+
+        if (showProjectMenu) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }
+    }, [showProjectMenu]);
+
+    // IntersectionObserver for section navigator active state
+    useEffect(() => {
+        const sectionIds = ['metamodels', 'models', 'transformations', 'viewpoints', 'documentation'];
+        const observer = new IntersectionObserver(
+            (entries) => {
+                for (const entry of entries) {
+                    if (entry.isIntersecting && entry.target.id) {
+                        setActiveSection(entry.target.id.replace('section-', ''));
+                    }
+                }
+            },
+            { threshold: 0.3, root: mainContentRef.current }
+        );
+
+        sectionIds.forEach(id => {
+            const el = document.getElementById(`section-${id}`);
+            if (el) observer.observe(el);
+        });
+
+        return () => observer.disconnect();
+    }, []);
 
     // Focus rename input when renaming starts
     useEffect(() => {
@@ -359,6 +466,38 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             setIsSaving(false);
         }
     }, [clearDirty]);
+
+    // Section navigator scroll handler
+    const scrollToSection = useCallback((sectionId: string) => {
+        const el = document.getElementById(`section-${sectionId}`);
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            setActiveSection(sectionId);
+        }
+    }, []);
+
+    // Download entire project as JSON
+    const handleDownloadProject = useCallback(() => {
+        try {
+            const projectData = {
+                format_version: '1.0',
+                metadata: {
+                    name: project.name || 'Unnamed Project',
+                    exported_at: new Date().toISOString(),
+                    jjodel_version: '2.0'
+                },
+                project: (project as any).__raw || project
+            };
+            const jsonString = JSON.stringify(projectData, null, 2);
+            const filename = `${project.name || 'project'}.jjodel`;
+            U.download(filename, jsonString);
+            U.alert('i', 'Downloaded', `Project exported: ${filename}`);
+        } catch (error) {
+            console.error('Download project error:', error);
+            U.alert('e', 'Download Failed', 'Could not download the project.');
+        }
+        setShowProjectMenu(false);
+    }, [project]);
 
     // Name editing handlers
     const handleStartEditName = () => {
@@ -1384,31 +1523,38 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         }
     };
 
+    // Section definitions for the sidebar navigator
+    const sections = [
+        { id: 'metamodels', label: 'Metamodels', iconLetter: 'M', iconClass: 'list-card__icon--mm', count: metamodels.length, group: 'structure' },
+        { id: 'models', label: 'Models', iconLetter: 'm', iconClass: 'list-card__icon--model', count: models.length, group: 'structure' },
+        { id: 'transformations', label: 'Transforms', iconLetter: '⇄', iconClass: 'list-card__icon--transformation', count: transformations.length, group: 'transformation' },
+        { id: 'viewpoints', label: 'Viewpoints', iconLetter: 'V', iconClass: 'list-card__icon--vp', count: viewpoints.length, group: 'perspectives' },
+        { id: 'documentation', label: 'Docs', iconLetter: 'D', iconClass: 'list-card__icon--docs', count: 0, group: 'perspectives' },
+    ];
+
     return (
         <div className="project-editor">
-            {/* Header */}
-            <div className="project-header">
-                <div className="project-header__badges">
-                    <button
-                        className="jj-badge jj-badge--state badge--clickable"
-                        onClick={handleVisibilityBadgeClick}
-                        title={project.type === 'public' ? 'Click to get share link' : 'Click to make public'}
-                    >
-                        {project.type || 'private'}
-                        {project.type === 'public' ? (
-                            <i className="bi bi-link-45deg" />
-                        ) : (
-                            <i className="bi bi-arrow-left-right" />
-                        )}
-                    </button>
-                    {project.type === 'public' && (
-                        <button
-                            className="badge-toggle-btn"
-                            onClick={handleToggleType}
-                            title="Make private"
+            {/* Compact Header */}
+            <div className="project-header-compact">
+                <div className="project-header-compact__row1">
+                    {isEditingName ? (
+                        <input
+                            ref={nameInputRef}
+                            type="text"
+                            className="project-header-compact__title-input"
+                            value={editedName}
+                            onChange={(e) => setEditedName(e.target.value)}
+                            onBlur={handleSaveName}
+                            onKeyDown={handleNameKeyDown}
+                        />
+                    ) : (
+                        <h1
+                            className="project-header-compact__title"
+                            onClick={handleStartEditName}
+                            title="Click to edit name"
                         >
-                            <i className="bi bi-lock" />
-                        </button>
+                            {project.name || 'Unnamed Project'}
+                        </h1>
                     )}
                     <Badge category="version" className="badge--engine">
                         <i className="bi bi-gear" />
@@ -1417,162 +1563,182 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     <Badge category="version">
                         Rev {formatVersionNumber(project.version)}
                     </Badge>
-                </div>
-
-                {/* Editable Name */}
-                <div className="project-header__title-row">
-                    {isEditingName ? (
-                        <input
-                            ref={nameInputRef}
-                            type="text"
-                            className="project-header__title-input"
-                            value={editedName}
-                            onChange={(e) => setEditedName(e.target.value)}
-                            onBlur={handleSaveName}
-                            onKeyDown={handleNameKeyDown}
-                        />
-                    ) : (
-                        <h1
-                            className="project-header__title"
-                            onClick={handleStartEditName}
+                    <div className="project-header-compact__actions">
+                        <Button
+                            variant="primary"
+                            onClick={() => setShowMegamodelModal(true)}
+                            title="View relationships between project artifacts"
                         >
-                            {project.name || 'Unnamed Project'}
-                            <button className="edit-btn" title="Edit name">
-                                <i className="bi bi-pencil" />
-                            </button>
-                        </h1>
-                    )}
-                </div>
-
-                {/* Editable Description */}
-                <div className="project-header__description-row">
-                    {isEditingDescription ? (
-                        <textarea
-                            ref={descriptionInputRef}
-                            className="project-header__description-input"
-                            value={editedDescription}
-                            onChange={(e) => setEditedDescription(e.target.value)}
-                            onBlur={handleSaveDescription}
-                            onKeyDown={handleDescriptionKeyDown}
-                            rows={3}
-                            placeholder="Add a project description..."
-                        />
-                    ) : (
-                        <p
-                            className="project-header__description"
-                            onClick={handleStartEditDescription}
-                        >
-                            {project.description || 'Click to add a description...'}
-                            <button className="edit-btn" title="Edit description">
-                                <i className="bi bi-pencil" />
-                            </button>
-                        </p>
-                    )}
-                </div>
-
-                {/* Tags */}
-                <div className="project-tags">
-                    {tags.map((tag) => (
-                        <span key={tag} className="project-tag">
-                            {tag}
+                            <i className="bi bi-diagram-3" />
+                            View Megamodel
+                        </Button>
+                        {isAddingTag ? (
+                            <div className="project-tag__input-wrapper" style={{ display: 'inline-flex' }}>
+                                <input
+                                    ref={tagInputRef}
+                                    type="text"
+                                    className="project-tag__input"
+                                    value={newTag}
+                                    onChange={(e) => setNewTag(e.target.value)}
+                                    onBlur={handleAddTag}
+                                    onKeyDown={handleTagKeyDown}
+                                    placeholder="e.g. client, server"
+                                />
+                            </div>
+                        ) : (
                             <button
-                                className="project-tag__remove"
-                                onClick={() => handleRemoveTag(tag)}
-                                title="Remove tag"
+                                className="project-tag project-tag--add"
+                                onClick={() => setIsAddingTag(true)}
                             >
-                                ×
+                                + Tags
                             </button>
-                        </span>
-                    ))}
-                    {isAddingTag ? (
-                        <div className="project-tag__input-wrapper">
-                            <input
-                                ref={tagInputRef}
-                                type="text"
-                                className="project-tag__input"
-                                value={newTag}
-                                onChange={(e) => setNewTag(e.target.value)}
-                                onBlur={handleAddTag}
-                                onKeyDown={handleTagKeyDown}
-                                placeholder="e.g. client, server, api"
-                            />
-                            <span className="project-tag__hint">
-                                Use commas to add multiple tags
-                            </span>
-                        </div>
-                    ) : (
-                        <button
-                            className="project-tag project-tag--add"
-                            onClick={() => setIsAddingTag(true)}
-                        >
-                            + Add tags
-                        </button>
-                    )}
-                </div>
-
-                {/* Dates */}
-                <div className="project-dates">
-                    <span>Created: {formatDate(project.creation)}</span>
-                    <span className="project-dates__separator">·</span>
-                    <span>Modified: {formatDate(project.lastModified)}</span>
-                </div>
-
-                {/* Quick actions */}
-                <div className="project-quickactions">
-                    <Button
-                        variant="secondary"
-                        className="megamodel-btn"
-                        onClick={() => setShowMegamodelModal(true)}
-                        title="View relationships between project artifacts"
-                    >
-                        <i className="bi bi-diagram-3" />
-                        View Megamodel
-                    </Button>
-                </div>
-            </div>
-
-            {/* Metamodels Section */}
-            <div className="project-section">
-                <div className="project-section__header">
-                    <h2 className="project-section__title">METAMODELS</h2>
-                    <div className="project-section__actions">
-                        {/* Import button with dropdown */}
-                        <div className="import-button-wrapper" ref={importMenuRef}>
-                            <Button
-                                variant="secondary"
-                                onClick={() => setShowImportMenu(!showImportMenu)}
+                        )}
+                        <div className="project-menu-wrapper" ref={projectMenuRef}>
+                            <button
+                                className="icon-btn icon-btn--menu"
+                                onClick={() => setShowProjectMenu(!showProjectMenu)}
+                                title="Project actions"
                             >
-                                <i className="bi bi-upload" />
-                                Import
-                                <i className={`bi bi-chevron-${showImportMenu ? 'up' : 'down'} btn-chevron`} />
-                            </Button>
-
-                            {showImportMenu && (
-                                <div className="import-select-menu">
-                                    <button
-                                        className="import-select-menu__item"
-                                        onClick={handleImportJmm}
-                                    >
-                                        <i className="bi bi-file-earmark" />
-                                        Import .jmm
+                                <i className="bi bi-three-dots-vertical" />
+                            </button>
+                            {showProjectMenu && (
+                                <div className="project-menu-dropdown">
+                                    <button onClick={handleDownloadProject}>
+                                        <i className="bi bi-download" />
+                                        Download project
                                     </button>
-                                    <button
-                                        className="import-select-menu__item"
-                                        onClick={handleImportEcore}
-                                    >
-                                        <i className="bi bi-file-earmark-code" />
-                                        Import Ecore (.ecore)
+                                    <button onClick={() => { handleVisibilityBadgeClick(); setShowProjectMenu(false); }}>
+                                        <i className={`bi bi-${project.type === 'public' ? 'lock' : 'globe'}`} />
+                                        {project.type === 'public' ? 'Make private' : 'Make public'}
                                     </button>
+                                    <div className="project-menu-dropdown__divider" />
+                                    {onNavigateBack && (
+                                        <button onClick={() => { handleBackNavigation(); setShowProjectMenu(false); }}>
+                                            <i className="bi bi-x-lg" />
+                                            Close project
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>
-
-                        {/* New button */}
-                        <Button variant="primary" onClick={handleCreateMetamodel}>
-                            + New
-                        </Button>
                     </div>
                 </div>
+                <div className="project-header-compact__row2">
+                    <span>{project.description || 'No description'}</span>
+                    <span className="project-header-compact__sep">&middot;</span>
+                    <span>Created by {(project as any).author?.name || 'Unknown'}</span>
+                    <span className="project-header-compact__sep">&middot;</span>
+                    <span>{formatDate(project.creation)}</span>
+                    {tags.length > 0 && (
+                        <>
+                            <span className="project-header-compact__sep">&middot;</span>
+                            {tags.map((tag) => (
+                                <span key={tag} className="project-tag project-tag--compact">
+                                    {tag}
+                                    <button
+                                        className="project-tag__remove"
+                                        onClick={() => handleRemoveTag(tag)}
+                                        title="Remove tag"
+                                    >
+                                        ×
+                                    </button>
+                                </span>
+                            ))}
+                        </>
+                    )}
+                    <button
+                        className="edit-btn edit-btn--inline"
+                        onClick={handleStartEditDescription}
+                        title="Edit description"
+                    >
+                        <i className="bi bi-pencil" />
+                    </button>
+                    {/* Hidden description editor */}
+                    {isEditingDescription && (
+                        <div className="project-header-compact__desc-editor">
+                            <textarea
+                                ref={descriptionInputRef}
+                                className="project-header__description-input"
+                                value={editedDescription}
+                                onChange={(e) => setEditedDescription(e.target.value)}
+                                onBlur={handleSaveDescription}
+                                onKeyDown={handleDescriptionKeyDown}
+                                rows={3}
+                                placeholder="Add a project description..."
+                            />
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <div className="project-editor__body">
+                {/* Section Navigator Sidebar */}
+                <nav className="section-nav">
+                    {sections.map((sec, i) => (
+                        <React.Fragment key={sec.id}>
+                            {i > 0 && sections[i - 1].group !== sec.group && (
+                                <div className="section-nav__divider" />
+                            )}
+                            <button
+                                className={`section-nav__item ${activeSection === sec.id ? 'section-nav__item--active' : ''}`}
+                                onClick={() => scrollToSection(sec.id)}
+                            >
+                                <span className={`section-nav__icon ${sec.iconClass}`}>
+                                    {sec.iconBootstrap
+                                        ? <i className={`bi ${sec.iconBootstrap}`} />
+                                        : sec.iconLetter
+                                    }
+                                </span>
+                                <span className="section-nav__label">{sec.label}</span>
+                                {sec.count > 0 && (
+                                    <span className="section-nav__count">({sec.count})</span>
+                                )}
+                            </button>
+                        </React.Fragment>
+                    ))}
+                </nav>
+
+                {/* Main scrollable content */}
+                <div className="project-editor__main" ref={mainContentRef}>
+
+            {/* Group 1: Structure (Metamodels + Models) */}
+            <div className="section-group section-group--structure">
+              <span className="section-group__label">Structure</span>
+
+            {/* Metamodels Section */}
+            <div className="project-section" id="section-metamodels">
+                <SectionHeader
+                    title="METAMODELS"
+                    count={metamodels.length}
+                    primaryAction={{ label: '+ New', onClick: handleCreateMetamodel }}
+                    secondaryAction={{
+                        label: 'Import',
+                        onClick: () => setShowImportMenu(!showImportMenu),
+                        icon: 'upload',
+                        hasDropdown: true,
+                        isDropdownOpen: showImportMenu,
+                    }}
+                >
+                    {/* Import dropdown menu (rendered inside actions area) */}
+                    {showImportMenu && (
+                        <div className="import-select-menu" ref={importMenuRef}>
+                            <button
+                                className="import-select-menu__item"
+                                onClick={handleImportJmm}
+                            >
+                                <i className="bi bi-file-earmark" />
+                                Import .jmm
+                            </button>
+                            <button
+                                className="import-select-menu__item"
+                                onClick={handleImportEcore}
+                            >
+                                <i className="bi bi-file-earmark-code" />
+                                Import Ecore (.ecore)
+                            </button>
+                        </div>
+                    )}
+                </SectionHeader>
 
                 {metamodels.length === 0 ? (
                     <EmptyState
@@ -1687,12 +1853,15 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             </div>
 
             {/* Models Section */}
-            <div className="project-section">
-                <div className="project-section__header">
-                    <h2 className="project-section__title">MODELS</h2>
-                    <div className="new-model-button-wrapper" ref={metamodelMenuRef}>
-                        <Button
-                            variant="primary"
+            <div className="project-section" id="section-models">
+                <div className="project-section-header" ref={metamodelMenuRef}>
+                    <h2 className="project-section-header__title">
+                        MODELS
+                        <span className="project-section-header__count">({models.length})</span>
+                    </h2>
+                    <div className="project-section-header__actions">
+                        <button
+                            className="btn btn--ghost btn--sm"
                             disabled={metamodels.length === 0}
                             title={metamodels.length === 0 ? 'Create a metamodel first' : 'Create new model'}
                             onClick={handleNewModelClick}
@@ -1701,7 +1870,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             {metamodels.length > 1 && (
                                 <i className={`bi bi-chevron-${showMetamodelMenu ? 'up' : 'down'} btn-chevron`} />
                             )}
-                        </Button>
+                        </button>
 
                         {/* Metamodel selection dropdown */}
                         {showMetamodelMenu && metamodels.length > 1 && (
@@ -1843,83 +2012,36 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 )}
             </div>
 
-            {/* Environment Generation Section */}
-            <div className="project-section">
-                <div className="project-section__header">
-                    <h2 className="project-section__title">
-                        ENVIRONMENT GENERATION {envGenConfigs.length > 0 && `(${envGenConfigs.length})`}
-                    </h2>
-                    <Button
-                        variant="primary"
-                        disabled={metamodels.length === 0}
-                        title={metamodels.length === 0 ? 'Create a metamodel first' : 'Generate new environment'}
-                        onClick={() => { setEditingEnvGenId(undefined); setShowEnvGenWizard(true); }}
-                    >
-                        + New
-                    </Button>
-                </div>
+            </div>{/* end section-group--structure */}
 
-                {envGenConfigs.length === 0 ? (
-                    <EmptyState
-                        icon="bi-box-seam"
-                        title="No environments generated yet"
-                        description="Generate standalone modeling environments from your metamodels with AI-assisted prompt generation."
-                    />
-                ) : (
-                    <div className="list-card">
-                        {envGenConfigs.map((cfg) => (
-                            <div
-                                className="list-card__item"
-                                key={cfg.id}
-                                onClick={() => { setEditingEnvGenId(cfg.id); setShowEnvGenWizard(true); }}
-                                role="button"
-                                tabIndex={0}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' || e.key === ' ') {
-                                        e.preventDefault();
-                                        setEditingEnvGenId(cfg.id);
-                                        setShowEnvGenWizard(true);
-                                    }
-                                }}
-                                style={{ cursor: 'pointer' }}
-                            >
-                                <span className="list-card__icon list-card__icon--envgen">
-                                    <i className="bi bi-box-seam" />
-                                </span>
-                                <div className="list-card__content">
-                                    <div className="list-card__name">{cfg.name || 'Untitled'}</div>
-                                    <div className="list-card__type">
-                                        {cfg.techStackSummary} {cfg.metamodelName ? `· ${cfg.metamodelName}` : ''}
-                                    </div>
-                                </div>
-                                <Badge category={cfg.status === 'ready' ? 'version' : 'state'} className={cfg.status === 'generating' ? 'envgen-pulse' : ''}>
-                                    {cfg.status === 'ready' ? 'Ready' : cfg.status === 'generating' ? 'Generating...' : 'Draft'}
-                                </Badge>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
+            {/* TODO: [cleanup] Environment Generation section removed from dashboard UI.
+                Remove environment generation from:
+                - Model types/interfaces (EnvGenConfigSummary, etc.)
+                - API/service layer (EnvGenPersistence, EnvGenPromptBuilder)
+                - SCSS styles (.list-card__icon--envgen, .envgen-pulse)
+                - State management (showEnvGenWizard, envGenConfigs, editingEnvGenId)
+                - EnvGenWizardModal component usage below
+                - Navbar "Environment Generation" menu entry
+            */}
+
+            {/* Group 2: Transformation */}
+            <div className="section-group section-group--transformation">
+              <span className="section-group__label">Transformation</span>
 
             {/* Transformations Section */}
-            <div className="project-section">
-                <div className="project-section__header">
-                    <h2 className="project-section__title">
-                        TRANSFORMATIONS {transformations.length > 0 && `(${transformations.length})`}
-                    </h2>
-                    <Button
-                        variant="primary"
-                        onClick={() => setShowNewTransformationDialog(true)}
-                    >
-                        + New
-                    </Button>
-                </div>
+            <div className="project-section" id="section-transformations">
+                <SectionHeader
+                    title="TRANSFORMATIONS"
+                    count={transformations.length}
+                    primaryAction={{ label: '+ New', onClick: () => setShowNewTransformationDialog(true) }}
+                />
 
                 {transformations.length === 0 ? (
                     <EmptyState
                         icon="bi-arrow-left-right"
                         title="No transformations yet"
                         description="Create model-to-model transformations using JjTL to automate conversions between metamodels."
+                        action={{ label: 'Create Your First Transformation', onClick: () => setShowNewTransformationDialog(true) }}
                     />
                 ) : (
                     <TransformationsList
@@ -1932,16 +2054,19 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 )}
             </div>
 
+            </div>{/* end section-group--transformation */}
+
+            {/* Group 3: Perspectives (Viewpoints + Documentation) */}
+            <div className="section-group section-group--perspectives">
+              <span className="section-group__label">Perspectives</span>
+
             {/* Viewpoints Section */}
-            <div className="project-section">
-                <div className="project-section__header">
-                    <h2 className="project-section__title">
-                        VIEWPOINTS {viewpoints.length > 0 && `(${viewpoints.length})`}
-                    </h2>
-                    <Button variant="secondary" disabled>
-                        + Add
-                    </Button>
-                </div>
+            <div className="project-section" id="section-viewpoints">
+                <SectionHeader
+                    title="VIEWPOINTS"
+                    count={viewpoints.length}
+                    primaryAction={{ label: '+ New', onClick: () => {}, disabled: true, disabledTitle: 'Coming soon' }}
+                />
 
                 {viewpoints.length === 0 ? (
                     <EmptyState
@@ -1992,7 +2117,14 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             </div>
 
             {/* Documentation Section */}
-            <DocumentationSection project={project} />
+            <div id="section-documentation">
+                <DocumentationSection project={project} />
+            </div>
+
+            </div>{/* end section-group--perspectives */}
+
+                </div>{/* end project-editor__main */}
+            </div>{/* end project-editor__body */}
 
             {/* Megamodel Diagram View */}
             {showMegamodelModal && (() => {

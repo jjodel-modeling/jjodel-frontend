@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect, useMemo } from 'react';
+import { useCallback, useState, useEffect, useMemo, useRef } from 'react';
 import { Badge } from '../../common/Badge';
 import type { Node, Edge } from '@xyflow/react';
 import { useNodes } from '@xyflow/react';
@@ -402,6 +402,9 @@ function PropertiesPanel({
 function ClassNodeProperties({ node, onUpdate, isJjomMode, onDelete, onDuplicate }: { node: Node; onUpdate: (id: string, data: any) => void; isJjomMode?: boolean; onDelete?: () => void; onDuplicate?: () => void }) {
     const nodeData = node.data as ClassNodeData;
     const [name, setName] = useState(nodeData.label);
+    // Track the last name WE committed so we can distinguish our own writes
+    // from external changes and avoid re-triggering the sync loop.
+    const lastCommittedName = useRef(nodeData.label);
 
     // In JjOM mode, read directly from nodeData (JjOM is source of truth via useJjomSync).
     // In standalone mode, use local state as before.
@@ -425,16 +428,33 @@ function ClassNodeProperties({ node, onUpdate, isJjomMode, onDelete, onDuplicate
     );
 
     useEffect(() => {
+        // When switching to a different node, always reset.
         setName(nodeData.label);
+        lastCommittedName.current = nodeData.label;
         setEditBuffers({});
-    }, [node.id, nodeData.label]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [node.id]);
+
+    // Sync name from model only when changed externally (not by our own commit).
+    useEffect(() => {
+        if (nodeData.label !== lastCommittedName.current) {
+            setName(nodeData.label);
+            lastCommittedName.current = nodeData.label;
+        }
+    }, [nodeData.label]);
+
+    // Keep a ref to always read the latest nodeData without recreating commit
+    const nodeDataRef = useRef(nodeData);
+    nodeDataRef.current = nodeData;
 
     const commit = useCallback((updates: Partial<ClassNodeData>) => {
-        onUpdate(node.id, { ...nodeData, ...updates });
-    }, [node.id, nodeData, onUpdate]);
+        onUpdate(node.id, { ...nodeDataRef.current, ...updates });
+    }, [node.id, onUpdate]);
 
     // --- Name ---
     const commitName = () => {
+        if (name === lastCommittedName.current) return; // no-op if unchanged
+        lastCommittedName.current = name;
         commit({ label: name });
         syncNodeLabel(node.id, name);
     };
@@ -774,20 +794,36 @@ function ClassNodeProperties({ node, onUpdate, isJjomMode, onDelete, onDuplicate
 function EnumNodeProperties({ node, onUpdate, isJjomMode, onDelete, onDuplicate }: { node: Node; onUpdate: (id: string, data: any) => void; isJjomMode?: boolean; onDelete?: () => void; onDuplicate?: () => void }) {
     const nodeData = node.data as EnumNodeData;
     const [name, setName] = useState(nodeData.label);
+    const lastCommittedName = useRef(nodeData.label);
     const literals = nodeData.literals || [];
 
     const [editBuffers, setEditBuffers] = useState<Record<string, string>>({});
 
     useEffect(() => {
         setName(nodeData.label);
+        lastCommittedName.current = nodeData.label;
         setEditBuffers({});
-    }, [node.id, nodeData.label]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [node.id]);
+
+    useEffect(() => {
+        if (nodeData.label !== lastCommittedName.current) {
+            setName(nodeData.label);
+            lastCommittedName.current = nodeData.label;
+        }
+    }, [nodeData.label]);
+
+    // Keep a ref to always read the latest nodeData without recreating commit
+    const nodeDataRef = useRef(nodeData);
+    nodeDataRef.current = nodeData;
 
     const commit = useCallback((updates: Partial<EnumNodeData>) => {
-        onUpdate(node.id, { ...nodeData, ...updates });
-    }, [node.id, nodeData, onUpdate]);
+        onUpdate(node.id, { ...nodeDataRef.current, ...updates });
+    }, [node.id, onUpdate]);
 
     const commitName = () => {
+        if (name === lastCommittedName.current) return;
+        lastCommittedName.current = name;
         commit({ label: name });
         syncNodeLabel(node.id, name);
     };
@@ -1055,17 +1091,20 @@ function InheritanceEdgeProperties({
     const sourceAnchor: AnchorConfig = edgeData?.sourceAnchor || { mode: 'auto', side: (edge.sourceHandle || 'top') as AnchorSide };
     const targetAnchor: AnchorConfig = edgeData?.targetAnchor || { mode: 'auto', side: (edge.targetHandle || 'bottom') as AnchorSide };
 
+    const edgeDataRef = useRef(edgeData);
+    edgeDataRef.current = edgeData;
+
     const handleAnchorChange = useCallback((endpoint: 'source' | 'target', side: AnchorSide, mode: AnchorMode) => {
         const anchorKey = endpoint === 'source' ? 'sourceAnchor' : 'targetAnchor';
         const handleKey = endpoint === 'source' ? 'sourceHandle' : 'targetHandle';
         onEdgeChange(edge.id, {
             [handleKey]: side,
             data: {
-                ...edgeData,
+                ...edgeDataRef.current,
                 [anchorKey]: { mode, side } as AnchorConfig,
             },
         });
-    }, [edge.id, edgeData, onEdgeChange]);
+    }, [edge.id, onEdgeChange]);
     return (
         <>
             <PanelHeader icon={ELEMENT_ICONS.inheritance} name="Inheritance" badgeLabel="INHERITANCE" />
@@ -1143,16 +1182,24 @@ function ReferenceEdgeProperties({
     const [lowerBound, setLowerBound] = useState(ref?.lowerBound ?? 0);
     const [upperBound, setUpperBound] = useState(ref?.upperBound ?? -1);
 
+    // Use primitive deps to avoid infinite loop (ref is a new object every render)
     useEffect(() => {
         setName(ref?.name || String(edge.label || ''));
         setKind(ref?.kind || 'association');
         setLowerBound(ref?.lowerBound ?? 0);
         setUpperBound(ref?.upperBound ?? -1);
-    }, [edge.id, ref]);
+    }, [edge.id, ref?.name, ref?.kind, ref?.lowerBound, ref?.upperBound, edge.label]);
+
+    // Keep refs to avoid recreating callbacks on every render
+    const edgeDataRef = useRef(edgeData);
+    edgeDataRef.current = edgeData;
+    const refRef = useRef(ref);
+    refRef.current = ref;
 
     const commitRF = useCallback(() => {
+        const currentRef = refRef.current;
         const updatedRef: MetaReference = {
-            id: ref?.id || edge.id,
+            id: currentRef?.id || edge.id,
             name,
             kind,
             targetClassId: edge.target,
@@ -1162,9 +1209,9 @@ function ReferenceEdgeProperties({
         };
         onUpdate(edge.id, {
             label: name,
-            data: { ...edgeData, reference: updatedRef } as ReferenceEdgeData,
+            data: { ...edgeDataRef.current, reference: updatedRef } as ReferenceEdgeData,
         });
-    }, [name, kind, lowerBound, upperBound, edge.id, edge.target, ref, edgeData, onUpdate]);
+    }, [name, kind, lowerBound, upperBound, edge.id, edge.target, onUpdate]);
 
     const commitName = () => {
         commitRF();
@@ -1174,8 +1221,9 @@ function ReferenceEdgeProperties({
 
     const handleKindChange = (newKind: ReferenceKind) => {
         setKind(newKind);
+        const currentRef = refRef.current;
         const updatedRef: MetaReference = {
-            id: ref?.id || edge.id,
+            id: currentRef?.id || edge.id,
             name,
             kind: newKind,
             targetClassId: edge.target,
@@ -1185,7 +1233,7 @@ function ReferenceEdgeProperties({
         };
         onUpdate(edge.id, {
             label: name,
-            data: { ...edgeData, reference: updatedRef } as ReferenceEdgeData,
+            data: { ...edgeDataRef.current, reference: updatedRef } as ReferenceEdgeData,
         });
         syncEdgeRefKind(edge.id, newKind);
     };
@@ -1211,11 +1259,11 @@ function ReferenceEdgeProperties({
         onUpdate(edge.id, {
             [handleKey]: side,
             data: {
-                ...edgeData,
+                ...edgeDataRef.current,
                 [anchorKey]: { mode, side } as AnchorConfig,
             },
         });
-    }, [edge.id, edgeData, onUpdate]);
+    }, [edge.id, onUpdate]);
 
     return (
         <>

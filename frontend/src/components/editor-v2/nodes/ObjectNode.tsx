@@ -17,7 +17,7 @@
  * - Auto-edit on drop from palette (data.autoEdit)
  */
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { NodeResizer, useReactFlow, type NodeProps, type Node } from '@xyflow/react';
 import DynamicHandles from '../components/DynamicHandles';
@@ -148,6 +148,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
     // Header editing
     const [editing, setEditing] = useState(false);
     const [name, setName] = useState(data.label);
+    const lastCommittedName = useRef(data.label);
 
     // Feature value editing
     const [editingFeature, setEditingFeature] = useState<{
@@ -160,7 +161,10 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
     const [openEnumId, setOpenEnumId] = useState<string | null>(null);
 
     useEffect(() => {
-        setName(data.label);
+        if (data.label !== lastCommittedName.current) {
+            setName(data.label);
+            lastCommittedName.current = data.label;
+        }
     }, [data.label]);
 
     // Auto-edit mode for newly created nodes
@@ -181,7 +185,8 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
 
     const commitName = useCallback(() => {
         setEditing(false);
-        if (name !== data.label) {
+        if (name !== lastCommittedName.current) {
+            lastCommittedName.current = name;
             editorContext?.takeSnapshot();
             setNodes((nds) =>
                 nds.map((n) =>
@@ -190,7 +195,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
             );
             syncNodeLabel(id, name);
         }
-    }, [id, name, data.label, setNodes, editorContext]);
+    }, [id, name, setNodes, editorContext]);
 
     const handleBlur = useCallback(() => {
         commitName();
@@ -201,11 +206,11 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
             if (e.key === 'Enter') {
                 commitName();
             } else if (e.key === 'Escape') {
-                setName(data.label);
+                setName(lastCommittedName.current);
                 setEditing(false);
             }
         },
-        [commitName, data.label]
+        [commitName]
     );
 
     // ── Feature value editing ────────────────────────────────────────

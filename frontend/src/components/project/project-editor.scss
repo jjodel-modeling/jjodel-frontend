@@ -2,58 +2,65 @@
 // =====================================
 
 .project-editor {
-  padding: 40px;
-  max-width: 900px;
-  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
   min-height: 100%;
-}
 
-// Header
-// ------
-.project-header {
-  margin-bottom: 40px;
-
-  &__badges {
+  &__body {
     display: flex;
-    gap: 8px;
-    margin-bottom: 12px;
+    flex: 1;
+    min-height: 0;
   }
 
-  &__title-row {
-    margin-bottom: 8px;
+  &__main {
+    flex: 1;
+    min-width: 0;
+    padding: 24px 40px 40px;
+    max-width: 900px;
+    overflow-y: auto;
+  }
+}
+
+// Compact Header (2-row layout, ~56px)
+// ------------------------------------
+.project-header-compact {
+  padding: 12px 24px;
+  border-bottom: 1px solid #e2e8f0;
+
+  &__row1 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 32px;
   }
 
   &__title {
     margin: 0;
-    font-size: 28px;
-    font-weight: 600;
+    font-size: 20px;
+    font-weight: 700;
     color: #1e293b;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
     cursor: pointer;
-    border-radius: 6px;
-    padding: 4px 8px 4px 0;
+    border-radius: 4px;
+    padding: 2px 6px;
     transition: background 0.15s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 300px;
 
     &:hover {
       background: #f1f5f9;
-
-      .edit-btn {
-        opacity: 1;
-      }
     }
   }
 
   &__title-input {
-    font-size: 28px;
-    font-weight: 600;
+    font-size: 20px;
+    font-weight: 700;
     color: #1e293b;
     border: 2px solid var(--form-input-border-color-focus, #334155);
-    border-radius: 6px;
-    padding: 4px 8px;
-    width: 100%;
-    max-width: 600px;
+    border-radius: 4px;
+    padding: 2px 6px;
+    max-width: 300px;
     outline: none;
     background: #ffffff;
 
@@ -62,41 +69,196 @@
     }
   }
 
-  &__description-row {
-    margin-bottom: 16px;
+  &__actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
-  &__description {
-    margin: 0;
-    font-size: 14px;
-    line-height: 1.6;
-    color: #64748b;
-    display: inline-flex;
-    align-items: flex-start;
-    gap: 8px;
-    cursor: pointer;
+  &__row2 {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 2px;
+    flex-wrap: wrap;
+    position: relative;
+  }
+
+  &__sep {
+    margin: 0 2px;
+    color: #cbd5e1;
+  }
+
+  &__desc-editor {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 50;
+    margin-top: 4px;
+    width: 400px;
+  }
+}
+
+// Section Navigator Sidebar
+// -------------------------
+.section-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 8px;
+  width: 180px;
+  flex-shrink: 0;
+  border-right: 1px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
     border-radius: 6px;
-    padding: 4px 8px 4px 0;
-    transition: background 0.15s ease;
+    cursor: pointer;
+    font-size: 13px;
+    color: #64748b;
+    transition: all 150ms ease;
+    text-align: left;
+    width: 100%;
 
     &:hover {
       background: #f1f5f9;
+      color: #334155;
+    }
 
-      .edit-btn {
-        opacity: 1;
+    &--active {
+      background: #f1f5f9;
+      color: #1e293b;
+      font-weight: 600;
+    }
+  }
+
+  &__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+
+    i {
+      font-size: 13px;
+    }
+
+    &--plain {
+      background: none;
+      color: #64748b;
+
+      i {
+        font-size: 16px;
       }
     }
   }
 
+  &__label {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__count {
+    font-size: 11px;
+    color: #94a3b8;
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+
+  &__divider {
+    height: 1px;
+    background: #e2e8f0;
+    margin: 6px 12px;
+  }
+}
+
+// Project Menu Dropdown (⋮)
+// -------------------------
+.project-menu-wrapper {
+  position: relative;
+}
+
+.project-menu-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 50;
+  min-width: 200px;
+  padding: 4px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  margin-top: 4px;
+  animation: menuFadeIn 0.15s ease;
+
+  button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #334155;
+    cursor: pointer;
+    text-align: left;
+
+    &:hover {
+      background: #f1f5f9;
+    }
+
+    i {
+      font-size: 16px;
+      color: #64748b;
+    }
+  }
+
+  &__divider {
+    height: 1px;
+    background: #e2e8f0;
+    margin: 4px 0;
+  }
+}
+
+// Compact tag style for header row2
+.project-tag--compact {
+  padding: 1px 6px;
+  font-size: 10px;
+  border-radius: 10px;
+}
+
+// Legacy Header (kept for description-input reuse)
+// ------------------------------------------------
+.project-header {
   &__description-input {
     font-size: 14px;
     line-height: 1.6;
     color: #1e293b;
-    border: 2px solid #3b82f6;
+    border: 2px solid var(--form-input-border-color-focus, #334155);
     border-radius: 6px;
     padding: 8px 12px;
     width: 100%;
-    max-width: 600px;
     outline: none;
     background: #ffffff;
     resize: vertical;
@@ -130,6 +292,16 @@
   &:hover {
     background: #e2e8f0;
     color: #475569;
+  }
+
+  &--inline {
+    opacity: 0.5;
+    width: 18px;
+    height: 18px;
+
+    &:hover {
+      opacity: 1;
+    }
   }
 
   i {
@@ -227,8 +399,8 @@
   }
 }
 
-// Project Dates
-// -------------
+// Project Dates (legacy, kept for compatibility)
+// -----------------------------------------------
 .project-dates {
   font-size: 12px;
   color: #94a3b8;
@@ -236,13 +408,6 @@
   &__separator {
     margin: 0 8px;
   }
-}
-
-.project-quickactions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 4px;
 }
 
 // Badges — uses unified jj-badge system (Badge component)
@@ -290,32 +455,116 @@
   }
 }
 
+// Section Groups — Visual hierarchy
+// ==================================
+.section-group {
+  padding: 16px 0;
+
+  & + .section-group {
+    border-top: 1px dashed #e2e8f0;
+    margin-top: 8px;
+  }
+
+  .project-section + .project-section {
+    margin-top: 20px;
+  }
+}
+
+.section-group__label {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #cbd5e1;
+  margin-bottom: 12px;
+  padding-left: 4px;
+}
+
 // Sections
 // --------
 .project-section {
   margin-bottom: 32px;
 
-  &__header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
+  // Within a group, remove bottom margin (spacing handled by group)
+  .section-group & {
+    margin-bottom: 0;
   }
+}
+
+// Standardized Section Header
+// ----------------------------
+.project-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  position: relative;
 
   &__title {
     margin: 0;
-    font-size: 12px;
-    color: #64748b;
-    text-transform: uppercase;
+    font-size: 11px;
+    font-weight: 700;
     letter-spacing: 0.5px;
-    font-weight: 600;
+    text-transform: uppercase;
+    color: #64748b;
+  }
+
+  &__count {
+    font-weight: 500;
+    color: #94a3b8;
+    margin-left: 6px;
   }
 
   &__actions {
     display: flex;
-    gap: 8px;
     align-items: center;
+    gap: 4px;
+    position: relative;
   }
+}
+
+// Ghost button variant (section header actions)
+.btn--ghost {
+  background: transparent;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  &:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #334155;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .btn-chevron {
+    font-size: 10px;
+    margin-left: 2px;
+  }
+}
+
+// Size variants
+.btn--sm {
+  padding: 4px 12px;
+  font-size: 12px;
+}
+
+.btn--xs {
+  padding: 2px 8px;
+  font-size: 11px;
 }
 
 // Empty states now use unified .jj-empty-state component (ui/EmptyState)
@@ -398,6 +647,11 @@
       color: #64748b;
       background-color: #FCE7F3;  /* Pink-100 */
   color: #DB2777;   
+    }
+
+    &--docs {
+      background-color: #dbeafe;  /* Blue-100 */
+      color: #3b82f6;             /* Blue-500 */
     }
 
     &--transformation {
@@ -803,6 +1057,91 @@
     background: #0f172a;
   }
 
+  .project-header-compact {
+    border-color: #334155;
+
+    &__title {
+      color: #f1f5f9;
+
+      &:hover {
+        background: #334155;
+      }
+    }
+
+    &__title-input {
+      background: #1e293b;
+      color: #f1f5f9;
+      border-color: #475569;
+    }
+
+    &__row2 {
+      color: #64748b;
+    }
+
+    &__sep {
+      color: #475569;
+    }
+  }
+
+  .section-nav {
+    border-color: #334155;
+
+    &__item {
+      color: #94a3b8;
+
+      &:hover {
+        background: #1e293b;
+        color: #e2e8f0;
+      }
+
+      &--active {
+        background: #1e293b;
+        color: #f1f5f9;
+      }
+    }
+
+    &__count {
+      color: #64748b;
+    }
+
+    &__divider {
+      background: #334155;
+    }
+
+  }
+
+  .section-group {
+    & + .section-group {
+      border-color: #334155;
+    }
+  }
+
+  .section-group__label {
+    color: #475569;
+  }
+
+  .project-menu-dropdown {
+    background: #1e293b;
+    border-color: #334155;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+
+    button {
+      color: #e2e8f0;
+
+      &:hover {
+        background: #334155;
+      }
+
+      i {
+        color: #94a3b8;
+      }
+    }
+
+    &__divider {
+      background: #334155;
+    }
+  }
+
   .project-header {
     &__title {
       color: #f1f5f9;
@@ -810,6 +1149,12 @@
 
     &__description {
       color: #94a3b8;
+    }
+
+    &__description-input {
+      background: #1e293b;
+      color: #f1f5f9;
+      border-color: #475569;
     }
   }
 
@@ -824,8 +1169,25 @@
     color: #d1fae5;
   }
 
-  .project-section__title {
+  .project-section-header {
+    &__title {
+      color: #94a3b8;
+    }
+
+    &__count {
+      color: #64748b;
+    }
+  }
+
+  .btn--ghost {
     color: #94a3b8;
+    border-color: #475569;
+
+    &:hover {
+      background: #334155;
+      border-color: #64748b;
+      color: #e2e8f0;
+    }
   }
 
   .empty-state {

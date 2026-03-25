@@ -1,5 +1,135 @@
 # Claude Code Session Log
 
+## 2026-03-25 — Fix: Documentation section padding/margin alignment
+
+**Prompt**: Align Documentation section margins/padding with Viewpoints and other sections
+**File toccati**: `DocumentationSection.tsx`, `DocumentationSection.scss`
+**Esito**: ✅ completato
+
+**Changes**:
+- Replaced custom `documentation-section` wrapper with shared `project-section` class
+- Wrapped documentation card in `list-card` container for consistent border/radius/spacing
+- Replaced custom `doc-icon`/`doc-content` structure with `list-card__icon`/`list-card__content`/`list-card__name`/`list-card__type` — pixel-perfect match with Viewpoints cards
+- Simplified `DocumentationSection.scss`: removed ~100 lines of custom card/icon/content styles now handled by shared `list-card` classes
+- Kept documentation-specific styles: empty state (dashed border), disabled state, status badges, confidence badges, dark mode overrides
+
+---
+
+## 2026-03-25 — Fix: Docs icon in Section Navigator → lettera "D" con sfondo
+
+**Prompt**: Replace Bootstrap icon with letter "D" on colored square, matching M/m/V/⇄ pattern
+**File toccati**: `ProjectEditor.tsx`, `project-editor.scss`
+**Esito**: ✅ completato
+
+**Changes**:
+- Changed Docs section from `iconBootstrap: 'bi-file-earmark-text'` to `iconLetter: 'D'` with `iconClass: 'list-card__icon--docs'`
+- Added `&--docs` style: background `#dbeafe` (blue-100), color `#3b82f6` (blue-500)
+- Removed unused `section-nav__icon--plain` dark-mode style
+
+---
+
+## 2026-03-25 — Fix: Documentation icon for "not generated" state
+
+**Prompt**: Change empty-state Documentation icon from `bi-file-earmark-plus` to `bi-file-earmark-text`
+**File toccati**: `DocumentationSection.tsx`
+**Esito**: ✅ completato
+
+**Changes**:
+- Changed empty-state icon from `bi-file-earmark-plus` to `bi-file-earmark-text` to better communicate "documentation available but not yet generated"
+- Existing CSS (`doc-icon--empty`) already handles grey color (`#94a3b8`) and sizing
+
+---
+
+## 2026-03-25 — UI: Section group visual hierarchy in Project Dashboard
+
+**Prompt**: Create visual groupings to communicate MDE workflow structure (Structure → Transformation → Perspectives)
+**File toccati**: `ProjectEditor.tsx`, `project-editor.scss`
+**Esito**: ✅ completato, build passes
+
+**Changes**:
+- **Section groups**: Wrapped dashboard sections into 3 logical groups: Structure (Metamodels + Models), Transformation (Transformations), Perspectives (Viewpoints + Documentation)
+- **Group labels**: Discrete uppercase watermark labels ("Structure", "Transformation", "Perspectives") above each group
+- **Dashed separators**: `1px dashed #e2e8f0` between groups; reduced intra-group spacing (20px) vs inter-group spacing
+- **Sidebar nav dividers**: Added `section-nav__divider` between group boundaries in the section navigator
+- **Dark mode**: Full support for group separators (`#334155`), labels (`#475569`), and nav dividers
+- **IntersectionObserver**: Still works — `div[id="section-*"]` elements preserved as observer targets inside group wrappers
+
+---
+
+## 2026-03-25 — UI: Standardize section headers and actions in Project Dashboard
+
+**Prompt**: Uniform section header pattern across all dashboard sections
+**File toccati**: `ProjectEditor.tsx`, `project-editor.scss`, `DocumentationSection.tsx`, `DocumentationSection.scss`
+**Esito**: ✅ completato, build passes
+
+**Changes**:
+- **SectionHeader component**: Inline component with standardized title + count `(N)` always shown + ghost button actions
+- **Metamodels**: Uses `SectionHeader` with Import (secondary, ghost xs) + "+ New" (primary, ghost sm)
+- **Models**: Uses manual `project-section-header` div (needs ref for dropdown positioning) with count always shown
+- **Transformations**: Uses `SectionHeader` with count + "+ New"; added CTA to empty state
+- **Viewpoints**: Changed "+ Add" to "+ New" (disabled); count always shown including `(0)`
+- **Documentation**: Updated header from `.section-header` to `.project-section-header`; added "Generate" button in header actions
+- **New CSS classes**: `.project-section-header`, `.btn--ghost`, `.btn--sm`, `.btn--xs`
+- **Dark mode**: Full support for ghost buttons and section header
+
+---
+
+## 2026-03-25 — UI: Sidebar section navigator + compact header for Project Dashboard
+
+**Prompt**: Transform sidebar from action list to section navigator; compact header with actions in ⋮ menu
+**File toccati**: `frontend/src/components/project/ProjectEditor.tsx`, `frontend/src/components/project/project-editor.scss`
+**Esito**: ✅ completato, build passes
+
+**Changes**:
+- **Sidebar**: New section navigator with 5 entries (Metamodels, Models, Transforms, Viewpoints, Docs). Each shows type icon + label + count. Click scrolls to section via `scrollIntoView({ behavior: 'smooth' })`. Active section tracked via `IntersectionObserver`.
+- **Header compacted**: From ~120px multi-row layout to ~56px 2-row layout. Row 1: title + version badges + "View Megamodel" (promoted to primary button) + "+ Tags" + ⋮ menu. Row 2: description + author + date + inline tags.
+- **⋮ menu**: Download project, Make public/private, Close project. Click-outside to dismiss.
+- **Layout**: `project-editor` now uses flex column. Body is flex row with `section-nav` sidebar (180px) + scrollable main content.
+- **Section IDs**: Added `id="section-{name}"` to each section div for scroll targeting.
+- **Dark mode**: Full support for compact header, sidebar, and dropdown.
+
+---
+
+## 2026-03-25 — Fix: JjEL result rendering and error handling in JjScript Console
+
+**Prompt**: Fix 3 problemi nel rendering dei risultati JjEL nella console JjScript
+**File toccati**: `frontend/src/jjscript/components/JjScriptOutput.tsx`, `frontend/src/jjscript/executor/commands/eval.ts`
+**Esito**: ✅ completato
+
+**Problema 1 — "Eval" + "element" badge**: eval/forall results went through `parseExecutionResult()` which produced generic "Eval" + "element" badges instead of actual values. The `formatJjelResult()` in eval.ts already produced good messages (`**2** results`, actual values) but they were never displayed.
+**Fix**: Added `'eval'` and `'forall'` to `isDisplayCommand` in JjScriptOutput.tsx so they use classic status+message rendering. Added `data.items` rendering block (eval stores array items in `data.items`, but output only rendered `data.elements`).
+
+**Problema 2 — No error on invalid input**: `blablabla` returned success because JjEL evaluator silently returns `null` for undefined identifiers (evaluator.ts:191).
+**Fix**: Added `isBareIdentifier()` check in eval.ts — after jjelEval returns `null`, if the expression is a simple identifier not in the variables context, return `UNDEFINED_VARIABLE` error with suggestion. Also propagated `context.variables` (let/forall bindings) into eval context.
+
+**Problema 3 — ForAll display**: forall executor already produced good summary messages ("forall: 2/2 executed successfully") but they were hidden by the badge notification. Fixed by Problem 1's `isDisplayCommand` change.
+
+**TypeScript**: `npx tsc --noEmit` — no new errors in changed files.
+
+---
+
+## 2026-03-25 — Fix: JjScript parser no longer delegates JjEL expressions
+
+**Prompt**: Diagnosi + fix regressione — JjScript non delega a JjEL
+**File toccati**: `frontend/src/jjscript/parser/parser.ts`
+**Esito**: ✅ completato
+**Root cause**: Commit `8e9509e16` added `'forall'` to the `COMMANDS` array in `types.ts`. The lexer then tokenized `forall` as `COMMAND` type, but the JjEL delegation check at `parseCommand()` only matched `IDENTIFIER` or `KEYWORD` — so the forall→JjEL path became dead code. The input fell through to the `switch(command)` which had no `case 'forall':`, hitting `default: throw 'Unknown command'`.
+**Fix (3 changes)**:
+1. Added `token.type === 'COMMAND'` to the forall token type check (line 116) so `forall`-as-COMMAND still reaches the JjEL/JjScript disambiguation via `isForAllDoCommand()`
+2. Replaced the hard error at line 144 (non-COMMAND tokens) with JjEL delegation — arbitrary expressions like `classes.size` now fall through to JjEL instead of erroring
+3. Added `case 'forall':` in the parser switch (line 207) as safety net for JjScript `forall...do` commands
+
+---
+
+## 2026-03-25 — Feat: Add "Show Console" to View menu
+
+**Prompt**: Add JjScript console overlay accessible from View menu
+**File toccati**: `frontend/src/pages/components/Navbar.tsx`
+**Esito**: ✅ completato
+**Note**: Added `showConsole` state, "Show Console" toggle item in View menu (with checkmark and filled icon when active), and a fixed-position overlay (560×420px, bottom-right) rendering `<JjScriptConsole />` with a dark header bar and close button. No backdrop — canvas remains interactive. TypeScript clean (`npx tsc --noEmit` — no new errors).
+
+---
+
 ## 2026-03-25 — Audit: language documentation vs implementation
 
 **Prompt**: Systematic audit of `docs/jjtl-jjel-paper.tex` against the codebase (JjEL, JjTL, JjModal, JjLet, JjScript)

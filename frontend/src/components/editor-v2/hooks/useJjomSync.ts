@@ -112,6 +112,37 @@ function shallowArrayEqual(a: string[], b: string[]): boolean {
     return true;
 }
 
+/**
+ * Shallow comparison of React Flow node data objects.
+ * Returns true if all top-level primitive values match and arrays have the
+ * same length + same element references.  This avoids creating a new node
+ * reference (and triggering RF re-measurement) when only the DClass Redux
+ * reference changed but the derived RF data is semantically identical.
+ */
+function shallowDataEqual(a: any, b: any): boolean {
+    if (a === b) return true;
+    if (!a || !b) return false;
+    const keysA = Object.keys(a);
+    const keysB = Object.keys(b);
+    if (keysA.length !== keysB.length) return false;
+    for (const key of keysA) {
+        const va = a[key];
+        const vb = b[key];
+        if (va === vb) continue;
+        // For arrays (attributes, references, operations, literals), compare
+        // by length and element identity.
+        if (Array.isArray(va) && Array.isArray(vb)) {
+            if (va.length !== vb.length) return false;
+            for (let i = 0; i < va.length; i++) {
+                if (va[i] !== vb[i]) return false;
+            }
+            continue;
+        }
+        return false;
+    }
+    return true;
+}
+
 // ---------------------------------------------------------------------------
 // Helper: classify D-object as vertex or edge
 // ---------------------------------------------------------------------------
@@ -751,7 +782,12 @@ if (!lGraph) return;
                             if (sizeChanged && rfNode.style) patchedNodeStyles.set(id, rfNode.style as Record<string, any>);
                         }
                         rfNodeCache.current.set(id, rfNode);
-                        patchedNodeData.set(id, rfNode.data);
+                        // Only patch data if something actually changed — avoids
+                        // creating a new node reference that triggers RF re-measurement
+                        // and cascading re-renders (the "rename loop" bug).
+                        if (!existing || !shallowDataEqual(existing.data, rfNode.data)) {
+                            patchedNodeData.set(id, rfNode.data);
+                        }
                     }
                 } else if (isEdgeClassName(className)) {
                     const rfEdge = jjomEdgeToRFEdge(lProxy);

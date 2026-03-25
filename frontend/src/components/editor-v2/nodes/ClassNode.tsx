@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { NodeResizer, useReactFlow, type NodeProps, type Node } from '@xyflow/react';
 import ViewpointRenderer from '../viewpoint/ViewpointRenderer';
 import DynamicHandles from '../components/DynamicHandles';
@@ -29,6 +29,9 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
     const [editing, setEditing] = useState(false);
     const [name, setName] = useState(data.label);
     const [dragOver, setDragOver] = useState(false);
+    // Track the last name WE committed so we can distinguish our own writes
+    // from external changes (e.g. Info panel rename) and avoid a sync loop.
+    const lastCommittedName = useRef(data.label);
 
     // Inline editing for attributes and operations
     const [editingField, setEditingField] = useState<{
@@ -38,8 +41,12 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
     } | null>(null);
     const [editValue, setEditValue] = useState('');
 
+    // Sync name from model only when changed externally (not by our own commit).
     useEffect(() => {
-        setName(data.label);
+        if (data.label !== lastCommittedName.current) {
+            setName(data.label);
+            lastCommittedName.current = data.label;
+        }
     }, [data.label]);
 
     // Auto-edit mode for newly created nodes
@@ -132,7 +139,8 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
 
     const commitName = useCallback(() => {
         setEditing(false);
-        if (name !== data.label) {
+        if (name !== lastCommittedName.current) {
+            lastCommittedName.current = name;
             editorContext?.takeSnapshot();
             setNodes((nds) =>
                 nds.map((n) =>
@@ -141,7 +149,7 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
             );
             syncNodeLabel(id, name);
         }
-    }, [id, name, data.label, setNodes, editorContext]);
+    }, [id, name, setNodes, editorContext]);
 
     const handleBlur = useCallback(() => {
         commitName();

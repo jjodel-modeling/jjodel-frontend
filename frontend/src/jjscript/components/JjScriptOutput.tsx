@@ -32,8 +32,9 @@ export const JjScriptOutput: React.FC<JjScriptOutputProps> = memo(({
         return null;
     }, [success, useBeautifulNotification, result.command, message, data]);
 
-    // Check if this is a display-only command (list, show, help)
-    const isDisplayCommand = ['list', 'show', 'help'].includes(result.command);
+    // Check if this is a display-only command (list, show, help, eval, forall)
+    // eval/forall produce structured data that needs classic rendering, not badge notifications
+    const isDisplayCommand = ['list', 'show', 'help', 'eval', 'forall'].includes(result.command);
 
     return (
         <div className={`jjscript-output ${success ? 'jjscript-output--success' : 'jjscript-output--error'} ${className}`}>
@@ -131,6 +132,15 @@ export const JjScriptOutput: React.FC<JjScriptOutputProps> = memo(({
                     ))}
                 </div>
             )}
+
+            {/* JjEL eval result items (array values) */}
+            {data?.items && Array.isArray(data.items) && data.items.length > 0 && (
+                <div className="jjscript-output-list">
+                    {data.items.map((item: string, i: number) => (
+                        <div key={i} className="list-item">{item}</div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 });
@@ -164,8 +174,9 @@ export const JjScriptInlineOutput: React.FC<JjScriptOutputProps> = memo(({
         return null;
     }, [success, useBeautifulNotification, result.command, message, data]);
 
-    // Check if this is a display-only command (list, show, help)
-    const isDisplayCommand = ['list', 'show', 'help'].includes(result.command);
+    // Check if this is a display-only command (list, show, help, eval, forall)
+    // eval/forall produce structured data that needs classic rendering, not badge notifications
+    const isDisplayCommand = ['list', 'show', 'help', 'eval', 'forall'].includes(result.command);
 
     // Use beautiful notification for success action commands
     if (success && parsedNotification && !isDisplayCommand) {

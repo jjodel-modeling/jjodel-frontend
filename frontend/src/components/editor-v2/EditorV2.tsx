@@ -2076,27 +2076,27 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
     // Properties panel handlers
     const handleNodeChange = useCallback(
         (nodeId: string, data: any) => {
-            // Flush JjOM sync before snapshot: useJjomSync's useEffect may not
-            // have propagated the latest Redux state to node.data yet. Reading
-            // fresh data from JjOM ensures the snapshot captures current names.
-            if (isJjomMode) {
-                try {
-                    const lProxy = LPointerTargetable.fromPointer(nodeId);
-                    if (lProxy) {
-                        const freshNode = jjomVertexToRFNode(lProxy);
-                        if (freshNode) {
-                            setNodes(nds => nds.map(n =>
-                                n.id === nodeId ? { ...n, data: freshNode.data } : n
-                            ));
-                        }
-                    }
-                } catch { /* ignore — non-JjOM node or stale proxy */ }
-            }
             takeSnapshot();
+            // In JjOM mode, read fresh data from Redux first so that the
+            // snapshot captures up-to-date values — then layer the user's
+            // changes on top. Merged into a SINGLE setNodes call to avoid
+            // cascading re-renders (the old two-call pattern could trigger
+            // useJjomSync between the two updates, causing an infinite loop).
             setNodes((nds) =>
-                nds.map((n) =>
-                    n.id === nodeId ? { ...n, data: { ...n.data, ...data } } : n
-                )
+                nds.map((n) => {
+                    if (n.id !== nodeId) return n;
+                    let base = n.data;
+                    if (isJjomMode) {
+                        try {
+                            const lProxy = LPointerTargetable.fromPointer(nodeId);
+                            if (lProxy) {
+                                const freshNode = jjomVertexToRFNode(lProxy);
+                                if (freshNode) base = freshNode.data;
+                            }
+                        } catch { /* ignore */ }
+                    }
+                    return { ...n, data: { ...base, ...data } };
+                })
             );
         },
         [setNodes, takeSnapshot, isJjomMode]

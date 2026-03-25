@@ -113,7 +113,7 @@ export class Parser {
         const position = { line: token.line, column: token.column };
 
         // Special case: forall — JjScript (forall...do) vs JjEL (forall...:/such that)
-        if ((token.type === 'IDENTIFIER' || token.type === 'KEYWORD') &&
+        if ((token.type === 'IDENTIFIER' || token.type === 'KEYWORD' || token.type === 'COMMAND') &&
             token.value.toLowerCase() === 'forall') {
             if (this.isForAllDoCommand()) {
                 const args = this.parseForAllCommand();
@@ -142,12 +142,9 @@ export class Parser {
         }
 
         if (token.type !== 'COMMAND') {
-            // Try to be helpful
-            const suggestion = suggestCorrection(token.value, COMMANDS);
-            const msg = suggestion
-                ? `Expected command, found '${token.value}'. Did you mean '${suggestion}'?`
-                : `Expected command (create, delete, rename, etc.), found '${token.value}'`;
-            throw new Error(msg);
+            // Not a known command — delegate entire input to JjEL as an expression
+            const args: EvalArgs = { command: 'eval', expression: this.originalInput.trim() };
+            return { type: 'Command', command: 'eval', args, position };
         }
 
         const command = token.value.toLowerCase() as CommandType;
@@ -203,6 +200,9 @@ export class Parser {
                 break;
             case 'let':
                 args = this.parseLetCommand();
+                break;
+            case 'forall':
+                args = this.parseForAllCommand();
                 break;
             default:
                 throw new Error(`Unknown command: ${command}`);
