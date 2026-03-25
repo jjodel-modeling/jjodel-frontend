@@ -563,6 +563,22 @@ export class U {
         return fathers;
     }
 
+    static isShallowEqual(v: any, oldV: any): boolean {
+        switch (typeof v) {
+            default:
+                if (v === oldV) return true;
+                break;
+            case 'object':
+                if (v === oldV) return true;
+                if (v === null) return false;
+                // if (Array.isArray(v)) { U.arrayDifference() }
+                let diff = (window as any).Uobj.objdiff(v, oldV, false, false);
+                if (diff.added.length + diff.changed.length/* + diff.removed.length*/ === 0) return true;
+                break;
+            case 'function': if (v.toString() === oldV.toString()) return true;
+        }
+        return false;
+    }
     /// maxDepth = 2 is the minimum to check the content of objects inside usageDeclarations or node state. like node.errors.naming
     static isShallowEqualWithProxies(obj1?: any, obj2?: any, skipKeys: Dictionary<string>={}, out?: {reason?: string},
                                      depth: number = 0, maxDepth: number = 2, returnIfMaxDepth:boolean = false): boolean {
@@ -1327,10 +1343,14 @@ export class U {
         } } catch(e) { Log.e(true, "Exception while trying to read file as text. Error: |", e, "|", file); }
         Log.e(true, "Wrong file type found: |", file ? file.type : null, "|", file); }
 
-    static fileRead(onChange: (e: Event, files: FileList | null, contents?: string[]) => void, extensions: string[] | FileReadTypeEnum[], readContent: boolean): void {
+    static fileRead(onChange: (e: Event, files: FileList | null, contents?: string[]) => void, extensions: string | string[] | FileReadTypeEnum[], readContent: boolean): void {
         // $(document).on('change', (e) => console.log(e));
         // console.log("importEcore: pre file reader");
-        myFileReader.show(onChange, extensions, readContent);
+        let ext: string[] | undefined = extensions as any;
+        if (typeof ext === "string") ext = [ext];
+        if (!ext?.length) ext = undefined;
+        if (Array.isArray(ext)) ext = ext.filter(e=> e && typeof e === "string");
+        myFileReader.show(onChange, ext, readContent);
     }
 
     public static clear(htmlNode: Element): void {
@@ -2911,6 +2931,7 @@ export class U {
         if (!s) return s;
         return s[0].toUpperCase() + s.substring(1);
     }
+
 }
 export type ThrottleState = {timerID: null|number, decay: number, initialDelay:number, currentDelay:number, minDelay: number,
     pending:Function[], cumulative: boolean};
@@ -2996,6 +3017,13 @@ export class Uarr{
             if (isFunc ? (filter as Function)(arr[i], i, arr) : arr[i] === filter) ret.push(i);
         }
         return ret;
+    }
+
+    public static asArray(obj: any | any[], nullVal: any = [], undefVal: any = []): any[] {
+        if (Array.isArray(obj)) return obj;
+        if (obj === null) return nullVal as any;
+        if (obj === undefined) return undefVal as any;
+        return [obj];
     }
 
     static shallowEqual<T extends any>(a1: T[], a2: T): boolean{

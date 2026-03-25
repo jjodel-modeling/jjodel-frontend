@@ -131,6 +131,7 @@ div.jjodel-control .control-slider  {
 
  div.jjodel-control .control-slider .track {
     position: relative;
+    pointer-events: none;
     top: 18px;
     left: 15px;
     width: 100%;
@@ -192,11 +193,8 @@ div.jjodel-control .control-slider  {
 
     & label {
         padding-top: 1px;
-
-        margin-bottom: 2px;
         margin-left: 10px;
         width: 1.6em;
-        height: 1.6em;
         border-radius: 2px;
         color: white;
         background-color: var(--accent);

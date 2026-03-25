@@ -1358,11 +1358,17 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
         'references',
         'operations',
         'parameters',
-        'literals'];
+        'literals',
+        'objects', // lmodel1 -> lobj
+        'features', // lobj -> lvalue
+        'values' // lvalue -> lobj or primitive
+    ];
+
     public static pointerKeys = [
         'exceptions',
         'type',
-        'father'
+        'father',
+        'instanceof'
     ]
 
     clonedCounter?: number;
@@ -3907,9 +3913,11 @@ export class Language {
     t2m: LanguageObject;
     edited: boolean;
     v: number;
-    constructor(m2t: Partial<Language['m2t']> = {}, t2m: Partial<Language['t2m']> = {}) {
+    extension: string;
+    constructor(extension: string, m2t: Partial<Language['m2t']> = {}, t2m: Partial<Language['t2m']> = {}) {
         this.t2m = t2m = t2m as any || {};// || m2t ? 'Not implemented, the m2t transformation will be unidirectional' : "Not implemented";
         this.m2t = m2t = m2t as any || {};
+        this.extension = extension;
         if (!t2m.engine) t2m.engine = Object.keys(t2m)[0] || undefined as any;
         if (!m2t.engine) m2t.engine = Object.keys(m2t)[0] || undefined as any;
         for (let k in m2t) {

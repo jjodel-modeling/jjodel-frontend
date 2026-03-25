@@ -342,7 +342,7 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
             return ret;
 
         case 'javascript':
-            console.error('eval m2t js', func_str);
+            // console.log('eval m2t js', {func_str});
             let m2t = "("+func_str+")"; // because "function(text){return "a"}" is invalid without a function name unless i wrap it in parenthesis and turn into expression.
             try { func = eval(m2t); } catch (e) { Log.ee("M2T error", {e, m2t, language, engine, func_str, languageObj}); return "M2T transformation failed, check the logger for more info."; }
             if (typeof func !== 'function') {
@@ -356,7 +356,7 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
 
     let type: string = typeof ret;
     if (type !== 'string') {
-        let msg = 'The M2T transformation of "'+language+'" must be a serializer function returning a plain object, but returned "'+(type)+'" instead.' +
+        let msg = 'The M2T transformation of "'+language+'" must be a serializer function returning a string, but returned "'+(type)+'" instead.' +
             '\nPlease change the language definition.';
         Log.ee(msg, {ret, func});
         return msg;

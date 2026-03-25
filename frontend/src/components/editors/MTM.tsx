@@ -4,7 +4,7 @@ import {
     DataOutputComponent,
     DState, GObject,
     Input, L,
-    Language, Log,
+    Language, LNamedElement, Log,
     LPointerTargetable,
     Overlap,
     Pointer,
@@ -58,6 +58,19 @@ export function T2MEditor(props: EditorProps & {onBlur?: (value: string|undefine
         </div>)
 }
 
+function _export(data: LModelElement | undefined, extension: string, content: string): undefined {
+    let name: string = data?.name || "export";
+    console.trace("export");
+    U.download(name+"."+extension.toLowerCase(), content);
+}
+
+function _import(extension: string, onSave: (newValue: string) => void, setContent: (newValue: string) => void): undefined {
+    U.fileRead((e, files, contents)=>{
+        console.log("import", {e, files, contents});
+        if (contents?.[0]) { onSave(contents[0]), setContent(contents[0]);}
+    }, extension, true);
+}
+
 export function MTMComponent(props: AllProps): JSX.Element{
     // let groups={'Metamodelers':{}, 'Modelers':{}, 'Language designer':{}, 'Concrete Syntax designer':{}};
     // let groupsarr = Object.keys(groups);
@@ -105,7 +118,7 @@ export function MTMComponent(props: AllProps): JSX.Element{
     function New(){
         let name = U.increaseEndingNumber('My Language', false, false, (n)=> !!languages[n]);
         TRANSACTION('new language "'+name+'"', ()=> {
-            SetRootFieldAction.new('languages.'+name, new Language(), '', false)
+            SetRootFieldAction.new('languages.'+name, new Language("jlang"), '', false)
             AT_TRANSACTION( ()=> {
                 setLanguage(name);
                 setEditor(true);
@@ -113,6 +126,16 @@ export function MTMComponent(props: AllProps): JSX.Element{
 
         })
     }
+
+    const onSave = (newValue: string) => {
+        if (data) {
+            TRANSACTION('T2M transformation of "'+data.name+'" through "'+language+'"', () => {
+                doT2M(L.wrap(data) as LModelElement, language, newValue);
+            })
+        }
+        setFullscreen(false);
+    };
+
     return <section className={'w-100 h-100 p-2 MTM-tab'}>
         {/*<h1 className={"rightbar-title"}>Model → Text → Model</h1>*/}
         <h1 className={"rightbar-title"}>Languages (T2M, M2M, M2T)</h1>
@@ -180,19 +203,12 @@ export function MTMComponent(props: AllProps): JSX.Element{
             icon="bi-arrow-left-right"
             value={localValue || m2t_result}
             onChange={(value) => setLocalValue(value || '')}
-            onSave={(newValue) => {
-                if (data) {
-                    TRANSACTION('T2M transformation of "'+data.name+'" through "'+language+'"', ()=>{
-                        doT2M(L.wrap(data) as LModelElement, language, newValue);
-                    })
-                }
-                setFullscreen(false);
-            }}
+            onSave={onSave}
             language={language.toLowerCase()}
         />
         <div className={'export-row'}>
-            <button>Export</button>
-            <button>Import</button>
+            <button onClick={()=>_export(data, languageObj.extension || language, m2t_result)}>Export</button>
+            <button onClick={()=>_import(languageObj.extension || language, onSave, setLocalValue)}>Import</button>
         </div>
     </section>;
 }

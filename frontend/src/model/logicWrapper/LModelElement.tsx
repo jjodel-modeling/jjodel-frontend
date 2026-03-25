@@ -16,7 +16,7 @@ import {
     DState,
     DtoL, ECoreDetail,
     ECoreObject,
-    ECoreSubPackage,
+    ECoreSubPackage, EcoreXmiTags,
     EnumPointers,
     Function2,
     getWParams,
@@ -303,8 +303,29 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         }
     }
 
-    protected _convertEcoreToJom_m1(c: Context, ecore: GObject): GObject{
-        // todo
+    protected _convertEcoreToJom_m1(c: Context, ecore0: GObject): GObject{
+        let ecore = {...ecore0};
+        if (typeof ecore.features === "object" && ecore.features && !Array.isArray(ecore.features)) {
+            // transform feature dictionary into array keeping name
+            let arr = [];
+            for (let k in ecore.features) {
+                let v = ecore.features[k];
+                if (!v || typeof v !== 'object') { Log.ww("Object.t2m() invalid argument: json.features must contain sub-objects", {json:ecore0, k, v}); continue; }
+                if (Pointers.isPointer(k)) v.id = k;
+                else v.name = k;
+                arr.push(v);
+            }
+            ecore.features = arr;
+        }
+        else ecore.features = Uarr.asArray(ecore.features);
+
+        ecore.__childrenToSort = Uarr.asArray(ecore.__childrenToSort);
+        U.arrayMergeInPlace(ecore.features, ecore.__childrenToSort);
+        delete ecore.__childrenToSort;
+
+        // ecore.children = Uarr.asArray(ecore.children);
+        // U.arrayMergeInPlace(ecore.features, ecore.children || []);
+        // delete ecore.children;
         return ecore;
     }
 
@@ -886,6 +907,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     protected cannotCall(name: string, ...params: string[]): any {
         let cname = ((this.constructor as typeof RuntimeAccessibleClass)?.cname || this.constructor?.name);
         Log.exDevv(cname+'.'+name + '() should never be called directly, but should trigger get_' + name + '(' + params.join(', ') + '), this is only a signature for type checking.');
+        return true;
     }
 
     public addClass(): void {
@@ -5807,6 +5829,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     public get_t2m(c: Context): LObject['t2m'] {
         return (json: GObject, out_global_useless: {objectCreated: LObject[]} = {objectCreated: []}): this => {
             json = this._convertEcoreToJom_m1(c, json);
+            // if (true as any) return Dummy.doT2M(c, this)(json) as this;
             if (!LObject.maxDepth--) return c.proxyObject as this;
 
             TRANSACTION(this.get_name(c) + '.t2m()', ()=> {
@@ -5860,10 +5883,42 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
 
                 // START: actually set the values
                 let i = 0;
+                const getOrCreateValue = (name: string, /* v.name has sideeffects */v: Any<"subobject or primitive">): LValue | null => {
+                    let k = name;
+                    let isPointer = Pointers.isPointer(k);
+                    let child: LValue = newFeatures[k] || (isPointer && L.from(k)) || (l as any)['$' + k];
+                    let mid = v?.id;
+                    if (!child && mid) newFeatures[mid] || (isPointer && L.from(mid));
+                    let vname = v?.name;
+                    if (!child && vname) newFeatures[vname] ||  (l as any)['$' + vname];
+
+                    if (!child && isPartial) {
+                        let pointers: GObject = {father: c.data.id};
+                        if (v.id) pointers.id = v.id;
+                        child = (this as any as LObject).get_addValue(c, true)();//DValue.new3(pointers, ()=>{}, true);
+
+                        console.log(c.data.className+'.t2m() add child value', {k, v});
+                        // todo: support to create with correct pointer if the specified key is a pointer.
+                    }
+                    if (!child) return null;
+                    if (isPointer && (s.idlookup[k] as DValue)?.father !== c.data.id && s.idlookup[k].className === 'DValue') { // !!! NB: keep idloookup here, don't do D.from !!!
+                        // if element was already existing and was identified by ptr, it might need to change parent.
+                        // here child === L.from(s.idlookup[k]);
+                        child.father = c.data.id as any; // SetFieldAction.new(k as Pointer, 'father', c.data.id, '', true);
+                    }
+                    // console.log(c.data.className+'.t2m() child_value.t2m()', {k, bestmatch, l, child, v});
+                    if ((!v.name || !v.$name) && typeof v === 'object') {
+                        v.name = isPointer ? newFeaturesIDNameMap[k] : k;
+                        if (v.name === 'untyped') v.name += '_' + i;
+                    }
+                    return null;
+                }
+
                 for (let prefixed_k in json) {
+                    if (!json.hasOwnProperty(prefixed_k)) { continue; }
                     i++;
                     let v = json[prefixed_k];
-                    let isChildKey = TargetableProxyHandler.childKeys[prefixed_k[0]];
+                    let isChildKey = !!(TargetableProxyHandler.childKeys[prefixed_k[0]] as unknown);
                     let k: string; // without $ or @ prefix
                     if (isChildKey) { k = prefixed_k.substring(1); }
                     else {
@@ -5875,33 +5930,29 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
 
                     if (!isChildKey) {
                         console.log(c.data.className+'.t2m() set key', {k, k0: prefixed_k, isChildKey, json});
-                        (l as any)[k] = v;
-                    } else {
-                        let isPointer = Pointers.isPointer(k);
-                        let child: LValue = newFeatures[k] || (isPointer && L.from(k)) || (l as any)['$' + k];
-                        if (!child && isPartial) {
-                            let pointers: GObject = {father: c.data.id};
-                            if (v.id) pointers.id = v.id;
-                            child = (this as any as LObject).get_addValue(c, true)();//DValue.new3(pointers, ()=>{}, true);
-
-                            console.log(c.data.className+'.t2m() add child value', {k, v});
-                            // todo: support to create with correct pointer if the specified key is a pointer.
+                        let oldV = (c.data as any)[k];
+                        switch (k) {
+                            case "features":
+                                for (let v of json.features) {
+                                    if (typeof v !== 'object') { Log.ww("invalid Object.t2m parameter. Object.features must contain named sub-objects.", {v, json, d:c.data}); continue; }
+                                    let child = getOrCreateValue('', v);
+                                    if (child) child.t2m(v);
+                                    else Log.ww("Object.t2m() failed to find feature", {val:v, json, baseObj: c.data});
+                                }
+                                break;
+                            default:
+                                if (U.isShallowEqual(v, oldV)) break;
+                                if (!Dummy.t2mIgnoreKeys.includes(k) && !EcoreXmiTags.includes(k)) {
+                                    (l as any)[k] = v;
+                                }
+                                break;
                         }
-                        if (isPointer && (s.idlookup[k] as DValue)?.father !== c.data.id && s.idlookup[k].className === 'DValue') { // !!! NB: keep idloookup here, don't do D.from !!!
-                            // if element was already existing and was identified by ptr, it might need to change parent.
-                            // here child === L.from(s.idlookup[k]);
-                            child.father = c.data.id as any; // SetFieldAction.new(k as Pointer, 'father', c.data.id, '', true);
-                        }
-                        // console.log(c.data.className+'.t2m() child_value.t2m()', {k, bestmatch, l, child, v});
-                        if ((!v.name || !v.$name) && typeof v === 'object') {
-                            v.name = isPointer ? newFeaturesIDNameMap[k] : k;
-                            if (v.name === 'untyped') v.name += '_' + i;
-                        }
-                        child.t2m(v, out_global_useless);
+                    } else { // is childkey
+                        let child = getOrCreateValue(k, v);
+                        if (child) child.t2m(v, out_global_useless);
+                        else Log.ww("Object.t2m() failed to find feature", {name:k, val:v, json, baseObj: c.data});
                     }
                 }
-
-
             })
             return c.proxyObject as this;
         }
@@ -6054,9 +6105,17 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     }
     set_instanceof(val: LClass | DClass | Pointer<DClass> | undefined, c: Context, out?: {featureCreated: LValue[], featureRemoved: Pointer<DValue>[]}): boolean {
         if (Array.isArray(val)) return true;
-        const metaptr: D["instanceof"] = Pointers.from(val as any) as Pointer<DClass>;
+        let metaptr: D["instanceof"] = Pointers.from(val as any) as Pointer<DClass>;
+        if (!metaptr) { // attempt match by class name
+            let model = this.get_model(c);
+            metaptr = model.classes.filter(c=> c.name === val)[0]?.id;
+            if (!metaptr) {
+                metaptr = model.crossClasses.filter(c=> c.name === val)[0]?.id;
+            }
+            if (!metaptr) Log.ww("failed to find ");
+        }
         if (metaptr === c.data.instanceof) return true;
-        TRANSACTION(this.get_name(c)+'.instanceof', ()=>{
+        TRANSACTION(this.get_name(c)+'.instanceof', ()=> {
             this._removeConformity(c, out);
             SetFieldAction.new(c.data.id, "instanceof", metaptr, undefined, true);
             if (metaptr) {
@@ -6313,59 +6372,72 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     public t2m(json: GObject, out: {objectCreated: LObject[]} = {objectCreated: []}): this { this.cannotCall('LValue.t2m'); return this; }
 
     public get_apply(c: Context): LValue['apply'] { return this.get_t2m(c); }
+
     // NB: only usable if this is LObject or LValue, make a fallback if this is model to create/recover a new root object
     public get_t2m(c: Context): LValue['t2m'] {
         return (json: GObject, out: {objectCreated: LObject[]} = {objectCreated: []}): this => {
             json = this._convertEcoreToJom_m1(c, json);
+            console.log('L'+c.data.className.substring(1)+'.t2m() called.', {d:c.data, j:json});
 
-            TRANSACTION(this.get_name(c) + '.t2m()', ()=> {
-                console.log('L'+c.data.className.substring(1)+'.t2m() called.', {d:c.data, j:json});
-
-                let json_4val!: GObject[];
-                if (!json) { json = []; Log.eDevv('t2m deletion still unsupported'); return this; }
-                switch (c.data.className) {
-                    default: Log.ee('L'+c.data.className.substring(1)+'.t2m() todo, still unsupported.'); return this;
-                    case 'DValue': json_4val = Array.isArray(json) ? json : [json]; break;
-                }
-                // let childNames = this.get_childNames(c);
-
-                let m1: LModel = null as any;
-                let m2: LModel = null as any;
-
-                // filter typings
-                let uniformedValues: (Pointer|PrimitiveType)[] = [];
-                let type: LClassifier = (this as LValue).get_type(c);
-                let validSubTypes: LClassifier[];
-                let validTargets: (LObject|LEnumLiteral)[];
-                const includeEnum: boolean = false;
-                if (type?.className === 'DEnumerator') {
-                    if (includeEnum) validSubTypes = [type];
-                    else validSubTypes = [];
-                    //validInstances = (type as LEnumerator).literals;
-                } else {
-                    if (!m1) m1 = this.get_model(c);
-                    if (!m2) m2 = m1?.instanceof as LModel;
-                    let dependencies = m2?.dependencies || [];
-                    if (!type) {
-                        validSubTypes = dependencies.flatMap(m=>m.classes).filter(c=>c.instantiable);
-                        if (includeEnum) U.arrayMergeInPlace(validSubTypes, dependencies.flatMap(m=>m.enumerators));
-                    } else {
-                        validSubTypes = [type, ...(type as LClass).allSubClasses].filter(c=>c.instantiable);
-                        // let validSubTypesPointers = validSubTypes.map(t=>t.id);
-                        // let validInstances = m1.allSubObjects.filter(o => validSubTypesPointers.includes(o.type?.id));
-                        // let linkedModels: LModel[] = dependencies.flatMap(m2=> m2.instances);
-                        // let linkedModels_ptrs: Pointer<DModel>[] = linkedModels.map(m2=>m2.id);
-                        // validInstances = validSubTypes.flatMap(e=>e.instances).filter(o => linkedModels_ptrs.includes(o.model.id));
+            let json_4val!: GObject[];
+            if (!json) { json = []; Log.eDevv('t2m deletion still unsupported'); return this; }
+            // check if the root json is a dvalue object or an array of values or a single value (object pointed)
+            let isValueRoot: boolean = false;
+            switch (c.data.className) {
+                default: Log.ee('L'+c.data.className.substring(1)+'.t2m() todo, still unsupported.'); return this;
+                case 'DValue':
+                    // NB: do not use "values" in json, because Object.values() is a native function of all objects in js and always present.
+                    isValueRoot = typeof json === "object" && !Array.isArray(json) &&
+                        (json.hasOwnProperty("values") || json.hasOwnProperty("value") || json.className && json.className.toLowerCase().includes("value"));
+                    if (isValueRoot) {
+                        json_4val = json.values || json.value || [];
                     }
+                    else json_4val = json as any; break;
+            }
+            if (json_4val === null || json_4val === undefined) json_4val = [];
+            else if (!Array.isArray(json_4val)) json_4val = [json_4val];
+
+            console.log('isvalueroot',  {isValueRoot, jcn:json.className, vin: "values" in json, json })
+            // let childNames = this.get_childNames(c);
+
+            let m1: LModel = null as any;
+            let m2: LModel = null as any;
+
+            // filter typings
+            let uniformedValues: (Pointer|PrimitiveType)[] = [];
+            let type: LClassifier = (this as LValue).get_type(c);
+            let validSubTypes: LClassifier[];
+            let validTargets: (LObject|LEnumLiteral)[];
+            const includeEnum: boolean = false;
+            if (type?.className === 'DEnumerator') {
+                if (includeEnum) validSubTypes = [type];
+                else validSubTypes = [];
+                //validInstances = (type as LEnumerator).literals;
+            } else {
+                if (!m1) m1 = this.get_model(c);
+                if (!m2) m2 = m1?.instanceof as LModel;
+                let dependencies = m2?.dependencies || [];
+                if (!type) {
+                    validSubTypes = dependencies.flatMap(m=>m.classes).filter(c=>c.instantiable);
+                    if (includeEnum) U.arrayMergeInPlace(validSubTypes, dependencies.flatMap(m=>m.enumerators));
+                } else {
+                    validSubTypes = [type, ...(type as LClass).allSubClasses].filter(c=>c.instantiable);
+                    // let validSubTypesPointers = validSubTypes.map(t=>t.id);
+                    // let validInstances = m1.allSubObjects.filter(o => validSubTypesPointers.includes(o.type?.id));
+                    // let linkedModels: LModel[] = dependencies.flatMap(m2=> m2.instances);
+                    // let linkedModels_ptrs: Pointer<DModel>[] = linkedModels.map(m2=>m2.id);
+                    // validInstances = validSubTypes.flatMap(e=>e.instances).filter(o => linkedModels_ptrs.includes(o.model.id));
                 }
-                const validSubTypesMap: Dictionary<Pointer, LClassifier> = {};
-                for (let l of validSubTypes) validSubTypesMap[l.id] = l;
+            }
+            const validSubTypesMap: Dictionary<Pointer, LClassifier> = {};
+            for (let l of validSubTypes) validSubTypesMap[l.id] = l;
 
-                console.log('L'+c.data.className.substring(1)+'.t2m() types found.', {d:c.data, json, json_4val, validSubTypesMap, includeEnum, type});
+            console.log('L'+c.data.className.substring(1)+'.t2m() types found.', {d:c.data, json, json_4val, validSubTypesMap, includeEnum, type});
 
-                // START: actually set the values
-                let i: number = -1;
-                let oldValues: any[] = c.data.values; //this.get_values(c);
+            // START: actually set the values
+            let i: number = -1;
+            let oldValues: any[] = c.data.values; //this.get_values(c);
+            TRANSACTION(this.get_name(c) + '.t2m()', ()=> {
                 for (let v of json_4val) {
                     ++i;
                     let child2: LObject | undefined = undefined;
@@ -6419,7 +6491,20 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                     }
                 }
                 if (this.get_instanceof(c)?.name === 'expression') console.error('set val', {uniformedValues, json, validSubTypesMap, out, oldValues})
+                console.log('t2m setvalues',  {uniformedValues, c, json, json_4val});
                 this.set_values(uniformedValues, c);
+                // set other properties
+
+                if (isValueRoot) for (let k in json) {
+                    switch (k) {
+                        case "values": case "value": case "instanceof": continue;
+                    }
+                    let oldV = (c.data as any)[k];
+                    let v = json[k];
+                    if (!Dummy.t2mIgnoreKeys.includes(k) && !EcoreXmiTags.includes(k) && !U.isShallowEqual(v, oldV)) {
+                        (c.proxyObject as any)[k] = v;
+                    }
+                }
 
             })
             return c.proxyObject as this;
@@ -6604,89 +6689,102 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             let isDValue = c.data.className === "DValue";
             let isDModel = c.data.className === "DModel";
 
+            // TRANSACTION(this.get_name(c as any)+'.addObject()', () => {
+            let instanceoff: undefined | LAttribute | LReference = isDValue ? this.get_instanceof(c as Context) : undefined;
+            let dinstanceoff: undefined | DAttribute | DReference = instanceoff && instanceoff.__raw;
+            // let ShapelessObjectID =
+            let isShapeless: boolean = !dinstanceoff; // || dinstanceoff && ((dinstanceoff?.id | dinstanceoff) === ShapelessObjectID);
+            let isReference: boolean = !!(dinstanceoff && dinstanceoff.className === "DReference");
+            if (isDValue && !isReference && !isShapeless) {
+                Log.ee("cannot call addObject() on a DValue implementing an attribute", {dinstanceoff, thiss:c.data});
+                return lobj;
+            }
+            let isContainment: boolean = (isDValue && this.get_containment(c as Context)) || isDModel;
+            // if (metaclass === undefined) metaclass = "object"; // in this case, i first check if a class "object" exist, then make a shapeless object if not.
+            let state: DState = store.getState();
+            father = isContainment ? c.data.id : this.get_model(c).id;
+            let constructorPointers: Partial<ObjectPointers> = {...json, father};
+
+            // if undefined = explicitly told to make it shapeless. if null, it's automatic selection by value.type or m2-model classes.
+            //console.log('Object.new3', {metaclass, forceCreation, json});
+            if (metaclass !== null) {
+                let lmetaclass: LClass | undefined;
+                // find instance schema: 1) by explicit type argument
+                if (metaclass) {
+                    // find instance schema: 1.1) by pointer AND 1.3) by Dclass
+                    lmetaclass = LPointerTargetable.from(metaclass, state);
+                    // find instance schema: 1.2) by $class_name
+                    if ((!lmetaclass || lmetaclass.className !== "DClass") && typeof metaclass === "string") {
+                        let m2classes = c.proxyObject.model?.instanceof?.classes;
+                        if (m2classes) lmetaclass = LPointerTargetable.from(m2classes["$" + metaclass] || m2classes[metaclass], state);
+                        // if (!lmetaclass && typeof metaclass === "string" && metaclass.toLowerCase() === "object") lmetaclass = undefined;
+                    }
+                    //(window as any).debugg = LValue.getInstantiableClasses(this, c, json, true, lmetaclass ? [lmetaclass, ...lmetaclass.allSubClasses] : []);
+                    // check if metaclass is found
+                    if (!lmetaclass || lmetaclass.className !== "DClass") {
+                        Log.ee("provided schema type does not belong to a Class, cannot intantiate.", {lmetaclass, schema:metaclass, this:c.data})
+                        return lobj;
+                    };
+                    // check if metaclass is valid (instantiable in the callee collection: .values or .objects)
+                    // console.log("isExtending", {lmetaclass, type: isDValue && this.get_type?.(c as any)});
+                    if (isDValue && !lmetaclass.isExtending(this.get_type(c as Context) as LClass)) {
+                        Log.ee("provided schema type does not extend this.type, cannot intantiate.", {lmetaclass, schema:metaclass, this:c.data});
+                        return lobj;
+                    }
+                }
+                // find instance schema: 2) by dvalue.type
+                else if (isDValue && !isShapeless) {
+                    lmetaclass = this.get_type(c as Context) as LClass;
+                }
+                // phase 2: using lmetaclass (if found), i set constructorPointers.instanceof
+                // if requested type is found. but might be abstract, so i filter the best subclass match
+                if (lmetaclass) {
+                    if (forceCreation && metaclass) {
+                        constructorPointers.instanceof = (typeof metaclass === 'string' ? metaclass : (metaclass as any).id);
+                    }
+                    else {
+                        constructorPointers.instanceof = LValue.getInstantiableClasses(this, c, json, false,
+                            [lmetaclass, ...lmetaclass.allSubClasses], lmetaclass)[0] as any; // actually a L-class, but "ObjectPointers" can accept them too.
+                    }
+                    if (!constructorPointers.instanceof) { // the whole if is just printing error.
+                        let matches = LValue.getInstantiableClasses(this, c, json, true, [lmetaclass, ...lmetaclass.allSubClasses]);
+                        if (lmetaclass?.isSingleton) Log.ee("addObject(schema) cannot instantiate " + metaclass + " because it is a singleton.", {json, matches, this: c.data});
+                        Log.ee("addObject(schema) could not find a valid subtype of " + metaclass +
+                            " conforming ot that schema to instantiate an object.\n" + (matches.length ? "closest match was: " + matches[0].name : ""),
+                            {json, matches, this: c.data});
+                        return lobj;
+                    }
+                }
+                // if not found, i look among all m2classes
+                else if (!isDValue || isShapeless) {
+                    // if shapelessvalue.addObject() --> infer schema from json keys and ref sub-types best match
+                    // if model.addObject() --> find best match within all classes
+                    (window as any).debugg = this.get_model(c).instantiableClasses(json, true);
+                    constructorPointers.instanceof = this.get_model(c).instantiableClasses(json, false)[0] as any // actually a L-class, but "ObjectPointers" can accept them too.
+                    if (!constructorPointers.instanceof) { // the whole if is just printing error.
+                        let matches = isDValue ? this.get_instantiableClasses(c as Context)(json, true) : this.get_model(c).instantiableClasses(json, true);
+                        let type: LClassifier = isDValue ? this.get_type(c as Context) : undefined as any;
+                        Log.ee("LValue.addObject(schema) could not find a valid " + (c.data.className === "DValue" ? "subtype of " + type.name : "type") +
+                            " conforming ot that schema to instantiate an object.\n" + (matches.length ? "closest match was: " + (matches[0] as any)?.class.name : ""), {json, type, matches, thiss: c.data});
+                        return lobj;
+                    }
+                }
+                if (!constructorPointers.instanceof && isDValue && !isShapeless) {
+                    Log.ee("could not find an instantiable subtype for given schema and type " + instanceoff?.type?.name, {schema: json, type: instanceoff?.type})
+                    return lobj;
+                }
+            }
+            // both dmodel.objects nad dvalue.values are updated by the Constructors by passing father parameter.
+            // phase 3: create object according to schema (or shapeless) and update parent container collection.
+            console.log("Object.new3", {constructorPointers});
+            if (!constructorPointers.name && constructorPointers.instanceof){
+                let meta = L.from(constructorPointers.instanceof) as LClass;
+                if (meta.isSingleton){ constructorPointers.name = meta.name; }
+            }
             TRANSACTION(this.get_name(c as any)+'.addObject()', () => {
-                let instanceoff: undefined | LAttribute | LReference = isDValue ? this.get_instanceof(c as Context) : undefined;
-                let dinstanceoff: undefined | DAttribute | DReference = instanceoff && instanceoff.__raw;
-                // let ShapelessObjectID =
-                let isShapeless: boolean = !dinstanceoff; // || dinstanceoff && ((dinstanceoff?.id | dinstanceoff) === ShapelessObjectID);
-                let isReference: boolean = !!(dinstanceoff && dinstanceoff.className === "DReference");
-                if (isDValue && !isReference && !isShapeless) return Log.ee("cannot call addObject() on a DValue implementing an attribute", {dinstanceoff, thiss:c.data});
-                let isContainment: boolean = (isDValue && this.get_containment(c as Context)) || isDModel;
-                // if (metaclass === undefined) metaclass = "object"; // in this case, i first check if a class "object" exist, then make a shapeless object if not.
-                let state: DState = store.getState();
-
-                father = isContainment ? c.data.id : this.get_model(c).id;
-                let constructorPointers: Partial<ObjectPointers> = {...json, father};
-
-                // if undefined = explicitly told to make it shapeless. if null, it's automatic selectyion by value.type or m2-model classes.
-                //console.log('Object.new3', {metaclass, forceCreation, json});
-                if (metaclass !== null) {
-                    let lmetaclass: LClass | undefined;
-                    // find instance schema: 1) by explicit type argument
-                    if (metaclass) {
-                        // find instance schema: 1.1) by pointer AND 1.3) by Dclass
-                        lmetaclass = LPointerTargetable.from(metaclass, state);
-                        // find instance schema: 1.2) by $class_name
-                        if ((!lmetaclass || lmetaclass.className !== "DClass") && typeof metaclass === "string") {
-                            let m2classes = c.proxyObject.model?.instanceof?.classes;
-                            if (m2classes) lmetaclass = LPointerTargetable.from(m2classes["$" + metaclass] || m2classes[metaclass], state);
-                            // if (!lmetaclass && typeof metaclass === "string" && metaclass.toLowerCase() === "object") lmetaclass = undefined;
-                        }
-                        //(window as any).debugg = LValue.getInstantiableClasses(this, c, json, true, lmetaclass ? [lmetaclass, ...lmetaclass.allSubClasses] : []);
-                        // check if metaclass is found
-                        if (!lmetaclass || lmetaclass.className !== "DClass") return Log.ee("provided schema type does not belong to a Class, cannot intantiate.", {lmetaclass, schema:metaclass, this:c.data});
-                        // check if metaclass is valid (instantiable in the callee collection: .values or .objects)
-                        // console.log("isExtending", {lmetaclass, type: isDValue && this.get_type?.(c as any)});
-                        if (isDValue && !lmetaclass.isExtending(this.get_type(c as Context) as LClass)) return Log.ee("provided schema type does not extend this.type, cannot intantiate.", {lmetaclass, schema:metaclass, this:c.data});
-                    }
-                    // find instance schema: 2) by dvalue.type
-                    else if (isDValue && !isShapeless) {
-                        lmetaclass = this.get_type(c as Context) as LClass;
-                    }
-                    // phase 2: using lmetaclass (if found), i set constructorPointers.instanceof
-                    // if requested type is found. but might be abstract, so i filter the best subclass match
-                    if (lmetaclass) {
-                        if (forceCreation && metaclass) {
-                            constructorPointers.instanceof = (typeof metaclass === 'string' ? metaclass : (metaclass as any).id);
-                        }
-                        else {
-                            constructorPointers.instanceof = LValue.getInstantiableClasses(this, c, json, false,
-                                [lmetaclass, ...lmetaclass.allSubClasses], lmetaclass)[0] as any; // actually a L-class, but "ObjectPointers" can accept them too.
-                        }
-                        if (!constructorPointers.instanceof) { // the whole if is just printing error.
-                            let matches = LValue.getInstantiableClasses(this, c, json, true, [lmetaclass, ...lmetaclass.allSubClasses]);
-                            if (lmetaclass?.isSingleton) Log.ee("addObject(schema) cannot instantiate " + metaclass + " because it is a singleton.", {json, matches, this: c.data});
-                            return Log.ee("addObject(schema) could not find a valid subtype of " + metaclass +
-                                " conforming ot that schema to instantiate an object.\n" + (matches.length ? "closest match was: " + matches[0].name : ""),
-                                {json, matches, this: c.data});
-                        }
-                    }
-                    // if not found, i look among all m2classes
-                    else if (!isDValue || isShapeless) {
-                        // if shapelessvalue.addObject() --> infer schema from json keys and ref sub-types best match
-                        // if model.addObject() --> find best match within all classes
-                        (window as any).debugg = this.get_model(c).instantiableClasses(json, true);
-                        constructorPointers.instanceof = this.get_model(c).instantiableClasses(json, false)[0] as any // actually a L-class, but "ObjectPointers" can accept them too.
-                        if (!constructorPointers.instanceof) { // the whole if is just printing error.
-                            let matches = isDValue ? this.get_instantiableClasses(c as Context)(json, true) : this.get_model(c).instantiableClasses(json, true);
-                            let type: LClassifier = isDValue ? this.get_type(c as Context) : undefined as any;
-                            return Log.ee("LValue.addObject(schema) could not find a valid " + (c.data.className === "DValue" ? "subtype of " + type.name : "type") +
-                                " conforming ot that schema to instantiate an object.\n" + (matches.length ? "closest match was: " + (matches[0] as any)?.class.name : ""), {json, type, matches, thiss: c.data});
-                        }
-                    }
-                    if (!constructorPointers.instanceof && isDValue && !isShapeless) {
-                        return Log.ee("could not find an instantiable subtype for given schema and type " + instanceoff?.type?.name, {schema: json, type: instanceoff?.type})
-                    }
-                }
-                // both dmodel.objects nad dvalue.values are updated by the Constructors by passing father parameter.
-                // phase 3: create object according to schema (or shapeless) and update parent container collection.
-                console.log("Object.new3", {constructorPointers});
-                if (!constructorPointers.name && constructorPointers.instanceof){
-                    let meta = L.from(constructorPointers.instanceof) as LClass;
-                    if (meta.isSingleton){ constructorPointers.name = meta.name; }
-                }
                 let dobj = DObject.new3(constructorPointers, () => { }, isDModel?DModel:DValue, true);
                 if (isReference && !isContainment){
+                    console.log("set values in addobject", {dobj, c, d: c.data, vals: (c.data as any).values, m2v: c.proxyObject.instanceof});
                     // if is ref containment, object.father is set to value, which also appends the object to this.values
                     // if it's model, object.father = model, and it goes in model.objects and not in values.
                     // if it's non-containment value, it goes in model but also appended to this.values
@@ -6768,6 +6866,8 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     protected get_unique(context: Context): LStructuralFeature["unique"] { return this.get_fromlfeature(context.proxyObject.instanceof, "unique"); }
     protected get_isMany(context: Context): LStructuralFeature["many"] { return this.get_many(context); }
     protected get_many(context: Context): LStructuralFeature["many"] { return this.get_fromlfeature(context.proxyObject.instanceof, "many"); }
+    protected get_upperbound(c: Context): LStructuralFeature["upperBound"] { return this.get_upperBound(c); }
+    protected get_lowerbound(c: Context): LStructuralFeature["lowerBound"] { return this.get_lowerBound(c); }
     protected get_upperBound(context: Context): LStructuralFeature["upperBound"] { return this.get_fromlfeature(context.proxyObject.instanceof, "upperBound"); }
     protected get_lowerBound(context: Context): LStructuralFeature["lowerBound"] { return this.get_fromlfeature(context.proxyObject.instanceof, "lowerBound"); }
     protected get_ordered(context: Context): LStructuralFeature["ordered"] { return this.get_fromlfeature(context.proxyObject.instanceof, "ordered"); }
@@ -6784,12 +6884,15 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         if (!pointer) return undefined;
         return LPointerTargetable.from(pointer)
     }
+
+
     set_instanceof(val: Pack1<this["instanceof"]>, c: Context): boolean {
-        let ptr = Pointers.from<DNamedElement>(val as any);
-        if (ptr === c.data.instanceof) return true;
+        this.cannotSet("LValue.set instanceof"); // if you enable it, check lobject implementation
+        /* let metaptr = Pointers.from<DNamedElement>(val as any);
+        if (metaptr === c.data.instanceof) return true;
         TRANSACTION(this.get_name(c)+'.instanceof', ()=>{
-            SetFieldAction.new(c.data, 'instanceof', ptr, "", true);
-        }, this.get_instanceof(c)?.fullname, LPointerTargetable.wrap(ptr)?.fullname)
+            SetFieldAction.new(c.data, 'instanceof', metaptr, "", true);
+        }, this.get_instanceof(c)?.fullname, LPointerTargetable.wrap(metaptr)?.fullname)*/
         return true;
     }
 
@@ -7132,8 +7235,8 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         }
         if (!skipSettingUndefined) SetFieldAction.new(context.data, 'values.' + index as any, undefined, '', info.isPtr);
     }
-    protected get_setValueAtPosition(c: Context): ((index: number, val: this["values"][0], info?: Partial<SetValueAtPositionInfoType>, outactions?:outactions) => {success: boolean, reason?: string}) {
-        return (index: number, val: this["values"][0] | any, info0?: Partial<SetValueAtPositionInfoType>, outactions?: outactions): { success: boolean, reason?: string } => {
+    protected get_setValueAtPosition(c: Context): ((index: number, val: this["values"][0], info?: Partial<SetValueAtPositionInfoType>, outactions?:outactions, lname?: string) => {success: boolean, reason?: string}) {
+        return (index: number, val: this["values"][0] | any, info0?: Partial<SetValueAtPositionInfoType>, outactions?: outactions, lname: string = ''): { success: boolean, reason?: string } => {
             if (!outactions) outactions = {clear:[], set:[], immediatefire: true}
             let isPtr: boolean = undefined as any;
             let lval: LObject | LEnumLiteral = undefined as any;
@@ -7211,15 +7314,15 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                     }
                 }
             }
-
-            TRANSACTION(this.get_name(c)+'.setValue('+index+': index)', ()=>{
+            if (!lname) lname = this.get_name(c);
+            TRANSACTION(lname+'.setValue('+index+': index)', ()=>{
                 if (!outactions) return;
                 // clear sideeffect part
                 outactions.clear.push(()=>this._clearValueAtPosition(c, index, info, true));
                 // console.log('set value index', {index, val, isPtr});
                 // actual set
                 outactions.set.push(()=>SetFieldAction.new(c.data, 'values.' + index as any, val, '', isPtr));
-                if (index === 0 && c.data.name?.toLowerCase() === 'name' && c.data.father) {
+                if (index === 0 && lname?.toLowerCase() === 'name' && c.data.father) {
                     outactions.set.push(()=> SetFieldAction.new(c.data.father, 'name', val, '', false));
                 }
                 if (info.setMirage !== false) SetFieldAction.new(c.data, 'isMirage', false, '', false);
@@ -7238,6 +7341,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         let modified = false;
         let meta = this.get_instanceof(c);
         let dmeta: DReference | DAttribute | undefined = meta?.__raw;
+        let lname =  this.get_name(c);
         if (dmeta?.derived) {
             let td = transientProperties.modelElement[dmeta.id];
             if (!td.derived_write) {
@@ -7246,10 +7350,10 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                     td.derived_write = new Function('values, data, oldValues', 'return ('+txt+')(data, originalValues)') as Function2;
                 }
                 catch (error: any) {
-                    Log.ee('invalid derived (set) attribute expression: ' + dmeta.name, {error, derivedText:dmeta.derived_write});
+                    Log.ee('invalid derived (set) attribute expression: ' + lname, {error, derivedText:dmeta.derived_write});
                 }
                 if(td.derived_write) try {
-                    TRANSACTION('changed ' + this.get_name(c)+' derived attributes', ()=>{
+                    TRANSACTION('changed ' +lname+' derived attributes', ()=>{
                         let ret = td?.derived_write?.(val, c.proxyObject, c.data.values);
                         if (ret !== undefined) {
                             val = ret;
@@ -7258,7 +7362,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                     })
                 }
                 catch (error: any) {
-                    Log.ee('Error during derived (set) attribute evaluation: ' + dmeta.name, {error, derivedText:dmeta.derived_write});
+                    Log.ee('Error during derived (set) attribute evaluation: ' + lname, {error, derivedText:dmeta.derived_write});
                 }
             }
         }
@@ -7274,7 +7378,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         TRANSACTION(this.get_fullname(c)+'.values', ()=>{
             let outactions: outactions = {clear:[], set:[], immediatefire: false};
             for (let i = 0; i < val.length; i++) {
-                let out = this.get_setValueAtPosition(c)(i, val[i], {setMirage: false} as any, outactions);
+                let out = this.get_setValueAtPosition(c)(i, val[i], {setMirage: false} as any, outactions, lname);
                 modified = out.success || modified;
                 // console.log('set_values', {val, i, modifiedreason:out});
             }

@@ -1,4 +1,4 @@
-import type {
+import {
     DState,
     GObject,
     Pointer,
@@ -13,7 +13,7 @@ import type {
     DClassifier,
     LModel,
     LValue,
-    Dependency,
+    Dependency, DValue,
 } from '../joiner';
 
 import {
@@ -46,6 +46,7 @@ import { ActivityType } from '../types/activity';
 import {i} from "vite/dist/node/chunks/moduleRunnerTransport";
 
 export class Dummy {
+    static t2mIgnoreKeys = ['id','pointedBy','className'];
     static get_delete(thiss: L, context: any): () => void {
         const lDeleted: L & GObject = context.proxyObject;
         const dDeleted = context.data;
@@ -381,6 +382,7 @@ export class Dummy {
                             break;
                         case 'DEnumerator': collection = 'literals'; break;
                         case 'DOperation': collection = 'parameters'; break;
+                        case 'DObject': collection = 'features'; break;
                         default:
                             Log.eDevv('eCore ambiguous child collection found in a leaf element', {childJson:json, k, v, parent:c.data});
                             break;
@@ -415,6 +417,7 @@ export class Dummy {
                     let v = json[k];
                     let arr: (Pointer|D|L)[] = Array.isArray(v) ? v : [v];
                     let i: number = -1;
+                    // if (v) console.log("register children", {k, v, json, arr});
                     for (let v of arr) {
                         ++i;
                         if (!v) {
@@ -459,6 +462,7 @@ export class Dummy {
                         if (gv.id) {
                             child = L.fromPointer(gv.id) || L.fromPointer(Pointers.prefix + gv.id);
                             if (!child) {
+                                // console.warn("doChildrenupdate", {k, i, json: v, src:"id"});
                                 childrenToUpdateByNew.push({k, i, json:v});
                                 continue; // valid, new element
                             }
@@ -490,6 +494,7 @@ export class Dummy {
                             }
                             // if name not matching, don't create it yet, it might be renamed -> attempt match by index.
                         }
+                        // console.log("register children not match", {child, k, i})
                         unregisteredChildren.push({k, i});
                     }
                 }
@@ -498,14 +503,14 @@ export class Dummy {
                 // uses __childrenToSort
                 const registerByCollection = (k0: string, i: number)=> {
                     let child: LModelElement = null as any;
-                    let v = json[k0];
-                    let arr = Array.isArray(v) ? v : (v ? [v] : []);
+                    let arr_0 = json[k0];
+                    let arr = Array.isArray(arr_0) ? arr_0 : (arr_0 ? [arr_0] : []);
                     let gv = arr[i];
                     let k: string = k0;
                     let msg: string = ''
                     let [dparent, lparent] = getParent(k, gv);
                     if (!dparent) {
-                        childrenToUpdateInvalidMismatches.push({k, i, json:v, reason: 'parent element not found'});
+                        childrenToUpdateInvalidMismatches.push({k, i, json:gv, reason: 'parent element not found'});
                         return;
                     }
                     let oldValues: LModelElement[];
@@ -513,15 +518,16 @@ export class Dummy {
                     child = oldValues?.[i];
                     if (!child) {
                         // Log.ee('M2T could not match a children element', {gv:JSON.parse(JSON.stringify(gv)), k0, k, json:JSON.parse(JSON.stringify(json)), arr:JSON.parse(JSON.stringify(arr)), i, oldValues});
-                        // childrenToUpdateInvalidMismatches.push({k, i, json:v, reason: 'match by index failed, old index is not populated'});
-                        childrenToUpdateByNew.push({k, i, json:v});
+                        // childrenToUpdateInvalidMismatches.push({k, i, json:gv, reason: 'match by index failed, old index is not populated'});
+                        // console.warn("doChildrenupdate", {k, i, json: gv, src:"collection/index", arr, jjson:json});
+                        childrenToUpdateByNew.push({k, i, json:gv});
                         return; // valid, completed registration
                     }
                     if (registeredMap.get(child)) {
                         Log.ee(msg = 'M2T element matched by index matched the same modelElement matched by other elements by name or id.\n' +
                                 'Please give id or names to all elements or none.',
                             {gv:JSON.parse(JSON.stringify(gv)), k0, k, json:JSON.parse(JSON.stringify(json)), arr:JSON.parse(JSON.stringify(arr)), i, oldValues});
-                        childrenToUpdateInvalidMismatches.push({k, i, json:v, reason: msg+" i:"+i + " k:"+k});
+                        childrenToUpdateInvalidMismatches.push({k, i, json:gv, reason: msg+" i:"+i + " k:"+k});
                         return;
                     }
                     // valid, completed registration
@@ -589,31 +595,12 @@ export class Dummy {
                 // do non-children properties first
                 for (let k in json) {
                     let v = json[k];
-                    // ignore some unsettable keys.
-                    switch (k) {
-                        case 'id':
-                        case 'pointedBy':
-                        case 'className': continue;
-                        default:
-                            // do childs last
-                            if (DPointerTargetable.childKeys.includes(k)) continue;
-                            if (EcoreXmiTags.includes(k)) continue;
-                            break;
-                    }
                     let oldV = (c.data as any)[k];
-
-                    // check for non-changes to skip.
-                    switch (typeof v){
-                        default:
-                            if (v === oldV) continue;
-                            break;
-                        case 'object':
-                            // if (Array.isArray(v)) { U.arrayDifference() }
-                            let diff = Uobj.objdiff(v, oldV, false, false);
-                            if (diff.added.length + diff.changed.length/* + diff.removed.length*/ === 0) continue;
-                            break;
-                        case 'function': if (v.toString() === oldV.toString()) continue;
-                    }
+                    // ignore some unsettable keys / skip non-changes.
+                    if (Dummy.t2mIgnoreKeys.includes(k) || EcoreXmiTags.includes(k) || U.isShallowEqual(v, oldV)) continue;
+                    // do childs last
+                    if (DPointerTargetable.childKeys.includes(k)) continue;
+                    
 
                     // do assignment
                     switch (k) {

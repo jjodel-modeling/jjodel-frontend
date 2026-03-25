@@ -477,8 +477,9 @@ function ContextMenuComponentInner(props: AllProps) {
 
         /* AUTO-SIZING */
         let gn = node as GObject;
-        if (gn.isResized) ContextEntry('asize', icon['contract'], 'Restore auto-sizing', () => gn.isResized = false, key_bindings.asize.keystroke)
-        else ContextEntry('nasize', icon['expand'], 'Disable auto-sizing', () => gn.isResized = true, key_bindings.asize.keystroke)
+        // keep function {wrapped}, cannot return false or it disables triggering close event.
+        if (gn.isResized) ContextEntry('asize', icon['contract'], 'Restore auto-sizing', () => {gn.isResized = false; /*read above*/}, key_bindings.asize.keystroke)
+        else ContextEntry('nasize', icon['expand'], 'Disable auto-sizing', () => {gn.isResized = true}, key_bindings.asize.keystroke)
 
         // /* LOCK-UNLOCK */
         // jsxList.push(<div onClick={() => {close(); ldata.delete(); /*node.delete();*/}} className={'col item'} tabIndex={0}>{icon['lock']} Lock/Unlock<div> <i
