@@ -18,3 +18,5 @@ export { executeUndo, executeRedo } from './undoredo';
 export { executeClear } from './clear';
 export { executeValidate } from './validate';
 export { executeExtends } from './extends';
+export { executeLet } from './let';
+export { executeForAll } from './forall';

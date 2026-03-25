@@ -67,7 +67,7 @@ export async function executeEval(
  * Converts L-layer proxy objects to plain JjelValue objects
  * using shallow conversion to avoid circular reference issues.
  */
-function buildEvalContext(context: ExecutionContext): Record<string, JjelValue> {
+export function buildEvalContext(context: ExecutionContext): Record<string, JjelValue> {
     const variables: Record<string, JjelValue> = {};
 
     const project = getProject(context);

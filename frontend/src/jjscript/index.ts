@@ -47,6 +47,12 @@ export {
     executeScript
 } from './executor/executor';
 
+// Let command handler
+export { executeLet } from './executor/commands/let';
+
+// ForAll command handler
+export { executeForAll } from './executor/commands/forall';
+
 // Resolvers
 export {
     resolveElement,

@@ -10,7 +10,9 @@ import {
     ExecutionResult,
     ExecutionError,
     ExecutionContext,
-    CommandHistoryEntry
+    CommandHistoryEntry,
+    LetArgs,
+    ForAllArgs
 } from '../types';
 import { executeCreate } from './commands/create';
 import { executeDelete } from './commands/delete';
@@ -28,6 +30,8 @@ import { executeClear } from './commands/clear';
 import { executeValidate } from './commands/validate';
 import { executeExtends } from './commands/extends';
 import { executeEval } from './commands/eval';
+import { executeLet } from './commands/let';
+import { executeForAll } from './commands/forall';
 import { extractDependencies } from './dependencies';
 import { waitForDependencies } from './elementWaiter';
 
@@ -75,16 +79,18 @@ export class JjScriptExecutor {
     }
 
     /**
-     * Execute a parsed AST node
+     * Execute a parsed AST node.
+     * @param contextOverride — optional scoped context (used by `let` to inject variables)
      */
-    async executeAST(ast: CommandNode): Promise<ExecutionResult> {
+    async executeAST(ast: CommandNode, contextOverride?: ExecutionContext): Promise<ExecutionResult> {
+        const context = contextOverride || this.context;
         const startTime = Date.now();
 
         try {
             // PRE-CHECK: Wait for dependencies before executing
             const dependencies = extractDependencies(ast);
             if (dependencies.length > 0) {
-                const waitResult = await waitForDependencies(dependencies, this.context);
+                const waitResult = await waitForDependencies(dependencies, context);
                 if (!waitResult.allResolved) {
                     const missing = waitResult.unresolved.map(d => `${d.name.raw} (${d.role})`).join(', ');
                     console.warn(`[JjScript] Unresolved dependencies after ${waitResult.waitedMs}ms: ${missing}`);
@@ -98,34 +104,34 @@ export class JjScriptExecutor {
 
             switch (ast.command) {
                 case 'create':
-                    result = await executeCreate(ast.args as any, this.context);
+                    result = await executeCreate(ast.args as any, context);
                     break;
                 case 'delete':
-                    result = await executeDelete(ast.args as any, this.context);
+                    result = await executeDelete(ast.args as any, context);
                     break;
                 case 'rename':
-                    result = await executeRename(ast.args as any, this.context);
+                    result = await executeRename(ast.args as any, context);
                     break;
                 case 'set':
-                    result = await executeSet(ast.args as any, this.context);
+                    result = await executeSet(ast.args as any, context);
                     break;
                 case 'add':
-                    result = await executeAdd(ast.args as any, this.context);
+                    result = await executeAdd(ast.args as any, context);
                     break;
                 case 'remove':
-                    result = await executeRemove(ast.args as any, this.context);
+                    result = await executeRemove(ast.args as any, context);
                     break;
                 case 'move':
-                    result = await executeMove(ast.args as any, this.context);
+                    result = await executeMove(ast.args as any, context);
                     break;
                 case 'copy':
-                    result = await executeCopy(ast.args as any, this.context);
+                    result = await executeCopy(ast.args as any, context);
                     break;
                 case 'list':
-                    result = await executeList(ast.args as any, this.context);
+                    result = await executeList(ast.args as any, context);
                     break;
                 case 'show':
-                    result = await executeShow(ast.args as any, this.context);
+                    result = await executeShow(ast.args as any, context);
                     break;
                 case 'help':
                     result = executeHelp(ast.args as any);
@@ -137,16 +143,22 @@ export class JjScriptExecutor {
                     result = executeRedo(ast.args as any, this.undoStack, this.redoStack);
                     break;
                 case 'clear':
-                    result = executeClear(ast.args as any, this.context);
+                    result = executeClear(ast.args as any, context);
                     break;
                 case 'validate':
-                    result = await executeValidate(ast.args as any, this.context);
+                    result = await executeValidate(ast.args as any, context);
                     break;
                 case 'extends':
-                    result = await executeExtends(ast.args as any, this.context);
+                    result = await executeExtends(ast.args as any, context);
                     break;
                 case 'eval':
-                    result = await executeEval(ast.args as any, this.context);
+                    result = await executeEval(ast.args as any, context);
+                    break;
+                case 'let':
+                    result = await executeLet(ast.args as LetArgs, context);
+                    break;
+                case 'forall':
+                    result = await executeForAll(ast.args as ForAllArgs, context);
                     break;
                 default:
                     result = {
@@ -157,7 +169,7 @@ export class JjScriptExecutor {
                     };
             }
 
-            // Record in history
+            // Record in main history (always on this.context, not override)
             this.recordHistory(ast, result);
 
             return result;

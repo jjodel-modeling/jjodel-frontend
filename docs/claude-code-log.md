@@ -1,5 +1,40 @@
 # Claude Code Session Log
 
+## 2026-03-25 — Audit: language documentation vs implementation
+
+**Prompt**: Systematic audit of `docs/jjtl-jjel-paper.tex` against the codebase (JjEL, JjTL, JjModal, JjLet, JjScript)
+**File toccati**: `docs/LANGUAGE-DOCS-AUDIT.md` (creato)
+**Esito**: ✅ completato
+**Note**: 55 punti verificati — 35 allineati, 13 parzialmente disallineati, 7 disallineati, 3 non documentati. Le discrepanze critiche sono: (1) `when` vs `where` keyword mismatch in tutto il documento, (2) short-circuit evaluation dichiarato ma non implementato, (3) `filter()`/`map()` dichiarati rimossi ma ancora presenti, (4) JjScript completamente non documentato nel paper. Vedi report completo per dettagli e priorità di aggiornamento.
+
+---
+
+## 2026-03-25 — Feat: implement `let` command in JjScript (Phase 3 of JjLet)
+
+### Changes
+- Added `'let'` to `CommandType` union, `LetArgs` interface, `CommandArgs` union, and `COMMANDS` array in `types.ts`
+- Added `parseLetCommand()` in `parser.ts` with helpers: `consumeDollarIdentifier()`, `collectValueExprRaw()`, `matchComma()`, `skipNewlines()`
+- Added `$variable` support in `parseValueOrQualified()` — parses `$name` as a QualifiedName for use in set/rename values
+- Added optional `contextOverride` parameter to `JjScriptExecutor.executeAST()` for scoped context injection
+- Added `case 'let'` in executor switch dispatch
+- Created `executor/commands/let.ts` handler with:
+  - `executeLet()` — creates child context, evaluates bindings sequentially, resolves variables in body AST, executes body
+  - `evaluateBindingValue()` — dispatches to prompt/confirm (UIBridge) or JjEL evaluation
+  - `resolveVariablesInBody()` — walks body AST to replace `$variable` references with concrete LiteralValues (handles SetArgs.value, RenameArgs.newName)
+- Re-exported `executeLet` from `commands/index.ts` and `jjscript/index.ts`
+
+### Files changed
+- `frontend/src/jjscript/types.ts` — `LetArgs`, `CommandType`, `CommandArgs`, `COMMANDS`
+- `frontend/src/jjscript/parser/parser.ts` — `parseLetCommand()`, `$variable` in values
+- `frontend/src/jjscript/executor/executor.ts` — `contextOverride`, `case 'let'`
+- `frontend/src/jjscript/executor/commands/let.ts` — new handler
+- `frontend/src/jjscript/index.ts` — re-export
+
+### Type check
+- `npx tsc --noEmit` — zero new errors (only pre-existing legacy errors)
+
+---
+
 ## 2026-03-25 — Fix: `let` binding expression stops at COMMA and IN
 
 ### Bug

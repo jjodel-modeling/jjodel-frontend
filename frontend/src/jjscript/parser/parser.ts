@@ -35,6 +35,8 @@ import {
     ValidateArgs,
     ExtendsArgs,
     EvalArgs,
+    LetArgs,
+    ForAllArgs,
     CreateOptions,
     QualifiedName,
     COMMANDS,
@@ -46,8 +48,9 @@ import {
 // PARSER CLASS
 // ============================================
 
-/** JjEL expression trigger keywords — when these appear as the first token, the entire input is treated as a JjEL expression */
-const JJEL_EXPRESSION_TRIGGERS = ['forall', 'exists', 'with'];
+/** JjEL expression trigger keywords — when these appear as the first token, the entire input is treated as a JjEL expression.
+ *  Note: 'forall' is handled separately to distinguish JjScript forall...do from JjEL forall. */
+const JJEL_EXPRESSION_TRIGGERS = ['exists', 'with'];
 
 export class Parser {
     private tokens: Token[] = [];
@@ -109,7 +112,20 @@ export class Parser {
         const token = this.peek();
         const position = { line: token.line, column: token.column };
 
-        // Special case: JjEL expression triggers (forall, exists, with)
+        // Special case: forall — JjScript (forall...do) vs JjEL (forall...:/such that)
+        if ((token.type === 'IDENTIFIER' || token.type === 'KEYWORD') &&
+            token.value.toLowerCase() === 'forall') {
+            if (this.isForAllDoCommand()) {
+                const args = this.parseForAllCommand();
+                return { type: 'Command', command: 'forall', args, position };
+            } else {
+                // No 'do' found → delegate entire input to JjEL
+                const args: EvalArgs = { command: 'eval', expression: this.originalInput.trim() };
+                return { type: 'Command', command: 'eval', args, position };
+            }
+        }
+
+        // Special case: JjEL expression triggers (exists, with)
         // The entire input is passed as-is to JjEL for evaluation
         if ((token.type === 'IDENTIFIER' || token.type === 'KEYWORD') &&
             JJEL_EXPRESSION_TRIGGERS.includes(token.value.toLowerCase())) {
@@ -184,6 +200,9 @@ export class Parser {
                 break;
             case 'eval':
                 args = this.parseEvalCommand();
+                break;
+            case 'let':
+                args = this.parseLetCommand();
                 break;
             default:
                 throw new Error(`Unknown command: ${command}`);
@@ -757,6 +776,214 @@ export class Parser {
     }
 
     // ============================================
+    // LET COMMAND
+    // ============================================
+
+    private parseLetCommand(): LetArgs {
+        const bindings: LetArgs['bindings'] = [];
+
+        do {
+            this.skipNewlines();
+
+            // Parse $identifier
+            const name = this.consumeDollarIdentifier();
+
+            this.skipNewlines();
+
+            // Expect '='
+            if (!this.matchOperator('=')) {
+                throw new Error("Expected '=' after variable name in let binding");
+            }
+
+            this.skipNewlines();
+
+            // Collect raw value expression until ',' or 'in' at depth 0
+            const valueExpr = this.collectValueExprRaw();
+            if (!valueExpr) {
+                throw new Error(`Expected expression after '=' for variable ${name}`);
+            }
+
+            bindings.push({ name, valueExpr });
+        } while (this.matchComma());
+
+        this.skipNewlines();
+
+        // Expect 'in'
+        if (!this.matchKeyword('in')) {
+            throw new Error("Expected 'in' after let bindings");
+        }
+
+        this.skipNewlines();
+
+        // Parse the body command
+        const body = this.parseCommand();
+
+        return { command: 'let', bindings, body };
+    }
+
+    /**
+     * Consume a $identifier token pair (PUNCTUATION '$' + IDENTIFIER).
+     * Returns the combined string including the '$' sigil.
+     */
+    private consumeDollarIdentifier(): string {
+        const dollarToken = this.peek();
+        if (dollarToken.type !== 'PUNCTUATION' || dollarToken.value !== '$') {
+            throw new Error("Expected '$' before variable name in let binding");
+        }
+        this.advance(); // consume '$'
+
+        const identToken = this.peek();
+        if (identToken.type !== 'IDENTIFIER' && identToken.type !== 'KEYWORD') {
+            throw new Error("Expected variable name after '$'");
+        }
+        this.advance();
+        return '$' + identToken.value;
+    }
+
+    /**
+     * Collect raw expression text from the original input until we hit
+     * ',' or 'in' at parenthesis depth 0 (or end of input).
+     * Uses original input positions for faithful reproduction.
+     */
+    private collectValueExprRaw(): string {
+        const startToken = this.peek();
+        const startPos = startToken.position;
+        let depth = 0;
+
+        while (!this.isAtEnd() && !this.check('EOF')) {
+            const token = this.peek();
+
+            if (token.type === 'PUNCTUATION') {
+                if (token.value === '(') depth++;
+                else if (token.value === ')') { if (depth > 0) depth--; }
+                else if (token.value === ',' && depth === 0) break;
+            }
+
+            // 'in' keyword at depth 0 signals the body
+            if (depth === 0 && token.type === 'KEYWORD' && token.value === 'in') break;
+
+            this.advance();
+        }
+
+        const endToken = this.peek();
+        const endPos = endToken.position;
+        return this.originalInput.substring(startPos, endPos).trim();
+    }
+
+    private matchComma(): boolean {
+        const token = this.peek();
+        if (token.type === 'PUNCTUATION' && token.value === ',') {
+            this.advance();
+            return true;
+        }
+        return false;
+    }
+
+    private skipNewlines(): void {
+        while (this.check('NEWLINE')) {
+            this.advance();
+        }
+    }
+
+    // ============================================
+    // FORALL COMMAND (forall <var> in <collection> [such that <filter>] do <command>)
+    // ============================================
+
+    /**
+     * Look ahead (without consuming) to check if this forall contains a 'do'
+     * keyword at paren depth 0, making it a JjScript forall...do command.
+     * Returns false if ':' is found first at depth 0 (JjEL projection).
+     */
+    private isForAllDoCommand(): boolean {
+        let depth = 0;
+        for (let i = this.current; i < this.tokens.length; i++) {
+            const token = this.tokens[i];
+            if (token.type === 'EOF' || token.type === 'NEWLINE') break;
+            if (token.type === 'PUNCTUATION') {
+                if (token.value === '(') depth++;
+                else if (token.value === ')') depth--;
+                // ':' at depth 0 → JjEL projection separator, not JjScript
+                if (depth === 0 && token.value === ':') return false;
+            }
+            if (depth === 0 && (token.type === 'KEYWORD' || token.type === 'IDENTIFIER')
+                && token.value.toLowerCase() === 'do') {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Parse: forall <var> in <collection> [such that <filter>] do <command>
+     */
+    private parseForAllCommand(): ForAllArgs {
+        this.advance(); // consume 'forall'
+
+        const variable = this.expectIdentifier('variable name');
+
+        if (!this.matchKeyword('in')) {
+            throw new Error("Expected 'in' after variable name in forall");
+        }
+
+        // Collect collection expression until 'such' or 'do' at depth 0
+        const collectionExpr = this.collectExprRawUntil(['do', 'such']);
+        if (!collectionExpr) {
+            throw new Error("Expected collection expression after 'in' in forall");
+        }
+
+        // Check for optional 'such that' filter
+        let filterExpr: string | undefined;
+        if (this.matchKeyword('such')) {
+            if (!this.matchKeyword('that')) {
+                throw new Error("Expected 'that' after 'such' in forall");
+            }
+            filterExpr = this.collectExprRawUntil(['do']);
+            if (!filterExpr) {
+                throw new Error("Expected filter expression after 'such that' in forall");
+            }
+        }
+
+        // Expect 'do'
+        if (!this.matchKeyword('do')) {
+            throw new Error("Expected 'do' keyword in forall...do command");
+        }
+
+        // Parse body command
+        const body = this.parseCommand();
+
+        return { command: 'forall', variable, collectionExpr, filterExpr, body };
+    }
+
+    /**
+     * Collect raw expression text from the original input until one of the
+     * stop keywords at parenthesis depth 0 (or end of input).
+     */
+    private collectExprRawUntil(stopKeywords: string[]): string {
+        const startToken = this.peek();
+        const startPos = startToken.position;
+        let depth = 0;
+
+        while (!this.isAtEnd() && !this.check('EOF')) {
+            const token = this.peek();
+
+            if (token.type === 'PUNCTUATION') {
+                if (token.value === '(') depth++;
+                else if (token.value === ')') { if (depth > 0) depth--; }
+            }
+
+            if (depth === 0 && (token.type === 'KEYWORD' || token.type === 'IDENTIFIER')) {
+                if (stopKeywords.includes(token.value.toLowerCase())) break;
+            }
+
+            this.advance();
+        }
+
+        const endToken = this.peek();
+        const endPos = endToken.position;
+        return this.originalInput.substring(startPos, endPos).trim();
+    }
+
+    // ============================================
     // EVAL COMMAND (explicit "eval <expression>")
     // ============================================
 
@@ -829,6 +1056,14 @@ export class Parser {
             if (value === 'null' || value === 'true' || value === 'false') {
                 return this.parseLiteralValueToken();
             }
+        }
+
+        // Check for $variable reference (PUNCTUATION '$' + IDENTIFIER)
+        if (token.type === 'PUNCTUATION' && token.value === '$') {
+            this.advance(); // consume '$'
+            const name = this.expectIdentifier('variable name');
+            const raw = '$' + name;
+            return { segments: [raw], raw } as QualifiedName;
         }
 
         // Otherwise, treat as qualified name
