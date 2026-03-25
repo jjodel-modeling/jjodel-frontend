@@ -12,7 +12,8 @@ import {
     ExecutionContext,
     CommandHistoryEntry,
     LetArgs,
-    ForAllArgs
+    ForAllArgs,
+    AbstractArgs
 } from '../types';
 import { executeCreate } from './commands/create';
 import { executeDelete } from './commands/delete';
@@ -32,6 +33,7 @@ import { executeExtends } from './commands/extends';
 import { executeEval } from './commands/eval';
 import { executeLet } from './commands/let';
 import { executeForAll } from './commands/forall';
+import { executeAbstract } from './commands/abstract';
 import { extractDependencies } from './dependencies';
 import { waitForDependencies } from './elementWaiter';
 
@@ -159,6 +161,9 @@ export class JjScriptExecutor {
                     break;
                 case 'forall':
                     result = await executeForAll(ast.args as ForAllArgs, context);
+                    break;
+                case 'abstract':
+                    result = await executeAbstract(ast.args as AbstractArgs, context);
                     break;
                 default:
                     result = {

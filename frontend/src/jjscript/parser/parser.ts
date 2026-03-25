@@ -37,6 +37,7 @@ import {
     EvalArgs,
     LetArgs,
     ForAllArgs,
+    AbstractArgs,
     CreateOptions,
     QualifiedName,
     COMMANDS,
@@ -119,18 +120,33 @@ export class Parser {
                 const args = this.parseForAllCommand();
                 return { type: 'Command', command: 'forall', args, position };
             } else {
-                // No 'do' found → delegate entire input to JjEL
-                const args: EvalArgs = { command: 'eval', expression: this.originalInput.trim() };
+                // No 'do' found → delegate remaining input to JjEL
+                const args: EvalArgs = { command: 'eval', expression: this.remainingInput() };
                 return { type: 'Command', command: 'eval', args, position };
             }
         }
 
         // Special case: JjEL expression triggers (exists, with)
-        // The entire input is passed as-is to JjEL for evaluation
+        // The remaining input is passed as-is to JjEL for evaluation
         if ((token.type === 'IDENTIFIER' || token.type === 'KEYWORD') &&
             JJEL_EXPRESSION_TRIGGERS.includes(token.value.toLowerCase())) {
-            const args: EvalArgs = { command: 'eval', expression: this.originalInput.trim() };
+            const args: EvalArgs = { command: 'eval', expression: this.remainingInput() };
             return { type: 'Command', command: 'eval', args, position };
+        }
+
+        // Special case: "abstract ClassName" — toggle abstract flag on a class
+        // When 'abstract' is followed by an identifier (not 'class'), it's the toggle command
+        // Note: 'abstract' is in both COMMANDS and KEYWORDS, so the lexer may tokenize it as COMMAND
+        if ((token.type === 'IDENTIFIER' || token.type === 'KEYWORD' || token.type === 'COMMAND') &&
+            token.value.toLowerCase() === 'abstract') {
+            const nextToken = this.peekNext();
+            if (nextToken && (nextToken.type === 'IDENTIFIER' || nextToken.type === 'QUALIFIED_NAME') &&
+                nextToken.value.toLowerCase() !== 'class') {
+                this.advance(); // consume 'abstract'
+                const target = this.parseQualifiedNameToken();
+                const args: AbstractArgs = { command: 'abstract', target };
+                return { type: 'Command', command: 'abstract', args, position };
+            }
         }
 
         // Special case: "ChildClass extends ParentClass" syntax
@@ -142,8 +158,8 @@ export class Parser {
         }
 
         if (token.type !== 'COMMAND') {
-            // Not a known command — delegate entire input to JjEL as an expression
-            const args: EvalArgs = { command: 'eval', expression: this.originalInput.trim() };
+            // Not a known command — delegate remaining input to JjEL as an expression
+            const args: EvalArgs = { command: 'eval', expression: this.remainingInput() };
             return { type: 'Command', command: 'eval', args, position };
         }
 
@@ -204,6 +220,12 @@ export class Parser {
             case 'forall':
                 args = this.parseForAllCommand();
                 break;
+            case 'abstract': {
+                // Fallback: 'abstract' reached the switch (e.g., typed alone without a target)
+                const target = this.parseQualifiedNameToken();
+                args = { command: 'abstract', target } as AbstractArgs;
+                break;
+            }
             default:
                 throw new Error(`Unknown command: ${command}`);
         }
@@ -848,19 +870,32 @@ export class Parser {
     private collectValueExprRaw(): string {
         const startToken = this.peek();
         const startPos = startToken.position;
-        let depth = 0;
+        let parenDepth = 0;
+        let forallExistsDepth = 0;
 
         while (!this.isAtEnd() && !this.check('EOF')) {
             const token = this.peek();
 
             if (token.type === 'PUNCTUATION') {
-                if (token.value === '(') depth++;
-                else if (token.value === ')') { if (depth > 0) depth--; }
-                else if (token.value === ',' && depth === 0) break;
+                if (token.value === '(') parenDepth++;
+                else if (token.value === ')') { if (parenDepth > 0) parenDepth--; }
+                else if (token.value === ',' && parenDepth === 0 && forallExistsDepth === 0) break;
             }
 
-            // 'in' keyword at depth 0 signals the body
-            if (depth === 0 && token.type === 'KEYWORD' && token.value === 'in') break;
+            // Track forall/exists nesting — each expects a following 'in'
+            // Note: forall/exists are not in KEYWORDS, so they tokenize as IDENTIFIER
+            if ((token.type === 'KEYWORD' || token.type === 'IDENTIFIER') && (token.value === 'forall' || token.value === 'exists')) {
+                forallExistsDepth++;
+            }
+
+            // 'in' keyword: if inside a forall/exists, it belongs to that construct
+            if (token.type === 'KEYWORD' && token.value === 'in') {
+                if (forallExistsDepth > 0) {
+                    forallExistsDepth--;
+                } else if (parenDepth === 0) {
+                    break; // this 'in' belongs to the let
+                }
+            }
 
             this.advance();
         }
@@ -883,6 +918,17 @@ export class Parser {
         while (this.check('NEWLINE')) {
             this.advance();
         }
+    }
+
+    /**
+     * Return the unparsed remainder of the original input from the current
+     * token position.  Used when delegating to JjEL so that, inside a
+     * recursive parseCommand() call (e.g. let body), only the body portion
+     * is forwarded — not the entire original input.
+     */
+    private remainingInput(): string {
+        const token = this.peek();
+        return this.originalInput.substring(token.position).trim();
     }
 
     // ============================================

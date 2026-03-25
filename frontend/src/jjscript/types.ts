@@ -58,7 +58,8 @@ export type CommandType =
     | 'extends'
     | 'eval'
     | 'let'
-    | 'forall';
+    | 'forall'
+    | 'abstract';
 
 export type ElementType =
     | 'class'
@@ -117,7 +118,8 @@ export type CommandArgs =
     | ExtendsArgs
     | EvalArgs
     | LetArgs
-    | ForAllArgs;
+    | ForAllArgs
+    | AbstractArgs;
 
 // CREATE command
 export interface CreateArgs {
@@ -299,6 +301,12 @@ export interface ForAllArgs {
     collectionExpr: string;     // raw JjEL expression for the collection
     filterExpr?: string;        // raw JjEL expression for 'such that' filter
     body: CommandNode;          // the command after 'do'
+}
+
+// ABSTRACT command (toggle abstract flag on a class)
+export interface AbstractArgs {
+    command: 'abstract';
+    target: QualifiedName;
 }
 
 // ============================================
@@ -547,7 +555,7 @@ export const COMMANDS: CommandType[] = [
     'create', 'delete', 'rename', 'set', 'add', 'remove',
     'move', 'copy', 'list', 'show', 'help', 'undo', 'redo',
     'clear', 'export', 'import', 'validate', 'extends', 'eval',
-    'let', 'forall'
+    'let', 'forall', 'abstract'
 ];
 
 export const ELEMENT_TYPES: ElementType[] = [

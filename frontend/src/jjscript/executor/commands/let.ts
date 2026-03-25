@@ -23,6 +23,7 @@ import { getExecutor } from '../executor';
 import { jjelEval } from '../../../jjel';
 import type { JjelValue } from '../../../jjel';
 import { getUIBridge } from '../../../jjtl/executor/UIBridge';
+import { buildEvalContext } from './eval';
 
 // ============================================
 // LET COMMAND EXECUTOR
@@ -119,9 +120,10 @@ async function evaluateConfirm(expr: string): Promise<boolean> {
 }
 
 function evaluateJjel(expr: string, context: ExecutionContext): any {
-    // Build variables from context.variables (includes earlier let bindings)
-    const variables: Record<string, JjelValue> = {};
+    // Build full evaluation context (classes, attributes, metamodel, project)
+    const variables: Record<string, JjelValue> = buildEvalContext(context);
 
+    // Overlay context.variables (includes earlier let bindings)
     for (const [key, value] of context.variables) {
         variables[key] = value;
     }

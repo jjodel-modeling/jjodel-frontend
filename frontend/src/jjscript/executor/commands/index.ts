@@ -20,3 +20,4 @@ export { executeValidate } from './validate';
 export { executeExtends } from './extends';
 export { executeLet } from './let';
 export { executeForAll } from './forall';
+export { executeAbstract } from './abstract';

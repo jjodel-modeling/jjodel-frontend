@@ -1,5 +1,121 @@
 # Claude Code Session Log
 
+## 2026-03-26 — Fix: `abstract Person` still gives "Unknown command: abstract" after initial fix
+
+**Prompt**: Previous session added all the pieces (types, executor, parser special case) but `abstract Person` still fails.
+**File toccati**: `frontend/src/jjscript/parser/parser.ts`
+**Esito**: ✅ completato
+
+**Root cause**:
+`abstract` is in BOTH `COMMANDS` and `KEYWORDS` arrays. The lexer checks `COMMANDS` first (lexer.ts:371), so it tokenizes `abstract` as `COMMAND` type. But the parser's special-case check (line 139) only matched `IDENTIFIER` or `KEYWORD` — **not `COMMAND`**. So the special case was skipped, and `abstract` fell through to the main switch statement which had no `case 'abstract'`, hitting `default: throw new Error('Unknown command: abstract')`.
+
+**Fix**:
+1. Added `token.type === 'COMMAND'` to the special-case condition for abstract toggle
+2. Added `case 'abstract'` to the switch as a safety fallback (handles edge case where abstract reaches the switch)
+
+**Lesson**: When a word appears in multiple token-type lists (`COMMANDS` + `KEYWORDS`), the lexer picks the first match. Parser special cases must account for all possible token types.
+
+---
+
+## 2026-03-26 — Fix: `abstract Person` command returns SUCCESS but has no effect (initial fix)
+
+**Prompt**: `abstract Person` in JjScript Console returns SUCCESS + null, but the class doesn't become abstract. The toggle in Properties panel stays off.
+**File toccati**: `frontend/src/jjscript/types.ts`, `frontend/src/jjscript/parser/parser.ts`, `frontend/src/jjscript/executor/executor.ts`, `frontend/src/jjscript/executor/commands/abstract.ts` (new), `frontend/src/jjscript/executor/commands/index.ts`
+**Esito**: ✅ ma con bug residuo (vedi entry sopra)
+
+**Root cause**:
+`abstract` was tokenized as `KEYWORD` (not `COMMAND`). In `parseCommand()`, the check `if (token.type !== 'COMMAND')` was true, so the entire input `abstract Person` was delegated to JjEL as an eval expression. JjEL evaluated it and returned null — no model mutation occurred.
+
+There was no `abstract` command type, no parser handler, and no executor for it.
+
+**Fix**:
+- Added `'abstract'` to `CommandType` union and `COMMANDS` array in `types.ts`
+- Created `AbstractArgs` interface with `target: QualifiedName`
+- Added special case in `parseCommand()`: when first token is `abstract` and next token is an identifier (not `class`), parse as the `abstract` toggle command
+- Created `abstract.ts` executor that resolves the class, reads `element.abstract`, toggles with `SetFieldAction.new(element, 'abstract', !currentValue)`
+- Wired in `executor.ts` switch and `index.ts` exports
+
+**Semantics**: `abstract Person` toggles — if concrete, makes abstract; if abstract, makes concrete. Message: "Class 'Person' is now abstract/concrete".
+
+**Note**: `abstract class Person` (with `class` keyword) still routes to `create` command as before — the special case only fires when `abstract` is followed directly by an identifier.
+
+---
+
+## 2026-03-25 — Fix: let binding $variable empty in body (missing metamodel context)
+
+**Prompt**: `let $cls = (forall c in classes: c.name) in $cls` parses correctly but returns "Empty result (0 items)" — the forall works standalone but not inside let.
+**File toccati**: `frontend/src/jjscript/executor/commands/let.ts`
+**Esito**: ✅ completato
+
+**Root cause**:
+`evaluateJjel()` in `let.ts` only passed `context.variables` to `jjelEval()` — it did NOT call `buildEvalContext(context)` to include `classes`, `attributes`, `metamodel`, `project`. So when evaluating the valueExpr `(forall c in classes: c.name)`, the identifier `classes` was undefined and the forall returned an empty array.
+
+Compare with `executeEval` in `eval.ts` which correctly calls `buildEvalContext(context)` first, then overlays `context.variables`.
+
+**Fix**:
+- Imported `buildEvalContext` from `./eval` into `let.ts`
+- Changed `evaluateJjel()` to call `buildEvalContext(context)` first, then overlay `context.variables` on top (so let bindings can reference earlier bindings AND metamodel context)
+
+---
+
+## 2026-03-25 — Fix: forallExistsDepth counter never fires (token type mismatch)
+
+**Prompt**: The `forallExistsDepth` fix in `collectValueExprRaw()` had no effect — same error persisted.
+**File toccati**: `frontend/src/jjscript/parser/parser.ts`
+**Esito**: ✅ completato
+
+**Root cause**:
+`forall` and `exists` are NOT in the JjScript `KEYWORDS` array (`types.ts:560`), so the lexer tokenizes them as `IDENTIFIER`, not `KEYWORD`. The guard at line 864 checked `token.type === 'KEYWORD'` only, so the `forallExistsDepth` counter was never incremented — the fix was dead code.
+
+**Fix**:
+- Changed the check from `token.type === 'KEYWORD'` to `(token.type === 'KEYWORD' || token.type === 'IDENTIFIER')` for forall/exists detection in `collectValueExprRaw()`
+
+---
+
+## 2026-03-25 — Fix (ineffective): ambiguità keyword 'in' nel let binding con espressioni JjEL
+
+**Prompt**: `let $cls = forall c in classes: c.name in $cls` produces `[LET_ERROR] Expected 'in' after variable name` because the parser grabs the first `in` (belonging to `forall`) instead of the outer `in` (belonging to `let`).
+**File toccati**: `frontend/src/jjscript/parser/parser.ts`
+**Esito**: ⚠️ Logic was correct but never executed due to token type mismatch (see fix above)
+
+**Fix**:
+- Added `forallExistsDepth` counter alongside the existing `parenDepth`
+- When a `forall` or `exists` keyword is encountered, increment `forallExistsDepth`
+- When `in` is encountered: if `forallExistsDepth > 0`, decrement it (the `in` belongs to the inner construct); otherwise, if `parenDepth === 0`, break (the `in` belongs to the `let`)
+- Comma break also requires `forallExistsDepth === 0`
+- Handles arbitrarily nested `forall`/`exists` (e.g., `forall ... exists ... in ... in ... in`)
+
+---
+
+## 2026-03-25 — Fix: let binding delegates entire input to JjEL instead of body only
+
+**Prompt**: `let $attribute = prompt('Attribute', EString) in forall c in classes such that c.name == $attribute` produces `[JJEL_ERROR] Unexpected '='`
+**File toccati**: `frontend/src/jjscript/parser/parser.ts`
+**Esito**: ✅ completato
+
+**Root cause**:
+When `parseCommand()` is called recursively from `parseLetCommand()` to parse the body, and the body is a JjEL expression (e.g. `forall` without `do`, `exists`, `with`, or any non-command identifier), the parser used `this.originalInput.trim()` as the JjEL expression text. `originalInput` is the **entire** input string including the `let $var = expr in` prefix, so JjEL received the full let binding syntax and choked on the `=` assignment operator.
+
+**Fix**:
+- Added `remainingInput()` helper method that returns `this.originalInput.substring(currentToken.position).trim()` — only the unparsed portion from the current token forward
+- Replaced all 3 occurrences of `this.originalInput.trim()` in `parseCommand()`'s JjEL fallback paths with `this.remainingInput()`
+- No changes to JjEL or JjTL
+
+---
+
+## 2026-03-25 — Fix: Titolo progetto troncato nell'header della dashboard
+
+**Prompt**: Il titolo H1 del progetto veniva troncato con ellissi — deve andare a capo liberamente
+**File toccati**: `project-editor.scss`
+**Esito**: ✅ completato
+
+**Changes**:
+- Removed `white-space: nowrap`, `overflow: hidden`, `text-overflow: ellipsis`, `max-width: 300px` from `.project-header-compact__title`
+- Removed `max-width: 300px` from `__title-input` for consistency
+- Added `flex-wrap: wrap` to `__row1` so version badges wrap below the title when space is tight
+
+---
+
 ## 2026-03-25 — Fix: Documentation section padding/margin alignment
 
 **Prompt**: Align Documentation section margins/padding with Viewpoints and other sections
