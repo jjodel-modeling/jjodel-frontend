@@ -8,6 +8,8 @@ interface EditorContextValue {
     onEdgeDataChange?: (edgeId: string, data: Partial<Edge>) => void;
     /** Recalculate auto-anchors for a specific edge (e.g. after segment handle drag). */
     recalculateAnchors?: (edgeId: string) => void;
+    /** Update Properties panel to show a child element (attr/op/literal) without changing graph selection. */
+    selectChildElement?: (childModelElementId: string) => void;
 }
 
 export const EditorContext = createContext<EditorContextValue | null>(null);

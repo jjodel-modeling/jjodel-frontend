@@ -8,6 +8,7 @@
   "homepage-local-deploy": "https://mdegroup.github.io/",
   "homepage-gitpages-deploy": "https://mdegroup.github.io/jjodel/",
   "dependencies": {
+    "@dagrejs/dagre": "^2.0.4",
     "@floating-ui/react": "^0.27.16",
     "@fontsource-variable/inter": "^5.2.6",
     "@monaco-editor/react": "^4.7.0",
@@ -89,7 +90,7 @@
     "ii": "npm i && npm i react-json-view --force --no-save",
     "posti": "npm i react-json-view --force --no-save",
     "______________________________________deploy________________________________": "",
-    "build": "set NODE_OPTIONS=--openssl-legacy-provider && react-app-rewired build",
+    "build": "vite build",
     "postbuild": "",
     "dev": "docker-compose -f docker-compose.dev.yml up",
     "________________________________other_build_modes___________________________": "",

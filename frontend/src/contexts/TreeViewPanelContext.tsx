@@ -9,6 +9,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 
 export type ElementAction = 'create' | 'modify' | 'delete' | 'unknown';
+export type EditorType = 'model' | 'metamodel' | 'transformation' | 'summary' | null;
 
 interface TreeViewPanelContextType {
     /** Panel is visible/expanded */
@@ -23,10 +24,6 @@ interface TreeViewPanelContextType {
     showWithHighlight: () => void;
     /** Whether panel is currently highlighted (animation active) */
     isHighlighted: boolean;
-    /** Panel width */
-    width: number;
-    /** Set panel width */
-    setWidth: (width: number) => void;
     /** Whether script is currently executing */
     isScriptExecuting: boolean;
 
@@ -47,15 +44,15 @@ interface TreeViewPanelContextType {
     collapseNode: (nodeId: string) => void;
     /** Toggle node expansion */
     toggleNode: (nodeId: string) => void;
+    /** Currently active editor type (drives panel visibility matrix) */
+    activeEditorType: EditorType;
+    /** Set active editor type */
+    setActiveEditorType: (type: EditorType) => void;
 }
 
 const TreeViewPanelContext = createContext<TreeViewPanelContextType | null>(null);
 
 const STORAGE_KEY_VISIBLE = 'jjodel_treeview_visible';
-const STORAGE_KEY_WIDTH = 'jjodel_treeview_width';
-const DEFAULT_WIDTH = 280;
-const MIN_WIDTH = 200;
-const MAX_WIDTH = 500;
 
 /**
  * Extract action from JjScript command
@@ -75,13 +72,11 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
         return stored !== null ? stored === 'true' : true; // Default: visible
     });
 
-    const [width, setWidthState] = useState(() => {
-        const stored = localStorage.getItem(STORAGE_KEY_WIDTH);
-        return stored ? Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, parseInt(stored, 10))) : DEFAULT_WIDTH;
-    });
-
     const [isHighlighted, setIsHighlighted] = useState(false);
     const [isScriptExecuting, setIsScriptExecuting] = useState(false);
+
+    // Active editor type (drives panel visibility matrix)
+    const [activeEditorType, setActiveEditorType] = useState<EditorType>(null);
 
     // Element highlighting state
     const [highlightedElementId, setHighlightedElementId] = useState<string | null>(null);
@@ -97,10 +92,6 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
         localStorage.setItem(STORAGE_KEY_VISIBLE, String(isVisible));
     }, [isVisible]);
 
-    // Persist width
-    useEffect(() => {
-        localStorage.setItem(STORAGE_KEY_WIDTH, String(width));
-    }, [width]);
 
     const show = useCallback(() => {
         setIsVisible(true);
@@ -112,10 +103,6 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const toggle = useCallback(() => {
         setIsVisible(prev => !prev);
-    }, []);
-
-    const setWidth = useCallback((newWidth: number) => {
-        setWidthState(Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, newWidth)));
     }, []);
 
     // Show with highlight effect (for programmatic/automated calls)
@@ -184,6 +171,20 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
             }
             return newSet;
         });
+    }, []);
+
+    // Listen for editor type changes (drives panel visibility matrix)
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const { editorType } = (e as CustomEvent).detail;
+            setActiveEditorType(editorType);
+            // Auto-open tree view for modeling editors; don't force-close for others
+            if (editorType === 'model' || editorType === 'metamodel') {
+                setIsVisible(true);
+            }
+        };
+        window.addEventListener('jjodel:editor-type-change', handler);
+        return () => window.removeEventListener('jjodel:editor-type-change', handler);
     }, []);
 
     // Listen for JjScript execution events
@@ -294,8 +295,6 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
             toggle,
             showWithHighlight,
             isHighlighted,
-            width,
-            setWidth,
             isScriptExecuting,
             // Element highlighting
             highlightedElementId,
@@ -306,6 +305,8 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
             expandNode,
             collapseNode,
             toggleNode,
+            activeEditorType,
+            setActiveEditorType,
         }}>
             {children}
         </TreeViewPanelContext.Provider>

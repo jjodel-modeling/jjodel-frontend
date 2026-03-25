@@ -1,0 +1,148 @@
+\babel@toc {english}{}\relax 
+\contentsline {section}{\numberline {1}Introduction}{4}{section.1}%
+\contentsline {subsection}{\numberline {1.1}Design Criteria}{4}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}Document Structure}{4}{subsection.1.2}%
+\contentsline {section}{\numberline {2}JjEL: Jjodel Expression Language}{5}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Positioning and Scope}{5}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Types and Values}{5}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}The Core Construct: \texttt {forall}}{5}{subsection.2.3}%
+\contentsline {subsubsection}{\numberline {2.3.1}Design Motivation}{5}{subsubsection.2.3.1}%
+\contentsline {subsubsection}{\numberline {2.3.2}Syntax and Forms}{6}{subsubsection.2.3.2}%
+\contentsline {subsubsection}{\numberline {2.3.3}Separator Design}{6}{subsubsection.2.3.3}%
+\contentsline {subsubsection}{\numberline {2.3.4}Why Not \texttt {filter} and \texttt {map}?}{6}{subsubsection.2.3.4}%
+\contentsline {subsection}{\numberline {2.4}Existential Check: \texttt {exists}}{7}{subsection.2.4}%
+\contentsline {subsection}{\numberline {2.5}Logical Implication: \texttt {implies}}{7}{subsection.2.5}%
+\contentsline {subsection}{\numberline {2.6}Context Binding: \texttt {with...do}}{7}{subsection.2.6}%
+\contentsline {subsection}{\numberline {2.7}Conditional: \texttt {if...then...else}}{7}{subsection.2.7}%
+\contentsline {subsection}{\numberline {2.8}Lambda Expressions}{8}{subsection.2.8}%
+\contentsline {subsection}{\numberline {2.9}Null Safety}{8}{subsection.2.9}%
+\contentsline {subsection}{\numberline {2.10}Operator Precedence}{8}{subsection.2.10}%
+\contentsline {subsection}{\numberline {2.11}Built-in Methods}{8}{subsection.2.11}%
+\contentsline {subsection}{\numberline {2.12}Evaluation Rules}{9}{subsection.2.12}%
+\contentsline {subsubsection}{\numberline {2.12.1}Short-Circuit Evaluation}{9}{subsubsection.2.12.1}%
+\contentsline {subsubsection}{\numberline {2.12.2}Truthiness}{9}{subsubsection.2.12.2}%
+\contentsline {subsubsection}{\numberline {2.12.3}Error Handling}{9}{subsubsection.2.12.3}%
+\contentsline {section}{\numberline {3}JjTL: Jjodel Transformation Language}{9}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Design Philosophy}{9}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Transformation Structure}{9}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Class Mappings}{10}{subsection.3.3}%
+\contentsline {subsubsection}{\numberline {3.3.1}Multiplicity}{10}{subsubsection.3.3.1}%
+\contentsline {subsubsection}{\numberline {3.3.2}Guard Conditions}{10}{subsubsection.3.3.2}%
+\contentsline {subsection}{\numberline {3.4}Attribute Mappings}{10}{subsection.3.4}%
+\contentsline {subsubsection}{\numberline {3.4.1}Direct Mapping}{10}{subsubsection.3.4.1}%
+\contentsline {subsubsection}{\numberline {3.4.2}Value Mapping (Enum Conversion)}{11}{subsubsection.3.4.2}%
+\contentsline {subsubsection}{\numberline {3.4.3}Expression Mapping}{11}{subsubsection.3.4.3}%
+\contentsline {subsubsection}{\numberline {3.4.4}Object Creation}{11}{subsubsection.3.4.4}%
+\contentsline {subsection}{\numberline {3.5}Helper Functions}{11}{subsection.3.5}%
+\contentsline {subsection}{\numberline {3.6}Trace Model}{11}{subsection.3.6}%
+\contentsline {subsubsection}{\numberline {3.6.1}Invertibility Analysis}{11}{subsubsection.3.6.1}%
+\contentsline {subsection}{\numberline {3.7}Interactive Features}{12}{subsection.3.7}%
+\contentsline {subsection}{\numberline {3.8}Execution Model}{12}{subsection.3.8}%
+\contentsline {section}{\numberline {4}JjModal: Jjodel Interaction Language}{12}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Motivation and Design Position}{12}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Commands}{13}{subsection.4.2}%
+\contentsline {subsubsection}{\numberline {4.2.1}\texttt {prompt}}{13}{subsubsection.4.2.1}%
+\contentsline {paragraph}{Design rationale.}{13}{section*.2}%
+\contentsline {subsubsection}{\numberline {4.2.2}\texttt {confirm}}{13}{subsubsection.4.2.2}%
+\contentsline {paragraph}{Design rationale.}{13}{section*.3}%
+\contentsline {subsection}{\numberline {4.3}Type System}{14}{subsection.4.3}%
+\contentsline {paragraph}{Ecore primitive types.}{14}{section*.4}%
+\contentsline {paragraph}{Metamodel-relative references.}{14}{section*.5}%
+\contentsline {subsection}{\numberline {4.4}Grammar}{14}{subsection.4.4}%
+\contentsline {subsection}{\numberline {4.5}Embedding and Transparent Recognition}{15}{subsection.4.5}%
+\contentsline {subsection}{\numberline {4.6}Usage Examples}{15}{subsection.4.6}%
+\contentsline {subsubsection}{\numberline {4.6.1}Prompt in an attribute binding}{15}{subsubsection.4.6.1}%
+\contentsline {subsubsection}{\numberline {4.6.2}Prompt with a metamodel-relative type}{16}{subsubsection.4.6.2}%
+\contentsline {subsubsection}{\numberline {4.6.3}Confirm in a guard condition}{16}{subsubsection.4.6.3}%
+\contentsline {subsubsection}{\numberline {4.6.4}Confirm in JjScript}{16}{subsubsection.4.6.4}%
+\contentsline {subsection}{\numberline {4.7}Execution Semantics}{16}{subsection.4.7}%
+\contentsline {subsubsection}{\numberline {4.7.1}Blocking from the author's perspective}{16}{subsubsection.4.7.1}%
+\contentsline {subsubsection}{\numberline {4.7.2}Async/await implementation}{17}{subsubsection.4.7.2}%
+\contentsline {subsubsection}{\numberline {4.7.3}Serialisation of interactions}{17}{subsubsection.4.7.3}%
+\contentsline {subsection}{\numberline {4.8}UI Manifestation}{17}{subsection.4.8}%
+\contentsline {subsection}{\numberline {4.9}Relationship to the \textsf {JjTL}{} Interactive Feature Table}{18}{subsection.4.9}%
+\contentsline {subsection}{\numberline {4.10}Comparison with Related Work}{18}{subsection.4.10}%
+\contentsline {section}{\numberline {5}JjLet: Let-Binding for Interactive Transformations}{19}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Motivation}{19}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Design Position and Architecture}{19}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Variable Sigil}{20}{subsection.5.3}%
+\contentsline {subsection}{\numberline {5.4}Syntax}{20}{subsection.5.4}%
+\contentsline {subsubsection}{\numberline {5.4.1}Single binding}{20}{subsubsection.5.4.1}%
+\contentsline {subsubsection}{\numberline {5.4.2}Multiple bindings}{20}{subsubsection.5.4.2}%
+\contentsline {subsubsection}{\numberline {5.4.3}Block body in JjTL}{21}{subsubsection.5.4.3}%
+\contentsline {subsubsection}{\numberline {5.4.4}Formal grammar}{21}{subsubsection.5.4.4}%
+\contentsline {subsection}{\numberline {5.5}Semantics}{21}{subsection.5.5}%
+\contentsline {subsubsection}{\numberline {5.5.1}Evaluation order}{21}{subsubsection.5.5.1}%
+\contentsline {subsubsection}{\numberline {5.5.2}Lexical scope}{21}{subsubsection.5.5.2}%
+\contentsline {subsubsection}{\numberline {5.5.3}Cancellation handling}{21}{subsubsection.5.5.3}%
+\contentsline {subsection}{\numberline {5.6}Usage Examples}{22}{subsection.5.6}%
+\contentsline {subsubsection}{\numberline {5.6.1}JjTL --- shared prompt across bindings}{22}{subsubsection.5.6.1}%
+\contentsline {subsubsection}{\numberline {5.6.2}JjTL --- confirm before transformation}{22}{subsubsection.5.6.2}%
+\contentsline {subsubsection}{\numberline {5.6.3}JjTL --- multi-step interactive mapping}{22}{subsubsection.5.6.3}%
+\contentsline {subsubsection}{\numberline {5.6.4}JjScript --- interactive bulk operation}{22}{subsubsection.5.6.4}%
+\contentsline {subsection}{\numberline {5.7}Implementation Plan}{23}{subsection.5.7}%
+\contentsline {paragraph}{Phase 1 --- \texttt {\$identifier} token in \textsf {JjEL}{} lexer.}{23}{section*.6}%
+\contentsline {paragraph}{Phase 2 --- \texttt {\textbf {let}} in JjTL.}{23}{section*.7}%
+\contentsline {paragraph}{Phase 3 --- \texttt {\textbf {let}} in \textsf {JjScript}.}{23}{section*.8}%
+\contentsline {subsection}{\numberline {5.8}Design Tensions}{23}{subsection.5.8}%
+\contentsline {paragraph}{\texttt {\textbf {in}} keyword collision.}{23}{section*.9}%
+\contentsline {paragraph}{Context key convention.}{23}{section*.10}%
+\contentsline {paragraph}{Block body boundary.}{23}{section*.11}%
+\contentsline {section}{\numberline {6}Comparative Analysis}{23}{section.6}%
+\contentsline {subsection}{\numberline {6.1}ATL (Atlas Transformation Language)}{23}{subsection.6.1}%
+\contentsline {subsubsection}{\numberline {6.1.1}Overview}{23}{subsubsection.6.1.1}%
+\contentsline {subsubsection}{\numberline {6.1.2}Structural Comparison}{24}{subsubsection.6.1.2}%
+\contentsline {subsubsection}{\numberline {6.1.3}Key Design Differences}{24}{subsubsection.6.1.3}%
+\contentsline {paragraph}{Binding direction.}{24}{section*.12}%
+\contentsline {paragraph}{Rule taxonomy.}{24}{section*.13}%
+\contentsline {paragraph}{Two-phase execution.}{24}{section*.14}%
+\contentsline {paragraph}{Expression language.}{24}{section*.15}%
+\contentsline {subsection}{\numberline {6.2}EOL / ETL (Epsilon Platform)}{24}{subsection.6.2}%
+\contentsline {subsubsection}{\numberline {6.2.1}Overview}{24}{subsubsection.6.2.1}%
+\contentsline {subsubsection}{\numberline {6.2.2}Structural Comparison}{25}{subsubsection.6.2.2}%
+\contentsline {subsubsection}{\numberline {6.2.3}Key Design Differences}{25}{subsubsection.6.2.3}%
+\contentsline {paragraph}{Declarative vs.\ imperative bindings.}{25}{section*.16}%
+\contentsline {paragraph}{Verbosity.}{25}{section*.17}%
+\contentsline {paragraph}{Rule inheritance.}{25}{section*.18}%
+\contentsline {subsection}{\numberline {6.3}QVT Relations (QVT-R)}{25}{subsection.6.3}%
+\contentsline {subsubsection}{\numberline {6.3.1}Overview}{25}{subsubsection.6.3.1}%
+\contentsline {subsubsection}{\numberline {6.3.2}Structural Comparison}{25}{subsubsection.6.3.2}%
+\contentsline {subsubsection}{\numberline {6.3.3}Key Design Differences}{26}{subsubsection.6.3.3}%
+\contentsline {paragraph}{Bidirectionality.}{26}{section*.19}%
+\contentsline {paragraph}{Pattern matching vs.\ explicit mapping.}{26}{section*.20}%
+\contentsline {paragraph}{Relation calls.}{26}{section*.21}%
+\contentsline {subsection}{\numberline {6.4}QVT Operational (QVT-O)}{26}{subsection.6.4}%
+\contentsline {subsubsection}{\numberline {6.4.1}Overview}{26}{subsubsection.6.4.1}%
+\contentsline {subsubsection}{\numberline {6.4.2}Structural Comparison}{26}{subsubsection.6.4.2}%
+\contentsline {subsubsection}{\numberline {6.4.3}Key Design Differences}{26}{subsubsection.6.4.3}%
+\contentsline {paragraph}{Entry point.}{26}{section*.22}%
+\contentsline {paragraph}{Self vs.\ implicit context.}{26}{section*.23}%
+\contentsline {subsection}{\numberline {6.5}Feature Comparison Matrix}{27}{subsection.6.5}%
+\contentsline {subsection}{\numberline {6.6}Expression Language Comparison}{27}{subsection.6.6}%
+\contentsline {section}{\numberline {7}Transformation Examples}{27}{section.7}%
+\contentsline {subsection}{\numberline {7.1}Example 1: UML Class to Relational Table}{28}{subsection.7.1}%
+\contentsline {subsubsection}{\numberline {7.1.1}ATL}{28}{subsubsection.7.1.1}%
+\contentsline {subsubsection}{\numberline {7.1.2}ETL}{29}{subsubsection.7.1.2}%
+\contentsline {subsubsection}{\numberline {7.1.3}JjTL}{29}{subsubsection.7.1.3}%
+\contentsline {subsection}{\numberline {7.2}Example 2: State Machine to Petri Net}{30}{subsection.7.2}%
+\contentsline {subsubsection}{\numberline {7.2.1}ATL}{30}{subsubsection.7.2.1}%
+\contentsline {subsubsection}{\numberline {7.2.2}ETL}{31}{subsubsection.7.2.2}%
+\contentsline {subsubsection}{\numberline {7.2.3}JjTL}{31}{subsubsection.7.2.3}%
+\contentsline {paragraph}{Comparison notes.}{32}{section*.24}%
+\contentsline {subsection}{\numberline {7.3}Example 3: UML to Java (Structural)}{32}{subsection.7.3}%
+\contentsline {subsubsection}{\numberline {7.3.1}ATL}{32}{subsubsection.7.3.1}%
+\contentsline {subsubsection}{\numberline {7.3.2}ETL}{33}{subsubsection.7.3.2}%
+\contentsline {subsubsection}{\numberline {7.3.3}JjTL}{34}{subsubsection.7.3.3}%
+\contentsline {paragraph}{Comparison notes.}{34}{section*.25}%
+\contentsline {subsection}{\numberline {7.4}Example 4: Validation Invariants}{34}{subsection.7.4}%
+\contentsline {subsection}{\numberline {7.5}Example 5: Guard Conditions}{35}{subsection.7.5}%
+\contentsline {section}{\numberline {8}Discussion}{35}{section.8}%
+\contentsline {subsection}{\numberline {8.1}Strengths of the JjTL/JjEL Approach}{35}{subsection.8.1}%
+\contentsline {subsection}{\numberline {8.2}Limitations and Trade-offs}{36}{subsection.8.2}%
+\contentsline {subsection}{\numberline {8.3}Open Design Points}{36}{subsection.8.3}%
+\contentsline {section}{\numberline {9}Conclusion}{36}{section.9}%
+\contentsline {section}{\numberline {A}JjEL Grammar (Complete)}{37}{appendix.A}%
+\contentsline {section}{\numberline {B}JjEL Built-in Methods (Complete)}{38}{appendix.B}%
+\contentsline {subsection}{\numberline {B.1}String Methods (33)}{38}{subsection.B.1}%
+\contentsline {subsection}{\numberline {B.2}Collection Methods (28)}{38}{subsection.B.2}%
+\contentsline {section}{\numberline {C}JjTL Token Types}{40}{appendix.C}%

@@ -12,11 +12,11 @@ $color-text-secondary: #6B7280;
 $color-text-tertiary: #9CA3AF;
 $color-text-inverse: #ffffff;
 
-$color-bg-primary: #ffffff;
-$color-bg-secondary: #f8fafc;
-$color-bg-tertiary: #f1f5f9;
+$color-bg-primary: #f8fafc;
+$color-bg-secondary: #f1f5f9;
+$color-bg-tertiary: #e2e8f0;
 
-$color-border: #e2e4e8;
+$color-border: #e2e8f0;
 $color-border-light: #f0f1f2;
 $color-border-hover: #d0d3d8;
 
@@ -32,7 +32,7 @@ $transition-fast: 150ms ease;
 $transition-normal: 250ms ease;
 
 // Tree type colors - DISTINCT colors for each type
-$color-model: #64748b;      // Slate - Metamodels
+$color-model: #534AB7;      // Violet - Metamodels (see docs/DESIGN-SYSTEM.md §2.2)
 $color-package: #f59e0b;    // Amber - Packages
 $color-class: #0ea5e9;      // Cyan - Classes
 $color-attribute: #10b981;  // Green - Attributes
@@ -349,9 +349,11 @@ $color-parameter: #9ca3af;  // Gray (light) - Parameters
     align-items: center;
     gap: 2px;
     padding: 4px 6px;
+    margin-left: 8px;
     border-radius: $radius-sm;
     cursor: pointer;
     transition: background-color $transition-fast;
+
 
     &:hover {
         background-color: $color-bg-secondary;
@@ -369,7 +371,9 @@ $color-parameter: #9ca3af;  // Gray (light) - Parameters
 }
 
 .metamodel-tree__content {
-    padding-left: 4px;
+    padding-left: 6px;
+
+
 }
 
 .tree-empty-package {
@@ -388,10 +392,11 @@ $color-parameter: #9ca3af;  // Gray (light) - Parameters
     display: flex;
     align-items: center;
     gap: 2px;
-    padding: 3px 6px;
+    padding: 3px 27px!important; // Large right padding to allow space for badges/icons without affecting text layout
     border-radius: $radius-sm;
     cursor: pointer;
     transition: background-color $transition-fast;
+
 
     &:hover {
         background-color: $color-bg-secondary;
@@ -444,6 +449,7 @@ $color-parameter: #9ca3af;  // Gray (light) - Parameters
     gap: 5px;
     flex: 1;
     min-width: 0;
+    padding-left: 10px;
 }
 
 // ============================================
@@ -466,9 +472,9 @@ $color-parameter: #9ca3af;  // Gray (light) - Parameters
     // Each type has a DISTINCT color for easy identification
 
     &.tree-DModel {
-        // Slate - Metamodels
-        background-color: rgba(100, 116, 139, 0.15);
-        color: $color-model;
+        // Muted slate — uppercase M is enough to identify metamodels
+        background-color: rgba(100, 116, 139, 0.12);
+        color: #64748b;
     }
 
     &.tree-DPackage {
@@ -530,6 +536,64 @@ $color-parameter: #9ca3af;  // Gray (light) - Parameters
         background-color: rgba(107, 114, 128, 0.15);
         color: $color-object;
     }
+
+    // Nested M1 model icon — muted slate, lowercase "m" distinguishes from metamodel
+    &.tree-nested-model {
+        background-color: rgba(100, 116, 139, 0.12);
+        color: #64748b;
+        font-style: italic;
+    }
+}
+
+// ============================================
+// NESTED M1 MODEL + INSTANCE STYLES
+// ============================================
+
+.nested-model-tree {
+    // No border — indentation alone is sufficient
+    padding-left: 6px;
+}
+
+// M1 badge next to model name — very subtle slate hint
+.tree-nested-model__badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    font-size: 9px;
+    font-weight: 700;
+    color: #94a3b8;
+    background: rgba(100, 116, 139, 0.08);
+    border-radius: 3px;
+    margin-left: 6px;
+    letter-spacing: 0.3px;
+    flex-shrink: 0;
+    line-height: 16px;
+}
+
+// Instance icon (bi-app-fill square) — muted slate
+.tree-instance__icon {
+    font-size: 10px;
+    color: #94a3b8;
+    flex-shrink: 0;
+    margin-right: 4px;
+    line-height: 1;
+}
+
+// Instance name styling
+.tree-instance__name {
+    font-size: 12px;
+    color: $color-text-primary;
+}
+
+// Metaclass name after the colon
+.tree-instance__metaclass {
+    font-size: 11px;
+    color: $color-text-tertiary;
+    margin-left: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .tree-node__name {
@@ -538,6 +602,7 @@ $color-parameter: #9ca3af;  // Gray (light) - Parameters
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+
 }
 
 .tree-node__extends {
@@ -772,8 +837,8 @@ $color-highlight-unknown: #f59e0b; // Amber - unknown action
     // Dark mode pastel colors (slightly brighter)
     .tree-node__icon {
         &.tree-DModel {
-            // Slate - Metamodels
-            background-color: rgba(100, 116, 139, 0.2);
+            // Muted slate — dark mode
+            background-color: rgba(148, 163, 184, 0.15);
             color: #94a3b8;
         }
 
@@ -831,6 +896,29 @@ $color-highlight-unknown: #f59e0b; // Amber - unknown action
             background-color: rgba(107, 114, 128, 0.2);
             color: #9ca3af;
         }
+
+        &.tree-nested-model {
+            // Muted slate — dark mode
+            background-color: rgba(148, 163, 184, 0.15);
+            color: #94a3b8;
+        }
+    }
+
+    .tree-nested-model__badge {
+        color: #64748b;
+        background: rgba(148, 163, 184, 0.10);
+    }
+
+    .tree-instance__icon {
+        color: #64748b;
+    }
+
+    .tree-instance__name {
+        color: #e0e0e0;
+    }
+
+    .tree-instance__metaclass {
+        color: #6b7280;
     }
 }
 
@@ -880,5 +968,147 @@ html[data-theme="dark"] {
                 color: #e0e0e0;
             }
         }
+
+        .megamodel-entry {
+            &__header {
+                color: #e0e0e0;
+            }
+
+            &:hover {
+                background-color: #2a2a2a;
+            }
+        }
+
+        .transformation-section {
+            &__header {
+                color: #e0e0e0;
+
+                &:hover {
+                    background-color: #2a2a2a;
+                }
+            }
+
+            &__count {
+                background: rgba(255, 255, 255, 0.1);
+                color: #94a3b8;
+            }
+        }
+
+        .tree-transformation {
+            background: rgba(148, 163, 184, 0.12);
+            color: #64748b;
+        }
     }
+}
+
+// ─── Megamodel Entry ──────────────────────────────────────
+
+.megamodel-entry {
+    cursor: pointer;
+    border-bottom: 1px solid #e2e8f0;
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #334155;
+        transition: background-color 0.15s;
+    }
+
+    &:hover {
+        background-color: #f1f5f9;
+    }
+
+    &__icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 4px;
+        background: rgba(14, 165, 233, 0.12);
+        color: #0ea5e9;
+        font-size: 13px;
+    }
+
+    &__label {
+        flex: 1;
+    }
+}
+
+// ─── Transformation Section ───────────────────────────────
+
+.transformation-section {
+    border-top: 1px solid #e2e8f0;
+    margin-top: 4px;
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        color: #334155;
+        transition: background-color 0.15s;
+
+        &:hover {
+            background-color: #f1f5f9;
+        }
+
+        .tree-node__toggle {
+            flex-shrink: 0;
+        }
+    }
+
+    &__icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 4px;
+        background: rgba(100, 116, 139, 0.10);
+        color: #94a3b8;
+        font-size: 12px;
+    }
+
+    &__label {
+        flex: 1;
+    }
+
+    &__count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 20px;
+        height: 18px;
+        padding: 0 6px;
+        border-radius: 9px;
+        background: #f1f5f9;
+        color: #64748b;
+        font-size: 11px;
+        font-weight: 500;
+    }
+
+    &__content {
+        padding-bottom: 4px;
+    }
+}
+
+.tree-transformation {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    background: rgba(100, 116, 139, 0.10);
+    color: #94a3b8;
+    font-size: 11px;
+    margin-right: 4px;
 }

@@ -1388,7 +1388,34 @@ export class LVoidVertex<Context extends LogicContext<DVoidVertex> = any, C exte
         return true;
     }
 
-
+    // Direct getter/setter overrides for x, y, w, h.
+    // The inherited LGraphElement.get_x() goes through get_size() → view.getSize()
+    // which doesn't work in editor-v2 (ReactFlow). These overrides read/write
+    // directly from the D-object data, bypassing the view layer.
+    get_x(context: Context): this["x"] { return context.data.x; }
+    set_x(val: this["x"], context: Context): boolean {
+        if (context.data.x === val) return true;
+        TRANSACTION('vertex.x', () => { SetFieldAction.new(context.data.id, "x", val, undefined, false); });
+        return true;
+    }
+    get_y(context: Context): this["y"] { return context.data.y; }
+    set_y(val: this["y"], context: Context): boolean {
+        if (context.data.y === val) return true;
+        TRANSACTION('vertex.y', () => { SetFieldAction.new(context.data.id, "y", val, undefined, false); });
+        return true;
+    }
+    get_w(context: Context): this["w"] { return context.data.w; }
+    set_w(val: this["w"], context: Context): boolean {
+        if (context.data.w === val) return true;
+        TRANSACTION('vertex.w', () => { SetFieldAction.new(context.data.id, "w", val, undefined, false); });
+        return true;
+    }
+    get_h(context: Context): this["h"] { return context.data.h; }
+    set_h(val: this["h"], context: Context): boolean {
+        if (context.data.h === val) return true;
+        TRANSACTION('vertex.h', () => { SetFieldAction.new(context.data.id, "h", val, undefined, false); });
+        return true;
+    }
 
 }
 

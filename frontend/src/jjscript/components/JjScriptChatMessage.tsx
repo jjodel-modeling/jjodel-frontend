@@ -5,6 +5,7 @@
 
 import React, { memo } from 'react';
 import { ExecutionResult } from '../types';
+import { Badge } from '../../components/common/Badge';
 import './JjScriptChatMessage.scss';
 
 interface JjScriptChatMessageProps {
@@ -26,7 +27,7 @@ export const JjScriptChatMessage: React.FC<JjScriptChatMessageProps> = memo(({
                     <span className="command-prefix">&gt;</span>
                     <code className="command-text">{command}</code>
                 </div>
-                <span className={`status-badge ${success ? 'status-badge--success' : 'status-badge--error'}`}>
+                <Badge category={success ? 'state' : 'state-danger'}>
                     {success ? (
                         <>
                             <i className="bi bi-check-circle-fill" />
@@ -38,7 +39,7 @@ export const JjScriptChatMessage: React.FC<JjScriptChatMessageProps> = memo(({
                             <span>Error</span>
                         </>
                     )}
-                </span>
+                </Badge>
             </div>
 
             {/* Main message */}

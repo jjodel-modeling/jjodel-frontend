@@ -9,13 +9,13 @@ import { tokenize, parse, JjtlEditor } from './jjtl';
 
 // Parse JjTL code
 const source = `
-transformation StateMachine-2-PetriNet
+transformation StateMachine2PetriNet
 
 from StateMachineMM
 to   PetriNetMM
 
 State -> Place {
-    isInitial -> tokens : true=1, false=0
+    tokens := isInitial : true=1, false=0
 }
 `;
 
@@ -34,21 +34,31 @@ transformation <Nome>
 from <SourceMetamodel>
 to   <TargetMetamodel>
 
-# Mapping classe
+-- Mapping classe
 SourceClass -> TargetClass {
-    # Mapping attributi
-    sourceAttr -> targetAttr
-    sourceAttr -> targetAttr : true=1, false=0
+    -- Mapping attributi (target := source)
+    targetAttr := sourceAttr
+    tokens := isInitial : true=1, false=0
 
-    # Creazione oggetti
+    -- Creazione oggetti
     -> newAttr {
         -> NewClass {
-            attr -> value
+            targetAttr := value
         }
     }
 }
 
-# Helper function
+-- Con alias e guard
+Person p -> Human where p.age > 18 {
+    name := p.fullName
+}
+
+-- Multi-source
+Class c, Package p -> Table where c.package = p {
+    name := p.name + "." + c.name
+}
+
+-- Helper function
 helper nomeFunzione(param: Tipo) -> TipoRitorno {
     espressione
 }
@@ -68,39 +78,39 @@ jjtl/
 ## Esempio Completo
 
 ```jjtl
-transformation StateMachine-2-PetriNet
+transformation StateMachine2PetriNet
 
 from StateMachineMM
 to   PetriNetMM
 
-# Ogni State diventa un Place
+-- Ogni State diventa un Place
 State -> Place {
-    name -> label
-    isInitial -> tokens : true=1, false=0
+    label := name
+    tokens := isInitial : true=1, false=0
 }
 
-# Ogni Transition diventa un Transition + Arcs
+-- Ogni Transition diventa un Transition + Arcs
 Transition -> Transition [*] {
-    name -> label
+    label := name
 
-    # Crea arco da Place sorgente
+    -- Crea arco da Place sorgente
     -> inputArcs {
         -> Arc {
-            place -> source.map()
-            weight -> 1
+            source := place.map()
+            weight := 1
         }
     }
 
-    # Crea arco verso Place destinazione
+    -- Crea arco verso Place destinazione
     -> outputArcs {
         -> Arc {
-            place -> target.map()
-            weight -> 1
+            target := place.map()
+            weight := 1
         }
     }
 }
 
-# Helper per formattare nomi
+-- Helper per formattare nomi
 helper formatLabel(s: String) -> String {
     s.toUpper()
 }
@@ -149,9 +159,10 @@ import { JjtlEditor } from './jjtl';
 | TRANSFORMATION | `transformation` |
 | FROM | `from` |
 | TO | `to` |
-| WHEN | `when` |
+| WHERE | `where` |
 | HELPER | `helper` |
 | ARROW | `->` |
+| ASSIGN | `:=` |
 | IDENTIFIER | `name`, `State` |
 | STRING | `"hello"` |
 | NUMBER | `42`, `3.14` |
@@ -161,8 +172,8 @@ import { JjtlEditor } from './jjtl';
 
 - `Transformation` - Root node
 - `ClassMapping` - Mapping tra classi
-- `AttributeMapping` - Mapping tra attributi
-- `Conversion` - Conversione valori
+- `AttributeMapping` - Mapping tra attributi (`target := source`)
+- `Conversion` - Conversione valori (lookup table)
 - `ValueMapping` - Mapping valore singolo
 - `ObjectCreation` - Creazione nuovo oggetto
 - `Helper` - Funzione helper

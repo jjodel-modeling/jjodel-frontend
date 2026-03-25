@@ -1733,6 +1733,13 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         newView.pointedBy = PointedBy.merge(newView, v);
         newView.subViews = {...newView.subViews, ...v.subViews};
         s.idlookup[v.id] = newView;
+        // When called with explicit state (e.g. from VersionFixer during project load),
+        // skip dispatching to the live Redux store — the state object will be loaded
+        // via LoadAction later, and VIEWS_RECOMPILE is already set up by SaveManager.
+        if (state) {
+            // Only update the state object directly; recompile flags are already in `state`
+            return;
+        }
         transientProperties.view[v.id] = new ViewTransientProperties();
         SetRootFieldAction.new('VIEWS_RECOMPILE_all', v.id, '+=', false);
     }

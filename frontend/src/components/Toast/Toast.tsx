@@ -1,67 +1,53 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, type ReactNode } from 'react';
+import type { ToastDismiss, ToastPriority } from './toastTypes';
 import './toast.scss';
 
-export type ToastType = 'success' | 'error' | 'info' | 'warning';
+export type ToastType = ToastPriority;
 
 interface ToastProps {
     id: string;
     type: ToastType;
-    title?: string;
-    message: string;
+    title?: ReactNode;
+    message: ReactNode;
+    dismiss?: ToastDismiss;
     duration?: number;
     onClose: (id: string) => void;
 }
 
-/**
- * Toast - Non-blocking notification component
- *
- * Replaces modal notifications with lightweight toasts
- * that auto-dismiss and don't block user interaction.
- */
+const ICON_MAP: Record<ToastType, string> = {
+    success: 'bi-check-circle-fill',
+    error: 'bi-x-circle-fill',
+    warning: 'bi-exclamation-triangle-fill',
+    info: 'bi-info-circle-fill',
+};
+
 export const Toast: React.FC<ToastProps> = ({
     id,
     type,
     title,
     message,
+    dismiss = 'auto',
     duration = 4000,
-    onClose
+    onClose,
 }) => {
     const [isExiting, setIsExiting] = useState(false);
+    const isManual = dismiss === 'manual';
 
     useEffect(() => {
-        // Start exit animation before removal
-        const exitTimer = setTimeout(() => {
-            setIsExiting(true);
-        }, duration - 300);
+        if (isManual) return;
 
-        // Remove after animation
-        const removeTimer = setTimeout(() => {
-            onClose(id);
-        }, duration);
+        const exitTimer = setTimeout(() => setIsExiting(true), duration - 300);
+        const removeTimer = setTimeout(() => onClose(id), duration);
 
         return () => {
             clearTimeout(exitTimer);
             clearTimeout(removeTimer);
         };
-    }, [id, duration, onClose]);
+    }, [id, duration, onClose, isManual]);
 
     const handleClose = () => {
         setIsExiting(true);
         setTimeout(() => onClose(id), 300);
-    };
-
-    const getIcon = () => {
-        switch (type) {
-            case 'success':
-                return <i className="bi bi-check-circle-fill" />;
-            case 'error':
-                return <i className="bi bi-x-circle-fill" />;
-            case 'warning':
-                return <i className="bi bi-exclamation-triangle-fill" />;
-            case 'info':
-            default:
-                return <i className="bi bi-info-circle-fill" />;
-        }
     };
 
     return (
@@ -71,7 +57,7 @@ export const Toast: React.FC<ToastProps> = ({
             aria-live="polite"
         >
             <div className="toast-icon">
-                {getIcon()}
+                <i className={`bi ${ICON_MAP[type]}`} />
             </div>
             <div className="toast-content">
                 {title && <div className="toast-title">{title}</div>}
@@ -84,7 +70,9 @@ export const Toast: React.FC<ToastProps> = ({
             >
                 <i className="bi bi-x" />
             </button>
-            <div className="toast-progress" style={{ animationDuration: `${duration}ms` }} />
+            {!isManual && (
+                <div className="toast-progress" style={{ animationDuration: `${duration}ms` }} />
+            )}
         </div>
     );
 };

@@ -448,7 +448,8 @@ export class U {
     public static objectInspect(val: GObject, depth: number = 2, color: boolean = true, showHidden = true): string{
         if (typeof val === 'string') return val;
         let ansiConvert = (window as any).ansiConvert;
-        if (!ansiConvert) (window as any).ansiconvert = ansiConvert = new Convert();
+        if (!ansiConvert) (window as any).ansiConvert = ansiConvert = new Convert();
+        if (!ansiConvert || typeof ansiConvert.toHtml !== 'function') return U.inspect(val, showHidden, depth, false);
         return U.replaceAll(ansiConvert.toHtml(U.inspect(val, showHidden, depth, color)),
             "style=\"color:#FFF\"", "style=\"color:#000\"");
     }

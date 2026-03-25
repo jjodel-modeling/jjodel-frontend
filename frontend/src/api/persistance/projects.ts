@@ -29,6 +29,10 @@ import {ProjectResponseDTO} from "../DTO/ProjectResponseDTO";
 import { getNextVersionNumber, formatVersion } from '../../utils/versionUtils';
 import ActivityLogger from '../../services/ActivityLogger';
 import { ActivityType } from '../../types/activity';
+import {
+    extractMegamodelFromProjectJson,
+    registerSerializedMegamodel,
+} from '../../model/megamodelPersistence';
 import {VersionFixer} from "../../redux/VersionFixer";
 
 @RuntimeAccessible('ProjectsApi')
@@ -127,7 +131,17 @@ class ProjectsApi {
 
 
     static async importFromText(content: string, name: string = '', date: number = Date.now()) {
-        let project = JSON.parse(content) as DProject;
+        const json = JSON.parse(content) as Record<string, unknown>;
+
+        // Extract and register the megamodel (user-defined edges) for this project.
+        // The full megamodel (derived + user-defined) is computed later via loadMegamodel()
+        // once the project's Redux state is populated and artifacts are accessible.
+        const megamodelData = extractMegamodelFromProjectJson(json);
+        if (megamodelData && json.id && typeof json.id === 'string') {
+            registerSerializedMegamodel(json.id, megamodelData);
+        }
+
+        let project = json as unknown as DProject;
         project.isFavorite = false;
         let state = store.getState();
         let resp_replace = 'Replace';

@@ -152,14 +152,9 @@ function computeBestAnchors(
         return { sourceHandle: 'right', targetHandle: 'top' };
     }
 
-    // Inheritance: semantic vertical ports (UML convention)
+    // Inheritance: always child=top, parent=bottom (UML convention)
     if (edgeType === 'inheritance') {
-        const dy = targetRect.centerY - sourceRect.centerY;
-        if (dy < 0) {
-            return { sourceHandle: 'top', targetHandle: 'bottom' };
-        } else {
-            return { sourceHandle: 'bottom', targetHandle: 'top' };
-        }
+        return { sourceHandle: 'top', targetHandle: 'bottom' };
     }
 
     // Reference: angular dead-zone approach
@@ -262,8 +257,9 @@ function getAnchorConfig(
 ): AnchorConfig {
     const config = endpoint === 'source' ? edgeData?.sourceAnchor : edgeData?.targetAnchor;
     if (config) return config;
-    // Legacy fallback: derive from current handle
-    return { mode: 'auto', side: getBaseSide(handleId) as AnchorSide };
+    // Default: treat as pinned — edges stay at their anchor point after
+    // initial placement. Only manual endpoint drag changes them.
+    return { mode: 'pinned', side: getBaseSide(handleId) as AnchorSide };
 }
 
 /**
@@ -274,7 +270,8 @@ function getAnchorConfig(
  */
 function computeAnchorsWithHysteresis(
     edges: MinimalEdgeWithData[],
-    nodeRects: Map<string, NodeRect>
+    nodeRects: Map<string, NodeRect>,
+    contextEdges?: EdgeContext[],
 ): Map<string, AnchorResult> {
     const result = new Map<string, AnchorResult>();
 
@@ -312,8 +309,10 @@ function computeAnchorsWithHysteresis(
             continue;
         }
 
-        // Both pinned: keep as-is
-        if (currentSource.mode === 'pinned' && currentTarget.mode === 'pinned') {
+        // Any pinned anchor: freeze the entire edge — don't reroute either endpoint.
+        // Once the user manually places an anchor, automatic rerouting must not
+        // override their intent (even for the other, non-pinned endpoint).
+        if (currentSource.mode === 'pinned' || currentTarget.mode === 'pinned') {
             const r: AnchorResult = {
                 sourceHandle: currentSource.side, targetHandle: currentTarget.side,
                 sourceAnchor: currentSource, targetAnchor: currentTarget,
@@ -323,21 +322,20 @@ function computeAnchorsWithHysteresis(
             continue;
         }
 
-        // Inheritance: default vertical, but respect individually pinned endpoints
+        // After the pinned-anchor early return above, both endpoints are 'auto' here.
+
+        // Inheritance: enforce top→bottom convention (source=child→top, target=parent→bottom).
+        // The edge creation pipeline (handleEdgeTypeSelected) establishes this convention;
+        // hysteresis must never invert it regardless of relative node positions.
         const edgeType = edge.type === 'inheritance' ? 'inheritance' : 'reference';
         if (edgeType === 'inheritance') {
-            const dy = targetRect.centerY - sourceRect.centerY;
-            const autoSh: AnchorSide = dy < 0 ? 'top' : 'bottom';
-            const autoTh: AnchorSide = dy < 0 ? 'bottom' : 'top';
-            const sh = currentSource.mode === 'pinned' ? currentSource.side : autoSh;
-            const th = currentTarget.mode === 'pinned' ? currentTarget.side : autoTh;
             const r: AnchorResult = {
-                sourceHandle: sh, targetHandle: th,
-                sourceAnchor: { mode: currentSource.mode, side: sh },
-                targetAnchor: { mode: currentTarget.mode, side: th },
+                sourceHandle: 'top', targetHandle: 'bottom',
+                sourceAnchor: { mode: 'auto', side: 'top' },
+                targetAnchor: { mode: 'auto', side: 'bottom' },
             };
             result.set(edge.id, r);
-            edgesWithAnchors.push({ ...edge, sourceHandle: sh, targetHandle: th });
+            edgesWithAnchors.push({ ...edge, sourceHandle: 'top', targetHandle: 'bottom' });
             continue;
         }
 
@@ -353,7 +351,7 @@ function computeAnchorsWithHysteresis(
         let finalSourceSide: AnchorSide;
         let finalTargetSide: AnchorSide;
 
-        if (hasDifferentTypeOnPair && currentSource.mode !== 'pinned' && currentTarget.mode !== 'pinned') {
+        if (hasDifferentTypeOnPair) {
             // Count lateral occupancy for both nodes (excluding self-refs and edges between this pair)
             const sideOcc: Record<'right' | 'left', number> = { right: 0, left: 0 };
             for (const e of edges) {
@@ -371,29 +369,34 @@ function computeAnchorsWithHysteresis(
             finalSourceSide = bestSide;
             finalTargetSide = bestSide;
         } else {
-            // Reference with at least one auto side: compute best with dead-zone
-            // Pass current sides so the dead-zone (30°–60°) retains them
-            const currentSrcSide = currentSource.mode === 'pinned' ? undefined : currentSource.side as Side;
-            const currentTgtSide = currentTarget.mode === 'pinned' ? undefined : currentTarget.side as Side;
-            const best = computeBestAnchors(
-                sourceRect, targetRect, false, 'reference',
-                currentSrcSide, currentTgtSide,
+            // Reference with both auto sides: compute best with occupancy scoring
+            // so edges from the same node prefer different sides.
+            const edgeContext = contextEdges || edges as unknown as EdgeContext[];
+            const best = computeBestAnchorsWithContext(
+                sourceRect, targetRect, edge.source, edge.target,
+                'reference', edgeContext,
             );
 
-            // Respect pinning per-endpoint
-            finalSourceSide = currentSource.mode === 'pinned'
-                ? currentSource.side
-                : best.sourceHandle as AnchorSide;
-            finalTargetSide = currentTarget.mode === 'pinned'
-                ? currentTarget.side
-                : best.targetHandle as AnchorSide;
+            // Dead-zone hysteresis: in the ambiguous 30°–60° angle range,
+            // keep the current sides to avoid constant flipping.
+            const dx = targetRect.centerX - sourceRect.centerX;
+            const dy = targetRect.centerY - sourceRect.centerY;
+            const angle = Math.atan2(Math.abs(dy), Math.abs(dx));
+
+            if (angle >= DEG_30 && angle <= DEG_60) {
+                finalSourceSide = currentSource.side;
+                finalTargetSide = currentTarget.side;
+            } else {
+                finalSourceSide = best.sourceHandle as AnchorSide;
+                finalTargetSide = best.targetHandle as AnchorSide;
+            }
         }
 
         const r: AnchorResult = {
             sourceHandle: finalSourceSide,
             targetHandle: finalTargetSide,
-            sourceAnchor: { mode: currentSource.mode, side: finalSourceSide },
-            targetAnchor: { mode: currentTarget.mode, side: finalTargetSide },
+            sourceAnchor: { mode: 'auto', side: finalSourceSide },
+            targetAnchor: { mode: 'auto', side: finalTargetSide },
         };
         result.set(edge.id, r);
         edgesWithAnchors.push({ ...edge, sourceHandle: finalSourceSide, targetHandle: finalTargetSide });
@@ -403,21 +406,28 @@ function computeAnchorsWithHysteresis(
     const deconflicted = deconflictBidirectionalEdges(edgesWithAnchors, nodeRects);
 
     // Merge deconfliction results — update handle IDs and anchor sides.
-    // IMPORTANT: never overwrite a pinned endpoint's side.
+    // IMPORTANT: never overwrite a pinned endpoint's side or an inheritance edge's convention.
     for (const [edgeId, adjusted] of deconflicted) {
         const existing = result.get(edgeId);
         if (existing) {
+            // Find the original edge to check its type
+            const originalEdge = edges.find(e => e.id === edgeId);
+            const isInheritance = originalEdge?.type === 'inheritance';
+
+            // Inheritance edges: never override — top→bottom convention is sacred
+            if (isInheritance) continue;
+
+            // Any pinned anchor: freeze entire edge — don't let deconfliction
+            // override user's manual placement
             const srcPinned = existing.sourceAnchor.mode === 'pinned';
             const tgtPinned = existing.targetAnchor.mode === 'pinned';
+            if (srcPinned || tgtPinned) continue;
+
             result.set(edgeId, {
-                sourceHandle: srcPinned ? existing.sourceHandle : adjusted.sourceHandle,
-                targetHandle: tgtPinned ? existing.targetHandle : adjusted.targetHandle,
-                sourceAnchor: srcPinned
-                    ? existing.sourceAnchor
-                    : { mode: 'auto', side: adjusted.sourceHandle as AnchorSide },
-                targetAnchor: tgtPinned
-                    ? existing.targetAnchor
-                    : { mode: 'auto', side: adjusted.targetHandle as AnchorSide },
+                sourceHandle: adjusted.sourceHandle,
+                targetHandle: adjusted.targetHandle,
+                sourceAnchor: { mode: 'auto', side: adjusted.sourceHandle as AnchorSide },
+                targetAnchor: { mode: 'auto', side: adjusted.targetHandle as AnchorSide },
             });
         }
     }
@@ -472,12 +482,9 @@ function computeBestAnchorsWithContext(
         return { sourceHandle: 'right', targetHandle: 'top' };
     }
 
-    // Inheritance: always vertical (semantic UML convention)
+    // Inheritance: always child=top, parent=bottom (UML convention)
     if (edgeType === 'inheritance') {
-        const dy = targetRect.centerY - sourceRect.centerY;
-        return dy < 0
-            ? { sourceHandle: 'top', targetHandle: 'bottom' }
-            : { sourceHandle: 'bottom', targetHandle: 'top' };
+        return { sourceHandle: 'top', targetHandle: 'bottom' };
     }
 
     // Different-type same-pair rule: when an inheritance already exists between

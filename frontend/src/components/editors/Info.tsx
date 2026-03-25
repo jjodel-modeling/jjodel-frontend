@@ -1,12 +1,12 @@
 import {
     Any,
     DAttribute, DClass, DEnumerator, Dictionary, DModel, DocString, DReference,
-    DState,
+    DPackage, DState,
     Input, LAttribute, LClass, LClassifier, LEnumerator,
     LGraphElement,
     LModel,
     LModelElement,
-    LObject, LPointerTargetable, LReference, LStructuralFeature, LValue,
+    LObject, LPackage, LPointerTargetable, LReference, LStructuralFeature, LValue,
     LViewElement, MultiSelect, Pointer, Pointers,
     Select,
     Selectors, SetFieldAction, SetRootFieldAction, store, TRANSACTION, U, ValueDetail
@@ -15,6 +15,7 @@ import {FakeStateProps, int, windoww} from '../../joiner/types';
 
 import ReactJson from 'react-json-view' // npm i react-json-view --force
 import React, {Component, Dispatch, JSX, ReactElement, ReactNode, useState} from 'react';
+import HelpButton from '../HelpButton';
 import {connect} from 'react-redux';
 import './editors.scss';
 import './info.scss';
@@ -24,29 +25,258 @@ import {Empty} from "./Empty";
 import { CommandBar, Btn } from '../commandbar/CommandBar';
 import { Tooltip } from '../forEndUser/Tooltip';
 import { icon } from '../../pages/components/icons/Icons';
-import { Toggle } from '../../joiner/components';
-import { UpgradePrompt } from '../ModeSystem';
-import { Button } from '../ui';
+import { Toggle as JoinerToggle } from '../../joiner/components';
+// import { UpgradePrompt } from '../ModeSystem'; // TODO: reintroduce as toast or first-visit hint
+import { Button, EmptyState, Toggle, NumberInput } from '../ui';
 import { M2AnalyticsModal, M2AnalyticsData } from '../M2AnalyticsModal';
+import { useInterfaceMode } from '../../hooks/useInterfaceMode';
 
-// Custom toggle switch component (div-based horizontal switch)
-function PropertiesToggle(props: { data: LModelElement; field: string }) {
-    const { data, field } = props;
+// Collapsible section for properties panel grouping
+function CollapsibleSection(props: { title: string; defaultOpen?: boolean; headerRight?: React.ReactNode; children: React.ReactNode }) {
+    const { title, defaultOpen = true, headerRight, children } = props;
+    const [open, setOpen] = useState(defaultOpen);
+
+    return (
+        <div className={`props-section ${open ? 'props-section--open' : 'props-section--closed'}`}>
+            <div className="props-section__header-row">
+                <button
+                    type="button"
+                    className="props-section__header"
+                    onClick={() => setOpen(!open)}
+                    tabIndex={-1}
+                >
+                    <span className="props-section__title">{title}</span>
+                    <i className={`bi bi-chevron-right props-section__chevron ${open ? 'props-section__chevron--open' : ''}`} />
+                </button>
+                {headerRight && <div className="props-section__header-right" onClick={e => e.stopPropagation()}>{headerRight}</div>}
+            </div>
+            {open && (
+                <div className="props-section__body">
+                    {children}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// Inline info icon with hover tooltip
+function InfoTooltip(props: { text: string }) {
+    const [show, setShow] = useState(false);
+    return (
+        <span className="jj-info-icon-wrapper"
+            onMouseEnter={() => setShow(true)}
+            onMouseLeave={() => setShow(false)}
+        >
+            <span className="jj-info-icon">i</span>
+            {show && <span className="jj-info-tooltip">{props.text}</span>}
+        </span>
+    );
+}
+
+// Toggle component for boolean properties (uses ui/Toggle)
+function PropertiesToggle(props: { data: LModelElement; field: string; label: string; tooltip?: string; badge?: string }) {
+    const { data, field, label, tooltip, badge } = props;
     const value = !!(data as any)[field];
 
-    const handleToggle = () => {
-        (data as any)[field] = !value;
+    const handleChange = (checked: boolean) => {
+        (data as any)[field] = checked;
+    };
+
+    const handleRowClick = (e: React.MouseEvent) => {
+        // Avoid double-trigger if user clicked directly on the toggle button
+        if ((e.target as HTMLElement).closest('button[role="switch"]')) return;
+        handleChange(!value);
     };
 
     return (
-        <button
-            type="button"
-            role="switch"
-            aria-checked={value}
-            aria-label={field}
-            className={`jjodel-switch ${value ? 'active' : ''}`}
-            onClick={handleToggle}
-        />
+        <div className="jj-toggle-row" onClick={handleRowClick}>
+            <span className="jj-toggle-row__label">
+                {label}
+                {badge && <span className="jj-toggle-row__badge">{badge}</span>}
+                {tooltip && <InfoTooltip text={tooltip} />}
+            </span>
+            <Toggle checked={value} onChange={handleChange} size="xs" />
+        </div>
+    );
+}
+
+// Inheritance section — cross-extend visibility driven by global interface mode
+function InheritanceSection(props: {
+    lclass: LClass; advanced: boolean; hasDependencies: boolean;
+    extendValue: {value: string; label: string}[];
+    extendOptions: any;
+}) {
+    const { lclass, advanced, hasDependencies, extendValue, extendOptions } = props;
+    const { isAdvanced: globalAdvanced } = useInterfaceMode();
+
+    return (
+        <CollapsibleSection title="INHERITANCE">
+            <PropertiesToggle data={lclass} field={'abstract'} label="Abstract"
+                tooltip="Cannot be instantiated directly; must be subclassed" />
+            <div className="jj-divider" />
+            <PropertiesToggle data={lclass} field={'interface'} label="Interface"
+                tooltip="Defines a contract without implementation" />
+            {advanced && hasDependencies && <>
+                <div className="jj-divider" />
+                <div className="jj-field" style={{marginTop: 4}}>
+                    <div className="jj-field-label">Extends</div>
+                    <MultiSelect classNamePrefix="jj-select" isMulti={true} options={extendOptions as any} value={extendValue}
+                        placeholder="Select superclass..."
+                        onChange={(v: any) => {
+                            lclass.extends = v.map((e: any) => e.value) as Any<string[]>;
+                        }} />
+                    <div className="jj-field-hint">Inherit from classes in dependent metamodels</div>
+                </div>
+            </>}
+            <div className={`jj-toggle-row-animated ${globalAdvanced ? 'jj-toggle-row-animated--visible' : ''}`}>
+                <div className="jj-divider" />
+                <PropertiesToggle data={lclass} field={'allowCrossReference'} label="Allow cross-extend"
+                    tooltip="Allows extending classifiers from other metamodels" />
+            </div>
+        </CollapsibleSection>
+    );
+}
+
+// Format multiplicity notation for bounds badge (e.g. [0..1], [1], [1..*])
+function formatMultiplicity(lower: number, upper: number): string {
+    const l = typeof lower === 'number' ? lower : 0;
+    const u = typeof upper === 'number' ? upper : 1;
+    const upperStr = u === -1 ? '*' : String(u);
+    if (l === u) return `[${l}]`;
+    return `[${l}..${upperStr}]`;
+}
+
+// Number input for numeric properties (uses ui/NumberInput)
+function PropertiesNumberInput(props: { data: LModelElement; field: string; min?: number; max?: number }) {
+    const { data, field, min, max } = props;
+    const rawValue = (data as any)[field];
+    const value = typeof rawValue === 'number' ? rawValue : parseInt(rawValue) || 0;
+
+    const handleChange = (newVal: number) => {
+        (data as any)[field] = newVal;
+    };
+
+    return (
+        <NumberInput value={value} onChange={handleChange} min={min} max={max} />
+    );
+}
+
+// Contents list for Metamodel — classes, enums, packages
+function MetamodelContents(props: { data: LModel }) {
+    const { data } = props;
+    const d = data.__raw;
+    const classes = data.classes || [];
+    const enumerators = data.enumerators || [];
+    const packages = data.packages || [];
+
+    const handleSelect = (elementId: string) => {
+        SetRootFieldAction.new('_lastSelected' as any, {
+            node: '',
+            view: '',
+            modelElement: elementId,
+        });
+    };
+
+    const parentId = d.id as any;
+
+    const handleAddClass = () => {
+        DClass.new('NewClass', false, false, false, undefined, undefined, parentId, true);
+    };
+
+    const handleAddEnum = () => {
+        DEnumerator.new('NewEnumerator', parentId, true);
+    };
+
+    const handleAddPackage = () => {
+        DPackage.new('NewPackage', '', '', parentId, true);
+    };
+
+    return (
+        <>
+            {/* Classes */}
+            <div className="jj-contents-group">
+                <div className="jj-contents-group-header">
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <span className="jj-section-title">Classes</span>
+                        <span className="jj-contents-count">({classes.length})</span>
+                    </div>
+                    <button className="jj-contents-add" onClick={handleAddClass}>+ Add</button>
+                </div>
+                {classes.length > 0 ? (
+                    <div className="jj-contents-list">
+                        {classes.map((cls: any) => (
+                            <div
+                                key={cls.id}
+                                className="jj-contents-item"
+                                onClick={() => handleSelect(cls.__raw?.id || cls.id)}
+                            >
+                                <div className="jj-contents-icon jj-contents-icon--class">C</div>
+                                <span className="jj-contents-name">{cls.name}</span>
+                                {cls.abstract && <span className="jj-contents-tag">abstract</span>}
+                                {cls.interface && <span className="jj-contents-tag">interface</span>}
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="jj-contents-empty">No classes yet</div>
+                )}
+            </div>
+
+            {/* Enumerators */}
+            <div className="jj-contents-group">
+                <div className="jj-contents-group-header">
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <span className="jj-section-title">Enumerators</span>
+                        <span className="jj-contents-count">({enumerators.length})</span>
+                    </div>
+                    <button className="jj-contents-add" onClick={handleAddEnum}>+ Add</button>
+                </div>
+                {enumerators.length > 0 ? (
+                    <div className="jj-contents-list">
+                        {enumerators.map((en: any) => (
+                            <div
+                                key={en.id}
+                                className="jj-contents-item"
+                                onClick={() => handleSelect(en.__raw?.id || en.id)}
+                            >
+                                <div className="jj-contents-icon jj-contents-icon--enum">E</div>
+                                <span className="jj-contents-name">{en.name}</span>
+                                <span className="jj-contents-detail">{en.literals?.length || 0} literals</span>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="jj-contents-empty">No enumerators yet</div>
+                )}
+            </div>
+
+            {/* Packages */}
+            <div className="jj-contents-group">
+                <div className="jj-contents-group-header">
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <span className="jj-section-title">Packages</span>
+                        <span className="jj-contents-count">({packages.length})</span>
+                    </div>
+                    <button className="jj-contents-add" onClick={handleAddPackage}>+ Add</button>
+                </div>
+                {packages.length > 0 ? (
+                    <div className="jj-contents-list">
+                        {packages.map((pkg: any) => (
+                            <div
+                                key={pkg.id}
+                                className="jj-contents-item"
+                                onClick={() => handleSelect(pkg.__raw?.id || pkg.id)}
+                            >
+                                <div className="jj-contents-icon jj-contents-icon--package">P</div>
+                                <span className="jj-contents-name">{pkg.name}</span>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="jj-contents-empty">No packages yet</div>
+                )}
+            </div>
+        </>
     );
 }
 
@@ -55,26 +285,9 @@ class builder {
         return (<>
             {!skipTitle && <h1>{data.name}</h1>}
             {!skipTitle && data.state.description && <h2>{data.state.description}</h2>}
-            <div className={'form-field'}>
-                <label className={'form-label'}>
-                    Name
-                    <span className="form-label-required">*</span>
-                </label>
+            <div className="jj-field">
+                <label className="jj-field-label">Name <span className="jj-field-required">*</span></label>
                 <Input data={data} field={'name'} type={'text'} />
-                <div className="form-hint">
-                    <i className="bi bi-info-circle" />
-                    Must be unique. Used as identifier in code generation.
-                </div>
-            </div>
-
-            <div className="form-toggle-container">
-                <div className="form-toggle-header">
-                    <div className="form-toggle-content">
-                        <h4 className="form-toggle-title">Read-only</h4>
-                        <p className="form-toggle-description">Prevent modifications to this element</p>
-                    </div>
-                    <PropertiesToggle data={data} field={'__readonly'} />
-                </div>
             </div>
         </>);
     }
@@ -93,346 +306,183 @@ class builder {
             multiselectValue.push(opt);
             return undefined;
         }).filter(e=>!!e) as {value: string, label: string}[];
-        // <Select data={data} isMulti={true} field={'dependencies'}/>
 
         return (<>
-            {this.named(data, advanced, skipTitle)}
+            <CollapsibleSection title="GENERAL">
+                {this.named(data, advanced, true)}
+            </CollapsibleSection>
 
-            <div className={'form-field'}>
-                <label className={'form-label'}>
-                    Model Dependencies
-                    <span className="form-label-badge">Optional</span>
+            <CollapsibleSection title="DEPENDENCIES">
+                <label className={'input-container'}>
+                    <b className={'me-2'}>Depends from models</b>
+                    <MultiSelect
+                        classNamePrefix="jj-select"
+                        isMulti={true}
+                        options={multiselectOptions as any}
+                        value={multiselectValue}
+                        placeholder="Select models..."
+                        onChange={(v) => {
+                            console.log('setting model dependencies', v);
+                            l.dependencies = v.map(e => e.value) as Any<string[]>;
+                        }}
+                    />
                 </label>
-                <MultiSelect
-                    isMulti={true}
-                    options={multiselectOptions as any}
-                    value={multiselectValue}
-                    placeholder="Select dependent models..."
-                    onChange={(v) => {
-                        console.log('setting model dependencies', v);
-                        l.dependencies = v.map(e => e.value) as Any<string[]>;
-                    }}
-                />
-                <div className="form-hint">
-                    <i className="bi bi-info-circle" />
-                    This model will import types from selected models
-                </div>
-            </div>
+            </CollapsibleSection>
+
+            {data.isMetamodel && <CollapsibleSection title="CONTENTS">
+                <MetamodelContents data={l} />
+            </CollapsibleSection>}
         </>);
     }
 
     static package(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
-            {this.named(data, advanced, skipTitle)}
-            <label className={'input-container'}>
-                <b className={'me-2'}>Uri:</b>
-                <Input data={data} field={'uri'} type={'text'}/>
-            </label>
-            <label className={'input-container'}>
-                <b className={'me-2'}>Prefix:</b>
-                <Input data={data} field={'prefix'} type={'text'}/>
-            </label>
+            <CollapsibleSection title="GENERAL">
+                {this.named(data, advanced, true)}
+                <div className="jj-field">
+                    <div className="jj-field-label">Uri</div>
+                    <Input data={data} field={'uri'} type={'text'}/>
+                    <div className="jj-field-hint">Unique identifier for this package</div>
+                </div>
+                <div className="jj-field">
+                    <div className="jj-field-label">Prefix</div>
+                    <Input data={data} field={'prefix'} type={'text'}/>
+                    <div className="jj-field-hint">Short prefix used in qualified names</div>
+                </div>
+            </CollapsibleSection>
         </>);
     }
     
 
     static class(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         let lclass: LClass = data as any;
-        let dclass = lclass.__raw;
-        /*
-        let extendOptions: {value: string, label: string}[] lclass.extends.map(lsubclass=> ({value: lsubclass.id, label: lsubclass.name}));
-        let m2: LModel = lclass.model;
-        // let pkgs = lclass.allowCrossReference ? m2.allCrossSubPackages : m2.allSubPackages;
-        let pkgs = lclass.validTargets;
-        let extendsarr = dclass.extends;
-        let extendValue: {value: string, label: string}[] = [];
-        let extendOptions: {label: string, options: {value: string, label: string}[]}[] = pkgs.map(p => (
-            {label: p.fullname, options: p.classes.map(c=> {
-                let opt = {value:c.id, label: c.name};
-                if (opt.value === dclass.id) return undefined;
-                if (!extendsarr.includes(opt.value)) return opt;
-                extendValue.push(opt);
-                return undefined;
-            }).filter(e=>!!e) as {value: string, label: string}[]}));*/
-        //let extendOptions = pkgs.map(p => ({label: p.fullname, options: p.classes.map(c=> ({value:c.id as string, label:c.name}))}));
 
         let extendValue: {value: string, label: string}[] = lclass.extends.map(c=>({value:c.id, label:c.name}));
         let extendOptions = lclass.validTargetOptions;
-
-        type WikidataSearchItem = {
-            [x: string]: any;
-            id: string;
-            label: string;
-            description?: string;
-        };
-
-        type WikidataSearchResponse = {
-            search?: WikidataSearchItem[];
-        };
-        
-
-        async function lookupWikidataTerm(term: string, language: string = "en"): Promise<WikidataSearchItem | null> {
-            const params = new URLSearchParams({
-                action: "wbsearchentities",
-                search: term,
-                language,
-                format: "json",
-                origin: "*" // <<< THIS IS CRITICAL FOR BROWSER CALLS
-            });  
-
-            lclass.state = {count: lclass.state.count||0};
-
-            const incrementCount = (length: int) => {
-                if (lclass.state.count || 0 + 1 === length) {
-                    lclass.state = {count: 0}      
-                } else {
-                    lclass.state = {count: lclass.state.count||0+1}
-                }
-            }
-
-            const url = "https://www.wikidata.org/w/api.php?" + params.toString();
-
-            try {
-                const response = await fetch(url, {
-                    method: "GET",
-                    headers: { Accept: "application/json" }
-                    // no need to set mode explicitly; default is fine
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error ${response.status}`);
-                }
-
-                const data: WikidataSearchResponse = await response.json();
-
-                if (!data.search || data.search.length === 0) {
-                    return null;
-                }
-
-                const results = data.search.filter(
-                    r => r.label.toLowerCase() === term.toLowerCase() && r.description !== 'family name'
-                ).sort();
-
-                if (!results || results.length === 0) {
-                    return null;
-                }
-
-                const best = results[lclass.state.count||0];
-                lclass.state = {description: best.description};
-                // lclass.state = {label: best.label};
-                lclass.state = {wikidataId: best.id};
-                incrementCount(results.length);
-
-                return best;
-            } catch (error) {
-                console.error("Error calling Wikidata:", error);
-                return null;
-            }
-        }
-
-      
+        let hasDependencies = (lclass.model as any)?.__raw?.dependencies?.length > 0;
 
         return (<>
-            {this.named(data, advanced, skipTitle)}
-            <label className={'input-container'}>
-                <b className={'me-2'}>Class Description:</b>
-                <Input
-	                type="text"
-                    getter={() => lclass.state.description||''}
-                    setter={(value) => (lclass.state = { description: value })}
-                />
-            </label>
-            <label className={'input-container'}>
-                <b className={'me-2'} />
+            <CollapsibleSection title="GENERAL">
+                {this.named(data, advanced, true)}
+            </CollapsibleSection>
 
-                <button className="btn-generate-ai" onClick={() => lookupWikidataTerm(lclass.name)}>
-                    <i className="bi bi-magic" />
-                    Generate with AI
-                </button>
-            </label>
+            <InheritanceSection lclass={lclass} advanced={advanced} hasDependencies={hasDependencies}
+                extendValue={extendValue} extendOptions={extendOptions} />
 
-            <div className={'input-container'}>
-                <b className={'me-2'}>Abstract:
-                    <Tooltip tooltip="Prevents direct instantiation. This class can only be inherited by other classes.">
-                        <i className="bi bi-info-circle" style={{marginLeft: '6px', fontSize: '14px', color: '#94a3b8', cursor: 'help'}} />
-                    </Tooltip>
-                </b>
-                <PropertiesToggle data={lclass} field={'abstract'} />
-            </div>
-            <div className={'input-container'}>
-                <b className={'me-2'}>Interface:
-                    <Tooltip tooltip="Defines a contract that other classes must implement. Cannot contain method implementations.">
-                        <i className="bi bi-info-circle" style={{marginLeft: '6px', fontSize: '14px', color: '#94a3b8', cursor: 'help'}} />
-                    </Tooltip>
-                </b>
-                <PropertiesToggle data={lclass} field={'interface'} />
-            </div>
-
-            <label className={'input-container'}>
-                <b className={'me-2'}>Extends:</b>
-                <MultiSelect isMulti={true} options={extendOptions as any} value={extendValue} onChange={(v) => {
-                    console.log('setting extend', v);
-                    lclass.extends = v.map(e => e.value) as Any<string[]>;
-                }} />
-            </label>
-
-            {advanced && (
-                <>
-                    <div className={'input-container'}>
-                        <b className={'me-2'}>Allow extension from other packages:
-                            <Tooltip tooltip="Classes in other packages can extend this class.">
-                                <i className="bi bi-info-circle" style={{marginLeft: '6px', fontSize: '14px', color: '#94a3b8', cursor: 'help'}} />
-                            </Tooltip>
-                        </b>
-                        <PropertiesToggle data={lclass} field={'allowCrossReference'} />
-                    </div>
-
-                    <div className={'input-container'}>
-                        <b className={'me-2'}>Final:
-                            <Tooltip tooltip="Prevents this class from being extended by other classes (opposite of Abstract).">
-                                <i className="bi bi-info-circle" style={{marginLeft: '6px', fontSize: '14px', color: '#94a3b8', cursor: 'help'}} />
-                            </Tooltip>
-                        </b>
-                        <PropertiesToggle data={lclass} field={'final'} />
-                    </div>
-
-                    <div className={'input-container'}>
-                        <b className={'me-2'}>Singleton:
-                            <Tooltip tooltip="Only one instance of this class can exist at runtime (Singleton pattern).">
-                                <i className="bi bi-info-circle" style={{marginLeft: '6px', fontSize: '14px', color: '#94a3b8', cursor: 'help'}} />
-                            </Tooltip>
-                        </b>
-                        <PropertiesToggle data={data} field={'singleton'} />
-                    </div>
-
-                    <div className={'input-container'}>
-                        <b className={'me-2'}>Rootable:
-                            <Tooltip tooltip="This element can be used as the root element in models (appears in toolbar).">
-                                <i className="bi bi-info-circle" style={{marginLeft: '6px', fontSize: '14px', color: '#94a3b8', cursor: 'help'}} />
-                            </Tooltip>
-                        </b>
-                        <PropertiesToggle data={data} field={'rootable'} />
-                    </div>
-
-                    <div className={'input-container'}>
-                        <b className={'me-2'}>Partial:</b>
-                        <PropertiesToggle data={data} field={'partial'} />
-                    </div>
-                </>
-            )}
+            <CollapsibleSection title="FLAGS">
+                <PropertiesToggle data={lclass} field={'final'} label="Final" />
+                <div className="jj-divider" />
+                <PropertiesToggle data={data} field={'singleton'} label="Singleton" />
+                <div className="jj-divider" />
+                <PropertiesToggle data={data} field={'rootable'} label="Rootable" />
+                <div className="jj-divider" />
+                <PropertiesToggle data={data} field={'partial'} label="Partial" />
+            </CollapsibleSection>
         </>);
     }
 
     static enum(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
-            {this.named(data, advanced, skipTitle)}
-            {advanced && <label className={'input-container'}>
-                <b className={'me-2'}>Serializable:</b>
-                <Input data={data} field={'serializable'} type={'checkbox'}/>
-            </label>}
+            <CollapsibleSection title="GENERAL">
+                {this.named(data, advanced, true)}
+                {advanced && <PropertiesToggle data={data} field={'serializable'} label="Serializable" />}
+            </CollapsibleSection>
         </>);
     }
 
     static feature(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
-            {this.named(data, advanced, skipTitle)}
-            <label className={'input-container'}>
-                <b className={'me-2'}>Type:</b>
-                <Select data={data} field={'type'} />
-            </label>
-            <label className={'input-container'}>
-                <b className={'me-2'}>Lower Bound:</b>
-                <Input data={data} field={'lowerBound'} type={'number'} />
-            </label>
-            <label className={'input-container'}>
-                <b className={'me-2'}>Upper Bound:</b>
-                <Input data={data} field={'upperBound'} type={'number'} />
-            </label>
-            {advanced && <>
-                <label className={'input-container'}>
-                    <b className={'me-2'}>Unique:</b>
-                    <Input data={data} field={'unique'} type={'checkbox'}/>
-                </label>
-                <label className={'input-container'}>
-                    <b className={'me-2'}>Ordered:</b>
-                    <Input data={data} field={'ordered'} type={'checkbox'}/>
-                </label>
-                <label className={'input-container'}>
-                    <b className={'me-2'}>Changeable:</b>
-                    <Input data={data} field={'changeable'} type={'checkbox'}/>
-                </label>
-                <label className={'input-container'}>
-                    <b className={'me-2'}>Volatile:</b>
-                    <Input data={data} field={'volatile'} type={'checkbox'}/>
-                </label>
-                <label className={'input-container'}>
-                    <b className={'me-2'}>Transient:</b>
-                    <Input data={data} field={'transient'} type={'checkbox'}/>
-                </label>
-                <label className={'input-container'}>
-                    <b className={'me-2'}>Unsettable:</b>
-                    <Input data={data} field={'unsettable'} type={'checkbox'}/>
-                </label>
-                <label className={'input-container'}>
-                    <b className={'me-2'}>Derived:</b>
-                    <Input data={data} field={'derived'} type={'checkbox'}/>
-                </label>
-                <label className={'input-container'}>
-                    <b className={'me-2'}>Cross Reference:</b>
-                    <Input data={data} field={'allowCrossReference'} type={'checkbox'}/>
-                </label>
-            </>}
+            <CollapsibleSection title="GENERAL">
+                {this.named(data, advanced, true)}
+            </CollapsibleSection>
+
+            <CollapsibleSection title="TYPE &amp; BOUNDS">
+                <div className="jj-field">
+                    <div className="jj-field-label">Type <span className="jj-field-required">*</span></div>
+                    <Select data={data} field={'type'} />
+                </div>
+                <div className="jj-bounds-row">
+                    <div className="jj-bounds-field">
+                        <div className="jj-field-label">Lower</div>
+                        <PropertiesNumberInput data={data} field={'lowerBound'} min={-1} />
+                    </div>
+                    <div className="jj-bounds-field">
+                        <div className="jj-field-label">Upper</div>
+                        <PropertiesNumberInput data={data} field={'upperBound'} min={-1} />
+                    </div>
+                    <div className="jj-bounds-badge">
+                        {formatMultiplicity((data as any).lowerBound, (data as any).upperBound)}
+                    </div>
+                </div>
+            </CollapsibleSection>
+
+            {advanced && <CollapsibleSection title="ADVANCED" defaultOpen={false}>
+                <PropertiesToggle data={data} field={'unique'} label="Unique" />
+                <div className="jj-divider" />
+                <PropertiesToggle data={data} field={'ordered'} label="Ordered" />
+                <div className="jj-divider" />
+                <PropertiesToggle data={data} field={'changeable'} label="Changeable" />
+                <div className="jj-divider" />
+                <PropertiesToggle data={data} field={'volatile'} label="Volatile" />
+                <div className="jj-divider" />
+                <PropertiesToggle data={data} field={'transient'} label="Transient" />
+                <div className="jj-divider" />
+                <PropertiesToggle data={data} field={'unsettable'} label="Unsettable" />
+                <div className="jj-divider" />
+                <PropertiesToggle data={data} field={'derived'} label="Derived" />
+                <div className="jj-divider" />
+                <PropertiesToggle data={data} field={'allowCrossReference'} label="Cross Reference" />
+            </CollapsibleSection>}
         </>);
     }
 
     static attribute(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
-            {this.feature(data, advanced, skipTitle)}
-            {advanced && <>
-                <label className={'input-container'}>
-                    <b className={'me-2'}>ID:</b>
-                    <Input data={data} field={'isID'} type={'checkbox'} />
-                </label>
-                <label className={'input-container'}>
-                    <b className={'me-2'}>IoT:</b>
-                    <Input data={data} field={'isIoT'} type={'checkbox'} />
-                </label>
-            </>}
+            {this.feature(data, advanced, true)}
+            {advanced && <CollapsibleSection title="FLAGS" defaultOpen={false}>
+                <PropertiesToggle data={data} field={'isID'} label="ID" />
+                <div className="jj-divider" />
+                <PropertiesToggle data={data} field={'isIoT'} label="IoT" />
+            </CollapsibleSection>}
         </>);
     }
     static reference(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
-            {this.feature(data, advanced, skipTitle)}
-            <label className={'input-container'}>
-                <b className={'me-2'}>Composition:</b>
-                <Input data={data} field={'composition'} type={'checkbox'} />
-            </label>
-            <label className={'input-container'}>
-                <b className={'me-2'}>Aggregation:</b>
-                <Input data={data} field={'aggregation'} type={'checkbox'} />
-            </label>
-            <label className={'input-container'}>
-                <b className={'me-2'}>Container:</b>
-                <Input data={data} field={'container'} type={'checkbox'} />
-            </label>
+            {this.feature(data, advanced, true)}
+
+            <CollapsibleSection title="FLAGS">
+                <PropertiesToggle data={data} field={'composition'} label="Composition" />
+                <div className="jj-divider" />
+                <PropertiesToggle data={data} field={'aggregation'} label="Aggregation" />
+            </CollapsibleSection>
         </>);
     }
     static operation(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
-            {this.named(data, advanced, skipTitle)}
-            <label className={'input-container'}>
-                <b className={'me-2'}>Return:</b>
-                <Select data={data} field={'type'} />
-            </label>
+            <CollapsibleSection title="GENERAL">
+                {this.named(data, advanced, true)}
+            </CollapsibleSection>
+
+            <CollapsibleSection title="RETURN">
+                <div className="jj-field">
+                    <div className="jj-field-label">Return type</div>
+                    <Select data={data} field={'type'} />
+                </div>
+            </CollapsibleSection>
         </>);
     }
     static literal(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
-            {this.named(data, advanced, skipTitle)}
-            <label className={'input-container'}>
-                <b className={'me-2'}>Ordinal:</b>
-                <Input data={data} field={'ordinal'} type={'number'} />
-            </label>
+            <CollapsibleSection title="GENERAL">
+                {this.named(data, advanced, true)}
+            </CollapsibleSection>
+
+            <CollapsibleSection title="VALUE">
+                <div className="jj-field">
+                    <div className="jj-field-label">Ordinal</div>
+                    <PropertiesNumberInput data={data} field={'ordinal'} min={0} />
+                </div>
+            </CollapsibleSection>
         </>);
     }
     static object(data: LModelElement, topics: Dictionary<string, unknown>, advanced: boolean, mode: 'popup'|'tab'|'inline'): JSX.Element {
@@ -452,62 +502,74 @@ class builder {
         }
         let instanceoff = object.instanceof;
         return(<>
-            {tab && 
-                <h1>{data.name}: {instanceoff && conform && instanceoff.name}</h1>
-            }
             {popup && <>
                     <h1>Edit {data.name}: {instanceoff && conform && instanceoff.name}</h1>
                     <b>Properties</b>
                 </>
             }
-           
-            {tab && instanceoff && conform && <label className={'d-block text-center'}>
-                The instance <b className={'text-success'}>CONFORMS</b> to {instanceoff.name}
-            </label>}
 
-            {tab && instanceoff && !conform && <label className={'d-block text-center'}>
-                The instance <b className={'text-danger'}>NOT CONFORMS</b> to {instanceoff.name}
-            </label>}
-            {tab && !instanceoff && <label className={'d-block text-center'}>
-                The instance is <b className={'text-warning'}>SHAPELESS</b>
-            </label>}
+            {/* Conformance banner */}
+            {tab && instanceoff && conform && (
+                <div className="jj-conformance-bar">
+                    <span className="jj-conformance-dot" />
+                    Conforms to <strong>{instanceoff.name}</strong>
+                </div>
+            )}
+            {tab && instanceoff && !conform && (
+                <div className="jj-conformance-bar jj-conformance-bar--error">
+                    <span className="jj-conformance-dot jj-conformance-dot--error" />
+                    Does not conform to <strong>{instanceoff.name}</strong>
+                </div>
+            )}
+            {tab && !instanceoff && (
+                <div className="jj-conformance-bar jj-conformance-bar--warning">
+                    <span className="jj-conformance-dot jj-conformance-dot--warning" />
+                    Shapeless instance
+                </div>
+            )}
 
-            {instanceoff && !object.partial ? null :
-                tab && <label className={'input-container'}>
+            {/* Force Type section */}
+            {tab && <CollapsibleSection title="TYPE">
+                {this.forceConform(object)}
+            </CollapsibleSection>}
 
-                    <CommandBar style={{marginLeft: 'auto', marginTop: '6px'}}>
-                        <Btn icon={'add'} action={()=> object.addValue()} tip={`Add a feature`} className={'add-feature'} />
-                    </CommandBar>
+            {/* Slots section */}
+            {object.features.length > 0 && (
+                <CollapsibleSection title="SLOTS">
+                    {object.features.map(f => <div id={`Object-${f.id}`} key={f.id}>
+                        {this.value(f, topics, advanced, mode)}
+                    </div>)}
+                </CollapsibleSection>
+            )}
 
-                </label>
-            }
-
-            {tab && this.forceConform(object)}
-
-            {object.features.map(f => <div id={`Object-${f.id}`}>
-                {this.value(f, topics, advanced, mode)}
-            </div>)}
+            {object.features.length === 0 && tab && (
+                <CollapsibleSection title="SLOTS">
+                    <div className="jj-slot-empty" style={{padding: '10px 16px'}}>No slots defined</div>
+                </CollapsibleSection>
+            )}
         </>);
     }
 
     static forceConform(me: LObject) {
         let mm: LModel = Selectors.getLastSelectedModel().m2 as LModel;
         if (!mm) return <></>
-        return(<label className={'input-container'}>
-            <b className={'me-2'}>Force Type:</b>
-            <select className={'my-auto ms-auto select'} onChange={ (event)=>{
-                (window as any).debugmm = mm;
-                (window as any).debugm = me;
-                me.instanceof = event.target.value === 'undefined' ? undefined : event.target.value as any;
-            } } value={me.instanceof?.id || 'undefined'}>
-                <optgroup label={mm.name}>
-                    {(mm.classes || []).map( c =>
-                            <option value={c.id}>{c?.name || c.id}</option>
-                    )}
-                    <option value={'undefined'}>Object</option>
-                </optgroup>
-            </select>
-        </label>);
+        return(
+            <div className="jj-field">
+                <div className="jj-field-label">Force type</div>
+                <select className="jj-slot-value-select" onChange={ (event)=>{
+                    (window as any).debugmm = mm;
+                    (window as any).debugm = me;
+                    me.instanceof = event.target.value === 'undefined' ? undefined : event.target.value as any;
+                } } value={me.instanceof?.id || 'undefined'}>
+                    <optgroup label={mm.name}>
+                        {(mm.classes || []).map( c =>
+                                <option key={c.id} value={c.id}>{c?.name || c.id}</option>
+                        )}
+                        <option value={'undefined'}>Object</option>
+                    </optgroup>
+                </select>
+            </div>
+        );
     }
 
     static value(data: LModelElement, topics: Dictionary<string, unknown>, advanced: boolean, mode: 'popup'|'tab'|'inline'): JSX.Element {
@@ -597,109 +659,124 @@ class builder {
         let selectOptions: JSX.Element | JSX.Element[] | null = value.validTargetsJSX;
 
         let isPtr = isAttribute ? false : (isEnumerator || isReference ? true : undefined);
+        const lowerBound = feature ? (feature as LReference | LAttribute).__raw.lowerBound : 0;
+        const isMultiValued = upperBound > 1 || upperBound >= 999;
+        const isSingleRequired = upperBound === 1 && lowerBound >= 1;
+
         const valueslist = (filteredValues).map((val, index) =>
             val.hidden ? null :
-                <label className={'mt-1 d-flex ms-4'} key={index}>
-                    {/* <div className={'border border-dark'}></div>*/}
-
+                <div className="jj-slot-value-row" key={index}>
                     {/* Attribute */}
-                    
                     {isAttribute && <Input key={'a'+index} setter={(val: any) => { changeDValue({target:{value:val, checked:!!val}} as any, index, false) }}
-                                           className={'input m-auto ms-1' /*@ts-ignore*/}
+                                           className={'jj-slot-value-input' /*@ts-ignore*/}
                                            getter={()=>val.value as any} min={min} max={max} type={field as any} step={stepSize}
                                            maxLength={maxLength} placeholder={'empty'}/> }
-                   
+
                     {/* Enumerator */}
-                    
-                    {isEnumerator && <select key={'e'+index} onChange={(evt) => {changeDValue(evt, index, true)}} className={'m-auto ms-1 select'} value={val.rawValue+''} data-valuedebug={val.rawValue}>
-                            {<option key='undefined' value={'undefined'}>-----</option>}
+                    {isEnumerator && <select key={'e'+index} onChange={(evt) => {changeDValue(evt, index, true)}} className="jj-slot-value-select" value={val.rawValue+''} data-valuedebug={val.rawValue}>
+                            <option key='undefined' value={'undefined'}>-----</option>
                             {selectOptions}
                     </select>}
-                    
+
                     {/* Reference */}
-                    
-                    {isReference && <select key={'r'+index} onChange={(evt) => {changeDValue(evt, index, true)}} className={'m-auto ms-1 select'} value={val.rawValue+''} data-valuedebug={val.rawValue}>
+                    {isReference && <select key={'r'+index} onChange={(evt) => {changeDValue(evt, index, true)}} className="jj-slot-value-select" value={val.rawValue+''} data-valuedebug={val.rawValue}>
                             <option value={'undefined'}>-----</option>
                             {selectOptions}
                         </select>
                     }
-                    
-                    {/* Composition - to finalize */}
-                    
+
+                    {/* Composition */}
                     {isComposition && (() => {
                         const element = LModelElement.fromPointer(val.rawValue+'');
                         if (!inline) {
                             return <div className={`item ${inline && 'inline'}`}>
                                 {/*@ts-ignore*/}
                                 {popup && element && <b>{element.instanceof.name}</b>}
-                                {!popup && <select key={'r'+index} onChange={(evt) => {changeDValue(evt, index, true)}} className={'m-auto ms-1 select'} value={val.rawValue+''} data-valuedebug={val.rawValue}>
+                                {!popup && <select key={'r'+index} onChange={(evt) => {changeDValue(evt, index, true)}} className="jj-slot-value-select" value={val.rawValue+''} data-valuedebug={val.rawValue}>
                                     <option value={'undefined'}>-----</option>
                                     {selectOptions}
                                 </select>}
-                                {popup && 
+                                {popup &&
                                     <div className={'inline'}>
                                         <Info mode={'inline'} localData={element} />
                                     </div>}
                             </div>;
-                        } 
+                        }
                     })()}
 
                     {/* Shapeless */}
-
                     {isShapeless && <>
-                        {<Input key={'raw' + index} setter={(val: any) => {changeDValue({target:{value:val, checked:!!val}} as any, index, false)}}
-                                className={'input m-auto ms-1' /*@ts-ignore*/}
-                                getter={()=>val.rawValue} list={'objectdatalist'} type={'text'} placeholder={'empty'}/>}
-                        <span className={'ms-1 my-auto'}>→</span>
-                        {<select key={index} onChange={(evt) => {changeDValue(evt, index, undefined)}} className={'select m-auto ms-1'} value={val.rawValue+''}>
+                        <Input key={'raw' + index} setter={(val: any) => {changeDValue({target:{value:val, checked:!!val}} as any, index, false)}}
+                                className={'jj-slot-value-input' /*@ts-ignore*/}
+                                getter={()=>val.rawValue} list={'objectdatalist'} type={'text'} placeholder={'empty'}/>
+                        <span style={{color: '#94a3b8', fontSize: '12px', margin: '0 2px'}}>→</span>
+                        <select key={index} onChange={(evt) => {changeDValue(evt, index, undefined)}} className="jj-slot-value-select" value={val.rawValue+''}>
                             {selectOptions}
-                        </select>}
+                        </select>
                     </>}
 
-                    <CommandBar>
-                        <Btn icon={'delete'} tip={'Remove value'} action={(evt) => {remove(index, isPtr)}} />
-                    </CommandBar>
-                    {/* <button className={'btn m-auto ms-2'} onClick={(evt) => {remove(index, isPtr)}}>
-                        <i className={'p-1 bi bi-trash3'} style={{color: 'var(--color)'}}></i>
-                    </button>*/}
-                </label>);
+                    {!isSingleRequired && (
+                        <button className="jj-slot-value-delete" onClick={() => {remove(index, isPtr)}} title="Remove value">×</button>
+                    )}
+                </div>);
 
+        // Slot type name
+        const typeName = feature?.type?.name || '';
+        const lowerDisplay = lowerBound ?? 0;
+        const upperDisplay = upperBound >= 999 ? '*' : upperBound;
+
+        if (tab) {
+            return (
+                <div className="jj-slot">
+                    <div className="jj-slot-header">
+                        <div className="jj-slot-header-left">
+                            <span className="jj-slot-name">{data.name}</span>
+                            <span className="jj-slot-multiplicity">[{lowerDisplay}..{upperDisplay}]</span>
+                        </div>
+                        <div className="jj-slot-header-right">
+                            <span className="jj-slot-type">{typeName}</span>
+
+                            {(upperBound === -1 || filteredValues.length < upperBound) && (
+                                <button className="jj-slot-add" onClick={add} disabled={filteredValues.length >= upperBound} title={`Add ${data.name} value`}>+</button>
+                            )}
+                        </div>
+                    </div>
+                    <div className="jj-slot-values">
+                        {filteredValues.length === 0 ? (
+                            <div className="jj-slot-empty">No values</div>
+                        ) : valueslist}
+                    </div>
+                    {value.instanceof?.className === 'DAttribute' && (value.instanceof as LAttribute).isIoT && (
+                        <div className="jj-field" style={{marginTop: '6px'}}>
+                            <div className="jj-field-label">Topic</div>
+                            <select className="jj-slot-value-select" defaultValue={value.topic} onChange={e => value.topic = e.target.value}>
+                                <optgroup label={'topics'}>
+                                    <option value={''}>------</option>
+                                    {U.extractTopics(topics).map(t => <option key={t} value={t}>{t}</option>)}
+                                </optgroup>
+                            </select>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // Popup / inline fallback
         return(<>
-            {tab ? 
-                <>
-                    <h1>{data.name}</h1> 
-                    <label className={'d-flex'}>
-                    <label className={'ms-1 my-auto'}>Values</label>
-                    <CommandBar style={{marginLeft: 'auto', marginTop: '6px'}}>
-                        <Btn icon={'add'} action={add} tip={`Add a ${data.name} value`} disabled={filteredValues.length >= upperBound}/>
-                    </CommandBar>
-                    {/* <button className={'btn btn-primary ms-auto me-1'} disabled={filteredValues.length >= upperBound} onClick={add}>
-                        <i className={'p-1 bi bi-plus'}></i>
-                    </button>*/}
-                    </label>
-                </>
-            : 
-                <>
-                    <label className={'d-flex'}>
-                    <label className={'ms-1 my-auto'}>{data.name}</label>
-                    <CommandBar style={{marginLeft: 'auto', marginTop: '0px'}}>
-                        {!isComposition && <Btn icon={'add'} 
-                            action={add} 
-                            tip={`Add a ${data.name} value`} 
-                            disabled={filteredValues.length >= upperBound} 
-                            style={{color: 'black'}}
-                        />}
-                    </CommandBar>
-                    {/* <button className={'btn ms-auto me-1'} disabled={filteredValues.length >= upperBound} onClick={add}>
-                        <i className={'p-1 bi bi-plus'}></i>
-                    </button>*/}
-                    </label>
-                </>
-            }
-           
+            <label className={'d-flex'}>
+                <label className={'ms-1 my-auto'}>{data.name}</label>
+                <CommandBar style={{marginLeft: 'auto', marginTop: '0px'}}>
+                    {!isComposition && <Btn icon={'add'}
+                        action={add}
+                        tip={`Add a ${data.name} value`}
+                        disabled={filteredValues.length >= upperBound}
+                        style={{color: 'black'}}
+                    />}
+                </CommandBar>
+            </label>
             {valueslist}
             {value.instanceof?.className === 'DAttribute' && (value.instanceof as LAttribute).isIoT && <label className={'mt-2 input-container'}>
-                <b className={'me-2'}>Topic:</b>
+                <b className={'me-2'}>Topic</b>
                 <select className={'my-auto ms-auto select'} defaultValue={value.topic} onChange={e => value.topic = e.target.value}>
                     <optgroup label={'topics'}>
                         <option value={''}>------</option>
@@ -717,62 +794,141 @@ function getElementTypeInfo(className: string): { badge: string; badgeClass: str
         case 'DModel':
             return { badge: 'Metamodel', badgeClass: 'metamodel', icon: 'bi-diagram-3' };
         case 'DPackage':
-            return { badge: 'Package', badgeClass: 'model', icon: 'bi-folder' };
+            return { badge: 'Package', badgeClass: 'package', icon: 'bi-folder' };
         case 'DClass':
             return { badge: 'Class', badgeClass: 'class', icon: 'bi-box' };
         case 'DEnumerator':
-            return { badge: 'Enum', badgeClass: 'class', icon: 'bi-list-ol' };
+            return { badge: 'Enum', badgeClass: 'enum', icon: 'bi-list-ol' };
         case 'DAttribute':
-            return { badge: 'Attribute', badgeClass: 'attribute', icon: 'bi-type' };
+            return { badge: 'Attribute', badgeClass: 'attribute', icon: 'bi-list-ul' };
         case 'DReference':
             return { badge: 'Reference', badgeClass: 'reference', icon: 'bi-link-45deg' };
         case 'DOperation':
-            return { badge: 'Operation', badgeClass: 'attribute', icon: 'bi-gear' };
+            return { badge: 'Operation', badgeClass: 'operation', icon: 'bi-gear' };
         case 'DParameter':
             return { badge: 'Parameter', badgeClass: 'attribute', icon: 'bi-three-dots' };
         case 'DEnumLiteral':
-            return { badge: 'Literal', badgeClass: 'attribute', icon: 'bi-hash' };
+            return { badge: 'Literal', badgeClass: 'literal', icon: 'bi-hash' };
         case 'DObject':
-            return { badge: 'Object', badgeClass: 'model', icon: 'bi-circle' };
+            return { badge: 'Object', badgeClass: 'class', icon: 'bi-circle' };
         case 'DValue':
             return { badge: 'Value', badgeClass: 'attribute', icon: 'bi-pencil' };
         default:
-            return { badge: 'Element', badgeClass: 'model', icon: 'bi-square' };
+            return { badge: 'Element', badgeClass: 'class', icon: 'bi-square' };
     }
 }
 
-// Header component for the new design
-function PropertiesHeader(props: { data: LModelElement; className: string }) {
-    const { data, className } = props;
+// Header component with icon, name, and badge
+function PropertiesHeader(props: { data: LModelElement; className: string; isMetamodel?: boolean }) {
+    const { data, className, isMetamodel } = props;
     const typeInfo = getElementTypeInfo(className);
-    const description = data.state?.description || '';
+
+    // Override badge for DModel: distinguish Model vs Metamodel
+    const badge = className === 'DModel'
+        ? (isMetamodel ? 'Metamodel' : 'Model')
+        : typeInfo.badge;
+    const badgeClass = className === 'DModel'
+        ? (isMetamodel ? 'metamodel' : 'model')
+        : typeInfo.badgeClass;
 
     return (
-        <div className="properties-header">
-            <div className="properties-header-icon">
+        <div className="props-header">
+            <div className="props-header__icon">
                 <i className={`bi ${typeInfo.icon}`} />
             </div>
-            <div className="properties-header-content">
-                <div className="properties-header-top">
-                    <h1 className="properties-header-name">{data.name || 'Unnamed'}</h1>
-                    <span className={`properties-header-badge ${typeInfo.badgeClass}`}>
-                        {typeInfo.badge}
-                    </span>
-                </div>
-                {description && (
-                    <p className="properties-header-description">{description}</p>
-                )}
-            </div>
+            <span className="props-header__name">{data.name || 'Unnamed'}</span>
+            <span className={`jj-type-badge jj-type-badge--${badgeClass}`}>
+                {badge}
+            </span>
+            <HelpButton helpKey="properties-panel" />
         </div>
     );
 }
 
 // Overview stats for Model/Metamodel
-function PropertiesOverview(props: { data: LModel; onViewAnalytics?: () => void }) {
-    const { data, onViewAnalytics } = props;
-    const packages = data.packages?.length || 0;
-    const classes = data.classes?.length || 0;
-    const enumerators = data.enumerators?.length || 0;
+function PropertiesOverview(props: { data: LModel; isMetamodel: boolean; onViewAnalytics?: () => void }) {
+    const { data, isMetamodel, onViewAnalytics } = props;
+
+    if (isMetamodel) {
+        const packages = data.packages?.length || 0;
+        const classes = data.classes?.length || 0;
+        const enumerators = data.enumerators?.length || 0;
+
+        return (
+            <div className="properties-section">
+                <div className="properties-section-header">
+                    <h3 className="properties-section-title">Overview</h3>
+                </div>
+                <div className="properties-section-content">
+                    <div className="overview-grid-horizontal">
+                        <div className="overview-cell">
+                            <i className="bi bi-folder" />
+                            <span className="cell-value">{packages}</span>
+                            <span className="cell-label">Packages</span>
+                        </div>
+                        <div className="overview-cell">
+                            <i className="bi bi-diagram-3" />
+                            <span className="cell-value">{classes}</span>
+                            <span className="cell-label">Classes</span>
+                        </div>
+                        <div className="overview-cell">
+                            <i className="bi bi-list-ul" />
+                            <span className="cell-value">{enumerators}</span>
+                            <span className="cell-label">Enumerators</span>
+                        </div>
+                    </div>
+
+                    {/* Analytics Box with Link */}
+                    <div className="overview-analytics-box" style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '10px 12px',
+                        background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '6px',
+                        marginTop: '16px'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <i className="bi bi-bar-chart-line" style={{
+                                fontSize: '16px',
+                                color: '#475569'
+                            }} />
+                            <span style={{
+                                fontSize: '12px',
+                                fontWeight: 500,
+                                color: '#334155'
+                            }}>Additional metrics and insights available in Metamodel Analytics</span>
+                        </div>
+                        <button style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            padding: '6px 10px',
+                            background: '#334155',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            whiteSpace: 'nowrap'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.background = '#475569'}
+                        onMouseOut={(e) => e.currentTarget.style.background = '#334155'}
+                        onClick={onViewAnalytics}>
+                            <span>View Analytics</span>
+                            <i className="bi bi-arrow-right" style={{ fontSize: '12px', color: 'white' }} />
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Model overview
+    const instances = data.objects?.length || 0;
 
     return (
         <div className="properties-section">
@@ -780,70 +936,12 @@ function PropertiesOverview(props: { data: LModel; onViewAnalytics?: () => void 
                 <h3 className="properties-section-title">Overview</h3>
             </div>
             <div className="properties-section-content">
-                {/* Horizontal 1x3 Grid */}
                 <div className="overview-grid-horizontal">
                     <div className="overview-cell">
-                        <i className="bi bi-folder" />
-                        <span className="cell-value">{packages}</span>
-                        <span className="cell-label">Packages</span>
+                        <i className="bi bi-circle" />
+                        <span className="cell-value">{instances}</span>
+                        <span className="cell-label">Instances</span>
                     </div>
-
-                    <div className="overview-cell">
-                        <i className="bi bi-diagram-3" />
-                        <span className="cell-value">{classes}</span>
-                        <span className="cell-label">Classes</span>
-                    </div>
-
-                    <div className="overview-cell">
-                        <i className="bi bi-list-ul" />
-                        <span className="cell-value">{enumerators}</span>
-                        <span className="cell-label">Enumerators</span>
-                    </div>
-                </div>
-
-                {/* Analytics Box with Link */}
-                <div className="overview-analytics-box" style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '10px 12px',
-                    background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px',
-                    marginTop: '16px'
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <i className="bi bi-bar-chart-line" style={{
-                            fontSize: '16px',
-                            color: '#475569'
-                        }} />
-                        <span style={{
-                            fontSize: '12px',
-                            fontWeight: 500,
-                            color: '#334155'
-                        }}>Additional metrics and insights available in Metamodel Analytics</span>
-                    </div>
-                    <button style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '5px',
-                        padding: '6px 10px',
-                        background: '#334155',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                        fontWeight: 500,
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        whiteSpace: 'nowrap'
-                    }}
-                    onMouseOver={(e) => e.currentTarget.style.background = '#475569'}
-                    onMouseOut={(e) => e.currentTarget.style.background = '#334155'}
-                    onClick={onViewAnalytics}>
-                        <span>View Analytics</span>
-                        <i className="bi bi-arrow-right" style={{ fontSize: '12px', color: 'white' }} />
-                    </button>
                 </div>
             </div>
         </div>
@@ -1054,99 +1152,99 @@ function InfoComponent(props: AllProps) {
 
         // Element selected - show full properties panel
         const showOverview = ddata.className === 'DModel';
-        const showActions = ['DModel', 'DClass', 'DEnumerator', 'DAttribute', 'DReference', 'DOperation'].includes(ddata.className);
+        const isMetamodel = showOverview && !!(data as LModel).isMetamodel;
+        // const showActions = ['DModel', 'DClass', 'DEnumerator', 'DAttribute', 'DReference', 'DOperation', 'DEnumLiteral', 'DPackage'].includes(ddata.className);
+
+        // Build breadcrumb path with type icons and element IDs for navigation
+        const breadcrumbParts: Array<{ name: string; icon: string; elementId?: string }> = [];
+        try {
+            const father = (data as any).father;
+            if (father && father.name) {
+                const grandFather = (father as any).father;
+                if (grandFather && grandFather.name) {
+                    const gfClass = grandFather.__raw?.className || '';
+                    breadcrumbParts.push({ name: grandFather.name, icon: getElementTypeInfo(gfClass).icon, elementId: grandFather.__raw?.id || grandFather.id });
+                }
+                const fClass = father.__raw?.className || '';
+                breadcrumbParts.push({ name: father.name, icon: getElementTypeInfo(fClass).icon, elementId: father.__raw?.id || father.id });
+            }
+            breadcrumbParts.push({ name: data.name || 'Unnamed', icon: getElementTypeInfo(ddata.className).icon });
+        } catch { /* breadcrumb not available */ }
+
+        const handleBreadcrumbClick = (elementId?: string) => {
+            if (!elementId) return;
+            SetRootFieldAction.new('_lastSelected' as any, {
+                node: '',
+                view: '',
+                modelElement: elementId,
+            });
+        };
 
         return (
             <>
                 <section className="properties-tab properties-panel">
                     {/* Header */}
-                    <PropertiesHeader data={data} className={ddata.className} />
+                    <PropertiesHeader data={data} className={ddata.className} isMetamodel={isMetamodel} />
+
+                    {/* Breadcrumb */}
+                    {breadcrumbParts.length > 1 && (
+                        <div className="jj-context-bar">
+                            {breadcrumbParts.map((part, i) => {
+                                const isCurrent = i === breadcrumbParts.length - 1;
+                                return (
+                                    <React.Fragment key={i}>
+                                        {i > 0 && <span className="jj-context-bar__sep">›</span>}
+                                        <span
+                                            className={`jj-context-bar__segment${isCurrent ? ' jj-context-bar__segment--current' : ''}`}
+                                            onClick={!isCurrent ? () => handleBreadcrumbClick(part.elementId) : undefined}
+                                        >
+                                            <i className={`bi ${part.icon}`} />
+                                            {part.name}
+                                        </span>
+                                    </React.Fragment>
+                                );
+                            })}
+                        </div>
+                    )}
 
                     {/* Overview - only for Models */}
-                    {showOverview && <PropertiesOverview data={data as LModel} onViewAnalytics={openM2Analytics} />}
+                    {showOverview && <PropertiesOverview data={data as LModel} isMetamodel={isMetamodel} onViewAnalytics={openM2Analytics} />}
 
-                    {/* Details Section */}
-                    <div className="properties-section">
-                        <div className="properties-section-header">
-                            <h3 className="properties-section-title">Details</h3>
-                        </div>
-                        <div className="properties-section-content">
-                            {jsx}
-                        </div>
+                    {/* Fields (builder methods now include their own CollapsibleSections) */}
+                    <div className="properties-fields">
+                        {jsx}
                     </div>
 
-                    {/* State Section - Advanced Mode Only (Collapsible) */}
+                    {/* Advanced State — collapsed by default, advanced mode only */}
                     {advanced && (
-                        <div className="properties-section properties-section--collapsible">
-                            <button
-                                className="properties-section-header"
-                                onClick={() => setAdvancedStateOpen(!advancedStateOpen)}
-                            >
-                                <div className="properties-section-title">
-                                    <i className={`bi ${advancedStateOpen ? 'bi-chevron-down' : 'bi-chevron-right'}`} />
-                                    <i className="bi bi-braces" />
-                                    Advanced State
-                                </div>
-                                <span className="properties-section-badge advanced">Optional</span>
-                            </button>
-
-                            {advancedStateOpen && (
-                                <div className="properties-section-content">
-                                    {!ddata || Object.keys(ddata._state).length === 0 ? (
-                                        <div className="empty-state">
-                                            <div className="empty-state-icon">
-                                                <i className="bi bi-code-slash" />
-                                            </div>
-                                            <div className="empty-state-title">No custom state defined</div>
-                                            <div className="empty-state-description">
-                                                Advanced state properties are empty. This is normal for most elements.
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="object-state" style={{ margin: 0, border: 'none' }}>
-                                            <ReactJson
-                                                src={ddata._state}
-                                                collapsed={1}
-                                                collapseStringsAfterLength={20}
-                                                displayDataTypes={true}
-                                                displayObjectSize={true}
-                                                enableClipboard={true}
-                                                groupArraysAfterLength={100}
-                                                indentWidth={4}
-                                                name={"state"}
-                                                iconStyle={"triangle"}
-                                                quotesOnKeys={true}
-                                                shouldCollapse={false}
-                                                sortKeys={false}
-                                                theme={"rjv-default"}
-                                            />
-                                        </div>
-                                    )}
+                        <CollapsibleSection title="ADVANCED STATE" defaultOpen={false}>
+                            {!ddata || Object.keys(ddata._state).length === 0 ? (
+                                <div className="props-empty-state">No custom state defined</div>
+                            ) : (
+                                <div className="object-state" style={{ margin: 0, border: 'none' }}>
+                                    <ReactJson
+                                        src={ddata._state}
+                                        collapsed={1}
+                                        collapseStringsAfterLength={20}
+                                        displayDataTypes={true}
+                                        displayObjectSize={true}
+                                        enableClipboard={true}
+                                        groupArraysAfterLength={100}
+                                        indentWidth={4}
+                                        name={"state"}
+                                        iconStyle={"triangle"}
+                                        quotesOnKeys={true}
+                                        shouldCollapse={false}
+                                        sortKeys={false}
+                                        theme={"rjv-default"}
+                                    />
                                 </div>
                             )}
-                        </div>
+                        </CollapsibleSection>
                     )}
 
-                    {/* Actions */}
-                    {showActions && (
-                        <PropertiesActions
-                            data={data}
-                            onEdit={node?.select ? () => node?.select() : undefined}
-                            onDuplicate={data?.duplicate ? () => data?.duplicate?.() : undefined}
-                            onDelete={data?.delete ? () => data?.delete?.() : undefined}
-                        />
-                    )}
-
-                    {/* Upgrade Prompt - Basic Mode Only */}
-                    {!advanced && (
-                        <UpgradePrompt
-                            features={[
-                                'View and edit element state',
-                                'Access advanced class options',
-                                'Configure OCL constraints'
-                            ]}
-                        />
-                    )}
+                    {/* TODO: Duplicate/Delete available via toolbar and context menu.
+                         UpgradePrompt can return as toast or first-visit hint. */}
                 </section>
 
                 {/* M2 Analytics Modal */}

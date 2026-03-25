@@ -734,7 +734,7 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     background-color: $color-accent;
     color: white;
     font-size: $font-size-xs;
-    height: 24px;
+    height: 32px;
 }
 
 .jjtl-statusbar-section {
@@ -818,6 +818,16 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     font-weight: 600;
 }
 
+// Separator between JjTL-specific items and the shared right-zone
+.jjtl-statusbar-rz-sep {
+    display: inline-block;
+    width: 1px;
+    height: 16px;
+    background: rgba(255, 255, 255, 0.25);
+    margin: 0 10px;
+    flex-shrink: 0;
+}
+
 // ============================================
 // Metamodel Tree View
 // ============================================
@@ -843,22 +853,7 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     color: $color-text-primary;
 }
 
-.jjtl-metamodel-tree-badge {
-    font-size: 10px;
-    font-weight: 700;
-    padding: 2px 6px;
-    border-radius: $radius-sm;
-
-    &--source {
-        background-color: $color-primary-light;
-        color: $color-primary;
-    }
-
-    &--target {
-        background-color: $color-purple-light;
-        color: $color-purple;
-    }
-}
+// SRC/TGT badges now use unified jj-badge system (Badge component)
 
 .jjtl-metamodel-tree-search {
     display: flex;

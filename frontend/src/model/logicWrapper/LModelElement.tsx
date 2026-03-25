@@ -90,6 +90,7 @@ import {
 import {ValuePointers} from "./PointerDefinitions";
 import {transientProperties} from "../../joiner/classes";
 import React, {JSX} from "react";
+import { checkObjectCreation, checkLinkCreation, checkValueAssignment, emitGuardViolation } from '../conformance/ConformanceGuard';
 import {Dummy} from "../../common/Dummy";
 
 type outactions = {clear:(()=>void)[], set:(()=>void)[], immediatefire?: boolean};
@@ -5287,7 +5288,6 @@ instanceof === undefined or missing  --> auto-detect and assign the type
     protected set_name(val: this['name'], c: Context): boolean {
         if (c.data.name === val) return true;
         const models: LModel[] = LModel.fromPointer(store.getState()['models']);
-
         if (models.filter((model) => { return model.name === val }).length > 0) {
             U.alert('e', 'Cannot rename the selected model, this name is already taken.');
         } else {

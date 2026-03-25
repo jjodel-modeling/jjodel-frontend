@@ -13,7 +13,7 @@ interface SchemeOption {
     icon: string;
 }
 
-interface PastelOption {
+interface PaletteOption {
     id: ColorScheme;
     name: string;
     swatches: string[]; // 4 hex colors: [class, abstract, enum, package]
@@ -27,18 +27,18 @@ const MAIN_OPTIONS: SchemeOption[] = [
     { id: 'print',          name: 'Print',           desc: 'No fills, B&W',   icon: 'bi-printer' },
 ];
 
-const PASTEL_OPTIONS: PastelOption[] = [
-    { id: 'pastel-lavender', name: 'Lavender Dream',  swatches: ['#c4b5fd', '#b8b8d8', '#d8b4fe', '#b0a8d0'] },
-    { id: 'pastel-rose',     name: 'Rose Garden',     swatches: ['#f9a8d4', '#e0b4c0', '#fda4af', '#e8c0c8'] },
-    { id: 'pastel-ocean',    name: 'Ocean Breeze',    swatches: ['#5eead4', '#6ee7b7', '#67e8f9', '#80c8c8'] },
-    { id: 'pastel-earth',    name: 'Earthy Warmth',   swatches: ['#fbbf24', '#d4c0a0', '#fdba74', '#e0d0b0'] },
-    { id: 'pastel-meadow',   name: 'Spring Meadow',   swatches: ['#86efac', '#90d4a0', '#bef264', '#a0c890'] },
+const PALETTE_OPTIONS: PaletteOption[] = [
+    { id: 'sapphire',    name: 'Sapphire',    swatches: ['#3b82f6', '#94a3b8', '#38bdf8', '#475569'] },
+    { id: 'amethyst',    name: 'Amethyst',    swatches: ['#8b5cf6', '#6d5da0', '#a78bfa', '#4c1d95'] },
+    { id: 'jade',        name: 'Jade',        swatches: ['#10b981', '#3d7a60', '#2dd4bf', '#134e4a'] },
+    { id: 'terracotta',  name: 'Terracotta',  swatches: ['#d97706', '#a08060', '#fb923c', '#78350f'] },
+    { id: 'crimson',     name: 'Crimson',     swatches: ['#ef4444', '#9a4040', '#fb7185', '#881337'] },
 ];
 
 // Build a lookup for trigger display
 const ALL_OPTIONS = new Map<ColorScheme, { name: string; icon: string }>([
     ...MAIN_OPTIONS.map(o => [o.id, { name: o.name, icon: o.icon }] as const),
-    ...PASTEL_OPTIONS.map(o => [o.id, { name: o.name, icon: 'bi-droplet-half' }] as const),
+    ...PALETTE_OPTIONS.map(o => [o.id, { name: o.name, icon: 'bi-gem' }] as const),
 ]);
 
 function ColorSchemeSelector({ colorScheme, onColorSchemeChange }: ColorSchemeSelectorProps) {
@@ -48,7 +48,7 @@ function ColorSchemeSelector({ colorScheme, onColorSchemeChange }: ColorSchemeSe
     const submenuTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const current = ALL_OPTIONS.get(colorScheme) ?? { name: 'Default', icon: 'bi-palette' };
-    const isPastelActive = colorScheme.startsWith('pastel-');
+    const isPaletteActive = PALETTE_OPTIONS.some(o => o.id === colorScheme);
 
     // Close dropdown on click outside
     useEffect(() => {
@@ -100,20 +100,19 @@ function ColorSchemeSelector({ colorScheme, onColorSchemeChange }: ColorSchemeSe
         submenuTimeout.current = setTimeout(() => setSubmenuOpen(false), 150);
     }, []);
 
-    // Insert pastel group after monochrome (index 1)
+    // Insert palette group after monochrome (index 1)
     const topOptions = MAIN_OPTIONS.slice(0, 2);    // default, monochrome
     const bottomOptions = MAIN_OPTIONS.slice(2);     // high-contrast, print
 
     return (
         <div className="scheme-selector" ref={dropdownRef}>
             <button
-                className="toolbar-btn scheme-selector__trigger"
+                className="toolbar-dropdown-btn scheme-selector__trigger"
                 onClick={() => setOpen(prev => !prev)}
                 title="Color scheme"
             >
-                <i className={`bi ${current.icon}`} />
-                <span className="scheme-selector__label">{current.name}</span>
-                <i className="bi bi-chevron-down scheme-selector__chevron" />
+                <span>Theme: {current.name}</span>
+                <i className="bi bi-chevron-down toolbar-dropdown-btn__chevron" />
             </button>
             {open && (
                 <div className="scheme-selector__dropdown">
@@ -125,21 +124,23 @@ function ColorSchemeSelector({ colorScheme, onColorSchemeChange }: ColorSchemeSe
                             onClick={() => handleSelect(opt.id)}
                         >
                             <i className={`bi ${opt.icon}`} />
-                            <div>
+                            <div style={{ flex: 1 }}>
                                 <div className="scheme-selector__option-name">{opt.name}</div>
                                 <div className="scheme-selector__option-desc">{opt.desc}</div>
                             </div>
+                            <i className={`bi bi-check2 scheme-selector__check`} />
                         </button>
                     ))}
 
-                    {/* Pastel group with submenu */}
+                    {/* Palette group with submenu */}
                     <div
-                        className={`scheme-selector__group-item ${submenuOpen ? 'submenu-open' : ''} ${isPastelActive ? 'has-active-child' : ''}`}
+                        className={`scheme-selector__group-item ${submenuOpen ? 'submenu-open' : ''} ${isPaletteActive ? 'has-active-child' : ''}`}
                         onMouseEnter={handlePastelEnter}
                         onMouseLeave={handlePastelLeave}
                     >
-                        <i className="bi bi-droplet-half" />
-                        <span className="scheme-selector__group-label">Pastel</span>
+                        <i className="bi bi-gem" />
+                        <span className="scheme-selector__group-label">Palette</span>
+                        <i className={`bi bi-check2 scheme-selector__check`} />
                         <i className="bi bi-chevron-right scheme-selector__group-chevron" />
 
                         {submenuOpen && (
@@ -148,12 +149,13 @@ function ColorSchemeSelector({ colorScheme, onColorSchemeChange }: ColorSchemeSe
                                 onMouseEnter={handleSubmenuEnter}
                                 onMouseLeave={handleSubmenuLeave}
                             >
-                                {PASTEL_OPTIONS.map(opt => (
+                                {PALETTE_OPTIONS.map(opt => (
                                     <button
                                         key={opt.id}
                                         className={`scheme-selector__sub-option ${colorScheme === opt.id ? 'active' : ''}`}
                                         onClick={() => handleSelect(opt.id)}
                                     >
+                                        <i className={`bi ${colorScheme === opt.id ? 'bi-check2' : ''}`} />
                                         <span className="scheme-selector__sub-option-name">{opt.name}</span>
                                         <div className="scheme-selector__swatches">
                                             {opt.swatches.map((color, i) => (
@@ -178,10 +180,11 @@ function ColorSchemeSelector({ colorScheme, onColorSchemeChange }: ColorSchemeSe
                             onClick={() => handleSelect(opt.id)}
                         >
                             <i className={`bi ${opt.icon}`} />
-                            <div>
+                            <div style={{ flex: 1 }}>
                                 <div className="scheme-selector__option-name">{opt.name}</div>
                                 <div className="scheme-selector__option-desc">{opt.desc}</div>
                             </div>
+                            <i className={`bi bi-check2 scheme-selector__check`} />
                         </button>
                     ))}
                 </div>

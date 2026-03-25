@@ -4,6 +4,7 @@ export interface ContextMenuItem {
     label?: string;
     icon?: string;
     danger?: boolean;
+    disabled?: boolean;
     onClick?: () => void;
     divider?: boolean;
 }
@@ -34,8 +35,10 @@ function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
                     ) : (
                         <button
                             key={i}
-                            className={`context-menu__item ${item.danger ? 'danger' : ''}`}
+                            className={`context-menu__item ${item.danger ? 'danger' : ''} ${item.disabled ? 'disabled' : ''}`}
+                            disabled={item.disabled}
                             onClick={() => {
+                                if (item.disabled) return;
                                 item.onClick?.();
                                 onClose();
                             }}

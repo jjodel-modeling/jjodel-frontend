@@ -6,6 +6,7 @@
 
 import React from 'react';
 import './element-badge.scss';
+import { resolveEntityType, entityLetter } from '../../common/entityMeta';
 
 interface ElementBadgeProps {
     type: 'metamodel' | 'model' | 'package' | 'class' | 'enum' | 'attribute' | 'reference' | 'operation' | 'viewpoint' | string;
@@ -14,31 +15,12 @@ interface ElementBadgeProps {
     filled?: boolean; // For viewpoint filled/outline distinction
 }
 
-// Map element types to display letters
-const TYPE_LETTERS: Record<string, string> = {
-    'metamodel': 'M',
-    'model': 'M',
-    'package': 'P',
-    'class': 'C',
-    'concept': 'C',
-    'enum': 'E',
-    'enumerator': 'E',
-    'attribute': 'A',
-    'reference': 'R',
-    'operation': 'O',
-    'parameter': 'P',
-    'literal': 'L',
-    'object': 'O',
-    'viewpoint': 'V',
-    'epsilon': 'E',
-    'transformation': 'E',
-};
-
 export const ElementBadge: React.FC<ElementBadgeProps> = ({ type, label, className = '' }) => {
     // Remove 'D' prefix if present: DModel -> model, DClass -> class
     const normalizedType = type.replace(/^D/, '').toLowerCase();
+    const resolved = resolveEntityType(normalizedType);
     const badgeClass = `element-badge element-badge--${normalizedType}`;
-    const displayLetter = label || TYPE_LETTERS[normalizedType] || type.charAt(0).toUpperCase();
+    const displayLetter = label || (resolved ? entityLetter(resolved) : type.charAt(0).toUpperCase());
 
     return (
         <span className={`${badgeClass} ${className}`}>

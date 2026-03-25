@@ -5,11 +5,11 @@ export type NotationMode = 'uml' | 'simplified' | 'compact' | 'wireframe' | 'er'
 export type ColorScheme =
     | 'default'
     | 'monochrome'
-    | 'pastel-lavender'
-    | 'pastel-rose'
-    | 'pastel-ocean'
-    | 'pastel-earth'
-    | 'pastel-meadow'
+    | 'sapphire'
+    | 'amethyst'
+    | 'jade'
+    | 'terracotta'
+    | 'crimson'
     | 'high-contrast'
     | 'print';
 
@@ -64,6 +64,7 @@ export interface MetaReference {
 export interface ClassNodeData {
     label: string;
     isAbstract: boolean;
+    isSingleton?: boolean;
     attributes: MetaAttribute[];
     references?: MetaReference[];
     operations?: MetaOperation[];
@@ -129,6 +130,50 @@ export interface InheritanceEdgeData {
 }
 
 export type MetaEdgeData = ReferenceEdgeData | InheritanceEdgeData;
+
+// === M1 (Model Instance) Node Data ===
+
+export interface ObjectNodeData {
+    label: string;                    // instance name
+    instanceOfClassName: string;      // metaclass name (e.g. "Person")
+    instanceOfClassId: string;        // metaclass JjOM id
+    features: FeatureValueRow[];      // attribute values shown inline
+    autoEdit?: boolean;               // auto-focus on creation
+    [key: string]: unknown;
+}
+
+export interface FeatureValueRow {
+    id: string;                       // DValue id or feature id
+    featureName: string;
+    featureKind: 'attribute' | 'reference';
+    featureTypeId?: string;           // DClassifier id (for enum co-evolution)
+    typeName?: string;                // DClassifier name (e.g. "Gender" for enum header)
+    value: string;                    // display value
+    /** For enum-typed attributes: allowed literal names */
+    enumLiterals?: Array<{ name: string; value: number }>;
+}
+
+// === M1 Edge Data ===
+
+export interface CompositionEdgeData {
+    referenceName: string;            // composition reference name
+    referenceId: string;              // DReference id in the metamodel
+    sourceAnchor?: AnchorConfig;
+    targetAnchor?: AnchorConfig;
+    waypoints?: EdgeWaypoint[];
+    [key: string]: unknown;
+}
+
+export interface InstanceReferenceEdgeData {
+    referenceName: string;            // non-composition reference name
+    referenceId: string;              // DReference id in the metamodel
+    sourceAnchor?: AnchorConfig;
+    targetAnchor?: AnchorConfig;
+    waypoints?: EdgeWaypoint[];
+    [key: string]: unknown;
+}
+
+export type M1EdgeData = CompositionEdgeData | InstanceReferenceEdgeData;
 
 // === Helpers ===
 export function createAttribute(name: string = 'newAttr', type: EDataType = 'EString'): MetaAttribute {

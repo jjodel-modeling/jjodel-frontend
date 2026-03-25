@@ -18,16 +18,16 @@
   transition: background-color 150ms ease, color 150ms ease;
 }
 
-/* Metamodel - Lavender/Purple */
+/* Metamodel - Violet (DESIGN-SYSTEM.md §2.2) */
 .element-badge--metamodel {
-  background-color: #E9D5FF;  /* Lavender */
-  color: #7C3AED;             /* Purple-600 */
+  background-color: #EEEDFE;  /* Violet bg light */
+  color: #534AB7;             /* Violet text on light bg */
 }
 
-/* Model - Amber/Yellow */
+/* Model - Amber (DESIGN-SYSTEM.md §2.2) */
 .element-badge--model {
-  background-color: #FEF3C7;  /* Amber-100 */
-  color: #D97706;             /* Amber-600 */
+  background-color: #FAEEDA;  /* Amber bg light */
+  color: #854F0B;             /* Amber text on light bg */
 }
 
 /* Package - Blue */
@@ -92,23 +92,23 @@
   color: #DB2777;             /* Pink-600 */
 }
 
-/* Epsilon/Transformation - Orange */
+/* Epsilon/Transformation - Teal (DESIGN-SYSTEM.md §2.2) */
 .element-badge--epsilon,
 .element-badge--transformation {
-  background-color: #FFEDD5;  /* Orange-100 */
-  color: #EA580C;             /* Orange-600 */
+  background-color: #E1F5EE;  /* Teal bg light */
+  color: #0F6E56;             /* Teal text on light bg */
 }
 
 /* Dark mode support */
 html[data-theme="dark"] {
   .element-badge--metamodel {
-    background-color: rgba(139, 92, 246, 0.15);
-    color: #A78BFA;
+    background-color: rgba(127, 119, 221, 0.2);  /* Violet (DESIGN-SYSTEM.md) */
+    color: #AFA9EC;                               /* Violet text on dark bg */
   }
 
   .element-badge--model {
-    background-color: rgba(245, 158, 11, 0.15);
-    color: #FBBF24;
+    background-color: rgba(186, 117, 23, 0.2);   /* Amber (DESIGN-SYSTEM.md) */
+    color: #FAC775;                               /* Amber text on dark bg */
   }
 
   .element-badge--package {
@@ -165,7 +165,7 @@ html[data-theme="dark"] {
 
   .element-badge--epsilon,
   .element-badge--transformation {
-    background-color: rgba(234, 88, 12, 0.15);
-    color: #FB923C;
+    background-color: rgba(29, 158, 117, 0.2);  /* Teal (DESIGN-SYSTEM.md) */
+    color: #5DCAA5;                              /* Teal text on dark bg */
   }
 }

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {AI, AIConfig, AIProvider, AIVersion, ALL_AI_PROVIDERS, JodieConfig, TAIProvider} from '../../types/jodie';
+import { Badge } from '../common/Badge';
+import { Button } from '../common/Button';
 import './AISettingsContent.scss';
 import type {Dictionary, GObject} from "../../joiner";
 import {U} from "../../joiner";
@@ -45,22 +47,22 @@ function ModelCapabilitiesBadges({ model }: { model: AIVersion | undefined }): J
     return (
         <div className="model-capabilities">
             {capabilities.vision && (
-                <span className="capability-badge vision d-flex" title="Supports image upload">
-                    <i className="bi bi-image my-auto" />
-                    <span className="my-auto">Images</span>
-                </span>
+                <Badge category="type">
+                    <i className="bi bi-image" />
+                    Images
+                </Badge>
             )}
             {capabilities.pdf && (
-                <span className="capability-badge pdf d-flex" title="Supports PDF upload">
-                    <i className="bi bi-file-earmark-pdf my-auto" />
-                    <span className="my-auto">PDF</span>
-                </span>
+                <Badge category="type">
+                    <i className="bi bi-file-earmark-pdf" />
+                    PDF
+                </Badge>
             )}
             {!capabilities.vision && !capabilities.pdf && (
-                <span className="capability-badge text-only d-flex" title="Text only">
-                    <i className="bi bi-fonts my-auto" />
-                    <span className="my-auto">Text only</span>
-                </span>
+                <Badge category="state">
+                    <i className="bi bi-fonts" />
+                    Text only
+                </Badge>
             )}
         </div>
     );
@@ -148,10 +150,10 @@ export function AISettingsContent({
                     </div>
                     <div className="provider-status">
                         {isConfigured && (
-                            <span className="status-badge configured">
+                            <Badge category="version">
                                 <i className="bi bi-check-circle-fill" />
                                 Configured
-                            </span>
+                            </Badge>
                         )}
                         <i className={`bi bi-chevron-${isExpanded ? 'up' : 'down'} chevron`} />
                     </div>
@@ -307,7 +309,11 @@ export function AISettingsContent({
                     <span>API keys are stored locally in your browser.</span>
                 </div>
                 <div className="footer-actions">
-                    {onClose && <button className="btn-secondary" onClick={onClose}>Close</button>}
+                    {onClose && (
+                        <Button variant="secondary" onClick={onClose}>
+                            Cancel
+                        </Button>
+                    )}
                 </div>
             </div>
         </div>

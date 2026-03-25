@@ -10,6 +10,7 @@ import {
     Point,
     RuntimeAccessible,
     Size,
+    store,
     Try,
     U,
     windoww
@@ -304,7 +305,11 @@ interface LayoutState {
 let currentDropRect!: LayoutState["dropRect"];
 let currentDropArea!: Element;
 let dockLayout!: Element;
-let dropIndicator: Element = U.toHtml('<div class="dock-drop-indicator" style="left: 0px; top: 0px; width: 0px; height: 60px; display: block;')
+let dropIndicator: Element | undefined;
+function getDropIndicator(): Element {
+    if (!dropIndicator) dropIndicator = U.toHtml('<div class="dock-drop-indicator" style="left: 0px; top: 0px; width: 0px; height: 60px; display: block;">');
+    return dropIndicator;
+}
 
 function getStrip(side: string): PinnableStrip {
     let s = side[0];
@@ -413,12 +418,16 @@ function makeAnchorControl(side: string){
 </div>`;
     return U.toHtml(str);
 }
-const anchorControls = [
-    makeAnchorControl('top'),
-    makeAnchorControl('bottom'),
-    makeAnchorControl('left'),
-    makeAnchorControl('right'),
-];
+let anchorControls: Element[];
+function getAnchorControls(): Element[] {
+    if (!anchorControls) anchorControls = [
+        makeAnchorControl('top'),
+        makeAnchorControl('bottom'),
+        makeAnchorControl('left'),
+        makeAnchorControl('right'),
+    ];
+    return anchorControls;
+}
 
 // todo: how to drop pinned tabs in the main layout https://github.com/ticlo/rc-dock/issues/97there is also an official example with a different strat
 @RuntimeAccessible('PinnableDock')
@@ -473,6 +482,8 @@ export class PinnableDock extends DockLayout{
             "children": []
         }
     }
+
+    private _lastActiveId: string | undefined = undefined;
 
     constructor(props: any) {
         super(props);
@@ -554,8 +565,43 @@ export class PinnableDock extends DockLayout{
         return tabdata;
     }
 
+    /**
+     * Detect when the active tab in the left (models) panel changes,
+     * and dispatch jjodel:editor-type-change so panels update accordingly.
+     * This catches tab clicks that bypass DockManager entirely.
+     */
+    private _detectActiveTabChange(): void {
+    const layout = this.getLayout();
+    const firstPanel = layout?.dockbox?.children?.[0] as PanelData | undefined;
+    const activeId = (firstPanel as any)?.activeId as string | undefined;
+
+    // Ignore missing or transient rightbar IDs — do NOT update _lastActiveId
+    // so the real editor tab is still detected on the next call
+    if (!activeId || activeId.startsWith('DockComponent_rightbar_')) return;
+
+    if (activeId === this._lastActiveId) return;
+    this._lastActiveId = activeId;
+
+    let editorType: string;
+    if (activeId.startsWith('jjtl_')) {
+        editorType = 'transformation';
+    } else if (activeId.startsWith('doc_')) {
+        editorType = 'summary';
+    } else {
+        const rawModel = store.getState().idlookup[activeId] as any;
+        editorType = rawModel?.className === 'DModel'
+            ? (rawModel.isMetamodel ? 'metamodel' : 'model')
+            : 'summary';
+    }
+
+    window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
+        detail: { editorType }
+    }));
+}
+
     componentDidUpdate(prevProps: Readonly<LayoutProps>, prevState: Readonly<LayoutState>, snapshot?: any) {
         super.componentDidUpdate(prevProps, prevState, snapshot);
+        this._detectActiveTabChange();
         if (this.state.dropRect) {
             let droparea = this.state.dropRect.element;
             if (!droparea || droparea.classList.contains('dock-style-models')) return;
@@ -565,7 +611,7 @@ export class PinnableDock extends DockLayout{
             dockLayout = windoww.htmldockLayout = this._ref;
             currentDropRect = this.state.dropRect;
             if (!droplayer) return;
-            droplayer.append(...anchorControls);
+            droplayer.append(...getAnchorControls());
             let tab = PinnableDock.getTabFromDropRect(droparea);
             console.log('activating pin buttons', {tab, currentDropRect, dockLayout, droparea, prevProps, prevState, snapshot}, );
             // todo: tabfocus but not the active one, the clicked one

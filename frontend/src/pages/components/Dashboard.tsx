@@ -17,9 +17,10 @@ import {
 } from '../../joiner';
 import {LeftBar, Navbar} from './';
 import { RightPanel } from './RightPanel';
+import { Badge } from '../../components/common/Badge';
 
 import '../dashboard.scss'
-import React, {JSX, ReactElement, useRef, useState} from "react";
+import React, {JSX, ReactElement, useEffect, useRef, useState} from "react";
 import {Btn, CommandBar, Sep} from '../../components/commandbar/CommandBar';
 
 import colors000 from '../../static/img/colors-000.png';
@@ -39,7 +40,7 @@ import { Tooltip } from '../../components/forEndUser/Tooltip';
 import { ProjectsApi } from '../../api/persistance';
 import {Cards} from "./cards/Cards";
 import {createM2} from "./Navbar";
-import {BottomToolbar} from "./BottomToolbar";
+import StatusBar from "../../components/StatusBar";
 
 
 type UserProps = {
@@ -100,7 +101,7 @@ const Title = (props: TitleProps) => {
             return (<><label className='text-end nav-commands d-flex' 
                         style={{float: `${props.type === 'public' ? 'left': 'none'}`}}>
                 {props.type && <>
-                    <span className={"my-auto me-1"}>{props.type === "public" ? "public" : props.type === "private" ? "private" : "collaborative"}</span>
+                    <Badge category="state" className="my-auto me-1">{props.type === "public" ? "Public" : props.type === "private" ? "Private" : "Collaborative"}</Badge>
                     
                     {props.type !== "collaborative" && 
                         <Input type="toggle"
@@ -201,7 +202,6 @@ const Title = (props: TitleProps) => {
                             {props.description && <Tooltip tooltip={'DoubleClick to edit'} inline={true} position={'left'} offsetX={10}>
                                 <h3 onDoubleClick={() => setEditDes(!editDes)}>{props.description}</h3>
                             </Tooltip>}
-                            <span className="project-version">v{props.version}</span>
                         </>
                     }
                     
@@ -252,6 +252,14 @@ function GenericDashboard(props: DashProps): any {
     const {children, active} = props;
     const user: LUser = LUser.getUser();
     const [isDragging, setIsDragging] = useState(false);
+
+    // Dashboard is not a rc-dock tab, so Dock's handleLayoutChange never fires.
+    // Dispatch 'summary' so panels hide correctly.
+    useEffect(() => {
+        window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
+            detail: { editorType: 'summary' }
+        }));
+    }, []);
 
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
@@ -336,6 +344,7 @@ function GenericDashboard(props: DashProps): any {
                 </div>
             )}
         </div>
+        <StatusBar />
     </>);
 }
 
@@ -409,7 +418,9 @@ function ProjectCatalog(props: ProjectProps) {
                 let name = mm.name
                 return (
                 <div className="row data" key={mm.id}>
-                    <div className={'col-4 '} onClick={async () => await DockManager.open2(mm)}>
+                    <div className={'col-4 '} onClick={async () => {
+                        await DockManager.open2(mm);
+                    }}>
                         <ElementBadge type="metamodel" /> {name}</div>
                     <div className={'col-2 artifact-type'}>Metamodel</div>
                     <div className={'buttons'}>
@@ -542,7 +553,7 @@ function ProjectDashboard(props: DashProps): any {
         </Try>
         <Try><Navbar /></Try>
         <Try><Dock /></Try>
-        <Try><BottomToolbar /></Try>
+        <Try><StatusBar /></Try>
     </>);
 }
 

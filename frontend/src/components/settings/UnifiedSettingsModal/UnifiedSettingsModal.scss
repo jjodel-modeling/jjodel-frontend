@@ -587,6 +587,47 @@ $transition-normal: 200ms ease-out;
 }
 
 // ============================================
+// INLINE ROW (label + control side by side)
+// ============================================
+
+.settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.settings-row-label {
+    font-size: 13px;
+    color: $color-text-primary;
+    font-weight: 500;
+}
+
+.settings-select {
+    appearance: none;
+    background: $color-bg-secondary;
+    border: 1px solid $color-border;
+    border-radius: 6px;
+    padding: 6px 28px 6px 10px;
+    font-size: 13px;
+    color: $color-text-primary;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M3 5l3 3 3-3'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    transition: border-color 150ms ease;
+
+    &:hover {
+        border-color: $color-text-secondary;
+    }
+
+    &:focus {
+        outline: none;
+        border-color: $color-primary;
+    }
+}
+
+// ============================================
 // STATUS BADGE
 // ============================================
 
@@ -833,4 +874,138 @@ $transition-normal: 200ms ease-out;
 
 .spinning {
     animation: spin 1s linear infinite;
+}
+
+/* Avatar customizer */
+.avatar-customizer {
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    &__preview {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff;
+        transition: background-color 0.25s ease;
+        flex-shrink: 0;
+        overflow: hidden;
+        position: relative;
+    }
+
+    &__preview-content {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        i { font-size: 22px; color: #ffffff; }
+    }
+
+    &__initials {
+        font-size: 20px;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+    }
+
+    &__info {
+        font-size: 13px;
+        color: var(--text-secondary, #64748b);
+        line-height: 1.4;
+
+        strong {
+            color: var(--text-primary, #1e293b);
+            font-weight: 500;
+            display: block;
+            font-size: 14px;
+            margin-bottom: 2px;
+        }
+    }
+
+    &__label {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-tertiary, #94a3b8);
+        margin-bottom: 8px;
+        margin-top: 14px;
+    }
+
+    &__style-grid {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+
+    &__style-option {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        border: 1.5px solid var(--border-color, #e2e8f0);
+        background: var(--bg-primary, #ffffff);
+        color: var(--text-secondary, #64748b);
+        transition: all 0.15s ease;
+        font-size: 14px;
+        font-weight: 500;
+        padding: 0;
+
+        i { font-size: 16px; color: inherit; }
+
+        &:hover {
+            border-color: var(--border-hover, #cbd5e1);
+            color: var(--text-primary, #1e293b);
+        }
+
+        &:focus-visible {
+            box-shadow: 0 0 0 2px #334155, 0 0 0 4px rgba(51, 65, 85, 0.3);
+        }
+
+        &.selected {
+            // border-color, background, and color set via inline style
+            box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
+
+            i { color: #ffffff; }
+        }
+    }
+
+    &__color-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    &__color-swatch {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: all 0.15s ease;
+        padding: 0;
+        outline: none;
+
+        &:hover { transform: scale(1.15); }
+
+        &:focus-visible {
+            box-shadow: 0 0 0 2px #334155, 0 0 0 4px rgba(51, 65, 85, 0.3);
+        }
+
+        &.selected {
+            border-color: #334155;
+            box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #334155;
+        }
+    }
+
 }

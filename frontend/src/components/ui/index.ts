@@ -31,9 +31,15 @@ export type { ErrorTextProps } from './ErrorText';
 export { Field } from './Field';
 export type { FieldProps } from './Field';
 
+export { NumberInput } from './NumberInput';
+export type { NumberInputProps } from './NumberInput';
+
 // Layout Components
 export { FormSection } from './FormSection';
 export type { FormSectionProps } from './FormSection';
+
+export { EmptyState } from './EmptyState';
+export type { EmptyStateProps, EmptyStateHint, EmptyStateAction } from './EmptyState';
 
 // Additional components can be exported here as they are created:
 // export { Card } from './Card';

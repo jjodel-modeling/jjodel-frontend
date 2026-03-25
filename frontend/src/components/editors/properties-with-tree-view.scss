@@ -24,19 +24,6 @@ $radius-sm: 4px;
 $radius-md: 6px;
 
 // ============================================
-// GLOBAL RESIZE CURSOR (applied to body)
-// ============================================
-
-body.resizing-tree-view {
-    cursor: col-resize !important;
-    user-select: none !important;
-
-    * {
-        cursor: col-resize !important;
-    }
-}
-
-// ============================================
 // MAIN CONTAINER
 // ============================================
 
@@ -48,18 +35,8 @@ body.resizing-tree-view {
     background-color: $color-bg-primary;
     position: relative;
 
-    // During resize, disable pointer events on children to prevent interference
-    &.is-resizing {
-        .properties-panel-container,
-        .tree-view-panel-container {
-            pointer-events: none;
-            user-select: none;
-        }
-
-        .resize-grip-icon-vertical {
-            color: #0ea5e9;
-            background-color: rgba(14, 165, 233, 0.06);
-        }
+    &--empty {
+        display: block;
     }
 }
 
@@ -74,6 +51,9 @@ body.resizing-tree-view {
     height: 100%;
     overflow: hidden;
     min-width: 300px; // Don't let it get too narrow
+    max-width: 450px;
+    background: #f8fafc; // slate-50, visually distinct from white canvas
+    border-left: 1px solid #e2e8f0; // slate-200, separates from canvas
 
     // The Info component styles already handle scrolling
     .properties-tab,
@@ -81,57 +61,12 @@ body.resizing-tree-view {
         height: 100%;
         overflow-y: auto;
     }
-}
 
-// ============================================
-// RESIZABLE DIVIDER
-// ============================================
-
-.panel-resizer {
-    flex: 0 0 12px;
-    width: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: col-resize;
-    background-color: transparent;
-    position: relative;
-    z-index: 10;
-    user-select: none;
-    flex-shrink: 0;
-
-    // Expand hit area for easier grabbing
-    &::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        left: -4px;
-        right: -4px;
-        cursor: col-resize;
-    }
-
-    // Focus state for keyboard accessibility
-    &:focus {
-        outline: none;
-
-        .resize-grip-icon-vertical {
-            color: #0ea5e9;
-            background-color: rgba(14, 165, 233, 0.06);
-        }
-    }
-
-    &:hover,
-    &:active {
-        .resize-grip-icon-vertical {
-            color: #0ea5e9;
-            background-color: rgba(14, 165, 233, 0.06);
-        }
+    // Empty state: no scrollbar needed
+    .properties-panel--empty {
+        overflow: hidden;
     }
 }
-
-// Icon styles are handled by .resize-grip-icon-vertical class in console-tab.scss
-// The icon inherits pointer-events: none from parent behavior
 
 // ============================================
 // TREE VIEW PANEL (RIGHT) - FIXED WIDTH
@@ -219,8 +154,8 @@ body.resizing-tree-view {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 12px;
-    border-bottom: 1px solid $color-border;
+    padding: 0px 12px;
+    border-bottom: 1px solid #f1f5f9; // var(--color-border-primary);
     background-color: $color-bg-primary;
     font-size: 12px;
     font-weight: 600;
@@ -228,6 +163,7 @@ body.resizing-tree-view {
     text-transform: uppercase;
     letter-spacing: 0.5px;
     flex-shrink: 0;
+    height: 41px;
     transition: background $transition-fast;
 
     > i {
@@ -381,6 +317,7 @@ body.resizing-tree-view {
         cursor: pointer;
         color: $color-text-tertiary;
         padding: 0;
+        padding-left: 0px!important; // Align with icon
         flex-shrink: 0;
         transition: color $transition-fast;
 
@@ -495,6 +432,7 @@ body.resizing-tree-view {
         border-radius: $radius-sm;
         cursor: pointer;
         transition: background-color $transition-fast;
+        bordr: 1px solid red;
 
         &:hover {
             background-color: $color-bg-secondary;
@@ -514,7 +452,7 @@ body.resizing-tree-view {
         display: flex;
         align-items: center;
         gap: 2px;
-        padding: 4px 6px;
+        padding: 4px 6px 0 4px!important;
         border-radius: $radius-sm;
         cursor: pointer;
         transition: background-color $transition-fast;
@@ -539,20 +477,77 @@ body.resizing-tree-view {
 // DARK MODE SUPPORT
 // ============================================
 
+// ============================================
+// NODE SECTION (Expert mode — collapsible at bottom of Properties)
+// ============================================
+
+.properties-node-section {
+    border-top: 1px solid $color-border;
+    flex-shrink: 0;
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: 100%;
+        padding: 10px 12px;
+        background: $color-bg-secondary;
+        border: none;
+        cursor: pointer;
+        font-size: 11px;
+        font-weight: 600;
+        color: $color-text-secondary;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        transition: background $transition-fast;
+
+        &:hover {
+            background: $color-bg-tertiary;
+        }
+
+        i {
+            font-size: 12px;
+            color: $color-accent;
+        }
+
+        i:first-child {
+            font-size: 10px;
+            color: $color-text-tertiary;
+        }
+    }
+
+    &__content {
+        // Hide the redundant NodeEditor header (we have our own section header)
+        .node-header {
+            display: none;
+        }
+    }
+}
+
+// ============================================
+// DARK MODE SUPPORT
+// ============================================
+
 [data-theme="dark"] {
     .properties-with-tree-view {
         background-color: #1e1e1e;
     }
 
-    .resize-grip-icon-vertical {
-        color: #64748b;
-    }
+    .properties-node-section {
+        border-top-color: #333;
 
-    .panel-resizer:hover .resize-grip-icon-vertical,
-    .panel-resizer:active .resize-grip-icon-vertical,
-    .panel-resizer:focus .resize-grip-icon-vertical {
-        color: #60a5fa;
-        background-color: rgba(96, 165, 250, 0.1);
+        &__header {
+            background: #252525;
+            color: #888;
+
+            &:hover {
+                background: #2a2a2a;
+            }
+
+            i {
+                color: #6b7280;
+            }
+        }
     }
 
     .tree-view-panel-container {

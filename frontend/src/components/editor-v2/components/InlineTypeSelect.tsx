@@ -32,10 +32,27 @@ function InlineTypeSelect({ value, onChange, onClose }: InlineTypeSelectProps) {
     ];
 
     // Find initial highlighted index
+useEffect(() => {
+    const idx = options.indexOf(value);
+    if (idx >= 0) setHighlighted(idx);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
+
+    // Focus container on mount so keyboard events work
     useEffect(() => {
-        const idx = options.indexOf(value);
-        if (idx >= 0) setHighlighted(idx);
-    }, [value, options]);
+        // Use rAF to ensure the DOM is ready after React Flow node rendering
+        const raf = requestAnimationFrame(() => containerRef.current?.focus());
+        return () => cancelAnimationFrame(raf);
+    }, []);
+
+    // Close on Escape (document-level fallback)
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') { e.preventDefault(); onClose(); }
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [onClose]);
 
     // Close on click outside
     useEffect(() => {
@@ -80,13 +97,20 @@ function InlineTypeSelect({ value, onChange, onClose }: InlineTypeSelectProps) {
     };
 
     return (
+
         <div
             ref={containerRef}
             className="inline-type-select"
             onKeyDown={handleKeyDown}
+            onClick={(e) => e.stopPropagation()}  // ← aggiungi questo
+            onMouseDown={(e) => e.stopPropagation()}  // ← e questo
             tabIndex={0}
             autoFocus
         >
+
+
+
+
             <div ref={listRef} className="inline-type-select__list">
                 {E_DATA_TYPES.length > 0 && (
                     <div className="inline-type-select__group">Primitives</div>
@@ -103,7 +127,6 @@ function InlineTypeSelect({ value, onChange, onClose }: InlineTypeSelectProps) {
                 ))}
                 {enums.length > 0 && (
                     <>
-                        {/* <div className="inline-type-select__group">Enumerations</div>*/}
                         {enums.map((enumName, i) => {
                             const idx = E_DATA_TYPES.length + i;
                             return (

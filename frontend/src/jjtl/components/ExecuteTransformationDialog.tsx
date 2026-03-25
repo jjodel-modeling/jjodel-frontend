@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Button } from '../../components/common/Button';
 import '../../components/CreateProjectDialog/create-project-dialog.scss';
 import './execute-transformation-dialog.scss';
 
@@ -346,17 +347,18 @@ export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogPr
 
                     {/* Footer */}
                     <div className="dialog-footer">
-                        <button
+                        <Button
+                            variant="secondary"
                             type="button"
-                            className="btn btn-secondary"
                             onClick={handleCancel}
                             disabled={isExecuting}
                         >
                             Cancel
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                            variant="primary"
                             type="submit"
-                            className="btn btn-primary btn-execute"
+                            className="btn-execute"
                             disabled={isExecuting || noCompatibleModels}
                         >
                             {isExecuting ? (
@@ -370,7 +372,7 @@ export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogPr
                                     Execute Transformation
                                 </>
                             )}
-                        </button>
+                        </Button>
                     </div>
                 </form>
             </div>

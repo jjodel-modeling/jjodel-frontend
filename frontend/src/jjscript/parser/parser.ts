@@ -34,6 +34,7 @@ import {
     ClearArgs,
     ValidateArgs,
     ExtendsArgs,
+    EvalArgs,
     CreateOptions,
     QualifiedName,
     COMMANDS,
@@ -45,10 +46,14 @@ import {
 // PARSER CLASS
 // ============================================
 
+/** JjEL expression trigger keywords — when these appear as the first token, the entire input is treated as a JjEL expression */
+const JJEL_EXPRESSION_TRIGGERS = ['forall', 'exists', 'with'];
+
 export class Parser {
     private tokens: Token[] = [];
     private current: number = 0;
     private errors: ParseError[] = [];
+    private originalInput: string = '';
 
     /**
      * Parse input string into AST
@@ -58,6 +63,7 @@ export class Parser {
         this.tokens = tokenize(input);
         this.current = 0;
         this.errors = [];
+        this.originalInput = input;
 
         // Skip leading newlines
         while (this.check('NEWLINE')) {
@@ -102,6 +108,14 @@ export class Parser {
     private parseCommand(): CommandNode {
         const token = this.peek();
         const position = { line: token.line, column: token.column };
+
+        // Special case: JjEL expression triggers (forall, exists, with)
+        // The entire input is passed as-is to JjEL for evaluation
+        if ((token.type === 'IDENTIFIER' || token.type === 'KEYWORD') &&
+            JJEL_EXPRESSION_TRIGGERS.includes(token.value.toLowerCase())) {
+            const args: EvalArgs = { command: 'eval', expression: this.originalInput.trim() };
+            return { type: 'Command', command: 'eval', args, position };
+        }
 
         // Special case: "ChildClass extends ParentClass" syntax
         // Check if first token is identifier/qualified_name and next is 'extends'
@@ -167,6 +181,9 @@ export class Parser {
                 break;
             case 'validate':
                 args = this.parseValidateCommand();
+                break;
+            case 'eval':
+                args = this.parseEvalCommand();
                 break;
             default:
                 throw new Error(`Unknown command: ${command}`);
@@ -737,6 +754,24 @@ export class Parser {
         const parentClass = this.parseQualifiedNameToken();
 
         return { command: 'extends', childClass, parentClass };
+    }
+
+    // ============================================
+    // EVAL COMMAND (explicit "eval <expression>")
+    // ============================================
+
+    private parseEvalCommand(): EvalArgs {
+        // Everything after "eval" is the JjEL expression
+        // Reconstruct from remaining tokens
+        const parts: string[] = [];
+        while (!this.isAtEnd() && !this.check('NEWLINE') && !this.check('EOF')) {
+            parts.push(this.advance().value);
+        }
+        const expression = parts.join(' ').trim();
+        if (!expression) {
+            throw new Error('Expected JjEL expression after eval');
+        }
+        return { command: 'eval', expression };
     }
 
     // ============================================

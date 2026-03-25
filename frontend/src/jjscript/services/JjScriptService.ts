@@ -42,10 +42,15 @@ export class JjScriptService {
         const commands = [
             'create', 'delete', 'rename', 'set', 'add', 'remove',
             'move', 'copy', 'list', 'show', 'help', 'undo', 'redo',
-            'validate', 'clear'
+            'validate', 'clear', 'eval'
         ];
 
         const firstWord = text.split(/\s+/)[0]?.toLowerCase();
+
+        // JjEL expression triggers (forall, exists, with) are also valid commands
+        const jjelTriggers = ['forall', 'exists', 'with'];
+        if (jjelTriggers.includes(firstWord)) return true;
+
         return commands.includes(firstWord);
     }
 
@@ -175,6 +180,9 @@ export class JjScriptService {
                 break;
             case 'list':
                 lines.push(...this.formatListResult(result));
+                break;
+            case 'eval':
+                lines.push(...this.formatEvalResult(result));
                 break;
             case 'set':
                 lines.push(...this.formatSetResult(result));
@@ -328,6 +336,37 @@ export class JjScriptService {
             for (const item of data.elements) {
                 lines.push(item);
             }
+        }
+
+        return lines;
+    }
+
+    /**
+     * Format EVAL (JjEL expression) result
+     */
+    private static formatEvalResult(result: ExecutionResult): string[] {
+        const { data } = result;
+        const lines: string[] = [];
+
+        if (!data) {
+            lines.push(result.message);
+            return lines;
+        }
+
+        // Show expression
+        lines.push(`\u25B6 \`${data.expression}\``);
+        lines.push('');
+
+        if (data.items && data.items.length > 0) {
+            // Array result — show as list
+            lines.push(result.message);
+            lines.push('');
+            for (const item of data.items) {
+                lines.push(`  \u2022 ${item}`);
+            }
+        } else {
+            // Scalar/object result
+            lines.push(result.message);
         }
 
         return lines;

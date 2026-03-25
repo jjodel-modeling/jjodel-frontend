@@ -122,13 +122,37 @@
   // Resize handles
   --resize-handle-bg: #0ea5e9;
   --resize-handle-border: #1e293b;
+
+  // Surface hierarchy
+  --topbar-bg: #0f172a;
+  --topbar-border: #1e293b;
+  --topbar-text: #64748b;
+  --panel-bg: #1e293b;
+  --panel-border: rgba(255, 255, 255, 0.08);
+  --sidebar-bg: #253347;
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+
+  // Floating surfaces (context menu, edge type popup, popovers)
+  --float-bg: #1e293b;
+  --float-border: #334155;
+  --float-shadow: rgba(0, 0, 0, 0.3);
+  --float-text: #cbd5e1;
+  --float-text-muted: #475569;
+  --float-text-section: #475569;
+  --float-icon: #64748b;
+  --float-hover: rgba(255, 255, 255, 0.06);
+  --float-active-bg: rgba(14, 165, 233, 0.12);
+  --float-active-text: #38bdf8;
+  --float-danger: #f87171;
+  --float-danger-bg: rgba(239, 68, 68, 0.12);
+  --float-divider: rgba(255, 255, 255, 0.08);
 }
 
 // === LIGHT THEME ===
 .editor-v2.theme-light {
   // Canvas
-  --canvas-bg: #f8fafc;
-  --canvas-dots: rgba(0, 0, 0, 0.08);
+  --canvas-bg: #f1f5f9;
+  --canvas-dots: rgba(100, 116, 139, 0.25);
 
   // Surfaces
   --surface-1: #ffffff;
@@ -244,4 +268,28 @@
   // Resize handles
   --resize-handle-bg: #0284c7;
   --resize-handle-border: #ffffff;
+
+  // Surface hierarchy
+  --topbar-bg: #1e293b;
+  --topbar-border: #334155;
+  --topbar-text: #94a3b8;
+  --panel-bg: #ffffff;
+  --panel-border: #e2e8f0;
+  --sidebar-bg: #f8fafc;
+  --sidebar-border: #e2e8f0;
+
+  // Floating surfaces (dark in both themes)
+  --float-bg: #1e293b;
+  --float-border: #334155;
+  --float-shadow: rgba(0, 0, 0, 0.2);
+  --float-text: #cbd5e1;
+  --float-text-muted: #475569;
+  --float-text-section: #475569;
+  --float-icon: #64748b;
+  --float-hover: rgba(255, 255, 255, 0.06);
+  --float-active-bg: rgba(14, 165, 233, 0.12);
+  --float-active-text: #38bdf8;
+  --float-danger: #f87171;
+  --float-danger-bg: rgba(239, 68, 68, 0.12);
+  --float-divider: rgba(255, 255, 255, 0.08);
 }

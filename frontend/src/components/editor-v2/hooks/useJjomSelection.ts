@@ -14,7 +14,7 @@
  * not position/size).
  */
 
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import type { Node, Edge } from '@xyflow/react';
 import {
     SetRootFieldAction,
@@ -27,6 +27,34 @@ import {
     store,
 } from '../../../joiner';
 import { markCanvasUpdatedBatch } from '../sync/syncState';
+
+/**
+ * Find a model element (DClass or DPackage) inside the given model.
+ * Used to set `_lastSelected.modelElement` so that `Selectors.getActiveModel()`
+ * can resolve the correct parent DModel via the `.model` getter chain.
+ */
+function findModelElement(modelid: string): string {
+    try {
+        const state: DState = store.getState();
+        const rawModel = state.idlookup?.[modelid] as any;
+        if (!rawModel) return modelid; // model not in store yet — use model ID directly
+
+        for (const pkgId of (rawModel.packages ?? [])) {
+            const pkg = state.idlookup?.[pkgId] as any;
+            if (!pkg) continue;
+            // Prefer a class (most common model element)
+            for (const classId of (pkg.classes ?? [])) {
+                if (classId) return classId;
+            }
+            // Fallback to the package itself (DPackage is a DModelElement)
+            return pkgId;
+        }
+    } catch { /* ignore */ }
+    // Last resort: use the model ID itself.
+    // DModel extends DModelElement, so Selectors.getActiveModel()
+    // resolves me.model → self for a DModel.
+    return modelid;
+}
 
 // ---------------------------------------------------------------------------
 // Internal helpers (not exported — selection-only)
@@ -87,7 +115,8 @@ function selectElement(elementId: string, modelid: string): void {
     }
 }
 
-/** Deselect all elements and clear _lastSelected. */
+/** Deselect all elements but keep _lastSelected.modelElement pointing to the
+ *  current model so that Jjodie and other context-dependent UI stays in sync. */
 function deselectAll(modelid: string): void {
     try {
         const allIds = getGraphSubElementIds(modelid);
@@ -104,7 +133,23 @@ function deselectAll(modelid: string): void {
                     try { sub.deselect(DUser.current); } catch { /* ignore */ }
                 }
             }
-            SetRootFieldAction.new('_lastSelected' as any, undefined as any);
+
+            // Keep modelElement pointing to a classifier inside the model
+            // so Selectors.getActiveModel() still resolves to this model.
+            const modelElement = findModelElement(modelid);
+            if (modelElement) {
+                SetRootFieldAction.new('_lastSelected' as any, {
+                    node: '',
+                    view: '',
+                    modelElement,
+                });
+            } else {
+                SetRootFieldAction.new('_lastSelected' as any, {
+                    node: '',
+                    view: '',
+                    modelElement: modelid,  // punta al model stesso invece di undefined
+                });
+            }
         });
     } catch (err) {
         console.warn('[useJjomSelection] Failed to deselect all:', err);
@@ -129,22 +174,55 @@ export function useJjomSelection(
     modelid: string | undefined,
     isJjomMode: boolean,
 ): UseJjomSelectionResult {
-    const onNodeClick = useCallback(
-        (_event: React.MouseEvent, node: Node) => {
-            if (isJjomMode && modelid) selectElement(node.id, modelid);
-        },
-        [isJjomMode, modelid],
-    );
+    // When the editor opens a different model (tab switch), update
+    // _lastSelected.modelElement so Jjodie and other context-dependent
+    // UI immediately knows which model is active — without requiring
+    // the user to click on a specific node first.
+    // NOTE: This must NOT depend on isJjomMode because for a new/empty
+    // model the v2-flow graph doesn't exist yet (isJjomMode = false),
+    // but we still need Jjodie to point to the correct model.
+    useEffect(() => {
+        if (!modelid) return;
+        const modelElement = findModelElement(modelid);
+        SetRootFieldAction.new('_lastSelected' as any, {
+            node: '',
+            view: '',
+            modelElement: modelElement ?? modelid,  // fallback al model stesso
+        });
+    }, [modelid]);
 
-    const onEdgeClick = useCallback(
-        (_event: React.MouseEvent, edge: Edge) => {
-            if (isJjomMode && modelid) selectElement(edge.id, modelid);
-        },
-        [isJjomMode, modelid],
-    );
+    const onNodeClick = useCallback(
+    (_event: React.MouseEvent, node: Node) => {
+        _event.stopPropagation();  // ← aggiungi questo
+        if (isJjomMode && modelid) selectElement(node.id, modelid);
+    },
+    [isJjomMode, modelid],
+);
+
+const onEdgeClick = useCallback(
+    (_event: React.MouseEvent, edge: Edge) => {
+        _event.stopPropagation();  // ← aggiungi questo
+        if (isJjomMode && modelid) selectElement(edge.id, modelid);
+    },
+    [isJjomMode, modelid],
+);
 
     const onPaneClick = useCallback(() => {
-        if (isJjomMode && modelid) deselectAll(modelid);
+        if (!modelid) return;
+        if (isJjomMode) {
+            // Full deselect: deselect graph elements + keep _lastSelected on model
+            deselectAll(modelid);
+        } else {
+            // No graph yet — just update _lastSelected so Jjodie targets this model
+            const modelElement = findModelElement(modelid);
+            if (modelElement) {
+                SetRootFieldAction.new('_lastSelected' as any, {
+                    node: '',
+                    view: '',
+                    modelElement,
+                });
+            }
+        }
     }, [isJjomMode, modelid]);
 
     return { onNodeClick, onEdgeClick, onPaneClick };

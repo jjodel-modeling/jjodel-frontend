@@ -83,6 +83,7 @@
         padding: 0 !important;
         margin: 0 !important;
 
+
      
 
         &>h1 {
@@ -216,12 +217,12 @@
   width: 230px;
   min-width: 200px;
 
-  /* Visual */
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border-primary);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-dropdown);
-  padding: var(--space-2);
+  /* Visual — dark slate floating surface */
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+  padding: 4px;
 
   /* Animation */
   animation: fadeIn var(--duration-fast) var(--ease-out);
@@ -230,10 +231,12 @@
   font-family: var(--font-sans);
 
   .name {
-    font-size: var(--text-sm);
-    font-weight: var(--font-semibold);
-    color: var(--color-text-primary);
-    padding: var(--space-2) var(--space-3);
+    font-size: 10px;
+    font-weight: 600;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 4px 8px;
   }
 
   .name.model, .name.metamodel {
@@ -241,69 +244,87 @@
     overflow: hidden;
     height: 1lh;
     white-space: nowrap;
-    font-size: var(--text-sm);
-    font-weight: var(--font-normal);
+    font-size: 12px;
+    font-weight: 400;
     align-items: center;
-    color: var(--color-text-primary);
+    color: #cbd5e1;
+    text-transform: none;
+    letter-spacing: normal;
   }
 
   .name::before {
     position: absolute;
-    top: var(--space-2);
-    left: var(--space-3);
+    top: 6px;
+    left: 8px;
     content: '\F3FE' !important;
     font-family: 'bootstrap-icons';
-    font-size: var(--text-lg);
-    color: var(--color-text-secondary);
+    font-size: 13px;
+    color: #64748b;
   }
 
   hr.my-1 {
     border: none;
-    border-top: 1px solid var(--color-border-primary);
+    border-top: 0.5px solid rgba(255, 255, 255, 0.08);
     width: 100%;
-    margin: var(--space-1) 0;
+    margin: 3px 0;
+  }
+
+  /* Divider before Delete (danger action) */
+  .item[data-cannotdelete] {
+    border-top: 0.5px solid rgba(255, 255, 255, 0.08);
+    margin-top: 3px;
+    padding-top: 3px;
+  }
+
+  /* Divider before Help */
+  .item:has(> .bi-question-circle) {
+    border-top: 0.5px solid rgba(255, 255, 255, 0.08);
+    margin-top: 3px;
+    padding-top: 3px;
   }
 
   .submenu-holder.hoverable>.content {
     box-shadow: none;
     left: calc(100% - 15px);
-    top: calc(-1 * var(--space-2));
+    top: -4px;
 
     &>.context-menu {
-      box-shadow: var(--shadow-dropdown);
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
     }
   }
 
   .item {
     cursor: pointer;
-    padding: var(--space-2) var(--space-3);
-    font-weight: var(--font-normal);
-    font-size: var(--text-sm);
-    color: var(--color-text-primary);
+    padding: 5px 8px;
+    font-weight: 400;
+    font-size: 12px;
+    color: #cbd5e1;
     display: flex;
     align-items: center;
-    gap: var(--space-2);
-    border-radius: var(--radius-md);
-    transition: var(--transition-fast);
+    gap: 8px;
+    border-radius: 4px;
+    transition: background 0.15s;
 
     >* {
       margin: auto 0;
     }
 
     &:hover {
-      background-color: var(--color-accent);
-      color: white;
+      background-color: rgba(255, 255, 255, 0.06);
+      color: #cbd5e1;
     }
 
     i.bi, span.empty {
-      font-size: var(--text-lg);
+      font-size: 13px;
       width: 1.5em;
-      color: inherit;
+      color: inherit!important;
     }
 
     &>div {
       display: inline;
       margin-left: auto;
+      color: #475569;
+      font-size: 11px;
     }
   }
 }
@@ -350,19 +371,18 @@
 }
 
 .highlight .bi {
-  color: var(--color-text-primary);
+  color: #64748b;
   font-size: 1.2em;
   padding-right: 8px!important;
 }
 
-/* White color on hover when background is accent color */
 .highlight:hover .bi {
-  color: white;
+  color: #cbd5e1;
 }
 
 .highlight .hidden {
-  color: var(--color);
+  color: #475569;
 }
 .highlight:hover .hidden {
-  color: var(--secondary);
+  color: #cbd5e1;
 }

@@ -11,6 +11,8 @@ import { Tooltip } from '../../components/forEndUser/Tooltip';
 import {SaveManager} from "../../components/topbar/SaveManager";
 import {Link, useNavigate, useSearchParams} from "react-router-dom";
 import { DevModeLabel } from '../../components/DevModeLabel/DevModeLabel';
+import { buildProjectExportJson } from '../../model/megamodelPersistence';
+import { getRuntimeMegamodel } from '../../model/megamodelRuntime';
 
 interface StateProps {
     projects: LProject[];
@@ -177,7 +179,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
     const exportProject = async() => {
         if(project) {
             await ProjectsApi.save(project);
-            U.download(`${project?.name}.jjodel`, JSON.stringify(project?.__raw));
+            U.download(`${project?.name}.jjodel`, JSON.stringify(buildProjectExportJson(project?.__raw as unknown as Record<string, unknown>, project ? getRuntimeMegamodel(project.id) : undefined)));
         }
     }
 
@@ -248,19 +250,6 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                     <Item action={closeProject} icon={icon['close']}>Close project </Item>
                 </Menu>
 
-                {/* Footer - Version Only */}
-                <div className="leftbar-footer">
-                    <span className="version-text">Jjodel v2.0</span>
-                    <a
-                        href="https://opensource.org/licenses/MIT"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="license-badge"
-                    >
-                        <span className="license-label">License</span>
-                        <span className="license-type">MIT</span>
-                    </a>
-                </div>
             </div>
             :
             <div className={'leftbar'}>
@@ -344,20 +333,6 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                         icon={<i className="bi bi-github" />}
                     >GitHub</Item>
                 </Menu>
-
-                {/* Footer - Version Only */}
-                <div className="leftbar-footer">
-                    <span className="version-text">Jjodel v2.0</span>
-                    <a
-                        href="https://opensource.org/licenses/MIT"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="license-badge"
-                    >
-                        <span className="license-label">License</span>
-                        <span className="license-type">MIT</span>
-                    </a>
-                </div>
 
             </div>
         }

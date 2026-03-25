@@ -17,9 +17,10 @@ export class SimpleMatcher {
     ): MappingSuggestion[] {
         const suggestions: MappingSuggestion[] = [];
 
-        // Get all classes from both metamodels
+        // Get all classes from both metamodels (filter out abstract targets)
         const sourceClasses = this.getAllClasses(sourceElements);
-        const targetClasses = this.getAllClasses(targetElements);
+        const targetClasses = this.getAllClasses(targetElements)
+            .filter(c => !c.isAbstract);
 
         // 1. Match classes by name
         for (const sourceClass of sourceClasses) {

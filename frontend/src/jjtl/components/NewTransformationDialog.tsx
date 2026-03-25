@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { TransformationFormData, generateUniqueName } from '../types/transformation';
+import { Button } from '../../components/common/Button';
 import '../../components/CreateProjectDialog/create-project-dialog.scss';
 
 // ============================================
@@ -361,17 +362,17 @@ export const NewTransformationDialog: React.FC<NewTransformationDialogProps> = (
 
                     {/* Footer */}
                     <div className="dialog-footer">
-                        <button
+                        <Button
+                            variant="secondary"
                             type="button"
-                            className="btn btn-secondary"
                             onClick={handleCancel}
                             disabled={isSubmitting}
                         >
                             Cancel
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                            variant="primary"
                             type="submit"
-                            className="btn btn-primary"
                             disabled={isSubmitting || noMetamodels}
                         >
                             {isSubmitting ? (
@@ -385,7 +386,7 @@ export const NewTransformationDialog: React.FC<NewTransformationDialogProps> = (
                                     Create Transformation
                                 </>
                             )}
-                        </button>
+                        </Button>
                     </div>
                 </form>
             </div>

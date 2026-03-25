@@ -11,7 +11,7 @@ const KEYWORDS = [
     { label: 'transformation', detail: 'Define a new transformation', insertText: 'transformation ${1:Name}\n\nfrom ${2:SourceMetamodel}\nto   ${3:TargetMetamodel}\n\n$0' },
     { label: 'from', detail: 'Source metamodel', insertText: 'from ${1:Metamodel}' },
     { label: 'to', detail: 'Target metamodel', insertText: 'to ${1:Metamodel}' },
-    { label: 'when', detail: 'Conditional mapping', insertText: 'when { ${1:condition} }' },
+    { label: 'where', detail: 'Conditional mapping guard', insertText: 'where ${1:condition}' },
     { label: 'helper', detail: 'Define a helper function', insertText: 'helper ${1:name}(${2:param}: ${3:Type}) -> ${4:ReturnType} {\n    $0\n}' },
 ];
 
@@ -62,6 +62,12 @@ const INTERACTIVE_FUNCTIONS = [
         detail: 'Show success alert',
         documentation: 'Display a success message to the user',
         insertText: 'alert("${1:message}", "success")',
+    },
+    {
+        label: 'confirm',
+        detail: 'Ask user for yes/no confirmation',
+        documentation: 'confirm(message: EString) → EBoolean\nOpens a Yes/No dialog. Returns true if confirmed, false otherwise.',
+        insertText: 'confirm(\'${1:message}\')',
     },
     {
         label: 'notify',
@@ -119,32 +125,47 @@ const SNIPPETS = [
     {
         label: 'class-mapping',
         detail: 'Class mapping with body',
-        insertText: '${1:SourceClass} -> ${2:TargetClass} {\n    ${3:sourceAttr} -> ${4:targetAttr}\n    $0\n}',
+        insertText: '${1:SourceClass} -> ${2:TargetClass} {\n    ${3:targetAttr} := ${4:sourceAttr}\n    $0\n}',
     },
     {
         label: 'class-mapping-multi',
         detail: 'Class mapping with multiplicity',
-        insertText: '${1:SourceClass} -> ${2:TargetClass} [*] {\n    ${3:sourceAttr} -> ${4:targetAttr}\n    $0\n}',
+        insertText: '${1:SourceClass} -> ${2:TargetClass} [*] {\n    ${3:targetAttr} := ${4:sourceAttr}\n    $0\n}',
     },
     {
         label: 'attr-mapping',
-        detail: 'Attribute mapping',
-        insertText: '${1:source} -> ${2:target}',
+        detail: 'Attribute mapping (target := source)',
+        insertText: '${1:target} := ${2:source}',
     },
     {
         label: 'attr-conversion',
-        detail: 'Attribute mapping with conversion',
-        insertText: '${1:source} -> ${2:target} : ${3:true}=${4:1}, ${5:false}=${6:0}',
+        detail: 'Attribute mapping with value conversion',
+        insertText: '${1:target} := ${2:source} : ${3:true}=${4:1}, ${5:false}=${6:0}',
+    },
+    {
+        label: 'attr-expression',
+        detail: 'Attribute mapping with expression',
+        insertText: '${1:target} := ${2:expression}',
     },
     {
         label: 'object-creation',
         detail: 'Create new object',
-        insertText: '-> ${1:targetAttr} {\n    -> ${2:NewClass} {\n        ${3:attr} -> ${4:value}\n    }\n}',
+        insertText: '-> ${1:targetAttr} {\n    -> ${2:NewClass} {\n        ${3:targetAttr} := ${4:sourceExpr}\n    }\n}',
     },
     {
         label: 'conditional-mapping',
         detail: 'Mapping with condition',
-        insertText: '${1:SourceClass} -> ${2:TargetClass} when { ${3:condition} } {\n    $0\n}',
+        insertText: '${1:SourceClass} -> ${2:TargetClass} where ${3:condition} {\n    ${4:target} := ${5:source}\n    $0\n}',
+    },
+    {
+        label: 'alias-mapping',
+        detail: 'Class mapping with source alias',
+        insertText: '${1:SourceClass} ${2:s} -> ${3:TargetClass} where ${4:condition} {\n    ${5:target} := ${2:s}.${6:attr}\n    $0\n}',
+    },
+    {
+        label: 'multi-source-mapping',
+        detail: 'Multi-source class mapping',
+        insertText: '${1:ClassA} ${2:a}, ${3:ClassB} ${4:b} -> ${5:TargetClass} where ${2:a}.${6:ref} = ${4:b} {\n    ${7:target} := ${2:a}.${8:attr}\n    $0\n}',
     },
 ];
 

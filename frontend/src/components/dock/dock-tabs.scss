@@ -58,7 +58,7 @@ $transition: 150ms ease;
 .not-strip .dock-panel .dock-bar {
     background: transparent !important;
     border-bottom: none !important;
-    padding: 12px 16px !important;
+    padding: 4px 12px !important;
 
     .dock-nav {
         height: auto;
@@ -68,10 +68,12 @@ $transition: 150ms ease;
         display: inline-flex;
         background: $tabs-bg;
         padding: 4px;
-        border-radius: 8px;
-        gap: 2px;
+        border-radius: 6px;
+        gap: 4px;
         overflow: visible;
         margin-left: 0 !important;
+        height: 50px;
+        
     }
 
     .dock-nav-list {
@@ -84,7 +86,7 @@ $transition: 150ms ease;
 
     // Reset ink bar - we don't need it with segmented style
     .dock-ink-bar {
-        display: none !important;
+        display: none !important;font-size: 14px!important;
     }
 }
 
@@ -107,13 +109,13 @@ $transition: 150ms ease;
     // Inner button styling
     > div,
     .dock-tab-btn {
-        padding: 8px 14px !important;
+        padding: 5px 10px !important;
         font-family: 'Inter Variable', -apple-system, sans-serif;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 500;
         color: $tab-text;
         white-space: nowrap;
-        border-radius: 6px;
+        border-radius: 5px;
         transition: all $transition;
         height: auto !important;
     }
@@ -140,7 +142,7 @@ $transition: 150ms ease;
         display: flex;
         align-items: center;
         gap: 0; // No gap - margins handle spacing
-        padding: 8px 12px 8px 12px !important; // Equal padding, X centered via margins
+        padding: 5px 10px !important; // Equal padding, X centered via margins
     }
 
     .dock-tab-close-btn {
@@ -223,13 +225,18 @@ $transition: 150ms ease;
 }
 
 // ============================================
-// EDITORS PANEL (Right panel with Properties, Tree View, etc.)
+// EDITORS PANEL (Right panel - Properties only, no tab bar)
 // ============================================
 
+// Hide the tab bar since Properties is the sole tab.
+// This gives the full panel height to Properties content.
 .not-strip .dock-panel.dock-style-editors .dock-bar {
-    .dock-nav-wrap {
-        background: $tabs-bg;
-    }
+    display: none !important;
+}
+
+// Ensure content fills the full height when tab bar is hidden
+.not-strip .dock-panel.dock-style-editors > .dock-content-holder {
+    height: 100% !important;
 }
 
 // ============================================

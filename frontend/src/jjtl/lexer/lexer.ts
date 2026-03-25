@@ -57,7 +57,13 @@ export class JjtlLexer {
             case ')': this.addToken(TokenType.RPAREN); break;
             case '[': this.addToken(TokenType.LBRACKET); break;
             case ']': this.addToken(TokenType.RBRACKET); break;
-            case ':': this.addToken(TokenType.COLON); break;
+            case ':':
+                if (this.match('=')) {
+                    this.addToken(TokenType.ASSIGN);    // :=
+                } else {
+                    this.addToken(TokenType.COLON);     // :
+                }
+                break;
             case ',': this.addToken(TokenType.COMMA); break;
             case '+': this.addToken(TokenType.PLUS); break;
             case '*': this.addToken(TokenType.STAR); break;
@@ -85,10 +91,12 @@ export class JjtlLexer {
                 }
                 break;
 
-            // Equals and equality
+            // Equals, fat arrow, and equality
             case '=':
                 if (this.match('=')) {
                     this.addToken(TokenType.EQUALS_EQUALS); // ==
+                } else if (this.match('>')) {
+                    this.addToken(TokenType.FAT_ARROW);     // =>
                 } else {
                     this.addToken(TokenType.EQUALS);        // =
                 }
@@ -131,6 +139,8 @@ export class JjtlLexer {
             case '-':
                 if (this.match('>')) {
                     this.addToken(TokenType.ARROW);         // ->
+                } else if (this.match('-')) {
+                    this.comment();                         // -- line comment
                 } else {
                     this.addToken(TokenType.MINUS);         // -
                 }
@@ -163,6 +173,23 @@ export class JjtlLexer {
             // Single-quoted strings (also supported)
             case "'":
                 this.singleQuotedString();
+                break;
+
+            // Dollar-prefixed identifiers: $varName
+            case '$':
+                if (this.isAlpha(this.peek())) {
+                    while (this.isAlphaNumeric(this.peek())) {
+                        this.advance();
+                    }
+                    this.addToken(TokenType.DOLLAR_IDENT);
+                } else {
+                    this.errors.push({
+                        message: "Unexpected '$'. Expected identifier after '$'.",
+                        line: this.line,
+                        column: this.column - 1,
+                    });
+                    this.addToken(TokenType.UNKNOWN);
+                }
                 break;
 
             default:

@@ -369,6 +369,19 @@ function ContextMenuComponentInner(props: AllProps) {
 
         if (true as any || !isM2 && cname !== 'DModel') {
             ContextEntry('edit', icon['edit'], 'Edit', () => setEditPanel(true) as undefined, [])
+
+            ContextEntry("help", <i className='bi bi-question-circle' />, "Help", () => {
+                let cn = ddata?.className;
+                let helpKey: string = '';
+                if (!cn) helpKey = 'properties-panel';
+                if (cn) {
+                    cn = cn.toLowerCase();
+                    if (cn.includes("enum")) helpKey = 'element-enum'; // both literal and enumerator shares the same help section?
+                    else helpKey =  'element-' + cn.substring(1);
+                }
+                window.dispatchEvent(new CustomEvent('jjodel:help-open', { detail: { helpKey } }));
+                close();
+                }, []);
             separator();
         }
 

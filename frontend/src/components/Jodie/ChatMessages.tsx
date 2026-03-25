@@ -10,6 +10,8 @@ import { executeCommand, ScriptLineResult } from '../../jjscript';
 import { DUser, L, LUser, LProject, LModel, store } from '../../joiner';
 import { Selectors } from '../../redux/selectors/selectors';
 import { ProviderIcon } from '../icons';
+import { useAvatar } from '../../hooks/useAvatar';
+import { AVATAR_COLORS, AVATAR_ICONS } from '../../constants/avatarConfig';
 
 interface ChatMessagesProps {
     messages: ChatMessage[];
@@ -33,13 +35,20 @@ function MessageBubble({ message, onJjScriptExecute }: { message: ChatMessage; o
     const displayName = message.userName || 'You';
     const isJjScript = !!message.jjscriptResult;
     const jjScriptSuccess = message.jjscriptResult?.success ?? true;
+    const [avatarConfig] = useAvatar();
+    const avatarColor = AVATAR_COLORS[avatarConfig.colorIndex];
+    const avatarIcon = AVATAR_ICONS[avatarConfig.iconIndex];
 
     return (
         <div className={`jodie-message ${isUser ? 'jodie-message-user' : 'jodie-message-assistant'}`}>
-            {/* User avatar with initials */}
+            {/* User avatar with initials or icon */}
             {isUser && (
-                <div className="jodie-message-avatar jodie-user-avatar">
-                    <span>{getInitials(displayName)}</span>
+                <div className="jodie-message-avatar jodie-user-avatar"
+                     style={{ background: avatarColor.hex }}>
+                    {avatarIcon
+                        ? <i className={`bi ${avatarIcon}`} style={{ fontSize: 11 }} />
+                        : <span>{getInitials(displayName)}</span>
+                    }
                 </div>
             )}
             {/* JjScript avatar */}

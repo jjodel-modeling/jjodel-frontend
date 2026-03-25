@@ -45,6 +45,38 @@
         color: #1e40af;             // Blue-800 for contrast
     }
 
+    // Conformance indicator (inside model tabs)
+    .conformance-indicator {
+        cursor: default;
+
+        .conformance-tooltip {
+            position: absolute;
+            bottom: calc(100% + 6px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1e293b;
+            color: #e2e8f0;
+            font-size: 11px;
+            font-weight: 500;
+            padding: 4px 8px;
+            border-radius: 4px;
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+
+            &::after {
+                content: '';
+                position: absolute;
+                top: 100%;
+                left: 50%;
+                transform: translateX(-50%);
+                border: 4px solid transparent;
+                border-top-color: #1e293b;
+            }
+        }
+    }
+
     // Transformation badge - Emerald/Green pastel
     // Uses inline icon instead of letter, so style the .bi icon
     &[data-type="transformation"] {

@@ -52,6 +52,11 @@ export function useJjtlParser(options: UseJjtlParserOptions = {}): UseJjtlParser
             column: e.column,
         }));
 
+        // DEBUG: log full token stream
+        console.log('[useJjtlParser] Full token stream:', lexerResult.tokens.map(
+            (t, i) => `${i}:[${t.type}:${JSON.stringify(t.value)}]`
+        ).join(' '));
+
         // Parse
         const parserResult = parse(lexerResult.tokens);
         console.log('[useJjtlParser] Parse result:', {

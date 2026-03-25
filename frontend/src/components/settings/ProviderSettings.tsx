@@ -4,6 +4,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { credentialsService, ProviderCredentials, ProviderType } from '../../services/CredentialsService';
+import { Button } from '../common/Button';
 import './ProviderSettings.css';
 import {AI, AIConfig, ALL_AI_PROVIDERS, JodieConfig, TAIProvider} from "../../types/jodie";
 import {GObject, U} from "../../joiner";
@@ -178,10 +180,10 @@ export const ProviderSettings: React.FC = () => {
                                     </div>
 
                                     <div className="form-actions">
-                                        <button className="btn btn-secondary" onClick={handleCancel}>
-                                            <i className="bi bi-x-lg"></i>
+                                        <Button variant="primary" onClick={handleCancel}>
+                                            <i className="bi bi-check-lg"></i>
                                             Close
-                                        </button>
+                                        </Button>
                                     </div>
                                 </div>
                             )}
@@ -213,19 +215,19 @@ export const ProviderSettings: React.FC = () => {
                             {/* Actions */}
                             {!isEditing && (
                                 <div className="provider-actions">
-                                    <button className="btn btn-outline" onClick={() => handleEdit(provider.name)}>
+                                    <Button variant="secondary" onClick={() => handleEdit(provider.name)}>
                                         <i className="bi bi-pencil"></i>
                                         {configured ? 'Edit' : 'Configure'}
-                                    </button>
+                                    </Button>
 
                                     {/*configured && (
-                                        <button
-                                            className="btn btn-danger"
+                                        <Button
+                                            variant="danger"
                                             onClick={() => handleRemove(provider.id, provider.name)}
                                         >
                                             <i className="bi bi-trash"></i>
                                             Remove
-                                        </button>
+                                        </Button>
                                     )*/}
                                 </div>
                             )}
@@ -236,15 +238,15 @@ export const ProviderSettings: React.FC = () => {
 
             {/* Footer */}
             <div className="settings-footer">
-                <button className="btn btn-outline-small" onClick={handleExport}>
+                <Button variant="secondary" size="sm" onClick={handleExport}>
                     <i className="bi bi-download"></i>
                     Export Backup
-                </button>
+                </Button>
 
-                <button className="btn btn-danger-small" onClick={handleClearAll}>
+                <Button variant="danger" size="sm" onClick={handleClearAll}>
                     <i className="bi bi-trash"></i>
                     Clear All
-                </button>
+                </Button>
             </div>
         </div>
     );

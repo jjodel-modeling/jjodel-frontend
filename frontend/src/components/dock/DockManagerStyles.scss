@@ -37,8 +37,8 @@
     //.dock:hover{overflow: visible;}
 
     .pinnable-strip{
-        --pinnable-strip-h: calc(0px + 31px);
-        --pinnable-strip-w: calc(0px + 31px);
+        --pinnable-strip-h: calc(0px + 26px);
+        --pinnable-strip-w: calc(0px + 26px);
         --content-border: 1px solid #108ee9;
         --navbar-h: 32px;
         --footer-h: 28px;
@@ -50,7 +50,7 @@
             position: absolute;
             z-index: 1;
             width: 1ric;
-            height: 31px;
+            height: 26px;
             display: flex;
             &::before{
                 margin: auto;
@@ -77,7 +77,7 @@
         }
 
         .dock-tab {
-            height: calc(10px + var(--pinnable-strip-h)); // it will be overflow hidden but i don't want to have a "hole" in pointer-events:hover when i move to content.
+            height: calc(8px + var(--pinnable-strip-h)); // it will be overflow hidden but i don't want to have a "hole" in pointer-events:hover when i move to content.
         }
         .dock-tabpane{
             display: none;// original jus had visibility hidden which makes inactive tab take space for pinned tabs:hover
@@ -257,7 +257,7 @@
     }
 }
 .active-on-mouseenter{
-    padding: 4px 14px;
+    padding: 3px 10px;
     height: 100%; width: 100%;
 }
 .pin-button{
@@ -449,7 +449,7 @@
           }
       }
     .dock-nav{
-        transform: translateX(23px) rotate(90deg);
+        transform: translateX(18px) rotate(90deg);
         // transform: translateX(calc(var(--pinnable-strip-h) - 2px)) rotate(90deg);
         //transform: translateX(29px) rotate(90deg);
         transform-origin: top left;

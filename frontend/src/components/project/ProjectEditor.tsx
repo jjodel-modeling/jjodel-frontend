@@ -11,6 +11,8 @@ import {
     DModel,
     DGraph,
     DObject,
+    DVertex,
+    GraphSize,
     Constructors,
     SetFieldAction,
     SetRootFieldAction,
@@ -30,7 +32,14 @@ import { execute as executeTransformation, ExecutionResult } from '../../jjtl/ex
 import { convertMetamodelToJjtl, findMetamodelById } from '../../jjtl/utils/metamodelConverter';
 import { EnvGenWizardModal, EnvGenPersistence, ENVGEN_CHANGE_EVENT, ENVGEN_OPEN_WIZARD_EVENT } from '../envgen';
 import type { EnvGenConfigSummary } from '../envgen';
+import { loadMegamodel, getSerializedMegamodel } from '../../model/megamodelPersistence';
+import { setRuntimeMegamodel, clearRuntimeMegamodel, getRuntimeMegamodel } from '../../model/megamodelRuntime';
+import MegamodelView, { type ArtifactStats } from '../megamodel/MegamodelView';
+import { Badge } from '../common/Badge';
+import { Button } from '../common/Button';
+import { EmptyState } from '../ui/EmptyState';
 import './project-editor.scss';
+
 
 // Types for contextual menu
 type MenuType = 'metamodel' | 'model' | 'transformation' | null;
@@ -90,6 +99,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     const [newTag, setNewTag] = useState('');
     const [isAddingTag, setIsAddingTag] = useState(false);
     const [showShareModal, setShowShareModal] = useState(false);
+    const [showMegamodelModal, setShowMegamodelModal] = useState(false);
 
     // Contextual menu state
     const [openMenu, setOpenMenu] = useState<OpenMenu | null>(null);
@@ -233,6 +243,53 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         window.addEventListener(ENVGEN_OPEN_WIZARD_EVENT, handler);
         return () => window.removeEventListener(ENVGEN_OPEN_WIZARD_EVENT, handler);
     }, []);
+
+    // Open megamodel modal when TreeView entry is clicked
+    useEffect(() => {
+        const handler = () => setShowMegamodelModal(true);
+        window.addEventListener('jjodel:openMegamodel', handler);
+        return () => window.removeEventListener('jjodel:openMegamodel', handler);
+    }, []);
+
+    // Broadcast transformations to TreeView via CustomEvent
+    useEffect(() => {
+        const detail = transformations.map(t => ({
+            id: t.id,
+            name: t.name,
+            sourceMMName: t.sourceMetamodelName,
+            targetMMName: t.targetMetamodelName,
+        }));
+        window.dispatchEvent(new CustomEvent('jjodel:transformations', { detail }));
+    }, [transformations]);
+
+    // Megamodel: compute and register runtime megamodel whenever artifacts change
+    useEffect(() => {
+        const projectId = project.id;
+        if (!projectId) return;
+
+        const artifacts = {
+            metamodels: metamodels.map(mm => ({ id: mm.id, name: mm.name || '' })),
+            models: models.map(m => {
+                const rawInstanceof = (m.__raw as any)['instanceof'];
+                const instanceofMetamodelId = typeof rawInstanceof === 'string' ? rawInstanceof : undefined;
+                const rawState = (m.__raw as any)['_state'];
+                const generatedBy = rawState?.generatedBy ?? undefined;
+                return { id: m.id, name: m.name || '', instanceofMetamodelId, generatedBy };
+            }),
+            transformations: transformations.map(t => ({
+                id: t.id,
+                name: t.name || '',
+                sourceMetamodelId: t.sourceMetamodelId,
+                targetMetamodelId: t.targetMetamodelId,
+            })),
+        };
+
+        const serialized = getSerializedMegamodel(projectId);
+        const megamodel = loadMegamodel(serialized, artifacts);
+        setRuntimeMegamodel(projectId, megamodel);
+
+        return () => { clearRuntimeMegamodel(projectId); };
+    }, [project.id, metamodels, models, transformations]);
 
     // Mark project as dirty (unsaved changes)
     // Sets both local state and global U.isProjectModified for consistency
@@ -521,7 +578,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             const name = jmmData.metadata?.name || file.name.replace(/\.jmm$/, '');
 
             // Create new metamodel in project using existing createM2
-            const newMM = createM2(project, name);
+            const newMM = createM2(project);
 
             // TODO: Populate metamodel with imported data
             // For now, just show success with the created metamodel
@@ -879,15 +936,9 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     return;
                 }
 
-                // Find transformation and target metamodel
-                const currentTransformation = transformations.find(t => t.targetMetamodelId);
-                if (!currentTransformation) {
-                    U.alert('e', 'Error', 'Transformation not found');
-                    isExecutingTransformation = false;
-                    return;
-                }
-
-                const targetMetamodel = metamodels.find(mm => mm.id === currentTransformation.targetMetamodelId);
+                // Use the current transformation from the enclosing closure
+                // (previously: transformations.find(t => t.targetMetamodelId) which always returned the FIRST one)
+                const targetMetamodel = metamodels.find(mm => mm.id === transformation.targetMetamodelId);
                 if (!targetMetamodel) {
                     U.alert('e', 'Error', `Target metamodel not found`);
                     isExecutingTransformation = false;
@@ -983,7 +1034,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
 
                 const sourceModelDataCopy = JSON.parse(JSON.stringify(sourceModelData));
                 // Execute transformation
-                const result: ExecutionResult = executeTransformation(ast, sourceModelDataCopy, targetMetamodel);
+                const result: ExecutionResult = await executeTransformation(ast, sourceModelDataCopy, targetMetamodel);
 
                 if (!result.success) {
                     U.alert('e', 'Transformation Failed', result.errors.join('\n'));
@@ -1028,6 +1079,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 let createdDModel: DModel | null = null;
                 let createdDGraph: DGraph | null = null;
                 let createdModelId: string | null = null;
+                let createdGraphId: string | null = null;
                 let instancesCreated = 0;
 
                 // Store object NAME (not ID!) with attributes — ID from DObject.new() is unreliable
@@ -1035,6 +1087,14 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     objectName: string;
                     className: string;
                     attributes: Record<string, any>;
+                }> = [];
+
+                // Collect object IDs + positions for DVertex creation AFTER the TRANSACTION
+                // (DVertex.new has its own internal TRANSACTION — nesting causes coordinates to be lost)
+                const pendingVertices: Array<{
+                    objectId: string;
+                    posX: number;
+                    posY: number;
                 }> = [];
 
                 TRANSACTION('Execute Transformation: Create Target Model', () => {
@@ -1056,7 +1116,11 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     const graphId = Constructors.DGraph_makeID(dModel.id);
                     const dGraph: DGraph = DGraph.new(0, dModel.id, undefined, undefined, graphId);
                     createdDGraph = dGraph;
+                    createdGraphId = dGraph.id;
                     console.log('[ProjectEditor] Created DGraph:', { id: dGraph.id });
+
+                    // Tag graph as v2-flow so EditorV2/useJjomSync can find it
+                    SetFieldAction.new(dGraph.id, 'graphStyle', 'v2-flow', '', false);
 
                     // STEP 3: Aggiungi model a project.models
                     SetFieldAction.new(project.id, 'models', dModel.id, '+=', true);
@@ -1069,6 +1133,15 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     // STEP 5: Aggiungi graph a project.graphs - per persistenza
                     SetFieldAction.new(project.id, 'graphs', dGraph.id, '+=', true);
                     console.log('[ProjectEditor] Added graph to project.graphs');
+
+                    // STEP 5b: Tag model as generated by transformation
+                    SetFieldAction.new(dModel.id, '_state', {
+                        generatedBy: {
+                            transformationId: transformation.id,
+                            sourceModelId: sourceModelId,
+                            timestamp: Date.now(),
+                        }
+                    }, '', false);
 
                     // STEP 6: Crea istanze
                     if (result.targetModel?.instances) {
@@ -1084,6 +1157,15 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                 return;
                             }
 
+                            // Grid layout constants for DVertex positioning
+                            const GRID_COLS = 3;
+                            const NODE_W = 200;
+                            const NODE_H = 80;
+                            const GAP_X = 50;
+                            const GAP_Y = 50;
+                            const START_X = 50;
+                            const START_Y = 50;
+
                             for (const instanceData of instances) {
                                 console.log(`[ProjectEditor] instanceData from executor:`, instanceData);
 
@@ -1091,10 +1173,26 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                 const dObject = DObject.new(targetClass.id, dModel.id, DModel, objectName, true);
                                 console.log(`[ProjectEditor] Created instance:`, { name: objectName, class: className });
 
+                                // Collect for DVertex creation AFTER the TRANSACTION.
+                                // DVertex.new has its own internal TRANSACTION — nesting
+                                // causes coordinates to be lost (all positions become 0,0).
+                                const col = instancesCreated % GRID_COLS;
+                                const row = Math.floor(instancesCreated / GRID_COLS);
+                                const posX = START_X + col * (NODE_W + GAP_X);
+                                const posY = START_Y + row * (NODE_H + GAP_Y);
+                                pendingVertices.push({ objectId: dObject.id, posX, posY });
+
                                 // Collect attributes for deferred setting (after TRANSACTION)
+                                // Use WHITELIST approach: only include attributes that exist in the
+                                // target metamodel class. This avoids collisions between system
+                                // properties (id, name, className) and domain attributes with the
+                                // same names.
+                                const domainAttrNames = new Set(
+                                    (targetClass.attributes || []).map((a: any) => a.name).filter(Boolean)
+                                );
                                 const attrs: Record<string, any> = {};
                                 for (const [attrName, attrValue] of Object.entries(instanceData)) {
-                                    if (attrName.startsWith('__') || ['className', 'id', 'name'].includes(attrName)) continue;
+                                    if (!domainAttrNames.has(attrName)) continue;
                                     if (attrValue === undefined || attrValue === null) continue;
                                     attrs[attrName] = attrValue;
                                 }
@@ -1115,6 +1213,46 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
 
                     console.log(`[ProjectEditor] Total instances created: ${instancesCreated}`);
                 });
+
+                // STEP 7: Open tab AFTER a delay for Redux (fire-and-forget)
+                // Schedule this FIRST so tab opens even if DVertex/attribute steps fail.
+                if (createdDModel) {
+                    const modelToOpen = createdDModel;
+                    const modelName = uniqueOutputName;
+                    const count = instancesCreated;
+
+                    setTimeout(() => {
+                        try {
+                            const tab = TabDataMaker.model(modelToOpen);
+                            DockManager.open('models', tab);
+                            U.alert('i', 'Transformation Executed',
+                                `Created model "${modelName}" with ${count} instances.`);
+                            markDirty();
+                        } catch (e) {
+                            console.error('[ProjectEditor] Error opening tab:', e);
+                        }
+                    }, 200);
+                }
+
+                // STEP 6b: Create DVertices OUTSIDE the TRANSACTION.
+                // DVertex.new has its own internal TRANSACTION — calling it inside
+                // another TRANSACTION causes nested transactions that lose coordinates.
+                // Same pattern as useJjomSync's auto-population.
+                // Wrapped in try-catch so vertex creation failures don't prevent tab opening.
+                if (pendingVertices.length > 0 && createdGraphId) {
+                    const gid = createdGraphId;
+                    const NODE_W = 200;
+                    const NODE_H = 80;
+                    try {
+                        for (const pv of pendingVertices) {
+                            const size = new GraphSize(pv.posX, pv.posY, NODE_W, NODE_H);
+                            DVertex.new(0, pv.objectId, gid, gid, undefined, size);
+                            console.log(`[ProjectEditor] Created DVertex for object at (${pv.posX}, ${pv.posY})`);
+                        }
+                    } catch (e) {
+                        console.error('[ProjectEditor] Error creating DVertices (non-fatal):', e);
+                    }
+                }
 
                 // STEP 8: Set attributes after delay — use LModel proxy to find objects by name
                 if (pendingAttributeSets.length > 0 && createdModelId) {
@@ -1172,25 +1310,6 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 // Tab opening and attribute setting happen in the background (fire-and-forget)
                 // Broadcast execution result via custom event (for JjtlDevelopmentEnv trace display)
                 window.dispatchEvent(new CustomEvent('jjtl-execution-result', { detail: result }));
-
-                // STEP 7: Open tab AFTER a delay for Redux (fire-and-forget, don't await)
-                if (createdDModel) {
-                    const modelToOpen = createdDModel;
-                    const modelName = uniqueOutputName;
-                    const count = instancesCreated;
-
-                    setTimeout(() => {
-                        try {
-                            const tab = TabDataMaker.model(modelToOpen);
-                            DockManager.open('models', tab);
-                            U.alert('i', 'Transformation Executed',
-                                `Created model "${modelName}" with ${count} instances.`);
-                            markDirty();
-                        } catch (e) {
-                            console.error('[ProjectEditor] Error opening tab:', e);
-                        }
-                    }, 200);
-                }
 
                 // Reset execution guard
                 isExecutingTransformation = false;
@@ -1272,7 +1391,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             <div className="project-header">
                 <div className="project-header__badges">
                     <button
-                        className={`badge badge--type badge--clickable ${project.type === 'public' ? 'badge--public' : ''}`}
+                        className="jj-badge jj-badge--state badge--clickable"
                         onClick={handleVisibilityBadgeClick}
                         title={project.type === 'public' ? 'Click to get share link' : 'Click to make public'}
                     >
@@ -1292,19 +1411,14 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             <i className="bi bi-lock" />
                         </button>
                     )}
-                    <span
-                        className="badge badge--engine"
-                        title={"Current Jjodel platform version - Same for all projects" + (versionList.length ? "\nProject Version history:" + (versionList.map(v=>"\n\t"+v)) : null)}
-                    >
+                    <Badge category="version" className="badge--engine"
+                           title={"Current Jjodel platform version - Same for all projects" + (versionList.length ? "\nProject Version history:" + (versionList.map(v=>"\n\t"+v)) : null)}>
                         <i className="bi bi-gear" />
                         {getEngineVersion()}
-                    </span>
-                    <span
-                        className="badge badge--content"
-                        title="Project revision - Auto-increments on each save"
-                    >
+                    </Badge>
+                    <Badge category="version">
                         Rev {formatVersionNumber(project.version)}
-                    </span>
+                    </Badge>
                 </div>
 
                 {/* Editable Name */}
@@ -1404,6 +1518,19 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     <span className="project-dates__separator">·</span>
                     <span>Modified: {formatDate(project.lastModified)}</span>
                 </div>
+
+                {/* Quick actions */}
+                <div className="project-quickactions">
+                    <Button
+                        variant="secondary"
+                        className="megamodel-btn"
+                        onClick={() => setShowMegamodelModal(true)}
+                        title="View relationships between project artifacts"
+                    >
+                        <i className="bi bi-diagram-3" />
+                        View Megamodel
+                    </Button>
+                </div>
             </div>
 
             {/* Metamodels Section */}
@@ -1413,14 +1540,14 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     <div className="project-section__actions">
                         {/* Import button with dropdown */}
                         <div className="import-button-wrapper" ref={importMenuRef}>
-                            <button
-                                className="btn btn--secondary"
+                            <Button
+                                variant="secondary"
                                 onClick={() => setShowImportMenu(!showImportMenu)}
                             >
                                 <i className="bi bi-upload" />
                                 Import
                                 <i className={`bi bi-chevron-${showImportMenu ? 'up' : 'down'} btn-chevron`} />
-                            </button>
+                            </Button>
 
                             {showImportMenu && (
                                 <div className="import-select-menu">
@@ -1443,28 +1570,19 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                         </div>
 
                         {/* New button */}
-                        <button className="btn btn--primary" onClick={handleCreateMetamodel}>
+                        <Button variant="primary" onClick={handleCreateMetamodel}>
                             + New
-                        </button>
+                        </Button>
                     </div>
                 </div>
 
                 {metamodels.length === 0 ? (
-                    <div className="empty-state">
-                        <div className="empty-state__icon">
-                            <i className="bi bi-diagram-3" />
-                        </div>
-                        <h3 className="empty-state__title">No metamodels yet</h3>
-                        <p className="empty-state__description">
-                            Create a metamodel to define the structure and rules for your domain models.
-                        </p>
-                        <button
-                            className="btn btn--primary btn--empty-state"
-                            onClick={handleCreateMetamodel}
-                        >
-                            Create Your First Metamodel
-                        </button>
-                    </div>
+                    <EmptyState
+                        icon="bi-diagram-3"
+                        title="No metamodels yet"
+                        description="Create a metamodel to define the structure and rules for your domain models."
+                        action={{ label: 'Create Your First Metamodel', onClick: handleCreateMetamodel }}
+                    />
                 ) : (
                     <div className="list-card">
                         {metamodels.map((mm) => (
@@ -1575,8 +1693,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 <div className="project-section__header">
                     <h2 className="project-section__title">MODELS</h2>
                     <div className="new-model-button-wrapper" ref={metamodelMenuRef}>
-                        <button
-                            className="btn btn--primary"
+                        <Button
+                            variant="primary"
                             disabled={metamodels.length === 0}
                             title={metamodels.length === 0 ? 'Create a metamodel first' : 'Create new model'}
                             onClick={handleNewModelClick}
@@ -1585,7 +1703,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             {metamodels.length > 1 && (
                                 <i className={`bi bi-chevron-${showMetamodelMenu ? 'up' : 'down'} btn-chevron`} />
                             )}
-                        </button>
+                        </Button>
 
                         {/* Metamodel selection dropdown */}
                         {showMetamodelMenu && metamodels.length > 1 && (
@@ -1610,25 +1728,16 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 </div>
 
                 {models.length === 0 ? (
-                    <div className="empty-state empty-state--secondary">
-                        <div className="empty-state__icon empty-state__icon--small">
-                            <i className="bi bi-box" />
-                        </div>
-                        <h3 className="empty-state__title">
-                            {metamodels.length === 0 ? 'Create a metamodel first' : 'No models yet'}
-                        </h3>
-                        <p className="empty-state__description">
-                            {metamodels.length === 0
-                                ? 'Models are instances of metamodels. You need to create a metamodel structure before you can create models.'
-                                : 'Create a model to instantiate your metamodel.'}
-                        </p>
-                        {metamodels.length === 0 && (
-                            <div className="empty-state__hint">
-                                <i className="bi bi-arrow-up" />
-                                <span>Create your first metamodel in the section above</span>
-                            </div>
-                        )}
-                    </div>
+                    <EmptyState
+                        icon="bi-box"
+                        title={metamodels.length === 0 ? 'Create a metamodel first' : 'No models yet'}
+                        description={metamodels.length === 0
+                            ? 'Models are instances of metamodels. You need to create a metamodel structure before you can create models.'
+                            : 'Create a model to instantiate your metamodel.'}
+                        hints={metamodels.length === 0
+                            ? [{ icon: 'bi-arrow-up', text: 'Create your first metamodel in the section above' }]
+                            : undefined}
+                    />
                 ) : (
                     <div className="list-card">
                         {models.map((model) => (
@@ -1742,26 +1851,22 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     <h2 className="project-section__title">
                         ENVIRONMENT GENERATION {envGenConfigs.length > 0 && `(${envGenConfigs.length})`}
                     </h2>
-                    <button
-                        className="btn btn--primary"
+                    <Button
+                        variant="primary"
                         disabled={metamodels.length === 0}
                         title={metamodels.length === 0 ? 'Create a metamodel first' : 'Generate new environment'}
                         onClick={() => { setEditingEnvGenId(undefined); setShowEnvGenWizard(true); }}
                     >
                         + New
-                    </button>
+                    </Button>
                 </div>
 
                 {envGenConfigs.length === 0 ? (
-                    <div className="empty-state empty-state--secondary">
-                        <div className="empty-state__icon empty-state__icon--small">
-                            <i className="bi bi-box-seam" />
-                        </div>
-                        <h3 className="empty-state__title">No environments generated yet</h3>
-                        <p className="empty-state__description">
-                            Generate standalone modeling environments from your metamodels with AI-assisted prompt generation.
-                        </p>
-                    </div>
+                    <EmptyState
+                        icon="bi-box-seam"
+                        title="No environments generated yet"
+                        description="Generate standalone modeling environments from your metamodels with AI-assisted prompt generation."
+                    />
                 ) : (
                     <div className="list-card">
                         {envGenConfigs.map((cfg) => (
@@ -1789,9 +1894,9 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                         {cfg.techStackSummary} {cfg.metamodelName ? `· ${cfg.metamodelName}` : ''}
                                     </div>
                                 </div>
-                                <span className={`envgen-status-badge envgen-status-badge--${cfg.status}`}>
+                                <Badge category={cfg.status === 'ready' ? 'version' : 'state'} className={cfg.status === 'generating' ? 'envgen-pulse' : ''}>
                                     {cfg.status === 'ready' ? 'Ready' : cfg.status === 'generating' ? 'Generating...' : 'Draft'}
-                                </span>
+                                </Badge>
                             </div>
                         ))}
                     </div>
@@ -1804,24 +1909,20 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     <h2 className="project-section__title">
                         TRANSFORMATIONS {transformations.length > 0 && `(${transformations.length})`}
                     </h2>
-                    <button
-                        className="btn btn--primary"
+                    <Button
+                        variant="primary"
                         onClick={() => setShowNewTransformationDialog(true)}
                     >
                         + New
-                    </button>
+                    </Button>
                 </div>
 
                 {transformations.length === 0 ? (
-                    <div className="empty-state empty-state--secondary">
-                        <div className="empty-state__icon empty-state__icon--small">
-                            <i className="bi bi-arrow-left-right" />
-                        </div>
-                        <h3 className="empty-state__title">No transformations yet</h3>
-                        <p className="empty-state__description">
-                            Create model-to-model transformations using JjTL to automate conversions between metamodels.
-                        </p>
-                    </div>
+                    <EmptyState
+                        icon="bi-arrow-left-right"
+                        title="No transformations yet"
+                        description="Create model-to-model transformations using JjTL to automate conversions between metamodels."
+                    />
                 ) : (
                     <TransformationsList
                         transformations={transformations}
@@ -1839,15 +1940,17 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     <h2 className="project-section__title">
                         VIEWPOINTS {viewpoints.length > 0 && `(${viewpoints.length})`}
                     </h2>
-                    <button className="btn btn--secondary" disabled>
+                    <Button variant="secondary" disabled>
                         + Add
-                    </button>
+                    </Button>
                 </div>
 
                 {viewpoints.length === 0 ? (
-                    <div className="empty-state empty-state--subtle">
-                        <p className="empty-state__text-inline">No viewpoints defined</p>
-                    </div>
+                    <EmptyState
+                        icon="bi-eye"
+                        title="No viewpoints defined"
+                        description="Viewpoints let you define custom perspectives on your models."
+                    />
                 ) : (
                     <div className="list-card">
                         {viewpoints.map((vp) => {
@@ -1892,6 +1995,144 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
 
             {/* Documentation Section */}
             <DocumentationSection project={project} />
+
+            {/* Megamodel Diagram View */}
+            {showMegamodelModal && (() => {
+                const megamodel = getRuntimeMegamodel(project.id);
+                if (!megamodel) return null;
+
+                // Compute artifact stats for rich node cards
+                const artifactStats: ArtifactStats[] = [];
+                for (const mm of metamodels) {
+                    const classes = mm.classes || [];
+                    const attrs = mm.attributes || [];
+                    const refs = mm.references || [];
+                    artifactStats.push({
+                        id: mm.id,
+                        stats: {
+                            classCount: classes.length,
+                            attributeCount: attrs.length,
+                            referenceCount: refs.length,
+                        },
+                        status: {
+                            type: 'valid',
+                            label: `${classes.length} classes`,
+                        },
+                    });
+                }
+                for (const m of models) {
+                    const objects = m.objects || [];
+                    const conformsToName = (m as any).instanceof?.name;
+                    artifactStats.push({
+                        id: m.id,
+                        stats: {
+                            objectCount: objects.length,
+                            linkCount: objects.reduce((sum: number, o: any) =>
+                                sum + (o.referenceFeatures?.length ?? 0), 0),
+                        },
+                        status: objects.length === 0
+                            ? { type: 'warning', label: 'Empty model' }
+                            : { type: 'valid', label: conformsToName ? `Conforms to ${conformsToName}` : `${objects.length} objects` },
+                    });
+                }
+                for (const t of transformations) {
+                    const ruleCount = t.ast?.mappings?.length ?? 0;
+                    const mappingCount = t.ast?.mappings?.reduce((sum: number, m: any) =>
+                        sum + (m.body?.length ?? 0), 0) ?? 0;
+                    artifactStats.push({
+                        id: t.id,
+                        stats: {
+                            ruleCount,
+                            mappingCount,
+                        },
+                        status: t.isValid === false
+                            ? { type: 'warning', label: `${t.errorCount ?? 0} errors` }
+                            : { type: 'info', label: `${ruleCount} rules` },
+                    });
+                }
+
+                return (
+                    <MegamodelView
+                        megamodel={megamodel}
+                        projectId={project.id}
+                        viewpoints={viewpoints.map(vp => ({
+                            id: vp.id || vp.name,
+                            name: vp.name || 'Unnamed',
+                            isOverlay: vp.isOverlay,
+                        }))}
+                        artifactStats={artifactStats}
+                        onClose={() => setShowMegamodelModal(false)}
+                        onOpenNode={(nodeId, nodeKind) => {
+                            if (nodeKind === 'metamodel' || nodeKind === 'model') {
+                                const lModel = metamodels.find(mm => mm.id === nodeId) || models.find(m => m.id === nodeId);
+                                if (lModel) DockManager.open2(lModel);
+                            } else if (nodeKind === 'transformation') {
+                                const t = transformations.find(tr => tr.id === nodeId);
+                                if (t) handleOpenTransformation(t);
+                            }
+                        }}
+                        onDeleteNode={(nodeId, nodeKind) => {
+                            if (nodeKind === 'metamodel') {
+                                const mm = metamodels.find(m => m.id === nodeId);
+                                if (mm) handleDeleteMetamodel(mm);
+                            } else if (nodeKind === 'model') {
+                                const m = models.find(mod => mod.id === nodeId);
+                                if (m) handleDeleteModel(m);
+                            } else if (nodeKind === 'transformation') {
+                                handleDeleteTransformation(nodeId);
+                            }
+                            setShowMegamodelModal(false);
+                        }}
+                        onRenameNode={(nodeId, nodeKind, newName) => {
+                            if (nodeKind === 'metamodel') {
+                                const mm = metamodels.find(m => m.id === nodeId);
+                                if (mm && newName !== mm.name) {
+                                    mm.name = newName;
+                                    markDirty();
+                                }
+                            } else if (nodeKind === 'model') {
+                                const m = models.find(mod => mod.id === nodeId);
+                                if (m && newName !== m.name) {
+                                    m.name = newName;
+                                    markDirty();
+                                }
+                            } else if (nodeKind === 'transformation') {
+                                handleRenameTransformation(nodeId, newName);
+                            }
+                            // Keep runtime megamodel ArtifactRef names in sync
+                            // so that close/reopen rebuilds nodes with the new name
+                            const currentMm = getRuntimeMegamodel(project.id);
+                            if (currentMm) {
+                                for (const edge of currentMm.edges) {
+                                    if (edge.source.id === nodeId) edge.source.name = newName;
+                                    if (edge.target.id === nodeId) edge.target.name = newName;
+                                }
+                            }
+                        }}
+                        onDuplicateNode={(nodeId, nodeKind) => {
+                            if (nodeKind === 'transformation') {
+                                handleDuplicateTransformation(nodeId);
+                            }
+                            // TODO: duplicate for metamodels/models
+                        }}
+                        onRunTransformation={(nodeId) => {
+                            const t = transformations.find(tr => tr.id === nodeId);
+                            if (t) {
+                                setShowMegamodelModal(false);
+                                handleOpenTransformation(t);
+                            }
+                        }}
+                        onCreateMetamodel={() => {
+                            handleCreateMetamodel();
+                            setShowMegamodelModal(false);
+                        }}
+                        onCreateModel={() => {
+                            handleNewModelClick();
+                            setShowMegamodelModal(false);
+                        }}
+                    />
+                );
+            })()}
 
             {/* Share Modal */}
             <ShareProjectModal

@@ -83,14 +83,26 @@ class DockManager {
 
     static async open(group: 'models'|'editors', tab: TabData): Promise<void> {
         if(!DockManager.dock) return;
+        // Guard: if a tab with this ID already exists, just activate it
+        if (tab.id) {
+            const existing = DockManager.dock.find(tab.id);
+            if (existing && 'content' in existing) {
+                DockManager.dock.updateTab(tab.id, null as any, true);
+                return;
+            }
+        }
         const index = (group === 'models') ? 0 : 1;
-        console.log("TabManager open()", group, tab);
         DockManager.dock.dockMove(tab, DockManager.dock.getLayout().dockbox.children[index], 'middle');
     }
 
     static async open2(me: LModel): Promise<void> {
         const tab = (me.isMetamodel) ? TabDataMaker.metamodel(me) : TabDataMaker.model(me);
         await DockManager.open('models', tab);
+        const editorType = me.isMetamodel ? 'metamodel' : 'model';
+        console.log('[OPEN2] about to dispatch', { editorType });
+        window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
+            detail: { editorType }
+        }));
     }
 
     /**
@@ -118,6 +130,9 @@ class DockManager {
             if (existingTab) {
                 console.log('[DockManager] Activating existing documentation tab');
                 DockManager.dock.updateTab(tabId, null as any, true);
+                window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
+                    detail: { editorType: 'summary' }
+                }));
                 return;
             }
 
@@ -137,6 +152,9 @@ class DockManager {
             if (layout?.dockbox?.children?.[0]) {
                 console.log('[DockManager] Creating new documentation tab');
                 DockManager.dock.dockMove(tab, layout.dockbox.children[0], 'middle');
+                window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
+                    detail: { editorType: 'summary' }
+                }));
             } else {
                 console.warn('[DockManager] Dock layout not ready');
                 U.alert('w', 'Cannot open documentation', 'The editor layout is not ready. Please try again.');
@@ -211,6 +229,18 @@ class DockManager {
         });
 
         try {
+            // Check if tab already exists
+            const existingTab = DockManager.dock.find(tabId);
+            if (existingTab) {
+                console.log('[DockManager] Updating and activating existing transformation tab');
+                // CRITICAL: Update tab content with fresh callbacks to avoid stale closures
+                DockManager.dock.updateTab(tabId, { content: tabContent }, true);
+                window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
+                    detail: { editorType: 'transformation' }
+                }));
+                return;
+            }
+
             // Create new JjTL Development Environment tab
             const title = (
                 <div className="tab-title active-on-mouseenter">
@@ -238,6 +268,9 @@ class DockManager {
             if (layout?.dockbox?.children?.[0]) {
                 console.log('[DockManager] Creating new transformation tab');
                 DockManager.dock.dockMove(tab, layout.dockbox.children[0], 'middle');
+                window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
+                    detail: { editorType: 'transformation' }
+                }));
             } else {
                 console.warn('[DockManager] Dock layout not ready');
                 U.alert('w', 'Cannot open transformation', 'The editor layout is not ready. Please try again.');

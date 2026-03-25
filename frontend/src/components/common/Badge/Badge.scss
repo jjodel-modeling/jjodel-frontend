@@ -1,0 +1,46 @@
+.jj-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+
+  i {
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+
+  &--type {
+    background: #e0f2fe;
+    color: #0369a1;
+  }
+
+  &--state {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+    padding: 1px 7px; // compensate border
+  }
+
+  &--state-danger {
+    background: #fef2f2;
+    color: #b91c1c;
+  }
+
+  &--version {
+    background: #ecfdf5;
+    color: #047857;
+  }
+
+  &--context {
+    background: #f8fafc;
+    color: #334155;
+    border: 1px solid #e2e8f0;
+    padding: 1px 7px;
+    border-radius: 10px; // pill shape
+  }
+}

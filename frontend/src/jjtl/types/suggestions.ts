@@ -45,6 +45,7 @@ export interface MappingSuggestion {
 
     // For conversions
     conversionHint?: string;     // e.g., "true=1, false=0"
+    guardHint?: string;          // e.g., "gender == \"Male\"" — condition for choosing this target subclass
 
     // State - new checkbox-based workflow
     status: MappingStatus;

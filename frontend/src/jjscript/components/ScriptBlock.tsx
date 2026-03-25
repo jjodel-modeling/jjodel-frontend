@@ -1082,10 +1082,6 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                             {displayCode}
                         </SyntaxHighlighter>
                     </div>
-                    {/* AI Disclaimer (compact) */}
-                    <div className="script-block__disclaimer">
-                        <AIDisclaimer compact />
-                    </div>
                 </div>
             )}
 

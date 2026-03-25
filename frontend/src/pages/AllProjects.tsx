@@ -9,6 +9,7 @@ import {Dashboard, Project} from './components';
 
 import { Cards, Card } from './components/cards/Cards';
 import { Catalog } from './components/catalog/Catalog';
+import { Button } from '../components/common/Button';
 
 import {ProjectsApi} from "../api/persistance";
 import { LatestUpdates } from './components/LatestUpdates';
@@ -119,20 +120,20 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
                         <h1 className="dashboard-page-title">Projects</h1>
                     </div>
                     <div className="dashboard-cta-right">
-                        <button
-                            className="btn-secondary-outlined"
+                        <Button
+                            variant="secondary"
                             onClick={() => setDropping(true)}
                         >
                             <i className="bi bi-download" />
                             Import
-                        </button>
-                        <button
-                            className="btn-primary-solid"
+                        </Button>
+                        <Button
+                            variant="primary"
                             onClick={handleOpenCreateDialog}
                         >
                             <i className="bi bi-plus-lg" />
                             New Project
-                        </button>
+                        </Button>
                     </div>
                 </div>
                 <Catalog projects={projects} onNewProject={handleOpenCreateDialog} />

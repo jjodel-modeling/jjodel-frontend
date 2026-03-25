@@ -9,6 +9,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { dialogManager, DialogRequest } from '../../executor/ReactUIBridge';
 import { setUIBridge, ReactUIBridge } from '../../executor';
 import { JjtlAlertDialog } from './JjtlAlertDialog';
+import { JjtlConfirmDialog } from './JjtlConfirmDialog';
 import { JjtlPromptDialog } from './JjtlPromptDialog';
 import { JjtlInputDialog } from './JjtlInputDialog';
 import { JjtlNotifyToast, useToasts } from './JjtlNotifyToast';
@@ -74,7 +75,21 @@ export const JjtlDialogManager: React.FC = () => {
                 return (
                     <JjtlPromptDialog
                         message={request.message}
+                        typeRef={request.typeRef}
                         defaultValue={request.defaultValue}
+                        executionContext={request.executionContext}
+                        onSubmit={(result) => {
+                            request.resolve(result);
+                            handleClose();
+                        }}
+                    />
+                );
+
+            case 'confirm':
+                return (
+                    <JjtlConfirmDialog
+                        message={request.message}
+                        executionContext={request.executionContext}
                         onSubmit={(result) => {
                             request.resolve(result);
                             handleClose();

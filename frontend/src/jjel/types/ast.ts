@@ -33,9 +33,15 @@ export type JjelExpression =
     | IfThenElseExpr
     | NullCoalesceExpr
     | IsTypeExpr
+    | ImpliesExpr
     | LambdaExpr
     | ArrayLiteralExpr
-    | InterpolatedStringExpr;
+    | InterpolatedStringExpr
+    | ForAllExpr
+    | ExistsExpr
+    | WithDoExpr
+    | IndexAccessExpr
+    | ObjectLiteralExpr;
 
 // ============================================
 // LITERALS
@@ -197,19 +203,97 @@ export interface IsTypeExpr extends JjelASTNode {
 }
 
 // ============================================
+// LOGICAL IMPLICATION
+// ============================================
+
+/**
+ * Logical implication: a implies b
+ * Right-associative: a implies b implies c = a implies (b implies c)
+ * Semantics: false implies anything = true; true implies x = x
+ */
+export interface ImpliesExpr extends JjelASTNode {
+    type: 'Implies';
+    left: JjelExpression;
+    right: JjelExpression;
+}
+
+// ============================================
 // LAMBDA
 // ============================================
 
 /**
- * Lambda expression: params: body
- * Note: Uses COLON, not arrow
- * Single param: x: x.name
- * Multiple params: (a, b): a + b
+ * Lambda expression: params => body
+ * Single param: x => x.name
+ * Multiple params: (a, b) => a + b
  */
 export interface LambdaExpr extends JjelASTNode {
     type: 'Lambda';
     params: string[];
     body: JjelExpression;
+}
+
+// ============================================
+// SET COMPREHENSION / QUANTIFIERS
+// ============================================
+
+/**
+ * Universal quantifier / set comprehension: forall x in S [such that filter] [: projection]
+ * At least one of filter or projection must be present.
+ * Examples:
+ *   forall a in attrs such that a.isPublic           — returns filtered set
+ *   forall a in attrs : a.name                        — maps to names
+ *   forall a in attrs such that a.isPublic : a.name  — filter then map
+ */
+export interface ForAllExpr extends JjelASTNode {
+    type: 'ForAll';
+    variable: string;
+    collection: JjelExpression;
+    filter?: JjelExpression;
+    projection?: JjelExpression;
+}
+
+/**
+ * Existential quantifier: exists x in S (such that | |) predicate
+ * Returns true if any element satisfies the predicate.
+ * NOTE: ':' is NOT accepted for exists — use 'such that' or '|'.
+ * Examples:
+ *   exists a in attrs such that a.type == "String"
+ *   exists a in attrs | a.isPublic
+ */
+export interface ExistsExpr extends JjelASTNode {
+    type: 'Exists';
+    variable: string;
+    collection: JjelExpression;
+    predicate: JjelExpression;
+}
+
+// ============================================
+// CONTEXT BINDING
+// ============================================
+
+/**
+ * Context switch: with expr do body
+ * Evaluates body with the context object's properties as implicit identifiers.
+ * Example: with parent do name.camelCase()
+ */
+export interface WithDoExpr extends JjelASTNode {
+    type: 'WithDo';
+    context: JjelExpression;
+    body: JjelExpression;
+}
+
+// ============================================
+// INDEX ACCESS
+// ============================================
+
+/**
+ * Array/object index access: expr[index]
+ * Examples: items[0], matrix[i][j]
+ */
+export interface IndexAccessExpr extends JjelASTNode {
+    type: 'IndexAccess';
+    object: JjelExpression;
+    index: JjelExpression;
 }
 
 // ============================================
@@ -223,6 +307,25 @@ export interface LambdaExpr extends JjelASTNode {
 export interface ArrayLiteralExpr extends JjelASTNode {
     type: 'ArrayLiteral';
     elements: JjelExpression[];
+}
+
+// ============================================
+// OBJECT LITERAL
+// ============================================
+
+/**
+ * Object literal: {key1: expr1, key2: expr2, ...}
+ * Keys can be identifiers or strings.
+ * Examples: {name: "hello", count: 42}, {"my-key": value}, {}
+ */
+export interface ObjectLiteralExpr extends JjelASTNode {
+    type: 'ObjectLiteral';
+    entries: ObjectLiteralEntry[];
+}
+
+export interface ObjectLiteralEntry {
+    key: string;
+    value: JjelExpression;
 }
 
 // ============================================

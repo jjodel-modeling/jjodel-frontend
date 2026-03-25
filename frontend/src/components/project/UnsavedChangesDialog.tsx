@@ -1,4 +1,5 @@
 import React from 'react';
+import { Button } from '../common/Button';
 import './unsaved-changes-dialog.scss';
 
 interface UnsavedChangesDialogProps {
@@ -35,22 +36,22 @@ const UnsavedChangesDialog: React.FC<UnsavedChangesDialogProps> = ({
                     You have unsaved changes. What do you want to do?
                 </p>
                 <div className="unsaved-dialog__actions">
-                    <button
-                        className="unsaved-dialog__btn unsaved-dialog__btn--text"
+                    <Button
+                        variant="ghost"
                         onClick={onDontSave}
                         disabled={isSaving}
                     >
                         Don't save
-                    </button>
-                    <button
-                        className="unsaved-dialog__btn unsaved-dialog__btn--secondary"
+                    </Button>
+                    <Button
+                        variant="secondary"
                         onClick={onCancel}
                         disabled={isSaving}
                     >
                         Cancel
-                    </button>
-                    <button
-                        className="unsaved-dialog__btn unsaved-dialog__btn--primary"
+                    </Button>
+                    <Button
+                        variant="primary"
                         onClick={onSave}
                         disabled={isSaving}
                     >
@@ -62,7 +63,7 @@ const UnsavedChangesDialog: React.FC<UnsavedChangesDialogProps> = ({
                         ) : (
                             'Save & Exit'
                         )}
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>

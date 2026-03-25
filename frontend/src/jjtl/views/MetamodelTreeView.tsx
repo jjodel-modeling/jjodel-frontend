@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
+import { Badge } from '../../components/common/Badge';
 
 export interface MetamodelElement {
     id: string;
@@ -172,9 +173,9 @@ export const MetamodelTreeView: React.FC<MetamodelTreeViewProps> = ({
             {/* Header */}
             <div className="jjtl-metamodel-tree-header">
                 <span className="jjtl-metamodel-tree-title">{title}</span>
-                <span className={`jjtl-metamodel-tree-badge jjtl-metamodel-tree-badge--${side}`}>
+                <Badge category="type">
                     {side === 'source' ? 'SRC' : 'TGT'}
-                </span>
+                </Badge>
             </div>
 
             {/* Search */}

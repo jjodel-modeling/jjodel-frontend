@@ -161,6 +161,14 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
         return () => window.removeEventListener('jjtl-execution-result', handler);
     }, [setResultFromExternal]);
 
+    // Notify the app StatusBar that JjTL editor is visible (so it hides itself)
+    useEffect(() => {
+        window.dispatchEvent(new CustomEvent('jjodel:jjtl-statusbar', { detail: { active: true } }));
+        return () => {
+            window.dispatchEvent(new CustomEvent('jjodel:jjtl-statusbar', { detail: { active: false } }));
+        };
+    }, []);
+
     // Convert parser errors to problems
     const problems: Problem[] = parserErrors.map((e, i) => parserErrorToProblem(e, i));
 
@@ -518,83 +526,8 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
         };
     }, [isResizingBottomPanel]);
 
-    // Nascondi pannello destro globale quando JjTL è attivo
-    // Usando manipolazione diretta del layout rc-dock (più affidabile del CSS)
-    useEffect(() => {
-        // Import DockManager dynamically to avoid circular dependencies
-        import('../../components/abstract/DockManager').then(({ default: DockManager }) => {
-            let originalRightPanelSize: number | null = null;
-
-            // Nascondi pannello destro al mount
-            const hideRightPanel = () => {
-                if (!DockManager.dock) return;
-
-                try {
-                    const layout = DockManager.dock.getLayout();
-                    if (layout?.dockbox?.children?.length >= 2) {
-                        // Salva dimensione originale
-                        originalRightPanelSize = layout.dockbox.children[1].size as number;
-
-                        // Crea copia del layout e imposta dimensione a 0
-                        const updatedLayout = JSON.parse(JSON.stringify(layout));
-                        updatedLayout.dockbox.children[1].size = 0;
-                        updatedLayout.dockbox.children[0].size = window.innerWidth;
-
-                        DockManager.dock.loadLayout(updatedLayout);
-                        console.log('[JjTL] Right panel hidden, original size:', originalRightPanelSize);
-
-                        // Trigger resize per ricalcolare
-                        setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
-                    }
-                } catch (error) {
-                    console.error('[JjTL] Error hiding right panel:', error);
-                }
-            };
-
-            // Piccolo delay per assicurarsi che il dock sia pronto
-            const timer = setTimeout(hideRightPanel, 100);
-
-            // Store cleanup info in ref for access in cleanup
-            (window as any).__jjtl_original_size = originalRightPanelSize;
-            (window as any).__jjtl_hide_timer = timer;
-        });
-
-        // Cleanup: ripristina pannello destro al unmount
-        return () => {
-            // Clear any pending timer
-            if ((window as any).__jjtl_hide_timer) {
-                clearTimeout((window as any).__jjtl_hide_timer);
-            }
-
-            import('../../components/abstract/DockManager').then(({ default: DockManager }) => {
-                if (!DockManager.dock) return;
-
-                try {
-                    const layout = DockManager.dock.getLayout();
-                    if (layout?.dockbox?.children?.length >= 2) {
-                        // Usa dimensione salvata o default
-                        const rightSize = (window as any).__jjtl_original_size || 400;
-
-                        const updatedLayout = JSON.parse(JSON.stringify(layout));
-                        updatedLayout.dockbox.children[1].size = rightSize;
-                        updatedLayout.dockbox.children[0].size = window.innerWidth - rightSize;
-
-                        DockManager.dock.loadLayout(updatedLayout);
-                        console.log('[JjTL] Right panel restored, size:', rightSize);
-
-                        // Trigger resize per ricalcolare
-                        setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
-                    }
-                } catch (error) {
-                    console.error('[JjTL] Error showing right panel:', error);
-                }
-
-                // Cleanup window properties
-                delete (window as any).__jjtl_original_size;
-                delete (window as any).__jjtl_hide_timer;
-            });
-        };
-    }, []);
+    // Right panel visibility is now managed centrally via jjodel:editor-type-change
+    // events dispatched by DockManager and handled in Dock.tsx
 
     // Keyboard shortcuts
     useEffect(() => {
