@@ -546,9 +546,10 @@
     cursor: not-allowed;
   }
 
-  .btn-chevron {
+  i.bi.btn-chevron, i.bi.bi-upload { 
     font-size: 10px;
     margin-left: 2px;
+    color: #334155!important;
   }
 }
 
