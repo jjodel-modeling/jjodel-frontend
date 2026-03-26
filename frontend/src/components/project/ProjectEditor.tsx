@@ -1558,7 +1558,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                         </h1>
                     )}
                     <Badge category="version" className="badge--engine"
-                           title={"Current Jjodel platform version - Same for all projects" + (versionList.length ? "\nProject Version history:" + (versionList.map(v=>"\n\t"+v)) : null)}>
+                                  title={"Current Jjodel platform version - Same for all projects" + (versionList.length ? "\nProject Version history:" + (versionList.map(v=>"\n\t"+v)) : null)}>
                         <i className="bi bi-gear" />
                         {getEngineVersion()}
                     </Badge>
@@ -1686,8 +1686,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                 onClick={() => scrollToSection(sec.id)}
                             >
                                 <span className={`section-nav__icon ${sec.iconClass}`}>
-                                    {sec.iconBootstrap
-                                        ? <i className={`bi ${sec.iconBootstrap}`} />
+                                    {sec.iconClass
+                                        ? <i className={`bi ${sec.iconClass}`} />
                                         : sec.iconLetter
                                     }
                                 </span>
