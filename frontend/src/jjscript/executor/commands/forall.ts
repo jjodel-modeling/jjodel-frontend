@@ -9,6 +9,7 @@
 
 import {
     ForAllArgs,
+    BlockArgs,
     ExecutionResult,
     ExecutionContext,
     CommandNode,
@@ -137,7 +138,15 @@ function resolveVariableInBody(
     elementName: string
 ): CommandNode {
     const clone = JSON.parse(JSON.stringify(body)) as CommandNode;
-    replaceVariableRefs(clone.args, variable, elementName);
+    if (clone.command === 'block') {
+        // Recursively resolve in each sub-command
+        const blockArgs = clone.args as BlockArgs;
+        for (const cmd of blockArgs.commands) {
+            replaceVariableRefs(cmd.args, variable, elementName);
+        }
+    } else {
+        replaceVariableRefs(clone.args, variable, elementName);
+    }
     return clone;
 }
 

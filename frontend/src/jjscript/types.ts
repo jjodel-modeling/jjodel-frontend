@@ -59,7 +59,8 @@ export type CommandType =
     | 'eval'
     | 'let'
     | 'forall'
-    | 'abstract';
+    | 'abstract'
+    | 'block';
 
 export type ElementType =
     | 'class'
@@ -119,7 +120,8 @@ export type CommandArgs =
     | EvalArgs
     | LetArgs
     | ForAllArgs
-    | AbstractArgs;
+    | AbstractArgs
+    | BlockArgs;
 
 // CREATE command
 export interface CreateArgs {
@@ -307,6 +309,12 @@ export interface ForAllArgs {
 export interface AbstractArgs {
     command: 'abstract';
     target: QualifiedName;
+}
+
+// BLOCK command (do...end — sequential execution of multiple commands)
+export interface BlockArgs {
+    command: 'block';
+    commands: CommandNode[];
 }
 
 // ============================================

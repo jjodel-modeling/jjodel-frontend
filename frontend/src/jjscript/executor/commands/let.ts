@@ -11,6 +11,7 @@
 
 import {
     LetArgs,
+    BlockArgs,
     ExecutionResult,
     ExecutionContext,
     CommandNode,
@@ -143,6 +144,18 @@ function resolveVariablesInBody(
     body: CommandNode,
     variables: Map<string, any>
 ): CommandNode {
+    // Handle block commands by resolving variables in each sub-command
+    if (body.command === 'block') {
+        const blockArgs = body.args as BlockArgs;
+        return {
+            ...body,
+            args: {
+                ...blockArgs,
+                commands: blockArgs.commands.map(cmd => resolveVariablesInBody(cmd, variables))
+            } as BlockArgs
+        };
+    }
+
     if (body.command === 'set') {
         const setArgs = body.args as SetArgs;
         const resolvedValue = tryResolveVariable(setArgs.value, variables);

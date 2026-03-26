@@ -1,5 +1,33 @@
 # Claude Code Session Log
 
+## 2026-03-26 — Fix: `do...end` block executes only the first command
+
+**Prompt**: In a `do...end` block, only the first command is executed. Subsequent commands are ignored.
+**File toccati**: `frontend/src/jjscript/types.ts`, `frontend/src/jjscript/parser/parser.ts`, `frontend/src/jjscript/executor/executor.ts`, `frontend/src/jjscript/executor/commands/forall.ts`, `frontend/src/jjscript/executor/commands/let.ts`, `frontend/src/jjscript/executor/dependencies.ts`, `frontend/src/jjscript/components/ScriptExecutionWindow.tsx`
+**Esito**: ✅ completato
+
+**Root cause (3 layers)**:
+1. **Parser**: No concept of `do...end` blocks. `parseCommand()` returned a single `CommandNode`. After `do` in forall/let, only one command was parsed.
+2. **Executor**: No `'block'` command type existed. Even if multiple commands were parsed, there was no way to execute them sequentially.
+3. **Script pipeline**: Both `executeScript()` and `ScriptExecutionWindow` split input by newlines, so multiline `do...end` blocks were broken into individual lines.
+
+**Fix**:
+1. Added `BlockArgs` type with `commands: CommandNode[]` and `'block'` to `CommandType`
+2. Added `parseBlockBody()` (parses commands until `end`), `parseBlockOrCommand()` (detects block vs single command via `hasEndAhead()`), and standalone `do` handling in `parseCommand()`
+3. Updated `parseForAllCommand()` and `parseLetCommand()` to use `parseBlockOrCommand()` for body parsing
+4. Added `executeBlock()` method in executor — iterates all commands, stops on first error
+5. Updated `resolveVariableInBody()` in forall and `resolveVariablesInBody()` in let to handle block nodes recursively
+6. Added `groupBlockCommands()` utility to aggregate multiline `do...end` blocks before batch execution
+7. Updated `ScriptExecutionWindow` line parser to group `do...end` blocks into single logical lines
+8. Updated `extractDependencies()` to handle block nodes
+
+**Design decisions**:
+- `do` and `end` are NOT added to COMMANDS/KEYWORDS — they're recognized contextually by the parser (as IDENTIFIER tokens matched via `checkKeyword()`)
+- Single-command forall/let (no `end`) remains backward compatible — `parseBlockOrCommand()` falls back to `parseCommand()` when no `end` is found ahead
+- Block execution stops on first error (fail-fast semantics)
+
+---
+
 ## 2026-03-26 — Fix: `abstract Person` still gives "Unknown command: abstract" after initial fix
 
 **Prompt**: Previous session added all the pieces (types, executor, parser special case) but `abstract Person` still fails.

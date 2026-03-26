@@ -38,6 +38,7 @@ import {
     LetArgs,
     ForAllArgs,
     AbstractArgs,
+    BlockArgs,
     CreateOptions,
     QualifiedName,
     COMMANDS,
@@ -155,6 +156,15 @@ export class Parser {
             this.peekNext()?.value.toLowerCase() === 'extends') {
             const args = this.parseExtendsCommand();
             return { type: 'Command', command: 'extends', args, position };
+        }
+
+        // Standalone do...end block
+        if ((token.type === 'IDENTIFIER' || token.type === 'KEYWORD') &&
+            token.value.toLowerCase() === 'do') {
+            this.advance(); // consume 'do'
+            const commands = this.parseBlockBody();
+            const args: BlockArgs = { command: 'block', commands };
+            return { type: 'Command', command: 'block', args, position };
         }
 
         if (token.type !== 'COMMAND') {
@@ -837,8 +847,8 @@ export class Parser {
 
         this.skipNewlines();
 
-        // Parse the body command
-        const body = this.parseCommand();
+        // Parse body — single command or multiple commands until 'end'
+        const body = this.parseBlockOrCommand();
 
         return { command: 'let', bindings, body };
     }
@@ -932,6 +942,79 @@ export class Parser {
     }
 
     // ============================================
+    // BLOCK BODY (do...end)
+    // ============================================
+
+    /**
+     * Parse multiple commands separated by ';' or newlines until 'end' keyword.
+     * Consumes the 'end' keyword.
+     */
+    private parseBlockBody(): CommandNode[] {
+        const commands: CommandNode[] = [];
+
+        while (!this.isAtEnd() && !this.check('EOF')) {
+            this.skipNewlines();
+            // Skip semicolons between commands
+            while (!this.isAtEnd() && this.check('PUNCTUATION') && this.peek().value === ';') {
+                this.advance();
+                this.skipNewlines();
+            }
+
+            if (this.isAtEnd() || this.check('EOF')) break;
+
+            // Stop at 'end' keyword
+            if (this.checkKeyword('end')) {
+                this.advance(); // consume 'end'
+                break;
+            }
+
+            commands.push(this.parseCommand());
+        }
+
+        return commands;
+    }
+
+    /**
+     * Parse either a single command or a block (multiple commands terminated by 'end').
+     * Used after 'do' in forall and after 'in' in let.
+     * If the next meaningful token starts a command and 'end' appears later, collects
+     * all commands until 'end'. Otherwise parses a single command.
+     */
+    private parseBlockOrCommand(): CommandNode {
+        this.skipNewlines();
+
+        // Check if this is a multi-command block (look for 'end' keyword ahead)
+        if (this.hasEndAhead()) {
+            const commands = this.parseBlockBody();
+            if (commands.length === 1) return commands[0];
+            const position = commands.length > 0
+                ? commands[0].position
+                : this.currentPosition();
+            const args: BlockArgs = { command: 'block', commands };
+            return { type: 'Command', command: 'block', args, position };
+        }
+
+        // Single command (no 'end' ahead)
+        return this.parseCommand();
+    }
+
+    /**
+     * Look ahead to check if 'end' keyword appears before end of input.
+     * Used to determine if the body after 'do' / 'in' is a block or single command.
+     */
+    private hasEndAhead(): boolean {
+        for (let i = this.current; i < this.tokens.length; i++) {
+            const token = this.tokens[i];
+            if (token.type === 'EOF') break;
+            if ((token.type === 'IDENTIFIER' || token.type === 'KEYWORD') &&
+                token.value.toLowerCase() === 'end') {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // ============================================
     // FORALL COMMAND (forall <var> in <collection> [such that <filter>] do <command>)
     // ============================================
 
@@ -994,8 +1077,8 @@ export class Parser {
             throw new Error("Expected 'do' keyword in forall...do command");
         }
 
-        // Parse body command
-        const body = this.parseCommand();
+        // Parse body — single command or multiple commands until 'end'
+        const body = this.parseBlockOrCommand();
 
         return { command: 'forall', variable, collectionExpr, filterExpr, body };
     }

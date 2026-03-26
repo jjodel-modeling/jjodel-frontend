@@ -13,7 +13,8 @@ import {
     CommandHistoryEntry,
     LetArgs,
     ForAllArgs,
-    AbstractArgs
+    AbstractArgs,
+    BlockArgs
 } from '../types';
 import { executeCreate } from './commands/create';
 import { executeDelete } from './commands/delete';
@@ -165,6 +166,9 @@ export class JjScriptExecutor {
                 case 'abstract':
                     result = await executeAbstract(ast.args as AbstractArgs, context);
                     break;
+                case 'block':
+                    result = await this.executeBlock(ast.args as BlockArgs, context);
+                    break;
                 default:
                     result = {
                         success: false,
@@ -187,6 +191,38 @@ export class JjScriptExecutor {
                 errors: [{ code: 'EXECUTION_ERROR', message: err.message }]
             };
         }
+    }
+
+    /**
+     * Execute a block of commands sequentially (do...end)
+     */
+    private async executeBlock(args: BlockArgs, context: ExecutionContext): Promise<ExecutionResult> {
+        if (args.commands.length === 0) {
+            return { success: true, command: 'block', message: 'Empty block' };
+        }
+
+        let lastResult: ExecutionResult | undefined;
+        let successCount = 0;
+        let errorCount = 0;
+
+        for (const cmd of args.commands) {
+            lastResult = await this.executeAST(cmd, context);
+            if (lastResult.success) successCount++;
+            else {
+                errorCount++;
+                break; // stop on first error
+            }
+        }
+
+        const total = successCount + errorCount;
+        return {
+            success: errorCount === 0,
+            command: 'block',
+            message: errorCount === 0
+                ? `Block: ${successCount}/${args.commands.length} commands executed`
+                : `Block: failed at command ${total}/${args.commands.length} — ${lastResult!.message}`,
+            errors: lastResult && !lastResult.success ? lastResult.errors : undefined
+        };
     }
 
     /**
@@ -300,13 +336,62 @@ export async function executeBatch(
 }
 
 /**
- * Execute a script (multiple lines)
+ * Execute a script (multiple lines).
+ * Groups do...end blocks into single commands before batch execution.
  */
 export async function executeScript(
     script: string,
     projectId?: string,
     modelId?: string
 ): Promise<ExecutionResult[]> {
-    const lines = script.split('\n');
-    return executeBatch(lines, projectId, modelId);
+    const commands = groupBlockCommands(script.split('\n'));
+    return executeBatch(commands, projectId, modelId);
+}
+
+/**
+ * Group do...end blocks and forall...do...end blocks spanning multiple lines
+ * into single command strings. Lines outside blocks pass through unchanged.
+ */
+export function groupBlockCommands(lines: string[]): string[] {
+    const result: string[] = [];
+    let blockLines: string[] | null = null;
+    let depth = 0;
+
+    for (const line of lines) {
+        const trimmed = line.trim();
+        const lower = trimmed.toLowerCase();
+
+        // Count 'do' keywords that open a block (standalone 'do' or at end of forall/let)
+        // We detect: line ending with 'do', standalone 'do', or 'do' keyword before body
+        const doMatches = (lower === 'do') ||
+            lower.endsWith(' do') ||
+            / do$/.test(lower);
+        const endMatches = lower === 'end' || lower.endsWith(';end') || lower.startsWith('end;') || lower === 'end;';
+
+        if (doMatches && blockLines === null) {
+            // Start of a block
+            blockLines = [line];
+            depth = 1;
+        } else if (blockLines !== null) {
+            blockLines.push(line);
+            // Track nested do...end
+            if (doMatches) depth++;
+            if (endMatches || lower === 'end') depth--;
+            if (depth <= 0) {
+                // Block complete — join into single command
+                result.push(blockLines.join('\n'));
+                blockLines = null;
+                depth = 0;
+            }
+        } else {
+            result.push(line);
+        }
+    }
+
+    // Unterminated block — push what we have
+    if (blockLines !== null) {
+        result.push(blockLines.join('\n'));
+    }
+
+    return result;
 }
