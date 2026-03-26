@@ -54,6 +54,7 @@
     "react-hot-toast": "^2.5.2",
     "react-icons": "^5.5.0",
     "react-itertools": "^0.0.6",
+    "react-json-view": "^1.21.3",
     "react-markdown": "^10.1.0",
     "react-portal": "^4.3.0",
     "react-redux": "^9.2.0",
@@ -156,7 +157,8 @@
     "ts-node": "^10.9.2",
     "vite": "^7.3.1",
     "vite-plugin-monaco-editor": "^1.1.0",
-    "vite-plugin-node-polyfills": "^0.25.0"
+    "vite-plugin-node-polyfills": "^0.25.0",
+    "vitest": "^4.1.1"
   },
   "erasable_comments": {
     "current_tested_versions": "node: 23.11.0, npm:10.9.2 react 18",

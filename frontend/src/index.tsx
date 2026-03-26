@@ -17,17 +17,18 @@ import { createRoot } from "react-dom/client";
 // ✅ MONACO SETUP - IMPORTANTE: loader.config PRIMA di MonacoEnvironment
 import * as monaco from 'monaco-editor';
 import { loader } from '@monaco-editor/react';
-// eslint-disable-next-line import/no-webpack-loader-syntax
+// @ts-ignore
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
-// eslint-disable-next-line import/no-webpack-loader-syntax
+// @ts-ignore
 import JsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
-// eslint-disable-next-line import/no-webpack-loader-syntax
+// @ts-ignore
 import CssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker';
-// eslint-disable-next-line import/no-webpack-loader-syntax
+// @ts-ignore
 import HtmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker';
-// eslint-disable-next-line import/no-webpack-loader-syntax
+// @ts-ignore
 import TsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
 
+console.log("monaco workers load", {EditorWorker, JsonWorker, CssWorker, HtmlWorker, TsWorker});
 // Configura @monaco-editor/react per usare l'istanza locale invece del CDN
 loader.config({ monaco });
 

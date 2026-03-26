@@ -10,7 +10,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import './ScriptBlock.scss';
 import { ExecutionErrorDialog } from './ExecutionErrorDialog';
-import { parseError, ExecutionPauseInfo, ExecutionSummary, JjScriptError } from '../executor/errors';
+import {parseError, ExecutionPauseInfo, ExecutionSummary, JjScriptError, ExecutionErrorInfo} from '../executor/errors';
 import { AIDisclaimer } from '../../components/common/AIDisclaimer';
 import {TransformationAST} from "../../jjtl";
 import {ExecutionContext} from "../../jjtl/executor";
@@ -75,12 +75,6 @@ export class ExecutionStats {
     duration: number = 0;
 }
 
-export interface ExecutionErrorInfo {
-    command: string;
-    lineNumber: number;
-    error: string;
-    errorType?: string;
-}
 
 // Utility function for delay between commands
 const sleep = (ms: number): Promise<void> => {
@@ -332,24 +326,19 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                     errorCount++;
                     // Parse the error for better messaging
                     const parsedError = parseError(result.message || 'Unknown error', commands[i]);
-
-                    // Store detailed error info
-                    setExecutionErrorInfo({
-                        command: commands[i],
-                        lineNumber: i + 1,
-                        error: result.message || 'Unknown error',
-                    });
-
-                    // Set pause info for the error dialog
                     const currentElapsed = Date.now() - startTimeRef.current;
-                    setPauseInfo({
-                        line: i + 1,
+
+                    const info = {
+                        lineNumber: i + 1,
                         command: commands[i],
                         error: parsedError,
                         executedSoFar: executedCount,
                         totalCommands: commands.length,
                         elapsedMs: currentElapsed,
-                    });
+                    };
+                    // Store detailed error info
+                    setExecutionErrorInfo(info);
+                    setPauseInfo(info);
 
                     // Store error in list for final summary
                     setErrorsList(prev => [...prev, { line: i + 1, command: commands[i], error: parsedError }]);
@@ -394,23 +383,19 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                     )
                 );
 
-                // Store detailed error info for the modal
-                setExecutionErrorInfo({
-                    command: commands[i],
-                    lineNumber: i + 1,
-                    error: errorMessage,
-                });
-
                 // Set pause info for the error dialog
                 const currentElapsed = Date.now() - startTimeRef.current;
-                setPauseInfo({
-                    line: i + 1,
+                const info = {
+                    lineNumber: i + 1,
                     command: commands[i],
-                    error: parsedError,
+                    error: errorMessage,
                     executedSoFar: executedCount,
                     totalCommands: commands.length,
                     elapsedMs: currentElapsed,
-                });
+                };
+                // Store detailed error info for the modal
+                setExecutionErrorInfo(info);
+                setPauseInfo(info);
 
                 // Store error in list for final summary
                 setErrorsList(prev => [...prev, { line: i + 1, command: commands[i], error: parsedError }]);
@@ -582,11 +567,16 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 }));
             } else {
                 // Error - store detailed info and show modal
-                setExecutionErrorInfo({
-                    command: commands[nextIndex],
+                const elapsedMs = Date.now() - startTimeRef.current;
+                const info = {
                     lineNumber: nextIndex + 1,
+                    command: commands[nextIndex],
                     error: result.message || 'Unknown error',
-                });
+                    executedSoFar: nextIndex - 1,
+                    totalCommands: commands.length,
+                    elapsedMs,
+                }
+                setExecutionErrorInfo(info);
                 const duration = Date.now() - startTimeRef.current;
                 const stats = {
                     totalCommands: commands.length,
@@ -628,19 +618,22 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 )
             );
             // Store error info for the modal
-            setExecutionErrorInfo({
+            const elapsedMs = Date.now() - startTimeRef.current;
+            let info  = {
                 command: commands[nextIndex],
                 lineNumber: nextIndex + 1,
                 error: errorMessage,
-            });
-            // Show error modal
-            const duration = Date.now() - startTimeRef.current;
+                executedSoFar: nextIndex - 1,
+                totalCommands: commands.length,
+                elapsedMs,
+            }
+            setExecutionErrorInfo(info);
             const stats = {
                 totalCommands: commands.length,
                 executedCommands: nextIndex,
                 skippedLines: 0,
                 errors: 1,
-                duration: duration > 0 ? duration : 0,
+                duration: elapsedMs,
             };
             console.log('[ScriptBlock] Setting execution stats (handleStep catch):', stats);
             setExecutionStats(stats);
@@ -678,7 +671,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
     const handleSkipAndContinue = useCallback(async () => {
         if (!pauseInfo || !onExecute) return;
 
-        const skipLineIndex = pauseInfo.line - 1; // Convert to 0-based
+        const skipLineIndex = pauseInfo.lineNumber - 1; // Convert to 0-based
 
         // Mark line as skipped
         setLineStates(prev =>
@@ -688,7 +681,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
         );
 
         // Add to skipped set
-        setSkippedLinesSet(prev => new Set([...prev, pauseInfo.line]));
+        setSkippedLinesSet(prev => new Set([...prev, pauseInfo.lineNumber]));
 
         // Close error dialog
         setShowErrorDialog(false);
@@ -700,7 +693,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
         if (nextIndex >= commands.length) {
             // All done - show completion summary
             const duration = Date.now() - startTimeRef.current;
-            const skippedLines = [...skippedLinesSet, pauseInfo.line];
+            const skippedLines = [...skippedLinesSet, pauseInfo.lineNumber];
             setExecutionSummary({
                 totalCommands: commands.length,
                 executedCount: lineStates.filter(ls => ls.status === 'success').length,
@@ -756,7 +749,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                     // Set pause info for the error dialog
                     const currentElapsed = Date.now() - startTimeRef.current;
                     setPauseInfo({
-                        line: i + 1,
+                        lineNumber: i + 1,
                         command: commands[i],
                         error: parsedError,
                         executedSoFar: executedCount,
@@ -789,7 +782,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
 
                 const currentElapsed = Date.now() - startTimeRef.current;
                 setPauseInfo({
-                    line: i + 1,
+                    lineNumber: i + 1,
                     command: commands[i],
                     error: parsedError,
                     executedSoFar: executedCount,
@@ -805,7 +798,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
 
         // Completed after skipping
         const duration = Date.now() - startTimeRef.current;
-        const allSkippedLines = [...skippedLinesSet, pauseInfo.line];
+        const allSkippedLines = [...skippedLinesSet, pauseInfo.lineNumber];
         setExecutionSummary({
             totalCommands: commands.length,
             executedCount,
@@ -1109,7 +1102,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 onClose={handleCloseErrorDialog}
                 pauseInfo={pauseInfo || undefined}
                 summary={executionSummary || undefined}
-                onSkip={pauseInfo?.error.skippable ? handleSkipAndContinue : undefined}
+                onSkip={(pauseInfo?.error as JjScriptError)?.skippable ? handleSkipAndContinue : undefined}
             />
 
             {/* Legacy Execution Complete Modal (for non-error completion) */}
@@ -1139,7 +1132,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                                 </div>
                                 <div className="error-row">
                                     <span className="error-label">Error:</span>
-                                    <span className="error-message">{executionErrorInfo.error}</span>
+                                    <span className="error-message">{(executionErrorInfo.error as JjScriptError)?.message || executionErrorInfo.error.toString()}</span>
                                 </div>
                             </div>
                         )}

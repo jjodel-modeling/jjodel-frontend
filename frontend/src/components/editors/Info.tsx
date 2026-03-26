@@ -329,7 +329,7 @@ class builder {
                 </label>
             </CollapsibleSection>
 
-            {data.isMetamodel && <CollapsibleSection title="CONTENTS">
+            {l.isMetamodel && <CollapsibleSection title="CONTENTS">
                 <MetamodelContents data={l} />
             </CollapsibleSection>}
         </>);

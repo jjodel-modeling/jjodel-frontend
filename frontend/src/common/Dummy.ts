@@ -600,7 +600,7 @@ export class Dummy {
                     if (Dummy.t2mIgnoreKeys.includes(k) || EcoreXmiTags.includes(k) || U.isShallowEqual(v, oldV)) continue;
                     // do childs last
                     if (DPointerTargetable.childKeys.includes(k)) continue;
-                    
+
 
                     // do assignment
                     switch (k) {

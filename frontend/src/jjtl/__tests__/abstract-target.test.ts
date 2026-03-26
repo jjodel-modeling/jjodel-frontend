@@ -62,12 +62,12 @@ const targetMetamodel = [
 ];
 
 describe('Abstract class target validation', () => {
-    test('rejects abstract class as target with concrete suggestions', () => {
+    test('rejects abstract class as target with concrete suggestions', async () => {
         const ast = makeTransformation([
             makeClassMapping('Person', 'Human'),
         ]);
         const source = [{ className: 'Person', name: 'John' }];
-        const result = execute(ast, source, targetMetamodel);
+        const result = await execute(ast, source, targetMetamodel);
 
         expect(result.success).toBe(false);
         expect(result.errors.length).toBeGreaterThan(0);
@@ -76,18 +76,18 @@ describe('Abstract class target validation', () => {
         expect(result.errors[0]).toContain('Female');
     });
 
-    test('allows concrete class as target', () => {
+    test('allows concrete class as target', async () => {
         const ast = makeTransformation([
             makeClassMapping('Person', 'Male'),
         ]);
         const source = [{ className: 'Person', name: 'John' }];
-        const result = execute(ast, source, targetMetamodel);
+        const result = await execute(ast, source, targetMetamodel);
 
         expect(result.success).toBe(true);
         expect(result.errors.length).toBe(0);
     });
 
-    test('allows concrete class with guard condition', () => {
+    test('allows concrete class with guard condition', async () => {
         const ast = makeTransformation([
             makeClassMapping('Person', 'Male', [
                 {
@@ -99,25 +99,25 @@ describe('Abstract class target validation', () => {
             ]),
         ]);
         const source = [{ className: 'Person', name: 'John' }];
-        const result = execute(ast, source, targetMetamodel);
+        const result = await execute(ast, source, targetMetamodel);
 
         expect(result.success).toBe(true);
     });
 
-    test('skips validation when no target metamodel provided', () => {
+    test('skips validation when no target metamodel provided', async () => {
         const ast = makeTransformation([
             makeClassMapping('Person', 'Human'),
         ]);
         const source = [{ className: 'Person', name: 'John' }];
         // No targetMetamodel — validation skipped, execution proceeds
-        const result = execute(ast, source);
+        const result = await execute(ast, source);
 
         // Should not fail due to abstract check (may fail for other reasons or succeed)
         const hasAbstractError = result.errors.some(e => e.includes('abstract'));
         expect(hasAbstractError).toBe(false);
     });
 
-    test('validates object creation targets in forall mappings', () => {
+    test('validates object creation targets in forall mappings', async () => {
         const ast = makeTransformation([
             makeClassMapping('Person', 'Male', [
                 {
@@ -135,7 +135,7 @@ describe('Abstract class target validation', () => {
             ]),
         ]);
         const source = [{ className: 'Person', name: 'John', attrs: [] }];
-        const result = execute(ast, source, targetMetamodel);
+        const result = await execute(ast, source, targetMetamodel);
 
         expect(result.success).toBe(false);
         expect(result.errors.some(e => e.includes("abstract class 'Human'"))).toBe(true);

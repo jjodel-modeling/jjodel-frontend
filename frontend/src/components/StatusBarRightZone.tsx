@@ -11,10 +11,10 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import type { DState } from '../joiner';
 import { useInterfaceMode } from '../hooks/useInterfaceMode';
-import { JodieConfigService } from '../services/JodieConfig';
 import { useSettingsModalSafe } from '../contexts/SettingsModalContext';
 import NotificationCenter, { useNotifications } from './NotificationCenter';
 import './StatusBarRightZone.scss';
+import {AIConfig, JodieConfig} from "../types/jodie";
 
 interface StatusBarRightZoneProps {
     variant?: 'light' | 'dark';
@@ -25,7 +25,7 @@ const StatusBarRightZone: React.FC<StatusBarRightZoneProps> = ({ variant = 'ligh
     const settingsModal = useSettingsModalSafe();
     const { notifications, unreadCount, markAsRead, clearAll } = useNotifications();
     const [showNotifications, setShowNotifications] = useState(false);
-    const [aiConnected, setAiConnected] = useState(() => JodieConfigService.hasValidConfiguration());
+    const [aiConnected, setAiConnected] = useState(() => JodieConfig.hasEnabledProviders());
 
     const engineVersion = useSelector((state: DState) => {
         const v = (state as any).version;
@@ -34,7 +34,7 @@ const StatusBarRightZone: React.FC<StatusBarRightZoneProps> = ({ variant = 'ligh
 
     // Listen for AI provider config changes
     useEffect(() => {
-        const handler = () => setAiConnected(JodieConfigService.hasValidConfiguration());
+        const handler = () => setAiConnected(JodieConfig.hasEnabledProviders());
         window.addEventListener('ai-provider-changed', handler);
         window.addEventListener('storage', handler);
         return () => {

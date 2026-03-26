@@ -68,7 +68,7 @@ function makeAttrMapping(
 // ============================================
 
 describe('Test 1: Direct mapping', () => {
-    test('name -> tableName copies value', () => {
+    test('name -> tableName copies value', async () => {
         const ast = makeTransformation('T', 'S', 'T', [
             makeClassMapping('Class', 'Table', [
                 makeAttrMapping('name', 'tableName'),
@@ -76,7 +76,7 @@ describe('Test 1: Direct mapping', () => {
         ]);
 
         const source = [{ className: 'Class', name: 'MyClass' }];
-        const result = execute(ast, source);
+        const result = await execute(ast, source);
 
         expect(result.success).toBe(true);
         const tables = result.targetModel!.instances.get('Table')!;
@@ -90,7 +90,7 @@ describe('Test 1: Direct mapping', () => {
 // ============================================
 
 describe('Test 2: JjEL builtins in expressions', () => {
-    test('name.snakeCase() works via JjEL delegation', () => {
+    test('name.snakeCase() works via JjEL delegation', async () => {
         const ast = makeTransformation('T', 'S', 'T', [
             makeClassMapping('Class', 'Table', [
                 makeAttrMapping('name', 'tableName', {
@@ -112,14 +112,14 @@ describe('Test 2: JjEL builtins in expressions', () => {
         ]);
 
         const source = [{ className: 'Class', name: 'MyClassName' }];
-        const result = execute(ast, source);
+        const result = await execute(ast, source);
 
         expect(result.success).toBe(true);
         const tables = result.targetModel!.instances.get('Table')!;
         expect(tables[0].tableName).toBe('my_class_name');
     });
 
-    test('name.camelCase() works via JjEL delegation', () => {
+    test('name.camelCase() works via JjEL delegation', async () => {
         const ast = makeTransformation('T', 'S', 'T', [
             makeClassMapping('Class', 'Table', [
                 makeAttrMapping('name', 'tableName', {
@@ -141,14 +141,14 @@ describe('Test 2: JjEL builtins in expressions', () => {
         ]);
 
         const source = [{ className: 'Class', name: 'my_class_name' }];
-        const result = execute(ast, source);
+        const result = await execute(ast, source);
 
         expect(result.success).toBe(true);
         const tables = result.targetModel!.instances.get('Table')!;
         expect(tables[0].tableName).toBe('myClassName');
     });
 
-    test('name + "_suffix" string concatenation', () => {
+    test('name + "_suffix" string concatenation', async () => {
         const ast = makeTransformation('T', 'S', 'T', [
             makeClassMapping('Class', 'Table', [
                 makeAttrMapping('name', 'tableName', {
@@ -166,7 +166,7 @@ describe('Test 2: JjEL builtins in expressions', () => {
         ]);
 
         const source = [{ className: 'Class', name: 'MyClass' }];
-        const result = execute(ast, source);
+        const result = await execute(ast, source);
 
         expect(result.success).toBe(true);
         const tables = result.targetModel!.instances.get('Table')!;
@@ -179,7 +179,7 @@ describe('Test 2: JjEL builtins in expressions', () => {
 // ============================================
 
 describe('Test 3: Value mapping', () => {
-    test('true=1, false=0', () => {
+    test('true=1, false=0', async () => {
         const ast = makeTransformation('T', 'S', 'T', [
             makeClassMapping('State', 'Place', [
                 makeAttrMapping('isInitial', 'tokens', {
@@ -207,7 +207,7 @@ describe('Test 3: Value mapping', () => {
             { className: 'State', isInitial: true, name: 'S1' },
             { className: 'State', isInitial: false, name: 'S2' },
         ];
-        const result = execute(ast, source);
+        const result = await execute(ast, source);
 
         expect(result.success).toBe(true);
         const places = result.targetModel!.instances.get('Place')!;
@@ -222,7 +222,7 @@ describe('Test 3: Value mapping', () => {
 // ============================================
 
 describe('Test 4: Guard condition', () => {
-    test('when not isAbstract skips abstract classes', () => {
+    test('when not isAbstract skips abstract classes', async () => {
         const ast = makeTransformation('T', 'S', 'T', [
             makeClassMapping('Class', 'Table', [
                 makeAttrMapping('name', 'tableName'),
@@ -239,7 +239,7 @@ describe('Test 4: Guard condition', () => {
             { className: 'Class', name: 'ConcreteClass', isAbstract: false },
             { className: 'Class', name: 'AbstractClass', isAbstract: true },
         ];
-        const result = execute(ast, source);
+        const result = await execute(ast, source);
 
         expect(result.success).toBe(true);
         const tables = result.targetModel!.instances.get('Table')!;
@@ -253,7 +253,7 @@ describe('Test 4: Guard condition', () => {
 // ============================================
 
 describe('Test 5: Nested object creation', () => {
-    test('creates nested object with attributes', () => {
+    test('creates nested object with attributes', async () => {
         const ast = makeTransformation('T', 'S', 'T', [
             makeClassMapping('Class', 'Table', [
                 makeAttrMapping('name', 'tableName'),
@@ -273,7 +273,7 @@ describe('Test 5: Nested object creation', () => {
         ]);
 
         const source = [{ className: 'Class', name: 'Person' }];
-        const result = execute(ast, source);
+        const result = await execute(ast, source);
 
         expect(result.success).toBe(true);
         const tables = result.targetModel!.instances.get('Table')!;
@@ -291,7 +291,7 @@ describe('Test 5: Nested object creation', () => {
 // ============================================
 
 describe('Test 6: If/then/else in expression', () => {
-    test('if isInitial then 1 else 0', () => {
+    test('if isInitial then 1 else 0', async () => {
         const ast = makeTransformation('T', 'S', 'T', [
             makeClassMapping('State', 'Place', [
                 makeAttrMapping('isInitial', 'tokens', {
@@ -312,7 +312,7 @@ describe('Test 6: If/then/else in expression', () => {
             { className: 'State', isInitial: true, name: 'Start' },
             { className: 'State', isInitial: false, name: 'End' },
         ];
-        const result = execute(ast, source);
+        const result = await execute(ast, source);
 
         expect(result.success).toBe(true);
         const places = result.targetModel!.instances.get('Place')!;
@@ -326,7 +326,7 @@ describe('Test 6: If/then/else in expression', () => {
 // ============================================
 
 describe('Test 7: Null-safe navigation', () => {
-    test('parent?.name ?? "none"', () => {
+    test('parent?.name ?? "none"', async () => {
         const ast = makeTransformation('T', 'S', 'T', [
             makeClassMapping('Class', 'Table', [
                 makeAttrMapping(undefined, 'parentName', {
@@ -350,14 +350,14 @@ describe('Test 7: Null-safe navigation', () => {
         const sourceWithParent = [
             { className: 'Class', name: 'Child', parent: { name: 'Parent' } },
         ];
-        const result1 = execute(ast, sourceWithParent);
+        const result1 = await execute(ast, sourceWithParent);
         expect(result1.success).toBe(true);
         expect(result1.targetModel!.instances.get('Table')![0].parentName).toBe('Parent');
 
         const sourceNoParent = [
             { className: 'Class', name: 'Orphan', parent: null },
         ];
-        const result2 = execute(ast, sourceNoParent);
+        const result2 = await execute(ast, sourceNoParent);
         expect(result2.success).toBe(true);
         expect(result2.targetModel!.instances.get('Table')![0].parentName).toBe('none');
     });
@@ -368,7 +368,7 @@ describe('Test 7: Null-safe navigation', () => {
 // ============================================
 
 describe('Multiple source instances', () => {
-    test('each source instance produces a separate target', () => {
+    test('each source instance produces a separate target', async () => {
         const ast = makeTransformation('T', 'S', 'T', [
             makeClassMapping('State', 'Place', [
                 makeAttrMapping('name', 'label'),
@@ -380,7 +380,7 @@ describe('Multiple source instances', () => {
             { className: 'State', name: 'Running' },
             { className: 'State', name: 'Done' },
         ];
-        const result = execute(ast, source);
+        const result = await execute(ast, source);
 
         expect(result.success).toBe(true);
         const places = result.targetModel!.instances.get('Place')!;
@@ -396,7 +396,7 @@ describe('Multiple source instances', () => {
 // ============================================
 
 describe('Trace model', () => {
-    test('trace model records bindings', () => {
+    test('trace model records bindings', async () => {
         const ast = makeTransformation('SM_to_PN', 'StateMachine', 'PetriNet', [
             makeClassMapping('State', 'Place', [
                 makeAttrMapping('name', 'label'),
@@ -404,7 +404,7 @@ describe('Trace model', () => {
         ]);
 
         const source = [{ className: 'State', name: 'S1' }];
-        const result = execute(ast, source);
+        const result = await execute(ast, source);
 
         expect(result.success).toBe(true);
         expect(result.traceModel).toBeDefined();
@@ -418,7 +418,7 @@ describe('Trace model', () => {
 // ============================================
 
 describe('Falsy value preservation', () => {
-    test('if/then/else returning false is preserved', () => {
+    test('if/then/else returning false is preserved', async () => {
         const ast = makeTransformation('T', 'S', 'T', [
             makeClassMapping('Person', 'Result', [
                 makeAttrMapping(undefined, 'hasLongName', {
@@ -451,7 +451,7 @@ describe('Falsy value preservation', () => {
             { className: 'Person', name: 'Di Rocco' },     // length 8, NOT > 8 → false
             { className: 'Person', name: 'Bucchiarone' },   // length 11 > 8 → true
         ];
-        const result = execute(ast, source);
+        const result = await execute(ast, source);
 
         expect(result.success).toBe(true);
         const results = result.targetModel!.instances.get('Result')!;
@@ -461,7 +461,7 @@ describe('Falsy value preservation', () => {
         expect(results[2].hasLongName).toBe(true);
     });
 
-    test('zero is preserved as attribute value', () => {
+    test('zero is preserved as attribute value', async () => {
         const ast = makeTransformation('T', 'S', 'T', [
             makeClassMapping('Item', 'Output', [
                 makeAttrMapping(undefined, 'count', {
@@ -473,14 +473,14 @@ describe('Falsy value preservation', () => {
         ]);
 
         const source = [{ className: 'Item', name: 'x' }];
-        const result = execute(ast, source);
+        const result = await execute(ast, source);
 
         expect(result.success).toBe(true);
         const outputs = result.targetModel!.instances.get('Output')!;
         expect(outputs[0].count).toBe(0);  // Must be 0, NOT undefined/null
     });
 
-    test('empty string is preserved as attribute value', () => {
+    test('empty string is preserved as attribute value', async () => {
         const ast = makeTransformation('T', 'S', 'T', [
             makeClassMapping('Item', 'Output', [
                 makeAttrMapping(undefined, 'label', {
@@ -492,7 +492,7 @@ describe('Falsy value preservation', () => {
         ]);
 
         const source = [{ className: 'Item', name: 'x' }];
-        const result = execute(ast, source);
+        const result = await execute(ast, source);
 
         expect(result.success).toBe(true);
         const outputs = result.targetModel!.instances.get('Output')!;

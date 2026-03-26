@@ -327,7 +327,7 @@ type TAIVersion = string;
 export class AIConfig{
     static cname = 'AIConfig';
     private static map: Dictionary<TAIProvider, ProviderConfig> = {} as any;
-    static default: AIConfig;
+    // static default: AIConfig;
     name: TAIProvider;
     model: TAIVersion;
     enabled: boolean;

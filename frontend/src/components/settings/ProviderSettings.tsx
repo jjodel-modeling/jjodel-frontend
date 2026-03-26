@@ -4,12 +4,10 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { credentialsService, ProviderCredentials, ProviderType } from '../../services/CredentialsService';
 import { Button } from '../common/Button';
 import './ProviderSettings.css';
 import {AI, AIConfig, ALL_AI_PROVIDERS, JodieConfig, TAIProvider} from "../../types/jodie";
 import {GObject, U} from "../../joiner";
-import Jodie from "../Jodie/Jodie";
 
 
 export const ProviderSettings: React.FC = () => {

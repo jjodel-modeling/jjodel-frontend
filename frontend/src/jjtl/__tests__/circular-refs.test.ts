@@ -54,7 +54,7 @@ function makeAttrMapping(
 
 describe('Circular reference safety', () => {
 
-    it('handles source model with circular references without freezing', () => {
+    it('handles source model with circular references without freezing', async () => {
         // Simulate L-layer circular refs: Class → attributes → Attribute → owner → Class
         const classA: any = {
             className: 'EClass',
@@ -86,7 +86,7 @@ describe('Circular reference safety', () => {
 
         // This must complete without freezing (< 5 seconds)
         const start = Date.now();
-        const result = executor.execute([classA]);
+        const result = await executor.execute([classA]);
         const elapsed = Date.now() - start;
 
         expect(elapsed).toBeLessThan(5000);
@@ -99,7 +99,7 @@ describe('Circular reference safety', () => {
         expect(tables![0].tableName).toBe('Person');
     });
 
-    it('handles deeply nested circular references', () => {
+    it('handles deeply nested circular references', async () => {
         // Class → superClass → subClasses → [Class] (cycle)
         const parentClass: any = {
             className: 'EClass',
@@ -126,14 +126,14 @@ describe('Circular reference safety', () => {
         ]);
 
         const executor = new JjtlExecutor(ast);
-        const result = executor.execute([parentClass, childClass]);
+        const result = await executor.execute([parentClass, childClass]);
 
         expect(result.success).toBe(true);
         const tables = result.targetModel!.instances.get('Table');
         expect(tables!.length).toBe(2);
     });
 
-    it('handles self-referencing objects', () => {
+    it('handles self-referencing objects', async () => {
         const selfRef: any = {
             className: 'Node',
             name: 'Root',
@@ -147,7 +147,7 @@ describe('Circular reference safety', () => {
         ]);
 
         const executor = new JjtlExecutor(ast);
-        const result = executor.execute([selfRef]);
+        const result = await executor.execute([selfRef]);
 
         expect(result.success).toBe(true);
         const nodes = result.targetModel!.instances.get('FlatNode');
@@ -155,7 +155,7 @@ describe('Circular reference safety', () => {
         expect(nodes![0].label).toBe('Root');
     });
 
-    it('handles circular refs in conversion expressions', () => {
+    it('handles circular refs in conversion expressions', async () => {
         const classA: any = {
             className: 'EClass',
             name: 'person',
@@ -179,7 +179,7 @@ describe('Circular reference safety', () => {
         ]);
 
         const executor = new JjtlExecutor(ast);
-        const result = executor.execute([classA]);
+        const result = await executor.execute([classA]);
 
         expect(result.success).toBe(true);
         const tables = result.targetModel!.instances.get('Table');

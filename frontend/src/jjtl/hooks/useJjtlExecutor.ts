@@ -59,7 +59,7 @@ export function useJjtlExecutor(options: UseJjtlExecutorOptions = {}): UseJjtlEx
 
         try {
             // Execute the transformation
-            const result = execute(ast, sourceModel);
+            const result = await execute(ast, sourceModel);
 
             // Check if this execution is still the current one
             if (executionId !== executionIdRef.current) {

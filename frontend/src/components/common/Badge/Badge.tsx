@@ -7,11 +7,12 @@ interface BadgeProps {
     category: BadgeCategory;
     children: React.ReactNode;
     className?: string;
+    title?: string;
 }
 
-const Badge: React.FC<BadgeProps> = ({ category, children, className = '' }) => {
+const Badge: React.FC<BadgeProps> = ({ category, children, className = '', ...otherProps}) => {
     return (
-        <span className={`jj-badge jj-badge--${category} ${className}`.trim()}>
+        <span className={`jj-badge jj-badge--${category} ${className}`.trim()} {...otherProps}>
             {children}
         </span>
     );

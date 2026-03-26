@@ -11,9 +11,9 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import {ScriptTarget, ScriptLineResult, ExecutionErrorInfo, ExecutionStats} from './ScriptBlock';
+import {ScriptTarget, ScriptLineResult, ExecutionStats} from './ScriptBlock';
 import { ExecutionErrorDialog, } from './ExecutionErrorDialog';
-import { ExecutionPauseInfo, parseError } from '../executor/errors';
+import {ExecutionErrorInfo, ExecutionPauseInfo, parseError} from '../executor/errors';
 import './ScriptExecutionWindow.scss';
 // import {ExecutionStats} from "../../jjtl/executor";
 // ============================================
@@ -146,7 +146,7 @@ export const ScriptExecutionWindow: React.FC<ScriptExecutionWindowProps> = ({
     const showErrorDialog = useCallback((
         line: ParsedLine,
         errorMessage: string,
-        executedCommands: number,
+        commandsExecuted: number,
         errors: number
     ): Promise<'re-evaluate' | 'stop' | 'continue'> => {
         return new Promise((resolve) => {
@@ -155,10 +155,10 @@ export const ScriptExecutionWindow: React.FC<ScriptExecutionWindowProps> = ({
             setErrorDialogInfo({
                 lineNumber: line.index + 1,
                 command: line.text.trim(),
-                error: parseError(errorMessage, line.text.trim()),
                 executedSoFar: commandsExecuted,
                 totalCommands: commandsExecuted + errors,
                 elapsedMs: Date.now() - executionStartTime,
+                error: parseError(errorMessage, line.text.trim()),
                 errorType: errorMessage.toLowerCase().includes('not found') ? 'not_found' :
                            errorMessage.toLowerCase().includes('parse') ? 'parse' : 'execution',
             });

@@ -71,7 +71,7 @@ function makeAttrMapping(
 // ============================================
 
 describe('L-layer property access in source instances', () => {
-    test('isAbstract property is accessible in direct mapping', () => {
+    test('isAbstract property is accessible in direct mapping', async () => {
         const ast = makeTransformation('T', 'S', 'T', [
             makeClassMapping('Class', 'Table', [
                 makeAttrMapping('isAbstract', 'abstract'),
@@ -83,7 +83,7 @@ describe('L-layer property access in source instances', () => {
             { className: 'Class', name: 'Person', isAbstract: false },
             { className: 'Class', name: 'Shape', isAbstract: true },
         ];
-        const result = execute(ast, source);
+        const result = await execute(ast, source);
 
         expect(result.success).toBe(true);
         const tables = result.targetModel!.instances.get('Table')!;
@@ -92,7 +92,7 @@ describe('L-layer property access in source instances', () => {
         expect(tables[1].abstract).toBe(true);
     });
 
-    test('attributes array is accessible as source property', () => {
+    test('attributes array is accessible as source property', async () => {
         const ast = makeTransformation('T', 'S', 'T', [
             makeClassMapping('Class', 'Table', [
                 makeAttrMapping('name', 'tableName'),
@@ -126,7 +126,7 @@ describe('L-layer property access in source instances', () => {
                 ],
             },
         ];
-        const result = execute(ast, source);
+        const result = await execute(ast, source);
 
         expect(result.success).toBe(true);
         const tables = result.targetModel!.instances.get('Table')!;
@@ -141,7 +141,7 @@ describe('L-layer property access in source instances', () => {
 // ============================================
 
 describe('Guard conditions with L-layer properties', () => {
-    test('when { not isAbstract } filters abstract classes', () => {
+    test('when { not isAbstract } filters abstract classes', async () => {
         const ast = makeTransformation('T', 'S', 'T', [
             makeClassMapping('Class', 'Table', [
                 makeAttrMapping('name', 'tableName'),
@@ -159,7 +159,7 @@ describe('Guard conditions with L-layer properties', () => {
             { className: 'Class', name: 'Shape', isAbstract: true },
             { className: 'Class', name: 'Animal', isAbstract: false },
         ];
-        const result = execute(ast, source);
+        const result = await execute(ast, source);
 
         expect(result.success).toBe(true);
         const tables = result.targetModel!.instances.get('Table')!;
@@ -168,7 +168,7 @@ describe('Guard conditions with L-layer properties', () => {
         expect(tables.map((t: any) => t.tableName).sort()).toEqual(['Animal', 'Person']);
     });
 
-    test('when { subClasses.isNotEmpty } filters by computed collection', () => {
+    test('when { subClasses.isNotEmpty } filters by computed collection', async () => {
         const ast = makeTransformation('T', 'S', 'T', [
             makeClassMapping('Class', 'Table', [
                 makeAttrMapping('name', 'tableName'),
@@ -191,7 +191,7 @@ describe('Guard conditions with L-layer properties', () => {
             { className: 'Class', name: 'Circle', subClasses: [] },
             { className: 'Class', name: 'Rectangle', subClasses: [] },
         ];
-        const result = execute(ast, source);
+        const result = await execute(ast, source);
 
         expect(result.success).toBe(true);
         const tables = result.targetModel!.instances.get('Table')!;
@@ -206,7 +206,7 @@ describe('Guard conditions with L-layer properties', () => {
 // ============================================
 
 describe('ForAll with resolved object collections', () => {
-    test('forall a in attributes -> Column maps each attribute', () => {
+    test('forall a in attributes -> Column maps each attribute', async () => {
         const forallMapping: ForAllMappingAST = {
             type: 'ForAllMapping',
             variable: 'a',
@@ -258,7 +258,7 @@ describe('ForAll with resolved object collections', () => {
                 ],
             },
         ];
-        const result = execute(ast, source);
+        const result = await execute(ast, source);
 
         expect(result.success).toBe(true);
         const tables = result.targetModel!.instances.get('Table')!;
@@ -271,7 +271,7 @@ describe('ForAll with resolved object collections', () => {
         expect(tables[0].columns[1].typeName).toBe('Integer');
     });
 
-    test('forall with such that filter using item property', () => {
+    test('forall with such that filter using item property', async () => {
         const forallMapping: ForAllMappingAST = {
             type: 'ForAllMapping',
             variable: 'a',
@@ -320,7 +320,7 @@ describe('ForAll with resolved object collections', () => {
                 ],
             },
         ];
-        const result = execute(ast, source);
+        const result = await execute(ast, source);
 
         expect(result.success).toBe(true);
         const tables = result.targetModel!.instances.get('Table')!;
@@ -334,7 +334,7 @@ describe('ForAll with resolved object collections', () => {
 // ============================================
 
 describe('Proxy property preservation through deep copy', () => {
-    test('properties survive JSON.parse(JSON.stringify) after flattening', () => {
+    test('properties survive JSON.parse(JSON.stringify) after flattening', async () => {
         const ast = makeTransformation('T', 'S', 'T', [
             makeClassMapping('Class', 'Table', [
                 makeAttrMapping('name', 'tableName'),
@@ -371,7 +371,7 @@ describe('Proxy property preservation through deep copy', () => {
                 superClass: null,
             },
         ];
-        const result = execute(ast, source);
+        const result = await execute(ast, source);
 
         expect(result.success).toBe(true);
         const tables = result.targetModel!.instances.get('Table')!;
@@ -380,7 +380,7 @@ describe('Proxy property preservation through deep copy', () => {
         expect(tables[0].refCount).toBe(2);
     });
 
-    test('original source model is not mutated', () => {
+    test('original source model is not mutated', async () => {
         const ast = makeTransformation('T', 'S', 'T', [
             makeClassMapping('Class', 'Table', [
                 makeAttrMapping('name', 'tableName'),
@@ -403,7 +403,7 @@ describe('Proxy property preservation through deep copy', () => {
 // ============================================
 
 describe('Multiple element types', () => {
-    test('handles Enumeration elements alongside Class elements', () => {
+    test('handles Enumeration elements alongside Class elements', async () => {
         const ast = makeTransformation('T', 'S', 'T', [
             makeClassMapping('Class', 'Table', [
                 makeAttrMapping('name', 'tableName'),
@@ -417,7 +417,7 @@ describe('Multiple element types', () => {
             { className: 'Class', name: 'Person', isAbstract: false, attributes: [] },
             { className: 'Enumeration', name: 'Color', literals: ['RED', 'GREEN', 'BLUE'] },
         ];
-        const result = execute(ast, source);
+        const result = await execute(ast, source);
 
         expect(result.success).toBe(true);
         const tables = result.targetModel!.instances.get('Table')!;

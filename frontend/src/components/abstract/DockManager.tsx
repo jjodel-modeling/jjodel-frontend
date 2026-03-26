@@ -1,4 +1,5 @@
 import {DockLayout, TabData} from 'rc-dock';
+import type {GObject,} from '../../joiner';
 import {LModel, LProject, RuntimeAccessible, U} from '../../joiner';
 import TabDataMaker from "./tabs/TabDataMaker";
 import {DocumentationTab} from "./tabs/DocumentationTab";
@@ -234,12 +235,13 @@ class DockManager {
             if (existingTab) {
                 console.log('[DockManager] Updating and activating existing transformation tab');
                 // CRITICAL: Update tab content with fresh callbacks to avoid stale closures
-                DockManager.dock.updateTab(tabId, { content: tabContent }, true);
+                DockManager.dock.updateTab(tabId, { content: tabContent } as any, true);
                 window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
                     detail: { editorType: 'transformation' }
                 }));
                 return;
             }
+
 
             // Create new JjTL Development Environment tab
             const title = (
@@ -254,15 +256,6 @@ class DockManager {
                 title,
                 content: tabContent
             };
-
-            // Check if tab already exists
-            const existingTab = DockManager.dock.find(tabId);
-            if (existingTab) {
-                console.log('[DockManager] Updating and activating existing transformation tab');
-                // CRITICAL: Update tab content with fresh callbacks to avoid stale closures
-                DockManager.dock.updateTab(tabId, { title, content: tabContent }, true);
-                return;
-            }
 
             const layout = DockManager.dock.getLayout();
             if (layout?.dockbox?.children?.[0]) {

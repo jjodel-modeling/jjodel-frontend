@@ -28,7 +28,7 @@ function executeTransformation(source: string, sourceInstances: any[]) {
 describe('JjTL ForAll Mapping', () => {
 
     describe('Lexer', () => {
-        it('tokenizes forall, in, such, that as keywords', () => {
+        it('tokenizes forall, in, such, that as keywords', async () => {
             const lexer = new JjtlLexer('forall x in items such that x.active');
             const { tokens } = lexer.tokenize();
 
@@ -41,7 +41,7 @@ describe('JjTL ForAll Mapping', () => {
     });
 
     describe('Parser', () => {
-        it('parses forall with filter and object creation', () => {
+        it('parses forall with filter and object creation', async () => {
             const ast = parseJjtl(`
                 transformation Test
                 from Source
@@ -69,7 +69,7 @@ describe('JjTL ForAll Mapping', () => {
             expect(forall.objectCreation.body).toHaveLength(1);
         });
 
-        it('parses forall without filter', () => {
+        it('parses forall without filter', async () => {
             const ast = parseJjtl(`
                 transformation Test
                 from Source
@@ -89,7 +89,7 @@ describe('JjTL ForAll Mapping', () => {
             expect(forall.objectCreation.targetClass).toBe('Column');
         });
 
-        it('parses forall with dotted collection expression', () => {
+        it('parses forall with dotted collection expression', async () => {
             const ast = parseJjtl(`
                 transformation Test
                 from Source
@@ -107,7 +107,7 @@ describe('JjTL ForAll Mapping', () => {
             expect(forall.collection.type).toBe('MemberAccess');
         });
 
-        it('parses forall alongside regular attribute mappings', () => {
+        it('parses forall alongside regular attribute mappings', async () => {
             const ast = parseJjtl(`
                 transformation Test
                 from Source
@@ -130,8 +130,8 @@ describe('JjTL ForAll Mapping', () => {
     });
 
     describe('Executor — basic iteration', () => {
-        it('creates one target object per source element', () => {
-            const result = executeTransformation(`
+        it('creates one target object per source element', async () => {
+            const result = await executeTransformation(`
                 transformation Test
                 from Source
                 to Target
@@ -164,8 +164,8 @@ describe('JjTL ForAll Mapping', () => {
             expect(target.columns[2].name).toBe('email');
         });
 
-        it('handles empty collection', () => {
-            const result = executeTransformation(`
+        it('handles empty collection', async () => {
+            const result = await executeTransformation(`
                 transformation Test
                 from Source
                 to Target
@@ -189,8 +189,8 @@ describe('JjTL ForAll Mapping', () => {
             expect(targets![0].columns || []).toHaveLength(0);
         });
 
-        it('handles null collection', () => {
-            const result = executeTransformation(`
+        it('handles null collection', async () => {
+            const result = await executeTransformation(`
                 transformation Test
                 from Source
                 to Target
@@ -214,8 +214,8 @@ describe('JjTL ForAll Mapping', () => {
     });
 
     describe('Executor — filtering', () => {
-        it('filters with such that clause', () => {
-            const result = executeTransformation(`
+        it('filters with such that clause', async () => {
+            const result = await executeTransformation(`
                 transformation Test
                 from Source
                 to Target
@@ -246,8 +246,8 @@ describe('JjTL ForAll Mapping', () => {
     });
 
     describe('Executor — variable scoping', () => {
-        it('forall variable is visible in nested attribute mappings', () => {
-            const result = executeTransformation(`
+        it('forall variable is visible in nested attribute mappings', async () => {
+            const result = await executeTransformation(`
                 transformation Test
                 from Source
                 to Target
@@ -275,8 +275,8 @@ describe('JjTL ForAll Mapping', () => {
             expect(target.columns[0].dataType).toBe('Integer');
         });
 
-        it('forall variable is visible in conversion expressions', () => {
-            const result = executeTransformation(`
+        it('forall variable is visible in conversion expressions', async () => {
+            const result = await executeTransformation(`
                 transformation Test
                 from Source
                 to Target
@@ -303,8 +303,8 @@ describe('JjTL ForAll Mapping', () => {
     });
 
     describe('Executor — with JjEL builtins', () => {
-        it('snakeCase works inside forall', () => {
-            const result = executeTransformation(`
+        it('snakeCase works inside forall', async () => {
+            const result = await executeTransformation(`
                 transformation Test
                 from Source
                 to Target
@@ -331,8 +331,8 @@ describe('JjTL ForAll Mapping', () => {
     });
 
     describe('Integration — realistic transformation', () => {
-        it('Class2Relational: attributes become columns', () => {
-            const result = executeTransformation(`
+        it('Class2Relational: attributes become columns', async () => {
+            const result = await executeTransformation(`
                 transformation Class2Relational
                 from ClassDiagram
                 to Relational

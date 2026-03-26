@@ -8,10 +8,10 @@
  */
 
 import React, { useEffect, useCallback } from 'react';
-import { JjScriptError, ExecutionPauseInfo, ExecutionSummary } from '../executor/errors';
+import {JjScriptError, ExecutionPauseInfo, ExecutionSummary, ExecutionErrorInfo} from '../executor/errors';
 import './ExecutionErrorDialog.scss';
 import {ExecutionError} from "../types";
-import {ExecutionErrorInfo, ExecutionStats} from "./ScriptBlock";
+import {ExecutionStats} from "./ScriptBlock";
 import {Keystrokes} from "../../common/U";
 
 // ============================================
@@ -78,7 +78,7 @@ export const ExecutionErrorDialog: React.FC<ExecutionErrorDialogProps> = ({
             return {
                 icon: 'bi-exclamation-circle',
                 iconClass: 'warning',
-                title: `Execution stopped at line ${pauseInfo.line}`,
+                title: `Execution stopped at line ${pauseInfo!.lineNumber}`,
             };
         }
         if (isCompleted && hasErrors && summary.executedCount === 0) {
@@ -159,7 +159,7 @@ export const ExecutionErrorDialog: React.FC<ExecutionErrorDialogProps> = ({
 
                 {/* Actions */}
                 <div className="exec-error-actions">
-                    {isPaused && pauseInfo?.error.skippable && onSkip && (
+                    {isPaused && (pauseInfo?.error as JjScriptError)?.skippable && onSkip && (
                         <button
                             className="exec-error-btn exec-error-btn--secondary"
                             onClick={onSkip}
@@ -205,17 +205,17 @@ const PausedContent: React.FC<PausedContentProps> = ({ pauseInfo }) => {
             <div className="exec-error-section">
                 <label className="exec-error-label">Error:</label>
                 <div className="exec-error-message">
-                    {error.message.split('\n').map((line, i) => (
+                    {(error as JjScriptError)?.message ? (error as JjScriptError).message.split('\n').map((line, i) => (
                         <p key={i}>{line}</p>
-                    ))}
+                    )) : error.toString()}
                 </div>
             </div>
 
             {/* Suggestion (if any) */}
-            {error.suggestion && (
+            {(error as JjScriptError)?.suggestion && (
                 <div className="exec-error-suggestion">
                     <i className="bi bi-lightbulb" />
-                    <span>{error.suggestion}</span>
+                    <span>{(error as JjScriptError)!.suggestion}</span>
                 </div>
             )}
         </>
