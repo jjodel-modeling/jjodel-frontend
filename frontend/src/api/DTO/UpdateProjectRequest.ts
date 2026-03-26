@@ -18,7 +18,7 @@ export class UpdateProjectRequest extends Request_DTO<DProject>{
     collaborators!: string[];
     imported!: boolean;
     version!: number;
-    tags!: string[];
+    tagNames!: string[];
 
     constructor(src: Json<RawObject> | DProject) {
         super();

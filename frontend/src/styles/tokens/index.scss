@@ -112,7 +112,7 @@ input[type="checkbox"] {
 }
 
 /* Custom checkbox container - applies to label or wrapper */
-/* Exclude react-select internal inputs */
+/* Exclude react-select internal inputs
 input[type="checkbox"]:not([class*="css-"]):not([id*="react-select"]),
 label:has(input[type="checkbox"]):not([class*="css-"])::before {
   content: '';
@@ -129,15 +129,15 @@ label:has(input[type="checkbox"]):not([class*="css-"])::before {
   transition: all 0.15s ease;
   position: relative;
 }
-
-/* Hide any checkbox visual inside react-select */
+*/
+/* Hide any checkbox visual inside react-select
 [class*="-container"] input[type="checkbox"],
 [class*="css-"] input[type="checkbox"] {
   display: none !important;
   visibility: hidden !important;
   width: 0 !important;
   height: 0 !important;
-}
+}*/
 
 /* Hover state */
 input[type="checkbox"]:not(:checked):not(:disabled) + span:hover::before,

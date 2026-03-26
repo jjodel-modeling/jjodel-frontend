@@ -787,13 +787,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
     static mousedownComponent: GraphElementComponent | undefined;
     onMouseDown(e: React.MouseEvent): void {
-        console.log('[DEBUG] onMouseDown called', {
+        /*console.log('[DEBUG] onMouseDown called', {
             button: e.button,
             target: (e.target as HTMLElement)?.className,
             currentTarget: (e.currentTarget as HTMLElement)?.className,
             nodeid: this.props.nodeid,
             isStopped: UX.isStoppedEvt(e)
-        });
+        });*/
         if (UX.isStoppedEvt(e)) return;
         e.stopPropagation();
         GraphElementComponent.mousedownComponent = this;
@@ -860,11 +860,11 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let isDelete: boolean = false;
         if (e.key === Keystrokes.delete){ isDelete = true; }
         if (e.shiftKey) {
-            // todo: make them a switch
-            if (e.key === "D" || e.key === "d") this.props.data?.duplicate(); else
-            if (e.key === "R" || e.key === "r") { isDelete = true; }
+            switch(e.key?.toUpperCase()) {
+                case "D": this.props.data?.duplicate(); break;
+                case "R": isDelete = true; break;
+            }
         }
-        console.log('keydown isDelete', isDelete);
         if (isDelete){
             let nid = this.props.nodeid;
             let tn = transientProperties.node[nid];

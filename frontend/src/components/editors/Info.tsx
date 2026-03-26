@@ -380,7 +380,7 @@ class builder {
             </CollapsibleSection>
         </>);
     }
-
+repl all type="ckeckbox" with "switch"
     static enum(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         return (<>
             <CollapsibleSection title="GENERAL">

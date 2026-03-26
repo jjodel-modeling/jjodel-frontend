@@ -14,7 +14,6 @@ import {COMMIT} from "../../redux/action/action";
 (window as any).io = io;
 
 const ignoredRootFields: (keyof DState)[] = [
-    'env',
     'debug',
     'logs',
     'isEdgePending',
@@ -53,7 +52,7 @@ export class Collaborative {
 
     static async connect(id: Pointer<DProject>){
         if (!id) id = U.getProjectID_URL() || '';
-        Collaborative.client = io(process.env['JODEL_COLLABORATIVE'], {path: '/collaborative', autoConnect: false});
+        Collaborative.client = io(U.env('JODEL_COLLABORATIVE'), {path: '/collaborative', autoConnect: false});
         Collaborative.client.io.opts.query = {'project': id};
         Collaborative.client.connect();
         // 20s timeout for server-side socket (server config) + 5s of extra transmission delay to client.

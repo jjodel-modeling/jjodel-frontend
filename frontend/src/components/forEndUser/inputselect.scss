@@ -28,24 +28,32 @@ input.switch[type="checkbox"]{
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
+  display: flex;
 
   // DIMENSIONS: 32x18px (compact)
-  width: 32px;
-  height: 18px;
-  min-width: 32px;
+  width: 40px;
+  height: 20px;
+  min-width: 36px;
   min-height: 18px;
 
   // OFF state: gray-300
-  background-color: #d1d5db;
+  background-color: #e2e4e8;
   background-image: none;
   border: none;
-  border-radius: 9px;
+  border-radius: 11px;
   position: relative;
   cursor: pointer;
   outline: none;
-  transition: all 150ms ease;
+  transition: all 150ms ease, background-color 250ms ease;
   flex-shrink: 0;
-  box-sizing: border-box;
+  box-sizing: border-box;;
+  padding: 2px;
+
+  --outlineshadow: #475569;
+  &:focus {
+    box-shadow: 0 0 5px 2px var(--outlineshadow) !important;
+  }
+
 
   // Remove any ::before content (icons)
   &::before {
@@ -55,35 +63,41 @@ input.switch[type="checkbox"]{
 
   // KNOB: 14px white circle
   &::after {
-    position: absolute;
     content: "";
-    width: 14px;
-    height: 14px;
-    top: 2px;
-    left: 2px;
+    position: initial !important;
+    width: 20px;
+    height: 20px;
+    margin-top: auto;
+    margin-bottom: auto;
     border-radius: 50%;
     background-color: #fff;
     background-image: none;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
-    transition: transform 150ms ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    transition: all 250ms ease;
     font-size: 0;
     text-indent: -9999px;
+    transform: translateX(0%) scale(90%) !important;
+    transform-origin: center;
   }
 
   // ON state: slate gradient
   &:checked {
     background: linear-gradient(135deg, #64748b 0%, #475569 100%);
-  }
-  &:checked::after {
-    transform: translateX(14px);
+
+    // background-color: var(--color-accent, #475569) !important;
+
+    &::after {
+      transform: translateX(100%) scale(90%) !important;
+    }
   }
 
   // Hover state
-  &:hover:not(:disabled) {
-    background-color: #9ca3af;
+  &:hover { // :not(:disabled) not needed because of pointer-events: none on disabled
+    // background-color: #d0d3d8 !important;
 
     &:checked {
       background: linear-gradient(135deg, #475569 0%, #334155 100%);
+      // background-color: var(--color-accent-hover, #334155) !important;
     }
   }
 
@@ -154,21 +168,21 @@ select.model-select {
   // 2. Filter input - grows to push tags right
   .jjodel-select__input,
   [class*="-Input"] {
-    flex: 1 1 auto !important;
-    min-width: 50px !important;
-    margin: 0 !important;
-    padding: 0 !important;
+    flex: 1 1 auto;
+    min-width: 50px;
+    margin: 0;
+    padding: 0;
 
     input {
-      border: none !important;
-      outline: none !important;
-      box-shadow: none !important;
-      background: transparent !important;
-      padding: 0 !important;
-      margin: 0 !important;
-      font-size: 13px !important;
-      color: #334155 !important;
-      width: 100% !important;
+      border: none;
+      outline: none;
+      box-shadow: none;
+      background: transparent;
+      padding: 0;
+      margin: 0;
+      font-size: 13px;
+      color: #334155;
+      width: 100%;
     }
   }
 

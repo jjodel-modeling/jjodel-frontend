@@ -801,7 +801,7 @@
     }
   }
 
-  /* Toggle switch styling - override global hidden checkbox */
+  /* Toggle switch styling - override global hidden checkbox * /
   input[type="checkbox"].switch {
     position: relative !important;
     opacity: 1 !important;
@@ -818,7 +818,7 @@
     flex-shrink: 0;
     padding: 2px;
 
-    /* Toggle thumb using ::after pseudo-element */
+    /* Toggle thumb using ::after pseudo-element * /
     &::after {
       content: '' !important;
       position: absolute !important;
@@ -852,7 +852,7 @@
         background-color: var(--color-accent-hover, #334155) !important;
       }
     }
-  }
+  }*/
 
   /* Regular checkbox styling (fallback) - override global hidden checkbox */
   input[type="checkbox"]:not(.switch) {
@@ -1143,7 +1143,7 @@ html[data-theme="dark"] {
 .jj-select__single-value {
   font-size: 13px !important;
   color: #1e293b !important;
-  
+
 }
 
 .jj-select__clear-indicator {
@@ -1207,7 +1207,7 @@ html[data-theme="dark"] {
     outline: none !important;
 
 
-      
+
       box-shadow: none !important;
       height: auto !important;
       min-height: auto !important;

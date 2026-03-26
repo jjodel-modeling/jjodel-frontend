@@ -139,17 +139,17 @@ Ohm.flexmi_grammar = String.raw`
 
     // Top-level element: either a multi-root wrapper or a single element
     Element
-      = "<_>" Node* "</_>"                                       -- multiroot
-      | "<" tagName Attr* "/>"                                   -- selfclose
-      | "<" tagName Attr* ">" Node* "</" tagName ">"            -- full
+      = "<_>" Node* "</_>"                            --multiroot
+      | "<" tagName Attr* "/>"                        --selfclose
+      | "<" tagName Attr* ">" Node* "</" tagName ">"  --full
 
     // A node inside an element body
     Node
       = PI
       | TemplateDef
-      | "<" tagName Attr* "/>"                                   -- selfclose
-      | "<" tagName Attr* ">" Node* "</" tagName ">"            -- full
-      | textChars                                                -- text
+      | "<" tagName Attr* "/>"                        --selfclose
+      | "<" tagName Attr* ">" Node* "</" tagName ">"  --full
+      | textChars                                     --text
 
     // <?target content?>  — reusable partial, used at doc level and inside nodes
     PI
@@ -163,10 +163,10 @@ Ohm.flexmi_grammar = String.raw`
       = "<:template" Attr* ">" TmplChild* "</:template>"
 
     TmplChild
-      = "<:param" Attr* "/>"                                     -- param
-      | "<:content>" Node* "</:content>"                        -- content
-      | "<" tagName Attr* "/>"                                   -- selfclose
-      | "<" tagName Attr* ">" Node* "</" tagName ">"            -- full
+      = "<:param" Attr* "/>"                          -- param
+      | "<:content>" Node* "</:content>"              -- content
+      | "<" tagName Attr* "/>"                        -- selfclose
+      | "<" tagName Attr* ">" Node* "</" tagName ">"  -- full
 
     // Attribute  name="val"  or  :name="val"  (exec / var / ref)
     Attr
@@ -227,10 +227,9 @@ Ohm.flexmi_semantic = String.raw`
             }
         },*/
         Element_multiroot(_o, nodes, _c) {
-            return {
-                type:     'MultiRoot',
-                children: nodes.children.map(n => n.ast()).filter(x => x != null),
-            };
+            let children = nodes.children.map(n => n.ast()).filter(x => x != null);
+            for (let c of children) delete c._tagName;
+            return children;
         },
         Element_selfclose: (_lt, name, attrs, _sl) => makeElement(name, attrs, []),
         Element_full: (_lt, name, attrs, _gt, nodes, _cl, _cn, _cgt) => (

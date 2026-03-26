@@ -29,7 +29,7 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
       'src': path.resolve(__dirname, './src'),
-      'jquery': 'jquery/dist/jquery.js'
+      // 'jquery': 'jquery/dist/jquery.js'
     }
   },
   css: {
@@ -42,7 +42,7 @@ export default defineConfig({
   },
   define: {
     'global': 'globalThis',
-    'window.jQuery': 'window.$',
-    'window.$': 'window.$'
+    // 'window.jQuery': 'window.$',
+    // 'window.$': 'window.$'
   }
 })

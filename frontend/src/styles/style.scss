@@ -31,6 +31,7 @@ button, input, select, textarea {
   font-family: inherit;
   font-size: inherit;
   line-height: inherit;
+  appearance: auto;
 }
 
 /* classes */
@@ -88,7 +89,6 @@ button, input, select, textarea {
   }
 }
 .input[type="checkbox"]:focus, .input[type="radio"]:focus { border: none; }
-.autosize-input { flex-grow: 1; flex-basis: 10px; }
 /*
 textarea.autosize{ not possible in pure css, need to add a :after element mimicking text, updated with js.
     display: grid;
@@ -104,31 +104,32 @@ textarea.autosize{ not possible in pure css, need to add a :after element mimick
 .w-fill { width: $fill; }
 .h-fill { height: $fill; }
 
-.autosize-input{
+.GraphContainer{
+  input, select {
+    background-color: inherit;
+    &:empty{
+      font-style: italic;
+    }
+    &.autosize-input {
+      background-color: transparent;
+      color: transparent;
+    }
+  }
+
+}
+input.autosize-input{
   // opacity:0;
-  background: transparent;
+  background-color: transparent;
   color: transparent;
   caret-color: var(--color-text-primary);
   position: absolute;
   width: 100%;
+  min-width: 0;
+  flex-grow: 1;
+  flex-basis: 10px;
   border-color: transparent !important;
   &:focus{ border: 1px solid transparent; }
   outline: none;
-
-}
-.autosize-input-container.labelstyle{
-
-  &>input,
-  &::after{
-    margin: 0 !important;
-    padding: 0 !important;
-    font-weight: var(--font-light);
-    height: 21.61px;
-  }
-  &::after{
-    display: block;
-    left: -0.91px;
-  }
 }
 
 [disabled], .disabled{
@@ -142,32 +143,47 @@ textarea.autosize{ not possible in pure css, need to add a :after element mimick
     //padding: 0 2.5px; /* input have some margin and border that cannot be erased? always 5?*/
     margin: 0 5px; /* input have some margin and border that cannot be erased? always 5?*/
   }
+  &>input{
+    color: transparent !important;
+  }
+  &::after{
+    content: attr(data-value) ' ';
+    color: inherit !important;
+    // left: -0.91px;
+  }
   &>input,
   &::after{ // input and fake element must have same sizes
     // todo: maybe they can be css variables injected with jsx, so can change ::after css rendering from jsx
-    content: attr(data-value) ' ';
-    color: inherit !important;
-    border: 1px solid transparent;
     white-space: pre;
+    font-size: inherit;
+    font-family: inherit;
+    line-height: inherit;
+    font-style: inherit !important;
+
+    // border: 1px solid transparent;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 0.5em !important;
+    // padding-bottom: 1px !important; // no idea why, or it doesnt' align vertically
+    font-weight: var(--font-light);
+    height: 1lh;
+    max-height: 1lh !important;
+    min-height: 1lh !important;
 
     // below are only necessary for max width
     display: inline-flex;
     max-width: 200px;
     overflow: hidden;
     text-overflow: ellipsis;
+    //
+
+  }
+  :focus-within{
+    &>input,
+    &::after{ max-width: 9999px; }
   }
 }
 
-.autosize-input-container > input, .autosize-input-container::after{
-  display: flex;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: none !important;
-  height: 1lh;
-  max-height: 1lh !important;
-  min-height: 1lh !important;
-  font-style: inherit !important;
-}
 input[type="color"] {
   cursor: pointer;
   width: 24px;
@@ -199,48 +215,61 @@ input[type="color"]::-webkit-color-swatch {
    Modern checkbox system using new token system
    ============================================ */
 
+input.digits3{
+  width: 6em;
+}
+input[type="checkbox"]{
+  opacity: 1;
+  position: relative;
+  width: 20px;
+  height: 20px;
+  accent-color: white; // actual bg uses this instead of background-color
+  outline: 1.5px solid gray;
+  outline-offset: -1px;
+}
+
+/* Reset default appearance
 .input[type='checkbox'],
 input[type='checkbox'] {
-  /* Reset default appearance */
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
 
-  /* Sizing */
+  // Sizing
   width: 20px;
   height: 20px;
   min-width: 20px;
   min-height: 20px;
 
-  /* Visual */
+  // Visual
   background: var(--color-bg-elevated);
   border: 2px solid var(--color-border-primary);
   border-radius: var(--radius-sm);
   cursor: pointer;
   position: relative;
 
-  /* Animation */
+  // Animation
   transition: var(--transition-fast);
 
-  /* Hover state */
+  // Hover state
   &:hover:not(:disabled) {
     border-color: var(--color-accent);
     background: var(--color-bg-hover);
   }
 
-  /* Focus state - slate color for consistency */
+  // Focus state - slate color for consistency
   &:focus {
     outline: none;
     border-color: var(--form-input-border-color-focus, #334155);
     box-shadow: var(--form-input-focus-shadow, 0 0 0 3px rgba(51, 65, 85, 0.15));
   }
 
-  /* Checked state */
+  // Checked state
   &:checked {
     background: var(--color-accent);
     border-color: var(--color-accent);
 
-    /* Checkmark icon */
+    // Checkmark icon
     &::after {
       content: '';
       position: absolute;
@@ -253,8 +282,7 @@ input[type='checkbox'] {
       transform: rotate(45deg);
     }
   }
-
-  /* Disabled state */
+  // Disabled state
   &:disabled {
     background: var(--color-bg-tertiary);
     border-color: var(--color-border-primary);
@@ -271,6 +299,7 @@ input[type='checkbox'] {
     }
   }
 }
+*/
 
 /* Specific override for edit panel */
 .edit-panel .properties-tab .input[type='checkbox'] {
@@ -396,37 +425,41 @@ input[type='checkbox'].switch {
   }
 }
 
+select {
+  padding: 2px 5px;
+  border-radius: 5px;
+
+}
 /* ============================================
    SELECT DROPDOWNS - REDESIGNED WITH DESIGN TOKENS
    Modern select system using new token system
    ============================================ */
-
+/*
 .select,
 select {
-  /* Sizing */
+  // Sizing
   width: 100%;
-  height: var(--input-height);  /* 40px - matches input fields */
-  padding: 0 var(--space-3);  /* 12px horizontal padding */
+  height: var(--input-height);  // 40px - matches input fields
+  padding: 0 var(--space-3);  // 12px horizontal padding
 
-  /* Typography */
+  // Typography
   font-family: var(--font-sans);
   font-size: var(--text-sm);
   color: var(--color-text-primary);
 
-  /* Visual */
+  // Visual
   background: var(--color-bg-elevated);
   border: 1px solid var(--color-border-primary);
   border-radius: var(--radius-md);
   outline: none;
-  appearance: none;
 
-  /* Custom dropdown arrow */
+  // Custom dropdown arrow
   background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23525866' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right var(--space-3) center;
-  padding-right: var(--space-8);  /* Make room for arrow */
+  padding-right: var(--space-8);  // Make room for arrow
 
-  /* Animation */
+  // Animation
   transition: var(--transition-input);
   cursor: pointer;
 
@@ -446,13 +479,13 @@ select {
     opacity: 0.6;
   }
 
-  /* Option styling */
+  // Option styling
   option {
     background: var(--color-bg-elevated);
     color: var(--color-text-primary);
     padding: var(--space-2) var(--space-3);
   }
-}
+}*/
 
 /* ============================================
    BUTTON STYLES - REDESIGNED WITH DESIGN TOKENS

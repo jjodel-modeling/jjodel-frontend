@@ -218,6 +218,15 @@ export function parseT2M(language: string, text0: string, canThrow: boolean = fa
 }
 windoww.parseT2M = parseT2M;
 
+function fixPartialName(k: string | undefined, dict: Dictionary<string, string>, fixDPrefix = false): string {
+    if (!k) return '';
+    if (dict[k]) return k;
+    let k2 = k.toLowerCase();
+    if (dict[k2]) return k2;
+    if (fixDPrefix && k[0] === 'D') return fixPartialName(k.substring(1), dict, false);
+    return '';
+}
+
 export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, language: string): string{
     let data: LModelElement = LPointerTargetable.from(data0 as any);
     if (!data) return "M2T transformation to "+language+" is missing the model (data) parameter.";
@@ -244,7 +253,8 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
     let langObj = s.languages[language];
     let allowPartial = langObj.m2t[engine].allowPartials;
 
-    if (data.className !== 'DModel' && !allowPartial) {
+    let cname = data.className;
+    if (cname !== 'DModel' && !allowPartial) {
         let msg = 'The language ' + language+' with engine ' + engine + ' does not allow partial serializations.\n' +
             'Call the serialization from the root model.';
         Log.ee(msg);
@@ -283,18 +293,73 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
             return msg;
         case undefined:
         case 'eta':
-            let eta_str: string = '';
+            let eta_partials: Dictionary<string, string> = {};
+            let eta = new Eta({
+                views: '/',            // dummy value — satisfies the resolver check
+            });
+            eta.readFile = (name: string, ...a: any) => {  // intercepts all include() calls
+                console.log("eta custom read file", {name, a});
+                if (name[0] === '/' || name[0] === '@') { name = name.substring(1); }
+                if (name[0] === '/' || name[0] === '@') { name = name.substring(1); }
+                if (name[name.length -1] === '/') name = name.substring(0, name.length - 1);
+                if (name.endsWith(".eta")) name = name.substring(0, name.length - 4);
+                let key = name;
+                let ret: string = '';
+                if (eta_partials[key]) ret = eta_partials[key];
+                if (!ret) throw new Error(`Eta Partial not found: ${name}`);
+                return `<%
+    try {
+  %>${ret}<%
+    } catch(e) {
+      e.message = '[template: ${key}] ' + e.message;
+      throw e;
+    }
+  %>`;
+            }
             if (allowPartials) for (let name in m2tobj) {
                 if (name in notLanguageFragments) continue;
                 let v = m2tobj[name]?.trim();
-                // if (v) ETA.registerPartial(name, v);
-                eta_str += v;
+                // @prefix is mandatory for templates dynamically loaded (not from file system) it is not part of the template name
+                // but i changed eta.loadFromFile function so it always read from eta_partials and @ is NOT NEEDED, actually harmful
+                eta.loadTemplate(name, v);
+                eta_partials[name] = v;
             }
-            let eta_template = (obj: GObject, config?: Partial<EtaConfig>)=> new Eta(config).renderString(eta_str, obj);
-            console.log('handlebars 2', {func_str, eta_template});
-            try { ret = eta_template(data); }
+            for (let k in eta_partials) {
+                let k2 = k.toLowerCase();
+                if (!(k2 in eta_partials)) eta_partials[k2] = eta_partials[k];
+            }
+            console.log('eta m2t', {eta, eta_partials, cname});
+            let selectedPartial: string = '';
+            // try to find correct partial name
+            switch (cname) {
+                default:
+                    Log.eDevv("unexpected object type found in m1 M2T: " + cname, {data, cname});
+                    break;
+                case "Model": case "DModel": selectedPartial = fixPartialName("DModel", eta_partials, true); break;
+                case 'Value': case "DValue": {
+                    let meta = (data as LValue).instanceof;
+                    selectedPartial = fixPartialName(meta?.className, eta_partials, true);
+                    if (!selectedPartial) selectedPartial = fixPartialName("DValue", eta_partials, true);
+                    } break;
+                case "Object": case "DObject":
+                    let meta = (data as LObject).instanceof;
+                    let name = meta?.name;
+                    let ambiguousNames = ["Value", "DValue", "Model", "DModel", "Object", "DObject", "Attribute", "DAttribute", "Reference", "DReference"];
+                    /*console.log("eta m2t object attempt 1: ", {name, eta_partials, ret: fixPartialName(name, eta_partials, false)});
+                    console.log("eta m2t object attempt 2: ", {name, eta_partials, ret: fixPartialName("DObject", eta_partials, true)});*/
+                    if (!ambiguousNames.includes(name || '')) selectedPartial = fixPartialName(name, eta_partials, false);
+                    if (!selectedPartial) selectedPartial = fixPartialName("DObject", eta_partials, true);
+                    break;
+            }
+            if (!selectedPartial) selectedPartial = "Default";
+            try {
+                if (cname) {
+                    ret = eta.render(selectedPartial, data);
+                }
+            }
             catch (e: any) {
                 ret = e.message;
+                console.log('eta m2t error', {e, selectedPartial, eta});
             }
             // cleanup
             /*for (let name in m2tobj) {
@@ -302,7 +367,7 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
                 Handlebars.unregisterPartial(name);
             }*/
             // Handlebars.partials = {}; // unofficial fallback to make sure i erase all partials
-            console.log('eta m2t', {func_str, eta_template, ret});
+            console.log('eta m2t', {func_str, eta_partials, ret});
             return ret;
         case 'handlebars':
             if (allowPartials) for (let name in m2tobj) {

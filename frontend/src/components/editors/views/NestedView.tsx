@@ -246,7 +246,7 @@ function renderEntry(d: DViewElement, childrens: GObject, isExpanded: boolean, t
                                 <i className="bi bi-x priority-clear" onClick={() => { l.explicitApplicationPriority = undefined as any; }}></i>
                                 <Input
                                     type="number"
-                                    className="priority-booster"
+                                    className="priority-booster digits3"
                                     inputClassName="priority-booster-input"
                                     readOnly={false}
                                     data={l}

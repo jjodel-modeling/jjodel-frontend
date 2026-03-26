@@ -59,14 +59,15 @@
 
 /* Class node refinements */
 .class {
-  border-radius: 6px !important;
+  border-radius: 6px;
   overflow: hidden;
   background: var(--color-bg-primary, #ffffff);
+
   border: 2.5px solid var(--color-accent, #5B8266) !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 
   /* Header with CLASS/Interface label and name */
-  > .header { border: 1px solid red!important;
+  > .header {
     display: flex;
     justify-content: space-between;
     gap: 8px;
@@ -76,7 +77,7 @@
     font-family: 'JetBrains Mono', Monaco, Consolas, monospace;
     font-size: 12px;
 
-    /* Input field for class name - lighter weight, no border */
+    /* Input field for class name - lighter weight, no border
     & input {
       font-family: 'JetBrains Mono', Monaco, Consolas, monospace !important;
       font-size: 12px !important;
@@ -88,7 +89,7 @@
       box-shadow: none !important;
       padding: 0;
       min-width: 60px;
-    }
+    }*/
   }
 
   /* Legacy class-name support */
@@ -534,11 +535,11 @@
 
   /* Alignment classes */
   &.left {
-    transform: translateX(-100%);
+    // transform: translateX(-100%);
   }
 
   &.right {
-    transform: translateX(0);
+    transform: translateX(-100%);
   }
 
   &.center {

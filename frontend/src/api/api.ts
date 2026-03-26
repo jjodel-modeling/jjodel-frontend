@@ -9,7 +9,7 @@ import {
     Log,
     Pointers,
     R,
-    RuntimeAccessible
+    RuntimeAccessible, U
 } from "../joiner";
 import Storage from "../data/storage";
 
@@ -18,7 +18,6 @@ export type Response = {code: number, data: Json|null};
 @RuntimeAccessible('Api')
 export class Api {
     public static cname: string = 'Api';
-    public static persistance = `${process.env['JODEL_PERSISTANCE']}`;
     private static token: string | null = null;
     private static _refreshToken: string | null = null;
     private static refreshTokenTimer: number = -1;
@@ -106,7 +105,7 @@ export class Api {
             if (isRefreshToken || allowAnonymous || Api.checkToken()) {
                 console.log('post api call:', {obj, swap:Api.swapToGUID(obj)});
                 const response = await Axios.post(path, Api.swapToGUID(obj), isRefreshToken ? undefined : {headers: this.headers()});
-                console.log('Api response', {path, r:response});
+                console.trace('Api response', {path, r:response});
                 return {code: response.status, data: Api.swapToJodelID(response.data)};
             }
             return {code: 401, data: 'Login session expired.' as any};
@@ -158,7 +157,7 @@ export class Api {
 
         Api.throttle_refreshToken = Date.now();
         try {
-            const response: GObject = await Api.post(process.env['JODEL_PERSISTANCE']+'/account/refresh-token', {token: Api.token, refreshToken: Api._refreshToken}, true, true);
+            const response: GObject = await Api.post(U.env('JODEL_PERSISTANCE')+'/account/refresh-token', {token: Api.token, refreshToken: Api._refreshToken}, true, true);
             if (!response || (response.code+'')[0] !== '2') {
                 Log.ee('Failed to refresh token, session might expire soon.', {response});
                 return false;
@@ -179,7 +178,7 @@ export class Api {
         let user = DUser.getUser();
         if (!user) return false;
         try {
-            const response = await Api.post(process.env['JODEL_PERSISTANCE']+'/account/revoke', {username: user.nickname}, true);
+            const response = await Api.post(U.env('JODEL_PERSISTANCE')+'/account/revoke', {username: user.nickname}, true);
             if (response && (response.code+'')[0] !== '2') return false;
             Api.storeSessionData();
             return true;

@@ -260,6 +260,10 @@
     & .suggestions {
       border-radius: var(--radius);
       background-color: var(--color)!important;
+      .suggestcontent{
+        max-height: 30vh;
+        overflow-y: auto;
+      }
       
       & h6 {
         color: var(--neutral);
@@ -322,7 +326,7 @@
 
     & .color-picker-root {
       height: var(--input-height);
-      background-color: var(--color-bg-secondary, white); // transparent!important;
+      background-color: transparent; // var(--color-bg-secondary, white);
       padding: 0!important;
       margin: 0!important;
       height: var(--input-height);

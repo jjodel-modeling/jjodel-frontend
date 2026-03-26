@@ -1228,6 +1228,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         _this.type = type;
         _this.name = name;
         _this.state = state || '';
+        _this.tagNames = [];
         // Content version: new projects start at 1.0, loaded projects use -1 (to be extracted from state)
         _this.version = state ? -1 : 1.0;
         if(id) _this.id = id;
@@ -1939,12 +1940,6 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         return !!(val as any).__isProxy;
     }
 
-
-    private test(){
-        let a: LPointerTargetable = null as any as LEnumLiteral;
-        let c: LPointerTargetable = null as any as LParameter;
-        let b: LPointerTargetable = null as any as LVertex;
-    }
     // public r!: this;
 
     private __info_of__id = {type:"Pointer&lt;this&gt;",
@@ -2950,7 +2945,7 @@ export class DProject extends DPointerTargetable {
     activeLayout?: string;
     state!: string;
     version!: number;
-    tags: string[] = [];
+    tagNames!: string[];
 
     public static new(type: DProject['type'], name?: string, state?: DProject['state'],
                       m2?: DProject['metamodels'], m1?: DProject['models'], id?: DProject['id'], otherProjects?:LProject[]): DProject {
@@ -3022,7 +3017,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     // stringify state
     state!: string;
     version!: number;
-    tags!: string[];
+    tagNames!: string[];
 
     /* DATA */
     readonly packages!: LPackage[];

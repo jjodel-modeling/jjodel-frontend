@@ -1,4 +1,3 @@
-import type * as monaco from "monaco-editor";
 import {LanguageCache, notLanguageFragments, ParserData} from "../../joiner/classes";
 import {
     DataOutputComponent,
@@ -93,15 +92,12 @@ export function MTMComponent(props: AllProps): JSX.Element{
     let dataid: Pointer<DModelElement> | undefined;
     let t2mobj = languageObj.t2m[languageObj.t2m.engine];
     let m2tobj = languageObj.m2t[languageObj.m2t.engine];
-    console.log('check global transform', {data, cn:data?.className, t2mobj, m2tobj, t2:t2mobj?.allowPartials, m2:m2tobj?.allowPartials})
 
     if (data && data.className !== 'DModel' && (!t2mobj?.allowPartials || !m2tobj?.allowPartials)) {
-        console.log('check global transform --> GLOBAL');
         data = data.model;
         dataid = data.id;
     }
     else {
-        console.log('check global transform --> LOCAL');
         dataid = props.dataid || undefined;
     }
 
@@ -445,7 +441,7 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
                         /><span className={'my-auto ms-1'}> Allow partial {a.operation}s</span></label>
                     </Tooltip>
                     {a.allowPartials ? <div className={'fragments d-flex mx-1'}><div className={'fill'}>{
-                        ['+', ...a.fragments].reverse().map(f=><div className={'fragment-btn '/* +(f === a.fragment ? 'selected btn-secondary' : 'btn-outline-secondary')*/}
+                        [...a.fragments, "+"].map(f=><div className={'fragment-btn '/* +(f === a.fragment ? 'selected btn-secondary' : 'btn-outline-secondary')*/}
                                               onClick={() => {a.setFragment(f); a.set_oldEngine('__jj_needs_reset__')}}>
                             {f === 'Default'? <span>Default</span> : <Input placeholder={'Confirm to delete'} key={f} getter={()=>f} tooltip={'double click to '+(f==='+'?'add':'rename')+' fragment'} setter={(v)=>{
                                 if (!v) {

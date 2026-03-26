@@ -78,6 +78,7 @@ export function ShowContextMenu(nodeid: Pointer<DGraphElement>, x: number, y: nu
         graph_html = graph_html.parentElement;
     }
     if (!graphid) { Log.eDevv('contextmenu graph not found', {nodeid, graphid}); return; }
+    console.log('showctx', {contextMenuMap, graphid, cg:contextMenuMap[graphid]});
     contextMenuMap[graphid]?.(nodeid, x, y);
 }
 
@@ -229,6 +230,17 @@ function separator() {
 }
 let closefunc: (panelClick?: boolean)=>void = null as any;
 
+function test(){
+    let data: any = null, View: any = null, Input: any = null as any, view: any, decorators: any;
+    L.from(s().viewelements).filter(v=>v.name === "View for Product")[0].onDataUpdate = (
+`let oldQt = data.state.oldQuantity, qt= +data.$quantity;
+console.log("check qt", {n: data.name, qt, oldQt, cc:data.clonedCounter});
+if (oldQt === undefined) { data.state = {oldQuantity: qt, editN:data.clonedCounter}; return; }
+if (oldQt / qt > 2 || oldQt / qt <= 0.5) {
+    if (data.state.editN !== data.clonedCounter) { data.state = {requiresValidation: false, oldQuantity: qt, editN: data.clonedCounter}; }
+    else { data.state = {requiresValidation: true, editN: data.clonedNumber}; }
+}`)
+}
 
 function ContextMenuComponentInner(props: AllProps) {
     // const project = user.project as LProject;
@@ -245,13 +257,13 @@ function ContextMenuComponentInner(props: AllProps) {
     const [editPanel, setEditPanel] = useStateIfMounted(false);
     //if (!contextMenuMap[props.graph]) {// NB: do not cache/initialize only once, otherwise closure will not update nodeid, x and y
     contextMenuMap[props.graph] = (nodeid: Pointer<DGraphElement>, x: number, y: number)=> {
-        // console.log('ShowContextMenu', {graph:props.graph, nodeid, x, y, display} );
+        console.log('ShowContextMenu', {graph:props.graph, nodeid, x, y, display} );
         if (display && (nodeid === display.nodeid && x === display.x && y === display.y)) return;
         setDisplay({nodeid, x, y});
     };
 
 
-    if (!display) return null;
+    if (!display) return <div className=" context-menu" id={"ctxhidden"} style={{display: "none"}}/>;
     jsxList = [];
 
     const nodeid = display.nodeid;

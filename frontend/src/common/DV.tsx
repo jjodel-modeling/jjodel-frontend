@@ -384,8 +384,15 @@ strescape -> ["\\\\/bfnrt] {% id %}
 `
 }},
 );
-        const flexmim2t =  {eta:{__str: ETA.flexmi_attribute + "\n" + ETA.flexmi_object + "\n" + ETA.flexmi_model,
-                'Model': ETA.flexmi_model, 'Object': ETA.flexmi_object, 'Value': ETA.flexmi_attribute, allowPartials: true}};
+        const flexmim2t =  {eta:{__str: 'Flexmi is usable only with partials so far.',
+                'Default': "Flexmi has no default, it uses Model, Object, Value fragments as entry points.",
+                'Model': ETA.flexmi_model,
+                'Object': ETA.flexmi_object,
+                'Value': ETA.flexmi_value,
+                'ObjectChild': ETA.flexmi_ObjectChild,
+                'ValueChild': ETA.flexmi_ValueChild,
+                'ValueInline': ETA.flexmi_ValueInline,
+                allowPartials: true}};
         ret['flexmi/YAML'] = new Language("yaml", m2t, t2m);
         ret['flexmi/XMI'] = new Language("flexmi", flexmim2t, {ohm: {__str: Ohm.flexmi_grammar+'╗' + Ohm.flexmi_semantic, allowPartials: true, test_text: Ohm.exampleM1}});
 
@@ -837,8 +844,6 @@ foreignObject.label{
 foreignObject.label-end, foreignObject.label-start {
 	overflow: visible;
 	color: var(--stroke-color);
-	width: 0;
-	height: 0;
 	white-space: pre;
 
 	> div{
@@ -850,12 +855,10 @@ foreignObject.label-end, foreignObject.label-start {
 	& .left {
 		display: flex;
 		justify-content: flex-start!important;
-		width: 0px;
 	}
 	& .right {
 		display: flex;
 		justify-content: flex-end!important;
-		width: 0px;
 	}
 }
 
@@ -901,7 +904,6 @@ foreignObject.label-end, foreignObject.label-start {
                     </foreignObject>
                 ])}
                 { /* edge head */ }
-                {console.error('edge jsx', {segments})}
                 ` + head + `
                 { /* edge tail */ }
                 ` + tail + `
@@ -1565,7 +1567,7 @@ public static enum(): string { return (
     transition: 'background 0.15s ease'
 }}>
     {/* Left side: Name with colon */}
-    <div style={{display: 'flex', alignItems: 'center', gap: '4px'}}>
+    <div className={"me-1"}>
         {/* External indicator */}
         {(data.type && data.type.model && data.type.model.id !== data.model.id) &&
             <i className="bi bi-box-arrow-up-right" style={{
@@ -1580,10 +1582,7 @@ public static enum(): string { return (
     </div>
 
     {/* Right side: Type Select (smaller) */}
-    <div style={{maxWidth: '110px', minWidth: '80px'}}>
-        <Select data={data} field={'type'} />
-    </div>
-
+    <Select data={data} field={'type'} />
     {decorators}
 </View>`
 );}

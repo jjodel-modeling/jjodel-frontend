@@ -148,7 +148,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     const metamodels = project.metamodels || [];
     const models = project.models || [];
     const viewpoints = project.viewpoints || [];
-    const tags = project.tags || [];
+    const tags = project.tagNames || [];
 
     // Transformations state (in-memory for now)
     const [transformations, setTransformations] = useState<JjtlTransformation[]>([]);
@@ -568,7 +568,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 .filter(t => t.length > 0 && !tags.includes(t));
 
             if (newTags.length > 0) {
-                project.tags = [...tags, ...newTags];
+                project.tagNames = [...tags, ...newTags];
                 markDirty();
             }
             setNewTag('');
@@ -577,7 +577,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     };
 
     const handleRemoveTag = (tagToRemove: string) => {
-        project.tags = tags.filter(t => t !== tagToRemove);
+        project.tagNames = tags.filter(t => t !== tagToRemove);
         markDirty();
     };
 

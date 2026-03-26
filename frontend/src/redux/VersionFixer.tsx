@@ -575,15 +575,25 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         s.projects = [pid];
         for (let k in s.idlookup) {
             let e = s.idlookup[k] as GObject;
-            if (k !== pid && e?.className === 'DProject') {
+            if (!e?.className) continue;
+            if (k !== pid && e.className === 'DProject') {
                 delete s.idlookup[k];
             }
-            if ((e?.className.includes('Vertex') || e?.className.includes('EdgePoint') || e?.className.includes('View')) && !('snap' in e)) {
+            if ((e.className.includes('Vertex') || e.className.includes('EdgePoint') || e.className.includes('View')) && !('snap' in e)) {
                 e.snap = {x:1, y:1};
             }
-            if ((/*e?.className.includes('Graph') ||*/ e?.className.includes('View')) && !('grid' in e)) {
+            if ((/*e.className.includes('Graph') ||*/ e.className.includes('View')) && !('grid' in e)) {
                 e.grid = {x: 0, y:0, type:'cartesian', center: 'cc', visible: true};
             }
+        }
+        return s;
+    }
+
+    private ['2.209 -> 2.210'](s: DState): DState {
+        for (let k in s.idlookup) {
+            let e = s.idlookup[k] as GObject;
+            if (!e?.className) continue;
+            if (e.className === 'DProject' && !e.tagNames) { e.tagNames = e.tags || [] }
         }
         return s;
     }

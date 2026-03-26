@@ -4,7 +4,7 @@
  */
 
 import React, { useRef, useEffect, useCallback } from 'react';
-import * as monaco from 'monaco-editor';
+import {monaco} from "../../joiner";
 import { registerJjtlLanguage, JJTL_LANGUAGE_ID } from './jjtlLanguage';
 import { registerJjtlTheme, JJTL_THEME_ID } from './jjtlTheme';
 import { tokenize } from '../lexer';

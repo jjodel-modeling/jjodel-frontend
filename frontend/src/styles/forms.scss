@@ -33,7 +33,7 @@
     color: #9ca3af;
   }
 }
-
+/*
 .form-input,
 .form-select,
 .form-textarea {
@@ -75,6 +75,8 @@
   resize: vertical;
   line-height: 1.5;
 }
+
+*/
 
 .form-hint {
   display: block;
@@ -121,19 +123,19 @@
     transform: translateY(-50%) rotate(180deg);
     color: #ef4444;
   }
-}
+  .form-select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    padding-right: 40px;  // Space for custom arrow
+    cursor: pointer;
 
-.form-select {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  padding-right: 40px;  // Space for custom arrow
-  cursor: pointer;
-
-  &::-ms-expand {
-    display: none;  // Remove IE arrow
+    &::-ms-expand {
+      display: none;  // Remove IE arrow
+    }
   }
 }
+
 
 // ----------------
 // TOGGLE SWITCHES

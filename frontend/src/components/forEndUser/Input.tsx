@@ -18,7 +18,7 @@ import {
     DPointerTargetable,
     GObject,
     Keystrokes, L, LAttribute,
-    LClass, LEnumerator, LEnumLiteral, LModel, LObject,
+    LClass, LEnumerator, LEnumLiteral, LModel, LObject, Log,
     LPointerTargetable, LReference, LStructuralFeature, LValue, MultiSelect, MultiSelectOptGroup,
     MultiSelectOption,
     Overlap,
@@ -48,9 +48,10 @@ function errorUpdate(msg: string, e: Error){
 }
 
 export function getSelectOptions(data: LPointerTargetable, field: string, options: ReactNode, children?: ReactNode, id_debug?:string): ReactNode {
-    if (options && React.isValidElement(options) && (options as any)?.length !== 0) {
-        if (Array.isArray(options)) {
-            return options.map(d => {
+    let asArr: any[] | null = Array.isArray(options) ? options : null;
+    if (options && (asArr || React.isValidElement(options)) && asArr?.length !== 0) {
+        if (asArr) {
+            return asArr.map(d => {
                 if (DPointerTargetable.isD(d)) return <option value={d.id}>d.name</option>;
                 if (Pointers.isPointer(d)) {
                     let d2 = L.fromPointer(d) as DPointerTargetable;
@@ -61,9 +62,10 @@ export function getSelectOptions(data: LPointerTargetable, field: string, option
         }
         return options;
     }
-    if (children && React.isValidElement(children) && (children as any)?.length !== 0) {
-        if (Array.isArray(children)) {
-            return children.map(d => {
+    asArr = Array.isArray(children) ? children : null;
+    if (children && (asArr || React.isValidElement(children)) && asArr?.length !== 0) {
+        if (asArr) {
+            return asArr.map(d => {
                 if (DPointerTargetable.isD(d)) return <option value={d.id}>d.name</option>;
                 if (Pointers.isPointer(d)) {
                     let d2 = L.fromPointer(d) as DPointerTargetable;
@@ -158,23 +160,25 @@ export function InputComponent(props: AllProps) {
     let postlabel: ReactNode | undefined = props.postlabel;
     let tooltip: ReactNode|string|undefined = ((props.tooltip === true) ? data?.['__info_of__' + field]?.txt : props.tooltip) || '';
 
-    let classes = '_Input ';//'my-auto input ';
+    let classes = ' ';//'my-auto input ';
     //classes += (jsxLabel) ? 'ms-1' : (label) ? 'ms-auto' : '';
     classes += (props.hidden) ? ' hidden-input' : '';
     classes += (props.clickHidden) ? ' click-hidden-input' : '';
     let autosize: boolean = props.autosize === undefined ? false : props.autosize; // props.type==='text'
     classes += autosize ? ' autosize-input' : '';
     const isBoolean = (['checkbox', 'radio'].includes(type));
-
+    const isTextual = !isBoolean && (props.tag !== 'select');
 
     const onDoubleClick = (evt: React.MouseEvent<HTMLInputElement>) => { // fully select the text
+        try { (props as any).onDoubleClick?.(evt); } catch (e) { Log.ee("error in user event Input.onDoubleClick", e); }
+        if (!isTextual) return;
         evt.preventDefault();
         evt.stopPropagation();
         console.warn('input dblclick', {t:evt.target, evt}); //, ets:(evt.target as HTMLInputElement).select()};
         (evt.target as HTMLInputElement).select?.();
     }
     const onChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
-        (props as any).onChange?.(evt);
+        try { (props as any).onChange?.(evt); } catch (e) { Log.ee("error in user event Input.onChange", e); }
         if (readOnly) return;
 
         if (isBoolean) {
@@ -195,8 +199,8 @@ export function InputComponent(props: AllProps) {
         }
     }
     const onKeyDown = (evt: React.KeyboardEvent<HTMLInputElement>) => {
-        (props as any).onKeyDown?.(evt);
-        if (props.tag === 'select') return;
+        try { (props as any).onKeyDown?.(evt); } catch (e) { Log.ee("error in user event Input.onKeyDown", e); }
+        if (!isTextual) return;
         if (evt.key === Keystrokes.enter) confirmValue(evt as any);
         if (evt.key === Keystrokes.escape) {
             const oldValue = getter ? getter(data, field) : data[field];
@@ -208,12 +212,19 @@ export function InputComponent(props: AllProps) {
             // optimize 2: memoize the whole component, so it won't update unless the displayed value changed. this would also fix cursor going to input end when pressing enter.
         }
     }
+    const onBlur = (evt: { target: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement }) => {
+        try { (props as any).onBlur?.(evt); } catch (e) { Log.ee("error in user event Input.onBlur", e); }
+        if (!isTextual) return;
+        confirmValue(evt);
+    }
+
     const getValueFromEvent = (evt: { target: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement }) => {
         switch (props.tag){
             case "textarea": case "input": case "select": case "": case null: case undefined: return evt.target.value;
             default: return evt.target.innerText;
         }
     }
+
     const writeHtmlValueFromEvent = (evt: { target: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement }, value: any) => {
         value = serializeValue(value);
         switch (props.tag){
@@ -222,11 +233,6 @@ export function InputComponent(props: AllProps) {
         }
     }
 
-    const onBlur = (evt: { target: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement }) => {
-        (props as any).onBlur?.(evt);
-        if (props.tag === 'select') return;
-        confirmValue(evt);
-    }
     const confirmValue = (evt: { target: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement }|undefined, val?: PrimitiveType|PrimitiveType[]) => {
         if (readOnly || isBoolean) return;
         const newValue = val || (evt && getValueFromEvent(evt));
@@ -255,7 +261,8 @@ export function InputComponent(props: AllProps) {
     delete otherprops.autosize; // because react complains is bool in dom attribute or unknown attrib name
 
     let checked: boolean | undefined = undefined;
-    if (isBoolean) checked = typeof value === "boolean" ? value : (typeof value === "string" ? U.fromBoolString(value) : !!value);
+    if (isBoolean) checked = typeof value === "boolean" ? value :
+        (typeof value === "string" ? U.fromBoolString(value, false, subtype === "checkbox3" ? undefined : false, subtype === "checkbox3" ? undefined : false) : !!value);
 
     let cursor: string;
     if (tooltip) cursor = 'help';
@@ -265,9 +272,9 @@ export function InputComponent(props: AllProps) {
 
     // Add form design system classes based on input type
     let formClass = '';
-    if (props.tag === 'textarea') formClass = 'form-textarea';
+    /*if (props.tag === 'textarea') formClass = 'form-textarea';
     else if (props.tag === 'select') formClass = 'form-select';
-    else if (!isBoolean && type !== 'range') formClass = 'form-input';
+    else if (!isBoolean && type !== 'range') formClass = 'form-input';*/
 
     let inputProps: GObject = {...otherprops,
         className: [formClass, props.inputClassName||'', classes].join(' '),
@@ -281,10 +288,7 @@ export function InputComponent(props: AllProps) {
         onDoubleClick,
         onChange, onBlur, onKeyDown} // key:`${field}.${data?.id}`
     if (!inputProps.style.cursor) { inputProps.style.cursor = cursor; }
-    switch (subtype) {
-        case 'checkbox3': case 'switch': case 'slider': inputProps.className += ' ' + subtype + (oldValue===undefined?'undetermined':''); break;
-        default: break;
-    }
+    if (subtype) inputProps.className += ' ' + subtype + (oldValue === undefined ? ' undetermined' : '');
 
     let input: ReactNode;
     let rootprops: GObject = {className: otherprops.className||'', style: otherprops.style||{}};

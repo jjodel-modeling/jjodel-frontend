@@ -2,7 +2,7 @@
  * JjTL Autocompletion Provider for Monaco Editor
  */
 
-import * as monaco from 'monaco-editor';
+import {monaco} from "../../joiner";
 import { JJTL_LANGUAGE_ID } from './jjtlLanguage';
 import {CancellationToken, editor, languages, Position} from "monaco-editor";
 

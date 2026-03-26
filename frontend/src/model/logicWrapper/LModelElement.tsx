@@ -5365,6 +5365,9 @@ instanceof === undefined or missing  --> auto-detect and assign the type
     protected get_roots(context: Context, includeCross: boolean = false): this["roots"] {
         return this.get_objects(context, includeCross);//.filter( o => o.isRoot);
     }
+    protected get_root(context: Context, includeCross: boolean = false): this["roots"][0] {
+        return this.get_objects(context, includeCross)[0];
+    }
 
     protected get_crossClasses(c: Context, s?: DState): this["classes"] { return this.get_classes(c, s, true); }
     protected get_classes(c: Context, s?: DState, includeCross: boolean = false): this["classes"] {

@@ -223,14 +223,14 @@
 .form-textarea,
 input.form-input,
 textarea.form-textarea {
-  width: 100%; 
-  height: 32px!important;
-  padding: 14px 16px !important;
+  width: 100%;
+  height: 32px;
+  padding: 14px 16px;
   background: #ffffff;
-  border: 1px solid #d1d5db !important;
+  border: 1px solid #d1d5db;
   border-radius: 8px;
-  font-size: 13px !important;
-  line-height: 1.5 !important;
+  font-size: 13px;
+  line-height: 1.5;
   color: #1f2937;
   margin-bottom: 2px;
   transition: all 0.2s ease;
@@ -272,7 +272,7 @@ textarea.form-textarea {
   line-height: 1.6;
 }
 
-/* Enhanced select - match user profile style */
+/* Enhanced select - match user profile style
 .form-select,
 select.form-select {
   width: 100%;
@@ -317,7 +317,7 @@ select.form-select {
     color: #9ca3af;
     font-style: italic;
   }
-}
+}*/
 
 .form-hint {
   display: flex;

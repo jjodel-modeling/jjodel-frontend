@@ -48,24 +48,23 @@ input[type="url"],
 input[type="tel"],
 input[type="date"],
 input[type="time"],
-textarea,
 .form-input, .form-input.form-input-fix,
 .form-textarea {
-  width: 100% !important;
-  height: var(--form-input-height) !important;
-  padding: var(--form-input-padding-y) var(--form-input-padding-x) !important;
-  font-family: var(--font-sans, 'Inter Variable', -apple-system, sans-serif) !important;
-  font-size: var(--form-input-font-size) !important;
-  color: var(--form-input-color) !important;
-  background: var(--form-input-bg) !important;
-  border: 1px solid var(--form-input-border-color) !important;
-  border-radius: var(--form-input-border-radius) !important;
-  outline: none !important;
-  box-sizing: border-box !important;
-  transition: border-color 150ms ease, box-shadow 150ms ease !important;
+  min-width: 35px;
+  height: var(--form-input-height);
+  padding: var(--form-input-padding-y) var(--form-input-padding-x);
+  font-family: var(--font-sans, 'Inter Variable', -apple-system, sans-serif);
+  font-size: var(--form-input-font-size);
+  color: var(--form-input-color);
+  background: var(--form-input-bg);
+  border: 1px solid var(--form-input-border-color);
+  border-radius: var(--form-input-border-radius);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
 
   &:hover:not(:disabled):not(:focus) {
-    border-color: var(--form-input-border-color-hover) !important;
+    border-color: var(--form-input-border-color-hover);
   }
 
   &:focus {
@@ -132,7 +131,7 @@ textarea,
 // ==============================================
 // SELECT STYLES
 // ==============================================
-
+/*
 select,
 .select,
 .form-select {
@@ -182,7 +181,7 @@ select,
     color: var(--form-input-color);
   }
 }
-
+*/
 // ==============================================
 // NUMBER INPUT WITH SPINNER
 // ==============================================
@@ -221,7 +220,10 @@ input[type="number"] {
   gap: 8px;
   margin-bottom: var(--form-field-gap);
   flex-wrap: wrap;
-
+  >*{
+    margin-top: auto;
+    margin-bottom: auto;
+  }
   // Label styling (the <b> element)
   > b,
   > label:first-child {
@@ -232,15 +234,6 @@ input[type="number"] {
     min-width: 100px;
   }
 
-  // Input/Select inside container
-  > input,
-  > select,
-  > .input,
-  > .select {
-    flex: 1;
-    min-width: 120px;
-    height: var(--form-input-height);
-  }
 
   // Checkbox/Radio styling
   > input[type="checkbox"],
@@ -526,7 +519,7 @@ input[type="number"] {
 // ==============================================
 
 // Override react-select control
-[class*="-control"],
+// [class*="-control"],
 .css-control,
 .select__control {
   min-height: var(--form-input-height) !important;
@@ -579,16 +572,16 @@ input[type="number"] {
 }
 
 // Dropdown menu
-[class*="-menu"],
+// [class*="-menu"],
 .select__menu {
   //border: 1px solid var(--form-input-border-color) !important;
   border-radius: var(--form-input-border-radius) !important;
   //box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
-  z-index: 100 !important;
+  z-index: 100;
 }
 
 // Menu options
-[class*="-option"],
+// [class*="-option"],
 .select__option {
   padding: 10px var(--form-input-padding-x) !important;
   font-size: var(--form-input-font-size) !important;
@@ -930,13 +923,10 @@ html[data-theme="dark"] {
 // ==============================================
 
 .monaco-editor-wrapper {
-  min-height: 150px !important;
-}
-
-// Specific contexts may need larger minimum heights
-.template-tab .monaco-editor-wrapper,
-.jsx-editor .monaco-editor-wrapper {
   min-height: 200px !important;
+  >*{
+    min-height: 200px;
+  }
 }
 
 // Function component editors (Constants, Observed properties)

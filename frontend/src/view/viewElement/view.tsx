@@ -291,13 +291,12 @@ export class DViewElement extends DPointerTargetable {
 
 <View className={'root bg-white p-1'}>
     <div className={'header'}>
-        {data ? <label className={'input-container mx-2'}>
-            <b className={'object-name'}>Name:</b>
-            {data.$name ?
-                <Input data={data.$name} field={'value'} hidden={true} autosize={true} placeholder={'enter name'}/> :
+        {!data ? null :
+            <label className={'input-container mx-2'}>
+                <b className={'object-name'}>Name:</b>
                 <Input data={data} field={'name'} hidden={true} autosize={true} placeholder={'enter name'}/>
-            }
-        </label> ? null}
+            </label>
+        }
     </div>
     <div className={'body'}>To add information here,<br/> edit the view<br/>"{view.name}"</div>
     {decorators}

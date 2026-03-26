@@ -332,20 +332,20 @@
 
   // 2. Filter input - grows to push tags right
   [class*="-Input"] {
-    flex: 1 1 auto !important;
-    min-width: 50px !important;
-    margin: 0 !important;
-    padding: 0 !important;
+    flex: 1 1 auto;
+    min-width: 50px;
+    margin: 0;
+    padding: 0;
 
     input {
-      border: none !important;
-      outline: none !important;
-      box-shadow: none !important;
-      background: transparent !important;
-      padding: 0 !important;
-      margin: 0 !important;
-      font-size: 13px !important;
-      width: 100% !important;
+      border: none;
+      outline: none;
+      box-shadow: none;
+      background: transparent;
+      padding: 0;
+      margin: 0;
+      font-size: 13px;
+      width: 100%;
     }
   }
 

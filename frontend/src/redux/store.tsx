@@ -110,7 +110,6 @@ export class DState extends DPointerTargetable{
     timestamp!: number;
     timestampdiff!: number;
 
-    env: Dictionary = process.env;  //damiano: this might make problems on load
     debug: boolean = false;
     logs: Pointer<DLog>[] = [];
     models: Pointer<DModel, 0, 'N'> = []; // Pointer<DModel, 0, 'N'>[] = [];
@@ -290,14 +289,6 @@ export class DState extends DPointerTargetable{
   }
   
 
-  /* style inputs */
-  select, input{
-    background: inherit;
-    color: inherit;
-    &:empty{
-      font-style: italic;
-    }
-  }
 }
 
 /* normally hide overflow on all nodes */

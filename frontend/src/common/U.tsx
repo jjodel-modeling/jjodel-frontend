@@ -313,7 +313,8 @@ export class U {
     };
 
     static publish(topic: string, value: unknown) {
-        if(!IoT.client.connected) {
+        if (!IoT.client) IoT.init();
+        if (!IoT.client.connected) {
             SetRootFieldAction.new('alert', '3:Cannot connect to broker!:','');
             return;
         }
@@ -1662,13 +1663,14 @@ export class U {
 
     static fromBoolString<T extends any>(str: string | boolean): boolean;
     static fromBoolString<T extends any>(str: string | boolean, defaultVal?: T): boolean | T;
-    static fromBoolString<T extends any>(str: string | boolean, defaultVal?: T, allowNull?: boolean): boolean | null | T;
-    static fromBoolString<T extends any>(str: string | boolean, defaultVal: T = false as any, allowNull: boolean = false, allowUndefined: boolean = false): boolean | null | undefined | T {
+    static fromBoolString<T extends any>(str: string | boolean, defaultVal?: T, nullValue?: T): boolean | T;
+    static fromBoolString<T extends any>(str: string | boolean, defaultVal?: T, nullValue?: T, undefValue?: T): boolean | T;
+    static fromBoolString<T extends any>(str: string | boolean, defaultVal: T = false as any, nullValue: T = null as any, undefValue: T = undefined as any): boolean | T {
         if (str === false) return false;
         if (str === true) return true;
-        str = ('' + str).toLowerCase();
-        if (allowNull && (str === 'null')) return null;
-        if (allowUndefined && (str === 'undefined')) return undefined;
+        str = ('' + str).toLowerCase().trim();
+        if ((str === 'null')) return nullValue;
+        if ((str === 'undefined')) return undefValue;
 
         if (str === "true" || str === 't' || str === '1') return true;
         // if (defaultVal === true) return str === "false" || str === 'f' || str === '0'; // false solo se è esplicitamente false, true se ambiguo.
@@ -2931,6 +2933,11 @@ export class U {
     public static camelCase(s: string): string {
         if (!s) return s;
         return s[0].toUpperCase() + s.substring(1);
+    }
+
+    public static env(varr: string): string {
+        if (!varr) return window['process'].env as any;
+        return window['process'].env[varr] || '';
     }
 
 }

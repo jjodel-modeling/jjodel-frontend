@@ -322,11 +322,11 @@ class LoggerComponent extends PureComponent<AllProps, ThisState> {
             {/* Toolbar */}
             <div className={"search-row"}>
                 <input placeholder={"Filter logs..."} className={"search " + (this.state.regexpIsInvalid ? "invalid" : "")} type={"search"} value={this.state.searchTag} onChange={ this.changeSearch } />
-                <label className={"toolbar-checkbox"}>
+                <label className={"logger-checkbox"}>
                     <input type="checkbox" checked={this.state.searchTagAsRegExp} onChange={this.changeRegexpSearch} />
                     <span>RegExp</span>
                 </label>
-                <label className={"toolbar-checkbox"}>
+                <label className={"logger-checkbox"}>
                     <input type="checkbox" checked={this.state.searchTagIsDeep} onChange={this.changeDeepSearch} />
                     <span>Deep</span>
                 </label>

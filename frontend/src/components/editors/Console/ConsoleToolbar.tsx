@@ -51,7 +51,7 @@ export const ConsoleToolbar: React.FC<ConsoleToolbarProps> = ({
     <div className="console-toolbar">
       <div className="console-toolbar__left">
         <button
-          className="toolbar-btn"
+          className="toolbar-btn console-btn"
           onClick={handleClearConsole}
           title="Clear console (Ctrl+L)"
           type="button"
@@ -61,7 +61,7 @@ export const ConsoleToolbar: React.FC<ConsoleToolbarProps> = ({
         </button>
 
         <button
-          className="toolbar-btn"
+          className="toolbar-btn console-btn"
           onClick={handleCopyAll}
           title="Copy all output"
           type="button"

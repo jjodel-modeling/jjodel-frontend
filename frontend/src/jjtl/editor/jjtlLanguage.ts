@@ -2,7 +2,7 @@
  * JjTL Language Definition for Monaco Editor
  */
 
-import * as monaco from 'monaco-editor';
+import {monaco} from "../../joiner";
 
 export const JJTL_LANGUAGE_ID = 'jjtl';
 

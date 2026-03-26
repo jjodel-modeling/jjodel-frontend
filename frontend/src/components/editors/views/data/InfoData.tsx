@@ -31,6 +31,7 @@ function InfoDataComponent(props: AllProps) {
     let vp = view.viewpoint;
     let vpid = vp?.id;
     let dallVP: DViewPoint[] = viewpoints.map(v=>v.__raw);
+    console.log("infodatacomponent", {dallVP, viewpoints, vp, vpid, parents:view.allPossibleParentViews.filter(v=>v.viewpoint?.id === vpid)});
 
     const objectTypes = ['', 'DModel', 'DPackage', 'DEnumerator', 'DEnumLiteral', 'DClass', 'DAttribute', 'DReference', 'DOperation', 'DParameter', 'DObject', 'DValue', 'DStructuralFeature'];
     const classesOptionsJSX = <optgroup label={'Object type'}>
@@ -135,7 +136,7 @@ function InfoDataComponent(props: AllProps) {
                     className="form-select"
                 >
                     <option value="">Select viewpoint...</option>
-                    {dallVP.map((viewpoint) => (
+                    {...dallVP.map((viewpoint) => (
                         <option key={viewpoint.id} value={viewpoint.id}>{viewpoint.name}</option>
                     ))}
                 </Select>
@@ -151,7 +152,7 @@ function InfoDataComponent(props: AllProps) {
                     className="form-select"
                 >
                     <option value="">None</option>
-                    {view.allPossibleParentViews.filter(v=>v.viewpoint?.id === vpid).map((view) => (
+                    {...view.allPossibleParentViews.filter(v=>v.viewpoint?.id === vpid).map((view) => (
                         <option key={view.id} value={view.id}>{view.name}</option>
                     ))}
                 </Select>
