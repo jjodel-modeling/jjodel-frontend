@@ -22,7 +22,7 @@ RUN npm run build
 FROM nginx:alpine
 
 # Copia la build dal stage precedente
-COPY --from=builder /app/build /usr/share/nginx/html
+COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Copia la configurazione di Nginx ottimizzata per standalone
 COPY nginx-standalone.conf /etc/nginx/conf.d/default.conf
