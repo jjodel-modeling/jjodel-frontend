@@ -29,6 +29,7 @@
 % New macros
 \newcommand{\jjmodal}{\textsf{JjModal}}
 \newcommand{\jjlet}{\textsf{JjLet}}
+\newcommand{\jjscript}{\textsf{JjScript}}
  
 % JjModal listing language (for standalone grammar/example fragments)
 
@@ -68,7 +69,7 @@
 
 % JjTL
 \lstdefinelanguage{jjtl}{
-    morekeywords={transformation, from, to, when, helper, alert, notify, prompt, input, let},
+    morekeywords={transformation, from, to, where, helper, alert, notify, prompt, input, let, confirm},
     morekeywords=[2]{forall, exists, implies, such, that, with, do, if, then, else, and, or, not, is, true, false, null, in},
     sensitive=true,
     morecomment=[l]{\#},
@@ -122,6 +123,29 @@
     stringstyle=\color{red!60!black},
 }
  
+
+% JjScript
+\lstdefinelanguage{jjscript}{
+    morekeywords={create, delete, rename, set, add, remove, move, copy, list, show, help, undo, redo, clear, validate, extends, eval, let, forall},
+    morekeywords=[2]{class, abstract, interface, attribute, reference, containment, composition, operation, parameter, package, enum, literal, model, metamodel, annotation, in, to, from, as, deep, cascade, force, do, such, that, type, default, derived, readonly, brief, full, tree, all},
+    morekeywords=[3]{forall, exists, implies, with, if, then, else, and, or, not, is, true, false, null},
+    sensitive=true,
+    morecomment=[l]{//},
+    morecomment=[l]{\#},
+    morecomment=[s]{/*}{*/},
+    morestring=[b]",
+    morestring=[b]',
+}
+
+\lstdefinestyle{jjscript}{
+    style=base,
+    language=jjscript,
+    keywordstyle=\bfseries\color{cyan!70!black},
+    keywordstyle=[2]\color{teal!80!black},
+    keywordstyle=[3]\bfseries\color{purple!70!black},
+    commentstyle=\itshape\color{green!40!black},
+    stringstyle=\color{red!60!black},
+}
 
 % ATL
 \lstdefinelanguage{atl}{
@@ -246,7 +270,7 @@
 \vspace{6pt}
 
 \begin{abstract}
-This document presents the design and rationale of two domain-specific languages developed within the Jjodel ecosystem: \jjtl{} (Jjodel Transformation Language), a declarative Model-to-Model transformation language, and \jjel{} (Jjodel Expression Language), a set-theoretic expression language inspired by first-order logic. We describe the syntax, semantics, and, most importantly, the \emph{design motivations} behind each language construct, explaining \emph{why} certain decisions were made and what alternatives were considered. We then provide a detailed comparison with four established transformation languages: ATL, EOL/ETL, QVT Relations, and QVT Operational Mappings. Finally, we present a series of parallel transformation examples across ATL, ETL, and \jjtl{} to enable direct syntactic and conceptual comparison.
+This document presents the design and rationale of the domain-specific languages developed within the Jjodel ecosystem: \jjel{} (Jjodel Expression Language), a set-theoretic expression language inspired by first-order logic; \jjtl{} (Jjodel Transformation Language), a declarative Model-to-Model transformation language; \jjmodal{}, a minimal interaction sub-language; \jjlet{}, a let-binding construct for interactive transformations; and \jjscript{} (Jjodel Scripting Language), an imperative command language for direct metamodel manipulation. We describe the syntax, semantics, and, most importantly, the \emph{design motivations} behind each language construct, explaining \emph{why} certain decisions were made and what alternatives were considered. We then provide a detailed comparison with four established transformation languages: ATL, EOL/ETL, QVT Relations, and QVT Operational Mappings. Finally, we present a series of parallel transformation examples across ATL, ETL, and \jjtl{} to enable direct syntactic and conceptual comparison.
 \end{abstract}
 
 \tableofcontents
@@ -272,6 +296,7 @@ The Jjodel project addresses these issues with two complementary languages:
 \begin{itemize}
     \item \textbf{\jjel{}}, a set-theoretic expression language whose core construct, \kw{forall}, has \emph{set comprehension} semantics (it returns a set, not a boolean). This bridges the gap between formal logic and practical computation, providing a single primitive that replaces \texttt{filter}, \texttt{map}, and logical quantification.
     \item \textbf{\jjtl{}}, a declarative M2M transformation language that uses \jjel{} as its expression sub-language, offering a simpler rule structure than ATL while maintaining automatic traceability and guard conditions.
+    \item \textbf{\jjscript{}}, an imperative scripting language for direct metamodel manipulation, providing a command-based interface for creating, modifying, and querying metamodel elements with expression delegation to \jjel{}.
 \end{itemize}
 
 \subsection{Design Criteria}
@@ -286,7 +311,7 @@ Both languages were designed under three guiding principles, applied in strict p
 
 \subsection{Document Structure}
 
-\Cref{sec:jjel} presents \jjel{} in detail, including its set-theoretic semantics and design motivations. \Cref{sec:jjtl} describes \jjtl{} and its transformation model. \Cref{sec:jjmodal} introduces \jjmodal{}, the interaction sub-language for user-facing commands. \Cref{sec:jjlet} presents \jjlet{}, a let-binding construct that bridges asynchronous interaction with synchronous expression evaluation. \Cref{sec:comparison} provides a detailed comparative analysis with ATL, EOL/ETL, QVT-R, and QVT-O. \Cref{sec:examples} presents parallel transformation examples across multiple languages. \Cref{sec:discussion} discusses open points and future directions.
+\Cref{sec:jjel} presents \jjel{} in detail, including its set-theoretic semantics and design motivations. \Cref{sec:jjtl} describes \jjtl{} and its transformation model. \Cref{sec:jjmodal} introduces \jjmodal{}, the interaction sub-language for user-facing commands. \Cref{sec:jjlet} presents \jjlet{}, a let-binding construct that bridges asynchronous interaction with synchronous expression evaluation. \Cref{sec:jjscript} presents \jjscript{}, an imperative scripting language for direct metamodel manipulation. \Cref{sec:comparison} provides a detailed comparative analysis with ATL, EOL/ETL, QVT-R, and QVT-O. \Cref{sec:examples} presents parallel transformation examples across multiple languages. \Cref{sec:discussion} discusses open points and future directions.
 
 
 % ============================================
@@ -514,34 +539,37 @@ Using \texttt{.} on a null value throws an error by design: this forces users to
 
 \subsection{Built-in Methods}
 
-\jjel{} provides over 125 built-in methods organized by type. The guiding principle is that the most frequent MDE operations should be native, requiring no import or boilerplate.
+\jjel{} provides over 130 built-in methods organized by type. The guiding principle is that the most frequent MDE operations should be native, requiring no import or boilerplate.
 
 \begin{center}
 \begin{tabular}{@{}lrl@{}}
 \toprule
 \textbf{Category} & \textbf{Count} & \textbf{Highlights} \\
 \midrule
-String & 33 & \texttt{camelCase()}, \texttt{pascalCase()}, \texttt{snakeCase()}, \texttt{kebabCase()} \\
-Number & 30 & \texttt{abs()}, \texttt{clamp()}, \texttt{between()}, trigonometry \\
-Collection & 28 & \texttt{sortBy()}, \texttt{groupBy()}, \texttt{flatten()}, \texttt{distinct()} \\
-Date & 39 & \texttt{addDays()}, \texttt{diffMonths()}, \texttt{format()} \\
+String & 36 & \texttt{camelCase()}, \texttt{pascalCase()}, \texttt{snakeCase()}, \texttt{kebabCase()} \\
+Number & 35 & \texttt{abs()}, \texttt{clamp()}, \texttt{between()}, trigonometry \\
+Collection & 31 & \texttt{sortBy()}, \texttt{groupBy()}, \texttt{flatten()}, \texttt{distinct()} \\
+Date & 36+5$^*$ & \texttt{addDays()}, \texttt{diffMonths()}, \texttt{format()} \\
 \bottomrule
 \end{tabular}
+
+\vspace{4pt}
+\footnotesize $^*$36 instance methods plus 5 constructor functions (\texttt{now()}, \texttt{today()}, \texttt{date()}, \texttt{datetime()}, \texttt{parseDate()}).
 \end{center}
 
 Naming convention methods (\texttt{camelCase}, \texttt{pascalCase}, \texttt{snakeCase}, \texttt{kebabCase}) are native because they are essential in model transformations (e.g., converting class names to table names, attribute names to column names). No other transformation language provides these natively.
 
-Note: \texttt{filter()} and \texttt{map()} are \emph{removed} from the collection methods, as they are replaced by the \kw{forall} construct. The remaining collection methods are those that \kw{forall} does not subsume: aggregation (\texttt{sum}, \texttt{avg}), ordering (\texttt{sortBy}), structure (\texttt{groupBy}, \texttt{flatten}), and boolean checks (\texttt{all}, \texttt{any}, \texttt{none}).
+Note: while \texttt{filter()} and \texttt{map()} remain available for backward compatibility and for use with lambda-based patterns, the idiomatic \jjel{} approach is to use \kw{forall}, which subsumes both operations in a single construct. The remaining collection methods are those that \kw{forall} does not subsume: aggregation (\texttt{sum}, \texttt{avg}), ordering (\texttt{sortBy}), structure (\texttt{groupBy}, \texttt{flatten}), and boolean checks (\texttt{all}, \texttt{any}, \texttt{none}).
 
 
 \subsection{Evaluation Rules}
 
 \subsubsection{Short-Circuit Evaluation}
 
-\kw{and} and \kw{or} use \textbf{short-circuit} evaluation: the right operand is not evaluated if the result is determined by the left operand. This is essential for guard-like expressions:
+\kw{and} and \kw{or} are specified with \textbf{short-circuit} semantics: the right operand should not be evaluated if the result is determined by the left operand alone. This enables guard-like expressions:\footnote{The current implementation (v0.x) evaluates both operands eagerly due to the structure of the binary expression evaluator. Short-circuit evaluation is specified as a target for a future release. In the meantime, null safety in guard expressions is best achieved via the \texttt{?.}\ operator.}
 
 \begin{lstlisting}[style=jjel,numbers=none]
-parent != null and parent.name.isNotEmpty    -- safe: parent.name not reached if null
+parent != null and parent?.name.isNotEmpty   -- null-safe via ?. operator
 \end{lstlisting}
 
 \subsubsection{Truthiness}
@@ -570,7 +598,7 @@ parent != null and parent.name.isNotEmpty    -- safe: parent.name not reached if
 
 \begin{itemize}
     \item \textbf{Simpler than ATL}: No two-phase execution, no \texttt{thisModule} reference, no distinction between matched/lazy/called rules. Every rule is a class mapping.
-    \item \textbf{More structured than ETL}: Attribute mappings use a declarative binding syntax (\texttt{->}) rather than imperative assignment. Guards are explicit (\kw{when}) rather than statement blocks.
+    \item \textbf{More structured than ETL}: Attribute mappings use a declarative binding syntax (\texttt{->}) rather than imperative assignment. Guards are explicit (\kw{where}) rather than statement blocks.
     \item \textbf{JjEL instead of OCL}: Expressions use \jjel{}'s set-theoretic semantics, null-safe navigation, and native naming conventions, features that OCL does not provide.
 \end{itemize}
 
@@ -599,13 +627,26 @@ helper formatLabel(s: String) -> String {
 
 \subsection{Class Mappings}
 
-A class mapping specifies a correspondence between a source class and a target class:
+A class mapping specifies a correspondence between one or more source classes and a target class:
 
 \begin{lstlisting}[style=jjtl,numbers=none]
-SourceClass -> TargetClass [multiplicity] when { guard } {
+SourceClass -> TargetClass [multiplicity] where { guard } {
     attributeMappings...
 }
 \end{lstlisting}
+
+\subsubsection{Multi-Source Mappings}
+
+A class mapping may specify multiple source classes, optionally with aliases, separated by commas:
+
+\begin{lstlisting}[style=jjtl,numbers=none]
+ClassA a, ClassB b -> MergedClass where { a.name == b.name } {
+    a.name -> name
+    b.description -> description
+}
+\end{lstlisting}
+
+This enables join-like semantics where multiple source instances are combined into a single target instance. Without aliases, source properties are accessed by class membership; with aliases, the alias provides an explicit qualifier for disambiguation.
 
 \subsubsection{Multiplicity}
 
@@ -619,10 +660,10 @@ Multiplicity controls how many target instances are created per source instance:
 
 \subsubsection{Guard Conditions}
 
-The \kw{when} clause filters which source instances are transformed. The guard is a \jjel{} expression evaluated with the source instance as implicit context:
+The \kw{where} clause filters which source instances are transformed. The guard is a \jjel{} expression evaluated with the source instance as implicit context:
 
 \begin{lstlisting}[style=jjtl,numbers=none]
-Class -> Table when { not isAbstract and attributes.isNotEmpty } {
+Class -> Table where { not isAbstract and attributes.isNotEmpty } {
     ...
 }
 \end{lstlisting}
@@ -656,6 +697,16 @@ Arbitrary \jjel{} expressions compute the target value:
 name -> tableName : name.snakeCase()
 -> columnDefs : forall a in attributes: a.name + " " + a.type.toUpper()
 \end{lstlisting}
+
+\subsubsection{Assignment Syntax}
+
+As an alternative to the \texttt{->} mapping arrow, \jjtl{} also supports the \texttt{:=} assignment operator for attribute bindings:
+\begin{lstlisting}[style=jjtl,numbers=none]
+name := name.snakeCase()
+label := "prefix_" + name
+\end{lstlisting}
+
+The \texttt{:=} syntax is equivalent to the expression mapping form (\texttt{-> target : expr}) but reads more naturally when the target attribute name matches the binding variable. Both syntaxes are interchangeable; \texttt{->} emphasises the directional nature of the mapping, while \texttt{:=} emphasises value assignment.
 
 \subsubsection{Object Creation}
 
@@ -728,7 +779,7 @@ The \jjtl{} executor follows a simple pipeline:
 \begin{enumerate}
     \item \textbf{Initialize}: bind source model elements in the evaluation context; register helpers.
     \item \textbf{Match}: for each class mapping, find all source instances of the matching type.
-    \item \textbf{Guard}: filter instances through the \kw{when} condition.
+    \item \textbf{Guard}: filter instances through the \kw{where} condition.
     \item \textbf{Create}: instantiate target elements according to multiplicity.
     \item \textbf{Bind}: evaluate attribute mappings and assign values.
     \item \textbf{Trace}: record the trace link with invertibility information.
@@ -885,6 +936,8 @@ valid member of the declared type. The user cannot dismiss the dialog with
 widget is decorated with an inline error indicator. Toast notifications
 are not used for validation errors, as they are easily missed and do not
 prevent submission.
+
+\emph{Note:} Metamodel-relative type resolution (\texttt{EEnum} and \texttt{EClass} references) is specified but not yet implemented in the current version. The \kw{prompt} command currently accepts only Ecore primitive types (\texttt{EString}, \texttt{EInt}, \texttt{EFloat}, \texttt{EBoolean}, \texttt{EDate}). Metamodel-relative types are planned for a future release.
  
 \subsection{Grammar}
  
@@ -957,7 +1010,7 @@ from UML_MM
 to   UML_MM
  
 -- Add a database prefix to every Table, chosen at run time
-Class -> Table when { not isAbstract } {
+Class -> Table where { not isAbstract } {
     name -> name : prompt('Table prefix', EString, "tbl_") + name.snakeCase()
     -- The default "tbl_" is pre-filled; the user may override it
 }
@@ -1002,7 +1055,7 @@ to   UML_MM
  
 -- Only proceed with derived-attribute removal after explicit confirmation
 Attribute -> Attribute
-    when { not isDerived or confirm('Remove derived attribute ' + name + '?') } {
+    where { not isDerived or confirm('Remove derived attribute ' + name + '?') } {
     name -> name
     type -> type
 }
@@ -1212,7 +1265,7 @@ occurrence:
 
 \begin{lstlisting}[style=jjtl,numbers=none]
 -- Without let: dialog opened twice (undesirable)
-Class -> Table when { not isAbstract } {
+Class -> Table where { not isAbstract } {
     name  -> name  : prompt('Column prefix', EString) + name.snakeCase()
     label -> label : prompt('Column prefix', EString) + name.toUpper()
 }
@@ -1222,7 +1275,7 @@ With \jjlet{}, the dialog is opened once and the result is reused:
 
 \begin{lstlisting}[style=jjtl,numbers=none]
 -- With let: dialog opened once, $p reused in two bindings
-Class -> Table when { not isAbstract } {
+Class -> Table where { not isAbstract } {
     let $p = prompt('Column prefix', EString, 'col_') in {
         name  -> name  : $p + name.snakeCase()
         label -> label : $p + name.toUpper()
@@ -1418,7 +1471,7 @@ transformation EnrichSchema
 from UML_MM
 to   Relational_MM
 
-Class -> Table when { not isAbstract } {
+Class -> Table where { not isAbstract } {
     let $prefix = prompt('Column prefix', EString, 'col_') in {
         name  -> name  : $prefix + name.snakeCase()
         label -> label : $prefix + name.toUpper()
@@ -1430,7 +1483,7 @@ Class -> Table when { not isAbstract } {
 
 \begin{lstlisting}[style=jjtl,caption={JjLet with confirm in a guard}]
 Attribute -> Attribute
-    when {
+    where {
         let $ok = confirm('Map derived attribute ' + name + '?') in
             not isDerived or $ok
     } {
@@ -1442,7 +1495,7 @@ Attribute -> Attribute
 \subsubsection{JjTL --- multi-step interactive mapping}
 
 \begin{lstlisting}[style=jjtl,caption={JjLet with multiple bindings}]
-Class -> Table when { not isAbstract } {
+Class -> Table where { not isAbstract } {
     let $prefix = prompt('Table prefix', EString, 'tbl_'),
         $suffix = prompt('Table suffix', EString, '') in {
         name -> name : $prefix + name.snakeCase() + $suffix
@@ -1452,7 +1505,7 @@ Class -> Table when { not isAbstract } {
 
 \subsubsection{JjScript --- interactive bulk operation}
 
-\begin{lstlisting}[style=jjel,caption={JjLet in JjScript (planned)}]
+\begin{lstlisting}[style=jjel,caption={JjLet in JjScript}]
 let $target = prompt('Rename all instances to', EString) in
 let $ok = confirm('Rename ' + (list Person).size + ' instances to '
                   + $target + '?') in
@@ -1462,22 +1515,22 @@ let $ok = confirm('Rename ' + (list Person).size + ' instances to '
 \end{lstlisting}
 
 
-\subsection{Implementation Plan}
+\subsection{Implementation Status}
 
-\jjlet{} is implemented in three phases, each building on the previous.
+\jjlet{} was implemented in three phases, each building on the previous. All three phases are complete.
 
-\paragraph{Phase 1 --- \texttt{\$identifier} token in \jjel{} lexer.}
-This is the only modification to the \jjel{} layer. The lexer is
-extended to recognise \texttt{\$letter\ldots} as a
+\paragraph{Phase 1 --- \texttt{\$identifier} token in \jjel{} lexer (\checkmark).}
+The only modification to the \jjel{} layer. The lexer
+recognises \texttt{\$letter\ldots} as a
 \texttt{DOLLAR\_IDENT} token (before the existing bare-\texttt{\$}
-error branch). The \jjel{} parser adds \texttt{DOLLAR\_IDENT} as a
+error branch). The \jjel{} parser accepts \texttt{DOLLAR\_IDENT} as a
 valid primary expression. The \jjel{} evaluator requires no changes:
 \texttt{\$name} is looked up in the scope stack like any other
 identifier. Three files: \texttt{jjel/lexer/lexer.ts},
 \texttt{jjel/types/tokens.ts}, \texttt{jjel/parser/parser.ts}.
 
-\paragraph{Phase 2 --- \kw{let} in JjTL.}
-The \jjtl{} parser is extended to recognise
+\paragraph{Phase 2 --- \kw{let} in JjTL (\checkmark).}
+The \jjtl{} parser recognises
 \texttt{let \$x = e in \{ mappings \}} as a mapping body item.
 The \jjtl{} executor evaluates each binding asynchronously (enabling
 \jjmodal{} commands as binding values), injects results into a child
@@ -1485,8 +1538,8 @@ The \jjtl{} executor evaluates each binding asynchronously (enabling
 within that context. Three files: \texttt{jjtl/types/ast.ts},
 \texttt{jjtl/parser/parser.ts}, \texttt{jjtl/executor/executor.ts}.
 
-\paragraph{Phase 3 --- \kw{let} in \textsf{JjScript}.}
-\kw{let} becomes a new command type in the \textsf{JjScript} command
+\paragraph{Phase 3 --- \kw{let} in \textsf{JjScript} (\checkmark).}
+\kw{let} is a command type in the \textsf{JjScript} command
 taxonomy. Its handler evaluates bindings asynchronously and executes the
 body command with an enriched context. Five files:
 \texttt{jjscript/types.ts}, \texttt{jjscript/parser/parser.ts},
@@ -1524,7 +1577,578 @@ the context is a mapping body, a block body is assumed.
 
 
 % ============================================
-% 6. COMPARISON
+% 6. JjScript
+% ============================================
+\section{JjScript: Jjodel Scripting Language}\label{sec:jjscript}
+
+\jjscript{} is an imperative, command-based scripting language for direct
+metamodel manipulation. While \jjel{} evaluates expressions without side
+effects and \jjtl{} produces new target models declaratively, \jjscript{}
+\emph{mutates} the metamodel in place: it creates, renames, moves, and
+deletes metamodel elements as immediate operations on the live model graph.
+
+\subsection{Motivation and Design Position}\label{sec:jjscript-motivation}
+
+The Jjodel language family assigns each language a distinct role along the
+\emph{purity--effect spectrum}:
+
+\begin{center}
+\begin{tabular}{@{}llll@{}}
+\toprule
+& \textbf{\jjel{}} & \textbf{\jjtl{}} & \textbf{\jjscript{}} \\
+\midrule
+Paradigm & Functional & Declarative & Imperative \\
+Side effects & None & None (new model) & Yes (in-place mutation) \\
+Primary use & Querying, computing & M2M transformation & Metamodel editing \\
+Operates on & Model instances & Source $\to$ target & Metamodel itself \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\jjscript{} fills a gap that neither \jjel{} nor \jjtl{} can address:
+\emph{ad hoc structural modification} of a metamodel during an interactive
+modelling session. Typical tasks include adding a class, renaming an
+attribute, setting a property to a new value, or bulk-updating elements
+matching a criterion. These operations are inherently imperative---they
+change state---and do not fit the declarative paradigm of \jjtl{} or the
+pure expression semantics of \jjel{}.
+
+The design is governed by three principles, in priority order:
+
+\begin{enumerate}
+    \item \textbf{Command-oriented syntax.} Every \jjscript{} statement
+          begins with a verb (\kw{create}, \kw{rename}, \kw{delete}, etc.)
+          followed by its arguments. This mirrors the mental model of a
+          user performing discrete editing actions and enables
+          straightforward autocompletion.
+    \item \textbf{Expression delegation.} All value expressions---filters,
+          computed defaults, collections---are delegated to \jjel{}. This
+          avoids duplicating an expression evaluator and ensures that the
+          same expression syntax works across all Jjodel languages.
+    \item \textbf{Metamodel scope.} \jjscript{} operates on the
+          \emph{metamodel level} (M2): it creates and modifies classes,
+          attributes, references, packages, and enumerations. It does not
+          operate on model instances (M1), which are the domain of \jjtl{}.
+\end{enumerate}
+
+
+\subsection{Language Architecture}\label{sec:jjscript-arch}
+
+\jjscript{} follows a classic interpreter pipeline:
+
+\begin{enumerate}
+    \item \textbf{Lexer} (\texttt{parser/lexer.ts}): tokenises the input
+          into 16 token types, including \texttt{COMMAND}, \texttt{KEYWORD},
+          \texttt{IDENTIFIER}, \texttt{QUALIFIED\_NAME}, \texttt{STRING},
+          \texttt{NUMBER}, \texttt{BOOLEAN}, \texttt{MULTIPLICITY},
+          \texttt{OPERATOR}, \texttt{ARROW}, and \texttt{COMMENT}. Keywords
+          are case-sensitive and lowercase only; PascalCase tokens are
+          classified as identifiers, allowing class names like
+          \texttt{Attribute} to coexist with the keyword \kw{attribute}.
+    \item \textbf{Parser} (\texttt{parser/parser.ts}): a recursive descent
+          parser that produces a \texttt{CommandNode} AST. Each node
+          carries the command type and a typed argument structure specific
+          to the command.
+    \item \textbf{Executor} (\texttt{executor/executor.ts}): dispatches to
+          a command-specific handler. Each handler validates arguments,
+          resolves target elements in the metamodel, and performs mutations
+          via Redux actions wrapped in \texttt{TRANSACTION()} calls. All
+          handlers are asynchronous, enabling integration with \jjmodal{}
+          for interactive commands.
+    \item \textbf{Result}: every command returns an \texttt{ExecutionResult}
+          containing success status, a human-readable message, optional
+          data payload, and error details with suggestions.
+\end{enumerate}
+
+\subsubsection{Element Resolution}
+
+A critical component is the \textbf{element resolver}
+(\texttt{executor/resolvers.ts}), which locates metamodel elements by
+qualified name. Three resolution strategies are applied in order:
+
+\begin{enumerate}
+    \item \textbf{Metamodel-scoped} (preferred): searches only within the
+          target metamodel specified by the execution context, preventing
+          accidental cross-metamodel references.
+    \item \textbf{Project-wide}: searches all metamodels in the project,
+          used when no target metamodel is specified.
+    \item \textbf{Name-only}: case-insensitive lookup by the last segment
+          of the qualified name, with recursive package traversal.
+\end{enumerate}
+
+Qualified names use the \texttt{::} separator for package paths
+(\texttt{com::model::Person}) and \texttt{.} for member access
+(\texttt{Person.name}).
+
+\subsubsection{Natural Language Normalisation}
+
+\jjscript{} includes a \textbf{normaliser}
+(\texttt{normalizer/}) that converts natural-language or
+pseudo-syntactic input into formal \jjscript{} commands via
+pattern-based rules. A companion \textbf{detector}
+(\texttt{normalizer/detector.ts}) classifies input as \jjscript{},
+\jjel{}, or free text.
+This normalisation layer serves as the bridge between the AI assistant
+(Jjodie) and the \jjscript{} executor: when a user types a natural-language
+request in the chat, Jjodie generates \jjscript{} commands that the
+normaliser validates and the executor runs.
+
+
+\subsection{Command Taxonomy}\label{sec:jjscript-commands}
+
+\jjscript{} provides 19 commands organised into four functional categories.
+
+\subsubsection{Structural Commands}
+
+These commands create and modify the metamodel structure.
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}llX@{}}
+\toprule
+\textbf{Command} & \textbf{Syntax} & \textbf{Description} \\
+\midrule
+\kw{create} & \texttt{create <type> <name> [in <parent>] [options]} &
+    Creates a new metamodel element. Supports 15 element types (class,
+    abstract class, interface, attribute, reference, containment,
+    composition, operation, parameter, package, enum, literal, annotation,
+    model, metamodel). Element-specific options include \texttt{type},
+    \texttt{[multiplicity]}, \texttt{default}, \texttt{abstract},
+    \texttt{extends}, \texttt{opposite}, \texttt{derived}, \texttt{readonly}. \\
+\addlinespace
+\kw{delete} & \texttt{delete [<type>] <target> [cascade|force]} &
+    Removes an element. \texttt{cascade} deletes children;
+    \texttt{force} ignores dependencies. \\
+\addlinespace
+\kw{rename} & \texttt{rename [<type>] <target> [in <parent>] to <name>} &
+    Renames an element with conflict checking. \\
+\addlinespace
+\kw{set} & \texttt{set <target>.<prop> [=|+=|-=] <value>} &
+    Sets a property. Operators: \texttt{=} (replace), \texttt{+=}
+    (append), \texttt{-=} (remove from collection). \\
+\addlinespace
+\kw{add} & \texttt{add <type> <name> to <target>} &
+    Syntactic sugar for \kw{create} with a parent context. \\
+\addlinespace
+\kw{remove} & \texttt{remove <target> from <parent>} &
+    Removes an element from a collection. Special form:
+    \texttt{remove extends from <class>} clears inheritance. \\
+\addlinespace
+\kw{move} & \texttt{move <target> to <destination>} &
+    Relocates an element, validating move legality. \\
+\addlinespace
+\kw{copy} & \texttt{copy <target> to <dest> [as <name>] [deep]} &
+    Duplicates an element. \texttt{deep} copies nested children. \\
+\addlinespace
+\kw{extends} & \texttt{<Child> extends <Parent>} &
+    Sets inheritance with circular-inheritance checking. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsubsection{Inspection Commands}
+
+These commands query the metamodel without modifying it.
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}llX@{}}
+\toprule
+\textbf{Command} & \textbf{Syntax} & \textbf{Description} \\
+\midrule
+\kw{list} & \texttt{list [<type>] [in <scope>]} &
+    Lists elements with optional type and scope filtering. \\
+\addlinespace
+\kw{show} & \texttt{show <target> [brief|full|tree]} &
+    Displays detailed element information at three verbosity levels. \\
+\addlinespace
+\kw{validate} & \texttt{validate [<target>|all]} &
+    Checks model correctness: name conflicts, type consistency,
+    multiplicity satisfaction, circular inheritance. Returns
+    categorised errors, warnings, and informational messages. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsubsection{Control Commands}
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}llX@{}}
+\toprule
+\textbf{Command} & \textbf{Syntax} & \textbf{Description} \\
+\midrule
+\kw{undo} / \kw{redo} & \texttt{undo [n]} / \texttt{redo [n]} &
+    Stack-based transaction reversal (up to 20 actions). \\
+\addlinespace
+\kw{clear} & \texttt{clear [history|console|selection]} &
+    Resets command history, console output, or current selection. \\
+\addlinespace
+\kw{help} & \texttt{help [<topic>]} &
+    Context-sensitive help for commands, element types, and syntax. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsubsection{Advanced Commands}
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}llX@{}}
+\toprule
+\textbf{Command} & \textbf{Syntax} & \textbf{Description} \\
+\midrule
+\kw{eval} & \texttt{eval <jjel-expression>} &
+    Evaluates a \jjel{} expression in the current metamodel context
+    and displays the result. Also triggered implicitly when the input
+    begins with a \jjel{} keyword (\kw{exists}, \kw{with},
+    \kw{forall}). \\
+\addlinespace
+\kw{let} & \texttt{let \$var = <expr> [, \$v2 = <e2>] in <command>} &
+    Scoped variable bindings (see \cref{sec:jjlet}). Supports
+    \texttt{prompt()} and \texttt{confirm()} as binding expressions
+    via \jjmodal{} integration. \\
+\addlinespace
+\kw{forall} & \texttt{forall <var> in <coll> [such that <pred>] do <cmd>} &
+    Iteration: evaluates a \jjel{} collection expression, optionally
+    filters with a predicate, and executes the body command once per
+    matching element. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+
+\subsection{Type System}\label{sec:jjscript-types}
+
+\jjscript{} commands operate on 15 element types, mirroring the Ecore
+metamodelling constructs:
+
+\begin{center}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Category} & \textbf{Element Types} & \textbf{Notes} \\
+\midrule
+Classifiers & \texttt{class}, \texttt{abstract class}, \texttt{interface} & Structural types \\
+Features & \texttt{attribute}, \texttt{reference}, \texttt{containment}, \texttt{composition} & Typed with multiplicity \\
+Behavioural & \texttt{operation}, \texttt{parameter} & Method signatures \\
+Packaging & \texttt{package} & With \texttt{nsUri}, \texttt{nsPrefix} \\
+Enumeration & \texttt{enum}, \texttt{literal} & Discrete value types \\
+Annotation & \texttt{annotation} & Metadata \\
+Structural & \texttt{model}, \texttt{metamodel} & Top-level containers \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Type references in \kw{create} and \kw{set} commands accept Ecore
+primitive types (\texttt{EString}, \texttt{EInt}, \texttt{EFloat},
+\texttt{EBoolean}, \texttt{EDate}), qualified class names, enum
+references, and collection types (\texttt{List<T>}, \texttt{Set<T>},
+\texttt{OrderedSet<T>}, \texttt{Bag<T>}, \texttt{Sequence<T>}).
+
+Multiplicities follow EMF notation: \texttt{[0..1]}, \texttt{[1..*]},
+\texttt{[*]}, or shorthand \texttt{?} (optional), \texttt{+}
+(one-or-more), \texttt{*} (unbounded).
+
+
+\subsection{Expression Delegation to JjEL}\label{sec:jjscript-jjel}
+
+\jjscript{} does \emph{not} contain its own expression evaluator. All
+value expressions are delegated to \jjel{} via the \texttt{jjelEval()}
+function, following the same pattern used by \jjtl{} (see
+\cref{sec:jjtl}).
+
+Three commands perform \jjel{} delegation:
+
+\begin{enumerate}
+    \item \textbf{\kw{eval}}: builds a \jjel{} evaluation context
+          containing all metamodel classes, attributes, and project metadata,
+          then calls \texttt{jjelEval(expression, context)}. The result is
+          formatted for display (arrays, objects, and primitives with type
+          annotations).
+    \item \textbf{\kw{let}}: evaluates each binding expression via
+          \texttt{jjelEval()} (or via \jjmodal{}'s \texttt{UIBridge} for
+          \texttt{prompt()}/\texttt{confirm()} calls). Resolved values are
+          injected into a child context as \texttt{\$}-prefixed variables,
+          then the body command executes with the enriched context.
+    \item \textbf{\kw{forall}}: evaluates the collection expression via
+          \texttt{jjelEval()}, which must return an array. The optional
+          \kw{such that} predicate is evaluated per element with the
+          iteration variable bound in a child context. The body command
+          executes once per passing element with variable substitution.
+\end{enumerate}
+
+This delegation architecture ensures expression consistency: the same
+\jjel{} expression that works in a \jjtl{} binding or in the Console
+REPL works identically inside a \jjscript{} \kw{eval}, \kw{let}, or
+\kw{forall} command.
+
+
+\subsection{Autocompletion}\label{sec:jjscript-autocomplete}
+
+\jjscript{} includes a context-sensitive autocompletion engine
+(\texttt{autocomplete/engine.ts}) that provides real-time suggestions
+as the user types. The engine combines three providers:
+
+\begin{enumerate}
+    \item \textbf{Keyword provider}: suggests command names, keywords, and
+          element types based on the current cursor position and partial
+          input.
+    \item \textbf{Metamodel provider}: suggests class names, attribute
+          names, and reference names from the metamodel currently in scope.
+    \item \textbf{Type provider}: suggests primitive types and user-defined
+          classes when the cursor is in a type-reference position.
+\end{enumerate}
+
+Suggestions are ranked by relevance (exact prefix matches and recent
+commands are boosted) and presented with type annotations
+(\texttt{command}, \texttt{keyword}, \texttt{element}, \texttt{type},
+\texttt{property}, \texttt{value}) to disambiguate visually.
+
+
+\subsection{Grammar}\label{sec:jjscript-grammar}
+
+The following EBNF grammar is derived from the recursive descent parser
+(\texttt{parser/parser.ts}). It covers the core command syntax; element-specific
+options (e.g., \texttt{abstract}, \texttt{extends}, \texttt{type}) are
+parsed contextually by the \kw{create} handler.
+
+\begin{lstlisting}[style=grammar,caption={JjScript formal grammar in EBNF}]
+Program        = Command*
+
+Command        = CreateCmd | DeleteCmd | RenameCmd | SetCmd
+               | AddCmd | RemoveCmd | MoveCmd | CopyCmd
+               | ExtendsCmd | ListCmd | ShowCmd | ValidateCmd
+               | HelpCmd | UndoCmd | RedoCmd | ClearCmd
+               | EvalCmd | LetCmd | ForallCmd
+
+CreateCmd      = 'create' ElementType IDENTIFIER
+                   ('in' QualifiedName)?
+                   CreateOptions*
+
+DeleteCmd      = 'delete' ElementType? QualifiedName
+                   ('cascade' | 'force')?
+
+RenameCmd      = 'rename' ElementType? QualifiedName
+                   ('in' QualifiedName)? 'to' IDENTIFIER
+
+SetCmd         = 'set' QualifiedName '.' IDENTIFIER
+                   ('=' | '+=' | '-=') Value
+
+AddCmd         = 'add' ElementType IDENTIFIER 'to' QualifiedName
+
+RemoveCmd      = 'remove' QualifiedName 'from' QualifiedName
+               | 'remove' 'extends' 'from' QualifiedName
+
+MoveCmd        = 'move' QualifiedName 'to' QualifiedName
+
+CopyCmd        = 'copy' QualifiedName 'to' QualifiedName
+                   ('as' IDENTIFIER)? ('deep')?
+
+ExtendsCmd     = IDENTIFIER 'extends' IDENTIFIER
+               | 'extends' IDENTIFIER IDENTIFIER
+
+ListCmd        = 'list' ElementType? ('in' QualifiedName)?
+
+ShowCmd        = 'show' QualifiedName ('brief' | 'full' | 'tree')?
+
+ValidateCmd    = 'validate' (QualifiedName | 'all')?
+
+EvalCmd        = 'eval' JjELExpression
+               | JjELExpression     (* bare JjEL, auto-detected *)
+
+LetCmd         = 'let' BindingList 'in' Command
+
+ForallCmd      = 'forall' IDENTIFIER 'in' JjELExpression
+                   ('such' 'that' JjELExpression)?
+                   'do' Command
+
+BindingList    = Binding (',' Binding)*
+Binding        = '$' IDENTIFIER '=' (JjELExpression | ModalExpr)
+ModalExpr      = 'prompt' '(' STRING ',' TypeRef (',' Value)? ')'
+               | 'confirm' '(' STRING ')'
+
+ElementType    = 'class' | 'abstract' 'class' | 'interface'
+               | 'attribute' | 'reference' | 'containment'
+               | 'composition' | 'operation' | 'parameter'
+               | 'package' | 'enum' | 'literal'
+               | 'model' | 'metamodel' | 'annotation'
+
+QualifiedName  = IDENTIFIER ('::' IDENTIFIER)* ('.' IDENTIFIER)?
+
+TypeRef        = PrimitiveType | QualifiedName
+               | CollectionType '<' TypeRef '>'
+PrimitiveType  = 'EString' | 'EInt' | 'EFloat' | 'EBoolean'
+               | 'EDate' | 'String' | 'Integer' | 'Boolean'
+CollectionType = 'List' | 'Set' | 'OrderedSet' | 'Bag' | 'Sequence'
+
+Multiplicity   = '[' INT ('..' (INT | '*'))? ']'
+               | '*' | '+' | '?'
+
+Value          = STRING | NUMBER | 'true' | 'false' | 'null'
+               | QualifiedName | JjELExpression
+\end{lstlisting}
+
+The grammar is LL(1) with one key ambiguity: bare \jjel{} expressions
+(without the \kw{eval} prefix) are detected by checking whether the
+first token is a \jjel{} keyword (\kw{exists}, \kw{with}, or
+contextually \kw{forall}). If so, the entire input is delegated to the
+\jjel{} parser. The \kw{forall} keyword is disambiguated by context:
+if followed by an identifier, \kw{in}, a collection, and \kw{do}, it is
+a \jjscript{} iteration; otherwise it is a \jjel{} set comprehension.
+
+
+\subsection{Interaction with Jjodie}\label{sec:jjscript-jjodie}
+
+\jjscript{} serves as the \textbf{execution target} for Jjodie, the
+Jjodel AI assistant. The integration follows a three-layer architecture:
+
+\begin{enumerate}
+    \item \textbf{Chat layer}: the user types a natural-language request
+          (``add a name attribute of type String to Person'').
+    \item \textbf{AI layer}: Jjodie generates one or more \jjscript{}
+          commands (\texttt{create attribute name in Person type EString}).
+    \item \textbf{Execution layer}: the \texttt{JjScriptService} detects
+          that the message is a \jjscript{} command (via the normaliser's
+          detector), parses it, executes it, and returns the result
+          formatted for the chat UI.
+\end{enumerate}
+
+A design tension arises from keyword--natural-language overlap: words
+like \texttt{create}, \texttt{delete}, and \texttt{move} are both
+\jjscript{} commands and common English words. The normaliser resolves
+this by applying pattern matching: if the input matches a known
+\jjscript{} command pattern (verb + element type + arguments), it is
+classified as \jjscript{}; otherwise it is treated as free text and
+forwarded to the AI layer.
+
+
+\subsection{Usage Examples}\label{sec:jjscript-examples}
+
+\subsubsection{Metamodel Construction}
+
+\begin{lstlisting}[style=jjscript,caption={Building a metamodel from scratch in JjScript}]
+# Create structural types
+create class Person
+create abstract class BaseEntity
+create interface Nameable
+
+# Set inheritance
+Person extends BaseEntity
+Person extends Nameable
+
+# Add features
+create attribute name in Person type EString [1]
+create attribute age in Person type EInt default 0
+create reference friends in Person type Person [*]
+create attribute email in Person type EString [0..1]
+
+# Create an enumeration
+create enum VisibilityKind
+create literal PUBLIC in VisibilityKind
+create literal PRIVATE in VisibilityKind
+create literal PROTECTED in VisibilityKind
+
+# Create a package and move elements
+create package com.example nsUri "http://example.com" nsPrefix "ex"
+move Person to com.example
+\end{lstlisting}
+
+\subsubsection{Querying and Validation}
+
+\begin{lstlisting}[style=jjscript,caption={Inspection and validation in JjScript}]
+# List all classes
+list class
+
+# Show detailed view of a class
+show Person full
+
+# Validate the entire metamodel
+validate all
+
+# Evaluate a JjEL expression
+eval forall c in classes such that c.isAbstract: c.name
+
+# Query with exists
+eval exists a in Person.attributes such that a.type == "EString"
+\end{lstlisting}
+
+\subsubsection{Bulk Operations with \texttt{forall} and \texttt{let}}
+
+\begin{lstlisting}[style=jjscript,caption={Advanced JjScript with iteration and bindings}]
+# Set all String attributes to readonly
+forall a in attributes such that a.type == "EString"
+    do set a.readonly = true
+
+# Interactive rename with prompt
+let $name = prompt('New class name', EString) in
+    rename class Person to $name
+
+# Conditional bulk delete with confirm
+let $ok = confirm('Delete all derived attributes?') in
+    forall a in attributes such that a.isDerived
+        do delete a
+\end{lstlisting}
+
+
+\subsection{Relationship to Other Jjodel Languages}\label{sec:jjscript-relations}
+
+\jjscript{} completes the Jjodel language family by providing the
+imperative, side-effecting component that the other languages deliberately
+exclude. \Cref{tab:jjscript-family} summarises the relationships.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Jjodel language family: positioning of \jjscript{}.}
+\label{tab:jjscript-family}
+\begin{tabularx}{\textwidth}{@{}lXXX@{}}
+\toprule
+\textbf{Aspect} & \textbf{\jjel{}} & \textbf{\jjtl{}} & \textbf{\jjscript{}} \\
+\midrule
+Paradigm & Functional & Declarative & Imperative \\
+Side effects & None & None (new model) & Yes (in-place) \\
+Operates on & Model instances (M1) & Source $\to$ target (M1) & Metamodel (M2) \\
+Uses \jjel{} & Is \jjel{} & Yes (sub-language) & Yes (sub-language) \\
+Uses \jjmodal{} & No & Yes & Yes (via \kw{let}) \\
+Uses \jjlet{} & No & Yes & Yes \\
+AI integration & No & No & Yes (via Jjodie) \\
+Autocompletion & No & Planned & Yes (3 providers) \\
+Undo support & N/A & N/A & Yes (20-action stack) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+A key design invariant is that \jjscript{} \emph{never duplicates}
+expression evaluation logic: every expression inside a \kw{let},
+\kw{forall}, or \kw{eval} command is handled by \jjel{}, and every
+interaction command (\kw{prompt}, \kw{confirm}) is handled by \jjmodal{}.
+\jjscript{}'s own contribution is strictly the command dispatch, element
+resolution, and metamodel mutation layer.
+
+
+\subsection{Implementation Status}
+
+\jjscript{} is fully implemented with approximately 4{,}500 lines of
+TypeScript across 50 files. The implementation includes:
+
+\begin{itemize}
+    \item 19 command handlers, each in a separate module under
+          \texttt{executor/commands/}.
+    \item A three-strategy element resolver with metamodel-scoped,
+          project-wide, and name-only fallback.
+    \item A context-sensitive autocompletion engine with three providers
+          (keyword, metamodel, type).
+    \item A pattern-based normaliser for natural-language input.
+    \item A chat integration service (\texttt{JjScriptService}) bridging
+          \jjscript{} with the Jjodie AI assistant.
+    \item Error handling with Levenshtein-based fuzzy matching for typo
+          suggestions.
+\end{itemize}
+
+
+% ============================================
+% 7. COMPARISON
 % ============================================
 \section{Comparative Analysis}\label{sec:comparison}
 
@@ -1546,7 +2170,7 @@ ATL is a hybrid declarative/imperative M2M transformation language developed at 
 Header & \texttt{module Name; create Out from In} & \texttt{transformation Name \textbackslash n from X \textbackslash n to Y} \\
 Rule type & Matched / Lazy / Called / Entrypoint & Single type: class mapping \\
 Binding & \texttt{targetAttr <- expr} & \texttt{sourceAttr -> targetAttr} \\
-Guard & OCL expression in \texttt{from} clause & \kw{when} block with \jjel{} \\
+Guard & OCL expression in \texttt{from} clause & \kw{where} block with \jjel{} \\
 Trace resolution & Implicit via matched rules & Implicit (like ATL) with per-binding invertibility \\
 Imperative block & \texttt{do \{ ... \}} (post-binding) & \kw{do} in \kw{forall} (per-element) \\
 Expression language & OCL & \jjel{} \\
@@ -1580,7 +2204,7 @@ EOL is the imperative base language of the Epsilon platform; ETL extends it for 
 \midrule
 Rule syntax & \texttt{rule Name transform s:T to t:T \{ ... \}} & \texttt{S -> T \{ ... \}} \\
 Binding & Imperative assignment: \texttt{t.x = s.y} & Declarative: \texttt{y -> x} \\
-Guard & \texttt{guard: expr} or \texttt{guard \{ block \}} & \texttt{when \{ expr \}} \\
+Guard & \texttt{guard: expr} or \texttt{guard \{ block \}} & \texttt{where \{ expr \}} \\
 Trace resolution & \texttt{::=} operator / \texttt{equivalent()} & Implicit with per-binding invertibility \\
 Rule modifiers & \texttt{@abstract}, \texttt{@lazy}, \texttt{@primary}, \texttt{@greedy} & Multiplicity (\texttt{[*]}) \\
 Inheritance & \texttt{extends parentRule} & Not supported \\
@@ -1614,7 +2238,7 @@ QVT-R is the declarative relational sub-language of the OMG QVT standard. Its di
 Paradigm & Fully declarative, bidirectional & Declarative, bidirectional (with unidirectional extension) \\
 Rule structure & \texttt{relation} with domain patterns & Class mapping with attribute bindings \\
 Directionality & \texttt{checkonly} / \texttt{enforce} per domain & Bidirectional core; unidirectional extension \\
-Precondition & \texttt{when \{ ... \}} (relation calls) & \texttt{when \{ JjEL expr \}} \\
+Precondition & \texttt{when \{ ... \}} (relation calls) & \texttt{where \{ JjEL expr \}} \\
 Postcondition & \texttt{where \{ ... \}} (relation calls) & Not explicit (sequential) \\
 Expression language & OCL & \jjel{} \\
 Variable binding & Implicit via pattern variables & Explicit via source property names \\
@@ -1648,9 +2272,9 @@ Entry point & Explicit \texttt{main()} & Implicit (all rules fire) \\
 Mapping syntax & \texttt{mapping T::op() : TT} & \texttt{S -> T \{ ... \}} \\
 Implicit context & \texttt{self} & Unqualified (source properties) \\
 Object creation & \texttt{object Type \{ ... \}} & Nested \texttt{-> Type \{ ... \}} \\
-Guard & \texttt{when \{ ... \}} & \texttt{when \{ ... \}} \\
+Guard & \texttt{when \{ ... \}} & \texttt{where \{ ... \}} \\
 Trace resolution & Implicit via mapping invocation & Implicit with per-binding invertibility \\
-Assignment & \texttt{:=} & \texttt{->} \\
+Assignment & \texttt{:=} & \texttt{->} and \texttt{:=} \\
 Expression language & OCL & \jjel{} \\
 \bottomrule
 \end{tabularx}
@@ -1863,7 +2487,7 @@ from ClassMM
 to   RelationalMM
 
 # Non-abstract classes become tables
-Class -> Table when { not isAbstract } {
+Class -> Table where { not isAbstract } {
     name -> name : name.snakeCase()
 
     # Primary key column
@@ -1885,7 +2509,7 @@ Class -> Table when { not isAbstract } {
 }
 
 # Multi-valued attributes become junction tables
-Attribute -> Table when { multiValued } {
+Attribute -> Table where { multiValued } {
     -> name : owner.name.snakeCase() + "_" + name.snakeCase()
 
     -> col {
@@ -2240,13 +2864,51 @@ Several aspects of \jjel{} are under active review:
     \item \textbf{\kw{forall} nesting}: The readability and semantics of nested \kw{forall} expressions need further validation.
 \end{enumerate}
 
+\subsection{JjScript in the MDE Scripting Landscape}
+
+\jjscript{} occupies a design space adjacent to, but distinct from, the
+transformation languages compared in \cref{sec:comparison}. Its closest
+analogue in the literature is \textbf{EOL} (Epsilon Object Language), the
+imperative base language of the Epsilon platform. Both are command-oriented,
+imperative, and operate on model elements. However, three differences are
+significant:
+
+\begin{enumerate}
+    \item \textbf{Abstraction level.} EOL operates on model instances (M1):
+          it navigates, queries, and modifies elements conforming to a
+          metamodel. \jjscript{} operates on the \emph{metamodel itself}
+          (M2): it creates and modifies classes, attributes, references, and
+          packages. This is a fundamental difference in scope---\jjscript{}
+          is a metamodel engineering tool, not a model manipulation language.
+    \item \textbf{Expression delegation.} EOL has its own expression
+          evaluator (a Java-like syntax with closures). \jjscript{}
+          delegates all expressions to \jjel{}, ensuring a single expression
+          syntax across the entire Jjodel language family. This reduces
+          cognitive load for users who work with both \jjtl{} and
+          \jjscript{}.
+    \item \textbf{AI integration.} \jjscript{} is designed as a generation
+          target for AI-mediated interaction: the Jjodie assistant
+          translates natural-language requests into \jjscript{} commands.
+          No published MDE scripting language has been designed with this
+          integration pattern.
+\end{enumerate}
+
+\textbf{QVT-O} shares \jjscript{}'s imperative character but targets M2M
+transformation (source model $\to$ target model), not metamodel editing.
+QVT-O's \texttt{mapping} operations, \texttt{init}/\texttt{end} sections,
+and OCL-based expressions are considerably more complex than \jjscript{}'s
+verb-first command syntax. \jjscript{} trades QVT-O's generality for
+accessibility: a user can productively use \jjscript{} without reading a
+specification---the command names are self-documenting, and the
+autocompletion engine guides syntax.
+
 
 % ============================================
-% 9. CONCLUSION
+% 10. CONCLUSION
 % ============================================
 \section{Conclusion}\label{sec:conclusion}
 
-This document has presented \jjtl{} and \jjel{} as a pair of complementary domain-specific languages for Model-Driven Engineering. The key contribution is \jjel{}'s set-theoretic approach to expressions: by reinterpreting \kw{forall} as a set comprehension rather than a logical assertion, we achieve a significant reduction in cognitive load while maintaining the declarative character valued in the MDE community.
+This document has presented the Jjodel language family---\jjel{}, \jjtl{}, \jjmodal{}, \jjlet{}, and \jjscript{}---as a set of complementary domain-specific languages for Model-Driven Engineering. The key contribution is \jjel{}'s set-theoretic approach to expressions: by reinterpreting \kw{forall} as a set comprehension rather than a logical assertion, we achieve a significant reduction in cognitive load while maintaining the declarative character valued in the MDE community. \jjscript{} complements the declarative languages by providing an imperative, command-based interface for direct metamodel manipulation, completing the purity--effect spectrum from pure expressions (\jjel{}) through declarative transformations (\jjtl{}) to imperative scripting (\jjscript{}).
 
 The comparative analysis with ATL, EOL/ETL, QVT-R, and QVT-O reveals that each language occupies a distinct design point:
 
@@ -2327,7 +2989,7 @@ literal        = STRING | NUMBER | 'true' | 'false' | 'null'
 
 \section{JjEL Built-in Methods (Complete)}\label{app:builtins}
 
-\subsection{String Methods (33)}
+\subsection{String Methods (36)}
 
 \begin{longtable}{@{}lll@{}}
 \toprule
@@ -2368,18 +3030,22 @@ literal        = STRING | NUMBER | 'true' | 'false' | 'null'
 \texttt{charAt(i)} & index & Character at position \\
 \texttt{toNumber()} & -- & Parse as number \\
 \texttt{toInt()} & -- & Parse as integer \\
+\texttt{quote()} & -- & Wrap in double quotes \\
+\texttt{format(args...)} & values & String formatting with placeholders \\
 \bottomrule
 \end{longtable}
 
-\subsection{Collection Methods (28)}
+\subsection{Collection Methods (31)}
 
-After \kw{forall} replaces \texttt{filter()} and \texttt{map()}, the remaining collection methods are:
+While \texttt{filter()} and \texttt{map()} remain available, the idiomatic approach uses \kw{forall}. The full collection method list is:
 
 \begin{longtable}{@{}lll@{}}
 \toprule
 \textbf{Method} & \textbf{Parameters} & \textbf{Description} \\
 \midrule
 \endhead
+\texttt{filter(fn)} & predicate & Filter elements (deprecated; use \kw{forall}) \\
+\texttt{map(fn)} & lambda & Transform elements (deprecated; use \kw{forall}) \\
 \texttt{sum()} & -- & Numeric sum \\
 \texttt{avg()} & -- & Numeric average \\
 \texttt{min()} & -- & Minimum value \\
@@ -2397,7 +3063,7 @@ After \kw{forall} replaces \texttt{filter()} and \texttt{map()}, the remaining c
 \texttt{distinct()} & -- & Remove duplicates \\
 \texttt{distinctBy(fn)} & lambda & Remove duplicates by key \\
 \texttt{sortBy(fn)} & lambda & Sort ascending \\
-\texttt{sortByDesc(fn)} & lambda & Sort descending \\
+\texttt{sortByDescending(fn)} & lambda & Sort descending \\
 \texttt{reverse()} & -- & Reverse order \\
 \texttt{flatten()} & -- & Flatten nested arrays \\
 \texttt{flatMap(fn)} & lambda & Map + flatten \\
@@ -2416,30 +3082,85 @@ After \kw{forall} replaces \texttt{filter()} and \texttt{map()}, the remaining c
 
 \section{JjTL Token Types}\label{app:tokens}
 
+The \jjtl{} lexer recognises 44 token types. Since \jjtl{} embeds \jjel{} expressions, its token set is a superset of the \jjel{} tokens.
+
 \begin{center}
+\small
 \begin{tabular}{@{}lll@{}}
 \toprule
-\textbf{Category} & \textbf{Token} & \textbf{Example} \\
+\textbf{Category} & \textbf{Token} & \textbf{Lexeme} \\
 \midrule
-\multirow{5}{*}{Keywords} & \texttt{TRANSFORMATION} & \texttt{transformation} \\
+\multirow{6}{*}{JjTL keywords}
+& \texttt{TRANSFORMATION} & \texttt{transformation} \\
 & \texttt{FROM} & \texttt{from} \\
 & \texttt{TO} & \texttt{to} \\
-& \texttt{WHEN} & \texttt{when} \\
+& \texttt{WHERE} & \texttt{where} \\
 & \texttt{HELPER} & \texttt{helper} \\
+& \texttt{LET} & \texttt{let} \\
 \midrule
-\multirow{4}{*}{Interactive} & \texttt{ALERT} & \texttt{alert} \\
+\multirow{5}{*}{Interactive}
+& \texttt{ALERT} & \texttt{alert} \\
 & \texttt{NOTIFY} & \texttt{notify} \\
 & \texttt{PROMPT} & \texttt{prompt} \\
 & \texttt{INPUT} & \texttt{input} \\
+& \texttt{CONFIRM} & \texttt{confirm} \\
 \midrule
-\multirow{4}{*}{Literals} & \texttt{STRING} & \texttt{"hello"} \\
+\multirow{6}{*}{Iteration}
+& \texttt{FORALL} & \texttt{forall} \\
+& \texttt{EXISTS} & \texttt{exists} \\
+& \texttt{IN} & \texttt{in} \\
+& \texttt{SUCH} & \texttt{such} \\
+& \texttt{THAT} & \texttt{that} \\
+& \texttt{DO} & \texttt{do} \\
+\midrule
+\multirow{7}{*}{JjEL keywords}
+& \texttt{IF} / \texttt{THEN} / \texttt{ELSE} & \texttt{if}, \texttt{then}, \texttt{else} \\
+& \texttt{AND} / \texttt{OR} / \texttt{NOT} & \texttt{and}, \texttt{or}, \texttt{not} \\
+& \texttt{IS} & \texttt{is} \\
+& \texttt{IMPLIES} & \texttt{implies} \\
+& \texttt{WITH} & \texttt{with} \\
+& \texttt{TRUE} / \texttt{FALSE} & \texttt{true}, \texttt{false} \\
+& \texttt{NULL} & \texttt{null} \\
+\midrule
+\multirow{5}{*}{Literals}
+& \texttt{STRING} & \texttt{"hello"}, \texttt{'world'} \\
 & \texttt{NUMBER} & \texttt{42}, \texttt{3.14} \\
 & \texttt{BOOLEAN} & \texttt{true}, \texttt{false} \\
 & \texttt{IDENTIFIER} & \texttt{name}, \texttt{State} \\
+& \texttt{DOLLAR\_IDENT} & \texttt{\$prefix}, \texttt{\$ok} \\
 \midrule
-\multirow{3}{*}{Operators} & \texttt{ARROW} & \texttt{->} \\
+\multirow{8}{*}{Operators}
+& \texttt{ARROW} & \texttt{->} \\
+& \texttt{FAT\_ARROW} & \texttt{=>} \\
+& \texttt{ASSIGN} & \texttt{:=} \\
 & \texttt{DOT} & \texttt{.} \\
 & \texttt{QUESTION\_DOT} & \texttt{?.} \\
+& \texttt{NULL\_COALESCE} & \texttt{??} \\
+& \texttt{EQUALS} & \texttt{=} \\
+& \texttt{COLON} & \texttt{:} \\
+\midrule
+\multirow{6}{*}{Comparison}
+& \texttt{EQUALS\_EQUALS} / \texttt{NOT\_EQUALS} & \texttt{==}, \texttt{!=} \\
+& \texttt{LESS\_THAN} / \texttt{GREATER\_THAN} & \texttt{<}, \texttt{>} \\
+& \texttt{LESS\_EQUAL} / \texttt{GREATER\_EQUAL} & \texttt{<=}, \texttt{>=} \\
+& \texttt{PLUS} / \texttt{MINUS} & \texttt{+}, \texttt{-} \\
+& \texttt{STAR} / \texttt{SLASH} / \texttt{PERCENT} & \texttt{*}, \texttt{/}, \texttt{\%} \\
+& \texttt{PIPE} & \texttt{|} \\
+\midrule
+\multirow{3}{*}{Delimiters}
+& \texttt{LBRACE} / \texttt{RBRACE} & \texttt{\{}, \texttt{\}} \\
+& \texttt{LPAREN} / \texttt{RPAREN} & \texttt{(}, \texttt{)} \\
+& \texttt{LBRACKET} / \texttt{RBRACKET} & \texttt{[}, \texttt{]} \\
+\midrule
+\multirow{2}{*}{Punctuation}
+& \texttt{COMMA} & \texttt{,} \\
+& \texttt{HASH} & \texttt{\#} \\
+\midrule
+\multirow{4}{*}{Special}
+& \texttt{COMMENT} & \texttt{-- ...} or \texttt{\# ...} \\
+& \texttt{NEWLINE} & end of line \\
+& \texttt{WHITESPACE} & spaces, tabs \\
+& \texttt{EOF} & end of input \\
 \bottomrule
 \end{tabular}
 \end{center}

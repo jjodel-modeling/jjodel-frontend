@@ -56,7 +56,11 @@ export type CommandType =
     | 'import'
     | 'validate'
     | 'extends'
-    | 'eval';
+    | 'eval'
+    | 'let'
+    | 'forall'
+    | 'abstract'
+    | 'block';
 
 export type ElementType =
     | 'class'
@@ -113,7 +117,11 @@ export type CommandArgs =
     | ClearArgs
     | ValidateArgs
     | ExtendsArgs
-    | EvalArgs;
+    | EvalArgs
+    | LetArgs
+    | ForAllArgs
+    | AbstractArgs
+    | BlockArgs;
 
 // CREATE command
 export interface CreateArgs {
@@ -276,6 +284,37 @@ export interface ExtendsArgs {
 export interface EvalArgs {
     command: 'eval';
     expression: string;
+}
+
+// LET command (scoped variable bindings)
+export interface LetArgs {
+    command: 'let';
+    bindings: Array<{
+        name: string;       // e.g. '$name' — sigil included
+        valueExpr: string;  // raw expression string — evaluated at runtime via JjEL or UIBridge
+    }>;
+    body: CommandNode;      // the command after 'in'
+}
+
+// FORALL command (iterate collection, execute command per element)
+export interface ForAllArgs {
+    command: 'forall';
+    variable: string;           // e.g. 'c' — the iteration variable name
+    collectionExpr: string;     // raw JjEL expression for the collection
+    filterExpr?: string;        // raw JjEL expression for 'such that' filter
+    body: CommandNode;          // the command after 'do'
+}
+
+// ABSTRACT command (toggle abstract flag on a class)
+export interface AbstractArgs {
+    command: 'abstract';
+    target: QualifiedName;
+}
+
+// BLOCK command (do...end — sequential execution of multiple commands)
+export interface BlockArgs {
+    command: 'block';
+    commands: CommandNode[];
 }
 
 // ============================================
@@ -523,7 +562,8 @@ export const TYPE_ALIASES: Record<string, PrimitiveTypeName> = {
 export const COMMANDS: CommandType[] = [
     'create', 'delete', 'rename', 'set', 'add', 'remove',
     'move', 'copy', 'list', 'show', 'help', 'undo', 'redo',
-    'clear', 'export', 'import', 'validate', 'extends', 'eval'
+    'clear', 'export', 'import', 'validate', 'extends', 'eval',
+    'let', 'forall', 'abstract'
 ];
 
 export const ELEMENT_TYPES: ElementType[] = [

@@ -8,7 +8,7 @@
  * - Reference targets (read-only links)
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { Node } from '@xyflow/react';
 import type { ObjectNodeData, FeatureValueRow } from '../types';
 import { syncNodeLabel, syncUpdateFeatureValue } from '../sync/canvasToJjom';
@@ -35,13 +35,16 @@ function M1PropertiesPanel({ selectedNode, onNodeChange }: M1PropertiesPanelProp
         }
     }, [name, nodeData.label, selectedNode.id, onNodeChange]);
 
+    const nodeDataRef = useRef(nodeData);
+    nodeDataRef.current = nodeData;
+
     const handleFeatureChange = useCallback((feature: FeatureValueRow, newValue: string) => {
-        const updatedFeatures = nodeData.features.map(f =>
+        const updatedFeatures = nodeDataRef.current.features.map(f =>
             f.id === feature.id ? { ...f, value: newValue } : f
         );
         onNodeChange(selectedNode.id, { features: updatedFeatures });
         syncUpdateFeatureValue(selectedNode.id, feature.featureName, newValue);
-    }, [nodeData.features, selectedNode.id, onNodeChange]);
+    }, [selectedNode.id, onNodeChange]);
 
     const attributes = nodeData.features?.filter(f => f.featureKind === 'attribute') ?? [];
     const references = nodeData.features?.filter(f => f.featureKind === 'reference') ?? [];

@@ -96,29 +96,39 @@ const DocumentationSection: React.FC<Props> = ({ project }) => {
     // RENDER
     // ==========================================
     return (
-        <div className="documentation-section">
-            {/* Header - just title */}
-            <div className="section-header">
-                <h3 className="section-title">DOCUMENTATION</h3>
+        <div className="project-section">
+            {/* Header */}
+            <div className="project-section-header">
+                <h2 className="project-section-header__title documentation">DOCUMENTATION</h2>
+                <div className="project-section-header__actions">
+                    {!documentation && canGenerate && (
+                        <button
+                            className="btn btn--ghost btn--sm"
+                            onClick={handleGenerate}
+                            disabled={isGenerating}
+                        >
+                            {isGenerating ? 'Generating...' : 'Generate'}
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Documentation Card */}
+            <div className="list-card">
             {documentation ? (
                 // Card with documentation - click to view
                 <div
-                    className="documentation-card"
+                    className="list-card__item documentation-card"
                     onClick={handleView}
                     role="button"
                     tabIndex={0}
                     onKeyDown={(e) => e.key === 'Enter' && handleView()}
                 >
-                    <div className="doc-icon">
-                        <span>D</span>
-                    </div>
+                    <span className="list-card__icon list-card__icon--docs">D</span>
 
-                    <div className="doc-content">
-                        <div className="doc-header">
-                            <span className="doc-title">Project Documentation</span>
+                    <div className="list-card__content">
+                        <div className="list-card__name">
+                            Project Documentation
                             {isOutdated && (
                                 <span className="status-badge status-outdated">
                                     <i className="bi bi-exclamation-triangle" />
@@ -126,8 +136,8 @@ const DocumentationSection: React.FC<Props> = ({ project }) => {
                                 </span>
                             )}
                         </div>
-                        <div className="doc-meta">
-                            <span>Generated {formatTimeAgo(documentation.generatedAt)}</span>
+                        <div className="list-card__type">
+                            Generated {formatTimeAgo(documentation.generatedAt)}
                             {confidence > 0 && (
                                 <>
                                     <span className="meta-separator">·</span>
@@ -142,28 +152,26 @@ const DocumentationSection: React.FC<Props> = ({ project }) => {
             ) : (
                 // Empty state - click to generate
                 <div
-                    className={`documentation-card documentation-card--empty ${!canGenerate ? 'documentation-card--disabled' : ''}`}
+                    className={`list-card__item documentation-card documentation-card--empty ${!canGenerate ? 'documentation-card--disabled' : ''}`}
                     onClick={canGenerate ? handleGenerate : undefined}
                     role="button"
                     tabIndex={canGenerate ? 0 : -1}
                     onKeyDown={(e) => e.key === 'Enter' && canGenerate && handleGenerate()}
                     title={!canGenerate ? 'Add at least 1 class to generate documentation' : ''}
                 >
-                    <div className="doc-icon doc-icon--empty">
+                    <span className="list-card__icon list-card__icon--docs">
                         {isGenerating ? (
                             <i className="bi bi-arrow-repeat doc-spinning" />
                         ) : (
-                            <i className="bi bi-file-earmark-plus" />
+                            <i className="bi bi-file-earmark-text" />
                         )}
-                    </div>
+                    </span>
 
-                    <div className="doc-content">
-                        <div className="doc-header">
-                            <span className="doc-title">
-                                {isGenerating ? 'Generating...' : 'Generate Documentation'}
-                            </span>
+                    <div className="list-card__content">
+                        <div className="list-card__name">
+                            {isGenerating ? 'Generating...' : 'Generate Documentation'}
                         </div>
-                        <div className="doc-meta">
+                        <div className="list-card__type">
                             {canGenerate
                                 ? 'Click to create documentation for your metamodel'
                                 : 'Add classes to your metamodel first'
@@ -178,6 +186,7 @@ const DocumentationSection: React.FC<Props> = ({ project }) => {
                     )}
                 </div>
             )}
+            </div>
         </div>
     );
 };

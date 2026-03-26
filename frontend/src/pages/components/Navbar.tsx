@@ -64,6 +64,7 @@ import { buildProjectExportJson } from '../../model/megamodelPersistence';
 import { getRuntimeMegamodel } from '../../model/megamodelRuntime';
 import { useAvatar } from '../../hooks/useAvatar';
 import { AVATAR_COLORS, AVATAR_ICONS } from '../../constants/avatarConfig';
+import { JjScriptConsole } from '../../jjscript/components/JjScriptConsole';
 
 
 let windoww = window as any;
@@ -359,6 +360,7 @@ function NavbarComponent(props: AllProps) {
 
     // Keyboard Shortcuts Reference state
     const [showShortcutsReference, setShowShortcutsReference] = useState(false);
+    const [showConsole, setShowConsole] = useState(false);
 
     // Hoisted hooks from formerly-inner components (HelpMenu, UserMenu, LevelBadge, TreeViewToggle)
     // Defining function components inside render causes React to unmount/remount them on every re-render.
@@ -1182,6 +1184,11 @@ function NavbarComponent(props: AllProps) {
                     },
                     icon: <i className={`bi ${props.debug ? 'bi-bug-fill' : 'bi-bug'}`} />
                 },
+                {name: 'divisor', function: placeholder},
+                {name: showConsole ? 'Show Console  \u2713' : 'Show Console',
+                    function: () => setShowConsole(prev => !prev),
+                    icon: <i className={`bi ${showConsole ? 'bi-terminal-fill' : 'bi-terminal'}`} />
+                },
             ]
         },
 
@@ -1634,6 +1641,55 @@ function NavbarComponent(props: AllProps) {
             isOpen={showShortcutsReference}
             onClose={() => setShowShortcutsReference(false)}
         />
+        {showConsole && (
+            <div
+                style={{
+                    position: 'fixed',
+                    bottom: 16,
+                    right: 16,
+                    width: 560,
+                    height: 420,
+                    zIndex: 9999,
+                    borderRadius: 12,
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.32)',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column',
+                }}
+            >
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 12px',
+                    background: '#1e293b',
+                    color: '#e2e8f0',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'default',
+                    userSelect: 'none',
+                }}>
+                    <span><i className="bi bi-terminal" style={{marginRight: 6}}/> JjScript Console</span>
+                    <button
+                        onClick={() => setShowConsole(false)}
+                        style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#94a3b8',
+                            cursor: 'pointer',
+                            fontSize: 16,
+                            lineHeight: 1,
+                            padding: '0 2px',
+                        }}
+                    >
+                        <i className="bi bi-x-lg"/>
+                    </button>
+                </div>
+                <div style={{ flex: 1, overflow: 'hidden' }}>
+                    <JjScriptConsole />
+                </div>
+            </div>
+        )}
     </>);
 }
 

@@ -35,6 +35,10 @@ import {
     ValidateArgs,
     ExtendsArgs,
     EvalArgs,
+    LetArgs,
+    ForAllArgs,
+    AbstractArgs,
+    BlockArgs,
     CreateOptions,
     QualifiedName,
     COMMANDS,
@@ -46,8 +50,9 @@ import {
 // PARSER CLASS
 // ============================================
 
-/** JjEL expression trigger keywords — when these appear as the first token, the entire input is treated as a JjEL expression */
-const JJEL_EXPRESSION_TRIGGERS = ['forall', 'exists', 'with'];
+/** JjEL expression trigger keywords — when these appear as the first token, the entire input is treated as a JjEL expression.
+ *  Note: 'forall' is handled separately to distinguish JjScript forall...do from JjEL forall. */
+const JJEL_EXPRESSION_TRIGGERS = ['exists', 'with'];
 
 export class Parser {
     private tokens: Token[] = [];
@@ -109,12 +114,40 @@ export class Parser {
         const token = this.peek();
         const position = { line: token.line, column: token.column };
 
-        // Special case: JjEL expression triggers (forall, exists, with)
-        // The entire input is passed as-is to JjEL for evaluation
+        // Special case: forall — JjScript (forall...do) vs JjEL (forall...:/such that)
+        if ((token.type === 'IDENTIFIER' || token.type === 'KEYWORD' || token.type === 'COMMAND') &&
+            token.value.toLowerCase() === 'forall') {
+            if (this.isForAllDoCommand()) {
+                const args = this.parseForAllCommand();
+                return { type: 'Command', command: 'forall', args, position };
+            } else {
+                // No 'do' found → delegate remaining input to JjEL
+                const args: EvalArgs = { command: 'eval', expression: this.remainingInput() };
+                return { type: 'Command', command: 'eval', args, position };
+            }
+        }
+
+        // Special case: JjEL expression triggers (exists, with)
+        // The remaining input is passed as-is to JjEL for evaluation
         if ((token.type === 'IDENTIFIER' || token.type === 'KEYWORD') &&
             JJEL_EXPRESSION_TRIGGERS.includes(token.value.toLowerCase())) {
-            const args: EvalArgs = { command: 'eval', expression: this.originalInput.trim() };
+            const args: EvalArgs = { command: 'eval', expression: this.remainingInput() };
             return { type: 'Command', command: 'eval', args, position };
+        }
+
+        // Special case: "abstract ClassName" — toggle abstract flag on a class
+        // When 'abstract' is followed by an identifier (not 'class'), it's the toggle command
+        // Note: 'abstract' is in both COMMANDS and KEYWORDS, so the lexer may tokenize it as COMMAND
+        if ((token.type === 'IDENTIFIER' || token.type === 'KEYWORD' || token.type === 'COMMAND') &&
+            token.value.toLowerCase() === 'abstract') {
+            const nextToken = this.peekNext();
+            if (nextToken && (nextToken.type === 'IDENTIFIER' || nextToken.type === 'QUALIFIED_NAME') &&
+                nextToken.value.toLowerCase() !== 'class') {
+                this.advance(); // consume 'abstract'
+                const target = this.parseQualifiedNameToken();
+                const args: AbstractArgs = { command: 'abstract', target };
+                return { type: 'Command', command: 'abstract', args, position };
+            }
         }
 
         // Special case: "ChildClass extends ParentClass" syntax
@@ -125,13 +158,19 @@ export class Parser {
             return { type: 'Command', command: 'extends', args, position };
         }
 
+        // Standalone do...end block
+        if ((token.type === 'IDENTIFIER' || token.type === 'KEYWORD') &&
+            token.value.toLowerCase() === 'do') {
+            this.advance(); // consume 'do'
+            const commands = this.parseBlockBody();
+            const args: BlockArgs = { command: 'block', commands };
+            return { type: 'Command', command: 'block', args, position };
+        }
+
         if (token.type !== 'COMMAND') {
-            // Try to be helpful
-            const suggestion = suggestCorrection(token.value, COMMANDS);
-            const msg = suggestion
-                ? `Expected command, found '${token.value}'. Did you mean '${suggestion}'?`
-                : `Expected command (create, delete, rename, etc.), found '${token.value}'`;
-            throw new Error(msg);
+            // Not a known command — delegate remaining input to JjEL as an expression
+            const args: EvalArgs = { command: 'eval', expression: this.remainingInput() };
+            return { type: 'Command', command: 'eval', args, position };
         }
 
         const command = token.value.toLowerCase() as CommandType;
@@ -185,6 +224,18 @@ export class Parser {
             case 'eval':
                 args = this.parseEvalCommand();
                 break;
+            case 'let':
+                args = this.parseLetCommand();
+                break;
+            case 'forall':
+                args = this.parseForAllCommand();
+                break;
+            case 'abstract': {
+                // Fallback: 'abstract' reached the switch (e.g., typed alone without a target)
+                const target = this.parseQualifiedNameToken();
+                args = { command: 'abstract', target } as AbstractArgs;
+                break;
+            }
             default:
                 throw new Error(`Unknown command: ${command}`);
         }
@@ -757,6 +808,311 @@ export class Parser {
     }
 
     // ============================================
+    // LET COMMAND
+    // ============================================
+
+    private parseLetCommand(): LetArgs {
+        const bindings: LetArgs['bindings'] = [];
+
+        do {
+            this.skipNewlines();
+
+            // Parse $identifier
+            const name = this.consumeDollarIdentifier();
+
+            this.skipNewlines();
+
+            // Expect '='
+            if (!this.matchOperator('=')) {
+                throw new Error("Expected '=' after variable name in let binding");
+            }
+
+            this.skipNewlines();
+
+            // Collect raw value expression until ',' or 'in' at depth 0
+            const valueExpr = this.collectValueExprRaw();
+            if (!valueExpr) {
+                throw new Error(`Expected expression after '=' for variable ${name}`);
+            }
+
+            bindings.push({ name, valueExpr });
+        } while (this.matchComma());
+
+        this.skipNewlines();
+
+        // Expect 'in'
+        if (!this.matchKeyword('in')) {
+            throw new Error("Expected 'in' after let bindings");
+        }
+
+        this.skipNewlines();
+
+        // Parse body — single command or multiple commands until 'end'
+        const body = this.parseBlockOrCommand();
+
+        return { command: 'let', bindings, body };
+    }
+
+    /**
+     * Consume a $identifier token pair (PUNCTUATION '$' + IDENTIFIER).
+     * Returns the combined string including the '$' sigil.
+     */
+    private consumeDollarIdentifier(): string {
+        const dollarToken = this.peek();
+        if (dollarToken.type !== 'PUNCTUATION' || dollarToken.value !== '$') {
+            throw new Error("Expected '$' before variable name in let binding");
+        }
+        this.advance(); // consume '$'
+
+        const identToken = this.peek();
+        if (identToken.type !== 'IDENTIFIER' && identToken.type !== 'KEYWORD') {
+            throw new Error("Expected variable name after '$'");
+        }
+        this.advance();
+        return '$' + identToken.value;
+    }
+
+    /**
+     * Collect raw expression text from the original input until we hit
+     * ',' or 'in' at parenthesis depth 0 (or end of input).
+     * Uses original input positions for faithful reproduction.
+     */
+    private collectValueExprRaw(): string {
+        const startToken = this.peek();
+        const startPos = startToken.position;
+        let parenDepth = 0;
+        let forallExistsDepth = 0;
+
+        while (!this.isAtEnd() && !this.check('EOF')) {
+            const token = this.peek();
+
+            if (token.type === 'PUNCTUATION') {
+                if (token.value === '(') parenDepth++;
+                else if (token.value === ')') { if (parenDepth > 0) parenDepth--; }
+                else if (token.value === ',' && parenDepth === 0 && forallExistsDepth === 0) break;
+            }
+
+            // Track forall/exists nesting — each expects a following 'in'
+            // Note: forall/exists are not in KEYWORDS, so they tokenize as IDENTIFIER
+            if ((token.type === 'KEYWORD' || token.type === 'IDENTIFIER') && (token.value === 'forall' || token.value === 'exists')) {
+                forallExistsDepth++;
+            }
+
+            // 'in' keyword: if inside a forall/exists, it belongs to that construct
+            if (token.type === 'KEYWORD' && token.value === 'in') {
+                if (forallExistsDepth > 0) {
+                    forallExistsDepth--;
+                } else if (parenDepth === 0) {
+                    break; // this 'in' belongs to the let
+                }
+            }
+
+            this.advance();
+        }
+
+        const endToken = this.peek();
+        const endPos = endToken.position;
+        return this.originalInput.substring(startPos, endPos).trim();
+    }
+
+    private matchComma(): boolean {
+        const token = this.peek();
+        if (token.type === 'PUNCTUATION' && token.value === ',') {
+            this.advance();
+            return true;
+        }
+        return false;
+    }
+
+    private skipNewlines(): void {
+        while (this.check('NEWLINE')) {
+            this.advance();
+        }
+    }
+
+    /**
+     * Return the unparsed remainder of the original input from the current
+     * token position.  Used when delegating to JjEL so that, inside a
+     * recursive parseCommand() call (e.g. let body), only the body portion
+     * is forwarded — not the entire original input.
+     */
+    private remainingInput(): string {
+        const token = this.peek();
+        return this.originalInput.substring(token.position).trim();
+    }
+
+    // ============================================
+    // BLOCK BODY (do...end)
+    // ============================================
+
+    /**
+     * Parse multiple commands separated by ';' or newlines until 'end' keyword.
+     * Consumes the 'end' keyword.
+     */
+    private parseBlockBody(): CommandNode[] {
+        const commands: CommandNode[] = [];
+
+        while (!this.isAtEnd() && !this.check('EOF')) {
+            this.skipNewlines();
+            // Skip semicolons between commands
+            while (!this.isAtEnd() && this.check('PUNCTUATION') && this.peek().value === ';') {
+                this.advance();
+                this.skipNewlines();
+            }
+
+            if (this.isAtEnd() || this.check('EOF')) break;
+
+            // Stop at 'end' keyword
+            if (this.checkKeyword('end')) {
+                this.advance(); // consume 'end'
+                break;
+            }
+
+            commands.push(this.parseCommand());
+        }
+
+        return commands;
+    }
+
+    /**
+     * Parse either a single command or a block (multiple commands terminated by 'end').
+     * Used after 'do' in forall and after 'in' in let.
+     * If the next meaningful token starts a command and 'end' appears later, collects
+     * all commands until 'end'. Otherwise parses a single command.
+     */
+    private parseBlockOrCommand(): CommandNode {
+        this.skipNewlines();
+
+        // Check if this is a multi-command block (look for 'end' keyword ahead)
+        if (this.hasEndAhead()) {
+            const commands = this.parseBlockBody();
+            if (commands.length === 1) return commands[0];
+            const position = commands.length > 0
+                ? commands[0].position
+                : this.currentPosition();
+            const args: BlockArgs = { command: 'block', commands };
+            return { type: 'Command', command: 'block', args, position };
+        }
+
+        // Single command (no 'end' ahead)
+        return this.parseCommand();
+    }
+
+    /**
+     * Look ahead to check if 'end' keyword appears before end of input.
+     * Used to determine if the body after 'do' / 'in' is a block or single command.
+     */
+    private hasEndAhead(): boolean {
+        for (let i = this.current; i < this.tokens.length; i++) {
+            const token = this.tokens[i];
+            if (token.type === 'EOF') break;
+            if ((token.type === 'IDENTIFIER' || token.type === 'KEYWORD') &&
+                token.value.toLowerCase() === 'end') {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // ============================================
+    // FORALL COMMAND (forall <var> in <collection> [such that <filter>] do <command>)
+    // ============================================
+
+    /**
+     * Look ahead (without consuming) to check if this forall contains a 'do'
+     * keyword at paren depth 0, making it a JjScript forall...do command.
+     * Returns false if ':' is found first at depth 0 (JjEL projection).
+     */
+    private isForAllDoCommand(): boolean {
+        let depth = 0;
+        for (let i = this.current; i < this.tokens.length; i++) {
+            const token = this.tokens[i];
+            if (token.type === 'EOF' || token.type === 'NEWLINE') break;
+            if (token.type === 'PUNCTUATION') {
+                if (token.value === '(') depth++;
+                else if (token.value === ')') depth--;
+                // ':' at depth 0 → JjEL projection separator, not JjScript
+                if (depth === 0 && token.value === ':') return false;
+            }
+            if (depth === 0 && (token.type === 'KEYWORD' || token.type === 'IDENTIFIER')
+                && token.value.toLowerCase() === 'do') {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Parse: forall <var> in <collection> [such that <filter>] do <command>
+     */
+    private parseForAllCommand(): ForAllArgs {
+        this.advance(); // consume 'forall'
+
+        const variable = this.expectIdentifier('variable name');
+
+        if (!this.matchKeyword('in')) {
+            throw new Error("Expected 'in' after variable name in forall");
+        }
+
+        // Collect collection expression until 'such' or 'do' at depth 0
+        const collectionExpr = this.collectExprRawUntil(['do', 'such']);
+        if (!collectionExpr) {
+            throw new Error("Expected collection expression after 'in' in forall");
+        }
+
+        // Check for optional 'such that' filter
+        let filterExpr: string | undefined;
+        if (this.matchKeyword('such')) {
+            if (!this.matchKeyword('that')) {
+                throw new Error("Expected 'that' after 'such' in forall");
+            }
+            filterExpr = this.collectExprRawUntil(['do']);
+            if (!filterExpr) {
+                throw new Error("Expected filter expression after 'such that' in forall");
+            }
+        }
+
+        // Expect 'do'
+        if (!this.matchKeyword('do')) {
+            throw new Error("Expected 'do' keyword in forall...do command");
+        }
+
+        // Parse body — single command or multiple commands until 'end'
+        const body = this.parseBlockOrCommand();
+
+        return { command: 'forall', variable, collectionExpr, filterExpr, body };
+    }
+
+    /**
+     * Collect raw expression text from the original input until one of the
+     * stop keywords at parenthesis depth 0 (or end of input).
+     */
+    private collectExprRawUntil(stopKeywords: string[]): string {
+        const startToken = this.peek();
+        const startPos = startToken.position;
+        let depth = 0;
+
+        while (!this.isAtEnd() && !this.check('EOF')) {
+            const token = this.peek();
+
+            if (token.type === 'PUNCTUATION') {
+                if (token.value === '(') depth++;
+                else if (token.value === ')') { if (depth > 0) depth--; }
+            }
+
+            if (depth === 0 && (token.type === 'KEYWORD' || token.type === 'IDENTIFIER')) {
+                if (stopKeywords.includes(token.value.toLowerCase())) break;
+            }
+
+            this.advance();
+        }
+
+        const endToken = this.peek();
+        const endPos = endToken.position;
+        return this.originalInput.substring(startPos, endPos).trim();
+    }
+
+    // ============================================
     // EVAL COMMAND (explicit "eval <expression>")
     // ============================================
 
@@ -829,6 +1185,14 @@ export class Parser {
             if (value === 'null' || value === 'true' || value === 'false') {
                 return this.parseLiteralValueToken();
             }
+        }
+
+        // Check for $variable reference (PUNCTUATION '$' + IDENTIFIER)
+        if (token.type === 'PUNCTUATION' && token.value === '$') {
+            this.advance(); // consume '$'
+            const name = this.expectIdentifier('variable name');
+            const raw = '$' + name;
+            return { segments: [raw], raw } as QualifiedName;
         }
 
         // Otherwise, treat as qualified name

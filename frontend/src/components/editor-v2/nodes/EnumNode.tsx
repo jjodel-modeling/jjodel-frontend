@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { NodeResizer, useReactFlow, type NodeProps, type Node } from '@xyflow/react';
 import DynamicHandles from '../components/DynamicHandles';
 import { syncNodeLabel, syncAddEnumLiteral, syncUpdateEnumLiteral } from '../sync/canvasToJjom';
@@ -14,13 +14,18 @@ function EnumNode({ id, data, selected }: NodeProps<EnumNodeType>) {
     const [editing, setEditing] = useState(false);
     const [name, setName] = useState(data.label);
     const [dragOver, setDragOver] = useState(false);
+    const lastCommittedName = useRef(data.label);
 
     // Inline editing for literals
     const [editingLit, setEditingLit] = useState<string | null>(null);
     const [editValue, setEditValue] = useState('');
 
+    // Sync name from model only when changed externally (not by our own commit).
     useEffect(() => {
-        setName(data.label);
+        if (data.label !== lastCommittedName.current) {
+            setName(data.label);
+            lastCommittedName.current = data.label;
+        }
     }, [data.label]);
 
     // Auto-edit mode for newly created nodes
@@ -35,7 +40,8 @@ function EnumNode({ id, data, selected }: NodeProps<EnumNodeType>) {
 
     const commitName = useCallback(() => {
         setEditing(false);
-        if (name !== data.label) {
+        if (name !== lastCommittedName.current) {
+            lastCommittedName.current = name;
             editorContext?.takeSnapshot();
             setNodes((nds) =>
                 nds.map((n) =>
@@ -44,18 +50,18 @@ function EnumNode({ id, data, selected }: NodeProps<EnumNodeType>) {
             );
             syncNodeLabel(id, name);
         }
-    }, [id, name, data.label, setNodes, editorContext]);
+    }, [id, name, setNodes, editorContext]);
 
     const handleKeyDown = useCallback(
         (e: React.KeyboardEvent) => {
             if (e.key === 'Enter') {
                 commitName();
             } else if (e.key === 'Escape') {
-                setName(data.label);
+                setName(lastCommittedName.current);
                 setEditing(false);
             }
         },
-        [commitName, data.label]
+        [commitName]
     );
 
     // Start editing a literal

@@ -1,5 +1,314 @@
 # Claude Code Session Log
 
+## 2026-03-26 — Fix: `do...end` block executes only the first command
+
+**Prompt**: In a `do...end` block, only the first command is executed. Subsequent commands are ignored.
+**File toccati**: `frontend/src/jjscript/types.ts`, `frontend/src/jjscript/parser/parser.ts`, `frontend/src/jjscript/executor/executor.ts`, `frontend/src/jjscript/executor/commands/forall.ts`, `frontend/src/jjscript/executor/commands/let.ts`, `frontend/src/jjscript/executor/dependencies.ts`, `frontend/src/jjscript/components/ScriptExecutionWindow.tsx`
+**Esito**: ✅ completato
+
+**Root cause (3 layers)**:
+1. **Parser**: No concept of `do...end` blocks. `parseCommand()` returned a single `CommandNode`. After `do` in forall/let, only one command was parsed.
+2. **Executor**: No `'block'` command type existed. Even if multiple commands were parsed, there was no way to execute them sequentially.
+3. **Script pipeline**: Both `executeScript()` and `ScriptExecutionWindow` split input by newlines, so multiline `do...end` blocks were broken into individual lines.
+
+**Fix**:
+1. Added `BlockArgs` type with `commands: CommandNode[]` and `'block'` to `CommandType`
+2. Added `parseBlockBody()` (parses commands until `end`), `parseBlockOrCommand()` (detects block vs single command via `hasEndAhead()`), and standalone `do` handling in `parseCommand()`
+3. Updated `parseForAllCommand()` and `parseLetCommand()` to use `parseBlockOrCommand()` for body parsing
+4. Added `executeBlock()` method in executor — iterates all commands, stops on first error
+5. Updated `resolveVariableInBody()` in forall and `resolveVariablesInBody()` in let to handle block nodes recursively
+6. Added `groupBlockCommands()` utility to aggregate multiline `do...end` blocks before batch execution
+7. Updated `ScriptExecutionWindow` line parser to group `do...end` blocks into single logical lines
+8. Updated `extractDependencies()` to handle block nodes
+
+**Design decisions**:
+- `do` and `end` are NOT added to COMMANDS/KEYWORDS — they're recognized contextually by the parser (as IDENTIFIER tokens matched via `checkKeyword()`)
+- Single-command forall/let (no `end`) remains backward compatible — `parseBlockOrCommand()` falls back to `parseCommand()` when no `end` is found ahead
+- Block execution stops on first error (fail-fast semantics)
+
+---
+
+## 2026-03-26 — Fix: `abstract Person` still gives "Unknown command: abstract" after initial fix
+
+**Prompt**: Previous session added all the pieces (types, executor, parser special case) but `abstract Person` still fails.
+**File toccati**: `frontend/src/jjscript/parser/parser.ts`
+**Esito**: ✅ completato
+
+**Root cause**:
+`abstract` is in BOTH `COMMANDS` and `KEYWORDS` arrays. The lexer checks `COMMANDS` first (lexer.ts:371), so it tokenizes `abstract` as `COMMAND` type. But the parser's special-case check (line 139) only matched `IDENTIFIER` or `KEYWORD` — **not `COMMAND`**. So the special case was skipped, and `abstract` fell through to the main switch statement which had no `case 'abstract'`, hitting `default: throw new Error('Unknown command: abstract')`.
+
+**Fix**:
+1. Added `token.type === 'COMMAND'` to the special-case condition for abstract toggle
+2. Added `case 'abstract'` to the switch as a safety fallback (handles edge case where abstract reaches the switch)
+
+**Lesson**: When a word appears in multiple token-type lists (`COMMANDS` + `KEYWORDS`), the lexer picks the first match. Parser special cases must account for all possible token types.
+
+---
+
+## 2026-03-26 — Fix: `abstract Person` command returns SUCCESS but has no effect (initial fix)
+
+**Prompt**: `abstract Person` in JjScript Console returns SUCCESS + null, but the class doesn't become abstract. The toggle in Properties panel stays off.
+**File toccati**: `frontend/src/jjscript/types.ts`, `frontend/src/jjscript/parser/parser.ts`, `frontend/src/jjscript/executor/executor.ts`, `frontend/src/jjscript/executor/commands/abstract.ts` (new), `frontend/src/jjscript/executor/commands/index.ts`
+**Esito**: ✅ ma con bug residuo (vedi entry sopra)
+
+**Root cause**:
+`abstract` was tokenized as `KEYWORD` (not `COMMAND`). In `parseCommand()`, the check `if (token.type !== 'COMMAND')` was true, so the entire input `abstract Person` was delegated to JjEL as an eval expression. JjEL evaluated it and returned null — no model mutation occurred.
+
+There was no `abstract` command type, no parser handler, and no executor for it.
+
+**Fix**:
+- Added `'abstract'` to `CommandType` union and `COMMANDS` array in `types.ts`
+- Created `AbstractArgs` interface with `target: QualifiedName`
+- Added special case in `parseCommand()`: when first token is `abstract` and next token is an identifier (not `class`), parse as the `abstract` toggle command
+- Created `abstract.ts` executor that resolves the class, reads `element.abstract`, toggles with `SetFieldAction.new(element, 'abstract', !currentValue)`
+- Wired in `executor.ts` switch and `index.ts` exports
+
+**Semantics**: `abstract Person` toggles — if concrete, makes abstract; if abstract, makes concrete. Message: "Class 'Person' is now abstract/concrete".
+
+**Note**: `abstract class Person` (with `class` keyword) still routes to `create` command as before — the special case only fires when `abstract` is followed directly by an identifier.
+
+---
+
+## 2026-03-25 — Fix: let binding $variable empty in body (missing metamodel context)
+
+**Prompt**: `let $cls = (forall c in classes: c.name) in $cls` parses correctly but returns "Empty result (0 items)" — the forall works standalone but not inside let.
+**File toccati**: `frontend/src/jjscript/executor/commands/let.ts`
+**Esito**: ✅ completato
+
+**Root cause**:
+`evaluateJjel()` in `let.ts` only passed `context.variables` to `jjelEval()` — it did NOT call `buildEvalContext(context)` to include `classes`, `attributes`, `metamodel`, `project`. So when evaluating the valueExpr `(forall c in classes: c.name)`, the identifier `classes` was undefined and the forall returned an empty array.
+
+Compare with `executeEval` in `eval.ts` which correctly calls `buildEvalContext(context)` first, then overlays `context.variables`.
+
+**Fix**:
+- Imported `buildEvalContext` from `./eval` into `let.ts`
+- Changed `evaluateJjel()` to call `buildEvalContext(context)` first, then overlay `context.variables` on top (so let bindings can reference earlier bindings AND metamodel context)
+
+---
+
+## 2026-03-25 — Fix: forallExistsDepth counter never fires (token type mismatch)
+
+**Prompt**: The `forallExistsDepth` fix in `collectValueExprRaw()` had no effect — same error persisted.
+**File toccati**: `frontend/src/jjscript/parser/parser.ts`
+**Esito**: ✅ completato
+
+**Root cause**:
+`forall` and `exists` are NOT in the JjScript `KEYWORDS` array (`types.ts:560`), so the lexer tokenizes them as `IDENTIFIER`, not `KEYWORD`. The guard at line 864 checked `token.type === 'KEYWORD'` only, so the `forallExistsDepth` counter was never incremented — the fix was dead code.
+
+**Fix**:
+- Changed the check from `token.type === 'KEYWORD'` to `(token.type === 'KEYWORD' || token.type === 'IDENTIFIER')` for forall/exists detection in `collectValueExprRaw()`
+
+---
+
+## 2026-03-25 — Fix (ineffective): ambiguità keyword 'in' nel let binding con espressioni JjEL
+
+**Prompt**: `let $cls = forall c in classes: c.name in $cls` produces `[LET_ERROR] Expected 'in' after variable name` because the parser grabs the first `in` (belonging to `forall`) instead of the outer `in` (belonging to `let`).
+**File toccati**: `frontend/src/jjscript/parser/parser.ts`
+**Esito**: ⚠️ Logic was correct but never executed due to token type mismatch (see fix above)
+
+**Fix**:
+- Added `forallExistsDepth` counter alongside the existing `parenDepth`
+- When a `forall` or `exists` keyword is encountered, increment `forallExistsDepth`
+- When `in` is encountered: if `forallExistsDepth > 0`, decrement it (the `in` belongs to the inner construct); otherwise, if `parenDepth === 0`, break (the `in` belongs to the `let`)
+- Comma break also requires `forallExistsDepth === 0`
+- Handles arbitrarily nested `forall`/`exists` (e.g., `forall ... exists ... in ... in ... in`)
+
+---
+
+## 2026-03-25 — Fix: let binding delegates entire input to JjEL instead of body only
+
+**Prompt**: `let $attribute = prompt('Attribute', EString) in forall c in classes such that c.name == $attribute` produces `[JJEL_ERROR] Unexpected '='`
+**File toccati**: `frontend/src/jjscript/parser/parser.ts`
+**Esito**: ✅ completato
+
+**Root cause**:
+When `parseCommand()` is called recursively from `parseLetCommand()` to parse the body, and the body is a JjEL expression (e.g. `forall` without `do`, `exists`, `with`, or any non-command identifier), the parser used `this.originalInput.trim()` as the JjEL expression text. `originalInput` is the **entire** input string including the `let $var = expr in` prefix, so JjEL received the full let binding syntax and choked on the `=` assignment operator.
+
+**Fix**:
+- Added `remainingInput()` helper method that returns `this.originalInput.substring(currentToken.position).trim()` — only the unparsed portion from the current token forward
+- Replaced all 3 occurrences of `this.originalInput.trim()` in `parseCommand()`'s JjEL fallback paths with `this.remainingInput()`
+- No changes to JjEL or JjTL
+
+---
+
+## 2026-03-25 — Fix: Titolo progetto troncato nell'header della dashboard
+
+**Prompt**: Il titolo H1 del progetto veniva troncato con ellissi — deve andare a capo liberamente
+**File toccati**: `project-editor.scss`
+**Esito**: ✅ completato
+
+**Changes**:
+- Removed `white-space: nowrap`, `overflow: hidden`, `text-overflow: ellipsis`, `max-width: 300px` from `.project-header-compact__title`
+- Removed `max-width: 300px` from `__title-input` for consistency
+- Added `flex-wrap: wrap` to `__row1` so version badges wrap below the title when space is tight
+
+---
+
+## 2026-03-25 — Fix: Documentation section padding/margin alignment
+
+**Prompt**: Align Documentation section margins/padding with Viewpoints and other sections
+**File toccati**: `DocumentationSection.tsx`, `DocumentationSection.scss`
+**Esito**: ✅ completato
+
+**Changes**:
+- Replaced custom `documentation-section` wrapper with shared `project-section` class
+- Wrapped documentation card in `list-card` container for consistent border/radius/spacing
+- Replaced custom `doc-icon`/`doc-content` structure with `list-card__icon`/`list-card__content`/`list-card__name`/`list-card__type` — pixel-perfect match with Viewpoints cards
+- Simplified `DocumentationSection.scss`: removed ~100 lines of custom card/icon/content styles now handled by shared `list-card` classes
+- Kept documentation-specific styles: empty state (dashed border), disabled state, status badges, confidence badges, dark mode overrides
+
+---
+
+## 2026-03-25 — Fix: Docs icon in Section Navigator → lettera "D" con sfondo
+
+**Prompt**: Replace Bootstrap icon with letter "D" on colored square, matching M/m/V/⇄ pattern
+**File toccati**: `ProjectEditor.tsx`, `project-editor.scss`
+**Esito**: ✅ completato
+
+**Changes**:
+- Changed Docs section from `iconBootstrap: 'bi-file-earmark-text'` to `iconLetter: 'D'` with `iconClass: 'list-card__icon--docs'`
+- Added `&--docs` style: background `#dbeafe` (blue-100), color `#3b82f6` (blue-500)
+- Removed unused `section-nav__icon--plain` dark-mode style
+
+---
+
+## 2026-03-25 — Fix: Documentation icon for "not generated" state
+
+**Prompt**: Change empty-state Documentation icon from `bi-file-earmark-plus` to `bi-file-earmark-text`
+**File toccati**: `DocumentationSection.tsx`
+**Esito**: ✅ completato
+
+**Changes**:
+- Changed empty-state icon from `bi-file-earmark-plus` to `bi-file-earmark-text` to better communicate "documentation available but not yet generated"
+- Existing CSS (`doc-icon--empty`) already handles grey color (`#94a3b8`) and sizing
+
+---
+
+## 2026-03-25 — UI: Section group visual hierarchy in Project Dashboard
+
+**Prompt**: Create visual groupings to communicate MDE workflow structure (Structure → Transformation → Perspectives)
+**File toccati**: `ProjectEditor.tsx`, `project-editor.scss`
+**Esito**: ✅ completato, build passes
+
+**Changes**:
+- **Section groups**: Wrapped dashboard sections into 3 logical groups: Structure (Metamodels + Models), Transformation (Transformations), Perspectives (Viewpoints + Documentation)
+- **Group labels**: Discrete uppercase watermark labels ("Structure", "Transformation", "Perspectives") above each group
+- **Dashed separators**: `1px dashed #e2e8f0` between groups; reduced intra-group spacing (20px) vs inter-group spacing
+- **Sidebar nav dividers**: Added `section-nav__divider` between group boundaries in the section navigator
+- **Dark mode**: Full support for group separators (`#334155`), labels (`#475569`), and nav dividers
+- **IntersectionObserver**: Still works — `div[id="section-*"]` elements preserved as observer targets inside group wrappers
+
+---
+
+## 2026-03-25 — UI: Standardize section headers and actions in Project Dashboard
+
+**Prompt**: Uniform section header pattern across all dashboard sections
+**File toccati**: `ProjectEditor.tsx`, `project-editor.scss`, `DocumentationSection.tsx`, `DocumentationSection.scss`
+**Esito**: ✅ completato, build passes
+
+**Changes**:
+- **SectionHeader component**: Inline component with standardized title + count `(N)` always shown + ghost button actions
+- **Metamodels**: Uses `SectionHeader` with Import (secondary, ghost xs) + "+ New" (primary, ghost sm)
+- **Models**: Uses manual `project-section-header` div (needs ref for dropdown positioning) with count always shown
+- **Transformations**: Uses `SectionHeader` with count + "+ New"; added CTA to empty state
+- **Viewpoints**: Changed "+ Add" to "+ New" (disabled); count always shown including `(0)`
+- **Documentation**: Updated header from `.section-header` to `.project-section-header`; added "Generate" button in header actions
+- **New CSS classes**: `.project-section-header`, `.btn--ghost`, `.btn--sm`, `.btn--xs`
+- **Dark mode**: Full support for ghost buttons and section header
+
+---
+
+## 2026-03-25 — UI: Sidebar section navigator + compact header for Project Dashboard
+
+**Prompt**: Transform sidebar from action list to section navigator; compact header with actions in ⋮ menu
+**File toccati**: `frontend/src/components/project/ProjectEditor.tsx`, `frontend/src/components/project/project-editor.scss`
+**Esito**: ✅ completato, build passes
+
+**Changes**:
+- **Sidebar**: New section navigator with 5 entries (Metamodels, Models, Transforms, Viewpoints, Docs). Each shows type icon + label + count. Click scrolls to section via `scrollIntoView({ behavior: 'smooth' })`. Active section tracked via `IntersectionObserver`.
+- **Header compacted**: From ~120px multi-row layout to ~56px 2-row layout. Row 1: title + version badges + "View Megamodel" (promoted to primary button) + "+ Tags" + ⋮ menu. Row 2: description + author + date + inline tags.
+- **⋮ menu**: Download project, Make public/private, Close project. Click-outside to dismiss.
+- **Layout**: `project-editor` now uses flex column. Body is flex row with `section-nav` sidebar (180px) + scrollable main content.
+- **Section IDs**: Added `id="section-{name}"` to each section div for scroll targeting.
+- **Dark mode**: Full support for compact header, sidebar, and dropdown.
+
+---
+
+## 2026-03-25 — Fix: JjEL result rendering and error handling in JjScript Console
+
+**Prompt**: Fix 3 problemi nel rendering dei risultati JjEL nella console JjScript
+**File toccati**: `frontend/src/jjscript/components/JjScriptOutput.tsx`, `frontend/src/jjscript/executor/commands/eval.ts`
+**Esito**: ✅ completato
+
+**Problema 1 — "Eval" + "element" badge**: eval/forall results went through `parseExecutionResult()` which produced generic "Eval" + "element" badges instead of actual values. The `formatJjelResult()` in eval.ts already produced good messages (`**2** results`, actual values) but they were never displayed.
+**Fix**: Added `'eval'` and `'forall'` to `isDisplayCommand` in JjScriptOutput.tsx so they use classic status+message rendering. Added `data.items` rendering block (eval stores array items in `data.items`, but output only rendered `data.elements`).
+
+**Problema 2 — No error on invalid input**: `blablabla` returned success because JjEL evaluator silently returns `null` for undefined identifiers (evaluator.ts:191).
+**Fix**: Added `isBareIdentifier()` check in eval.ts — after jjelEval returns `null`, if the expression is a simple identifier not in the variables context, return `UNDEFINED_VARIABLE` error with suggestion. Also propagated `context.variables` (let/forall bindings) into eval context.
+
+**Problema 3 — ForAll display**: forall executor already produced good summary messages ("forall: 2/2 executed successfully") but they were hidden by the badge notification. Fixed by Problem 1's `isDisplayCommand` change.
+
+**TypeScript**: `npx tsc --noEmit` — no new errors in changed files.
+
+---
+
+## 2026-03-25 — Fix: JjScript parser no longer delegates JjEL expressions
+
+**Prompt**: Diagnosi + fix regressione — JjScript non delega a JjEL
+**File toccati**: `frontend/src/jjscript/parser/parser.ts`
+**Esito**: ✅ completato
+**Root cause**: Commit `8e9509e16` added `'forall'` to the `COMMANDS` array in `types.ts`. The lexer then tokenized `forall` as `COMMAND` type, but the JjEL delegation check at `parseCommand()` only matched `IDENTIFIER` or `KEYWORD` — so the forall→JjEL path became dead code. The input fell through to the `switch(command)` which had no `case 'forall':`, hitting `default: throw 'Unknown command'`.
+**Fix (3 changes)**:
+1. Added `token.type === 'COMMAND'` to the forall token type check (line 116) so `forall`-as-COMMAND still reaches the JjEL/JjScript disambiguation via `isForAllDoCommand()`
+2. Replaced the hard error at line 144 (non-COMMAND tokens) with JjEL delegation — arbitrary expressions like `classes.size` now fall through to JjEL instead of erroring
+3. Added `case 'forall':` in the parser switch (line 207) as safety net for JjScript `forall...do` commands
+
+---
+
+## 2026-03-25 — Feat: Add "Show Console" to View menu
+
+**Prompt**: Add JjScript console overlay accessible from View menu
+**File toccati**: `frontend/src/pages/components/Navbar.tsx`
+**Esito**: ✅ completato
+**Note**: Added `showConsole` state, "Show Console" toggle item in View menu (with checkmark and filled icon when active), and a fixed-position overlay (560×420px, bottom-right) rendering `<JjScriptConsole />` with a dark header bar and close button. No backdrop — canvas remains interactive. TypeScript clean (`npx tsc --noEmit` — no new errors).
+
+---
+
+## 2026-03-25 — Audit: language documentation vs implementation
+
+**Prompt**: Systematic audit of `docs/jjtl-jjel-paper.tex` against the codebase (JjEL, JjTL, JjModal, JjLet, JjScript)
+**File toccati**: `docs/LANGUAGE-DOCS-AUDIT.md` (creato)
+**Esito**: ✅ completato
+**Note**: 55 punti verificati — 35 allineati, 13 parzialmente disallineati, 7 disallineati, 3 non documentati. Le discrepanze critiche sono: (1) `when` vs `where` keyword mismatch in tutto il documento, (2) short-circuit evaluation dichiarato ma non implementato, (3) `filter()`/`map()` dichiarati rimossi ma ancora presenti, (4) JjScript completamente non documentato nel paper. Vedi report completo per dettagli e priorità di aggiornamento.
+
+---
+
+## 2026-03-25 — Feat: implement `let` command in JjScript (Phase 3 of JjLet)
+
+### Changes
+- Added `'let'` to `CommandType` union, `LetArgs` interface, `CommandArgs` union, and `COMMANDS` array in `types.ts`
+- Added `parseLetCommand()` in `parser.ts` with helpers: `consumeDollarIdentifier()`, `collectValueExprRaw()`, `matchComma()`, `skipNewlines()`
+- Added `$variable` support in `parseValueOrQualified()` — parses `$name` as a QualifiedName for use in set/rename values
+- Added optional `contextOverride` parameter to `JjScriptExecutor.executeAST()` for scoped context injection
+- Added `case 'let'` in executor switch dispatch
+- Created `executor/commands/let.ts` handler with:
+  - `executeLet()` — creates child context, evaluates bindings sequentially, resolves variables in body AST, executes body
+  - `evaluateBindingValue()` — dispatches to prompt/confirm (UIBridge) or JjEL evaluation
+  - `resolveVariablesInBody()` — walks body AST to replace `$variable` references with concrete LiteralValues (handles SetArgs.value, RenameArgs.newName)
+- Re-exported `executeLet` from `commands/index.ts` and `jjscript/index.ts`
+
+### Files changed
+- `frontend/src/jjscript/types.ts` — `LetArgs`, `CommandType`, `CommandArgs`, `COMMANDS`
+- `frontend/src/jjscript/parser/parser.ts` — `parseLetCommand()`, `$variable` in values
+- `frontend/src/jjscript/executor/executor.ts` — `contextOverride`, `case 'let'`
+- `frontend/src/jjscript/executor/commands/let.ts` — new handler
+- `frontend/src/jjscript/index.ts` — re-export
+
+### Type check
+- `npx tsc --noEmit` — zero new errors (only pre-existing legacy errors)
+
+---
+
 ## 2026-03-25 — Fix: `let` binding expression stops at COMMA and IN
 
 ### Bug
