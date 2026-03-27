@@ -4,7 +4,7 @@
  */
 
 import React, { useRef, useEffect, useCallback } from 'react';
-import {monaco} from "../../joiner";
+import {Monaco, monaco} from "../../joiner";
 import { registerJjtlLanguage, JJTL_LANGUAGE_ID } from './jjtlLanguage';
 import { registerJjtlTheme, JJTL_THEME_ID } from './jjtlTheme';
 import { tokenize } from '../lexer';
@@ -45,7 +45,7 @@ export const JjtlEditor: React.FC<JjtlEditorProps> = ({
     readOnly = false,
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
-    const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
+    const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
 
     // Parse and report errors
     const parseContent = useCallback((content: string) => {
@@ -65,7 +65,7 @@ export const JjtlEditor: React.FC<JjtlEditorProps> = ({
         if (editorRef.current) {
             const model = editorRef.current.getModel();
             if (model) {
-                const markers: monaco.editor.IMarkerData[] = allErrors.map(error => ({
+                const markers: Monaco.editor.IMarkerData[] = allErrors.map(error => ({
                     severity: monaco.MarkerSeverity.Error,
                     message: error.message,
                     startLineNumber: error.line,

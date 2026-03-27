@@ -231,7 +231,7 @@ function separator() {
 let closefunc: (panelClick?: boolean)=>void = null as any;
 
 function test(){
-    let data: any = null, View: any = null, Input: any = null as any, view: any, decorators: any;
+    /*let data: any = null, View: any = null, Input: any = null as any, view: any, decorators: any;
     L.from(s().viewelements).filter(v=>v.name === "View for Product")[0].onDataUpdate = (
 `let oldQt = data.state.oldQuantity, qt= +data.$quantity;
 console.log("check qt", {n: data.name, qt, oldQt, cc:data.clonedCounter});
@@ -239,7 +239,7 @@ if (oldQt === undefined) { data.state = {oldQuantity: qt, editN:data.clonedCount
 if (oldQt / qt > 2 || oldQt / qt <= 0.5) {
     if (data.state.editN !== data.clonedCounter) { data.state = {requiresValidation: false, oldQuantity: qt, editN: data.clonedCounter}; }
     else { data.state = {requiresValidation: true, editN: data.clonedNumber}; }
-}`)
+}`)*/
 }
 
 function ContextMenuComponentInner(props: AllProps) {

@@ -3,11 +3,11 @@
  * Based on Jjodel's slate/cyan color scheme
  */
 
-import {monaco} from "../../joiner";
+import {Monaco, monaco} from "../../joiner";
 
 export const JJTL_THEME_ID = 'jjtl-theme';
 
-export const jjtlTheme: monaco.editor.IStandaloneThemeData = {
+export const jjtlTheme: Monaco.editor.IStandaloneThemeData = {
     base: 'vs', // Light theme base
     inherit: true,
     rules: [

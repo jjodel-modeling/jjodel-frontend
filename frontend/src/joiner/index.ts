@@ -24,11 +24,13 @@ windoww.XML = XML;
 windoww.XMI = XMI;
 export const prxml2json = _pr_xml2json;
 windoww.prxml2json = prxml2json;
+import type * as Monaco from 'monaco-editor';
 //@ts-ignore
 import * as monaco_ from 'monaco-editor/esm/vs/editor/editor.main';
 windoww.monaco = monaco_;
 import { loader } from '@monaco-editor/react'
-export let monaco = monaco_;
+export type {Monaco};
+export const monaco = monaco_ as any as typeof Monaco;
 // Tell @monaco-editor/react to use local monaco instead of CDN
 loader.config({ monaco });
 

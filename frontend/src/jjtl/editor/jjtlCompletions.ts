@@ -2,7 +2,7 @@
  * JjTL Autocompletion Provider for Monaco Editor
  */
 
-import {monaco} from "../../joiner";
+import {Monaco, monaco} from "../../joiner";
 import { JJTL_LANGUAGE_ID } from './jjtlLanguage';
 import {CancellationToken, editor, languages, Position} from "monaco-editor";
 
@@ -190,9 +190,9 @@ export function setCompletionContext(context: CompletionContext): void {
  */
 function createCompletionItem(
     item: { label: string; detail: string; insertText: string; documentation?: string },
-    kind: monaco.languages.CompletionItemKind,
-    range: monaco.IRange
-): monaco.languages.CompletionItem {
+    kind: Monaco.languages.CompletionItemKind,
+    range: Monaco.IRange
+): Monaco.languages.CompletionItem {
     return {
         label: item.label,
         kind,
@@ -207,18 +207,18 @@ function createCompletionItem(
 /**
  * JjTL Completion Provider
  */
-class MonacoCompletion implements monaco.languages.CompletionItemProvider{
+class MonacoCompletion implements Monaco.languages.CompletionItemProvider{
     triggerCharacters: string[];
     constructor() {
         this.triggerCharacters = ['.', '-', '>', ' '];
     }
 
     provideCompletionItems(
-        model: monaco.editor.ITextModel,
-        position: monaco.Position
-    ): monaco.languages.ProviderResult<monaco.languages.CompletionList> {
+        model: Monaco.editor.ITextModel,
+        position: Monaco.Position
+    ): Monaco.languages.ProviderResult<Monaco.languages.CompletionList> {
         const word = model.getWordUntilPosition(position);
-        const range: monaco.IRange = {
+        const range: Monaco.IRange = {
             startLineNumber: position.lineNumber,
             endLineNumber: position.lineNumber,
             startColumn: word.startColumn,
@@ -228,7 +228,7 @@ class MonacoCompletion implements monaco.languages.CompletionItemProvider{
         const lineContent = model.getLineContent(position.lineNumber);
         const textBeforeCursor = lineContent.substring(0, position.column - 1);
 
-        const suggestions: monaco.languages.CompletionItem[] = [];
+        const suggestions: Monaco.languages.CompletionItem[] = [];
 
         // Check context for different completions
         const isAfterDot = textBeforeCursor.endsWith('.');
@@ -356,7 +356,7 @@ class MonacoCompletion implements monaco.languages.CompletionItemProvider{
     /**
      * Check if position is inside a mapping body
      */
-    isInsideBody(model: monaco.editor.ITextModel, position: monaco.Position): boolean {
+    isInsideBody(model: Monaco.editor.ITextModel, position: Monaco.Position): boolean {
         let braceCount = 0;
         for (let line = 1; line <= position.lineNumber; line++) {
             const lineContent = model.getLineContent(line);
@@ -374,7 +374,7 @@ class MonacoCompletion implements monaco.languages.CompletionItemProvider{
 /**
  * Register completion provider for JjTL
  */
-export function registerJjtlCompletions(): monaco.IDisposable {
+export function registerJjtlCompletions(): Monaco.IDisposable {
     return monaco.languages.registerCompletionItemProvider(
         JJTL_LANGUAGE_ID,
         jjtlCompletionProvider

@@ -2,11 +2,11 @@
  * JjTL Language Definition for Monaco Editor
  */
 
-import {monaco} from "../../joiner";
+import {Monaco, monaco} from "../../joiner";
 
 export const JJTL_LANGUAGE_ID = 'jjtl';
 
-export const jjtlLanguageDefinition: monaco.languages.IMonarchLanguage = {
+export const jjtlLanguageDefinition: Monaco.languages.IMonarchLanguage = {
     defaultToken: 'invalid',
     tokenPostfix: '.jjtl',
 
@@ -94,7 +94,7 @@ export const jjtlLanguageDefinition: monaco.languages.IMonarchLanguage = {
     },
 };
 
-export const jjtlLanguageConfiguration: monaco.languages.LanguageConfiguration = {
+export const jjtlLanguageConfiguration: Monaco.languages.LanguageConfiguration = {
     comments: {
         lineComment: '--',
     },
