@@ -243,6 +243,25 @@ export function useJjomSync(
         return count;
     });
 
+    // ── Selector: watch total reference count across all classes
+    //    (triggers repopulation when JjScript adds a reference) ──────
+    const modelRefCount = useSelector((state: DState) => {
+        if (!modelid) return 0;
+        const rawModel = state.idlookup?.[modelid] as any;
+        if (!rawModel) return 0;
+        let count = 0;
+        for (const pkgId of (rawModel.packages ?? [])) {
+            const pkg = state.idlookup?.[pkgId] as any;
+            if (!pkg) continue;
+            for (const clsId of (pkg.classes ?? [])) {
+                const cls = state.idlookup?.[clsId] as any;
+                if (!cls) continue;
+                count += (cls.references ?? []).length;
+            }
+        }
+        return count;
+    });
+
     // ── Auto-create / populate v2-flow graph ─────────────────────────
     const creatingGraphRef = useRef(false);
     const justCreatedGraphRef = useRef(false);
@@ -478,7 +497,7 @@ console.log('[DEBUG populate] classifierEntries:', classifierEntries.length, cla
             // before the effect can run again (avoids stale snapshots).
             setTimeout(() => { creatingGraphRef.current = false; }, 150);
         }
-    }, [modelid, hasGraph, subElementIds.length, modelClassCount]);
+    }, [modelid, hasGraph, subElementIds.length, modelClassCount, modelRefCount]);
 
     // ── Selector 2: Per-element D-object references ────────────────────
     // For each ID in subElements, select state.idlookup[id].
