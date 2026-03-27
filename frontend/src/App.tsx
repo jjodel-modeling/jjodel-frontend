@@ -48,6 +48,7 @@ import { SettingsModalProvider } from './contexts/SettingsModalContext';
 import { ToastProvider } from './components/Toast';
 import { DonationBanner } from './components/DonationBanner/DonationBanner';
 import HelpDrawer from './components/HelpDrawer';
+import ExplainModal from './components/ExplainModal';
 
 let firstLoading = true;
 let browserData = U.getOSBrowserData();
@@ -159,6 +160,7 @@ function App(props: AllProps): JSX.Element {
                 </HashRouter>
                 {user && <Try><GlobalDrawer/></Try>}
                 {user && <Try><HelpDrawer/></Try>}
+                {user && <Try><ExplainModal/></Try>}
                 {user && <Try><DonationBanner/></Try>}
 
             </div>

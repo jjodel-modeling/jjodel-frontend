@@ -1983,6 +1983,56 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                         window.dispatchEvent(new CustomEvent('jjodel:help-open', { detail: { helpKey } }));
                     },
                 },
+                {
+                    label: 'Explain this',
+                    icon: 'bi-stars',
+                    onClick: () => {
+                        const data = node?.data as any;
+                        const elementName = data?.label ?? 'Unknown';
+                        const elementType =
+                            node?.type === 'classNode'   ? 'Class'
+                          : node?.type === 'enumNode'    ? 'Enum'
+                          : node?.type === 'packageNode' ? 'Package'
+                          : node?.type === 'objectNode'  ? 'Object'
+                          : 'Element';
+                        const metamodelName = modelid ? (getModelInfo(modelid)?.name ?? 'Unknown') : 'Unknown';
+                        const properties: Record<string, any> = {};
+                        if (data?.isAbstract) properties.isAbstract = true;
+                        if (data?.isSingleton) properties.isSingleton = true;
+                        if (data?.attributes?.length) {
+                            properties.attributes = data.attributes.map((a: any) => ({
+                                name: a.name, type: a.type,
+                                ...(a.lowerBound !== undefined && { lowerBound: a.lowerBound }),
+                                ...(a.upperBound !== undefined && { upperBound: a.upperBound }),
+                            }));
+                        }
+                        if (data?.references?.length) {
+                            properties.references = data.references.map((r: any) => ({
+                                name: r.name, kind: r.kind, targetType: r.type?.name,
+                                containment: r.containment,
+                            }));
+                        }
+                        if (data?.operations?.length) {
+                            properties.operations = data.operations.map((o: any) => ({
+                                name: o.name, returnType: o.returnType,
+                            }));
+                        }
+                        if (data?.literals?.length) {
+                            properties.literals = data.literals.map((l: any) => l.name);
+                        }
+                        if (data?.instanceOfClassName) {
+                            properties.instanceOf = data.instanceOfClassName;
+                        }
+                        if (data?.features?.length) {
+                            properties.features = data.features.map((f: any) => ({
+                                name: f.featureName, value: f.value,
+                            }));
+                        }
+                        window.dispatchEvent(new CustomEvent('jjodel:explain-open', {
+                            detail: { elementName, elementType, metamodelName, properties },
+                        }));
+                    },
+                },
             );
             return items;
         }
