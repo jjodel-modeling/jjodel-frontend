@@ -1,5 +1,5 @@
 import {DockLayout, TabData} from 'rc-dock';
-import type {GObject,} from '../../joiner';
+import type {GObject, DViewPoint, LViewPoint} from '../../joiner';
 import {LModel, LProject, RuntimeAccessible, U} from '../../joiner';
 import TabDataMaker from "./tabs/TabDataMaker";
 import {DocumentationTab} from "./tabs/DocumentationTab";
@@ -50,7 +50,7 @@ class DockManager {
      * @param entityId - The ID of the entity being deleted
      * @param entityType - Optional type to specify which patterns to check
      */
-    static closeTabsForEntity(entityId: string, entityType?: 'metamodel' | 'model' | 'transformation' | 'documentation'): void {
+    static closeTabsForEntity(entityId: string, entityType?: 'metamodel' | 'model' | 'transformation' | 'documentation' | 'viewpoint'): void {
         if (!DockManager.dock || !entityId) {
             return;
         }
@@ -70,6 +70,11 @@ class DockManager {
         if (!entityType || entityType === 'transformation') {
             // Transformation tabs use jjtl_ prefix
             tabIds.push(`jjtl_${entityId}`);
+        }
+
+        if (!entityType || entityType === 'viewpoint') {
+            // Viewpoint tabs use vp_ prefix
+            tabIds.push(`vp_${entityId}`);
         }
 
         if (entityType === 'documentation') {
@@ -164,6 +169,18 @@ class DockManager {
             console.error('[DockManager] Error opening documentation:', error);
             U.alert('e', 'Error', 'Failed to open documentation tab.');
         }
+    }
+
+    /**
+     * Open Viewpoint Workbench Tab
+     */
+    static openViewpoint(vp: DViewPoint | LViewPoint): void {
+        if (!DockManager.dock) {
+            console.warn('[DockManager] Dock not available, cannot open viewpoint');
+            return;
+        }
+        const tab = TabDataMaker.viewpoint(vp);
+        DockManager.open('models', tab);
     }
 
     /**

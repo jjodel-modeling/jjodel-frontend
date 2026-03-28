@@ -871,6 +871,10 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         model.delete();
     };
 
+    const handleOpenViewpoint = (vp: LViewPoint) => {
+        DockManager.openViewpoint(vp);
+    };
+
     const handleDuplicateViewpoint = (vp: LViewPoint) => {
         vp.duplicate();
     };
@@ -2083,15 +2087,20 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             const isDefault = vp.name === 'Default' || vp.name === 'Validation default';
                             return (
                                 <div className="list-card__item" key={vp.id || vp.name}>
-                                    <span className="list-card__icon list-card__icon--vp">V</span>
-                                    <div className="list-card__content">
+                                    <span className="list-card__icon list-card__icon--vp"
+                                          style={{ cursor: 'pointer' }}
+                                          onClick={() => handleOpenViewpoint(vp)}>V</span>
+                                    <div className="list-card__content"
+                                         style={{ cursor: 'pointer' }}
+                                         onClick={() => handleOpenViewpoint(vp)}>
                                         <div className="list-card__name">{vp.name || 'Unnamed'}</div>
                                         <div className="list-card__type">
                                             {vp.isOverlay ? 'Overlay Viewpoint' : 'Viewpoint'}
                                         </div>
                                     </div>
                                     <div className="list-card__actions">
-                                        <button className="icon-btn" title="View" disabled>
+                                        <button className="icon-btn" title="View"
+                                                onClick={() => handleOpenViewpoint(vp)}>
                                             <i className="bi bi-eye" />
                                         </button>
                                         <button

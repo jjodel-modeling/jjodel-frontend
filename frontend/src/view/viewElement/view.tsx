@@ -44,6 +44,7 @@ import {
 import {DUser, EPSize, Pack1, transientProperties } from "../../joiner/classes";
 import DSL from "../../DSL/DSL";
 import {ReactNode} from "react";
+import type {ViewpointType} from "../viewPoint/viewpoint";
 import {labeltype} from "../../model/dataStructure/GraphDataElements";
 
 let CSS_Units0 = {'Local-font relative':{
@@ -189,6 +190,7 @@ export class DViewElement extends DPointerTargetable {
     isValidation!: boolean; // only for root views (ex viewpoints) to group views semantically.
     name!: string;
     isExclusiveView!: boolean;
+    viewpointType?: ViewpointType; // explicit viewpoint type (additive — legacy booleans still work)
 
     // processate 1 sola volta all'applicazione della vista o all'editing del campo
     constants?: string;

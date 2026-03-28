@@ -3,7 +3,9 @@ import {TabData} from 'rc-dock';
 import MetamodelTab from './MetamodelTab';
 import ModelTab from './ModelTab';
 import DocumentationTab from './DocumentationTab';
+import ViewpointWorkbench from '../../editors/ViewpointWorkbench';
 import { ConformanceIndicator } from '../../../model/conformance/ConformanceIndicator';
+import type {DViewPoint, LViewPoint} from '../../../joiner';
 import './tab-title.scss';
 
 // CSS-only approach: uses data attribute and ::before pseudo-element
@@ -26,6 +28,19 @@ class TabDataMaker {
             group: 'models',
             closable: true,
             content: <ModelTab modelid={model.id} metamodelid={(model.instanceof as any)?.id || model.instanceof} />
+        };
+    }
+
+    static viewpoint(vp: DViewPoint|LViewPoint): TabData {
+        const tabId = `vp_${vp.id}`;
+        return {
+            id: tabId,
+            title: <div className="tab-title active-on-mouseenter" data-type="viewpoint">
+                       <i className="bi bi-eye" />{vp.name || 'Viewpoint'}
+                   </div>,
+            group: 'models',
+            closable: true,
+            content: <ViewpointWorkbench viewpointId={vp.id} key={tabId} />
         };
     }
 

@@ -10,6 +10,15 @@ import {
     RuntimeAccessibleClass
 } from "../../joiner";
 
+export type ViewpointType = 'syntax' | 'decoration' | 'validation' | 'semantics' | 'editor_behavior';
+
+/** Derives the viewpoint type from legacy booleans + explicit field */
+export function getViewpointType(vp: DViewElement): ViewpointType {
+    if ((vp as any).viewpointType) return (vp as any).viewpointType;
+    if (vp.isValidation) return 'validation';
+    if (vp.isExclusiveView) return 'syntax';
+    return 'decoration';
+}
 
 @RuntimeAccessible('DViewPoint')
 export class DViewPoint extends DViewElement {

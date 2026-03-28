@@ -195,7 +195,8 @@ export {Size, GraphSize, GraphPoint, IPoint, ISize, Point, Geom} from "../common
 
 export type {WViewElement} from "../view/viewElement/view";
 export {LViewElement, DViewElement} from "../view/viewElement/view";
-export {DViewPoint, LViewPoint} from "../view/viewPoint/viewpoint";
+export {DViewPoint, LViewPoint, getViewpointType} from "../view/viewPoint/viewpoint";
+export type {ViewpointType} from "../view/viewPoint/viewpoint";
 
 export {Action, CreateElementAction, DeleteElementAction, SetFieldAction, SetRootFieldAction, CompositeAction, ParsedAction, LoadAction, CombineHistoryAction, RedoAction, UndoAction,
     TRANSACTION, ABORT, /*BEGIN, END*/} from "../redux/action/action";
