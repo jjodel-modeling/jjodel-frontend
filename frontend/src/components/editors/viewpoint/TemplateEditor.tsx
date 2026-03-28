@@ -1,9 +1,11 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import Editor from '@monaco-editor/react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import Editor, { OnMount, useMonaco } from '@monaco-editor/react';
+import type { editor as monacoEditor } from 'monaco-editor';
 import { LViewElement } from '../../../joiner';
 import { typescriptMonacoOptions, withReadOnly } from '../monacoConfig';
 import { Function } from '../../forEndUser/FunctionComponent';
 import EditorFullscreenOverlay from './EditorFullscreenOverlay';
+import { wrapFragment, unwrapFragment, PREFIX_LINE_COUNT, SUFFIX_LINE_COUNT } from './jsxWrapperUtils';
 
 interface TemplateEditorProps {
     view: LViewElement;
@@ -11,10 +13,53 @@ interface TemplateEditorProps {
     onViewUpdate: () => void;
 }
 
+/**
+ * Apply hidden areas to a Monaco editor so the user only sees the JSX fragment.
+ * Prefix lines (1..PREFIX_LINE_COUNT) and suffix lines are hidden.
+ */
+function applyHiddenAreas(
+    editorInstance: monacoEditor.IStandaloneCodeEditor,
+    monaco: typeof import('monaco-editor'),
+) {
+    const model = editorInstance.getModel();
+    if (!model) return;
+    const totalLines = model.getLineCount();
+    const suffixStart = totalLines - SUFFIX_LINE_COUNT;
+
+    const hidden: import('monaco-editor').IRange[] = [];
+    if (PREFIX_LINE_COUNT > 0) {
+        hidden.push(new monaco.Range(1, 1, PREFIX_LINE_COUNT, 1));
+    }
+    if (suffixStart < totalLines) {
+        hidden.push(new monaco.Range(suffixStart + 1, 1, totalLines, 1));
+    }
+    (editorInstance as any).setHiddenAreas(hidden);
+}
+
 const TemplateEditor: React.FC<TemplateEditorProps> = ({ view, readOnly, onViewUpdate }) => {
     const dview = view.__raw;
     const [jsx, setJsx] = useState(dview.jsxString || '');
     const [fullscreen, setFullscreen] = useState(false);
+    const editorRef = useRef<monacoEditor.IStandaloneCodeEditor | null>(null);
+    const monacoRef = useRef<typeof import('monaco-editor') | null>(null);
+
+    const monaco = useMonaco();
+
+    // Configure TypeScript compiler for JSX once Monaco is ready
+    useEffect(() => {
+        if (!monaco) return;
+        monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
+            target: monaco.languages.typescript.ScriptTarget.Latest,
+            allowNonTsExtensions: true,
+            moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+            module: monaco.languages.typescript.ModuleKind.CommonJS,
+            noEmit: true,
+            esModuleInterop: true,
+            jsx: monaco.languages.typescript.JsxEmit.React,
+            reactNamespace: 'React',
+            allowJs: true,
+        });
+    }, [monaco]);
 
     // Sync when view changes externally
     useEffect(() => {
@@ -23,8 +68,47 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ view, readOnly, onViewU
         }
     }, [dview.jsxString, fullscreen]);
 
+    // When jsx state changes, update the editor model (wrapped) and re-hide areas
+    useEffect(() => {
+        const ed = editorRef.current;
+        const m = monacoRef.current;
+        if (!ed || !m) return;
+        const model = ed.getModel();
+        if (!model) return;
+
+        const wrapped = wrapFragment(jsx);
+        const currentValue = model.getValue();
+        if (wrapped !== currentValue) {
+            model.setValue(wrapped);
+            applyHiddenAreas(ed, m);
+        }
+    }, [jsx]);
+
     const handleChange = useCallback((value: string | undefined) => {
-        if (value !== undefined) setJsx(value);
+        if (value === undefined) return;
+        // Extract the fragment from the full wrapped content
+        const fragment = unwrapFragment(value);
+        setJsx(fragment);
+    }, []);
+
+    const handleEditorMount: OnMount = useCallback((editor, mon) => {
+        editorRef.current = editor;
+        monacoRef.current = mon;
+
+        // Set initial wrapped content and hide prefix/suffix
+        const model = editor.getModel();
+        if (model) {
+            const wrapped = wrapFragment(jsx);
+            model.setValue(wrapped);
+            applyHiddenAreas(editor, mon);
+
+            // Re-apply hidden areas whenever content changes (e.g. undo/redo)
+            model.onDidChangeContent(() => {
+                applyHiddenAreas(editor, mon);
+            });
+        }
+    // jsx is intentionally captured at mount time only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleBlur = useCallback(() => {
@@ -56,7 +140,7 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ view, readOnly, onViewU
                 </div>
             </div>
 
-            {/* Editor */}
+            {/* Editor — value prop is intentionally empty; content is set via model in onMount */}
             <div
                 className="editor-section__body"
                 tabIndex={-1}
@@ -64,14 +148,16 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ view, readOnly, onViewU
             >
                 <Editor
                     className="monaco-editor-container"
-                    value={jsx}
+                    defaultValue={wrapFragment(jsx)}
                     language="typescript"
                     theme="vs"
                     options={{
                         ...withReadOnly(typescriptMonacoOptions, readOnly),
                         automaticLayout: true,
+                        lineNumbers: (lineNumber) => String(lineNumber),
                     }}
                     onChange={handleChange}
+                    onMount={handleEditorMount}
                 />
             </div>
 
@@ -104,8 +190,9 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ view, readOnly, onViewU
                 title={`Template — ${view.name || 'View'}`}
                 language="typescript"
                 value={jsx}
-                onChange={handleChange}
+                onChange={setJsx}
                 readOnly={readOnly}
+                jsxWrapping
             />
         </>
     );

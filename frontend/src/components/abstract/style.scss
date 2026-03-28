@@ -1174,6 +1174,30 @@ body[data-editor-type="transformation"] {
   }
 }
 
+/* Viewpoint Mode - hide properties panel (ViewpointWorkbench has its own) */
+body[data-editor-type="viewpoint"] {
+  .dock-hbox > .dock-panel:last-child,
+  .dock-hbox > .dock-box:last-child {
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    overflow: hidden !important;
+    opacity: 0;
+    pointer-events: none;
+    transition: width 200ms ease, opacity 200ms ease;
+  }
+
+  .dock-hbox > .dock-panel:first-child,
+  .dock-hbox > .dock-box:first-child {
+    flex: 1 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
 /* Canvas-Only Mode - hide properties panel completely */
 body[data-layout-mode="canvas-only"] {
   .dock-hbox > .dock-panel:last-child,

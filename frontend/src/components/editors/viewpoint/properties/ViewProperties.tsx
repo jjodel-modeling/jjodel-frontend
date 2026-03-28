@@ -33,13 +33,22 @@ const defaultEvents = [
 ] as const;
 
 const ViewProperties: React.FC<ViewPropertiesProps> = ({ viewId, viewpointId, isExpertMode, readOnly }) => {
-    // Subscribe to Redux for reactivity
-    const dview = useSelector((state: any) => state[viewId]) as DViewElement | undefined;
+    // Subscribe to Redux for reactivity (triggers re-render on view data changes)
+    const _reduxTrigger = useSelector((state: any) => state[viewId]);
+
+    // Resolve view via LPointerTargetable — same pattern as WorkbenchEditors
     const lview = useMemo(() => {
         try {
-            return LPointerTargetable.fromPointer(viewId as Pointer) as LViewElement;
-        } catch { return null; }
-    }, [viewId]);
+            const resolved = LPointerTargetable.fromPointer(viewId as Pointer);
+            if (resolved && (resolved as any).className) {
+                return resolved as LViewElement;
+            }
+        } catch { /* view not found */ }
+        return null;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [viewId, _reduxTrigger]);
+
+    const dview: DViewElement | undefined = lview?.__raw;
 
     const setField = useCallback((field: string, value: any) => {
         if (!readOnly && lview) {
@@ -47,7 +56,7 @@ const ViewProperties: React.FC<ViewPropertiesProps> = ({ viewId, viewpointId, is
         }
     }, [lview, readOnly]);
 
-    if (!dview || !lview) {
+    if (!lview || !dview) {
         return (
             <div className="workbench-properties__empty">
                 <span>View not found</span>
