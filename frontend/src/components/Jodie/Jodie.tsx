@@ -212,7 +212,7 @@ export function Jodie(): JSX.Element {
         let providerToUse = activeProvider;
 
         // Validate that current provider is configured
-        if (!AIConfig.get(activeProvider).enabled) {
+        if (!AIConfig.get(activeProvider)?.isConfigured()) {
             const enabledProviders = JodieConfig.getEnabledProviders();
 
             if (enabledProviders.length === 0) {

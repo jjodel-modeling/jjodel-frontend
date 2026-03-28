@@ -5,7 +5,11 @@ import { Button } from '../common/Button';
 import './AISettingsContent.scss';
 import type {Dictionary, GObject} from "../../joiner";
 import {U} from "../../joiner";
+import { OpenAIIcon } from '../icons/ProviderIcons';
 
+import groqLogo from '../../static/img/groq.webp';
+import kimiLogo from '../../static/img/kimi.svg';
+import ollamaLogo from '../../static/img/ollama.png';
 
 interface AISettingsContentProps {
     onClose?: () => void;
@@ -126,6 +130,35 @@ export function AISettingsContent({
         const availableModels: AIVersion[] = Object.values(llm.versions);
         const selectedModel = llm.versions[config.model];
 
+        const AIicon = (name: string) => {
+
+            switch (name) {
+                case 'GPT': 
+                    return <i className="bi bi-openai"></i>;
+                case 'Claude': 
+                    return <i className="bi bi-claude"></i>;
+                case 'Groq':
+                    return <img style={{width: '24px', height: '24px', borderRadius: '3px'}} src={groqLogo} />;
+                case 'DeepSeek':
+                    return 'D';
+                case 'Gemini':
+                    return <i className="bi bi-gem"></i>;
+                case 'Mistral':
+                    return <i className="bi bi-wind"></i>;
+                case 'Ollama':
+                    return <img style={{width: '24px', height: '24px', borderRadius: '3px'}} src={ollamaLogo} />;
+                case 'Llama':
+                    return 'Llama';
+                case 'Kimi':
+                    return <img style={{width: '24px', height: '24px', backgroundColor: '#ccc', padding: '2px', borderRadius: '3px'}} src={kimiLogo} />;
+                case 'Custom':
+                    return 'Custom';
+                default:
+                    return null;
+            }
+            
+        }
+
         return (
             <div
                 key={name}
@@ -136,13 +169,15 @@ export function AISettingsContent({
                     onClick={() => setExpandedProvider(isExpanded ? null : name)}
                 >
                     <div className="provider-info">
+
                         {llm.logo ? (
-                            <img src={llm.logo} alt={`${name} logo`} className="provider-icon-logo" />
+                            AIicon(name)
                         ) : (
                             <div className="provider-icon-letter" style={{ backgroundColor: llm.bgColor }}>
                                 {name === AIProvider.Custom ? <i className="bi bi-puzzle" /> : llm.initial}
                             </div>
                         )}
+
                         <div className="provider-details">
                             <span className="provider-name">{name}</span>
                             <span className="provider-description">{description}</span>
@@ -269,7 +304,7 @@ export function AISettingsContent({
                     }}
                 >
                     <option value="">Auto (first available)</option>
-                    {configuredProvidersList.map(p => <option key={p.name} value={p.name}>{p.name}</option>)}
+                    {configuredProvidersList.map((p, i) => <option key={`${i}-${p.name}`} value={p.name}>{p.name}</option>)}
                 </select>
                 {configuredProvidersList.length === 0 && (
                     <p className="default-provider-empty">Configure at least one provider below to set a default.</p>
@@ -277,14 +312,14 @@ export function AISettingsContent({
             </div>
 
             <div className="providers-list">
-                {ALL_AI_PROVIDERS.map(provider=> AI[provider]).map(llm=>(
-                    llm.name === AIProvider.Custom ? null :
+                {ALL_AI_PROVIDERS.map(provider => {
+                    const llm = AI[provider];
+                    return llm.name === AIProvider.Custom ? null :
                         renderProviderCard(llm.name, [
                             { key: 'apiKey', label: 'API Key', type: 'password', placeholder: llm.keyPlaceholder || "Your " + llm.name + " API key" },
                             { key: 'model', label: 'Model', type: 'model', placeholder: '' },
-                        ]
-                    )
-                ))}
+                        ]);
+                })}
 
 
                 {/* Custom Provider */}

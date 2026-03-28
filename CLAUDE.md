@@ -1018,6 +1018,11 @@ essere off-screen su schermi normali.
 **Fix**: posizionare le voci importanti nei primi 5-6 slot del menu,
 non in fondo.
 
+### F1 su macOS richiede Fn+F1
+Su Mac, F1 senza il tasto Fn controlla la luminosità dello schermo
+e non raggiunge il browser. Il listener HelpDrawer usa capture phase
+correttamente — il comportamento è atteso. Shortcut effettivo: Fn+F1.
+
 ---
 
 ## 📅 Ultimo Aggiornamento

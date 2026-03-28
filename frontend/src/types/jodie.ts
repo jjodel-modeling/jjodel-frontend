@@ -418,7 +418,12 @@ export class AIConfig{
             console.error(`Failed to save provider config for ${provider}:`, error);
         }}
     save(cascadeGlobal: boolean = true){
-        localStorage.setItem(AI[this.name].storageKey, JSON.stringify(this));
+        const aiConfig = AI[this.name];
+        if (!aiConfig?.storageKey) {
+            console.warn(`[AIConfig2.save] No AI config found for provider: ${this.name}`);
+            return;
+        }
+        localStorage.setItem(aiConfig.storageKey, JSON.stringify(this));
         // Dispatch event to notify other components
         window.dispatchEvent(new CustomEvent('ai-provider-changed', {
             detail: { provider: this.name, config: this }
@@ -448,7 +453,9 @@ export class AIConfig{
     };
 
     isConfigured() : boolean {
+        if (!this?.name) return false;
         let llm = AI[this.name];
+        if (!llm) return false;
         let config = this;
         if (llm.name === AIProvider.Custom) return !!(config.baseUrl || config.apiKey);
         else return !!(llm.requiresKey ? config.apiKey : config.baseUrl);
@@ -552,9 +559,9 @@ export class JodieConfig {
     static hasEnabledProviders() { return JodieConfig.getEnabledProviders().length > 0; }
     static getEnabledProviders(): TAIProvider[] {
         return ALL_AI_PROVIDERS.filter(provider => {
+            if (!provider) return false;
             const config = AIConfig.get(provider);
-            let llm = AI[provider];
-            return !!config?.isConfigured()// && (!llm.requiresKey || config.apiKey) && config.enabled;
+            return !!config?.isConfigured();
         });
     }
 

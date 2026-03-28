@@ -93,15 +93,13 @@ export class AIProviderService {
 
         messages.push({ role: 'user' as const, content: currentContent });
 
-        // Use proxy endpoint to avoid CORS issues
-        const proxyUrl = AI.Claude.proxy as string;
-
-        const response = await fetch(proxyUrl, {
+        const response = await fetch(AI.Claude.endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'x-api-key': apiKey,
                 'anthropic-version': '2023-06-01',
+                'anthropic-dangerous-direct-browser-access': 'true',
             },
             body: JSON.stringify({
                 model,
@@ -193,7 +191,8 @@ export class AIProviderService {
 
         messages.push({ role: 'user' as const, content: currentContent });
 
-        const response = await fetch(AI.GPT.endpoint, {
+        // OpenAI doesn't support browser CORS — use proxy when configured (AI.GPT.proxy)
+        const response = await fetch(AI.GPT.getEndpoint(), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -325,7 +324,7 @@ export class AIProviderService {
         });
 
         // Use proxy endpoint to avoid CORS issues
-        const proxyUrl = `${AI.Gemini.proxy}/${model}/generateContent?key=${apiKey}`;
+        const proxyUrl = `${AI.Gemini.getEndpoint()}/${model}/generateContent?key=${apiKey}`;
 
         const response = await fetch(proxyUrl, {
             method: 'POST',
@@ -645,7 +644,7 @@ export class AIProviderService {
             }
 
             // Use proxy endpoint to avoid CORS issues
-            const proxyUrl = AI.Claude.proxy as string;
+            const proxyUrl = AI.Claude.getEndpoint();
 
             const response = await fetch(proxyUrl, {
                 method: 'POST',
@@ -811,7 +810,7 @@ export class AIProviderService {
     private static async testGemini(apiKey: string, model: string): Promise<{ success: boolean; error?: string }> {
         try {
             // Use proxy endpoint to avoid CORS issues
-            const proxyUrl = `${AI.Gemini.proxy}/${model}/generateContent?key=${apiKey}`;
+            const proxyUrl = `${AI.Gemini.getEndpoint()}/${model}/generateContent?key=${apiKey}`;
 
             const response = await fetch(proxyUrl, {
                 method: 'POST',

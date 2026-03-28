@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { JodieConfigService } from '../services/JodieConfig';
-import { getProxyEndpoint, PROVIDER_ENDPOINTS } from '../types/jodie';
+import ReactMarkdown from 'react-markdown';
+import { JodieConfig, AIConfig, AI, AIProvider } from '../types/jodie';
 import './ExplainModal.scss';
 
 export interface ExplainDetail {
@@ -24,13 +24,13 @@ Be concise (3-5 sentences). Use simple, clear language suitable for students lea
 
 /** Parse SSE stream from Anthropic API and yield text deltas */
 async function* streamClaude(apiKey: string, model: string, prompt: string, signal: AbortSignal) {
-    const proxyUrl = getProxyEndpoint('anthropic');
-    const response = await fetch(proxyUrl, {
+    const response = await fetch(AI.Claude.endpoint, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'x-api-key': apiKey,
             'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true',
         },
         body: JSON.stringify({
             model,
@@ -125,28 +125,23 @@ async function* streamOpenAI(endpoint: string, apiKey: string, model: string, pr
 
 async function* streamExplain(prompt: string, signal: AbortSignal) {
     // Use the same active provider as Jjodie chat
-    const providerId = JodieConfigService.getActiveProvider();
-    const config = JodieConfigService.getProvider(providerId);
+    const providerId = JodieConfig.current.activeProvider;
+    const config = AIConfig.get(providerId);
 
-    if (!config?.apiKey && providerId !== 'ollama') {
+    if (!config?.apiKey && providerId !== AIProvider.Ollama) {
         throw new Error('No AI provider configured. Please add an API key in Settings.');
     }
 
+    const llm = AI[providerId];
     switch (providerId) {
-        case 'claude':
+        case AIProvider.Claude:
             yield* streamClaude(config!.apiKey, config!.model, prompt, signal);
             break;
-        case 'openai':
-            yield* streamOpenAI(PROVIDER_ENDPOINTS.openai, config!.apiKey, config!.model, prompt, signal);
-            break;
-        case 'deepseek':
-            yield* streamOpenAI(PROVIDER_ENDPOINTS.deepseek, config!.apiKey, config!.model, prompt, signal);
-            break;
-        case 'mistral':
-            yield* streamOpenAI(PROVIDER_ENDPOINTS.mistral, config!.apiKey, config!.model, prompt, signal);
-            break;
-        case 'groq':
-            yield* streamOpenAI(PROVIDER_ENDPOINTS.groq, config!.apiKey, config!.model, prompt, signal);
+        case AIProvider.GPT:
+        case AIProvider.DeepSeek:
+        case AIProvider.Mistral:
+        case AIProvider.Groq:
+            yield* streamOpenAI(llm.endpoint, config!.apiKey, config!.model, prompt, signal);
             break;
         default:
             throw new Error(`Streaming not supported for provider "${providerId}". Configure Claude or OpenAI in Settings.`);
@@ -249,7 +244,7 @@ const ExplainModal: React.FC = () => {
                             <span>Thinking...</span>
                         </div>
                     )}
-                    {text && <div className="explain-modal-text">{text}</div>}
+                    {text && <div className="explain-modal-text"><ReactMarkdown>{text}</ReactMarkdown></div>}
                     {error && (
                         <div className="explain-modal-error">
                             <i className="bi bi-exclamation-triangle" /> {error}
