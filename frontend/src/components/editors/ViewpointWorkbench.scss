@@ -54,10 +54,21 @@
         overflow: hidden;
     }
 
+    &__properties-resize {
+        width: 4px;
+        cursor: col-resize;
+        background: transparent;
+        flex-shrink: 0;
+        transition: background 0.15s;
+
+        &:hover {
+            background: #0ea5e9;
+        }
+    }
+
     &__properties {
-        width: 260px;
-        min-width: 260px;
         border-left: 0.5px solid #e2e8f0;
         overflow-y: auto;
+        flex-shrink: 0;
     }
 }

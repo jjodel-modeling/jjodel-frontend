@@ -35,9 +35,7 @@ class TabDataMaker {
         const tabId = `vp_${vp.id}`;
         return {
             id: tabId,
-            title: <div className="tab-title active-on-mouseenter" data-type="viewpoint">
-                       <i className="bi bi-eye" />{vp.name || 'Viewpoint'}
-                   </div>,
+            title: <div className="tab-title active-on-mouseenter" data-type="viewpoint">{vp.name || 'Viewpoint'}</div>,
             group: 'models',
             closable: true,
             content: <ViewpointWorkbench viewpointId={vp.id} key={tabId} />

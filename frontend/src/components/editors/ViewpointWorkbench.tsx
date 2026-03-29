@@ -21,6 +21,11 @@ const ViewpointWorkbench: React.FC<ViewpointWorkbenchProps> = ({ viewpointId }) 
     const [isResizing, setIsResizing] = useState(false);
     const [previewModelId, setPreviewModelId] = useState<string | null>(null);
     const [isExpertMode, setIsExpertMode] = useState(false);
+    const [highlightMode, setHighlightMode] = useState(true);
+    const [filterMode, setFilterMode] = useState(false);
+    const [isCanvasFullscreen, setIsCanvasFullscreen] = useState(false);
+    const [canvasRefreshKey, setCanvasRefreshKey] = useState(0);
+    const [propertiesWidth, setPropertiesWidth] = useState(320);
 
     const canvasHeightRef = useRef(canvasHeight);
     canvasHeightRef.current = canvasHeight;
@@ -65,6 +70,33 @@ const ViewpointWorkbench: React.FC<ViewpointWorkbenchProps> = ({ viewpointId }) 
         document.addEventListener('mouseup', handleMouseUp);
     }, []);
 
+    const propertiesWidthRef = useRef(propertiesWidth);
+    propertiesWidthRef.current = propertiesWidth;
+
+    const handlePropertiesResizeStart = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        const startX = e.clientX;
+        const startWidth = propertiesWidthRef.current;
+
+        const onMove = (ev: MouseEvent) => {
+            const delta = startX - ev.clientX;
+            const newWidth = Math.max(320, Math.min(startWidth + delta, 500));
+            setPropertiesWidth(newWidth);
+        };
+
+        const onUp = () => {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        };
+
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+    }, []);
+
     if (!lViewpoint) {
         return (
             <div className="viewpoint-workbench">
@@ -106,8 +138,20 @@ const ViewpointWorkbench: React.FC<ViewpointWorkbenchProps> = ({ viewpointId }) 
                     />
                 </div>
                 <div className="viewpoint-workbench__center">
-                    <WorkbenchCanvas height={canvasHeight} />
-                    <div
+                    <WorkbenchCanvas
+                        viewpointId={viewpointId}
+                        previewModelId={previewModelId}
+                        selectedViewId={selectedNodeType === 'view' ? selectedNodeId : null}
+                        highlightMode={highlightMode}
+                        filterMode={filterMode}
+                        isFullscreen={isCanvasFullscreen}
+                        onToggleHighlight={() => setHighlightMode(v => !v)}
+                        onToggleFilter={() => setFilterMode(v => !v)}
+                        onToggleFullscreen={() => setIsCanvasFullscreen(v => !v)}
+                        height={canvasHeight}
+                        refreshKey={canvasRefreshKey}
+                    />
+                    {isCanvasFullscreen ? null : <div
                         className={`viewpoint-workbench__resize-handle ${isResizing ? 'viewpoint-workbench__resize-handle--resizing' : ''}`}
                         onMouseDown={handleResizeMouseDown}
                     >
@@ -133,22 +177,28 @@ const ViewpointWorkbench: React.FC<ViewpointWorkbenchProps> = ({ viewpointId }) 
                                 <i className="bi bi-trash3" />
                             </button>
                         </div>
-                    </div>
-                    <WorkbenchEditors
-                        selectedNodeId={selectedNodeId}
-                        selectedNodeType={selectedNodeType}
-                        isExpertMode={isExpertMode}
-                        onViewUpdate={() => {
-                            // Notify canvas to re-render after editor save
-                            console.log('[ViewpointWorkbench] View updated from editor');
-                        }}
-                    />
+                    </div>}
+                    {!isCanvasFullscreen && (
+                        <WorkbenchEditors
+                            selectedNodeId={selectedNodeId}
+                            selectedNodeType={selectedNodeType}
+                            isExpertMode={isExpertMode}
+                            onViewUpdate={() => {
+                                setCanvasRefreshKey(k => k + 1);
+                            }}
+                        />
+                    )}
                 </div>
+                <div
+                    className="viewpoint-workbench__properties-resize"
+                    onMouseDown={handlePropertiesResizeStart}
+                />
                 <WorkbenchProperties
                     viewpointId={viewpointId}
                     selectedNodeId={selectedNodeId}
                     selectedNodeType={selectedNodeType}
                     isExpertMode={isExpertMode}
+                    style={{ width: propertiesWidth, minWidth: 320 }}
                 />
             </div>
         </div>

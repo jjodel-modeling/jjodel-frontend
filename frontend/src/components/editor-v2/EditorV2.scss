@@ -295,7 +295,54 @@
     }
 }
 
-// ── Abstract syntax pill ──
+// ── Viewpoint selector group ──
+.toolbar-viewpoint-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.toolbar-viewpoint-selector {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    .bi-eye {
+        font-size: 13px;
+        color: #64748b;
+    }
+
+    select {
+        padding: 3px 8px;
+        border: 1px solid #e2e8f0;
+        border-radius: 5px;
+        font-size: 11px;
+        color: #334155;
+        background: #fff;
+        cursor: pointer;
+        outline: none;
+        max-width: 140px;
+
+        &:focus {
+            border-color: #0ea5e9;
+        }
+    }
+
+    &--active {
+        select {
+            border-color: #0ea5e9;
+            color: #0369a1;
+            background: #f0f9ff;
+        }
+
+        .bi-eye {
+            color: #0ea5e9;
+        }
+    }
+}
+
+// ── Abstract / Concrete syntax pill ──
 .toolbar-syntax-pill {
     display: inline-flex;
     align-items: center;
@@ -316,6 +363,12 @@
         color: var(--accent, #0ea5e9);
         background: rgba(14, 165, 233, 0.06);
         border-color: rgba(14, 165, 233, 0.15);
+    }
+
+    &--concrete {
+        color: #0F6E56;
+        background: rgba(16, 185, 129, 0.06);
+        border-color: rgba(16, 185, 129, 0.15);
     }
 
     &__dot {

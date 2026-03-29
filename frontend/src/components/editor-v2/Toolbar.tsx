@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSelector } from 'react-redux';
 import type { NotationMode, ColorScheme } from './types';
 import ColorSchemeSelector from './components/ColorSchemeSelector';
 import { LayoutMode, getSavedLayoutMode, saveLayoutMode } from '../abstract/Dock';
 import { isProjectOverviewPage } from '../../utils/navigationUtils';
+import { LPointerTargetable, LViewPoint, SetRootFieldAction } from '../../joiner';
 
 interface ToolbarProps {
     snapEnabled: boolean;
@@ -150,6 +152,20 @@ function Toolbar({
     const prevPanelMode = useRef<LayoutMode>('sidebar');
 
     const currentNotation = NOTATION_OPTIONS.find(n => n.id === notation) ?? NOTATION_OPTIONS[0];
+
+    // ── Viewpoint selector ──
+    const activeViewpointId = useSelector((state: any) => state.viewpoint) as string;
+    const viewpointPointers = useSelector((state: any) => state.viewpoints) as string[];
+    const viewpoints = (viewpointPointers || []).map(ptr => {
+        try {
+            const lVp = LPointerTargetable.fromPointer(ptr) as LViewPoint;
+            return lVp ? { id: ptr, name: lVp.name || 'Unnamed' } : null;
+        } catch { return null; }
+    }).filter(Boolean) as Array<{ id: string; name: string }>;
+
+    const handleViewpointChange = useCallback((vpId: string) => {
+        SetRootFieldAction.new('viewpoint', vpId, '', true);
+    }, []);
 
     // ── Layout mode state (synced via CustomEvent + localStorage) ──
     const [layoutMode, setLayoutMode] = useState<LayoutMode>(getSavedLayoutMode);
@@ -364,14 +380,29 @@ function Toolbar({
 
             <div className="toolbar-separator" />
 
-            {/* ── Abstract syntax pill ── */}
-            <button
-                className="toolbar-syntax-pill toolbar-syntax-pill--active"
-                title="Currently viewing abstract syntax"
-            >
-                <span className="toolbar-syntax-pill__dot" />
-                Abstract syntax
-            </button>
+            {/* ── Viewpoint selector + syntax pill ── */}
+            <div className="toolbar-viewpoint-group">
+                <div className={`toolbar-viewpoint-selector${activeViewpointId ? ' toolbar-viewpoint-selector--active' : ''}`}>
+                    <i className="bi bi-eye" />
+                    <select
+                        value={activeViewpointId || ''}
+                        onChange={(e) => handleViewpointChange(e.target.value)}
+                        title="Select viewpoint"
+                    >
+                        <option value="">No viewpoint</option>
+                        {viewpoints.map(vp => (
+                            <option key={vp.id} value={vp.id}>{vp.name}</option>
+                        ))}
+                    </select>
+                </div>
+                <button
+                    className={`toolbar-syntax-pill ${activeViewpointId ? 'toolbar-syntax-pill--concrete' : 'toolbar-syntax-pill--active'}`}
+                    title={activeViewpointId ? 'Concrete syntax active (viewpoint selected)' : 'Currently viewing abstract syntax'}
+                >
+                    <span className="toolbar-syntax-pill__dot" />
+                    {activeViewpointId ? 'Concrete syntax' : 'Abstract syntax'}
+                </button>
+            </div>
 
             {/* ── Spacer ── */}
             <div className="toolbar-spacer" />

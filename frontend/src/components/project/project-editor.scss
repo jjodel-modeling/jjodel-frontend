@@ -640,10 +640,33 @@
     }
 
     &--vp {
-      background: rgba(100, 116, 139, 0.12);
-      color: #64748b;
-      background-color: #FCE7F3;  /* Pink-100 */
-  color: #DB2777;   
+      background-color: #FCE7F3;
+      color: #DB2777;
+    }
+
+    &--vp-syntax {
+      background-color: #E6F1FB;
+      color: #0C447C;
+    }
+
+    &--vp-decoration {
+      background-color: #EEEDFE;
+      color: #3C3489;
+    }
+
+    &--vp-validation {
+      background-color: #FAEEDA;
+      color: #633806;
+    }
+
+    &--vp-semantics {
+      background-color: #E1F5EE;
+      color: #085041;
+    }
+
+    &--vp-editor_behavior {
+      background-color: #F1EFE8;
+      color: #444441;
     }
 
     &--docs {
@@ -736,6 +759,34 @@
       box-shadow: var(--form-input-focus-shadow, 0 0 0 3px rgba(51, 65, 85, 0.15));
     }
   }
+}
+
+// Viewpoint type badge
+// --------------------
+.vp-type-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: 99px;
+  text-transform: capitalize;
+  font-weight: 400;
+  margin-left: 8px;
+  vertical-align: middle;
+
+  &[data-type="syntax"] { background: #E6F1FB; color: #185FA5; }
+  &[data-type="decoration"] { background: #EEEDFE; color: #534AB7; }
+  &[data-type="validation"] { background: #FAEEDA; color: #854F0B; }
+  &[data-type="semantics"] { background: #E1F5EE; color: #0F6E56; }
+  &[data-type="editor_behavior"] { background: #F1EFE8; color: #5F5E5A; }
+}
+
+// Viewpoint exclusive/overlay icon
+.vp-mode-icon {
+  font-size: 11px;
+  margin-left: 4px;
+  color: #94a3b8;
+  vertical-align: middle;
 }
 
 // Icon Buttons

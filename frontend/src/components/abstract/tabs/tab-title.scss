@@ -77,25 +77,11 @@
         }
     }
 
-    // Viewpoint badge - Teal/Cyan pastel with eye icon
-    &[data-type="viewpoint"] {
-        &::before {
-            display: none;  // Hide the pseudo-element, using inline icon
-        }
-
-        .bi {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 20px;
-            height: 20px;
-            min-width: 20px;
-            border-radius: 4px;
-            font-size: 10px;
-            background-color: #CCFBF1;  // Teal-100
-            color: #0D9488;             // Teal-600
-            margin-right: 0 !important;
-        }
+    // Viewpoint badge - Teal pastel with "V" letter (same pattern as M/m/D)
+    &[data-type="viewpoint"]::before {
+        content: "V";
+        background-color: #CCFBF1;  // Teal-100
+        color: #0D9488;             // Teal-600
     }
 
     // Transformation badge - Emerald/Green pastel

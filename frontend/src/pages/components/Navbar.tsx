@@ -1338,6 +1338,24 @@ function NavbarComponent(props: AllProps) {
                     } else if (id.startsWith('doc_')) {
                         type = 'documentation';
                         title = 'Documentation';
+                    } else if (id.startsWith('vp_')) {
+                        type = 'viewpoint';
+                        // Extract title from React element or look up viewpoint
+                        const vpId = id.slice(3); // strip 'vp_' prefix
+                        const rawVp = (state as any)[vpId] || (state as any).idlookup?.[vpId];
+                        title = rawVp?.name || 'Viewpoint';
+                        if (!title || title === 'Viewpoint') {
+                            // Try extracting from tab title JSX
+                            const rawTitle = tab.title;
+                            if (rawTitle?.props?.children) {
+                                const children = rawTitle.props.children;
+                                if (Array.isArray(children)) {
+                                    title = children.filter((c: any) => typeof c === 'string').join('').trim() || 'Viewpoint';
+                                } else if (typeof children === 'string') {
+                                    title = children;
+                                }
+                            }
+                        }
                     } else {
                         // Model/Metamodel — look up in state
                         const raw = (state as any)[id] || (state as any).idlookup?.[id];
@@ -1400,13 +1418,14 @@ function NavbarComponent(props: AllProps) {
         DockManager.closeTab(tabId);
     }, []);
 
-    // Tab type badge letter
-    const getTabBadge = (type: string): { letter: string; className: string } => {
+    // Tab type badge letter or icon
+    const getTabBadge = (type: string): { letter: string; icon?: string; className: string } => {
         switch (type) {
             case 'metamodel': return { letter: 'M', className: 'appbar-tab__badge--metamodel' };
             case 'model': return { letter: 'm', className: 'appbar-tab__badge--model' };
             case 'transformation': return { letter: 'T', className: 'appbar-tab__badge--transformation' };
             case 'documentation': return { letter: 'D', className: 'appbar-tab__badge--documentation' };
+            case 'viewpoint': return { letter: 'V', className: 'appbar-tab__badge--viewpoint' };
             default: return { letter: '', className: '' };
         }
     };
@@ -1487,9 +1506,9 @@ function NavbarComponent(props: AllProps) {
                                 onClick={() => handleTabClick(tab.id)}
                                 title={tab.title}
                             >
-                                {badge.letter && (
+                                {(badge.letter || badge.icon) && (
                                     <span className={`appbar-tab__badge ${badge.className}`}>
-                                        {badge.letter}
+                                        {badge.icon ? <i className={`bi ${badge.icon}`} /> : badge.letter}
                                     </span>
                                 )}
                                 <span className="appbar-tab__name">{tab.title}</span>
@@ -1523,9 +1542,9 @@ function NavbarComponent(props: AllProps) {
                                                 className="appbar-tabs__overflow-item"
                                                 onClick={() => { handleTabClick(tab.id); setShowOverflow(false); }}
                                             >
-                                                {badge.letter && (
+                                                {(badge.letter || badge.icon) && (
                                                     <span className={`appbar-tab__badge ${badge.className}`}>
-                                                        {badge.letter}
+                                                        {badge.icon ? <i className={`bi ${badge.icon}`} /> : badge.letter}
                                                     </span>
                                                 )}
                                                 <span>{tab.title}</span>

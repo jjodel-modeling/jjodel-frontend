@@ -16,7 +16,9 @@ import {
     Constructors,
     SetFieldAction,
     SetRootFieldAction,
-    TRANSACTION
+    TRANSACTION,
+    getViewpointType,
+    DViewPoint,
 } from '../../joiner';
 import DockManager from '../abstract/DockManager';
 import TabDataMaker from '../abstract/tabs/TabDataMaker';
@@ -27,6 +29,7 @@ import UnsavedChangesDialog from './UnsavedChangesDialog';
 import DocumentationSection from './DocumentationSection';
 import { EcoreService, XMIService } from '../../services/export';
 import { NewTransformationDialog, TransformationsList } from '../../jjtl/components';
+import { NewViewpointDialog } from './NewViewpointDialog';
 import { JjtlTransformation, createTransformation, TransformationAST } from '../../jjtl/types';
 import { execute as executeTransformation, ExecutionResult } from '../../jjtl/executor';
 import { convertMetamodelToJjtl, findMetamodelById } from '../../jjtl/utils/metamodelConverter';
@@ -153,6 +156,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     // Transformations state (in-memory for now)
     const [transformations, setTransformations] = useState<JjtlTransformation[]>([]);
     const [showNewTransformationDialog, setShowNewTransformationDialog] = useState(false);
+    const [showNewViewpointDialog, setShowNewViewpointDialog] = useState(false);
 
     // Editing states
     const [isEditingName, setIsEditingName] = useState(false);
@@ -881,6 +885,32 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
 
     const handleDeleteViewpoint = (vp: LViewPoint) => {
         vp.delete();
+    };
+
+    const handleCreateViewpoint = (data: { name: string; type: import('../../joiner').ViewpointType }) => {
+        const dVp = DViewPoint.newVP(data.name, (vp) => {
+            // Set legacy booleans based on type
+            switch (data.type) {
+                case 'syntax':
+                    vp.isExclusiveView = true;
+                    vp.isValidation = false;
+                    break;
+                case 'validation':
+                    vp.isExclusiveView = false;
+                    vp.isValidation = true;
+                    break;
+                default: // decoration, semantics, editor_behavior
+                    vp.isExclusiveView = false;
+                    vp.isValidation = false;
+                    break;
+            }
+            // Set explicit viewpointType field
+            (vp as any).viewpointType = data.type;
+        });
+        setShowNewViewpointDialog(false);
+
+        // Open the new viewpoint in the workbench
+        DockManager.openViewpoint(dVp);
     };
 
     // Transformation handlers
@@ -2071,7 +2101,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 <SectionHeader
                     title="VIEWPOINTS"
                     count={viewpoints.length}
-                    primaryAction={{ label: '+ New', onClick: () => {}, disabled: true, disabledTitle: 'Coming soon' }}
+                    primaryAction={{ label: '+ New', onClick: () => setShowNewViewpointDialog(true) }}
                 />
 
                 {viewpoints.length === 0 ? (
@@ -2085,17 +2115,37 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                         {viewpoints.map((vp) => {
                             if (!vp) return null;
                             const isDefault = vp.name === 'Default' || vp.name === 'Validation default';
+                            const vpType = getViewpointType(vp as any);
+                            const isExclusive = vpType === 'syntax';
+                            // Count sub-views recursively
+                            const countViews = (v: any): number => {
+                                let subs: any[] = [];
+                                try { subs = v.subViews || []; } catch { subs = []; }
+                                let count = subs.length;
+                                for (const sv of subs) {
+                                    if (sv) count += countViews(sv);
+                                }
+                                return count;
+                            };
+                            const viewCount = countViews(vp);
                             return (
                                 <div className="list-card__item" key={vp.id || vp.name}>
-                                    <span className="list-card__icon list-card__icon--vp"
+                                    <span className={`list-card__icon list-card__icon--vp-${vpType}`}
                                           style={{ cursor: 'pointer' }}
                                           onClick={() => handleOpenViewpoint(vp)}>V</span>
                                     <div className="list-card__content"
                                          style={{ cursor: 'pointer' }}
                                          onClick={() => handleOpenViewpoint(vp)}>
-                                        <div className="list-card__name">{vp.name || 'Unnamed'}</div>
+                                        <div className="list-card__name">
+                                            {vp.name || 'Unnamed'}
+                                            <span className="vp-type-badge" data-type={vpType}>
+                                                {vpType.replace('_', ' ')}
+                                            </span>
+                                            <i className={`bi ${isExclusive ? 'bi-diamond-fill' : 'bi-layers'} vp-mode-icon`}
+                                               title={isExclusive ? 'Exclusive viewpoint' : 'Overlay viewpoint'} />
+                                        </div>
                                         <div className="list-card__type">
-                                            {vp.isOverlay ? 'Overlay Viewpoint' : 'Viewpoint'}
+                                            {viewCount} {viewCount === 1 ? 'view' : 'views'}
                                         </div>
                                     </div>
                                     <div className="list-card__actions">
@@ -2294,6 +2344,14 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 )}
                 existingNames={transformations.map(t => t.name)}
                 metamodels={metamodels.map(mm => ({ id: mm.id, name: mm.name || 'Unnamed' }))}
+            />
+
+            {/* New Viewpoint Dialog */}
+            <NewViewpointDialog
+                isOpen={showNewViewpointDialog}
+                onClose={() => setShowNewViewpointDialog(false)}
+                onSubmit={handleCreateViewpoint}
+                existingNames={viewpoints.map(vp => vp?.name || '')}
             />
 
             {/* Environment Generation Wizard */}

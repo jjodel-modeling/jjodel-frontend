@@ -11,6 +11,7 @@ interface WorkbenchPropertiesProps {
     selectedNodeId: string | null;
     selectedNodeType: TreeNodeType | null;
     isExpertMode: boolean;
+    style?: React.CSSProperties;
 }
 
 const WorkbenchProperties: React.FC<WorkbenchPropertiesProps> = ({
@@ -18,6 +19,7 @@ const WorkbenchProperties: React.FC<WorkbenchPropertiesProps> = ({
     selectedNodeId,
     selectedNodeType,
     isExpertMode,
+    style,
 }) => {
     const lViewpoint = useMemo(() => {
         try {
@@ -81,7 +83,7 @@ const WorkbenchProperties: React.FC<WorkbenchPropertiesProps> = ({
     };
 
     return (
-        <div className="viewpoint-workbench__properties">
+        <div className="viewpoint-workbench__properties" style={style}>
             {renderContent()}
         </div>
     );

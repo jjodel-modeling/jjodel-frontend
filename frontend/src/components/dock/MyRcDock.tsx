@@ -587,6 +587,8 @@ export class PinnableDock extends DockLayout{
         editorType = 'transformation';
     } else if (activeId.startsWith('doc_')) {
         editorType = 'summary';
+    } else if (activeId.startsWith('vp_')) {
+        editorType = 'viewpoint';
     } else {
         const rawModel = store.getState().idlookup[activeId] as any;
         editorType = rawModel?.className === 'DModel'

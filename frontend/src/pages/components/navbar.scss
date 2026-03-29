@@ -1775,6 +1775,15 @@ $transition-menu: 150ms ease;
     }
   }
 
+  // Viewpoint tab active — teal background
+  &--viewpoint.appbar-tab--active {
+    background: rgba(13, 148, 136, 0.08);
+
+    .appbar-tab__name {
+      color: #0D9488;
+    }
+  }
+
   &__badge {
     display: inline-flex;
     align-items: center;
@@ -1813,6 +1822,16 @@ $transition-menu: 150ms ease;
     &--documentation {
       background-color: #bfdbfe;
       color: #1e40af;
+    }
+
+    &--viewpoint {
+      background-color: #CCFBF1;  // Teal-100
+      color: #0D9488;             // Teal-600
+
+      .bi {
+        font-size: 9px;
+        line-height: 1;
+      }
     }
   }
 

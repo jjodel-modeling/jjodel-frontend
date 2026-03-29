@@ -233,6 +233,106 @@
     gap: 4px;
 }
 
+// --- Canvas ---
+.workbench-canvas__toolbar {
+    position: absolute;
+    top: 5px;
+    left: 6px;
+    right: 6px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    z-index: 10;
+    pointer-events: none;
+
+    > * {
+        pointer-events: auto;
+    }
+}
+
+.workbench-canvas__toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.workbench-canvas__toolbar-spacer {
+    flex: 1;
+}
+
+.workbench-canvas__control {
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 0.5px solid #e2e8f0;
+    color: #64748b;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    white-space: nowrap;
+
+    &:hover {
+        color: #334155;
+        background: rgba(255, 255, 255, 0.95);
+    }
+
+    &--active {
+        background: #e0f2fe;
+        border-color: #0ea5e9;
+        color: #0369a1;
+
+        &:hover {
+            background: #bae6fd;
+        }
+    }
+}
+
+.workbench-canvas__content {
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+}
+
+.workbench-canvas__editor-wrap {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: auto;
+}
+
+.workbench-canvas__status {
+    position: absolute;
+    bottom: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 8px;
+    color: #94a3b8;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 1px 6px;
+    border-radius: 2px;
+    border: 0.5px solid #e2e8f0;
+    backdrop-filter: blur(4px);
+    z-index: 10;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+// Highlight mode: dim non-matched elements
+.workbench-canvas--highlight .workbench-canvas__editor-wrap {
+    // TODO: integrate view scoring for highlight/filter
+    // When implemented, matched elements get a cyan border glow
+    // and non-matched elements get reduced opacity
+}
+
+// Filter mode: hide non-matched elements
+.workbench-canvas--filter .workbench-canvas__editor-wrap {
+    // TODO: integrate view scoring for highlight/filter
+    // When implemented, non-matched elements are hidden (display: none)
+}
+
 // --- Resize Handle ---
 .viewpoint-workbench__resize-handle {
     height: 20px;

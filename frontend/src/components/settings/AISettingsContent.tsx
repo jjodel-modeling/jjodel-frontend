@@ -10,6 +10,15 @@ import { OpenAIIcon } from '../icons/ProviderIcons';
 import groqLogo from '../../static/img/groq.webp';
 import kimiLogo from '../../static/img/kimi.svg';
 import ollamaLogo from '../../static/img/ollama.png';
+import claudeLogo from '../../static/img/claude.webp';
+import mistralLogo from '../../static/img/mistral-color.webp';
+import geminiLogo from '../../static/img/gemini.webp';
+import deepseekLogo from '../../static/img/deepseek.webp';
+import copilotLogo from '../../static/img/copilot.webp';
+
+
+
+
 
 interface AISettingsContentProps {
     onClose?: () => void;
@@ -136,19 +145,21 @@ export function AISettingsContent({
                 case 'GPT': 
                     return <i className="bi bi-openai"></i>;
                 case 'Claude': 
-                    return <i className="bi bi-claude"></i>;
+                    return <img style={{width: '24px', height: '24px', borderRadius: '3px'}} src={claudeLogo} />;
                 case 'Groq':
                     return <img style={{width: '24px', height: '24px', borderRadius: '3px'}} src={groqLogo} />;
                 case 'DeepSeek':
-                    return 'D';
+                    return <img style={{width: '24px', height: '24px', borderRadius: '3px'}} src={deepseekLogo} />;
                 case 'Gemini':
-                    return <i className="bi bi-gem"></i>;
+                    return <img style={{width: '24px', height: '24px', borderRadius: '3px'}} src={geminiLogo} />;
                 case 'Mistral':
-                    return <i className="bi bi-wind"></i>;
+                    return <img style={{width: '24px', height: '24px', borderRadius: '3px'}} src={mistralLogo} />;
                 case 'Ollama':
                     return <img style={{width: '24px', height: '24px', borderRadius: '3px'}} src={ollamaLogo} />;
                 case 'Llama':
                     return 'Llama';
+                case 'Copilot':
+                    return <img style={{width: '24px', height: '24px', borderRadius: '3px'}} src={copilotLogo} />;
                 case 'Kimi':
                     return <img style={{width: '24px', height: '24px', backgroundColor: '#ccc', padding: '2px', borderRadius: '3px'}} src={kimiLogo} />;
                 case 'Custom':
