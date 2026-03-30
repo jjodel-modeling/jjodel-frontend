@@ -7,6 +7,35 @@ import stringify from 'json-stable-stringify';
 export class Uobj {
     static cname: string = 'Uobj';
 
+    static deepEdit(
+        obj: any,
+        key: (k: string | number | symbol) => string | number | symbol | undefined,
+        value: (v: any) => any, inPlace = false
+    ): any {
+        if (obj === null || typeof obj !== 'object') return obj;
+
+        let modified = false;
+        const newObj: any = inPlace ? obj : (Array.isArray(obj) ? [] : {});
+        let isArr = Array.isArray(obj);
+        for (const k of Reflect.ownKeys(obj)) {
+            let newKey = key(k);
+            if (isArr && newKey !== undefined && typeof newKey !== "symbol" && !isNaN(+newKey) && +newKey >= 0) newKey = +newKey; // isNaN check to avoid transforming "length" into NaN or custom keys like ([]).a = "custom key"
+            if (newKey === undefined) {
+                modified = true;
+                if (inPlace) delete newObj[k];
+                continue;
+            }
+
+            const transformedVal = value(obj[k]);
+            const newVal = Uobj.deepEdit(transformedVal, key, value);
+
+            if (newKey !== k || newVal !== obj[k]) modified = true;
+            if (inPlace) delete newObj[k];
+            newObj[newKey] = newVal;
+        }
+
+        return modified ? newObj : obj;
+    }
     // difference react-style. lazy check by === equality field by field. parameters are readonly
     public static objdiff<T extends GObject>(old:T, neww: T, includeProto: boolean = true, emptyObjectsCheck: boolean = true): {removed: Partial<T>, added: Partial<T>, changed: Partial<T>, unchanged: Partial<T>} {
         // let ret: GObject = {removed:{}, added:{}, changed:{}};

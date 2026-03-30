@@ -51,11 +51,17 @@ export class DV {
         let m2t = undefined; //  {javascript:{__str:'function(model) {\n\treturn "Not implemented, this is a placeholder.";\n}'}};
         let t2m = undefined;
         let ret: Dictionary<string, Language> & {_selected: string} = { _selected: 'JSON' } as any;
-        ret.JSON = new Language(
-            {javascript:{allowPartials: true, __str:'function(modelData) {\n\treturn JSON.stringify(modelData.deepJson, null, 4);\n}'}},
+        ret.JSON = new Language("jom",
+            {javascript:{allowPartials: true, __str:'function(modelData) {' +
+                        '\n\tlet obj = modelData.deepJson;' +
+                        '\n\t// remove keys not often modified (instanceof) or that are references to other models (instanceof, instances).' +
+                        '\n\tlet ignoredKeys = ["instances", "father", "instanceof"];' +
+                        '\n\tlet ret = Uobj.deepEdit(obj, k => (ignoredKeys.includes(k) ? undefined : k), v=>v, false);' +
+                        '\n\treturn JSON.stringify(ret, null, 4);' +
+                        '\n}'}},
             {javascript:{allowPartials: true, __str:"function(text) {\n\treturn JSON.parse(text);\n}"}}
         );
-        ret['Emfatic'] = new Language(
+        ret['Emfatic'] = new Language("emf",
             {engine: 'handlebars' as any, javascript:
                     {allowPartials: true, __str: `function(model, node){
     // finds and applies the appropriate serializer, empty string for missing ones.
@@ -387,10 +393,10 @@ strescape -> ["\\\\/bfnrt] {% id %}
                 'ValueChild': ETA.flexmi_ValueChild,
                 'ValueInline': ETA.flexmi_ValueInline,
                 allowPartials: true}};
-        ret['flexmi/YAML'] = new Language(m2t, t2m);
-        ret['flexmi/XMI'] = new Language(flexmim2t, {ohm: {__str: Ohm.flexmi_grammar+'╗' + Ohm.flexmi_semantic, allowPartials: true, test_text: Ohm.exampleM1}});
+        ret['flexmi/YAML'] = new Language("yaml", m2t, t2m);
+        ret['flexmi/XMI'] = new Language("flexmi", flexmim2t, {ohm: {__str: Ohm.flexmi_grammar+'╗' + Ohm.flexmi_semantic, allowPartials: true, test_text: Ohm.exampleM1}});
 
-        ret['eCore/JSON'] = new Language(
+        ret['eCore/JSON'] = new Language("json",
             {javascript:{allowPartials: true, __str: `function(modelData) {
     let ecore = modelData.ecore; // or: modelData.shallowEcore to exclude sub-elements.
     // remove sub-element collections to keep the scope limited to current element.
@@ -407,11 +413,11 @@ strescape -> ["\\\\/bfnrt] {% id %}
     // ecore is natively supported
     return ecore;
 }`}});
-        ret['eCore/XMI'] = new Language(
+        ret['eCore/XMI'] = new Language("xmi",
             {javascript:{allowPartials: true, __str: `function(modelData) { return XMI.fromJSON(M2T(modelData, 'eCore/JSON')) }`}},
             {javascript:{allowPartials: true, __str: `function(text) { return parseT2M('eCore/JSON', JSON.stringify(XMI.toJSON(text))); }`}});
 
-        ret.testLanguage = new Language({
+        ret.testLanguage = new Language("test", {
                 javascript:{allowPartials: false, __str:`function (model, node){
     let text: string = '' model.className + ':' + model.id;
     for (let child of model.attributes) text += '\\n\\t'+child.name+':'+JSON.stringify(child.values);
