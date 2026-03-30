@@ -368,7 +368,7 @@ const MetamodelTree = memo(function MetamodelTree({
                             <TreeNode
                                 key={pkg.id}
                                 data={pkg}
-                                depth={1}
+                                depth={2}
                                 selectedId={selectedId}
                                 onSelect={onSelect}
                                 highlightedElementId={highlightedElementId}
@@ -485,7 +485,7 @@ const ModelTree = memo(function ModelTree({
                             <TreeNode
                                 key={obj.id}
                                 data={obj}
-                                depth={1}
+                                depth={2}
                                 selectedId={selectedId}
                                 onSelect={onSelect}
                                 highlightedElementId={highlightedElementId}
@@ -831,19 +831,9 @@ const TransformationSection = memo(function TransformationSection({
     selectedId?: string;
     onSelect?: () => void;
 }): ReactElement {
-    const [isExpanded, setIsExpanded] = useStateIfMounted(true);
-
-    const handleToggle = useCallback((e: React.MouseEvent) => {
-        e.stopPropagation();
-        setIsExpanded(prev => !prev);
-    }, [setIsExpanded]);
-
     return (
         <div className="transformation-section">
-            <div className="transformation-section__header" onClick={handleToggle}>
-                <button className="tree-node__toggle">
-                    <i className={`bi bi-chevron-${isExpanded ? 'down' : 'right'}`} />
-                </button>
+            <div className="transformation-section__header">
                 <span className="transformation-section__icon">
                     <i className={`bi ${entityIcon('transformation')}`} />
                 </span>
@@ -851,18 +841,16 @@ const TransformationSection = memo(function TransformationSection({
                 <span className="transformation-section__count">{transformations.length}</span>
             </div>
 
-            {isExpanded && (
-                <div className="transformation-section__content">
-                    {transformations.map((t) => (
-                        <TransformationItem
-                            key={t.id}
-                            transformation={t}
-                            selectedId={selectedId}
-                            onSelect={onSelect}
-                        />
-                    ))}
-                </div>
-            )}
+            <div className="transformation-section__content">
+                {transformations.map((t) => (
+                    <TransformationItem
+                        key={t.id}
+                        transformation={t}
+                        selectedId={selectedId}
+                        onSelect={onSelect}
+                    />
+                ))}
+            </div>
         </div>
     );
 });
@@ -1026,10 +1014,8 @@ const ViewpointItem = memo(function ViewpointItem({
                         V
                     </span>
                     <span className="tree-node__name">{viewpoint.name}</span>
-                    <i
-                        className={`bi ${viewpoint.isExclusive ? 'bi-diamond-fill' : 'bi-layers'}`}
-                        style={{ fontSize: '9px', opacity: 0.5 }}
-                    />
+
+                    {!viewpoint.isExclusive && <i className={'bi bi-layers'} title={'Overkay viewpoint'} style={{ fontSize: '11px', opacity: 0.5 }}></i>}
                 </div>
             </div>
 
@@ -1064,10 +1050,15 @@ const VP_TYPE_LABELS: Record<ViewpointType, string> = {
 /**
  * ViewpointSection — collapsible section listing all viewpoints grouped by type
  */
-const ViewpointSection = memo(function ViewpointSection({
+/**
+ * ViewpointTypeGroup — collapsible sub-group for a single viewpoint type (Syntax, Validation, etc.)
+ */
+const ViewpointTypeGroup = memo(function ViewpointTypeGroup({
+    type,
     viewpoints,
     onSelect,
 }: {
+    type: ViewpointType;
     viewpoints: TreeViewpointData[];
     onSelect?: () => void;
 }): ReactElement {
@@ -1078,6 +1069,40 @@ const ViewpointSection = memo(function ViewpointSection({
         setIsExpanded(prev => !prev);
     }, [setIsExpanded]);
 
+    return (
+        <div className="tree-type-group">
+            <div className="tree-type-group__header" data-type={type} onClick={handleToggle}>
+                <button className="tree-node__toggle">
+                    <i className={`bi bi-chevron-${isExpanded ? 'down' : 'right'}`} />
+                </button>
+                <span className="tree-type-group__indicator" data-type={type} />
+                <span className="tree-type-group__label" data-type={type}>
+                    {VP_TYPE_LABELS[type]}
+                </span>
+                <span className="tree-type-group__count">{viewpoints.length}</span>
+            </div>
+            {isExpanded && (
+                <div className="tree-type-group__content">
+                    {viewpoints.map((vp) => (
+                        <ViewpointItem
+                            key={vp.id}
+                            viewpoint={vp}
+                            onSelect={onSelect}
+                        />
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+});
+
+const ViewpointSection = memo(function ViewpointSection({
+    viewpoints,
+    onSelect,
+}: {
+    viewpoints: TreeViewpointData[];
+    onSelect?: () => void;
+}): ReactElement {
     // Group viewpoints by type
     const groupedViewpoints = useMemo(() => {
         const groups = new Map<ViewpointType, TreeViewpointData[]>();
@@ -1095,10 +1120,7 @@ const ViewpointSection = memo(function ViewpointSection({
 
     return (
         <div className="viewpoint-section">
-            <div className="viewpoint-section__header" onClick={handleToggle}>
-                <button className="tree-node__toggle">
-                    <i className={`bi bi-chevron-${isExpanded ? 'down' : 'right'}`} />
-                </button>
+            <div className="viewpoint-section__header">
                 <span className="viewpoint-section__icon">
                     <i className="bi bi-eye" />
                 </span>
@@ -1106,31 +1128,78 @@ const ViewpointSection = memo(function ViewpointSection({
                 <span className="viewpoint-section__count">{viewpoints.length}</span>
             </div>
 
-            {isExpanded && (
-                <div className="viewpoint-section__content">
-                    {activeGroups.map((type) => {
-                        const vps = groupedViewpoints.get(type)!;
-                        const groupColors = VP_TYPE_COLORS[type];
-                        return (
-                            <div key={type}>
-                                <div className="tree-group-header" data-type={type}>
-                                    <span className="tree-group-header__label">
-                                        {VP_TYPE_LABELS[type]}
-                                    </span>
-                                    <span className="tree-group-header__count">{vps.length}</span>
-                                </div>
-                                {vps.map((vp) => (
-                                    <ViewpointItem
-                                        key={vp.id}
-                                        viewpoint={vp}
-                                        onSelect={onSelect}
-                                    />
-                                ))}
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
+            <div className="viewpoint-section__content">
+                {activeGroups.map((type) => (
+                    <ViewpointTypeGroup
+                        key={type}
+                        type={type}
+                        viewpoints={groupedViewpoints.get(type)!}
+                        onSelect={onSelect}
+                    />
+                ))}
+            </div>
+        </div>
+    );
+});
+
+/**
+ * MetamodelsSection — collapsible section grouping all metamodels and their child models
+ */
+const MetamodelsSection = memo(function MetamodelsSection({
+    metamodels,
+    selectedId,
+    onSelect,
+    highlightedElementId,
+    highlightedAction,
+    expandedNodeIds,
+    isScriptExecuting,
+}: {
+    metamodels: ProcessedMetamodel[];
+    selectedId?: string;
+    onSelect?: () => void;
+    highlightedElementId?: string | null;
+    highlightedAction?: ElementAction | null;
+    expandedNodeIds?: Set<string>;
+    isScriptExecuting?: boolean;
+}): ReactElement {
+    const totalCount = metamodels.length;
+
+    return (
+        <div className="metamodels-section">
+            <div className="metamodels-section__header">
+                <span className="metamodels-section__icon">
+                    <i className="bi bi-boxes" />
+                </span>
+                <span className="metamodels-section__label">Metamodels</span>
+                <span className="metamodels-section__count">{totalCount}</span>
+            </div>
+
+            <div className="metamodels-section__content">
+                {metamodels.map((mm, index) => (
+                    <React.Fragment key={mm.data.id}>
+                        <MetamodelTree
+                            metamodel={mm.data}
+                            packages={mm.packages}
+                            selectedId={selectedId}
+                            onSelect={onSelect}
+                            defaultExpanded={index === 0}
+                            highlightedElementId={highlightedElementId}
+                            highlightedAction={highlightedAction}
+                            expandedNodeIds={expandedNodeIds}
+                            isScriptExecuting={isScriptExecuting}
+                        />
+                        {mm.childModels.map((model) => (
+                            <NestedModelTree
+                                key={model.id}
+                                model={model}
+                                depth={1}
+                                selectedId={selectedId}
+                                onSelect={onSelect}
+                            />
+                        ))}
+                    </React.Fragment>
+                ))}
+            </div>
         </div>
     );
 });
@@ -1234,31 +1303,17 @@ function TreeViewContentComponent(props: AllProps & TreeViewContentProps) {
         <div ref={containerRef} className="tree-view-content">
             <MegamodelEntry />
 
-            {processedMetamodels.map((mm, index) => (
-                <React.Fragment key={mm.data.id}>
-                    <MetamodelTree
-                        metamodel={mm.data}
-                        packages={mm.packages}
-                        selectedId={selectedElementId}
-                        onSelect={onSelect}
-                        defaultExpanded={index === 0}
-                        highlightedElementId={highlightedElementId}
-                        highlightedAction={highlightedAction}
-                        expandedNodeIds={expandedNodeIds}
-                        isScriptExecuting={isScriptExecuting}
-                    />
-                    {/* M1 models at same level as their parent metamodel */}
-                    {mm.childModels.map((model) => (
-                        <NestedModelTree
-                            key={model.id}
-                            model={model}
-                            depth={0}
-                            selectedId={selectedElementId}
-                            onSelect={onSelect}
-                        />
-                    ))}
-                </React.Fragment>
-            ))}
+            {(processedMetamodels.length > 0 || standaloneModels.length > 0) && (
+                <MetamodelsSection
+                    metamodels={processedMetamodels}
+                    selectedId={selectedElementId}
+                    onSelect={onSelect}
+                    highlightedElementId={highlightedElementId}
+                    highlightedAction={highlightedAction}
+                    expandedNodeIds={expandedNodeIds}
+                    isScriptExecuting={isScriptExecuting}
+                />
+            )}
 
             {/* Standalone M1 models (no metamodel parent open) */}
             {standaloneModels.map((model) => (

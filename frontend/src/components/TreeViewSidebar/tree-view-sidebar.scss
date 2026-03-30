@@ -352,7 +352,7 @@ $color-subview: #94a3b8;    // Slate - Sub-views
     align-items: center;
     gap: 2px;
     padding: 4px 6px;
-    margin-left: 8px;
+    padding-left: 16px;
     border-radius: $radius-sm;
     cursor: pointer;
     transition: background-color $transition-fast;
@@ -374,12 +374,12 @@ $color-subview: #94a3b8;    // Slate - Sub-views
 }
 
 .metamodel-tree__content {
-    padding-left: 8px;
+    // No extra padding — depth is managed by inline paddingLeft on tree nodes
 }
 
 .tree-empty-package {
     padding: 6px 10px;
-    padding-left: 28px;
+    padding-left: 32px;
     font-size: 11px;
     color: $color-text-tertiary;
     font-style: italic;
@@ -472,58 +472,68 @@ $color-subview: #94a3b8;    // Slate - Sub-views
     font-weight: 500;
     flex-shrink: 0;
 
-    // OUTLINE STYLE - transparent bg, colored border + text
-    background: transparent;
-    border: 1px solid currentColor;
+    // FILLED PASTEL STYLE - light bg, dark text, no border
+    border: none;
 
     &.tree-DModel {
-        color: $color-model;
+        background: #EEEDFE;
+        color: #3C3489;
     }
 
     &.tree-DPackage {
-        color: $color-package;
+        background: #F1EFE8;
+        color: #444441;
     }
 
     &.tree-DClass {
-        color: $color-class;
+        background: #E6F1FB;
+        color: #0C447C;
 
         &.abstract-class {
-            border-style: dashed;
+            border: 1px dashed #0C447C;
         }
     }
 
     &.tree-DAttribute {
-        color: $color-attribute;
+        background: #EAF3DE;
+        color: #27500A;
     }
 
     &.tree-DReference {
-        color: $color-reference;
+        background: #FAECE7;
+        color: #712B13;
     }
 
     &.tree-DEnumerator,
     &.tree-DEnum {
-        color: $color-enum;
+        background: #FBEAF0;
+        color: #72243E;
     }
 
     &.tree-DEnumLiteral {
-        color: $color-literal;
+        background: #FBEAF0;
+        color: #72243E;
     }
 
     &.tree-DOperation {
-        color: $color-operation;
+        background: #E0F7FA;
+        color: #0E7490;
     }
 
     &.tree-DParameter {
-        color: $color-parameter;
+        background: #F1F5F9;
+        color: #475569;
     }
 
     &.tree-DObject {
-        color: $color-object;
+        background: #F1F5F9;
+        color: #475569;
     }
 
     // Nested M1 model icon — lowercase "m"
     &.tree-nested-model {
-        color: $color-nested-model;
+        background: #E1F5EE;
+        color: #085041;
         font-style: italic;
     }
 }
@@ -533,8 +543,7 @@ $color-subview: #94a3b8;    // Slate - Sub-views
 // ============================================
 
 .nested-model-tree {
-    // No border — indentation alone is sufficient
-    padding-left: 6px;
+    // No border — indentation managed by inline paddingLeft
 }
 
 // M1 badge next to model name — very subtle slate hint
@@ -862,21 +871,19 @@ $color-highlight-unknown: #f59e0b; // Amber - unknown action
         background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
     }
 
-    // Dark mode — outline icons use slightly brighter colors for visibility
+    // Dark mode — filled pastel icons with dimmed backgrounds for visibility
     .tree-node__icon {
-        background: transparent;
-
-        &.tree-DModel { color: #9B95E8; }
-        &.tree-DPackage { color: #a5a49e; }
-        &.tree-DClass { color: #5ea3e8; }
-        &.tree-DAttribute { color: #7fb836; }
-        &.tree-DReference { color: #e87a54; }
-        &.tree-DEnumerator, &.tree-DEnum { color: #e07399; }
-        &.tree-DEnumLiteral { color: #e07399; }
-        &.tree-DOperation { color: #22d3ee; }
-        &.tree-DParameter { color: #d1d5db; }
-        &.tree-DObject { color: #9ca3af; }
-        &.tree-nested-model { color: #34c48e; }
+        &.tree-DModel { background: rgba(#9B95E8, 0.18); color: #B5B0F0; }
+        &.tree-DPackage { background: rgba(#a5a49e, 0.15); color: #c5c4be; }
+        &.tree-DClass { background: rgba(#5ea3e8, 0.18); color: #7BB8F0; }
+        &.tree-DAttribute { background: rgba(#7fb836, 0.18); color: #9AD04E; }
+        &.tree-DReference { background: rgba(#e87a54, 0.18); color: #F09474; }
+        &.tree-DEnumerator, &.tree-DEnum { background: rgba(#e07399, 0.18); color: #F08DB3; }
+        &.tree-DEnumLiteral { background: rgba(#e07399, 0.18); color: #F08DB3; }
+        &.tree-DOperation { background: rgba(#22d3ee, 0.18); color: #44E0F8; }
+        &.tree-DParameter { background: rgba(#d1d5db, 0.12); color: #d1d5db; }
+        &.tree-DObject { background: rgba(#9ca3af, 0.15); color: #b0b8c4; }
+        &.tree-nested-model { background: rgba(#34c48e, 0.18); color: #4ED8A4; }
     }
 
     .tree-nested-model__badge {
@@ -896,15 +903,16 @@ $color-highlight-unknown: #f59e0b; // Amber - unknown action
         color: #6b7280;
     }
 
-    .viewpoint-section {
+    .metamodels-section {
         border-color: #333;
 
         &__header {
             color: #e0e0e0;
+        }
 
-            &:hover {
-                background-color: #2a2a2a;
-            }
+        &__icon {
+            background: rgba(127, 119, 221, 0.15);
+            color: #9B95E8;
         }
 
         &__count {
@@ -913,24 +921,59 @@ $color-highlight-unknown: #f59e0b; // Amber - unknown action
         }
     }
 
-    .tree-group-header {
+    .viewpoint-section {
+        border-color: #333;
+
+        &__header {
+            color: #e0e0e0;
+        }
+
+        &__count {
+            background: rgba(255, 255, 255, 0.1);
+            color: #94a3b8;
+        }
+    }
+
+    .tree-type-group {
+        &__header {
+            border-color: #333;
+
+            &:hover {
+                background-color: #2a2a2a;
+            }
+        }
+
+        &__label {
+            color: #94a3b8;
+        }
+
         &__count {
             color: #6b7280;
         }
     }
 
     .tree-node__icon.tree-subview {
-        background: transparent;
+        background: rgba(#b0bec5, 0.15);
         color: #b0bec5;
     }
 
     .tree-node__icon.tree-rule {
-        background: transparent;
+        background: rgba(#34d399, 0.15);
         color: #34d399;
     }
 
     .tree-node__icon.tree-helper {
-        background: transparent;
+        background: rgba(#94a3b8, 0.15);
+        color: #94a3b8;
+    }
+
+    .tree-viewpoint {
+        background: rgba(#F08DB3, 0.18) !important;
+        color: #F08DB3 !important;
+    }
+
+    .tree-transformation {
+        background: rgba(148, 163, 184, 0.15);
         color: #94a3b8;
     }
 
@@ -1004,13 +1047,27 @@ html[data-theme="dark"] {
             }
         }
 
+        .metamodels-section {
+            border-color: #333;
+
+            &__header {
+                color: #e0e0e0;
+            }
+
+            &__icon {
+                background: rgba(127, 119, 221, 0.15);
+                color: #9B95E8;
+            }
+
+            &__count {
+                background: rgba(255, 255, 255, 0.1);
+                color: #94a3b8;
+            }
+        }
+
         .transformation-section {
             &__header {
                 color: #e0e0e0;
-
-                &:hover {
-                    background-color: #2a2a2a;
-                }
             }
 
             &__count {
@@ -1020,8 +1077,8 @@ html[data-theme="dark"] {
         }
 
         .tree-transformation {
-            background: rgba(148, 163, 184, 0.12);
-            color: #64748b;
+            background: rgba(148, 163, 184, 0.15);
+            color: #94a3b8;
         }
 
         .viewpoint-section {
@@ -1029,10 +1086,6 @@ html[data-theme="dark"] {
 
             &__header {
                 color: #e0e0e0;
-
-                &:hover {
-                    background-color: #2a2a2a;
-                }
             }
 
             &__count {
@@ -1041,24 +1094,46 @@ html[data-theme="dark"] {
             }
         }
 
-        .tree-group-header {
+        .tree-type-group {
+            &__header {
+                border-color: #333;
+
+                &:hover {
+                    background-color: #2a2a2a;
+                }
+            }
+
+            &__label {
+                color: #94a3b8;
+            }
+
             &__count {
                 color: #6b7280;
             }
         }
 
         .tree-node__icon.tree-subview {
-            background: transparent;
+            background: rgba(#b0bec5, 0.15);
             color: #b0bec5;
         }
 
         .tree-node__icon.tree-rule {
-            background: transparent;
+            background: rgba(#34d399, 0.15);
             color: #34d399;
         }
 
         .tree-node__icon.tree-helper {
-            background: transparent;
+            background: rgba(#94a3b8, 0.15);
+            color: #94a3b8;
+        }
+
+        .tree-viewpoint {
+            background: rgba(#F08DB3, 0.18) !important;
+            color: #F08DB3 !important;
+        }
+
+        .tree-transformation {
+            background: rgba(148, 163, 184, 0.15);
             color: #94a3b8;
         }
 
@@ -1080,7 +1155,7 @@ html[data-theme="dark"] {
 
 .megamodel-entry {
     cursor: pointer;
-    border-bottom: 1px solid #e2e8f0;
+    // No border-bottom — metamodels-section has border-top for separation
 
     &__header {
         display: flex;
@@ -1114,6 +1189,57 @@ html[data-theme="dark"] {
     }
 }
 
+// ─── Metamodels Section ───────────────────────────────────
+
+.metamodels-section {
+    border-top: 1px solid #e2e8f0;
+    margin-top: 4px;
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #334155;
+    }
+
+    &__icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 4px;
+        background: rgba(127, 119, 221, 0.10);
+        color: #7F77DD;
+        font-size: 12px;
+    }
+
+    &__label {
+        flex: 1;
+    }
+
+    &__count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 20px;
+        height: 18px;
+        padding: 0 6px;
+        border-radius: 9px;
+        background: #f1f5f9;
+        color: #64748b;
+        font-size: 11px;
+        font-weight: 500;
+    }
+
+    &__content {
+        padding-bottom: 4px;
+    }
+}
+
 // ─── Transformation Section ───────────────────────────────
 
 .transformation-section {
@@ -1125,19 +1251,9 @@ html[data-theme="dark"] {
         align-items: center;
         gap: 6px;
         padding: 6px 12px;
-        cursor: pointer;
         font-size: 13px;
         font-weight: 600;
         color: #334155;
-        transition: background-color 0.15s;
-
-        &:hover {
-            background-color: #f1f5f9;
-        }
-
-        .tree-node__toggle {
-            flex-shrink: 0;
-        }
     }
 
     &__icon {
@@ -1183,9 +1299,9 @@ html[data-theme="dark"] {
     height: 16px;
     min-width: 16px;
     border-radius: 3px;
-    background: transparent;
-    border: 1px solid currentColor;
-    color: #94a3b8;
+    background: #F1F5F9;
+    border: none;
+    color: #64748b;
     font-size: 8px;
     font-weight: 500;
     margin-right: 4px;
@@ -1202,19 +1318,9 @@ html[data-theme="dark"] {
         align-items: center;
         gap: 6px;
         padding: 6px 12px;
-        cursor: pointer;
         font-size: 13px;
         font-weight: 600;
         color: #334155;
-        transition: background-color 0.15s;
-
-        &:hover {
-            background-color: #f1f5f9;
-        }
-
-        .tree-node__toggle {
-            flex-shrink: 0;
-        }
     }
 
     &__icon {
@@ -1256,7 +1362,9 @@ html[data-theme="dark"] {
 .tree-viewpoint {
     font-weight: 500;
     font-size: 8px;
-    background: transparent !important;
+    background: #FBEAF0 !important;
+    color: #72243E !important;
+    border: none;
 }
 
 // Viewpoint type badge (inline next to name)
@@ -1271,69 +1379,85 @@ html[data-theme="dark"] {
     font-weight: 500;
 }
 
-// ─── Viewpoint Type Group Headers ─────────────────────────────
+// ─── Viewpoint Type Group (collapsible sub-sections) ─────────────────
 
-.tree-group-header {
-    position: relative;
-    padding: 8px 8px 4px 24px;
-    font-size: 11px;
-    text-transform: uppercase;
-    color: $color-text-tertiary;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    user-select: none;
-    margin-top: 4px;
-    border-top: 0.5px solid $color-border;
-
-    // Hide border on first group header (parent wrapper is first-child)
-    :first-child > & {
+.tree-type-group {
+    &:first-child .tree-type-group__header {
         border-top: none;
     }
 
-    // Colored left indicator per type
-    &::before {
-        content: '';
-        position: absolute;
-        left: 8px;
-        top: 50%;
-        width: 3px;
-        height: 12px;
-        transform: translateY(-50%);
-        border-radius: 2px;
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px 4px 16px;
+        cursor: pointer;
+        user-select: none;
+        margin-top: 2px;
+        border-top: 0.5px solid $color-border;
+        transition: background-color $transition-fast;
+
+        &:hover {
+            background-color: $color-bg-secondary;
+        }
+
+        .tree-node__toggle {
+            flex-shrink: 0;
+        }
     }
 
-    &[data-type="syntax"]::before { background: #378ADD; }
-    &[data-type="decoration"]::before { background: #7F77DD; }
-    &[data-type="validation"]::before { background: #EF9F27; }
-    &[data-type="semantics"]::before { background: #1D9E75; }
-    &[data-type="editor_behavior"]::before { background: #888780; }
+    // Colored left indicator per type
+    &__indicator {
+        width: 3px;
+        height: 12px;
+        border-radius: 2px;
+        flex-shrink: 0;
 
-    // Darker label colors for readability
-    &[data-type="syntax"] .tree-group-header__label { color: #0C447C; }
-    &[data-type="decoration"] .tree-group-header__label { color: #3C3489; }
-    &[data-type="validation"] .tree-group-header__label { color: #633806; }
-    &[data-type="semantics"] .tree-group-header__label { color: #085041; }
-    &[data-type="editor_behavior"] .tree-group-header__label { color: #444441; }
+        &[data-type="syntax"] { background: #378ADD; }
+        &[data-type="decoration"] { background: #7F77DD; }
+        &[data-type="validation"] { background: #EF9F27; }
+        &[data-type="semantics"] { background: #1D9E75; }
+        &[data-type="editor_behavior"] { background: #888780; }
+    }
 
     &__label {
-        // Base color overridden per type above
+        font-size: 11px;
+        text-transform: uppercase;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        color: $color-text-tertiary;
+        flex: 1;
+
+        &[data-type="syntax"] { color: #0C447C; }
+        &[data-type="decoration"] { color: #3C3489; }
+        &[data-type="validation"] { color: #633806; }
+        &[data-type="semantics"] { color: #085041; }
+        &[data-type="editor_behavior"] { color: #444441; }
     }
 
     &__count {
         font-size: 10px;
         font-weight: 500;
+        color: $color-text-tertiary;
         opacity: 0.6;
     }
+
+    &__content {
+        // Children rendered inside
+    }
+}
+
+// Legacy .tree-group-header kept for backward compatibility
+.tree-group-header {
+    display: none;
 }
 
 // ─── Sub-view icon in tree ─────────────────────────────────────
 
 .tree-node__icon.tree-subview {
-    background: transparent;
-    color: $color-subview;
+    background: #F1F5F9;
+    color: #64748b;
+    border: none;
     font-size: 10px;
 
     i {
@@ -1344,15 +1468,17 @@ html[data-theme="dark"] {
 // ─── Transformation rule/helper icons ─────────────────────────
 
 .tree-node__icon.tree-rule {
-    background: transparent;
-    color: #10b981;
+    background: #E1F5EE;
+    color: #085041;
+    border: none;
     font-weight: 500;
     font-size: 8px;
 }
 
 .tree-node__icon.tree-helper {
-    background: transparent;
-    color: #64748b;
+    background: #F1F5F9;
+    color: #475569;
+    border: none;
     font-weight: 500;
     font-size: 8px;
 }

@@ -2159,8 +2159,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                             <span className="vp-type-badge" data-type={vpType}>
                                                 {vpType.replace('_', ' ')}
                                             </span>
-                                            <i className={`bi ${isExclusive ? 'bi-diamond-fill' : 'bi-layers'} vp-mode-icon`}
-                                               title={isExclusive ? 'Exclusive viewpoint' : 'Overlay viewpoint'} />
+                                            {!isExclusive && <i className="bi bi-layers vp-mode-icon" title="Overlay viewpoint"></i>}
                                         </div>
                                         <div className="list-card__type">
                                             {viewCount} {viewCount === 1 ? 'view' : 'views'}
