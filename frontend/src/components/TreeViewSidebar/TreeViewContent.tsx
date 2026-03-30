@@ -1394,12 +1394,12 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
 
     // Get metamodels
     const metamodelPointers = state.m2models || [];
-    const metamodels: LModel[] = LPointerTargetable.fromPointer(metamodelPointers) || [];
+    const metamodels: LModel[] = (LPointerTargetable.fromPointer(metamodelPointers) || []).filter(Boolean);
     const metamodelIdSet = new Set(metamodels.map(mm => mm.id));
 
     // Get M1 models
     const modelPointers = state.m1models || [];
-    const m1Models: LModel[] = LPointerTargetable.fromPointer(modelPointers) || [];
+    const m1Models: LModel[] = (LPointerTargetable.fromPointer(modelPointers) || []).filter(Boolean);
 
     // Check which M1 models have a graph (tab has been opened)
     const graphs: DGraph[] = DGraph.fromPointer(state.graphs || []);

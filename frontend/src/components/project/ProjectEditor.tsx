@@ -148,6 +148,7 @@ const formatDate = (date: Date | string | number | undefined): string => {
  * Shows project header with badges, and sections for metamodels, models, viewpoints
  */
 const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }) => {
+    if (!project) return null;
     const metamodels = project.metamodels || [];
     const models = project.models || [];
     const viewpoints = project.viewpoints || [];
