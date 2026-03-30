@@ -274,6 +274,10 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         return isConcatenable ? ret.join(' ') : ret; }
 
     public get(targetObj: ME, propKey: string | symbol, proxyitself: Proxyfied<ME>): any {
+        // Symbol properties (React internals, iterators, etc.) — bypass proxy logic
+        if (typeof propKey === 'symbol') {
+            return Reflect.get(targetObj, propKey, proxyitself);
+        }
         let ret;
         let isError = false;
         // console.error('_proxy get PRE:', {targetObj, propKey, proxyitself, arguments});
@@ -445,6 +449,10 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
     }
 
     public set(targetObj: ME, propKey: string | symbol, value: any, proxyitself?: Proxyfied<ME>): boolean {
+        // Symbol properties — bypass proxy logic
+        if (typeof propKey === 'symbol') {
+            return Reflect.set(targetObj, propKey, value, proxyitself);
+        }
         // console.error('_proxy set PRE:', {targetObj, propKey, value, proxyitself, arguments});
         // if (propKey in this.l || propKey in this.d || (this.l as GObject)[this.s + (propKey as string)] || (this.l as GObject)[(propKey as string)]) {
 
@@ -455,14 +463,6 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
             }
             return true;
         }
-        switch (typeof propKey) {
-            case "symbol":
-                propKey = String(propKey);
-                Log.exDevv('unexpected symbol in proxy setter:', propKey);
-                break;
-            default: break;
-        }
-
         switch (propKey) {
             case 'parent': propKey = 'father'; break;
         }
