@@ -4,7 +4,8 @@ import type { NotationMode, ColorScheme } from './types';
 import ColorSchemeSelector from './components/ColorSchemeSelector';
 import { LayoutMode, getSavedLayoutMode, saveLayoutMode } from '../abstract/Dock';
 import { isProjectOverviewPage } from '../../utils/navigationUtils';
-import { LPointerTargetable, LViewPoint, SetRootFieldAction } from '../../joiner';
+import { LPointerTargetable, LViewPoint } from '../../joiner';
+import { activateViewpoint } from '../../utils/lastViewpoint';
 
 interface ToolbarProps {
     snapEnabled: boolean;
@@ -38,6 +39,7 @@ interface ToolbarProps {
     onAlignBottom?: () => void;
     onDistributeH?: () => void;
     onDistributeV?: () => void;
+    isMetamodel?: boolean;
 }
 
 const NOTATION_OPTIONS: Array<{ id: NotationMode; name: string; desc: string; icon: string }> = [
@@ -146,6 +148,7 @@ function Toolbar({
     onAlignBottom,
     onDistributeH,
     onDistributeV,
+    isMetamodel = false,
 }: ToolbarProps) {
     const [notationOpen, setNotationOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -164,8 +167,12 @@ function Toolbar({
     }).filter(Boolean) as Array<{ id: string; name: string }>;
 
     const handleViewpointChange = useCallback((vpId: string) => {
-        SetRootFieldAction.new('viewpoint', vpId, '', true);
-    }, []);
+        console.log('[FIX] dropdown value:', vpId, 'viewpoints:', viewpoints.map(v => ({ id: v.id, name: v.name })));
+        // Uses the same mechanism as NestedView.tsx select() function:
+        // sets both state.viewpoint (for EditorSwitch) and
+        // project.activeViewpoint via L-proxy (for classic renderer)
+        activateViewpoint(vpId || null);
+    }, [viewpoints]);
 
     // ── Layout mode state (synced via CustomEvent + localStorage) ──
     const [layoutMode, setLayoutMode] = useState<LayoutMode>(getSavedLayoutMode);
@@ -382,25 +389,27 @@ function Toolbar({
 
             {/* ── Viewpoint selector + syntax pill ── */}
             <div className="toolbar-viewpoint-group">
-                <div className={`toolbar-viewpoint-selector${activeViewpointId ? ' toolbar-viewpoint-selector--active' : ''}`}>
-                    <i className="bi bi-eye" />
-                    <select
-                        value={activeViewpointId || ''}
-                        onChange={(e) => handleViewpointChange(e.target.value)}
-                        title="Select viewpoint"
-                    >
-                        <option value="">No viewpoint</option>
-                        {viewpoints.map(vp => (
-                            <option key={vp.id} value={vp.id}>{vp.name}</option>
-                        ))}
-                    </select>
-                </div>
+                {!isMetamodel && (
+                    <div className={`toolbar-viewpoint-selector${activeViewpointId ? ' toolbar-viewpoint-selector--active' : ''}`}>
+                        <i className="bi bi-eye" />
+                        <select
+                            value={activeViewpointId || ''}
+                            onChange={(e) => handleViewpointChange(e.target.value)}
+                            title="Select viewpoint"
+                        >
+                            <option value="">No viewpoint</option>
+                            {viewpoints.map(vp => (
+                                <option key={vp.id} value={vp.id}>{vp.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
                 <button
-                    className={`toolbar-syntax-pill ${activeViewpointId ? 'toolbar-syntax-pill--concrete' : 'toolbar-syntax-pill--active'}`}
-                    title={activeViewpointId ? 'Concrete syntax active (viewpoint selected)' : 'Currently viewing abstract syntax'}
+                    className={`toolbar-syntax-pill ${!isMetamodel && activeViewpointId ? 'toolbar-syntax-pill--concrete' : 'toolbar-syntax-pill--active'}`}
+                    title={isMetamodel ? 'Metamodels use abstract syntax only' : (activeViewpointId ? 'Concrete syntax active (viewpoint selected)' : 'Currently viewing abstract syntax')}
                 >
                     <span className="toolbar-syntax-pill__dot" />
-                    {activeViewpointId ? 'Concrete syntax' : 'Abstract syntax'}
+                    {!isMetamodel && activeViewpointId ? 'Concrete syntax' : 'Abstract syntax'}
                 </button>
             </div>
 

@@ -1,6 +1,7 @@
 import React, {useState, useCallback, useRef, useEffect} from 'react';
 import './ViewpointWorkbench.scss';
 import {LPointerTargetable, LViewPoint, LProject, LModel, Pointer} from '../../joiner';
+import {setLastEditedViewpoint} from '../../utils/lastViewpoint';
 import {TreeNodeType} from './viewpoint/ViewTreeNode';
 import ViewpointBreadcrumb from './viewpoint/ViewpointBreadcrumb';
 import ViewTree from './viewpoint/ViewTree';
@@ -27,6 +28,13 @@ const ViewpointWorkbench: React.FC<ViewpointWorkbenchProps> = ({ viewpointId }) 
     const [canvasRefreshKey, setCanvasRefreshKey] = useState(0);
     const [propertiesWidth, setPropertiesWidth] = useState(320);
 
+    // Track this as the last edited viewpoint for context menu "Add View"
+    useEffect(() => {
+        if (lViewpoint) {
+            setLastEditedViewpoint(lViewpoint.id, lViewpoint.name || 'Unnamed Viewpoint');
+        }
+    }, [lViewpoint?.id, lViewpoint?.name]);
+
     const canvasHeightRef = useRef(canvasHeight);
     canvasHeightRef.current = canvasHeight;
 
@@ -42,6 +50,19 @@ const ViewpointWorkbench: React.FC<ViewpointWorkbenchProps> = ({ viewpointId }) 
         setSelectedNodeId(nodeId);
         setSelectedNodeType(nodeType);
     }, []);
+
+    // Listen for external view selection (from TreeView sidebar)
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const { viewpointId: vpId, viewId } = (e as CustomEvent).detail || {};
+            if (vpId === viewpointId && viewId) {
+                setSelectedNodeId(viewId);
+                setSelectedNodeType('view');
+            }
+        };
+        window.addEventListener('jjodel:selectViewInWorkbench', handler);
+        return () => window.removeEventListener('jjodel:selectViewInWorkbench', handler);
+    }, [viewpointId]);
 
     const handleCreateView = useCallback(() => {
         // Will be implemented in a later prompt

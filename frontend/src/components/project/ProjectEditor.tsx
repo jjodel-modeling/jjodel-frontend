@@ -369,6 +369,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             name: t.name,
             sourceMMName: t.sourceMetamodelName,
             targetMMName: t.targetMetamodelName,
+            rules: t.ast?.mappings?.map(m => `${m.sources?.map(s => s.className).join(', ') || '?'} → ${m.targetClass}`) || [],
+            helpers: t.ast?.helpers?.map(h => h.name) || [],
         }));
         window.dispatchEvent(new CustomEvent('jjodel:transformations', { detail }));
     }, [transformations]);
@@ -1523,6 +1525,22 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             handleExecuteTransformation
         );
     };
+
+    // Open transformation tab when TreeView entry is clicked
+    const handleOpenTransformationRef = useRef(handleOpenTransformation);
+    handleOpenTransformationRef.current = handleOpenTransformation;
+    const transformationsRef = useRef(transformations);
+    transformationsRef.current = transformations;
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const { id } = (e as CustomEvent).detail || {};
+            if (!id) return;
+            const t = transformationsRef.current.find((tr: any) => tr.id === id);
+            if (t) handleOpenTransformationRef.current(t);
+        };
+        window.addEventListener('jjodel:openTransformation', handler);
+        return () => window.removeEventListener('jjodel:openTransformation', handler);
+    }, []);
 
     const handleRenameTransformation = (id: string, newName: string) => {
         setTransformations(prev => prev.map(t =>

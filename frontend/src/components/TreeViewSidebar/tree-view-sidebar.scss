@@ -31,17 +31,20 @@ $shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.1);
 $transition-fast: 150ms ease;
 $transition-normal: 250ms ease;
 
-// Tree type colors - DISTINCT colors for each type
-$color-model: #534AB7;      // Violet - Metamodels (see docs/DESIGN-SYSTEM.md §2.2)
-$color-package: #f59e0b;    // Amber - Packages
-$color-class: #0ea5e9;      // Cyan - Classes
-$color-attribute: #10b981;  // Green - Attributes
-$color-reference: #8b5cf6;  // Purple - References
-$color-enum: #ec4899;       // Pink - Enums
-$color-literal: #f472b6;    // Light Pink - Enum Literals
+// Tree type colors - DISTINCT outline colors for each type
+$color-model: #7F77DD;      // Purple-400 - Metamodels
+$color-package: #888780;    // Gray-400 - Packages
+$color-class: #378ADD;      // Blue-400 - Classes
+$color-attribute: #639922;  // Green-400 - Attributes
+$color-reference: #D85A30;  // Coral-400 - References
+$color-enum: #D4537E;       // Pink-400 - Enums
+$color-literal: #D4537E;    // Pink-400 - Enum Literals (same as enum)
 $color-operation: #06b6d4;  // Cyan (darker) - Operations
 $color-object: #6b7280;     // Gray - Objects
 $color-parameter: #9ca3af;  // Gray (light) - Parameters
+$color-nested-model: #1D9E75; // Teal-400 - Models (M1)
+$color-viewpoint: #D4537E;  // Pink-400 - Viewpoints
+$color-subview: #94a3b8;    // Slate - Sub-views
 
 // ============================================
 // SIDEBAR (Desktop/Monitor Mode)
@@ -371,9 +374,7 @@ $color-parameter: #9ca3af;  // Gray (light) - Parameters
 }
 
 .metamodel-tree__content {
-    padding-left: 6px;
-
-
+    padding-left: 8px;
 }
 
 .tree-empty-package {
@@ -392,7 +393,9 @@ $color-parameter: #9ca3af;  // Gray (light) - Parameters
     display: flex;
     align-items: center;
     gap: 2px;
-    padding: 3px 27px!important; // Large right padding to allow space for badges/icons without affecting text layout
+    padding-top: 3px;
+    padding-bottom: 3px;
+    padding-right: 27px; // Large right padding to allow space for badges/icons without affecting text layout
     border-radius: $radius-sm;
     cursor: pointer;
     transition: background-color $transition-fast;
@@ -458,89 +461,69 @@ $color-parameter: #9ca3af;  // Gray (light) - Parameters
 // ============================================
 
 .tree-node__icon {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 700;
+    border-radius: 3px;
+    font-size: 8px;
+    font-weight: 500;
     flex-shrink: 0;
 
-    // PASTEL STYLE - background with opacity, colored text
-    // Each type has a DISTINCT color for easy identification
+    // OUTLINE STYLE - transparent bg, colored border + text
+    background: transparent;
+    border: 1px solid currentColor;
 
     &.tree-DModel {
-        // Muted slate — uppercase M is enough to identify metamodels
-        background-color: rgba(100, 116, 139, 0.12);
-        color: #64748b;
+        color: $color-model;
     }
 
     &.tree-DPackage {
-        // Amber - Packages
-        background-color: rgba(245, 158, 11, 0.15);
         color: $color-package;
     }
 
     &.tree-DClass {
-        // Cyan - Classes
-        background-color: rgba(14, 165, 233, 0.15);
         color: $color-class;
 
         &.abstract-class {
-            background-color: rgba(14, 165, 233, 0.08);
-            border: 1px dashed rgba(14, 165, 233, 0.5);
+            border-style: dashed;
         }
     }
 
     &.tree-DAttribute {
-        // Green - Attributes
-        background-color: rgba(16, 185, 129, 0.15);
         color: $color-attribute;
     }
 
     &.tree-DReference {
-        // Purple - References
-        background-color: rgba(139, 92, 246, 0.15);
         color: $color-reference;
     }
 
     &.tree-DEnumerator,
     &.tree-DEnum {
-        // Pink - Enums
-        background-color: rgba(236, 72, 153, 0.15);
         color: $color-enum;
     }
 
     &.tree-DEnumLiteral {
-        // Light Pink - Enum Literals
-        background-color: rgba(244, 114, 182, 0.15);
         color: $color-literal;
     }
 
     &.tree-DOperation {
-        // Cyan (darker) - Operations
-        background-color: rgba(6, 182, 212, 0.15);
         color: $color-operation;
     }
 
     &.tree-DParameter {
-        // Gray - Parameters
-        background-color: rgba(156, 163, 175, 0.15);
         color: $color-parameter;
     }
 
     &.tree-DObject {
-        // Gray - Objects
-        background-color: rgba(107, 114, 128, 0.15);
         color: $color-object;
     }
 
-    // Nested M1 model icon — muted slate, lowercase "m" distinguishes from metamodel
+    // Nested M1 model icon — lowercase "m"
     &.tree-nested-model {
-        background-color: rgba(100, 116, 139, 0.12);
-        color: #64748b;
+        color: $color-nested-model;
         font-style: italic;
     }
 }
@@ -744,6 +727,51 @@ $color-highlight-unknown: #f59e0b; // Amber - unknown action
     }
 }
 
+// Tree node context menu (right-click → "Add View")
+.tree-node__context-menu {
+    background: #ffffff;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    padding: 4px;
+    min-width: 180px;
+}
+
+.tree-node__context-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+    color: $color-text-primary;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    white-space: nowrap;
+
+    i {
+        font-size: 13px;
+        color: $color-text-secondary;
+    }
+
+    &:hover {
+        background: $color-bg-secondary;
+    }
+
+    &--disabled {
+        color: $color-text-tertiary;
+        cursor: default;
+        pointer-events: none;
+
+        i {
+            color: $color-text-tertiary;
+        }
+
+        &:hover {
+            background: transparent;
+        }
+    }
+}
+
 // Script executing state indicator on tree nodes
 .tree-view-content--executing {
     .tree-node__header,
@@ -834,74 +862,21 @@ $color-highlight-unknown: #f59e0b; // Amber - unknown action
         background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
     }
 
-    // Dark mode pastel colors (slightly brighter)
+    // Dark mode — outline icons use slightly brighter colors for visibility
     .tree-node__icon {
-        &.tree-DModel {
-            // Muted slate — dark mode
-            background-color: rgba(148, 163, 184, 0.15);
-            color: #94a3b8;
-        }
+        background: transparent;
 
-        &.tree-DPackage {
-            // Amber - Packages
-            background-color: rgba(245, 158, 11, 0.2);
-            color: #fbbf24;
-        }
-
-        &.tree-DClass {
-            // Cyan - Classes
-            background-color: rgba(14, 165, 233, 0.2);
-            color: #38bdf8;
-        }
-
-        &.tree-DAttribute {
-            // Green - Attributes
-            background-color: rgba(16, 185, 129, 0.2);
-            color: #34d399;
-        }
-
-        &.tree-DReference {
-            // Purple - References
-            background-color: rgba(139, 92, 246, 0.2);
-            color: #a78bfa;
-        }
-
-        &.tree-DEnumerator,
-        &.tree-DEnum {
-            // Pink - Enums
-            background-color: rgba(236, 72, 153, 0.2);
-            color: #f472b6;
-        }
-
-        &.tree-DEnumLiteral {
-            // Light Pink - Enum Literals
-            background-color: rgba(244, 114, 182, 0.2);
-            color: #f9a8d4;
-        }
-
-        &.tree-DOperation {
-            // Cyan (darker) - Operations
-            background-color: rgba(6, 182, 212, 0.2);
-            color: #22d3ee;
-        }
-
-        &.tree-DParameter {
-            // Gray - Parameters
-            background-color: rgba(156, 163, 175, 0.2);
-            color: #d1d5db;
-        }
-
-        &.tree-DObject {
-            // Gray - Objects
-            background-color: rgba(107, 114, 128, 0.2);
-            color: #9ca3af;
-        }
-
-        &.tree-nested-model {
-            // Muted slate — dark mode
-            background-color: rgba(148, 163, 184, 0.15);
-            color: #94a3b8;
-        }
+        &.tree-DModel { color: #9B95E8; }
+        &.tree-DPackage { color: #a5a49e; }
+        &.tree-DClass { color: #5ea3e8; }
+        &.tree-DAttribute { color: #7fb836; }
+        &.tree-DReference { color: #e87a54; }
+        &.tree-DEnumerator, &.tree-DEnum { color: #e07399; }
+        &.tree-DEnumLiteral { color: #e07399; }
+        &.tree-DOperation { color: #22d3ee; }
+        &.tree-DParameter { color: #d1d5db; }
+        &.tree-DObject { color: #9ca3af; }
+        &.tree-nested-model { color: #34c48e; }
     }
 
     .tree-nested-model__badge {
@@ -919,6 +894,56 @@ $color-highlight-unknown: #f59e0b; // Amber - unknown action
 
     .tree-instance__metaclass {
         color: #6b7280;
+    }
+
+    .viewpoint-section {
+        border-color: #333;
+
+        &__header {
+            color: #e0e0e0;
+
+            &:hover {
+                background-color: #2a2a2a;
+            }
+        }
+
+        &__count {
+            background: rgba(255, 255, 255, 0.1);
+            color: #94a3b8;
+        }
+    }
+
+    .tree-group-header {
+        &__count {
+            color: #6b7280;
+        }
+    }
+
+    .tree-node__icon.tree-subview {
+        background: transparent;
+        color: #b0bec5;
+    }
+
+    .tree-node__icon.tree-rule {
+        background: transparent;
+        color: #34d399;
+    }
+
+    .tree-node__icon.tree-helper {
+        background: transparent;
+        color: #94a3b8;
+    }
+
+    .documentation-entry {
+        border-color: #333;
+
+        &__header {
+            color: #e0e0e0;
+        }
+
+        &:hover {
+            background-color: #2a2a2a;
+        }
     }
 }
 
@@ -997,6 +1022,56 @@ html[data-theme="dark"] {
         .tree-transformation {
             background: rgba(148, 163, 184, 0.12);
             color: #64748b;
+        }
+
+        .viewpoint-section {
+            border-color: #333;
+
+            &__header {
+                color: #e0e0e0;
+
+                &:hover {
+                    background-color: #2a2a2a;
+                }
+            }
+
+            &__count {
+                background: rgba(255, 255, 255, 0.1);
+                color: #94a3b8;
+            }
+        }
+
+        .tree-group-header {
+            &__count {
+                color: #6b7280;
+            }
+        }
+
+        .tree-node__icon.tree-subview {
+            background: transparent;
+            color: #b0bec5;
+        }
+
+        .tree-node__icon.tree-rule {
+            background: transparent;
+            color: #34d399;
+        }
+
+        .tree-node__icon.tree-helper {
+            background: transparent;
+            color: #94a3b8;
+        }
+
+        .documentation-entry {
+            border-color: #333;
+
+            &__header {
+                color: #e0e0e0;
+            }
+
+            &:hover {
+                background-color: #2a2a2a;
+            }
         }
     }
 }
@@ -1104,11 +1179,219 @@ html[data-theme="dark"] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
     border-radius: 3px;
-    background: rgba(100, 116, 139, 0.10);
+    background: transparent;
+    border: 1px solid currentColor;
     color: #94a3b8;
-    font-size: 11px;
+    font-size: 8px;
+    font-weight: 500;
     margin-right: 4px;
+}
+
+// ─── Viewpoint Section ──────────────────────────────────────
+
+.viewpoint-section {
+    border-top: 1px solid #e2e8f0;
+    margin-top: 4px;
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        color: #334155;
+        transition: background-color 0.15s;
+
+        &:hover {
+            background-color: #f1f5f9;
+        }
+
+        .tree-node__toggle {
+            flex-shrink: 0;
+        }
+    }
+
+    &__icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 4px;
+        background: rgba(83, 74, 183, 0.10);
+        color: #534AB7;
+        font-size: 12px;
+    }
+
+    &__label {
+        flex: 1;
+    }
+
+    &__count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 20px;
+        height: 18px;
+        padding: 0 6px;
+        border-radius: 9px;
+        background: #f1f5f9;
+        color: #64748b;
+        font-size: 11px;
+        font-weight: 500;
+    }
+
+    &__content {
+        padding-bottom: 4px;
+    }
+}
+
+// Viewpoint icon in tree node
+.tree-viewpoint {
+    font-weight: 500;
+    font-size: 8px;
+    background: transparent !important;
+}
+
+// Viewpoint type badge (inline next to name)
+.tree-node__type-badge {
+    font-size: 9px;
+    padding: 0px 4px;
+    border-radius: 3px;
+    margin-left: 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    line-height: 16px;
+    font-weight: 500;
+}
+
+// ─── Viewpoint Type Group Headers ─────────────────────────────
+
+.tree-group-header {
+    position: relative;
+    padding: 8px 8px 4px 24px;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: $color-text-tertiary;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    user-select: none;
+    margin-top: 4px;
+    border-top: 0.5px solid $color-border;
+
+    // Hide border on first group header (parent wrapper is first-child)
+    :first-child > & {
+        border-top: none;
+    }
+
+    // Colored left indicator per type
+    &::before {
+        content: '';
+        position: absolute;
+        left: 8px;
+        top: 50%;
+        width: 3px;
+        height: 12px;
+        transform: translateY(-50%);
+        border-radius: 2px;
+    }
+
+    &[data-type="syntax"]::before { background: #378ADD; }
+    &[data-type="decoration"]::before { background: #7F77DD; }
+    &[data-type="validation"]::before { background: #EF9F27; }
+    &[data-type="semantics"]::before { background: #1D9E75; }
+    &[data-type="editor_behavior"]::before { background: #888780; }
+
+    // Darker label colors for readability
+    &[data-type="syntax"] .tree-group-header__label { color: #0C447C; }
+    &[data-type="decoration"] .tree-group-header__label { color: #3C3489; }
+    &[data-type="validation"] .tree-group-header__label { color: #633806; }
+    &[data-type="semantics"] .tree-group-header__label { color: #085041; }
+    &[data-type="editor_behavior"] .tree-group-header__label { color: #444441; }
+
+    &__label {
+        // Base color overridden per type above
+    }
+
+    &__count {
+        font-size: 10px;
+        font-weight: 500;
+        opacity: 0.6;
+    }
+}
+
+// ─── Sub-view icon in tree ─────────────────────────────────────
+
+.tree-node__icon.tree-subview {
+    background: transparent;
+    color: $color-subview;
+    font-size: 10px;
+
+    i {
+        font-size: 10px;
+    }
+}
+
+// ─── Transformation rule/helper icons ─────────────────────────
+
+.tree-node__icon.tree-rule {
+    background: transparent;
+    color: #10b981;
+    font-weight: 500;
+    font-size: 8px;
+}
+
+.tree-node__icon.tree-helper {
+    background: transparent;
+    color: #64748b;
+    font-weight: 500;
+    font-size: 8px;
+}
+
+// ─── Documentation Entry ────────────────────────────────────
+
+.documentation-entry {
+    border-top: 1px solid #e2e8f0;
+    margin-top: 4px;
+    cursor: pointer;
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #334155;
+        transition: background-color 0.15s;
+    }
+
+    &:hover {
+        background-color: #f1f5f9;
+    }
+
+    &__icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 4px;
+        background: rgba(100, 116, 139, 0.10);
+        color: #64748b;
+        font-size: 13px;
+    }
+
+    &__label {
+        flex: 1;
+    }
 }

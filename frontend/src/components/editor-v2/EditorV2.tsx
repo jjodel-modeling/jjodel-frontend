@@ -80,6 +80,7 @@ import { jjomVertexToRFNode } from './utils/jjomTransformers';
 import { useTheme } from '../../services/ThemeService';
 import { getDraggedMetaclassId } from './utils/dragState';
 import { PolymetricView } from '../polymetric';
+import { getLastEditedViewpointId, getLastEditedViewpointName, createViewInWorkbench } from '../../utils/lastViewpoint';
 
 import './EditorV2.scss';
 
@@ -2034,6 +2035,30 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                     },
                 },
             );
+
+            // "Create View" — only for classifiers (classNode, enumNode), not objectNode/packageNode
+            if (node?.type === 'classNode' || node?.type === 'enumNode') {
+                const lastVpId = getLastEditedViewpointId();
+                const lastVpName = getLastEditedViewpointName();
+                const data = node.data as any;
+                items.push(
+                    { divider: true },
+                    {
+                        label: lastVpId ? `Create View${lastVpName ? ` in "${lastVpName}"` : ''}` : 'Create View — open a viewpoint first',
+                        icon: 'bi-eye',
+                        disabled: !lastVpId,
+                        onClick: () => {
+                            // node.id is a vertex ID; resolve to the DClass model element ID
+                            const vertexProxy: any = LPointerTargetable.fromPointer(node.id);
+                            const modelElement = vertexProxy?.model;
+                            const classId = modelElement?.id ?? node.id;
+                            const className = modelElement?.__raw?.className ?? 'DClass';
+                            createViewInWorkbench(classId, data?.label ?? 'unnamed', className);
+                        },
+                    },
+                );
+            }
+
             return items;
         }
 
@@ -2539,6 +2564,7 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                         onAlignBottom={() => withSnapshot(alignBottom)}
                         onDistributeH={() => withSnapshot(distributeHorizontally)}
                         onDistributeV={() => withSnapshot(distributeVertically)}
+                        isMetamodel={!isModelMode}
                     />
                     <div className="editor-v2__canvas" ref={editorContainerRef} style={{ position: 'relative' }}>
                         <ReactFlow

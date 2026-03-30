@@ -48,6 +48,8 @@ import { createPortal } from 'react-dom';
 import { Logo } from '../logo';
 import { forEach } from 'lodash';
 import './ContextMenu.scss';
+import { getLastEditedViewpointId, getLastEditedViewpointName, createViewInWorkbench } from '../../utils/lastViewpoint';
+import { toast } from '../Toast/toastDispatch';
 
 function ContextMenuComponent(props: AllProps) {
     return ContextMenuComponentInner(props);
@@ -524,11 +526,20 @@ function ContextMenuComponentInner(props: AllProps) {
 
 
         /* ADD VIEW */
-        if (isM2 && (cname === 'DModel' || cname === 'DClass' || cname === 'DAttribute' || cname === 'DReference')) {
-            ContextEntry('view+m2', icon['add'], 'Add view', null, [], false, [
-                SubEntry('own', null, 'For this '+(data?.className || 'DElement').substring(1), addViewSelf, []),
-                SubEntry('instance', null, 'For his instances', addViewInstances, key_bindings.addView.keystroke)]
-            )
+        if (isM2 && (cname === 'DModel' || cname === 'DClass' || cname === 'DPackage' || cname === 'DAttribute' || cname === 'DReference')) {
+            const hasWorkbenchVP = !!getLastEditedViewpointId();
+            ContextEntry('view+m2', icon['add'],
+                hasWorkbenchVP ? 'Add view' : 'Add view — open a viewpoint first',
+                hasWorkbenchVP ? addViewInstances : null,
+                key_bindings.addView.keystroke, !hasWorkbenchVP, []);
+
+            /* CREATE VIEW IN WORKBENCH — classifiers only */
+            if (cname === 'DModel' || cname === 'DClass' || cname === 'DPackage') {
+                ContextEntry('createview', <i className="bi bi-eye" />,
+                    hasWorkbenchVP ? 'Create View' : 'Create View — open a viewpoint first',
+                    hasWorkbenchVP ? addViewToWorkbench : null,
+                    [], !hasWorkbenchVP, []);
+            }
         } else {
             ContextEntry('view+', icon['add'], 'Add view', addViewSelf, key_bindings.addView.keystroke, false, []);
         }
@@ -621,11 +632,22 @@ const addViewInstances = () => {
     key_bindings.close.function();
 }
 
+function addViewToWorkbench() {
+    let {modelElement: dataid} = getSelected();
+    let ddata = dataid && D.fromPointer(dataid);
+    if (!ddata) return;
+
+    const cn = ddata.className;
+    const elementName = (ddata as any).name || 'unnamed';
+    createViewInWorkbench(ddata.id, elementName, cn);
+    key_bindings.close.function();
+}
+
 function addViewKeybind() {
     let {modelElement: dataid, node: nodeid} = getSelected();
     let ddata = dataid && D.fromPointer(dataid);
     let cname = ddata?.className;
-    if (cname === 'DModel' || cname === 'DClass' || cname === 'DAttribute' || cname === 'DReference') addViewInstances();
+    if (cname === 'DModel' || cname === 'DClass' || cname === 'DPackage' || cname === 'DAttribute' || cname === 'DReference') addViewInstances();
     else addViewSelf();
 }
 

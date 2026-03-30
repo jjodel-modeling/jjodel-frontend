@@ -117,16 +117,10 @@ export function EditorSwitch({ modelid, children, isMetamodel }: EditorSwitchPro
         document.addEventListener('mouseup', onUp);
     }, [paneSizes, panes.length]);
 
-    // --- Fallback for metamodels: original either/or behavior ---
+    // --- Metamodels: always use Flow editor (abstract syntax only) ---
+    // state.viewpoint is global and may be set from a model tab;
+    // metamodels must ignore it to avoid switching to Classic editor.
     if (isMetamodel) {
-        // Metamodels: viewpoint → classic, otherwise → flow (no split)
-        if (viewpointId) {
-            return (
-                <div className="editor-switch-container">
-                    {children}
-                </div>
-            );
-        }
         return (
             <div className="editor-switch-container">
                 <div className="editor-switch-v2-wrapper">

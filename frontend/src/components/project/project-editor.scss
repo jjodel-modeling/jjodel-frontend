@@ -644,29 +644,13 @@
       color: #DB2777;
     }
 
-    &--vp-syntax {
-      background-color: #E6F1FB;
-      color: #0C447C;
-    }
-
-    &--vp-decoration {
-      background-color: #EEEDFE;
-      color: #3C3489;
-    }
-
-    &--vp-validation {
-      background-color: #FAEEDA;
-      color: #633806;
-    }
-
-    &--vp-semantics {
-      background-color: #E1F5EE;
-      color: #085041;
-    }
-
+    &--vp-syntax,
+    &--vp-decoration,
+    &--vp-validation,
+    &--vp-semantics,
     &--vp-editor_behavior {
-      background-color: #F1EFE8;
-      color: #444441;
+      background-color: #FCE7F3;
+      color: #DB2777;
     }
 
     &--docs {

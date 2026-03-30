@@ -9,10 +9,18 @@ import {
     LNamedElement,
     LPointerTargetable,
     SetRootFieldAction,
+    D,
+    LProject,
+    LViewPoint,
+    DViewPoint,
+    getViewpointType,
 } from '../../joiner';
+import type { ViewpointType } from '../../view/viewPoint/viewpoint';
 import { resolveEntityType, entityLetter, entityIcon } from '../../common/entityMeta';
 import { useStateIfMounted } from 'use-state-if-mounted';
 import { useTreeViewPanel, ElementAction } from '../../contexts/TreeViewPanelContext';
+import { getLastEditedViewpointId, getLastEditedViewpointName, createViewInWorkbench } from '../../utils/lastViewpoint';
+import DockManager from '../abstract/DockManager';
 
 /**
  * TreeViewContent Component (Optimized)
@@ -53,6 +61,16 @@ interface TreeNodeProps {
 }
 
 /**
+ * Creates a view in the last workbench viewpoint for a given classifier element.
+ */
+function addViewToWorkbenchFromTree(elementId: string, elementName: string, className: string): void {
+    createViewInWorkbench(elementId, elementName, className);
+}
+
+/** Classifiers that support "Add View to Workbench" */
+const CLASSIFIER_TYPES = new Set(['DClass', 'DEnumerator', 'DModel', 'DPackage']);
+
+/**
  * Memoized TreeNode - only re-renders when props change
  */
 const TreeNode = memo(function TreeNode({
@@ -66,6 +84,7 @@ const TreeNode = memo(function TreeNode({
     isScriptExecuting
 }: TreeNodeProps): ReactElement {
     const nodeRef = useRef<HTMLDivElement>(null);
+    const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
 
     // Check if this node or any child is highlighted
     const isHighlighted = highlightedElementId === data.id;
@@ -95,8 +114,29 @@ const TreeNode = memo(function TreeNode({
         }
     }, [shouldForceExpand, hasHighlightedDescendant, setIsExpanded]);
 
+    // Close context menu on outside click or Escape
+    useEffect(() => {
+        if (!ctxMenu) return;
+        const handleClick = () => setCtxMenu(null);
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setCtxMenu(null);
+        };
+        const handleScroll = () => setCtxMenu(null);
+        document.addEventListener('click', handleClick);
+        document.addEventListener('keydown', handleKeyDown);
+        // Close on scroll within the tree view body
+        const scrollContainer = nodeRef.current?.closest('.tree-view-sidebar__body, .tree-view-overlay__body');
+        scrollContainer?.addEventListener('scroll', handleScroll);
+        return () => {
+            document.removeEventListener('click', handleClick);
+            document.removeEventListener('keydown', handleKeyDown);
+            scrollContainer?.removeEventListener('scroll', handleScroll);
+        };
+    }, [ctxMenu]);
+
     const hasChildren = data.children && data.children.length > 0;
     const isSelected = selectedId === data.id;
+    const isClassifier = CLASSIFIER_TYPES.has(data.className);
 
     const handleClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
@@ -107,6 +147,24 @@ const TreeNode = memo(function TreeNode({
         }, '', false);
         onSelect?.();
     }, [data.id, data.nodeId, data.viewId, onSelect]);
+
+    const handleContextMenu = useCallback((e: React.MouseEvent) => {
+        if (!isClassifier) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const menuWidth = 200;
+        const menuHeight = 40;
+        let x = e.clientX;
+        let y = e.clientY;
+        if (x + menuWidth > window.innerWidth) x = window.innerWidth - menuWidth - 8;
+        if (y + menuHeight > window.innerHeight) y = window.innerHeight - menuHeight - 8;
+        setCtxMenu({ x, y });
+    }, [isClassifier]);
+
+    const handleAddView = useCallback(() => {
+        addViewToWorkbenchFromTree(data.id, data.name, data.className);
+        setCtxMenu(null);
+    }, [data.id, data.name, data.className]);
 
     const toggleExpand = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
@@ -124,6 +182,9 @@ const TreeNode = memo(function TreeNode({
         ? `tree-node__header--highlighted tree-node__header--action-${highlightedAction || 'unknown'}`
         : '';
 
+    const vpName = getLastEditedViewpointName();
+    const hasWorkbenchVP = !!getLastEditedViewpointId();
+
     return (
         <div
             ref={nodeRef}
@@ -132,7 +193,8 @@ const TreeNode = memo(function TreeNode({
         >
             <div
                 className={`tree-node__header ${isSelected ? 'tree-node__header--selected' : ''} ${highlightClass}`}
-                style={{ paddingLeft: `${depth * 12}px` }}
+                style={{ paddingLeft: `${depth * 16}px` }}
+                onContextMenu={handleContextMenu}
             >
                 <button
                     className="tree-node__toggle"
@@ -164,6 +226,23 @@ const TreeNode = memo(function TreeNode({
                     )}
                 </div>
             </div>
+
+            {/* Context menu for classifiers: Add View to Workbench */}
+            {ctxMenu && isClassifier && (
+                <div
+                    className="tree-node__context-menu"
+                    style={{ position: 'fixed', top: ctxMenu.y, left: ctxMenu.x, zIndex: 9999 }}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <div
+                        className={`tree-node__context-item ${!hasWorkbenchVP ? 'tree-node__context-item--disabled' : ''}`}
+                        onClick={hasWorkbenchVP ? handleAddView : undefined}
+                    >
+                        <i className="bi bi-eye" />
+                        <span>{hasWorkbenchVP ? 'Create View' : 'Create View — open a viewpoint first'}</span>
+                    </div>
+                </div>
+            )}
 
             {isExpanded && hasChildren && (
                 <div className="tree-node__children">
@@ -517,7 +596,7 @@ const InstanceItem = memo(function InstanceItem({
         <div className="tree-node" data-element-id={instance.objectId}>
             <div
                 className={`tree-node__header ${isSelected ? 'tree-node__header--selected' : ''}`}
-                style={{ paddingLeft: `${depth * 12}px` }}
+                style={{ paddingLeft: `${depth * 16}px` }}
             >
                 <span className="tree-node__spacer" style={{ width: 16 }} />
                 <div className="tree-node__content" onClick={handleClick}>
@@ -580,7 +659,7 @@ const NestedModelTree = memo(function NestedModelTree({
         <div className="tree-node nested-model-tree" data-element-id={model.id}>
             <div
                 className="tree-node__header"
-                style={{ paddingLeft: `${depth * 12}px` }}
+                style={{ paddingLeft: `${depth * 16}px` }}
             >
                 <button
                     className="tree-node__toggle"
@@ -625,6 +704,10 @@ interface TreeTransformationData {
     name: string;
     sourceMMName?: string;
     targetMMName?: string;
+    /** Class mapping rule names (from AST) */
+    rules?: string[];
+    /** Helper function names (from AST) */
+    helpers?: string[];
 }
 
 /**
@@ -648,7 +731,7 @@ const MegamodelEntry = memo(function MegamodelEntry(): ReactElement {
 });
 
 /**
- * TransformationItem — a single transformation entry in the tree
+ * TransformationItem — a single transformation entry in the tree (expandable with rules/helpers)
  */
 const TransformationItem = memo(function TransformationItem({
     transformation,
@@ -659,10 +742,19 @@ const TransformationItem = memo(function TransformationItem({
     selectedId?: string;
     onSelect?: () => void;
 }): ReactElement {
+    const [isExpanded, setIsExpanded] = useStateIfMounted(false);
     const isSelected = selectedId === transformation.id;
+
+    const hasRules = (transformation.rules?.length || 0) > 0;
+    const hasHelpers = (transformation.helpers?.length || 0) > 0;
+    const hasChildren = hasRules || hasHelpers;
 
     const handleClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
+        // Dispatch event to open transformation tab (ProjectEditor listens)
+        window.dispatchEvent(new CustomEvent('jjodel:openTransformation', {
+            detail: { id: transformation.id }
+        }));
         SetRootFieldAction.new('_lastSelected', {
             node: '',
             view: '',
@@ -671,13 +763,24 @@ const TransformationItem = memo(function TransformationItem({
         onSelect?.();
     }, [transformation.id, onSelect]);
 
+    const toggleExpand = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        setIsExpanded(prev => !prev);
+    }, [setIsExpanded]);
+
     return (
         <div className="tree-node" data-element-id={transformation.id}>
             <div
                 className={`tree-node__header ${isSelected ? 'tree-node__header--selected' : ''}`}
-                style={{ paddingLeft: '12px' }}
+                style={{ paddingLeft: '16px' }}
             >
-                <span className="tree-node__spacer" style={{ width: 16 }} />
+                <button className="tree-node__toggle" onClick={toggleExpand} disabled={!hasChildren}>
+                    {hasChildren ? (
+                        <i className={`bi bi-chevron-${isExpanded ? 'down' : 'right'}`} />
+                    ) : (
+                        <span className="tree-node__spacer" />
+                    )}
+                </button>
                 <div className="tree-node__content" onClick={handleClick}>
                     <span className="tree-node__icon tree-transformation">
                         <i className={`bi ${entityIcon('transformation')}`} />
@@ -685,6 +788,33 @@ const TransformationItem = memo(function TransformationItem({
                     <span className="tree-node__name">{transformation.name}</span>
                 </div>
             </div>
+
+            {isExpanded && hasChildren && (
+                <div className="tree-node__children">
+                    {transformation.rules?.map((rule, i) => (
+                        <div key={`r-${i}`} className="tree-node">
+                            <div className="tree-node__header" style={{ paddingLeft: '32px' }}>
+                                <span className="tree-node__spacer" />
+                                <div className="tree-node__content">
+                                    <span className="tree-node__icon tree-rule">R</span>
+                                    <span className="tree-node__name">{rule}</span>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                    {transformation.helpers?.map((helper, i) => (
+                        <div key={`h-${i}`} className="tree-node">
+                            <div className="tree-node__header" style={{ paddingLeft: '32px' }}>
+                                <span className="tree-node__spacer" />
+                                <div className="tree-node__content">
+                                    <span className="tree-node__icon tree-helper">H</span>
+                                    <span className="tree-node__name">{helper}</span>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 });
@@ -733,6 +863,300 @@ const TransformationSection = memo(function TransformationSection({
                     ))}
                 </div>
             )}
+        </div>
+    );
+});
+
+// ─── Viewpoint data structures ─────────────────────────────────────────────
+
+/** Sub-view data for tree display */
+interface TreeSubViewData {
+    id: string;
+    name: string;
+    children: TreeSubViewData[];
+}
+
+interface TreeViewpointData {
+    id: string;
+    name: string;
+    vpType: ViewpointType;
+    isExclusive: boolean;
+    viewCount: number;
+    /** Raw LViewPoint for DockManager.openViewpoint() */
+    raw: LViewPoint;
+    /** Sub-views for expandable tree display */
+    subViews: TreeSubViewData[];
+}
+
+/** Colors per viewpoint type — matching dashboard badge colors */
+const VP_TYPE_COLORS: Record<ViewpointType, { bg: string; color: string }> = {
+    syntax:          { bg: '#E6F1FB', color: '#185FA5' },
+    decoration:      { bg: '#EEEDFE', color: '#534AB7' },
+    validation:      { bg: '#FAEEDA', color: '#854F0B' },
+    semantics:       { bg: '#E1F5EE', color: '#0F6E56' },
+    editor_behavior: { bg: '#F1EFE8', color: '#5F5E5A' },
+};
+
+/** Unified pink color for all viewpoint V badges — outline style */
+const VP_ICON_COLOR = { color: '#D4537E' };
+
+/**
+ * SubViewItem — a single view entry inside an expanded viewpoint
+ */
+const SubViewItem = memo(function SubViewItem({
+    view,
+    viewpointRaw,
+    depth,
+    onSelect,
+}: {
+    view: TreeSubViewData;
+    viewpointRaw: LViewPoint;
+    depth: number;
+    onSelect?: () => void;
+}): ReactElement {
+    const [isExpanded, setIsExpanded] = useStateIfMounted(false);
+    const hasChildren = view.children.length > 0;
+
+    const handleClick = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        try {
+            // Open the viewpoint workbench tab, then notify it to select this view
+            DockManager.openViewpoint(viewpointRaw);
+            // Dispatch event to select this specific view in the workbench
+            setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('jjodel:selectViewInWorkbench', {
+                    detail: { viewpointId: viewpointRaw.id, viewId: view.id }
+                }));
+            }, 100);
+        } catch (err) {
+            console.warn('[TreeView] Failed to open view in workbench:', err);
+        }
+        onSelect?.();
+    }, [viewpointRaw, view.id, onSelect]);
+
+    const toggleExpand = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        setIsExpanded(prev => !prev);
+    }, [setIsExpanded]);
+
+    return (
+        <div className="tree-node" data-element-id={view.id}>
+            <div
+                className="tree-node__header"
+                style={{ paddingLeft: `${depth * 16}px` }}
+            >
+                <button className="tree-node__toggle" onClick={toggleExpand} disabled={!hasChildren}>
+                    {hasChildren ? (
+                        <i className={`bi bi-chevron-${isExpanded ? 'down' : 'right'}`} />
+                    ) : (
+                        <span className="tree-node__spacer" />
+                    )}
+                </button>
+                <div className="tree-node__content" onClick={handleClick}>
+                    <span className="tree-node__icon tree-subview">
+                        <i className="bi bi-eye" />
+                    </span>
+                    <span className="tree-node__name">{view.name}</span>
+                </div>
+            </div>
+
+            {isExpanded && hasChildren && (
+                <div className="tree-node__children">
+                    {view.children.map((child) => (
+                        <SubViewItem
+                            key={child.id}
+                            view={child}
+                            viewpointRaw={viewpointRaw}
+                            depth={depth + 1}
+                            onSelect={onSelect}
+                        />
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+});
+
+/**
+ * ViewpointItem — a single viewpoint entry in the tree (expandable with sub-views)
+ */
+const ViewpointItem = memo(function ViewpointItem({
+    viewpoint,
+    onSelect,
+}: {
+    viewpoint: TreeViewpointData;
+    onSelect?: () => void;
+}): ReactElement {
+    const [isExpanded, setIsExpanded] = useStateIfMounted(false);
+    const hasSubViews = viewpoint.subViews.length > 0;
+
+    const handleClick = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        try {
+            DockManager.openViewpoint(viewpoint.raw);
+        } catch (err) {
+            console.warn('[TreeView] Failed to open viewpoint:', err);
+        }
+        onSelect?.();
+    }, [viewpoint.raw, onSelect]);
+
+    const toggleExpand = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        setIsExpanded(prev => !prev);
+    }, [setIsExpanded]);
+
+    const iconStyle = VP_ICON_COLOR;
+    const badgeStyle = VP_TYPE_COLORS[viewpoint.vpType] || VP_TYPE_COLORS.decoration;
+
+    return (
+        <div className="tree-node" data-element-id={viewpoint.id}>
+            <div className="tree-node__header" style={{ paddingLeft: '16px' }}>
+                <button className="tree-node__toggle" onClick={toggleExpand} disabled={!hasSubViews}>
+                    {hasSubViews ? (
+                        <i className={`bi bi-chevron-${isExpanded ? 'down' : 'right'}`} />
+                    ) : (
+                        <span className="tree-node__spacer" />
+                    )}
+                </button>
+                <div className="tree-node__content" onClick={handleClick}>
+                    <span
+                        className="tree-node__icon tree-viewpoint"
+                        style={{ color: iconStyle.color }}
+                    >
+                        V
+                    </span>
+                    <span className="tree-node__name">{viewpoint.name}</span>
+                    <i
+                        className={`bi ${viewpoint.isExclusive ? 'bi-diamond-fill' : 'bi-layers'}`}
+                        style={{ fontSize: '9px', opacity: 0.5 }}
+                    />
+                </div>
+            </div>
+
+            {isExpanded && hasSubViews && (
+                <div className="tree-node__children">
+                    {viewpoint.subViews.map((sv) => (
+                        <SubViewItem
+                            key={sv.id}
+                            view={sv}
+                            viewpointRaw={viewpoint.raw}
+                            depth={2}
+                            onSelect={onSelect}
+                        />
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+});
+
+/** Order and labels for viewpoint type groups */
+const VP_TYPE_ORDER: ViewpointType[] = ['syntax', 'decoration', 'validation', 'semantics', 'editor_behavior'];
+
+const VP_TYPE_LABELS: Record<ViewpointType, string> = {
+    syntax: 'Syntax',
+    decoration: 'Decoration',
+    validation: 'Validation',
+    semantics: 'Semantics',
+    editor_behavior: 'Editor behavior',
+};
+
+/**
+ * ViewpointSection — collapsible section listing all viewpoints grouped by type
+ */
+const ViewpointSection = memo(function ViewpointSection({
+    viewpoints,
+    onSelect,
+}: {
+    viewpoints: TreeViewpointData[];
+    onSelect?: () => void;
+}): ReactElement {
+    const [isExpanded, setIsExpanded] = useStateIfMounted(true);
+
+    const handleToggle = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        setIsExpanded(prev => !prev);
+    }, [setIsExpanded]);
+
+    // Group viewpoints by type
+    const groupedViewpoints = useMemo(() => {
+        const groups = new Map<ViewpointType, TreeViewpointData[]>();
+        for (const vp of viewpoints) {
+            if (!groups.has(vp.vpType)) groups.set(vp.vpType, []);
+            groups.get(vp.vpType)!.push(vp);
+        }
+        return groups;
+    }, [viewpoints]);
+
+    // Only render groups that have viewpoints
+    const activeGroups = useMemo(() =>
+        VP_TYPE_ORDER.filter(type => groupedViewpoints.has(type)),
+    [groupedViewpoints]);
+
+    return (
+        <div className="viewpoint-section">
+            <div className="viewpoint-section__header" onClick={handleToggle}>
+                <button className="tree-node__toggle">
+                    <i className={`bi bi-chevron-${isExpanded ? 'down' : 'right'}`} />
+                </button>
+                <span className="viewpoint-section__icon">
+                    <i className="bi bi-eye" />
+                </span>
+                <span className="viewpoint-section__label">Viewpoints</span>
+                <span className="viewpoint-section__count">{viewpoints.length}</span>
+            </div>
+
+            {isExpanded && (
+                <div className="viewpoint-section__content">
+                    {activeGroups.map((type) => {
+                        const vps = groupedViewpoints.get(type)!;
+                        const groupColors = VP_TYPE_COLORS[type];
+                        return (
+                            <div key={type}>
+                                <div className="tree-group-header" data-type={type}>
+                                    <span className="tree-group-header__label">
+                                        {VP_TYPE_LABELS[type]}
+                                    </span>
+                                    <span className="tree-group-header__count">{vps.length}</span>
+                                </div>
+                                {vps.map((vp) => (
+                                    <ViewpointItem
+                                        key={vp.id}
+                                        viewpoint={vp}
+                                        onSelect={onSelect}
+                                    />
+                                ))}
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+});
+
+/**
+ * DocumentationEntry — simple entry for the documentation section
+ */
+const DocumentationEntry = memo(function DocumentationEntry({
+    onSelect,
+}: {
+    onSelect?: () => void;
+}): ReactElement {
+    const handleClick = useCallback(() => {
+        // Open the dashboard scrolled to documentation section
+        window.dispatchEvent(new CustomEvent('jjodel:openMegamodel'));
+        onSelect?.();
+    }, [onSelect]);
+
+    return (
+        <div className="documentation-entry">
+            <div className="documentation-entry__header" onClick={handleClick}>
+                <span className="documentation-entry__icon">
+                    <i className="bi bi-file-text" />
+                </span>
+                <span className="documentation-entry__label">Documentation</span>
+            </div>
         </div>
     );
 });
@@ -789,11 +1213,11 @@ function TreeViewContentComponent(props: AllProps & TreeViewContentProps) {
         };
     }, []);
 
-    const { standaloneModels } = props as AllProps;
+    const { standaloneModels, viewpoints: vpData } = props as AllProps;
 
     const hasContent = (processedMetamodels && processedMetamodels.length > 0) || standaloneModels.length > 0;
 
-    if (!hasContent && transformations.length === 0) {
+    if (!hasContent && transformations.length === 0 && vpData.length === 0) {
         return (
             <div ref={containerRef} className="tree-view-content">
                 <MegamodelEntry />
@@ -854,6 +1278,15 @@ function TreeViewContentComponent(props: AllProps & TreeViewContentProps) {
                     onSelect={onSelect}
                 />
             )}
+
+            {vpData.length > 0 && (
+                <ViewpointSection
+                    viewpoints={vpData}
+                    onSelect={onSelect}
+                />
+            )}
+
+            <DocumentationEntry onSelect={onSelect} />
         </div>
     );
 }
@@ -863,6 +1296,7 @@ interface OwnProps extends TreeViewContentProps {}
 interface StateProps {
     processedMetamodels: ProcessedMetamodel[];
     standaloneModels: TreeModelData[];
+    viewpoints: TreeViewpointData[];
     selectedElementId?: string;
 }
 
@@ -978,6 +1412,50 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     }));
 
     ret.standaloneModels = standaloneModels;
+
+    // Build viewpoint data from LProject (including sub-view hierarchy)
+    const vpList: TreeViewpointData[] = [];
+
+    /** Recursively build sub-view tree data */
+    function buildSubViewTree(lView: any): TreeSubViewData[] {
+        const children: TreeSubViewData[] = [];
+        try {
+            const subs = lView.subViews || [];
+            for (const sv of subs) {
+                if (!sv) continue;
+                children.push({
+                    id: sv.id,
+                    name: sv.name || 'Unnamed View',
+                    children: buildSubViewTree(sv),
+                });
+            }
+        } catch { /* ignore */ }
+        return children;
+    }
+
+    try {
+        const project = LProject.getProject();
+        if (project) {
+            const viewpoints: LViewPoint[] = project.viewpoints || [];
+            for (const vp of viewpoints) {
+                if (!vp) continue;
+                const vpType = getViewpointType(vp as any);
+                const isExclusive = vpType === 'syntax';
+                const subViews = buildSubViewTree(vp);
+                vpList.push({
+                    id: vp.id,
+                    name: vp.name || 'Unnamed Viewpoint',
+                    vpType,
+                    isExclusive,
+                    viewCount: subViews.length,
+                    raw: vp,
+                    subViews,
+                });
+            }
+        }
+    } catch { /* ignore errors reading viewpoints */ }
+    ret.viewpoints = vpList;
+
     ret.selectedElementId = state._lastSelected?.modelElement || undefined;
 
     return ret;
