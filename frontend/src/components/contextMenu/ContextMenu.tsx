@@ -231,7 +231,7 @@ function separator() {
 let closefunc: (panelClick?: boolean)=>void = null as any;
 
 function test(){
-    let data: any = null, View: any = null, Input: any = null as any, view: any, decorators: any;
+    /*let data: any = null, View: any = null, Input: any = null as any, view: any, decorators: any;
     L.from(s().viewelements).filter(v=>v.name === "View for Product")[0].onDataUpdate = (
 `let oldQt = data.state.oldQuantity, qt= +data.$quantity;
 console.log("check qt", {n: data.name, qt, oldQt, cc:data.clonedCounter});
@@ -239,7 +239,7 @@ if (oldQt === undefined) { data.state = {oldQuantity: qt, editN:data.clonedCount
 if (oldQt / qt > 2 || oldQt / qt <= 0.5) {
     if (data.state.editN !== data.clonedCounter) { data.state = {requiresValidation: false, oldQuantity: qt, editN: data.clonedCounter}; }
     else { data.state = {requiresValidation: true, editN: data.clonedNumber}; }
-}`)
+}`)*/
 }
 
 function ContextMenuComponentInner(props: AllProps) {
@@ -381,6 +381,19 @@ function ContextMenuComponentInner(props: AllProps) {
 
         if (true as any || !isM2 && cname !== 'DModel') {
             ContextEntry('edit', icon['edit'], 'Edit', () => setEditPanel(true) as undefined, [])
+
+            ContextEntry("help", <i className='bi bi-question-circle' />, "Help", () => {
+                let cn = ddata?.className;
+                let helpKey: string = '';
+                if (!cn) helpKey = 'properties-panel';
+                if (cn) {
+                    cn = cn.toLowerCase();
+                    if (cn.includes("enum")) helpKey = 'element-enum'; // both literal and enumerator shares the same help section?
+                    else helpKey =  'element-' + cn.substring(1);
+                }
+                window.dispatchEvent(new CustomEvent('jjodel:help-open', { detail: { helpKey } }));
+                close();
+                }, []);
             separator();
         }
 
@@ -489,8 +502,9 @@ function ContextMenuComponentInner(props: AllProps) {
 
         /* AUTO-SIZING */
         let gn = node as GObject;
-        if (gn.isResized) ContextEntry('asize', icon['contract'], 'Restore auto-sizing', () => gn.isResized = false, key_bindings.asize.keystroke)
-        else ContextEntry('nasize', icon['expand'], 'Disable auto-sizing', () => gn.isResized = true, key_bindings.asize.keystroke)
+        // keep function {wrapped}, cannot return false or it disables triggering close event.
+        if (gn.isResized) ContextEntry('asize', icon['contract'], 'Restore auto-sizing', () => {gn.isResized = false; /*read above*/}, key_bindings.asize.keystroke)
+        else ContextEntry('nasize', icon['expand'], 'Disable auto-sizing', () => {gn.isResized = true}, key_bindings.asize.keystroke)
 
         // /* LOCK-UNLOCK */
         // jsxList.push(<div onClick={() => {close(); ldata.delete(); /*node.delete();*/}} className={'col item'} tabIndex={0}>{icon['lock']} Lock/Unlock<div> <i

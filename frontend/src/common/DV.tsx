@@ -83,8 +83,8 @@ export class DV {
     
     return serialize(model);
 }`},
-        handlebars: {allowPartials: true,
-'Model':`{{#with packages.[0]}}
+                handlebars: {allowPartials: true,
+                    'Model':`{{#with packages.[0]}}
 @namespace(uri="{{uri}}", prefix="{{prefix}}")
 {{>Annotations}}
 package {{name}};
@@ -97,7 +97,7 @@ package {{name}};
 {{/each}}
 {{/with}}
 `,
-'Package':`{{>Annotations}}package {{name}} {
+                    'Package':`{{>Annotations}}package {{name}} {
 {{#each subPackages}}
     {{>Package}}\n
 {{/each}}
@@ -105,7 +105,7 @@ package {{name}};
     {{~>Class}}\n
 {{/each}}
 }`,
-'Class':`{{>Annotations}}{{#if isAbstract}}abstract {{/if}}{{#if isInterface}}interface {{/if~}}
+                    'Class':`{{>Annotations}}{{#if isAbstract}}abstract {{/if}}{{#if isInterface}}interface {{/if~}}
 class {{name}} {{#ifCond extends.length '||' implements.length~}}
 extends {{#js implements extends "(a, b)=> [...a, ...b].join(', ')"}}{{/js}}{{/ifCond}} {
 {{#each attributes}}
@@ -118,7 +118,7 @@ extends {{#js implements extends "(a, b)=> [...a, ...b].join(', ')"}}{{/js}}{{/i
     {{>Operation}}\n
 {{/each}}
 }`,
-'Modifiers': `{{>Annotations}}{{#unless changeable}}readonly {{/unless~}}
+                    'Modifiers': `{{>Annotations}}{{#unless changeable}}readonly {{/unless~}}
 {{#if volatile}}volatile {{/if~}}
 {{#if transient}}transient {{/if~}}
 {{#if unsettable}}unsettable {{/if~}}
@@ -128,16 +128,16 @@ extends {{#js implements extends "(a, b)=> [...a, ...b].join(', ')"}}{{/js}}{{/i
 {{#if resolveProxies}}resolve {{/if~}}
 {{#if isID}}id {{/if~}}
 `,
-'Operation': `{{>Modifiers}}op {{type.name}}{{>Multiplicity}} {{name~}}
+                    'Operation': `{{>Modifiers}}op {{type.name}}{{>Multiplicity}} {{name~}}
     ({{#each parameters}}{{>Parameter}}{{#unless @last}}, {{/unless}}{{/each}})\n`,
-'Parameter': `{{>Modifiers}}{{type.name}}{{>Multiplicity}} {{name}}`,
-'Multiplicity': `{{#js lowerBound upperBound "(l, u)=>{let s = l+''+u; switch(s){case '01': return ''; case '0-1': return'[*]'; case '1-1': return'[+]';} if (l==u) return '['+l+']'; if (u==-1) return '['+l+'...]'; return '['+l+'...'+u+']'}"}}{{/js}}`,
-'Attribute': '{{>Modifiers}}attr {{type.name}} {{name}}{{>Multiplicity}}{{#if defaultValue}}= {{defaultValue}}{{/if}};\n',
-'Reference': '{{>Modifiers}}{{#if isContainment}}val{{else}}ref{{/if}} {{type.name}} {{name}}{{>Multiplicity}};\n',
-'Annotations': `{{#each annotations}}@{{source}}({{#js entries "args => args.map(e => e.key + ' = ' + e.value).join(', ')"}}{{/js}})\n{{/each}}`,
-'Default': ``,
+                    'Parameter': `{{>Modifiers}}{{type.name}}{{>Multiplicity}} {{name}}`,
+                    'Multiplicity': `{{#js lowerBound upperBound "(l, u)=>{let s = l+''+u; switch(s){case '01': return ''; case '0-1': return'[*]'; case '1-1': return'[+]';} if (l==u) return '['+l+']'; if (u==-1) return '['+l+'...]'; return '['+l+'...'+u+']'}"}}{{/js}}`,
+                    'Attribute': '{{>Modifiers}}attr {{type.name}} {{name}}{{>Multiplicity}}{{#if defaultValue}}= {{defaultValue}}{{/if}};\n',
+                    'Reference': '{{>Modifiers}}{{#if isContainment}}val{{else}}ref{{/if}} {{type.name}} {{name}}{{>Multiplicity}};\n',
+                    'Annotations': `{{#each annotations}}@{{source}}({{#js entries "args => args.map(e => e.key + ' = ' + e.value).join(', ')"}}{{/js}})\n{{/each}}`,
+                    'Default': ``,
 // {{#each}}{{}}{{/each}}`
-'__str':`@namespace(uri="{{package.uri}}", prefix="{{prefix}}")
+                    '__str':`@namespace(uri="{{package.uri}}", prefix="{{prefix}}")
 package {{name}};
 
 {{#each classes}}
@@ -152,8 +152,8 @@ class {{name}} {
 
 {{/each}}
 `}},
-        {engine:'nearley' as any, nearley:{allowPartials: true, __str:
-`main -> header (classdef | package):* {% (d) => ({packages:[{globalold:true, uri: d[0].uri, prefix: d[0].prefix, classifiers:d[1]}]}) %}
+            {engine:'nearley' as any, nearley:{allowPartials: true, __str:
+                        `main -> header (classdef | package):* {% (d) => ({packages:[{globalold:true, uri: d[0].uri, prefix: d[0].prefix, classifiers:d[1]}]}) %}
 package -> ws "package" ws identifier ws "{" (classdef | package):* "}"
 
 # --------------------------------------------------------------------
@@ -230,8 +230,8 @@ strescape -> ["\\\\/bfnrt] {% id %}
     | "u" [a-fA-F0-9] [a-fA-F0-9] [a-fA-F0-9] [a-fA-F0-9] {%
     (d) => { return d.join(""); }
 %}`,
-Model:
-`main -> header import:* (classifier | package):* {% (d) => (log('mdl', d) || {packages:[{...d[0], className:'package', children:d[2].flat(3)}]}) %}
+                    Model:
+                        `main -> header import:* (classifier | package):* {% (d) => (log('mdl', d) || {packages:[{...d[0], className:'package', children:d[2].flat(3)}]}) %}
 
 header -> "@namespace(uri=\\"" namespace "\\"," ws
            "prefix=\\"" prefix:? "\\")" eol
@@ -240,14 +240,14 @@ header -> "@namespace(uri=\\"" namespace "\\"," ws
 import -> "import" ws dqstring ";" eol
 namespace -> identifier ("." identifier):*
 prefix -> identifier`,
-Package:`
+                    Package:`
 main -> package
 package -> ws "package" ws identifier ws "{" (classifier | package):* "}"
              {% (d) => log('pkg', d) || ({
                 className:"Package", 
                 name: d[4],
                 children: d[7][0]}) %}`,
-Class:`
+                    Class:`
 main -> class
 class -> ("abstract" ws):? ("class" | "interface") ws identifier ws extends (java_classname ws):? "{" eol
             (annotation | attr | ref | operation | eol):*
@@ -259,14 +259,14 @@ class -> ("abstract" ws):? ("class" | "interface") ws identifier ws extends (jav
 extends -> null | "extends" ws (identifier | (identifier ws "," ws):+)
 java_classname -> ":" ws namespace
 `,
-Attribute:`
+                    Attribute:`
 main -> attr
 attr -> modifiers "attr" ws att_type ws identifier ws ("=" ws value):? ";" eol
             {% (d) => log('attr', d) || ({...d[0], className: 'attribute',
                 type: d[3]?.[0]?.[0],
                 ...(d[3]?.[1] || {}),
                 name: d[5]}) %}`,
-Reference:`
+                    Reference:`
 main -> ref
 ref -> modifiers ("ref" | "val") ws ref_type ("#" identifier):? ws identifier ws ("=" ws value):? ";" eol
             {% (d) => log('ref', d) || ({...d[0], className: 'reference',
@@ -274,7 +274,7 @@ ref -> modifiers ("ref" | "val") ws ref_type ("#" identifier):? ws identifier ws
                 ...(d[3]?.[1] || {}),
                 name: d[6],
                 containment: d[1] === 'val'}) %}`,
-Operation:`
+                    Operation:`
 main -> operation
 operation -> modifiers "op" ws return_type ws identifier ws "(" (parameter | (parameter "," ws):*) ")" ("throws" (identifier | (identifier "," ws):*)):? ";" eol:*
             {% (d) => log('op todo', d) || ({
@@ -284,21 +284,21 @@ operation -> modifiers "op" ws return_type ws identifier ws "(" (parameter | (pa
 
 # missing support for @before annotations
 `,
-Enumerator:`
+                    Enumerator:`
 main -> enumerator
 enumerator -> "enum" ws identifier ws "{" literal:* "}" eol:*
              {% (d) => log('enum', d) || ({
                 name: d[2],
                 literals: d[5]}) %}
 `,
-Literal:`
+                    Literal:`
 main -> literal
 literal -> identifier ws ("=" ws number ws):? ";"
             {% (d) => log('lit', d) || ({
                 name: d[0],
                 value: d[2]?.[2]}) %}
 `,
-Parameter:`
+                    Parameter:`
 # main -> parameter
 parameter -> modifiers type ws identifier
             {% (d) => log('param', d) || ({
@@ -309,7 +309,7 @@ todo:`
 main -> todo
 todo -> "enum" ws identifier ws "{" literal:* "}" eol:*
 `,*/
-'Default':`
+                    'Default':`
 # syntax guide: https://eclipse.dev/emfatic/
 classifier -> class | enumerator | datatype | mapentry
 modifiers -> ("!":? modifier ws):* 
@@ -382,8 +382,8 @@ strescape -> ["\\\\/bfnrt] {% id %}
     function(d) { return d.join(""); }
 %}
 `
-}},
-);
+                }},
+        );
         const flexmim2t =  {eta:{__str: 'Flexmi is usable only with partials so far.',
                 'Default': "Flexmi has no default, it uses Model, Object, Value fragments as entry points.",
                 'Model': ETA.flexmi_model,
@@ -426,10 +426,10 @@ strescape -> ["\\\\/bfnrt] {% id %}
     text+='\\n\\tnode.initialX' = node.x;
     return text;
 }`}},
-    {
-        // NB: check nearley postprocessors for json to jom object
-        // https://nearley.js.org/docs/grammar#postprocessors
-    nearley:{allowPartials: false, __str:`
+            {
+                // NB: check nearley postprocessors for json to jom object
+                // https://nearley.js.org/docs/grammar#postprocessors
+                nearley:{allowPartials: false, __str:`
 main         -> classs:* "end:"               {% (d)=> { return {packages: [{name: "default", classes: d[0]}]}} %}
 comment      -> "#" [^\\n\\r]:* "\\r":? "\\n"     {% (d)=> { return d.flat().join("") }%}
 eol          -> (ws "\\r":? "\\n")              {% (d)=> { return null }%}
@@ -442,7 +442,7 @@ mult         -> "[*]"                         {% id %}
 classtype    -> identifier                    {% id %}
 classs       -> ws comment:? ws identifier ":" eol features {% (d)=> { let feats = d[d.length-1].flat(); return {name: d[3], attributes: feats.filter(f=>!f.isRef), references: feats.filter(f=>f.isRef)}} %}
 `,
-test_text:`# Q12136 - A disorder of structure or function in a living organism that produces specific symptoms or affects a specific location, not simply a direct result of physical injury.
+                    test_text:`# Q12136 - A disorder of structure or function in a living organism that produces specific symptoms or affects a specific location, not simply a direct result of physical injury.
  Disease:
    name: String
    symptoms -> Symptom [*]
@@ -511,8 +511,8 @@ test_text:`# Q12136 - A disorder of structure or function in a living organism t
    specialization: String
    performs -> Treatment [*]
 end:`
-    },
-    javascript:{allowPartials: false, __str:`function (text) {
+                },
+                javascript:{allowPartials: false, __str:`function (text) {
     let lines = text.split('\\n');
     lines = lines.map(line=>{ // uncomment
         let comment_index = line.indexOf('//'); return (comment_index==-1) ? line : line.substr(0,comment_index);
@@ -589,10 +589,10 @@ end:`
 }</div>
 `);}
     static edgePointView(): string { return beautify((
-`<div className={"edgePoint"} tabIndex="-1">
+        `<div className={"edgePoint"} tabIndex="-1">
     {decorators}
 </div>`
-))}
+    ))}
     static edgePointViewSVG(): string { return beautify(
         `<ellipse stroke={"black"} fill={"red"} cx={"50"} cy={"50"} rx={"20"} ry={"20"} />`
         //`<ellipse stroke={"black"} fill={"red"} cx={props.node.x} cy={props.node.y} rx={props.node.w} ry={props.node.h} />`
@@ -732,8 +732,8 @@ end:`
         // "\n\tfill:var(--fill);" +
         // "\n}" +
         // "\npath.edge.full.outline{" +
-	    // "\nstroke-width: var(--edge-outline-width);" +
-    	// "\nstroke: white;" + 
+        // "\nstroke-width: var(--edge-outline-width);" +
+        // "\nstroke: white;" +
         // "\n}" +
         // "\npath.edge.full.hover-activator{" +
         // "\n\tstroke-width: var(--stroke-width-hover);" +
@@ -763,7 +763,7 @@ end:`
         // "\n\t" +
         // "";
 
-    let css = `
+        let css = `
 .edge-anchor {
 	cursor: crosshair;
 	stroke: transparent;
@@ -866,7 +866,7 @@ foreignObject.label-end, foreignObject.label-start {
         let head = DV.svgHeadTail("head", modename) || '';
         let tail = DV.svgHeadTail("tail", modename) || '';
         let jsx = beautify(
-        `<div className={"edge hoverable hide-ep clickthrough fullscreen ` + modename + `"}>
+            `<div className={"edge hoverable hide-ep clickthrough fullscreen ` + modename + `"}>
             <svg className={"clickthrough fullscreen"} onDoubleClick={() => setTimeout(edge.addMidPoint(edge.start.size.tl().add(edge.end.size.tl()).divide(2)), 150)}>
                 { /* edge full paths
                
@@ -914,7 +914,7 @@ foreignObject.label-end, foreignObject.label-start {
                  onMouseUp={()=> edge.startfollow=false} />}
                 { /* edge anchor end */ }
                 {edge.end && <circle className="edge-anchor content clickable no-drag" `+ // cx={0*segments.all.last().end.pt.x} cy={0*segments.all.last().end.pt.y}
-                `style={{transform: "translate(" + segments.all.last().end.pt.x +"px, " + segments.all.last().end.pt.y +"px)"}}
+            `style={{transform: "translate(" + segments.all.last().end.pt.x +"px, " + segments.all.last().end.pt.y +"px)"}}
                  onMouseDown={()=> edge.endFollow=true}
                  onMouseUp={()=> edge.endfollow=false} />}
 
@@ -925,7 +925,7 @@ foreignObject.label-end, foreignObject.label-start {
             }
             {decorators}
         </div>`
-    );
+        );
         let edgePrerenderFunc: string = "(ret)=>{\n" +
             "// ** preparations and default behaviour here ** //\n" +
             "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
@@ -953,8 +953,8 @@ foreignObject.label-end, foreignObject.label-start {
             "ret.view = view\n" +
             "// data, edge, view are dependencies by default. delete the line(s) above if you want to remove them.\n" +
             "// add preparation code here (like for loops to count something), then list the dependencies below.\n\n" +
-            
-           
+
+
             "ret.getPosition = () => {\n" +
             "  if (!ret.segments || !ret.segments.all || !ret.segments.all.length) return null;\n\n" +
             "  const all = ret.segments.all;\n\n" +
@@ -1049,7 +1049,7 @@ foreignObject.label-end, foreignObject.label-start {
             "ret.ePos = ret.position ? ret.position.end : { x: 0, y: 0, align: 'right' }\n" +
             "}";
 
-        
+
         let ev = DViewElement.new2("Edge"+name, jsx, vp,
             (v: DViewElement) => {
                 // v.appliableToClasses = [DVoidEdge.cname];
@@ -1081,11 +1081,11 @@ foreignObject.label-end, foreignObject.label-start {
     }
     */
     static semanticErrorOverlay_old() { return (
-`<section className="overlap">
+        `<section className="overlap">
     <div className="error-message">Lowerbound violation</div>
 </section>`
-)}    static semanticErrorOverlay() { return (
-`<section className="overlap">
+    )}    static semanticErrorOverlay() { return (
+        `<section className="overlap">
     {
     /* how it works: when a validated property changes to an invalid state (let's say lowerbound)
      - lowerbound updated, this cause an update on both the main and lowerbound views (due to usageDeclarations)
@@ -1097,7 +1097,7 @@ foreignObject.label-end, foreignObject.label-start {
     }
     
 </section>`
-)}
+    )}
 
 
 } // DV class end
@@ -1214,7 +1214,7 @@ export class DefaultView {
     /* MODEL */
 
     public static model(): string { return (
-`
+        `
 /* -- Jjodel Abstract Syntax Specification v2.0 -- */
 <View className={"root model"}>
 <Grid node={node}/>
@@ -1296,23 +1296,23 @@ export class DefaultView {
 
 <Zoom node={node}/>
 </View>`
-);}
+    );}
 
 
     public static void(): string { return (
-`<div className="void model-less">
+        `<div className="void model-less">
     <i className="bi bi-exclamation-diamond-fill" />
     <div className={"m-auto text-center"}>{data ? data.name : "Shapeless element"} didn't match any primary view</div>
     <hr className="content inline" style={{width: '100%'}} />
     <div className={"m-auto text-center content inline"}>Generated by {parentView && parentView.name + 'view'||'A root-level element'}</div>
     {/*decorators*/}
 </div>`
-);}
+    );}
 
     /* PACKAGE */
 
     public static package(): string { return (
-`
+        `
 /* -- Jjodel Abstract Syntax Specification v2.0 -- */
 
 
@@ -1346,21 +1346,21 @@ export class DefaultView {
     <Measurable draggable={true}><div>draggable</div></Measurable>*/
 }
 </View>`
-);}
+    );}
 
     public static defaultPackage(): string { return (
-`<div className={'root package'}>
+        `<div className={'root package'}>
     <div className={'package-children'}>
         {data.children.map(c => <DefaultNode key={c.id} data={c} />)}
     </div>
     {decorators}
 </div>`
-);}
+    );}
 
     /* CLASS */
 
 
-public static class(): string { return (`
+    public static class(): string { return (`
 /* -- Jjodel Abstract Syntax Specification v2.2 -- */
 
 <View
@@ -1508,8 +1508,8 @@ public static class(): string { return (`
 
     /* ENUM */
 
-public static enum(): string { return (
-`
+    public static enum(): string { return (
+        `
 /* -- Jjodel Abstract Syntax Specification v2.0 -- */
 
 
@@ -1549,12 +1549,12 @@ public static enum(): string { return (
     </div>
     {decorators}
 </View>`
-);}
+    );}
 
     /* FEATURE (Attribute / Reference) */
 
     public static feature(): string { return (
-`
+        `
 /* -- Jjodel Abstract Syntax Specification v2.3 -- */
 
 <View className={'root feature ' + (data.className === 'DReference' ? 'reference-row' : 'attribute-row')} style={{
@@ -1585,12 +1585,12 @@ public static enum(): string { return (
     <Select data={data} field={'type'} />
     {decorators}
 </View>`
-);}
+    );}
 
     /* LITERAL */
 
     public static literal(): string { return (
-`
+        `
 /* -- Jjodel Abstract Syntax Specification v2.0 -- */
 
 
@@ -1598,12 +1598,12 @@ public static enum(): string { return (
     {data.name}
     {decorators}
 </label>`
-);}
+    );}
 
     /* OPERATION */
 
     public static operation(): string { return (
-`
+        `
 /* -- Jjodel Abstract Syntax Specification v2.3 -- */
 
 <View className={'root operation operation-row'} style={{
@@ -1639,12 +1639,12 @@ public static enum(): string { return (
 
     {decorators}
 </View>`
-);}
+    );}
 
     /* PARAMETER */
 
-public static parameter(): string { return (
-`
+    public static parameter(): string { return (
+        `
 /* -- Jjodel Abstract Syntax Specification v2.0 -- */
 
 
@@ -1656,12 +1656,12 @@ public static parameter(): string { return (
     <span className={"modifier"}>{data.upperBound > 1 || data.upperBound === -1 ? '[]' : ''}</span>
     {decorators}
 </View>`
-);}
+    );}
 
     // i want to keep it because it will be useful for a candidate next feature in m1 & layoutable elements
     // it is still work in progress.
     public static operationm1(): string { return (
-`<div className={'d-flex root operationm1'} style={{paddingRight: "6px"}}>
+        `<div className={'d-flex root operationm1'} style={{paddingRight: "6px"}}>
     <label className={'d-block ms-1'}>{this.props.data.instanceof.name}</label>
     <label className={'d-block ms-auto hover-root'} style={{color:` + valuecolormap_str + `[this.props.data.values.type] || "gray"}}>
         →→→
@@ -1671,12 +1671,12 @@ public static parameter(): string { return (
     </label>
     {decorators}
 </div>`
-);}
+    );}
 
-/* OBJECT */
+    /* OBJECT */
 
-public static object(): string { return (
-`
+    public static object(): string { return (
+        `
 /* -- Jjodel Abstract Syntax Specification v2.0 -- */
 
 
@@ -1696,12 +1696,12 @@ public static object(): string { return (
     </div>
     {decorators}
 </View>`
-);}
+    );}
 
     /* VALUE */
 
     public static value() { return (
-`
+        `
 /* -- Jjodel Abstract Syntax Specification v2.0 -- */
 
 
@@ -1713,12 +1713,12 @@ public static object(): string { return (
     </label>
     {decorators}
 </View>`
-);}
+    );}
 
     /* SINGLETON OBJECT */
 
     public static singleton(): string { return (
-    `
+        `
 /* -- Jjodel Abstract Syntax Specification v2.0 -- */
 
 
@@ -1731,7 +1731,7 @@ public static object(): string { return (
 
     /* ERROR */
 
-    
+
 
     public static error(msg: undefined | ReactNode, errortype: string | "SYNTAX" | "RUNTIME",
                         data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: LViewElement|DViewElement, clickRetry?: (e:any)=>any): React.ReactNode {

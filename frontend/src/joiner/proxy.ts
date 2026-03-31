@@ -322,18 +322,34 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
                 let ret: GObject = {...targetObj};
                 if (ret._state) ret.state = ret._state;
                 for (let k of hiddenkeys) { delete ret[k]; }
+                let keptChildKeys = {'values': true, 'value': true};
+                console.log("hasvalues 0", {has:"values" in ret, ret:{...ret}, finalret:ret} );
                 if (propKey === 'json' || propKey === 'deepJson') for (let k of lang_hiddenkeys) { delete ret[k]; }
                 let childKeys_ = windoww.LPointerTargetable.childKeys;
                 let pointerKeys = windoww.LPointerTargetable.pointerKeys;
                 // replace children pointers with json or remove them
+                console.log("hasvalues 1", {has:"values" in ret, ret:{...ret}, finalret:ret} );
                 if (propKey === 'deepJson' || propKey === '__deepJson') {
                     for (let k of childKeys_) {
                         if (!(k in ret)) continue;
-                        if (!Array.isArray(ret[k])) ret[k] = (L.from(ret[k]) as any)?.[propKey];
-                        else ret[k] = ret[k].map(e=>(L.from(e) as any)?.[propKey]).filter(e=>!!e);
+                        let isValues = k === 'values' || k === 'value';
+                        if (!Array.isArray(ret[k])) {
+                            let ltarget = (L.from(ret[k]) as any)?.[propKey];
+                            if (!ltarget && isValues) continue;
+                            ret[k] = ltarget;
+                        }
+                        else ret[k] = ret[k].map(e=> {
+                            let ltarget = (L.from(ret[k]) as any)?.[propKey];
+                            if (!ltarget && isValues) return ret[k];
+                            return ltarget;
+                        }).filter(e=> isValues ? true : !!e);
                     }
                 }
-                else if (propKey !== '__json') for (let k of childKeys_) { delete ret[k]; }
+                else if (propKey !== '__json') for (let k of childKeys_) {
+                    if (k in keptChildKeys) continue;
+                    delete ret[k];
+                }
+                console.log("hasvalues 2", {has:"values" in ret, ret:{...ret}, finalret:ret} );
                 // replace non-containing pointers (type) with names
                 if (propKey !== '__json') for (let k of pointerKeys) {
                     if (!(k in ret)) continue;
@@ -345,6 +361,8 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
                     if ((Array.isArray(v) && v.length === 0) || U.isEmptyObject(v)) delete ret[k];
                     if (v === '') delete ret[k];
                 }
+
+                console.log("hasvalues 3", {has:"values" in ret, ret:{...ret}, finalret:ret} );
                 return ret;
             case '__serialize': return JSON.stringify(targetObj, null, 4);
             case '__isproxy':
