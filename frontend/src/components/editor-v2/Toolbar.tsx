@@ -167,12 +167,24 @@ function Toolbar({
     }).filter(Boolean) as Array<{ id: string; name: string }>;
 
     const handleViewpointChange = useCallback((vpId: string) => {
-        console.log('[FIX] dropdown value:', vpId, 'viewpoints:', viewpoints.map(v => ({ id: v.id, name: v.name })));
-        // Uses the same mechanism as NestedView.tsx select() function:
-        // sets both state.viewpoint (for EditorSwitch) and
-        // project.activeViewpoint via L-proxy (for classic renderer)
         activateViewpoint(vpId || null);
-    }, [viewpoints]);
+    }, []);
+
+    // ── Viewpoint editor state (from sidebar) ──
+    const [vpEditorState, setVpEditorState] = useState<{ active: boolean; viewpointName?: string; viewpointType?: string }>({ active: false });
+
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const detail = (e as CustomEvent).detail;
+            setVpEditorState(detail);
+        };
+        window.addEventListener('jjodel:viewpoint-editor-state', handler);
+        return () => window.removeEventListener('jjodel:viewpoint-editor-state', handler);
+    }, []);
+
+    const handleBackFromViewpointEditor = useCallback(() => {
+        window.dispatchEvent(new CustomEvent('jjodel:closeViewpointEditor'));
+    }, []);
 
     // ── Layout mode state (synced via CustomEvent + localStorage) ──
     const [layoutMode, setLayoutMode] = useState<LayoutMode>(getSavedLayoutMode);
@@ -230,6 +242,25 @@ function Toolbar({
 
     return (
         <div className="editor-v2-toolbar">
+            {/* ── Viewpoint editor back button + badge ── */}
+            {vpEditorState.active && (
+                <div className="toolbar-group toolbar-vp-editor-group">
+                    <button
+                        className="toolbar-btn toolbar-vp-back-btn"
+                        onClick={handleBackFromViewpointEditor}
+                        title="Exit viewpoint editor"
+                    >
+                        <i className="bi bi-arrow-left" />
+                    </button>
+                    <span
+                        className={`toolbar-vp-badge toolbar-vp-badge--${vpEditorState.viewpointType === 'validation' ? 'validation' : 'syntax'}`}
+                    >
+                        {vpEditorState.viewpointName}
+                    </span>
+                    <div className="toolbar-separator" />
+                </div>
+            )}
+
             {/* ── Actions / Alignment group (swaps in-place) ── */}
             {selectedCount >= 2 && onAlignLeft ? (
                 <div className="toolbar-group toolbar-group--align">

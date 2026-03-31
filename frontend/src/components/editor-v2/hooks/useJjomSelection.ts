@@ -74,6 +74,23 @@ function getGraphSubElementIds(modelid: string): string[] {
     }
 }
 
+/** Dispatch canvas element selected event for viewpoint editor auto-navigate. */
+function notifyElementSelected(elementId: string): void {
+    try {
+        const state: DState = store.getState();
+        const raw = state.idlookup?.[elementId] as any;
+        // Resolve the model element (vertex → model element)
+        const modelElementId = raw?.model ?? elementId;
+        const modelElement = state.idlookup?.[modelElementId] as any;
+        const className = modelElement?.className ?? raw?.className ?? '';
+        if (className) {
+            window.dispatchEvent(new CustomEvent('jjodel:canvas-element-selected', {
+                detail: { elementId, className },
+            }));
+        }
+    } catch { /* ignore */ }
+}
+
 /** Select one element and deselect all others in the same graph. */
 function selectElement(elementId: string, modelid: string): void {
     try {
@@ -110,6 +127,9 @@ function selectElement(elementId: string, modelid: string): void {
                 modelElement: modelElement?.id ?? modelElement?.__raw?.id ?? '',
             });
         });
+
+        // Notify viewpoint editor panel about the selected element
+        notifyElementSelected(elementId);
     } catch (err) {
         console.warn('[useJjomSelection] Failed to select element:', err);
     }

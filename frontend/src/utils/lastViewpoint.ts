@@ -4,7 +4,7 @@
  * to create new views.
  */
 
-import { DPointerTargetable, DViewElement, LProject, LViewPoint, SetRootFieldAction, Defaults } from '../joiner';
+import { DPointerTargetable, DViewElement, LProject, LViewPoint, SetFieldAction, SetRootFieldAction, Defaults } from '../joiner';
 import { toast } from '../components/Toast/toastDispatch';
 
 let lastEditedViewpointId: string | null = null;
@@ -30,26 +30,27 @@ export function clearLastEditedViewpoint(): void {
 
 /**
  * Activates a viewpoint for rendering.
- * Logic copied from NestedView.tsx select() function (lines 109-127).
  *
  * Sets both:
- * 1. state.viewpoint (root state) — used by EditorSwitch for split view toggle
- * 2. project.activeViewpoint (L-proxy setter) — used by the classic renderer
+ * 1. project.activeViewpoint (via direct SetFieldAction) — used by the classic renderer
+ * 2. state.viewpoint (root state) — used by EditorSwitch for split view toggle
+ *
+ * Uses direct SetFieldAction instead of the L-proxy setter to avoid async
+ * TRANSACTION batching issues that caused the SetRootFieldAction to interfere
+ * with the project.activeViewpoint update.
  *
  * @param viewpointId - ID of the viewpoint to activate, or null/'' to deactivate
  */
 export function activateViewpoint(viewpointId: string | null): void {
-    // Verbatim from NestedView.tsx select() — project.activeViewpoint = ptr as any
     const project = LProject.getProject();
-    const previousId = project.activeViewpoint?.id;
-    console.log('[activateViewpoint]', { viewpointId, previousId, projectId: project.id });
+    const projectId = (project as any).__raw?.id;
 
-    // 1. Set project.activeViewpoint via L-proxy (the NestedView way)
-    if (viewpointId) {
-        project.activeViewpoint = viewpointId as any;
+    // 1. Set project.activeViewpoint via direct SetFieldAction (no L-proxy, no async TRANSACTION)
+    if (viewpointId && projectId) {
+        SetFieldAction.new(projectId, 'activeViewpoint', viewpointId, '', true);
     }
 
-    // 2. Also update state.viewpoint (used by EditorSwitch for split view toggle)
+    // 2. Update state.viewpoint (used by EditorSwitch for split view toggle)
     SetRootFieldAction.new('viewpoint', viewpointId || '', '', true);
 }
 
@@ -58,7 +59,7 @@ export function activateViewpoint(viewpointId: string | null): void {
  * Priority: last edited workbench VP → active project VP → default VP.
  * Returns { dViewpoint, vpName } or null if nothing found.
  */
-function resolveParentViewpoint(): { dViewpoint: DViewElement; vpName: string } | null {
+export function resolveParentViewpoint(): { dViewpoint: DViewElement; vpName: string } | null {
     // 1. Try last edited workbench viewpoint
     const vpId = getLastEditedViewpointId();
     if (vpId) {
@@ -117,8 +118,8 @@ export function createViewInWorkbench(elementId: string, elementName: string, cl
     let appliableToClasses: string[] = [];
     switch (className) {
         case 'DClass':
-            query = `context DClass inv: self.id = '${elementId}'`;
-            appliableToClasses = ['DClass'];
+            query = `context DObject inv: self.instanceof.id = '${elementId}'`;
+            appliableToClasses = ['DObject'];
             appliableTo = 'Vertex';
             break;
         case 'DEnumerator':
@@ -177,5 +178,11 @@ export function createViewInWorkbench(elementId: string, elementName: string, cl
     }
 
     toast.success(`"${viewName}" added to "${vpName}"`, 'View created');
+
+    // Notify ViewpointEditorRoot (and any other listener) that a view was created
+    setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('jjodel:viewCreated', { detail: { viewpointId: dViewpoint.id } }));
+    }, 300);
+
     return true;
 }

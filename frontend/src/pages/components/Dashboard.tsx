@@ -462,11 +462,20 @@ function ProjectCatalog(props: ProjectProps) {
                 let name = vp?.name;
                 return (!vp ? <div key={name||'error_'+vp}>errorvp: {vp + ''}</div> :
                     <div className="row data viewpoint" key={name}>
-                        <div className={'col-4'}><ElementBadge type="viewpoint" /> {name}</div>
+                        <div className={'col-4'} style={{ cursor: 'pointer' }} onClick={() => {
+                            window.dispatchEvent(new CustomEvent('jjodel:openViewpointEditor', {
+                                detail: { viewpointId: vp.id },
+                            }));
+                        }}><ElementBadge type="viewpoint" /> {name}</div>
                         <div className={'col-2 artifact-type'}>Viewpoint</div>
                         <div className={'buttons'}>
                             <CommandBar noBorder={true} style={{marginBottom: '0'}}>
-                                <Btn icon={'open'} tip={'Open viewpoint'} disabled={true}/>
+                                <Btn icon={'open'} tip={'Open viewpoint'} action={() => {
+                                    // Navigate to metamodel tab and open viewpoint editor
+                                    window.dispatchEvent(new CustomEvent('jjodel:openViewpointEditor', {
+                                        detail: { viewpointId: vp.id },
+                                    }));
+                                }}/>
                                 <Btn icon={'minispace'}/>
                                 <Btn icon={'copy'} action={e => vp.duplicate()} tip={'Duplicate viewpoint'}/>
                                 <Sep/>

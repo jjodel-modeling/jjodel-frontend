@@ -62,11 +62,8 @@ const ViewTreeNode: React.FC<ViewTreeNodeProps> = ({
                     {badge.letter}
                 </span>
                 <span className="view-tree__name">{node.name || 'Unnamed'}</span>
-                {node.nodeType === 'view' && (
-                    <i
-                        className={`bi ${node.isExclusive ? 'bi-diamond-fill' : 'bi-layers'} view-tree__icon`}
-                        title={node.isExclusive ? 'Exclusive' : 'Overlay'}
-                    />
+                {node.nodeType === 'view' && !node.isExclusive && (
+                    <i className={'bi bi-layers view-tree__icon'} title={'Overlay'} />
                 )}
             </div>
             {hasChildren && expanded && node.children!.map(child => (

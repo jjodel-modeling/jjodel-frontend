@@ -80,7 +80,9 @@ import { jjomVertexToRFNode } from './utils/jjomTransformers';
 import { useTheme } from '../../services/ThemeService';
 import { getDraggedMetaclassId } from './utils/dragState';
 import { PolymetricView } from '../polymetric';
-import { getLastEditedViewpointId, getLastEditedViewpointName, createViewInWorkbench } from '../../utils/lastViewpoint';
+import { createViewInWorkbench, resolveParentViewpoint } from '../../utils/lastViewpoint';
+import BottomDrawer from '../panels/BottomDrawer';
+import ElementPropertiesDrawer from '../panels/ElementPropertiesDrawer';
 
 import './EditorV2.scss';
 
@@ -429,6 +431,19 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
             try { localStorage.setItem('jjodel.showGrid', String(next)); } catch {}
             return next;
         });
+    }, []);
+
+    // ── Bottom drawer (element properties) ──
+    const [bottomDrawerOpen, setBottomDrawerOpen] = useState(false);
+    const [bottomDrawerElementName, setBottomDrawerElementName] = useState('');
+
+    const openBottomDrawer = useCallback((elementName: string) => {
+        setBottomDrawerElementName(elementName);
+        setBottomDrawerOpen(true);
+    }, []);
+
+    const closeBottomDrawer = useCallback(() => {
+        setBottomDrawerOpen(false);
     }, []);
 
     // ── Singleton instance toggle ──────────────────────────────────────
@@ -1726,11 +1741,10 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
     const onNodeContextMenu = useCallback(
         (event: React.MouseEvent, node: Node) => {
             event.preventDefault();
-            const rect = editorContainerRef.current?.getBoundingClientRect();
             const selectedCount = getNodes().filter(n => n.selected).length;
             setContextMenu({
-                x: event.clientX - (rect?.left ?? 0),
-                y: event.clientY - (rect?.top ?? 0),
+                x: event.clientX,
+                y: event.clientY,
                 nodeId: node.id,
                 isMultiSelect: selectedCount > 1,
                 selectedCount,
@@ -1742,10 +1756,9 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
     const onEdgeContextMenu = useCallback(
         (event: React.MouseEvent, edge: Edge) => {
             event.preventDefault();
-            const rect = editorContainerRef.current?.getBoundingClientRect();
             setContextMenu({
-                x: event.clientX - (rect?.left ?? 0),
-                y: event.clientY - (rect?.top ?? 0),
+                x: event.clientX,
+                y: event.clientY,
                 edgeId: edge.id,
             });
         },
@@ -1757,6 +1770,13 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
         jjomSelection.onPaneClick();
     }, [jjomSelection]);
 
+    // Double-click node → open bottom drawer with properties
+    const onNodeDoubleClick = useCallback((_event: React.MouseEvent, node: Node) => {
+        const data = node.data as any;
+        const name = data?.label ?? data?.name ?? 'Element';
+        openBottomDrawer(name);
+    }, [openBottomDrawer]);
+
     const closeContextMenu = useCallback(() => {
         setContextMenu(null);
     }, []);
@@ -1765,10 +1785,9 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
     useEffect(() => {
         const handler = (e: Event) => {
             const { childId, childKind, nodeId, x, y } = (e as CustomEvent).detail;
-            const rect = editorContainerRef.current?.getBoundingClientRect();
             setContextMenu({
-                x: x - (rect?.left ?? 0),
-                y: y - (rect?.top ?? 0),
+                x,
+                y,
                 nodeId,
                 childId,
                 childKind,
@@ -1965,6 +1984,14 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                     onClick: () => duplicateNode(contextMenu.nodeId!),
                 },
                 {
+                    label: 'Properties',
+                    icon: 'bi-sliders',
+                    onClick: () => {
+                        const data = node?.data as any;
+                        openBottomDrawer(data?.label ?? 'Element');
+                    },
+                },
+                {
                     label: 'Delete',
                     icon: 'bi-trash',
                     danger: true,
@@ -2038,21 +2065,23 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
 
             // "Create View" — only for classifiers (classNode, enumNode), not objectNode/packageNode
             if (node?.type === 'classNode' || node?.type === 'enumNode') {
-                const lastVpId = getLastEditedViewpointId();
-                const lastVpName = getLastEditedViewpointName();
+                const resolved = resolveParentViewpoint();
+                const vpName = resolved?.vpName;
                 const data = node.data as any;
                 items.push(
                     { divider: true },
                     {
-                        label: lastVpId ? `Create View${lastVpName ? ` in "${lastVpName}"` : ''}` : 'Create View — open a viewpoint first',
+                        label: resolved ? `Create View${vpName ? ` in "${vpName}"` : ''}` : 'Create View — no viewpoint available',
                         icon: 'bi-eye',
-                        disabled: !lastVpId,
+                        disabled: !resolved,
                         onClick: () => {
+                            console.log('[EditorV2] Create View clicked, node:', node.id, node.type);
                             // node.id is a vertex ID; resolve to the DClass model element ID
                             const vertexProxy: any = LPointerTargetable.fromPointer(node.id);
                             const modelElement = vertexProxy?.model;
                             const classId = modelElement?.id ?? node.id;
                             const className = modelElement?.__raw?.className ?? 'DClass';
+                            console.log('[EditorV2] resolved classId:', classId, 'className:', className);
                             createViewInWorkbench(classId, data?.label ?? 'unnamed', className);
                         },
                     },
@@ -2582,6 +2611,7 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                             onNodeContextMenu={onNodeContextMenu}
                             onEdgeContextMenu={onEdgeContextMenu}
                             onNodeClick={jjomSelection.onNodeClick}
+                            onNodeDoubleClick={onNodeDoubleClick}
                             onEdgeClick={jjomSelection.onEdgeClick}
                             onPaneClick={onPaneClick}
                             nodeTypes={nodeTypes}
@@ -2651,6 +2681,15 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                             />
                         )}
                     </div>
+
+                    {/* Bottom drawer for element properties */}
+                    <BottomDrawer
+                        isOpen={bottomDrawerOpen}
+                        onClose={closeBottomDrawer}
+                        title={`Properties: ${bottomDrawerElementName}`}
+                    >
+                        <ElementPropertiesDrawer elementName={bottomDrawerElementName} />
+                    </BottomDrawer>
                 </div>
 
                 {/* PropertiesPanel removed — properties editing handled by dock-based Info panel */}

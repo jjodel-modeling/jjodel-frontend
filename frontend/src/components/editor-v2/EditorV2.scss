@@ -380,6 +380,41 @@
     }
 }
 
+// ── Viewpoint editor badge + back button ──
+.toolbar-vp-editor-group {
+    gap: 6px;
+}
+
+.toolbar-vp-back-btn {
+    color: #64748b;
+
+    &:hover {
+        color: #334155;
+        background: #f1f5f9;
+    }
+}
+
+.toolbar-vp-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
+
+    &--syntax {
+        background: #e0f2fe;
+        color: #0369a1;
+    }
+
+    &--validation {
+        background: #fef3c7;
+        color: #92400e;
+    }
+}
+
 // ── Zoom controls ──
 .toolbar-zoom {
     display: flex;
@@ -2687,7 +2722,7 @@
 }
 
 .context-menu {
-    position: absolute;
+    position: fixed;
     z-index: 1000;
     background: var(--float-bg);
     border: 1px solid var(--float-border);

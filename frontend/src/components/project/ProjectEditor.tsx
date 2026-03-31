@@ -878,8 +878,21 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         model.delete();
     };
 
-    const handleOpenViewpoint = (vp: LViewPoint) => {
-        DockManager.openViewpoint(vp);
+    const handleOpenViewpoint = async (vp: LViewPoint) => {
+        // Open the first metamodel tab, then activate the ViewpointEditorPanel in the sidebar
+        const mm = metamodels[0];
+        if (mm) {
+            await DockManager.open2(mm);
+            // Small delay to ensure PropertiesWithTreeView is mounted and listening
+            setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('jjodel:openViewpointEditor', {
+                    detail: { viewpointId: vp.id },
+                }));
+            }, 150);
+        } else {
+            // Fallback: no metamodel available, open old viewpoint workbench
+            DockManager.openViewpoint(vp);
+        }
     };
 
     const handleDuplicateViewpoint = (vp: LViewPoint) => {
@@ -912,8 +925,19 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         });
         setShowNewViewpointDialog(false);
 
-        // Open the new viewpoint in the workbench
-        DockManager.openViewpoint(dVp);
+        // Open the new viewpoint in the sidebar editor
+        const mm = metamodels[0];
+        if (mm) {
+            DockManager.open2(mm).then(() => {
+                setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent('jjodel:openViewpointEditor', {
+                        detail: { viewpointId: dVp.id },
+                    }));
+                }, 150);
+            });
+        } else {
+            DockManager.openViewpoint(dVp);
+        }
     };
 
     // Transformation handlers
