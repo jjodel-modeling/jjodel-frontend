@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { LViewPoint, LViewElement, DViewPoint, DViewElement, DPointerTargetable } from '../../../joiner';
 import { getViewpointType, ViewpointType } from '../../../view/viewPoint/viewpoint';
@@ -7,6 +7,7 @@ import StyleTab from './tabs/StyleTab';
 interface ViewpointEditorRootProps {
     viewpoint: LViewPoint;
     onViewSelect: (viewId: string) => void;
+    onViewCreated?: () => void;
 }
 
 // ---------- View tree types & helpers ----------
@@ -47,6 +48,34 @@ function buildTreeItems(lView: LViewElement, isRoot: boolean): ViewTreeItem {
         children: subViews
             .filter(sv => !!sv)
             .map(sv => buildTreeItems(sv, false)),
+    };
+}
+
+/**
+ * Build tree items reading directly from Redux store (bypasses proxy L cache).
+ * In the store, subViews is a dictionary { pointerId: number }, not an array.
+ */
+function buildTreeFromStore(state: any, nodeId: string, isRoot: boolean): ViewTreeItem | null {
+    const raw = state.idlookup?.[nodeId];
+    if (!raw) return null;
+
+    const subViewDict = raw.subViews;
+    const subViewIds = subViewDict ? Object.keys(subViewDict) : [];
+
+    const children = subViewIds
+        .map(id => buildTreeFromStore(state, id, false))
+        .filter((item): item is ViewTreeItem => item !== null);
+
+    return {
+        id: nodeId,
+        name: raw.name || 'Unnamed',
+        isViewpoint: isRoot && raw.className === DViewPoint.cname,
+        isExclusive: raw.isExclusiveView ?? false,
+        priority: raw.explicitApplicationPriority,
+        hasOcl: !!(raw.oclCondition && raw.oclCondition.trim()),
+        hasJs: !!(raw.jsCondition && (raw.jsCondition as string)?.trim?.()),
+        hasExclusive: raw.isExclusiveView ?? false,
+        children,
     };
 }
 
@@ -133,22 +162,17 @@ const ViewTreeRow: React.FC<ViewTreeRowProps> = ({ item, depth, selectedId, onSe
 const ViewpointEditorRoot: React.FC<ViewpointEditorRootProps> = ({
     viewpoint,
     onViewSelect,
+    onViewCreated,
 }) => {
     const [activeTab, setActiveTab] = useState<'views' | 'style'>('views');
     const [selectedTreeId, setSelectedTreeId] = useState<string | null>(null);
     const [menuOpen, setMenuOpen] = useState(false);
 
-    // Track Redux changes to trigger re-render when subViews change
-    const _vpRedux = useSelector((state: any) => {
-        const vp = state[viewpoint.id];
-        const subs = vp?.subViews;
-        return Array.isArray(subs) ? subs.join(',') : JSON.stringify(subs ?? 0);
-    });
-
-    const treeRoot = useMemo(
-        () => buildTreeItems(viewpoint as any as LViewElement, true),
-        [viewpoint, _vpRedux],
-    );
+    // Read tree directly from Redux store — bypasses proxy L cache for reactivity
+    const treeRoot = useSelector(
+        (state: any) => buildTreeFromStore(state, viewpoint.id, true),
+        (a, b) => JSON.stringify(a) === JSON.stringify(b)
+    ) ?? buildTreeItems(viewpoint as any as LViewElement, true);
 
     const vpType = getViewpointType(viewpoint.__raw);
     const typeBadge = vpType === 'syntax'
@@ -199,14 +223,11 @@ const ViewpointEditorRoot: React.FC<ViewpointEditorRootProps> = ({
             true,
         );
 
-        // Notify listeners (e.g. parent panel) that a view was created
-        setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('jjodel:viewCreated', {
-                detail: { viewpointId: viewpoint.id },
-            }));
-        }, 300);
+        if (onViewCreated) {
+            onViewCreated();
+        }
 
-    }, [viewpoint.id, treeRoot.children.length]);
+    }, [viewpoint.id, treeRoot.children.length, onViewCreated]);
 
     // Viewpoint properties handlers
     const handleNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {

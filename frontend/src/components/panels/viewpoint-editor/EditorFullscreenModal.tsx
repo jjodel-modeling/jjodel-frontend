@@ -6,6 +6,16 @@ import { baseMonacoOptions, withReadOnly } from '../../editors/monacoConfig';
 import { wrapFragment, unwrapFragment, PREFIX_LINE_COUNT, SUFFIX_LINE_COUNT } from '../../editors/viewpoint/jsxWrapperUtils';
 import type { LanguageBadge } from './EditorToolbar';
 
+type ToolbarSep = '|';
+interface ToolbarButton {
+    icon: string;
+    iconActive?: string;
+    title: string;
+    action: (editor: monacoEditor.IStandaloneCodeEditor) => void;
+    /** Return true when the button should show its "active/feedback" icon */
+    isActive?: () => boolean;
+}
+
 export interface EditorFullscreenModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -61,6 +71,7 @@ const EditorFullscreenModal: React.FC<EditorFullscreenModalProps> = ({
     const [cursorPosition, setCursorPosition] = useState({ line: 1, col: 1 });
     const [minimap, setMinimap] = useState(false);
     const [wordWrap, setWordWrap] = useState(false);
+    const [copyFeedback, setCopyFeedback] = useState(false);
 
     // ESC to close (capture phase for Monaco compatibility)
     useEffect(() => {
@@ -129,13 +140,50 @@ const EditorFullscreenModal: React.FC<EditorFullscreenModalProps> = ({
         if (e.target === e.currentTarget) onClose();
     }, [onClose]);
 
+    const toolbarItems: (ToolbarButton | ToolbarSep)[] = [
+        {
+            icon: 'bi-arrow-counterclockwise',
+            title: 'Undo',
+            action: (ed) => ed.trigger('toolbar', 'undo', null),
+        },
+        {
+            icon: 'bi-arrow-clockwise',
+            title: 'Redo',
+            action: (ed) => ed.trigger('toolbar', 'redo', null),
+        },
+        '|',
+        {
+            icon: 'bi-search',
+            title: 'Find',
+            action: (ed) => ed.trigger('toolbar', 'actions.find', null),
+        },
+        {
+            icon: copyFeedback ? 'bi-check' : 'bi-clipboard',
+            title: 'Copy All',
+            action: (ed) => {
+                const text = jsxWrapping ? unwrapFragment(ed.getValue()) : ed.getValue();
+                navigator.clipboard.writeText(text).then(() => {
+                    setCopyFeedback(true);
+                    setTimeout(() => setCopyFeedback(false), 1500);
+                });
+            },
+        },
+        {
+            icon: 'bi-code-slash',
+            title: 'Format Document',
+            action: (ed) => ed.trigger('toolbar', 'editor.action.formatDocument', null),
+        },
+    ];
+
     if (!isOpen) return null;
 
     const options: monacoEditor.IStandaloneEditorConstructionOptions = {
         ...withReadOnly(baseMonacoOptions, readOnly),
         automaticLayout: true,
         fontSize: 14,
-        lineNumbers: 'on',
+        lineNumbers: jsxWrapping ? ((n: number) => String(n - PREFIX_LINE_COUNT)) as any : 'on',
+        lineNumbersMinChars: 4,
+        lineDecorationsWidth: 8,
         folding: true,
         scrollBeyondLastLine: false,
         padding: { top: 12, bottom: 12 },
@@ -163,15 +211,33 @@ const EditorFullscreenModal: React.FC<EditorFullscreenModalProps> = ({
                         <span className="vep-fullscreen-card__subtitle">{subtitle}</span>
                     </div>
                     <div className="vep-fullscreen-card__header-right">
-                        {onRefresh && (
-                            <button
-                                className="vep-fullscreen-card__header-btn"
-                                onClick={onRefresh}
-                                title="Refresh"
-                            >
-                                <i className="bi bi-arrow-clockwise" />
-                            </button>
+                        {toolbarItems.map((item, i) =>
+                            item === '|' ? (
+                                <span key={i} className="vep-fullscreen-card__header-sep" />
+                            ) : (
+                                <button
+                                    key={i}
+                                    className="vep-fullscreen-card__header-btn"
+                                    title={item.title}
+                                    onClick={() => editorRef.current && item.action(editorRef.current)}
+                                >
+                                    <i className={`bi ${item.icon}`} />
+                                </button>
+                            )
                         )}
+                        {onRefresh && (
+                            <>
+                                <span className="vep-fullscreen-card__header-sep" />
+                                <button
+                                    className="vep-fullscreen-card__header-btn"
+                                    onClick={onRefresh}
+                                    title="Refresh"
+                                >
+                                    <i className="bi bi-arrow-clockwise" />
+                                </button>
+                            </>
+                        )}
+                        <span className="vep-fullscreen-card__header-sep" />
                         <button
                             className="vep-fullscreen-card__header-btn"
                             onClick={onClose}

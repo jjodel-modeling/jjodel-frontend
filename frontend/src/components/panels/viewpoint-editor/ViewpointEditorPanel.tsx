@@ -37,11 +37,15 @@ const ViewpointEditorPanel: React.FC<ViewpointEditorPanelProps> = ({
         return () => { clearLastEditedViewpoint(); };
     }, [viewpoint.id, viewpoint.name]);
 
-    // Force remount of ViewpointEditorRoot when a view is created,
-    // so the L-proxy reads fresh data from Redux.
+    // Callback: "+" button in ViewpointEditorRoot created a view
+    const handleViewCreated = useCallback(() => {
+        setTimeout(() => setRootKey(k => k + 1), 600);
+    }, []);
+
+    // Listen for views created externally (canvas context menu)
     useEffect(() => {
         const handler = () => {
-            setTimeout(() => setRootKey(k => k + 1), 200);
+            setTimeout(() => setRootKey(k => k + 1), 600);
         };
         window.addEventListener('jjodel:viewCreated', handler);
         return () => window.removeEventListener('jjodel:viewCreated', handler);
@@ -105,6 +109,7 @@ const ViewpointEditorPanel: React.FC<ViewpointEditorPanelProps> = ({
                     key={rootKey}
                     viewpoint={viewpoint}
                     onViewSelect={handleViewSelect}
+                    onViewCreated={handleViewCreated}
                 />
             ) : (
                 <div className="vep-single-view">
