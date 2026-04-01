@@ -20,7 +20,7 @@ export default defineConfig({
         global: true,
         process: true
       }
-    })
+    }),
   ],
   server: {
     port: 3000

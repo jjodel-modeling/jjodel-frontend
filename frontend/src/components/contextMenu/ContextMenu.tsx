@@ -48,6 +48,8 @@ import { createPortal } from 'react-dom';
 import { Logo } from '../logo';
 import { forEach } from 'lodash';
 import './ContextMenu.scss';
+import { getLastEditedViewpointId, getLastEditedViewpointName, createViewInWorkbench } from '../../utils/lastViewpoint';
+import { toast } from '../Toast/toastDispatch';
 
 function ContextMenuComponent(props: AllProps) {
     return ContextMenuComponentInner(props);
@@ -231,7 +233,7 @@ function separator() {
 let closefunc: (panelClick?: boolean)=>void = null as any;
 
 function test(){
-    let data: any = null, View: any = null, Input: any = null as any, view: any, decorators: any;
+    /*let data: any = null, View: any = null, Input: any = null as any, view: any, decorators: any;
     L.from(s().viewelements).filter(v=>v.name === "View for Product")[0].onDataUpdate = (
 `let oldQt = data.state.oldQuantity, qt= +data.$quantity;
 console.log("check qt", {n: data.name, qt, oldQt, cc:data.clonedCounter});
@@ -239,7 +241,7 @@ if (oldQt === undefined) { data.state = {oldQuantity: qt, editN:data.clonedCount
 if (oldQt / qt > 2 || oldQt / qt <= 0.5) {
     if (data.state.editN !== data.clonedCounter) { data.state = {requiresValidation: false, oldQuantity: qt, editN: data.clonedCounter}; }
     else { data.state = {requiresValidation: true, editN: data.clonedNumber}; }
-}`)
+}`)*/
 }
 
 function ContextMenuComponentInner(props: AllProps) {
@@ -381,6 +383,19 @@ function ContextMenuComponentInner(props: AllProps) {
 
         if (true as any || !isM2 && cname !== 'DModel') {
             ContextEntry('edit', icon['edit'], 'Edit', () => setEditPanel(true) as undefined, [])
+
+            ContextEntry("help", <i className='bi bi-question-circle' />, "Help", () => {
+                let cn = ddata?.className;
+                let helpKey: string = '';
+                if (!cn) helpKey = 'properties-panel';
+                if (cn) {
+                    cn = cn.toLowerCase();
+                    if (cn.includes("enum")) helpKey = 'element-enum'; // both literal and enumerator shares the same help section?
+                    else helpKey =  'element-' + cn.substring(1);
+                }
+                window.dispatchEvent(new CustomEvent('jjodel:help-open', { detail: { helpKey } }));
+                close();
+                }, []);
             separator();
         }
 
@@ -489,8 +504,9 @@ function ContextMenuComponentInner(props: AllProps) {
 
         /* AUTO-SIZING */
         let gn = node as GObject;
-        if (gn.isResized) ContextEntry('asize', icon['contract'], 'Restore auto-sizing', () => gn.isResized = false, key_bindings.asize.keystroke)
-        else ContextEntry('nasize', icon['expand'], 'Disable auto-sizing', () => gn.isResized = true, key_bindings.asize.keystroke)
+        // keep function {wrapped}, cannot return false or it disables triggering close event.
+        if (gn.isResized) ContextEntry('asize', icon['contract'], 'Restore auto-sizing', () => {gn.isResized = false; /*read above*/}, key_bindings.asize.keystroke)
+        else ContextEntry('nasize', icon['expand'], 'Disable auto-sizing', () => {gn.isResized = true}, key_bindings.asize.keystroke)
 
         // /* LOCK-UNLOCK */
         // jsxList.push(<div onClick={() => {close(); ldata.delete(); /*node.delete();*/}} className={'col item'} tabIndex={0}>{icon['lock']} Lock/Unlock<div> <i
@@ -510,11 +526,20 @@ function ContextMenuComponentInner(props: AllProps) {
 
 
         /* ADD VIEW */
-        if (isM2 && (cname === 'DModel' || cname === 'DClass' || cname === 'DAttribute' || cname === 'DReference')) {
-            ContextEntry('view+m2', icon['add'], 'Add view', null, [], false, [
-                SubEntry('own', null, 'For this '+(data?.className || 'DElement').substring(1), addViewSelf, []),
-                SubEntry('instance', null, 'For his instances', addViewInstances, key_bindings.addView.keystroke)]
-            )
+        if (isM2 && (cname === 'DModel' || cname === 'DClass' || cname === 'DPackage' || cname === 'DAttribute' || cname === 'DReference')) {
+            const hasWorkbenchVP = !!getLastEditedViewpointId();
+            ContextEntry('view+m2', icon['add'],
+                hasWorkbenchVP ? 'Add view' : 'Add view — open a viewpoint first',
+                hasWorkbenchVP ? addViewInstances : null,
+                key_bindings.addView.keystroke, !hasWorkbenchVP, []);
+
+            /* CREATE VIEW IN WORKBENCH — classifiers only */
+            if (cname === 'DModel' || cname === 'DClass' || cname === 'DPackage') {
+                ContextEntry('createview', <i className="bi bi-eye" />,
+                    hasWorkbenchVP ? 'Create View' : 'Create View — open a viewpoint first',
+                    hasWorkbenchVP ? addViewToWorkbench : null,
+                    [], !hasWorkbenchVP, []);
+            }
         } else {
             ContextEntry('view+', icon['add'], 'Add view', addViewSelf, key_bindings.addView.keystroke, false, []);
         }
@@ -607,11 +632,22 @@ const addViewInstances = () => {
     key_bindings.close.function();
 }
 
+function addViewToWorkbench() {
+    let {modelElement: dataid} = getSelected();
+    let ddata = dataid && D.fromPointer(dataid);
+    if (!ddata) return;
+
+    const cn = ddata.className;
+    const elementName = (ddata as any).name || 'unnamed';
+    createViewInWorkbench(ddata.id, elementName, cn);
+    key_bindings.close.function();
+}
+
 function addViewKeybind() {
     let {modelElement: dataid, node: nodeid} = getSelected();
     let ddata = dataid && D.fromPointer(dataid);
     let cname = ddata?.className;
-    if (cname === 'DModel' || cname === 'DClass' || cname === 'DAttribute' || cname === 'DReference') addViewInstances();
+    if (cname === 'DModel' || cname === 'DClass' || cname === 'DPackage' || cname === 'DAttribute' || cname === 'DReference') addViewInstances();
     else addViewSelf();
 }
 

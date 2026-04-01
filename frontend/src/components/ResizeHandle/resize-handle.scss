@@ -1,114 +1,70 @@
-// ResizeHandle Component Styles
-// Draggable divider for resizing console panel
-
-// Design tokens (from CLAUDE.md)
-$color-border: #e2e4e8;
-$color-bg-secondary: #f8fafc;
-$color-bg-tertiary: #f1f5f9;
-$color-accent: #475569;
-$color-accent-hover: #334155;
-$transition-fast: 150ms ease;
-$transition-normal: 250ms ease;
+// ResizeHandle - Minimal resize divider
+// Visually 1px line, 5px hit area
 
 .resize-handle {
-  position: relative;
-  height: 16px;
   background: transparent;
-  cursor: ns-resize;
-  z-index: 100;
+  position: relative;
   flex-shrink: 0;
   user-select: none;
+  z-index: 100;
 
-  // Larger hit area for easier dragging
-  &::before {
+  &::after {
     content: '';
     position: absolute;
-    top: -4px;
-    left: 0;
-    right: 0;
-    height: 24px;
-    cursor: ns-resize;
+    background: #e2e8f0;
+    transition: background 150ms ease;
   }
 
-  // Hover state
-  &:hover {
-    .resize-handle__icon {
-      color: #0ea5e9;
-      background-color: rgba(14, 165, 233, 0.06);
-    }
+  &:hover::after,
+  &.dragging::after {
+    background: #94a3b8;
   }
 
-  // Dragging state
-  &.dragging {
-    .resize-handle__icon {
-      color: #0ea5e9;
-      background-color: rgba(14, 165, 233, 0.1);
-      transform: scaleY(1.2);
-    }
-  }
-
-  // Focus state for keyboard accessibility
   &:focus {
     outline: none;
 
-    .resize-handle__icon {
-      color: #0ea5e9;
-      background-color: rgba(14, 165, 233, 0.06);
+    &::after {
+      background: #94a3b8;
+    }
+  }
+
+  // Horizontal: resizes height (row-resize)
+  &--horizontal {
+    height: 5px;
+    cursor: row-resize;
+
+    &::after {
+      left: 0;
+      right: 0;
+      top: 2px;
+      height: 1px;
+    }
+  }
+
+  // Vertical: resizes width (col-resize)
+  &--vertical {
+    width: 5px;
+    cursor: col-resize;
+
+    &::after {
+      top: 0;
+      bottom: 0;
+      left: 2px;
+      width: 1px;
     }
   }
 }
-
-.resize-handle__track {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-}
-
-// Icon-based resize indicator
-.resize-handle__icon {
-  font-size: 16px;
-  color: #94a3b8;
-  padding: 2px 8px;
-  border-radius: 4px;
-  background-color: transparent;
-  transition: color $transition-fast, background-color $transition-fast, transform $transition-fast;
-}
-
-// ============================================
-// DARK MODE
-// ============================================
 
 html[data-theme="dark"] {
   .resize-handle {
-    &:hover {
-      .resize-handle__icon {
-        color: #60a5fa;
-        background-color: rgba(96, 165, 250, 0.1);
-      }
+    &::after {
+      background: #334155;
     }
 
-    &.dragging {
-      .resize-handle__icon {
-        color: #60a5fa;
-        background-color: rgba(96, 165, 250, 0.15);
-      }
+    &:hover::after,
+    &.dragging::after,
+    &:focus::after {
+      background: #64748b;
     }
-
-    &:focus {
-      .resize-handle__icon {
-        color: #60a5fa;
-        background-color: rgba(96, 165, 250, 0.1);
-      }
-    }
-  }
-
-  .resize-handle__icon {
-    color: #64748b;
   }
 }

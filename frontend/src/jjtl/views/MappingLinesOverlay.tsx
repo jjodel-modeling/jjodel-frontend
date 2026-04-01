@@ -23,6 +23,8 @@ export interface MappingLine {
 
 interface LineCoordinates {
     id: string;
+    sourceId: string;
+    targetId: string;
     x1: number;
     y1: number;
     x2: number;
@@ -139,6 +141,8 @@ export const MappingLinesOverlay: React.FC<MappingLinesOverlayProps> = ({
 
                 newCoordinates.push({
                     id: line.id,
+                    sourceId: line.sourceId,
+                    targetId: line.targetId,
                     x1,
                     y1,
                     x2,
@@ -194,11 +198,16 @@ export const MappingLinesOverlay: React.FC<MappingLinesOverlayProps> = ({
      * Generate path between source and target elements
      * Uses STRAIGHT LINE when elements are at the same vertical level
      * Uses Manhattan routing (horizontal → vertical → horizontal) otherwise
+     *
+     * @param targetIndex - index of this line among lines sharing the same target
+     * @param targetTotal - total lines arriving at the same target element
      */
     const generatePath = useCallback((
         coords: LineCoordinates,
         index: number,
-        total: number
+        total: number,
+        targetIndex: number,
+        targetTotal: number
     ): string => {
         const { x1, y1, x2, y2 } = coords;
 
@@ -210,8 +219,9 @@ export const MappingLinesOverlay: React.FC<MappingLinesOverlayProps> = ({
         const midX = ((x1 + x2) / 2) + offset;
 
         // Calculate small vertical offset for TARGET endpoint only to prevent arrowhead overlap
-        const targetVerticalSpacing = 4;
-        const targetYOffset = total > 1 ? (index - (total - 1) / 2) * targetVerticalSpacing : 0;
+        // Only applies when multiple lines arrive at the SAME target element
+        const targetVerticalSpacing = 2;
+        const targetYOffset = targetTotal > 1 ? (targetIndex - (targetTotal - 1) / 2) * targetVerticalSpacing : 0;
         const adjustedY2 = y2 + targetYOffset;
 
         // Vertical distance
@@ -297,34 +307,34 @@ export const MappingLinesOverlay: React.FC<MappingLinesOverlayProps> = ({
                         <React.Fragment key={`markers-${coords.id}`}>
                             <marker
                                 id={`arrow-${coords.id}-normal`}
-                                markerWidth="6"
-                                markerHeight="5"
-                                refX="5"
-                                refY="2.5"
+                                markerWidth="5"
+                                markerHeight="4"
+                                refX="4"
+                                refY="2"
                                 orient="auto"
                             >
                                 <polyline
-                                    points="0 0, 5 2.5, 0 5"
+                                    points="0 0.5, 4 2, 0 3.5"
                                     fill="none"
                                     stroke={colorNormal}
-                                    strokeWidth="1.5"
+                                    strokeWidth="1"
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
                                 />
                             </marker>
                             <marker
                                 id={`arrow-${coords.id}-highlighted`}
-                                markerWidth="6"
-                                markerHeight="5"
-                                refX="5"
-                                refY="2.5"
+                                markerWidth="5"
+                                markerHeight="4"
+                                refX="4"
+                                refY="2"
                                 orient="auto"
                             >
                                 <polyline
-                                    points="0 0, 5 2.5, 0 5"
+                                    points="0 0.5, 4 2, 0 3.5"
                                     fill="none"
                                     stroke={colorHighlight}
-                                    strokeWidth="1.5"
+                                    strokeWidth="1"
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
                                 />
@@ -335,49 +345,66 @@ export const MappingLinesOverlay: React.FC<MappingLinesOverlayProps> = ({
             </defs>
 
             {/* Render lines */}
-            {visibleCoordinates.map((coords, index) => {
-                const isHovered = effectiveHoveredLine === coords.id;
-                const isSelected = coords.isSelected;
-                const isHighlighted = isHovered || isSelected;
+            {(() => {
+                // Build target group map: for each targetId, track which visible lines arrive there
+                const targetGroups = new Map<string, number[]>();
+                visibleCoordinates.forEach((coords, index) => {
+                    const group = targetGroups.get(coords.targetId) || [];
+                    group.push(index);
+                    targetGroups.set(coords.targetId, group);
+                });
 
-                // Get unique color for this line
-                const strokeColor = getLineColor(index, !!isHighlighted);
-                const strokeWidth = isHighlighted ? 2 : 1.2;
-                const strokeOpacity = isHighlighted ? 1 : 0.7;
-                const markerId = isHighlighted
-                    ? `arrow-${coords.id}-highlighted`
-                    : `arrow-${coords.id}-normal`;
+                return visibleCoordinates.map((coords, index) => {
+                    const isHovered = effectiveHoveredLine === coords.id;
+                    const isSelected = coords.isSelected;
+                    const isHighlighted = isHovered || isSelected;
 
-                return (
-                    <g key={coords.id}>
-                        {/* Invisible wider path for easier click */}
-                        <path
-                            d={generatePath(coords, index, visibleCoordinates.length)}
-                            fill="none"
-                            stroke="transparent"
-                            strokeWidth={12}
-                            style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
-                            onMouseEnter={() => handleLineMouseEnter(coords.id)}
-                            onMouseLeave={handleLineMouseLeave}
-                            onClick={() => handleLineClick(coords.id)}
-                        />
+                    // Get unique color for this line
+                    const strokeColor = getLineColor(index, !!isHighlighted);
+                    const strokeWidth = isHighlighted ? 2 : 1.2;
+                    const strokeOpacity = isHighlighted ? 1 : 0.7;
+                    const markerId = isHighlighted
+                        ? `arrow-${coords.id}-highlighted`
+                        : `arrow-${coords.id}-normal`;
 
-                        {/* Visible line */}
-                        <path
-                            d={generatePath(coords, index, visibleCoordinates.length)}
-                            fill="none"
-                            stroke={strokeColor}
-                            strokeWidth={strokeWidth}
-                            strokeOpacity={strokeOpacity}
-                            strokeDasharray={coords.isInferred ? '4,3' : undefined}
-                            markerEnd={`url(#${markerId})`}
-                            style={{
-                                transition: 'stroke 150ms ease, stroke-width 150ms ease, stroke-opacity 150ms ease',
-                            }}
-                        />
-                    </g>
-                );
-            })}
+                    // Compute target group index for this line
+                    const group = targetGroups.get(coords.targetId)!;
+                    const targetIndex = group.indexOf(index);
+                    const targetTotal = group.length;
+
+                    const path = generatePath(coords, index, visibleCoordinates.length, targetIndex, targetTotal);
+
+                    return (
+                        <g key={coords.id}>
+                            {/* Invisible wider path for easier click */}
+                            <path
+                                d={path}
+                                fill="none"
+                                stroke="transparent"
+                                strokeWidth={12}
+                                style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
+                                onMouseEnter={() => handleLineMouseEnter(coords.id)}
+                                onMouseLeave={handleLineMouseLeave}
+                                onClick={() => handleLineClick(coords.id)}
+                            />
+
+                            {/* Visible line */}
+                            <path
+                                d={path}
+                                fill="none"
+                                stroke={strokeColor}
+                                strokeWidth={strokeWidth}
+                                strokeOpacity={strokeOpacity}
+                                strokeDasharray={coords.isInferred ? '4,3' : undefined}
+                                markerEnd={`url(#${markerId})`}
+                                style={{
+                                    transition: 'stroke 150ms ease, stroke-width 150ms ease, stroke-opacity 150ms ease',
+                                }}
+                            />
+                        </g>
+                    );
+                });
+            })()}
         </svg>
     );
 };

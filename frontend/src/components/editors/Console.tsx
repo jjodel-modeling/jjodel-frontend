@@ -1,10 +1,12 @@
 import {
     DEdge,
     DGraphElement,
+    DModel,
     Dictionary,
     DState,
     GObject, Info,
     LGraphElement,
+    LModel,
     LModelElement,
     Log,
     LPointerTargetable,
@@ -44,6 +46,63 @@ import type { ConsoleLanguage } from './Console/LanguageToggle';
 
 // Import JjEL for expression evaluation
 import { jjelEval } from '../../jjel';
+import { extractAttributeValues } from '../../jjel/evaluator/modelContext';
+import DockManager from '../abstract/DockManager';
+
+/**
+ * Flatten a Jjodel proxy's properties into a plain object for use as JjEL context.
+ *
+ * The Jjodel L* proxy system uses ES6 Proxy with a `get` trap that dispatches to
+ * `get_<propName>()` methods. The proxy's `ownKeys` trap returns merged keys (D* own +
+ * L* getter names), but there is no `getOwnPropertyDescriptor` trap, so `Object.keys()`
+ * and the spread operator miss all L* properties (like `classes`, `attributes`, etc.).
+ *
+ * Fix: use `Reflect.ownKeys()` which calls the `ownKeys` trap directly without filtering
+ * through `getOwnPropertyDescriptor`, then access each key via the proxy's `get` trap.
+ */
+function flattenProxyContext(proxyObj: any): Record<string, any> {
+    const result: Record<string, any> = {};
+
+    // Reflect.ownKeys calls the proxy's ownKeys trap, which returns merged D* + L* keys
+    // (excluding get_*/set_* prefixed methods). Unlike Object.keys(), it does NOT filter
+    // through getOwnPropertyDescriptor, so L* getter properties like `classes` are included.
+    let keys: (string | symbol)[];
+    try {
+        keys = Reflect.ownKeys(proxyObj);
+    } catch {
+        keys = Object.keys(proxyObj);
+    }
+
+    for (const key of keys) {
+        if (typeof key === 'symbol') continue;
+        if (key.startsWith('__') || key === '_proxied') continue;
+        try { result[key] = proxyObj[key]; } catch { /* skip */ }
+    }
+
+    return result;
+}
+
+/**
+ * Get all accessible property names from a Jjodel proxy (D* own + L* getters).
+ * Uses Reflect.ownKeys for the same reason as flattenProxyContext.
+ */
+function getProxyPropertyNames(proxyObj: any): string[] {
+    const keys = new Set<string>();
+
+    let allKeys: (string | symbol)[];
+    try {
+        allKeys = Reflect.ownKeys(proxyObj);
+    } catch {
+        allKeys = Object.keys(proxyObj);
+    }
+
+    for (const key of allKeys) {
+        if (typeof key === 'symbol') continue;
+        if (!key.startsWith('_')) keys.add(key);
+    }
+
+    return Array.from(keys);
+}
 
 let ansiConvert = (window as any).ansiConvert;
 if (!ansiConvert) (window as any).ansiconvert = ansiConvert = new Convert();
@@ -169,7 +228,7 @@ class ThisState{
     // Footer resize state
     footerHeight: number = 200; // Default footer height
     // Language toggle state
-    language: ConsoleLanguage = 'js';
+    language: ConsoleLanguage = 'jjel';
 }
 
 // trasformato in class component così puoi usare il this nella console. e non usa accidentalmente window come contesto
@@ -282,7 +341,7 @@ class ConsoleComponent extends PureComponent<AllProps, ThisState>{
 
         // Load language preference from localStorage
         const storedLanguage = localStorage.getItem('jjodel_console_language') as ConsoleLanguage | null;
-        const language: ConsoleLanguage = storedLanguage === 'jjel' ? 'jjel' : 'js';
+        const language: ConsoleLanguage = storedLanguage === 'js' ? 'js' : 'jjel';
 
         const state = new ThisState();
         state.footerHeight = !isNaN(footerHeight) && footerHeight >= 100 && footerHeight <= 400 ? footerHeight : 200;
@@ -613,8 +672,22 @@ Tip: Click the keyboard icon in the toolbar for quick reference.`;
             // Execute as JjEL expression
             try {
                 console.log('[JjEL DEBUG] 1. Starting parse for:', code);
+                // Build implicit context: flatten data properties (including prototype getters)
+                // as top-level variables so users can write `name` instead of `data.name`.
+                // Explicit context keys (data, node, view) override any same-named data properties.
+                // For M1 instances: also extract attribute values from $attrName.value pattern.
+                const dataObj = this._context.data;
+                let jjelContext: Record<string, any>;
+                if (dataObj && typeof dataObj === 'object' && !Array.isArray(dataObj)) {
+                    const flattened = flattenProxyContext(dataObj);
+                    // Extract M1 attribute values (overrides flattened props like DObject.name)
+                    extractAttributeValues(dataObj, flattened);
+                    jjelContext = { ...flattened, ...this._context };
+                } else {
+                    jjelContext = this._context;
+                }
                 // jjelEval throws on parse/evaluation errors, returns the value directly on success
-                output = jjelEval(code, this._context);
+                output = jjelEval(code, jjelContext);
                 console.log('[JjEL DEBUG] 2. jjelEval completed, output type:', typeof output);
                 console.log('[JjEL DEBUG] 2b. output isProxy:', output?.__isProxy);
                 console.log('[JjEL DEBUG] 2c. output isArray:', Array.isArray(output));
@@ -761,20 +834,61 @@ Tip: Click the keyboard icon in the toolbar for quick reference.`;
         }
     };
 
-    render(){
-        if (!this.props.node) return <Empty msg={"Select a node."} />;
+    // Get the fallback LModel when no node is selected.
+    // Prefers the currently active DockManager tab (= the metamodel the user is viewing).
+    private getFallbackModel(): LModel | null {
+        // 1. Try DockManager active tab — most reliable indicator of current metamodel
+        try {
+            if (DockManager.dock) {
+                const layout = DockManager.dock.getLayout();
+                const modelsPanel = layout?.dockbox?.children?.[0];
+                const tabs = (modelsPanel as any)?.tabs || [];
+                const activeId: string = (modelsPanel as any)?.activeId || tabs[0]?.id;
+                if (activeId) {
+                    const model = LPointerTargetable.fromPointer(activeId) as LModel | null;
+                    if (model) return model;
+                }
+            }
+        } catch { /* dock not available */ }
 
-        const data = this.props.data;
+        // 2. Fall back to first metamodel/model pointer
+        const { m2models, m1models } = this.props;
+        const pointers = (m2models && m2models.length > 0) ? m2models
+            : (m1models && m1models.length > 0) ? m1models
+            : [];
+        if (pointers.length === 0) return null;
+        try {
+            return LPointerTargetable.fromPointer(pointers[0]) as LModel;
+        } catch { return null; }
+    }
+
+    // Update context using the fallback model (no node selected)
+    private updateContextForModel(model: LModel): void {
+        this._context = { data: model, props: this.props } as any;
+    }
+
+    render(){
+        const hasNode = !!this.props.node;
+        const fallbackModel = hasNode ? null : this.getFallbackModel();
+
+        if (!hasNode && !fallbackModel) return <Empty msg={"No models available."} />;
+
+        const data = hasNode ? this.props.data : fallbackModel;
         const advanced = this.props.advanced;
 
-        // Update context when node changes
-        if (this.lastNode !== this.props.node.id) {
+        if (hasNode) {
+            // Update context when node changes
+            if (this.lastNode !== this.props.node!.id) {
+                this.updateContext();
+                this.lastNode = this.props.node!.id;
+            }
+            // Update context on every render to ensure it's fresh
             this.updateContext();
-            this.lastNode = this.props.node.id;
+        } else {
+            // Fallback: use model as context
+            this.updateContextForModel(fallbackModel!);
+            this.lastNode = '';
         }
-
-        // Update context on every render to ensure it's fresh
-        this.updateContext();
 
         // Get context keys for autocomplete and collapsible section
         const objraw = this._context.data || {};
@@ -792,7 +906,10 @@ Tip: Click the keyboard icon in the toolbar for quick reference.`;
                 ...Object.keys(Array.prototype)
             ];
         } else {
-            contextkeysarr = Object.getOwnPropertyNames(objraw) || [];
+            // Use getProxyPropertyNames to include prototype getters (classes, attributes, etc.)
+            contextkeysarr = (objraw && typeof objraw === 'object' && objraw.__isProxy)
+                ? getProxyPropertyNames(objraw)
+                : (Object.getOwnPropertyNames(objraw) || []);
         }
 
         // Filter out internal/private keys (starting with _ or __)
@@ -810,7 +927,10 @@ Tip: Click the keyboard icon in the toolbar for quick reference.`;
                         <span>Console</span>
                     </h2>
                     <span className="console-header__subtitle">
-                        On {((data as GObject)?.name || "model-less node (" + this.props.node?.className + ")") + " - " + this.props.node?.className}
+                        {hasNode
+                            ? `On ${(data as GObject)?.name || "model-less node (" + this.props.node?.className + ")"} — ${this.props.node?.className}`
+                            : `On ${(fallbackModel as any)?.name || "model"} — No selection`
+                        }
                     </span>
                 </div>
 
@@ -915,6 +1035,8 @@ interface StateProps {
     node: LGraphElement|null;
     view: LViewElement|null;
     advanced: boolean;
+    m2models: Pointer<DModel, 0, 'N'>;
+    m1models: Pointer<DModel, 0, 'N'>;
 }
 interface DispatchProps {}
 
@@ -923,11 +1045,31 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
     const nodeid = state._lastSelected?.node;
-    const node: LGraphElement|null = (nodeid) ? LGraphElement.fromPointer(nodeid) : null;
+    let node: LGraphElement|null = (nodeid) ? LGraphElement.fromPointer(nodeid) : null;
+
+    // If the selected node belongs to a different metamodel than the active tab,
+    // treat it as "no node selected" so the Console scopes to the active tab's metamodel.
+    if (node) {
+        try {
+            if (DockManager.dock) {
+                const layout = DockManager.dock.getLayout();
+                const modelsPanel = layout?.dockbox?.children?.[0];
+                const tabs = (modelsPanel as any)?.tabs || [];
+                const activeId: string = (modelsPanel as any)?.activeId || tabs[0]?.id;
+                if (activeId && node.model && node.model.id !== activeId) {
+                    // Node is from a different metamodel — clear it
+                    node = null;
+                }
+            }
+        } catch { /* dock not available */ }
+    }
+
     ret.node = node;
     ret.data = (node?.model) ? node.model : null;
     ret.view = (node?.view) ? node.view : null;
     ret.advanced = state.advanced;
+    ret.m2models = state.m2models;
+    ret.m1models = state.m1models;
     return ret;
 }
 

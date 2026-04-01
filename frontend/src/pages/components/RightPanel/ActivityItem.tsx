@@ -1,5 +1,7 @@
 import React from 'react';
 import { R } from '../../../joiner';
+import { Badge } from '../../../components/common/Badge';
+import type { BadgeCategory } from '../../../components/common/Badge';
 
 type ActivityAction = 'created' | 'modified' | 'deleted' | 'shared' | 'opened' | 'validated' | 'exported' | 'imported';
 
@@ -37,6 +39,17 @@ const actionColors: Record<ActivityAction, string> = {
     validated: 'purple',
     exported: 'orange',
     imported: 'cyan'
+};
+
+const actionBadgeCategory: Record<ActivityAction, BadgeCategory> = {
+    created: 'version',
+    modified: 'state',
+    deleted: 'state-danger',
+    shared: 'state',
+    opened: 'state',
+    validated: 'type',
+    exported: 'state',
+    imported: 'type'
 };
 
 const actionText: Record<ActivityAction, string> = {
@@ -85,7 +98,7 @@ export const ActivityItem = (props: ActivityItemProps) => {
             <div className="timeline-content">
                 <div className="timeline-header">
                     <span className="timeline-project">{props.projectName}</span>
-                    <span className={`timeline-badge ${colorClass}`}>{actionText[props.action]}</span>
+                    <Badge category={actionBadgeCategory[props.action]}>{actionText[props.action]}</Badge>
                 </div>
                 <span className="timeline-time">{timeAgo}</span>
             </div>

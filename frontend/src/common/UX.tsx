@@ -39,17 +39,7 @@ import {
 } from "../components/forEndUser/Control";
 import {T2M_API} from "../components/forEndUser/MTM";
 
-var Convert = require('ansi-to-html');
-/*
-public static draggable_eventmap = {
-    's':    {'draggable': 'onDragStart',    'rotatable': 'onRotateStart',   'resizable': 'onResizeStart'},
-    'ing':  {'draggable': 'whileDragging',  'rotatable': 'whileRotating',   'resizable': 'whileResizing'},
-    'e':    {'draggable': 'onDragEnd',      'rotatable': 'onRotateEnd',     'resizable': 'onResizeEnd'  },
-};
-public static draggable_eventprops= UX.initMeasurable();
-static initMeasurable(): Dictionary<string, boolean>{
-    return U.objectFromArrayValues(Object.values(UX.draggable_eventmap).flatMap(v=>Object.values(v)), true);
-}*/
+// var Convert = require('ansi-to-html');
 
 // U-functions that require jsx
 @RuntimeAccessible('UX')

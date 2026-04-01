@@ -30,6 +30,12 @@ $script-running: #3b82f6;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     margin: 10px 0;
 
+    // Remove outer border when inside a Jjodie chat message wrapper
+    .md-jjscript-wrapper & {
+        border: none;
+        margin: 0;
+    }
+
     &--collapsed {
         .script-block__content {
             display: none;
@@ -501,19 +507,7 @@ $script-running: #3b82f6;
     }
 }
 
-// ============================================
-// AI DISCLAIMER
-// ============================================
-
-.script-block__disclaimer {
-    padding: 4px 12px;
-    background: rgba(0, 0, 0, 0.02);
-    border-top: 1px solid $script-border;
-
-    .ai-disclaimer--compact {
-        color: $script-text-muted;
-    }
-}
+// AI Disclaimer removed from ScriptBlock — shown globally in JodieWindow
 
 // ============================================
 // SCROLLBAR

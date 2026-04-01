@@ -12,11 +12,11 @@ $color-text-secondary: #6B7280;
 $color-text-tertiary: #9CA3AF;
 $color-text-inverse: #ffffff;
 
-$color-bg-primary: #ffffff;
-$color-bg-secondary: #f8fafc;
-$color-bg-tertiary: #f1f5f9;
+$color-bg-primary: #f8fafc;
+$color-bg-secondary: #f1f5f9;
+$color-bg-tertiary: #e2e8f0;
 
-$color-border: #e2e4e8;
+$color-border: #e2e8f0;
 $color-border-light: #f0f1f2;
 $color-border-hover: #d0d3d8;
 
@@ -31,17 +31,20 @@ $shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.1);
 $transition-fast: 150ms ease;
 $transition-normal: 250ms ease;
 
-// Tree type colors - DISTINCT colors for each type
-$color-model: #64748b;      // Slate - Metamodels
-$color-package: #f59e0b;    // Amber - Packages
-$color-class: #0ea5e9;      // Cyan - Classes
-$color-attribute: #10b981;  // Green - Attributes
-$color-reference: #8b5cf6;  // Purple - References
-$color-enum: #ec4899;       // Pink - Enums
-$color-literal: #f472b6;    // Light Pink - Enum Literals
+// Tree type colors - DISTINCT outline colors for each type
+$color-model: #7F77DD;      // Purple-400 - Metamodels
+$color-package: #888780;    // Gray-400 - Packages
+$color-class: #378ADD;      // Blue-400 - Classes
+$color-attribute: #639922;  // Green-400 - Attributes
+$color-reference: #D85A30;  // Coral-400 - References
+$color-enum: #D4537E;       // Pink-400 - Enums
+$color-literal: #D4537E;    // Pink-400 - Enum Literals (same as enum)
 $color-operation: #06b6d4;  // Cyan (darker) - Operations
 $color-object: #6b7280;     // Gray - Objects
 $color-parameter: #9ca3af;  // Gray (light) - Parameters
+$color-nested-model: #1D9E75; // Teal-400 - Models (M1)
+$color-viewpoint: #D4537E;  // Pink-400 - Viewpoints
+$color-subview: #94a3b8;    // Slate - Sub-views
 
 // ============================================
 // SIDEBAR (Desktop/Monitor Mode)
@@ -349,9 +352,11 @@ $color-parameter: #9ca3af;  // Gray (light) - Parameters
     align-items: center;
     gap: 2px;
     padding: 4px 6px;
+    padding-left: 16px;
     border-radius: $radius-sm;
     cursor: pointer;
     transition: background-color $transition-fast;
+
 
     &:hover {
         background-color: $color-bg-secondary;
@@ -369,12 +374,12 @@ $color-parameter: #9ca3af;  // Gray (light) - Parameters
 }
 
 .metamodel-tree__content {
-    padding-left: 4px;
+    // No extra padding — depth is managed by inline paddingLeft on tree nodes
 }
 
 .tree-empty-package {
     padding: 6px 10px;
-    padding-left: 28px;
+    padding-left: 32px;
     font-size: 11px;
     color: $color-text-tertiary;
     font-style: italic;
@@ -388,10 +393,13 @@ $color-parameter: #9ca3af;  // Gray (light) - Parameters
     display: flex;
     align-items: center;
     gap: 2px;
-    padding: 3px 6px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    padding-right: 27px; // Large right padding to allow space for badges/icons without affecting text layout
     border-radius: $radius-sm;
     cursor: pointer;
     transition: background-color $transition-fast;
+
 
     &:hover {
         background-color: $color-bg-secondary;
@@ -444,6 +452,7 @@ $color-parameter: #9ca3af;  // Gray (light) - Parameters
     gap: 5px;
     flex: 1;
     min-width: 0;
+    padding-left: 10px;
 }
 
 // ============================================
@@ -452,84 +461,131 @@ $color-parameter: #9ca3af;  // Gray (light) - Parameters
 // ============================================
 
 .tree-node__icon {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 700;
+    border-radius: 3px;
+    font-size: 8px;
+    font-weight: 500;
     flex-shrink: 0;
 
-    // PASTEL STYLE - background with opacity, colored text
-    // Each type has a DISTINCT color for easy identification
+    // FILLED PASTEL STYLE - light bg, dark text, no border
+    border: none;
 
     &.tree-DModel {
-        // Slate - Metamodels
-        background-color: rgba(100, 116, 139, 0.15);
-        color: $color-model;
+        background: #EEEDFE;
+        color: #3C3489;
     }
 
     &.tree-DPackage {
-        // Amber - Packages
-        background-color: rgba(245, 158, 11, 0.15);
-        color: $color-package;
+        background: #F1EFE8;
+        color: #444441;
     }
 
     &.tree-DClass {
-        // Cyan - Classes
-        background-color: rgba(14, 165, 233, 0.15);
-        color: $color-class;
+        background: #E6F1FB;
+        color: #0C447C;
 
         &.abstract-class {
-            background-color: rgba(14, 165, 233, 0.08);
-            border: 1px dashed rgba(14, 165, 233, 0.5);
+            border: 1px dashed #0C447C;
         }
     }
 
     &.tree-DAttribute {
-        // Green - Attributes
-        background-color: rgba(16, 185, 129, 0.15);
-        color: $color-attribute;
+        background: #EAF3DE;
+        color: #27500A;
     }
 
     &.tree-DReference {
-        // Purple - References
-        background-color: rgba(139, 92, 246, 0.15);
-        color: $color-reference;
+        background: #FAECE7;
+        color: #712B13;
     }
 
     &.tree-DEnumerator,
     &.tree-DEnum {
-        // Pink - Enums
-        background-color: rgba(236, 72, 153, 0.15);
-        color: $color-enum;
+        background: #FBEAF0;
+        color: #72243E;
     }
 
     &.tree-DEnumLiteral {
-        // Light Pink - Enum Literals
-        background-color: rgba(244, 114, 182, 0.15);
-        color: $color-literal;
+        background: #FBEAF0;
+        color: #72243E;
     }
 
     &.tree-DOperation {
-        // Cyan (darker) - Operations
-        background-color: rgba(6, 182, 212, 0.15);
-        color: $color-operation;
+        background: #E0F7FA;
+        color: #0E7490;
     }
 
     &.tree-DParameter {
-        // Gray - Parameters
-        background-color: rgba(156, 163, 175, 0.15);
-        color: $color-parameter;
+        background: #F1F5F9;
+        color: #475569;
     }
 
     &.tree-DObject {
-        // Gray - Objects
-        background-color: rgba(107, 114, 128, 0.15);
-        color: $color-object;
+        background: #F1F5F9;
+        color: #475569;
     }
+
+    // Nested M1 model icon — lowercase "m"
+    &.tree-nested-model {
+        background: #E1F5EE;
+        color: #085041;
+        font-style: italic;
+    }
+}
+
+// ============================================
+// NESTED M1 MODEL + INSTANCE STYLES
+// ============================================
+
+.nested-model-tree {
+    // No border — indentation managed by inline paddingLeft
+}
+
+// M1 badge next to model name — very subtle slate hint
+.tree-nested-model__badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    font-size: 9px;
+    font-weight: 700;
+    color: #94a3b8;
+    background: rgba(100, 116, 139, 0.08);
+    border-radius: 3px;
+    margin-left: 6px;
+    letter-spacing: 0.3px;
+    flex-shrink: 0;
+    line-height: 16px;
+}
+
+// Instance icon (bi-app-fill square) — muted slate
+.tree-instance__icon {
+    font-size: 10px;
+    color: #94a3b8;
+    flex-shrink: 0;
+    margin-right: 4px;
+    line-height: 1;
+}
+
+// Instance name styling
+.tree-instance__name {
+    font-size: 12px;
+    color: $color-text-primary;
+}
+
+// Metaclass name after the colon
+.tree-instance__metaclass {
+    font-size: 11px;
+    color: $color-text-tertiary;
+    margin-left: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .tree-node__name {
@@ -538,6 +594,7 @@ $color-parameter: #9ca3af;  // Gray (light) - Parameters
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+
 }
 
 .tree-node__extends {
@@ -679,6 +736,51 @@ $color-highlight-unknown: #f59e0b; // Amber - unknown action
     }
 }
 
+// Tree node context menu (right-click → "Add View")
+.tree-node__context-menu {
+    background: #ffffff;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    padding: 4px;
+    min-width: 180px;
+}
+
+.tree-node__context-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+    color: $color-text-primary;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    white-space: nowrap;
+
+    i {
+        font-size: 13px;
+        color: $color-text-secondary;
+    }
+
+    &:hover {
+        background: $color-bg-secondary;
+    }
+
+    &--disabled {
+        color: $color-text-tertiary;
+        cursor: default;
+        pointer-events: none;
+
+        i {
+            color: $color-text-tertiary;
+        }
+
+        &:hover {
+            background: transparent;
+        }
+    }
+}
+
 // Script executing state indicator on tree nodes
 .tree-view-content--executing {
     .tree-node__header,
@@ -769,67 +871,121 @@ $color-highlight-unknown: #f59e0b; // Amber - unknown action
         background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
     }
 
-    // Dark mode pastel colors (slightly brighter)
+    // Dark mode — filled pastel icons with dimmed backgrounds for visibility
     .tree-node__icon {
-        &.tree-DModel {
-            // Slate - Metamodels
-            background-color: rgba(100, 116, 139, 0.2);
+        &.tree-DModel { background: rgba(#9B95E8, 0.18); color: #B5B0F0; }
+        &.tree-DPackage { background: rgba(#a5a49e, 0.15); color: #c5c4be; }
+        &.tree-DClass { background: rgba(#5ea3e8, 0.18); color: #7BB8F0; }
+        &.tree-DAttribute { background: rgba(#7fb836, 0.18); color: #9AD04E; }
+        &.tree-DReference { background: rgba(#e87a54, 0.18); color: #F09474; }
+        &.tree-DEnumerator, &.tree-DEnum { background: rgba(#e07399, 0.18); color: #F08DB3; }
+        &.tree-DEnumLiteral { background: rgba(#e07399, 0.18); color: #F08DB3; }
+        &.tree-DOperation { background: rgba(#22d3ee, 0.18); color: #44E0F8; }
+        &.tree-DParameter { background: rgba(#d1d5db, 0.12); color: #d1d5db; }
+        &.tree-DObject { background: rgba(#9ca3af, 0.15); color: #b0b8c4; }
+        &.tree-nested-model { background: rgba(#34c48e, 0.18); color: #4ED8A4; }
+    }
+
+    .tree-nested-model__badge {
+        color: #64748b;
+        background: rgba(148, 163, 184, 0.10);
+    }
+
+    .tree-instance__icon {
+        color: #64748b;
+    }
+
+    .tree-instance__name {
+        color: #e0e0e0;
+    }
+
+    .tree-instance__metaclass {
+        color: #6b7280;
+    }
+
+    .metamodels-section {
+        border-color: #333;
+
+        &__header {
+            color: #e0e0e0;
+        }
+
+        &__icon {
+            background: rgba(127, 119, 221, 0.15);
+            color: #9B95E8;
+        }
+
+        &__count {
+            background: rgba(255, 255, 255, 0.1);
+            color: #94a3b8;
+        }
+    }
+
+    .viewpoint-section {
+        border-color: #333;
+
+        &__header {
+            color: #e0e0e0;
+        }
+
+        &__count {
+            background: rgba(255, 255, 255, 0.1);
+            color: #94a3b8;
+        }
+    }
+
+    .tree-type-group {
+        &__header {
+            border-color: #333;
+
+            &:hover {
+                background-color: #2a2a2a;
+            }
+        }
+
+        &__label {
             color: #94a3b8;
         }
 
-        &.tree-DPackage {
-            // Amber - Packages
-            background-color: rgba(245, 158, 11, 0.2);
-            color: #fbbf24;
+        &__count {
+            color: #6b7280;
+        }
+    }
+
+    .tree-node__icon.tree-subview {
+        background: rgba(#b0bec5, 0.15);
+        color: #b0bec5;
+    }
+
+    .tree-node__icon.tree-rule {
+        background: rgba(#34d399, 0.15);
+        color: #34d399;
+    }
+
+    .tree-node__icon.tree-helper {
+        background: rgba(#94a3b8, 0.15);
+        color: #94a3b8;
+    }
+
+    .tree-viewpoint {
+        background: rgba(#F08DB3, 0.18) !important;
+        color: #F08DB3 !important;
+    }
+
+    .tree-transformation {
+        background: rgba(148, 163, 184, 0.15);
+        color: #94a3b8;
+    }
+
+    .documentation-entry {
+        border-color: #333;
+
+        &__header {
+            color: #e0e0e0;
         }
 
-        &.tree-DClass {
-            // Cyan - Classes
-            background-color: rgba(14, 165, 233, 0.2);
-            color: #38bdf8;
-        }
-
-        &.tree-DAttribute {
-            // Green - Attributes
-            background-color: rgba(16, 185, 129, 0.2);
-            color: #34d399;
-        }
-
-        &.tree-DReference {
-            // Purple - References
-            background-color: rgba(139, 92, 246, 0.2);
-            color: #a78bfa;
-        }
-
-        &.tree-DEnumerator,
-        &.tree-DEnum {
-            // Pink - Enums
-            background-color: rgba(236, 72, 153, 0.2);
-            color: #f472b6;
-        }
-
-        &.tree-DEnumLiteral {
-            // Light Pink - Enum Literals
-            background-color: rgba(244, 114, 182, 0.2);
-            color: #f9a8d4;
-        }
-
-        &.tree-DOperation {
-            // Cyan (darker) - Operations
-            background-color: rgba(6, 182, 212, 0.2);
-            color: #22d3ee;
-        }
-
-        &.tree-DParameter {
-            // Gray - Parameters
-            background-color: rgba(156, 163, 175, 0.2);
-            color: #d1d5db;
-        }
-
-        &.tree-DObject {
-            // Gray - Objects
-            background-color: rgba(107, 114, 128, 0.2);
-            color: #9ca3af;
+        &:hover {
+            background-color: #2a2a2a;
         }
     }
 }
@@ -880,5 +1036,488 @@ html[data-theme="dark"] {
                 color: #e0e0e0;
             }
         }
+
+        .megamodel-entry {
+            &__header {
+                color: #e0e0e0;
+            }
+
+            &:hover {
+                background-color: #2a2a2a;
+            }
+        }
+
+        .metamodels-section {
+            border-color: #333;
+
+            &__header {
+                color: #e0e0e0;
+            }
+
+            &__icon {
+                background: rgba(127, 119, 221, 0.15);
+                color: #9B95E8;
+            }
+
+            &__count {
+                background: rgba(255, 255, 255, 0.1);
+                color: #94a3b8;
+            }
+        }
+
+        .transformation-section {
+            &__header {
+                color: #e0e0e0;
+            }
+
+            &__count {
+                background: rgba(255, 255, 255, 0.1);
+                color: #94a3b8;
+            }
+        }
+
+        .tree-transformation {
+            background: rgba(148, 163, 184, 0.15);
+            color: #94a3b8;
+        }
+
+        .viewpoint-section {
+            border-color: #333;
+
+            &__header {
+                color: #e0e0e0;
+            }
+
+            &__count {
+                background: rgba(255, 255, 255, 0.1);
+                color: #94a3b8;
+            }
+        }
+
+        .tree-type-group {
+            &__header {
+                border-color: #333;
+
+                &:hover {
+                    background-color: #2a2a2a;
+                }
+            }
+
+            &__label {
+                color: #94a3b8;
+            }
+
+            &__count {
+                color: #6b7280;
+            }
+        }
+
+        .tree-node__icon.tree-subview {
+            background: rgba(#b0bec5, 0.15);
+            color: #b0bec5;
+        }
+
+        .tree-node__icon.tree-rule {
+            background: rgba(#34d399, 0.15);
+            color: #34d399;
+        }
+
+        .tree-node__icon.tree-helper {
+            background: rgba(#94a3b8, 0.15);
+            color: #94a3b8;
+        }
+
+        .tree-viewpoint {
+            background: rgba(#F08DB3, 0.18) !important;
+            color: #F08DB3 !important;
+        }
+
+        .tree-transformation {
+            background: rgba(148, 163, 184, 0.15);
+            color: #94a3b8;
+        }
+
+        .documentation-entry {
+            border-color: #333;
+
+            &__header {
+                color: #e0e0e0;
+            }
+
+            &:hover {
+                background-color: #2a2a2a;
+            }
+        }
+    }
+}
+
+// ─── Megamodel Entry ──────────────────────────────────────
+
+.megamodel-entry {
+    cursor: pointer;
+    // No border-bottom — metamodels-section has border-top for separation
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #334155;
+        transition: background-color 0.15s;
+    }
+
+    &:hover {
+        background-color: #f1f5f9;
+    }
+
+    &__icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 4px;
+        background: rgba(14, 165, 233, 0.12);
+        color: #0ea5e9;
+        font-size: 13px;
+    }
+
+    &__label {
+        flex: 1;
+    }
+}
+
+// ─── Metamodels Section ───────────────────────────────────
+
+.metamodels-section {
+    border-top: 1px solid #e2e8f0;
+    margin-top: 4px;
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #334155;
+    }
+
+    &__icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 4px;
+        background: rgba(127, 119, 221, 0.10);
+        color: #7F77DD;
+        font-size: 12px;
+    }
+
+    &__label {
+        flex: 1;
+    }
+
+    &__count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 20px;
+        height: 18px;
+        padding: 0 6px;
+        border-radius: 9px;
+        background: #f1f5f9;
+        color: #64748b;
+        font-size: 11px;
+        font-weight: 500;
+    }
+
+    &__content {
+        padding-bottom: 4px;
+    }
+}
+
+// ─── Transformation Section ───────────────────────────────
+
+.transformation-section {
+    border-top: 1px solid #e2e8f0;
+    margin-top: 4px;
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #334155;
+    }
+
+    &__icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 4px;
+        background: rgba(100, 116, 139, 0.10);
+        color: #94a3b8;
+        font-size: 12px;
+    }
+
+    &__label {
+        flex: 1;
+    }
+
+    &__count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 20px;
+        height: 18px;
+        padding: 0 6px;
+        border-radius: 9px;
+        background: #f1f5f9;
+        color: #64748b;
+        font-size: 11px;
+        font-weight: 500;
+    }
+
+    &__content {
+        padding-bottom: 4px;
+    }
+}
+
+.tree-transformation {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    border-radius: 3px;
+    background: #F1F5F9;
+    border: none;
+    color: #64748b;
+    font-size: 8px;
+    font-weight: 500;
+    margin-right: 4px;
+}
+
+// ─── Viewpoint Section ──────────────────────────────────────
+
+.viewpoint-section {
+    border-top: 1px solid #e2e8f0;
+    margin-top: 4px;
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #334155;
+    }
+
+    &__icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 4px;
+        background: rgba(83, 74, 183, 0.10);
+        color: #534AB7;
+        font-size: 12px;
+    }
+
+    &__label {
+        flex: 1;
+    }
+
+    &__count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 20px;
+        height: 18px;
+        padding: 0 6px;
+        border-radius: 9px;
+        background: #f1f5f9;
+        color: #64748b;
+        font-size: 11px;
+        font-weight: 500;
+    }
+
+    &__content {
+        padding-bottom: 4px;
+    }
+}
+
+// Viewpoint icon in tree node
+.tree-viewpoint {
+    font-weight: 500;
+    font-size: 8px;
+    background: #FBEAF0 !important;
+    color: #72243E !important;
+    border: none;
+}
+
+// Viewpoint type badge (inline next to name)
+.tree-node__type-badge {
+    font-size: 9px;
+    padding: 0px 4px;
+    border-radius: 3px;
+    margin-left: 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    line-height: 16px;
+    font-weight: 500;
+}
+
+// ─── Viewpoint Type Group (collapsible sub-sections) ─────────────────
+
+.tree-type-group {
+    &:first-child .tree-type-group__header {
+        border-top: none;
+    }
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px 4px 16px;
+        cursor: pointer;
+        user-select: none;
+        margin-top: 2px;
+        border-top: 0.5px solid $color-border;
+        transition: background-color $transition-fast;
+
+        &:hover {
+            background-color: $color-bg-secondary;
+        }
+
+        .tree-node__toggle {
+            flex-shrink: 0;
+        }
+    }
+
+    // Colored left indicator per type
+    &__indicator {
+        width: 3px;
+        height: 12px;
+        border-radius: 2px;
+        flex-shrink: 0;
+
+        &[data-type="syntax"] { background: #378ADD; }
+        &[data-type="decoration"] { background: #7F77DD; }
+        &[data-type="validation"] { background: #EF9F27; }
+        &[data-type="semantics"] { background: #1D9E75; }
+        &[data-type="editor_behavior"] { background: #888780; }
+    }
+
+    &__label {
+        font-size: 11px;
+        text-transform: uppercase;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        color: $color-text-tertiary;
+        flex: 1;
+
+        &[data-type="syntax"] { color: #0C447C; }
+        &[data-type="decoration"] { color: #3C3489; }
+        &[data-type="validation"] { color: #633806; }
+        &[data-type="semantics"] { color: #085041; }
+        &[data-type="editor_behavior"] { color: #444441; }
+    }
+
+    &__count {
+        font-size: 10px;
+        font-weight: 500;
+        color: $color-text-tertiary;
+        opacity: 0.6;
+    }
+
+    &__content {
+        // Children rendered inside
+    }
+}
+
+// Legacy .tree-group-header kept for backward compatibility
+.tree-group-header {
+    display: none;
+}
+
+// ─── Sub-view icon in tree ─────────────────────────────────────
+
+.tree-node__icon.tree-subview {
+    background: #F1F5F9;
+    color: #64748b;
+    border: none;
+    font-size: 10px;
+
+    i {
+        font-size: 10px;
+    }
+}
+
+// ─── Transformation rule/helper icons ─────────────────────────
+
+.tree-node__icon.tree-rule {
+    background: #E1F5EE;
+    color: #085041;
+    border: none;
+    font-weight: 500;
+    font-size: 8px;
+}
+
+.tree-node__icon.tree-helper {
+    background: #F1F5F9;
+    color: #475569;
+    border: none;
+    font-weight: 500;
+    font-size: 8px;
+}
+
+// ─── Documentation Entry ────────────────────────────────────
+
+.documentation-entry {
+    border-top: 1px solid #e2e8f0;
+    margin-top: 4px;
+    cursor: pointer;
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #334155;
+        transition: background-color 0.15s;
+    }
+
+    &:hover {
+        background-color: #f1f5f9;
+    }
+
+    &__icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 4px;
+        background: rgba(100, 116, 139, 0.10);
+        color: #64748b;
+        font-size: 13px;
+    }
+
+    &__label {
+        flex: 1;
     }
 }

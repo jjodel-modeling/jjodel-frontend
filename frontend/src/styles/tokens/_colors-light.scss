@@ -185,11 +185,129 @@ $gradient-hover: linear-gradient(180deg, $slate-100 0%, $slate-200 100%);
      CANVAS & GRAPH COLORS
      For metamodel/model nodes
      ============================================ */
-  --color-canvas-bg: #ffffff;             /* Canvas background */
-  --color-canvas-grid: #{$slate-200};     /* Grid lines */
-  --color-node-bg: #ffffff;               /* Node background */
-  --color-node-border: #{$slate-300};     /* Node border */
-  --color-node-shadow: rgba(15, 23, 42, 0.08);  /* Node shadow - slate-900 based */
+
+  /* Canvas */
+  --color-canvas-bg: #{$slate-100};               /* Canvas background (subtle gray) */
+  --color-canvas-grid: #{$slate-300};             /* Grid dots/lines */
+  --color-canvas-accent: #06b6d4;                 /* Selection, focus, active (cyan-500) */
+  --color-canvas-accent-hover: #22d3ee;           /* Accent hover (cyan-300) */
+  --color-canvas-accent-subtle: rgba(6, 182, 212, 0.1);  /* Accent tint */
+  --color-canvas-accent-muted: rgba(6, 182, 212, 0.05);  /* Very subtle accent */
+  --color-canvas-tint: rgba(0, 0, 0, 0.02);      /* Subtle header/hover tint */
+  --color-canvas-tint-hover: rgba(0, 0, 0, 0.03); /* Slightly stronger hover */
+  --color-canvas-tint-active: rgba(0, 0, 0, 0.04); /* Active tint */
+  --color-canvas-tint-strong: rgba(0, 0, 0, 0.06); /* Badge-level tint */
+
+  /* Nodes */
+  --color-node-bg: #ffffff;                       /* Node background */
+  --color-node-border: #{$slate-200};             /* Node border */
+  --color-node-border-selected: var(--color-canvas-accent); /* Selected node border */
+  --color-node-shadow: rgba(15, 23, 42, 0.06);   /* Node shadow */
+  --color-node-shadow-selected: rgba(6, 182, 212, 0.2); /* Selected node glow */
+  --color-node-text: #{$slate-900};               /* Node primary text */
+  --color-node-text-secondary: #{$slate-500};     /* Node secondary text */
+  --color-node-text-muted: #{$slate-400};         /* Node muted text */
+  --color-node-separator: #{$slate-200};          /* Section borders inside nodes */
+
+  /* Type-specific node accent borders */
+  --color-type-class: #3b82f6;                    /* Blue-500 */
+  --color-type-enum: #8b5cf6;                     /* Violet-500 */
+  --color-type-package: #10b981;                  /* Emerald-500 */
+  --color-type-object: #f59e0b;                   /* Amber-500 */
+  --color-type-datatype: #6366f1;                 /* Indigo-500 */
+
+  /* Edges */
+  --color-edge-default: #{$slate-400};            /* Default edge stroke */
+  --color-edge-selected: var(--color-canvas-accent); /* Selected edge */
+  --color-edge-marker-fill: #ffffff;              /* Hollow marker fill */
+  --color-edge-label-bg: rgba(255, 255, 255, 0.9);  /* Edge label background */
+  --color-edge-label-bg-selected: rgba(255, 255, 255, 0.95);
+  --color-edge-label-text: #{$slate-600};         /* Edge label text */
+  --color-edge-label-text-selected: #0e7490;      /* Edge label selected text */
+  --color-edge-cardinality-bg: rgba(255, 255, 255, 0.85);
+  --color-edge-cardinality-text: #{$slate-400};
+
+  /* Handles / Anchors */
+  --color-handle-border: var(--color-canvas-accent);
+  --color-handle-bg: var(--color-node-bg);
+  --color-handle-hover: var(--color-canvas-accent);
+
+  /* Panels (palette, properties) */
+  --color-panel-bg: #ffffff;
+  --color-palette-bg: #{$slate-50};               /* Left sidebar / palette background */
+  --color-panel-border: #{$slate-200};
+  --color-panel-header-bg: #1e293b;               /* Dark panel headers */
+  --color-panel-header-text: #94a3b8;             /* Light text on dark headers */
+  --color-panel-header-border: #334155;           /* Border for dark headers */
+  --color-panel-section-text: #{$slate-500};
+  --color-panel-item-text: #{$slate-700};
+  --color-panel-item-hover: #{$slate-100};
+  --color-panel-item-active: #{$slate-200};
+  --color-panel-icon: #{$slate-500};
+  --color-panel-muted: #{$slate-400};
+  --color-panel-input-bg: #ffffff;
+  --color-panel-input-border: #{$slate-200};
+  --color-panel-input-text: #{$slate-900};
+  --color-panel-input-focus: var(--color-canvas-accent);
+  --color-panel-count-bg: #{$slate-200};
+  --color-panel-count-text: #{$slate-500};
+  --color-panel-detail-border: #{$slate-100};
+
+  /* Toolbar */
+  --color-toolbar-bg: #{$slate-50};
+  --color-toolbar-border: #{$slate-200};
+  --color-toolbar-shadow: rgba(0, 0, 0, 0.08);
+  --color-toolbar-label: #{$slate-400};
+  --color-toolbar-btn-group: rgba(0, 0, 0, 0.04);
+  --color-toolbar-btn-text: #{$slate-500};
+  --color-toolbar-btn-hover-bg: rgba(0, 0, 0, 0.06);
+  --color-toolbar-btn-hover-text: #{$slate-900};
+  --color-toolbar-btn-active-bg: #ffffff;
+  --color-toolbar-btn-active-text: #0ea5e9;
+  --color-toolbar-btn-active-shadow: rgba(0, 0, 0, 0.06);
+  --color-toolbar-swatch-active-border: #{$slate-900};
+
+  /* Context menu */
+  --color-ctx-menu-bg: #ffffff;
+  --color-ctx-menu-shadow-1: rgba(0, 0, 0, 0.12);
+  --color-ctx-menu-shadow-2: rgba(0, 0, 0, 0.08);
+  --color-ctx-menu-text: #{$slate-700};
+  --color-ctx-menu-hover: #{$slate-100};
+  --color-ctx-menu-icon: #{$slate-500};
+  --color-ctx-menu-divider: #{$slate-200};
+
+  /* Minimap */
+  --color-minimap-bg: #{$slate-100};
+
+  /* Segment handles */
+  --color-segment-handle-stroke: #ffffff;
+  --color-segment-handle-hover: #22d3ee;
+  --color-segment-handle-glow: rgba(14, 165, 233, 0.4);
+
+  /* Viewpoint components */
+  --color-viewpoint-input-border: #{$slate-200};
+  --color-viewpoint-input-bg: #ffffff;
+  --color-viewpoint-focus-border: #{$blue-500};
+  --color-viewpoint-focus-glow: rgba(59, 130, 246, 0.2);
+  --color-viewpoint-focus-glow-subtle: rgba(59, 130, 246, 0.15);
+  --color-viewpoint-toggle-inactive: #{$slate-300};
+  --color-viewpoint-toggle-active: #{$blue-500};
+  --color-viewpoint-toggle-knob: #ffffff;
+  --color-viewpoint-label: #{$slate-500};
+  --color-viewpoint-error-bg: #{$red-50};
+  --color-viewpoint-error-border: #fecaca;
+  --color-viewpoint-error-text: #{$red-600};
+  --color-viewpoint-error-pre: #991b1b;
+
+  /* Badge colors (simplified notation) */
+  --color-badge-attr-bg: rgba(59, 130, 246, 0.1);
+  --color-badge-attr-text: #{$blue-500};
+  --color-badge-ref-bg: rgba(6, 182, 212, 0.1);
+  --color-badge-ref-text: #06b6d4;
+  --color-badge-op-bg: rgba(139, 92, 246, 0.1);
+  --color-badge-op-text: #8b5cf6;
+  --color-badge-obj-bg: rgba(16, 185, 129, 0.1);
+  --color-badge-obj-text: #10b981;
 
   /* ============================================
      LEGACY COMPATIBILITY

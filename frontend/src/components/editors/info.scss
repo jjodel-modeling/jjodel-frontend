@@ -33,6 +33,7 @@
   margin: var(--space-2) !important;
   padding: var(--space-2) !important;
   background-color: var(--color-bg-secondary);
+  margin-top: 0 !important;
 
   & section {
   }
@@ -40,6 +41,11 @@
 
 /* Properties tab React Select overrides */
 .properties-tab {
+  padding-left: 0!important;
+  margin-top: 0!important;
+
+
+
   & .css-b62m3t-container {
   }
 
@@ -392,10 +398,11 @@
    Modern card-based layout with sections
    ============================================ */
 
-.properties-panel {
+.properties-panel { /* *** */
   padding: var(--space-3);
   height: 100%;
   overflow: auto;
+  margin:0!important;
 
   // Empty state variant - no element selected
   &--empty {
@@ -462,38 +469,16 @@
   font-weight: var(--font-medium);
   padding: 2px 8px;
   border-radius: var(--radius-sm);
-  background-color: #f1f5f9; // Neutral gray, not cyan
-  color: #374151; // Brand color
   text-transform: uppercase;
   letter-spacing: 0.02em;
   white-space: nowrap;
+  // Uniform cyan for all type badges
+  background-color: #e0f2fe;
+  color: #0369a1;
 
-  // Semantic colors per type - per color guidelines
-  &.metamodel {
-    background-color: #dbeafe; // Blue for metamodel
-    color: #1e40af;
-  }
-
-  &.model {
-    background-color: #dcfce7; // Green for model/package
-    color: #166534;
-  }
-
-  &.class {
-      font-size: 11px;
-    border: none!important;
-    background-color: #fef3c7; // Amber for class
-    color: #92400e;
-  }
-
-  &.attribute {
-    background-color: rgba(249, 115, 22, 0.1);
-    color: #f97316;
-  }
-
-  &.reference {
-    background-color: rgba(34, 197, 94, 0.1);
-    color: #22c55e;
+  &.metamodel, &.model, &.class, &.attribute, &.reference {
+    background-color: #e0f2fe;
+    color: #0369a1;
   }
 }
 
@@ -760,13 +745,25 @@
    ======================================== */
 .properties-panel .input-container {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: stretch;
   padding: var(--space-2) var(--space-4);
   border-bottom: 1px solid var(--color-border-tertiary);
   margin: 0;
-  min-height: 44px;
-  gap: var(--space-3);
+  gap: 4px;
+
+  /* Toggle/checkbox rows stay horizontal — checkbox LEFT, label RIGHT */
+  &:has(.properties-toggle),
+  &:has(.jjodel-switch),
+  &:has(input[type="checkbox"]),
+  &:has(.props-checkbox),
+  &:has(.props-custom-checkbox) {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--space-3);
+    min-height: 44px;
+  }
 
   /* CRITICAL: Hide the global checkbox ::before pseudo-element (ghost checkbox) */
   &::before {
@@ -794,11 +791,9 @@
     border: 1px solid var(--color-border-secondary);
     border-radius: var(--radius-md);
     padding: var(--space-2) var(--space-3);
-    min-width: 140px;
-    flex: 1;
-    max-width: 200px;
+    width: 100%;
+    max-width: none;
     outline: none;
-    margin-left: auto;
     height: 36px;
 
     &:focus {
@@ -806,6 +801,58 @@
     }
   }
 
+  /* Toggle switch styling - override global hidden checkbox * /
+  input[type="checkbox"].switch {
+    position: relative !important;
+    opacity: 1 !important;
+    width: 40px !important;
+    height: 22px !important;
+    pointer-events: auto !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    border: none !important;
+    border-radius: 11px !important;
+    background-color: #e2e4e8 !important;
+    cursor: pointer;
+    transition: background-color 0.25s ease;
+    flex-shrink: 0;
+    padding: 2px;
+
+    /* Toggle thumb using ::after pseudo-element * /
+    &::after {
+      content: '' !important;
+      position: absolute !important;
+      top: 2px !important;
+      left: 2px !important;
+      width: 18px !important;
+      height: 18px !important;
+      border-radius: 50% !important;
+      background-color: #ffffff !important;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+      transition: transform 0.25s ease !important;
+      display: block !important;
+    }
+
+    &:checked {
+      background-color: var(--color-accent, #475569) !important;
+
+      &::after {
+        transform: translateX(18px) !important;
+      }
+    }
+
+    &:focus {
+      box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.25) !important;
+    }
+
+    &:hover {
+      background-color: #d0d3d8 !important;
+
+      &:checked {
+        background-color: var(--color-accent-hover, #334155) !important;
+      }
+    }
+  }*/
 
   /* Regular checkbox styling (fallback) - override global hidden checkbox */
   input[type="checkbox"]:not(.switch) {
@@ -821,7 +868,6 @@
     background-color: var(--color-bg-elevated, #ffffff) !important;
     cursor: pointer;
     transition: all 0.15s ease;
-    margin-left: auto;
     flex-shrink: 0;
 
     &:hover {
@@ -849,11 +895,9 @@
     border: 1px solid var(--color-border-secondary);
     border-radius: var(--radius-md);
     padding: var(--space-2) var(--space-3);
-    min-width: 140px;
-    flex: 1;
-    max-width: 200px;
+    width: 100%;
+    max-width: none;
     outline: none;
-    margin-left: auto;
     height: 36px;
 
     &:focus {
@@ -896,7 +940,6 @@
   transition: background-color 0.25s ease;
   position: relative;
   flex-shrink: 0;
-  margin-left: auto;
 
   &:hover {
     background-color: #d0d3d8;
@@ -977,4 +1020,235 @@ html[data-theme="dark"] {
       border-color: #475569;
     }
   }
+}
+
+/* ==============================================
+   REACT-SELECT OVERRIDE (MultiSelect)
+   ============================================== */
+
+.jj-select__control {
+  min-height: 32px !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 6px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  font-size: 13px !important;
+  cursor: pointer !important;
+  transition: border-color 0.15s !important;
+
+  &:hover {
+    border-color: #cbd5e1 !important;
+  }
+
+  &--is-focused {
+    border-color: #94a3b8 !important;
+    box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.08) !important;
+  }
+}
+
+.jj-select__value-container {
+  padding: 0 10px !important;
+  font-size: 13px !important;
+}
+
+.jj-select__placeholder {
+  color: #94a3b8 !important;
+  font-size: 13px !important;
+}
+
+.jj-select__input-container {
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 13px !important;
+  color: #1e293b !important;
+}
+
+.jj-select__indicator {
+  padding: 4px 8px !important;
+  color: #94a3b8 !important;
+
+  &:hover {
+    color: #64748b !important;
+  }
+}
+
+.jj-select__indicator-separator {
+  display: none !important;
+}
+
+.jj-select__menu {
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+  overflow: hidden !important;
+  z-index: 10 !important;
+  margin-top: 4px !important;
+  background: #ffffff !important;
+}
+
+.jj-select__menu-list {
+  padding: 4px !important;
+}
+
+.jj-select__option {
+  font-size: 13px !important;
+  padding: 6px 10px !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  color: #334155 !important;
+  transition: background 0.1s !important;
+
+  &--is-focused {
+    background: #f1f5f9 !important;
+    color: #1e293b !important;
+
+  }
+
+
+}
+
+.jj-select__option:hover {
+    color: white !important;
+  }
+
+.jj-select__menu-notice--no-options {
+  font-size: 12px !important;
+  color: #94a3b8 !important;
+  padding: 12px 10px !important;
+}
+
+.jj-select__multi-value {
+
+  background: #f1f5f9 !important;
+  border-radius: 4px !important;
+}
+
+.jj-select__multi-value__label {
+  font-size: 12px !important;
+  color: white !important;
+  padding: 5px 6px !important;
+}
+
+.jj-select__multi-value__remove {
+  color: #94a3b8 !important;
+  padding: 0 4px !important;
+  border-radius: 0 3px 3px 0 !important;
+
+  &:hover {
+    background: #fee2e2 !important;
+    color: #991b1b !important;
+  }
+}
+
+.jj-select__single-value {
+  font-size: 13px !important;
+  color: #1e293b !important;
+
+}
+
+.jj-select__clear-indicator {
+  padding: 4px !important;
+  color: #94a3b8 !important;
+
+  &:hover {
+    color: #ef4444 !important;
+  }
+}
+
+.jj-select__input-container {
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 13px !important;
+  color: #1e293b !important;
+}
+
+.jj-select__input-container input {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    height: auto !important;
+    min-height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    width: 100% !important;
+    border: 1px solid red!important;
+}
+
+.jj-select__value-container.jj-select__value-container--is-multi {
+
+  padding: 0 0 0 8px!important;
+  border-right: 1px solid #e2e8f0 !important;
+
+  input {
+    border: none !important;
+
+    background: transparent !important;
+    box-shadow: none !important;
+    height: 100% !important;
+    min-height: auto !important;
+    padding: 0 !important;
+
+    border-radius: 0 !important;
+    width: 100% !important;
+  }
+}
+.jj-select__input-container {
+
+  outline: none !important;
+  padding-left: 3px!important;
+
+
+  & input.jj-select__input {
+
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    outline: none !important;
+
+
+
+      box-shadow: none !important;
+      height: auto !important;
+      min-height: auto !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      border-radius: 0 !important;
+      width: 100% !important;
+    }
+
+    & input:focus.jj-select__input {
+      outline: none !important;
+      box-shadow: none !important;
+    }
+  }
+
+/* ==============================================
+   BOUNDS ROW (Lower + Upper + Badge inline)
+   ============================================== */
+
+.jj-bounds-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.jj-bounds-field {
+  flex: 0 0 auto;
+
+}
+
+.jj-bounds-badge {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  background: #f1f5f9;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+  white-space: nowrap;
+  flex-shrink: 0;
 }

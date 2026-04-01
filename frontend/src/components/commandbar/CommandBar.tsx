@@ -45,22 +45,22 @@ export const Btn = (props: BtnProps) => {
 
     switch (props.icon){
         case 'delete2':
-            icon = <div {...props} className={`delete2 ${props.theme ? props.theme : 'light'} ${props.className || ''}`}>Delete</div>; break;
+            icon = <div style={style} className={`delete2 ${props.theme ? props.theme : 'light'} ${props.className || ''}`}>Delete</div>; break;
 
         case 'delete':
             icon = <Tooltip tooltip={askingConfirm ? 'Are you sure?' : props.tip} inline={true} position={'top'} offsetY={10} >
-                <i {...props} onClick={action} className={i_classes + ' ' + (props.className || '')} />
+                <i style={style} onClick={action} className={i_classes + ' ' + (props.className || '')} />
             </Tooltip>; break;
 
         default:
             icon = <Tooltip tooltip={props.tip} inline={true} position={'top'} offsetY={10}>
-                <i {...props} className={i_classes + ' ' +(props.className || '')} onClick={action}/>
+                <i style={style} className={i_classes + ' ' +(props.className || '')} onClick={action}/>
             </Tooltip>; break;
     }
 
     if (props.icon === "space" || props.icon === "minispace") return (
-        <span {...props} style={{...style, display: 'block', width: `${props.icon === 'space' ? '24px' : '4px'}`}} />);
-    return <div {...props} className={'btn-component '+(props.active ? 'active ' : '') +  (props.className || '')}>{icon}</div>;
+        <span style={{...style, display: 'block', width: `${props.icon === 'space' ? '24px' : '4px'}`}} />);
+    return <div style={style} className={'btn-component '+(props.active ? 'active ' : '') +  (props.className || '')}>{icon}</div>;
 }
 
 

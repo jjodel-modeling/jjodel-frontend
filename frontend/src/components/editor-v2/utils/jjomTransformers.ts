@@ -13,6 +13,8 @@ import type {
     ClassNodeData,
     EnumNodeData,
     PackageNodeData,
+    ObjectNodeData,
+    FeatureValueRow,
     MetaAttribute,
     MetaLiteral,
     MetaReference,
@@ -20,6 +22,8 @@ import type {
     MetaParameter,
     ReferenceEdgeData,
     InheritanceEdgeData,
+    CompositionEdgeData,
+    InstanceReferenceEdgeData,
     ReferenceKind,
 } from '../types';
 import { setEdgeRefId } from '../sync/syncState';
@@ -98,13 +102,24 @@ function classVertexToRFNode(vertex: any): Node<ClassNodeData> {
         }
     } catch { /* proxy access can throw */ }
 
+    // Use __raw for reliable numeric coordinates (LProxy gotcha:
+    // proxy getters return {} instead of numbers when stale)
+    const raw = vertex.__raw ?? vertex;
+    const x = typeof raw.x === 'number' ? raw.x : 0;
+    const y = typeof raw.y === 'number' ? raw.y : 0;
+
+    console.log('[DEBUG classVertexToRFNode] x:', x, 'y:', y, 'raw:', raw?.x, raw?.y, 'id:', vertex.id);
+
+
+
     return {
         id: vertex.id,
         type: 'classNode',
-        position: { x: vertex.x ?? 0, y: vertex.y ?? 0 },
+        position: { x, y },
         data: {
             label: lClass?.name ?? 'Class',
             isAbstract: !!lClass?.abstract,
+            isSingleton: !!lClass?.isSingleton,
             attributes: attrs,
             references: refs.length > 0 ? refs : undefined,
             operations: ops.length > 0 ? ops : undefined,
@@ -131,10 +146,15 @@ function enumVertexToRFNode(vertex: any): Node<EnumNodeData> {
         }
     } catch { /* proxy access can throw */ }
 
+    // Use __raw for reliable numeric coordinates (LProxy gotcha)
+    const raw = vertex.__raw ?? vertex;
+    const x = typeof raw.x === 'number' ? raw.x : 0;
+    const y = typeof raw.y === 'number' ? raw.y : 0;
+
     return {
         id: vertex.id,
         type: 'enumNode',
-        position: { x: vertex.x ?? 0, y: vertex.y ?? 0 },
+        position: { x, y },
         data: {
             label: lEnum?.name ?? 'Enum',
             literals,
@@ -147,17 +167,126 @@ function enumVertexToRFNode(vertex: any): Node<EnumNodeData> {
  */
 function packageVertexToRFNode(vertex: any): Node<PackageNodeData> {
     const lPackage = vertex.model;
+    // Use __raw for reliable numeric coordinates (LProxy gotcha)
+    const raw = vertex.__raw ?? vertex;
+    const x = typeof raw.x === 'number' ? raw.x : 0;
+    const y = typeof raw.y === 'number' ? raw.y : 0;
+    const w = typeof raw.w === 'number' ? raw.w : 400;
+    const h = typeof raw.h === 'number' ? raw.h : 300;
+
     return {
         id: vertex.id,
         type: 'packageNode',
-        position: { x: vertex.x ?? 0, y: vertex.y ?? 0 },
+        position: { x, y },
         style: {
             zIndex: -1,
-            width: vertex.w ?? 400,
-            height: vertex.h ?? 300,
+            width: w,
+            height: h,
         },
         data: {
             label: lPackage?.name ?? 'Package',
+        },
+    };
+}
+
+/**
+ * Map a JjOM vertex (LVertex with LObject model) to a React Flow objectNode.
+ * Used for M1 (model instance) editing.
+ */
+function objectVertexToRFNode(vertex: any): Node<ObjectNodeData> {
+    const lObject = vertex.model;
+    const features: FeatureValueRow[] = [];
+
+    // Read the metaclass info
+    let instanceOfClassName = 'Object';
+    let instanceOfClassId = '';
+    try {
+        const instanceOf = lObject?.instanceof;
+        if (instanceOf) {
+            instanceOfClassName = instanceOf.name ?? 'Object';
+            instanceOfClassId = instanceOf.id ?? '';
+        }
+    } catch { /* proxy can throw */ }
+
+    // Read feature values (DValue instances)
+    try {
+        const featureValues = lObject?.features ?? [];
+        for (const fv of featureValues) {
+            const feature = fv?.instanceof ?? fv?.feature;
+            const featureClassName = feature?.className ?? feature?.__raw?.className ?? '';
+            const isRef = featureClassName === 'DReference';
+            const featureKind: 'attribute' | 'reference' = isRef ? 'reference' : 'attribute';
+
+            let value = '';
+            let featureTypeId = '';
+            let typeName = '';
+            let enumLiterals: Array<{ name: string; value: number }> | undefined;
+
+            if (isRef) {
+                // Reference: show resolved target names (handle both pointer IDs and objects)
+                try {
+                    const vals = fv.values ?? [];
+                    const names: string[] = [];
+                    for (const v of vals) {
+                        const target = typeof v === 'string' ? null : v;
+                        if (target?.name) names.push(target.name);
+                    }
+                    value = names.join(', ') || '—';
+                } catch { value = '—'; }
+            } else {
+                // Attribute: show primitive value
+                try {
+                    const vals = fv.values ?? [];
+                    value = vals.length > 0 ? String(vals[0] ?? '') : '';
+                } catch { value = ''; }
+
+                // Resolve enum literals if the attribute type is an enumeration
+                try {
+                    const featureType = feature?.type;
+                    featureTypeId = featureType?.id ?? '';
+                    typeName = featureType?.name ?? '';
+                    if (featureType?.isEnum) {
+                        const lits = featureType.literals ?? [];
+                        if (lits.length > 0) {
+                            enumLiterals = [];
+                            for (let i = 0; i < lits.length; i++) {
+                                const lit = lits[i];
+                                enumLiterals.push({
+                                    name: lit.name ?? `VALUE_${i}`,
+                                    value: lit.value ?? i,
+                                });
+                            }
+                        }
+                    }
+                } catch { /* proxy access can throw */ }
+            }
+
+            features.push({
+                id: fv.id ?? `fv_${features.length}`,
+                featureName: feature?.name ?? 'unnamed',
+                featureKind,
+                featureTypeId,
+                typeName: typeName || undefined,
+                value,
+                enumLiterals,
+            });
+        }
+    } catch { /* proxy access can throw */ }
+
+    // Use __raw for reliable numeric coordinates (LProxy gotcha)
+    const raw = vertex.__raw ?? vertex;
+    const x = typeof raw.x === 'number' ? raw.x : 0;
+    const y = typeof raw.y === 'number' ? raw.y : 0;
+
+    return {
+        id: vertex.id,
+        type: 'objectNode',
+        position: { x, y },
+        data: {
+            label: lObject?.name ?? 'obj',
+            instanceOfClassName,
+            instanceOfClassId,
+            features,
         },
     };
 }
@@ -168,6 +297,7 @@ function packageVertexToRFNode(vertex: any): Node<PackageNodeData> {
  */
 export function jjomVertexToRFNode(vertex: any): Node | null {
     const model = vertex?.model;
+        console.log('[DEBUG jjomVertexToRFNode] vertex.id:', vertex?.id, 'model:', !!model, 'className:', model?.className ?? model?.__raw?.className);
     if (!model) return null;
 
     const className = model.className ?? model.__raw?.className;
@@ -178,8 +308,9 @@ export function jjomVertexToRFNode(vertex: any): Node | null {
             return enumVertexToRFNode(vertex);
         case 'DPackage':
             return packageVertexToRFNode(vertex);
+        case 'DObject':
+            return objectVertexToRFNode(vertex);
         default:
-            // Unknown type — skip (could be DObject in model instances, etc.)
             return null;
     }
 }
@@ -198,14 +329,18 @@ function computeOptimalHandles(
     targetVertex: any,
     isInheritance: boolean = false,
 ): { sourceHandle: string; targetHandle: string } {
-    const sx = sourceVertex.x ?? 0;
-    const sy = sourceVertex.y ?? 0;
-    const sw = sourceVertex.w ?? 180;
-    const sh = sourceVertex.h ?? 80;
-    const tx = targetVertex.x ?? 0;
-    const ty = targetVertex.y ?? 0;
-    const tw = targetVertex.w ?? 180;
-    const th = targetVertex.h ?? 80;
+    // Use __raw to get reliable numeric values — LProxy getters return {}
+    // instead of numbers, which causes NaN and wrong fallthrough.
+    const sRaw = sourceVertex?.__raw ?? sourceVertex;
+    const tRaw = targetVertex?.__raw ?? targetVertex;
+    const sx = typeof sRaw?.x === 'number' ? sRaw.x : 0;
+    const sy = typeof sRaw?.y === 'number' ? sRaw.y : 0;
+    const sw = typeof sRaw?.w === 'number' ? sRaw.w : 180;
+    const sh = typeof sRaw?.h === 'number' ? sRaw.h : 80;
+    const tx = typeof tRaw?.x === 'number' ? tRaw.x : 0;
+    const ty = typeof tRaw?.y === 'number' ? tRaw.y : 0;
+    const tw = typeof tRaw?.w === 'number' ? tRaw.w : 180;
+    const th = typeof tRaw?.h === 'number' ? tRaw.h : 80;
 
     const scx = sx + sw / 2;
     const scy = sy + sh / 2;
@@ -216,24 +351,9 @@ function computeOptimalHandles(
     const dy = tcy - scy;
 
     if (isInheritance) {
-        // Inheritance: strongly prefer vertical routing.
-        // Child (source) at top, parent (target) at bottom.
-        // Only go horizontal if Y difference is negligible (< 30px).
-        if (Math.abs(dy) < 30 && Math.abs(dx) > 50) {
-            if (dx > 0) {
-                return { sourceHandle: 'right-0', targetHandle: 'left-0' };
-            } else {
-                return { sourceHandle: 'left-0', targetHandle: 'right-0' };
-            }
-        }
-        // Default: vertical — child top → parent bottom
-        if (dy < 0) {
-            // Target (parent) is above source (child) — normal case
-            return { sourceHandle: 'top-0', targetHandle: 'bottom-0' };
-        } else {
-            // Target (parent) is below source (child) — unusual but respect layout
-            return { sourceHandle: 'bottom-0', targetHandle: 'top-0' };
-        }
+        // Inheritance always anchors child=top, parent=bottom
+        // (consistent with EditorV2 creation and useAutoAnchor hysteresis)
+        return { sourceHandle: 'top-0', targetHandle: 'bottom-0' };
     }
 
     // Non-inheritance: use dominant axis
@@ -267,7 +387,51 @@ export function jjomEdgeToRFEdge(edge: any): Edge | null {
     const isInheritance = !!edge.isExtend;
     const handles = computeOptimalHandles(startVertex, endVertex, isInheritance);
 
-    // Check isReference FIRST — it's more specific (DEdge.model points to a DReference).
+    // Check M1 instance edges FIRST — before isReference/isExtend.
+    // M1 edges also have isReference === true but need different RF types
+    // ('composition' / 'instanceRef') so that UnifiedEdge can suppress
+    // diamonds and cardinality labels.
+    const sourceModel = startVertex?.model;
+    const sourceClassName = sourceModel?.className ?? sourceModel?.__raw?.className;
+    if (sourceClassName === 'DObject') {
+        // M1 edge — check if composition or reference
+        const refModel = edge.model;
+        const isComposition = !!refModel?.composition;
+        const refName = refModel?.name ?? '';
+        const refId = refModel?.id ?? edge.id;
+
+        if (isComposition) {
+            return {
+                id: edge.id,
+                source: startVertex.id,
+                target: endVertex.id,
+                sourceHandle: handles.sourceHandle,
+                targetHandle: handles.targetHandle,
+                type: 'composition',
+                label: refName,
+                data: {
+                    referenceName: refName,
+                    referenceId: refId,
+                } as CompositionEdgeData,
+            };
+        }
+
+        return {
+            id: edge.id,
+            source: startVertex.id,
+            target: endVertex.id,
+            sourceHandle: handles.sourceHandle,
+            targetHandle: handles.targetHandle,
+            type: 'instanceRef',
+            label: refName,
+            data: {
+                referenceName: refName,
+                referenceId: refId,
+            } as InstanceReferenceEdgeData,
+        };
+    }
+
+    // Check isReference for M2 edges (DEdge.model points to a DReference).
     // isExtend can give false positives when the source class happens to extend another class.
     if (edge.isReference) {
         // Reference edge — extract info from the model (DReference)

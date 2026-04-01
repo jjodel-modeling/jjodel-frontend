@@ -3,21 +3,20 @@
  *
  * Phase 6: Side-aware routing - the router now knows which side the edge
  * exits from and enters to, producing clean paths without U-turns.
- *
- * Phase 7: A* grid-based obstacle avoidance (opt-in via OBSTACLE_AVOIDANCE_ENABLED).
  */
 
-import { ObstacleGrid, type NodeRect } from './ObstacleGrid';
-import { astarManhattan, smoothPath } from './astarPathfinder';
+/** Pre-computed bounding rect for a node, used by tree bar clearance and crossing detection. */
+export interface NodeRect {
+    id: string;
+    type: string;
+    rect: Rect;
+    parentId?: string;
+}
 
-export const EDGE_PADDING = 25; // legacy — kept for ManhattanEdge.tsx compatibility
 const DETOUR_PADDING = 30; // used only for same-side and backward U-shape routing
 
-/** Toggle for Phase 7 A* obstacle avoidance. */
-export const OBSTACLE_AVOIDANCE_ENABLED = false;
-
-/** Padding used for the fast-path obstruction check (matches ObstacleGrid's default). */
-const OBSTRUCTION_CHECK_PADDING = 10;
+/** Minimum perpendicular stub length (px) for orthogonal endpoint enforcement. */
+const STUB_LENGTH = 20;
 
 export type Side = 'top' | 'right' | 'bottom' | 'left';
 
@@ -131,7 +130,8 @@ export function computeManhattanPath(
             break;
     }
 
-    return pointsToPath(cleanPoints(points));
+    const orthogonal = ensureOrthogonalEndpoints(points, sourceSide, targetSide);
+    return pointsToPath(cleanPoints(orthogonal));
 }
 
 function categorizeSidePair(s: Side, t: Side): 'opposite-horizontal' | 'opposite-vertical' | 'same' | 'adjacent' {
@@ -280,8 +280,12 @@ function routeAdjacent(
             }
             return [{ x: sx, y: sy }, { x: tx, y: sy }, { x: tx, y: ty }];
         } else {
-            // Z-fallback: 3 segments with midpoint
-            const midX = (sx + tx) / 2;
+            // Z-fallback: 3 segments with direction-aware midpoint.
+            // Ensure first segment always goes in the correct outward direction
+            // of the source side (right → increasing X, left → decreasing X).
+            const midX = goingRight
+                ? Math.max((sx + tx) / 2, sx + DETOUR_PADDING)
+                : Math.min((sx + tx) / 2, sx - DETOUR_PADDING);
             return [
                 { x: sx, y: sy },
                 { x: midX, y: sy },
@@ -310,8 +314,12 @@ function routeAdjacent(
             }
             return [{ x: sx, y: sy }, { x: sx, y: ty }, { x: tx, y: ty }];
         } else {
-            // Z-fallback: 3 segments with midpoint
-            const midY = (sy + ty) / 2;
+            // Z-fallback: 3 segments with direction-aware midpoint.
+            // Ensure first segment always goes in the correct outward direction
+            // of the source side (bottom → increasing Y, top → decreasing Y).
+            const midY = goingDown
+                ? Math.max((sy + ty) / 2, sy + DETOUR_PADDING)
+                : Math.min((sy + ty) / 2, sy - DETOUR_PADDING);
             return [
                 { x: sx, y: sy },
                 { x: sx, y: midY },
@@ -320,6 +328,119 @@ function routeAdjacent(
             ];
         }
     }
+}
+
+// ============================================
+// Orthogonal endpoint enforcement
+// ============================================
+
+/** Computes a stub point offset from a handle position in the handle's exit/entry direction. */
+function stubPoint(handle: { x: number; y: number }, side: Side): { x: number; y: number } {
+    switch (side) {
+        case 'right':  return { x: handle.x + STUB_LENGTH, y: handle.y };
+        case 'left':   return { x: handle.x - STUB_LENGTH, y: handle.y };
+        case 'bottom': return { x: handle.x, y: handle.y + STUB_LENGTH };
+        case 'top':    return { x: handle.x, y: handle.y - STUB_LENGTH };
+    }
+}
+
+/**
+ * Builds a full orthogonal path between two points with mandatory stubs at both ends.
+ * Used for 2-point paths where fixing one end would invalidate the other.
+ */
+function buildOrthogonalPath(
+    first: { x: number; y: number },
+    last: { x: number; y: number },
+    sourceSide: Side,
+    targetSide: Side,
+    sourceH: boolean,
+): { x: number; y: number }[] {
+    const stubS = stubPoint(first, sourceSide);
+    const stubT = stubPoint(last, targetSide);
+
+    const result: { x: number; y: number }[] = [first, stubS];
+
+    // Connect stubs with a Manhattan L-turn if they're not on the same axis
+    if (Math.abs(stubS.x - stubT.x) > 0.5 && Math.abs(stubS.y - stubT.y) > 0.5) {
+        // Choose corner that avoids creating spikes at endpoints:
+        // After horizontal stub → go vertical; after vertical stub → go horizontal.
+        if (sourceH) {
+            result.push({ x: stubS.x, y: stubT.y });
+        } else {
+            result.push({ x: stubT.x, y: stubS.y });
+        }
+    }
+
+    result.push(stubT, last);
+    return result;
+}
+
+/**
+ * Ensures the first and last segments of a Manhattan path are perpendicular
+ * to the source/target node sides they connect to.
+ *
+ * - Top/bottom handles → first/last segment must be vertical
+ * - Left/right handles → first/last segment must be horizontal
+ *
+ * For paths that already have correct alignment, returns the original points unchanged.
+ * For paths that need fixing, inserts stub + connector points to enforce orthogonality.
+ * The collinear point removal in cleanPoints() naturally merges redundant segments.
+ */
+function ensureOrthogonalEndpoints(
+    points: { x: number; y: number }[],
+    sourceSide: Side,
+    targetSide: Side,
+): { x: number; y: number }[] {
+    if (points.length < 2) return points;
+
+    const first = points[0];
+    const last = points[points.length - 1];
+    const sourceH = sourceSide === 'left' || sourceSide === 'right';
+    const targetH = targetSide === 'left' || targetSide === 'right';
+
+    // Check if first segment is already perpendicular to source side
+    const second = points[1];
+    const startOK = sourceH
+        ? Math.abs(first.y - second.y) <= 0.5
+        : Math.abs(first.x - second.x) <= 0.5;
+
+    // Check if last segment is already perpendicular to target side
+    const prev = points[points.length - 2];
+    const endOK = targetH
+        ? Math.abs(last.y - prev.y) <= 0.5
+        : Math.abs(last.x - prev.x) <= 0.5;
+
+    if (startOK && endOK) return points;
+
+    // For 2-point paths, rebuild entirely with stubs to avoid order-dependency issues
+    // (fixing one end of a 2-point path changes the other end's segment)
+    if (points.length === 2) {
+        return buildOrthogonalPath(first, last, sourceSide, targetSide, sourceH);
+    }
+
+    // For 3+ point paths, fix each end independently.
+    // Fix end FIRST (inserts near the end), then fix start (inserts near the start).
+    // Since they operate on opposite ends of the array, they don't interfere.
+    const result = points.map(p => ({ ...p }));
+
+    if (!endOK) {
+        const n = result.length;
+        const stub = stubPoint(last, targetSide);
+        const connector = targetH
+            ? { x: stub.x, y: result[n - 2].y }
+            : { x: result[n - 2].x, y: stub.y };
+        result.splice(n - 1, 0, connector, stub);
+    }
+
+    if (!startOK) {
+        const stub = stubPoint(first, sourceSide);
+        const connector = sourceH
+            ? { x: stub.x, y: result[1].y }
+            : { x: result[1].x, y: stub.y };
+        result.splice(1, 0, stub, connector);
+    }
+
+    return result;
 }
 
 // ============================================
@@ -378,144 +499,6 @@ function segmentHitsRect(
     }
 
     return false;
-}
-
-/**
- * Calculates total Manhattan length of a point sequence.
- */
-function totalPathLength(points: { x: number; y: number }[]): number {
-    let total = 0;
-    for (let i = 0; i < points.length - 1; i++) {
-        total += Math.abs(points[i + 1].x - points[i].x) + Math.abs(points[i + 1].y - points[i].y);
-    }
-    return total;
-}
-
-/**
- * Computes the shortest detour around an obstacle for a single segment.
- * Calculates BOTH possible detour directions and picks the shorter one.
- */
-function computeSmartDetour(
-    p1: { x: number; y: number },
-    p2: { x: number; y: number },
-    rect: Rect,
-    pad: number
-): { x: number; y: number }[] {
-    const isHorizontal = Math.abs(p1.y - p2.y) < 1;
-
-    if (isHorizontal) {
-        // Horizontal segment → detour goes above or below
-        const segY = p1.y;
-        const beforeX = rect.x - pad;
-        const afterX = rect.x + rect.width + pad;
-        const aboveY = rect.y - pad;
-        const belowY = rect.y + rect.height + pad;
-
-        const optionA = [
-            p1,
-            { x: beforeX, y: segY },
-            { x: beforeX, y: aboveY },
-            { x: afterX, y: aboveY },
-            { x: afterX, y: segY },
-            p2,
-        ];
-
-        const optionB = [
-            p1,
-            { x: beforeX, y: segY },
-            { x: beforeX, y: belowY },
-            { x: afterX, y: belowY },
-            { x: afterX, y: segY },
-            p2,
-        ];
-
-        return totalPathLength(optionA) <= totalPathLength(optionB) ? optionA : optionB;
-    } else {
-        // Vertical segment → detour goes left or right
-        const segX = p1.x;
-        const beforeY = rect.y - pad;
-        const afterY = rect.y + rect.height + pad;
-        const leftX = rect.x - pad;
-        const rightX = rect.x + rect.width + pad;
-
-        const optionA = [
-            p1,
-            { x: segX, y: beforeY },
-            { x: leftX, y: beforeY },
-            { x: leftX, y: afterY },
-            { x: segX, y: afterY },
-            p2,
-        ];
-
-        const optionB = [
-            p1,
-            { x: segX, y: beforeY },
-            { x: rightX, y: beforeY },
-            { x: rightX, y: afterY },
-            { x: segX, y: afterY },
-            p2,
-        ];
-
-        return totalPathLength(optionA) <= totalPathLength(optionB) ? optionA : optionB;
-    }
-}
-
-/**
- * Post-processes a Manhattan path to avoid obstacles (other nodes).
- *
- * Strategy: for each segment that hits a node, compute both possible detours
- * (left/right or above/below) and pick the shortest one.
- *
- * @param points - Array of path points from computeManhattanPath
- * @param obstacles - Array of node rectangles to avoid (exclude source and target nodes)
- * @param pad - Minimum distance from obstacles (default 15px — compact but visible)
- * @returns Adjusted points array that avoids all obstacles
- */
-export function avoidObstacles(
-    points: { x: number; y: number }[],
-    obstacles: Rect[],
-    pad: number = 15
-): { x: number; y: number }[] {
-    if (obstacles.length === 0 || points.length < 2) return points;
-
-    let current = [...points.map(p => ({ ...p }))];
-    const MAX_ITERATIONS = 3;
-
-    for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
-        let changed = false;
-        const newPoints: { x: number; y: number }[] = [current[0]];
-
-        for (let i = 0; i < current.length - 1; i++) {
-            const p1 = current[i];
-            const p2 = current[i + 1];
-
-            // Find the first obstacle this segment hits
-            let hitRect: Rect | null = null;
-            for (const obs of obstacles) {
-                if (segmentHitsRect(p1.x, p1.y, p2.x, p2.y, obs, pad)) {
-                    hitRect = obs;
-                    break;
-                }
-            }
-
-            if (!hitRect) {
-                newPoints.push(p2);
-                continue;
-            }
-
-            changed = true;
-            const detourPoints = computeSmartDetour(p1, p2, hitRect, pad);
-            // Push all detour points except the first (which is p1, already in newPoints)
-            for (let d = 1; d < detourPoints.length; d++) {
-                newPoints.push(detourPoints[d]);
-            }
-        }
-
-        current = cleanPoints(newPoints);
-        if (!changed) break;
-    }
-
-    return current;
 }
 
 /**
@@ -733,7 +716,7 @@ export function computeLabelPosition(path: string): { x: number; y: number } {
  */
 export function computeCardinalityPosition(
     path: string,
-    offset: number = 35
+    offset: number = 20
 ): { x: number; y: number } {
     const points = parsePathPoints(path);
     if (points.length < 2) return { x: 0, y: 0 };
@@ -1005,23 +988,34 @@ export function computeTreeConnectorPath(
         obstacleRects, excludeIds,
     );
 
-    // Trunk: from bar up to parent (markerEnd will be placed at the parent end)
-    const trunkPath = `M ${parentX} ${barY} L ${parentX} ${parentY}`;
+    // Trunk: from near-bar up to parent (markerEnd will be placed at the parent end).
+    // Shortened by CORNER_RADIUS so the trunk's straight line doesn't overlap the
+    // rounded corner arcs that branch paths draw at the (parentX, barY) junction.
+    const CORNER_RADIUS = 4;
+    const trunkLen = Math.abs(barY - parentY);
+    const trunkGap = Math.min(CORNER_RADIUS, trunkLen * 0.5);
+    const trunkDir = parentY < barY ? -1 : 1; // from barY toward parentY
+    const trunkStartY = barY + trunkDir * trunkGap;
+    const trunkPath = `M ${parentX} ${trunkStartY} L ${parentX} ${parentY}`;
 
-    // Branches: each branch is an L-shaped path from the trunk junction (parentX, barY)
-    // through the horizontal bar to the child. This creates 3-point paths with a corner
-    // at (childX, barY) that roundManhattanPath can round with smooth arcs.
+    // Branches: each branch starts near the bar (at trunkStartY) so that the
+    // trunk segment is drawn only ONCE (by trunkPath), avoiding opacity build-up
+    // when the stroke color has transparency (e.g. rgba).
+    // Each branch is a 4-point path with TWO corners:
+    //   1. At (parentX, barY): trunk → bar turn (provides rounded junction arc)
+    //   2. At (childX, barY): bar → child turn
     let barAndBranches = '';
 
     const branchPaths = new Map<string, string>();
     for (const child of sorted) {
-        // L-shaped route: trunk junction → horizontal along bar → vertical down to child
-        const branchPath = `M ${parentX} ${barY} L ${child.childX} ${barY} L ${child.childX} ${child.childY}`;
+        // Route: trunkStart → bar → child (4 points, 2 corners)
+        const branchPath = `M ${parentX} ${trunkStartY} L ${parentX} ${barY} L ${child.childX} ${barY} L ${child.childX} ${child.childY}`;
         if (barAndBranches) barAndBranches += ' ';
         barAndBranches += branchPath;
 
-        // Hit-test path: same L-shaped route
-        branchPaths.set(child.edgeId, branchPath);
+        // Hit-test path: full route from parent for better click area
+        const hitPath = `M ${parentX} ${parentY} L ${parentX} ${barY} L ${child.childX} ${barY} L ${child.childX} ${child.childY}`;
+        branchPaths.set(child.edgeId, hitPath);
     }
 
     return { trunkPath, barAndBranchesPath: barAndBranches, branchPaths };
@@ -1121,408 +1115,6 @@ function findClearBarY(
 
     // No clear position found — fall back to default
     return defaultBarY;
-}
-
-// ============================================
-// Phase 7 — A* routing integration
-// ============================================
-
-// ── Tree Obstacle Registry ──────────────────────────────────
-
-interface TreeObstacleEntry {
-    rects: Array<{ x: number; y: number; width: number; height: number }>;
-    parentNodeId: string;
-}
-
-const treeObstacleRegistry = new Map<string, TreeObstacleEntry>();
-
-/** Thickness (total width) for tree segment obstacle rects — 5 px margin per side. */
-const TREE_OBSTACLE_THICKNESS = 10;
-
-/** Convert a line segment (horizontal or vertical) to a thin rectangle. */
-function segmentToRect(
-    p1: { x: number; y: number },
-    p2: { x: number; y: number },
-    thickness: number,
-): { x: number; y: number; width: number; height: number } {
-    if (Math.abs(p1.x - p2.x) < 1) {
-        // Vertical segment
-        const x = (p1.x + p2.x) / 2;
-        const minY = Math.min(p1.y, p2.y);
-        const maxY = Math.max(p1.y, p2.y);
-        return { x: x - thickness / 2, y: minY, width: thickness, height: maxY - minY };
-    } else {
-        // Horizontal segment
-        const y = (p1.y + p2.y) / 2;
-        const minX = Math.min(p1.x, p2.x);
-        const maxX = Math.max(p1.x, p2.x);
-        return { x: minX, y: y - thickness / 2, width: maxX - minX, height: thickness };
-    }
-}
-
-/** Convert a polyline (array of points) to thin obstacle rects, one per segment. */
-function pathToObstacleRects(
-    points: Array<{ x: number; y: number }>,
-    thickness: number,
-): Array<{ x: number; y: number; width: number; height: number }> {
-    const rects: Array<{ x: number; y: number; width: number; height: number }> = [];
-    for (let i = 0; i < points.length - 1; i++) {
-        const rect = segmentToRect(points[i], points[i + 1], thickness);
-        if (rect.width > 0.5 || rect.height > 0.5) {
-            rects.push(rect);
-        }
-    }
-    return rects;
-}
-
-/**
- * Register inheritance tree segments (trunk, bar, branches) as thin-rect
- * obstacles so A* routes around them.
- * Called by useTreeLayout when tree geometry is computed.
- */
-export function updateTreeObstacles(
-    groupId: string,
-    trunkPath: string,
-    barAndBranchesPath: string | undefined,
-    parentNodeId: string,
-): void {
-    const rects: Array<{ x: number; y: number; width: number; height: number }> = [];
-
-    const trunkPts = parsePathPoints(trunkPath);
-    if (trunkPts.length >= 2) {
-        rects.push(...pathToObstacleRects(trunkPts, TREE_OBSTACLE_THICKNESS));
-    }
-
-    if (barAndBranchesPath) {
-        const subPaths = parsePathSubPaths(barAndBranchesPath);
-        for (const pts of subPaths) {
-            if (pts.length >= 2) {
-                rects.push(...pathToObstacleRects(pts, TREE_OBSTACLE_THICKNESS));
-            }
-        }
-    }
-
-    treeObstacleRegistry.set(groupId, { rects, parentNodeId });
-}
-
-/** Remove tree obstacles when inheritance group unmounts or changes. */
-export function removeTreeObstacles(groupId: string): void {
-    treeObstacleRegistry.delete(groupId);
-}
-
-// ── Obstruction helpers ─────────────────────────────────────
-// (uses the existing segmentHitsRect(x1,y1,x2,y2,rect,margin) defined above)
-
-/**
- * Fast-path check: does the classic Manhattan path intersect any obstacle?
- * Checks BOTH node rects (with padding) and tree obstacle rects.
- */
-function isPathObstructed(
-    points: Array<{ x: number; y: number }>,
-    nodeRects: NodeRect[],
-    excludeIds: Set<string>,
-    padding: number,
-): boolean {
-    for (let i = 0; i < points.length - 1; i++) {
-        const p1 = points[i];
-        const p2 = points[i + 1];
-
-        // Check node obstacles
-        for (const entry of nodeRects) {
-            if (excludeIds.has(entry.id) || entry.type === 'packageNode') continue;
-            if (segmentHitsRect(p1.x, p1.y, p2.x, p2.y, entry.rect, padding)) {
-                return true;
-            }
-        }
-
-        // Check tree obstacles (rect already includes margin, so use margin=0).
-        // Tree segments are always obstacles — even when the edge targets the tree's parent node,
-        // the edge must route around the trunk/bar/branches.
-        for (const [, treeEntry] of treeObstacleRegistry) {
-            for (const r of treeEntry.rects) {
-                if (segmentHitsRect(p1.x, p1.y, p2.x, p2.y, r, 0)) {
-                    return true;
-                }
-            }
-        }
-    }
-    return false;
-}
-
-// ── FIX 1: Endpoint alignment ───────────────────────────────
-
-/** Minimum perpendicular stub length (px). Used when the path needs a
- *  direction change but the next/prev point shares the exit/entry axis
- *  coordinate, making a standard L-connector degenerate to zero length. */
-const STUB_LENGTH = 20;
-
-/**
- * Ensure the first and last segments of an A* path are perpendicular
- * to the exit/entry side of the source/target node.
- *
- * Two cases per endpoint:
- * - **Standard**: the adjacent point differs on both axes → insert a single
- *   L-connector corner point.
- * - **Degenerate**: the adjacent point shares the exit/entry axis coordinate
- *   (e.g. directly above a right-side anchor) → an L-connector would produce
- *   a zero-length segment.  Instead, insert a 2-point perpendicular stub
- *   in the exit/entry direction.
- */
-function alignPathEndpoints(
-    path: Array<{ x: number; y: number }>,
-    sourceSide: Side,
-    targetSide: Side,
-): Array<{ x: number; y: number }> {
-    if (path.length < 2) return path;
-    const result = path.map(p => ({ ...p }));
-
-    // ── Align start: force first segment perpendicular to source side ──
-    {
-        const first = result[0];
-        const second = result[1];
-        const exitH = sourceSide === 'left' || sourceSide === 'right';
-
-        if (exitH) {
-            // First segment must be horizontal (shared Y)
-            if (Math.abs(first.y - second.y) > 0.5) {
-                if (Math.abs(first.x - second.x) > 0.5) {
-                    // Standard L-connector: corner at (second.x, first.y)
-                    result.splice(1, 0, { x: second.x, y: first.y });
-                } else {
-                    // Degenerate: second point is directly above/below →
-                    // insert stub in the exit direction
-                    const stubX = sourceSide === 'right'
-                        ? first.x + STUB_LENGTH : first.x - STUB_LENGTH;
-                    result.splice(1, 0,
-                        { x: stubX, y: first.y },
-                        { x: stubX, y: second.y },
-                    );
-                }
-            }
-        } else {
-            // First segment must be vertical (shared X)
-            if (Math.abs(first.x - second.x) > 0.5) {
-                if (Math.abs(first.y - second.y) > 0.5) {
-                    // Standard L-connector: corner at (first.x, second.y)
-                    result.splice(1, 0, { x: first.x, y: second.y });
-                } else {
-                    // Degenerate: second point is directly left/right →
-                    // insert stub in the exit direction
-                    const stubY = sourceSide === 'bottom'
-                        ? first.y + STUB_LENGTH : first.y - STUB_LENGTH;
-                    result.splice(1, 0,
-                        { x: first.x, y: stubY },
-                        { x: second.x, y: stubY },
-                    );
-                }
-            }
-        }
-    }
-
-    // ── Align end: force last segment perpendicular to target side ──
-    {
-        const n = result.length;
-        const last = result[n - 1];
-        const prev = result[n - 2];
-        const entryH = targetSide === 'left' || targetSide === 'right';
-
-        if (entryH) {
-            // Last segment must be horizontal (shared Y)
-            if (Math.abs(last.y - prev.y) > 0.5) {
-                if (Math.abs(last.x - prev.x) > 0.5) {
-                    // Standard L-connector: corner at (prev.x, last.y)
-                    result.splice(n - 1, 0, { x: prev.x, y: last.y });
-                } else {
-                    // Degenerate: prev is directly above/below target →
-                    // insert stub in the entry direction
-                    const stubX = targetSide === 'right'
-                        ? last.x + STUB_LENGTH : last.x - STUB_LENGTH;
-                    result.splice(n - 1, 0,
-                        { x: stubX, y: prev.y },
-                        { x: stubX, y: last.y },
-                    );
-                }
-            }
-        } else {
-            // Last segment must be vertical (shared X)
-            if (Math.abs(last.x - prev.x) > 0.5) {
-                if (Math.abs(last.y - prev.y) > 0.5) {
-                    // Standard L-connector: corner at (last.x, prev.y)
-                    result.splice(n - 1, 0, { x: last.x, y: prev.y });
-                } else {
-                    // Degenerate: prev is directly left/right of target →
-                    // insert stub in the entry direction
-                    const stubY = targetSide === 'bottom'
-                        ? last.y + STUB_LENGTH : last.y - STUB_LENGTH;
-                    result.splice(n - 1, 0,
-                        { x: prev.x, y: stubY },
-                        { x: last.x, y: stubY },
-                    );
-                }
-            }
-        }
-    }
-
-    return result;
-}
-
-// ── A* path computation ─────────────────────────────────────
-
-/** Direction offsets for the four cardinal directions keyed by Side. */
-const SIDE_OFFSETS: Record<Side, { dc: number; dr: number }> = {
-    top:    { dc: 0, dr: -1 },
-    bottom: { dc: 0, dr:  1 },
-    left:   { dc: -1, dr: 0 },
-    right:  { dc:  1, dr: 0 },
-};
-
-/**
- * Force-clear the grid cell at a world point AND a small corridor (6 cells)
- * in the exit/entry direction.  This is called AFTER the re-mark step to
- * guarantee that A* can start from / reach source and target anchors even
- * when nearby obstacle rects overlap with the anchor cell.
- */
-function forceStartGoalWalkable(
-    grid: ObstacleGrid,
-    worldX: number,
-    worldY: number,
-    side: Side,
-): void {
-    const cell = grid.toGrid(worldX, worldY);
-    const { dc, dr } = SIDE_OFFSETS[side];
-
-    // Clear the anchor cell itself
-    grid.clearCell(cell.col, cell.row);
-
-    // Clear a corridor of 6 cells in the exit/entry direction
-    // (wider than the 4-cell clearCorridor to bridge any re-marked gap)
-    for (let d = 1; d <= 6; d++) {
-        grid.clearCell(cell.col + dc * d, cell.row + dr * d);
-    }
-}
-
-/**
- * Compute a Manhattan path using the A* grid router.
- *
- * Optimisation: first checks whether the classic Manhattan path is obstacle-free
- * (including both nodes and tree segments). If so the analytic path is returned
- * directly (cleaner appearance, zero grid cost).
- * Otherwise builds a per-edge obstacle grid and runs A*.
- * If A* fails, falls back to the classic computeManhattanPath.
- *
- * @param grid - Shared obstacle grid from ObstacleGridContext
- * @param nodeRects - Pre-computed node rectangles from ObstacleGridContext
- */
-export function computeAStarPath(
-    grid: ObstacleGrid,
-    sourceX: number,
-    sourceY: number,
-    sourceSide: Side,
-    targetX: number,
-    targetY: number,
-    targetSide: Side,
-    sourceNodeId: string,
-    targetNodeId: string,
-    nodeRects: NodeRect[],
-): string {
-    // Collect IDs of ancestors of source/target (packages that contain them)
-    const ancestorIds = new Set<string>();
-    const collectAncestors = (nodeId: string) => {
-        const entry = nodeRects.find(n => n.id === nodeId);
-        if (entry?.parentId) {
-            ancestorIds.add(entry.parentId);
-            collectAncestors(entry.parentId);
-        }
-    };
-    collectAncestors(sourceNodeId);
-    collectAncestors(targetNodeId);
-
-    // IDs to exclude from obstacle checks (source, target, ancestors)
-    const excludeIds = new Set<string>([sourceNodeId, targetNodeId, ...ancestorIds]);
-
-    // ── Fast path: classic Manhattan route doesn't hit anything ──
-    const classicPath = computeManhattanPath(sourceX, sourceY, sourceSide, targetX, targetY, targetSide);
-    const classicPoints = parsePathPoints(classicPath);
-    const obstructed = isPathObstructed(classicPoints, nodeRects, excludeIds, OBSTRUCTION_CHECK_PADDING);
-
-    if (!obstructed) {
-        return classicPath;
-    }
-
-    // ── A* needed: build per-edge grid ──
-    // Use REDUCED padding (5 px ≈ half a cell) compared to the shared grid (20 px).
-    // The shared grid's 20 px padding is fine for the fast-path obstruction check,
-    // but for the A* grid it creates continuous walls between closely-spaced nodes
-    // that leave no walkable cells for the pathfinder to navigate around obstacles.
-    // 5 px keeps a small aesthetic margin while ensuring navigability.
-    const A_STAR_PADDING = 5;
-    const perEdgeGrid = new ObstacleGrid({
-        cellSize: grid.cellSize,
-        padding: A_STAR_PADDING,
-        bounds: { ...grid.bounds },
-    });
-
-    // Mark node obstacles (with the reduced 5 px padding)
-    for (const entry of nodeRects) {
-        if (excludeIds.has(entry.id) || entry.type === 'packageNode') continue;
-        perEdgeGrid.markObstacle(entry.rect);
-    }
-
-    // Mark tree obstacles (thin rects, no extra padding — rect already includes margin).
-    for (const [, treeEntry] of treeObstacleRegistry) {
-        for (const rect of treeEntry.rects) {
-            perEdgeGrid.markRect(rect);
-        }
-    }
-
-    // Clear corridors for source and target so the path can reach them
-    const sourceEntry = nodeRects.find(n => n.id === sourceNodeId);
-    const targetEntry = nodeRects.find(n => n.id === targetNodeId);
-    if (sourceEntry) perEdgeGrid.clearCorridor(sourceEntry.rect, sourceSide, 4);
-    if (targetEntry) perEdgeGrid.clearCorridor(targetEntry.rect, targetSide, 4);
-
-    // Re-mark core rects (without padding) for non-excluded obstacle nodes.
-    // clearCorridor may have unblocked cells belonging to intermediate nodes
-    // (e.g., node B between vertically-aligned A and C). Re-marking their core
-    // rects ensures intermediate nodes stay solid obstacles.
-    for (const entry of nodeRects) {
-        if (excludeIds.has(entry.id) || entry.type === 'packageNode') continue;
-        perEdgeGrid.markRect(entry.rect);
-    }
-
-    // Re-clear corridors AFTER re-mark: the re-mark step can re-block cells
-    // inside the source/target corridors when an obstacle's core rect overlaps
-    // with the corridor zone.  Running clearCorridor again ensures the A*
-    // pathfinder can always reach source and target anchors.
-    if (sourceEntry) perEdgeGrid.clearCorridor(sourceEntry.rect, sourceSide, 4);
-    if (targetEntry) perEdgeGrid.clearCorridor(targetEntry.rect, targetSide, 4);
-
-    // Final safety: force-clear the exact anchor cells + exit/entry direction
-    forceStartGoalWalkable(perEdgeGrid, sourceX, sourceY, sourceSide);
-    forceStartGoalWalkable(perEdgeGrid, targetX, targetY, targetSide);
-
-    // Run A*
-    const result = astarManhattan(
-        perEdgeGrid,
-        { x: sourceX, y: sourceY },
-        { x: targetX, y: targetY },
-        sourceSide,
-        targetSide,
-    );
-
-    if (!result.success || result.path.length < 2) {
-        return classicPath;
-    }
-
-    // Line-of-sight smoothing: shortcut unnecessary intermediate waypoints
-    // by checking if non-adjacent points can be connected directly or via
-    // a single L-connector without hitting obstacles on the per-edge grid.
-    const smoothed = smoothPath(result.path, perEdgeGrid);
-
-    // FIX 1: Align first/last segments with exit/entry directions
-    const aligned = alignPathEndpoints(smoothed, sourceSide, targetSide);
-    const finalPoints = cleanPoints(aligned);
-    return pointsToPath(finalPoints);
 }
 
 // ============================================
@@ -1646,9 +1238,12 @@ export function getEdgeCrossings(
 
                     // FIX 3a: Skip crossings inside or very near any node
                     // (edges naturally converge near nodes — bridges there are spurious)
+                    // Package nodes are excluded — they are containers, not real obstacles.
                     if (nodeRects) {
                         let nearNode = false;
                         for (const nr of nodeRects) {
+                            // Skip package containers — they wrap the whole diagram
+                            if (nr.type === 'packageNode') continue;
                             const r = nr.rect;
                             if (cx >= r.x - NODE_CROSSING_MARGIN &&
                                 cx <= r.x + r.width + NODE_CROSSING_MARGIN &&

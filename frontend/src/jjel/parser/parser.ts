@@ -3,17 +3,19 @@
  * Recursive descent parser for Jjodel Expression Language
  *
  * Operator Precedence (lowest to highest):
+ * 0. forall / exists / with...do (keyword expressions)
  * 1. if then else
  * 2. ?? (null coalesce)
- * 3. or
- * 4. and
- * 5. == !=
- * 6. < > <= >=
- * 7. is
- * 8. + -
- * 9. * / %
- * 10. not - (unary)
- * 11. . ?. (postfix)
+ * 3. implies (right-associative)
+ * 4. or
+ * 5. and
+ * 6. == !=
+ * 7. < > <= >=
+ * 8. is
+ * 9. + -
+ * 10. * / %
+ * 11. not - (unary)
+ * 12. . ?. [] (postfix)
  */
 
 import {
@@ -34,10 +36,16 @@ import {
     IfThenElseExpr,
     NullCoalesceExpr,
     IsTypeExpr,
+    ImpliesExpr,
     LambdaExpr,
     ArrayLiteralExpr,
     InterpolatedStringExpr,
     InterpolatedStringPart,
+    ForAllExpr,
+    ExistsExpr,
+    WithDoExpr,
+    IndexAccessExpr,
+    ObjectLiteralExpr,
     ASTLocation,
     BinaryOperator,
 } from '../types';
@@ -72,9 +80,12 @@ export class JjelParser {
     // ============================================
 
     /**
-     * expression = ifThenElse
+     * expression = forall | exists | withDo | ifThenElse
      */
     private expression(): JjelExpression {
+        if (this.check(JjelTokenType.FORALL)) return this.forAll();
+        if (this.check(JjelTokenType.EXISTS)) return this.exists();
+        if (this.check(JjelTokenType.WITH))   return this.withDo();
         return this.ifThenElse();
     }
 
@@ -107,13 +118,13 @@ export class JjelParser {
     }
 
     /**
-     * nullCoalesce = logicalOr (?? logicalOr)*
+     * nullCoalesce = implies (?? implies)*
      */
     private nullCoalesce(): JjelExpression {
-        let expr = this.logicalOr();
+        let expr = this.implies();
 
         while (this.match(JjelTokenType.NULL_COALESCE)) {
-            const right = this.logicalOr();
+            const right = this.implies();
             expr = {
                 type: 'NullCoalesce',
                 left: expr,
@@ -123,6 +134,25 @@ export class JjelParser {
         }
 
         return expr;
+    }
+
+    /**
+     * implies = logicalOr (IMPLIES implies)?   — right-associative
+     */
+    private implies(): JjelExpression {
+        const left = this.logicalOr();
+
+        if (this.match(JjelTokenType.IMPLIES)) {
+            const right = this.implies(); // right-recursive → right-associative
+            return {
+                type: 'Implies',
+                left,
+                right,
+                location: this.makeLocationFromExprs(left, right),
+            } as ImpliesExpr;
+        }
+
+        return left;
     }
 
     /**
@@ -353,6 +383,16 @@ export class JjelParser {
                         location: this.makeLocation(this.getStartToken(expr), propToken),
                     } as NullSafeMemberAccessExpr;
                 }
+            } else if (this.match(JjelTokenType.LBRACKET)) {
+                // Index access: expr[index]
+                const index = this.expression();
+                this.consume(JjelTokenType.RBRACKET, "Expected ']' after index");
+                expr = {
+                    type: 'IndexAccess',
+                    object: expr,
+                    index,
+                    location: this.makeLocation(this.getStartToken(expr), this.previous()),
+                } as IndexAccessExpr;
             } else {
                 break;
             }
@@ -413,17 +453,32 @@ export class JjelParser {
             return this.arrayLiteral();
         }
 
+        // Object literal: {key: expr, ...}
+        if (this.match(JjelTokenType.LBRACE)) {
+            return this.objectLiteral();
+        }
+
         // Parenthesized expression or lambda with multiple params
         if (this.match(JjelTokenType.LPAREN)) {
             return this.parenthesizedOrLambda();
+        }
+
+        // $identifier (dollar-prefixed variable)
+        if (this.match(JjelTokenType.DOLLAR_IDENT)) {
+            const token = this.previous();
+            return {
+                type: 'Identifier',
+                name: token.value,
+                location: this.makeLocation(token, token),
+            } as IdentifierExpr;
         }
 
         // Identifier or single-param lambda
         if (this.match(JjelTokenType.IDENTIFIER)) {
             const token = this.previous();
 
-            // Check for lambda: x: expr
-            if (this.match(JjelTokenType.COLON)) {
+            // Check for lambda: x => expr
+            if (this.match(JjelTokenType.ARROW)) {
                 const body = this.expression();
                 return {
                     type: 'Lambda',
@@ -464,8 +519,8 @@ export class JjelParser {
 
             if (this.match(JjelTokenType.RPAREN)) {
                 // Could be lambda or parenthesized identifier
-                if (this.match(JjelTokenType.COLON)) {
-                    // Multi-param lambda: (a, b): expr
+                if (this.match(JjelTokenType.ARROW)) {
+                    // Multi-param lambda: (a, b) => expr
                     const body = this.expression();
                     return {
                         type: 'Lambda',
@@ -475,7 +530,7 @@ export class JjelParser {
                     } as LambdaExpr;
                 }
 
-                // If only one param and no colon, it was a parenthesized identifier
+                // If only one param and no arrow, it was a parenthesized identifier
                 if (params.length === 1) {
                     return {
                         type: 'Identifier',
@@ -484,8 +539,8 @@ export class JjelParser {
                     } as IdentifierExpr;
                 }
 
-                // Multiple identifiers without colon is an error
-                throw this.error(this.peek(), "Expected ':' for lambda expression");
+                // Multiple identifiers without arrow is an error
+                throw this.error(this.peek(), "Expected '=>' for lambda expression");
             }
         }
 
@@ -517,6 +572,139 @@ export class JjelParser {
         return {
             type: 'ArrayLiteral',
             elements,
+            location: this.makeLocation(startToken, this.previous()),
+        };
+    }
+
+    /**
+     * objectLiteral = { (objectEntry (, objectEntry)*)? }
+     * objectEntry   = (IDENTIFIER | STRING) : expression
+     */
+    private objectLiteral(): ObjectLiteralExpr {
+        const startToken = this.previous(); // the LBRACE
+        const entries: { key: string; value: JjelExpression }[] = [];
+
+        if (!this.check(JjelTokenType.RBRACE)) {
+            do {
+                // Key: identifier or string
+                let key: string;
+                if (this.match(JjelTokenType.IDENTIFIER)) {
+                    key = this.previous().value;
+                } else if (this.match(JjelTokenType.STRING)) {
+                    key = this.previous().value;
+                } else {
+                    throw this.error(this.peek(), "Expected property name (identifier or string) in object literal");
+                }
+
+                this.consume(JjelTokenType.COLON, "Expected ':' after property name in object literal");
+                const value = this.expression();
+                entries.push({ key, value });
+            } while (this.match(JjelTokenType.COMMA));
+        }
+
+        this.consume(JjelTokenType.RBRACE, "Expected '}' after object literal");
+
+        return {
+            type: 'ObjectLiteral',
+            entries,
+            location: this.makeLocation(startToken, this.previous()),
+        };
+    }
+
+    // ============================================
+    // QUANTIFIER / CONTEXT EXPRESSIONS
+    // ============================================
+
+    /**
+     * forall = FORALL IDENT IN nullCoalesce [('such that' | '|') expression] [COLON expression]
+     * At least one of filter or ':' projection must be present.
+     * '|' is an alias for 'such that' (filter separator).
+     * Uses nullCoalesce (not expression) for collection to avoid consuming keywords.
+     */
+    private forAll(): ForAllExpr {
+        const startToken = this.peek();
+        this.consume(JjelTokenType.FORALL, "Expected 'forall'");
+        const varToken = this.consume(JjelTokenType.IDENTIFIER, "Expected variable name after 'forall'");
+        this.consume(JjelTokenType.IN, "Expected 'in' after variable name");
+
+        // Collection: stop before 'such', 'that', ':', '|', keywords
+        const collection = this.nullCoalesce();
+
+        let filter: JjelExpression | undefined;
+        let projection: JjelExpression | undefined;
+
+        if (this.match(JjelTokenType.SUCH)) {
+            this.consume(JjelTokenType.THAT, "Expected 'that' after 'such'");
+            filter = this.expression(); // full expression — allows exists/forall/with/if
+        } else if (this.match(JjelTokenType.PIPE)) {
+            filter = this.expression(); // '|' is alias for 'such that'
+        }
+
+        if (this.match(JjelTokenType.COLON)) {
+            projection = this.expression();
+        }
+
+        if (!filter && !projection) {
+            throw this.error(this.peek(), "forall requires 'such that' / '|' clause, ':' projection, or both");
+        }
+
+        return {
+            type: 'ForAll',
+            variable: varToken.value,
+            collection,
+            filter,
+            projection,
+            location: this.makeLocation(startToken, this.previous()),
+        };
+    }
+
+    /**
+     * exists = EXISTS IDENT IN nullCoalesce ('such that' | '|') expression
+     * NOTE: ':' is NOT accepted for exists — use 'such that' or '|' instead.
+     */
+    private exists(): ExistsExpr {
+        const startToken = this.peek();
+        this.consume(JjelTokenType.EXISTS, "Expected 'exists'");
+        const varToken = this.consume(JjelTokenType.IDENTIFIER, "Expected variable name after 'exists'");
+        this.consume(JjelTokenType.IN, "Expected 'in' after variable name");
+
+        const collection = this.nullCoalesce();
+
+        if (this.match(JjelTokenType.SUCH)) {
+            this.consume(JjelTokenType.THAT, "Expected 'that' after 'such'");
+        } else if (this.match(JjelTokenType.PIPE)) {
+            // '|' is alias for 'such that'
+        } else if (this.check(JjelTokenType.COLON)) {
+            throw this.error(this.peek(), "exists does not accept ':' as separator — use 'such that' or '|' instead");
+        } else {
+            throw this.error(this.peek(), "exists requires 'such that' or '|' followed by predicate");
+        }
+
+        const predicate = this.expression();
+
+        return {
+            type: 'Exists',
+            variable: varToken.value,
+            collection,
+            predicate,
+            location: this.makeLocation(startToken, this.previous()),
+        };
+    }
+
+    /**
+     * withDo = WITH nullCoalesce DO expression
+     */
+    private withDo(): WithDoExpr {
+        const startToken = this.peek();
+        this.consume(JjelTokenType.WITH, "Expected 'with'");
+        const context = this.nullCoalesce(); // stop before 'do'
+        this.consume(JjelTokenType.DO, "Expected 'do' after context expression");
+        const body = this.expression();
+
+        return {
+            type: 'WithDo',
+            context,
+            body,
             location: this.makeLocation(startToken, this.previous()),
         };
     }

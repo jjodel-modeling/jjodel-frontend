@@ -181,7 +181,7 @@ function MetamodelTabComponent(props: AllProps) {
         </div>}
 
 
-        <EditorSwitch modelid={model.id}>
+        <EditorSwitch modelid={model.id} isMetamodel>
             <div className={'d-flex h-100'} style={{overflow:'hidden'}} onClick={e => { if (!U.isProjectModified) U.isProjectModified = U.userHasInteracted = true; }}>
                 {/* Fixed Features Palette - always visible */}
                 <FeaturesPalette />

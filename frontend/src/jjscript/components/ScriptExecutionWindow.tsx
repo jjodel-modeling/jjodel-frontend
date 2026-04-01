@@ -11,8 +11,9 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import {ScriptTarget, ScriptLineResult, ExecutionErrorInfo, ExecutionStats} from './ScriptBlock';
+import {ScriptTarget, ScriptLineResult, ExecutionStats} from './ScriptBlock';
 import { ExecutionErrorDialog, } from './ExecutionErrorDialog';
+import {ExecutionErrorInfo, ExecutionPauseInfo, parseError} from '../executor/errors';
 import './ScriptExecutionWindow.scss';
 // import {ExecutionStats} from "../../jjtl/executor";
 // ============================================
@@ -86,7 +87,7 @@ export const ScriptExecutionWindow: React.FC<ScriptExecutionWindowProps> = ({
     // Error dialog state
     const [errorDialogOpen, setErrorDialogOpen] = useState(false);
     const [errorDialogInfo, setErrorDialogInfo] = useState<ExecutionErrorInfo | null>(null);
-    const [executionStats, setExecutionStats] = useState<ExecutionStats>(new ExecutionStats());
+    // const [executionStats, setExecutionStats] = useState<ExecutionStats>(new ExecutionStats());
     const [executionStartTime, setExecutionStartTime] = useState<number>(0);
 
     // Refs
@@ -97,25 +98,70 @@ export const ScriptExecutionWindow: React.FC<ScriptExecutionWindowProps> = ({
     const errorActionResolverRef = useRef<((action: 're-evaluate' | 'stop' | 'continue') => void) | null>(null);
     const reEvaluateCommandRef = useRef<string>('');
 
-    // Parse script into lines
+    // Parse script into lines, grouping do...end blocks into single logical lines
     useEffect(() => {
         if (!isOpen) return;
 
-        const lines = script.split('\n');
-        const parsed: ParsedLine[] = lines.map((text, index) => {
-            const trimmed = text.trim();
-            const isComment = trimmed.startsWith('//') || trimmed.startsWith('#');
-            const isTargetCommand = trimmed.toLowerCase().startsWith('target ');
-            const isEmpty = trimmed === '';
-            const isExecutable = !isComment && !isTargetCommand && !isEmpty;
+        const rawLines = script.split('\n');
+        const parsed: ParsedLine[] = [];
+        let blockLines: string[] | null = null;
+        let blockStartIndex = 0;
+        let depth = 0;
 
-            return {
-                index,
-                text,
-                isExecutable,
-                status: isExecutable ? 'pending' : 'skip',
-            };
-        });
+        for (let i = 0; i < rawLines.length; i++) {
+            const text = rawLines[i];
+            const trimmed = text.trim();
+            const lower = trimmed.toLowerCase();
+            const isComment = trimmed.startsWith('//') || trimmed.startsWith('#');
+            const isTargetCommand = lower.startsWith('target ');
+            const isEmpty = trimmed === '';
+
+            const doOpens = !isComment && !isEmpty && (
+                lower === 'do' || lower.endsWith(' do') || / do$/.test(lower)
+            );
+            const isEnd = !isComment && (lower === 'end' || lower === 'end;');
+
+            if (doOpens && blockLines === null) {
+                // Start collecting a block
+                blockLines = [text];
+                blockStartIndex = i;
+                depth = 1;
+            } else if (blockLines !== null) {
+                blockLines.push(text);
+                if (doOpens) depth++;
+                if (isEnd) depth--;
+                if (depth <= 0) {
+                    // Block complete — emit as single logical line
+                    const joinedText = blockLines.join('\n');
+                    parsed.push({
+                        index: blockStartIndex,
+                        text: joinedText,
+                        isExecutable: true,
+                        status: 'pending',
+                    });
+                    blockLines = null;
+                    depth = 0;
+                }
+            } else {
+                const isExecutable = !isComment && !isTargetCommand && !isEmpty;
+                parsed.push({
+                    index: i,
+                    text,
+                    isExecutable,
+                    status: isExecutable ? 'pending' : 'skip',
+                });
+            }
+        }
+
+        // Unterminated block — push as-is
+        if (blockLines !== null) {
+            parsed.push({
+                index: blockStartIndex,
+                text: blockLines.join('\n'),
+                isExecutable: true,
+                status: 'pending',
+            });
+        }
 
         setParsedLines(parsed);
         setCurrentExecutableIndex(-1);
@@ -145,7 +191,7 @@ export const ScriptExecutionWindow: React.FC<ScriptExecutionWindowProps> = ({
     const showErrorDialog = useCallback((
         line: ParsedLine,
         errorMessage: string,
-        executedCommands: number,
+        commandsExecuted: number,
         errors: number
     ): Promise<'re-evaluate' | 'stop' | 'continue'> => {
         return new Promise((resolve) => {
@@ -154,17 +200,15 @@ export const ScriptExecutionWindow: React.FC<ScriptExecutionWindowProps> = ({
             setErrorDialogInfo({
                 lineNumber: line.index + 1,
                 command: line.text.trim(),
-                error: errorMessage,
+                executedSoFar: commandsExecuted,
+                totalCommands: commandsExecuted + errors,
+                elapsedMs: Date.now() - executionStartTime,
+                error: parseError(errorMessage, line.text.trim()),
                 errorType: errorMessage.toLowerCase().includes('not found') ? 'not_found' :
                            errorMessage.toLowerCase().includes('parse') ? 'parse' : 'execution',
             });
 
-            setExecutionStats({
-                ...executionStats,
-                executedCommands,
-                errors,
-                duration,
-            });
+            // setExecutionStats({...executionStats, commandsExecuted, errors, duration });
 
             errorActionResolverRef.current = resolve;
             setErrorDialogOpen(true);
@@ -615,11 +659,9 @@ export const ScriptExecutionWindow: React.FC<ScriptExecutionWindowProps> = ({
             {errorDialogOpen && errorDialogInfo && (
                 <ExecutionErrorDialog
                     isOpen={errorDialogOpen}
-                    error={errorDialogInfo}
-                    stats={executionStats}
-                    onReEvaluate={handleErrorReEvaluate}
-                    onStop={handleErrorStop}
-                    onContinue={handleErrorContinue}
+                    onClose={handleErrorStop}
+                    pauseInfo={errorDialogInfo ?? undefined}
+                    onSkip={handleErrorContinue}
                 />
             )}
         </div>

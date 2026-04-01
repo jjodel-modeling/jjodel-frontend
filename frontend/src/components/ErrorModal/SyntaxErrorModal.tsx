@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { U } from '../../joiner';
+import { Button } from '../common/Button';
 import './syntax-error-modal.scss';
 
 export interface SyntaxErrorModalProps {
@@ -156,14 +157,14 @@ export const SyntaxErrorModal: React.FC<SyntaxErrorModalProps> = ({
 
         {/* Action Buttons */}
         <div className="modal-actions">
-          <button className="btn btn-secondary" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose}>
             Close
-          </button>
+          </Button>
           {onRetry && (
-            <button className="btn btn-primary" onClick={onRetry}>
+            <Button variant="primary" onClick={onRetry}>
               <i className="bi bi-arrow-clockwise" />
               Try Again
-            </button>
+            </Button>
           )}
         </div>
 
@@ -215,13 +216,14 @@ export const SyntaxErrorModal: React.FC<SyntaxErrorModalProps> = ({
 
               {/* Copy All Button */}
               <div className="technical-details__actions">
-                <button
-                  className="btn btn-ghost btn-small"
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={copyAllErrorDetails}
                 >
                   <i className={`bi ${copiedAll ? 'bi-check' : 'bi-clipboard'}`} />
                   {copiedAll ? 'Copied!' : 'Copy All Details'}
-                </button>
+                </Button>
               </div>
             </div>
           )}

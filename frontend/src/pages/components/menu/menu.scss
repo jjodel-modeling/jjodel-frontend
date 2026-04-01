@@ -285,6 +285,8 @@ hr.divisor {
   transition: transform 150ms ease, box-shadow 150ms ease;
   user-select: none;
 
+  i { color: inherit; }
+
   &:hover {
     transform: scale(1.05);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);

@@ -9,6 +9,7 @@
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { EmptyState as JjEmptyState } from '../../components/ui/EmptyState';
 import { MetamodelElement } from './MetamodelTreeView';
 import {
     MappingSuggestion,
@@ -46,6 +47,31 @@ export interface SuggestedMappingsPanelProps {
 }
 
 /**
+ * Check if a conversionHint looks like a valid JjEL expression.
+ * Plain English text (prose) should be emitted as a -- comment instead of : expr.
+ */
+function isJjelExpression(hint: string): boolean {
+    // Must contain at least one code-like character: operator, paren, dot, digit, bracket, or =
+    return /[().=\[\]><!+\-*/%&|0-9]/.test(hint);
+}
+
+/**
+ * Format a single attribute mapping line in JjTL syntax.
+ * conversionHint is either a JjEL expression (: expr) or falls back to a -- comment.
+ */
+function formatAttrMapping(attr: MappingSuggestion): string {
+    let line = `    ${attr.targetAttribute} := ${attr.sourceAttribute}`;
+    if (attr.conversionHint) {
+        if (isJjelExpression(attr.conversionHint)) {
+            line += ` : ${attr.conversionHint}`;
+        } else {
+            line += `  -- ${attr.conversionHint}`;
+        }
+    }
+    return line;
+}
+
+/**
  * Generate JjTL code from toInsert mapping suggestions
  */
 function generateJjtlCode(mappings: MappingSuggestion[]): string {
@@ -76,14 +102,14 @@ function generateJjtlCode(mappings: MappingSuggestion[]): string {
 
         code += `${classMapping.sourceClass} -> ${classMapping.targetClass}`;
 
+        if (classMapping.guardHint) {
+            code += ` where ${classMapping.guardHint}`;
+        }
+
         if (matchingAttrs.length > 0) {
             code += ' {\n';
             for (const attr of matchingAttrs) {
-                code += `    ${attr.sourceAttribute} -> ${attr.targetAttribute}`;
-                if (attr.conversionHint) {
-                    code += ` : ${attr.conversionHint}`;
-                }
-                code += '\n';
+                code += formatAttrMapping(attr) + '\n';
             }
             code += '}';
         }
@@ -100,11 +126,7 @@ function generateJjtlCode(mappings: MappingSuggestion[]): string {
 
         code += `${sourceClass} -> ${targetClass} {\n`;
         for (const attr of attrs) {
-            code += `    ${attr.sourceAttribute} -> ${attr.targetAttribute}`;
-            if (attr.conversionHint) {
-                code += ` : ${attr.conversionHint}`;
-            }
-            code += '\n';
+            code += formatAttrMapping(attr) + '\n';
         }
         code += '}\n\n';
     }
@@ -432,11 +454,11 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
 
                             {/* Empty State */}
                             {visibleSuggestions.length === 0 && (
-                                <div className="empty-state">
-                                    <i className="bi bi-inbox" />
-                                    <p>No mappings suggested</p>
-                                    <span>Try using AI mode for semantic analysis</span>
-                                </div>
+                                <JjEmptyState
+                                    icon="bi-inbox"
+                                    title="No mappings suggested"
+                                    description="Try using AI mode for semantic analysis."
+                                />
                             )}
                         </div>
                     )}

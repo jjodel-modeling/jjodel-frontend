@@ -177,13 +177,17 @@ export class BidirectionalityAnalyzer {
         const issues: BidirectionalityIssue[] = [];
         const attributeAnalyses: AttributeAnalysis[] = [];
 
+        const sourceDesc = mapping.sources.map(s => s.alias ? `${s.className} ${s.alias}` : s.className).join(', ');
+        const mappingName = `${sourceDesc} -> ${mapping.targetClass}`;
+        const primarySourceClass = mapping.sources[0]?.className ?? '';
+
         // Check for conditional mapping
         if (mapping.condition) {
             issues.push({
                 type: 'conditional_mapping',
-                message: `Class mapping ${mapping.sourceClass} -> ${mapping.targetClass} has a 'when' condition`,
+                message: `Class mapping ${mappingName} has a 'when' condition`,
                 location: mapping.location?.start,
-                mapping: `${mapping.sourceClass} -> ${mapping.targetClass}`,
+                mapping: mappingName,
                 severity: 'warning',
             });
             this.issues.push(issues[issues.length - 1]);
@@ -197,7 +201,7 @@ export class BidirectionalityAnalyzer {
                     type: 'conditional_mapping',
                     message: `Non-1:1 multiplicity may affect reversibility`,
                     location: mapping.location?.start,
-                    mapping: `${mapping.sourceClass} -> ${mapping.targetClass}`,
+                    mapping: mappingName,
                     severity: 'warning',
                 });
             }
@@ -205,7 +209,7 @@ export class BidirectionalityAnalyzer {
 
         // Analyze body items
         for (const item of mapping.body) {
-            const analysis = this.analyzeBodyItem(item, `${mapping.sourceClass} -> ${mapping.targetClass}`);
+            const analysis = this.analyzeBodyItem(item, mappingName);
             if ('sourceAttribute' in analysis || 'targetAttribute' in analysis) {
                 attributeAnalyses.push(analysis as AttributeAnalysis);
             }
@@ -218,7 +222,7 @@ export class BidirectionalityAnalyzer {
         const bidirectional = issues.length === 0;
 
         return {
-            sourceClass: mapping.sourceClass,
+            sourceClass: primarySourceClass,
             targetClass: mapping.targetClass,
             bidirectional,
             issues,

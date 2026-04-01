@@ -1,47 +1,32 @@
 /**
  * AI Provider Icons
  *
- * Uses react-icons for OpenAI
- * Uses inline SVG for Claude, DeepSeek, Gemini, Mistral, Groq
+ * Uses bootstrap-icons 1.13.1 for Claude, OpenAI
+ * Uses react-icons for Gemini
+ * Uses inline SVG for Mistral, Groq, DeepSeek
  */
 
 import React from 'react';
-import { SiOpenai } from 'react-icons/si';
+import { RiGeminiLine } from 'react-icons/ri';
 
 interface IconProps {
     size?: number;
     className?: string;
 }
 
-// OpenAI Icon (from react-icons)
+// OpenAI Icon (bootstrap-icons 1.13.1)
 export const OpenAIIcon: React.FC<IconProps> = ({ size = 18, className }) => (
-    <SiOpenai size={size} className={className} />
+    <i className={`bi bi-openai ${className || ''}`} style={{ fontSize: size }} />
 );
 
-// Claude/Anthropic Icon (custom SVG - stylized "C")
+// Claude/Anthropic Icon (bootstrap-icons 1.13.1)
 export const ClaudeIcon: React.FC<IconProps> = ({ size = 18, className }) => (
-    <svg
-        width={size}
-        height={size}
-        viewBox="0 0 24 24"
-        fill="currentColor"
-        className={className}
-    >
-        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1.5 14.5c-2.49 0-4.5-2.01-4.5-4.5s2.01-4.5 4.5-4.5c1.24 0 2.36.5 3.17 1.32l-1.28 1.28c-.49-.49-1.15-.77-1.89-.77-1.52 0-2.75 1.23-2.75 2.75s1.23 2.75 2.75 2.75c1.34 0 2.17-.78 2.4-1.87h-2.4v-1.75h4.28c.05.27.08.55.08.85 0 2.64-1.77 4.44-4.36 4.44z"/>
-    </svg>
+    <i className={`bi bi-claude ${className || ''}`} style={{ fontSize: size }} />
 );
 
-// Google Gemini Icon (custom SVG - sparkle/star shape)
+// Google Gemini Icon (react-icons)
 export const GeminiIcon: React.FC<IconProps> = ({ size = 18, className }) => (
-    <svg
-        width={size}
-        height={size}
-        viewBox="0 0 24 24"
-        fill="currentColor"
-        className={className}
-    >
-        <path d="M12 2L9.19 9.19 2 12l7.19 2.81L12 22l2.81-7.19L22 12l-7.19-2.81L12 2zm0 4.83l1.5 3.84 3.84 1.5-3.84 1.5-1.5 3.84-1.5-3.84-3.84-1.5 3.84-1.5L12 6.83z"/>
-    </svg>
+    <RiGeminiLine size={size} className={className} />
 );
 
 // DeepSeek Icon (custom SVG - stylized "D" wave)
@@ -78,16 +63,19 @@ export const MistralIcon: React.FC<IconProps> = ({ size = 18, className }) => (
     </svg>
 );
 
-// Groq Icon (custom SVG - stylized "G" bolt)
+// Groq Icon (custom SVG - based on official logo)
 export const GroqIcon: React.FC<IconProps> = ({ size = 18, className }) => (
     <svg
+        viewBox="0 0 100 100"
         width={size}
         height={size}
-        viewBox="0 0 24 24"
-        fill="currentColor"
+        xmlns="http://www.w3.org/2000/svg"
         className={className}
     >
-        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.94-.49-7-3.85-7-7.93s3.06-7.44 7-7.93v2.02c-2.83.48-5 2.94-5 5.91s2.17 5.43 5 5.91v2.02zm2-2.02c2.83-.48 5-2.94 5-5.91h-3v-2h3c0-2.97-2.17-5.43-5-5.91V2.07c3.94.49 7 3.85 7 7.93v4c0 4.08-3.06 7.44-7 7.93v-2.02z"/>
+        <rect width="100" height="100" rx="16" fill="#F55036"/>
+        <path d="M 67 32 A 24 24 0 1 0 67 68 L 67 54
+                 A 10 10 0 1 1 57 40 L 67 40 Z"
+              fill="white"/>
     </svg>
 );
 

@@ -74,15 +74,38 @@ function computePortDistribution(
         const sourceSide = getBaseSide(edge.sourceHandle);
         const targetSide = getBaseSide(edge.targetHandle);
 
-        // --- Source side: each edge gets its own port ---
+        // --- Source side ---
         const sourceKey = `${edge.source}:${sourceSide}`;
         if (!sideGroups.has(sourceKey)) sideGroups.set(sourceKey, []);
-        sideGroups.get(sourceKey)!.push({
-            edgeIds: [edge.id],
-            edgeType,
-            role: 'source',
-            otherNodeIds: [edge.target],
-        });
+
+        if (edgeType === 'inheritance') {
+            // Inheritance fan-out: all inheritance edges FROM same node+side share ONE port.
+            // Mirrors the target-side fan-in. In UML, a child class has a single
+            // generalization arrow stub even when extending multiple parents.
+            const sourceGroups = sideGroups.get(sourceKey)!;
+            const existingInh = sourceGroups.find(
+                g => g.edgeType === 'inheritance' && g.role === 'source'
+            );
+            if (existingInh) {
+                existingInh.edgeIds.push(edge.id);
+                existingInh.otherNodeIds.push(edge.target);
+            } else {
+                sourceGroups.push({
+                    edgeIds: [edge.id],
+                    edgeType: 'inheritance',
+                    role: 'source',
+                    otherNodeIds: [edge.target],
+                });
+            }
+        } else {
+            // Non-inheritance: each edge gets its own port
+            sideGroups.get(sourceKey)!.push({
+                edgeIds: [edge.id],
+                edgeType,
+                role: 'source',
+                otherNodeIds: [edge.target],
+            });
+        }
 
         // --- Target side ---
         const targetKey = `${edge.target}:${targetSide}`;

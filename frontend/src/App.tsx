@@ -45,6 +45,10 @@ import { TreeViewPanelProvider } from './contexts/TreeViewPanelContext';
 import { GlobalDrawer } from './components/GlobalDrawer';
 import { JjtlDialogManager } from './jjtl/components';
 import { SettingsModalProvider } from './contexts/SettingsModalContext';
+import { ToastProvider } from './components/Toast';
+import { DonationBanner } from './components/DonationBanner/DonationBanner';
+import HelpDrawer from './components/HelpDrawer';
+import ExplainModal from './components/ExplainModal';
 
 let firstLoading = true;
 let browserData = U.getOSBrowserData();
@@ -102,6 +106,7 @@ function App(props: AllProps): JSX.Element {
 
     return (<>
         <SettingsModalProvider>
+        <ToastProvider>
         <DevModeProvider>
         <GlobalDrawerProvider>
         <FeaturesPanelProvider>
@@ -154,12 +159,16 @@ function App(props: AllProps): JSX.Element {
                     {user && <Try><Jodie/></Try>}
                 </HashRouter>
                 {user && <Try><GlobalDrawer/></Try>}
+                {user && <Try><HelpDrawer/></Try>}
+                {user && <Try><ExplainModal/></Try>}
+                {user && <Try><DonationBanner/></Try>}
 
             </div>
         </TreeViewPanelProvider>
         </FeaturesPanelProvider>
         </GlobalDrawerProvider>
         </DevModeProvider>
+        </ToastProvider>
         </SettingsModalProvider>
     </>);
 

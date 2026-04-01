@@ -1,0 +1,131 @@
+/**
+ * StatusBar Styles
+ * Fixed 32px bar at the bottom of the viewport.
+ * Prefix: app-statusbar (avoids collision with jjtl-statusbar)
+ *
+ * Right-zone item styles live in StatusBarRightZone.scss (shared with JjTL bar).
+ */
+
+.app-statusbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 32px;
+    min-height: 32px;
+    max-height: 32px;
+    padding: 0 12px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter Variable', sans-serif;
+    font-size: 11px;
+    color: #64748b;
+    z-index: 50;
+    flex-shrink: 0;
+    user-select: none;
+
+    // ── Left zone ──
+
+    &__left {
+        display: flex;
+        align-items: center;
+        gap: 0;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    &__stat {
+        white-space: nowrap;
+        color: #64748b;
+
+        strong {
+            font-weight: 500;
+            color: #334155;
+        }
+    }
+
+    // ── Breadcrumb ──
+
+    &__breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 0;
+        min-width: 0;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    &__crumb {
+        color: #94a3b8;
+        font-weight: 400;
+        flex-shrink: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+
+        &--model {
+            color: #334155;
+            font-weight: 500;
+            flex-shrink: 0; // Don't truncate the model name
+        }
+
+        &--last {
+            color: #334155;
+            font-weight: 500;
+            flex-shrink: 1;
+        }
+    }
+
+    &__crumb-icon {
+        margin-right: 4px;
+        font-size: 10px;
+        opacity: 0.7;
+    }
+
+    &__crumb-sep {
+        color: #94a3b8;
+        margin: 0 6px;
+        flex-shrink: 0;
+        font-size: 10px;
+    }
+
+    &__crumb-detail {
+        color: #94a3b8;
+        font-weight: 400;
+    }
+
+    // ── Editor stats ──
+
+    &__stats {
+        white-space: nowrap;
+        color: #64748b;
+        flex-shrink: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    &__middot {
+        color: #94a3b8;
+        margin: 0 4px;
+    }
+
+    // ── Right zone ──
+
+    &__right {
+        display: flex;
+        align-items: center;
+        gap: 0;
+        flex-shrink: 0;
+    }
+
+    // ── Separator (left zone only) ──
+
+    &__sep {
+        display: inline-block;
+        width: 1px;
+        height: 16px;
+        background: #e2e8f0;
+        margin: 0 8px;
+        flex-shrink: 0;
+    }
+}

@@ -14,7 +14,7 @@
 - Manipolare metamodelli via scripting (JjScript)
 - Valutare espressioni sui modelli (JjEL)
 
-**Status UI Redesign:** ~50% completato
+**Status UI Redesign:** ~60% completato (header redesign completato 2026-03-15)
 **Focus:** Ridurre cognitive load mantenendo full functionality
 **Users:** Ricercatori, educatori, studenti (beginner to expert)
 
@@ -41,6 +41,8 @@
 ---
 
 ## 🎨 Design System
+
+> **Full design system spec:** [`docs/DESIGN-SYSTEM.md`](docs/DESIGN-SYSTEM.md) — single source of truth for artifact type colors, component catalog, layout patterns, and interaction behaviors.
 
 ### Colori
 ```scss
@@ -200,21 +202,34 @@ $error: #ef4444;      // Rosso
 frontend/src/
 ├── components/
 │   ├── abstract/tabs/     # Tab components (ModelTab, MetamodelTab)
+│   ├── editor-v2/          # React Flow-based editor (V2)
+│   │   ├── hooks/           # useJjomSync, useEditorMode, useAutoAnchor
+│   │   ├── sync/            # canvasToJjom (RF→JjOM), jjomTransformers (JjOM→RF)
+│   │   ├── panels/          # PalettePanel, PropertiesPanel
+│   │   └── EditorV2.tsx     # Main editor component
 │   ├── project/           # ProjectEditor, Dashboard
 │   └── shared/            # Componenti riutilizzabili
 ├── jjtl/                  # Transformation Language
-│   ├── lexer/             # Tokenizer
-│   ├── parser/            # Parser -> AST
-│   ├── executor/          # Esecuzione trasformazioni
+│   ├── lexer/             # Tokenizer (uses JJTL_KEYWORDS from types/)
+│   ├── parser/            # Recursive descent parser → TransformationAST
+│   ├── executor/
+│   │   ├── executor.ts    # JjtlExecutor — transformation execution
+│   │   └── astBridge.ts   # toJjelAst() — JjTL expr → JjEL expr conversion
 │   ├── editor/            # Monaco integration
 │   ├── components/        # UI (ExecuteTransformationDialog)
 │   ├── views/             # MappingTraceView, DualMetamodelPanel
-│   └── types/             # AST types, transformation types
+│   ├── types/             # AST types (tokens.ts, ast.ts), transformation types
+│   └── __tests__/         # 4 test files (211 tests)
 ├── jjscript/              # Scripting Language
 │   ├── parser/            # Grammar, tokenizer
 │   ├── executor/          # Command execution
 │   └── commands/          # create, copy, delete, etc.
-├── jjel/                  # Expression Language
+├── jjel/                  # Expression Language (standalone evaluator)
+│   ├── lexer/             # Tokenizer
+│   ├── parser/            # Parser → JjelExpression AST
+│   ├── evaluator/         # JjelEvaluator + EvaluationContext + builtins/
+│   ├── types/             # AST types, token types
+│   └── __tests__/         # evaluator.test.ts, parser.test.ts
 ├── joiner/                # Core utilities, Redux, data layer
 └── pages/                 # Route pages
 ```
@@ -294,6 +309,101 @@ TRANSACTION('Description', () => {
 
 ---
 
+## 📐 JjEL - Expression Language
+
+JjEL (Jjodel Expression Language) is the expression evaluation engine used by both JjTL and JjScript. It is a standalone language with its own lexer, parser, evaluator, and type system.
+
+### Architecture
+
+```
+frontend/src/jjel/
+├── lexer/lexer.ts          # Tokenizer
+├── parser/parser.ts        # Recursive descent parser → AST
+├── evaluator/
+│   ├── evaluator.ts        # JjelEvaluator class — main evaluation engine
+│   ├── context.ts          # EvaluationContext — scoped variable bindings
+│   └── builtins/
+│       ├── strings.ts      # 35+ string methods
+│       ├── collections.ts  # 30+ collection methods
+│       ├── numbers.ts      # 35+ numeric methods
+│       └── dates.ts        # 35+ date/time methods
+├── types/
+│   ├── ast.ts              # JjelExpression union type
+│   └── tokens.ts           # Token types
+└── __tests__/
+    ├── evaluator.test.ts   # Evaluator tests
+    └── parser.test.ts      # Parser tests
+```
+
+### Core Constructs
+
+| Construct | Syntax | Example |
+|-----------|--------|---------|
+| Member access | `obj.prop` | `source.name` |
+| Null-safe access | `obj?.prop` | `source?.owner` |
+| Method call | `obj.method()` | `name.toUpper()` |
+| Null coalesce | `a ?? b` | `name ?? "default"` |
+| Conditional | `if c then a else b` | `if active then "yes" else "no"` |
+| Type check | `x is Type` | `value is String` |
+| Implication | `a implies b` | `isAbstract implies hasSubclasses` |
+| Lambda | `x => expr` | `x => x.name` |
+| ForAll (set comp.) | `forall x in S [such that / \| P] [: proj]` | `forall a in attrs \| a.isPublic : a.name` |
+| Exists | `exists x in S (such that / \|) pred` | `exists a in attrs such that a.type == "String"` |
+| With...do | `with expr do body` | `with parent do name.camelCase()` |
+| Array literal | `[a, b, c]` | `["red", "green"]` |
+| Index access | `arr[index]` | `items[0]` |
+| Line comment | `-- comment` | `-- this is ignored` |
+
+### Operators (by precedence, lowest to highest)
+
+1. `if/then/else`, `forall`, `exists`, `with...do` — lowest
+2. `??` — null coalesce
+3. `implies` — right-associative logical implication
+4. `or` — logical OR
+5. `and` — logical AND
+6. `==`, `!=` — equality
+7. `<`, `>`, `<=`, `>=` — comparison
+8. `is` — type check
+9. `+`, `-` — additive (+ also string concat)
+10. `*`, `/`, `%` — multiplicative
+11. `not`, `-` (unary) — unary
+12. `.`, `?.`, `()`, `[index]` — postfix (highest)
+
+### Design Decisions
+
+- `forall` has **set-theoretic semantics** (returns a set, not a boolean)
+- `do` keyword exists ONLY in `with...do` — nowhere else
+- Lambda uses `=>` (not `:`) to avoid conflict with forall projection separator
+- Implicit context: Console uses selected node; JjTL uses matched source element
+- Truthiness: `null`, `false`, `0`, `""`, `[]` are falsy
+
+### Built-in Methods Summary
+
+- **Strings (35+):** `toUpper`, `toLower`, `camelCase`, `pascalCase`, `snakeCase`, `kebabCase`, `capitalize`, `trim`, `split`, `replace`, `contains`, `startsWith`, `endsWith`, `substring`, `length`, `isEmpty`, `matches`, `format`, ...
+- **Collections (30+):** `filter`, `map`, `flatMap`, `first`, `last`, `any`, `all`, `none`, `count`, `size`, `distinct`, `sortBy`, `groupBy`, `join`, `sum`, `avg`, `min`, `max`, `take`, `skip`, ...
+- **Numbers (35+):** `abs`, `round`, `floor`, `ceil`, `sqrt`, `pow`, `clamp`, `between`, `toFixed`, `isInteger`, `isPositive`, ...
+- **Dates (35+):** `now()`, `today()`, `date()`, `year`, `month`, `day`, `addDays`, `diffDays`, `isBefore`, `isAfter`, `format`, ...
+
+### EvaluationContext
+
+Scoped binding system with parent-child relationship:
+
+```typescript
+// Create child context with additional bindings
+const child = parentCtx.child({ myVar: someValue });
+
+// child inherits all parent bindings + has myVar
+```
+
+Used by JjTL executor to pass forall variables into nested scopes.
+
+### Tests
+
+- `frontend/src/jjel/__tests__/evaluator.test.ts` — expression evaluation
+- `frontend/src/jjel/__tests__/parser.test.ts` — parsing to AST
+
+---
+
 ## 📐 JjTL - Transformation Language
 
 ### Sintassi
@@ -307,49 +417,107 @@ to   TargetMetamodel
 SourceClass -> TargetClass {
     # Attribute mapping (copia diretta)
     sourceAttr -> targetAttr
-    
-    # Con conversione
+
+    # Con conversione (value mapping)
     sourceAttr -> targetAttr : true=1, false=0
-    
-    # Con espressione
+
+    # Con espressione JjEL
     sourceAttr -> targetAttr : sourceAttr + "_suffix"
+
+    # Object creation (inline)
+    -> Arc { place -> source.map() }
+
+    # ForAll mapping (iterazione su collezione)
+    forall a in attributes such that not a.multiValued -> Column {
+        -> name : a.name.snakeCase()
+        -> type : a.type
+    }
 }
 ```
 
-### AST Types
+### AST Bridge Architecture
+
+JjTL does NOT have its own expression evaluator. All expression evaluation is delegated to JjEL via `astBridge.ts`:
+
+```
+JjTL Parser → JjTL AST → astBridge.toJjelAst() → JjEL AST → JjelEvaluator.evaluate()
+```
+
+Key mappings in `astBridge.ts`:
+- `FunctionCall` → `MethodCall` (if callee is MemberAccess) or `Identifier`
+- `BinaryExpression` → `Binary` (with operator normalization: `=`→`==`, `<>`→`!=`)
+- `ConditionalExpression` → `IfThenElse`
+- `JjelExpression` wrapper → unwraps inner expression
+
+### AST Types (Key Nodes)
+
 ```typescript
+// Root
 interface TransformationAST {
     type: 'Transformation';
     name: string;
     sourceMetamodel: string;
     targetMetamodel: string;
     mappings: ClassMappingAST[];
+    helpers: HelperAST[];
 }
 
-interface ClassMappingAST {
-    type: 'ClassMapping';
-    sourceClass: string;
+// Class mapping body can contain multiple item types
+type MappingBodyItemAST =
+    | AttributeMappingAST
+    | ForAllMappingAST
+    | AlertStatementAST
+    | NotifyStatementAST;
+
+// ForAll mapping (added 2026-03)
+interface ForAllMappingAST {
+    type: 'ForAllMapping';
+    variable: string;
+    collection: ExpressionAST;
+    filter?: ExpressionAST;         // such that clause
+    objectCreation: ObjectCreationAST;
+}
+
+// Object creation body also supports MappingBodyItemAST (not just AttributeMapping)
+interface ObjectCreationAST {
+    type: 'ObjectCreation';
     targetClass: string;
-    body: AttributeMappingAST[];
-}
-
-interface AttributeMappingAST {
-    type: 'AttributeMapping';
-    sourceAttribute?: string;
-    targetAttribute: string;
-    conversion?: ConversionAST;
+    body: MappingBodyItemAST[];
 }
 ```
 
 ### Esecuzione Trasformazione
+
+**Executor:** `JjtlExecutor` class in `frontend/src/jjtl/executor/executor.ts`
+
+```typescript
+const executor = new JjtlExecutor(ast);
+const result: ExecutionResult = executor.execute(sourceModel);
+// result.success, result.targetModel, result.trace, result.errors, result.warnings
+```
+
+**Execution flow:**
 1. Parse JjTL code → AST
-2. Trova source model instances
-3. Per ogni class mapping:
+2. Deep-copy source model (prevents mutation)
+3. Extract source instances (supports both flat array and `{classes, instances}` format)
+4. Per ogni class mapping:
    - Filtra istanze source per className
    - Crea istanze target
-   - Applica attribute mappings
-4. Crea DModel + DGraph
-5. Aggiungi a Redux state
+   - Applica attribute mappings (direct copy or JjEL conversion)
+   - Esegue ForAll mappings (iterate, filter, create sub-objects)
+5. Result contains `targetModel.instances: Map<string, any[]>`
+
+**ForAll execution:**
+- Evaluates collection expression on source instance
+- Iterates elements, applies `such that` filter via JjEL
+- Creates child EvaluationContext with forall variable bound
+- Executes object creation for each passing element
+- Stores created objects under pluralized property name (e.g., `Column` → `columns`)
+
+**Integration with Jjodel framework:**
+1. Executor produces `ExecutionResult` (pure data, no framework dependency)
+2. `ProjectEditor` takes result and creates DModel + DGraph via framework APIs
+3. Uses deferred attribute setting pattern (see below)
 
 ### ⚠️ Pattern Critici per Object Persistence (2026-02-09)
 
@@ -417,23 +585,56 @@ JjTL is designed as both a user-facing transformation language AND a core IR (In
 - Phase 8: Advanced features (bidirectionality, incrementality, AI-assisted transformation)
 - Cross-cutting: Static invertibility analysis with real-time IDE feedback
 
+### Language Boundaries: JjEL / JjTL / JjScript
+
+| Aspect | JjEL | JjTL | JjScript |
+|--------|------|------|----------|
+| **Purpose** | Expression evaluation | Model-to-model transformation | Metamodel scripting |
+| **Nature** | Pure (no side effects) | Declarative + side effects | Imperative |
+| **Has own evaluator?** | Yes (`JjelEvaluator`) | No — delegates to JjEL via AST bridge | Yes (command executor) |
+| **Keyword overlap** | `if/then/else`, `and/or/not`, `is` | Shares JjEL keywords + `transformation/from/to/forall/in/such/that` | Own keywords |
+| **ForAll semantics** | Returns a boolean (quantifier: `collection.forAll(x: predicate)`) | Creates objects (iteration: `forall x in coll -> Type { ... }`) | N/A |
+
+**Key rule:** JjTL's `forall` is a **mapping construct** (creates target objects as side effect). JjEL's `forall` is a **set comprehension** (returns filtered/projected collection). They share the keyword but have different semantics.
+
+**Symbol ownership:**
+- `do` keyword: ONLY in JjEL's `with...do`. Not in JjTL. Not anywhere else.
+- `->` operator: ONLY in JjTL (mapping arrow). Not in JjEL.
+- `:` separator: JjEL forall projection + JjTL conversion/value mapping (context-distinct).
+- `=>` separator: Lambda in both JjEL and JjTL.
+- `--` comments: Both JjEL and JjTL.
+
+### Grammar Spec References
+
+- **JjEL SPEC:** `frontend/src/jjel/SPEC.md`
+- **JjTL SPEC:** `frontend/src/jjtl/SPEC.md`
+- **JjTL Token definitions:** `frontend/src/jjtl/types/tokens.ts` (`JJTL_KEYWORDS` map)
+- **JjEL Token definitions:** `frontend/src/jjel/types/tokens.ts`
+- **Audit report:** `docs/jjel-jjtl-audit.md` — comprehensive read-only analysis
+- **Design document:** `___JjTL__1_.pdf` — full language design rationale and comparative analysis with ATL, ETL, QVT-R, QVT-O
+
 ### Modifica Sintassi JjTL — Checklist Obbligatoria
 
 Quando si modifica la grammatica JjTL, aggiornare **SEMPRE** tutti e 4 i file:
 
-1. **Lexer** (`frontend/src/jjtl/parser/lexer.ts`) — nuovi token se necessari
-2. **Parser** (`frontend/src/jjtl/parser/parser.ts`) — regole di parsing
-3. **Grammar Rules** (`frontend/src/jjtl/diagrams/types.ts`) — EBNF in `GRAMMAR_RULES`
-4. **Railroad Diagrams** (`frontend/src/jjtl/diagrams/GrammarDiagram.tsx`) — rendering visuale
+1. **Tokens** (`frontend/src/jjtl/types/tokens.ts`) — nuovi token types + keyword map
+2. **Lexer** (`frontend/src/jjtl/lexer/lexer.ts`) — tokenizzazione (usa `JJTL_KEYWORDS` automaticamente)
+3. **Parser** (`frontend/src/jjtl/parser/parser.ts`) — regole di parsing
+4. **Grammar Rules** (`frontend/src/jjtl/diagrams/types.ts`) — EBNF in `GRAMMAR_RULES`
+5. **Railroad Diagrams** (`frontend/src/jjtl/diagrams/GrammarDiagram.tsx`) — rendering visuale
 
 ⚠️ Non aggiornare MAI solo il parser senza gli altri. I railroad diagrams sono la documentazione visiva per l'utente e non si aggiornano automaticamente.
 
-### Stato JjTL (Aggiornamento 2026-02-09)
+### Stato JjTL (Aggiornamento 2026-03-10)
 
 **Completato:**
-- ✅ Parser JjTL → AST
+- ✅ Lexer/Parser JjTL → AST (full recursive descent)
+- ✅ AST Bridge: JjTL expressions → JjEL evaluation (no duplicate evaluator)
 - ✅ Executor: class mapping (A -> B)
 - ✅ Executor: attribute mapping diretto (name -> label)
+- ✅ Executor: conversion expressions via JjEL (`name -> label : name.snakeCase()`)
+- ✅ Executor: ForAll mapping (`forall x in collection such that predicate -> Type { ... }`)
+- ✅ Executor: object creation (`-> Arc { place -> source }`)
 - ✅ Executor: evaluatePropertyPath con fallback multi-strategia
 - ✅ ProjectEditor: creazione modello target con DModel.new
 - ✅ ProjectEditor: creazione istanze con DObject.new
@@ -441,14 +642,34 @@ Quando si modifica la grammatica JjTL, aggiornare **SEMPRE** tutti e 4 i file:
 - ✅ UI: Manhattan arrows per mapping visualization
 - ✅ UI: nomi trasformazioni con `_to_` (no trattini)
 - ✅ UI: nomi modelli unici con numerazione progressiva
+- ✅ Executor: guard conditions (`when` clause) — evaluates via JjEL bridge
+- ✅ Executor: helper functions (`helper` declarations) — registered as JjEL builtins
+- ✅ Interactive statements: alert(), notify(), prompt(), input() — parsed (AST)
+- ✅ Test suite: 211 tests passing (4 test files in `jjtl/__tests__/`)
 
 **Da Completare:**
-- ❌ Conversion expressions JjEL (name -> label : name + '_suffix') — da testare
-- ❌ Multi-attribute mapping — da testare
-- ❌ Reference mapping (oggetti collegati)
-- ❌ Guard conditions (`when` clause)
+- ❌ Reference mapping (oggetti collegati tra modelli)
+- ❌ Multiplicity constraints — parsed but not enforced (executor always creates 1)
+- ❌ Interactive statements — parsed but not wired to UIBridge
+- ❌ Multiple source types: `[Class, Interface] -> Table {}`
 - ❌ Undo/redo per trasformazioni
-- ❌ Cleanup log di debug
+- ❌ Cleanup log di debug (executor has verbose console.log)
+
+### JjTL Tests
+
+```
+frontend/src/jjtl/__tests__/
+├── astBridge.test.ts          # AST bridge JjTL→JjEL conversion
+├── executor-bridge.test.ts    # Executor with JjEL integration
+├── forall-mapping.test.ts     # ForAll mapping (13 tests)
+└── parser-fixes.test.ts       # Parser edge cases
+```
+
+### Known Limitations
+
+- **Source attribute in forall:** `a.name -> targetAttr` does not parse (dotted source attributes). Use conversion syntax instead: `-> targetAttr : a.name`
+- **Flat array source format:** Using `[{ className: 'X', ... }]` is more reliable than `{ classes: [...], instances: [...] }` format (avoids duplicate extraction bug)
+- **Pluralization heuristic:** ForAll stores created objects under `targetClass.charAt(0).toLowerCase() + targetClass.slice(1) + 's'` (e.g., `Column` → `columns`)
 
 ---
 
@@ -602,12 +823,12 @@ astRef.current = currentAST;
 2. Trovare oggetti per NOME via `lModel.objects.find(o => o.name)`
 3. Scrivere valori via proxy `$attr.value = val`
 
-### Nuovi Bug Aperti (2026-02-09)
+### Bug Aperti (2026-03)
 | Bug | Stato | Note |
 |-----|-------|------|
-| Valore duplicato (tutti B ricevono A_0) | ⚠️ APERTO | Da verificare executor loop |
-| Doppia esecuzione executor | ⚠️ APERTO | React double rendering |
+| Doppia esecuzione executor | ⚠️ APERTO | React double rendering (StrictMode) |
 | "Error in View: Fallback" su target | ⚠️ APERTO | Rendering modello creato |
+| ForAll pluralization heuristic naive | ⚠️ APERTO | `TargetClass + 's'` — needs proper strategy |
 
 ---
 
@@ -649,6 +870,62 @@ astRef.current = currentAST;
 
 ---
 
+## 🖥 Header Layout (aggiornato 2026-03-15)
+
+### Struttura: 2 righe (~84px totali)
+- **Riga 1 — App bar (50px)**: Logo | Menu 12px | Project link | Tab (overflow Chrome-style) | Level badge (read-only) | Help | Avatar
+- **Riga 2 — Toolbar (34px)**: [undo][redo][duplicate][delete] | VIEW [Notation ▾] [Theme: X ▾] | LAYOUT [grid][autolayout] | [● Abstract syntax] | spacer | [−] 100% [+] [⤢] | [panel toggle]
+
+### Toolbar — Multi-selezione
+Quando 2+ elementi selezionati, il primo gruppo della toolbar fa swap:
+- Normale: undo, redo, duplicate, delete
+- Multi-selezione: ALIGN [6 icone allineamento] + "N selected"
+Zero layout shift — stesso spazio, altezza invariata.
+
+### Toolbar — Regole anti-shift
+- Dropdown notation: `min-width: 120px` (per "Structured")
+- Zoom value: `min-width: 44px`, `text-align: center`, `font-variant-numeric: tabular-nums`
+- Abstract syntax pill: `white-space: nowrap`, `flex-shrink: 0`
+- Tutti i bottoni icon: 28×28px fissi
+
+### Debug mode
+- NON nella app bar — accessibile da menu View → ☑ Debug Mode
+- Quasi solo per sviluppatori
+
+### Progressive disclosure
+- 3 livelli: Basic, Intermediate, Advanced
+- Selezionabili nei Settings, badge read-only nella app bar
+- Click badge → Settings
+
+### Polymetric view
+- NON nella toolbar — accessibile da menu Tools con label "(beta)"
+
+### Panel toggle
+- 1 solo bottone (non 3) — alterna fullscreen ↔ split con properties
+- Icona contestuale: mostra l'azione disponibile
+
+---
+
+## 📋 Properties Panel (aggiornato 2026-03-15)
+
+### Form layout
+- Label SOPRA i campi input (layout verticale stacked)
+- Nessun ":" dopo le label
+- Gap label↔input: 4px
+- Gap tra campi: 12-16px
+
+### Campi booleani
+- Checkbox custom 14×14px, stile shadcn/ui
+- Unchecked: border `#cbd5e1`, bg trasparente
+- Checked: bg `#0ea5e9` (cyan), check SVG bianco
+- Posizione: checkbox a sinistra, label a destra (pattern Bootstrap)
+- Componente: `PropertiesCheckbox` in Info.tsx
+
+### Container
+- `properties-panel-container`: margin 0 (adiacente al canvas, no gap)
+
+---
+
 ## 🔄 Workflow Preferito
 
 - Al termine di ogni task che introduce nuovi pattern o convenzioni, proponi un aggiornamento a questo file.
@@ -685,6 +962,8 @@ astRef.current = currentAST;
 - ❌ Modifiche al core senza approvazione
 - ❌ Over-engineering per feature semplici
 - ❌ Usare `createM1()` per creare modelli target (genera nomi automatici)
+- ❌ `require()` nel frontend — restituisce `{}` (usare ES module imports)
+- ❌ `model.addChild()` in canvasToJjom — causa nested TRANSACTION (usare `.new()` direttamente)
 
 ### Best Practices
 - ✅ Accessibility (WCAG guidelines)
@@ -706,18 +985,54 @@ astRef.current = currentAST;
 |------|-------------|
 | `ProjectEditor.tsx` | Dashboard principale, gestione progetto |
 | `DockManager.ts` | Gestione tabs e pannelli |
-| `executor.ts` (jjtl) | Esecuzione trasformazioni |
+| `jjtl/executor/executor.ts` | JjtlExecutor — esecuzione trasformazioni |
+| `jjtl/executor/astBridge.ts` | toJjelAst() — converte espressioni JjTL → JjEL |
+| `jjel/evaluator/evaluator.ts` | JjelEvaluator — valutazione espressioni |
+| `jjel/evaluator/context.ts` | EvaluationContext — scope e bindings |
 | `MappingLinesOverlay.tsx` | Frecce di mapping |
 | `DualMetamodelPanel.tsx` | Vista side-by-side metamodelli |
 | `ExecuteTransformationDialog.tsx` | Dialog esecuzione |
+| `Navbar.tsx` + `navbar.scss` | App bar (riga 1 header) |
+| `Toolbar.tsx` | Toolbar (riga 2 header) |
+| `Info.tsx` + `info.scss` | Properties panel (form layout, checkbox custom) |
+
+---
+
+## Known Gotchas
+
+### Monaco Editor intercetta F1 e altri shortcut
+Monaco registra listener `keydown` in bubble phase sul suo elemento DOM.
+Chiama `stopPropagation()`, quindi gli eventi non raggiungono `window`.
+**Fix**: usare sempre la capture phase per shortcut globali che devono
+coesistere con Monaco:
+```typescript
+window.addEventListener('keydown', handler, true) // true = capture
+```
+Shortcut noti intercettati da Monaco: F1 (command palette), F12
+(go to definition), altri shortcut editor standard.
+
+### ContextMenu è clippato dall'overflow:hidden del tab container
+`MetamodelTab` e `ModelTab` renderizzano `<ContextMenu>` dentro un
+`<div style={{overflow:'hidden'}}>`. Voci in fondo al menu possono
+essere off-screen su schermi normali.
+**Fix**: posizionare le voci importanti nei primi 5-6 slot del menu,
+non in fondo.
+
+### F1 su macOS richiede Fn+F1
+Su Mac, F1 senza il tasto Fn controlla la luminosità dello schermo
+e non raggiunge il browser. Il listener HelpDrawer usa capture phase
+correttamente — il comportamento è atteso. Shortcut effettivo: Fn+F1.
 
 ---
 
 ## 📅 Ultimo Aggiornamento
 
-**Data:** Febbraio 2026
-**Stato JjTL Executor:** In debug - attribute mapping non funziona
-**Prossimi Step:** 
-1. Fix attribute mapping (verificare flusso executor → ProjectEditor)
-2. Completare UI redesign
-3. Implementare JjEL property aliases
+**Data:** Marzo 2026
+**Stato JjTL Executor:** Funzionante — class mapping, attribute mapping, forall mapping, guard conditions, helper functions, JjEL expressions via AST bridge
+**Stato JjEL:** Completo — 100+ built-in methods, forall/exists/implies/with...do, scoped contexts
+**Test:** 211 tests passing (JjTL: 4 test files, JjEL: 2 test files)
+**Prossimi Step:**
+1. Reference mapping (cross-model object links)
+2. Multiplicity enforcement in executor
+3. Interactive statements (wire to UIBridge)
+4. Completare UI redesign

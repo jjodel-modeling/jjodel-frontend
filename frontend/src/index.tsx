@@ -15,40 +15,65 @@ import App from './App';
 import { createRoot } from "react-dom/client";
 
 // ✅ MONACO SETUP - IMPORTANTE: loader.config PRIMA di MonacoEnvironment
+import * as monaco from 'monaco-editor';
+import { loader } from '@monaco-editor/react';
+// @ts-ignore
+import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
+// @ts-ignore
+import JsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
+// @ts-ignore
+import CssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker';
+// @ts-ignore
+import HtmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker';
+// @ts-ignore
+import TsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
 
-// Configura i workers per Vite
+console.log("monaco workers load", {EditorWorker, JsonWorker, CssWorker, HtmlWorker, TsWorker});
+// Configura @monaco-editor/react per usare l'istanza locale invece del CDN
+loader.config({ monaco });
+
+// Configura i workers per Vite (?worker syntax works in both dev and build)
 (self as any).MonacoEnvironment = {
   getWorker(_: any, label: string) {
-    if (label === 'json') {
-      return new Worker(
-        new URL('../node_modules/monaco-editor/esm/vs/language/json/json.worker', import.meta.url),
-        { type: 'module' }
-      );
-    }
-    if (label === 'css' || label === 'scss' || label === 'less') {
-      return new Worker(
-        new URL('../node_modules/monaco-editor/esm/vs/language/css/css.worker', import.meta.url),
-        { type: 'module' }
-      );
-    }
-    if (label === 'html' || label === 'handlebars' || label === 'razor') {
-      return new Worker(
-        new URL('../node_modules/monaco-editor/esm/vs/language/html/html.worker', import.meta.url),
-        { type: 'module' }
-      );
-    }
-    if (label === 'typescript' || label === 'javascript') {
-      return new Worker(
-        new URL('../node_modules/monaco-editor/esm/vs/language/typescript/ts.worker', import.meta.url),
-        { type: 'module' }
-      );
-    }
-    return new Worker(
-      new URL('../node_modules/monaco-editor/esm/vs/editor/editor.worker', import.meta.url),
-      { type: 'module' }
-    );
+    if (label === 'json') return new JsonWorker();
+    if (label === 'css' || label === 'scss' || label === 'less') return new CssWorker();
+    if (label === 'html' || label === 'handlebars' || label === 'razor') return new HtmlWorker();
+    if (label === 'typescript' || label === 'javascript') return new TsWorker();
+    return new EditorWorker();
   }
 };
+/*(self as any).MonacoEnvironment = {
+    getWorker(_: any, label: string) {
+        if (label === 'json') {
+            return new Worker(
+                new URL('../node_modules/monaco-editor/esm/vs/language/json/json.worker', import.meta.url),
+                { type: 'module' }
+            );
+        }
+        if (label === 'css' || label === 'scss' || label === 'less') {
+            return new Worker(
+                new URL('../node_modules/monaco-editor/esm/vs/language/css/css.worker', import.meta.url),
+                { type: 'module' }
+            );
+        }
+        if (label === 'html' || label === 'handlebars' || label === 'razor') {
+            return new Worker(
+                new URL('../node_modules/monaco-editor/esm/vs/language/html/html.worker', import.meta.url),
+                { type: 'module' }
+            );
+        }
+        if (label === 'typescript' || label === 'javascript') {
+            return new Worker(
+                new URL('../node_modules/monaco-editor/esm/vs/language/typescript/ts.worker', import.meta.url),
+                { type: 'module' }
+            );
+        }
+        return new Worker(
+            new URL('../node_modules/monaco-editor/esm/vs/editor/editor.worker', import.meta.url),
+            { type: 'module' }
+        );
+    }
+};*/
 // ✅ FINE MONACO SETUP
 
 // Aspetta che il DOM sia pronto

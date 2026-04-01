@@ -283,19 +283,7 @@
     color: #1E293B;
 }
 
-.node-badge {
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.node-badge.abstract {
-    background: #E0F2FE;
-    color: #0369A1;
-}
+/* Abstract badge now uses unified jj-badge system (Badge component) */
 
 .node-count {
     margin-left: auto;

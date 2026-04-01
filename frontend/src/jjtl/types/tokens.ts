@@ -12,14 +12,22 @@ export enum TokenType {
     TRANSFORMATION = 'TRANSFORMATION',
     FROM = 'FROM',
     TO = 'TO',
-    WHEN = 'WHEN',
+    WHERE = 'WHERE',
     HELPER = 'HELPER',
+
+    // Iteration Keywords
+    FORALL = 'FORALL',
+    IN = 'IN',
+    SUCH = 'SUCH',
+    THAT = 'THAT',
+    LET = 'LET',
 
     // Interactive Keywords
     ALERT = 'ALERT',
     NOTIFY = 'NOTIFY',
     PROMPT = 'PROMPT',
     INPUT = 'INPUT',
+    CONFIRM = 'CONFIRM',
 
     // ============================================
     // JJEL KEYWORDS (for expressions)
@@ -46,6 +54,8 @@ export enum TokenType {
     // ============================================
     // JjTL operators
     ARROW = 'ARROW',              // ->
+    FAT_ARROW = 'FAT_ARROW',      // =>
+    ASSIGN = 'ASSIGN',            // :=
     COLON = 'COLON',              // :
     EQUALS = 'EQUALS',            // =
     DOT = 'DOT',                  // .
@@ -79,6 +89,7 @@ export enum TokenType {
     // ============================================
     // SPECIAL
     // ============================================
+    DOLLAR_IDENT = 'DOLLAR_IDENT', // $varName
     COMMENT = 'COMMENT',          // # ...
     NEWLINE = 'NEWLINE',
     WHITESPACE = 'WHITESPACE',
@@ -96,12 +107,18 @@ export const JJTL_KEYWORDS: Record<string, TokenType> = {
     'transformation': TokenType.TRANSFORMATION,
     'from': TokenType.FROM,
     'to': TokenType.TO,
-    'when': TokenType.WHEN,
+    'where': TokenType.WHERE,
     'helper': TokenType.HELPER,
+    'forall': TokenType.FORALL,
+    'in': TokenType.IN,
+    'such': TokenType.SUCH,
+    'that': TokenType.THAT,
+    'let': TokenType.LET,
     'alert': TokenType.ALERT,
     'notify': TokenType.NOTIFY,
     'prompt': TokenType.PROMPT,
     'input': TokenType.INPUT,
+    'confirm': TokenType.CONFIRM,
 
     // JjEL keywords
     'if': TokenType.IF,

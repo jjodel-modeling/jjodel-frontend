@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { NodeResizer, useReactFlow, type NodeProps, type Node } from '@xyflow/react';
 import ViewpointRenderer from '../viewpoint/ViewpointRenderer';
 import DynamicHandles from '../components/DynamicHandles';
@@ -22,9 +22,16 @@ export type { ClassNodeData } from '../types';
 function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
     const { setNodes } = useReactFlow();
     const editorContext = useEditorContextSafe();
+
+    const attributes = data.attributes ?? [];
+    const operations = data.operations ?? [];
+
     const [editing, setEditing] = useState(false);
     const [name, setName] = useState(data.label);
     const [dragOver, setDragOver] = useState(false);
+    // Track the last name WE committed so we can distinguish our own writes
+    // from external changes (e.g. Info panel rename) and avoid a sync loop.
+    const lastCommittedName = useRef(data.label);
 
     // Inline editing for attributes and operations
     const [editingField, setEditingField] = useState<{
@@ -34,8 +41,12 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
     } | null>(null);
     const [editValue, setEditValue] = useState('');
 
+    // Sync name from model only when changed externally (not by our own commit).
     useEffect(() => {
-        setName(data.label);
+        if (data.label !== lastCommittedName.current) {
+            setName(data.label);
+            lastCommittedName.current = data.label;
+        }
     }, [data.label]);
 
     // Auto-edit mode for newly created nodes
@@ -117,13 +128,19 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
         }
     }, [commitFieldEdit]);
 
+    // Select a child element (attribute/operation) in the Properties panel
+    const handleChildClick = useCallback((childId: string) => {
+        editorContext?.selectChildElement?.(childId);
+    }, [editorContext]);
+
     const handleDoubleClick = useCallback(() => {
         setEditing(true);
     }, []);
 
     const commitName = useCallback(() => {
         setEditing(false);
-        if (name !== data.label) {
+        if (name !== lastCommittedName.current) {
+            lastCommittedName.current = name;
             editorContext?.takeSnapshot();
             setNodes((nds) =>
                 nds.map((n) =>
@@ -132,7 +149,7 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
             );
             syncNodeLabel(id, name);
         }
-    }, [id, name, data.label, setNodes, editorContext]);
+    }, [id, name, setNodes, editorContext]);
 
     const handleBlur = useCallback(() => {
         commitName();
@@ -210,7 +227,8 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
 
     const notation = editorContext?.notation ?? 'uml';
     const isAbstract = data.isAbstract ?? false;
-    const hasContent = (data.attributes?.length || 0) > 0 || (data.operations?.length || 0) > 0;
+    const isSingleton = data.isSingleton ?? false;
+    const hasContent = attributes.length > 0 || operations.length > 0;
     const showBody = notation !== 'compact';
 
     // Format bounds for display
@@ -224,7 +242,7 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
 
     return (
         <div
-            className={`mm-node mm-class ${selected ? 'selected' : ''} ${isAbstract ? 'abstract' : ''} ${dragOver ? 'drop-target' : ''}`}
+            className={`mm-node mm-class ${selected ? 'selected' : ''} ${isAbstract ? 'abstract' : ''} ${isSingleton ? 'singleton' : ''} ${dragOver ? 'drop-target' : ''}`}
             onDragOver={(e) => { handleDragOver(e); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
@@ -264,7 +282,7 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
             {showBody && hasContent && notation === 'er' && (
                 <div className="mm-node__body mm-node__body--er">
                     <span className="mm-node__er-attrs">
-                        {data.attributes?.map(a => a.name).join(', ')}
+                        {attributes.map(a => a.name).join(', ')}
                     </span>
                 </div>
             )}
@@ -272,12 +290,19 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
             {showBody && hasContent && notation !== 'er' && (
                 <div className="mm-node__body">
                     {/* Attributes */}
-                    {data.attributes && data.attributes.length > 0 && (
+                    {attributes.length > 0 && (
                         <div className="mm-node__fields">
-                            {data.attributes.map((attr) => {
+                            {attributes.map((attr) => {
                                 const bounds = formatBounds(attr.lowerBound ?? 0, attr.upperBound ?? 1);
                                 return (
-                                    <div key={attr.id} className="mm-field">
+                                    <div key={attr.id} className="mm-field" onClick={() => handleChildClick(attr.id)}
+                                        onContextMenu={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            window.dispatchEvent(new CustomEvent('jjodel:child-context-menu', {
+                                                detail: { childId: attr.id, childKind: 'attr', nodeId: id, x: e.clientX, y: e.clientY }
+                                            }));
+                                        }}>
                                         {editingField?.id === attr.id && editingField.field === 'name' ? (
                                             <input
                                                 className="mm-field__input"
@@ -328,6 +353,7 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                                                 onClick={() => { if (selected) startEditField(attr.id, 'type', attr.type, 'attr'); }}
                                             >
                                                 {attr.type}
+                                                <i className="bi bi-chevron-down mm-field__type-chevron" />
                                             </span>
                                         )}
                                         {bounds ? <span className="mm-field__bound">{bounds}</span> : <span />}
@@ -338,15 +364,22 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                     )}
 
                     {/* Operations separator */}
-                    {(data.attributes?.length ?? 0) > 0 && (data.operations?.length ?? 0) > 0 && (
+                    {attributes.length > 0 && operations.length > 0 && (
                         <div className="mm-node__separator" />
                     )}
 
                     {/* Operations */}
-                    {data.operations && data.operations.length > 0 && (
+                    {operations.length > 0 && (
                         <div className="mm-node__fields">
-                            {data.operations.map((op) => (
-                                <div key={op.id} className="mm-field mm-operation">
+                            {operations.map((op) => (
+                                <div key={op.id} className="mm-field mm-operation" onClick={() => handleChildClick(op.id)}
+                                    onContextMenu={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        window.dispatchEvent(new CustomEvent('jjodel:child-context-menu', {
+                                            detail: { childId: op.id, childKind: 'op', nodeId: id, x: e.clientX, y: e.clientY }
+                                        }));
+                                    }}>
                                     {editingField?.id === op.id && editingField.field === 'name' ? (
                                         <input
                                             className="mm-field__input"
@@ -397,6 +430,7 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                                             onClick={() => { if (selected) startEditField(op.id, 'returnType', op.returnType, 'op'); }}
                                         >
                                             {op.returnType}
+                                            <i className="bi bi-chevron-down mm-field__type-chevron" />
                                         </span>
                                     )}
                                     <span />

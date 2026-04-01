@@ -1,4 +1,5 @@
 import React, {ReactNode} from "react";
+import { EmptyState } from '../ui/EmptyState';
 import './empty.scss';
 
 type Props = {
@@ -11,7 +12,6 @@ type Props = {
 /**
  * Empty state component for Properties panel
  * Shows when no element is selected on the canvas
- * Following CLAUDE.md design guidelines
  */
 export function Empty(props: Props){
     const {
@@ -32,26 +32,18 @@ export function Empty(props: Props){
         );
     }
 
-    // New empty state design
+    // Unified empty state
     return (
         <section className="properties-empty-state">
-            <div className="properties-empty-state__content">
-                <div className="properties-empty-state__icon">
-                    <i className={`bi ${icon}`} />
-                </div>
-                <h3 className="properties-empty-state__title">{title}</h3>
-                <p className="properties-empty-state__description">{description}</p>
-                <div className="properties-empty-state__hints">
-                    <div className="properties-empty-state__hint">
-                        <i className="bi bi-mouse" />
-                        <span>Click an element to select it</span>
-                    </div>
-                    <div className="properties-empty-state__hint">
-                        <i className="bi bi-diagram-2" />
-                        <span>Use Tree View to navigate the model</span>
-                    </div>
-                </div>
-            </div>
+            <EmptyState
+                icon={icon}
+                title={title}
+                description={description}
+                hints={[
+                    { icon: 'bi-mouse', text: 'Click an element to select it' },
+                    { icon: 'bi-diagram-2', text: 'Use Tree View to navigate the model' },
+                ]}
+            />
         </section>
     );
 }

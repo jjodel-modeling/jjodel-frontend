@@ -22,13 +22,13 @@ import { DEFAULT_PROMPTS } from '../constants/defaultPrompts';
  * When a prompt is missing these markers, it's considered stale and reset.
  */
 const CRITICAL_MARKERS: Partial<Record<PromptType, string[]>> = {
-    chat: ['JjScript', 'create class', '```jjscript', 'conversational, flowing style'],  // JjScript section + response style markers
+    chat: ['JjScript', 'create class', '```jjscript', 'conversational, flowing style', 'projectContext'],  // JjScript section + response style + context injection markers
 };
 
 /**
  * Migration version - increment when prompts have breaking changes
  */
-const PROMPT_VERSION = 3;
+const PROMPT_VERSION = 4;
 const PROMPT_VERSION_KEY = 'jjodel_prompt_version';
 
 // ============================================

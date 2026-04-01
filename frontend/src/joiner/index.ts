@@ -24,11 +24,13 @@ windoww.XML = XML;
 windoww.XMI = XMI;
 export const prxml2json = _pr_xml2json;
 windoww.prxml2json = prxml2json;
+import type * as Monaco from 'monaco-editor';
 //@ts-ignore
 import * as monaco_ from 'monaco-editor/esm/vs/editor/editor.main';
 windoww.monaco = monaco_;
 import { loader } from '@monaco-editor/react'
-export let monaco = monaco_;
+export type {Monaco};
+export const monaco = monaco_ as any as typeof Monaco;
 // Tell @monaco-editor/react to use local monaco instead of CDN
 loader.config({ monaco });
 
@@ -193,7 +195,8 @@ export {Size, GraphSize, GraphPoint, IPoint, ISize, Point, Geom} from "../common
 
 export type {WViewElement} from "../view/viewElement/view";
 export {LViewElement, DViewElement} from "../view/viewElement/view";
-export {DViewPoint, LViewPoint} from "../view/viewPoint/viewpoint";
+export {DViewPoint, LViewPoint, getViewpointType} from "../view/viewPoint/viewpoint";
+export type {ViewpointType} from "../view/viewPoint/viewpoint";
 
 export {Action, CreateElementAction, DeleteElementAction, SetFieldAction, SetRootFieldAction, CompositeAction, ParsedAction, LoadAction, CombineHistoryAction, RedoAction, UndoAction,
     TRANSACTION, ABORT, /*BEGIN, END*/} from "../redux/action/action";

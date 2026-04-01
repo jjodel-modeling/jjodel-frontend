@@ -147,23 +147,9 @@
 //.dock-style-editors .dock-tabpane .input-container:has(input:focus) > .me-2::before, .dock-style-editors .dock-tabpane .input-container:has(input:hover) > .me-2::before,
 //.dock-style-editors .dock-tabpane .input-container:has(select:focus) > .me-2::before, .dock-style-editors .dock-tabpane .input-container:has(select:hover) > .me-2::before {
 
-.input-container:has(input:focus) > .me-2::before, .input-container:has(input:hover) > .me-2::before,
-.input-container:has(select:focus) > .me-2::before, .input-container:has(select:hover) > .me-2::before,
-.properties-tab label:has(input:hover) > span::before, .properties-tab label:has(select:hover) > span::before  {
-
-  position: relative;
-  right: 0px;
-  top: 0;
-  border-left: 4px solid var(--accent);
-  width: 8px;
-  margin-right: 4px;
-  height: 0.7em;
-  font-family: bootstrap-icons;
-  content: "";
-  font-size: 1em;
-  transition: border 0.3s;
-
-}
+// Border-left accent indicator on hover removed — input focus state is sufficient
+// .input-container:has(input:focus) > .me-2::before, ...
+// was: border-left: 4px solid var(--accent)
 
 .dock-content-holder #DockComponent_rightbar_1 {
 

@@ -315,6 +315,7 @@ body > .dragging-layer > div:last-child {
   width: 100%;
   height: 100%;
   color: var(--color-text-primary);
+  outline: none;
 }
 
 .dock-content-holder {
@@ -497,6 +498,14 @@ body.dock-dragging iframe {
   color: var(--color-text-primary);
   background: var(--color-bg-primary);
   border: 1px solid var(--color-bg-primary);
+  outline: none;
+
+  &:focus,
+  &:focus-visible,
+  &:focus-within {
+    outline: none;
+    box-shadow: none;
+  }
 }
 
 .dock-panel.dragging {
@@ -563,16 +572,16 @@ body.dock-dragging iframe {
 
 .dock-divider {
   box-sizing: border-box;
-  flex: 0 0 8px;
-  background: transparent;
-  border-left: 1px solid var(--color-border-primary);
+  flex: 0 0 1px;
+  background: trasparent;
+  border-left: 1px solid #e2e4e8; // var(--surface-3);
   border-right: none;
   z-index: 1;
-  transition: var(--transition-fast);
+  transition: var(--transition-fast)!important;
   position: relative;
 }
 
-/* Visible handle in the center of the divider */
+/* Visible handle in the center of the divider — appears on hover */
 /* Offset by ~18px to align with panel-resizer (accounts for tab bar height) */
 .dock-divider::after {
   content: '';
@@ -582,7 +591,7 @@ body.dock-dragging iframe {
   transform: translate(-50%, -50%);
   width: 4px;
   height: 40px;
-  background-color: var(--color-border-primary);
+  background-color: transparent;
   border-radius: 3px;
   transition: background-color 150ms ease, height 150ms ease;
   pointer-events: none;
@@ -603,6 +612,8 @@ body.dock-dragging iframe {
 
 .dock-vbox > .dock-divider {
   cursor: ns-resize;
+  border-left: none;
+  border-top: 1px solid var(--color-border-primary);
 }
 
 .dock-vbox > .dock-divider::after {
@@ -1033,6 +1044,7 @@ body[data-layout-mode="split"] {
   .dock-hbox > .dock-box:last-child {
     min-width: 400px;
     transition: opacity 200ms ease;
+    max-width: 710px
   }
 }
 
@@ -1090,6 +1102,102 @@ body[data-layout-mode="sidebar"] {
   }
 }
 
+/* Documentation Tab - hide properties panel (not needed for docs view) */
+body[data-active-tab="documentation"] {
+  .dock-hbox > .dock-panel:last-child,
+  .dock-hbox > .dock-box:last-child {
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    overflow: hidden !important;
+    opacity: 0;
+    pointer-events: none;
+    transition: width 200ms ease, opacity 200ms ease;
+  }
+
+  .dock-hbox > .dock-panel:first-child,
+  .dock-hbox > .dock-box:first-child {
+    flex: 1 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* Summary/Dashboard Mode - hide properties panel (no editor active) */
+body[data-editor-type="summary"] {
+  .dock-hbox > .dock-panel:last-child,
+  .dock-hbox > .dock-box:last-child {
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    overflow: hidden !important;
+    opacity: 0;
+    pointer-events: none;
+    transition: width 200ms ease, opacity 200ms ease;
+  }
+
+  .dock-hbox > .dock-panel:first-child,
+  .dock-hbox > .dock-box:first-child {
+    flex: 1 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* Transformation Mode - hide properties panel (JjTL has its own panels) */
+body[data-editor-type="transformation"] {
+  .dock-hbox > .dock-panel:last-child,
+  .dock-hbox > .dock-box:last-child {
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    overflow: hidden !important;
+    opacity: 0;
+    pointer-events: none;
+    transition: width 200ms ease, opacity 200ms ease;
+  }
+
+  .dock-hbox > .dock-panel:first-child,
+  .dock-hbox > .dock-box:first-child {
+    flex: 1 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* Viewpoint Mode - hide properties panel (ViewpointWorkbench has its own) */
+body[data-editor-type="viewpoint"] {
+  .dock-hbox > .dock-panel:last-child,
+  .dock-hbox > .dock-box:last-child {
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    overflow: hidden !important;
+    opacity: 0;
+    pointer-events: none;
+    transition: width 200ms ease, opacity 200ms ease;
+  }
+
+  .dock-hbox > .dock-panel:first-child,
+  .dock-hbox > .dock-box:first-child {
+    flex: 1 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
 /* Canvas-Only Mode - hide properties panel completely */
 body[data-layout-mode="canvas-only"] {
   .dock-hbox > .dock-panel:last-child,
@@ -1113,6 +1221,7 @@ body[data-layout-mode="canvas-only"] {
     max-width: 100% !important;
   }
 }
+
 
 /* Ensure the left panel (models) can shrink in split mode */
 .dock-hbox > .dock-panel:first-child,

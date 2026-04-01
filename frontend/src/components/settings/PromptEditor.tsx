@@ -7,6 +7,7 @@ import React, { useState, useCallback } from 'react';
 import { PromptType, PromptContext, PROMPT_REGISTRY } from '../../types/prompts';
 import { PromptService } from '../../services/PromptService';
 import { DEFAULT_PROMPTS } from '../../constants/defaultPrompts';
+import { Button } from '../common/Button';
 import './PromptEditor.scss';
 
 interface PromptEditorProps {
@@ -99,38 +100,38 @@ export function PromptEditor({
 
                 <div className="prompt-editor__actions">
                     {projectId && source === 'project' && (
-                        <button
-                            className="btn btn--ghost"
+                        <Button
+                            variant="ghost"
                             onClick={handleUseGlobal}
                             title="Remove project override, use global setting"
                         >
                             Use Global
-                        </button>
+                        </Button>
                     )}
                     {isCustomized && (
-                        <button
-                            className="btn btn--ghost"
+                        <Button
+                            variant="ghost"
                             onClick={handleReset}
                             title="Reset to default prompt"
                         >
                             <i className="bi bi-arrow-counterclockwise" />
                             Reset
-                        </button>
+                        </Button>
                     )}
-                    <button
-                        className="btn btn--ghost"
+                    <Button
+                        variant="ghost"
                         onClick={() => setShowPreview(!showPreview)}
                     >
                         <i className={`bi bi-${showPreview ? 'code' : 'eye'}`} />
                         {showPreview ? 'Edit' : 'Preview'}
-                    </button>
-                    <button
-                        className="btn btn--primary"
+                    </Button>
+                    <Button
+                        variant="primary"
                         onClick={handleSave}
                         disabled={!isDirty}
                     >
                         Save
-                    </button>
+                    </Button>
                 </div>
             </div>
 

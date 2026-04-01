@@ -405,6 +405,10 @@
     font-size: var(--text-xs);
 }
 
+.jodie-message-avatar i {
+    color: inherit;
+}
+
 /* User avatar with blue gradient */
 .jodie-user-avatar {
     background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);

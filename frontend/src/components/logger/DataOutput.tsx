@@ -1,5 +1,5 @@
 import React, {PureComponent, ReactNode} from "react";
-import ReactJson from 'react-json-view' // npm run postinstall
+import ReactJson from 'react-json-view' // npm run posti
 import './logger.scss'
 import {GObject, U} from "../../joiner";
 

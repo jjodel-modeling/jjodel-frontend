@@ -28,6 +28,7 @@ import {
 } from '../../joiner';
 
 import {icon} from '../components/icons/Icons';
+import { JjodelProjectIcon } from '../../components/icons/JjodelProjectIcon';
 
 import {useNavigate} from 'react-router-dom';
 
@@ -56,9 +57,14 @@ import { formatShortcutPills, getRedoShortcutPills, SHORTCUTS, matchesShortcut, 
 import { AdvancedModeTutorial, shouldShowAdvancedModeTutorial } from '../../components/AdvancedModeTutorial';
 import { M2AnalyticsModal, M2AnalyticsData } from '../../components/M2AnalyticsModal';
 import { ShortcutsReference } from '../../components/ShortcutsReference';
-import { VerticalToggle } from '../../components/ui/VerticalToggle';
 import { useGlobalDrawer } from '../../contexts/GlobalDrawerContext';
 import { useSettingsModal } from '../../contexts/SettingsModalContext';
+import { useTheme } from '../../services/ThemeService';
+import { buildProjectExportJson } from '../../model/megamodelPersistence';
+import { getRuntimeMegamodel } from '../../model/megamodelRuntime';
+import { useAvatar } from '../../hooks/useAvatar';
+import { AVATAR_COLORS, AVATAR_ICONS } from '../../constants/avatarConfig';
+import { JjScriptConsole } from '../../jjscript/components/JjScriptConsole';
 
 
 let windoww = window as any;
@@ -180,10 +186,14 @@ function makeEntry(i: MenuEntry|null|undefined, index: number) {
 
 
 /* User badge component - now used as menu trigger */
-const UserBadge = (props: {name: string, initials: string}) => {
+const UserBadge = (props: {name: string, initials: string, color?: string, icon?: string | null}) => {
     return (
-        <div className={'user-badge'} title={props.name}>
-            {props.initials.toUpperCase()}
+        <div className={'user-badge'} title={props.name}
+             style={props.color ? { backgroundColor: props.color } : undefined}>
+            {props.icon
+                ? <i className={`bi ${props.icon}`} style={{ fontSize: 16 }} />
+                : props.initials.toUpperCase()
+            }
         </div>
     );
 };
@@ -350,6 +360,82 @@ function NavbarComponent(props: AllProps) {
 
     // Keyboard Shortcuts Reference state
     const [showShortcutsReference, setShowShortcutsReference] = useState(false);
+    const [showConsole, setShowConsole] = useState(false);
+
+    // Hoisted hooks from formerly-inner components (HelpMenu, UserMenu, LevelBadge, TreeViewToggle)
+    // Defining function components inside render causes React to unmount/remount them on every re-render.
+    // See comment at line ~1162 about MainLogo having the same issue.
+    const { openDrawer } = useGlobalDrawer();
+    const { openSettings } = useSettingsModal();
+    const [theme, setTheme] = useTheme();
+    const [avatarConfig] = useAvatar();
+
+    // TreeViewToggle state (hoisted)
+    const [isTreeViewOpen, setIsTreeViewOpen] = useState(() => {
+        const saved = localStorage.getItem('jjodel_tree_view_open');
+        return saved === 'true';
+    });
+    useEffect(() => {
+        const handleStorageChange = () => {
+            const saved = localStorage.getItem('jjodel_tree_view_open');
+            setIsTreeViewOpen(saved === 'true');
+        };
+        window.addEventListener('storage', handleStorageChange);
+        const handleTreeViewToggle = () => {
+            setTimeout(() => {
+                const saved = localStorage.getItem('jjodel_tree_view_open');
+                setIsTreeViewOpen(saved === 'true');
+            }, 50);
+        };
+        window.addEventListener('jjodel:toggle-tree-view', handleTreeViewToggle);
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener('jjodel:toggle-tree-view', handleTreeViewToggle);
+        };
+    }, []);
+
+    // ─── Show singleton instances toggle (per-model, localStorage-backed) ───
+    const getActiveModelTab = useCallback((): { id: string; isModel: boolean } | null => {
+        if (!DockManager.dock) return null;
+        try {
+            const layout = DockManager.dock.getLayout();
+            const modelsPanel = layout?.dockbox?.children?.[0];
+            const tabs = (modelsPanel as any)?.tabs || [];
+            const activeId: string = (modelsPanel as any)?.activeId || tabs[0]?.id;
+            if (!activeId) return null;
+            const state = store.getState() as any;
+            const raw = state[activeId] || state.idlookup?.[activeId];
+            if (!raw) return null;
+            return { id: activeId, isModel: raw.isMetamodel === false };
+        } catch { return null; }
+    }, []);
+
+    const [showSingletons, setShowSingletons] = useState<boolean>(() => {
+        const tab = getActiveModelTab();
+        if (!tab) return false;
+        return localStorage.getItem(`jjodel.showSingletons.${tab.id}`) === 'true';
+    });
+
+    // Sync singleton toggle when active tab changes
+    useEffect(() => {
+        const syncSingletonState = () => {
+            const tab = getActiveModelTab();
+            if (!tab) { setShowSingletons(false); return; }
+            setShowSingletons(localStorage.getItem(`jjodel.showSingletons.${tab.id}`) === 'true');
+        };
+        window.addEventListener('jjodel:active-tab', syncSingletonState);
+        return () => window.removeEventListener('jjodel:active-tab', syncSingletonState);
+    }, [getActiveModelTab]);
+
+    const toggleShowSingletons = useCallback(() => {
+        const tab = getActiveModelTab();
+        if (!tab || !tab.isModel) return;
+        const newVal = !showSingletons;
+        localStorage.setItem(`jjodel.showSingletons.${tab.id}`, String(newVal));
+        setShowSingletons(newVal);
+        console.log(`[singleton] show=${newVal}, modelId=${tab.id}`);
+        window.dispatchEvent(new CustomEvent('jjodel:toggle-singletons', { detail: { modelId: tab.id, show: newVal } }));
+    }, [getActiveModelTab, showSingletons]);
 
     // Function to open M2 Analytics with computed data
     const openM2Analytics = () => {
@@ -893,6 +979,7 @@ function NavbarComponent(props: AllProps) {
         }
     }
 
+    const isActiveTabModel = getActiveModelTab()?.isModel === true;
     const isDashboard = !project;
     const isProject = !!project;
     const isFavorite = project?.isFavorite;
@@ -977,7 +1064,7 @@ function NavbarComponent(props: AllProps) {
                 isDashboard ? null : {name: 'Download Project', function: async()=> {
                         if (project) {
                             let dproject = await ProjectsApi.save(project);
-                            U.download(`${project.name}.jjodel`, JSON.stringify(dproject));
+                            U.download(`${project.name}.jjodel`, JSON.stringify(buildProjectExportJson(dproject as unknown as Record<string, unknown>, getRuntimeMegamodel(project.id))));
                         }
                     }, icon: <i className="bi bi-download" />},
 
@@ -1084,6 +1171,24 @@ function NavbarComponent(props: AllProps) {
                 {name: 'Show/Hide Sidebar', function: placeholder, icon: <i className="bi bi-layout-sidebar" />, disabled: true},
                 {name: 'Show/Hide Toolbar', function: placeholder, icon: <i className="bi bi-menu-button" />, disabled: true},
                 {name: `${isFullscreen ? 'Exit Fullscreen Mode' : 'Fullscreen Mode [F11]'}`, function: toggleFullScreen, icon: <i className="bi bi-arrows-fullscreen" />},
+                {name: showSingletons ? 'Show singleton instances  \u2713' : 'Show singleton instances',
+                    function: toggleShowSingletons,
+                    icon: <i className={`bi ${showSingletons ? 'bi-diamond-fill' : 'bi-diamond'}`} />,
+                    disabled: isDashboard || !isActiveTabModel
+                },
+                {name: 'divisor', function: placeholder},
+                {name: props.debug ? 'Debug Mode  \u2713' : 'Debug Mode',
+                    function: () => {
+                        TRANSACTION('debug', ()=>SetRootFieldAction.new('debug', !props.debug), props.debug, !props.debug);
+                        U.debug = !props.debug;
+                    },
+                    icon: <i className={`bi ${props.debug ? 'bi-bug-fill' : 'bi-bug'}`} />
+                },
+                {name: 'divisor', function: placeholder},
+                {name: showConsole ? 'Show Console  \u2713' : 'Show Console',
+                    function: () => setShowConsole(prev => !prev),
+                    icon: <i className={`bi ${showConsole ? 'bi-terminal-fill' : 'bi-terminal'}`} />
+                },
             ]
         },
 
@@ -1111,15 +1216,15 @@ function NavbarComponent(props: AllProps) {
                     icon: <i className="bi bi-box-seam" />,
                     disabled: isDashboard || metamodels.length === 0
                 },
-                // Debug Mode toggle - always visible (independent from Advanced Mode)
                 {name: 'divisor'},
-                {name: props.debug ? 'Disable Debug Mode' : 'Enable Debug Mode',
+                {name: 'Polymetric View',
+                    jsx: <span>Polymetric View <span style={{ fontSize: '10px', color: '#94a3b8', marginLeft: '4px', fontWeight: 400 }}>(beta)</span></span>,
                     function: () => {
-                        TRANSACTION('debug', ()=>SetRootFieldAction.new('debug', !props.debug), props.debug, !props.debug);
-                        U.debug = !props.debug;
+                        window.dispatchEvent(new CustomEvent('jjodel:open-polymetric'));
                     },
-                    icon: <i className={`bi ${props.debug ? 'bi-bug-fill' : 'bi-bug'}`} />
-                }
+                    icon: <i className="bi bi-grid-3x3-gap" />,
+                    disabled: isDashboard || metamodels.length === 0
+                },
             ]
         },
 
@@ -1149,291 +1254,396 @@ function NavbarComponent(props: AllProps) {
     Keystrokes.register('#root', 'navbar', keybindings);
 
 
-    const MainLogo = ()=> {
-        return (
-        <div className='nav-logo' onClick={() => R.navigate('/allProjects')}>
-            <div className={"aligner"}>
-                <img
-                    src={jjodelLogo}
-                    alt="Jjodel"
-                    className="nav-logo__image"
-                />
-            </div>
-        </div>
-        );
-    }
+    // MainLogo inlined below — defining it as a function component inside render
+    // caused React to unmount/remount it on every re-render, making the <img> flicker.
 
-    // Help dropdown menu - matches spec design
-    const HelpMenu = () => {
-        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-        const modKey = isMac ? '\u2318' : 'Ctrl';
+    // Help dropdown menu items (inlined to avoid inner component flicker)
+    const helpMenuMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const helpMenuModKey = helpMenuMac ? '\u2318' : 'Ctrl';
+    const helpItems: MenuEntry[] = [
+        {name: 'Keyboard Shortcuts', function: () => setShowShortcutsReference(true), icon: <i className="bi bi-keyboard" />, keystroke: [helpMenuModKey, '?']},
+        {name: 'divisor'},
+        {name: 'What\'s New in Jjodel', function: ()=> open("https://www.jjodel.io/whats-new/"), icon: <i className="bi bi-bell" />},
+        {name: 'Homepage', function: ()=> open("https://www.jjodel.io"), icon: <i className="bi bi-house" />},
+        {name: 'divisor'},
+        {name: 'Learn Jjodel', function: ()=> open("https://www.jjodel.io/learn-jjodel/"), icon: <i className="bi bi-infinity" />},
+        {name: 'Getting Started', function: ()=> open("https://www.jjodel.io/getting-started/"), icon: <i className="bi bi-rocket-takeoff" />},
+        {name: 'Video Tutorials', function: ()=> open("https://www.jjodel.io/video-tutorials/"), icon: <i className="bi bi-play-circle" />},
+        {name: 'User Guide', function: ()=> open('https://www.jjodel.io/getting-started/'), icon: <i className="bi bi-journal-text" />},
+        {name: 'Glossary', function: ()=> open('https://www.jjodel.io/glossary/'), icon: <i className="bi bi-book" />},
+        {name: 'FAQ', function: placeholder, icon: <i className="bi bi-chat-left-dots" />, disabled: true},
+        {name: 'divisor'},
+        {name: 'Support', icon: <i className="bi bi-life-preserver" />,
+            subItems: [
+                {name: 'Report a Bug', function: placeholder, icon: <i className="bi bi-bug" />, disabled: true},
+                {name: 'Request a Feature', function: placeholder, icon: <i className="bi bi-hand-index" />, disabled: true},
+                {name: 'Contact', function: placeholder, icon: <i className="bi bi-envelope" />, disabled: true}
+            ]}
+    ];
 
-        const helpItems: MenuEntry[] = [
-            {name: 'Keyboard Shortcuts', function: () => setShowShortcutsReference(true), icon: <i className="bi bi-keyboard" />, keystroke: [modKey, '?']},
-            {name: 'divisor'},
-            {name: 'What\'s New in Jjodel', function: ()=> open("https://www.jjodel.io/whats-new/"), icon: <i className="bi bi-bell" />},
-            {name: 'Homepage', function: ()=> open("https://www.jjodel.io"), icon: <i className="bi bi-house" />},
-            {name: 'divisor'},
-            {name: 'Learn Jjodel', function: ()=> open("https://www.jjodel.io/learn-jjodel/"), icon: <i className="bi bi-infinity" />},
-            {name: 'Getting Started', function: ()=> open("https://www.jjodel.io/getting-started/"), icon: <i className="bi bi-rocket-takeoff" />},
-            {name: 'Video Tutorials', function: ()=> open("https://www.jjodel.io/video-tutorials/"), icon: <i className="bi bi-play-circle" />},
-            {name: 'User Guide', function: ()=> open('https://www.jjodel.io/getting-started/'), icon: <i className="bi bi-journal-text" />},
-            {name: 'Glossary', function: ()=> open('https://www.jjodel.io/glossary/'), icon: <i className="bi bi-book" />},
-            {name: 'FAQ', function: placeholder, icon: <i className="bi bi-chat-left-dots" />, disabled: true},
-            {name: 'divisor'},
-            {name: 'Support', icon: <i className="bi bi-life-preserver" />,
-                subItems: [
-                    {name: 'Report a Bug', function: placeholder, icon: <i className="bi bi-bug" />, disabled: true},
-                    {name: 'Request a Feature', function: placeholder, icon: <i className="bi bi-hand-index" />, disabled: true},
-                    {name: 'Contact', function: placeholder, icon: <i className="bi bi-envelope" />, disabled: true}
-                ]}
-        ];
+    // Commands inlined below to avoid inner component flicker
 
-        return (
-            <div className='nav-hamburger hoverable inline help-menu' tabIndex={0}>
-                <span className={'menu-title'}>
-                    <i className="bi bi-question-circle" style={{marginRight: '6px'}} />
-                    Help
-                </span>
-                <div className={'content context-menu'}>
-                    <ul>
-                        {helpItems.map((i, index) => i ? makeEntry(i, index) : null)}
-                    </ul>
-                </div>
-            </div>
-        );
-    }
+    // TreeViewToggle and LayoutControls were inner components that are no longer rendered
+    // (TreeView renders nothing, LayoutControls moved to EditorV2 Toolbar).
 
-    const Commands = ()=> {
-        return (<section className='nav-commands d-flex'>
-            {project && debuggerr ? <DebuggerComponent /> : null}
-        </section>);
-    };
+    // UserMenu — inlined below to avoid inner component flicker.
+    // Hooks (useGlobalDrawer, useSettingsModal, useTheme, useAvatar) are hoisted above.
+    const userName = `${user?.name || ''} ${user?.surname || ''}`.trim();
+    const userEmail = user?.email || '';
+    const userInitials = userName.split(' ').map(n => n[0] || '').join('');
 
-    // TreeView Toggle button
-    // Dispatches custom event to toggle the Tree View sidebar
-    const TreeViewToggle = () => {
-        const [isTreeViewOpen, setIsTreeViewOpen] = useState(() => {
-            const saved = localStorage.getItem('jjodel_tree_view_open');
-            return saved === 'true';
-        });
+    // ─── Custom Tab Strip synced with DockManager ───
+    const [openTabs, setOpenTabs] = useState<Array<{id: string; title: string; type: string; active: boolean; closable: boolean}>>([]);
 
-        // Listen for tree view state changes
-        useEffect(() => {
-            const handleStorageChange = () => {
-                const saved = localStorage.getItem('jjodel_tree_view_open');
-                setIsTreeViewOpen(saved === 'true');
-            };
-            window.addEventListener('storage', handleStorageChange);
-            // Also listen for our custom toggle event to sync state
-            const handleToggle = () => {
-                setTimeout(() => {
-                    const saved = localStorage.getItem('jjodel_tree_view_open');
-                    setIsTreeViewOpen(saved === 'true');
-                }, 50);
-            };
-            window.addEventListener('jjodel:toggle-tree-view', handleToggle);
-            return () => {
-                window.removeEventListener('storage', handleStorageChange);
-                window.removeEventListener('jjodel:toggle-tree-view', handleToggle);
-            };
-        }, []);
+    // Sync tabs from DockManager on layout changes
+    useEffect(() => {
+        const syncTabs = () => {
+            if (!DockManager.dock) return;
+            try {
+                const layout = DockManager.dock.getLayout();
+                const modelsPanel = layout?.dockbox?.children?.[0];
+                if (!modelsPanel || !('tabs' in modelsPanel)) return;
 
-        const handleToggle = () => {
-            window.dispatchEvent(new CustomEvent('jjodel:toggle-tree-view'));
-        };
+                const tabs = (modelsPanel as any).tabs || [];
+                const activeId = (modelsPanel as any).activeId || tabs[0]?.id;
+                const state = store.getState();
 
-        const isMacOS = isMac();
-        const shortcutLabel = isMacOS ? '⌘B' : 'Ctrl+B';
+                const tabList = tabs.map((tab: any) => {
+                    const id = tab.id || '';
+                    let title = '';
+                    let type = 'project';
+                    const closable = tab.closable !== false;
 
-        return (
-            <>{/* <Tooltip tooltip={`Tree View (${shortcutLabel})`} inline={true} position="bottom" offsetY={8}>
-                <button
-                    className={`layout-btn ${isTreeViewOpen ? 'layout-btn--active' : ''}`}
-                    onClick={handleToggle}
-                    aria-label="Toggle Tree View"
-                >
-                    <i className="bi bi-diagram-2" />
-                </button>
-            </Tooltip>*/}
-            </>
-        );
-    };
-
-    // Layout Controls - Split/Sidebar toggle buttons + User Menu
-    // Only visible when editing metamodels and model instances (not on project overview)
-    const LayoutControls = () => {
-        // Check if the editor is manipulating metamodels and model instances
-        // This is true when a project is loaded AND there are metamodels in the editor
-        const isEditingModels = !!project && metamodels.length > 0;
-        if (!isEditingModels) return null;
-
-        // Also check if there are actual editor tabs open (not just the ModelsSummary tab)
-        // The dock has a 'models' group that contains ModelsSummary + any open metamodel/model tabs
-        // We only show layout controls when there are tabs open beyond just the summary
-        const dock = DockManager.dock;
-        if (dock) {
-            const layout = dock.getLayout();
-            // Find the 'models' panel in the layout
-            const modelsPanel = layout?.dockbox?.children?.[0];
-            if (modelsPanel && 'tabs' in modelsPanel) {
-                // If there's only 1 tab (ModelsSummary), we're in the project overview page
-                // Layout controls should only appear when editing a metamodel/model (2+ tabs)
-                if (modelsPanel.tabs.length <= 1) {
-                    return null;
-                }
-            }
-        }
-
-
-
-        // Nel tuo componente
-        if (isProjectOverviewPage()) {
-            return null;
-        }
-
-        return (<>
-            <div className="navbar__layout-controls">
-                <Tooltip tooltip="50% - 50% (doppio click = reset)" inline={true} position="bottom" offsetY={8}>
-                    <button
-                        className={`layout-btn ${layoutMode === 'split' ? 'layout-btn--active' : ''}`}
-                        onClick={() => handleLayoutModeChange('split')}
-                        onDoubleClick={() => handleLayoutModeDoubleClick('split')}
-                        aria-label="Split view"
-                    >
-                        <i className="bi bi-layout-split" />
-                    </button>
-                </Tooltip>
-                <Tooltip tooltip="70% - 30% (doppio click = reset)" inline={true} position="bottom" offsetY={8}>
-                    <button
-                        className={`layout-btn ${layoutMode === 'sidebar' ? 'layout-btn--active' : ''}`}
-                        onClick={() => handleLayoutModeChange('sidebar')}
-                        onDoubleClick={() => handleLayoutModeDoubleClick('sidebar')}
-                        aria-label="Sidebar view"
-                    >
-                        <i className="bi bi-layout-sidebar-reverse" />
-                    </button>
-                </Tooltip>
-                <Tooltip tooltip="Fullscreen" inline={true} position="bottom" offsetY={8}>
-                    <button
-                        className={`layout-btn ${layoutMode === 'canvas-only' ? 'layout-btn--active' : ''}`}
-                        onClick={() => handleLayoutModeChange('canvas-only')}
-                        aria-label="Fullscreen"
-                    >
-                        <i className="bi bi-fullscreen" />
-                    </button>
-                </Tooltip>
-            </div>
-            </>
-        );
-    };
-
-    type Theme = 'light' | 'dark';
-    const UserMenu = ()=> {
-        const { openDrawer } = useGlobalDrawer();
-        const { openSettings } = useSettingsModal();
-        const userName = `${user?.name || ''} ${user?.surname || ''}`.trim();
-        const userEmail = user?.email || '';
-        const initials = userName.split(' ').map(n => n[0] || '').join('');
-
-        const setTheme = (newTheme: Theme, init: boolean = false) => {
-            document.documentElement.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
-            if (!init) setThemeState(newTheme);
-        };
-        const [theme, setThemeState] = useState<Theme>(() => {
-            let theme: Theme = (localStorage.getItem('theme') as Theme | null) || 'light';
-            let oldTheme = document.documentElement.getAttribute('data-theme') as Theme | null;
-            if (theme !== oldTheme) setTheme(theme, true);
-            return theme;
-        });
-
-
-        return (
-            <div className='user-menu-container' id={'navusermenu'}>
-                <Menu
-                    position={'left'}
-                    trigger={<UserBadge name={userName} initials={initials} />}
-                >
-                    <UserHeader name={userName} email={userEmail} />
-                    <Item icon={<i className="bi bi-grid" />} action={async()=> {
-                        Collaborative.client.off('pullAction');
-                        await Collaborative.client.disconnect();
-                        U.resetState();
-                        R.navigate('/allProjects');
-                    }}>Dashboard</Item>
-                    <Item icon={<i className="bi bi-person-circle" />} action={()=> {
-                        openSettings('profile');
-                    }}>Profile</Item>
-                    <Item icon={<i className="bi bi-gear" />} action={()=> {
-                        openSettings();
-                    }}>Settings</Item>
-                    <Item icon={<i className="bi bi-box-arrow-left" />} action={async ()=> {
-                        if (isProjectModified()) {
-                            U.dialog('You are about to log out without saving your project. Do you want to proceed?', 'logout', async ()=>{
-                                await AuthApi.logout();
-                            });
-                        } else {
-                            await AuthApi.logout();
+                    // Determine type and title from tab ID
+                    if (id.startsWith('DockComponent_rightbar_')) {
+                        // Project summary tab
+                        title = project?.name || 'Project';
+                        type = 'project';
+                    } else if (id.startsWith('jjtl_')) {
+                        type = 'transformation';
+                        // Try to find transformation name
+                        const rawTitle = tab.title;
+                        if (typeof rawTitle === 'string') {
+                            title = rawTitle;
+                        } else if (rawTitle?.props?.children) {
+                            // React element — extract text
+                            const children = rawTitle.props.children;
+                            if (Array.isArray(children)) {
+                                title = children.filter((c: any) => typeof c === 'string').join('');
+                            } else if (typeof children === 'string') {
+                                title = children;
+                            }
                         }
-                    }}>Sign out</Item>
-                    <Divisor />
-                    <SubMenu icon={<i className="bi bi-circle-half" />} label="Theme">
-                        <SubMenuItem
-                            icon={<i className="bi bi-sun" />}
-                            action={() => setTheme('light')}
-                            active={theme === 'light'}
-                        >
-                            Light
-                        </SubMenuItem>
-                        <SubMenuItem
-                            icon={<i className="bi bi-moon" />}
-                            action={() => setTheme('dark')}
-                            active={theme === 'dark'}
-                        >
-                            Dark
-                        </SubMenuItem>
-                    </SubMenu>
-                </Menu>
-            </div>
-        );
+                        if (!title) title = 'Transformation';
+                    } else if (id.startsWith('doc_')) {
+                        type = 'documentation';
+                        title = 'Documentation';
+                    } else if (id.startsWith('vp_')) {
+                        type = 'viewpoint';
+                        // Extract title from React element or look up viewpoint
+                        const vpId = id.slice(3); // strip 'vp_' prefix
+                        const rawVp = (state as any)[vpId] || (state as any).idlookup?.[vpId];
+                        title = rawVp?.name || 'Viewpoint';
+                        if (!title || title === 'Viewpoint') {
+                            // Try extracting from tab title JSX
+                            const rawTitle = tab.title;
+                            if (rawTitle?.props?.children) {
+                                const children = rawTitle.props.children;
+                                if (Array.isArray(children)) {
+                                    title = children.filter((c: any) => typeof c === 'string').join('').trim() || 'Viewpoint';
+                                } else if (typeof children === 'string') {
+                                    title = children;
+                                }
+                            }
+                        }
+                    } else {
+                        // Model/Metamodel — look up in state
+                        const raw = (state as any)[id] || (state as any).idlookup?.[id];
+                        if (raw) {
+                            title = raw.name || 'Unnamed';
+                            type = raw.isMetamodel ? 'metamodel' : 'model';
+                        } else {
+                            title = 'Unnamed';
+                            type = 'metamodel';
+                        }
+                    }
+
+                    return { id, title, type, active: id === activeId, closable };
+                });
+
+                setOpenTabs(tabList);
+            } catch (e) {
+                // Ignore errors during sync
+            }
+        };
+
+        // Sync on layout changes
+        const handleActiveTab = () => setTimeout(syncTabs, 50);
+        window.addEventListener('jjodel:active-tab', handleActiveTab);
+
+        // Initial sync
+        const initialTimer = setTimeout(syncTabs, 200);
+        // Periodic sync (layout changes don't always fire events)
+        const interval = setInterval(syncTabs, 1000);
+
+        return () => {
+            window.removeEventListener('jjodel:active-tab', handleActiveTab);
+            clearTimeout(initialTimer);
+            clearInterval(interval);
+        };
+    }, [project]);
+
+    const handleTabClick2 = useCallback((tabId: string) => {
+        if (!DockManager.dock) return;
+        try {
+            const layout = DockManager.dock.getLayout();
+            const modelsPanel = layout?.dockbox?.children?.[0];
+            if (modelsPanel) {
+                const updated = JSON.parse(JSON.stringify(layout));
+                updated.dockbox.children[0].activeId = tabId;
+                DockManager.dock.loadLayout(updated);
+            }
+        } catch (e) {
+            console.warn('[Navbar] Error switching tab:', e);
+        }
+    }, []);
+
+    const handleTabClick = useCallback((tabId: string) => {
+        if (!DockManager.dock) return;
+        DockManager.dock.updateTab(tabId, null, true);
+    }, []);
+
+    const handleTabClose = useCallback((tabId: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        DockManager.closeTab(tabId);
+    }, []);
+
+    // Tab type badge letter or icon
+    const getTabBadge = (type: string): { letter: string; icon?: string; className: string } => {
+        switch (type) {
+            case 'metamodel': return { letter: 'M', className: 'appbar-tab__badge--metamodel' };
+            case 'model': return { letter: 'm', className: 'appbar-tab__badge--model' };
+            case 'transformation': return { letter: 'T', className: 'appbar-tab__badge--transformation' };
+            case 'documentation': return { letter: 'D', className: 'appbar-tab__badge--documentation' };
+            case 'viewpoint': return { letter: 'V', className: 'appbar-tab__badge--viewpoint' };
+            default: return { letter: '', className: '' };
+        }
+    };
+
+    // Overflow logic
+    const MAX_VISIBLE_TABS = 6;
+    const visibleTabs = openTabs.filter(t => t.type !== 'project'); // Don't show project summary in navbar
+    const tabsToShow = visibleTabs.length > MAX_VISIBLE_TABS
+        ? [...visibleTabs.slice(0, MAX_VISIBLE_TABS)]
+        : visibleTabs;
+    const overflowTabs = visibleTabs.length > MAX_VISIBLE_TABS
+        ? visibleTabs.slice(MAX_VISIBLE_TABS)
+        : [];
+    // Ensure active tab is always visible
+    const activeTab = visibleTabs.find(t => t.active);
+    if (activeTab && !tabsToShow.find(t => t.id === activeTab.id)) {
+        tabsToShow.pop();
+        tabsToShow.push(activeTab);
     }
+
+    const isProjectSelected = !visibleTabs.some(t => t.active);
+    const [showOverflow, setShowOverflow] = useState(false);
+
+    // Level badge component
+    // LevelBadge — inlined below. useSettingsModal() hoisted above.
+    const levelLabel = props.advanced ? 'Advanced' : 'Basic';
 
     return(<>
-        <nav id={'navbar'} className={'w-100 nav-container d-flex'} style={{zIndex: 99}}>
-            <MainLogo />
-            <MainMenu items={items} />
-            <Commands />
-            <div className="main-header-right">
-                {/* Vertical Toggles - Debug and Mode */}
-                <div className="navbar-toggles">
-                    <VerticalToggle
-                        isActive={props.debug}
-                        onToggle={() => {
-                            TRANSACTION('debug', ()=>SetRootFieldAction.new('debug', !props.debug), props.debug, !props.debug);
-                            U.debug = !props.debug;
-                        }}
-                        labelOn="debug on"
-                        labelOff="debug off"
-                        variant="debug"
-                    />
-                    <VerticalToggle
-                        isActive={props.advanced}
-                        onToggle={toggleAdvancedMode}
-                        labelOn="advanced"
-                        labelOff="basic"
-                        variant="default"
+        <nav id={'navbar'} className={'w-100 nav-container d-flex appbar'} style={{zIndex: 99}}>
+            <div className='nav-logo' onClick={() => R.navigate('/allProjects')}>
+                <div className={"aligner"}>
+                    <img
+                        src={jjodelLogo}
+                        alt="Jjodel"
+                        className="nav-logo__image"
                     />
                 </div>
-                {/* Layout Controls Group */}
-                <LayoutControls />
-                {/* Tree View Toggle - only in editor context */}
-                {project && metamodels.length > 0 && !isProjectOverviewPage() && <TreeViewToggle />}
+            </div>
+            <div className="appbar__sep" />
+            <MainMenu items={items} />
+            <section className='nav-commands d-flex'>
+                {project && debuggerr ? <DebuggerComponent /> : null}
+            </section>
+
+            {/* Project link */}
+            {project && (<>
+                <div className="appbar__sep" />
+                <button
+                    className={`appbar-project-link ${isProjectSelected ? 'appbar-project-link--selected' : 'appbar-project-link--unselected'}`}
+                    onClick={() => {
+                        const dock = DockManager.dock;
+                        if (dock) {
+                            const layout = dock.getLayout();
+                            const modelsPanel = layout?.dockbox?.children?.[0];
+                            if (modelsPanel && 'tabs' in modelsPanel && (modelsPanel as any).tabs?.length > 0) {
+                                const firstTabId = (modelsPanel as any).tabs[0].id;
+                                dock.updateTab(firstTabId, null, true);
+                            }
+                        }
+                    }}
+                    title="Project overview"
+                >
+                    <JjodelProjectIcon className="appbar-project-link__icon" />
+                    <span className="appbar-project-link__name">{project.name || 'Unnamed'}</span>
+                </button>
+            </>)}
+
+            {/* Custom Tab Strip */}
+            {visibleTabs.length > 0 && (<>
+                <div className="appbar__sep" />
+                <div className="appbar-tabs">
+                    {tabsToShow.map(tab => {
+                        const badge = getTabBadge(tab.type);
+                        return (
+                            <button
+                                key={tab.id}
+                                className={`appbar-tab appbar-tab--${tab.type} ${tab.active ? 'appbar-tab--active' : ''}`}
+                                onClick={() => handleTabClick(tab.id)}
+                                title={tab.title}
+                            >
+                                {(badge.letter || badge.icon) && (
+                                    <span className={`appbar-tab__badge ${badge.className}`}>
+                                        {badge.icon ? <i className={`bi ${badge.icon}`} /> : badge.letter}
+                                    </span>
+                                )}
+                                <span className="appbar-tab__name">{tab.title}</span>
+                                {tab.closable && (
+                                    <span
+                                        className="appbar-tab__close"
+                                        onClick={(e) => handleTabClose(tab.id, e)}
+                                        title="Close"
+                                    >
+                                        &times;
+                                    </span>
+                                )}
+                            </button>
+                        );
+                    })}
+                    {overflowTabs.length > 0 && (
+                        <div className="appbar-tabs__overflow" style={{ position: 'relative' }}>
+                            <button
+                                className="appbar-tabs__overflow-btn"
+                                onClick={() => setShowOverflow(!showOverflow)}
+                            >
+                                +{overflowTabs.length} &#x25BE;
+                            </button>
+                            {showOverflow && (
+                                <div className="appbar-tabs__overflow-dropdown">
+                                    {overflowTabs.map(tab => {
+                                        const badge = getTabBadge(tab.type);
+                                        return (
+                                            <button
+                                                key={tab.id}
+                                                className="appbar-tabs__overflow-item"
+                                                onClick={() => { handleTabClick(tab.id); setShowOverflow(false); }}
+                                            >
+                                                {(badge.letter || badge.icon) && (
+                                                    <span className={`appbar-tab__badge ${badge.className}`}>
+                                                        {badge.icon ? <i className={`bi ${badge.icon}`} /> : badge.letter}
+                                                    </span>
+                                                )}
+                                                <span>{tab.title}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    {/* New tab button */}
+                    {project && (
+                        <button
+                            className="appbar-tabs__new"
+                            onClick={() => project && createM2(project)}
+                            title="New metamodel"
+                        >
+                            +
+                        </button>
+                    )}
+                </div>
+            </>)}
+
+            <div className="main-header-right">
+                {/* Level badge (read-only) — inlined */}
+                <button
+                    className={`appbar-level-badge ${props.advanced ? 'appbar-level-badge--advanced' : ''}`}
+                    onClick={() => openSettings('profile')}
+                    title="Click to change in Settings"
+                >
+                    <span className="appbar-level-badge__dot" />
+                    {levelLabel}
+                </button>
+                <div className="appbar__sep" />
+                {/* Layout Controls moved to EditorV2 Toolbar */}
+                {/* Tree View Toggle — currently renders nothing (commented out) */}
                 {/* Divider */}
-                {project && <div className="navbar__divider" />}
-                {/* User Controls */}
-                <HelpMenu />
-                <UserMenu />
+                {project && <div className="appbar__sep" />}
+                {/* Help menu — inlined */}
+                <div className='nav-hamburger hoverable inline help-menu' tabIndex={0}>
+                    <span className={'menu-title'}>
+                        <i className="bi bi-question-circle" style={{marginRight: '6px'}} />
+                        Help
+                    </span>
+                    <div className={'content context-menu'}>
+                        <ul>
+                            {helpItems.map((i, index) => i ? makeEntry(i, index) : null)}
+                        </ul>
+                    </div>
+                </div>
+                {/* User menu — inlined */}
+                <div className='user-menu-container' id={'navusermenu'}>
+                    <Menu
+                        position={'left'}
+                        trigger={<UserBadge name={userName} initials={userInitials} color={AVATAR_COLORS[avatarConfig.colorIndex].hex} icon={AVATAR_ICONS[avatarConfig.iconIndex]} />}
+                    >
+                        <UserHeader name={userName} email={userEmail} />
+                        <Item icon={<i className="bi bi-grid" />} action={async()=> {
+                            Collaborative.client.off('pullAction');
+                            await Collaborative.client.disconnect();
+                            U.resetState();
+                            R.navigate('/allProjects');
+                        }}>Dashboard</Item>
+                        <Item icon={<i className="bi bi-person-circle" />} action={()=> {
+                            openSettings('profile');
+                        }}>Profile</Item>
+                        <Item icon={<i className="bi bi-gear" />} action={()=> {
+                            openSettings();
+                        }}>Settings</Item>
+                        <Item icon={<i className="bi bi-box-arrow-left" />} action={async ()=> {
+                            if (isProjectModified()) {
+                                U.dialog('You are about to log out without saving your project. Do you want to proceed?', 'logout', async ()=>{
+                                    await AuthApi.logout();
+                                    R.navigate('/auth');
+                                });
+                            } else {
+                                await AuthApi.logout();
+                                R.navigate('/auth');
+                            }
+                        }}>Sign out</Item>
+                        <Divisor />
+                        <SubMenu icon={<i className="bi bi-circle-half" />} label="Theme">
+                            <SubMenuItem
+                                icon={<i className="bi bi-sun" />}
+                                action={() => setTheme('light')}
+                                active={theme === 'light'}
+                            >
+                                Light
+                            </SubMenuItem>
+                            <SubMenuItem
+                                icon={<i className="bi bi-moon" />}
+                                action={() => setTheme('dark')}
+                                active={theme === 'dark'}
+                            >
+                                Dark
+                            </SubMenuItem>
+                        </SubMenu>
+                    </Menu>
+                </div>
             </div>
         </nav>
         <AboutDialog />
@@ -1450,6 +1660,55 @@ function NavbarComponent(props: AllProps) {
             isOpen={showShortcutsReference}
             onClose={() => setShowShortcutsReference(false)}
         />
+        {showConsole && (
+            <div
+                style={{
+                    position: 'fixed',
+                    bottom: 16,
+                    right: 16,
+                    width: 560,
+                    height: 420,
+                    zIndex: 9999,
+                    borderRadius: 12,
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.32)',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column',
+                }}
+            >
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 12px',
+                    background: '#1e293b',
+                    color: '#e2e8f0',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'default',
+                    userSelect: 'none',
+                }}>
+                    <span><i className="bi bi-terminal" style={{marginRight: 6}}/> JjScript Console</span>
+                    <button
+                        onClick={() => setShowConsole(false)}
+                        style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#94a3b8',
+                            cursor: 'pointer',
+                            fontSize: 16,
+                            lineHeight: 1,
+                            padding: '0 2px',
+                        }}
+                    >
+                        <i className="bi bi-x-lg"/>
+                    </button>
+                </div>
+                <div style={{ flex: 1, overflow: 'hidden' }}>
+                    <JjScriptConsole />
+                </div>
+            </div>
+        )}
     </>);
 }
 

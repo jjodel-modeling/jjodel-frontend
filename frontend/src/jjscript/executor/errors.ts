@@ -404,17 +404,16 @@ export function parseError(rawMessage: string, command?: string): JjScriptError 
 // ============================================
 // EXECUTION TYPES (co-located for convenience)
 // ============================================
-
-export interface ExecutionPauseInfo {
-    line: number;
+export interface ExecutionErrorInfo {
     command: string;
-    error: JjScriptError;
-    /** Commands executed so far */
-    executedSoFar: number;
-    /** Total commands */
-    totalCommands: number;
-    /** Time elapsed so far */
-    elapsedMs: number;
+    lineNumber: number;
+    executedSoFar: number,
+    totalCommands: number,
+    elapsedMs: number,
+    error: JjScriptError | string;
+    errorType?: string;
+}
+export interface ExecutionPauseInfo extends ExecutionErrorInfo {
 }
 
 export interface ExecutionSummary {

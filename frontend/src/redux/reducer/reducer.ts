@@ -518,12 +518,12 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
                 newState = action.value;
                 let u = DUser.getUser(newState);
                 let p = DProject.getProject(newState);
-                if (!newState.idlookup[u.id]) {
+                if (u && !newState.idlookup[u.id]) {
                     DUser.current = u.id;
                     newState.idlookup[u.id] = u;
                 }
-                if (!newState.idlookup[p.id]) {
-                    newState.idlookup[p.id] = u;
+                if (p && !newState.idlookup[p.id]) {
+                    newState.idlookup[p.id] = p;
                 }
                 U.debug = newState.debug;
                 break;

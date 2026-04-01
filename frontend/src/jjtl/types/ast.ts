@@ -29,10 +29,18 @@ export interface TransformationAST extends ASTNode {
     helpers: HelperAST[];
 }
 
+// A single source pattern in a class mapping: ClassName [alias]
+export interface SourcePatternAST {
+    className: string;
+    alias?: string;
+}
+
 // Class mapping: State -> Place { ... }
+//   or: State s -> Place { ... }       (single source with alias)
+//   or: Class c, Package p -> Table { ... }  (multi-source, aliases mandatory)
 export interface ClassMappingAST extends ASTNode {
     type: 'ClassMapping';
-    sourceClass: string;
+    sources: SourcePatternAST[];     // one element for single-source, multiple for multi-source
     targetClass: string;
     targetMultiplicity?: MultiplicityAST;
     condition?: ExpressionAST;
@@ -42,6 +50,8 @@ export interface ClassMappingAST extends ASTNode {
 // Union type for items that can appear in a mapping body
 export type MappingBodyItemAST =
     | AttributeMappingAST
+    | ForAllMappingAST
+    | LetStatementAST
     | AlertStatementAST
     | NotifyStatementAST;
 
@@ -52,11 +62,16 @@ export interface MultiplicityAST extends ASTNode {
     upper: number; // -1 = unbounded (*)
 }
 
-// Attribute mapping: name -> label : expression
+// Attribute mapping: targetAttr := expr  (new syntax)
+//   or: sourceAttr -> targetAttr [: conversion]  (legacy syntax)
 export interface AttributeMappingAST extends ASTNode {
     type: 'AttributeMapping';
-    sourceAttribute?: string;        // undefined for creation (-> attr)
     targetAttribute: string;
+    // New := syntax fields
+    expression?: ExpressionAST;      // targetAttr := expr
+    valueMapping?: ValueMappingAST[]; // targetAttr := sourceExpr : true=1, false=0
+    // Legacy -> syntax fields (kept for backward compatibility)
+    sourceAttribute?: string;        // undefined for creation (-> attr)
     conversion?: ConversionAST;
     objectCreation?: ObjectCreationAST;
 }
@@ -79,7 +94,26 @@ export interface ValueMappingAST extends ASTNode {
 export interface ObjectCreationAST extends ASTNode {
     type: 'ObjectCreation';
     targetClass: string;
-    body: AttributeMappingAST[];
+    body: MappingBodyItemAST[];
+}
+
+// Let statement: let $x = expr (, $y = expr)* in { body }
+export interface LetStatementAST extends ASTNode {
+    type: 'LetStatement';
+    bindings: Array<{
+        name: string;        // e.g. '$p' — sigil included
+        value: ExpressionAST;
+    }>;
+    body: MappingBodyItemAST[];
+}
+
+// ForAll mapping: forall x in collection such that predicate -> Type { ... }
+export interface ForAllMappingAST extends ASTNode {
+    type: 'ForAllMapping';
+    variable: string;
+    collection: ExpressionAST;
+    filter?: ExpressionAST;
+    objectCreation: ObjectCreationAST;
 }
 
 // Helper: helper formatName(s: String) -> String { ... }
@@ -116,6 +150,7 @@ export type ExpressionAST =
     | LambdaExpressionAST
     | PromptExpressionAST
     | InputExpressionAST
+    | ConfirmExpressionAST
     | ArrayLiteralAST
     // JjEL expression wrapper (for direct JjEL integration)
     | JjelExpressionWrapperAST;
@@ -239,12 +274,13 @@ export interface NotifyStatementAST extends ASTNode {
 }
 
 /**
- * Prompt expression - asks user for text input, returns String
- * prompt("message", "default")
+ * Prompt expression - asks user for typed input
+ * prompt("message", EString, "default")
  */
 export interface PromptExpressionAST extends ASTNode {
     type: 'PromptExpression';
     message: ExpressionAST;
+    typeRef: string;            // 'EString' | 'EInt' | 'EFloat' | 'EBoolean' | 'EDate' | any IDENTIFIER
     defaultValue?: ExpressionAST;
 }
 
@@ -258,6 +294,15 @@ export interface InputExpressionAST extends ASTNode {
     inputType: InputType;
     defaultValue?: ExpressionAST;
     options?: ExpressionAST[]; // For 'select' type
+}
+
+/**
+ * Confirm expression - blocking Yes/No dialog returning boolean
+ * confirm("message")
+ */
+export interface ConfirmExpressionAST extends ASTNode {
+    type: 'ConfirmExpression';
+    message: ExpressionAST;
 }
 
 /**

@@ -1,0 +1,409 @@
+// Shared styles for viewpoint workbench sub-components
+
+// --- Breadcrumb ---
+.viewpoint-breadcrumb {
+    height: 32px;
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 10px;
+    border-bottom: 0.5px solid #e2e8f0;
+    background: #f8fafc;
+    font-size: 11px;
+    color: #334155;
+    gap: 8px;
+
+    &__path {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    &__segment {
+        color: #94a3b8;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+
+        &--current {
+            color: #334155;
+            font-weight: 600;
+        }
+    }
+
+    &__separator {
+        color: #cbd5e1;
+        flex-shrink: 0;
+    }
+
+    &__badge {
+        font-size: 9px;
+        font-weight: 600;
+        padding: 1px 6px;
+        border-radius: 3px;
+        text-transform: capitalize;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    &__actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 0;
+    }
+
+    &__label {
+        color: #94a3b8;
+        font-size: 10px;
+        white-space: nowrap;
+    }
+
+    &__select {
+        font-size: 10px;
+        padding: 2px 4px;
+        border: 1px solid #e2e8f0;
+        border-radius: 4px;
+        background: white;
+        color: #334155;
+        outline: none;
+        max-width: 140px;
+
+        &:focus {
+            border-color: #0ea5e9;
+        }
+    }
+
+    &__mode-toggle {
+        font-size: 9px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border: 1px solid #e2e8f0;
+        border-radius: 4px;
+        background: white;
+        color: #94a3b8;
+        cursor: pointer;
+        white-space: nowrap;
+
+        &:hover {
+            background: #f1f5f9;
+        }
+
+        &--active {
+            background: #334155;
+            color: white;
+            border-color: #334155;
+
+            &:hover {
+                background: #475569;
+            }
+        }
+    }
+}
+
+// --- View Tree ---
+.view-tree {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+
+    &__header {
+        padding: 6px 8px;
+        border-bottom: 0.5px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #94a3b8;
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+
+    &__content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 2px 0;
+    }
+
+    &__node {
+        padding: 3px 6px;
+        display: flex;
+        align-items: center;
+        gap: 3px;
+        cursor: pointer;
+        font-size: 10px;
+        color: #334155;
+        user-select: none;
+
+        &:hover {
+            background: #f8fafc;
+        }
+
+        &--selected {
+            background: #f1f5f9;
+            border-left: 2px solid #0ea5e9;
+            font-weight: 500;
+            border-radius: 0;
+        }
+
+        &--level-0 { padding-left: 6px; }
+        &--level-1 { padding-left: 20px; }
+        &--level-2 { padding-left: 34px; }
+    }
+
+    &__badge {
+        width: 13px;
+        height: 13px;
+        border-radius: 2px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 7px;
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+
+    &__toggle {
+        font-size: 8px;
+        color: #94a3b8;
+        width: 10px;
+        text-align: center;
+        flex-shrink: 0;
+        cursor: pointer;
+    }
+
+    &__name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        flex: 1;
+        min-width: 0;
+    }
+
+    &__icon {
+        font-size: 9px;
+        color: #64748b;
+        flex-shrink: 0;
+        margin-left: auto;
+    }
+
+    &__footer {
+        padding: 4px 6px;
+        border-top: 0.5px solid #e2e8f0;
+        flex-shrink: 0;
+    }
+
+    &__add-btn {
+        width: 100%;
+        padding: 3px 6px;
+        font-size: 10px;
+        color: #64748b;
+        background: transparent;
+        border: 1px dashed #cbd5e1;
+        border-radius: 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+
+        &:hover {
+            background: #f8fafc;
+            color: #334155;
+            border-color: #94a3b8;
+        }
+    }
+}
+
+// --- Placeholders ---
+.workbench-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #94a3b8;
+    font-size: 11px;
+    gap: 4px;
+}
+
+// --- Canvas ---
+.workbench-canvas__toolbar {
+    position: absolute;
+    top: 5px;
+    left: 6px;
+    right: 6px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    z-index: 10;
+    pointer-events: none;
+
+    > * {
+        pointer-events: auto;
+    }
+}
+
+.workbench-canvas__toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.workbench-canvas__toolbar-spacer {
+    flex: 1;
+}
+
+.workbench-canvas__control {
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 0.5px solid #e2e8f0;
+    color: #64748b;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    white-space: nowrap;
+
+    &:hover {
+        color: #334155;
+        background: rgba(255, 255, 255, 0.95);
+    }
+
+    &--active {
+        background: #e0f2fe;
+        border-color: #0ea5e9;
+        color: #0369a1;
+
+        &:hover {
+            background: #bae6fd;
+        }
+    }
+}
+
+.workbench-canvas__content {
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+}
+
+.workbench-canvas__editor-wrap {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: auto;
+}
+
+.workbench-canvas__status {
+    position: absolute;
+    bottom: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 8px;
+    color: #94a3b8;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 1px 6px;
+    border-radius: 2px;
+    border: 0.5px solid #e2e8f0;
+    backdrop-filter: blur(4px);
+    z-index: 10;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+// Highlight mode: dim non-matched elements
+.workbench-canvas--highlight .workbench-canvas__editor-wrap {
+    // TODO: integrate view scoring for highlight/filter
+    // When implemented, matched elements get a cyan border glow
+    // and non-matched elements get reduced opacity
+}
+
+// Filter mode: hide non-matched elements
+.workbench-canvas--filter .workbench-canvas__editor-wrap {
+    // TODO: integrate view scoring for highlight/filter
+    // When implemented, non-matched elements are hidden (display: none)
+}
+
+// --- Resize Handle ---
+.viewpoint-workbench__resize-handle {
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8fafc;
+    border-top: 0.5px solid #e2e8f0;
+    border-bottom: 0.5px solid #e2e8f0;
+    cursor: ns-resize;
+    user-select: none;
+    gap: 8px;
+    font-size: 10px;
+    color: #64748b;
+    flex-shrink: 0;
+
+    &:hover {
+        background: #f1f5f9;
+    }
+
+    &--resizing {
+        background: #e2e8f0;
+    }
+}
+
+.viewpoint-workbench__resize-grip {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-items: center;
+
+    &::before,
+    &::after {
+        content: '';
+        width: 16px;
+        height: 1px;
+        background: #cbd5e1;
+        border-radius: 1px;
+    }
+}
+
+.viewpoint-workbench__resize-label {
+    font-size: 10px;
+    color: #94a3b8;
+    white-space: nowrap;
+}
+
+.viewpoint-workbench__resize-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+    padding-right: 4px;
+}
+
+.viewpoint-workbench__resize-btn {
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+    border-radius: 3px;
+    font-size: 11px;
+    padding: 0;
+
+    &:hover {
+        background: #e2e8f0;
+        color: #334155;
+    }
+}

@@ -5,13 +5,23 @@
 
 import { ExecutionContext } from '../types';
 import { DUser, L, LUser, LProject, LModel, store, LPointerTargetable, LModelElement, DState, GObject } from '../../joiner';
+import DockManager from '../../components/abstract/DockManager';
 
 /**
- * Get the active/selected metamodel from UI state
- * Uses the _lastSelected state to determine which metamodel is currently being worked on
+ * Get the active/selected metamodel from UI state.
+ *
+ * Resolution order:
+ * 1. DockManager active tab — the metamodel/model tab the user is currently viewing
+ * 2. _lastSelected.modelElement — the last clicked element's metamodel
+ * 3. null (caller decides fallback)
  */
 export function getActiveMetamodel(): LModel | null {
     try {
+        // 1. Use DockManager active tab ID (most reliable indicator of which metamodel is "active")
+        const activeTabModel = getActiveTabMetamodel();
+        if (activeTabModel) return activeTabModel;
+
+        // 2. Fall back to _lastSelected.modelElement
         const state: DState & GObject = store.getState();
         const selected = state._lastSelected?.modelElement;
 
@@ -23,6 +33,31 @@ export function getActiveMetamodel(): LModel | null {
                     return model;
                 }
             }
+        }
+        return null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Get the metamodel corresponding to the currently active DockManager tab.
+ * Tab IDs in the dock layout correspond to model/metamodel pointer IDs.
+ */
+function getActiveTabMetamodel(): LModel | null {
+    try {
+        if (!DockManager.dock) return null;
+
+        const layout = DockManager.dock.getLayout();
+        const modelsPanel = layout?.dockbox?.children?.[0];
+        const tabs = (modelsPanel as any)?.tabs || [];
+        const activeId: string = (modelsPanel as any)?.activeId || tabs[0]?.id;
+        if (!activeId) return null;
+
+        // Resolve the active tab ID to an LModel
+        const model = LPointerTargetable.fromPointer(activeId) as LModel | null;
+        if (model && model.isMetamodel) {
+            return model;
         }
         return null;
     } catch {

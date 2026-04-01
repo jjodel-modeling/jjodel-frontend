@@ -7,6 +7,8 @@ import { DevModeLabel } from "../../../components/DevModeLabel/DevModeLabel";
 import { ConfirmDialog } from "../../../components/ConfirmDialog/ConfirmDialog";
 import { AddTagDialog } from "../../../components/AddTagDialog/AddTagDialog";
 import { ProjectsApi } from "../../../api/persistance";
+import { buildProjectExportJson } from '../../../model/megamodelPersistence';
+import { getRuntimeMegamodel } from '../../../model/megamodelRuntime';
 import "./catalog.scss"
 import _ from "lodash";
 
@@ -276,7 +278,7 @@ const Catalog = (props: ChildrenType) => {
         try {
             const projectsToExport = props.projects?.filter((p: LProject) => selectedProjects.has(p.id)) || [];
             for (const project of projectsToExport) {
-                U.download(`${project.name}.jjodel`, JSON.stringify(project.__raw));
+                U.download(`${project.name}.jjodel`, JSON.stringify(buildProjectExportJson(project.__raw as unknown as Record<string, unknown>, getRuntimeMegamodel(project.id))));
             }
             handleClearSelection();
             U.alert('i', 'Success', `${count} project${count > 1 ? 's' : ''} exported`);

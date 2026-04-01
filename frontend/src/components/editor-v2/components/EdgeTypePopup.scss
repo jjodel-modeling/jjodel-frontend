@@ -1,9 +1,9 @@
 .edge-type-popup {
-    background: #1e293b;
-    border: 1px solid rgba(148, 163, 184, 0.2);
-    border-radius: 6px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    padding: 4px 0;
+    background: var(--float-bg);
+    border: 1px solid var(--float-border);
+    border-radius: 8px;
+    box-shadow: 0 2px 12px var(--float-shadow);
+    padding: 4px;
     min-width: 160px;
     outline: none;
     pointer-events: auto;
@@ -11,10 +11,10 @@
     &__header {
         font-size: 10px;
         font-weight: 600;
-        color: #64748b;
+        color: var(--float-text-section);
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        padding: 4px 10px 2px;
+        letter-spacing: 0.08em;
+        padding: 4px 8px 2px;
         user-select: none;
     }
 
@@ -23,11 +23,12 @@
         align-items: center;
         gap: 8px;
         width: 100%;
-        padding: 6px 10px;
+        padding: 5px 8px;
         border: none;
         background: transparent;
-        color: #e2e8f0;
+        color: var(--float-text);
         font-size: 12px;
+        border-radius: 4px;
         cursor: pointer;
         outline: none;
         text-align: left;
@@ -35,27 +36,28 @@
 
         &:hover,
         &:focus-visible {
-            background: rgba(14, 165, 233, 0.15);
+            background: var(--float-hover);
         }
 
         &:focus-visible {
-            box-shadow: inset 2px 0 0 #0ea5e9;
+            box-shadow: inset 2px 0 0 var(--float-active-text);
         }
 
         &:active {
-            background: rgba(14, 165, 233, 0.25);
+            color: var(--float-active-text);
+            background: var(--float-active-bg);
         }
     }
 
     &__icon {
         flex-shrink: 0;
-        color: #94a3b8;
+        color: var(--float-icon);
         transition: color 0.1s;
     }
 
     &__option:hover &__icon,
     &__option:focus-visible &__icon {
-        color: #0ea5e9;
+        color: var(--float-active-text);
     }
 
     &__label {

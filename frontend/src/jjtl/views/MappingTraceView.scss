@@ -547,6 +547,25 @@ $transition-fast: 150ms ease;
     }
 }
 
+.trace-binding-user-provided {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin-left: $spacing-xs;
+    padding: 1px 6px;
+    background-color: $color-primary-light;
+    border-radius: $radius-sm;
+    color: $color-primary;
+    font-family: $font-family;
+    font-size: 10px;
+    font-weight: 500;
+    white-space: nowrap;
+
+    i {
+        font-size: 10px;
+    }
+}
+
 .trace-binding-expression {
     display: flex;
     align-items: center;

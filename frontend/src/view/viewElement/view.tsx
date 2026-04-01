@@ -44,6 +44,7 @@ import {
 import {DUser, EPSize, Pack1, transientProperties } from "../../joiner/classes";
 import DSL from "../../DSL/DSL";
 import {ReactNode} from "react";
+import type {ViewpointType} from "../viewPoint/viewpoint";
 import {labeltype} from "../../model/dataStructure/GraphDataElements";
 
 let CSS_Units0 = {'Local-font relative':{
@@ -189,6 +190,7 @@ export class DViewElement extends DPointerTargetable {
     isValidation!: boolean; // only for root views (ex viewpoints) to group views semantically.
     name!: string;
     isExclusiveView!: boolean;
+    viewpointType?: ViewpointType; // explicit viewpoint type (additive — legacy booleans still work)
 
     // processate 1 sola volta all'applicazione della vista o all'editing del campo
     constants?: string;
@@ -1732,6 +1734,13 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         newView.pointedBy = PointedBy.merge(newView, v);
         newView.subViews = {...newView.subViews, ...v.subViews};
         s.idlookup[v.id] = newView;
+        // When called with explicit state (e.g. from VersionFixer during project load),
+        // skip dispatching to the live Redux store — the state object will be loaded
+        // via LoadAction later, and VIEWS_RECOMPILE is already set up by SaveManager.
+        if (state) {
+            // Only update the state object directly; recompile flags are already in `state`
+            return;
+        }
         transientProperties.view[v.id] = new ViewTransientProperties();
         SetRootFieldAction.new('VIEWS_RECOMPILE_all', v.id, '+=', false);
     }

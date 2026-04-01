@@ -7,6 +7,7 @@ import ProjectEditor from '../../project/ProjectEditor';
 
 function InfoTabComponent(props: AllProps) {
     const project = props.project;
+    if (!project) return null;
     windoww.project = project;
 
     return (

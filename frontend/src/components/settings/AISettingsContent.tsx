@@ -1,8 +1,23 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {AI, AIConfig, AIProvider, AIVersion, ALL_AI_PROVIDERS, JodieConfig, TAIProvider} from '../../types/jodie';
+import { Badge } from '../common/Badge';
+import { Button } from '../common/Button';
 import './AISettingsContent.scss';
 import type {Dictionary, GObject} from "../../joiner";
 import {U} from "../../joiner";
+import { OpenAIIcon } from '../icons/ProviderIcons';
+
+import groqLogo from '../../static/img/groq.webp';
+import kimiLogo from '../../static/img/kimi.svg';
+import ollamaLogo from '../../static/img/ollama.png';
+import claudeLogo from '../../static/img/claude.webp';
+import mistralLogo from '../../static/img/mistral-color.webp';
+import geminiLogo from '../../static/img/gemini.webp';
+import deepseekLogo from '../../static/img/deepseek.webp';
+import copilotLogo from '../../static/img/copilot.webp';
+
+
+
 
 
 interface AISettingsContentProps {
@@ -45,22 +60,22 @@ function ModelCapabilitiesBadges({ model }: { model: AIVersion | undefined }): J
     return (
         <div className="model-capabilities">
             {capabilities.vision && (
-                <span className="capability-badge vision d-flex" title="Supports image upload">
-                    <i className="bi bi-image my-auto" />
-                    <span className="my-auto">Images</span>
-                </span>
+                <Badge category="type">
+                    <i className="bi bi-image" />
+                    Images
+                </Badge>
             )}
             {capabilities.pdf && (
-                <span className="capability-badge pdf d-flex" title="Supports PDF upload">
-                    <i className="bi bi-file-earmark-pdf my-auto" />
-                    <span className="my-auto">PDF</span>
-                </span>
+                <Badge category="type">
+                    <i className="bi bi-file-earmark-pdf" />
+                    PDF
+                </Badge>
             )}
             {!capabilities.vision && !capabilities.pdf && (
-                <span className="capability-badge text-only d-flex" title="Text only">
-                    <i className="bi bi-fonts my-auto" />
-                    <span className="my-auto">Text only</span>
-                </span>
+                <Badge category="state">
+                    <i className="bi bi-fonts" />
+                    Text only
+                </Badge>
             )}
         </div>
     );
@@ -124,6 +139,37 @@ export function AISettingsContent({
         const availableModels: AIVersion[] = Object.values(llm.versions);
         const selectedModel = llm.versions[config.model];
 
+        const AIicon = (name: string) => {
+
+            switch (name) {
+                case 'GPT': 
+                    return <i className="bi bi-openai"></i>;
+                case 'Claude': 
+                    return <img style={{width: '24px', height: '24px', borderRadius: '3px'}} src={claudeLogo} />;
+                case 'Groq':
+                    return <img style={{width: '24px', height: '24px', borderRadius: '3px'}} src={groqLogo} />;
+                case 'DeepSeek':
+                    return <img style={{width: '24px', height: '24px', borderRadius: '3px'}} src={deepseekLogo} />;
+                case 'Gemini':
+                    return <img style={{width: '24px', height: '24px', borderRadius: '3px'}} src={geminiLogo} />;
+                case 'Mistral':
+                    return <img style={{width: '24px', height: '24px', borderRadius: '3px'}} src={mistralLogo} />;
+                case 'Ollama':
+                    return <img style={{width: '24px', height: '24px', borderRadius: '3px'}} src={ollamaLogo} />;
+                case 'Llama':
+                    return 'Llama';
+                case 'Copilot':
+                    return <img style={{width: '24px', height: '24px', borderRadius: '3px'}} src={copilotLogo} />;
+                case 'Kimi':
+                    return <img style={{width: '24px', height: '24px', backgroundColor: '#ccc', padding: '2px', borderRadius: '3px'}} src={kimiLogo} />;
+                case 'Custom':
+                    return 'Custom';
+                default:
+                    return null;
+            }
+            
+        }
+
         return (
             <div
                 key={name}
@@ -134,13 +180,15 @@ export function AISettingsContent({
                     onClick={() => setExpandedProvider(isExpanded ? null : name)}
                 >
                     <div className="provider-info">
+
                         {llm.logo ? (
-                            <img src={llm.logo} alt={`${name} logo`} className="provider-icon-logo" />
+                            AIicon(name)
                         ) : (
                             <div className="provider-icon-letter" style={{ backgroundColor: llm.bgColor }}>
                                 {name === AIProvider.Custom ? <i className="bi bi-puzzle" /> : llm.initial}
                             </div>
                         )}
+
                         <div className="provider-details">
                             <span className="provider-name">{name}</span>
                             <span className="provider-description">{description}</span>
@@ -148,10 +196,10 @@ export function AISettingsContent({
                     </div>
                     <div className="provider-status">
                         {isConfigured && (
-                            <span className="status-badge configured">
+                            <Badge category="version">
                                 <i className="bi bi-check-circle-fill" />
                                 Configured
-                            </span>
+                            </Badge>
                         )}
                         <i className={`bi bi-chevron-${isExpanded ? 'up' : 'down'} chevron`} />
                     </div>
@@ -267,7 +315,7 @@ export function AISettingsContent({
                     }}
                 >
                     <option value="">Auto (first available)</option>
-                    {configuredProvidersList.map(p => <option key={p.name} value={p.name}>{p.name}</option>)}
+                    {configuredProvidersList.map((p, i) => <option key={`${i}-${p.name}`} value={p.name}>{p.name}</option>)}
                 </select>
                 {configuredProvidersList.length === 0 && (
                     <p className="default-provider-empty">Configure at least one provider below to set a default.</p>
@@ -275,14 +323,14 @@ export function AISettingsContent({
             </div>
 
             <div className="providers-list">
-                {ALL_AI_PROVIDERS.map(provider=> AI[provider]).map(llm=>(
-                    llm.name === AIProvider.Custom ? null :
+                {ALL_AI_PROVIDERS.map(provider => {
+                    const llm = AI[provider];
+                    return llm.name === AIProvider.Custom ? null :
                         renderProviderCard(llm.name, [
                             { key: 'apiKey', label: 'API Key', type: 'password', placeholder: llm.keyPlaceholder || "Your " + llm.name + " API key" },
                             { key: 'model', label: 'Model', type: 'model', placeholder: '' },
-                        ]
-                    )
-                ))}
+                        ]);
+                })}
 
 
                 {/* Custom Provider */}
@@ -307,7 +355,11 @@ export function AISettingsContent({
                     <span>API keys are stored locally in your browser.</span>
                 </div>
                 <div className="footer-actions">
-                    {onClose && <button className="btn-secondary" onClick={onClose}>Close</button>}
+                    {onClose && (
+                        <Button variant="secondary" onClick={onClose}>
+                            Cancel
+                        </Button>
+                    )}
                 </div>
             </div>
         </div>

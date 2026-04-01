@@ -1,6 +1,6 @@
-import React, { useMemo, useRef, useState, useEffect, useLayoutEffect } from 'react';
-import { Handle, Position, useEdges, useNodes, useUpdateNodeInternals } from '@xyflow/react';
-import { computePortDistribution, MAX_HANDLES_PER_SIDE, type Side } from '../utils/portDistribution';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
+import { Handle, Position, useEdges, useStoreApi } from '@xyflow/react';
+import { MAX_HANDLES_PER_SIDE, type Side } from '../utils/portDistribution';
 
 const SIDES: readonly Side[] = ['top', 'right', 'bottom', 'left'];
 
@@ -32,8 +32,7 @@ const HOVER_THRESHOLD = 15;
  */
 function DynamicHandles({ nodeId }: DynamicHandlesProps) {
     const edges = useEdges();
-    const nodes = useNodes();
-    const updateNodeInternals = useUpdateNodeInternals();
+    const storeApi = useStoreApi();
 
     // --- Hover state for ghost-like behavior on inactive handles ---
     const [hoveredSide, setHoveredSide] = useState<Side | null>(null);
@@ -41,6 +40,8 @@ function DynamicHandles({ nodeId }: DynamicHandlesProps) {
     const markerRef = useRef<HTMLDivElement>(null);
 
     // --- Stable edge topology fingerprint ---
+    // Only changes when edge connections or handle assignments change.
+    // Does NOT depend on node positions — prevents re-render cascade during drag.
     const edgeTopologyKey = useMemo(() => {
         const relevant = edges
             .filter(e => e.source === nodeId || e.target === nodeId)
@@ -50,51 +51,56 @@ function DynamicHandles({ nodeId }: DynamicHandlesProps) {
         return relevant;
     }, [edges, nodeId]);
 
-    // --- Stable node positions key ---
-    const nodePositionsKey = useMemo(() => {
-        const parts: string[] = [];
-        for (const n of nodes) {
-            const w = (n.measured?.width ?? (n as any).width ?? 180) as number;
-            const h = (n.measured?.height ?? (n as any).height ?? 80) as number;
-            parts.push(`${n.id}:${Math.round(n.position.x)}:${Math.round(n.position.y)}:${Math.round(w)}:${Math.round(h)}`);
-        }
-        return parts.join('|');
-    }, [nodes]);
-
-    const nodePositions = useMemo(() => {
-        const map = new Map<string, { centerX: number; centerY: number }>();
-        for (const n of nodes) {
-            const w = (n.measured?.width ?? (n as any).width ?? 180) as number;
-            const h = (n.measured?.height ?? (n as any).height ?? 80) as number;
-            map.set(n.id, {
-                centerX: n.position.x + w / 2,
-                centerY: n.position.y + h / 2,
-            });
-        }
-        return map;
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [nodePositionsKey]);
-
-    // --- Compute active handles from port distribution ---
+    // --- Derive active handles directly from edge handle assignments ---
+    // Reads sourceHandle/targetHandle from edges (assigned by applyDistribution).
+    // No computePortDistribution call needed — avoids node position dependency
+    // which was causing updateNodeInternals → dimension changes → re-render loops.
     const activeHandles = useMemo(() => {
-        const allNodeIds = nodes.map(n => n.id);
-        const { nodeHandles } = computePortDistribution(edges, allNodeIds, nodePositions);
-        const config = nodeHandles.get(nodeId);
-
-        // Map: handleId → position (0-1 along side)
         const active = new Map<string, number>();
+        const sidePorts = new Map<string, Set<string>>();
 
-        if (config) {
-            for (const side of SIDES) {
-                for (const port of config[side]) {
-                    active.set(port.handleId, port.position);
-                }
+        for (const edge of edges) {
+            if (edge.source === nodeId && edge.sourceHandle) {
+                const side = edge.sourceHandle.split('-')[0];
+                if (!sidePorts.has(side)) sidePorts.set(side, new Set());
+                sidePorts.get(side)!.add(edge.sourceHandle);
             }
+            if (edge.target === nodeId && edge.targetHandle) {
+                const side = edge.targetHandle.split('-')[0];
+                if (!sidePorts.has(side)) sidePorts.set(side, new Set());
+                sidePorts.get(side)!.add(edge.targetHandle);
+            }
+        }
+
+        for (const [, handleIds] of sidePorts) {
+            const sorted = Array.from(handleIds).sort();
+            const count = sorted.length;
+            sorted.forEach((handleId, index) => {
+                const position = count === 1 ? 0.5 : (index + 1) / (count + 1);
+                active.set(handleId, position);
+            });
         }
 
         return active;
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [edgeTopologyKey, nodePositionsKey, nodeId]);
+    }, [edgeTopologyKey, nodeId]);
+
+    // --- Determine which Handle type (source/target) is used per handleId ---
+    // A handleId can be source, target, or both (if different edges use it in both roles).
+    const handleRoles = useMemo(() => {
+        const roles = new Map<string, Set<'source' | 'target'>>();
+        for (const edge of edges) {
+            if (edge.source === nodeId && edge.sourceHandle) {
+                if (!roles.has(edge.sourceHandle)) roles.set(edge.sourceHandle, new Set());
+                roles.get(edge.sourceHandle)!.add('source');
+            }
+            if (edge.target === nodeId && edge.targetHandle) {
+                if (!roles.has(edge.targetHandle)) roles.set(edge.targetHandle, new Set());
+                roles.get(edge.targetHandle)!.add('target');
+            }
+        }
+        return roles;
+    }, [edges, nodeId]);
 
     // --- Hover detection on parent .mm-node element ---
     useEffect(() => {
@@ -152,16 +158,37 @@ function DynamicHandles({ nodeId }: DynamicHandlesProps) {
 
     const lastCommittedKeyRef = useRef<string>('');
 
-    // useLayoutEffect: runs after DOM commit but BEFORE browser paint.
-    // Handle positions may change (active handles redistribute), so we tell RF
-    // to re-measure. Since all handles are always in DOM (pool pattern),
-    // RF always finds them — this just updates their measured positions.
-    useLayoutEffect(() => {
+    // useEffect (NOT useLayoutEffect): update RF handle measurements when
+    // active handles change. Using useEffect instead of useLayoutEffect avoids
+    // the synchronous cascade where updateNodeInternals → dimension changes →
+    // re-render → updateNodeInternals could exceed React's update depth limit.
+    //
+    // Double-rAF ensures the browser has PAINTED the new CSS positions before
+    // we measure via getBoundingClientRect. The timing chain is:
+    //   setEdges → StoreUpdater useEffect → zustand update → useEdges() →
+    //   DynamicHandles re-render → CSS committed → paint → rAF → rAF → measure
+    // Without this delay, getBoundingClientRect returns stale positions (50%)
+    // because the measurement fires before the browser resolves CSS percentages.
+    useEffect(() => {
         if (activeHandlesKey !== lastCommittedKeyRef.current) {
             lastCommittedKeyRef.current = activeHandlesKey;
-            updateNodeInternals(nodeId);
+            // Double-rAF: first rAF fires before next paint, second fires
+            // after that paint completes — guaranteeing CSS is resolved.
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    const state = storeApi.getState();
+                    const domNode = state.domNode;
+                    if (!domNode) return;
+                    const nodeElement = domNode.querySelector(`.react-flow__node[data-id="${nodeId}"]`);
+                    if (nodeElement) {
+                        const updates = new Map();
+                        updates.set(nodeId, { id: nodeId, nodeElement, force: true });
+                        state.updateNodeInternals(updates);
+                    }
+                });
+            });
         }
-    }, [activeHandlesKey, nodeId, updateNodeInternals]);
+    }, [activeHandlesKey, nodeId, storeApi]);
 
     // --- Render ALL handles from pool (stable keys, never mount/unmount) ---
     return (
@@ -197,29 +224,46 @@ function DynamicHandles({ nodeId }: DynamicHandlesProps) {
                     // inactive at 50% (center of side)
                     const position = isActive ? activePosition : 0.5;
 
-                    // CSS class determines visibility + style
-                    const className = isActive
-                        ? 'mm-anchor mm-anchor--connected'
-                        : isGhostVisible
-                            ? 'mm-anchor mm-anchor--ghost mm-anchor--ghost-visible'
-                            : 'mm-anchor mm-anchor--pool-inactive';
+                    // Determine active role(s) for this handleId.
+                    // Only the Handle matching its edge role gets --connected;
+                    // the other stays --pool-inactive to avoid double dots.
+                    const roles = handleRoles.get(handleId);
+                    const isSourceRole = isActive && (roles?.has('source') ?? false);
+                    const isTargetRole = isActive && (roles?.has('target') ?? false);
 
-                    // Inline style: active = position only; inactive = force invisible
-                    // (inline styles override RF's own inline styles on <Handle>)
-                    const style: React.CSSProperties = isActive
-                        ? { [positionProp]: `${position * 100}%` }
-                        : isGhostVisible
-                            ? { [positionProp]: '50%' }
-                            : {
-                                [positionProp]: '50%',
-                                visibility: 'hidden' as const,
-                                opacity: 0,
-                                pointerEvents: 'none' as const,
-                                // NO width:0, NO height:0 — React Flow MUST be able to measure
-                                // via getBoundingClientRect(). Dimensions come from CSS .mm-anchor (8x8px).
-                                border: 'none',
-                                background: 'transparent',
-                            };
+                    // Inactive style shared by both non-active handles
+                    const inactiveStyle: React.CSSProperties = {
+                        [positionProp]: '50%',
+                        visibility: 'hidden' as const,
+                        opacity: 0,
+                        pointerEvents: 'none' as const,
+                        // NO width:0, NO height:0 — React Flow MUST be able to measure
+                        // via getBoundingClientRect(). Dimensions come from CSS .mm-anchor (8x8px).
+                        border: 'none',
+                        background: 'transparent',
+                    };
+
+                    const ghostClassName = 'mm-anchor mm-anchor--ghost mm-anchor--ghost-visible';
+                    const ghostStyle: React.CSSProperties = { [positionProp]: '50%' };
+                    const connectedClassName = 'mm-anchor mm-anchor--connected';
+                    const connectedStyle: React.CSSProperties = { [positionProp]: `${position * 100}%` };
+                    const poolClassName = 'mm-anchor mm-anchor--pool-inactive';
+
+                    // --- Target Handle ---
+                    const targetClassName = isTargetRole
+                        ? connectedClassName
+                        : isGhostVisible ? ghostClassName : poolClassName;
+                    const targetStyle = isTargetRole
+                        ? connectedStyle
+                        : isGhostVisible ? ghostStyle : inactiveStyle;
+
+                    // --- Source Handle ---
+                    const sourceClassName = isSourceRole
+                        ? connectedClassName
+                        : isGhostVisible ? ghostClassName : poolClassName;
+                    const sourceStyle = isSourceRole
+                        ? connectedStyle
+                        : isGhostVisible ? ghostStyle : inactiveStyle;
 
                     handles.push(
                         <React.Fragment key={handleId}>
@@ -227,16 +271,16 @@ function DynamicHandles({ nodeId }: DynamicHandlesProps) {
                                 type="target"
                                 position={SIDE_TO_POSITION[side]}
                                 id={handleId}
-                                className={className}
-                                style={style}
+                                className={targetClassName}
+                                style={targetStyle}
                                 isConnectableStart={false}
                             />
                             <Handle
                                 type="source"
                                 position={SIDE_TO_POSITION[side]}
                                 id={handleId}
-                                className={className}
-                                style={style}
+                                className={sourceClassName}
+                                style={sourceStyle}
                                 isConnectableEnd={false}
                             />
                         </React.Fragment>

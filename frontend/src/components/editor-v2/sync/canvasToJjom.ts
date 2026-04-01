@@ -18,10 +18,17 @@ import {
     DVertex,
     DEdge,
     DVoidEdge,
+    DObject,
+    DModel,
+    DClass,
+    DEnumerator,
+    DPackage,
     GraphSize,
     store,
 } from '../../../joiner';
-import { markCanvasUpdated, markCanvasUpdatedBatch } from './syncState';
+import type { Node } from '@xyflow/react';
+import type { ClassNodeData } from '../types';
+import { markCanvasUpdated, markCanvasUpdatedBatch, markCanvasEdgePair } from './syncState';
 
 // ---------------------------------------------------------------------------
 // Position sync
@@ -103,22 +110,34 @@ export function syncInheritanceEdge(
 
         let edgeId: string | null = null;
 
+        // Model change and edge creation are done in SEPARATE transactions.
+        // DVoidEdge.new2 internally calls Constructors.persist() which creates
+        // its own TRANSACTION. Nesting it inside an outer TRANSACTION causes
+        // the edge to not be properly added to the graph's subElements.
+        // The auto-populate effect's dependencies (modelClassCount, subElementIds.length)
+        // do NOT include the extends array, so the effect won't fire between the two.
         TRANSACTION('EditorV2 create inheritance edge', () => {
             sourceClass.extends = [...currentExtends, targetClass.id];
-
-            const dEdge = DVoidEdge.new2(
-                undefined,
-                graphId,
-                graphId,
-                undefined,
-                sourceVertexId,
-                targetVertexId,
-                (d: DEdge) => { d.isExtend = true; }
-            );
-            edgeId = dEdge.id;
         });
 
+        // Register the edge pair BEFORE creating the DVoidEdge so the
+        // auto-populate won't create a duplicate even if it runs before
+        // the DVoidEdge appears in the graph's subElements.
+        markCanvasEdgePair(sourceVertexId, targetVertexId);
+
+        const dEdge = DVoidEdge.new2(
+            undefined,
+            graphId,
+            graphId,
+            undefined,
+            sourceVertexId,
+            targetVertexId,
+            (d: DEdge) => { d.isExtend = true; }
+        );
+        edgeId = dEdge.id;
+
         if (edgeId) markCanvasUpdated(edgeId);
+
         return edgeId;
     } catch (err) {
         console.warn('[canvasToJjom] Failed to create inheritance edge:', err);
@@ -128,15 +147,18 @@ export function syncInheritanceEdge(
 
 /**
  * Create a reference relationship in JjOM AND its graph edge (DEdge).
- * Both operations are wrapped in a single TRANSACTION to prevent
- * useJjomSync from firing between addReference and DVoidEdge.new2.
+ * Model changes (addReference, type, bounds, kind) are done in one TRANSACTION,
+ * then DVoidEdge.new2 runs separately (it has its own internal TRANSACTION).
+ * Nesting DVoidEdge.new2 inside an outer TRANSACTION caused the edge to not
+ * appear in the graph's subElements, leading to duplicate edges.
  * Returns the DEdge ID on success, null on failure.
  */
 export function syncReferenceEdge(
     sourceVertexId: string,
     targetVertexId: string,
     name: string = 'newRef',
-): string | null {
+    kind?: 'association' | 'composition' | 'aggregation',
+): { edgeId: string; refName: string } | null {
     try {
         const sourceProxy: any = LPointerTargetable.fromPointer(sourceVertexId);
         const targetProxy: any = LPointerTargetable.fromPointer(targetVertexId);
@@ -154,36 +176,72 @@ export function syncReferenceEdge(
             return null;
         }
 
-        let edgeId: string | null = null;
+        // Make the reference name unique within the source class.
+        // Use raw store lookup (NOT LProxy .id getter which can return {} — see MEMORY.md)
+        let uniqueName = name;
+        try {
+            const state = store.getState();
+            const rawVertex = state.idlookup?.[sourceVertexId] as any;
+            const classId = rawVertex?.model;  // raw string pointer, reliable
+            const dClass = classId ? state.idlookup?.[classId] as any : null;
+            if (dClass) {
+                const refNames = new Set<string>();
+                for (const refId of (dClass.references ?? [])) {
+                    const ref = state.idlookup?.[refId] as any;
+                    if (ref?.name) refNames.add(ref.name);
+                }
+                if (refNames.has(uniqueName)) {
+                    let i = 1;
+                    while (refNames.has(`${name}${i}`)) i++;
+                    uniqueName = `${name}${i}`;
+                }
+            }
+        } catch { /* use original name */ }
+
+        // Model changes and edge creation are done in SEPARATE transactions.
+        // DVoidEdge.new2 internally calls Constructors.persist() which creates
+        // its own TRANSACTION. Nesting it inside an outer TRANSACTION causes
+        // the edge to not be properly added to the graph's subElements.
+        let refId: any = null;
 
         TRANSACTION('EditorV2 create reference edge', () => {
-            const lRef = sourceClass.addReference(name, targetClass.id);
+            const lRef = sourceClass.addReference(uniqueName, targetClass.id);
             // lRef è un LReference proxy — setta type direttamente
             if (lRef && typeof lRef === 'object') {
                 lRef.type = targetClass.id;
                 lRef.upperBound = -1;
-                console.log('[DEBUG] direct lRef.type set:', {
-                    typeAfter: lRef.type?.name ?? lRef.type?.id ?? lRef.type,
-                    expected: targetClass.name,
-                });
             }
-            const refId = lRef?.id ?? lRef;
+            refId = lRef?.id ?? lRef;
             if (!refId) return;
 
-            const dEdge = DVoidEdge.new2(
-                refId,
-                graphId,
-                graphId,
-                undefined,
-                sourceVertexId,
-                targetVertexId,
-                (d: DEdge) => { d.isReference = true; }
-            );
-            edgeId = dEdge.id;
+            // Set composition/aggregation via SetFieldAction (more reliable than proxy setter)
+            if (kind === 'composition') {
+                SetFieldAction.new(refId as any, 'composition' as any, true, undefined, false);
+            } else if (kind === 'aggregation') {
+                SetFieldAction.new(refId as any, 'aggregation' as any, true, undefined, false);
+            }
         });
 
-        if (edgeId) markCanvasUpdated(edgeId);
-        return edgeId;
+        if (!refId) return null;
+
+        // Register the edge pair BEFORE creating the DVoidEdge so the
+        // auto-populate won't create a duplicate.
+        markCanvasEdgePair(sourceVertexId, targetVertexId);
+
+        const dEdge = DVoidEdge.new2(
+            refId,
+            graphId,
+            graphId,
+            undefined,
+            sourceVertexId,
+            targetVertexId,
+            (d: DEdge) => { d.isReference = true; }
+        );
+        const edgeId = dEdge.id;
+
+        if (!edgeId) return null;
+        markCanvasUpdated(edgeId);
+        return { edgeId, refName: uniqueName };
     } catch (err) {
         console.warn('[canvasToJjom] Failed to create reference edge:', err);
         return null;
@@ -343,11 +401,23 @@ export function syncUpdateAttribute(
     _vertexId: string,
 ): void {
     try {
-        // Don't markCanvasUpdated here — the sync should re-transform this
-        // vertex from JjOM so the cache stays fresh. The local setNodes()
-        // in ClassNode provides immediate feedback; the sync confirms it.
         const lAttr: any = LPointerTargetable.fromPointer(attrId);
-        if (lAttr) {
+        if (!lAttr) return;
+
+        if (field === 'type' && typeof value === 'string') {
+            const options = lAttr.validTargetOptions || [];
+            let pointerId: string | null = null;
+            for (const group of options) {
+                if (group.options) {
+                    const match = group.options.find((opt: any) => opt.label === value);
+                    if (match) { pointerId = match.value; break; }
+                } else if (group.value && group.label === value) {
+                    pointerId = group.value;
+                    break;
+                }
+            }
+            lAttr.type = pointerId || value;
+        } else {
             (lAttr as any)[field] = value;
         }
     } catch (err) {
@@ -366,17 +436,8 @@ export function syncUpdateReference(
 ): void {
     try {
         const lRef: any = LPointerTargetable.fromPointer(refId);
-        console.log('[syncUpdateReference] DIAG:', {
-            refId,
-            field,
-            value,
-            found: !!lRef,
-            currentName: lRef?.name,
-            className: lRef?.className ?? lRef?.__raw?.className,
-        });
         if (lRef) {
             (lRef as any)[field] = value;
-            console.log('[syncUpdateReference] AFTER write:', { field, newValue: (lRef as any)[field] });
         } else {
             console.warn('[canvasToJjom] syncUpdateReference: ref not found:', refId);
         }
@@ -422,9 +483,23 @@ export function syncUpdateOperation(
     vertexId: string,
 ): void {
     try {
-
         const lOp: any = LPointerTargetable.fromPointer(opId);
-        if (lOp) {
+        if (!lOp) return;
+
+        if (field === 'returnType' && typeof value === 'string') {
+            const options = lOp.validTargetOptions || [];
+            let pointerId: string | null = null;
+            for (const group of options) {
+                if (group.options) {
+                    const match = group.options.find((opt: any) => opt.label === value);
+                    if (match) { pointerId = match.value; break; }
+                } else if (group.value && group.label === value) {
+                    pointerId = group.value;
+                    break;
+                }
+            }
+            lOp.returnType = pointerId || value;
+        } else {
             (lOp as any)[field] = value;
         }
     } catch (err) {
@@ -513,26 +588,17 @@ export function syncEdgeRefProperty(
     refId?: string,
 ): void {
     try {
-        console.log('[DEBUG syncEdgeRefProperty] called with:', { edgeId, field, value, refId });
         // Try direct refId first (most reliable)
         if (refId) {
             const lRef: any = LPointerTargetable.fromPointer(refId);
-            console.log('[DEBUG syncEdgeRefProperty] direct refId lookup:', { refId, found: !!lRef, name: lRef?.name });
             if (lRef) {
                 (lRef as any)[field] = value;
-                console.log('[DEBUG syncEdgeRefProperty] wrote via direct refId, verify:', lRef[field]);
                 return;
             }
         }
 
         // Fall back to edge.model
         const edgeProxy: any = LPointerTargetable.fromPointer(edgeId);
-        console.log('[DEBUG syncEdgeRefProperty] lEdge resolved:', {
-            found: !!edgeProxy,
-            hasModel: !!edgeProxy?.model,
-            modelName: edgeProxy?.model?.name,
-            modelId: edgeProxy?.model?.id,
-        });
         if (!edgeProxy) {
             console.warn('[canvasToJjom] syncEdgeRefProperty: edge not found:', edgeId);
             return;
@@ -540,7 +606,6 @@ export function syncEdgeRefProperty(
         const lRef = edgeProxy?.model;
         if (lRef) {
             (lRef as any)[field] = value;
-            console.log('[DEBUG syncEdgeRefProperty] wrote via edge.model, verify:', lRef[field]);
             return;
         }
 
@@ -609,6 +674,47 @@ export function syncEdgeRefKind(edgeId: string, kind: string): void {
 // ---------------------------------------------------------------------------
 
 /**
+ * Generate a unique name with progressive numbering.
+ *
+ * Scans ALL elements in the store by className (DClass, DEnumerator, DPackage)
+ * to collect existing names. This brute-force approach is reliable regardless
+ * of the model/package tree structure.
+ *
+ * Returns the first available name:
+ *   "NewClass"  (if no collision)
+ *   "NewClass1" (if "NewClass" exists)
+ *   "NewClass2" (if both exist)
+ *   ...
+ */
+export function nextUniqueName(
+    _graphId: string,
+    prefix: string,
+): string {
+    try {
+        const state = store.getState();
+        const idlookup = state.idlookup;
+        if (!idlookup) return prefix;
+
+        const names = new Set<string>();
+        for (const id in idlookup) {
+            const elem = idlookup[id] as any;
+            if (!elem?.name) continue;
+            const cn = elem.className;
+            if (cn === 'DClass' || cn === 'DEnumerator' || cn === 'DPackage') {
+                names.add(elem.name);
+            }
+        }
+
+        if (!names.has(prefix)) return prefix;
+        let i = 1;
+        while (names.has(`${prefix}${i}`)) i++;
+        return `${prefix}${i}`;
+    } catch {
+        return prefix;
+    }
+}
+
+/**
  * Resolve the LModel from a graphId.
  * The DGraph points to a DModel via graph.model; we need the LModel
  * to call addChild().
@@ -634,11 +740,74 @@ function resolveModelFromGraph(graphId: string): any | null {
 }
 
 /**
+ * Resolve the first package ID for a model associated with a graphId.
+ * Classes and enumerators live inside packages, not directly on the model.
+ * If the model has no packages, one is created automatically.
+ *
+ * Uses raw Redux state to avoid LProxy gotchas.
+ */
+function resolvePackageIdFromGraph(graphId: string): string | null {
+    try {
+        const state = store.getState();
+        // DGraph → model (pointer)
+        const rawGraph = state.idlookup?.[graphId] as any;
+        if (!rawGraph) return null;
+        const modelId = rawGraph.model;
+        if (!modelId || typeof modelId !== 'string') return null;
+
+        const rawModel = state.idlookup?.[modelId] as any;
+        if (!rawModel) return null;
+
+        // Get first package
+        const packages = rawModel.packages;
+        if (Array.isArray(packages) && packages.length > 0) {
+            const pkgId = packages[0];
+            if (typeof pkgId === 'string') return pkgId;
+        }
+
+        // No package exists — create one via LProxy (this is rare, but safe)
+        const lModel = resolveModelFromGraph(graphId);
+        if (lModel?.addPackage) {
+            const pkg = lModel.addPackage();
+            const id = pkg?.id ?? pkg;
+            return typeof id === 'string' ? id : null;
+        }
+
+        return null;
+    } catch (err) {
+        console.warn('[canvasToJjom] Failed to resolve package from graph:', err);
+        return null;
+    }
+}
+
+/**
+ * Resolve the model ID from a graphId using raw Redux state.
+ */
+function resolveModelIdFromGraph(graphId: string): string | null {
+    try {
+        const state = store.getState();
+        const rawGraph = state.idlookup?.[graphId] as any;
+        if (!rawGraph) return null;
+        const modelId = rawGraph.model;
+        return (typeof modelId === 'string') ? modelId : null;
+    } catch {
+        return null;
+    }
+}
+
+/**
  * Safely call addChild, which may return a function or an element directly.
  * Pattern from ToolBar.tsx: try calling as function, catch means it's the element.
+ *
+ * @param name  Optional name forwarded to the constructor (e.g. DClass.new(name, ...)).
+ *              When provided, the JjOM constructor uses it directly instead of
+ *              generating a default like "Concept 1" / "enum 1".
+ *
+ * @deprecated  Prefer calling DClass.new() / DEnumerator.new() / DPackage.new()
+ *              directly to avoid nested TRANSACTIONs.
  */
-function safeAddChild(lModel: any, childType: string): any | null {
-    const d = lModel.addChild(childType);
+function safeAddChild(lModel: any, childType: string, name?: string): any | null {
+    const d = name ? lModel.addChild(childType, name) : lModel.addChild(childType);
     if (!d) return null;
     try {
         return (d as any)();
@@ -649,33 +818,42 @@ function safeAddChild(lModel: any, childType: string): any | null {
 
 /**
  * Create a new class in JjOM and position its vertex on the graph.
- * Returns true if creation succeeded.
+ * Returns the DVertex ID on success, false on failure.
+ *
+ * IMPORTANT: Calls DClass.new() directly (NOT through model.addChild())
+ * to avoid nested TRANSACTIONs.  model.addChild() wraps the call in its
+ * own TRANSACTION, while DClass.new() already creates one via
+ * Constructors.persist().  Nesting TRANSACTIONs can cause actions
+ * (like adding the class ID to the package's `classes` array) to be lost.
+ *
+ * @param name  Optional name for the class.
  */
 export function syncCreateClass(
     graphId: string,
     x: number,
     y: number,
     isAbstract: boolean = false,
+    name?: string,
 ): string | false {
     try {
-        const lModel = resolveModelFromGraph(graphId);
-        if (!lModel) {
-            console.warn('[canvasToJjom] Cannot create class: model not found for graph', graphId);
+        // Resolve the model's first package (where classes are stored)
+        const packageId = resolvePackageIdFromGraph(graphId);
+        if (!packageId) {
+            console.warn('[canvasToJjom] Cannot create class: package not found for graph', graphId);
             return false;
         }
 
-        const lClass = safeAddChild(lModel, 'class');
-        if (!lClass) {
-            console.warn('[canvasToJjom] addChild("class") returned null');
+        if (!name) name = nextUniqueName(graphId, 'Concept ');
+
+        // Call DClass.new() directly — single TRANSACTION (no nesting).
+        // DClass.new(name, isInterface, isAbstract, isPrimitive, partial, partialDefaultName, father, persist, id)
+        const dClass = DClass.new(name, false, isAbstract, false, undefined, undefined, packageId, true);
+        if (!dClass) {
+            console.warn('[canvasToJjom] DClass.new() returned null');
             return false;
         }
 
-        const classId = lClass.id ?? lClass;
-
-        // Set abstract if needed
-        if (isAbstract && typeof lClass === 'object') {
-            try { lClass.abstract = true; } catch { /* ignore */ }
-        }
+        const classId = dClass.id;
 
         // Create the DVertex positioned at drop coordinates
         const size = new GraphSize(x, y, 140, 40);
@@ -691,26 +869,35 @@ export function syncCreateClass(
 
 /**
  * Create a new enum in JjOM and position its vertex on the graph.
+ *
+ * Calls DEnumerator.new() directly to avoid nested TRANSACTIONs.
+ * DEnumerator.new(name, father, persist)
+ *
+ * @param name  Optional name for the enumerator.
  */
 export function syncCreateEnum(
     graphId: string,
     x: number,
     y: number,
+    name?: string,
 ): string | false {
     try {
-        const lModel = resolveModelFromGraph(graphId);
-        if (!lModel) {
-            console.warn('[canvasToJjom] Cannot create enum: model not found for graph', graphId);
+        const packageId = resolvePackageIdFromGraph(graphId);
+        if (!packageId) {
+            console.warn('[canvasToJjom] Cannot create enum: package not found for graph', graphId);
             return false;
         }
 
-        const lEnum = safeAddChild(lModel, 'enum');
-        if (!lEnum) {
-            console.warn('[canvasToJjom] addChild("enum") returned null');
+        if (!name) name = nextUniqueName(graphId, 'enum ');
+
+        // DEnumerator.new(name, father, persist)
+        const dEnum = DEnumerator.new(name, packageId, true);
+        if (!dEnum) {
+            console.warn('[canvasToJjom] DEnumerator.new() returned null');
             return false;
         }
 
-        const enumId = lEnum.id ?? lEnum;
+        const enumId = dEnum.id;
 
         const size = new GraphSize(x, y, 140, 40);
         const dv = DVertex.new(0, enumId, graphId, graphId, undefined, size);
@@ -725,26 +912,36 @@ export function syncCreateEnum(
 
 /**
  * Create a new package in JjOM and position its vertex on the graph.
+ *
+ * Calls DPackage.new() directly to avoid nested TRANSACTIONs.
+ * DPackage.new(name, uri, prefix, father, persist, fatherType)
+ *
+ * @param name  Optional name for the package.
  */
 export function syncCreatePackage(
     graphId: string,
     x: number,
     y: number,
+    name?: string,
 ): string | false {
     try {
-        const lModel = resolveModelFromGraph(graphId);
-        if (!lModel) {
+        const modelId = resolveModelIdFromGraph(graphId);
+        if (!modelId) {
             console.warn('[canvasToJjom] Cannot create package: model not found for graph', graphId);
             return false;
         }
 
-        const lPackage = safeAddChild(lModel, 'package');
-        if (!lPackage) {
-            console.warn('[canvasToJjom] addChild("package") returned null');
+        if (!name) name = nextUniqueName(graphId, 'pkg_');
+
+        // DPackage.new(name, uri, prefix, father, persist, fatherType)
+        // father is the model; fatherType must be DModel when parent is a model
+        const dPkg = DPackage.new(name, undefined, undefined, modelId, true, DModel);
+        if (!dPkg) {
+            console.warn('[canvasToJjom] DPackage.new() returned null');
             return false;
         }
 
-        const packageId = lPackage.id ?? lPackage;
+        const packageId = dPkg.id;
 
         const size = new GraphSize(x, y, 200, 120);
         const dv = DVertex.new(0, packageId, graphId, graphId, undefined, size);
@@ -825,5 +1022,366 @@ export function setModelUri(modelid: string, uri: string): void {
         if (lModel) lModel.uri = uri;
     } catch (err) {
         console.warn('[canvasToJjom] setModelUri failed:', err);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// M1 (Model Instance) — Object CRUD
+// ---------------------------------------------------------------------------
+
+/**
+ * Create a new DObject instance + DVertex on the graph.
+ * IMPORTANT: Do NOT wrap DObject.new in an outer TRANSACTION — nesting
+ * causes x/y coordinates to be lost (see MEMORY.md).
+ *
+ * @param graphId - the DGraph pointer
+ * @param metaclassId - the DClass pointer (class to instantiate)
+ * @param x - canvas X coordinate
+ * @param y - canvas Y coordinate
+ * @param objectName - optional instance name
+ * @returns the DVertex ID on success, false on failure
+ */
+export function syncCreateObject(
+    graphId: string,
+    metaclassId: string,
+    x: number,
+    y: number,
+    objectName?: string,
+): string | false {
+    try {
+        const lGraph: any = LPointerTargetable.fromPointer(graphId);
+        const modelId = lGraph?.model?.id ?? lGraph?.__raw?.model;
+
+        if (!modelId) {
+            console.warn('[canvasToJjom] syncCreateObject: cannot find model from graph', graphId);
+            return false;
+        }
+
+        const name = objectName || `obj_${Date.now().toString(36).slice(-4)}`;
+
+        // DObject.new(instanceof, father, fatherType, name, persist)
+        // Do NOT wrap in TRANSACTION — .new() creates its own internally
+
+        const dObject = (DObject as any).new(
+            metaclassId,   // which class to instantiate
+            modelId,       // parent model
+            DModel,        // fatherType — MUST be DModel
+            name,          // instance name
+            true           // persist
+        );
+
+        if (!dObject?.id) {
+            console.warn('[canvasToJjom] syncCreateObject: DObject.new returned null');
+            return false;
+        }
+
+        // Create the DVertex positioned at drop coordinates
+        const size = new GraphSize(x, y, 200, 80);
+        const dv = DVertex.new(0, dObject.id, graphId, graphId, undefined, size);
+        const vertexId = dv?.id;
+
+        return vertexId || false;
+    } catch (err) {
+        console.warn('[canvasToJjom] Failed to create object:', err);
+        return false;
+    }
+}
+
+/**
+ * Update a feature value on a DObject instance.
+ * Uses the LProxy magic getter: lObject['$featureName'].value = newValue
+ *
+ * @param objectVertexId - the DVertex ID of the object
+ * @param featureName - the attribute name
+ * @param newValue - the new value
+ */
+export function syncUpdateFeatureValue(
+    objectVertexId: string,
+    featureName: string,
+    newValue: string | number | boolean | null,
+): void {
+    try {
+        const lVertex: any = LPointerTargetable.fromPointer(objectVertexId);
+        const lObject = lVertex?.model;
+
+        if (!lObject) {
+            console.warn('[canvasToJjom] syncUpdateFeatureValue: no model for vertex', objectVertexId);
+            return;
+        }
+
+
+        TRANSACTION(`EditorV2 set ${featureName}`, () => {
+            const featureProxy = (lObject as any)['$' + featureName];
+            if (featureProxy) {
+                featureProxy.value = newValue;
+            } else {
+                console.warn('[canvasToJjom] syncUpdateFeatureValue: feature proxy not found:', featureName);
+            }
+        });
+    } catch (err) {
+        console.warn('[canvasToJjom] Failed to update feature value:', err);
+    }
+}
+
+/**
+ * Create a composition link between a parent and child object.
+ * Appends the child's DObject ID to the parent's reference values
+ * and creates a visual DEdge.
+ *
+ * @returns the DEdge ID on success, null on failure
+ */
+export function syncCreateCompositionLink(
+    parentVertexId: string,
+    childVertexId: string,
+    referenceName: string,
+): string | null {
+    try {
+        const parentProxy: any = LPointerTargetable.fromPointer(parentVertexId);
+        const childProxy: any = LPointerTargetable.fromPointer(childVertexId);
+        const parentObject = parentProxy?.model;
+        const childObject = childProxy?.model;
+
+        if (!parentObject || !childObject) {
+            console.warn('[canvasToJjom] syncCreateCompositionLink: missing model');
+            return null;
+        }
+
+        const graphId = parentProxy?.graph?.id ?? parentProxy?.__raw?.graph;
+        if (!graphId) {
+            console.warn('[canvasToJjom] syncCreateCompositionLink: cannot find graphId');
+            return null;
+        }
+
+        let edgeId: string | null = null;
+
+        TRANSACTION('EditorV2 create composition link', () => {
+            // Append child object ID to reference values
+            const refProxy = (parentObject as any)['$' + referenceName];
+            if (refProxy) {
+                const current = refProxy.values ?? [];
+                refProxy.values = [...current, childObject.id];
+            }
+
+            // Create visual edge
+            const dEdge = DVoidEdge.new2(
+                undefined,
+                graphId,
+                graphId,
+                undefined,
+                parentVertexId,
+                childVertexId,
+                (d: DEdge) => {
+                    d.isReference = true;
+                }
+            );
+            edgeId = dEdge?.id ?? null;
+        });
+
+        if (edgeId) markCanvasUpdated(edgeId);
+        return edgeId;
+    } catch (err) {
+        console.warn('[canvasToJjom] Failed to create composition link:', err);
+        return null;
+    }
+}
+
+/**
+ * Create a non-composition reference link between two object instances.
+ */
+export function syncCreateReferenceLink(
+    sourceVertexId: string,
+    targetVertexId: string,
+    referenceName: string,
+): string | null {
+    try {
+        const sourceProxy: any = LPointerTargetable.fromPointer(sourceVertexId);
+        const targetProxy: any = LPointerTargetable.fromPointer(targetVertexId);
+        const sourceObject = sourceProxy?.model;
+        const targetObject = targetProxy?.model;
+
+        if (!sourceObject || !targetObject) {
+            console.warn('[canvasToJjom] syncCreateReferenceLink: missing model');
+            return null;
+        }
+
+        const graphId = sourceProxy?.graph?.id ?? sourceProxy?.__raw?.graph;
+        if (!graphId) {
+            console.warn('[canvasToJjom] syncCreateReferenceLink: cannot find graphId');
+            return null;
+        }
+
+        let edgeId: string | null = null;
+
+        TRANSACTION('EditorV2 create reference link', () => {
+            // Append target object ID to reference values
+            const refProxy = (sourceObject as any)['$' + referenceName];
+            if (refProxy) {
+                const current = refProxy.values ?? [];
+                refProxy.values = [...current, targetObject.id];
+            }
+
+            // Create visual edge
+            const dEdge = DVoidEdge.new2(
+                undefined,
+                graphId,
+                graphId,
+                undefined,
+                sourceVertexId,
+                targetVertexId,
+                (d: DEdge) => { d.isReference = true; }
+            );
+            edgeId = dEdge?.id ?? null;
+        });
+
+        if (edgeId) markCanvasUpdated(edgeId);
+        return edgeId;
+    } catch (err) {
+        console.warn('[canvasToJjom] Failed to create reference link:', err);
+        return null;
+    }
+}
+
+/**
+ * Delete a DObject and its associated DVertex.
+ */
+// ---------------------------------------------------------------------------
+// Undo/Redo JjOM reconciliation
+// ---------------------------------------------------------------------------
+
+/**
+ * After undo/redo restores RF state, reconcile JjOM to match.
+ *
+ * The RF undo system restores canvas nodes/edges but doesn't undo JjOM
+ * operations. This function bridges the gap by comparing the restored RF
+ * attribute lists with the current JjOM state and syncing the differences.
+ *
+ * For each class node in the restored state:
+ *  - Attributes present in RF but deleted from JjOM → re-create in JjOM
+ *  - Attributes present in JjOM but absent in RF → delete from JjOM
+ *  - Attribute names/types that differ → update in JjOM
+ *
+ * Returns a Map<oldAttrId, newAttrId> for any re-created attributes so the
+ * caller can patch RF node data with the new JjOM IDs.
+ */
+export function reconcileJjomAfterUndoRedo(
+    restoredNodes: Node[],
+): Map<string, string> {
+    const idMap = new Map<string, string>(); // oldId → newId
+    const lookup = store.getState()?.idlookup;
+    if (!lookup) return idMap;
+
+    for (const node of restoredNodes) {
+        if (node.type !== 'classNode') continue;
+        const data = node.data as ClassNodeData;
+        const rfAttrs = data.attributes ?? [];
+
+        // Resolve the DClass via the vertex
+        const lVertex: any = LPointerTargetable.fromPointer(node.id);
+        const lClass = lVertex?.model;
+        if (!lClass) continue;
+
+        // Current JjOM attribute IDs for this class
+        const dClass = lookup[lClass.id] as any;
+        if (!dClass) continue;
+        const jjomAttrIds: string[] = dClass.attributes ?? [];
+        const jjomAttrSet = new Set(jjomAttrIds);
+
+        // RF attribute IDs
+        const rfAttrIds = rfAttrs.map(a => a.id);
+        const rfAttrSet = new Set(rfAttrIds);
+
+        // --- Attributes in RF but not in JjOM: re-create ---
+        for (const rfAttr of rfAttrs) {
+            if (jjomAttrSet.has(rfAttr.id)) continue;
+            // Also skip temp IDs (client-side, never existed in JjOM)
+            if (rfAttr.id.startsWith('attr_')) continue;
+
+            console.log('[UndoReconcile] Re-creating deleted attribute:', { name: rfAttr.name, type: rfAttr.type, oldId: rfAttr.id });
+            try {
+                const newLAttr = lClass.addAttribute(rfAttr.name);
+                if (newLAttr?.id) {
+                    idMap.set(rfAttr.id, newLAttr.id);
+                    console.log('[UndoReconcile] Created new attribute:', { oldId: rfAttr.id, newId: newLAttr.id, name: rfAttr.name });
+                }
+            } catch (err) {
+                console.warn('[UndoReconcile] Failed to re-create attribute:', err);
+            }
+        }
+
+        // --- Attributes in JjOM but not in RF: delete ---
+        for (const jjomAttrId of jjomAttrIds) {
+            if (rfAttrSet.has(jjomAttrId)) continue;
+            // Also check if this attr was just re-created (new ID maps to an RF attr)
+            let isRemapped = false;
+            for (const [, newId] of idMap) {
+                if (newId === jjomAttrId) { isRemapped = true; break; }
+            }
+            if (isRemapped) continue;
+
+            console.log('[UndoReconcile] Removing extra JjOM attribute:', { attrId: jjomAttrId });
+            try {
+                const lAttr: any = LPointerTargetable.fromPointer(jjomAttrId);
+                if (lAttr) {
+                    TRANSACTION('UndoReconcile remove attr', () => {
+                        DeleteElementAction.new(lAttr.__raw ?? lAttr);
+                    });
+                }
+            } catch (err) {
+                console.warn('[UndoReconcile] Failed to remove attribute:', err);
+            }
+        }
+
+        // --- Attributes in both: sync name/type if different ---
+        for (const rfAttr of rfAttrs) {
+            if (!jjomAttrSet.has(rfAttr.id)) continue;
+            const dAttr = lookup[rfAttr.id] as any;
+            if (!dAttr) continue;
+
+            if (dAttr.name !== rfAttr.name) {
+                console.log('[UndoReconcile] Renaming attribute:', { id: rfAttr.id, from: dAttr.name, to: rfAttr.name });
+                try {
+                    const lAttr: any = LPointerTargetable.fromPointer(rfAttr.id);
+                    if (lAttr) lAttr.name = rfAttr.name;
+                } catch { /* ignore */ }
+            }
+        }
+    }
+
+    return idMap;
+}
+
+export function syncDeleteObject(objectVertexId: string): void {
+    try {
+        const vertexProxy: any = LPointerTargetable.fromPointer(objectVertexId);
+        if (!vertexProxy) return;
+
+        // Delete connected edges first
+
+        const graphProxy: any = vertexProxy.graph;
+        if (graphProxy) {
+            const allEdges: any[] = graphProxy.edges ?? [];
+            const connected = allEdges.filter((e: any) => {
+                const startId = e?.start?.id ?? e?.__raw?.start;
+                const endId = e?.end?.id ?? e?.__raw?.end;
+                return startId === objectVertexId || endId === objectVertexId;
+            });
+            if (connected.length > 0) {
+                TRANSACTION('EditorV2 delete object edges', () => {
+                    for (const edge of connected) {
+                        DeleteElementAction.new(edge.__raw ?? edge);
+                    }
+                });
+            }
+        }
+
+        // Delete the DObject model element
+        const modelElement = vertexProxy?.model;
+        if (modelElement) {
+            TRANSACTION('EditorV2 delete object', () => {
+                DeleteElementAction.new(modelElement.__raw ?? modelElement);
+            });
+        }
+    } catch (err) {
+        console.warn('[canvasToJjom] Failed to delete object:', err);
     }
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './create-project-dialog.scss';
 import { DevModeLabel } from '../DevModeLabel/DevModeLabel';
+import { Button } from '../common/Button';
 
 interface CreateProjectDialogProps {
   isOpen: boolean;
@@ -208,17 +209,17 @@ export const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
 
           {/* Footer */}
           <div className="dialog-footer">
-            <button
+            <Button
               type="button"
-              className="btn btn-secondary"
+              variant="secondary"
               onClick={handleCancel}
               disabled={isSubmitting}
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              className="btn btn-primary"
+              variant="primary"
               disabled={isSubmitting}
             >
               {isSubmitting ? (
@@ -232,7 +233,7 @@ export const CreateProjectDialog: React.FC<CreateProjectDialogProps> = ({
                   Create Project
                 </>
               )}
-            </button>
+            </Button>
           </div>
         </form>
 

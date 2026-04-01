@@ -34,6 +34,7 @@
     --class-abstract-header-bg: transparent;
     --enum-header-bg: transparent;
     --package-header-bg: transparent;
+    --object-header-bg: transparent;
 
     // Unify text colors
     --node-header-text: var(--text-primary);
@@ -58,7 +59,8 @@
     .mm-node,
     .mm-class,
     .mm-enum,
-    .mm-package {
+    .mm-package,
+    .mm-object {
         box-shadow: none !important;
     }
 }

@@ -11,6 +11,8 @@ import { Tooltip } from '../../components/forEndUser/Tooltip';
 import {SaveManager} from "../../components/topbar/SaveManager";
 import {Link, useNavigate, useSearchParams} from "react-router-dom";
 import { DevModeLabel } from '../../components/DevModeLabel/DevModeLabel';
+import { buildProjectExportJson } from '../../model/megamodelPersistence';
+import { getRuntimeMegamodel } from '../../model/megamodelRuntime';
 
 interface StateProps {
     projects: LProject[];
@@ -177,7 +179,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
     const exportProject = async() => {
         if(project) {
             await ProjectsApi.save(project);
-            U.download(`${project?.name}.jjodel`, JSON.stringify(project?.__raw));
+            U.download(`${project?.name}.jjodel`, JSON.stringify(buildProjectExportJson(project?.__raw as unknown as Record<string, unknown>, project ? getRuntimeMegamodel(project.id) : undefined)));
         }
     }
 
@@ -241,26 +243,13 @@ function LeftBar(props: LeftBarProps): JSX.Element {
         {active === 'Project' ?
             <div className={'leftbar'}>
                 {/* @ts-ignore */}
-                <Menu title={props.project.name ? props.project.name : 'Unnamed Project'} project>
+                <Menu title={props.project?.name ? props.project.name : 'Unnamed Project'} project>
                     <Item action={exportProject} icon={icon['download']}>Download</Item>
                     {/* Export Metamodel removed - now in contextual menu on metamodel/model cards */}
                     <Item action={toggleFavorite} icon={!project?.isFavorite ? icon['favorite'] : icon['favoriteFill']}>{!project?.isFavorite ? 'Add to favorites ' : 'Remove from favorites '}</Item>
                     <Item action={closeProject} icon={icon['close']}>Close project </Item>
                 </Menu>
 
-                {/* Footer - Version Only */}
-                <div className="leftbar-footer">
-                    <span className="version-text">Jjodel v2.0</span>
-                    <a
-                        href="https://opensource.org/licenses/MIT"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="license-badge"
-                    >
-                        <span className="license-label">License</span>
-                        <span className="license-type">MIT</span>
-                    </a>
-                </div>
             </div>
             :
             <div className={'leftbar'}>
@@ -344,20 +333,6 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                         icon={<i className="bi bi-github" />}
                     >GitHub</Item>
                 </Menu>
-
-                {/* Footer - Version Only */}
-                <div className="leftbar-footer">
-                    <span className="version-text">Jjodel v2.0</span>
-                    <a
-                        href="https://opensource.org/licenses/MIT"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="license-badge"
-                    >
-                        <span className="license-label">License</span>
-                        <span className="license-type">MIT</span>
-                    </a>
-                </div>
 
             </div>
         }

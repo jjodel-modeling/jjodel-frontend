@@ -1,0 +1,251 @@
+.workbench-properties {
+  padding: 8px 10px;
+  font-size: 11px;
+  overflow-y: auto;
+  height: 100%;
+
+  &__section-header {
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+    margin: 0 0 6px;
+    font-size: 9px;
+    font-weight: 600;
+  }
+
+  &__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 6px;
+    color: #94a3b8;
+    font-size: 10px;
+  }
+}
+
+// ---------- Field ----------
+.wp-field {
+  margin-bottom: 8px;
+
+  &__label {
+    font-size: 10px;
+    color: #64748b;
+    display: block;
+    margin-bottom: 2px;
+    font-weight: 500;
+  }
+
+  &__input {
+    width: 100%;
+    font-size: 11px;
+    padding: 3px 6px;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    background: #fff;
+    color: #334155;
+    outline: none;
+    transition: border-color 0.15s;
+
+    &:focus {
+      border-color: #94a3b8;
+    }
+
+    &:disabled {
+      background: #f8fafc;
+      color: #94a3b8;
+    }
+  }
+
+  &__select {
+    @extend .wp-field__input;
+    cursor: pointer;
+  }
+
+  &__textarea {
+    @extend .wp-field__input;
+    resize: vertical;
+    min-height: 48px;
+    font-family: inherit;
+  }
+}
+
+// ---------- Toggle row ----------
+.wp-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 5px;
+  padding: 2px 0;
+
+  &__label {
+    font-size: 10px;
+    color: #334155;
+  }
+}
+
+// Compact inline switch (28x16)
+.wp-switch {
+  position: relative;
+  width: 28px;
+  height: 16px;
+  background: #cbd5e1;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background 0.15s;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 12px;
+    height: 12px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+    transition: transform 0.15s;
+  }
+
+  &--active {
+    background: #334155;
+
+    &::after {
+      transform: translateX(12px);
+    }
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// ---------- Collapsible sections ----------
+.wp-collapsible {
+  margin-top: 8px;
+  border-top: 0.5px solid #e2e8f0;
+  padding-top: 6px;
+
+  summary {
+    color: #94a3b8;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 9px;
+    font-weight: 600;
+    user-select: none;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    &::before {
+      content: '\25B6'; // right triangle
+      font-size: 7px;
+      transition: transform 0.15s;
+    }
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+  }
+
+  &[open] summary::before {
+    transform: rotate(90deg);
+  }
+
+  &__content {
+    margin-top: 6px;
+  }
+
+  &__sub-header {
+    font-size: 9px;
+    font-weight: 600;
+    color: #64748b;
+    margin: 8px 0 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+}
+
+// ---------- Divider ----------
+.wp-divider {
+  border: none;
+  border-top: 0.5px solid #e2e8f0;
+  margin: 8px 0;
+}
+
+// ---------- Events list ----------
+.wp-event-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+  font-size: 10px;
+  color: #64748b;
+
+  &__dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #cbd5e1;
+    flex-shrink: 0;
+  }
+
+  &__dot--active {
+    background: #10b981;
+  }
+
+  &__name {
+    font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+    font-size: 10px;
+  }
+}
+
+// ---------- Viewpoint type select ----------
+.wp-type-select {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+
+  &__option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 10px;
+    color: #64748b;
+    transition: background 0.1s;
+
+    &:hover {
+      background: #f1f5f9;
+    }
+
+    &--selected {
+      background: #f1f5f9;
+      color: #334155;
+      font-weight: 500;
+    }
+  }
+
+  &__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 1.5px solid #cbd5e1;
+    flex-shrink: 0;
+
+    .wp-type-select__option--selected & {
+      border-color: #334155;
+      background: #334155;
+    }
+  }
+}

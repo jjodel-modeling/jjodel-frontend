@@ -16,7 +16,7 @@ import {
     TAIProvider, AIConfig, AI, JodieConfig
 } from '../../types/jodie';
 import { AIProviderService } from '../../services/AIProviderService';
-import { useSettingsModal } from '../../contexts/SettingsModalContext';
+import { useSettingsModalSafe } from '../../contexts/SettingsModalContext';
 import { JjodieContextService } from '../../services/JjodieContext';
 import { JjodieRagService } from '../../services/JjodieRagService';
 import {DUser, L, LUser, LProject, store} from '../../joiner';
@@ -32,7 +32,7 @@ function generateMessageId(): string {
 
 export function Jodie(): JSX.Element {
     const navigate = useNavigate();
-    const { openSettings } = useSettingsModal();
+    const settingsModal = useSettingsModalSafe();
 
     // Chat state
     const [chatState, setChatState] = useState<ChatState>({
@@ -212,7 +212,7 @@ export function Jodie(): JSX.Element {
         let providerToUse = activeProvider;
 
         // Validate that current provider is configured
-        if (!AIConfig.get(activeProvider).enabled) {
+        if (!AIConfig.get(activeProvider)?.isConfigured()) {
             const enabledProviders = JodieConfig.getEnabledProviders();
 
             if (enabledProviders.length === 0) {
@@ -325,8 +325,8 @@ export function Jodie(): JSX.Element {
 
     // Open settings - open unified settings modal at Providers section
     const handleOpenSettings = useCallback(() => {
-        openSettings('providers');
-    }, [openSettings]);
+        settingsModal?.openSettings('providers');
+    }, [settingsModal]);
 
     // Open documentation tab
     const handleOpenDocumentation = useCallback(() => {

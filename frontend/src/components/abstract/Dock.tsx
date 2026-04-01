@@ -241,6 +241,23 @@ function DockComponent(props: AllProps) {
         };
     }, []);
 
+    // Listen for editor type changes — control panel visibility via CSS data attribute
+    useEffect(() => {
+        document.body.setAttribute('data-editor-type', 'summary');
+
+        const handleEditorTypeChange = (event: Event) => {
+            const { editorType } = (event as CustomEvent<{ editorType: string }>).detail;
+            document.body.setAttribute('data-editor-type', editorType || 'none');
+        };
+
+        window.addEventListener('jjodel:editor-type-change', handleEditorTypeChange);
+
+        return () => {
+            window.removeEventListener('jjodel:editor-type-change', handleEditorTypeChange);
+            document.body.removeAttribute('data-editor-type');
+        };
+    }, []);
+
     const groups = {
         'models': {floatable: true, maximizable: false},
         // editors group: tabLocked=true disables drag-and-drop reordering
@@ -300,9 +317,11 @@ function DockComponent(props: AllProps) {
     // Left panel (Models Summary / Canvas)
     layout.dockbox.children.push({tabs: [ModelsSummary], size: leftSize});
 
-    // Fixed tab order: Properties, Viewpoints, Node (Advanced), Console
-    // Tree View is now inside PropertiesWithTreeView component
-    // This order is locked (tabLocked:true in editors group)
+    // Properties is the sole right-panel content.
+    // Viewpoints editing → accessible via toolbar viewpoint selector (Prompt 6)
+    // Node → collapsible section inside Properties (advanced mode only)
+    // Console → will become bottom drawer (Prompt 7)
+    // Components are kept intact, only removed from tab navigation.
     const tabs = [];
     tabs.push(structure);  // Properties
     tabs.push(views);      // Viewpoints
@@ -317,7 +336,25 @@ function DockComponent(props: AllProps) {
     // Note: JjTL editor hides this panel via DockManager.dock.loadLayout() in JjtlDevelopmentEnv.tsx
     layout.dockbox.children.push({tabs, size: rightSize});
 
-    return (<PinnableDock key={''+advanced} ref={dock => { DockManager.dock = dock }} defaultLayout={layout} groups={groups} />);
+    // Emit custom event when the active tab in the left panel changes
+    // so that StatusBar can switch between project stats and editor breadcrumb.
+    const handleLayoutChange = (newLayout: any) => {
+        const activeId = newLayout?.dockbox?.children?.[0]?.activeId;
+        if (!activeId) return;
+
+        // Evento per StatusBar — mantenerlo
+        window.dispatchEvent(new CustomEvent('jjodel:active-tab', { detail: { activeId } }));
+
+        // Hide properties panel when Documentation tab is active
+        const isDocTab = activeId === 'documentation' || activeId.startsWith('doc_');
+        if (isDocTab) {
+            document.body.setAttribute('data-active-tab', 'documentation');
+        } else {
+            document.body.removeAttribute('data-active-tab');
+        }
+    };
+
+    return (<PinnableDock key={''+advanced} ref={dock => { DockManager.dock = dock }} defaultLayout={layout} groups={groups} onLayoutChange={handleLayoutChange} />);
 }
 interface OwnProps {}
 interface StateProps {

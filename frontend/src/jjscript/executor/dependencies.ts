@@ -15,6 +15,7 @@ import {
     MoveArgs,
     CopyArgs,
     RemoveArgs,
+    BlockArgs,
 } from '../types';
 
 // ============================================
@@ -108,6 +109,15 @@ export function extractDependencies(ast: CommandNode): ElementDependency[] {
             const args = ast.args as RemoveArgs;
             deps.push({ name: args.target, role: 'target', required: true });
             deps.push({ name: args.from, role: 'source', required: true });
+            break;
+        }
+
+        case 'block': {
+            // Extract dependencies from the first command in the block
+            const blockArgs = ast.args as BlockArgs;
+            if (blockArgs.commands.length > 0) {
+                deps.push(...extractDependencies(blockArgs.commands[0]));
+            }
             break;
         }
 

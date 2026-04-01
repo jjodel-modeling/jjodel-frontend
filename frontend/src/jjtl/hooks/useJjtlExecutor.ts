@@ -59,7 +59,7 @@ export function useJjtlExecutor(options: UseJjtlExecutorOptions = {}): UseJjtlEx
 
         try {
             // Execute the transformation
-            const result = execute(ast, sourceModel);
+            const result = await execute(ast, sourceModel);
 
             // Check if this execution is still the current one
             if (executionId !== executionIdRef.current) {
@@ -96,6 +96,9 @@ export function useJjtlExecutor(options: UseJjtlExecutorOptions = {}): UseJjtlEx
                             targetAttr: b.targetAttribute,
                             sourceValue: b.sourceValue,
                             targetValue: b.targetValue,
+                            invertible: b.invertible,
+                            expression: b.expression,
+                            userProvided: b.userProvided,
                         })),
                     }));
                     setTrace(traceEntries);
@@ -227,6 +230,7 @@ export function useJjtlExecutor(options: UseJjtlExecutorOptions = {}): UseJjtlEx
                         targetValue: b.targetValue,
                         invertible: b.invertible,
                         expression: b.expression,
+                        userProvided: b.userProvided,
                     })),
                 }));
                 setTrace(traceEntries);

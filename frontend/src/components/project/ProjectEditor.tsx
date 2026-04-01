@@ -11,10 +11,14 @@ import {
     DModel,
     DGraph,
     DObject,
+    DVertex,
+    GraphSize,
     Constructors,
     SetFieldAction,
     SetRootFieldAction,
-    TRANSACTION
+    TRANSACTION,
+    getViewpointType,
+    DViewPoint,
 } from '../../joiner';
 import DockManager from '../abstract/DockManager';
 import TabDataMaker from '../abstract/tabs/TabDataMaker';
@@ -25,12 +29,20 @@ import UnsavedChangesDialog from './UnsavedChangesDialog';
 import DocumentationSection from './DocumentationSection';
 import { EcoreService, XMIService } from '../../services/export';
 import { NewTransformationDialog, TransformationsList } from '../../jjtl/components';
+import { NewViewpointDialog } from './NewViewpointDialog';
 import { JjtlTransformation, createTransformation, TransformationAST } from '../../jjtl/types';
 import { execute as executeTransformation, ExecutionResult } from '../../jjtl/executor';
 import { convertMetamodelToJjtl, findMetamodelById } from '../../jjtl/utils/metamodelConverter';
 import { EnvGenWizardModal, EnvGenPersistence, ENVGEN_CHANGE_EVENT, ENVGEN_OPEN_WIZARD_EVENT } from '../envgen';
 import type { EnvGenConfigSummary } from '../envgen';
+import { loadMegamodel, getSerializedMegamodel } from '../../model/megamodelPersistence';
+import { setRuntimeMegamodel, clearRuntimeMegamodel, getRuntimeMegamodel } from '../../model/megamodelRuntime';
+import MegamodelView, { type ArtifactStats } from '../megamodel/MegamodelView';
+import { Badge } from '../common/Badge';
+import { Button } from '../common/Button';
+import { EmptyState } from '../ui/EmptyState';
 import './project-editor.scss';
+
 
 // Types for contextual menu
 type MenuType = 'metamodel' | 'model' | 'transformation' | null;
@@ -46,6 +58,69 @@ const getEngineVersion = (): string => {
     const state = store.getState();
     return `v${state.version?.n || '2.0'}`;
 };
+
+// ============================================
+// SectionHeader — Standardized section header
+// ============================================
+interface SectionHeaderProps {
+    title: string;
+    count: number;
+    primaryAction?: {
+        label: string;
+        onClick: () => void;
+        disabled?: boolean;
+        disabledTitle?: string;
+        hasDropdown?: boolean;
+        isDropdownOpen?: boolean;
+    };
+    secondaryAction?: {
+        label: string;
+        onClick: () => void;
+        icon?: string;
+        hasDropdown?: boolean;
+        isDropdownOpen?: boolean;
+    };
+    children?: React.ReactNode;
+}
+
+function SectionHeader({ title, count, primaryAction, secondaryAction, children }: SectionHeaderProps) {
+    return (
+        <div className="project-section-header">
+            <h2 className="project-section-header__title">
+                {title}
+                <span className="project-section-header__count">({count})</span>
+            </h2>
+            <div className="project-section-header__actions">
+                {secondaryAction && (
+                    <button
+                        className="btn btn--ghost btn--xs"
+                        onClick={secondaryAction.onClick}
+                    >
+                        {secondaryAction.icon && <i className={`bi bi-${secondaryAction.icon}`} />}
+                        {secondaryAction.label}
+                        {secondaryAction.hasDropdown && (
+                            <i className={`bi bi-chevron-${secondaryAction.isDropdownOpen ? 'up' : 'down'} btn-chevron`} />
+                        )}
+                    </button>
+                )}
+                {primaryAction && (
+                    <button
+                        className="btn btn--ghost btn--sm"
+                        onClick={primaryAction.onClick}
+                        disabled={primaryAction.disabled}
+                        title={primaryAction.disabled ? primaryAction.disabledTitle : undefined}
+                    >
+                        {primaryAction.label}
+                        {primaryAction.hasDropdown && (
+                            <i className={`bi bi-chevron-${primaryAction.isDropdownOpen ? 'up' : 'down'} btn-chevron`} />
+                        )}
+                    </button>
+                )}
+                {children}
+            </div>
+        </div>
+    );
+}
 
 interface ProjectEditorProps {
     project: LProject;
@@ -73,6 +148,7 @@ const formatDate = (date: Date | string | number | undefined): string => {
  * Shows project header with badges, and sections for metamodels, models, viewpoints
  */
 const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }) => {
+    if (!project) return null;
     const metamodels = project.metamodels || [];
     const models = project.models || [];
     const viewpoints = project.viewpoints || [];
@@ -81,6 +157,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     // Transformations state (in-memory for now)
     const [transformations, setTransformations] = useState<JjtlTransformation[]>([]);
     const [showNewTransformationDialog, setShowNewTransformationDialog] = useState(false);
+    const [showNewViewpointDialog, setShowNewViewpointDialog] = useState(false);
 
     // Editing states
     const [isEditingName, setIsEditingName] = useState(false);
@@ -89,7 +166,16 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     const [editedDescription, setEditedDescription] = useState(project.description || '');
     const [newTag, setNewTag] = useState('');
     const [isAddingTag, setIsAddingTag] = useState(false);
+
+    // Project menu (⋮) state
+    const [showProjectMenu, setShowProjectMenu] = useState(false);
+    const projectMenuRef = useRef<HTMLDivElement>(null);
+
+    // Section navigator — active section tracking
+    const [activeSection, setActiveSection] = useState('metamodels');
+    const mainContentRef = useRef<HTMLDivElement>(null);
     const [showShareModal, setShowShareModal] = useState(false);
+    const [showMegamodelModal, setShowMegamodelModal] = useState(false);
 
     // Contextual menu state
     const [openMenu, setOpenMenu] = useState<OpenMenu | null>(null);
@@ -198,6 +284,42 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         }
     }, [showImportMenu]);
 
+    // Click-outside handler for project menu (⋮)
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (projectMenuRef.current && !projectMenuRef.current.contains(event.target as Node)) {
+                setShowProjectMenu(false);
+            }
+        };
+
+        if (showProjectMenu) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }
+    }, [showProjectMenu]);
+
+    // IntersectionObserver for section navigator active state
+    useEffect(() => {
+        const sectionIds = ['metamodels', 'models', 'transformations', 'viewpoints', 'documentation'];
+        const observer = new IntersectionObserver(
+            (entries) => {
+                for (const entry of entries) {
+                    if (entry.isIntersecting && entry.target.id) {
+                        setActiveSection(entry.target.id.replace('section-', ''));
+                    }
+                }
+            },
+            { threshold: 0.3, root: mainContentRef.current }
+        );
+
+        sectionIds.forEach(id => {
+            const el = document.getElementById(`section-${id}`);
+            if (el) observer.observe(el);
+        });
+
+        return () => observer.disconnect();
+    }, []);
+
     // Focus rename input when renaming starts
     useEffect(() => {
         if (renamingItem && renameInputRef.current) {
@@ -233,6 +355,55 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         window.addEventListener(ENVGEN_OPEN_WIZARD_EVENT, handler);
         return () => window.removeEventListener(ENVGEN_OPEN_WIZARD_EVENT, handler);
     }, []);
+
+    // Open megamodel modal when TreeView entry is clicked
+    useEffect(() => {
+        const handler = () => setShowMegamodelModal(true);
+        window.addEventListener('jjodel:openMegamodel', handler);
+        return () => window.removeEventListener('jjodel:openMegamodel', handler);
+    }, []);
+
+    // Broadcast transformations to TreeView via CustomEvent
+    useEffect(() => {
+        const detail = transformations.map(t => ({
+            id: t.id,
+            name: t.name,
+            sourceMMName: t.sourceMetamodelName,
+            targetMMName: t.targetMetamodelName,
+            rules: t.ast?.mappings?.map(m => `${m.sources?.map(s => s.className).join(', ') || '?'} → ${m.targetClass}`) || [],
+            helpers: t.ast?.helpers?.map(h => h.name) || [],
+        }));
+        window.dispatchEvent(new CustomEvent('jjodel:transformations', { detail }));
+    }, [transformations]);
+
+    // Megamodel: compute and register runtime megamodel whenever artifacts change
+    useEffect(() => {
+        const projectId = project.id;
+        if (!projectId) return;
+
+        const artifacts = {
+            metamodels: metamodels.map(mm => ({ id: mm.id, name: mm.name || '' })),
+            models: models.map(m => {
+                const rawInstanceof = (m.__raw as any)['instanceof'];
+                const instanceofMetamodelId = typeof rawInstanceof === 'string' ? rawInstanceof : undefined;
+                const rawState = (m.__raw as any)['_state'];
+                const generatedBy = rawState?.generatedBy ?? undefined;
+                return { id: m.id, name: m.name || '', instanceofMetamodelId, generatedBy };
+            }),
+            transformations: transformations.map(t => ({
+                id: t.id,
+                name: t.name || '',
+                sourceMetamodelId: t.sourceMetamodelId,
+                targetMetamodelId: t.targetMetamodelId,
+            })),
+        };
+
+        const serialized = getSerializedMegamodel(projectId);
+        const megamodel = loadMegamodel(serialized, artifacts);
+        setRuntimeMegamodel(projectId, megamodel);
+
+        return () => { clearRuntimeMegamodel(projectId); };
+    }, [project.id, metamodels, models, transformations]);
 
     // Mark project as dirty (unsaved changes)
     // Sets both local state and global U.isProjectModified for consistency
@@ -302,6 +473,38 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             setIsSaving(false);
         }
     }, [clearDirty]);
+
+    // Section navigator scroll handler
+    const scrollToSection = useCallback((sectionId: string) => {
+        const el = document.getElementById(`section-${sectionId}`);
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            setActiveSection(sectionId);
+        }
+    }, []);
+
+    // Download entire project as JSON
+    const handleDownloadProject = useCallback(() => {
+        try {
+            const projectData = {
+                format_version: '1.0',
+                metadata: {
+                    name: project.name || 'Unnamed Project',
+                    exported_at: new Date().toISOString(),
+                    jjodel_version: '2.0'
+                },
+                project: (project as any).__raw || project
+            };
+            const jsonString = JSON.stringify(projectData, null, 2);
+            const filename = `${project.name || 'project'}.jjodel`;
+            U.download(filename, jsonString);
+            U.alert('i', 'Downloaded', `Project exported: ${filename}`);
+        } catch (error) {
+            console.error('Download project error:', error);
+            U.alert('e', 'Download Failed', 'Could not download the project.');
+        }
+        setShowProjectMenu(false);
+    }, [project]);
 
     // Name editing handlers
     const handleStartEditName = () => {
@@ -521,7 +724,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             const name = jmmData.metadata?.name || file.name.replace(/\.jmm$/, '');
 
             // Create new metamodel in project using existing createM2
-            const newMM = createM2(project, name);
+            const newMM = createM2(project);
 
             // TODO: Populate metamodel with imported data
             // For now, just show success with the created metamodel
@@ -675,12 +878,66 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         model.delete();
     };
 
+    const handleOpenViewpoint = async (vp: LViewPoint) => {
+        // Open the first metamodel tab, then activate the ViewpointEditorPanel in the sidebar
+        const mm = metamodels[0];
+        if (mm) {
+            await DockManager.open2(mm);
+            // Small delay to ensure PropertiesWithTreeView is mounted and listening
+            setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('jjodel:openViewpointEditor', {
+                    detail: { viewpointId: vp.id },
+                }));
+            }, 150);
+        } else {
+            // Fallback: no metamodel available, open old viewpoint workbench
+            DockManager.openViewpoint(vp);
+        }
+    };
+
     const handleDuplicateViewpoint = (vp: LViewPoint) => {
         vp.duplicate();
     };
 
     const handleDeleteViewpoint = (vp: LViewPoint) => {
         vp.delete();
+    };
+
+    const handleCreateViewpoint = (data: { name: string; type: import('../../joiner').ViewpointType }) => {
+        const dVp = DViewPoint.newVP(data.name, (vp) => {
+            // Set legacy booleans based on type
+            switch (data.type) {
+                case 'syntax':
+                    vp.isExclusiveView = true;
+                    vp.isValidation = false;
+                    break;
+                case 'validation':
+                    vp.isExclusiveView = false;
+                    vp.isValidation = true;
+                    break;
+                default: // decoration, semantics, editor_behavior
+                    vp.isExclusiveView = false;
+                    vp.isValidation = false;
+                    break;
+            }
+            // Set explicit viewpointType field
+            (vp as any).viewpointType = data.type;
+        });
+        setShowNewViewpointDialog(false);
+
+        // Open the new viewpoint in the sidebar editor
+        const mm = metamodels[0];
+        if (mm) {
+            DockManager.open2(mm).then(() => {
+                setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent('jjodel:openViewpointEditor', {
+                        detail: { viewpointId: dVp.id },
+                    }));
+                }, 150);
+            });
+        } else {
+            DockManager.openViewpoint(dVp);
+        }
     };
 
     // Transformation handlers
@@ -879,15 +1136,9 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     return;
                 }
 
-                // Find transformation and target metamodel
-                const currentTransformation = transformations.find(t => t.targetMetamodelId);
-                if (!currentTransformation) {
-                    U.alert('e', 'Error', 'Transformation not found');
-                    isExecutingTransformation = false;
-                    return;
-                }
-
-                const targetMetamodel = metamodels.find(mm => mm.id === currentTransformation.targetMetamodelId);
+                // Use the current transformation from the enclosing closure
+                // (previously: transformations.find(t => t.targetMetamodelId) which always returned the FIRST one)
+                const targetMetamodel = metamodels.find(mm => mm.id === transformation.targetMetamodelId);
                 if (!targetMetamodel) {
                     U.alert('e', 'Error', `Target metamodel not found`);
                     isExecutingTransformation = false;
@@ -983,7 +1234,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
 
                 const sourceModelDataCopy = JSON.parse(JSON.stringify(sourceModelData));
                 // Execute transformation
-                const result: ExecutionResult = executeTransformation(ast, sourceModelDataCopy, targetMetamodel);
+                const result: ExecutionResult = await executeTransformation(ast, sourceModelDataCopy, targetMetamodel);
 
                 if (!result.success) {
                     U.alert('e', 'Transformation Failed', result.errors.join('\n'));
@@ -1028,6 +1279,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 let createdDModel: DModel | null = null;
                 let createdDGraph: DGraph | null = null;
                 let createdModelId: string | null = null;
+                let createdGraphId: string | null = null;
                 let instancesCreated = 0;
 
                 // Store object NAME (not ID!) with attributes — ID from DObject.new() is unreliable
@@ -1035,6 +1287,14 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     objectName: string;
                     className: string;
                     attributes: Record<string, any>;
+                }> = [];
+
+                // Collect object IDs + positions for DVertex creation AFTER the TRANSACTION
+                // (DVertex.new has its own internal TRANSACTION — nesting causes coordinates to be lost)
+                const pendingVertices: Array<{
+                    objectId: string;
+                    posX: number;
+                    posY: number;
                 }> = [];
 
                 TRANSACTION('Execute Transformation: Create Target Model', () => {
@@ -1056,7 +1316,11 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     const graphId = Constructors.DGraph_makeID(dModel.id);
                     const dGraph: DGraph = DGraph.new(0, dModel.id, undefined, undefined, graphId);
                     createdDGraph = dGraph;
+                    createdGraphId = dGraph.id;
                     console.log('[ProjectEditor] Created DGraph:', { id: dGraph.id });
+
+                    // Tag graph as v2-flow so EditorV2/useJjomSync can find it
+                    SetFieldAction.new(dGraph.id, 'graphStyle', 'v2-flow', '', false);
 
                     // STEP 3: Aggiungi model a project.models
                     SetFieldAction.new(project.id, 'models', dModel.id, '+=', true);
@@ -1069,6 +1333,15 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     // STEP 5: Aggiungi graph a project.graphs - per persistenza
                     SetFieldAction.new(project.id, 'graphs', dGraph.id, '+=', true);
                     console.log('[ProjectEditor] Added graph to project.graphs');
+
+                    // STEP 5b: Tag model as generated by transformation
+                    SetFieldAction.new(dModel.id, '_state', {
+                        generatedBy: {
+                            transformationId: transformation.id,
+                            sourceModelId: sourceModelId,
+                            timestamp: Date.now(),
+                        }
+                    }, '', false);
 
                     // STEP 6: Crea istanze
                     if (result.targetModel?.instances) {
@@ -1084,6 +1357,15 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                 return;
                             }
 
+                            // Grid layout constants for DVertex positioning
+                            const GRID_COLS = 3;
+                            const NODE_W = 200;
+                            const NODE_H = 80;
+                            const GAP_X = 50;
+                            const GAP_Y = 50;
+                            const START_X = 50;
+                            const START_Y = 50;
+
                             for (const instanceData of instances) {
                                 console.log(`[ProjectEditor] instanceData from executor:`, instanceData);
 
@@ -1091,10 +1373,26 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                 const dObject = DObject.new(targetClass.id, dModel.id, DModel, objectName, true);
                                 console.log(`[ProjectEditor] Created instance:`, { name: objectName, class: className });
 
+                                // Collect for DVertex creation AFTER the TRANSACTION.
+                                // DVertex.new has its own internal TRANSACTION — nesting
+                                // causes coordinates to be lost (all positions become 0,0).
+                                const col = instancesCreated % GRID_COLS;
+                                const row = Math.floor(instancesCreated / GRID_COLS);
+                                const posX = START_X + col * (NODE_W + GAP_X);
+                                const posY = START_Y + row * (NODE_H + GAP_Y);
+                                pendingVertices.push({ objectId: dObject.id, posX, posY });
+
                                 // Collect attributes for deferred setting (after TRANSACTION)
+                                // Use WHITELIST approach: only include attributes that exist in the
+                                // target metamodel class. This avoids collisions between system
+                                // properties (id, name, className) and domain attributes with the
+                                // same names.
+                                const domainAttrNames = new Set(
+                                    (targetClass.attributes || []).map((a: any) => a.name).filter(Boolean)
+                                );
                                 const attrs: Record<string, any> = {};
                                 for (const [attrName, attrValue] of Object.entries(instanceData)) {
-                                    if (attrName.startsWith('__') || ['className', 'id', 'name'].includes(attrName)) continue;
+                                    if (!domainAttrNames.has(attrName)) continue;
                                     if (attrValue === undefined || attrValue === null) continue;
                                     attrs[attrName] = attrValue;
                                 }
@@ -1115,6 +1413,46 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
 
                     console.log(`[ProjectEditor] Total instances created: ${instancesCreated}`);
                 });
+
+                // STEP 7: Open tab AFTER a delay for Redux (fire-and-forget)
+                // Schedule this FIRST so tab opens even if DVertex/attribute steps fail.
+                if (createdDModel) {
+                    const modelToOpen = createdDModel;
+                    const modelName = uniqueOutputName;
+                    const count = instancesCreated;
+
+                    setTimeout(() => {
+                        try {
+                            const tab = TabDataMaker.model(modelToOpen);
+                            DockManager.open('models', tab);
+                            U.alert('i', 'Transformation Executed',
+                                `Created model "${modelName}" with ${count} instances.`);
+                            markDirty();
+                        } catch (e) {
+                            console.error('[ProjectEditor] Error opening tab:', e);
+                        }
+                    }, 200);
+                }
+
+                // STEP 6b: Create DVertices OUTSIDE the TRANSACTION.
+                // DVertex.new has its own internal TRANSACTION — calling it inside
+                // another TRANSACTION causes nested transactions that lose coordinates.
+                // Same pattern as useJjomSync's auto-population.
+                // Wrapped in try-catch so vertex creation failures don't prevent tab opening.
+                if (pendingVertices.length > 0 && createdGraphId) {
+                    const gid = createdGraphId;
+                    const NODE_W = 200;
+                    const NODE_H = 80;
+                    try {
+                        for (const pv of pendingVertices) {
+                            const size = new GraphSize(pv.posX, pv.posY, NODE_W, NODE_H);
+                            DVertex.new(0, pv.objectId, gid, gid, undefined, size);
+                            console.log(`[ProjectEditor] Created DVertex for object at (${pv.posX}, ${pv.posY})`);
+                        }
+                    } catch (e) {
+                        console.error('[ProjectEditor] Error creating DVertices (non-fatal):', e);
+                    }
+                }
 
                 // STEP 8: Set attributes after delay — use LModel proxy to find objects by name
                 if (pendingAttributeSets.length > 0 && createdModelId) {
@@ -1173,25 +1511,6 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 // Broadcast execution result via custom event (for JjtlDevelopmentEnv trace display)
                 window.dispatchEvent(new CustomEvent('jjtl-execution-result', { detail: result }));
 
-                // STEP 7: Open tab AFTER a delay for Redux (fire-and-forget, don't await)
-                if (createdDModel) {
-                    const modelToOpen = createdDModel;
-                    const modelName = uniqueOutputName;
-                    const count = instancesCreated;
-
-                    setTimeout(() => {
-                        try {
-                            const tab = TabDataMaker.model(modelToOpen);
-                            DockManager.open('models', tab);
-                            U.alert('i', 'Transformation Executed',
-                                `Created model "${modelName}" with ${count} instances.`);
-                            markDirty();
-                        } catch (e) {
-                            console.error('[ProjectEditor] Error opening tab:', e);
-                        }
-                    }, 200);
-                }
-
                 // Reset execution guard
                 isExecutingTransformation = false;
                 return result;
@@ -1232,6 +1551,22 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         );
     };
 
+    // Open transformation tab when TreeView entry is clicked
+    const handleOpenTransformationRef = useRef(handleOpenTransformation);
+    handleOpenTransformationRef.current = handleOpenTransformation;
+    const transformationsRef = useRef(transformations);
+    transformationsRef.current = transformations;
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const { id } = (e as CustomEvent).detail || {};
+            if (!id) return;
+            const t = transformationsRef.current.find((tr: any) => tr.id === id);
+            if (t) handleOpenTransformationRef.current(t);
+        };
+        window.addEventListener('jjodel:openTransformation', handler);
+        return () => window.removeEventListener('jjodel:openTransformation', handler);
+    }, []);
+
     const handleRenameTransformation = (id: string, newName: string) => {
         setTransformations(prev => prev.map(t =>
             t.id === id
@@ -1265,55 +1600,26 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         }
     };
 
+    // Section definitions for the sidebar navigator
+    const sections = [
+        { id: 'metamodels', label: 'Metamodels', iconLetter: 'M', iconClass: 'list-card__icon--mm', count: metamodels.length, group: 'structure' },
+        { id: 'models', label: 'Models', iconLetter: 'm', iconClass: 'list-card__icon--model', count: models.length, group: 'structure' },
+        { id: 'transformations', label: 'Transforms', iconLetter: '⇄', iconClass: 'list-card__icon--transformation', count: transformations.length, group: 'transformation' },
+        { id: 'viewpoints', label: 'Viewpoints', iconLetter: 'V', iconClass: 'list-card__icon--vp', count: viewpoints.length, group: 'perspectives' },
+        { id: 'documentation', label: 'Docs', iconLetter: 'D', iconClass: 'list-card__icon--docs', count: 0, group: 'perspectives' },
+    ];
+
     const versionList = store.getState().version.conversionList;
     return (
         <div className="project-editor">
-            {/* Header */}
-            <div className="project-header">
-                <div className="project-header__badges">
-                    <button
-                        className={`badge badge--type badge--clickable ${project.type === 'public' ? 'badge--public' : ''}`}
-                        onClick={handleVisibilityBadgeClick}
-                        title={project.type === 'public' ? 'Click to get share link' : 'Click to make public'}
-                    >
-                        {project.type || 'private'}
-                        {project.type === 'public' ? (
-                            <i className="bi bi-link-45deg" />
-                        ) : (
-                            <i className="bi bi-arrow-left-right" />
-                        )}
-                    </button>
-                    {project.type === 'public' && (
-                        <button
-                            className="badge-toggle-btn"
-                            onClick={handleToggleType}
-                            title="Make private"
-                        >
-                            <i className="bi bi-lock" />
-                        </button>
-                    )}
-                    <span
-                        className="badge badge--engine"
-                        title={"Current Jjodel platform version - Same for all projects" + (versionList.length ? "\nProject Version history:" + (versionList.map(v=>"\n\t"+v)) : null)}
-                    >
-                        <i className="bi bi-gear" />
-                        {getEngineVersion()}
-                    </span>
-                    <span
-                        className="badge badge--content"
-                        title="Project revision - Auto-increments on each save"
-                    >
-                        Rev {formatVersionNumber(project.version)}
-                    </span>
-                </div>
-
-                {/* Editable Name */}
-                <div className="project-header__title-row">
+            {/* Compact Header */}
+            <div className="project-header-compact">
+                <div className="project-header-compact__row1">
                     {isEditingName ? (
                         <input
                             ref={nameInputRef}
                             type="text"
-                            className="project-header__title-input"
+                            className="project-header-compact__title-input"
                             value={editedName}
                             onChange={(e) => setEditedName(e.target.value)}
                             onBlur={handleSaveName}
@@ -1321,150 +1627,205 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                         />
                     ) : (
                         <h1
-                            className="project-header__title"
+                            className="project-header-compact__title"
                             onClick={handleStartEditName}
+                            title="Click to edit name"
                         >
                             {project.name || 'Unnamed Project'}
-                            <button className="edit-btn" title="Edit name">
-                                <i className="bi bi-pencil" />
-                            </button>
                         </h1>
                     )}
-                </div>
-
-                {/* Editable Description */}
-                <div className="project-header__description-row">
-                    {isEditingDescription ? (
-                        <textarea
-                            ref={descriptionInputRef}
-                            className="project-header__description-input"
-                            value={editedDescription}
-                            onChange={(e) => setEditedDescription(e.target.value)}
-                            onBlur={handleSaveDescription}
-                            onKeyDown={handleDescriptionKeyDown}
-                            rows={3}
-                            placeholder="Add a project description..."
-                        />
-                    ) : (
-                        <p
-                            className="project-header__description"
-                            onClick={handleStartEditDescription}
+                    <Badge category="version" className="badge--engine"
+                                  title={"Current Jjodel platform version - Same for all projects" + (versionList.length ? "\nProject Version history:" + (versionList.map(v=>"\n\t"+v)) : null)}>
+                        <i className="bi bi-gear" />
+                        {getEngineVersion()}
+                    </Badge>
+                    <Badge category="version">
+                        Rev {formatVersionNumber(project.version)}
+                    </Badge>
+                    <div className="project-header-compact__actions">
+                        <Button
+                            variant="primary"
+                            onClick={() => setShowMegamodelModal(true)}
+                            title="View relationships between project artifacts"
                         >
-                            {project.description || 'Click to add a description...'}
-                            <button className="edit-btn" title="Edit description">
-                                <i className="bi bi-pencil" />
-                            </button>
-                        </p>
-                    )}
-                </div>
-
-                {/* Tags */}
-                <div className="project-tags">
-                    {tags.map((tag) => (
-                        <span key={tag} className="project-tag">
-                            {tag}
+                            <i className="bi bi-diagram-3" />
+                            View Megamodel
+                        </Button>
+                        {isAddingTag ? (
+                            <div className="project-tag__input-wrapper" style={{ display: 'inline-flex' }}>
+                                <input
+                                    ref={tagInputRef}
+                                    type="text"
+                                    className="project-tag__input"
+                                    value={newTag}
+                                    onChange={(e) => setNewTag(e.target.value)}
+                                    onBlur={handleAddTag}
+                                    onKeyDown={handleTagKeyDown}
+                                    placeholder="e.g. client, server"
+                                />
+                            </div>
+                        ) : (
                             <button
-                                className="project-tag__remove"
-                                onClick={() => handleRemoveTag(tag)}
-                                title="Remove tag"
+                                className="project-tag project-tag--add"
+                                onClick={() => setIsAddingTag(true)}
                             >
-                                ×
+                                + Tags
                             </button>
-                        </span>
-                    ))}
-                    {isAddingTag ? (
-                        <div className="project-tag__input-wrapper">
-                            <input
-                                ref={tagInputRef}
-                                type="text"
-                                className="project-tag__input"
-                                value={newTag}
-                                onChange={(e) => setNewTag(e.target.value)}
-                                onBlur={handleAddTag}
-                                onKeyDown={handleTagKeyDown}
-                                placeholder="e.g. client, server, api"
-                            />
-                            <span className="project-tag__hint">
-                                Use commas to add multiple tags
-                            </span>
-                        </div>
-                    ) : (
-                        <button
-                            className="project-tag project-tag--add"
-                            onClick={() => setIsAddingTag(true)}
-                        >
-                            + Add tags
-                        </button>
-                    )}
-                </div>
-
-                {/* Dates */}
-                <div className="project-dates">
-                    <span>Created: {formatDate(project.creation)}</span>
-                    <span className="project-dates__separator">·</span>
-                    <span>Modified: {formatDate(project.lastModified)}</span>
-                </div>
-            </div>
-
-            {/* Metamodels Section */}
-            <div className="project-section">
-                <div className="project-section__header">
-                    <h2 className="project-section__title">METAMODELS</h2>
-                    <div className="project-section__actions">
-                        {/* Import button with dropdown */}
-                        <div className="import-button-wrapper" ref={importMenuRef}>
+                        )}
+                        <div className="project-menu-wrapper" ref={projectMenuRef}>
                             <button
-                                className="btn btn--secondary"
-                                onClick={() => setShowImportMenu(!showImportMenu)}
+                                className="icon-btn icon-btn--menu"
+                                onClick={() => setShowProjectMenu(!showProjectMenu)}
+                                title="Project actions"
                             >
-                                <i className="bi bi-upload" />
-                                Import
-                                <i className={`bi bi-chevron-${showImportMenu ? 'up' : 'down'} btn-chevron`} />
+                                <i className="bi bi-three-dots-vertical" />
                             </button>
-
-                            {showImportMenu && (
-                                <div className="import-select-menu">
-                                    <button
-                                        className="import-select-menu__item"
-                                        onClick={handleImportJmm}
-                                    >
-                                        <i className="bi bi-file-earmark" />
-                                        Import .jmm
+                            {showProjectMenu && (
+                                <div className="project-menu-dropdown">
+                                    <button onClick={handleDownloadProject}>
+                                        <i className="bi bi-download" />
+                                        Download project
                                     </button>
-                                    <button
-                                        className="import-select-menu__item"
-                                        onClick={handleImportEcore}
-                                    >
-                                        <i className="bi bi-file-earmark-code" />
-                                        Import Ecore (.ecore)
+                                    <button onClick={() => { handleVisibilityBadgeClick(); setShowProjectMenu(false); }}>
+                                        <i className={`bi bi-${project.type === 'public' ? 'lock' : 'globe'}`} />
+                                        {project.type === 'public' ? 'Make private' : 'Make public'}
                                     </button>
+                                    <div className="project-menu-dropdown__divider" />
+                                    {onNavigateBack && (
+                                        <button onClick={() => { handleBackNavigation(); setShowProjectMenu(false); }}>
+                                            <i className="bi bi-x-lg" />
+                                            Close project
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>
-
-                        {/* New button */}
-                        <button className="btn btn--primary" onClick={handleCreateMetamodel}>
-                            + New
-                        </button>
                     </div>
                 </div>
+                <div className="project-header-compact__row2">
+                    <span>{project.description || 'No description'}</span>
+                    <span className="project-header-compact__sep">&middot;</span>
+                    <span>Created by {(project as any).author?.name || 'Unknown'}</span>
+                    <span className="project-header-compact__sep">&middot;</span>
+                    <span>{formatDate(project.creation)}</span>
+                    {tags.length > 0 && (
+                        <>
+                            <span className="project-header-compact__sep">&middot;</span>
+                            {tags.map((tag) => (
+                                <span key={tag} className="project-tag project-tag--compact">
+                                    {tag}
+                                    <button
+                                        className="project-tag__remove"
+                                        onClick={() => handleRemoveTag(tag)}
+                                        title="Remove tag"
+                                    >
+                                        ×
+                                    </button>
+                                </span>
+                            ))}
+                        </>
+                    )}
+                    <button
+                        className="edit-btn edit-btn--inline"
+                        onClick={handleStartEditDescription}
+                        title="Edit description"
+                    >
+                        <i className="bi bi-pencil" />
+                    </button>
+                    {/* Hidden description editor */}
+                    {isEditingDescription && (
+                        <div className="project-header-compact__desc-editor">
+                            <textarea
+                                ref={descriptionInputRef}
+                                className="project-header__description-input"
+                                value={editedDescription}
+                                onChange={(e) => setEditedDescription(e.target.value)}
+                                onBlur={handleSaveDescription}
+                                onKeyDown={handleDescriptionKeyDown}
+                                rows={3}
+                                placeholder="Add a project description..."
+                            />
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <div className="project-editor__body">
+                {/* Section Navigator Sidebar */}
+                <nav className="section-nav">
+                    {sections.map((sec, i) => (
+                        <React.Fragment key={sec.id}>
+                            {i > 0 && sections[i - 1].group !== sec.group && (
+                                <div className="section-nav__divider" />
+                            )}
+                            <button
+                                className={`section-nav__item ${activeSection === sec.id ? 'section-nav__item--active' : ''}`}
+                                onClick={() => scrollToSection(sec.id)}
+                            >
+                                <span className={`section-nav__icon ${sec.iconClass}`}>
+                                    {sec.iconClass
+                                        ? <i className={`bi ${sec.iconClass}`} />
+                                        : sec.iconLetter
+                                    }
+                                </span>
+                                <span className="section-nav__label">{sec.label}</span>
+                                {sec.count > 0 && (
+                                    <span className="section-nav__count">({sec.count})</span>
+                                )}
+                            </button>
+                        </React.Fragment>
+                    ))}
+                </nav>
+
+                {/* Main scrollable content */}
+                <div className="project-editor__main" ref={mainContentRef}>
+
+            {/* Group 1: Structure (Metamodels + Models) */}
+            <div className="section-group section-group--structure">
+              <span className="section-group__label">Structure</span>
+
+            {/* Metamodels Section */}
+            <div className="project-section" id="section-metamodels">
+                <SectionHeader
+                    title="METAMODELS"
+                    count={metamodels.length}
+                    primaryAction={{ label: '+ New', onClick: handleCreateMetamodel }}
+                    secondaryAction={{
+                        label: 'Import',
+                        onClick: () => setShowImportMenu(!showImportMenu),
+                        icon: 'upload',
+                        hasDropdown: true,
+                        isDropdownOpen: showImportMenu,
+                    }}
+                >
+                    {/* Import dropdown menu (rendered inside actions area) */}
+                    {showImportMenu && (
+                        <div className="import-select-menu" ref={importMenuRef}>
+                            <button
+                                className="import-select-menu__item"
+                                onClick={handleImportJmm}
+                            >
+                                <i className="bi bi-file-earmark" />
+                                Import .jmm
+                            </button>
+                            <button
+                                className="import-select-menu__item"
+                                onClick={handleImportEcore}
+                            >
+                                <i className="bi bi-file-earmark-code" />
+                                Import Ecore (.ecore)
+                            </button>
+                        </div>
+                    )}
+                </SectionHeader>
 
                 {metamodels.length === 0 ? (
-                    <div className="empty-state">
-                        <div className="empty-state__icon">
-                            <i className="bi bi-diagram-3" />
-                        </div>
-                        <h3 className="empty-state__title">No metamodels yet</h3>
-                        <p className="empty-state__description">
-                            Create a metamodel to define the structure and rules for your domain models.
-                        </p>
-                        <button
-                            className="btn btn--primary btn--empty-state"
-                            onClick={handleCreateMetamodel}
-                        >
-                            Create Your First Metamodel
-                        </button>
-                    </div>
+                    <EmptyState
+                        icon="bi-diagram-3"
+                        title="No metamodels yet"
+                        description="Create a metamodel to define the structure and rules for your domain models."
+                        action={{ label: 'Create Your First Metamodel', onClick: handleCreateMetamodel }}
+                    />
                 ) : (
                     <div className="list-card">
                         {metamodels.map((mm) => (
@@ -1571,12 +1932,15 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             </div>
 
             {/* Models Section */}
-            <div className="project-section">
-                <div className="project-section__header">
-                    <h2 className="project-section__title">MODELS</h2>
-                    <div className="new-model-button-wrapper" ref={metamodelMenuRef}>
+            <div className="project-section" id="section-models">
+                <div className="project-section-header" ref={metamodelMenuRef}>
+                    <h2 className="project-section-header__title">
+                        MODELS
+                        <span className="project-section-header__count">({models.length})</span>
+                    </h2>
+                    <div className="project-section-header__actions">
                         <button
-                            className="btn btn--primary"
+                            className="btn btn--ghost btn--sm"
                             disabled={metamodels.length === 0}
                             title={metamodels.length === 0 ? 'Create a metamodel first' : 'Create new model'}
                             onClick={handleNewModelClick}
@@ -1610,25 +1974,16 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 </div>
 
                 {models.length === 0 ? (
-                    <div className="empty-state empty-state--secondary">
-                        <div className="empty-state__icon empty-state__icon--small">
-                            <i className="bi bi-box" />
-                        </div>
-                        <h3 className="empty-state__title">
-                            {metamodels.length === 0 ? 'Create a metamodel first' : 'No models yet'}
-                        </h3>
-                        <p className="empty-state__description">
-                            {metamodels.length === 0
-                                ? 'Models are instances of metamodels. You need to create a metamodel structure before you can create models.'
-                                : 'Create a model to instantiate your metamodel.'}
-                        </p>
-                        {metamodels.length === 0 && (
-                            <div className="empty-state__hint">
-                                <i className="bi bi-arrow-up" />
-                                <span>Create your first metamodel in the section above</span>
-                            </div>
-                        )}
-                    </div>
+                    <EmptyState
+                        icon="bi-box"
+                        title={metamodels.length === 0 ? 'Create a metamodel first' : 'No models yet'}
+                        description={metamodels.length === 0
+                            ? 'Models are instances of metamodels. You need to create a metamodel structure before you can create models.'
+                            : 'Create a model to instantiate your metamodel.'}
+                        hints={metamodels.length === 0
+                            ? [{ icon: 'bi-arrow-up', text: 'Create your first metamodel in the section above' }]
+                            : undefined}
+                    />
                 ) : (
                     <div className="list-card">
                         {models.map((model) => (
@@ -1736,92 +2091,37 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 )}
             </div>
 
-            {/* Environment Generation Section */}
-            <div className="project-section">
-                <div className="project-section__header">
-                    <h2 className="project-section__title">
-                        ENVIRONMENT GENERATION {envGenConfigs.length > 0 && `(${envGenConfigs.length})`}
-                    </h2>
-                    <button
-                        className="btn btn--primary"
-                        disabled={metamodels.length === 0}
-                        title={metamodels.length === 0 ? 'Create a metamodel first' : 'Generate new environment'}
-                        onClick={() => { setEditingEnvGenId(undefined); setShowEnvGenWizard(true); }}
-                    >
-                        + New
-                    </button>
-                </div>
+            </div>{/* end section-group--structure */}
 
-                {envGenConfigs.length === 0 ? (
-                    <div className="empty-state empty-state--secondary">
-                        <div className="empty-state__icon empty-state__icon--small">
-                            <i className="bi bi-box-seam" />
-                        </div>
-                        <h3 className="empty-state__title">No environments generated yet</h3>
-                        <p className="empty-state__description">
-                            Generate standalone modeling environments from your metamodels with AI-assisted prompt generation.
-                        </p>
-                    </div>
-                ) : (
-                    <div className="list-card">
-                        {envGenConfigs.map((cfg) => (
-                            <div
-                                className="list-card__item"
-                                key={cfg.id}
-                                onClick={() => { setEditingEnvGenId(cfg.id); setShowEnvGenWizard(true); }}
-                                role="button"
-                                tabIndex={0}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' || e.key === ' ') {
-                                        e.preventDefault();
-                                        setEditingEnvGenId(cfg.id);
-                                        setShowEnvGenWizard(true);
-                                    }
-                                }}
-                                style={{ cursor: 'pointer' }}
-                            >
-                                <span className="list-card__icon list-card__icon--envgen">
-                                    <i className="bi bi-box-seam" />
-                                </span>
-                                <div className="list-card__content">
-                                    <div className="list-card__name">{cfg.name || 'Untitled'}</div>
-                                    <div className="list-card__type">
-                                        {cfg.techStackSummary} {cfg.metamodelName ? `· ${cfg.metamodelName}` : ''}
-                                    </div>
-                                </div>
-                                <span className={`envgen-status-badge envgen-status-badge--${cfg.status}`}>
-                                    {cfg.status === 'ready' ? 'Ready' : cfg.status === 'generating' ? 'Generating...' : 'Draft'}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
+            {/* TODO: [cleanup] Environment Generation section removed from dashboard UI.
+                Remove environment generation from:
+                - Model types/interfaces (EnvGenConfigSummary, etc.)
+                - API/service layer (EnvGenPersistence, EnvGenPromptBuilder)
+                - SCSS styles (.list-card__icon--envgen, .envgen-pulse)
+                - State management (showEnvGenWizard, envGenConfigs, editingEnvGenId)
+                - EnvGenWizardModal component usage below
+                - Navbar "Environment Generation" menu entry
+            */}
+
+            {/* Group 2: Transformation */}
+            <div className="section-group section-group--transformation">
+              <span className="section-group__label">Transformation</span>
 
             {/* Transformations Section */}
-            <div className="project-section">
-                <div className="project-section__header">
-                    <h2 className="project-section__title">
-                        TRANSFORMATIONS {transformations.length > 0 && `(${transformations.length})`}
-                    </h2>
-                    <button
-                        className="btn btn--primary"
-                        onClick={() => setShowNewTransformationDialog(true)}
-                    >
-                        + New
-                    </button>
-                </div>
+            <div className="project-section" id="section-transformations">
+                <SectionHeader
+                    title="TRANSFORMATIONS"
+                    count={transformations.length}
+                    primaryAction={{ label: '+ New', onClick: () => setShowNewTransformationDialog(true) }}
+                />
 
                 {transformations.length === 0 ? (
-                    <div className="empty-state empty-state--secondary">
-                        <div className="empty-state__icon empty-state__icon--small">
-                            <i className="bi bi-arrow-left-right" />
-                        </div>
-                        <h3 className="empty-state__title">No transformations yet</h3>
-                        <p className="empty-state__description">
-                            Create model-to-model transformations using JjTL to automate conversions between metamodels.
-                        </p>
-                    </div>
+                    <EmptyState
+                        icon="bi-arrow-left-right"
+                        title="No transformations yet"
+                        description="Create model-to-model transformations using JjTL to automate conversions between metamodels."
+                        action={{ label: 'Create Your First Transformation', onClick: () => setShowNewTransformationDialog(true) }}
+                    />
                 ) : (
                     <TransformationsList
                         transformations={transformations}
@@ -1833,37 +2133,66 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 )}
             </div>
 
+            </div>{/* end section-group--transformation */}
+
+            {/* Group 3: Perspectives (Viewpoints + Documentation) */}
+            <div className="section-group section-group--perspectives">
+              <span className="section-group__label">Perspectives</span>
+
             {/* Viewpoints Section */}
-            <div className="project-section">
-                <div className="project-section__header">
-                    <h2 className="project-section__title">
-                        VIEWPOINTS {viewpoints.length > 0 && `(${viewpoints.length})`}
-                    </h2>
-                    <button className="btn btn--secondary" disabled>
-                        + Add
-                    </button>
-                </div>
+            <div className="project-section" id="section-viewpoints">
+                <SectionHeader
+                    title="VIEWPOINTS"
+                    count={viewpoints.length}
+                    primaryAction={{ label: '+ New', onClick: () => setShowNewViewpointDialog(true) }}
+                />
 
                 {viewpoints.length === 0 ? (
-                    <div className="empty-state empty-state--subtle">
-                        <p className="empty-state__text-inline">No viewpoints defined</p>
-                    </div>
+                    <EmptyState
+                        icon="bi-eye"
+                        title="No viewpoints defined"
+                        description="Viewpoints let you define custom perspectives on your models."
+                    />
                 ) : (
                     <div className="list-card">
                         {viewpoints.map((vp) => {
                             if (!vp) return null;
                             const isDefault = vp.name === 'Default' || vp.name === 'Validation default';
+                            const vpType = getViewpointType(vp as any);
+                            const isExclusive = vpType === 'syntax';
+                            // Count sub-views recursively
+                            const countViews = (v: any): number => {
+                                let subs: any[] = [];
+                                try { subs = v.subViews || []; } catch { subs = []; }
+                                let count = subs.length;
+                                for (const sv of subs) {
+                                    if (sv) count += countViews(sv);
+                                }
+                                return count;
+                            };
+                            const viewCount = countViews(vp);
                             return (
                                 <div className="list-card__item" key={vp.id || vp.name}>
-                                    <span className="list-card__icon list-card__icon--vp">V</span>
-                                    <div className="list-card__content">
-                                        <div className="list-card__name">{vp.name || 'Unnamed'}</div>
+                                    <span className={`list-card__icon list-card__icon--vp-${vpType}`}
+                                          style={{ cursor: 'pointer' }}
+                                          onClick={() => handleOpenViewpoint(vp)}>V</span>
+                                    <div className="list-card__content"
+                                         style={{ cursor: 'pointer' }}
+                                         onClick={() => handleOpenViewpoint(vp)}>
+                                        <div className="list-card__name">
+                                            {vp.name || 'Unnamed'}
+                                            <span className="vp-type-badge" data-type={vpType}>
+                                                {vpType.replace('_', ' ')}
+                                            </span>
+                                            {!isExclusive && <i className="bi bi-layers vp-mode-icon" title="Overlay viewpoint"></i>}
+                                        </div>
                                         <div className="list-card__type">
-                                            {vp.isOverlay ? 'Overlay Viewpoint' : 'Viewpoint'}
+                                            {viewCount} {viewCount === 1 ? 'view' : 'views'}
                                         </div>
                                     </div>
                                     <div className="list-card__actions">
-                                        <button className="icon-btn" title="View" disabled>
+                                        <button className="icon-btn" title="View"
+                                                onClick={() => handleOpenViewpoint(vp)}>
                                             <i className="bi bi-eye" />
                                         </button>
                                         <button
@@ -1891,7 +2220,152 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             </div>
 
             {/* Documentation Section */}
-            <DocumentationSection project={project} />
+            <div id="section-documentation">
+                <DocumentationSection project={project} />
+            </div>
+
+            </div>{/* end section-group--perspectives */}
+
+                </div>{/* end project-editor__main */}
+            </div>{/* end project-editor__body */}
+
+            {/* Megamodel Diagram View */}
+            {showMegamodelModal && (() => {
+                const megamodel = getRuntimeMegamodel(project.id);
+                if (!megamodel) return null;
+
+                // Compute artifact stats for rich node cards
+                const artifactStats: ArtifactStats[] = [];
+                for (const mm of metamodels) {
+                    const classes = mm.classes || [];
+                    const attrs = mm.attributes || [];
+                    const refs = mm.references || [];
+                    artifactStats.push({
+                        id: mm.id,
+                        stats: {
+                            classCount: classes.length,
+                            attributeCount: attrs.length,
+                            referenceCount: refs.length,
+                        },
+                        status: {
+                            type: 'valid',
+                            label: `${classes.length} classes`,
+                        },
+                    });
+                }
+                for (const m of models) {
+                    const objects = m.objects || [];
+                    const conformsToName = (m as any).instanceof?.name;
+                    artifactStats.push({
+                        id: m.id,
+                        stats: {
+                            objectCount: objects.length,
+                            linkCount: objects.reduce((sum: number, o: any) =>
+                                sum + (o.referenceFeatures?.length ?? 0), 0),
+                        },
+                        status: objects.length === 0
+                            ? { type: 'warning', label: 'Empty model' }
+                            : { type: 'valid', label: conformsToName ? `Conforms to ${conformsToName}` : `${objects.length} objects` },
+                    });
+                }
+                for (const t of transformations) {
+                    const ruleCount = t.ast?.mappings?.length ?? 0;
+                    const mappingCount = t.ast?.mappings?.reduce((sum: number, m: any) =>
+                        sum + (m.body?.length ?? 0), 0) ?? 0;
+                    artifactStats.push({
+                        id: t.id,
+                        stats: {
+                            ruleCount,
+                            mappingCount,
+                        },
+                        status: t.isValid === false
+                            ? { type: 'warning', label: `${t.errorCount ?? 0} errors` }
+                            : { type: 'info', label: `${ruleCount} rules` },
+                    });
+                }
+
+                return (
+                    <MegamodelView
+                        megamodel={megamodel}
+                        projectId={project.id}
+                        viewpoints={viewpoints.map(vp => ({
+                            id: vp.id || vp.name,
+                            name: vp.name || 'Unnamed',
+                            isOverlay: vp.isOverlay,
+                        }))}
+                        artifactStats={artifactStats}
+                        onClose={() => setShowMegamodelModal(false)}
+                        onOpenNode={(nodeId, nodeKind) => {
+                            if (nodeKind === 'metamodel' || nodeKind === 'model') {
+                                const lModel = metamodels.find(mm => mm.id === nodeId) || models.find(m => m.id === nodeId);
+                                if (lModel) DockManager.open2(lModel);
+                            } else if (nodeKind === 'transformation') {
+                                const t = transformations.find(tr => tr.id === nodeId);
+                                if (t) handleOpenTransformation(t);
+                            }
+                        }}
+                        onDeleteNode={(nodeId, nodeKind) => {
+                            if (nodeKind === 'metamodel') {
+                                const mm = metamodels.find(m => m.id === nodeId);
+                                if (mm) handleDeleteMetamodel(mm);
+                            } else if (nodeKind === 'model') {
+                                const m = models.find(mod => mod.id === nodeId);
+                                if (m) handleDeleteModel(m);
+                            } else if (nodeKind === 'transformation') {
+                                handleDeleteTransformation(nodeId);
+                            }
+                            setShowMegamodelModal(false);
+                        }}
+                        onRenameNode={(nodeId, nodeKind, newName) => {
+                            if (nodeKind === 'metamodel') {
+                                const mm = metamodels.find(m => m.id === nodeId);
+                                if (mm && newName !== mm.name) {
+                                    mm.name = newName;
+                                    markDirty();
+                                }
+                            } else if (nodeKind === 'model') {
+                                const m = models.find(mod => mod.id === nodeId);
+                                if (m && newName !== m.name) {
+                                    m.name = newName;
+                                    markDirty();
+                                }
+                            } else if (nodeKind === 'transformation') {
+                                handleRenameTransformation(nodeId, newName);
+                            }
+                            // Keep runtime megamodel ArtifactRef names in sync
+                            // so that close/reopen rebuilds nodes with the new name
+                            const currentMm = getRuntimeMegamodel(project.id);
+                            if (currentMm) {
+                                for (const edge of currentMm.edges) {
+                                    if (edge.source.id === nodeId) edge.source.name = newName;
+                                    if (edge.target.id === nodeId) edge.target.name = newName;
+                                }
+                            }
+                        }}
+                        onDuplicateNode={(nodeId, nodeKind) => {
+                            if (nodeKind === 'transformation') {
+                                handleDuplicateTransformation(nodeId);
+                            }
+                            // TODO: duplicate for metamodels/models
+                        }}
+                        onRunTransformation={(nodeId) => {
+                            const t = transformations.find(tr => tr.id === nodeId);
+                            if (t) {
+                                setShowMegamodelModal(false);
+                                handleOpenTransformation(t);
+                            }
+                        }}
+                        onCreateMetamodel={() => {
+                            handleCreateMetamodel();
+                            setShowMegamodelModal(false);
+                        }}
+                        onCreateModel={() => {
+                            handleNewModelClick();
+                            setShowMegamodelModal(false);
+                        }}
+                    />
+                );
+            })()}
 
             {/* Share Modal */}
             <ShareProjectModal
@@ -1912,6 +2386,14 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 )}
                 existingNames={transformations.map(t => t.name)}
                 metamodels={metamodels.map(mm => ({ id: mm.id, name: mm.name || 'Unnamed' }))}
+            />
+
+            {/* New Viewpoint Dialog */}
+            <NewViewpointDialog
+                isOpen={showNewViewpointDialog}
+                onClose={() => setShowNewViewpointDialog(false)}
+                onSubmit={handleCreateViewpoint}
+                existingNames={viewpoints.map(vp => vp?.name || '')}
             />
 
             {/* Environment Generation Wizard */}

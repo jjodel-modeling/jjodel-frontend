@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { NodeResizer, useReactFlow, type NodeProps, type Node } from '@xyflow/react';
 import DynamicHandles from '../components/DynamicHandles';
 import { syncNodeLabel } from '../sync/canvasToJjom';
@@ -12,9 +12,13 @@ function PackageNode({ id, data, selected }: NodeProps<PackageNodeType>) {
     const editorContext = useEditorContextSafe();
     const [editing, setEditing] = useState(false);
     const [name, setName] = useState(data.label);
+    const lastCommittedName = useRef(data.label);
 
     useEffect(() => {
-        setName(data.label);
+        if (data.label !== lastCommittedName.current) {
+            setName(data.label);
+            lastCommittedName.current = data.label;
+        }
     }, [data.label]);
 
     // Auto-edit mode for newly created nodes
@@ -29,7 +33,8 @@ function PackageNode({ id, data, selected }: NodeProps<PackageNodeType>) {
 
     const commitName = useCallback(() => {
         setEditing(false);
-        if (name !== data.label) {
+        if (name !== lastCommittedName.current) {
+            lastCommittedName.current = name;
             editorContext?.takeSnapshot();
             setNodes((nds) =>
                 nds.map((n) =>
@@ -38,18 +43,18 @@ function PackageNode({ id, data, selected }: NodeProps<PackageNodeType>) {
             );
             syncNodeLabel(id, name);
         }
-    }, [id, name, data.label, setNodes, editorContext]);
+    }, [id, name, setNodes, editorContext]);
 
     const handleKeyDown = useCallback(
         (e: React.KeyboardEvent) => {
             if (e.key === 'Enter') {
                 commitName();
             } else if (e.key === 'Escape') {
-                setName(data.label);
+                setName(lastCommittedName.current);
                 setEditing(false);
             }
         },
-        [commitName, data.label]
+        [commitName]
     );
 
     return (

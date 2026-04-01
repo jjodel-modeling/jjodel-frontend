@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import StatusBarRightZone from '../../components/StatusBarRightZone';
 
 export interface JjtlStatusBarProps {
     // Parser status
@@ -152,6 +153,12 @@ export const JjtlStatusBar: React.FC<JjtlStatusBarProps> = ({
                 <div className="jjtl-statusbar-item jjtl-statusbar-language">
                     <span>JjTL</span>
                 </div>
+
+                {/* Separator before shared right-zone items */}
+                <span className="jjtl-statusbar-rz-sep" />
+
+                {/* Shared right-zone: mode toggle, Jjodie, bell, version */}
+                <StatusBarRightZone variant="dark" />
             </div>
         </div>
     );

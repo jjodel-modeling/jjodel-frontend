@@ -6,6 +6,8 @@ import type {
     Proxyfied,
     Pointer,
     Dictionary,
+    LValue,
+    LObject,
 } from "../joiner";
 import {
     windoww,
@@ -272,6 +274,10 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         return isConcatenable ? ret.join(' ') : ret; }
 
     public get(targetObj: ME, propKey: string | symbol, proxyitself: Proxyfied<ME>): any {
+        // Symbol properties (React internals, iterators, etc.) — bypass proxy logic
+        if (typeof propKey === 'symbol') {
+            return Reflect.get(targetObj, propKey, proxyitself);
+        }
         let ret;
         let isError = false;
         // console.error('_proxy get PRE:', {targetObj, propKey, proxyitself, arguments});
@@ -323,14 +329,29 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
                 if (ret._state) ret.state = ret._state;
                 for (let k of hiddenkeys) { delete ret[k]; }
                 if (propKey === 'json' || propKey === 'deepJson') for (let k of lang_hiddenkeys) { delete ret[k]; }
-                let childKeys_ = windoww.LPointerTargetable.childKeys;
-                let pointerKeys = windoww.LPointerTargetable.pointerKeys;
+                let childKeys_ = windoww.DPointerTargetable.childKeys;
+                let pointerKeys = windoww.DPointerTargetable.pointerKeys;
                 // replace children pointers with json or remove them
                 if (propKey === 'deepJson' || propKey === '__deepJson') {
                     for (let k of childKeys_) {
                         if (!(k in ret)) continue;
-                        if (!Array.isArray(ret[k])) ret[k] = (L.from(ret[k]) as any)?.[propKey];
-                        else ret[k] = ret[k].map(e=>(L.from(e) as any)?.[propKey]).filter(e=>!!e);
+                        switch (k) {
+                            case 'values':
+                                let isArr = Array.isArray(ret[k]);
+                                let v: LValue["values"] = ret[k];
+                                if (v === undefined || v === null) v = [];
+                                else if (!isArr) { v = [ret[k]]; }
+                                v = v.map(e=>(L.from(e as any) as any)?.[propKey] || e);
+                                if (v.length === 0) { delete ret[k]; break; }
+                                if (v.length === 1) { ret[k] = v; break; }
+                                ret[k] = v;
+                                break;
+
+                            default:
+                                if (!Array.isArray(ret[k])) ret[k] = (L.from(ret[k]) as any)?.[propKey];
+                                else ret[k] = ret[k].map(e=>(L.from(e) as any)?.[propKey]).filter(e=>!!e);
+                                break;
+                        }
                     }
                 }
                 else if (propKey !== '__json') for (let k of childKeys_) { delete ret[k]; }
@@ -344,6 +365,14 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
                     let v = ret[k];
                     if ((Array.isArray(v) && v.length === 0) || U.isEmptyObject(v)) delete ret[k];
                     if (v === '') delete ret[k];
+                }
+                if (ret.className === "DObject") {
+                    let l = L.from(targetObj.id);
+                    ret.name = (l as LObject).name; // fix name override by attribute
+                }
+                if (ret.className === "DValue") {
+                    let l = L.from(targetObj.id);
+                    ret.name = (l as LObject).instanceof?.name || ret.name; // fix name override by m2 feature name
                 }
                 return ret;
             case '__serialize': return JSON.stringify(targetObj, null, 4);
@@ -420,6 +449,10 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
     }
 
     public set(targetObj: ME, propKey: string | symbol, value: any, proxyitself?: Proxyfied<ME>): boolean {
+        // Symbol properties — bypass proxy logic
+        if (typeof propKey === 'symbol') {
+            return Reflect.set(targetObj, propKey, value, proxyitself);
+        }
         // console.error('_proxy set PRE:', {targetObj, propKey, value, proxyitself, arguments});
         // if (propKey in this.l || propKey in this.d || (this.l as GObject)[this.s + (propKey as string)] || (this.l as GObject)[(propKey as string)]) {
 
@@ -430,14 +463,6 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
             }
             return true;
         }
-        switch (typeof propKey) {
-            case "symbol":
-                propKey = String(propKey);
-                Log.exDevv('unexpected symbol in proxy setter:', propKey);
-                break;
-            default: break;
-        }
-
         switch (propKey) {
             case 'parent': propKey = 'father'; break;
         }
