@@ -6,6 +6,8 @@ import type {
     Proxyfied,
     Pointer,
     Dictionary,
+    LValue,
+    LObject,
 } from "../joiner";
 import {
     windoww,
@@ -286,24 +288,26 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         return ret;
     }
 
-    public get0(targetObj: ME, propKey: string | symbol, proxyitself: Proxyfied<ME>): any {
+    public get0(targetObj: ME, propKey0: string | symbol, proxyitself: Proxyfied<ME>): any {
         // console.log('proxy keysearch', {propKey, targetObj, l: this.l, proxyitself, d: this.d});
         let canThrowErrors = true;
 
-        switch (typeof propKey) {
+        switch (typeof propKey0) {
             case "symbol":
-                propKey = String(propKey);
+                propKey0 = String(propKey0);
                 // console.log('get symbol', {propKey});
-                switch (propKey) {
-                    default: Log.exDevv('unexpected symbol in proxy getter:', propKey); break;
+                switch (propKey0) {
+                    default: Log.exDevv('unexpected symbol in proxy getter:', propKey0); break;
                     // for object returns undefined, for arrays returns a function returning an iterator: arr[Symbol.iterator] = ()=>new Iterator(...);
                     case "Symbol(Symbol.iterator)": return undefined;
-                    case 'Symbol(Symbol.toStringTag)': propKey = 'toString'; break; //return (()=>"[Proxy]");
-                    case "Symbol(Symbol.toPrimitive)": propKey = 'toPrimitive'; break;
+                    case 'Symbol(Symbol.toStringTag)': propKey0 = 'toString'; break; //return (()=>"[Proxy]");
+                    case "Symbol(Symbol.toPrimitive)": propKey0 = 'toPrimitive'; break;
                 }
                 break;
             // case "number": return null;
         }
+        if (typeof propKey0 === 'symbol') return undefined;
+        let propKey: string = propKey0 as any;
 
         switch (propKey) {
             case '__l': return this.l;
@@ -323,46 +327,65 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
                 if (ret._state) ret.state = ret._state;
                 for (let k of hiddenkeys) { delete ret[k]; }
                 let keptChildKeys = {'values': true, 'value': true};
-                console.log("hasvalues 0", {has:"values" in ret, ret:{...ret}, finalret:ret} );
                 if (propKey === 'json' || propKey === 'deepJson') for (let k of lang_hiddenkeys) { delete ret[k]; }
-                let childKeys_ = windoww.LPointerTargetable.childKeys;
-                let pointerKeys = windoww.LPointerTargetable.pointerKeys;
+                let childKeys_ = windoww.DPointerTargetable.childKeys;
+                let pointerKeys = windoww.DPointerTargetable.pointerKeys;
                 // replace children pointers with json or remove them
-                console.log("hasvalues 1", {has:"values" in ret, ret:{...ret}, finalret:ret} );
                 if (propKey === 'deepJson' || propKey === '__deepJson') {
                     for (let k of childKeys_) {
-                        if (!(k in ret)) continue;
+                        if (!ret.hasOwnProperty(k)) continue;
                         let isValues = k === 'values' || k === 'value';
-                        if (!Array.isArray(ret[k])) {
-                            let ltarget = (L.from(ret[k]) as any)?.[propKey];
-                            if (!ltarget && isValues) continue;
-                            ret[k] = ltarget;
+                        switch (k) {
+                            case 'values':
+                                let isArr = Array.isArray(ret[k]);
+                                let v: LValue["values"] = ret[k];
+                                if (v === undefined || v === null) v = [];
+                                else if (!isArr) { v = [ret[k]]; }
+                                v = v.map(e=> {
+                                    let ltarget: GObject<LModelElement> = L.from(e as any);
+                                    if (!ltarget && isValues) return e;
+                                    if (ltarget.className === "DEnumLiteral") return ltarget.name;
+                                    return ltarget?.[propKey];
+                                });
+                                if (v.length === 0) { delete ret[k]; break; }
+                                if (v.length === 1) { ret[k] = v; break; }
+                                ret[k] = v;
+                                break;
+
+                            default:
+                                if (!Array.isArray(ret[k])) ret[k] = (L.from(ret[k]) as any)?.[propKey];
+                                else ret[k] = ret[k].map(e=>(L.from(e) as any)?.[propKey]).filter(e=>!!e);
+                                break;
                         }
-                        else ret[k] = ret[k].map(e=> {
-                            let ltarget = (L.from(ret[k]) as any)?.[propKey];
-                            if (!ltarget && isValues) return ret[k];
-                            return ltarget;
-                        }).filter(e=> isValues ? true : !!e);
                     }
                 }
                 else if (propKey !== '__json') for (let k of childKeys_) {
                     if (k in keptChildKeys) continue;
                     delete ret[k];
                 }
-                console.log("hasvalues 2", {has:"values" in ret, ret:{...ret}, finalret:ret} );
+                console.log("hasvalues 2", {has:"values" in ret, ret:{...ret}, finalret:ret, pointerKeys} );
                 // replace non-containing pointers (type) with names
                 if (propKey !== '__json') for (let k of pointerKeys) {
                     if (!(k in ret)) continue;
                     if (Array.isArray(ret[k])) ret[k] = ret[k].map(e => (L.from(e) as any)?.name).filter(e=>!!e);
                     else ret[k] = ret[k] = (L.from(ret[k]) as any)?.name;
                 }
+
+                console.log("hasvalues 3", {has:"values" in ret, ret:{...ret}, finalret:ret} );
                 for (let k of Object.keys(ret)) {
                     let v = ret[k];
                     if ((Array.isArray(v) && v.length === 0) || U.isEmptyObject(v)) delete ret[k];
                     if (v === '') delete ret[k];
                 }
-
-                console.log("hasvalues 3", {has:"values" in ret, ret:{...ret}, finalret:ret} );
+                console.log("hasvalues 4", {has:"values" in ret, ret:{...ret}, finalret:ret} );
+                if (ret.className === "DObject") {
+                    let l = L.from(targetObj.id);
+                    ret.name = (l as LObject).name; // fix name override by attribute
+                }
+                if (ret.className === "DValue") {
+                    let l = L.from(targetObj.id);
+                    ret.name = (l as LObject).instanceof?.name || ret.name; // fix name override by m2 feature name
+                }
                 return ret;
             case '__serialize': return JSON.stringify(targetObj, null, 4);
             case '__isproxy':
