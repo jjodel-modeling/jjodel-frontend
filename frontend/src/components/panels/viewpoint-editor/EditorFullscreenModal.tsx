@@ -9,11 +9,8 @@ import type { LanguageBadge } from './EditorToolbar';
 type ToolbarSep = '|';
 interface ToolbarButton {
     icon: string;
-    iconActive?: string;
     title: string;
     action: (editor: monacoEditor.IStandaloneCodeEditor) => void;
-    /** Return true when the button should show its "active/feedback" icon */
-    isActive?: () => boolean;
 }
 
 export interface EditorFullscreenModalProps {
