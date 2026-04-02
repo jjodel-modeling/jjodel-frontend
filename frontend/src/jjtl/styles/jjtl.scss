@@ -169,8 +169,8 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     align-items: center;
     gap: 4px;
     padding: 4px;
-    background: rgba(255, 255, 255, 0.95);
-    border: 1px solid $color-border;
+    background: var(--color-toolbar-bg, rgba(255, 255, 255, 0.95));
+    border: 1px solid var(--color-toolbar-border, $color-border);
     border-radius: $radius-lg;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     backdrop-filter: blur(8px);
@@ -186,7 +186,7 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     background: transparent;
     border: none;
     border-radius: $radius-md;
-    color: #64748b;
+    color: var(--color-toolbar-btn-text, #64748b);
     cursor: pointer;
     transition: all $transition-fast;
 
@@ -195,8 +195,8 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     }
 
     &:hover:not(:disabled) {
-        background: $color-bg-tertiary;
-        color: $color-text-primary;
+        background: var(--color-toolbar-btn-hover-bg, rgba(0, 0, 0, 0.06));
+        color: var(--color-toolbar-btn-hover-text, #0f172a);
     }
 
     &:disabled {
@@ -213,17 +213,17 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
         }
     }
 
-    // Primary button (Execute)
+    // Design system: primary buttons use slate gradient 135deg, icons always white
     &--primary {
-        background: $color-accent-gradient;
+        background: linear-gradient(135deg, #334155, #1e293b);
         color: #ffffff;
 
         i {
-            color: #ffffff;
+            color: #ffffff !important;
         }
 
         &:hover:not(:disabled) {
-            background: linear-gradient(135deg, #475569 0%, #334155 100%);
+            background: linear-gradient(135deg, #475569, #334155);
             color: #ffffff;
         }
     }
@@ -592,8 +592,8 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     display: flex;
     align-items: center;
     padding: $spacing-sm $spacing-md;
-    background-color: $color-bg-primary;
-    border-bottom: 1px solid $color-border;
+    background-color: var(--color-toolbar-bg, $color-bg-primary);
+    border-bottom: 1px solid var(--color-toolbar-border, $color-border);
     gap: $spacing-sm;
 }
 
@@ -619,14 +619,14 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     background: none;
     border: 1px solid transparent;
     border-radius: $radius-sm;
-    color: $color-text-secondary;
+    color: var(--color-toolbar-btn-text, #64748b);
     font-size: $font-size-sm;
     cursor: pointer;
     transition: all $transition-fast;
 
     &:hover:not(:disabled) {
-        background-color: $color-bg-secondary;
-        color: $color-text-primary;
+        background-color: var(--color-toolbar-btn-hover-bg, rgba(0, 0, 0, 0.06));
+        color: var(--color-toolbar-btn-hover-text, #0f172a);
     }
 
     &:disabled {
@@ -638,18 +638,19 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
         font-size: $font-size-md;
     }
 
+    // Design system: primary buttons use slate gradient 135deg, icons always white
     &--primary {
-        background: $color-accent-gradient;
-        color: white;
+        background: linear-gradient(135deg, #334155, #1e293b);
+        color: #ffffff;
         border: none;
 
         i {
-            color: white;
+            color: #ffffff !important;
         }
 
         &:hover:not(:disabled) {
-            background: linear-gradient(135deg, #475569 0%, #334155 100%);
-            color: white;
+            background: linear-gradient(135deg, #475569, #334155);
+            color: #ffffff;
         }
     }
 }
@@ -657,7 +658,7 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
 .jjtl-toolbar-divider {
     width: 1px;
     height: 24px;
-    background-color: $color-border;
+    background-color: var(--color-toolbar-border, $color-border);
     margin: 0 $spacing-xs;
 }
 
@@ -674,7 +675,7 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
 .jjtl-toolbar-metamodel-label {
     font-size: $font-size-xs;
     font-weight: 600;
-    color: $color-text-tertiary;
+    color: var(--color-toolbar-label, $color-text-tertiary);
     text-transform: uppercase;
 }
 
@@ -683,25 +684,25 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     align-items: center;
     gap: $spacing-xs;
     padding: $spacing-xs $spacing-sm;
-    background-color: $color-bg-secondary;
-    border: 1px solid $color-border;
+    background-color: var(--color-toolbar-btn-group, $color-bg-secondary);
+    border: 1px solid var(--color-toolbar-border, $color-border);
     border-radius: $radius-sm;
     font-size: $font-size-sm;
-    color: $color-text-primary;
+    color: var(--color-toolbar-btn-hover-text, #0f172a);
     cursor: pointer;
 
     &:hover {
-        border-color: $color-border-hover;
+        border-color: var(--color-border-hover, $color-border-hover);
     }
 
     i {
         font-size: 10px;
-        color: $color-text-tertiary;
+        color: var(--color-toolbar-label, #94a3b8);
     }
 }
 
 .jjtl-toolbar-arrow {
-    color: $color-text-tertiary;
+    color: var(--color-toolbar-label, #94a3b8);
     font-size: $font-size-md;
 }
 
@@ -711,7 +712,7 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     gap: $spacing-xs;
     font-size: $font-size-sm;
     font-weight: 500;
-    color: $color-text-primary;
+    color: var(--color-toolbar-btn-hover-text, #0f172a);
 
     i {
         color: $color-primary;
@@ -794,7 +795,7 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     color: white;
 
     i {
-        color: white;
+        color: white!important;
     }
 }
 
@@ -810,7 +811,7 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
     color: white;
 
     i {
-        color: white;
+        color: white!important;
     }
 }
 
@@ -2030,7 +2031,7 @@ $shadow-md: 0 1px 3px rgba(0, 0, 0, 0.08);
 
     i {
         font-size: $font-size-md;
-        color: white;
+        color: white!important;
     }
 }
 

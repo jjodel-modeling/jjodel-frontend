@@ -267,7 +267,8 @@ function DockComponent(props: AllProps) {
 
     let advanced:boolean = props.advanced;
 
-    const ModelsSummary = {id: id(), title: <TabHeader tid={tid()}><Logo style={{marginLeft: '-10px', fontSize: '1.5rem', paddingRight: '6px'}}/> {DProject.getProject()?.name}</TabHeader>, group: 'models', closable: false, content: <TabContent tid={tid()}><ModelsSummaryTab /></TabContent>};
+    const summaryTid = (id(), tid()); // advance counter for TabHeader/TabContent pairing
+    const ModelsSummary = {id: 'project_summary', title: <TabHeader tid={summaryTid}><Logo style={{marginLeft: '-10px', fontSize: '1.5rem', paddingRight: '6px'}}/> {DProject.getProject()?.name}</TabHeader>, group: 'models', closable: false, content: <TabContent tid={summaryTid}><ModelsSummaryTab /></TabContent>};
     const structure = {id: id(), title: <TabHeader tid={tid()}>Properties</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><PropertiesWithTreeView mode={'tab'}/></TabContent>};
     const metadata = {id: id(), title: <TabHeader tid={tid()}>Metadata</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><MetaData /></TabContent>};
     // Tree View tab removed - now using dedicated TreeViewSidebar component
