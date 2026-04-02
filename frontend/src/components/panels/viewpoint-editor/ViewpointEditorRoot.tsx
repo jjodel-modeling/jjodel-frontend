@@ -110,7 +110,7 @@ const ViewTreeRow: React.FC<ViewTreeRowProps> = ({ item, depth, selectedId, onSe
                         className="vep-tree__toggle"
                         onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
                     >
-                        {expanded ? '▾' : '▸'}
+                        {expanded ? <i className="bi bi-chevron-down"></i> : <i className="bi bi-chevron-right"></i>}
                     </span>
                 ) : (
                     <span className="vep-tree__toggle" />

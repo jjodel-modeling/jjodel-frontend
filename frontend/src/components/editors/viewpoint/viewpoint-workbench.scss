@@ -172,12 +172,20 @@
     }
 
     &__toggle {
-        font-size: 9px;
+        font-size: 10px;
         color: #94a3b8;
-        width: 12px;
+        width: 14px;
         text-align: center;
         flex-shrink: 0;
         cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+
+        i {
+            font-size: 10px;
+            line-height: 1;
+        }
     }
 
     &__name {

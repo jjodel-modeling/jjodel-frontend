@@ -335,83 +335,32 @@ $radius-md: 6px;
         }
     }
 
-    // Tree node icon - PASTEL STYLE
+    // Tree node icon - TEXT-ONLY STYLE (colored letter, no background)
     .tree-node__icon {
-        width: 20px;
-        height: 20px;
+        width: 16px;
+        height: 16px;
         display: flex;
         align-items: center;
         justify-content: center;
-        border-radius: 4px;
-        font-size: 11px;
-        font-weight: 700;
+        border-radius: 3px;
+        font-size: 10px;
+        font-weight: 600;
         flex-shrink: 0;
+        background: transparent;
 
-        // Model (slate) - Metamodels
-        &.tree-DModel {
-            background-color: rgba(100, 116, 139, 0.15);
-            color: #64748b;
-        }
-
-        // Package (amber)
-        &.tree-DPackage {
-            background-color: rgba(245, 158, 11, 0.15);
-            color: #f59e0b;
-        }
-
-        // Class (cyan)
+        &.tree-DModel { color: #7F77DD; }
+        &.tree-DPackage { color: #888780; }
         &.tree-DClass {
-            background-color: rgba(14, 165, 233, 0.15);
-            color: #0ea5e9;
-
-            &.abstract-class {
-                background-color: rgba(14, 165, 233, 0.08);
-                border: 1px dashed rgba(14, 165, 233, 0.5);
-            }
+            color: #378ADD;
+            &.abstract-class { font-style: italic; }
         }
-
-        // Attribute (green)
-        &.tree-DAttribute {
-            background-color: rgba(16, 185, 129, 0.15);
-            color: #10b981;
-        }
-
-        // Reference (purple)
-        &.tree-DReference {
-            background-color: rgba(139, 92, 246, 0.15);
-            color: #8b5cf6;
-        }
-
-        // Enum (pink)
-        &.tree-DEnumerator,
-        &.tree-DEnum {
-            background-color: rgba(236, 72, 153, 0.15);
-            color: #ec4899;
-        }
-
-        // Enum Literal (light pink)
-        &.tree-DEnumLiteral {
-            background-color: rgba(244, 114, 182, 0.15);
-            color: #f472b6;
-        }
-
-        // Operation (cyan darker)
-        &.tree-DOperation {
-            background-color: rgba(6, 182, 212, 0.15);
-            color: #06b6d4;
-        }
-
-        // Parameter (gray)
-        &.tree-DParameter {
-            background-color: rgba(156, 163, 175, 0.15);
-            color: #9ca3af;
-        }
-
-        // Object (gray)
-        &.tree-DObject {
-            background-color: rgba(107, 114, 128, 0.15);
-            color: #6b7280;
-        }
+        &.tree-DAttribute { color: #639922; }
+        &.tree-DReference { color: #D85A30; }
+        &.tree-DEnumerator, &.tree-DEnum { color: #D4537E; }
+        &.tree-DEnumLiteral { color: #D4537E; }
+        &.tree-DOperation { color: #06b6d4; }
+        &.tree-DParameter { color: #9ca3af; }
+        &.tree-DObject { color: #6b7280; }
     }
 
     // Tree node name

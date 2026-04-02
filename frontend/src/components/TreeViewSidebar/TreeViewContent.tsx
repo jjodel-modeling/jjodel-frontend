@@ -721,9 +721,6 @@ const MegamodelEntry = memo(function MegamodelEntry(): ReactElement {
     return (
         <div className="megamodel-entry" onClick={handleClick}>
             <div className="megamodel-entry__header">
-                <span className="megamodel-entry__icon">
-                    <i className="bi bi-diagram-3-fill" />
-                </span>
                 <span className="megamodel-entry__label">Megamodel</span>
             </div>
         </div>
@@ -834,9 +831,6 @@ const TransformationSection = memo(function TransformationSection({
     return (
         <div className="transformation-section">
             <div className="transformation-section__header">
-                <span className="transformation-section__icon">
-                    <i className={`bi ${entityIcon('transformation')}`} />
-                </span>
                 <span className="transformation-section__label">Transformations</span>
                 <span className="transformation-section__count">{transformations.length}</span>
             </div>
@@ -885,8 +879,11 @@ const VP_TYPE_COLORS: Record<ViewpointType, { bg: string; color: string }> = {
     editor_behavior: { bg: '#F1EFE8', color: '#5F5E5A' },
 };
 
-/** Unified pink color for all viewpoint V badges — outline style */
-const VP_ICON_COLOR = { color: '#D4537E' };
+/** Viewpoint badge color — matches viewpoint tree (purple) */
+const VP_ICON_COLOR = { color: '#8b5cf6', bg: 'rgba(139,92,246,0.15)' };
+
+/** View badge color — matches viewpoint tree (blue) */
+const VIEW_ICON_COLOR = { color: '#3b82f6', bg: 'rgba(59,130,246,0.15)' };
 
 /**
  * SubViewItem — a single view entry inside an expanded viewpoint
@@ -941,8 +938,11 @@ const SubViewItem = memo(function SubViewItem({
                     )}
                 </button>
                 <div className="tree-node__content" onClick={handleClick}>
-                    <span className="tree-node__icon tree-subview">
-                        <i className="bi bi-eye" />
+                    <span
+                        className="tree-node__icon tree-subview"
+                        style={{ color: VIEW_ICON_COLOR.color, background: VIEW_ICON_COLOR.bg }}
+                    >
+                        V
                     </span>
                     <span className="tree-node__name">{view.name}</span>
                 </div>
@@ -1009,9 +1009,9 @@ const ViewpointItem = memo(function ViewpointItem({
                 <div className="tree-node__content" onClick={handleClick}>
                     <span
                         className="tree-node__icon tree-viewpoint"
-                        style={{ color: iconStyle.color }}
+                        style={{ color: iconStyle.color, background: iconStyle.bg }}
                     >
-                        V
+                        VP
                     </span>
                     <span className="tree-node__name">{viewpoint.name}</span>
 
@@ -1075,7 +1075,6 @@ const ViewpointTypeGroup = memo(function ViewpointTypeGroup({
                 <button className="tree-node__toggle">
                     <i className={`bi bi-chevron-${isExpanded ? 'down' : 'right'}`} />
                 </button>
-                <span className="tree-type-group__indicator" data-type={type} />
                 <span className="tree-type-group__label" data-type={type}>
                     {VP_TYPE_LABELS[type]}
                 </span>
@@ -1121,9 +1120,6 @@ const ViewpointSection = memo(function ViewpointSection({
     return (
         <div className="viewpoint-section">
             <div className="viewpoint-section__header">
-                <span className="viewpoint-section__icon">
-                    <i className="bi bi-eye" />
-                </span>
                 <span className="viewpoint-section__label">Viewpoints</span>
                 <span className="viewpoint-section__count">{viewpoints.length}</span>
             </div>
@@ -1167,9 +1163,6 @@ const MetamodelsSection = memo(function MetamodelsSection({
     return (
         <div className="metamodels-section">
             <div className="metamodels-section__header">
-                <span className="metamodels-section__icon">
-                    <i className="bi bi-boxes" />
-                </span>
                 <span className="metamodels-section__label">Metamodels</span>
                 <span className="metamodels-section__count">{totalCount}</span>
             </div>
@@ -1221,9 +1214,6 @@ const DocumentationEntry = memo(function DocumentationEntry({
     return (
         <div className="documentation-entry">
             <div className="documentation-entry__header" onClick={handleClick}>
-                <span className="documentation-entry__icon">
-                    <i className="bi bi-file-text" />
-                </span>
                 <span className="documentation-entry__label">Documentation</span>
             </div>
         </div>

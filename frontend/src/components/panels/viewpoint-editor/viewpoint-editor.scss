@@ -350,6 +350,10 @@
         flex-shrink: 0;
         cursor: pointer;
         line-height: 1;
+
+        & i {
+            color: #94a3b8!important;
+        }
     }
 
     // --- Badge (VP / V) ---

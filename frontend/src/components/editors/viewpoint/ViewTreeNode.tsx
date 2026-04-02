@@ -50,7 +50,7 @@ const ViewTreeNode: React.FC<ViewTreeNodeProps> = ({
                         className="view-tree__toggle"
                         onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
                     >
-                        {expanded ? '▼' : '▶'}
+                        <i className={`bi bi-chevron-${expanded ? 'down' : 'right'}`} />
                     </span>
                 ) : (
                     <span className="view-tree__toggle">&nbsp;</span>
