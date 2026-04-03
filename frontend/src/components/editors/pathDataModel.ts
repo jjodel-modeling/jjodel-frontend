@@ -33,7 +33,7 @@ export type PathData = PathPoint[];
 // ============================================
 
 /** Generate a short unique ID */
-function uid(): string {
+export function uid(): string {
     return Math.random().toString(36).slice(2, 8);
 }
 
@@ -309,8 +309,8 @@ export function removePoint(data: PathData, pointId: string): PathData | null {
 
     const point = data[pointIndex];
 
-    // Cannot remove M (first point)
-    if (point.command === 'M') return null;
+    // Cannot remove the first M (path start)
+    if (point.command === 'M' && pointIndex === 0) return null;
 
     // Cannot remove Z (it's implicit)
     if (point.command === 'Z') return null;
@@ -336,8 +336,9 @@ export function convertSegment(data: PathData, pointId: string, newCommand: Comm
     const point = data[pointIndex];
     const prevPoint = data[pointIndex - 1];
 
-    // Cannot convert M or Z
-    if (point.command === 'M' || point.command === 'Z') return data;
+    // Cannot convert Z or the first M (path start)
+    if (point.command === 'Z') return data;
+    if (point.command === 'M' && pointIndex === 0) return data;
     if (!prevPoint) return data;
 
     // Already the requested command
@@ -432,6 +433,20 @@ export function convertSegment(data: PathData, pointId: string, newCommand: Comm
                     cy2: round1(point.y + (cy - point.y) * 0.66),
                 };
             }
+            break;
+
+        case 'M':
+            // Convert to M: start a new sub-path at this position
+            newData[pointIndex] = {
+                ...point,
+                command: 'M',
+                cx: undefined,
+                cy: undefined,
+                cx1: undefined,
+                cy1: undefined,
+                cx2: undefined,
+                cy2: undefined,
+            };
             break;
     }
 

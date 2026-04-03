@@ -223,6 +223,10 @@
     box-shadow: none;
   }
 
+  &__item i {
+    color: white!important;
+  }
+
   /* Visual — dark slate floating surface */
   background: #1e293b;
   border: 1px solid #334155;

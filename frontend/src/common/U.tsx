@@ -3543,10 +3543,9 @@ export class Keystrokes {
     public static getKeystrokeJsx(key: string, allowBootIcons: boolean = true, allowBoxIcons: boolean=true, allowTextIcons: boolean = true){
         if (typeof (key as unknown) !== 'string') return key as any;
         let os = U.getOSBrowserData().os.substring(0, 3).toLowerCase();
-        let obj = iconKeys['bi_' + os];
-        if (!obj) return Log.eDevv('Found unexpected OS: ' + os, {data:U.getOSBrowserData()}) && '';
+        let obj = iconKeys['bi_' + os] || {};
         let icon_name = obj[key] || iconKeys.bi_global[key];
-        let text = iconKeys['text_' + os][key] || iconKeys.text_global[key];
+        let text = (iconKeys['text_' + os] || {})[key] || iconKeys.text_global[key];
         if (allowBootIcons && icon_name) { return <i key={key} className={"bi " + icon_name} title={text || key}/>; }
         //obj = iconKeys['box_' + os];
         // if (!obj) return Log.eDevv('Found unexpected OS: ' + os, {data:U.getOSBrowserData()}) && '';

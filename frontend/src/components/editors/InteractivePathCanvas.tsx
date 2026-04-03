@@ -9,6 +9,7 @@
  * - Right-click to convert segment type or delete
  * - Shift key for snap-to-grid
  * - Delete/Backspace to remove hovered point
+ * - Cmd+Z / Ctrl+Z to undo, Shift+Cmd+Z / Shift+Ctrl+Z / Ctrl+Y to redo
  */
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
@@ -17,6 +18,7 @@ import {
     PathData,
     PathPoint,
     CommandType,
+    uid,
     serializePath,
     updatePoint,
     insertPointOnSegment,
@@ -44,6 +46,10 @@ interface InteractivePathCanvasProps {
     viewBox: string;
     /** Marker ID for grid pattern */
     markerId: string;
+    /** External snap-to-grid control. When provided, Shift key acts as temporary invert. */
+    snapEnabled?: boolean;
+    /** External highlight: makes this point visually emphasized (e.g. from sidebar hover). */
+    highlightedPointId?: string | null;
 }
 
 type InteractionState = 'idle' | 'hovering' | 'dragging';
@@ -66,6 +72,8 @@ export const InteractivePathCanvas: React.FC<InteractivePathCanvasProps> = ({
     zoom,
     viewBox,
     markerId,
+    snapEnabled,
+    highlightedPointId,
 }) => {
     // Interaction state
     const [interactionState, setInteractionState] = useState<InteractionState>('idle');
@@ -75,10 +83,26 @@ export const InteractivePathCanvas: React.FC<InteractivePathCanvasProps> = ({
     const [isSnapEnabled, setIsSnapEnabled] = useState(false);
     const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
     const [handlesVisible, setHandlesVisible] = useState(false);
+    const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
     // Refs
     const svgRef = useRef<SVGSVGElement>(null);
     const pointerIdRef = useRef<number | null>(null);
+    const justDraggedRef = useRef(false);
+    const pointerMovedRef = useRef(false);
+
+    // Undo/redo history
+    const historyRef = useRef<PathData[]>([]);
+    const historyIndexRef = useRef(-1);
+    const isUndoRedoRef = useRef(false);
+
+    // Show curve handles (tangent lines + control points) for a specific point
+    const showCurveHandles = useCallback((pointId: string): boolean => {
+        return selectedNodeId === pointId || hoveredPointId === pointId;
+    }, [selectedNodeId, hoveredPointId]);
+
+    // Show endpoint handles when hovering the path OR when a node is selected
+    const showHandlesOnCanvas = handlesVisible || selectedNodeId !== null;
 
     // Parse viewBox for grid
     const viewBoxParts = viewBox.split(' ').map(Number);
@@ -135,14 +159,94 @@ export const InteractivePathCanvas: React.FC<InteractivePathCanvasProps> = ({
                     setHoveredPointId(null);
                 }
             }
-            // Escape closes context menu
-            if (e.key === 'Escape' && contextMenu) {
-                setContextMenu(null);
+            // Escape: close context menu, then deselect node
+            if (e.key === 'Escape') {
+                if (contextMenu) {
+                    setContextMenu(null);
+                } else if (selectedNodeId) {
+                    setSelectedNodeId(null);
+                }
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [hoveredPointId, handlesVisible, pathData, onPathChange, contextMenu]);
+    }, [hoveredPointId, handlesVisible, pathData, onPathChange, contextMenu, selectedNodeId]);
+
+    // ========================================
+    // UNDO / REDO
+    // ========================================
+
+    // Record path snapshots — skip during drag (only record when drag ends)
+    useEffect(() => {
+        if (isUndoRedoRef.current) {
+            isUndoRedoRef.current = false;
+            return;
+        }
+        if (interactionState === 'dragging') return;
+
+        const history = historyRef.current;
+        const index = historyIndexRef.current;
+
+        // Initialize on first render
+        if (history.length === 0) {
+            historyRef.current = [pathData];
+            historyIndexRef.current = 0;
+            return;
+        }
+
+        // Skip if unchanged
+        if (JSON.stringify(history[index]) === JSON.stringify(pathData)) return;
+
+        // Truncate future history (branching after undo)
+        historyRef.current = history.slice(0, index + 1);
+        historyRef.current.push(pathData);
+        historyIndexRef.current = historyRef.current.length - 1;
+
+        // Cap at 100 entries
+        if (historyRef.current.length > 100) {
+            historyRef.current = historyRef.current.slice(-100);
+            historyIndexRef.current = historyRef.current.length - 1;
+        }
+    }, [pathData, interactionState]);
+
+    const undo = useCallback(() => {
+        if (historyIndexRef.current <= 0) return;
+        isUndoRedoRef.current = true;
+        historyIndexRef.current--;
+        onPathChange(historyRef.current[historyIndexRef.current]);
+    }, [onPathChange]);
+
+    const redo = useCallback(() => {
+        if (historyIndexRef.current >= historyRef.current.length - 1) return;
+        isUndoRedoRef.current = true;
+        historyIndexRef.current++;
+        onPathChange(historyRef.current[historyIndexRef.current]);
+    }, [onPathChange]);
+
+    // Cmd+Z / Ctrl+Z = undo, Shift+Cmd+Z / Shift+Ctrl+Z / Ctrl+Y = redo
+    // Uses capture phase so it fires before app-level undo/redo handlers
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            const mod = e.metaKey || e.ctrlKey;
+            if (!mod) return;
+
+            if (e.key.toLowerCase() === 'z' && !e.shiftKey) {
+                e.preventDefault();
+                e.stopPropagation();
+                undo();
+            } else if (e.key.toLowerCase() === 'z' && e.shiftKey) {
+                e.preventDefault();
+                e.stopPropagation();
+                redo();
+            } else if (e.key.toLowerCase() === 'y') {
+                e.preventDefault();
+                e.stopPropagation();
+                redo();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown, true);
+        return () => window.removeEventListener('keydown', handleKeyDown, true);
+    }, [undo, redo]);
 
     // ========================================
     // DRAG HANDLERS
@@ -158,6 +262,7 @@ export const InteractivePathCanvas: React.FC<InteractivePathCanvasProps> = ({
 
         e.stopPropagation();
         e.preventDefault();
+        pointerMovedRef.current = false;
 
         // Pointer capture on SVG root for reliable drag tracking
         if (svgRef.current) {
@@ -173,10 +278,17 @@ export const InteractivePathCanvas: React.FC<InteractivePathCanvasProps> = ({
 
     const handlePointerMove = useCallback((e: React.PointerEvent) => {
         if (interactionState !== 'dragging' || !draggingPointId) return;
+        pointerMovedRef.current = true;
+
+        // When snapEnabled prop is provided, Shift key acts as temporary invert;
+        // when not provided, Shift key enables snap (legacy behavior).
+        const effectiveSnap = snapEnabled != null
+            ? (snapEnabled !== isSnapEnabled)   // XOR: Shift inverts the toggle
+            : isSnapEnabled;                    // Legacy: Shift enables snap
 
         const { x, y } = clientToSvg(e.clientX, e.clientY);
-        const snappedX = snapToGrid(x, isSnapEnabled);
-        const snappedY = snapToGrid(y, isSnapEnabled);
+        const snappedX = snapToGrid(x, effectiveSnap);
+        const snappedY = snapToGrid(y, effectiveSnap);
 
         let updates: Partial<PathPoint> = {};
         switch (draggingField) {
@@ -195,7 +307,7 @@ export const InteractivePathCanvas: React.FC<InteractivePathCanvasProps> = ({
         }
 
         onPathChange(updatePoint(pathData, draggingPointId, updates));
-    }, [interactionState, draggingPointId, draggingField, clientToSvg, isSnapEnabled, pathData, onPathChange]);
+    }, [interactionState, draggingPointId, draggingField, clientToSvg, isSnapEnabled, snapEnabled, pathData, onPathChange]);
 
     const handlePointerUp = useCallback((e: React.PointerEvent) => {
         // Release pointer capture
@@ -204,10 +316,18 @@ export const InteractivePathCanvas: React.FC<InteractivePathCanvasProps> = ({
             pointerIdRef.current = null;
         }
 
+        // If pointer didn't move and we were on an endpoint, it's a click → toggle selection
+        if (!pointerMovedRef.current && draggingPointId && draggingField === 'endpoint') {
+            setSelectedNodeId(prev => prev === draggingPointId ? null : draggingPointId);
+        }
+
+        // Track drag completion to prevent false canvas clicks
+        justDraggedRef.current = interactionState === 'dragging';
+
         setDraggingPointId(null);
         setDraggingField('endpoint');
         setInteractionState(handlesVisible ? 'hovering' : 'idle');
-    }, [handlesVisible]);
+    }, [handlesVisible, interactionState, draggingPointId, draggingField]);
 
     // ========================================
     // SEGMENT CLICK (ADD POINT)
@@ -215,28 +335,83 @@ export const InteractivePathCanvas: React.FC<InteractivePathCanvasProps> = ({
 
     const handleSegmentClick = useCallback((e: React.MouseEvent) => {
         if (interactionState === 'dragging') return;
-        if (!handlesVisible) return;
+        if (!handlesVisible && !selectedNodeId) return;
 
         const { x, y } = clientToSvg(e.clientX, e.clientY);
         const segmentIndex = findClosestSegment(pathData, x, y, 3 / zoom);
 
         if (segmentIndex >= 0) {
+            e.stopPropagation(); // Prevent canvas click from also firing
             const newData = insertPointOnSegment(pathData, segmentIndex);
             onPathChange(newData);
         }
-    }, [interactionState, handlesVisible, clientToSvg, pathData, zoom, onPathChange]);
+    }, [interactionState, handlesVisible, selectedNodeId, clientToSvg, pathData, zoom, onPathChange]);
+
+    // ========================================
+    // CANVAS CLICK (DRAW POINTS)
+    // ========================================
+
+    const handleCanvasClick = useCallback((e: React.MouseEvent) => {
+        // Ignore clicks right after a drag operation
+        if (justDraggedRef.current) {
+            justDraggedRef.current = false;
+            return;
+        }
+
+        // If a node is selected, click on empty canvas deselects it
+        if (selectedNodeId) {
+            setSelectedNodeId(null);
+            return;
+        }
+
+        const { x, y } = clientToSvg(e.clientX, e.clientY);
+
+        // Apply snap-to-grid
+        const effectiveSnap = snapEnabled != null
+            ? (snapEnabled !== isSnapEnabled)   // XOR: Shift inverts the toggle
+            : isSnapEnabled;                    // Legacy: Shift enables snap
+        const snappedX = snapToGrid(x, effectiveSnap);
+        const snappedY = snapToGrid(y, effectiveSnap);
+
+        if (pathData.length === 0) {
+            // First click: add M (moveTo) command
+            onPathChange([{
+                id: uid(),
+                command: 'M',
+                x: snappedX,
+                y: snappedY,
+            }]);
+        } else {
+            // Subsequent clicks: add L (lineTo) command
+            const newPoint: PathPoint = {
+                id: uid(),
+                command: 'L',
+                x: snappedX,
+                y: snappedY,
+            };
+
+            // Insert before Z if the path is closed
+            const lastPoint = pathData[pathData.length - 1];
+            if (lastPoint.command === 'Z') {
+                const newData = [...pathData];
+                newData.splice(pathData.length - 1, 0, newPoint);
+                onPathChange(newData);
+            } else {
+                onPathChange([...pathData, newPoint]);
+            }
+        }
+    }, [selectedNodeId, clientToSvg, snapEnabled, isSnapEnabled, pathData, onPathChange]);
 
     // ========================================
     // CONTEXT MENU
     // ========================================
 
     const handleContextMenu = useCallback((e: React.MouseEvent, pointId: string) => {
-        console.log('CONTEXT MENU TRIGGERED', pointId);
         e.preventDefault();
         e.stopPropagation();
 
         const point = pathData.find(p => p.id === pointId);
-        if (!point || point.command === 'M' || point.command === 'Z') return;
+        if (!point || point.command === 'Z') return;
 
         setContextMenu({
             x: e.clientX,
@@ -257,9 +432,10 @@ export const InteractivePathCanvas: React.FC<InteractivePathCanvasProps> = ({
         const newData = removePoint(pathData, contextMenu.pointId);
         if (newData) {
             onPathChange(newData);
+            if (selectedNodeId === contextMenu.pointId) setSelectedNodeId(null);
         }
         setContextMenu(null);
-    }, [contextMenu, pathData, onPathChange]);
+    }, [contextMenu, pathData, onPathChange, selectedNodeId]);
 
     // ========================================
     // HOVER HANDLERS (on interaction layer <g>)
@@ -302,10 +478,11 @@ export const InteractivePathCanvas: React.FC<InteractivePathCanvasProps> = ({
             <svg
                 ref={svgRef}
                 viewBox={viewBox}
-                className={`interactive-path-canvas ${handlesVisible ? 'interactive-path-canvas--handles-visible' : ''} ${interactionState === 'dragging' ? 'interactive-path-canvas--dragging' : ''}`}
+                className={`interactive-path-canvas ${showHandlesOnCanvas ? 'interactive-path-canvas--handles-visible' : ''} ${interactionState === 'dragging' ? 'interactive-path-canvas--dragging' : ''}`}
                 preserveAspectRatio="xMidYMid meet"
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
+                onClick={handleCanvasClick}
                 onContextMenu={(e) => e.preventDefault()}
             >
                 {/* Layer 1: Grid pattern */}
@@ -385,9 +562,10 @@ export const InteractivePathCanvas: React.FC<InteractivePathCanvasProps> = ({
                         />
 
                         {/* Tangent lines (control point → endpoint) */}
-                        {handlesVisible && pathData.map((point, i) => {
+                        {showHandlesOnCanvas && pathData.map((point, i) => {
                             const prev = pathData[i - 1];
                             if (!prev) return null;
+                            if (!showCurveHandles(point.id)) return null;
 
                             if (point.command === 'Q' && point.cx != null && point.cy != null) {
                                 return (
@@ -451,7 +629,8 @@ export const InteractivePathCanvas: React.FC<InteractivePathCanvasProps> = ({
                         })}
 
                         {/* Control point handles (smaller, amber color) */}
-                        {handlesVisible && pathData.map((point) => {
+                        {showHandlesOnCanvas && pathData.map((point) => {
+                            if (!showCurveHandles(point.id)) return null;
                             const elements: React.ReactNode[] = [];
 
                             // Q control point
@@ -467,6 +646,7 @@ export const InteractivePathCanvas: React.FC<InteractivePathCanvasProps> = ({
                                         stroke="#f59e0b"
                                         strokeWidth={tangentStrokeWidth}
                                         onPointerDown={(e) => handlePointerDown(e, point.id, 'cp')}
+                                        onClick={(e) => e.stopPropagation()}
                                         onContextMenu={(e) => e.preventDefault()}
                                     />
                                 );
@@ -486,6 +666,7 @@ export const InteractivePathCanvas: React.FC<InteractivePathCanvasProps> = ({
                                             stroke="#f59e0b"
                                             strokeWidth={tangentStrokeWidth}
                                             onPointerDown={(e) => handlePointerDown(e, point.id, 'cp1')}
+                                            onClick={(e) => e.stopPropagation()}
                                             onContextMenu={(e) => e.preventDefault()}
                                         />
                                     );
@@ -502,6 +683,7 @@ export const InteractivePathCanvas: React.FC<InteractivePathCanvasProps> = ({
                                             stroke="#f59e0b"
                                             strokeWidth={tangentStrokeWidth}
                                             onPointerDown={(e) => handlePointerDown(e, point.id, 'cp2')}
+                                            onClick={(e) => e.stopPropagation()}
                                             onContextMenu={(e) => e.preventDefault()}
                                         />
                                     );
@@ -511,25 +693,29 @@ export const InteractivePathCanvas: React.FC<InteractivePathCanvasProps> = ({
                             return elements.length > 0 ? <g key={`cps-${point.id}`}>{elements}</g> : null;
                         })}
 
-                        {/* Endpoint handles (larger, cyan) */}
-                        {handlesVisible && pathData
+                        {/* Endpoint handles — always visible */}
+                        {pathData
                             .filter(p => p.command !== 'Z')
                             .map((point) => {
                                 const isHovered = hoveredPointId === point.id;
+                                const isHighlighted = highlightedPointId === point.id;
                                 const isDragging = draggingPointId === point.id && draggingField === 'endpoint';
+                                const isSelected = selectedNodeId === point.id;
+                                const emphasized = isHovered || isHighlighted || isDragging || isSelected;
 
                                 return (
                                     <circle
                                         key={`ep-${point.id}`}
                                         cx={point.x}
                                         cy={point.y}
-                                        r={isHovered || isDragging ? handleSize * 1.3 : handleSize}
+                                        r={emphasized ? handleSize * 1.3 : handleSize}
                                         className={`interactive-path-canvas__handle interactive-path-canvas__handle--endpoint ${
                                             isDragging ? 'interactive-path-canvas__handle--dragging' : ''
-                                        }`}
-                                        fill="#ffffff"
+                                        } ${isHighlighted ? 'interactive-path-canvas__handle--highlighted' : ''
+                                        } ${isSelected ? 'interactive-path-canvas__handle--selected' : ''}`}
+                                        fill={isSelected ? '#0ea5e9' : isHighlighted ? '#0ea5e9' : '#ffffff'}
                                         stroke="#0ea5e9"
-                                        strokeWidth={0.2 / zoom}
+                                        strokeWidth={isSelected ? 0.3 / zoom : 0.2 / zoom}
                                         onPointerDown={(e) => handlePointerDown(e, point.id, 'endpoint')}
                                         onPointerEnter={() => setHoveredPointId(point.id)}
                                         onPointerLeave={() => setHoveredPointId(null)}
@@ -547,11 +733,12 @@ export const InteractivePathCanvas: React.FC<InteractivePathCanvasProps> = ({
                         x="5"
                         y="5.5"
                         textAnchor="middle"
-                        fontSize={1.5 / zoom}
+                        fontSize={1.2 / zoom}
                         fill="#94a3b8"
                         opacity="0.7"
+                        style={{ pointerEvents: 'none' }}
                     >
-                        No marker
+                        Click to start drawing
                     </text>
                 )}
             </svg>
@@ -571,6 +758,16 @@ export const InteractivePathCanvas: React.FC<InteractivePathCanvasProps> = ({
                             const point = pathData.find(p => p.id === contextMenu.pointId);
                             if (!point) return null;
 
+                            // First M point (path start): show info only
+                            if (point.command === 'M' && pathData.indexOf(point) === 0) {
+                                return (
+                                    <div className="path-context-menu__item" style={{ opacity: 0.5, cursor: 'default' }}>
+                                        <i className="bi bi-geo-alt" />
+                                        <span>Start point</span>
+                                    </div>
+                                );
+                            }
+
                             const options: { label: string; icon: string; command: CommandType }[] = [];
 
                             if (point.command !== 'L') {
@@ -582,28 +779,33 @@ export const InteractivePathCanvas: React.FC<InteractivePathCanvasProps> = ({
                             if (point.command !== 'C') {
                                 options.push({ label: 'Cubic curve (C)', icon: 'bi-bezier2', command: 'C' });
                             }
+                            if (point.command !== 'M') {
+                                options.push({ label: 'Move to (M)', icon: 'bi-geo-alt', command: 'M' });
+                            }
 
-                            return options.map(opt => (
-                                <button
-                                    key={opt.command}
-                                    className="path-context-menu__item"
-                                    onClick={() => handleConvert(opt.command)}
-                                >
-                                    <i className={`bi ${opt.icon}`} />
-                                    <span>{opt.label}</span>
-                                </button>
-                            ));
+                            return (
+                                <>
+                                    {options.map(opt => (
+                                        <button
+                                            key={opt.command}
+                                            className="path-context-menu__item"
+                                            onClick={() => handleConvert(opt.command)}
+                                        >
+                                            <i className={`bi ${opt.icon}`} />
+                                            <span>{opt.label}</span>
+                                        </button>
+                                    ))}
+                                    <div className="path-context-menu__divider" />
+                                    <button
+                                        className="path-context-menu__item path-context-menu__item--danger"
+                                        onClick={handleDeleteFromMenu}
+                                    >
+                                        <i className="bi bi-trash3" />
+                                        <span>Delete point</span>
+                                    </button>
+                                </>
+                            );
                         })()}
-
-                        <div className="path-context-menu__divider" />
-
-                        <button
-                            className="path-context-menu__item path-context-menu__item--danger"
-                            onClick={handleDeleteFromMenu}
-                        >
-                            <i className="bi bi-trash3" />
-                            <span>Delete point</span>
-                        </button>
                     </div>
                 </>,
                 document.body

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import tinycolor from 'tinycolor2';
 import type { LViewElement } from '../../../../joiner';
 import type {
@@ -8,6 +8,9 @@ import type {
     StringControl,
     PathControl,
 } from '../../../../view/viewElement/view';
+import ColorPickerPopover from './ColorPickerPopover';
+import { parsePath, serializePath } from '../../../editors/pathDataModel';
+import PathEditorModal from './PathEditorModal';
 
 interface CssVariablesEditorProps {
     view: LViewElement;
@@ -16,44 +19,155 @@ interface CssVariablesEditorProps {
 
 type ControlType = 'color' | 'number' | 'text' | 'path';
 
-/** Tiny inline color dot that opens a native color picker on click. */
+// ============================================================================
+// ColorDot — opens the ColorPickerPopover on click
+// ============================================================================
+
 const ColorDot: React.FC<{
     rgba: tinycolor.ColorFormats.RGBA;
-    onChange: (hex: string) => void;
-    onRemove: () => void;
-}> = ({ rgba, onChange, onRemove }) => {
+    isPopoverOpen: boolean;
+    onOpenPopover: (el: HTMLElement) => void;
+}> = ({ rgba, isPopoverOpen, onOpenPopover }) => {
     const color = tinycolor(rgba);
-    const inputRef = useRef<HTMLInputElement>(null);
+    const dotRef = useRef<HTMLSpanElement>(null);
 
     return (
         <span className="vep-cssvar__dot-wrap">
             <span
-                className="vep-cssvar__dot"
+                ref={dotRef}
+                className={`vep-cssvar__dot ${isPopoverOpen ? 'vep-cssvar__dot--active' : ''}`}
                 style={{ background: color.toRgbString() }}
                 title={color.toHexString()}
-                onClick={() => inputRef.current?.click()}
+                onClick={() => dotRef.current && onOpenPopover(dotRef.current)}
             />
-            <input
-                ref={inputRef}
-                type="color"
-                className="vep-cssvar__dot-input"
-                value={color.toHexString()}
-                onChange={e => onChange(e.target.value)}
-            />
-            <button
-                className="vep-cssvar__dot-remove"
-                title="Remove color"
-                onClick={onRemove}
-            >
-                <i className="bi bi-x" />
-            </button>
         </span>
     );
 };
 
+// ============================================================================
+// PathPreview — inline SVG preview of an SVG path string
+// ============================================================================
+
+const PathPreview: React.FC<{ pathString: string; onClick?: () => void }> = ({ pathString, onClick }) => {
+    const pathData = useMemo(() => parsePath(pathString), [pathString]);
+    const svgD = useMemo(() => serializePath(pathData), [pathData]);
+    const isValid = pathData.length > 0;
+
+    // Compute viewBox from path bounding box
+    const viewBox = useMemo(() => {
+        if (!isValid) return '0 0 20 10';
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const pt of pathData) {
+            if (pt.x < minX) minX = pt.x;
+            if (pt.y < minY) minY = pt.y;
+            if (pt.x > maxX) maxX = pt.x;
+            if (pt.y > maxY) maxY = pt.y;
+            if (pt.cx != null && pt.cy != null) {
+                if (pt.cx < minX) minX = pt.cx;
+                if (pt.cy < minY) minY = pt.cy;
+                if (pt.cx > maxX) maxX = pt.cx;
+                if (pt.cy > maxY) maxY = pt.cy;
+            }
+            if (pt.cx1 != null && pt.cy1 != null) {
+                if (pt.cx1 < minX) minX = pt.cx1;
+                if (pt.cy1 < minY) minY = pt.cy1;
+                if (pt.cx1 > maxX) maxX = pt.cx1;
+                if (pt.cy1 > maxY) maxY = pt.cy1;
+            }
+            if (pt.cx2 != null && pt.cy2 != null) {
+                if (pt.cx2 < minX) minX = pt.cx2;
+                if (pt.cy2 < minY) minY = pt.cy2;
+                if (pt.cx2 > maxX) maxX = pt.cx2;
+                if (pt.cy2 > maxY) maxY = pt.cy2;
+            }
+        }
+        const pad = 2;
+        const w = Math.max(maxX - minX, 1);
+        const h = Math.max(maxY - minY, 1);
+        return `${minX - pad} ${minY - pad} ${w + pad * 2} ${h + pad * 2}`;
+    }, [pathData, isValid]);
+
+    if (!pathString.trim()) {
+        return (
+            <div
+                className={`vep-cssvar__path-preview ${onClick ? 'vep-cssvar__path-preview--clickable' : ''}`}
+                onClick={onClick}
+                title={onClick ? 'Click to edit path' : undefined}
+            >
+                <svg viewBox="0 0 20 10" preserveAspectRatio="xMidYMid meet">
+                    <text x="10" y="6" textAnchor="middle" fontSize="2.5" fill="#cbd5e1">
+                        No path
+                    </text>
+                </svg>
+                {onClick && (
+                    <span className="vep-cssvar__path-edit-hint">
+                        <i className="bi bi-pencil" /> Click to edit
+                    </span>
+                )}
+            </div>
+        );
+    }
+
+    return (
+        <div
+            className={`vep-cssvar__path-preview ${!isValid ? 'vep-cssvar__path-preview--invalid' : ''} ${onClick ? 'vep-cssvar__path-preview--clickable' : ''}`}
+            onClick={onClick}
+            title={onClick ? 'Click to edit path' : undefined}
+        >
+            <svg viewBox={viewBox} preserveAspectRatio="xMidYMid meet">
+                {isValid && (
+                    <path
+                        d={svgD}
+                        fill="none"
+                        stroke="#334155"
+                        strokeWidth={Math.max((parseFloat(viewBox.split(' ')[2]) || 20) / 100, 0.3)}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    />
+                )}
+                {!isValid && (
+                    <text x="10" y="6" textAnchor="middle" fontSize="2.5" fill="#ef4444">
+                        Invalid path
+                    </text>
+                )}
+            </svg>
+            {onClick && (
+                <span className="vep-cssvar__path-edit-hint">
+                    <i className="bi bi-pencil" />
+                </span>
+            )}
+        </div>
+    );
+};
+
+// ============================================================================
+// Main Component
+// ============================================================================
+
 const CssVariablesEditor: React.FC<CssVariablesEditorProps> = ({ view, onViewUpdate }) => {
+    const dview = view.__raw;
     const [addMenuOpen, setAddMenuOpen] = useState(false);
     const addMenuRef = useRef<HTMLDivElement>(null);
+
+    // Popover state: which color is being edited
+    const [popover, setPopover] = useState<{
+        prefix: string;
+        index: number;
+        anchorEl: HTMLElement;
+    } | null>(null);
+
+    // Path editor modal state
+    const [pathEditorPrefix, setPathEditorPrefix] = useState<string | null>(null);
+
+    // Local palette state — React re-renders reliably on changes
+    const [localPalette, setLocalPalette] = useState<PaletteType>(
+        () => ({ ...(view.palette || {}) }),
+    );
+
+    // Sync when view changes externally (different view selected)
+    useEffect(() => {
+        setLocalPalette({ ...(view.palette || {}) });
+    }, [dview]);
 
     // Close add-menu on outside click
     useEffect(() => {
@@ -67,9 +181,16 @@ const CssVariablesEditor: React.FC<CssVariablesEditorProps> = ({ view, onViewUpd
         return () => document.removeEventListener('mousedown', handler);
     }, [addMenuOpen]);
 
-    // --- Palette mutation helpers (mirrors PaletteData logic) ---
+    // --- Palette mutation helpers ---
 
-    const getPalette = useCallback((): PaletteType => ({ ...view.palette }), [view]);
+    const getPalette = useCallback((): PaletteType => ({ ...localPalette }), [localPalette]);
+
+    /** Commit palette change: persist to model + update local state */
+    const commit = useCallback((newPalette: PaletteType) => {
+        view.palette = newPalette;
+        setLocalPalette({ ...newPalette });
+        onViewUpdate();
+    }, [view, onViewUpdate]);
 
     const addControl = useCallback((type: ControlType) => {
         const palette = getPalette();
@@ -95,17 +216,15 @@ const CssVariablesEditor: React.FC<CssVariablesEditorProps> = ({ view, onViewUpd
                 tmp[prefix] = { type: 'path', value: '', x: '', y: '', options: [] } as PathControl;
                 break;
         }
-        view.palette = tmp;
-        onViewUpdate();
+        commit(tmp);
         setAddMenuOpen(false);
-    }, [view, getPalette, onViewUpdate]);
+    }, [getPalette, commit]);
 
     const removeControl = useCallback((prefix: string) => {
         const tmp = getPalette();
         delete tmp[prefix];
-        view.palette = tmp;
-        onViewUpdate();
-    }, [view, getPalette, onViewUpdate]);
+        commit(tmp);
+    }, [getPalette, commit]);
 
     const renamePrefix = useCallback((oldPrefix: string, newPrefix: string) => {
         const sanitized = newPrefix.replace(/[^\w\-]/g, '-');
@@ -115,20 +234,18 @@ const CssVariablesEditor: React.FC<CssVariablesEditorProps> = ({ view, onViewUpd
         for (const [k, v] of Object.entries(palette)) {
             tmp[k === oldPrefix ? sanitized : k] = v;
         }
-        view.palette = tmp;
-        onViewUpdate();
-    }, [view, getPalette, onViewUpdate]);
+        commit(tmp);
+    }, [getPalette, commit]);
 
-    const addColorStop = useCallback((prefix: string) => {
+    const addColorStop = useCallback((prefix: string, rgba?: tinycolor.ColorFormats.RGBA) => {
         const palette = getPalette();
         const ctrl = palette[prefix] as PaletteControl;
         if (!ctrl || ctrl.type !== 'color') return;
-        const newColor = tinycolor('#94a3b8').toRgb();
+        const newColor = rgba ?? tinycolor('#94a3b8').toRgb();
         const tmp = { ...palette };
         tmp[prefix] = { ...ctrl, value: [...ctrl.value, newColor] };
-        view.palette = tmp;
-        onViewUpdate();
-    }, [view, getPalette, onViewUpdate]);
+        commit(tmp);
+    }, [getPalette, commit]);
 
     const setColorStop = useCallback((prefix: string, index: number, hex: string) => {
         const palette = getPalette();
@@ -141,9 +258,19 @@ const CssVariablesEditor: React.FC<CssVariablesEditorProps> = ({ view, onViewUpd
         rgba.a = existing?.a ?? 1;
         values[index] = rgba;
         tmp[prefix] = { ...ctrl, value: values };
-        view.palette = tmp;
-        onViewUpdate();
-    }, [view, getPalette, onViewUpdate]);
+        commit(tmp);
+    }, [getPalette, commit]);
+
+    const setColorOpacity = useCallback((prefix: string, index: number, alpha: number) => {
+        const palette = getPalette();
+        const ctrl = palette[prefix] as PaletteControl;
+        if (!ctrl || ctrl.type !== 'color') return;
+        const tmp = { ...palette };
+        const values = [...ctrl.value];
+        values[index] = { ...values[index], a: alpha };
+        tmp[prefix] = { ...ctrl, value: values };
+        commit(tmp);
+    }, [getPalette, commit]);
 
     const removeColorStop = useCallback((prefix: string, index: number) => {
         const palette = getPalette();
@@ -151,9 +278,8 @@ const CssVariablesEditor: React.FC<CssVariablesEditorProps> = ({ view, onViewUpd
         if (!ctrl || ctrl.type !== 'color') return;
         const tmp = { ...palette };
         tmp[prefix] = { ...ctrl, value: ctrl.value.filter((_, i) => i !== index) };
-        view.palette = tmp;
-        onViewUpdate();
-    }, [view, getPalette, onViewUpdate]);
+        commit(tmp);
+    }, [getPalette, commit]);
 
     const setNumberValue = useCallback((prefix: string, value: number) => {
         const palette = getPalette();
@@ -161,9 +287,8 @@ const CssVariablesEditor: React.FC<CssVariablesEditorProps> = ({ view, onViewUpd
         if (!ctrl || ctrl.type !== 'number') return;
         const tmp = { ...palette };
         tmp[prefix] = { ...ctrl, value };
-        view.palette = tmp;
-        onViewUpdate();
-    }, [view, getPalette, onViewUpdate]);
+        commit(tmp);
+    }, [getPalette, commit]);
 
     const setNumberUnit = useCallback((prefix: string, unit: string) => {
         const palette = getPalette();
@@ -171,9 +296,8 @@ const CssVariablesEditor: React.FC<CssVariablesEditorProps> = ({ view, onViewUpd
         if (!ctrl || ctrl.type !== 'number') return;
         const tmp = { ...palette };
         tmp[prefix] = { ...ctrl, unit } as NumberControl;
-        view.palette = tmp;
-        onViewUpdate();
-    }, [view, getPalette, onViewUpdate]);
+        commit(tmp);
+    }, [getPalette, commit]);
 
     const setTextValue = useCallback((prefix: string, value: string) => {
         const palette = getPalette();
@@ -181,14 +305,39 @@ const CssVariablesEditor: React.FC<CssVariablesEditorProps> = ({ view, onViewUpd
         if (!ctrl || ctrl.type !== 'text') return;
         const tmp = { ...palette };
         tmp[prefix] = { ...ctrl, value };
-        view.palette = tmp;
-        onViewUpdate();
-    }, [view, getPalette, onViewUpdate]);
+        commit(tmp);
+    }, [getPalette, commit]);
+
+    const setPathValue = useCallback((prefix: string, value: string) => {
+        const palette = getPalette();
+        const ctrl = palette[prefix] as PathControl;
+        if (!ctrl || ctrl.type !== 'path') return;
+        const tmp = { ...palette };
+        tmp[prefix] = { ...ctrl, value };
+        commit(tmp);
+    }, [getPalette, commit]);
+
+    // --- Popover handlers ---
+
+    const handleOpenPopover = useCallback((prefix: string, index: number, el: HTMLElement) => {
+        setPopover({ prefix, index, anchorEl: el });
+    }, []);
+
+    const handleClosePopover = useCallback(() => {
+        setPopover(null);
+    }, []);
+
+    // Resolve the popover color from current palette state
+    const popoverRgba = useMemo(() => {
+        if (!popover) return null;
+        const ctrl = localPalette[popover.prefix] as PaletteControl | undefined;
+        if (!ctrl || ctrl.type !== 'color') return null;
+        return ctrl.value[popover.index] ?? null;
+    }, [popover, localPalette]);
 
     // --- Render ---
 
-    const palette = view.palette || {};
-    const entries = Object.entries(palette);
+    const entries = Object.entries(localPalette);
 
     return (
         <div className="vep-cssvar">
@@ -212,6 +361,9 @@ const CssVariablesEditor: React.FC<CssVariablesEditorProps> = ({ view, onViewUpd
                             </button>
                             <button onClick={() => addControl('text')}>
                                 <i className="bi bi-fonts" /> Text
+                            </button>
+                            <button onClick={() => addControl('path')}>
+                                <i className="bi bi-bezier2" /> Path
                             </button>
                         </div>
                     )}
@@ -242,8 +394,10 @@ const CssVariablesEditor: React.FC<CssVariablesEditorProps> = ({ view, onViewUpd
                                         <ColorDot
                                             key={`${prefix}-${i}`}
                                             rgba={rgba}
-                                            onChange={hex => setColorStop(prefix, i, hex)}
-                                            onRemove={() => removeColorStop(prefix, i)}
+                                            isPopoverOpen={
+                                                popover?.prefix === prefix && popover?.index === i
+                                            }
+                                            onOpenPopover={(el) => handleOpenPopover(prefix, i, el)}
                                         />
                                     ))}
                                     <button
@@ -286,9 +440,19 @@ const CssVariablesEditor: React.FC<CssVariablesEditorProps> = ({ view, onViewUpd
                             )}
 
                             {ctrl.type === 'path' && (
-                                <span className="vep-cssvar__path-badge">
-                                    <i className="bi bi-bezier2" /> path
-                                </span>
+                                <div className="vep-cssvar__path">
+                                    <input
+                                        className="vep-cssvar__path-input"
+                                        defaultValue={(ctrl as PathControl).value}
+                                        onBlur={e => setPathValue(prefix, e.target.value)}
+                                        placeholder="M 0 0 L 10 10"
+                                        spellCheck={false}
+                                    />
+                                    <PathPreview
+                                        pathString={(ctrl as PathControl).value}
+                                        onClick={() => setPathEditorPrefix(prefix)}
+                                    />
+                                </div>
                             )}
 
                             {/* Delete */}
@@ -303,6 +467,32 @@ const CssVariablesEditor: React.FC<CssVariablesEditorProps> = ({ view, onViewUpd
                     );
                 })}
             </div>
+
+            {/* Color Picker Popover */}
+            {popover && popoverRgba && (
+                <ColorPickerPopover
+                    rgba={popoverRgba}
+                    anchorEl={popover.anchorEl}
+                    onColorChange={(hex) => setColorStop(popover.prefix, popover.index, hex)}
+                    onOpacityChange={(alpha) => setColorOpacity(popover.prefix, popover.index, alpha)}
+                    onAddColor={(rgba) => addColorStop(popover.prefix, rgba)}
+                    onDelete={() => {
+                        removeColorStop(popover.prefix, popover.index);
+                        setPopover(null);
+                    }}
+                    onClose={handleClosePopover}
+                />
+            )}
+
+            {/* Path Editor Modal */}
+            {pathEditorPrefix != null && (
+                <PathEditorModal
+                    isOpen
+                    onClose={() => setPathEditorPrefix(null)}
+                    pathString={(localPalette[pathEditorPrefix] as PathControl)?.value ?? ''}
+                    onPathChange={(newPath) => setPathValue(pathEditorPrefix, newPath)}
+                />
+            )}
         </div>
     );
 };

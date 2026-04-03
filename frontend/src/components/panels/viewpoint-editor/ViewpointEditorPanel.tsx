@@ -5,8 +5,7 @@ import ViewpointEditorBreadcrumb from './ViewpointEditorBreadcrumb';
 import TemplateTab from './tabs/TemplateTab';
 import StyleTab from './tabs/StyleTab';
 import PredicateTab from './tabs/PredicateTab';
-import ViewProperties from './sections/ViewProperties';
-import ViewConfiguration from './sections/ViewConfiguration';
+// ViewProperties and ViewConfiguration fields are now in the "Apply to" tab (PredicateTab)
 import BehaviorSection from './sections/BehaviorSection';
 import EdgeSection from './sections/EdgeSection';
 import ConstantsSection from './sections/ConstantsSection';
@@ -115,15 +114,18 @@ const ViewpointEditorPanel: React.FC<ViewpointEditorPanelProps> = ({
                 <div className="vep-single-view">
                     {/* Tab bar */}
                     <div className="vep-tabs">
-                        {(['template', 'style', 'predicate'] as const).map(tab => (
-                            <button
-                                key={tab}
-                                className={`vep-tabs__tab ${activeTab === tab ? 'vep-tabs__tab--active' : ''}`}
-                                onClick={() => setActiveTab(tab)}
-                            >
-                                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                            </button>
-                        ))}
+                        {(['predicate', 'template', 'style'] as const).map(tab => {
+                            const label = tab === 'predicate' ? 'Apply to' : tab.charAt(0).toUpperCase() + tab.slice(1);
+                            return (
+                                <button
+                                    key={tab}
+                                    className={`vep-tabs__tab ${activeTab === tab ? 'vep-tabs__tab--active' : ''}`}
+                                    onClick={() => setActiveTab(tab)}
+                                >
+                                    {label}
+                                </button>
+                            );
+                        })}
                     </div>
 
                     {/* Tab content */}
@@ -142,14 +144,13 @@ const ViewpointEditorPanel: React.FC<ViewpointEditorPanelProps> = ({
                     {activeTab === 'predicate' && (
                         <PredicateTab
                             view={selectedView}
+                            viewpointId={viewpoint.id}
                             onViewUpdate={() => {/* trigger re-render if needed */}}
                         />
                     )}
 
-                    {/* Properties & Configuration sections */}
+                    {/* Expert-mode sections */}
                     <div className="vep-sections">
-                        <ViewProperties view={selectedView} />
-                        <ViewConfiguration view={selectedView} viewpointId={viewpoint.id} />
                         {isExpertMode && (
                             <>
                                 <BehaviorSection view={selectedView} />
