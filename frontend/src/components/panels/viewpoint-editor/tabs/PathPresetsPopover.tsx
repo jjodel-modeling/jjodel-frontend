@@ -10,6 +10,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import svgpath from 'svgpath';
 import { PATH_PRESETS } from './pathPresets';
 import {
     BOOTSTRAP_ICON_CATALOG,
@@ -23,7 +24,7 @@ import {
 
 interface PathPresetsPopoverProps {
     anchorRef: React.RefObject<HTMLElement | null>;
-    onSelect: (pathD: string) => void;
+    onSelect: (pathD: string, filled: boolean) => void;
     onClose: () => void;
     /** When true, clicking a preset shows an inline "Replace?" confirm instead of selecting immediately */
     hasExistingPath?: boolean;
@@ -66,19 +67,13 @@ const CONNECTOR_GROUPS = (['UML Connectors', 'ER Notation', 'General'] as const)
 })).filter(g => g.presets.length > 0);
 
 /**
- * Scale a Bootstrap Icons path (viewBox 0 0 16 16) to the editor's
- * 0–10 coordinate system, centered with a small margin.
+ * Scale a Bootstrap Icons path (viewBox 0 0 16 16) up for the path editor.
+ * ×2 scaling brings sub-pixel coordinates (0.293, 0.5 …) into a range
+ * where grid-snapping preserves shape detail.  The catalog keeps the
+ * original 0–16 coords so the popover preview renders correctly.
  */
 function scaleBI(pathD: string): string {
-    const scale = 8 / 16; // 0.5
-    const offset = 1;
-    return pathD.replace(
-        /([+-]?\d+\.?\d*)/g,
-        (_, num) => {
-            const val = parseFloat(num) * scale + offset;
-            return val.toFixed(2).replace(/\.?0+$/, '');
-        },
-    );
+    return svgpath(pathD).scale(2).round(4).toString();
 }
 
 // ============================================
@@ -102,6 +97,7 @@ const IconCard: React.FC<{
         <svg viewBox={viewBox} preserveAspectRatio="xMidYMid meet">
             <path
                 d={pathD}
+                fillRule="evenodd"
                 fill={filled ? 'currentColor' : 'none'}
                 stroke={filled ? 'none' : 'currentColor'}
                 strokeWidth={filled ? undefined : '0.6'}
@@ -150,7 +146,7 @@ const PathPresetsPopover: React.FC<PathPresetsPopoverProps> = ({
 }) => {
     const [search, setSearch] = useState('');
     const [expanded, setExpanded] = useState<Set<string>>(() => new Set(DEFAULT_EXPANDED));
-    const [pendingPreset, setPendingPreset] = useState<string | null>(null);
+    const [pendingPreset, setPendingPreset] = useState<{ path: string; filled: boolean } | null>(null);
     const popoverRef = useRef<HTMLDivElement>(null);
     const searchRef = useRef<HTMLInputElement>(null);
 
@@ -211,29 +207,29 @@ const PathPresetsPopover: React.FC<PathPresetsPopoverProps> = ({
 
     // Handlers — if canvas has content, show inline confirmation first
     const selectOrConfirm = useCallback(
-        (pathD: string) => {
+        (pathD: string, filled: boolean) => {
             if (hasExistingPath) {
-                setPendingPreset(pathD);
+                setPendingPreset({ path: pathD, filled });
             } else {
-                onSelect(pathD);
+                onSelect(pathD, filled);
             }
         },
         [hasExistingPath, onSelect],
     );
 
     const handlePresetClick = useCallback(
-        (pathD: string) => selectOrConfirm(pathD),
+        (pathD: string) => selectOrConfirm(pathD, false),
         [selectOrConfirm],
     );
 
     const handleIconClick = useCallback(
-        (icon: BootstrapIconEntry) => selectOrConfirm(scaleBI(icon.path)),
+        (icon: BootstrapIconEntry) => selectOrConfirm(scaleBI(icon.path), true),
         [selectOrConfirm],
     );
 
     const handleConfirmReplace = useCallback(() => {
         if (pendingPreset) {
-            onSelect(pendingPreset);
+            onSelect(pendingPreset.path, pendingPreset.filled);
             setPendingPreset(null);
         }
     }, [pendingPreset, onSelect]);
@@ -313,7 +309,7 @@ const PathPresetsPopover: React.FC<PathPresetsPopoverProps> = ({
                                 viewBox="-1 -1 12 12"
                                 pathD={preset.path}
                                 filled={false}
-                                pending={pendingPreset === preset.path}
+                                pending={pendingPreset?.path === preset.path}
                                 onClick={() => handlePresetClick(preset.path)}
                             />
                         ))}
@@ -329,7 +325,7 @@ const PathPresetsPopover: React.FC<PathPresetsPopoverProps> = ({
                                         viewBox="-1 -1 12 12"
                                         pathD={preset.path}
                                         filled={preset.filled ?? false}
-                                        pending={pendingPreset === preset.path}
+                                        pending={pendingPreset?.path === preset.path}
                                         onClick={() => handlePresetClick(preset.path)}
                                     />
                                 ))}
@@ -360,7 +356,7 @@ const PathPresetsPopover: React.FC<PathPresetsPopoverProps> = ({
                                             name={icon.name}
                                             viewBox={icon.viewBox}
                                             pathD={icon.path}
-                                            pending={pendingPreset === scaled}
+                                            pending={pendingPreset?.path === scaled}
                                             onClick={() => handleIconClick(icon)}
                                         />
                                     );
@@ -390,7 +386,7 @@ const PathPresetsPopover: React.FC<PathPresetsPopoverProps> = ({
                                             name={icon.name}
                                             viewBox={icon.viewBox}
                                             pathD={icon.path}
-                                            pending={pendingPreset === scaled}
+                                            pending={pendingPreset?.path === scaled}
                                             onClick={() => handleIconClick(icon)}
                                         />
                                     );

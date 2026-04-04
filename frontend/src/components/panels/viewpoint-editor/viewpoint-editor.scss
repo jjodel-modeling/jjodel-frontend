@@ -2261,7 +2261,7 @@
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 10px;
-    width: 960px;
+    width: 1180px;
     max-width: 95vw;
     height: 80vh;
     max-height: 760px;
@@ -2378,7 +2378,7 @@
 // --- Sidebar ---
 
 .path-editor-modal__sidebar {
-    width: 240px;
+    width: 460px;
     flex-shrink: 0;
     border-right: 1px solid #e2e8f0;
     display: flex;
@@ -2539,6 +2539,8 @@
     &:hover { background: #e2e8f0; }
     &--selected { background: rgba(14, 165, 233, 0.08); }
     &--highlighted { background: rgba(14, 165, 233, 0.12); }
+
+    // Arc rows are single-line now; keep default center alignment
 }
 
 .path-editor-modal__cmd-badge {
@@ -2563,11 +2565,42 @@
     }
 }
 
-.path-editor-modal__cmd-coords {
+.path-editor-modal__cmd-center {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+
+    .path-editor-modal__coord-input {
+        width: 48px;
+    }
+}
+
+.path-editor-modal__cmd-xy {
+    width: 128px;
+    flex-shrink: 0;
     display: flex;
     gap: 4px;
-    flex: 1;
-    min-width: 0;
+}
+
+.path-editor-modal__arc-flag {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 10px;
+    color: #64748b;
+    cursor: pointer;
+    white-space: nowrap;
+    user-select: none;
+
+    input[type="checkbox"] {
+        width: 13px;
+        height: 13px;
+        margin: 0;
+        accent-color: #0ea5e9;
+        cursor: pointer;
+    }
 }
 
 .path-editor-modal__coord-input {
@@ -2610,7 +2643,7 @@
 .path-editor-modal__cmd-actions {
     position: relative;
     flex-shrink: 0;
-    margin-left: auto;
+    min-width: 22px;
 }
 
 .path-editor-modal__cmd-menu-btn {
@@ -3148,6 +3181,10 @@ html[data-theme="dark"] {
         color: #e2e8f0;
         &:hover { border-color: #475569; background: #1e293b; }
         &:focus { border-color: #0ea5e9; background: #1e293b; }
+    }
+
+    .path-editor-modal__arc-flag {
+        color: #94a3b8;
     }
 
     .path-editor-modal__cmd-z-label { color: #64748b; }

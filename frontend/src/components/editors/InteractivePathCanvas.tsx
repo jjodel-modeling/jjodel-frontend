@@ -90,6 +90,7 @@ export const InteractivePathCanvas: React.FC<InteractivePathCanvasProps> = ({
     const pointerIdRef = useRef<number | null>(null);
     const justDraggedRef = useRef(false);
     const pointerMovedRef = useRef(false);
+    const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
 
     // Undo/redo history
     const historyRef = useRef<PathData[]>([]);
@@ -263,6 +264,7 @@ export const InteractivePathCanvas: React.FC<InteractivePathCanvasProps> = ({
         e.stopPropagation();
         e.preventDefault();
         pointerMovedRef.current = false;
+        pointerStartRef.current = { x: e.clientX, y: e.clientY };
 
         // Pointer capture on SVG root for reliable drag tracking
         if (svgRef.current) {
@@ -278,7 +280,14 @@ export const InteractivePathCanvas: React.FC<InteractivePathCanvasProps> = ({
 
     const handlePointerMove = useCallback((e: React.PointerEvent) => {
         if (interactionState !== 'dragging' || !draggingPointId) return;
-        pointerMovedRef.current = true;
+
+        // Use distance threshold to distinguish click from drag (3px)
+        if (!pointerMovedRef.current && pointerStartRef.current) {
+            const dx = e.clientX - pointerStartRef.current.x;
+            const dy = e.clientY - pointerStartRef.current.y;
+            if (Math.abs(dx) <= 3 && Math.abs(dy) <= 3) return;
+            pointerMovedRef.current = true;
+        }
 
         // When snapEnabled prop is provided, Shift key acts as temporary invert;
         // when not provided, Shift key enables snap (legacy behavior).
@@ -536,6 +545,7 @@ export const InteractivePathCanvas: React.FC<InteractivePathCanvasProps> = ({
                 {hasPath && (
                     <path
                         d={pathString}
+                        fillRule="evenodd"
                         fill={fillMode === 'filled' ? '#0ea5e9' : 'transparent'}
                         stroke="#0ea5e9"
                         strokeWidth={strokeWidth}

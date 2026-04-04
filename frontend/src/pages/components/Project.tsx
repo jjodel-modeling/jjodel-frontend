@@ -10,6 +10,59 @@ import {compressToUTF16} from "async-lz-string";
 import {formatVersionNumber} from '../../utils/versionUtils';
 import './project-card.scss';
 
+// ── Project Color for Gallery Header Band ────────────────
+
+interface ProjectColor {
+  bg: string;
+  text: string;
+  revBorder: string;
+  dot: string;
+}
+
+const PROJECT_PALETTE: ProjectColor[] = [
+  { bg: '#f0f4ff', text: '#3730a3', revBorder: '#c7d2fe', dot: '#818cf8' }, // indigo
+  { bg: '#f0fdf4', text: '#166534', revBorder: '#bbf7d0', dot: '#4ade80' }, // green
+  { bg: '#fff7ed', text: '#9a3412', revBorder: '#fed7aa', dot: '#fb923c' }, // orange
+  { bg: '#fdf4ff', text: '#6b21a8', revBorder: '#e9d5ff', dot: '#c084fc' }, // purple
+  { bg: '#fff1f2', text: '#9f1239', revBorder: '#fecdd3', dot: '#fb7185' }, // rose
+  { bg: '#f0fdfa', text: '#115e59', revBorder: '#99f6e4', dot: '#2dd4bf' }, // teal
+  { bg: '#fefce8', text: '#713f12', revBorder: '#fef08a', dot: '#facc15' }, // yellow
+  { bg: '#f0f9ff', text: '#075985', revBorder: '#bae6fd', dot: '#38bdf8' }, // sky
+  { bg: '#faf5ff', text: '#581c87', revBorder: '#d8b4fe', dot: '#a855f7' }, // violet
+  { bg: '#fff8f1', text: '#92400e', revBorder: '#fde68a', dot: '#fbbf24' }, // amber
+  { bg: '#f0fdf9', text: '#064e3b', revBorder: '#a7f3d0', dot: '#34d399' }, // emerald
+  { bg: '#f8f7ff', text: '#4c1d95', revBorder: '#ddd6fe', dot: '#8b5cf6' }, // purple-soft
+];
+
+function hashProjectId(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) {
+    h = (Math.imul(31, h) + id.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
+function getProjectColor(projectId: string): ProjectColor {
+  return PROJECT_PALETTE[hashProjectId(projectId) % PROJECT_PALETTE.length];
+}
+
+// ── Status automatico da timestamp ─────────────────────
+
+interface ProjectStatus {
+  label: 'Active' | 'Idle' | 'Stale';
+  bg: string;
+  text: string;
+}
+
+function getProjectStatus(lastModified: number): ProjectStatus {
+  const hoursAgo = (Date.now() - lastModified) / 3600000;
+  if (hoursAgo < 48)  return { label: 'Active', bg: '#dcfce7', text: '#166534' };
+  if (hoursAgo < 168) return { label: 'Idle',   bg: '#fef3c7', text: '#92400e' };
+  return                     { label: 'Stale',  bg: '#f1f5f9', text: '#64748b' };
+}
+
+// ── End Project Color / Status ───────────────────────────
+
 function formatDate(lastModified: number){
     
     let timeago = Date.now() - lastModified;
@@ -265,13 +318,13 @@ function Project(props: Props): JSX.Element {
 
         return (
             <article
-                className="project-card"
+                className={`project-card project-card--${data.type || 'private'}${data.isFavorite ? ' project-card--favorite' : ''}`}
                 onClick={e => getClickedElement(e)}
                 tabIndex={0}
                 role="button"
                 aria-label={`Open project ${data.name}`}
             >
-                {/* Accent Bar - Uniform slate color */}
+                {/* Accent Bar - Top, colored by type */}
                 <div className="project-card__accent" />
 
                 {/* Content */}
@@ -400,59 +453,22 @@ function Project(props: Props): JSX.Element {
     }
 
 
-    /* COMPACT LIST - Row view with colored dot and tags */
+    /* COMPACT LIST — table row with colored dot */
 
     function ProjectList(props: PropsList): JSX.Element {
-        const [showTagPopover, setShowTagPopover] = useState(false);
-        const [tagInput, setTagInput] = useState('');
-
-        // Filter suggestions based on input
-        const suggestions = tagInput.trim()
-            ? (props.allTags || []).filter(tag =>
-                tag.toLowerCase().includes(tagInput.toLowerCase()) &&
-                !(data.tagNames || []).includes(tag)
-              )
-            : [];
-
-        // Debug: log input and suggestions
-        if (tagInput.trim()) {
-            console.log('[DEBUG ProjectList] Input:', tagInput);
-            console.log('[DEBUG ProjectList] Suggestions:', suggestions);
-        }
-
-        // Get badge label for project type
-        const getBadgeLabel = () => {
-            switch (data.type) {
-                case 'private': return 'Private';
-                case 'public': return 'Public';
-                case 'collaborative': return 'Collab';
-                default: return 'Project';
-            }
-        };
-
-        // Get author display name
-        const getAuthorName = () => {
-            if (typeof data.author === 'string') {
-                if (data.author === 'Offline') return 'You';
-                return data.author;
-            }
-            const authorName = data.author?.name || '';
-            if (authorName === 'Offline') return 'You';
-            return authorName || 'You';
-        };
-
-        // Animation class and delay for stagger effect on Load More
+        const rowColor = getProjectColor(String(data.id));
         const { animationIndex = -1, isSelected = false, onSelect } = props;
         const isAnimating = animationIndex >= 0;
         const animationStyle = isAnimating
             ? { animationDelay: `${animationIndex * 50}ms` }
             : undefined;
 
-        // Handle checkbox click
-        const handleCheckboxChange = (e: React.MouseEvent<HTMLInputElement>) => {
-            e.stopPropagation();
-            if (onSelect) {
-                onSelect(data.id, e.shiftKey);
+        const getBadgeLabel = () => {
+            switch (data.type) {
+                case 'private': return 'Private';
+                case 'public': return 'Public';
+                case 'collaborative': return 'Collaborative';
+                default: return 'Private';
             }
         };
 
@@ -461,149 +477,200 @@ function Project(props: Props): JSX.Element {
                 className={`project-row ${isAnimating ? 'project-row--entering' : ''} ${isSelected ? 'project-row--selected' : ''}`}
                 style={animationStyle}
                 onClick={(e) => {
-                    // Don't navigate if clicking on interactive elements
-                    if ((e.target as HTMLElement).closest('.project-row__actions') ||
-                        (e.target as HTMLElement).closest('.project-row__checkbox') ||
+                    if ((e.target as HTMLElement).closest('.project-row__checkbox') ||
+                        (e.target as HTMLElement).closest('.project-row__actions') ||
                         (e.target as HTMLElement).closest('.menu-button') ||
-                        (e.target as HTMLElement).closest('.dropdown') ||
-                        (e.target as HTMLElement).closest('.tag-popover')) {
+                        (e.target as HTMLElement).closest('.dropdown')) {
                         return;
                     }
                     selectProject();
                 }}
             >
-                {/* Selection Checkbox (replaces colored dot) */}
-                <div className="project-row__checkbox">
+                {/* Checkbox */}
+                <div className="project-row__checkbox" onClick={e => e.stopPropagation()}>
                     <input
                         type="checkbox"
                         className="project-checkbox"
                         checked={isSelected}
-                        onClick={handleCheckboxChange}
-                        onChange={() => {}} // Controlled by onClick
+                        onClick={(e) => { e.stopPropagation(); onSelect?.(data.id, e.shiftKey); }}
+                        onChange={() => {}}
                         aria-label={`Select ${data.name}`}
                     />
                 </div>
 
-                {/* Project name */}
-                <span className="project-row__name">{data.name}</span>
+                {/* Colored dot */}
+                <span
+                    className="project-row__dot"
+                    style={{ background: rowColor.dot }}
+                />
 
-                {/* Badge */}
+                {/* Name + favorite star */}
+                <span className="project-row__name">
+                    {data.name}
+                    {data.isFavorite && (
+                        <i className="bi bi-star-fill" style={{ color: '#f59e0b', fontSize: 11, marginLeft: 4 }} />
+                    )}
+                </span>
+
+                {/* Type badge */}
                 <span className={`project-row__badge project-row__badge--${data.type}`}>
                     {getBadgeLabel()}
                 </span>
 
-                {/* Author */}
-                <span className="project-row__author">{getAuthorName()}</span>
-
-                {/* Tags - max 2 with tooltip for hidden tags */}
-                <div className="project-row__tags">
-                    {data.tagNames?.slice(0, 2).map((tag: string) => (
-                        <span key={tag} className="project-row__tag">{tag}</span>
-                    ))}
-                    {data.tagNames && data.tagNames.length > 2 && (
-                        <span className="project-row__tag-more">
-                            +{data.tagNames.length - 2}
-                            <span className="project-row__tag-tooltip">
-                                <svg
-                                    className="project-row__tag-tooltip-icon"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                >
-                                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/>
-                                    <line x1="7" y1="7" x2="7.01" y2="7"/>
-                                </svg>
-                                {data.tagNames.slice(2).join(', ')}
-                            </span>
-                        </span>
-                    )}
-                </div>
-
-                {/* Version */}
-                <span className="project-row__version" title="Project revision - Auto-increments on each save">
-                    Rev {formatVersionNumber(data.version)}
+                {/* Rev */}
+                <span className="project-row__rev">
+                    {formatVersionNumber(data.version)}
                 </span>
 
-                {/* Time */}
+                {/* Metamodels count */}
+                <span className="project-row__count">{data.metamodelsNumber}</span>
+
+                {/* Models count */}
+                <span className="project-row__count">{data.modelsNumber}</span>
+
+                {/* Modified */}
                 <span className="project-row__time">{formatDate(data.lastModified)}</span>
 
-                {/* Actions */}
-                <div className="project-row__actions">
+                {/* Actions — visible on hover */}
+                <div className="project-row__actions" onClick={e => e.stopPropagation()}>
                     <button
-                        className={`project-row__favorite ${data.isFavorite ? 'active' : ''}`}
-                        onClick={(e) => { e.stopPropagation(); toggleFavorite(data); }}
-                        aria-label={data.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                        className="project-row__action-btn"
+                        onClick={() => toggleFavorite(data)}
+                        title={data.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
                     >
-                        <i className={data.isFavorite ? 'bi bi-star-fill' : 'bi bi-star'} />
+                        <i className={`bi bi-star${data.isFavorite ? '-fill' : ''}`}
+                           style={data.isFavorite ? { color: '#f59e0b' } : undefined} />
                     </button>
                     <div className="menu-button project-row__menu">
                         <Menu>
-                            <Item icon={<i className="bi bi-folder2-open" />} action={e => {selectProject()}}>Open</Item>
-                            <Item icon={icon['download']} action={e => exportProject()}>Download</Item>
-                            <Item icon={icon['tools']} action={e => selectProject(true)}>Repair & open</Item>
+                            <Item icon={<i className="bi bi-folder2-open" />} action={() => selectProject()}>Open</Item>
+                            <Item icon={icon['download']} action={() => exportProject()}>Download</Item>
+                            <Item icon={icon['tools']} action={() => selectProject(true)}>Repair & open</Item>
                             <Divisor />
-                            <Item icon={icon['favorite']} action={(e => toggleFavorite(data))}>{!data.isFavorite ? 'Add to favorites' : 'Remove from favorites'}</Item>
-                            <Item icon={<i className="bi bi-tag" />} action={e => setShowTagPopover(true)}>Add tag</Item>
+                            <Item icon={icon['favorite']} action={() => toggleFavorite(data)}>{!data.isFavorite ? 'Add to favorites' : 'Remove from favorites'}</Item>
                             <Divisor />
-                            <Item icon={icon['delete']} action={async e => await deleteProject()}>Delete</Item>
+                            <Item icon={icon['delete']} action={async () => await deleteProject()}>Delete</Item>
                         </Menu>
                     </div>
                 </div>
-
-                {/* Tag Popover */}
-                {showTagPopover && (
-                    <div className="tag-popover" onClick={e => e.stopPropagation()}>
-                        <div className="tag-popover__input-row">
-                            <input
-                                type="text"
-                                placeholder="Tag name..."
-                                autoFocus
-                                value={tagInput}
-                                onChange={(e) => setTagInput(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && tagInput.trim()) {
-                                        saveTag(tagInput);
-                                        setTagInput('');
-                                        setShowTagPopover(false);
-                                    }
-                                    if (e.key === 'Escape') {
-                                        setTagInput('');
-                                        setShowTagPopover(false);
-                                    }
-                                }}
-                            />
-                            <button onClick={() => { setTagInput(''); setShowTagPopover(false); }}>×</button>
-                        </div>
-                        {suggestions.length > 0 && (
-                            <div className="tag-popover__suggestions">
-                                {suggestions.slice(0, 5).map(tag => (
-                                    <button
-                                        key={tag}
-                                        className="tag-popover__suggestion"
-                                        onClick={() => {
-                                            saveTag(tag);
-                                            setTagInput('');
-                                            setShowTagPopover(false);
-                                        }}
-                                    >
-                                        {tag}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                )}
             </div>
         );
     }
 
 
+    /* GALLERY CARD O — status-forward */
+
+    function ProjectGalleryCard(): JSX.Element {
+        const color  = getProjectColor(String(data.id));
+        const status = getProjectStatus(data.lastModified);
+
+        const metaCount  = data.metamodelsNumber ?? 0;
+        const modelCount = data.modelsNumber ?? 0;
+        const progressPct = metaCount > 0
+            ? Math.min(100, Math.round((modelCount / metaCount) * 100))
+            : 0;
+
+        const timeLabel = (() => {
+            const h = Math.floor((Date.now() - data.lastModified) / 3600000);
+            if (h < 1)  return 'just now';
+            if (h < 24) return `${h}h ago`;
+            return `${Math.floor(h / 24)}d ago`;
+        })();
+
+        return (
+            <article
+                className="gallery-card"
+                onClick={(e) => {
+                    if ((e.target as HTMLElement).closest('.gallery-card__header-actions') ||
+                        (e.target as HTMLElement).closest('.menu-button') ||
+                        (e.target as HTMLElement).closest('.dropdown')) {
+                        return;
+                    }
+                    selectProject();
+                }}
+                tabIndex={0}
+                role="button"
+                aria-label={`Open project ${data.name}`}
+            >
+                {/* Header: dot + name + actions */}
+                <div className="gallery-card__header">
+                    <div className="gallery-card__name-row">
+                        <span
+                            className="gallery-card__dot"
+                            style={{ background: color.dot }}
+                        />
+                        <span className="gallery-card__name" title={data.name}>
+                            {data.name}
+                        </span>
+                    </div>
+                    <div className="gallery-card__header-actions">
+                        <button
+                            className="gallery-card__action-btn"
+                            onClick={(e) => { e.stopPropagation(); toggleFavorite(data); }}
+                            title={data.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                        >
+                            <i
+                                className={`bi bi-star${data.isFavorite ? '-fill' : ''}`}
+                                style={data.isFavorite ? { color: '#f59e0b' } : undefined}
+                            />
+                        </button>
+                        <div className="menu-button">
+                            <Menu>
+                                <Item icon={<i className="bi bi-folder2-open" />} action={() => selectProject()}>Open</Item>
+                                <Item icon={icon['download']} action={() => exportProject()}>Download</Item>
+                                <Item icon={icon['tools']} action={() => selectProject(true)}>Repair & open</Item>
+                                <Divisor />
+                                <Item icon={icon['favorite']} action={() => toggleFavorite(data)}>{!data.isFavorite ? 'Add to favorites' : 'Remove from favorites'}</Item>
+                                <Divisor />
+                                <Item icon={icon['delete']} action={async () => await deleteProject()}>Delete</Item>
+                            </Menu>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Status + Rev */}
+                <div className="gallery-card__status-row">
+                    <span
+                        className="gallery-card__status"
+                        style={{ background: status.bg, color: status.text }}
+                    >
+                        {status.label}
+                    </span>
+                    <span className="gallery-card__rev">Rev {formatVersionNumber(data.version)}</span>
+                </div>
+
+                {/* Progress bar models/metamodels */}
+                <div className="gallery-card__progress-wrap">
+                    <div className="gallery-card__progress-labels">
+                        <span>Models / Metamodels</span>
+                        <span>{modelCount} / {metaCount}</span>
+                    </div>
+                    <div className="gallery-card__progress-track">
+                        <div
+                            className="gallery-card__progress-fill"
+                            style={{ width: `${progressPct}%`, background: color.dot }}
+                        />
+                    </div>
+                </div>
+
+                {/* Footer: timestamp */}
+                <div className="gallery-card__footer">
+                    <span className="gallery-card__footer-time">
+                        Modified {timeLabel}
+                    </span>
+                </div>
+            </article>
+        );
+    }
+
     return(<>
-        {props.mode === "cards" || props.mode === "compact" ?
-            <ProjectCard key={props.key} data={props.data} pnames={props.pnames} mode={props.mode} index={props.index} allTags={props.allTags} /> :
+        {props.mode === "gallery" ? (
+            <ProjectGalleryCard />
+        ) : props.mode === "cards" || props.mode === "compact" ? (
+            <ProjectCard key={props.key} data={props.data} pnames={props.pnames} mode={props.mode} index={props.index} allTags={props.allTags} />
+        ) : (
             <ProjectList key={props.key} data={props.data} pnames={props.pnames} allTags={props.allTags} animationIndex={props.animationIndex} isSelected={props.isSelected} onSelect={props.onSelect} />
-        }
+        )}
     </>);
 }
 

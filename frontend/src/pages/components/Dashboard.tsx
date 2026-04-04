@@ -303,7 +303,9 @@ function GenericDashboard(props: DashProps): any {
     };
 
     // Determine layout mode: three-column for dashboard pages, two-column for project editing
-    const layoutClass = active !== 'Project' ? 'three-column' : 'two-column';
+    const hasProjects = user?.projects && user.projects.length > 0;
+    const showRightPanel = active !== 'Project' && hasProjects;
+    const layoutClass = showRightPanel ? 'three-column' : active !== 'Project' ? 'two-column' : 'two-column';
 
     return (<>
         <Navbar />
@@ -329,8 +331,8 @@ function GenericDashboard(props: DashProps): any {
                 <Catalog children={children}/>
             </div>
 
-            {/* Right Panel - Only visible on dashboard pages (three-column layout) */}
-            {active !== 'Project' && (
+            {/* Right Panel - Only visible when there are projects (three-column layout) */}
+            {showRightPanel && (
                 <RightPanel user={user} projects={user?.projects} onNewProject={props.onNewProject} />
             )}
 

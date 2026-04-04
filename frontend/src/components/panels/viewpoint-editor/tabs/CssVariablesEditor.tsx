@@ -48,7 +48,7 @@ const ColorDot: React.FC<{
 // PathPreview — inline SVG preview of an SVG path string
 // ============================================================================
 
-const PathPreview: React.FC<{ pathString: string; onClick?: () => void }> = ({ pathString, onClick }) => {
+const PathPreview: React.FC<{ pathString: string; fillMode?: 'filled' | 'outline'; onClick?: () => void }> = ({ pathString, fillMode = 'outline', onClick }) => {
     const pathData = useMemo(() => parsePath(pathString), [pathString]);
     const svgD = useMemo(() => serializePath(pathData), [pathData]);
     const isValid = pathData.length > 0;
@@ -115,9 +115,18 @@ const PathPreview: React.FC<{ pathString: string; onClick?: () => void }> = ({ p
             title={onClick ? 'Click to edit path' : undefined}
         >
             <svg viewBox={viewBox} preserveAspectRatio="xMidYMid meet">
-                {isValid && (
+                {isValid && fillMode === 'filled' && (
                     <path
                         d={svgD}
+                        fillRule="evenodd"
+                        fill="#334155"
+                        stroke="none"
+                    />
+                )}
+                {isValid && fillMode !== 'filled' && (
+                    <path
+                        d={svgD}
+                        fillRule="evenodd"
                         fill="none"
                         stroke="#334155"
                         strokeWidth={Math.max((parseFloat(viewBox.split(' ')[2]) || 20) / 100, 0.3)}
@@ -308,12 +317,12 @@ const CssVariablesEditor: React.FC<CssVariablesEditorProps> = ({ view, onViewUpd
         commit(tmp);
     }, [getPalette, commit]);
 
-    const setPathValue = useCallback((prefix: string, value: string) => {
+    const setPathValue = useCallback((prefix: string, value: string, fillMode?: 'filled' | 'outline') => {
         const palette = getPalette();
         const ctrl = palette[prefix] as PathControl;
         if (!ctrl || ctrl.type !== 'path') return;
         const tmp = { ...palette };
-        tmp[prefix] = { ...ctrl, value };
+        tmp[prefix] = { ...ctrl, value, ...(fillMode != null && { fillMode }) };
         commit(tmp);
     }, [getPalette, commit]);
 
@@ -450,6 +459,7 @@ const CssVariablesEditor: React.FC<CssVariablesEditorProps> = ({ view, onViewUpd
                                     />
                                     <PathPreview
                                         pathString={(ctrl as PathControl).value}
+                                        fillMode={(ctrl as PathControl).fillMode}
                                         onClick={() => setPathEditorPrefix(prefix)}
                                     />
                                 </div>
@@ -490,7 +500,8 @@ const CssVariablesEditor: React.FC<CssVariablesEditorProps> = ({ view, onViewUpd
                     isOpen
                     onClose={() => setPathEditorPrefix(null)}
                     pathString={(localPalette[pathEditorPrefix] as PathControl)?.value ?? ''}
-                    onPathChange={(newPath) => setPathValue(pathEditorPrefix, newPath)}
+                    initialFillMode={(localPalette[pathEditorPrefix] as PathControl)?.fillMode ?? 'outline'}
+                    onPathChange={(newPath, fillMode) => setPathValue(pathEditorPrefix, newPath, fillMode)}
                 />
             )}
         </div>

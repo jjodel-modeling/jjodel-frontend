@@ -14,6 +14,17 @@ import { DevModeLabel } from '../../components/DevModeLabel/DevModeLabel';
 import { buildProjectExportJson } from '../../model/megamodelPersistence';
 import { getRuntimeMegamodel } from '../../model/megamodelRuntime';
 
+function relativeTime(date: number | string | Date): string {
+    const d = typeof date === 'number' ? date : (typeof date === 'string' ? new Date(date).getTime() : date.getTime());
+    const diff = Date.now() - d;
+    const h = Math.floor(diff / 3600000);
+    const days = Math.floor(h / 24);
+    if (h < 1) return 'now';
+    if (h < 24) return `${h}h`;
+    if (days < 7) return `${days}d`;
+    return `${Math.floor(days / 7)}w`;
+}
+
 interface StateProps {
     projects: LProject[];
 }
@@ -310,7 +321,15 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                         {[...props.projects]
                             .sort((a,b) => (b.lastModified > a.lastModified) ?  1 : -1)
                             .slice(0,5)
-                            .map(p => <Item key={p.id} icon={<i className="bi bi-file-earmark" />} action={e => selectProject(p)}>{p.name}</Item>)}
+                            .map(p => (
+                                <div key={p.id} className="recmod-item" onClick={() => selectProject(p)}>
+                                    <div className="recmod-left">
+                                        <span className={`recmod-dot${p.isFavorite ? ' recmod-dot--favorite' : ''}`} />
+                                        <span className="recmod-name">{p.name}</span>
+                                    </div>
+                                    <span className="recmod-time">{relativeTime(p.lastModified)}</span>
+                                </div>
+                            ))}
                     </Menu>
                 }
 

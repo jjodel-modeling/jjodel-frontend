@@ -64,14 +64,13 @@ function categorize(name) {
 function normalizePath(d) {
     if (!d) return d;
     try {
-        // abs()    — convert relative to absolute
+        // abs()     — convert relative to absolute
         // unshort() — expand s→C, t→Q
-        // unarc()  — convert A→C (arcs to cubic beziers)
         // iterate() — convert H→L, V→L
+        // Arcs (A) are preserved to maintain visual fidelity (rounded caps, circles)
         return svgpath(d)
             .abs()
             .unshort()
-            .unarc()
             .iterate(function (segment, index, x, y) {
                 // Convert H x → L x, currentY
                 if (segment[0] === 'H') {

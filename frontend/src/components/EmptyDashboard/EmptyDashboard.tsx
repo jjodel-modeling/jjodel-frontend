@@ -2,67 +2,6 @@ import React from 'react';
 import './empty-dashboard.scss';
 import { DevModeLabel } from '../DevModeLabel/DevModeLabel';
 
-interface OnboardingCardProps {
-  icon: string;
-  step: number;
-  title: string;
-  description: string;
-  buttonLabel: string;
-  buttonIcon?: string;
-  buttonVariant?: 'primary' | 'secondary';
-  onClick: () => void;
-}
-
-const OnboardingCard: React.FC<OnboardingCardProps> = ({
-  icon,
-  step,
-  title,
-  description,
-  buttonLabel,
-  buttonIcon,
-  buttonVariant = 'secondary',
-  onClick
-}) => (
-  <div className="onboarding-card">
-    <span className="card-step">Step {step}</span>
-    <i className={`bi ${icon} card-icon`} />
-    <h3 className="card-title">{title}</h3>
-    <p className="card-description">{description}</p>
-    <button
-      className={`btn ${buttonVariant === 'primary' ? 'btn-primary' : 'btn-secondary'}`}
-      onClick={onClick}
-    >
-      {buttonIcon && <i className={`bi ${buttonIcon}`} />}
-      {buttonLabel}
-    </button>
-  </div>
-);
-
-interface ResourceCardProps {
-  href: string;
-  icon: string;
-  title: string;
-  description: string;
-  ariaLabel: string;
-}
-
-const ResourceCard: React.FC<ResourceCardProps> = ({ href, icon, title, description, ariaLabel }) => (
-  <a
-    href={href}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="resource-card"
-    aria-label={ariaLabel}
-  >
-    <i className={`bi ${icon} resource-icon`} />
-    <span className="resource-title">{title}</span>
-    <span className="resource-description">{description}</span>
-    <span className="resource-arrow">
-      <i className="bi bi-arrow-right" />
-    </span>
-  </a>
-);
-
 interface EmptyDashboardProps {
   onNewProject: () => void;
 }
@@ -70,108 +9,68 @@ interface EmptyDashboardProps {
 export const EmptyDashboard: React.FC<EmptyDashboardProps> = ({
   onNewProject
 }) => {
-  const handleGetStarted = () => {
-    window.open('https://www.jjodel.io/get-started/', '_blank');
-  };
-
-  const handleUserManual = () => {
-    window.open('https://www.jjodel.io/user-manual/', '_blank');
-  };
-
   return (
-    <div className="empty-dashboard">
-      {/* Dev Mode Label */}
+    <div className="empty-projects">
       <DevModeLabel componentId="T2.1" />
 
-      {/* Hero Section */}
-      <div className="welcome-hero">
-        <div className="hero-icon">
-          <i className="bi bi-rocket-takeoff" />
-        </div>
-        <h1>Welcome to Jjodel!</h1>
-        <p className="hero-description">
-          Jjodel makes metamodeling accessible for research and education.
-          Get started in 3 steps:
-        </p>
+      {/* Icon — three-node graph, domain-specific for Jjodel */}
+      <div className="empty-projects__icon">
+        <svg
+          width="28" height="28"
+          fill="none" stroke="currentColor" strokeWidth="1.3"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="5" r="2" />
+          <circle cx="5"  cy="19" r="2" />
+          <circle cx="19" cy="19" r="2" />
+          <line x1="12" y1="7"  x2="5"  y2="17" />
+          <line x1="12" y1="7"  x2="19" y2="17" />
+          <line x1="5"  y1="17" x2="19" y2="17" />
+        </svg>
       </div>
 
-      {/* Onboarding Steps Grid */}
-      <div className="onboarding-steps">
-        <OnboardingCard
-          icon="bi-plus-circle"
-          step={1}
-          title="Quick Start"
-          description="Create your first project"
-          buttonLabel="New Project"
-          buttonIcon="bi-plus-lg"
-          buttonVariant="primary"
-          onClick={onNewProject}
-        />
-        <OnboardingCard
-          icon="bi-book"
-          step={2}
-          title="Learn Basics"
-          description="Read the Getting Started guide"
-          buttonLabel="Get Started"
-          buttonIcon="bi-book"
-          onClick={handleGetStarted}
-        />
-        <OnboardingCard
-          icon="bi-journal-text"
-          step={3}
-          title="Read Docs"
-          description="User Manual & API Reference"
-          buttonLabel="Manual"
-          buttonIcon="bi-journal-text"
-          onClick={handleUserManual}
-        />
-      </div>
+      <h2 className="empty-projects__title">No projects yet</h2>
 
-      {/* Popular Resources */}
-      <div className="popular-resources">
-        <h3>Popular Resources</h3>
-        <div className="resources-grid">
-          <ResourceCard
-            href="https://www.jjodel.io/get-started/"
-            icon="bi-rocket-takeoff"
-            title="Getting Started"
-            description="Quick introduction to Jjodel basics"
-            ariaLabel="Getting Started Guide - opens in new tab"
-          />
-          <ResourceCard
-            href="https://www.jjodel.io/user-manual/"
-            icon="bi-book"
-            title="User Manual"
-            description="Complete reference and API docs"
-            ariaLabel="User Manual & API Reference - opens in new tab"
-          />
-          <ResourceCard
-            href="https://www.jjodel.io/tutorials/"
-            icon="bi-play-btn"
-            title="Video Tutorials"
-            description="Step-by-step video guides"
-            ariaLabel="Video Tutorials - opens in new tab"
-          />
-          <ResourceCard
-            href="https://www.jjodel.io/documentation/"
-            icon="bi-file-text"
-            title="Documentation"
-            description="In-depth technical documentation"
-            ariaLabel="Documentation - opens in new tab"
-          />
-        </div>
-      </div>
+      <p className="empty-projects__sub">
+        Create your first metamodel project and start building
+        domain-specific languages in the browser.
+      </p>
 
-      {/* Help Footer */}
-      <div className="help-footer">
-        <i className="bi bi-chat-dots" />
-        <span>Need help?</span>
-        <a href="https://discord.gg/qxy7rjDd" target="_blank" rel="noopener noreferrer">
-          Join our community
+      <button
+        className="empty-projects__cta"
+        onClick={onNewProject}
+      >
+        <i className="bi bi-plus" />
+        New project
+      </button>
+
+      <div className="empty-projects__links">
+        <a
+          className="empty-projects__link"
+          href="https://www.jjodel.io/get-started/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Getting started guide
         </a>
-        <span className="separator">or</span>
-        <a href="https://www.jjodel.io/documentation/" target="_blank" rel="noopener noreferrer">
-          check the docs
+        <span className="empty-projects__sep">&middot;</span>
+        <a
+          className="empty-projects__link"
+          href="https://www.jjodel.io/tutorials/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Video tutorials
+        </a>
+        <span className="empty-projects__sep">&middot;</span>
+        <a
+          className="empty-projects__link"
+          href="https://www.jjodel.io/documentation/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Documentation
         </a>
       </div>
     </div>

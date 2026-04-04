@@ -11,6 +11,7 @@ import {
     PathData,
     PathPoint,
     CommandType,
+    normalizePath,
     parsePath,
     serializePath,
     updatePoint,
@@ -29,7 +30,8 @@ interface PathEditorModalProps {
     isOpen: boolean;
     onClose: () => void;
     pathString: string;
-    onPathChange: (newPath: string) => void;
+    initialFillMode?: FillMode;
+    onPathChange: (newPath: string, fillMode: FillMode) => void;
 }
 
 // Command badge color map
@@ -38,6 +40,7 @@ const CMD_COLORS: Record<CommandType, string> = {
     L: '#0ea5e9', // cyan
     Q: '#f59e0b', // amber
     C: '#10b981', // emerald
+    A: '#ec4899', // pink
     Z: '#94a3b8', // slate
 };
 
@@ -49,10 +52,11 @@ const PathEditorModal: React.FC<PathEditorModalProps> = ({
     isOpen,
     onClose,
     pathString,
+    initialFillMode = 'outline',
     onPathChange,
 }) => {
     const [pathData, setPathData] = useState<PathData>(() => parsePath(pathString));
-    const [fillMode, setFillMode] = useState<FillMode>('outline');
+    const [fillMode, setFillMode] = useState<FillMode>(initialFillMode);
     const [zoom, setZoom] = useState(1);
     const [localPathString, setLocalPathString] = useState(pathString);
     const [snapToGrid, setSnapToGrid] = useState(true);
@@ -77,13 +81,14 @@ const PathEditorModal: React.FC<PathEditorModalProps> = ({
         if (isOpen && !wasOpenRef.current) {
             setPathData(parsePath(pathString));
             setLocalPathString(pathString);
+            setFillMode(initialFillMode);
             setZoom(1);
             setSelectedPointId(null);
             setHighlightedPointId(null);
             setCmdMenuPointId(null);
         }
         wasOpenRef.current = isOpen;
-    }, [isOpen, pathString]);
+    }, [isOpen, pathString, initialFillMode]);
 
     // ========================================
     // DATA FLOW
@@ -104,17 +109,36 @@ const PathEditorModal: React.FC<PathEditorModalProps> = ({
     const handleTextareaChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
         const val = e.target.value;
         setLocalPathString(val);
-        const parsed = parsePath(val);
-        if (parsed.length > 0 || val.trim() === '') {
-            setPathData(parsed);
+        try {
+            const parsed = parsePath(val);
+            if (parsed.length > 0 || val.trim() === '') {
+                setPathData(parsed);
+            }
+        } catch {
+            // Partial/invalid path while typing — keep previous pathData
         }
     }, []);
 
+    // Normalize on blur: rewrite textarea with clean absolute commands (M, L, C, Z)
+    const handleTextareaBlur = useCallback(() => {
+        if (localPathString.trim() === '') return;
+        try {
+            const normalized = normalizePath(localPathString);
+            setLocalPathString(normalized);
+            const parsed = parsePath(normalized);
+            if (parsed.length > 0) {
+                setPathData(parsed);
+            }
+        } catch {
+            // Invalid path — leave textarea text as-is
+        }
+    }, [localPathString]);
+
     // Save: propagate to parent + close
     const handleSave = useCallback(() => {
-        onPathChange(localPathString);
+        onPathChange(localPathString, fillMode);
         onClose();
-    }, [localPathString, onPathChange, onClose]);
+    }, [localPathString, fillMode, onPathChange, onClose]);
 
     // Cancel: close without saving
     const handleCancel = useCallback(() => {
@@ -182,9 +206,10 @@ const PathEditorModal: React.FC<PathEditorModalProps> = ({
     }, [pathData, commitPathData, selectedPointId, highlightedPointId]);
 
     // Load a preset path into the editor (confirmation is handled inline by the popover)
-    const handlePresetClick = useCallback((presetPath: string) => {
+    const handlePresetClick = useCallback((presetPath: string, filled: boolean) => {
         const parsed = parsePath(presetPath);
         commitPathData(parsed);
+        if (filled) setFillMode('filled');
         setSelectedPointId(null);
         setHighlightedPointId(null);
     }, [commitPathData]);
@@ -257,6 +282,7 @@ const PathEditorModal: React.FC<PathEditorModalProps> = ({
                                 className="path-editor-modal__path-textarea"
                                 value={localPathString}
                                 onChange={handleTextareaChange}
+                                onBlur={handleTextareaBlur}
                                 placeholder="M 0 0 L 10 10"
                                 spellCheck={false}
                                 rows={4}
@@ -322,8 +348,8 @@ const PathEditorModal: React.FC<PathEditorModalProps> = ({
                                 <PathPresetsPopover
                                     anchorRef={presetsButtonRef}
                                     hasExistingPath={pathData.length > 0}
-                                    onSelect={(pathD) => {
-                                        handlePresetClick(pathD);
+                                    onSelect={(pathD, filled) => {
+                                        handlePresetClick(pathD, filled);
                                         setPresetsOpen(false);
                                     }}
                                     onClose={() => setPresetsOpen(false)}
@@ -353,8 +379,65 @@ const PathEditorModal: React.FC<PathEditorModalProps> = ({
                                             {point.command}
                                         </span>
 
-                                        {point.command !== 'Z' ? (
-                                            <div className="path-editor-modal__cmd-coords">
+                                        {/* Center zone (flex:1) — arc params for A, empty spacer for M/L */}
+                                        {point.command === 'A' ? (
+                                            <div className="path-editor-modal__cmd-center">
+                                                <input
+                                                    className="path-editor-modal__coord-input"
+                                                    type="number"
+                                                    step="0.1"
+                                                    value={point.rx ?? 0}
+                                                    onChange={e => handleCoordChange(point.id, 'rx', parseFloat(e.target.value) || 0)}
+                                                    onClick={e => e.stopPropagation()}
+                                                    title="rx"
+                                                    placeholder="rx"
+                                                />
+                                                <input
+                                                    className="path-editor-modal__coord-input"
+                                                    type="number"
+                                                    step="0.1"
+                                                    value={point.ry ?? 0}
+                                                    onChange={e => handleCoordChange(point.id, 'ry', parseFloat(e.target.value) || 0)}
+                                                    onClick={e => e.stopPropagation()}
+                                                    title="ry"
+                                                    placeholder="ry"
+                                                />
+                                                <input
+                                                    className="path-editor-modal__coord-input"
+                                                    type="number"
+                                                    step="1"
+                                                    value={point.rotation ?? 0}
+                                                    onChange={e => handleCoordChange(point.id, 'rotation', parseFloat(e.target.value) || 0)}
+                                                    onClick={e => e.stopPropagation()}
+                                                    title="rotation"
+                                                    placeholder="rot"
+                                                />
+                                                <label className="path-editor-modal__arc-flag" onClick={e => e.stopPropagation()} title="Large Arc">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={(point.largeArc ?? 0) === 1}
+                                                        onChange={e => handleCoordChange(point.id, 'largeArc', e.target.checked ? 1 : 0)}
+                                                    />
+                                                    <span>L</span>
+                                                </label>
+                                                <label className="path-editor-modal__arc-flag" onClick={e => e.stopPropagation()} title="Sweep">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={(point.sweep ?? 0) === 1}
+                                                        onChange={e => handleCoordChange(point.id, 'sweep', e.target.checked ? 1 : 0)}
+                                                    />
+                                                    <span>S</span>
+                                                </label>
+                                            </div>
+                                        ) : point.command !== 'Z' ? (
+                                            <div className="path-editor-modal__cmd-center" />
+                                        ) : (
+                                            <span className="path-editor-modal__cmd-z-label">close</span>
+                                        )}
+
+                                        {/* Right zone — x,y inputs (fixed width, aligned across all commands) */}
+                                        {point.command !== 'Z' && (
+                                            <div className="path-editor-modal__cmd-xy">
                                                 <input
                                                     className="path-editor-modal__coord-input"
                                                     type="number"
@@ -374,59 +457,61 @@ const PathEditorModal: React.FC<PathEditorModalProps> = ({
                                                     title="y"
                                                 />
                                             </div>
-                                        ) : (
-                                            <span className="path-editor-modal__cmd-z-label">close</span>
                                         )}
 
-                                        {/* Actions menu — for all points except first M and Z */}
-                                        {point.command !== 'Z' && !(point.command === 'M' && pathData.indexOf(point) === 0) && (
+                                        {/* Actions menu — rendered for all non-Z rows to preserve flex alignment */}
+                                        {point.command !== 'Z' && (
                                             <div className="path-editor-modal__cmd-actions" ref={cmdMenuPointId === point.id ? cmdMenuRef : undefined}>
-                                                <button
-                                                    className="path-editor-modal__cmd-menu-btn"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setCmdMenuPointId(prev => prev === point.id ? null : point.id);
-                                                    }}
-                                                    title="Actions"
-                                                >
-                                                    <i className="bi bi-three-dots" />
-                                                </button>
-
-                                                {cmdMenuPointId === point.id && (
-                                                    <div className="path-editor-modal__cmd-dropdown">
-                                                        {point.command !== 'L' && (
-                                                            <button onClick={(e) => { e.stopPropagation(); handleConvertCommand(point.id, 'L'); }}>
-                                                                <span className="path-editor-modal__cmd-badge path-editor-modal__cmd-badge--sm" style={{ background: CMD_COLORS.L }}>L</span>
-                                                                Straight
-                                                            </button>
-                                                        )}
-                                                        {point.command !== 'Q' && (
-                                                            <button onClick={(e) => { e.stopPropagation(); handleConvertCommand(point.id, 'Q'); }}>
-                                                                <span className="path-editor-modal__cmd-badge path-editor-modal__cmd-badge--sm" style={{ background: CMD_COLORS.Q }}>Q</span>
-                                                                Quadratic
-                                                            </button>
-                                                        )}
-                                                        {point.command !== 'C' && (
-                                                            <button onClick={(e) => { e.stopPropagation(); handleConvertCommand(point.id, 'C'); }}>
-                                                                <span className="path-editor-modal__cmd-badge path-editor-modal__cmd-badge--sm" style={{ background: CMD_COLORS.C }}>C</span>
-                                                                Cubic
-                                                            </button>
-                                                        )}
-                                                        {point.command !== 'M' && (
-                                                            <button onClick={(e) => { e.stopPropagation(); handleConvertCommand(point.id, 'M'); }}>
-                                                                <span className="path-editor-modal__cmd-badge path-editor-modal__cmd-badge--sm" style={{ background: CMD_COLORS.M }}>M</span>
-                                                                Move to
-                                                            </button>
-                                                        )}
-                                                        <div className="path-editor-modal__cmd-dropdown-divider" />
+                                                {!(point.command === 'M' && pathData.indexOf(point) === 0) && (
+                                                    <>
                                                         <button
-                                                            className="path-editor-modal__cmd-dropdown-danger"
-                                                            onClick={(e) => { e.stopPropagation(); handleDeleteCommand(point.id); }}
+                                                            className="path-editor-modal__cmd-menu-btn"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setCmdMenuPointId(prev => prev === point.id ? null : point.id);
+                                                            }}
+                                                            title="Actions"
                                                         >
-                                                            <i className="bi bi-trash3" />
-                                                            Delete
+                                                            <i className="bi bi-three-dots" />
                                                         </button>
-                                                    </div>
+
+                                                        {cmdMenuPointId === point.id && (
+                                                            <div className="path-editor-modal__cmd-dropdown">
+                                                                {point.command !== 'L' && (
+                                                                    <button onClick={(e) => { e.stopPropagation(); handleConvertCommand(point.id, 'L'); }}>
+                                                                        <span className="path-editor-modal__cmd-badge path-editor-modal__cmd-badge--sm" style={{ background: CMD_COLORS.L }}>L</span>
+                                                                        Straight
+                                                                    </button>
+                                                                )}
+                                                                {point.command !== 'Q' && (
+                                                                    <button onClick={(e) => { e.stopPropagation(); handleConvertCommand(point.id, 'Q'); }}>
+                                                                        <span className="path-editor-modal__cmd-badge path-editor-modal__cmd-badge--sm" style={{ background: CMD_COLORS.Q }}>Q</span>
+                                                                        Quadratic
+                                                                    </button>
+                                                                )}
+                                                                {point.command !== 'C' && (
+                                                                    <button onClick={(e) => { e.stopPropagation(); handleConvertCommand(point.id, 'C'); }}>
+                                                                        <span className="path-editor-modal__cmd-badge path-editor-modal__cmd-badge--sm" style={{ background: CMD_COLORS.C }}>C</span>
+                                                                        Cubic
+                                                                    </button>
+                                                                )}
+                                                                {point.command !== 'M' && (
+                                                                    <button onClick={(e) => { e.stopPropagation(); handleConvertCommand(point.id, 'M'); }}>
+                                                                        <span className="path-editor-modal__cmd-badge path-editor-modal__cmd-badge--sm" style={{ background: CMD_COLORS.M }}>M</span>
+                                                                        Move to
+                                                                    </button>
+                                                                )}
+                                                                <div className="path-editor-modal__cmd-dropdown-divider" />
+                                                                <button
+                                                                    className="path-editor-modal__cmd-dropdown-danger"
+                                                                    onClick={(e) => { e.stopPropagation(); handleDeleteCommand(point.id); }}
+                                                                >
+                                                                    <i className="bi bi-trash3" />
+                                                                    Delete
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </>
                                                 )}
                                             </div>
                                         )}

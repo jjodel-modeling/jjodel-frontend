@@ -63,6 +63,7 @@ export class Collaborative {
     }
 
     static async disconnect(){
+        if (!Collaborative.client) return;
         Collaborative.client.off('pullAction');
         await Collaborative.client.disconnect();
         Collaborative.online = false;

@@ -1,5 +1,19 @@
 # Claude Code Session Log
 
+## 2026-04-04 — feat: AllProjects page redesign
+**Prompt**: redesign visivo AllProjects — sidebar light, card accent bar, activity feed grouping, load more, cyan accents
+**File toccati**: `frontend/src/pages/dashboard.scss`, `frontend/src/pages/components/LeftBar.tsx`, `frontend/src/pages/components/project-card.scss`, `frontend/src/pages/components/Project.tsx`, `frontend/src/pages/components/catalog/Catalog.tsx`, `frontend/src/pages/components/catalog/catalog.scss`, `frontend/src/pages/components/RightPanel/RightPanel.tsx`, `frontend/src/pages/components/RightPanel/RightPanel.scss`
+**Esito**: ✅ completato
+**Note**:
+- Sidebar active item: cyan text + icon with subtle border (was slate bg)
+- Recently Modified: added colored dots (amber for favorites) + relative timestamps (now/3h/2d/1w)
+- Project cards: accent bar moved from left-side to top, colored by type (cyan=public, amber=collab/favorite, neutral=private); version badge de-emphasized from green to neutral slate; actions hidden by default, visible on hover
+- Tab bar: replaced segmented-control style with underline tabs, active = cyan border-bottom
+- Activity feed: already well-implemented with time grouping, colored dots, load more — no changes needed
+- Slider pagination: replaced dot carousel with progressive grid + "Load More" button (same pattern as list view)
+- Modified Today stat: cyan highlight background (#e0f2fe) on overview grid cell
+**Nome del documento prompt**: 2026-04-04 11:30 allprojects-redesign.md
+
 ## 2026-03-26 — Fix: `do...end` block executes only the first command
 
 **Prompt**: In a `do...end` block, only the first command is executed. Subsequent commands are ignored.

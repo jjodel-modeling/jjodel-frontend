@@ -4,11 +4,13 @@
  * for the interactive path editor.
  */
 
+import svgpath from 'svgpath';
+
 // ============================================
 // TYPES
 // ============================================
 
-export type CommandType = 'M' | 'L' | 'Q' | 'C' | 'Z';
+export type CommandType = 'M' | 'L' | 'Q' | 'C' | 'A' | 'Z';
 
 export interface PathPoint {
     id: string;
@@ -24,6 +26,12 @@ export interface PathPoint {
     cy1?: number;
     cx2?: number;
     cy2?: number;
+    /** Arc parameters (A command only) */
+    rx?: number;
+    ry?: number;
+    rotation?: number;
+    largeArc?: number;
+    sweep?: number;
 }
 
 export type PathData = PathPoint[];
@@ -91,22 +99,61 @@ function perpendicularOffset(x1: number, y1: number, x2: number, y2: number, dis
 }
 
 // ============================================
+// NORMALIZATION
+// ============================================
+
+/**
+ * Normalize any SVG path string to absolute uppercase commands (M, L, C, Z).
+ * Converts relative → absolute, expands shorthand (s→C, t→Q),
+ * converts arcs to cubic Bézier curves (.unarc()),
+ * and expands H/V to full L commands.
+ * After normalization only M, L, C, Q, Z commands remain.
+ */
+export function normalizePath(raw: string): string {
+    if (!raw || typeof raw !== 'string') return raw;
+    try {
+        return svgpath(raw)
+            .abs()
+            .unshort()
+            .unarc()
+            .iterate(function (segment: any[], _index: number, x: number, y: number) {
+                if (segment[0] === 'H') {
+                    segment[0] = 'L';
+                    segment.push(y);
+                }
+                if (segment[0] === 'V') {
+                    segment[0] = 'L';
+                    segment.splice(1, 0, x);
+                }
+            })
+            .round(4)
+            .toString();
+    } catch {
+        return raw;
+    }
+}
+
+// ============================================
 // PARSING
 // ============================================
 
 /**
  * Parse an SVG path `d` string into PathData.
- * Supports: M, L, Q, C, Z (uppercase absolute only).
- * Handles multiple spaces, commas as separators.
+ * Automatically normalizes the input first (relative → absolute,
+ * shorthand expansion, H/V→L) so that only
+ * M, L, Q, C, A, Z commands reach the parser.
  */
 export function parsePath(d: string): PathData {
     if (!d || typeof d !== 'string') return [];
+
+    // Normalize before parsing so any valid SVG path works
+    const normalized = normalizePath(d);
 
     const result: PathData = [];
     let firstPoint: { x: number; y: number } | null = null;
 
     // Tokenize: split by commands, keeping the command letter
-    const tokens = d.trim().split(/(?=[MLQCZ])/i).filter(Boolean);
+    const tokens = normalized.trim().split(/(?=[MLQCAZ])/i).filter(Boolean);
 
     for (const token of tokens) {
         const trimmed = token.trim();
@@ -174,6 +221,34 @@ export function parsePath(d: string): PathData {
                 }
                 break;
 
+            case 'A': {
+                // Arc has special syntax: params 4 & 5 are single-digit flags (0|1)
+                // that can be written without separators, e.g. A7 7 0 118 1
+                // means rx=7 ry=7 rotation=0 largeArc=1 sweep=1 x=8 y=1
+                const num = `([+-]?(?:\\d+\\.?\\d*|\\.\\d+)(?:e[+-]?\\d+)?)`;
+                const sep = `\\s*[,\\s]?\\s*`;
+                const flag = `([01])`;
+                const arcRegex = new RegExp(
+                    `${num}${sep}${num}${sep}${num}${sep}${flag}${sep}${flag}${sep}${num}${sep}${num}`,
+                    'g'
+                );
+                let arcMatch;
+                while ((arcMatch = arcRegex.exec(rest)) !== null) {
+                    result.push({
+                        id: uid(),
+                        command: 'A',
+                        rx: parseFloat(arcMatch[1]),
+                        ry: parseFloat(arcMatch[2]),
+                        rotation: parseFloat(arcMatch[3]),
+                        largeArc: parseInt(arcMatch[4]),
+                        sweep: parseInt(arcMatch[5]),
+                        x: parseFloat(arcMatch[6]),
+                        y: parseFloat(arcMatch[7]),
+                    });
+                }
+                break;
+            }
+
             case 'Z':
                 // Z copies M's coordinates for reference
                 result.push({
@@ -219,6 +294,12 @@ export function serializePath(data: PathData): string {
             case 'C':
                 if (point.cx1 != null && point.cy1 != null && point.cx2 != null && point.cy2 != null) {
                     parts.push(`C ${round1(point.cx1)} ${round1(point.cy1)} ${round1(point.cx2)} ${round1(point.cy2)} ${round1(point.x)} ${round1(point.y)}`);
+                }
+                break;
+
+            case 'A':
+                if (point.rx != null && point.ry != null && point.rotation != null && point.largeArc != null && point.sweep != null) {
+                    parts.push(`A ${round1(point.rx)} ${round1(point.ry)} ${round1(point.rotation)} ${point.largeArc} ${point.sweep} ${round1(point.x)} ${round1(point.y)}`);
                 }
                 break;
 
@@ -355,7 +436,7 @@ export function convertSegment(data: PathData, pointId: string, newCommand: Comm
 
     switch (newCommand) {
         case 'L':
-            // Drop all control points
+            // Drop all control points and arc params
             newData[pointIndex] = {
                 ...point,
                 command: 'L',
@@ -365,12 +446,17 @@ export function convertSegment(data: PathData, pointId: string, newCommand: Comm
                 cy1: undefined,
                 cx2: undefined,
                 cy2: undefined,
+                rx: undefined,
+                ry: undefined,
+                rotation: undefined,
+                largeArc: undefined,
+                sweep: undefined,
             };
             break;
 
         case 'Q':
-            if (point.command === 'L') {
-                // L → Q: place control point at midpoint offset perpendicular
+            if (point.command === 'L' || point.command === 'A') {
+                // L/A → Q: place control point at midpoint offset perpendicular
                 newData[pointIndex] = {
                     ...point,
                     command: 'Q',
@@ -380,6 +466,11 @@ export function convertSegment(data: PathData, pointId: string, newCommand: Comm
                     cy1: undefined,
                     cx2: undefined,
                     cy2: undefined,
+                    rx: undefined,
+                    ry: undefined,
+                    rotation: undefined,
+                    largeArc: undefined,
+                    sweep: undefined,
                 };
             } else if (point.command === 'C') {
                 // C → Q: average the two control points
@@ -399,8 +490,8 @@ export function convertSegment(data: PathData, pointId: string, newCommand: Comm
             break;
 
         case 'C':
-            if (point.command === 'L') {
-                // L → C: two control points at 1/3 and 2/3, offset perpendicular
+            if (point.command === 'L' || point.command === 'A') {
+                // L/A → C: two control points at 1/3 and 2/3, offset perpendicular
                 const x1 = prevPoint.x + (point.x - prevPoint.x) / 3;
                 const y1 = prevPoint.y + (point.y - prevPoint.y) / 3;
                 const x2 = prevPoint.x + (point.x - prevPoint.x) * 2 / 3;
@@ -415,6 +506,11 @@ export function convertSegment(data: PathData, pointId: string, newCommand: Comm
                     cy1: round1(y1 + offset.dy),
                     cx2: round1(x2 + offset.dx),
                     cy2: round1(y2 + offset.dy),
+                    rx: undefined,
+                    ry: undefined,
+                    rotation: undefined,
+                    largeArc: undefined,
+                    sweep: undefined,
                 };
             } else if (point.command === 'Q') {
                 // Q → C: split single control into two

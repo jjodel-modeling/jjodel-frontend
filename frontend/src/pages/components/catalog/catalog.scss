@@ -3,101 +3,6 @@
    ============================================ */
 
 /* ============================================
-   EMPTY STATE - NEW DESIGN
-   ============================================ */
-
-.dashboard-empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-
-  /* White box - FULL WIDTH per mockup */
-  background-color: #ffffff;
-  border-radius: 16px;
-  border: 1px solid #e2e4e8;
-  padding: 80px 40px;
-  width: 100%;
-  /* No max-width - box should be full width of content area */
-
-  .empty-state-icon {
-    width: 80px;
-    height: 80px;
-    border-radius: var(--radius-lg);
-    background-color: rgba(107, 114, 128, 0.1); /* Gray background */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: var(--space-6);
-
-    .bi {
-      font-size: 36px;
-      color: #6B7280; /* Gray icon */
-    }
-  }
-
-  .empty-state-title {
-    font-size: 22px;
-    font-weight: var(--font-semibold);
-    color: var(--color-text-primary);
-    margin: 0 0 var(--space-3) 0;
-  }
-
-  .empty-state-description {
-    font-size: 15px;
-    color: var(--color-text-secondary);
-    max-width: 400px;
-    margin: 0 0 var(--space-6) 0;
-    line-height: var(--line-relaxed);
-  }
-
-  .empty-state-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-3) var(--space-5);
-    font-family: var(--font-sans);
-    font-size: var(--text-base);
-    font-weight: var(--font-medium);
-    color: #ffffff;
-    background-color: #374151;
-    border: none;
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    transition: var(--transition-fast);
-    margin-bottom: var(--space-4);
-
-    .bi {
-      font-size: var(--text-lg);
-      color: #ffffff; /* White icon */
-    }
-
-    &:hover {
-      background-color: #334155;
-    }
-  }
-
-  .empty-state-link {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-2);
-    font-size: var(--text-sm);
-    color: #374151;
-    text-decoration: none;
-    transition: var(--transition-fast);
-
-    .bi {
-      font-size: var(--text-sm);
-    }
-
-    &:hover {
-      text-decoration: underline;
-    }
-  }
-}
-
-/* ============================================
    CATALOG HEADER - FILTER TABS + VIEW TOGGLE
    Uniform height: 40px for all elements
    ============================================ */
@@ -116,14 +21,15 @@
   align-items: center;
   gap: 4px;
   height: 40px;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  padding: 4px;
-  border-radius: 8px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 0;
+  border-radius: 0;
 }
 
 .filter-tab {
-  height: 32px;
+  height: 40px;
   padding: 0 16px;
   display: flex;
   align-items: center;
@@ -133,9 +39,10 @@
   color: #6b7280;
   background-color: transparent;
   border: none;
-  border-radius: 6px;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition: color 0.15s ease, border-color 0.15s ease;
   white-space: nowrap;
 
   &:hover {
@@ -143,9 +50,9 @@
   }
 
   &.active {
-    color: #1f2937;
-    background-color: #ffffff;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    color: #0ea5e9;
+    border-bottom-color: #0ea5e9;
+    font-weight: 500;
   }
 }
 
@@ -1021,22 +928,10 @@
   padding: 24px;
 }
 
-.slider-grid-container {
-  position: relative;
-  width: 100%;
-}
-
-.slider-track {
-  display: flex;
-  will-change: transform;
-}
-
 .slider-page {
-  flex-shrink: 0;
   width: 100%;
   display: grid;
-  grid-template-columns: repeat(3, 1fr); // Default: 3 columns (max)
-  grid-template-rows: repeat(3, auto); // Always 3 rows
+  grid-template-columns: repeat(3, 1fr);
   gap: 20px;
   overflow: visible;
 
@@ -1048,6 +943,21 @@
   // 1 column on mobile (<768px)
   @media (max-width: 767px) {
     grid-template-columns: 1fr;
+  }
+
+  // Gallery variant — smaller cards, denser grid
+  &--gallery {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+
+    @media (max-width: 767px) {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    @media (max-width: 420px) {
+      grid-template-columns: 1fr;
+    }
   }
 }
 

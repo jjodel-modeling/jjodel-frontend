@@ -92,7 +92,7 @@ export function RightPanel(props: RightPanelProps): JSX.Element {
                         <span className="overview-label">Favorites</span>
                     </div>
                     <div
-                        className="overview-cell"
+                        className="overview-cell overview-cell--highlight"
                         onClick={() => R.navigate('/allProjects?filter=recent', true)}
                         role="button"
                         tabIndex={0}
