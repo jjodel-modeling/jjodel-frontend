@@ -1,4 +1,5 @@
 import type { ToastPriority, ToastDismiss } from './toastTypes';
+import { JjodelEvents } from '../../events/registry';
 
 /**
  * Standalone toast function — drop-in replacement for U.alert().
@@ -77,7 +78,7 @@ export function toast(input: string | ToastOptions): void {
         dismiss = AUTO_DISMISS_TYPES.has(priority) ? 'auto' : 'manual';
     }
 
-    window.dispatchEvent(new CustomEvent('jjodel:toast', {
+    window.dispatchEvent(new CustomEvent(JjodelEvents.TOAST, {
         detail: { message, priority, title, dismiss, duration },
     }));
 }

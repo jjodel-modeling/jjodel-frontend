@@ -6,6 +6,7 @@ import { LayoutMode, getSavedLayoutMode, saveLayoutMode } from '../abstract/Dock
 import { isProjectOverviewPage } from '../../utils/navigationUtils';
 import { LPointerTargetable, LViewPoint } from '../../joiner';
 import { activateViewpoint } from '../../utils/lastViewpoint';
+import { JjodelEvents } from '../../events/registry';
 
 interface ToolbarProps {
     snapEnabled: boolean;
@@ -178,15 +179,15 @@ function Toolbar({
             const detail = (e as CustomEvent).detail;
             if (detail?.mode) setLayoutMode(detail.mode);
         };
-        window.addEventListener('jjodel:layout-mode-change', handleLayoutChange);
-        return () => window.removeEventListener('jjodel:layout-mode-change', handleLayoutChange);
+        window.addEventListener(JjodelEvents.LAYOUT_MODE_CHANGE, handleLayoutChange);
+        return () => window.removeEventListener(JjodelEvents.LAYOUT_MODE_CHANGE, handleLayoutChange);
     }, []);
 
     const handleLayoutModeChange = useCallback((mode: LayoutMode, resetToDefault = false) => {
         setLayoutMode(mode);
         saveLayoutMode(mode);
         document.body.setAttribute('data-layout-mode', mode);
-        window.dispatchEvent(new CustomEvent('jjodel:layout-mode-change', {
+        window.dispatchEvent(new CustomEvent(JjodelEvents.LAYOUT_MODE_CHANGE, {
             detail: { mode, resetToDefault }
         }));
     }, []);

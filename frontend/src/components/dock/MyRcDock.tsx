@@ -15,6 +15,7 @@ import {
     U,
     windoww
 } from "../../joiner";
+import { JjodelEvents } from '../../events/registry';
 import $ from "jquery";
 import {BoxData, LayoutData, DockLayout, LayoutProps, PanelData, TabData, TabGroup} from "rc-dock";
 import {MyPortal} from "./MyDock";
@@ -596,7 +597,7 @@ export class PinnableDock extends DockLayout{
             : 'summary';
     }
 
-    window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
+    window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
         detail: { editorType }
     }));
 }

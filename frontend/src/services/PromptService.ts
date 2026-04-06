@@ -12,6 +12,7 @@ import {
     PROMPT_REGISTRY
 } from '../types/prompts';
 import { DEFAULT_PROMPTS } from '../constants/defaultPrompts';
+import { AIEvents } from '../events/registry';
 
 // ============================================
 // PROMPT MIGRATION
@@ -154,7 +155,7 @@ export class PromptService {
         localStorage.setItem(key, JSON.stringify(prompt));
 
         // Dispatch event for listeners
-        window.dispatchEvent(new CustomEvent('prompt-changed', {
+        window.dispatchEvent(new CustomEvent(AIEvents.PROMPT_CHANGED, {
             detail: { type, scope: 'global' }
         }));
     }
@@ -166,7 +167,7 @@ export class PromptService {
         const key = `${PROMPT_GLOBAL_PREFIX}${type}`;
         localStorage.removeItem(key);
 
-        window.dispatchEvent(new CustomEvent('prompt-changed', {
+        window.dispatchEvent(new CustomEvent(AIEvents.PROMPT_CHANGED, {
             detail: { type, scope: 'global' }
         }));
     }
@@ -208,7 +209,7 @@ export class PromptService {
         };
         localStorage.setItem(key, JSON.stringify(prompt));
 
-        window.dispatchEvent(new CustomEvent('prompt-changed', {
+        window.dispatchEvent(new CustomEvent(AIEvents.PROMPT_CHANGED, {
             detail: { type, scope: 'project', projectId }
         }));
     }
@@ -220,7 +221,7 @@ export class PromptService {
         const key = `${PROMPT_PROJECT_PREFIX}${projectId}_${type}`;
         localStorage.removeItem(key);
 
-        window.dispatchEvent(new CustomEvent('prompt-changed', {
+        window.dispatchEvent(new CustomEvent(AIEvents.PROMPT_CHANGED, {
             detail: { type, scope: 'project', projectId }
         }));
     }

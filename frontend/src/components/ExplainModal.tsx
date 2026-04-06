@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { JodieConfig, AIConfig, AI, AIProvider } from '../types/jodie';
+import { JjodelEvents } from '../events/registry';
 import './ExplainModal.scss';
 
 export interface ExplainDetail {
@@ -172,8 +173,8 @@ const ExplainModal: React.FC = () => {
             setDetail(d);
             setIsOpen(true);
         };
-        window.addEventListener('jjodel:explain-open', handler);
-        return () => window.removeEventListener('jjodel:explain-open', handler);
+        window.addEventListener(JjodelEvents.EXPLAIN_OPEN, handler);
+        return () => window.removeEventListener(JjodelEvents.EXPLAIN_OPEN, handler);
     }, []);
 
     // Stream response when opened

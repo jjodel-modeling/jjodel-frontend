@@ -15,6 +15,7 @@ import { useSettingsModalSafe } from '../contexts/SettingsModalContext';
 import NotificationCenter, { useNotifications } from './NotificationCenter';
 import './StatusBarRightZone.scss';
 import {AIConfig, JodieConfig} from "../types/jodie";
+import { AIEvents } from '../events/registry';
 
 interface StatusBarRightZoneProps {
     variant?: 'light' | 'dark';
@@ -35,10 +36,10 @@ const StatusBarRightZone: React.FC<StatusBarRightZoneProps> = ({ variant = 'ligh
     // Listen for AI provider config changes
     useEffect(() => {
         const handler = () => setAiConnected(JodieConfig.hasEnabledProviders());
-        window.addEventListener('ai-provider-changed', handler);
+        window.addEventListener(AIEvents.PROVIDER_CHANGED, handler);
         window.addEventListener('storage', handler);
         return () => {
-            window.removeEventListener('ai-provider-changed', handler);
+            window.removeEventListener(AIEvents.PROVIDER_CHANGED, handler);
             window.removeEventListener('storage', handler);
         };
     }, []);

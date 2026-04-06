@@ -9,6 +9,7 @@
  */
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { JjScriptEvents } from '../events/registry';
 
 const STORAGE_KEY = 'jjodel.features-panel.expanded';
 
@@ -70,10 +71,10 @@ export const FeaturesPanelProvider: React.FC<{ children: React.ReactNode }> = ({
             }
         };
 
-        window.addEventListener('jjscript:metamodel-created', handleMetamodelCreated as EventListener);
+        window.addEventListener(JjScriptEvents.METAMODEL_CREATED, handleMetamodelCreated as EventListener);
 
         return () => {
-            window.removeEventListener('jjscript:metamodel-created', handleMetamodelCreated as EventListener);
+            window.removeEventListener(JjScriptEvents.METAMODEL_CREATED, handleMetamodelCreated as EventListener);
         };
     }, [expand]);
 

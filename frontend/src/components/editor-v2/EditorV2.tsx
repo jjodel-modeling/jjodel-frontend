@@ -84,6 +84,7 @@ import { createViewInWorkbench, resolveParentViewpoint } from '../../utils/lastV
 import BottomDrawer from '../panels/BottomDrawer';
 import ElementPropertiesDrawer from '../panels/ElementPropertiesDrawer';
 
+import { JjodelEvents } from '../../events/registry';
 import './EditorV2.scss';
 
 // Register custom node types (M2 + M1)
@@ -592,9 +593,9 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
             }
         }
 
-        window.addEventListener('jjodel:toggle-singletons', handleToggleSingletons);
+        window.addEventListener(JjodelEvents.TOGGLE_SINGLETONS, handleToggleSingletons);
         return () => {
-            window.removeEventListener('jjodel:toggle-singletons', handleToggleSingletons);
+            window.removeEventListener(JjodelEvents.TOGGLE_SINGLETONS, handleToggleSingletons);
             clearSuppressedSingletons();
         };
     }, [isJjomMode, graphId, isModelMode, modelid, setNodes, getNodes]);
@@ -671,8 +672,8 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                 setViewport({ x: -x * vp.zoom + window.innerWidth / 3, y: -y * vp.zoom + window.innerHeight / 3, zoom: vp.zoom }, { duration: 300 });
             }
         };
-        window.addEventListener('jjodel:selectNode', handleSelectNode);
-        return () => window.removeEventListener('jjodel:selectNode', handleSelectNode);
+        window.addEventListener(JjodelEvents.SELECT_NODE, handleSelectNode);
+        return () => window.removeEventListener(JjodelEvents.SELECT_NODE, handleSelectNode);
     }, [modelid, setNodes, setEdges, getNodes, getViewport, setViewport]);
 
     // Polymetric view modal (triggered via Tools menu CustomEvent)
@@ -682,8 +683,8 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
         const handlePolymetric = () => {
             if (modelid) setPolymetricOpen(true);
         };
-        window.addEventListener('jjodel:open-polymetric', handlePolymetric);
-        return () => window.removeEventListener('jjodel:open-polymetric', handlePolymetric);
+        window.addEventListener(JjodelEvents.OPEN_POLYMETRIC, handlePolymetric);
+        return () => window.removeEventListener(JjodelEvents.OPEN_POLYMETRIC, handlePolymetric);
     }, [modelid]);
 
     // History for undo/redo
@@ -1793,8 +1794,8 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                 childKind,
             });
         };
-        window.addEventListener('jjodel:child-context-menu', handler);
-        return () => window.removeEventListener('jjodel:child-context-menu', handler);
+        window.addEventListener(JjodelEvents.CHILD_CONTEXT_MENU, handler);
+        return () => window.removeEventListener(JjodelEvents.CHILD_CONTEXT_MENU, handler);
     }, []);
 
     // Shared helper: create a composition child on a parent node
@@ -1924,7 +1925,7 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                     icon: 'bi-question-circle',
                     onClick: () => {
                         const helpKey = contextMenu.childKind === 'attr' ? 'element-attribute' : 'element-operation';
-                        window.dispatchEvent(new CustomEvent('jjodel:help-open', { detail: { helpKey } }));
+                        window.dispatchEvent(new CustomEvent(JjodelEvents.HELP_OPEN, { detail: { helpKey } }));
                     },
                 },
             ];
@@ -2008,7 +2009,7 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                           : node?.type === 'packageNode' ? 'element-package'
                           : node?.type === 'objectNode'  ? 'element-object'
                           : 'properties-panel';
-                        window.dispatchEvent(new CustomEvent('jjodel:help-open', { detail: { helpKey } }));
+                        window.dispatchEvent(new CustomEvent(JjodelEvents.HELP_OPEN, { detail: { helpKey } }));
                     },
                 },
                 {
@@ -2056,7 +2057,7 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                                 name: f.featureName, value: f.value,
                             }));
                         }
-                        window.dispatchEvent(new CustomEvent('jjodel:explain-open', {
+                        window.dispatchEvent(new CustomEvent(JjodelEvents.EXPLAIN_OPEN, {
                             detail: { elementName, elementType, metamodelName, properties },
                         }));
                     },

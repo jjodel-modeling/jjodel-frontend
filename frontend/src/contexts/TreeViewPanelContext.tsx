@@ -7,6 +7,7 @@
  */
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import { JjodelEvents, JjScriptEvents, SystemEvents } from '../events/registry';
 
 export type ElementAction = 'create' | 'modify' | 'delete' | 'unknown';
 export type EditorType = 'model' | 'metamodel' | 'transformation' | 'summary' | null;
@@ -183,8 +184,8 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
                 setIsVisible(true);
             }
         };
-        window.addEventListener('jjodel:editor-type-change', handler);
-        return () => window.removeEventListener('jjodel:editor-type-change', handler);
+        window.addEventListener(JjodelEvents.EDITOR_TYPE_CHANGE, handler);
+        return () => window.removeEventListener(JjodelEvents.EDITOR_TYPE_CHANGE, handler);
     }, []);
 
     // Listen for JjScript execution events
@@ -255,26 +256,26 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
             highlightElement(elementId, action);
 
             // Scroll element into view
-            window.dispatchEvent(new CustomEvent('treeview:scroll-to-element', {
+            window.dispatchEvent(new CustomEvent(SystemEvents.TREEVIEW_SCROLL, {
                 detail: { elementId }
             }));
         };
 
         // Subscribe to events
-        window.addEventListener('jjscript:execution-start', handleExecutionStart);
-        window.addEventListener('jjscript:executing', handleExecuting);
-        window.addEventListener('jjscript:execution-end', handleExecutionEnd);
-        window.addEventListener('jjscript:executed', handleJjScriptExecuted);
-        window.addEventListener('jjscript:metamodel-created', handleMetamodelCreated);
-        window.addEventListener('jjscript:element-modified', handleElementModified);
+        window.addEventListener(JjScriptEvents.EXECUTION_START, handleExecutionStart);
+        window.addEventListener(JjScriptEvents.EXECUTING, handleExecuting);
+        window.addEventListener(JjScriptEvents.EXECUTION_END, handleExecutionEnd);
+        window.addEventListener(JjScriptEvents.EXECUTED, handleJjScriptExecuted);
+        window.addEventListener(JjScriptEvents.METAMODEL_CREATED, handleMetamodelCreated);
+        window.addEventListener(JjScriptEvents.ELEMENT_MODIFIED, handleElementModified);
 
         return () => {
-            window.removeEventListener('jjscript:execution-start', handleExecutionStart);
-            window.removeEventListener('jjscript:executing', handleExecuting);
-            window.removeEventListener('jjscript:execution-end', handleExecutionEnd);
-            window.removeEventListener('jjscript:executed', handleJjScriptExecuted);
-            window.removeEventListener('jjscript:metamodel-created', handleMetamodelCreated);
-            window.removeEventListener('jjscript:element-modified', handleElementModified);
+            window.removeEventListener(JjScriptEvents.EXECUTION_START, handleExecutionStart);
+            window.removeEventListener(JjScriptEvents.EXECUTING, handleExecuting);
+            window.removeEventListener(JjScriptEvents.EXECUTION_END, handleExecutionEnd);
+            window.removeEventListener(JjScriptEvents.EXECUTED, handleJjScriptExecuted);
+            window.removeEventListener(JjScriptEvents.METAMODEL_CREATED, handleMetamodelCreated);
+            window.removeEventListener(JjScriptEvents.ELEMENT_MODIFIED, handleElementModified);
         };
     }, [isVisible, show, showWithHighlight, expandNode, highlightElement]);
 

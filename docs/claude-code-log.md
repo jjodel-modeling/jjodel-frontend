@@ -1,5 +1,42 @@
 # Claude Code Session Log
 
+## 2026-04-06 — chore: Rimozione dipendenze inutilizzate
+**Prompt**: Verifica e rimozione delle dipendenze con zero import nel codebase.
+**Pacchetti rimossi** (4):
+- `react-itertools@0.0.6` — zero imports
+- `nearley-unparse@1.0.1` — zero imports
+- `react-scripts@4.0.3` — legacy CRA, progetto migrato a Vite; solo riferimento in `react-app-env.d.ts` (rimosso)
+- `webpack-cli@4.9.1` — zero riferimenti in source e config attivi
+**Pacchetti tenuti**:
+- `path-data-polyfill` — usato in `joiner/index.ts` via `require()`
+- `xml-formatter` — usato in `common/libraries/prj_xml2json.js`
+- `jquery` + `jqueryui` — usati in 7+ file (Vertex.tsx, MyRcDock.tsx, index.tsx, ecc.)
+**File modificati**: `src/react-app-env.d.ts` (rimosso `/// <reference types='react-scripts' />`)
+**node_modules**: 757MB → 531MB (−226MB, −30%), 1604 pacchetti rimossi
+**Esito**: build ok
+
+## 2026-04-06 — refactor: Event registry centralizzato
+**Prompt**: Creare `src/events/registry.ts` con tutti i custom DOM events come costanti tipizzate, sostituire stringhe hardcoded.
+**File creato**: `frontend/src/events/registry.ts` — 5 gruppi (`JjodelEvents`, `JjScriptEvents`, `AIEvents`, `JjodieEvents`, `SystemEvents`), 37 costanti evento, 5 type helpers
+**File modificati** (44):
+- Dock/DockManager/MyRcDock (3 file) — `jjodel:editor-type-change`, `layout-mode-change`, `active-tab`
+- TreeViewContent/TreeViewSidebar (2 file) — `selectNode`, `openMegamodel`, `openTransformation`, `transformations`, `treeview:scroll-to-element`, `selectViewInWorkbench`, `toggle-tree-view`
+- EditorV2/Toolbar/ClassNode/useJjomSelection/useClassRemoval (5 file) — `child-context-menu`, `toggle-singletons`, `selectNode`, `open-polymetric`, `help-open`, `explain-open`, `layout-mode-change`, `canvas-element-selected`, `toast`
+- Navbar/StatusBar/StatusBarRightZone (3 file) — `active-tab`, `toggle-tree-view`, `toggle-singletons`, `layout-mode-change`, `new-project`, `export-canvas`, `open-polymetric`, `transformations`, `jjtl-statusbar`, `ai-provider-changed`
+- ProjectEditor (1 file) — `jjtl-execution-result`, `openTransformation`, `openMegamodel`, `transformations`
+- Toast/toastDispatch (2 file) — `toast`, `toast-prefs-changed`, `guard-violation`
+- Services: ThemeService, JjodieActionExecutor, PromptService, ActivityLogger (4 file) — `theme-changed`, `jjodie:metamodel-updated`, `prompt-changed`, `activity-logged`
+- Contexts: TreeViewPanelContext, FeaturesPanelContext (2 file) — 8 jjscript events + `editor-type-change`, `treeview:scroll-to-element`
+- Hooks: useInterfaceMode, usePrompt (2 file) — `interfaceModeChange`, `prompt-changed`
+- Jodie/JodieWindow/JjodieWidget (3 file) — `jodie:open`, `ai-settings-changed`, `jjscript:executed/executing/execution-end`
+- ScriptBlock (1 file) — 14 jjscript event occurrences
+- useMetamodelGeneration (1 file) — `jjscript:executing`, `jjscript:execution-end`
+- JjtlDevelopmentEnv (1 file) — `jjtl-execution-result`, `jjtl-statusbar`
+- Other: ExplainModal, HelpDrawer, HelpButton, MetamodelTab, ContextMenu, MegamodelGraph-toDelete, PolymetricView, AllProjects, Dashboard, AIAssistantSettings, AppearanceSettings, PropertiesWithTreeView, ViewpointWorkbench, ConformanceGuard, types/jodie.ts (15 file)
+**Stringhe sostituite**: ~130 occorrenze
+**Residui hardcoded**: 0 (esclusi registry.ts, commenti, non-event class names, shortcut labels)
+**Esito**: build ok
+
 ## 2026-04-06 — refactor: Rimozione editor V3 (viewpoint-editor panel)
 **Prompt**: Rimozione sicura dell'editor V3 (panels/viewpoint-editor/) — mappatura dipendenze, pulizia 5 file esterni, build, rm -rf directory.
 **File rimossi**: `frontend/src/components/panels/viewpoint-editor/` (23 file, ~1.5MB incl. bootstrapIconCatalog.ts da 1.3MB)

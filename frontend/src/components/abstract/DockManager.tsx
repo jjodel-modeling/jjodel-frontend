@@ -1,4 +1,5 @@
 import {DockLayout, TabData} from 'rc-dock';
+import { JjodelEvents } from '../../events/registry';
 import type {GObject, DViewPoint, LViewPoint} from '../../joiner';
 import {LModel, LProject, RuntimeAccessible, U} from '../../joiner';
 import TabDataMaker from "./tabs/TabDataMaker";
@@ -106,7 +107,7 @@ class DockManager {
         await DockManager.open('models', tab);
         const editorType = me.isMetamodel ? 'metamodel' : 'model';
         console.log('[OPEN2] about to dispatch', { editorType });
-        window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
+        window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
             detail: { editorType }
         }));
     }
@@ -136,7 +137,7 @@ class DockManager {
             if (existingTab) {
                 console.log('[DockManager] Activating existing documentation tab');
                 DockManager.dock.updateTab(tabId, null as any, true);
-                window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
+                window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
                     detail: { editorType: 'summary' }
                 }));
                 return;
@@ -158,7 +159,7 @@ class DockManager {
             if (layout?.dockbox?.children?.[0]) {
                 console.log('[DockManager] Creating new documentation tab');
                 DockManager.dock.dockMove(tab, layout.dockbox.children[0], 'middle');
-                window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
+                window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
                     detail: { editorType: 'summary' }
                 }));
             } else {
@@ -253,7 +254,7 @@ class DockManager {
                 console.log('[DockManager] Updating and activating existing transformation tab');
                 // CRITICAL: Update tab content with fresh callbacks to avoid stale closures
                 DockManager.dock.updateTab(tabId, { content: tabContent } as any, true);
-                window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
+                window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
                     detail: { editorType: 'transformation' }
                 }));
                 return;
@@ -278,7 +279,7 @@ class DockManager {
             if (layout?.dockbox?.children?.[0]) {
                 console.log('[DockManager] Creating new transformation tab');
                 DockManager.dock.dockMove(tab, layout.dockbox.children[0], 'middle');
-                window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
+                window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
                     detail: { editorType: 'transformation' }
                 }));
             } else {

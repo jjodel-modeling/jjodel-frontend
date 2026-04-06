@@ -22,6 +22,7 @@ import { useSelector } from 'react-redux';
 import type { DState } from '../joiner';
 import { LPointerTargetable } from '../joiner';
 import StatusBarRightZone from './StatusBarRightZone';
+import { JjodelEvents } from '../events/registry';
 import './StatusBar.scss';
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -269,8 +270,8 @@ const StatusBar: React.FC = () => {
                 setTransformationCount(detail.length);
             }
         };
-        window.addEventListener('jjodel:transformations', handler);
-        return () => window.removeEventListener('jjodel:transformations', handler);
+        window.addEventListener(JjodelEvents.TRANSFORMATIONS, handler);
+        return () => window.removeEventListener(JjodelEvents.TRANSFORMATIONS, handler);
     }, []);
 
     // Listen for JjTL editor visibility changes (backup for mount/unmount)
@@ -278,8 +279,8 @@ const StatusBar: React.FC = () => {
         const handler = (e: Event) => {
             setJjtlActive((e as CustomEvent).detail?.active ?? false);
         };
-        window.addEventListener('jjodel:jjtl-statusbar', handler);
-        return () => window.removeEventListener('jjodel:jjtl-statusbar', handler);
+        window.addEventListener(JjodelEvents.JJTL_STATUSBAR, handler);
+        return () => window.removeEventListener(JjodelEvents.JJTL_STATUSBAR, handler);
     }, []);
 
     // Listen for active tab changes from the dock layout.
@@ -300,8 +301,8 @@ const StatusBar: React.FC = () => {
                 setJjtlActive(false);
             }
         };
-        window.addEventListener('jjodel:active-tab', handler);
-        return () => window.removeEventListener('jjodel:active-tab', handler);
+        window.addEventListener(JjodelEvents.ACTIVE_TAB, handler);
+        return () => window.removeEventListener(JjodelEvents.ACTIVE_TAB, handler);
     }, []);
 
     // When JjTL editor is active, its own status bar takes over

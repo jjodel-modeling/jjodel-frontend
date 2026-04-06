@@ -65,6 +65,7 @@ import { getRuntimeMegamodel } from '../../model/megamodelRuntime';
 import { useAvatar } from '../../hooks/useAvatar';
 import { AVATAR_COLORS, AVATAR_ICONS } from '../../constants/avatarConfig';
 import { JjScriptConsole } from '../../jjscript/components/JjScriptConsole';
+import { JjodelEvents } from '../../events/registry';
 
 
 let windoww = window as any;
@@ -387,10 +388,10 @@ function NavbarComponent(props: AllProps) {
                 setIsTreeViewOpen(saved === 'true');
             }, 50);
         };
-        window.addEventListener('jjodel:toggle-tree-view', handleTreeViewToggle);
+        window.addEventListener(JjodelEvents.TOGGLE_TREE_VIEW, handleTreeViewToggle);
         return () => {
             window.removeEventListener('storage', handleStorageChange);
-            window.removeEventListener('jjodel:toggle-tree-view', handleTreeViewToggle);
+            window.removeEventListener(JjodelEvents.TOGGLE_TREE_VIEW, handleTreeViewToggle);
         };
     }, []);
 
@@ -423,8 +424,8 @@ function NavbarComponent(props: AllProps) {
             if (!tab) { setShowSingletons(false); return; }
             setShowSingletons(localStorage.getItem(`jjodel.showSingletons.${tab.id}`) === 'true');
         };
-        window.addEventListener('jjodel:active-tab', syncSingletonState);
-        return () => window.removeEventListener('jjodel:active-tab', syncSingletonState);
+        window.addEventListener(JjodelEvents.ACTIVE_TAB, syncSingletonState);
+        return () => window.removeEventListener(JjodelEvents.ACTIVE_TAB, syncSingletonState);
     }, [getActiveModelTab]);
 
     const toggleShowSingletons = useCallback(() => {
@@ -434,7 +435,7 @@ function NavbarComponent(props: AllProps) {
         localStorage.setItem(`jjodel.showSingletons.${tab.id}`, String(newVal));
         setShowSingletons(newVal);
         console.log(`[singleton] show=${newVal}, modelId=${tab.id}`);
-        window.dispatchEvent(new CustomEvent('jjodel:toggle-singletons', { detail: { modelId: tab.id, show: newVal } }));
+        window.dispatchEvent(new CustomEvent(JjodelEvents.TOGGLE_SINGLETONS, { detail: { modelId: tab.id, show: newVal } }));
     }, [getActiveModelTab, showSingletons]);
 
     // Function to open M2 Analytics with computed data
@@ -603,7 +604,7 @@ function NavbarComponent(props: AllProps) {
         // Apply layout mode to body for CSS targeting
         document.body.setAttribute('data-layout-mode', mode);
         // Dispatch event to notify dock to update (includes resetToDefault flag)
-        window.dispatchEvent(new CustomEvent('jjodel:layout-mode-change', {
+        window.dispatchEvent(new CustomEvent(JjodelEvents.LAYOUT_MODE_CHANGE, {
             detail: { mode, resetToDefault }
         }));
     };
@@ -690,7 +691,7 @@ function NavbarComponent(props: AllProps) {
                 switch (context) {
                     case 'DASHBOARD':
                         // Dispatch event for AllProjects to handle (opens Create Project dialog)
-                        window.dispatchEvent(new CustomEvent('jjodel:new-project'));
+                        window.dispatchEvent(new CustomEvent(JjodelEvents.NEW_PROJECT));
                         break;
                     case 'PROJECT_EDITOR':
                         console.log('[Jjodel Shortcuts] Creating M2, project:', project);
@@ -931,7 +932,7 @@ function NavbarComponent(props: AllProps) {
                 if (matchesShortcut(event, SHORTCUTS.TOGGLE_TREE_VIEW)) {
                     event.preventDefault();
                     event.stopPropagation();
-                    window.dispatchEvent(new CustomEvent('jjodel:toggle-tree-view'));
+                    window.dispatchEvent(new CustomEvent(JjodelEvents.TOGGLE_TREE_VIEW));
                     return;
                 }
             }
@@ -1072,11 +1073,11 @@ function NavbarComponent(props: AllProps) {
                 isDashboard ? null : {name: 'Export Canvas', icon: <i className="bi bi-image" />,
                     disabled: metamodels.length === 0,
                     subItems: [
-                        {name: 'Export as PNG', function: () => window.dispatchEvent(new CustomEvent('jjodel:export-canvas', { detail: { format: 'png' } })), icon: <i className="bi bi-file-image" />, disabled: metamodels.length === 0},
-                        {name: 'Export as JPEG', function: () => window.dispatchEvent(new CustomEvent('jjodel:export-canvas', { detail: { format: 'jpeg' } })), icon: <i className="bi bi-file-image" />, disabled: metamodels.length === 0},
-                        {name: 'Export as SVG', function: () => window.dispatchEvent(new CustomEvent('jjodel:export-canvas', { detail: { format: 'svg' } })), icon: <i className="bi bi-filetype-svg" />, disabled: metamodels.length === 0},
+                        {name: 'Export as PNG', function: () => window.dispatchEvent(new CustomEvent(JjodelEvents.EXPORT_CANVAS, { detail: { format: 'png' } })), icon: <i className="bi bi-file-image" />, disabled: metamodels.length === 0},
+                        {name: 'Export as JPEG', function: () => window.dispatchEvent(new CustomEvent(JjodelEvents.EXPORT_CANVAS, { detail: { format: 'jpeg' } })), icon: <i className="bi bi-file-image" />, disabled: metamodels.length === 0},
+                        {name: 'Export as SVG', function: () => window.dispatchEvent(new CustomEvent(JjodelEvents.EXPORT_CANVAS, { detail: { format: 'svg' } })), icon: <i className="bi bi-filetype-svg" />, disabled: metamodels.length === 0},
                         {name: 'divisor'},
-                        {name: 'Copy to Clipboard', function: () => window.dispatchEvent(new CustomEvent('jjodel:export-canvas', { detail: { format: 'clipboard' } })), icon: <i className="bi bi-clipboard" />, disabled: metamodels.length === 0},
+                        {name: 'Copy to Clipboard', function: () => window.dispatchEvent(new CustomEvent(JjodelEvents.EXPORT_CANVAS, { detail: { format: 'clipboard' } })), icon: <i className="bi bi-clipboard" />, disabled: metamodels.length === 0},
                     ]
                 },
                 isDashboard ? null : {name: 'divisor'},
@@ -1220,7 +1221,7 @@ function NavbarComponent(props: AllProps) {
                 {name: 'Polymetric View',
                     jsx: <span>Polymetric View <span style={{ fontSize: '10px', color: '#94a3b8', marginLeft: '4px', fontWeight: 400 }}>(beta)</span></span>,
                     function: () => {
-                        window.dispatchEvent(new CustomEvent('jjodel:open-polymetric'));
+                        window.dispatchEvent(new CustomEvent(JjodelEvents.OPEN_POLYMETRIC));
                     },
                     icon: <i className="bi bi-grid-3x3-gap" />,
                     disabled: isDashboard || metamodels.length === 0
@@ -1379,7 +1380,7 @@ function NavbarComponent(props: AllProps) {
 
         // Sync on layout changes
         const handleActiveTab = () => setTimeout(syncTabs, 50);
-        window.addEventListener('jjodel:active-tab', handleActiveTab);
+        window.addEventListener(JjodelEvents.ACTIVE_TAB, handleActiveTab);
 
         // Initial sync
         const initialTimer = setTimeout(syncTabs, 200);
@@ -1387,7 +1388,7 @@ function NavbarComponent(props: AllProps) {
         const interval = setInterval(syncTabs, 1000);
 
         return () => {
-            window.removeEventListener('jjodel:active-tab', handleActiveTab);
+            window.removeEventListener(JjodelEvents.ACTIVE_TAB, handleActiveTab);
             clearTimeout(initialTimer);
             clearInterval(interval);
         };

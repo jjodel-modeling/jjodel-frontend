@@ -8,6 +8,7 @@ import {
     RuntimeAccessible,
     U
 } from "../joiner";
+import { AIEvents } from '../events/registry';
 
 // Provider logo imports
 import openaiLogo from '../assets/icons/providers/openai.svg';
@@ -411,7 +412,7 @@ export class AIConfig{
             AIConfig.map[this.name] = updated;
 
             // Dispatch event to notify other components
-            window.dispatchEvent(new CustomEvent('ai-provider-changed', {
+            window.dispatchEvent(new CustomEvent(AIEvents.PROVIDER_CHANGED, {
                 detail: { provider, config: updated }
             }));
         } catch (error) {
@@ -425,7 +426,7 @@ export class AIConfig{
         }
         localStorage.setItem(aiConfig.storageKey, JSON.stringify(this));
         // Dispatch event to notify other components
-        window.dispatchEvent(new CustomEvent('ai-provider-changed', {
+        window.dispatchEvent(new CustomEvent(AIEvents.PROVIDER_CHANGED, {
             detail: { provider: this.name, config: this }
         }));
         if (cascadeGlobal) JodieConfig.current.save(false);
@@ -506,7 +507,7 @@ export class JodieConfig {
             if (this.activeProvider) localStorage.setItem(AI.GLOBAL_DEFAULT_KEY, this.activeProvider);
             else localStorage.removeItem(AI.GLOBAL_DEFAULT_KEY);
 
-            window.dispatchEvent(new CustomEvent('ai-provider-changed', {
+            window.dispatchEvent(new CustomEvent(AIEvents.PROVIDER_CHANGED, {
                 detail: { type: 'global-default', provider:this.activeProvider, config: AIConfig.get(this.activeProvider) }
             }));
 

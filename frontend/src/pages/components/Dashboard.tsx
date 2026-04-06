@@ -41,6 +41,7 @@ import { ProjectsApi } from '../../api/persistance';
 import {Cards} from "./cards/Cards";
 import {createM2} from "./Navbar";
 import StatusBar from "../../components/StatusBar";
+import { JjodelEvents } from '../../events/registry';
 
 
 type UserProps = {
@@ -256,7 +257,7 @@ function GenericDashboard(props: DashProps): any {
     // Dashboard is not a rc-dock tab, so Dock's handleLayoutChange never fires.
     // Dispatch 'summary' so panels hide correctly.
     useEffect(() => {
-        window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
+        window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
             detail: { editorType: 'summary' }
         }));
     }, []);

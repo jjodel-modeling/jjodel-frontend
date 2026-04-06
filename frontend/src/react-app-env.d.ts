@@ -1,4 +1,4 @@
-/// <reference types='react-scripts' />
+// Legacy CRA reference removed — project uses Vite
 declare module 'jsx-runtime' {
     export default {} as any;
 }

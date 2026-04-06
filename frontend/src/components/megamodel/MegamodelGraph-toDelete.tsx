@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import type { Megamodel, MegamodelEdge, ArtifactType, EdgeType } from '../../model/megamodel';
+import { JjodelEvents } from '../../events/registry';
 
 // ─── Layout constants ────────────────────────────────────────────────────────
 
@@ -253,7 +254,7 @@ const MegamodelGraph: React.FC<MegamodelGraphProps> = ({ megamodel }) => {
     }, [hoveredNodeId, megamodel.edges]);
 
     const handleNodeClick = useCallback((nodeId: string, nodeType: ArtifactType) => {
-        window.dispatchEvent(new CustomEvent('jjodel:megamodel:open-artifact', {
+        window.dispatchEvent(new CustomEvent(JjodelEvents.MEGAMODEL_OPEN_ARTIFACT, {
             detail: { artifactId: nodeId, artifactType: nodeType },
         }));
     }, []);

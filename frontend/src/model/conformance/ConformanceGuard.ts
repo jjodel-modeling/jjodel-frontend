@@ -6,6 +6,7 @@ import type { LReference } from '../logicWrapper/LModelElement';
 import type { LStructuralFeature } from '../logicWrapper/LModelElement';
 import type { GuardResult, GuardOptions } from './ConformanceTypes';
 import { LPointerTargetable } from '../../joiner';
+import { JjodelEvents } from '../../events/registry';
 
 /**
  * Guard 1: Check if a new link can be added to a reference.
@@ -234,5 +235,5 @@ function checkTypeCompatibility(typeName: string, value: unknown): TypeCheckResu
 
 export function emitGuardViolation(error: GuardResult): void {
     if (error.allowed) return;
-    window.dispatchEvent(new CustomEvent('jjodel:guard-violation', { detail: error }));
+    window.dispatchEvent(new CustomEvent(JjodelEvents.GUARD_VIOLATION, { detail: error }));
 }

@@ -8,6 +8,7 @@ import ViewTree from './viewpoint/ViewTree';
 import WorkbenchCanvas from './viewpoint/WorkbenchCanvas';
 import WorkbenchEditors from './viewpoint/WorkbenchEditors';
 import WorkbenchProperties from './viewpoint/WorkbenchProperties';
+import { JjodelEvents } from '../../events/registry';
 
 interface ViewpointWorkbenchProps {
     viewpointId: Pointer<any>;
@@ -60,8 +61,8 @@ const ViewpointWorkbench: React.FC<ViewpointWorkbenchProps> = ({ viewpointId }) 
                 setSelectedNodeType('view');
             }
         };
-        window.addEventListener('jjodel:selectViewInWorkbench', handler);
-        return () => window.removeEventListener('jjodel:selectViewInWorkbench', handler);
+        window.addEventListener(JjodelEvents.SELECT_VIEW_IN_WORKBENCH, handler);
+        return () => window.removeEventListener(JjodelEvents.SELECT_VIEW_IN_WORKBENCH, handler);
     }, [viewpointId]);
 
     const handleCreateView = useCallback(() => {

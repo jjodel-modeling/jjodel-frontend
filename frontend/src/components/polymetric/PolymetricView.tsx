@@ -23,6 +23,7 @@ import PolymetricCanvas from './PolymetricCanvas';
 import PolymetricMappingEditor from './PolymetricMappingEditor';
 import { Selectors, type DState } from '../../joiner';
 
+import { JjodelEvents } from '../../events/registry';
 import './polymetric-view.scss';
 
 // ---------------------------------------------------------------------------
@@ -204,7 +205,7 @@ export const PolymetricView: React.FC<PolymetricViewProps> = ({
     }, [layoutNodes]);
 
     const handleNodeClick = useCallback((nodeId: string) => {
-        document.dispatchEvent(new CustomEvent('jjodel:polymetric-node-selected', {
+        document.dispatchEvent(new CustomEvent(JjodelEvents.POLYMETRIC_NODE_SELECTED, {
             detail: { nodeId, type: target === 'metamodel' ? 'metaclass' : 'instance' },
         }));
     }, [target]);

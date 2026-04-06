@@ -7,6 +7,7 @@ import { useTreeViewPanel } from '../../contexts/TreeViewPanelContext';
 import './properties-with-tree-view.scss';
 // Import tree view styles for icon colors and tree node styling
 import '../TreeViewSidebar/tree-view-sidebar.scss';
+import { JjodelEvents } from '../../events/registry';
 
 /**
  * PropertiesWithTreeView Component
@@ -47,9 +48,9 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
         const handleExternalToggle = () => {
             toggleTreeView();
         };
-        window.addEventListener('jjodel:toggle-tree-view', handleExternalToggle);
+        window.addEventListener(JjodelEvents.TOGGLE_TREE_VIEW, handleExternalToggle);
         return () => {
-            window.removeEventListener('jjodel:toggle-tree-view', handleExternalToggle);
+            window.removeEventListener(JjodelEvents.TOGGLE_TREE_VIEW, handleExternalToggle);
         };
     }, [toggleTreeView]);
 

@@ -21,6 +21,7 @@ import { useStateIfMounted } from 'use-state-if-mounted';
 import { useTreeViewPanel, ElementAction } from '../../contexts/TreeViewPanelContext';
 import { getLastEditedViewpointId, getLastEditedViewpointName, createViewInWorkbench } from '../../utils/lastViewpoint';
 import DockManager from '../abstract/DockManager';
+import { JjodelEvents, SystemEvents } from '../../events/registry';
 
 /**
  * TreeViewContent Component (Optimized)
@@ -586,7 +587,7 @@ const InstanceItem = memo(function InstanceItem({
     const handleClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
         // Dispatch custom event for EditorV2 to select the node on the canvas
-        window.dispatchEvent(new CustomEvent('jjodel:selectNode', {
+        window.dispatchEvent(new CustomEvent(JjodelEvents.SELECT_NODE, {
             detail: { nodeId: instance.id, modelId: instance.modelId }
         }));
         onSelect?.();
@@ -715,7 +716,7 @@ interface TreeTransformationData {
  */
 const MegamodelEntry = memo(function MegamodelEntry(): ReactElement {
     const handleClick = useCallback(() => {
-        window.dispatchEvent(new CustomEvent('jjodel:openMegamodel'));
+        window.dispatchEvent(new CustomEvent(JjodelEvents.OPEN_MEGAMODEL));
     }, []);
 
     return (
@@ -749,7 +750,7 @@ const TransformationItem = memo(function TransformationItem({
     const handleClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
         // Dispatch event to open transformation tab (ProjectEditor listens)
-        window.dispatchEvent(new CustomEvent('jjodel:openTransformation', {
+        window.dispatchEvent(new CustomEvent(JjodelEvents.OPEN_TRANSFORMATION, {
             detail: { id: transformation.id }
         }));
         SetRootFieldAction.new('_lastSelected', {
@@ -909,7 +910,7 @@ const SubViewItem = memo(function SubViewItem({
             DockManager.openViewpoint(viewpointRaw);
             // Dispatch event to select this specific view in the workbench
             setTimeout(() => {
-                window.dispatchEvent(new CustomEvent('jjodel:selectViewInWorkbench', {
+                window.dispatchEvent(new CustomEvent(JjodelEvents.SELECT_VIEW_IN_WORKBENCH, {
                     detail: { viewpointId: viewpointRaw.id, viewId: view.id }
                 }));
             }, 100);
@@ -1207,7 +1208,7 @@ const DocumentationEntry = memo(function DocumentationEntry({
 }): ReactElement {
     const handleClick = useCallback(() => {
         // Open the dashboard scrolled to documentation section
-        window.dispatchEvent(new CustomEvent('jjodel:openMegamodel'));
+        window.dispatchEvent(new CustomEvent(JjodelEvents.OPEN_MEGAMODEL));
         onSelect?.();
     }, [onSelect]);
 
@@ -1240,8 +1241,8 @@ function TreeViewContentComponent(props: AllProps & TreeViewContentProps) {
             const detail = (e as CustomEvent).detail as TreeTransformationData[] | undefined;
             setTransformations(detail || []);
         };
-        window.addEventListener('jjodel:transformations', handler);
-        return () => window.removeEventListener('jjodel:transformations', handler);
+        window.addEventListener(JjodelEvents.TRANSFORMATIONS, handler);
+        return () => window.removeEventListener(JjodelEvents.TRANSFORMATIONS, handler);
     }, []);
 
     // Listen for scroll-to-element events
@@ -1265,10 +1266,10 @@ function TreeViewContentComponent(props: AllProps & TreeViewContentProps) {
             }
         };
 
-        window.addEventListener('treeview:scroll-to-element', handleScrollToElement);
+        window.addEventListener(SystemEvents.TREEVIEW_SCROLL, handleScrollToElement);
 
         return () => {
-            window.removeEventListener('treeview:scroll-to-element', handleScrollToElement);
+            window.removeEventListener(SystemEvents.TREEVIEW_SCROLL, handleScrollToElement);
         };
     }, []);
 

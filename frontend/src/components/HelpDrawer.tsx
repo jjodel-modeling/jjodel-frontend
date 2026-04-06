@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useHelpResolver } from '../hooks/useHelpResolver';
+import { JjodelEvents } from '../events/registry';
 import './HelpDrawer.scss';
 
 // Local fallback: try fetching from bundled public/docs/help/
@@ -41,8 +42,8 @@ const HelpDrawer: React.FC = () => {
             setHelpKey(key);
             setIsOpen(true);
         };
-        window.addEventListener('jjodel:help-open', handler);
-        return () => window.removeEventListener('jjodel:help-open', handler);
+        window.addEventListener(JjodelEvents.HELP_OPEN, handler);
+        return () => window.removeEventListener(JjodelEvents.HELP_OPEN, handler);
     }, []);
 
     // Fetch content when helpKey changes
@@ -90,7 +91,7 @@ const HelpDrawer: React.FC = () => {
             if (!isCmdSlash && !isF1) return;
             e.preventDefault();
             window.dispatchEvent(
-                new CustomEvent('jjodel:help-open', { detail: { helpKey: 'properties-panel' } })
+                new CustomEvent(JjodelEvents.HELP_OPEN, { detail: { helpKey: 'properties-panel' } })
             );
         };
         window.addEventListener('keydown', handleF1, true);

@@ -17,6 +17,7 @@ import {
 } from '../../types/jodie';
 import { AIProviderService } from '../../services/AIProviderService';
 import { useSettingsModalSafe } from '../../contexts/SettingsModalContext';
+import { JjodieEvents, AIEvents, JjScriptEvents } from '../../events/registry';
 import { JjodieContextService } from '../../services/JjodieContext';
 import { JjodieRagService } from '../../services/JjodieRagService';
 import {DUser, L, LUser, LProject, store} from '../../joiner';
@@ -70,9 +71,9 @@ export function Jodie(): JSX.Element {
             setChatState(prev => ({ ...prev, isOpen: true, hasUnread: false }));
         };
 
-        window.addEventListener('jodie:open', handleOpenJodie);
+        window.addEventListener(JjodieEvents.OPEN, handleOpenJodie);
         return () => {
-            window.removeEventListener('jodie:open', handleOpenJodie);
+            window.removeEventListener(JjodieEvents.OPEN, handleOpenJodie);
         };
     }, []);
 
@@ -83,9 +84,9 @@ export function Jodie(): JSX.Element {
             setActiveProvider(JodieConfig.current.activeProvider);
         };
 
-        window.addEventListener('ai-settings-changed', handleSettingsChanged);
+        window.addEventListener(AIEvents.SETTINGS_CHANGED, handleSettingsChanged);
         return () => {
-            window.removeEventListener('ai-settings-changed', handleSettingsChanged);
+            window.removeEventListener(AIEvents.SETTINGS_CHANGED, handleSettingsChanged);
         };
     }, []);
 
@@ -341,7 +342,7 @@ export function Jodie(): JSX.Element {
     // JjScript execution completed - trigger metamodel refresh
     const handleJjScriptExecuted = useCallback(() => {
         // Emit custom event for metamodel refresh
-        window.dispatchEvent(new CustomEvent('jjscript:executed'));
+        window.dispatchEvent(new CustomEvent(JjScriptEvents.EXECUTED));
         console.log('[Jjodie] JjScript executed - metamodel refresh triggered');
     }, []);
 

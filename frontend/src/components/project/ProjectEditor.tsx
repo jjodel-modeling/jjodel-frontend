@@ -42,6 +42,7 @@ import MegamodelView, { type ArtifactStats } from '../megamodel/MegamodelView';
 import { Badge } from '../common/Badge';
 import { Button } from '../common/Button';
 import { EmptyState } from '../ui/EmptyState';
+import { JjodelEvents, SystemEvents } from '../../events/registry';
 import './project-editor.scss';
 
 
@@ -342,8 +343,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     // Open megamodel modal when TreeView entry is clicked
     useEffect(() => {
         const handler = () => setShowMegamodelModal(true);
-        window.addEventListener('jjodel:openMegamodel', handler);
-        return () => window.removeEventListener('jjodel:openMegamodel', handler);
+        window.addEventListener(JjodelEvents.OPEN_MEGAMODEL, handler);
+        return () => window.removeEventListener(JjodelEvents.OPEN_MEGAMODEL, handler);
     }, []);
 
     // Broadcast transformations to TreeView via CustomEvent
@@ -356,7 +357,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             rules: t.ast?.mappings?.map(m => `${m.sources?.map(s => s.className).join(', ') || '?'} → ${m.targetClass}`) || [],
             helpers: t.ast?.helpers?.map(h => h.name) || [],
         }));
-        window.dispatchEvent(new CustomEvent('jjodel:transformations', { detail }));
+        window.dispatchEvent(new CustomEvent(JjodelEvents.TRANSFORMATIONS, { detail }));
     }, [transformations]);
 
     // Megamodel: compute and register runtime megamodel whenever artifacts change
@@ -1462,7 +1463,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 // Return the execution result IMMEDIATELY so JjtlDevelopmentEnv can update trace display
                 // Tab opening and attribute setting happen in the background (fire-and-forget)
                 // Broadcast execution result via custom event (for JjtlDevelopmentEnv trace display)
-                window.dispatchEvent(new CustomEvent('jjtl-execution-result', { detail: result }));
+                window.dispatchEvent(new CustomEvent(SystemEvents.JJTL_EXECUTION_RESULT, { detail: result }));
 
                 // Reset execution guard
                 isExecutingTransformation = false;
@@ -1516,8 +1517,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             const t = transformationsRef.current.find((tr: any) => tr.id === id);
             if (t) handleOpenTransformationRef.current(t);
         };
-        window.addEventListener('jjodel:openTransformation', handler);
-        return () => window.removeEventListener('jjodel:openTransformation', handler);
+        window.addEventListener(JjodelEvents.OPEN_TRANSFORMATION, handler);
+        return () => window.removeEventListener(JjodelEvents.OPEN_TRANSFORMATION, handler);
     }, []);
 
     const handleRenameTransformation = (id: string, newName: string) => {

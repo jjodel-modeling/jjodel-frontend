@@ -27,6 +27,7 @@ import {
     store,
 } from '../../../joiner';
 import { markCanvasUpdatedBatch } from '../sync/syncState';
+import { JjodelEvents } from '../../../events/registry';
 
 /**
  * Find a model element (DClass or DPackage) inside the given model.
@@ -84,7 +85,7 @@ function notifyElementSelected(elementId: string): void {
         const modelElement = state.idlookup?.[modelElementId] as any;
         const className = modelElement?.className ?? raw?.className ?? '';
         if (className) {
-            window.dispatchEvent(new CustomEvent('jjodel:canvas-element-selected', {
+            window.dispatchEvent(new CustomEvent(JjodelEvents.CANVAS_ELEMENT_SELECTED, {
                 detail: { elementId, className },
             }));
         }

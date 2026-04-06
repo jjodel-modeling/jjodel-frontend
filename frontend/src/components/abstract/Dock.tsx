@@ -1,5 +1,6 @@
 import './style.scss';
 import React, {Dispatch, ReactElement, ReactNode, useEffect, useState} from 'react';
+import { JjodelEvents } from '../../events/registry';
 import {connect} from 'react-redux';
 import {DProject, DState, DUser, LProject, LUser} from '../../joiner';
 import {FakeStateProps, windoww} from '../../joiner/types';
@@ -59,7 +60,7 @@ export function getDefaultPanelRatio(mode: LayoutMode): number {
  */
 export function activateVerticalConsoleMode(): void {
     saveLayoutMode('vertical-console');
-    window.dispatchEvent(new CustomEvent('jjodel:layout-mode-change', {
+    window.dispatchEvent(new CustomEvent(JjodelEvents.LAYOUT_MODE_CHANGE, {
         detail: { mode: 'vertical-console' as LayoutMode }
     }));
     console.log('✅ Vertical Console Mode activated. Refresh if needed.');
@@ -224,7 +225,7 @@ function DockComponent(props: AllProps) {
             }
         };
 
-        window.addEventListener('jjodel:layout-mode-change', handleLayoutChange as EventListener);
+        window.addEventListener(JjodelEvents.LAYOUT_MODE_CHANGE, handleLayoutChange as EventListener);
 
         // Debounced resize save (save after user stops resizing)
         let resizeTimeout: ReturnType<typeof setTimeout>;
@@ -235,7 +236,7 @@ function DockComponent(props: AllProps) {
         window.addEventListener('mouseup', debouncedResize);
 
         return () => {
-            window.removeEventListener('jjodel:layout-mode-change', handleLayoutChange as EventListener);
+            window.removeEventListener(JjodelEvents.LAYOUT_MODE_CHANGE, handleLayoutChange as EventListener);
             window.removeEventListener('mouseup', debouncedResize);
             clearTimeout(resizeTimeout);
         };
@@ -250,10 +251,10 @@ function DockComponent(props: AllProps) {
             document.body.setAttribute('data-editor-type', editorType || 'none');
         };
 
-        window.addEventListener('jjodel:editor-type-change', handleEditorTypeChange);
+        window.addEventListener(JjodelEvents.EDITOR_TYPE_CHANGE, handleEditorTypeChange);
 
         return () => {
-            window.removeEventListener('jjodel:editor-type-change', handleEditorTypeChange);
+            window.removeEventListener(JjodelEvents.EDITOR_TYPE_CHANGE, handleEditorTypeChange);
             document.body.removeAttribute('data-editor-type');
         };
     }, []);
@@ -344,7 +345,7 @@ function DockComponent(props: AllProps) {
         if (!activeId) return;
 
         // Evento per StatusBar — mantenerlo
-        window.dispatchEvent(new CustomEvent('jjodel:active-tab', { detail: { activeId } }));
+        window.dispatchEvent(new CustomEvent(JjodelEvents.ACTIVE_TAB, { detail: { activeId } }));
 
         // Hide properties panel when Documentation tab is active
         const isDocTab = activeId === 'documentation' || activeId.startsWith('doc_');
