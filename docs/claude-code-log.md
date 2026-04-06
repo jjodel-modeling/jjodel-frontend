@@ -1,5 +1,43 @@
 # Claude Code Session Log
 
+## 2026-04-06 — refactor: Rimozione editor V3 (viewpoint-editor panel)
+**Prompt**: Rimozione sicura dell'editor V3 (panels/viewpoint-editor/) — mappatura dipendenze, pulizia 5 file esterni, build, rm -rf directory.
+**File rimossi**: `frontend/src/components/panels/viewpoint-editor/` (23 file, ~1.5MB incl. bootstrapIconCatalog.ts da 1.3MB)
+**File modificati**:
+- `frontend/src/components/editors/PropertiesWithTreeView.tsx` — rimosso import ViewpointEditorPanel, state sidebarMode, event listeners (openViewpointEditor, closeViewpointEditor), render condizionale V3
+- `frontend/src/components/editor-v2/Toolbar.tsx` — rimosso vpEditorState, listener jjodel:viewpoint-editor-state, back button + badge JSX
+- `frontend/src/components/project/ProjectEditor.tsx` — handleOpenViewpoint e handleCreateViewpoint ora usano DockManager.openViewpoint() diretto + TODO comment
+- `frontend/src/pages/components/Dashboard.tsx` — viewpoint click e Open button ora usano DockManager.openViewpoint() diretto + TODO comment
+- `frontend/src/utils/lastViewpoint.ts` — rimosso dispatch jjodel:viewCreated (consumato solo da V3)
+**Non toccati**: `components/abstract/DockLayout.tsx` (riferimenti V3 già commentati), `components/editors/viewpoint/` (vecchio workbench — ora unico editor viewpoint), `components/editor-v2/viewpoint/ViewpointRenderer.tsx` (utility V2)
+**Custom events rimossi**: jjodel:openViewpointEditor, jjodel:viewpoint-editor-state, jjodel:closeViewpointEditor, jjodel:viewCreated
+**Esito**: build ok
+
+## 2026-04-05 — audit: Git history analysis (pre vs post Natale 2025)
+**Prompt**: Confronto stato codebase prima del 24 dicembre 2025 vs oggi. Volume cambiamenti, snapshot temporali, feature introdotte, aree cresciute, file eliminati.
+**File toccati**: `docs/git-analysis-2026-04-05.md` (nuovo)
+**Esito**: completato
+**Metriche chiave**:
+- 301 commit in ~100 giorni (3/giorno), 76% Alfonso, 22% Damiano
+- Codebase 3.6× più grande: 303→959 file, 78K→281K LOC (+262%)
+- 3 linguaggi DSL creati da zero (JjTL 26K, JjScript 20K, JjEL 6.5K LOC)
+- Editor riscritto 2 volte (v2 + v3), AI system interamente nuovo (8 provider + RAG)
+- Solo 1 file eliminato — crescita quasi esclusivamente additiva
+- Punto di svolta: gennaio 2026 (101 commit, codebase raddoppiato)
+
+## 2026-04-05 — audit: Censimento completo codebase
+**Prompt**: Audit completo del codebase Jjodel — struttura directory, inventario componenti React, model layer, JjTL/JjEL/JjScript, AI/Jjodie, styling, dipendenze, TypeScript health, custom events, TODO/bug, metriche sintetiche, red flags.
+**File toccati**: `docs/audit-2026-04-05.md` (nuovo)
+**Esito**: completato
+**Metriche chiave**:
+- 400 .tsx + 376 .ts + 183 .scss = ~281K LOC
+- 307 componenti React, 42+ custom DOM events
+- 3,672 istanze any/as any/@ts-ignore (strict mode attivo)
+- 55 dipendenze runtime (5 probabilmente inutilizzate)
+- JjTL: 11 test files, JjEL: 2, JjScript: 0
+- 8 AI providers supportati, RAG system con IndexedDB
+**Red flags**: build system ibrido (react-scripts+Vite), ~600 inline styles, 50+ classi SCSS duplicate, JjScript senza test, jQuery residuo
+
 ## 2026-04-04 — feat: AllProjects page redesign
 **Prompt**: redesign visivo AllProjects — sidebar light, card accent bar, activity feed grouping, load more, cyan accents
 **File toccati**: `frontend/src/pages/dashboard.scss`, `frontend/src/pages/components/LeftBar.tsx`, `frontend/src/pages/components/project-card.scss`, `frontend/src/pages/components/Project.tsx`, `frontend/src/pages/components/catalog/Catalog.tsx`, `frontend/src/pages/components/catalog/catalog.scss`, `frontend/src/pages/components/RightPanel/RightPanel.tsx`, `frontend/src/pages/components/RightPanel/RightPanel.scss`

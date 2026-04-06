@@ -388,7 +388,7 @@ function makeDefaultGraphViews(vp: DViewPoint, validationVP: DViewPoint): DViewE
     }
 
     .error-message{
-        color: var(--accent);
+        color: var(--color-accent);
         background: var(--bg-2-5);
         border-radius: var(--radius);
         margin: auto;

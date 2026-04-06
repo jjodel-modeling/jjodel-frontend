@@ -14,7 +14,7 @@
   border: 1px solid var(--background2);
   background: var(--background2);
   color: #fff;
-  border-radius: var(--radius) var(--radius) 0 0;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   background: var(--background3);
   color: var(--color4);
 }
@@ -46,7 +46,7 @@
     background-image: none;
     width: auto;
     height: auto;// 31px;
-    border-radius: var(--radius);
+    border-radius: var(--radius-sm);
   }
   transition: all 0.15s ease-in-out;
 }
@@ -61,7 +61,7 @@
 
 .dock-panel.dock-style-card .dock-bar {
   background: var(--background1);
-  border-radius: var(--radius) var(--radius) 0 0;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   border-bottom: 1px solid var(--background2);
 }
 

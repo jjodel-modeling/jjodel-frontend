@@ -3,7 +3,7 @@
 .dock-tab {
     --color: #233d4d;
   --accent: #048BA8;
-  --accent-50: var(--bg-4);
+  --accent-50: var(--color-text-tertiary);
   --secondary: #048BA8;
   --terziary: #5F0F40;
   --accent-secondary: #F3B700;
@@ -17,7 +17,7 @@
   --bg-5: #525251;
 
   --dock-bg: var(-bg-1);
-  --disabled: var(--bg-4);
+  --disabled: var(--color-text-tertiary);
   --failure: #ed474a;
   --danger: #ed474a;
   --success: #3ddc97;
@@ -286,7 +286,7 @@
 .dock-tab:hover .dock-tab-close-btn,
 .dock-tab-close-btn:focus {
     opacity: 1;
-    color: var(--terziary);
+    color: var(--color-error);
 }
 
 .dock-nav-operations{

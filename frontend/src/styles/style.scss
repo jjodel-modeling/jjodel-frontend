@@ -313,9 +313,9 @@ input[type='checkbox'] {
 }
 
 .properties-tab > .object-state {
-    border: 1px solid var(--bg-4)!important;
-    background-color: var(--bg-1-3);
-    border-radius: var(--radius);
+    border: 1px solid var(--color-text-tertiary)!important;
+    background-color: var(--color-bg-secondary);
+    border-radius: var(--radius-sm);
     padding: 0.5em;
     font-family: var(--font-mono);
     margin-bottom: 1em;
@@ -638,7 +638,7 @@ button:hover{// experimental, doesn't go well because it applies to N parent ele
 }
 
 .monaco-editor-wrapper {
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   >*{
     margin: 0;
   }
@@ -773,7 +773,7 @@ html[data-theme="dark"] {
 
 label.jj-editor-title {
   display: inline-block;
-  color: var(--accent);
+  color: var(--color-accent);
 
   width: fit-content;
   margin-top: 20px;
@@ -913,36 +913,36 @@ i.bi {
     min-height: 350px;
   }
   & .login-header {
-    color: var(--secondary)!important;
+    color: var(--color-accent)!important;
     font-weight: var(--font-extrabold);
     font-family: var(--default-font-family)
 
   }
 
   & input {
-    outline: 1px solid var(--secondary);
+    outline: 1px solid var(--color-accent);
     padding: 2px 8px;
     border: none;
     height: var(--input-height);
   }
 
   & input:focus {
-    outline: 2px solid var(--secondary);
+    outline: 2px solid var(--color-accent);
     border: none;
   }
 
   & input::placeholder {
-    color: var(--bg-2-5);
+    color: var(--color-text-tertiary);
     font-style: italic;
   }
 
   & select {
     border: none;
-    border-radius: var(--radius);
+    border-radius: var(--radius-sm);
     padding: 0;
     padding-left: 6px;
     height: var(--input-height);
-    outline: 1px solid var(--secondary);
+    outline: 1px solid var(--color-accent);
     margin-top: 0!important;
     margin-bottom: 6px;
   }
@@ -950,21 +950,21 @@ i.bi {
   & select:focus {
     border: none;
     padding-left: 6px;
-    outline: 2px solid var(--secondary);
+    outline: 2px solid var(--color-accent);
   }
 
   & .login-button {
-    background-color: var(--secondary);
+    background-color: var(--color-accent);
     padding: 10px 20px!important;
     border: none;
   }
 
   & .login-button:hover {
-    background-color: var(--accent);
+    background-color: var(--color-accent);
   }
 
   & .login-link {
-    color: var(--secondary)!important;
+    color: var(--color-accent)!important;
   }
 
   & .login-logo {

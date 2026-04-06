@@ -1,11 +1,9 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Info } from './Info';
 import { NodeEditor } from './NodeEditor';
 import { TreeViewContent } from '../TreeViewSidebar/TreeViewContent';
 import { useTreeViewPanel } from '../../contexts/TreeViewPanelContext';
-import { LViewPoint, LPointerTargetable, Pointer } from '../../joiner';
-import ViewpointEditorPanel from '../panels/viewpoint-editor/ViewpointEditorPanel';
 import './properties-with-tree-view.scss';
 // Import tree view styles for icon colors and tree node styling
 import '../TreeViewSidebar/tree-view-sidebar.scss';
@@ -34,51 +32,7 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     const advanced = useSelector((state: any) => state.advanced);
     const [nodeOpen, setNodeOpen] = useState(false);
 
-    // --- Viewpoint editor mode switching ---
-    const [sidebarMode, setSidebarMode] = useState<'normal' | 'viewpoint-editor'>('normal');
-    const [editingViewpoint, setEditingViewpoint] = useState<LViewPoint | null>(null);
-
-    const openViewpointEditor = useCallback((viewpoint: LViewPoint) => {
-        setEditingViewpoint(viewpoint);
-        setSidebarMode('viewpoint-editor');
-        // Notify toolbar about viewpoint editor state
-        window.dispatchEvent(new CustomEvent('jjodel:viewpoint-editor-state', {
-            detail: { active: true, viewpointName: viewpoint.name || 'Unnamed', viewpointType: (viewpoint as any).type || 'syntax' },
-        }));
-    }, []);
-
-    const closeViewpointEditor = useCallback(() => {
-        setSidebarMode('normal');
-        setEditingViewpoint(null);
-        window.dispatchEvent(new CustomEvent('jjodel:viewpoint-editor-state', {
-            detail: { active: false },
-        }));
-    }, []);
-
-    // Listen for external events to open viewpoint editor (e.g., from dashboard P7)
-    useEffect(() => {
-        const handler = (e: Event) => {
-            const { viewpointId } = (e as CustomEvent).detail || {};
-            if (!viewpointId) return;
-            try {
-                const lVP = LPointerTargetable.fromPointer(viewpointId as Pointer) as LViewPoint | undefined;
-                if (lVP && (lVP as any).className) {
-                    openViewpointEditor(lVP);
-                }
-            } catch {
-                console.warn('[PropertiesWithTreeView] Could not resolve viewpoint:', viewpointId);
-            }
-        };
-        window.addEventListener('jjodel:openViewpointEditor', handler);
-        return () => window.removeEventListener('jjodel:openViewpointEditor', handler);
-    }, [openViewpointEditor]);
-
-    // Listen for close viewpoint editor from toolbar back button
-    useEffect(() => {
-        const handler = () => closeViewpointEditor();
-        window.addEventListener('jjodel:closeViewpointEditor', handler);
-        return () => window.removeEventListener('jjodel:closeViewpointEditor', handler);
-    }, [closeViewpointEditor]);
+    // TODO: redirect to panels/viewpoint-editor
 
     // Get tree view state from context
     const {
@@ -102,16 +56,6 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     // For non-tab modes, just render Info without the split
     if (mode !== 'tab') {
         return <Info mode={mode} />;
-    }
-
-    // --- Viewpoint editor mode ---
-    if (sidebarMode === 'viewpoint-editor' && editingViewpoint) {
-        return (
-            <ViewpointEditorPanel
-                viewpoint={editingViewpoint}
-                onClose={closeViewpointEditor}
-            />
-        );
     }
 
     // Right panel visibility is controlled by CSS via body[data-editor-type].

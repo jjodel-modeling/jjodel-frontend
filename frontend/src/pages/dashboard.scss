@@ -400,6 +400,18 @@
     background-color: #f8fafc;
   }
 
+  /* Dock wrapper — fills the grid cell next to LeftBar */
+  .project-dock-wrapper {
+    overflow: hidden;
+    height: 100%;
+    min-height: 0;
+
+    /* Override Dock's inline height: 100vh to fit grid cell */
+    > div {
+      height: 100% !important;
+    }
+  }
+
   /* ============================================
      DASH CONTENT AREA
      ============================================ */
@@ -996,6 +1008,109 @@ project-card .tip {
         opacity: 0.9;
       }
     }
+  }
+
+  /* ---- State B: Project sidebar ---- */
+
+  &.leftbar--project {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-tertiary);
+    padding: var(--space-3) var(--space-4) var(--space-1);
+    margin-top: var(--space-2);
+  }
+
+  .project-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+
+    &__name {
+      font-size: var(--text-sm);
+      font-weight: var(--font-semibold);
+      color: var(--color-text-primary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+  }
+
+  .status-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    color: #fff;
+    padding: 1px 6px;
+    border-radius: 8px;
+    line-height: 1.4;
+    flex-shrink: 0;
+  }
+
+  .modified-indicator {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 11px;
+    color: var(--color-accent);
+    padding: 0 var(--space-4) var(--space-1);
+
+    .bi-circle-fill {
+      font-size: 6px;
+    }
+  }
+
+  .item--muted {
+    color: var(--color-text-tertiary);
+    font-size: 12px;
+
+    .bi { color: var(--color-text-tertiary); }
+
+    &:hover {
+      color: var(--color-text-secondary);
+      .bi { color: var(--color-text-secondary); }
+    }
+  }
+
+  .item--danger {
+    color: var(--color-error);
+
+    .bi { color: var(--color-error); }
+
+    &:hover {
+      background-color: rgba(239, 68, 68, 0.08);
+      color: var(--color-error);
+      .bi { color: var(--color-error); }
+    }
+  }
+
+  .item-count {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--color-text-tertiary);
+    background: var(--color-bg-secondary);
+    padding: 0 6px;
+    border-radius: 8px;
+    line-height: 1.6;
+  }
+
+  .sidebar-spacer {
+    flex: 1;
+  }
+
+  .sidebar-actions {
+    border-top: 1px solid var(--color-border-primary);
+    padding-top: var(--space-2);
+    margin-top: var(--space-2);
   }
 }
 

@@ -465,18 +465,15 @@ function ProjectCatalog(props: ProjectProps) {
                 return (!vp ? <div key={name||'error_'+vp}>errorvp: {vp + ''}</div> :
                     <div className="row data viewpoint" key={name}>
                         <div className={'col-4'} style={{ cursor: 'pointer' }} onClick={() => {
-                            window.dispatchEvent(new CustomEvent('jjodel:openViewpointEditor', {
-                                detail: { viewpointId: vp.id },
-                            }));
+                            // TODO: redirect to panels/viewpoint-editor
+                            DockManager.openViewpoint(vp);
                         }}><ElementBadge type="viewpoint" /> {name}</div>
                         <div className={'col-2 artifact-type'}>Viewpoint</div>
                         <div className={'buttons'}>
                             <CommandBar noBorder={true} style={{marginBottom: '0'}}>
                                 <Btn icon={'open'} tip={'Open viewpoint'} action={() => {
-                                    // Navigate to metamodel tab and open viewpoint editor
-                                    window.dispatchEvent(new CustomEvent('jjodel:openViewpointEditor', {
-                                        detail: { viewpointId: vp.id },
-                                    }));
+                                    // TODO: redirect to panels/viewpoint-editor
+                                    DockManager.openViewpoint(vp);
                                 }}/>
                                 <Btn icon={'minispace'}/>
                                 <Btn icon={'copy'} action={e => vp.duplicate()} tip={'Duplicate viewpoint'}/>
@@ -563,7 +560,17 @@ function ProjectDashboard(props: DashProps): any {
             </>
         </Try>
         <Try><Navbar /></Try>
-        <Try><Dock /></Try>
+        <div className="dashboard-container two-column">
+            <LeftBar active={'Project'} project={project} />
+            <div className="project-dock-wrapper">
+                <Try><Dock /></Try>
+            </div>
+            {/* TODO: Add contextual RightPanel for project view with:
+                - Overview: Rev, creation date, owner
+                - Quick Actions: "View Megamodel", "New Metamodel"
+                - Recent Activity: project-specific feed
+                Requires RightPanel to accept a mode/context prop. */}
+        </div>
         <Try><StatusBar /></Try>
     </>);
 }

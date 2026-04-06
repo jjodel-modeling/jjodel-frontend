@@ -177,10 +177,10 @@
         }
 
         &.active {
-            color: var(--accent);
+            color: var(--color-accent);
 
             > i {
-                color: var(--accent);
+                color: var(--color-accent);
             }
         }
     }

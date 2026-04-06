@@ -794,17 +794,17 @@
   }
   .header {
     font-size: 1.2em;
-    color: var(--bg-4);
+    color: var(--color-text-tertiary);
     margin-bottom: 6px;
   }
   .data {
     font-size: 1.2em;
-    color: var(--color);
+    color: var(--color-text-primary);
     padding: 4px 8px;
     cursor: pointer;
     &:hover {
-      color: var(--bg-5);
-      background-color: var(--bg-3);
+      color: var(--color-text-secondary);
+      background-color: var(--color-border-primary);
       border-radius: 4px;
       transition: color, background-color 0.3s;
     }
@@ -817,7 +817,7 @@
 
   input[type=text] {
     margin-left: 4px!important;
-    border-radius: var(--radius);
+    border-radius: var(--radius-sm);
     outline: none;
     font-size: 1rem;
   }
@@ -826,9 +826,9 @@
     padding: 0!important;
     margin-left: 4px!important;
     border: none;
-    background-color: var(--bg-2-5);
+    background-color: var(--color-text-tertiary);
     padding: 12px 10px 10px 10px!important;
-    border-radius: var(--radius);
+    border-radius: var(--radius-sm);
     outline: none;
     font-size: 1rem;
   }
@@ -837,9 +837,9 @@
     padding: 0!important;
     margin-left: 4px!important;
     border: none;
-    background-color: var(--bg-2-5);
+    background-color: var(--color-text-tertiary);
     padding: 20px!important;
-    border-radius: var(--radius);
+    border-radius: var(--radius-sm);
     outline: none;
   }
 
@@ -857,8 +857,8 @@
   & .legenda {
     margin-top: 80px;
     width: calc(100% - 20px);
-    background-color: var(--bg-2);
-    border-radius: var(--radius);
+    background-color: var(--color-bg-tertiary);
+    border-radius: var(--radius-sm);
     padding: 10px;
 
     & h1 {

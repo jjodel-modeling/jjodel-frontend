@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
     LModel,
     LProject,
@@ -171,9 +172,11 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     const [showProjectMenu, setShowProjectMenu] = useState(false);
     const projectMenuRef = useRef<HTMLDivElement>(null);
 
-    // Section navigator — active section tracking
-    const [activeSection, setActiveSection] = useState('metamodels');
-    const mainContentRef = useRef<HTMLDivElement>(null);
+    // Section from URL search params (driven by LeftBar sidebar)
+    const [searchParams] = useSearchParams();
+    const currentSection = (searchParams.get('section') || 'metamodels') as
+        'metamodels' | 'models' | 'transformations' | 'viewpoints' | 'documentation';
+
     const [showShareModal, setShowShareModal] = useState(false);
     const [showMegamodelModal, setShowMegamodelModal] = useState(false);
 
@@ -298,27 +301,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         }
     }, [showProjectMenu]);
 
-    // IntersectionObserver for section navigator active state
-    useEffect(() => {
-        const sectionIds = ['metamodels', 'models', 'transformations', 'viewpoints', 'documentation'];
-        const observer = new IntersectionObserver(
-            (entries) => {
-                for (const entry of entries) {
-                    if (entry.isIntersecting && entry.target.id) {
-                        setActiveSection(entry.target.id.replace('section-', ''));
-                    }
-                }
-            },
-            { threshold: 0.3, root: mainContentRef.current }
-        );
-
-        sectionIds.forEach(id => {
-            const el = document.getElementById(`section-${id}`);
-            if (el) observer.observe(el);
-        });
-
-        return () => observer.disconnect();
-    }, []);
+    // IntersectionObserver removed — section is now driven by URL ?section= param via LeftBar sidebar
 
     // Focus rename input when renaming starts
     useEffect(() => {
@@ -474,14 +457,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         }
     }, [clearDirty]);
 
-    // Section navigator scroll handler
-    const scrollToSection = useCallback((sectionId: string) => {
-        const el = document.getElementById(`section-${sectionId}`);
-        if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            setActiveSection(sectionId);
-        }
-    }, []);
+    // scrollToSection removed — section navigation is now URL-based via LeftBar sidebar
 
     // Download entire project as JSON
     const handleDownloadProject = useCallback(() => {
@@ -879,20 +855,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     };
 
     const handleOpenViewpoint = async (vp: LViewPoint) => {
-        // Open the first metamodel tab, then activate the ViewpointEditorPanel in the sidebar
-        const mm = metamodels[0];
-        if (mm) {
-            await DockManager.open2(mm);
-            // Small delay to ensure PropertiesWithTreeView is mounted and listening
-            setTimeout(() => {
-                window.dispatchEvent(new CustomEvent('jjodel:openViewpointEditor', {
-                    detail: { viewpointId: vp.id },
-                }));
-            }, 150);
-        } else {
-            // Fallback: no metamodel available, open old viewpoint workbench
-            DockManager.openViewpoint(vp);
-        }
+        // TODO: redirect to panels/viewpoint-editor
+        DockManager.openViewpoint(vp);
     };
 
     const handleDuplicateViewpoint = (vp: LViewPoint) => {
@@ -925,19 +889,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         });
         setShowNewViewpointDialog(false);
 
-        // Open the new viewpoint in the sidebar editor
-        const mm = metamodels[0];
-        if (mm) {
-            DockManager.open2(mm).then(() => {
-                setTimeout(() => {
-                    window.dispatchEvent(new CustomEvent('jjodel:openViewpointEditor', {
-                        detail: { viewpointId: dVp.id },
-                    }));
-                }, 150);
-            });
-        } else {
-            DockManager.openViewpoint(dVp);
-        }
+        // TODO: redirect to panels/viewpoint-editor
+        DockManager.openViewpoint(dVp);
     };
 
     // Transformation handlers
@@ -1600,14 +1553,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         }
     };
 
-    // Section definitions for the sidebar navigator
-    const sections = [
-        { id: 'metamodels', label: 'Metamodels', iconLetter: 'M', iconClass: 'list-card__icon--mm', count: metamodels.length, group: 'structure' },
-        { id: 'models', label: 'Models', iconLetter: 'm', iconClass: 'list-card__icon--model', count: models.length, group: 'structure' },
-        { id: 'transformations', label: 'Transforms', iconLetter: '⇄', iconClass: 'list-card__icon--transformation', count: transformations.length, group: 'transformation' },
-        { id: 'viewpoints', label: 'Viewpoints', iconLetter: 'V', iconClass: 'list-card__icon--vp', count: viewpoints.length, group: 'perspectives' },
-        { id: 'documentation', label: 'Docs', iconLetter: 'D', iconClass: 'list-card__icon--docs', count: 0, group: 'perspectives' },
-    ];
+    // Section definitions removed — navigation is now in LeftBar sidebar
 
     const versionList = store.getState().version.conversionList;
     return (
@@ -1751,40 +1697,11 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             </div>
 
             <div className="project-editor__body">
-                {/* Section Navigator Sidebar */}
-                <nav className="section-nav">
-                    {sections.map((sec, i) => (
-                        <React.Fragment key={sec.id}>
-                            {i > 0 && sections[i - 1].group !== sec.group && (
-                                <div className="section-nav__divider" />
-                            )}
-                            <button
-                                className={`section-nav__item ${activeSection === sec.id ? 'section-nav__item--active' : ''}`}
-                                onClick={() => scrollToSection(sec.id)}
-                            >
-                                <span className={`section-nav__icon ${sec.iconClass}`}>
-                                    {sec.iconClass
-                                        ? <i className={`bi ${sec.iconClass}`} />
-                                        : sec.iconLetter
-                                    }
-                                </span>
-                                <span className="section-nav__label">{sec.label}</span>
-                                {sec.count > 0 && (
-                                    <span className="section-nav__count">({sec.count})</span>
-                                )}
-                            </button>
-                        </React.Fragment>
-                    ))}
-                </nav>
-
-                {/* Main scrollable content */}
-                <div className="project-editor__main" ref={mainContentRef}>
-
-            {/* Group 1: Structure (Metamodels + Models) */}
-            <div className="section-group section-group--structure">
-              <span className="section-group__label">Structure</span>
+                {/* Main content — single section driven by URL ?section= param */}
+                <div className="project-editor__main">
 
             {/* Metamodels Section */}
+            {currentSection === 'metamodels' && (
             <div className="project-section" id="section-metamodels">
                 <SectionHeader
                     title="METAMODELS"
@@ -1930,8 +1847,10 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     </div>
                 )}
             </div>
+            )}
 
             {/* Models Section */}
+            {currentSection === 'models' && (
             <div className="project-section" id="section-models">
                 <div className="project-section-header" ref={metamodelMenuRef}>
                     <h2 className="project-section-header__title">
@@ -2090,24 +2009,10 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     </div>
                 )}
             </div>
-
-            </div>{/* end section-group--structure */}
-
-            {/* TODO: [cleanup] Environment Generation section removed from dashboard UI.
-                Remove environment generation from:
-                - Model types/interfaces (EnvGenConfigSummary, etc.)
-                - API/service layer (EnvGenPersistence, EnvGenPromptBuilder)
-                - SCSS styles (.list-card__icon--envgen, .envgen-pulse)
-                - State management (showEnvGenWizard, envGenConfigs, editingEnvGenId)
-                - EnvGenWizardModal component usage below
-                - Navbar "Environment Generation" menu entry
-            */}
-
-            {/* Group 2: Transformation */}
-            <div className="section-group section-group--transformation">
-              <span className="section-group__label">Transformation</span>
+            )}
 
             {/* Transformations Section */}
+            {currentSection === 'transformations' && (
             <div className="project-section" id="section-transformations">
                 <SectionHeader
                     title="TRANSFORMATIONS"
@@ -2132,14 +2037,10 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     />
                 )}
             </div>
-
-            </div>{/* end section-group--transformation */}
-
-            {/* Group 3: Perspectives (Viewpoints + Documentation) */}
-            <div className="section-group section-group--perspectives">
-              <span className="section-group__label">Perspectives</span>
+            )}
 
             {/* Viewpoints Section */}
+            {currentSection === 'viewpoints' && (
             <div className="project-section" id="section-viewpoints">
                 <SectionHeader
                     title="VIEWPOINTS"
@@ -2218,13 +2119,14 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     </div>
                 )}
             </div>
+            )}
 
             {/* Documentation Section */}
+            {currentSection === 'documentation' && (
             <div id="section-documentation">
                 <DocumentationSection project={project} />
             </div>
-
-            </div>{/* end section-group--perspectives */}
+            )}
 
                 </div>{/* end project-editor__main */}
             </div>{/* end project-editor__body */}

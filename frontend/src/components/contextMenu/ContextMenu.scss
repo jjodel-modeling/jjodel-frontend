@@ -74,7 +74,7 @@
       margin: 0;
 
       &> hr {
-        color: var(--color)!important;
+        color: var(--color-text-primary)!important;
       }
 
       & .properties-tab {
@@ -89,7 +89,7 @@
         &>h1 {
           font-size: 1.2rem;
           font-weight: var(--font-semibold);
-          color: var(--color);
+          color: var(--color-text-primary);
           margin-top: 0 !important;
           margin-bottom: 0 !important;
           padding-left: 0 !important;
@@ -109,7 +109,7 @@
         &>h2 {
           font-size: 0.9rem;
           font-weight: var(--font-semibold);
-          color: var(--color);
+          color: var(--color-text-primary);
           margin-top: 0 !important;
           margin-bottom: 0 !important;
         }
@@ -156,16 +156,16 @@
 
         & .item {
           width: 100%;
-          border: 1px solid var(--bg-2-5) !important;
+          border: 1px solid var(--color-text-tertiary) !important;
           padding: 0.5rem  !important;
           margin-bottom: 0.5rem !important;
-          border-radius: var(--radius);
+          border-radius: var(--radius-sm);
           
           & .inline {
-            background-color: var(--bg-2);
+            background-color: var(--color-bg-tertiary);
             clear: both;
             padding: 0.5rem;
-            border-radius: var(--radius);
+            border-radius: var(--radius-sm);
             margin-bottom: 0.5rem;
             margin-top: 0.5rem;
           }
@@ -179,7 +179,7 @@
         width: 20px;
         height: 20px;
         cursor: pointer;
-        background: var(--bg-2-5);
+        background: var(--color-text-tertiary);
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -187,21 +187,21 @@
 
         &:hover {
 
-          color: var(--accent) !important;
+          color: var(--color-accent) !important;
         }
 
         &::before {
           content: '\F62A';
           font-family: 'bootstrap-icons';
           font-size: 1.6em;
-          color: var(--color);
+          color: var(--color-text-primary);
         }
       }
     }
 }
 
 .edit-panel.dark {
-  background: var(--color);
+  background: var(--color-accent);
   color: white!important;
 }
 

@@ -99,15 +99,15 @@
         height: 1lh;
         border-radius: 100%;
         text-align: center;
-        outline: 1px solid var(--color);
+        outline: 1px solid var(--color-accent);
         transform-origin: center;
         // outline-offset: 1px;
-        color: var(--color);
+        color: var(--color-text-primary);
         content: var(--content);
       }
       &:hover:before{
         color: white;
-        background-color: var(--color);
+        background-color: var(--color-accent);
         transform: translateX(calc(-100% - 5px)) scale(1.25);
         // scale: 1.25;
       }

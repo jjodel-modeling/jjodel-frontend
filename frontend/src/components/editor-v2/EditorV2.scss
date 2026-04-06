@@ -89,7 +89,7 @@
 
 
         &:active {
-            color: var(--accent);
+            color: var(--color-accent);
         }
     }
 
@@ -252,12 +252,12 @@
 
     &.active {
         background: var(--accent-muted);
-        color: var(--accent);
+        color: var(--color-accent);
     }
 
     &.danger:hover:not(:disabled) {
         background: var(--danger-bg);
-        color: var(--danger);
+        color: var(--color-error);
     }
 
     &:disabled {
@@ -521,7 +521,7 @@
 
     &:active {
         background: var(--accent-muted);
-        color: var(--accent);
+        color: var(--color-accent);
     }
 }
 
@@ -596,7 +596,7 @@
 
         i {
             font-size: 16px;
-            color: var(--accent);
+            color: var(--color-accent);
         }
 
         &--member {
@@ -676,7 +676,7 @@
 
     .react-flow__nodesselection-rect {
         background: var(--selection-bg);
-        border: 1px dashed var(--accent);
+        border: 1px dashed var(--color-accent);
     }
 }
 
@@ -775,7 +775,7 @@
 }
 
 .mm-anchor.mm-anchor--connected:hover {
-    background: var(--accent) !important;
+    background: var(--color-accent) !important;
     border-color: var(--text-primary) !important;
     transform: scale(1.3) !important;
 }
@@ -844,7 +844,7 @@
 .react-flow__handle-connecting {
     visibility: visible !important;
     opacity: 1 !important;
-    background: var(--accent) !important;
+    background: var(--color-accent) !important;
     pointer-events: all !important;
 }
 
@@ -875,12 +875,12 @@
     cursor: default;
 
     &.selected {
-        border-color: var(--accent);
+        border-color: var(--color-accent);
         box-shadow: 0 0 0 2px var(--accent-muted), 0 4px 16px var(--node-shadow-deep, rgba(0, 0, 0, 0.12));
     }
 
     &.drop-target {
-        border-color: var(--accent);
+        border-color: var(--color-accent);
         box-shadow: 0 0 0 2px var(--drop-glow), inset 0 0 16px var(--drop-inner);
     }
 
@@ -892,7 +892,7 @@
         overflow: visible;
 
         &.selected {
-            outline: 2px solid var(--accent);
+            outline: 2px solid var(--color-accent);
             outline-offset: 2px;
             border-radius: 4px;
         }
@@ -1312,7 +1312,7 @@
         max-width: 100px;
 
         &:focus {
-            border-color: var(--accent);
+            border-color: var(--color-accent);
         }
 
         &::selection {
@@ -1358,7 +1358,7 @@
         cursor: pointer;
 
         &:focus {
-            border-color: var(--accent);
+            border-color: var(--color-accent);
         }
 
         option {
@@ -1425,7 +1425,7 @@
         }
         &.selected {
             background: var(--accent-subtle);
-            color: var(--accent);
+            color: var(--color-accent);
             font-weight: 500;
         }
     }
@@ -1503,10 +1503,10 @@
 .viewpoint-error {
     padding: 8px 12px;
     background: var(--danger-bg);
-    color: var(--danger);
+    color: var(--color-error);
     border-radius: 6px;
     font-size: 11px;
-    border: 1px solid var(--danger);
+    border: 1px solid var(--color-error);
 }
 
 // ============================================
@@ -1652,14 +1652,14 @@
     }
 
     &.selected &__text {
-        border-color: var(--accent);
+        border-color: var(--color-accent);
         color: var(--text-primary);
     }
 
     &__input {
         font-family: var(--font-sans);
         background: var(--input-bg);
-        border: 1px solid var(--accent);
+        border: 1px solid var(--color-accent);
         color: var(--input-text);
         font-size: 9px;
         padding: 1px 4px;
@@ -1711,7 +1711,7 @@
 // ============================================
 
 .react-flow__connection-line {
-    stroke: var(--accent);
+    stroke: var(--color-accent);
     stroke-width: 2;
     stroke-dasharray: 5 5;
 }
@@ -2108,7 +2108,7 @@
         transition: all 0.15s;
 
         &:hover {
-            color: var(--danger);
+            color: var(--color-error);
             background: var(--danger-bg);
         }
     }
@@ -2128,7 +2128,7 @@
         transition: all 0.15s;
 
         &:hover {
-            color: var(--accent);
+            color: var(--color-accent);
             background: var(--accent-subtle);
         }
     }
@@ -2356,7 +2356,7 @@
     transition: all 0.15s;
 
     &:hover {
-        color: var(--accent);
+        color: var(--color-accent);
         background: var(--accent-subtle);
     }
 }
@@ -2541,7 +2541,7 @@
     transition: all 0.15s;
 
     &:hover {
-        color: var(--danger);
+        color: var(--color-error);
         background: var(--danger-bg);
     }
 }
@@ -2628,7 +2628,7 @@
         color: var(--text-primary);
         cursor: default;
 
-        i { color: var(--accent); }
+        i { color: var(--color-accent); }
     }
 
     &:disabled {
@@ -2661,7 +2661,7 @@
     &__preview {
         font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
         font-size: 12px;
-        color: var(--accent);
+        color: var(--color-accent);
         background: var(--accent-muted);
         padding: 4px 8px;
         border-radius: 4px;
@@ -3030,7 +3030,7 @@ body.header-variant-c {
     text-align: left;
 
     &:hover {
-        border-color: var(--accent);
+        border-color: var(--color-accent);
     }
 
     &--stale {

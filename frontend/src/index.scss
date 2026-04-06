@@ -10,7 +10,7 @@ img { -webkit-user-drag: none; }
 
 body {
 
-    color: var(--color);
+    color: var(--color-text-primary);
     &,#root{
         max-width: 100vw;
         max-height: 100vh;
@@ -48,7 +48,7 @@ body {
 }
 
 .view-icons .bi.selected {
-    background-color: var(--bg-3);
+    background-color: var(--color-border-primary);
 }
 
 

@@ -11,7 +11,7 @@
   margin-bottom: 0.3em;
 
   input, select, button {
-    border-radius: var(--radius);
+    border-radius: var(--radius-sm);
     padding-left: 10px;
     border: 1px solid var(--palette-g);
     & :invalid {
@@ -79,7 +79,7 @@
 
   .color-container{
     outline: 1px solid var(--palette-g);
-    border-radius: var(--radius);
+    border-radius: var(--radius-sm);
   }
   .color-container, .suggestion-container, .value.hoverable, .value.hoverable>div{
     // background: white;
@@ -126,12 +126,12 @@
     width: 24px;
   }
   div.controls div.palette-row-container div.palette-row.path select {
-    border-radius: var(--radius);
+    border-radius: var(--radius-sm);
   }
 
   input:focus, select:focus {
-    outline-color: var(--accent);
-    border-radius: var(--radius);
+    outline-color: var(--color-accent);
+    border-radius: var(--radius-sm);
     height: var(--input-height);
     padding-left: 10px;
     padding-right: 10px;
@@ -139,7 +139,7 @@
   }
 
   textarea:focus {
-    outline-color: var(--accent);
+    outline-color: var(--color-accent);
   }
 
 
@@ -151,7 +151,7 @@
     padding: 2px 10px;
     height: var(--input-height);
     margin-left: 24px;
-    border-radius: var(--radius);
+    border-radius: var(--radius-sm);
     margin-bottom: 10px;
   }
 
@@ -160,7 +160,7 @@
   }
   // color
   button.btn-success.my-btn.btn-color {
-    background-color: var(--accent);
+    background-color: var(--color-accent);
     margin: 10px 0 20px 0;
     border-radius: 0;
     border-left: 1px solid white;
@@ -171,7 +171,7 @@
   }
   // number
   button.btn-success.my-btn.btn-number {
-    background-color: var(--accent);
+    background-color: var(--color-accent);
     margin: 10px 0 20px 0;
     border-radius: 0;
     border-left: 1px solid white;
@@ -181,7 +181,7 @@
   }
   // textual
   button.btn-success.my-btn.btn-textual {
-    background-color: var(--accent);
+    background-color: var(--color-accent);
     margin: 10px 0 20px 0;
     border-radius: 0;
     border-left: 1px solid white;
@@ -191,11 +191,11 @@
   }
   // path
   button.btn-success.my-btn.btn-path {
-    background-color: var(--accent);
+    background-color: var(--color-accent);
     margin: 10px 0 20px 0;
     border-radius: 0;
-    border-top-right-radius: var(--radius);
-    border-bottom-right-radius: var(--radius);
+    border-top-right-radius: var(--radius-sm);
+    border-bottom-right-radius: var(--radius-sm);
     border-left: 1px solid white;
   }
   button.btn-success.my-btn.btn-path::before {
@@ -216,7 +216,7 @@
 
   button.btn-success.my-btn:hover {
     cursor: pointer;
-    background-color: var(--success);
+    background-color: var(--color-success);
   }
 
   div.controls div.palette-row-container div.palette-row.path div.value.hoverable input.value{
@@ -224,7 +224,7 @@
     top: -10px!important;
     padding-top: 0!important;
     height: var(--input-height);
-    border-radius: var(--radius);
+    border-radius: var(--radius-sm);
   }
 
   div.controls div.palette-row-container div.palette-row.path div.value.hoverable div.content {
@@ -236,7 +236,7 @@
 
 
     & input {
-      border-radius: var(--radius);
+      border-radius: var(--radius-sm);
     }
   }
 
@@ -258,8 +258,8 @@
 
 
     & .suggestions {
-      border-radius: var(--radius);
-      background-color: var(--color)!important;
+      border-radius: var(--radius-sm);
+      background-color: var(--color-accent)!important;
       .suggestcontent{
         max-height: 30vh;
         overflow-y: auto;
@@ -380,7 +380,7 @@
 
   & .prefix {
     height: var(--input-height);
-    border-radius: var(--radius);
+    border-radius: var(--radius-sm);
   }
 
   
@@ -642,14 +642,14 @@
       font-size: 1em;
       margin: auto;
       padding: 0.4em 0.8em;
-      background-color: var(--color);
+      background-color: var(--color-accent);
       border: none;
 
       &:first-of-type{
         margin-left: -0.5em;
       }
       &:hover{
-        background-color: var(--color);
+        background-color: var(--color-accent);
       }
       >span, >.bi{
         margin: auto;
@@ -692,8 +692,8 @@
       }
 
     > .btn-path {
-        border-bottom-right-radius: var(--radius)!important;
-        border-top-right-radius: var(--radius)!important;
+        border-bottom-right-radius: var(--radius-sm)!important;
+        border-top-right-radius: var(--radius-sm)!important;
 
        }
   }
