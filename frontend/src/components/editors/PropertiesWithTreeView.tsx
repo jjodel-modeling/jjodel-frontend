@@ -33,7 +33,13 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     const advanced = useSelector((state: any) => state.advanced);
     const [nodeOpen, setNodeOpen] = useState(false);
 
-    // TODO: redirect to panels/viewpoint-editor
+    // When a view/viewpoint is selected in the Tree View, Info.tsx renders ViewData
+    // (with Monaco editors for Template/Style) inside the fluid Properties column.
+    // The 260px Tree View would starve it of width, so we auto-collapse the tree
+    // while a view is selected. This override is transient: when _lastSelected.view
+    // becomes falsy again, the user's manual isTreeViewVisible preference is restored
+    // without being mutated.
+    const viewSelected = useSelector((state: any) => !!state._lastSelected?.view);
 
     // Get tree view state from context
     const {
@@ -42,6 +48,9 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
         isHighlighted,
         isScriptExecuting,
     } = useTreeViewPanel();
+
+    // Effective visibility: the user's preference, suppressed while a view is selected
+    const effectiveTreeVisible = viewSelected ? false : isTreeViewVisible;
 
     // Listen for external toggle events (e.g., from keyboard shortcut)
     useEffect(() => {
@@ -65,10 +74,16 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     return (
         <div
             ref={containerRef}
-            className={`properties-with-tree-view ${isTreeViewVisible ? 'tree-visible' : 'tree-hidden'}`}
+            className={`properties-with-tree-view ${effectiveTreeVisible ? 'tree-visible' : 'tree-hidden'}${viewSelected ? ' tree-suppressed' : ''}`}
         >
-            {/* Properties Panel (Left) - FLUID */}
-            <div className="properties-panel-container">
+            {/* Properties Panel (Left) - FLUID.
+                When a view is selected, the tree is suppressed AND the 450px
+                max-width cap (from properties-with-tree-view.scss) is lifted so
+                ViewData's Monaco editors get the full right-panel width. */}
+            <div
+                className="properties-panel-container"
+                style={viewSelected ? { maxWidth: 'none' } : undefined}
+            >
                 <Info mode={mode} />
 
                 {/* NODE section — Expert mode only */}
@@ -92,36 +107,35 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                 )}
             </div>
 
-            {/* Tree View Panel (Right) - Expanded */}
-            {isTreeViewVisible ? (
-                <>
-                    {/* Tree View - FIXED WIDTH */}
-                    <div
-                        className={`tree-view-panel-container ${isHighlighted ? 'tree-view-panel-container--highlighted' : ''} ${isScriptExecuting ? 'tree-view-panel-container--executing' : ''}`}
-                        style={{ width: `${TREE_VIEW_WIDTH}px`, minWidth: `${TREE_VIEW_WIDTH}px`, maxWidth: `${TREE_VIEW_WIDTH}px` }}
-                    >
-                        <div className="tree-view-panel-header">
-                            <i className="bi bi-diagram-2" />
-                            <span>TREE VIEW</span>
-                            {isScriptExecuting && (
-                                <span className="tree-view-executing-badge">
-                                    <span className="pulse-dot" />
-                                    Executing
-                                </span>
-                            )}
-                            <button
-                                className="tree-view-toggle-btn"
-                                onClick={toggleTreeView}
-                                title="Collapse Tree View"
-                            >
-                                <i className="bi bi-chevron-right" />
-                            </button>
-                        </div>
-                        <div className="tree-view-panel-body">
-                            <TreeViewContent />
-                        </div>
+            {/* Tree View Panel: hidden entirely while a view/viewpoint is selected
+                so ViewData (Monaco editors) can use the full panel width. */}
+            {!viewSelected && (effectiveTreeVisible ? (
+                /* Tree View - FIXED WIDTH */
+                <div
+                    className={`tree-view-panel-container ${isHighlighted ? 'tree-view-panel-container--highlighted' : ''} ${isScriptExecuting ? 'tree-view-panel-container--executing' : ''}`}
+                    style={{ width: `${TREE_VIEW_WIDTH}px`, minWidth: `${TREE_VIEW_WIDTH}px`, maxWidth: `${TREE_VIEW_WIDTH}px` }}
+                >
+                    <div className="tree-view-panel-header">
+                        <i className="bi bi-diagram-2" />
+                        <span>TREE VIEW</span>
+                        {isScriptExecuting && (
+                            <span className="tree-view-executing-badge">
+                                <span className="pulse-dot" />
+                                Executing
+                            </span>
+                        )}
+                        <button
+                            className="tree-view-toggle-btn"
+                            onClick={toggleTreeView}
+                            title="Collapse Tree View"
+                        >
+                            <i className="bi bi-chevron-right" />
+                        </button>
                     </div>
-                </>
+                    <div className="tree-view-panel-body">
+                        <TreeViewContent />
+                    </div>
+                </div>
             ) : (
                 /* Tree View Panel - Collapsed */
                 <div
@@ -131,7 +145,7 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                 >
                     <i className="bi bi-chevron-left" />
                 </div>
-            )}
+            ))}
 
         </div>
     );

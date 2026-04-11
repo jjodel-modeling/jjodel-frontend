@@ -81,8 +81,8 @@ import { useTheme } from '../../services/ThemeService';
 import { getDraggedMetaclassId } from './utils/dragState';
 import { PolymetricView } from '../polymetric';
 import { createViewInWorkbench, resolveParentViewpoint } from '../../utils/lastViewpoint';
-import BottomDrawer from '../panels/BottomDrawer';
-import ElementPropertiesDrawer from '../panels/ElementPropertiesDrawer';
+// BottomDrawer import removed — bottom property drawer disabled (duplicates right Properties panel)
+// ElementPropertiesDrawer import removed — bottom drawer disabled (see BottomDrawer removal)
 
 import { JjodelEvents } from '../../events/registry';
 import './EditorV2.scss';
@@ -434,19 +434,7 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
         });
     }, []);
 
-    // ── Bottom drawer (element properties) ──
-    const [bottomDrawerOpen, setBottomDrawerOpen] = useState(false);
-    const [bottomDrawerElementName, setBottomDrawerElementName] = useState('');
-
-    const openBottomDrawer = useCallback((elementName: string) => {
-        setBottomDrawerElementName(elementName);
-        setBottomDrawerOpen(true);
-    }, []);
-
-    const closeBottomDrawer = useCallback(() => {
-        setBottomDrawerOpen(false);
-    }, []);
-
+    // Bottom drawer removed — properties editing handled by right-side dock Info panel
     // ── Singleton instance toggle ──────────────────────────────────────
     // Listens for the View menu toggle and shows/hides singleton instance
     // nodes on the M1 canvas. DVertices persist in Redux (positions preserved);
@@ -1771,13 +1759,6 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
         jjomSelection.onPaneClick();
     }, [jjomSelection]);
 
-    // Double-click node → open bottom drawer with properties
-    const onNodeDoubleClick = useCallback((_event: React.MouseEvent, node: Node) => {
-        const data = node.data as any;
-        const name = data?.label ?? data?.name ?? 'Element';
-        openBottomDrawer(name);
-    }, [openBottomDrawer]);
-
     const closeContextMenu = useCallback(() => {
         setContextMenu(null);
     }, []);
@@ -1983,14 +1964,6 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                     label: 'Duplicate',
                     icon: 'bi-copy',
                     onClick: () => duplicateNode(contextMenu.nodeId!),
-                },
-                {
-                    label: 'Properties',
-                    icon: 'bi-sliders',
-                    onClick: () => {
-                        const data = node?.data as any;
-                        openBottomDrawer(data?.label ?? 'Element');
-                    },
                 },
                 {
                     label: 'Delete',
@@ -2612,7 +2585,6 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                             onNodeContextMenu={onNodeContextMenu}
                             onEdgeContextMenu={onEdgeContextMenu}
                             onNodeClick={jjomSelection.onNodeClick}
-                            onNodeDoubleClick={onNodeDoubleClick}
                             onEdgeClick={jjomSelection.onEdgeClick}
                             onPaneClick={onPaneClick}
                             nodeTypes={nodeTypes}
@@ -2683,25 +2655,19 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                         )}
                     </div>
 
-                    {/* Bottom drawer for element properties */}
-                    <BottomDrawer
-                        isOpen={bottomDrawerOpen}
-                        onClose={closeBottomDrawer}
-                        title={`Properties: ${bottomDrawerElementName}`}
-                    >
-                        <ElementPropertiesDrawer elementName={bottomDrawerElementName} />
-                    </BottomDrawer>
+                    {/* Bottom drawer removed — right-side Info panel handles properties */}
                 </div>
 
                 {/* PropertiesPanel removed — properties editing handled by dock-based Info panel */}
 
-                {contextMenu && (
+                {contextMenu && createPortal(
                     <ContextMenu
                         x={contextMenu.x}
                         y={contextMenu.y}
                         items={getContextMenuItems()}
                         onClose={closeContextMenu}
-                    />
+                    />,
+                    document.body,
                 )}
 
                 {modelid && createPortal(

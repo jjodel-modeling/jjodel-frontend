@@ -788,7 +788,7 @@ $field-height: 28px;
   &:hover:not(:disabled) {
     background: #e2e8f0;           // slate-200
     border-color: #94a3b8;         // slate-400
-    color: #0ea5e9;                // cyan on hover
+    color: #334155;                // slate-700 (was cyan — unified to slate baseline)
   }
 
   &:active:not(:disabled) {
@@ -797,8 +797,8 @@ $field-height: 28px;
 
   &:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.3);
-    border-color: #0ea5e9;
+    box-shadow: 0 0 0 2px rgba(51, 65, 85, 0.25);   // slate-700 focus ring
+    border-color: #475569;                          // slate-600
   }
 
   &:disabled {
@@ -1604,7 +1604,7 @@ $field-height: 28px;
     &:hover:not(:disabled) {
       background: #334155;         // slate-700
       border-color: #64748b;       // slate-500
-      color: #0ea5e9;              // cyan on hover
+      color: #e2e8f0;              // slate-200 (was cyan — unified to slate baseline)
     }
 
     &:active:not(:disabled) {
@@ -1612,8 +1612,8 @@ $field-height: 28px;
     }
 
     &:focus-visible {
-      box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.4);
-      border-color: #0ea5e9;
+      box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.35);   // slate-400 focus ring
+      border-color: #94a3b8;                             // slate-400
     }
   }
 

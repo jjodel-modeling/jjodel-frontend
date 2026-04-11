@@ -1,6 +1,10 @@
 import React, { useCallback } from 'react';
 import { LViewPoint } from '../../../../joiner';
 import { ViewpointType, getViewpointType } from '../../../../view/viewPoint/viewpoint';
+// Self-import the stylesheet so .wp-type-segmented + .wp-field + .workbench-properties
+// render correctly even when this component is mounted outside WorkbenchProperties
+// (e.g., directly from Info.tsx's view-branch).
+import './properties.scss';
 
 interface ViewpointPropertiesProps {
     viewpoint: LViewPoint;

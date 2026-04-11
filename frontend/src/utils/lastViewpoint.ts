@@ -6,6 +6,7 @@
 
 import { DPointerTargetable, DViewElement, LProject, LViewPoint, SetFieldAction, SetRootFieldAction, Defaults } from '../joiner';
 import { toast } from '../components/Toast/toastDispatch';
+import { JjodelEvents } from '../events/registry';
 
 let lastEditedViewpointId: string | null = null;
 let lastEditedViewpointName: string | null = null;
@@ -178,6 +179,11 @@ export function createViewInWorkbench(elementId: string, elementName: string, cl
     }
 
     toast.success(`"${viewName}" added to "${vpName}"`, 'View created');
+
+    // Notify ViewpointEditorRoot (and any other listener) that a view was created
+    setTimeout(() => {
+        window.dispatchEvent(new CustomEvent(JjodelEvents.VIEW_CREATED, { detail: { viewpointId: dViewpoint.id } }));
+    }, 300);
 
     return true;
 }

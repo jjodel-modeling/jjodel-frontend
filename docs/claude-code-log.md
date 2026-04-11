@@ -1,5 +1,329 @@
 # Claude Code Session Log
 
+## 2026-04-11 — style: restyle aggressivo Apply to tab
+**Prompt**: allineare Apply to alla baseline Properties — 9 fix specifici (Name input, Is Exclusive card, Priority, Preferred appearance, Applicable to chip, Viewpoint/Parent view, OCL/JS editor colors, spacing, labels)
+**File toccati**: `frontend/src/components/editors/views/data/viewapplyto.scss` (rewrite completo, ~550 righe → ~470 righe)
+**Esito**: ✅ build ok (80 errori TS pre-esistenti invariati, 491 test passing, `vite build` 41.60s, zero regressioni). **Nessuna modifica TSX** — tutti i fix applicati tramite CSS overrides.
+
+**Fix applicati (9)**:
+- **P1 — Name**: input ora 28px height / 12px font / 4px radius / 1px #e2e8f0 border (era 40px/14px/6px) con focus slate (era rgba(71,85,105,...) che sembrava cyan-ish con `var(--color-accent, #475569)` — ora #334155 solid come baseline)
+- **P2 — Is Exclusive**: rimossa completamente la "card" attorno — `.form-field--toggle` era `padding: 12px 16px; background: white; border: 1px solid; border-radius: 6px; margin-bottom: 16px` → ora `flex-row; padding: 5px 0; no background; no border; no radius`. La `.toggle-description` ("This view is exclusive to its viewpoint") è `display: none` per matchare le righe FLAGS semplici delle Properties (Abstract, Final, ecc.)
+- **P3 — Priority**: stesso trattamento input (28px/12px/4px/slate focus)
+- **P4 — Preferred appearance**: select con freccia dropdown slate invece di cyan, stesse dimensioni
+- **P5 — Applicable to (react-select)**: `.[class*="-control"]` border da transparent/0px → `1px solid #e2e8f0`, border-radius 4px, focus state `#334155` con shadow slate. Chip tags: `#f1f5f9 bg` + `#e2e8f0 border` + `#1e293b text` (era slate-700 solid, ora più light e leggibile). Chip X da red hover → `#64748b subtle hover`. Indicator caret 12px → slate-400, hover → slate-500
+- **P6 — Viewpoint / Parent view**: stessi select generici, nessun teal/cyan, `color: #1e293b` sul text e `background: white` + readonly `#f8fafc/#64748b`
+- **P7 — OCL Editor / JS Editor**: `.section-header--collapsible` padding 12px → 8px, `.section-header__left i` color → `#94a3b8` (slate-400), `.section-header__right i` color → `#94a3b8` con hover `#334155`, `.section-title` uppercase 11px #64748b (era già ok)
+- **P8 — Spacing**: container padding da `16px` (con margin `8px`) → `8px 12px` con margin `0`. `.form-field` margin-bottom `16px` → `0` con `padding: 5px 0` e `gap: 4px` interno (matches `info-improvements.scss:1084`). Tra sezioni (es. OCL Editor) `.section-header--collapsible` ha `margin-top: 12px`
+- **P9 — Labels**: `.form-label` font-weight `500` → `400`, color `var(--color-text-secondary, #334155)` → `#64748b` hardcoded (slate-500 — matches baseline `info-improvements.scss:1111`), font-size `13px` confermato
+
+**Toggle switch**: `.apply-to-toggle` active state era `linear-gradient(135deg, #64748b 0%, #475569 100%)` → ora `#334155` solid (matches `.properties-toggle.active` in `info-improvements.scss:419`). Aggiunto hover:not(.active) `#94a3b8` (come Properties). Focus shadow allineato a `rgba(51, 65, 85, 0.15)`. Dimensioni 36×20 + thumb 16×16 invariate (erano già corrette).
+
+**Dark mode**: completamente riscritto con stessi token slate della baseline (era mix di `var()` con fallback che a volte non matchavano). Il toggle dark ora usa slate-600→slate-400 per inactive→active.
+
+**Non toccato**:
+- `InfoData.tsx` — zero modifiche, mantengo la struttura di className esistente
+- `info.scss` / `info-improvements.scss` — baseline intatta
+- `.apply-to-header` rule — già OK (se mai renderizzata)
+- `section.page-root` legacy rule — lasciata per retrocompatibilità con altri percorsi
+- Hover state della `.section-header--collapsible` rimosso (era `rgba(0,0,0,0.02)` che non matchava il comportamento hover discreto di Properties)
+
+**Key insight**: la baseline Properties è molto più compatta di quanto Apply to fosse (28px vs 40px inputs, 12px vs 14px font, 4px vs 6px radius, 5px vs 16px row padding). L'aspetto salmon/arancio del Name field era dovuto al mix tra `var(--color-text-primary, #0f172a)` e qualche global style sovrastante con colori warm — risolto forzando `color: #1e293b !important`.
+
+## 2026-04-11 — style: uniformare sub-tab viewpoint editor alla baseline Properties
+**Prompt**: allineare stile Apply to/Template/Style/Events/Options al pannello Properties
+**File toccati** (solo SCSS, nessun TSX modificato):
+- `frontend/src/components/editors/views/data/viewapplyto.scss` — **Apply to**:
+  - `.section-title` color da `var(--color-text-tertiary)` → `var(--color-text-secondary)` (baseline)
+  - `.form-field [class*="-option--is-selected"]`: rimosso cyan `#0ea5e9` + `rgba(14,165,233,...)` → slate `#334155` + `rgba(51,65,85,...)`
+- `frontend/src/components/editors/views/data/palette-data.scss` — **Style**:
+  - `.marker-edit-btn:hover color` light mode: `#0ea5e9` → `#334155` (slate-700)
+  - `.marker-edit-btn:focus-visible` light mode: shadow da cyan → slate-600, border-color da `#0ea5e9` → `#475569`
+  - `.marker-edit-btn:hover color` dark mode: `#0ea5e9` → `#e2e8f0` (slate-200)
+  - `.marker-edit-btn:focus-visible` dark mode: shadow da cyan → slate-400, border-color da `#0ea5e9` → `#94a3b8`
+  - `.style-section-header .section-title` già allineato (no change)
+  - Lasciato `.text i { color: #10b981 }` + gli altri color type icons (number/color/path) — sono type indicator semantici, NON section header
+- `frontend/src/components/editors/views/data/events-tab.scss` — **Events**:
+  - `.events-section-title` font-size da `13px` → `11px`; letter-spacing allineato a `0.5px`; colore hardcoded `#475569/#1e293b` da variant `--default/--custom` consolidato in `var(--color-text-secondary)` (unificato — niente più distinzione cromatica default vs custom)
+  - Icone `.events-section-title i` da `16px` → `14px`
+  - `.events-add-btn:hover color`: `#0ea5e9` → `#334155`
+  - Empty state già ok (`1px dashed #e2e8f0` — non blu)
+- `frontend/src/components/editors/views/data/viewoptions.scss` — **Options**:
+  - Rimosse variabili dead code `$color-cyan-500: #06b6d4` + `$color-cyan-600: #0891b2` (dichiarate ma mai usate)
+  - Section header già allineato (no change: `font-size: 11px`, `color: $color-text-secondary = #64748b`, uppercase, letter-spacing)
+- `frontend/src/components/editors/info.scss` — **Template**:
+  - Aggiunta regola scoped `.template-tab .jj-editor-title` per allineare i label "Constants" e "Observed properties" al pattern baseline: `11px` (da 14px), uppercase, letter-spacing 0.5px, color `var(--color-text-secondary)`. La regola è scoped a `.template-tab` per non rompere altri usi di `.jj-editor-title` (es. FunctionComponent in altri contesti) — la regola base in `FunctionComponent.scss` rimane invariata
+
+**Non toccati** (volontariamente):
+- `TemplateData.tsx` — inline style su `<HRule style={{paddingTop: '40px!important', display: 'block'}}/>`: segnalato come inline style residuo ma non migrato (sarebbe una regola SCSS per `.template-tab .HRule` che aggiungerebbe accoppiamento; lasciato come micro debt)
+- `CustomData.tsx` — inline style `style={{paddingTop: '9px'}}` sul CommandBar: simile, micro debt lasciato in place
+- `PaletteData.tsx` — diversi inline styles tramite tinycolor per background dinamici dei color picker: **NON migrabili** in SCSS (calcolati a runtime per colori dinamici)
+- `FunctionComponent.scss` — regola base `.jj-editor-title` lasciata invariata (riutilizzo in altri contesti)
+- Icon type colors in palette-data.scss (`#10b981 #3b82f6 #f59e0b #8b5cf6` per text/number/path/color) — type indicator semantici, non header; task specificava "NO teal/colori forti per **header sezioni**"
+- Toggle switch in viewapplyto.scss (36×20px) vs baseline (40×22px) — lasciato come micro-variazione; entrambi hanno colore slate/bianco corretto, dimensioni leggermente diverse ma visivamente coerenti
+**Esito**: ✅ build ok (80 errori TS pre-esistenti invariati, 491 test passing, `vite build` 40.98s — SCSS compilato clean, zero regressioni)
+**Note**: **6 cyan violations eliminate** (2 in viewapplyto, 4 in palette-data, 1 in events-tab + 2 variabili dead code in viewoptions). **Section headers unificati** a 11px/uppercase/slate/0.5px letter-spacing su tutti e 5 i tab. **Events tab** era l'unico con section header a 13px — ora allineato. Baseline Properties in `info.scss:509` usa 12px per `.properties-section-title` — leggera divergenza accettata (il task chiedeva 11px per i sub-tab). **No TSX modifiche** — constraint rispettato. **No breaking changes** alle Properties normali (classe/attributo/reference) — le regole modificate sono scoped ai sub-tab.
+
+## 2026-04-11 — fix: batch funzionalità viewpoint (6 fix)
+**Prompt**: rimuovi sidebar duplicata editor, key ViewData, ViewpointProperties click, back button, dashboard click, cleanup dead code
+**File toccati**:
+- `frontend/src/pages/components/Navbar.tsx` — Fix 1: 2 call sites `TabDataMaker.metamodel/model + DockManager.open('models', tab)` → `DockManager.open2(lModel)` (per emettere `EDITOR_TYPE_CHANGE` e nascondere LeftBar). Rimosso import `TabDataMaker` ora inutilizzato.
+- `frontend/src/components/project/ProjectEditor.tsx` — Fix 1: 1 call site nel post-transformation handler `TabDataMaker.model(modelToOpen) + DockManager.open(...)` → `DockManager.open2(LModel.fromD(modelToOpen))`. Rimosso import `TabDataMaker` inutilizzato.
+- `frontend/src/components/editors/Info.tsx` — Fix 2: aggiunto `key={selectedView.id}` sia su `<ViewpointProperties>` che su `<ViewData>` nel view-branch del Properties panel, forzando il remount quando l'utente seleziona una view/viewpoint diversa nel Tree View (altrimenti i componenti interni catturano il viewID al mount e restano stale).
+- `frontend/src/components/editors/viewpoint/properties/ViewpointProperties.tsx` — Fix 3: aggiunto `import './properties.scss'`. Il file SCSS (che definisce `.wp-type-segmented`, `.wp-field`, `.workbench-properties`) era importato SOLO da `WorkbenchProperties.tsx` — ma il mio view-branch in Info.tsx rende `<ViewpointProperties>` direttamente, bypassando WorkbenchProperties, quindi il CSS non veniva mai caricato → segmented control non stilizzato. Self-import risolve.
+- `frontend/src/components/abstract/DockManager.tsx` — Fix 5: `openViewpoint()` riscritto. Prima (pre-fix): settava solo `_lastSelected.view`, inefficace se chiamato dalla dashboard (Properties panel CSS-hidden via `body[data-editor-type="summary"]`). Ora: controlla `document.body.getAttribute('data-editor-type')`; se è `'metamodel'` o `'model'` applica solo la selezione; altrimenti chiama `DockManager.open2(firstMetamodel)` per aprire il primo metamodello del progetto (via `LProject.getProject()?.metamodels?.[0]`), poi con `setTimeout(..., 200)` setta `_lastSelected.view` dopo il mount del tab e la propagazione di `EDITOR_TYPE_CHANGE`. Fallback: se non ci sono metamodelli, tenta comunque la selezione con warning.
+- **Rimossi** (Fix 6 — dead code, zero importers esterni):
+  - `frontend/src/components/editors/ViewpointWorkbench.tsx` (legacy workbench, orfano)
+  - `frontend/src/components/editors/ViewpointWorkbench.scss`
+  - `frontend/src/components/panels/viewpoint-editor/` — 23 file (ViewpointEditorRoot, ViewpointEditorPanel, EditorFullscreenModal, EditorToolbar, ViewpointEditorBreadcrumb, viewpoint-editor.scss, sections/*, tabs/*). Questi erano stati restaurati ieri da commit `5999f50c6~1` ma il routing era stato successivamente spostato al pannello destro.
+**Non toccati** (volontariamente):
+- Fix 4 (back button) — la catena `setSelectedView(undefined)` in ViewData → `clearSelection` callback in Info.tsx → `SetRootFieldAction.new('_lastSelected', {view: ''})` era già corretta dai task precedenti, verificata ma non modificata
+- Dashboard.tsx — il fix `hideLeftBar` per `'metamodel'` e `'model'` è già in place dal precedente round
+- `ViewData.tsx`, `NestedView.tsx`, `InfoData/TemplateData/PaletteData/CustomData/GenericNodeData/ComponentsTab` — tutti intatti
+- Commenti "TODO: redirect to panels/viewpoint-editor" in Dashboard.tsx/ProjectEditor.tsx — lasciati come TODO bookmark (no code impact)
+- Regola CSS `body[data-editor-type="viewpoint"]` in `abstract/style.scss:1178` — lasciata perché `MyRcDock.tsx:592` può ancora settare `editorType = 'viewpoint'` in alcuni scenari
+**Esito**: ✅ build ok (80 errori TS pre-esistenti invariati, 491 test passing, `vite build` 38.44s, zero regressioni)
+**Note**: Fix 1 è la scoperta principale — il `hideLeftBar` in Dashboard.tsx era corretto ma 3 call sites bypassavano il meccanismo chiamando `DockManager.open('models', tab)` direttamente invece di `DockManager.open2(lModel)`. Solo `open2` emette l'evento `EDITOR_TYPE_CHANGE`. Fix 2 è il remount pattern classico React per evitare stale state quando l'identità del target cambia ma il componente container rimane lo stesso. Fix 3 era un bug di import SCSS che si manifestava solo nel nuovo rendering path (ViewpointProperties dentro Info.tsx invece che dentro WorkbenchProperties). Fix 4 è stato verificato ma non modificato — già funzionante. Fix 5 sfrutta il body attribute `data-editor-type` che Dock.tsx mantiene in sync via EDITOR_TYPE_CHANGE listener. Fix 6 cleanup: ~1.5MB di codice morto rimosso (inclusi `bootstrapIconCatalog.ts` da 1.3MB). Build time invariato (rc-dock non era già importato da questo path).
+
+## 2026-04-11 — refactor: replace rc-dock DockLayout with simple React tabs in ViewData
+**Prompt**: sostituire DockLayout con tab React semplici, eliminare tutti i workaround altezza (ResizeObserver, relative+absolute, :has(), flex 1 1 0, ecc.) — rc-dock è troppo complesso per un semplice tab panel in una sidebar
+**File toccati**:
+- `frontend/src/components/editors/views/ViewData.tsx` — rewrite completo:
+  - Rimossi import `DockLayout`, `LayoutData` da `rc-dock`
+  - Rimossi import inutilizzati `PermissionViewTab`, `PermissionViewpointTab` (erano commentati nei tab ma ancora importati)
+  - Rimossi `useRef`, `useEffect`, stato `dockHeight`, `rootRef`, e tutto il ResizeObserver code
+  - Rimossa costruzione oggetto `layout: LayoutData` + variabile `tabidprefix` + funzione `id()` generatrice di id dock-specific
+  - Aggiunto tipo `TabId` (union string literal) e interfaccia `TabDescriptor`
+  - Array `tabs: TabDescriptor[]` costruito con spread conditionals (`...(isV ? [{...}] : [])`) per preservare la stessa logica isV/isVP del codice precedente
+  - Le `render` closure catturano `view.id`, `readOnly`, `viewpoints` — stesse identiche props dei componenti tab (InfoData riceve `viewID` + `viewpointsID` + `readonly`; TemplateData/PaletteData/EventsData/GenericNodeData/ComponentsTab ricevono `viewID` + `readonly`). Tutte ancora wrappate in `<Try>`.
+  - Nuovo stato `const [activeTab, setActiveTab] = useState<TabId>(tabs[0].id)` — default al primo tab (sempre 'apply-to')
+  - Fallback `activeDescriptor = tabs.find(t => t.id === activeTab) ?? tabs[0]` gestisce il caso in cui l'utente passi da una view a un viewpoint e il tab corrente non sia più disponibile
+  - JSX: `<div className="view-editor-tabs">` contiene `<div className="view-editor-tab-bar">` (con `role="tablist"` + `<button role="tab" aria-selected>`) e `<div className="view-editor-tab-content" role="tabpanel">`. Solo il contenuto del tab attivo è renderizzato (unmount degli altri, evitando memory overhead di editor Monaco non visibili).
+- `frontend/src/components/editors/views/nestedView.scss` — aggiunta sezione `VIEW EDITOR TABS` in fondo al file con 4 regole:
+  - `.view-editor-tabs { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow: hidden }`
+  - `.view-editor-tab-bar { display: flex; flex: 0 0 auto; border-bottom; padding: 0 8px; background: var(--color-bg-secondary) }`
+  - `.view-editor-tab { padding: 8px 16px; border: none; cursor: pointer; font-size: 12px; color: var(--color-text-secondary); border-bottom: 2px solid transparent; transition; &:hover; &.active { color primary + border-bottom-color accent + font-weight 500 } }`
+  - `.view-editor-tab-content { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 8px }`
+  - Tutte usano token del design system (`--color-border-primary`, `--color-bg-secondary`, `--color-text-secondary`, `--color-text-primary`, `--color-accent`) verificati in `styles/tokens/_colors-light.scss`
+**Non toccati**:
+- `InfoData.tsx`, `TemplateData.tsx`, `PaletteData.tsx`, `CustomData.tsx` (EventsData), `GenericNodeData.tsx`, `ComponentsTab.tsx` — nessun cambio, ricevono esattamente le stesse props di prima
+- `Info.tsx` — il view-branch non cambia, continua a renderizzare `<ViewData>` dentro `<section.properties-tab.properties-panel>`
+- `PropertiesWithTreeView.tsx` — invariato
+- `properties-with-tree-view.scss` e `info.scss` — le regole `:has(.view-editor-root)` del fix precedente rimangono in place, ora sono no-op harmless (non c'è più un DockLayout da vincolare) ma non hanno impatto. Se si volesse cleanup, sono in `info.scss:407-414` e `properties-with-tree-view.scss:65-80`.
+- `nestedView.scss` linee 2233-2248 — la regola `.view-editor-root .dock-layout` del fix precedente è ora dead code (no match), lasciata in place perché `NestedView.tsx` (file ancora presente ma senza importer) potrebbe teoricamente usarla in futuro
+**Esito**: ✅ build ok (80 errori TS pre-esistenti invariati, 491 test passing, `vite build` completato in 37.91s — più veloce del precedente 1m12s perché rc-dock non è più importato da questo modulo)
+**Note**: Approccio molto più semplice dei fix precedenti (ResizeObserver + pixel explicit height + :has() + flex 1 1 0 + overflow: hidden chain). rc-dock è pensato per layout dockable complessi dove l'utente può trascinare panels — overkill per un semplice tab container. React tabs con `useState` + `role="tab/tablist/tabpanel"` è più leggero, accessibile, e vincolato naturalmente dal parent via flex sizing (tutto si risolve con `flex: 1 1 auto; min-height: 0; overflow: hidden` sul `.view-editor-tabs` wrapper). Zero workaround. Il ResizeObserver e il pixel height sono spariti — non servono più perché rc-dock non c'è più. Le classi CSS (`view-editor-tabs`, `view-editor-tab-bar`, `view-editor-tab`, `view-editor-tab-content`) sono state verificate con grep: nessuna collisione preesistente.
+
+## 2026-04-10 — fix: constrain DockLayout parent overflow for proper tab behavior
+**Prompt**: overflow hidden sulla catena di container per forzare rc-dock a usare tabs (il DockLayout cresceva a 1422px perché `section.properties-tab.properties-panel` aveva `overflow: auto` che lasciava espandere `.view-editor-root`)
+**File toccati**:
+- `frontend/src/components/editors/properties-with-tree-view.scss` — aggiunta regola `&:has(.view-editor-root)` sotto `.properties-panel-container > .properties-tab, .properties-panel`: quando ViewData è presente, la section diventa `overflow: hidden; min-height: 0; flex: 1 1 0; height: auto; padding: 0`. Il `flex: 1 1 0` forza la section a prendere esattamente lo spazio flex rimanente del parent column (invece di usare `height: 100%` che era ambiguo in flex context). Il `padding: 0` lascia a ViewData il pieno spazio edge-to-edge.
+- `frontend/src/components/editors/info.scss` — aggiunta regola simmetrica `&:has(.view-editor-root)` sotto `.properties-panel` (globale, non scoped a container): override di `overflow: auto` → `overflow: hidden` e `padding: 0`. Questa regola è globale perché `.properties-panel` ha un padding default di `var(--space-3)` che va rimosso quando ViewData prende il controllo.
+**Non toccati**:
+- `ViewData.tsx` — il ResizeObserver ora misurerà l'altezza corretta del root (vincolata dal parent) e `dockHeight` sarà ragionevole
+- `PropertiesWithTreeView.tsx` — non serve modificarlo, la soluzione è pura CSS
+- `nestedView.scss` — `.view-editor-root` e `.dock-layout` hanno già le regole flex corrette dai fix precedenti
+**Esito**: ✅ build ok (80 errori TS pre-esistenti invariati, 491 test passing, vite build completato in 1m1s senza errori SCSS, `:has()` pseudo-class compila correttamente con Sass)
+**Note**: **Scope critico**: `:has(.view-editor-root)` è usato per scopare il fix SOLO quando ViewData è presente. Senza questo scope, il cambio da `overflow: auto` a `overflow: hidden` romperebbe lo scroll dei form proprietà normali (quando si seleziona una classe/attributo il form può essere molto lungo e deve scrollare). Con `:has()`, il comportamento di default `overflow: auto` rimane invariato per i form proprietà; solo quando ViewData entra nel DOM il comportamento cambia a `overflow: hidden` + flex sizing.
+
+**Perché `flex: 1 1 0` invece di `height: 100%`**: in flex column parents, `height: 100%` sui children può essere ambiguo — alcuni browser lo trattano come hint, altri come obbligatorio, altri lo ignorano se il parent è in overflow: auto. `flex: 1 1 0` è deterministico: grow=1 (prendi tutto lo spazio libero), shrink=1 (puoi rimpicciolirti), basis=0 (parti da 0). Combinato con `min-height: 0` (bypassa il default `min-height: auto` che altrimenti forzerebbe l'elemento a essere grande almeno quanto il content), la section prende ESATTAMENTE lo spazio flex rimanente.
+
+**Come la catena ora si risolve**: `.properties-panel-container` (height: 100%, flex col, overflow: hidden) → `section` (flex: 1 1 0, min-h: 0, overflow: hidden) → `.view-editor-root` (height: 100% dell'altezza risolta della section, overflow: hidden) → `ResizeObserver` misura l'altezza corretta (~600px invece di 1458px) → `dockHeight` ~564px → rc-dock usa la tab bar invece di stacked rendering.
+
+## 2026-04-10 — fix: DockLayout height via ResizeObserver (pixel measurement)
+**Prompt**: dare altezza esplicita al DockLayout, rimuovere pattern relative+absolute (che non aveva funzionato), usare approccio calc() o ResizeObserver
+**File toccati**: `frontend/src/components/editors/views/ViewData.tsx`
+**Esito**: ✅ build ok (80 errori TS pre-esistenti invariati, 491 test passing, zero regressioni)
+**Note**: Scelto l'approccio **ResizeObserver** (opzione 3 tra quelle suggerite) invece di `calc(100% - 36px)` o `calc(100vh - 200px)` perché:
+1. Più robusto: non dipende dalla catena di altezze CSS (che si era dimostrata fragile con rc-dock)
+2. Gestisce automaticamente il resize della finestra e i cambi di layout del pannello destro
+3. Più preciso: misura l'header effettivo invece di hardcodare 36px
+
+**Implementazione**:
+- Aggiunti hook `useRef`, `useState`, `useEffect` all'import React
+- `rootRef` attaccato al `<div className="view-editor-root">`
+- `dockHeight` state con default 400px (fallback prima della prima misurazione)
+- `useEffect` setup un `ResizeObserver` sul root element. Il callback misura `rootRect.height` e sottrae l'altezza effettiva di `.view-editor-header` (query via `querySelector`, fallback 36px se non trovato). Min-clamp a 100px per evitare valori degenerati.
+- Guard `typeof ResizeObserver === 'undefined'` per environment senza l'API (non dovrebbe mai scattare nel browser, ma è safe)
+- `setDockHeight(prev => prev === next ? prev : next)` evita re-render non necessari se l'altezza non cambia
+- Cleanup: `observer.disconnect()` on unmount
+- `<DockLayout>` riceve `style={{ width: '100%', height: dockHeight }}` — pixel esplicito, no percentuali, no flex
+
+**Rimosso**: il wrapper `<div style={{ position: 'relative', flex: '1 1 auto', minHeight: 0 }}>` del fix precedente (non aveva funzionato in pratica nonostante fosse il pattern "corretto" sulla carta).
+
+**Nota di design**: il fix SCSS in `nestedView.scss` (`.view-editor-root .dock-layout { flex: 1 1 auto; min-height: 0; position: relative }`) è tecnicamente ora redundant visto che il pixel height inline wins, ma rimane in place come zero-cost fallback. Se si volesse eliminarlo, è in `nestedView.scss:2233-2246` — cleanup non necessario per questo fix.
+
+## 2026-04-10 — fix: DockLayout explicit sizing via absolute positioning
+**Prompt**: wrappare DockLayout in relative+absolute per dare altezza a rc-dock (il precedente fix SCSS su `.dock-layout` non bastava perché rc-dock usa `position: absolute` internamente)
+**File toccati**: `frontend/src/components/editors/views/ViewData.tsx`
+**Esito**: ✅ build ok (80 errori TS pre-esistenti invariati, 491 test passing, zero regressioni)
+**Note**: Verificato tramite `node_modules/rc-dock/lib/DockLayout.d.ts:59` che `DockLayout` accetta una prop `style?: React.CSSProperties`. Applicato il pattern "relative wrapper + absolute child":
+```tsx
+<div style={{ position: 'relative', flex: '1 1 auto', minHeight: 0 }}>
+    <DockLayout
+        defaultLayout={layout}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+    />
+</div>
+```
+Il wrapper prende l'altezza residua via flex (sotto il `view-editor-header`), il DockLayout si incastra dentro con position absolute. Questo è il pattern standard per dare a rc-dock le dimensioni del parent senza bisogno di pixel espliciti. Il fix SCSS precedente in `nestedView.scss` (flex: 1 1 auto su `.dock-layout`) rimane in place come belt-and-suspenders — non è in conflitto perché la prop `style` sul DockLayout wins via specificity (inline style > SCSS). Default layout (`{dockbox: {mode: 'horizontal', children: []}}`) invariato. ViewData è l'unico file toccato.
+
+## 2026-04-10 — fix: ViewData full width + flex height for DockLayout
+**Prompt**: rimuovere max-width cap (450px) quando view selezionata e garantire che `.view-editor-root` > `.dock-layout` (rc-dock) abbia altezza flex corretta
+**File toccati**:
+- `frontend/src/components/editors/PropertiesWithTreeView.tsx` — **Fix 1 (width)**: aggiunto inline `style={viewSelected ? { maxWidth: 'none' } : undefined}` su `.properties-panel-container`. Sovrascrive il `max-width: 450px` della SCSS solo quando una view/viewpoint è selezionato. Transitorio: quando `_lastSelected.view` si svuota, lo style inline diventa `undefined` e la regola SCSS originale torna in vigore.
+- `frontend/src/components/editors/views/nestedView.scss` — **Fix 2 (height)**: `.view-editor-root > .dock-layout` aveva solo `flex-grow: 1` che non basta (flex-basis di default è 0%). Cambiato in `flex: 1 1 auto; min-height: 0; position: relative`. Il `min-height: 0` è cruciale per permettere al flex child di scendere sotto l'altezza del contenuto. Il `position: relative` ancora i wrapper assoluti interni di rc-dock. Anche `.view-editor-header` ora ha `flex: 0 0 auto` esplicito per garantire che non si espanda.
+**Non toccati**:
+- `ViewData.tsx`, `Info.tsx` — per vincolo del task
+- `properties-with-tree-view.scss` — `.properties-panel-container` aveva già `height: 100%; overflow: hidden` (Fix 3 non necessario)
+- `.view-editor-root` — aveva già `display: flex; flex-flow: column` (non serviva aggiungerlo)
+**Esito**: ✅ build ok (80 errori TS pre-esistenti invariati, 491 test passing, `vite build` completato in 1m12s senza errori)
+**Note**: Verificato che rc-dock renderizza `<div className="dock-layout">` (non `dock_layout` o altro) grepping `node_modules/rc-dock/lib/DockLayout.js:432`. La catena di altezze ora è: `.properties-panel-container (100%) → section.properties-tab (100%) → .view-editor-root (100% flex col) → .view-editor-header (flex: 0 0 auto) + .dock-layout (flex: 1 1 auto, min-h: 0, pos: relative) → Monaco editors riempiono lo spazio`. La catena di larghezze: `right panel (es. 700px) → .properties-panel-container (full width quando viewSelected) → ViewData`.
+
+## 2026-04-10 — fix: auto-collapse tree when view selected for full-width ViewData
+**Prompt**: Tree View si collassa quando `_lastSelected.view` è truthy, ripristina quando falsy (per dare a ViewData/Monaco editors la larghezza piena del pannello destro)
+**File toccati**: `frontend/src/components/editors/PropertiesWithTreeView.tsx`
+**Esito**: ✅ build ok (80 errori TS pre-esistenti invariati, 491 test passing, zero regressioni)
+**Note**: Aggiunto `useSelector` per leggere `state._lastSelected?.view` come booleano `viewSelected`. Computato `effectiveTreeVisible = viewSelected ? false : isTreeViewVisible` — override transitoria che NON muta lo stato `isTreeViewVisible` del context (quando l'utente deseleziona la view, la preferenza manuale del tree torna automaticamente). La rendering logic ora:
+- Se `viewSelected` → nessun tree renderizzato (nemmeno la barra collapsed da 32px), Properties panel full-width
+- Se `!viewSelected && effectiveTreeVisible` → tree panel da 260px
+- Se `!viewSelected && !effectiveTreeVisible` → barra collapsed da 32px (preferenza manuale utente)
+Aggiunta classe `tree-suppressed` al container quando viewSelected (utile per future regole CSS). Nessuna modifica a `Info.tsx`, `ViewData`, `TreeViewContent` o al context `useTreeViewPanel`. Il diagnostic log offerto nella sessione precedente non era mai stato applicato — nessun cleanup necessario.
+
+## 2026-04-10 — feat: view selection in tree shows editor sub-tabs in Properties
+**Prompt**: click view nel Tree View → Properties mostra ViewData sub-tab, click viewpoint → mostra ViewpointProperties, rimuovi tab Viewpoints separato dal pannello destro
+**File toccati**:
+- `frontend/src/components/editors/Info.tsx` — aggiunto branch di rendering precedente allo switch su `ddata?.className`: se `props.view` è un `DViewElement` → renderizza `<ViewData>`, se è un `DViewPoint` → renderizza `<ViewpointProperties>`. Aggiunti import `DViewElement`, `DViewPoint`, `LProject`, `LViewPoint`, `ViewData`, `ViewpointProperties`. Il branch legge `props.view` (già popolato da `mapStateToProps` da `state._lastSelected?.view`, ma non era mai usato prima)
+- `frontend/src/components/TreeViewSidebar/TreeViewContent.tsx` — `SubViewItem.handleClick` e `ViewpointItem.handleClick` ora settano direttamente `_lastSelected.view` via `SetRootFieldAction.new(...)` invece di chiamare `DockManager.openViewpoint()` + dispatch `SELECT_VIEW_IN_WORKBENCH`. Rimossa la logica legacy con `setTimeout`
+- `frontend/src/components/abstract/Dock.tsx` — rimosso il tab "Viewpoints" dal pannello destro: `const views = ...` eliminato, `tabs.push(views)` eliminato, import di `NestedView` rimosso. Il commento dead-code è stato ripulito (no "removed comment for removed code" per CLAUDE.md)
+- `frontend/src/components/abstract/DockManager.tsx` — `openViewpoint(vp)` riscritto: invece di `dock.updateTab('right-panel-viewpoints', ...)` ora setta `_lastSelected.view = vp.id` via `SetRootFieldAction`. Callers (Dashboard, ProjectEditor, TreeViewContent) non toccati — ricevono lo stesso comportamento API. Aggiunto import di `SetRootFieldAction` dai joiner. **CLAUDE.md**: evitato `require()` nel frontend (restituisce `{}`)
+**Non toccati**:
+- `ViewData.tsx`, `InfoData.tsx`, `TemplateData.tsx`, `PaletteData.tsx`, `CustomData.tsx` (EventsData), `GenericNodeData.tsx`, `ViewpointProperties.tsx` — tutti già funzionanti
+- `NestedView.tsx` — lasciato in place ma senza importer (il tab separato non esiste più, ma il componente potrebbe servire in futuro)
+- `panels/viewpoint-editor/` — 23 file restaurati restano in place (cleanup post-release)
+**Esito**: ✅ build ok (80 errori TS pre-esistenti invariati, 491 test passing, zero regressioni)
+**Note**: Discriminazione per tipo implementata in `Info.tsx` tramite `selectedViewClass === DViewPoint.cname` / `DViewElement.cname`. Il branch view/viewpoint precede quello del model element nello stesso `render()`, quindi se un view è selezionato, il rendering del Properties panel lo mostra invece dei campi GENERAL/INHERITANCE/FLAGS. Click su una classe invece resetta `_lastSelected.view=''` (esistente — Clicked handlers del tree già lo fanno) e il branch view non si attiva, ritornando al rendering originale. `setSelectedView` callback di `ViewData` (back button) ora resetta tutto `_lastSelected`.
+
+## 2026-04-10 — feat: riportare viewpoint editing nel pannello destro
+**Prompt**: riattivare tab Viewpoints nel pannello destro con sub-tab Apply to/Template/Style/Events/Options (no Permissions) invece di aprire una pagina dedicata via `ViewpointEditorPanel`
+**File toccati**:
+- `frontend/src/components/abstract/Dock.tsx` — assegnato id stabile `'right-panel-viewpoints'` al tab Viewpoints (era generato via `id()`, non targhettabile)
+- `frontend/src/components/abstract/DockManager.tsx` — `openViewpoint()` riscritto: ora chiama `dock.updateTab('right-panel-viewpoints', null, true)` per attivare il tab nel pannello destro invece di creare un tab dock dedicato. Parametro `vp` mantenuto per compatibilità API ma prefissato `_vp` (unused)
+- `frontend/src/components/abstract/tabs/TabDataMaker.tsx` — rimosso metodo `viewpoint()` e import di `ViewpointEditorPanel`, `DockManager`, `LPointerTargetable`, `LViewPoint`, `DViewPoint`. Lasciato comment esplicativo
+**Non toccati**:
+- `src/components/panels/viewpoint-editor/` — 23 file restaurati ieri restano in place (cleanup post-release per task Phase 5)
+- `src/components/editors/ViewpointWorkbench.tsx` — legacy, già orfano di importer
+- `src/components/editors/views/ViewData.tsx` — le sub-tab Permissions erano già commentate fuori dal codice (non serviva toccarle)
+- `src/components/editors/views/NestedView.tsx` — già funzionante, renderizza il tree nel tab "Viewpoints" del pannello destro
+- `lastViewpoint.ts` — dispatch `VIEW_CREATED` restaurato ieri resta in place (non rompe nulla con il nuovo flusso)
+**Esito**: ✅ build ok (80 errori TS pre-esistenti invariati, 491 test passing, zero regressioni)
+**Note**: Contesto — l'infrastruttura del tab "Viewpoints" nel pannello destro era già completa e funzionante (`Dock.tsx:329` lo pushava sempre nel tabs array, `NestedView` + `ViewData` + sub-tab `InfoData`/`TemplateData`/`PaletteData`/`EventsData`/`GenericNodeData`/`ComponentsTab` tutti funzionanti). L'unico problema era il routing di `DockManager.openViewpoint()` che, dopo il restore di ieri, apriva `ViewpointEditorPanel` come tab dedicato. Fix minimale: 3 file modificati, nessun componente nuovo, nessun file rimosso. Callers di `DockManager.openViewpoint()` (Dashboard, ProjectEditor, TreeViewContent) sono invariati — ricevono lo stesso comportamento a livello API ma ora attivano il tab del pannello destro.
+
+## 2026-04-10 — feat: ripristino ViewpointEditor redesign da git
+**Prompt**: ripristinare 23 file da commit `5999f50c6~1` (parent del cleanup V3), ricablare routing in `TabDataMaker` per usare il nuovo `ViewpointEditorPanel` invece del vecchio `ViewpointWorkbench`
+**File toccati**:
+- **Ripristinati** (23 file) da `5999f50c6~1` via `git checkout`:
+  - `src/components/panels/viewpoint-editor/ViewpointEditorRoot.tsx` (411 righe)
+  - `src/components/panels/viewpoint-editor/ViewpointEditorPanel.tsx` (170 righe, wrapper esterno)
+  - `ViewpointEditorBreadcrumb.tsx`, `EditorToolbar.tsx`, `EditorFullscreenModal.tsx`, `viewpoint-editor.scss`
+  - `sections/`: BehaviorSection, CollapsibleSection, ConstantsSection, EdgeSection, EventsSection, ObservedPropsSection, ViewConfiguration, ViewProperties
+  - `tabs/`: ColorPickerPopover, CssVariablesEditor, PathEditorModal, PathPresetsPopover, PredicateTab, StyleTab, TemplateTab, bootstrapIconCatalog, pathPresets
+- **Modificati**:
+  - `src/events/registry.ts` — aggiunto `JjodelEvents.VIEW_CREATED: 'jjodel:viewCreated'` (re-introdotto dopo la rimozione del 2026-04-06; è necessario al ViewpointEditorPanel per refresh della tree quando una view viene creata dal context menu del canvas)
+  - `src/components/panels/viewpoint-editor/ViewpointEditorPanel.tsx` — 2 stringhe hardcoded → costanti registry (`JjodelEvents.VIEW_CREATED`, `JjodelEvents.CANVAS_ELEMENT_SELECTED`)
+  - `src/utils/lastViewpoint.ts` — restaurato dispatch di `VIEW_CREATED` dopo `createViewInWorkbench()` (era stato rimosso nel cleanup V3 ma serviva al panel per refresh automatico)
+  - `src/components/abstract/tabs/TabDataMaker.tsx` — routing viewpoint: import `ViewpointEditorPanel` invece di `ViewpointWorkbench`, `TabDataMaker.viewpoint()` ora risolve `vp.id` → `LViewPoint` via `LPointerTargetable.fromPointer()` e passa l'istanza + callback `onClose={() => DockManager.closeTab(tabId)}` (la breadcrumb back-arrow chiude il tab invece che fare un no-op)
+**Non toccati**:
+- `src/components/editors/ViewpointWorkbench.tsx` — lasciato in place per reference, ma senza nessun importer (verrà rimosso in cleanup separato post-release)
+- Grammatica/struttura dei file ripristinati — solo fix di: stringhe evento → registry constants
+**Esito**: ✅ build ok (80 errori TS pre-esistenti invariati, 491 test passing, zero regressioni)
+**Note**: 23 file ripristinati, 2 stringhe evento migrate a registry, 1 evento re-introdotto nel registry (VIEW_CREATED), 1 dispatch site restaurato in lastViewpoint.ts, routing TabDataMaker aggiornato. Nessun fix di token CSS legacy necessario (grep `--accent|--bg-[1-5]|--secondary|--terziary|--radius|var(--color)` in `panels/viewpoint-editor/` → zero match: i file erano già puliti al momento della rimozione).
+
+## 2026-04-10 — fix: rimuovi struttura progetto duplicata dalla sidebar model editor
+**Prompt**: rimuovere sezioni Structure/Behaviour/Other dalla sidebar sinistra dell'editor modello
+**File toccati**: `frontend/src/pages/components/Dashboard.tsx`
+**Esito**: ✅ build ok (80 errori TS pre-esistenti invariati)
+**Note**: La sidebar `LeftBar` (che contiene le sezioni Structure/Behaviour/Other col nome progetto, Metamodels, Models, Transforms, Viewpoints, Docs) era già nascosta quando l'editor metamodello era attivo (fix 2026-04-06). Il task chiedeva lo stesso comportamento per il model editor. Fix: esteso `ProjectDashboard.useEffect` handlers — il predicato `hideLeftBar` ora usa `isEditorTab(editorType)` che accetta sia `'metamodel'` che `'model'`. Nessuna rimozione di componenti/JSX — solo estensione del predicato esistente. `LeftBar` invariata (serve ancora per la dashboard progetto).
+
+## 2026-04-10 — fix: 5 bug release testing sezione B (tree select, conformsTo, context menu, File tab, slots)
+**Prompt**: fix tree view selection per istanze modello, mostra conformsTo nella property panel del modello, fix posizione context menu del flow editor, fix highlight File tab nel menu, sblocca inline editing slot per istanze M1.
+**File toccati**:
+- `frontend/src/components/TreeViewSidebar/TreeViewContent.tsx` — Bug A: `InstanceItem.handleClick` ora dispatcha `SetRootFieldAction.new('_lastSelected', { node: '', view: '', modelElement: instance.objectId })` PRIMA di dispatchare `SELECT_NODE`. Prima, il click su un'istanza nel tree view aggiornava solo la selezione su React Flow (via custom event), ma il pannello Properties (`Info.tsx`) legge `state._lastSelected?.modelElement` → non si aggiornava. Aggiunto anche `instance.objectId` alla deps di `useCallback`.
+- `frontend/src/components/editors/Info.tsx` — Bug B: aggiunto banner "Conforms to" in `builder.model()` quando `!l.isMetamodel` e `l.instanceof` esiste. Riusa lo stesso markup usato in `builder.object()`: `<div className="jj-conformance-bar"><span className="jj-conformance-dot" /> Conforms to <strong>{metamodel.name}</strong></div>`. Zero CSS aggiunto — classi già esistenti.
+- `frontend/src/components/editor-v2/EditorV2.tsx` — Bug C: wrap del `<ContextMenu>` con `createPortal(..., document.body)` (import già presente). `position: fixed` falliva perché il tab rc-dock applicava transform ancestor che rompeva il containing block. Portal al body → coord viewport assoluti → menu al click point anche con zoom/pan canvas attivo.
+- `frontend/src/pages/components/navbar.scss` — Bug D: in `.nav-hamburger:hover span.menu-title` cambiato `background-color: var(--color-text-tertiary)` → `var(--color-bg-hover)`. La regola usava un token di text color (`slate-600` in light) come background — incongruente con la regola sibling `.nav-container span.menu-title:hover` che usava già `--color-bg-hover`. Specificità identica (0,3,1), quindi vinceva la regola later-in-file → tutti i menu tab avevano hover sbagliato.
+- `frontend/src/components/editor-v2/EditorV2.scss` — Bug E: rimosso `pointer-events: none` da `.mm-object__feature--placeholder`. Il CSS bloccava i click sugli slot placeholder (attributi del metaclass non ancora valorizzati), anche se `ObjectNode.tsx:510-519` ha `onDoubleClick`/`onClick` che setta `editingFeature` per abilitare l'inline editing. Sostituito con commento che spiega la dipendenza dai handler in JSX. Note: l'inline editing degli slot _esiste già_ (vedi `startEditFeature`/`commitFeatureEdit`/`syncUpdateFeatureValue`) — era solo il CSS che lo disabilitava per i placeholder.
+**Esito**: ✅ build ok, 491 test passing (nessuna regressione — stessi 8 file pre-fallenti per `window is not defined` in `PerformanceMetrics.ts`)
+**Note**: Bug E non era "by design" — tutta la pipeline di inline editing (startEditFeature → commitFeatureEdit → syncUpdateFeatureValue via proxy `$attr.value =`) era implementata. Il solo ostacolo era il `pointer-events: none` sulla classe placeholder, che veniva applicata quando `!isEditingThis` → impossibile uscire dallo stato placeholder via click. Gli slot con valori esistenti (non-placeholder) funzionavano già. Bug C fix è minimal e robusto: portalizza solo il ContextMenu, lascia tutto il resto invariato.
+
+## 2026-04-10 — fix: 3 bug release testing (infinite loop, bottom drawer, enum icon)
+**Prompt**: fix ErrorDisplay forwardRef (infinite loop xyflow), rimuovi bottom property drawer, allinea icona enum
+**File toccati**:
+- `frontend/src/common/ErrorPortal.tsx` — Bug A: wrap `ErrorDisplay` con `React.forwardRef<HTMLDivElement, ErrorDisplayProps>`, attach ref al div `.error-badge-slick` root, add `displayName`. Fix del re-render loop infinito quando Measurable cloneElement tentava di passare ref a function component senza forwardRef.
+- `frontend/src/components/editor-v2/EditorV2.tsx` — Bug B: rimossi import `BottomDrawer` + `ElementPropertiesDrawer`, state `bottomDrawerOpen`/`bottomDrawerElementName`, callback `openBottomDrawer`/`closeBottomDrawer`, `onNodeDoubleClick` handler, voce "Properties" dal context menu, JSX `<BottomDrawer>` render block, prop `onNodeDoubleClick` dal ReactFlow. Componenti `BottomDrawer.tsx` e `ElementPropertiesDrawer.tsx` NON toccati (potrebbero servire altrove).
+- `frontend/src/components/editor-v2/EditorV2.scss` — Bug C: aggiunto `.mm-enum .mm-node__header { justify-content: flex-start; }` per allineare l'icona enum a sinistra (override del base `justify-content: center` che centrava icon+name come gruppo spostando visivamente il testo).
+**Esito**: ✅ build ok — 0 nuovi errori TS (80 pre-esistenti invariati), 491 test passing (nessuna regressione)
+**Note**: Bug A root cause confermata — `MeasurableComponent.render()` a line 426 fa `React.cloneElement(child, {ref: ...})` che non funziona su function components senza `forwardRef`. Il ref fallito causava re-misure continue da xyflow → `setNodes` → re-render loop. Bug B: anche se il task diceva di rimuovere solo il render, ho rimosso anche state/callbacks/import per evitare dead code + warning TypeScript. Bug C: fix minimale — solo override CSS in `.mm-enum`, `<i>` e struttura JSX invariati.
+
+## 2026-04-09 — feat: JjScript test suite
+**Prompt**: Creare test suite completa per tutti i comandi JjScript (0 test esistenti su ~19 comandi)
+**File creati**:
+- `frontend/src/jjscript/__tests__/lexer.test.ts` — 36 test: tokenizzazione comandi, keyword, identifier, qualified names, literals, multiplicity, operatori, commenti, edge cases
+- `frontend/src/jjscript/__tests__/grammar.test.ts` — 54 test: parseQualifiedName, parseMultiplicity, parseTypeReference, parseLiteralValue, isValidIdentifier, suggestCorrection, tutti gli helper di formattazione
+- `frontend/src/jjscript/__tests__/parser.test.ts` — 66 test: parsing di tutti i 19 comandi (create, delete, rename, set, add, remove, move, copy, list, show, help, undo, redo, clear, validate, extends, eval, let, forall, abstract, do...end block), error handling, JjEL delegation
+- `frontend/src/jjscript/__tests__/commands.test.ts` — 39 test: executeHelp (general + tutti i topic), executeUndo/executeRedo (happy path, multi-step, error, roundtrip), executeClear (history, console, selection, all)
+**Esito**: ✅ 195 test passing, 0 skipped
+**Note**: 19 comandi inventariati. Test coprono: lexer (tokenizzazione), grammar (utility pure), parser (input→AST per tutti i comandi), 3 executor comandi puri (help, undo/redo, clear). I restanti 16 comandi (create, delete, rename, set, add, remove, move, copy, list, show, validate, extends, abstract, eval, let, forall) richiedono Redux store + Jjodel framework — testati a livello parser (AST output) ma non executor (necessita `jsdom` + mock store). Framework: vitest 4.1.1 (pre-esistente).
+
+## 2026-04-09 — refactor: event registry — migrate post-migration stragglers
+**Prompt**: Completare migrazione event registry: 3 eventi aggiunti dopo la migrazione originale (2026-04-06) non usavano il registry centralizzato.
+**File creato/modificato**:
+- `frontend/src/events/registry.ts` — aggiunto `EnvGenEvents` (2 costanti) + `AvatarEvents` (1 costante) + type helpers
+- `frontend/src/pages/components/Navbar.tsx` — `'envgen-open-wizard'` → `EnvGenEvents.OPEN_WIZARD`
+- `frontend/src/components/envgen/services/EnvGenPersistence.ts` — rimossi `CHANGE_EVENT`, `ENVGEN_CHANGE_EVENT`, `ENVGEN_OPEN_WIZARD_EVENT` locali → `EnvGenEvents.*`
+- `frontend/src/components/envgen/index.ts` — rimosso re-export costanti evento (ora in registry)
+- `frontend/src/components/project/ProjectEditor.tsx` — `ENVGEN_CHANGE_EVENT`/`ENVGEN_OPEN_WIZARD_EVENT` → `EnvGenEvents.*`
+- `frontend/src/hooks/useAvatar.ts` — `AVATAR_CHANGE_EVENT` locale → `AvatarEvents.CONFIG_CHANGE`
+**Esito**: ✅ build ok, 0 stringhe hardcoded residue
+**Note**: 3 eventi trovati, 6 file modificati, 0 eventi dinamici non migrabili. Registry ora a 40 costanti in 7 gruppi.
+
+## 2026-04-06 — fix: Pulizia header dashboard progetto
+
+**Prompt**: Migliorare l'header della dashboard: descrizione duplicata, matita sempre visibile, "View Megamodel" fuori posto, "+ Tags" stile tratteggiato incongruente.
+**Modifiche**:
+- **Descrizione**: textarea non si apre automaticamente — stato iniziale solo testo statico. Placeholder cliccabile "Add a description..." quando vuota. Icona matita visibile solo su hover della riga descrizione (via `__desc-row:hover .edit-btn--inline`). Rimosso "Created by" dalla row2 per pulizia.
+- **View Megamodel**: Rimosso dall'header, spostato nella sezione METAMODELS come primo bottone (ghost btn--xs) prima di Import e + New. SectionHeader ora rende `children` prima di secondary/primary actions.
+- **+ Tags**: Rimosso bordo tratteggiato, ora usa `btn btn--ghost btn--xs` con icona `bi-tag` come gli altri bottoni secondari.
+- **SCSS**: Aggiunto `__desc-row` (inline-flex, pencil opacity 0 → 0.5 on hover), `__desc-placeholder` (italic grigio, cliccabile), rimosso `opacity: 0.5` da `edit-btn--inline` (ora controllato dal parent), `__desc-editor` non più absolute.
+- **Import rimosso**: `Button` component non più importato (era usato solo per View Megamodel).
+**File modificati**: `ProjectEditor.tsx`, `project-editor.scss`
+
+## 2026-04-06 — fix: Nascondi sidebar navigazione progetto nell'editor metamodello (v2)
+
+**Prompt**: La sidebar LeftBar (navigazione progetto) restava visibile accanto alla palette editor quando un metamodello era aperto. Rimuoverla SOLO nell'editor di metamodello.
+**Root cause**: Il meccanismo originale si basava solo su `ACTIVE_TAB` con `tabType` estratto da `(activeTab.title).props['data-type']`. Questo falliva perché rc-dock non preserva i props dei React element nel callback `onLayoutChange`, producendo `tabType: null` → `hideLeftBar` restava `false`.
+**Fix**: In `Dashboard.tsx`, `ProjectDashboard` ora ascolta DUE eventi:
+1. `EDITOR_TYPE_CHANGE` — emesso da `DockManager.open2()` all'apertura di un nuovo tab. Registra `{activeId → editorType}` in un `useRef<Map>` locale e setta `hideLeftBar` immediatamente.
+2. `ACTIVE_TAB` — emesso da `Dock.tsx` su ogni switch di tab. Risolve il tipo usando prima il `tabType` dall'evento, poi la mappa locale come fallback.
+**Impatto**: Solo `Dashboard.tsx` modificato. LeftBar nascosta solo per `metamodel`, visibile per `model`, `viewpoint`, `project_summary` e tutti gli altri tab.
+**File modificati**: `frontend/src/pages/components/Dashboard.tsx`
+
+## 2026-04-06 — fix: Header dashboard centrato e restyling
+
+**Prompt**: L'header della dashboard (titolo, badge versione, metadata) non era allineato al contenuto centrato. Richiesto restyling più pulito.
+**Modifiche**:
+- **TSX**: Spostato `project-header-compact` da fuori `project-editor__body` a dentro `project-editor__main` (stesso container centrato max-width 900px)
+- **TSX**: Badge versione/Rev sostituiti da `<span class="__version">` più sobri (erano Badge component)
+- **SCSS**: Titolo 20px → 24px, colore `var(--color-text-primary)`; input editing allineato
+- **SCSS**: Aggiunto `&__version` — 12px, `var(--color-text-secondary)`, font-weight 500
+- **SCSS**: Row2 metadata — 12px, `var(--color-text-secondary)`, opacity 0.6, margin-top 6px
+- **SCSS**: Header — padding-top 24px, border-bottom con `var(--color-border-primary)`, margin-bottom 24px
+**File modificati**: `ProjectEditor.tsx`, `project-editor.scss`
+
+## 2026-04-06 — fix: Centro orizzontale contenuto dashboard
+**Prompt**: Il contenuto della dashboard progetto era allineato a sinistra anziché centrato.
+**Fix**: Aggiunto `margin-left: auto; margin-right: auto` a `.project-editor__main` in `project-editor.scss`. Il `max-width: 900px` era già presente — mancava solo il margin auto per centrare il blocco nell'area disponibile.
+**File modificati**: `frontend/src/components/project/project-editor.scss`
+
 ## 2026-04-06 — chore: Rimozione dipendenze inutilizzate
 **Prompt**: Verifica e rimozione delle dipendenze con zero import nel codebase.
 **Pacchetti rimossi** (4):

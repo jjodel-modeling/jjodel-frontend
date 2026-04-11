@@ -245,6 +245,19 @@
   content: "\F2C7";
 }
 
+/* Template tab: align Constants / Observed properties labels to the baseline
+   section header style (11px uppercase slate). These are .jj-editor-title
+   elements rendered inside <Function> components; the base rule in
+   FunctionComponent.scss uses 14px/text-primary — we override scoped to the
+   template tab so other Function usages are unaffected. */
+.template-tab .jj-editor-title {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  color: var(--color-text-secondary, #64748b) !important;
+}
+
 /* Style tab */
 .style-tab h1::before {
   position: relative;
@@ -403,6 +416,16 @@
   height: 100%;
   overflow: auto;
   margin:0!important;
+
+  // When ViewData is rendered inside (via Info.tsx view-branch), rc-dock
+  // needs the section to clip instead of scroll so .view-editor-root can
+  // resolve its height: 100% against a concrete parent size. Without this,
+  // content-based sizing would let the DockLayout grow to 1400+px and
+  // stack all sub-tabs vertically instead of using the tab bar.
+  &:has(.view-editor-root) {
+    overflow: hidden;
+    padding: 0;
+  }
 
   // Empty state variant - no element selected
   &--empty {

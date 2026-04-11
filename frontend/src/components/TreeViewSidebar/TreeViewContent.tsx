@@ -586,12 +586,21 @@ const InstanceItem = memo(function InstanceItem({
 
     const handleClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
+        // Update Redux _lastSelected so the Properties panel (Info.tsx) re-renders
+        // with this instance's data. Without this, clicking an instance in the
+        // tree view would only highlight it on the canvas but leave the Properties
+        // panel showing the previously selected element.
+        SetRootFieldAction.new('_lastSelected' as any, {
+            node: '',
+            view: '',
+            modelElement: instance.objectId,
+        }, '', false);
         // Dispatch custom event for EditorV2 to select the node on the canvas
         window.dispatchEvent(new CustomEvent(JjodelEvents.SELECT_NODE, {
             detail: { nodeId: instance.id, modelId: instance.modelId }
         }));
         onSelect?.();
-    }, [instance.id, instance.modelId, onSelect]);
+    }, [instance.id, instance.objectId, instance.modelId, onSelect]);
 
     return (
         <div className="tree-node" data-element-id={instance.objectId}>
@@ -906,19 +915,17 @@ const SubViewItem = memo(function SubViewItem({
     const handleClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
         try {
-            // Open the viewpoint workbench tab, then notify it to select this view
-            DockManager.openViewpoint(viewpointRaw);
-            // Dispatch event to select this specific view in the workbench
-            setTimeout(() => {
-                window.dispatchEvent(new CustomEvent(JjodelEvents.SELECT_VIEW_IN_WORKBENCH, {
-                    detail: { viewpointId: viewpointRaw.id, viewId: view.id }
-                }));
-            }, 100);
+            // Select this view in _lastSelected so the Properties panel renders ViewData
+            SetRootFieldAction.new('_lastSelected' as any, {
+                node: '',
+                view: view.id,
+                modelElement: '',
+            });
         } catch (err) {
-            console.warn('[TreeView] Failed to open view in workbench:', err);
+            console.warn('[TreeView] Failed to select view:', err);
         }
         onSelect?.();
-    }, [viewpointRaw, view.id, onSelect]);
+    }, [view.id, onSelect]);
 
     const toggleExpand = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
@@ -982,12 +989,17 @@ const ViewpointItem = memo(function ViewpointItem({
     const handleClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
         try {
-            DockManager.openViewpoint(viewpoint.raw);
+            // Select this viewpoint in _lastSelected so the Properties panel renders ViewpointProperties
+            SetRootFieldAction.new('_lastSelected' as any, {
+                node: '',
+                view: viewpoint.id,
+                modelElement: '',
+            });
         } catch (err) {
-            console.warn('[TreeView] Failed to open viewpoint:', err);
+            console.warn('[TreeView] Failed to select viewpoint:', err);
         }
         onSelect?.();
-    }, [viewpoint.raw, onSelect]);
+    }, [viewpoint.id, onSelect]);
 
     const toggleExpand = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();

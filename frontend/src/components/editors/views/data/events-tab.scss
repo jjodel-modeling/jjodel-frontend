@@ -17,15 +17,12 @@
 .events-section {
   margin-bottom: 24px;
 
-  &--default {
-    .events-section-title {
-      color: #475569;
-    }
-  }
-
+  // Section header color unified — no more distinct "default" vs "custom" hues,
+  // both use the slate secondary text color to match the Properties baseline.
+  &--default,
   &--custom {
     .events-section-title {
-      color: #1e293b;
+      color: var(--color-text-secondary, #64748b);
     }
   }
 }
@@ -42,16 +39,17 @@
 .events-section-title {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin: 0;
-  font-size: 13px;
+  font-size: 11px;                          // was 13px — unified to baseline
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  color: var(--color-text-secondary, #64748b);
 
   i {
-    font-size: 16px;
-    color: #64748b;
+    font-size: 14px;                        // was 16px — unified
+    color: var(--color-text-secondary, #64748b);
   }
 }
 
@@ -107,7 +105,7 @@
   &:hover:not(:disabled) {
     background: #f8fafc;
     border-color: #cbd5e1;
-    color: #0ea5e9;
+    color: #334155;                         // was cyan — unified to slate baseline
   }
 
   &:disabled {

@@ -543,6 +543,44 @@ function ProjectDashboard(props: DashProps): any {
     const query = useQuery();
     const id = query.get('id') || '';
     const project: LProject = LProject.fromPointer(id);
+    const [hideLeftBar, setHideLeftBar] = useState(false);
+    const tabTypeMapRef = useRef<Map<string, string>>(new Map());
+
+    // Hide project sidebar when metamodel OR model editor tab is active.
+    // Project structure (Metamodels/Models/Transforms/Viewpoints/Docs) is
+    // redundant inside these editors — the editor has its own palette sidebar.
+    // Two events cooperate: EDITOR_TYPE_CHANGE (fired on new tab open by
+    // DockManager.open2) and ACTIVE_TAB (fired on every tab switch by Dock).
+    // A local map keeps track of each tab's editor type so that switching
+    // back to an already-open tab resolves correctly even when rc-dock's
+    // onLayoutChange does not preserve React element props.
+    useEffect(() => {
+        const isEditorTab = (t: string | null | undefined) =>
+            t === 'metamodel' || t === 'model';
+
+        const handleEditorType = (e: Event) => {
+            const { editorType } = (e as CustomEvent).detail;
+            try {
+                const layout = DockManager.dock?.getLayout();
+                const activeId = layout?.dockbox?.children?.[0]?.activeId;
+                if (activeId) tabTypeMapRef.current.set(activeId, editorType);
+            } catch { /* dock not ready */ }
+            setHideLeftBar(isEditorTab(editorType));
+        };
+
+        const handleActiveTab = (e: Event) => {
+            const { activeId, tabType } = (e as CustomEvent).detail;
+            const resolved = tabType || tabTypeMapRef.current.get(activeId) || null;
+            setHideLeftBar(isEditorTab(resolved));
+        };
+
+        window.addEventListener(JjodelEvents.EDITOR_TYPE_CHANGE, handleEditorType);
+        window.addEventListener(JjodelEvents.ACTIVE_TAB, handleActiveTab);
+        return () => {
+            window.removeEventListener(JjodelEvents.EDITOR_TYPE_CHANGE, handleEditorType);
+            window.removeEventListener(JjodelEvents.ACTIVE_TAB, handleActiveTab);
+        };
+    }, []);
 
     let vparr = project?.viewpoints || [];
     let allViews = vparr.flatMap((vp: LViewPoint) => vp && vp.allSubViews);
@@ -561,8 +599,8 @@ function ProjectDashboard(props: DashProps): any {
             </>
         </Try>
         <Try><Navbar /></Try>
-        <div className="dashboard-container two-column">
-            <LeftBar active={'Project'} project={project} />
+        <div className={`dashboard-container two-column${hideLeftBar ? ' hide-leftbar' : ''}`}>
+            {!hideLeftBar && <LeftBar active={'Project'} project={project} />}
             <div className="project-dock-wrapper">
                 <Try><Dock /></Try>
             </div>

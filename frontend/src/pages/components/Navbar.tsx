@@ -36,7 +36,6 @@ import React, {Component, Dispatch, ReactElement, ReactNode, useState, useEffect
 import {FakeStateProps} from '../../joiner/types';
 import {connect} from 'react-redux';
 import {AuthApi, ProjectsApi} from '../../api/persistance';
-import TabDataMaker from "../../../src/components/abstract/tabs/TabDataMaker";
 import DockManager from "../../components/abstract/DockManager";
 
 import {Divisor, Item, Menu, UserHeader, SubMenu, SubMenuItem} from '../components/menu/Menu';
@@ -65,7 +64,7 @@ import { getRuntimeMegamodel } from '../../model/megamodelRuntime';
 import { useAvatar } from '../../hooks/useAvatar';
 import { AVATAR_COLORS, AVATAR_ICONS } from '../../constants/avatarConfig';
 import { JjScriptConsole } from '../../jjscript/components/JjScriptConsole';
-import { JjodelEvents } from '../../events/registry';
+import { JjodelEvents, EnvGenEvents } from '../../events/registry';
 
 
 let windoww = window as any;
@@ -81,8 +80,8 @@ export function createM2(project: LProject, name0?: string) {
     const dPackage = lModel.addChild('package');
     const lPackage: LPackage = LPackage.fromD(dPackage);
     lPackage.name = 'default';
-    const tab = TabDataMaker.metamodel(dModel);
-    DockManager.open('models', tab);
+    // Use open2() so EDITOR_TYPE_CHANGE dispatches and Dashboard hides the LeftBar.
+    DockManager.open2(lModel);
 
     // Log activity
     ActivityLogger.log({
@@ -102,8 +101,8 @@ export function createM1(project: LProject, metamodel: LModel) {
     const lModel: LModel = LModel.fromD(dModel);
     project.models = [...project.models, lModel];
     project.graphs = [...project.graphs, lModel.node as LGraph];
-    const tab = TabDataMaker.model(dModel);
-    DockManager.open('models', tab);
+    // Use open2() so EDITOR_TYPE_CHANGE dispatches and Dashboard hides the LeftBar.
+    DockManager.open2(lModel);
 
     // Log activity
     ActivityLogger.log({
@@ -1212,7 +1211,7 @@ function NavbarComponent(props: AllProps) {
                 {name: 'divisor'},
                 {name: 'Generate Environment...',
                     function: () => {
-                        window.dispatchEvent(new CustomEvent('envgen-open-wizard'));
+                        window.dispatchEvent(new CustomEvent(EnvGenEvents.OPEN_WIZARD));
                     },
                     icon: <i className="bi bi-box-seam" />,
                     disabled: isDashboard || metamodels.length === 0

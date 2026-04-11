@@ -374,6 +374,11 @@
     grid-template-rows: 1fr;
     flex-flow: unset;
 
+    // Hide project sidebar when metamodel editor is active
+    &.hide-leftbar {
+      grid-template-columns: 1fr;
+    }
+
     @media (max-width: 768px) {
       grid-template-columns: 1fr;
 

@@ -1072,6 +1072,9 @@
     .mm-node__header {
         background: var(--enum-header-bg);
         border-bottom: 1px solid var(--node-separator);
+        // Left-align icon + name (overrides base center) so the enum icon
+        // sits flush-left, visually consistent with other elements.
+        justify-content: flex-start;
     }
 
     &.selected {
@@ -1156,7 +1159,11 @@
     .mm-object__feature--placeholder {
         opacity: 0.45;
         font-style: italic;
-        pointer-events: none;
+        // NOTE: no `pointer-events: none` — the placeholder row must stay
+        // clickable so the user can double-click (or click when selected)
+        // to enter an initial value via the inline editor wired in
+        // ObjectNode.tsx. See `onDoubleClick`/`onClick` on the feature-value
+        // span inside the placeholder branch.
     }
 
     // Stale enum value — metamodel literal was deleted/renamed

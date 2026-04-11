@@ -44,8 +44,8 @@ function InfoDataComponent(props: AllProps) {
 
     return(<section className={'apply-to-tab'}>
         {/* Name field - vertical layout */}
-        <div className="form-field">
-            <label className="form-label">Name</label>
+        <div className="jj-field">
+            <label className="jj-field-label">Name</label>
             <Input data={view} field={'name'} readOnly={readOnly} className="form-input" />
         </div>
 

@@ -20,6 +20,7 @@ export const JjodelEvents = {
   OPEN_VIEWPOINT_EDITOR: 'jjodel:openViewpointEditor',
   CLOSE_VIEWPOINT_EDITOR: 'jjodel:closeViewpointEditor',
   VIEWPOINT_EDITOR_STATE: 'jjodel:viewpoint-editor-state',
+  VIEW_CREATED: 'jjodel:viewCreated',
   // Panels
   HELP_OPEN: 'jjodel:help-open',
   EXPLAIN_OPEN: 'jjodel:explain-open',
@@ -70,6 +71,17 @@ export const JjodieEvents = {
   OPEN: 'jodie:open',
 } as const;
 
+// ─── EnvGen (environment generation) ────────────────────────────
+export const EnvGenEvents = {
+  CONFIG_CHANGED: 'envgen-config-changed',
+  OPEN_WIZARD: 'envgen-open-wizard',
+} as const;
+
+// ─── Avatar ─────────────────────────────────────────────────────
+export const AvatarEvents = {
+  CONFIG_CHANGE: 'avatar-config-change',
+} as const;
+
 // ─── Uncategorized / cross-cutting ──────────────────────────────
 export const SystemEvents = {
   INTERFACE_MODE_CHANGE: 'interfaceModeChange',
@@ -82,4 +94,6 @@ export type JjodelEventName = typeof JjodelEvents[keyof typeof JjodelEvents];
 export type JjScriptEventName = typeof JjScriptEvents[keyof typeof JjScriptEvents];
 export type AIEventName = typeof AIEvents[keyof typeof AIEvents];
 export type JjodieEventName = typeof JjodieEvents[keyof typeof JjodieEvents];
+export type EnvGenEventName = typeof EnvGenEvents[keyof typeof EnvGenEvents];
+export type AvatarEventName = typeof AvatarEvents[keyof typeof AvatarEvents];
 export type SystemEventName = typeof SystemEvents[keyof typeof SystemEvents];

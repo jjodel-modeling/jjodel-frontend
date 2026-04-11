@@ -6,8 +6,7 @@ import {
     AVATAR_COLORS,
     AVATAR_ICONS,
 } from '../constants/avatarConfig';
-
-const AVATAR_CHANGE_EVENT = 'avatar-config-change';
+import { AvatarEvents } from '../events/registry';
 
 function loadConfig(): AvatarConfig {
     try {
@@ -48,15 +47,15 @@ export function useAvatar(): [AvatarConfig, (config: AvatarConfig) => void] {
     const setConfig = useCallback((newConfig: AvatarConfig) => {
         setConfigState(newConfig);
         localStorage.setItem(AVATAR_STORAGE_KEY, JSON.stringify(newConfig));
-        window.dispatchEvent(new CustomEvent(AVATAR_CHANGE_EVENT, { detail: newConfig }));
+        window.dispatchEvent(new CustomEvent(AvatarEvents.CONFIG_CHANGE, { detail: newConfig }));
     }, []);
 
     useEffect(() => {
         const handler = (e: Event) => {
             setConfigState((e as CustomEvent<AvatarConfig>).detail);
         };
-        window.addEventListener(AVATAR_CHANGE_EVENT, handler);
-        return () => window.removeEventListener(AVATAR_CHANGE_EVENT, handler);
+        window.addEventListener(AvatarEvents.CONFIG_CHANGE, handler);
+        return () => window.removeEventListener(AvatarEvents.CONFIG_CHANGE, handler);
     }, []);
 
     return [config, setConfig];

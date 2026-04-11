@@ -60,6 +60,21 @@ $radius-md: 6px;
     .properties-panel {
         height: 100%;
         overflow-y: auto;
+
+        // When Info.tsx's view-branch renders <ViewData> inside this section,
+        // rc-dock must own its own sizing and the section must NOT scroll.
+        // Force the section to behave as a flex item that fills (but does not
+        // exceed) the column remainder, with `overflow: hidden` so its child
+        // .view-editor-root can resolve height: 100% correctly — otherwise
+        // content-based sizing lets the whole tree grow to 1400+px, breaking
+        // the tab-bar behavior of rc-dock.
+        &:has(.view-editor-root) {
+            overflow: hidden;
+            min-height: 0;
+            flex: 1 1 0;
+            height: auto;
+            padding: 0;
+        }
     }
 
     // Empty state: no scrollbar needed
