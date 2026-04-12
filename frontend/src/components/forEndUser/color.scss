@@ -878,18 +878,23 @@
     flex-direction: column;
     align-items: center;
     gap: 2px;
+    flex: 1 1 auto;
+    min-width: 0;
 
     input {
-      width: 44px;
+      width: 100%;
+      min-width: 52px;
       height: 28px;
       background: rgba(255, 255, 255, 0.1);
       border: 1px solid rgba(255, 255, 255, 0.15);
       border-radius: 4px;
       color: #fff;
-      text-align: center;
+      text-align: left;
+      padding: 4px 18px 4px 6px;
       font-size: 11px;
       font-family: monospace;
       outline: none;
+      box-sizing: border-box;
 
       &:focus {
         border-color: rgba(255, 255, 255, 0.4);

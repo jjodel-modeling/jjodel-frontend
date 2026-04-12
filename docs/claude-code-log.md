@@ -1,5 +1,15 @@
 # Claude Code Session Log
 
+## 2026-04-12 — fix: RGB input values visible with proper width
+**File toccati**: `frontend/src/components/forEndUser/color.scss`
+**Esito**: ✅ build ok (80 errori TS, `vite build` 43.01s)
+**Fix**: `.cpanel__input-group input` was fixed at `width: 44px; text-align: center` — with the global `padding-right: 16px` for spinners, only ~22px remained for text (invisible "255"). Changed to: `width: 100%; min-width: 52px; text-align: left; padding: 4px 18px 4px 6px; box-sizing: border-box`. The parent `.cpanel__input-group` now has `flex: 1 1 auto; min-width: 0` so inputs share space equally.
+
+## 2026-04-12 — fix: number input padding-right for spinner arrows
+**File toccati**: `frontend/src/styles/components/_form-system.scss`
+**Esito**: ✅ build ok (80 errori TS, `vite build` 59.02s)
+**Fix**: `input[type="number"] { padding-right: 2px }` → `padding-right: 16px`. The 2px was too tight — multi-digit values (e.g. "255" in RGB inputs) overlapped the spinner arrows. 16px provides ~14px clearance matching typical spinner width.
+
 ## 2026-04-12 — fix: restore number spinners, remove right padding
 **File toccati**: `frontend/src/styles/components/_form-system.scss`
 **Esito**: ✅ build ok (80 errori TS, `vite build` 39.74s)
