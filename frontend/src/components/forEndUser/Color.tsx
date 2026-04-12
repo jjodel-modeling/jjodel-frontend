@@ -1,83 +1,189 @@
-import React, {Dispatch, ReactElement, ReactNode} from 'react';
+import React, {Dispatch, ReactElement, ReactNode, useCallback, useEffect, useRef} from 'react';
+import {createPortal} from 'react-dom';
 import {connect} from 'react-redux';
 import {DState} from '../../redux/store';
 import {Defaults, DPointerTargetable, GObject, LPointerTargetable, Overlap, Pointer} from '../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
+import tinycolor from 'tinycolor2';
 import './color.scss';
 
 
-function ColorComponent(props: AllProps) {
-    const [showTooltip, setShowTooltip] = useStateIfMounted(false);
+// ── HSV ↔ Hex helpers ────────────────────────────────────────
+function hexToHsv(hex: string) {
+    const hsv = tinycolor(hex).toHsv();
+    return { h: hsv.h, s: hsv.s * 100, v: hsv.v * 100 };
+}
 
-    if (!props.data && (!props.getter || !props.setter)) return(<></>);
+function hsvToHex(h: number, s: number, v: number) {
+    return tinycolor({ h, s: s / 100, v: v / 100 }).toHexString();
+}
+
+
+// ── Inline HSV color picker (SV canvas + hue slider + RGB) ──
+function ColorPickerArea(props: { color: string; onChange: (hex: string) => void; readOnly?: boolean }) {
+    const { color, onChange, readOnly } = props;
+    const svRef = useRef<HTMLDivElement>(null);
+    const hsv = hexToHsv(color || '#000000');
+    const rgb = tinycolor(color || '#000000').toRgb();
+
+    const updateSV = useCallback((clientX: number, clientY: number) => {
+        if (readOnly || !svRef.current) return;
+        const rect = svRef.current.getBoundingClientRect();
+        const s = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+        const v = Math.max(0, Math.min(100, (1 - (clientY - rect.top) / rect.height) * 100));
+        onChange(hsvToHex(hsv.h, s, v));
+    }, [hsv.h, onChange, readOnly]);
+
+    const handleSVMouseDown = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        updateSV(e.clientX, e.clientY);
+        const move = (ev: MouseEvent) => updateSV(ev.clientX, ev.clientY);
+        const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
+        document.addEventListener('mousemove', move);
+        document.addEventListener('mouseup', up);
+    }, [updateSV]);
+
+    return (
+        <>
+            {/* SV canvas */}
+            <div
+                ref={svRef}
+                className="cpanel__sv"
+                style={{ background: `linear-gradient(to right, #fff, hsl(${hsv.h}, 100%, 50%))` }}
+                onMouseDown={handleSVMouseDown}
+            >
+                <div className="cpanel__sv-dark" />
+                <div className="cpanel__sv-cursor" style={{ left: `${hsv.s}%`, top: `${100 - hsv.v}%` }} />
+            </div>
+
+            {/* Hue slider */}
+            <input
+                type="range" className="cpanel__hue"
+                min={0} max={360} value={Math.round(hsv.h)}
+                onChange={e => { if (!readOnly) onChange(hsvToHex(+e.target.value, hsv.s, hsv.v)); }}
+                disabled={readOnly}
+            />
+
+            {/* HEX + RGB inputs */}
+            <div className="cpanel__inputs">
+                <div className="cpanel__input-group cpanel__input-group--hex">
+                    <input
+                        type="text" value={tinycolor(color).toHexString()} spellCheck={false}
+                        onChange={e => { const v = e.target.value; if (!readOnly && tinycolor(v).isValid()) onChange(tinycolor(v).toHexString()); }}
+                        disabled={readOnly}
+                    />
+                    <span>HEX</span>
+                </div>
+                {(['r', 'g', 'b'] as const).map(ch => (
+                    <div key={ch} className="cpanel__input-group">
+                        <input
+                            type="number" min={0} max={255} value={rgb[ch]}
+                            onChange={e => { if (!readOnly) onChange(tinycolor({ ...rgb, [ch]: Math.max(0, Math.min(255, +e.target.value)) }).toHexString()); }}
+                            disabled={readOnly}
+                        />
+                        <span>{ch.toUpperCase()}</span>
+                    </div>
+                ))}
+            </div>
+        </>
+    );
+}
+
+
+// ── Portal-rendered unified panel ────────────────────────────
+function ColorPanel(props: {
+    color: string;
+    onChange: (hex: string) => void;
+    readOnly?: boolean;
+    anchorRef: React.RefObject<HTMLDivElement | null>;
+    childrenn?: any;
+    onClose: () => void;
+}) {
+    const { color, onChange, readOnly, anchorRef, childrenn, onClose } = props;
+    const panelRef = useRef<HTMLDivElement>(null);
+
+    // Position: fixed below the anchor swatch
+    const rect = anchorRef.current?.getBoundingClientRect();
+    const top = (rect?.bottom ?? 0) + 4;
+    const left = (rect ? rect.left + rect.width / 2 : 0) - 130; // center 260px panel
+
+    // Click outside closes
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (panelRef.current && !panelRef.current.contains(e.target as Node)
+                && anchorRef.current && !anchorRef.current.contains(e.target as Node)) {
+                onClose();
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [onClose, anchorRef]);
+
+    return createPortal(
+        <div
+            ref={panelRef}
+            className="cpanel"
+            style={{ top, left: Math.max(4, left) }}
+            onClick={e => e.stopPropagation()}
+        >
+            <ColorPickerArea color={color} onChange={onChange} readOnly={readOnly} />
+            <div className="cpanel__divider" />
+            {/* Opacity + Analogous/Lighten/Darken/... + Delete (from PaletteData childrenn) */}
+            {childrenn}
+        </div>,
+        document.body
+    );
+}
+
+
+// ── Main Color component ─────────────────────────────────────
+function ColorComponent(props: AllProps) {
+    const [pinned, setPinned] = useStateIfMounted(false);
+    const swatchRef = useRef<HTMLDivElement>(null);
+
+    if (!props.data && (!props.getter || !props.setter)) return <></>;
 
     const getter = props.getter || (() => props.data[props.field]);
-    const setter = props.setter || ((value:string) => { props.data[props.field] = value; });
-    //const field = props.field;
-    // const oldValue = (!data) ? undefined : (getter) ? getter(data) : data[field]; // !== undefined); ? data[field] : 'undefined'
+    const setter = props.setter || ((value: string) => { props.data[props.field] = value; });
     const readOnly = (props.readOnly !== undefined) ? props.readOnly : props.debugmodee !== 'true' && Defaults.check(props.data.id);
-    const type = (props.type) ? props.type : 'text';
-    const label: string|undefined = props.label;
-    const jsxLabel: ReactNode|undefined = props.jsxLabel;
-    let tooltip: ReactNode|string|undefined = ((props.tooltip === true) ? props.data?.['__info_of__' + props.field]?.txt : props.tooltip) || '';
+    const currentColor = getter(props.data, props.field) || '#000000';
 
-    let css = 'my-auto input ';
-    css += (jsxLabel) ? 'ms-1' : (label) ? 'ms-auto' : '';
-    css += (props.hidden) ? ' hidden-input' : '';
-    let autosize: boolean = props.autosize === undefined ? false : props.autosize; // props.type==='text'
-    css += autosize ? ' autosize-input' : '';
+    const handleColorChange = useCallback((hex: string) => {
+        if (!readOnly) setter(hex);
+    }, [readOnly, setter]);
 
-    const blur = (evt: React.FocusEvent<HTMLInputElement>) => {
-        if (readOnly) return;
-        const newValue = evt.target.value;
-        const oldValue = getter(props.data, props.field); // !== undefined) ? data[field] : 'undefined'
-        if (newValue !== oldValue) setter(newValue);
-    }
+    const handleSwatchClick = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        setPinned(prev => !prev);
+    }, [setPinned]);
 
-    const otherprops: GObject = {...props};
-    delete otherprops.data;
-    delete otherprops.field;
-    delete otherprops.getter;
-    delete otherprops.setter;
-    delete otherprops.label;
-    delete otherprops.jsxLabel;
-    delete otherprops.tooltip;
-    delete otherprops.hidden;
-    delete otherprops.inputStyle;
-    delete otherprops.children;
-    delete otherprops.autosize; // because react complains is bool in dom attribute or unknown attrib name
-    let input = <input {...otherprops}
-                       // key={props.data?.id + props.field}
-                       className={props.inputClassName || css}
-                       style={props.inputStyle}
-                       spellCheck={false}
-                       readOnly={readOnly}
-                       type={'color'} value={getter(props.data, props.field)} onChange={blur} onBlur={blur}
-    />
+    return (
+        <div
+            ref={swatchRef}
+            className={(props.className ? props.className : 'color-picker-root') + (pinned ? ' pinned' : '')}
+            style={{ cursor: 'pointer', ...((props as any).style || {}) }}
+        >
+            {/* Color swatch */}
+            <div
+                className="jj-color-swatch"
+                style={{ backgroundColor: currentColor, opacity: props.inputStyle?.opacity ?? 1 }}
+                title={currentColor}
+                onClick={handleSwatchClick}
+            />
 
-    // console.log("color component", {label, jsxLabel, tooltip, c:props.children})
-    
-    return(<label className={(props.className ? props.className : 'color-picker-root') + ' hoverable'} {...otherprops}
-                  style={{display: (jsxLabel || label) ? 'flex' : 'block', cursor: tooltip ? 'help' : 'auto', ...((props as any).style || {})}}>
-
-        {label && <label className={'my-auto'} onMouseEnter={e => setShowTooltip(true)}
-                         onMouseLeave={e => setShowTooltip(false)}>{label}
-        </label>}
-
-        {jsxLabel && <label onMouseEnter={e => setShowTooltip(true)}
-                            onMouseLeave={e => setShowTooltip(false)}>{jsxLabel}
-        </label>}
-
-        {(tooltip && showTooltip) && <div className={'my-tooltip'}>
-            <b className={'text-center text-capitalize'}>{props.field}</b>
-            <br />
-            <label>{tooltip}</label>
-        </div>}
-        {input}
-        {props.canDelete && false && <label className="p-1"><button className={'content delete-color mt-2'} style={{position:'relative'}}/></label>}
-        {props.children && Object.keys(props.children).length > 0 ? props.children : undefined}
-        {props.childrenn && Object.keys(props.childrenn).length > 0 ? props.childrenn : undefined}
-    </label>);
+            {/* Portal-rendered panel */}
+            {pinned && (
+                <ColorPanel
+                    color={currentColor}
+                    onChange={handleColorChange}
+                    readOnly={readOnly}
+                    anchorRef={swatchRef}
+                    childrenn={props.childrenn}
+                    onClose={() => setPinned(false)}
+                />
+            )}
+        </div>
+    );
 }
 
 export interface InputOwnProps {
@@ -105,38 +211,24 @@ export interface InputOwnProps {
 interface StateProps {
     debugmodee: string;
     data: LPointerTargetable & GObject;
-    // selected: Dictionary<Pointer<DUser>, LModelElement | null>;
 }
 interface DispatchProps { }
 type AllProps = Overlap<InputOwnProps, Overlap<StateProps, DispatchProps>>;
-
 
 function mapStateToProps(state: DState, ownProps: InputOwnProps): StateProps {
     const ret: StateProps = {} as any;
     const pointer: Pointer = typeof ownProps.data === 'string' ? ownProps.data : ownProps.data.id;
     ret.debugmodee = state.debug ? 'true' : 'false';
     ret.data = LPointerTargetable.fromPointer(pointer);
-    /*
-    const selected = state.selected;
-    ret.selected = {};
-    for(let user of Object.keys(selected)) {
-        const pointer = selected[user];
-        if(pointer) ret.selected[user] = LModelElement.fromPointer(pointer);
-        else ret.selected[user] = null;
-    }
-
-    */
     return ret;
 }
 
 function mapDispatchToProps(dispatch: Dispatch<any>): DispatchProps {
-    const ret: DispatchProps = {};
-    return ret;
+    return {};
 }
 
 export const ColorConnected =
     connect<StateProps, DispatchProps, InputOwnProps, DState>(mapStateToProps, mapDispatchToProps)(ColorComponent);
-
 
 export function Color(props: InputOwnProps, children: ReactNode = []): ReactElement {
     // @ts-ignore children

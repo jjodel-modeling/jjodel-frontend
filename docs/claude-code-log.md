@@ -1,5 +1,202 @@
 # Claude Code Session Log
 
+## 2026-04-12 — fix: restore number spinners, remove right padding
+**File toccati**: `frontend/src/styles/components/_form-system.scss`
+**Esito**: ✅ build ok (80 errori TS, `vite build` 39.74s)
+**Fix**: reversed the hide rule — `_form-system.scss:189-198` now explicitly restores spinners with `-webkit-appearance: inner-spin-button; margin: 0; padding: 0; opacity: 1` and sets `padding-right: 2px` on `input[type="number"]` to eliminate the gap. Removed the unused `.number-input-with-spinner` class (was dead code).
+
+## 2026-04-12 — style: remove native number input spinners globally
+**Prompt**: nascondere frecce up/down native su input[type=number]
+**File toccati**: `frontend/src/components/editors/skeleton.scss`
+**Esito**: ✅ build ok (80 errori TS, `vite build` 49.26s)
+**Root cause**: `skeleton.scss:226-242` had a GLOBAL rule re-enabling spinners with `!important`: `input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: auto !important; width: 24px; }`. This overrode the hide rule in `_form-system.scss:194-197` (`-webkit-appearance: none` — no `!important`). The skeleton rule was a legacy "spin buttons v1.0" style.
+**Fix**: removed the 16-line block at skeleton.scss:226-242 (replaced with a one-line comment). The `_form-system.scss` global hide rule now takes effect uncontested: `-webkit-appearance: none` on `::-webkit-inner-spin-button` / `::-webkit-outer-spin-button`, plus `-moz-appearance: textfield` for Firefox.
+
+## 2026-04-12 — fix: opacity slider track height + hide plus icon on hover
+**File toccati**: `frontend/src/components/forEndUser/color.scss`
+**Esito**: ✅ build ok (80 errori TS, `vite build` 46.77s)
+**Fix 1 — Opacity slider track mismatch**: root cause was `::-webkit-slider-runnable-track { height: 6px }` and `::-moz-range-track { height: 6px }` at lines 510-518 (legacy path) that overrode the element-level `height: 10px`. WebKit/Firefox render the track via pseudo-elements, not the input element height. Fixed both legacy and portal paths: track pseudo-elements → `10px; border-radius: 5px` matching the hue slider exactly.
+**Fix 2 — Plus icon hidden by default**: `.cpanel .btn.color-suggestion i.bi` now has `opacity: 0; transition: opacity 0.15s`, with `&:hover i.bi { opacity: 1 }`. Clean circles when idle, `+` appears on hover.
+
+## 2026-04-12 — style: opacity slider matches hue slider (both paths)
+**File toccati**: `frontend/src/components/forEndUser/color.scss`
+**Esito**: ✅ build ok (80 errori TS, `vite build` 1m1s)
+**Fix**: aligned both opacity slider instances to the hue slider dimensions:
+- `.cpanel .suggestcontent input[type="range"]` (portal path, ~line 915) — already aligned in prev session
+- `.suggestions input[type="range"]` (legacy path, ~line 478) — aligned now: track `6px; radius 3px` → `10px; 5px`, thumb `14×14` → `16×16`, shadow `0 1px 3px` → `0 1px 4px`, border `#cbd5e1` → `rgba(0,0,0,0.2)`, margin `8px 0` → `4px 0`
+
+## 2026-04-12 — fix: suggestion panel color swatches → perfect circles
+**Prompt**: i cerchi dentro il pannello scuro erano ancora ovali
+**File toccati**: `frontend/src/components/forEndUser/color.scss`
+**Esito**: ✅ build ok (80 errori TS, `vite build` 47.85s)
+**Fix**: riscritta la regola `.cpanel .btn.color-suggestion` con "nuclear approach" — ogni possibile dimensione forzata: `width/height/min-width/min-height/max-width/max-height: 22px !important`, `box-sizing: border-box`, `overflow: hidden`, `display: inline-flex` con center/center alignment, `font-size: 0` sul button (kills text baseline offset), `line-height: 1` su button e `i.bi`. Triple-selector `.btn.color-suggestion, button.btn.color-suggestion, .roww > .btn.color-suggestion` per massima specificity. Border ridotto da 2px a 1px per guadagnare spazio dentro il cerchio più piccolo. Icon `i.bi` ridotta da 12px a 10px.
+
+## 2026-04-12 — fix: color swatches perfect circles, 20% smaller
+**Prompt**: forzare cerchi perfetti (width === height) e ridurre 20%
+**File toccati**:
+- `frontend/src/components/editors/views/data/palette-data.scss` — root cause fix + size reduction
+- `frontend/src/components/forEndUser/color.scss` — suggestion circle size in panel + legacy block
+**Esito**: ✅ build ok (80 errori TS, `vite build` 43.70s)
+
+**Root cause dell'ovale**: `palette-data.scss:492-496` dentro `#root .style-tab-redesign .controls .color-picker-root` aveva `height: 200% !important; transform: translateY(-25%) !important`. Specificity `(1,3,0)` con `!important` batteva la regola base `height: 24px !important` a specificity `(0,1,0)`. Risultato: width 24px ma height 48px → **ovale**. Le regole erano un hack per il vecchio `<input type="color">` nativo (rendere l'area cliccabile più grande verticalmente) — non più necessarie con il custom swatch `<div>`.
+
+**Fix**: rimossi `height: 200% !important` e `transform: translateY(-25%) !important` dal blocco nested. Anche rimossi i sub-rules `input { min-width: 25px; height: 25px }` e `.delete-color { width: auto }` (target elementi che non esistono più nel DOM).
+
+**Size reduction (-20%)**:
+| Element | Before | After |
+|---|---|---|
+| `.color-picker-root` (palette-data.scss:282-283) | `24px × 24px` | `20px × 20px` |
+| `.color-suggestion` (palette-data.scss:344-345) | `24px × 24px` | `20px × 20px` |
+| `.cpanel .btn.color-suggestion` (color.scss) | `28px × 28px` | `22px × 22px` |
+| Legacy `button.btn.color-suggestion` (color.scss:298-299) | `28px × 28px` | `22px × 22px` |
+| `.jj-color-swatch` (color.scss:758-760) | `100% × 100%` | unchanged (fills parent) |
+
+## 2026-04-12 — fix: unified color picker panel definitive layout (createPortal)
+**Prompt**: ristrutturare Color.tsx per avere un singolo pannello contenuto
+**File toccati**:
+- `frontend/src/components/forEndUser/Color.tsx` — rewrite: panel rendered via `createPortal(panel, document.body)`
+- `frontend/src/components/forEndUser/color.scss` — rewrite del blocco jj-color-* → `.cpanel` namespace
+**Esito**: ✅ build ok (80 errori TS pre-esistenti invariati, `vite build` 44.64s)
+
+**Root cause del layout rotto**: `palette-data.scss:333` forza `.content.suggestions { position: absolute !important; z-index: 99999 !important }`. Il mio precedente override in `.jj-color-panel .content.suggestions { position: static !important }` aveva STESSA specificity `(0,2,0)` — palette-data.scss caricato dopo vince. Inoltre `.color-picker-root` è forzato a `24×24px` (palette-data.scss:282-283), troppo piccolo per ancorare un panel da 260px.
+
+**Fix definitivo: `createPortal`**: il panel è renderizzato fuori dal DOM hierarchy via `createPortal(panel, document.body)`. Questo bypassa:
+- `overflow: hidden` su qualsiasi parent
+- z-index stacking contexts
+- palette-data.scss's !important position rules
+- Il constraint 24×24px del `.color-picker-root`
+
+**Architettura nuova**:
+```
+<body>
+  ...
+  <div class="cpanel" style="position: fixed; top: {swatchBottom+4}; left: {centered}">
+    <div class="cpanel__sv">canvas + cursor</div>
+    <input class="cpanel__hue" />
+    <div class="cpanel__inputs">HEX + R + G + B</div>
+    <div class="cpanel__divider" />
+    {childrenn}  ← .content.suggestions flows inline (overridden to position:static)
+  </div>
+  ...
+</body>
+```
+
+**Posizionamento**: `position: fixed` basato su `anchorRef.getBoundingClientRect()` → `top = swatchBottom + 4`, `left = swatchCenterX - 130` (centrato 260px), `Math.max(4, left)` per non fuoriuscire a sinistra.
+
+**CSS specificity fix per `.content.suggestions`**: `.cpanel .content.suggestions.suggestions` = specificità `(0,4,0)` > `(0,2,0)` di palette-data.scss → override vince anche con !important su entrambi (higher specificity wins when both have !important).
+
+**Click-outside dismissal**: `useEffect` su `ColorPanel` ascolta `mousedown` globale, chiude se click fuori sia dal panel che dal swatch (due ref check).
+
+**Namespace `.cpanel`** scelto perché: corto, unico nel codebase (verificato), evita collisioni con `.jj-color-panel` / `.color-panel` / `.color-picker-root` etc. che hanno regole conflittuali sparse in palette-data.scss + color.scss.
+
+**Cosa rimane in color.scss (legacy)**: le vecchie regole `.pinned`, `.hoverable`, `.color-picker-root` etc. dalle righe 1-754 sono ora parzialmente dead code (il pinned highlight, il hover trigger, etc.) ma non rompono nulla — le regole di palette-data.scss che forzano `!important` su `.color-picker-root` rendono le vecchie regole irrilevanti. Cleanup di queste regole legacy delegato a post-release.
+
+## 2026-04-12 — style: color picker refinements (oval border, scrollbar, circle shape)
+**Prompt**: 3 fix cosmetici sul color picker panel
+**File toccati**: `frontend/src/components/forEndUser/color.scss`
+**Esito**: ✅ build ok (80 errori TS, `vite build` 41.15s)
+
+**Fix 1 — Oval border on pinned swatch**: `.pinned { background; outline: 1px solid; border-radius: 20% }` applicava un bordo ovale al container `.color-picker-root` rettangolare (width > height → 20% radius = ellisse). Rimossi `background`, `outline`, `border-radius` — il pannello aperto è sufficiente come visual indicator.
+
+**Fix 2 — Scrollbar nel panel**: `.jj-color-panel { max-height: 500px; overflow-y: auto }` causava scrollbar interna. Rimossi entrambi — il panel si espande per mostrare tutto il contenuto.
+
+**Fix 3 — Oval suggestion circles**: `button.btn.color-suggestion` usava `width/height: var(--input-height)` (variabile non risolta nell'ambito del panel dark → fallback potenzialmente non quadrato). Cambiato a `width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0` — dimensioni fisse, sempre circolari, non comprimibili dal flex parent.
+
+## 2026-04-12 — feat: unified color picker panel (custom HSV canvas + palette in single popup)
+**Prompt**: sostituire `<input type="color">` con color picker custom, integrare nel pannello palette
+**File toccati**:
+- `frontend/src/components/forEndUser/Color.tsx` — rewrite completo (~170 → ~200 righe)
+- `frontend/src/components/forEndUser/color.scss` — aggiunto blocco `jj-color-*` (~150 righe)
+**Esito**: ✅ build ok (80 errori TS pre-esistenti invariati, `vite build` 47.93s)
+
+**Architettura del nuovo componente**:
+```
+<div className="color-picker-root pinned">      ← root (click toggles pinned)
+  <div className="jj-color-swatch">              ← circle showing current color (replaces input[type=color])
+  <div className="jj-color-panel">               ← unified popup (absolute, z-index 10000)
+    <ColorPicker>                                 ← NEW: inline HSV picker component
+      <div className="jj-color-picker__sv">       ← SV canvas (CSS gradients + mouse drag)
+      <input className="jj-color-picker__hue">    ← Hue slider (0-360, rainbow gradient)
+      <div className="jj-color-picker__inputs">   ← HEX + R/G/B number inputs
+    </ColorPicker>
+    <div className="jj-color-panel__divider">     ← separator
+    {props.childrenn}                             ← existing: Opacity + Analogous/Lighten/... + Delete
+  </div>
+</div>
+```
+
+**Cosa è stato rimosso**:
+- `<input type="color" ...>` nativo — sostituito dal swatch + custom picker. Nessun popup nativo del browser.
+- L'intero blocco `otherprops` cleanup (delete data/field/getter/setter/etc.) — non serve più, l'input nativo era l'unico consumer
+- I `<label>` wrapper per tooltip (erano dentro la vecchia `<label>` root) → convertiti a `<span>` già nel fix precedente, ora semplicemente rimossi (il tooltip label era ridondante)
+
+**ColorPicker (nuovo componente inline, ~60 righe)**:
+- **SV Canvas**: `<div>` con `background: linear-gradient(to right, #fff, hsl(H, 100%, 50%))` + overlay `linear-gradient(to bottom, transparent, #000)`. Mouse handler su `mousedown` + `mousemove/mouseup` via document listeners. Il cursor circle si muove via `left` + `top` percentuali.
+- **Hue Slider**: `<input type="range" min=0 max=360>` con `background: linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)`.
+- **Inputs**: HEX (text, 70px) + R/G/B (number 0-255, 44px ciascuno). Tutti sincronizzati bidirezionalmente via tinycolor.
+- **Conversioni**: `hexToHsv()` e `hsvToHex()` wrapper su `tinycolor2` (già installato nel codebase).
+
+**Sincronizzazione bidirezionale**:
+- User drags SV canvas → `hsvToHex(h, newS, newV)` → `setter(hex)` → getter aggiorna → RGB inputs si aggiornano
+- User drags Hue slider → `hsvToHex(newH, s, v)` → setter → SV canvas gradient si aggiorna (via `hsl(H, 100%, 50%)` nello style)
+- User types RGB → `tinycolor({r, g, b}).toHexString()` → setter → SV cursor + hue slider si aggiornano
+- User types HEX → `tinycolor(hex)` se valido → setter → tutto si aggiorna
+- User clicks palette suggestion (Analogous, Lighten, etc.) → PaletteData.tsx chiama `setColor(prefix, i, newVal)` → getter/setter chain aggiorna il picker
+
+**Panel posizionamento e dismissal**:
+- `position: absolute; top: calc(100% + 4px); left: 50%; transform: translateX(-50%)` — centrato sotto il swatch
+- `width: 260px; max-height: 500px; overflow-y: auto` — contenuto scrollabile se supera viewport
+- Click outside → `document.addEventListener('mousedown')` handler chiude il pannello (invariato dal fix precedente)
+- `onClick={e.stopPropagation()}` sul panel evita che click interni chiudano il panel
+
+**Childrenn integration**: il `props.childrenn` (passato da PaletteData.tsx, contiene `<div className="content suggestions">` con Opacity slider + Analogous/Lighten/Darken/... + Delete button) viene renderizzato DENTRO `.jj-color-panel`. La regola CSS `.jj-color-panel .content.suggestions { position: static; background: transparent }` fa si che il pannello suggestions fluisca inline nel popup unificato (non assoluto come prima).
+
+**Dark theme naturale**: il panel usa `background: #1e293b` (slate-800), inputs `background: #0f172a` (slate-900), text `#e2e8f0` (slate-200) — lo stesso schema dark del pannello suggestions esistente. Tutto si integra visivamente.
+
+## 2026-04-12 — fix: color palette panel closed by default
+**Prompt**: il pannello suggerimenti colore appariva automaticamente quando si apriva il tab Style
+**File toccati**: `frontend/src/components/forEndUser/color.scss` (1 riga aggiunta)
+**Esito**: ✅ build ok (80 errori TS pre-esistenti invariati)
+**Root cause**: nel fix precedente (hover→click), rimuovendo il blocco di trigger `:hover/:focus-within/:active` da color.scss, avevo anche rimosso la regola `.controls:focus-within .content.suggestions:not(:focus-within) { display: none !important }` che serviva come default-hide. Senza quella regola, `.content.suggestions` non aveva nessun `display: none` → visibile di default.
+**Fix**: aggiunto `display: none` alla regola `.color-container .suggestions` (color.scss:264). Il `.pinned .content.suggestions { display: flex }` override lo mostra solo quando l'utente clicca.
+
+## 2026-04-12 — fix: color picker hover→click, opacity slider styling
+**Prompt**: cambiare hover→click per pannello palette colori, stilizzare slider opacity, evitare sovrapposizione popup
+**File toccati**:
+- `frontend/src/components/forEndUser/Color.tsx` — TSX refactor
+- `frontend/src/components/forEndUser/color.scss` — CSS trigger change + slider styling
+
+**Esito**: ✅ build ok (80 errori TS pre-esistenti invariati, `vite build` 47.72s)
+
+**Fix P1 — hover→click (Color.tsx)**:
+- Changed root element from `<label>` to `<div>` — prevents automatic forwarding of clicks to the child `<input type="color">` (browser `<label>` behavior). Now clicking the color circle area toggles the suggestions panel instead of opening the native color picker.
+- Added `[pinned, setPinned]` state + `.pinned` CSS class on root `<div>`
+- `handleRootClick`: toggles pinned, but skips if click target is inside `.content.suggestions` (let suggestion buttons handle their own clicks) or is the `<input>` element itself (let native picker open on direct input click)
+- Added `useEffect` click-outside handler (`document.addEventListener('mousedown')`) that unsets pinned when clicking outside the root `<div>`
+
+**Fix P3 — no overlap (color.scss)**:
+- Removed `:hover`, `:focus-within`, `:active` from the `.content.suggestions` display trigger (was `.hoverable:hover, .hoverable:focus-within, .hoverable:active, .hoverable.pinned` at line 426)
+- Only `.pinned` now shows the panel → click-only behavior, no accidental hover popup
+- The native color picker (browser's `<input type="color">`) opens only when the user clicks directly on the `<input>` element (not via label forwarding since root is now `<div>`)
+- Since `.pinned` toggle and native picker are separate interactions, they don't overlap
+
+**Fix P2 — opacity slider (color.scss)**:
+- Added custom styling for `input[type="range"]` inside `.suggestions`:
+  - `-webkit-appearance: none; appearance: none` — kills browser default
+  - Track: 6px height, 3px radius, `linear-gradient(to right, transparent, currentColor)` background
+  - Thumb: 14×14px white circle with `#cbd5e1` border and subtle shadow
+  - Both `-webkit-slider-thumb` and `-moz-range-thumb` covered for cross-browser
+
+**Root `<label>` → `<div>` blast radius**:
+- `<Color>` JSX element is rendered ONLY in `PaletteData.tsx:376` (verified via grep: 1 usage)
+- Inner `<label>` elements (for tooltip labels) changed to `<span>` to avoid nested-`<label>` issues now that root is `<div>`
+- The `color-picker-root` CSS class styles are unaffected — they used the class selector, not element-type selectors
+
+**Other hover rules left intact**:
+- `.value.hoverable:hover` (color.scss:401) — for SVG path value rows, different component from color circles, not changed
+- `.controls:not(:focus-within) .color-picker-root:hover` (was line 462) — removed along with the old trigger block (now replaced by `.pinned` which provides the same visual feedback: outline + overflow + bg)
+- `.controls:focus-within .content.suggestions:not(:focus-within)` (was line 471) — removed (no longer needed since suggestions are pinned-only, not focus-driven)
+
 ## 2026-04-11 — fix: JSX editor header alignment + language label
 **Prompt**: allineare titolo header, cambiare TYPESCRIPT → JSX in status bar
 **File toccati**:

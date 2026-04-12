@@ -35,7 +35,7 @@
     }
 
     &__separator {
-        color: #cbd5e1;
+        color: #64748b;
         flex-shrink: 0;
     }
 
@@ -328,6 +328,15 @@
     z-index: 10;
     white-space: nowrap;
     pointer-events: none;
+}
+
+// Empty canvas: compact layout
+.workbench-canvas--empty {
+    .workbench-placeholder {
+        font-size: 11px;
+        color: #94a3b8;
+        padding: 0;
+    }
 }
 
 // Highlight mode: dim non-matched elements

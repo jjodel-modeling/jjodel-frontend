@@ -223,23 +223,8 @@ input[type="number"]::-webkit-outer-spin-button {
 }*/
 
 
-input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
-  -webkit-appearance: auto !important;
-  opacity: 1 !important;
-  background: transparent !important;
-  border-width: 0px;
-  margin: 0;
-  border-left: 1px solid #d8d8d8;
-  height: var(--input-height);
-  width: 24px;
-  padding-top: 2px!important;
-  cursor: pointer;
-
-  background-color: var(--color-accent);
-  color: white!important;
-  border-left: 1px solid var(--color-accent)!important;
-}
+/* Legacy spin buttons removed — spinners hidden globally by _form-system.scss.
+   Was overriding the hide rule via -webkit-appearance: auto !important + width: 24px. */
 
 .dock-content-holder #DockComponent_rightbar_8 {
 

@@ -120,21 +120,23 @@ const WorkbenchCanvas: React.FC<WorkbenchCanvasProps> = ({
         return `Editing: ${viewName}`;
     }, [selectedViewInfo, matchInfo, highlightMode, filterMode]);
 
+    const isEmpty = !previewModelId;
     const containerStyle: React.CSSProperties = isFullscreen
         ? { flex: 1, position: 'relative' }
-        : { height, position: 'relative' };
+        : { height: isEmpty ? 80 : height, position: 'relative' };
 
     // Highlight/filter CSS classes applied to the canvas container
     const canvasClasses = [
         'viewpoint-workbench__canvas',
+        isEmpty ? 'workbench-canvas--empty' : '',
         highlightMode && selectedViewId ? 'workbench-canvas--highlight' : '',
         filterMode && selectedViewId ? 'workbench-canvas--filter' : '',
     ].filter(Boolean).join(' ');
 
     return (
         <div className={canvasClasses} style={containerStyle}>
-            {/* Mini-toolbar */}
-            <div className="workbench-canvas__toolbar">
+            {/* Mini-toolbar — hidden when no model selected */}
+            {!isEmpty && <div className="workbench-canvas__toolbar">
                 <div className="workbench-canvas__toolbar-group">
                     <button
                         className={`workbench-canvas__control ${highlightMode ? 'workbench-canvas__control--active' : ''}`}
@@ -159,7 +161,7 @@ const WorkbenchCanvas: React.FC<WorkbenchCanvasProps> = ({
                 >
                     <i className={`bi ${isFullscreen ? 'bi-fullscreen-exit' : 'bi-arrows-fullscreen'}`} />
                 </button>
-            </div>
+            </div>}
 
             {/* Canvas content */}
             <div className="workbench-canvas__content" key={refreshKey}>

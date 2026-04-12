@@ -187,25 +187,15 @@ select,
 // ==============================================
 
 input[type="number"] {
-  // Remove default spinner in Firefox
-  -moz-appearance: textfield;
+  // Space for spinner arrows (~14px) so text doesn't overlap them
+  padding-right: 16px;
 
-  // Custom spinner styling
-  &::-webkit-outer-spin-button,
-  &::-webkit-inner-spin-button {
-    -webkit-appearance: none;
+  &::-webkit-inner-spin-button,
+  &::-webkit-outer-spin-button {
+    -webkit-appearance: inner-spin-button;
     margin: 0;
-  }
-}
-
-// Optional: show spinner on hover/focus
-.number-input-with-spinner {
-  input[type="number"] {
-    &::-webkit-outer-spin-button,
-    &::-webkit-inner-spin-button {
-      -webkit-appearance: inner-spin-button;
-      opacity: 1;
-    }
+    padding: 0;
+    opacity: 1;
   }
 }
 
