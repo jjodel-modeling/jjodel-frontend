@@ -1,5 +1,251 @@
 # Claude Code Session Log
 
+## 2026-04-11 — fix: JSX editor header alignment + language label
+**Prompt**: allineare titolo header, cambiare TYPESCRIPT → JSX in status bar
+**File toccati**:
+- `frontend/src/components/editors/EditorFullscreenModal.scss` — header tightened
+- `frontend/src/components/editors/EditorFullscreenModal.tsx` — nuova prop `languageLabel`
+- `frontend/src/components/editors/languages/Jsx.tsx` — passa `languageLabel="jsx"`
+**Esito**: ✅ build ok (80 errori TS pre-esistenti invariati, `vite build` 39.78s)
+
+**Fix 1 — Header alignment** (`EditorFullscreenModal.scss:43-75`):
+| Property | Before | After | Motivo |
+|---|---|---|---|
+| `.editor-fullscreen-header { padding }` | `16px 24px` | `8px 16px` | Tighter, matches task hint "padding 8px 16px" |
+| `&__left { gap }` | `12px` | `8px` | Icon→title spacing più compatto |
+| `&__left i { font-size }` | `20px` | `18px` | Icon leggermente più piccola |
+| `&__left i { line-height }` | (not set → 1.2) | `1` | Evita offset verticale del line-height default |
+| `&__left h2 { font-size }` | `18px` | `16px` | Header più compatto |
+| `&__left h2 { line-height }` | (not set → 1.2) | `1` | **Fix critico**: senza questo il `h2` ha browser-default line-height 1.2 che offsetta il testo verticalmente di ~3-4px pur con `align-items: center` sul parent |
+| `&__left h2 { padding }` | (not set → 0) | `0` (esplicito) | Safety |
+
+**Fix 2 — Language label** (`EditorFullscreenModal.tsx` + `Jsx.tsx`):
+Root cause: `EditorFullscreenModal` prop `language` serviva sia come Monaco language id (per syntax highlighting, es. `'typescript'`) sia come display label nel footer (`.editor-fullscreen-footer__language` con CSS `text-transform: uppercase`). Per il JSX editor Monaco richiede `language='typescript'` (configurato con `typescriptDefaults.setCompilerOptions({jsx: JsxEmit.React})` in `Jsx.tsx:44-54`), ma l'utente vedeva "TYPESCRIPT" nel footer invece di "JSX".
+
+Fix: separato il display label dall'id Monaco. Aggiunta prop opzionale `languageLabel?: string` a `EditorFullscreenModalProps`. Il footer ora renderizza `{languageLabel ?? language}` — se la prop è fornita, usa quella; altrimenti fallback al `language` id (backward-compatible con tutti gli altri callers OCL/JS/MTM/Palette/Function che continuano a mostrare il language id grezzo).
+
+`Jsx.tsx` passa `languageLabel="jsx"` insieme a `language="typescript"`. Il footer mostra "JSX" (uppercase via CSS) mentre Monaco usa l'ancora `typescript` engine per syntax highlighting JSX.
+
+**Perché non cambiare `language="typescript" → "javascript"`**: Monaco's `typescript` language (via `typescriptDefaults.setCompilerOptions({jsx: JsxEmit.React})`) è configurato specificamente per JSX/TSX in `Jsx.tsx:44-54`. Passare a `javascript` perderebbe questa configurazione e potenzialmente rompe type-checking + autocomplete per il template.
+
+**Perché non usare `'typescriptreact'` / `'javascriptreact'`**: Monaco non ha di default questi language id come top-level languages (solo via extensions), e il `typescriptDefaults` helper usa l'id `typescript`. Cambiarlo rompe il setCompilerOptions.
+
+**Non toccato**:
+- `Jsx.tsx` Monaco config (`typescriptDefaults.setCompilerOptions`, `setDiagnosticsOptions`, etc.) — invariato
+- Altri callers di `EditorFullscreenModal` (OCL/JS/Javascript/PaletteData/MTM/Function) — tutti continuano a mostrare il `language` grezzo nel footer (backward-compatible)
+- Stili `.editor-fullscreen-footer__language` (text-transform: uppercase, slate bg) — invariati
+
+## 2026-04-11 — fix: Monaco editor invisible in JSX full-screen
+**Prompt**: fix dimensioni container Monaco nel full-screen editor dopo rimozione split mode
+**File toccati**: `frontend/src/components/editors/EditorFullscreenModal.tsx`
+**Esito**: ✅ build ok (80 errori TS pre-esistenti invariati, `vite build` 44.08s)
+
+**Root cause**: il rendering di `EditorFullscreenModal.tsx` wrappa il Monaco Editor in un `<div>` con `className` condizionale:
+
+```tsx
+<div className={viewMode === 'split' ? 'editor-fullscreen-editor-pane' : undefined}>
+  <Editor width="100%" height="100%" ... />
+</div>
+```
+
+In **split mode**, il wrapper ha la classe `.editor-fullscreen-editor-pane { flex: 1; display: flex; flex-direction: column; min-width: 0 }` che gli dà dimensioni corrette via flex row del parent `.editor-fullscreen-body--split`.
+
+In **source mode** (l'unico mode ora dopo il fix precedente per disabilitare split), il wrapper ha `className={undefined}` — è un block div senza CSS rules → dimensioni auto. Monaco con `height="100%"` risolve contro parent auto-height → **0 pixel** → Monaco collassa invisibile anche se montato (status bar mostra 143 lines / 5386 chars).
+
+**Perché gli altri editor (OCL/JS/MTM/Palette/Function) non mostrano lo stesso bug**: probabilmente l'`automaticLayout: true` option di Monaco + il ResizeObserver interno li salvano in alcuni casi. Il bug si è manifestato solo dopo la rimozione dello split mode dal JSX editor perché il JSX era SEMPRE in split mode prima, quindi il wrapper aveva sempre la classe `.editor-fullscreen-editor-pane`. Gli altri editor rendevano source-mode fin dall'inizio e avevano già workaround via automaticLayout (tested in real-time da Monaco ResizeObserver).
+
+**Fix**: aggiunto inline `style={viewMode === 'source' ? { width: '100%', height: '100%' } : undefined}` sul wrapper `<div>`. Solo in source mode viene applicato — in split mode il wrapper usa la classe `.editor-fullscreen-editor-pane` invariata.
+
+```tsx
+<div
+  className={viewMode === 'split' ? 'editor-fullscreen-editor-pane' : undefined}
+  style={viewMode === 'source' ? { width: '100%', height: '100%' } : undefined}
+>
+  <Editor width="100%" height="100%" ... />
+</div>
+```
+
+Ora Monaco's `height="100%"` risolve contro parent con altezza esplicita → dimensioni corrette → editor visibile.
+
+**Non toccato**:
+- `handleEditorMount` con `setTimeout(..., 50)` + `editor.layout()` — lasciato in place come safety net
+- `automaticLayout: true` nelle editorOptions — invariato
+- SCSS `.editor-fullscreen-body { flex: 1; position: relative; min-height: 0 }` — invariato
+- `.editor-fullscreen-editor-pane` SCSS (flex layout per split mode) — invariato
+- `Jsx.tsx` — il fix precedente per disabilitare split mode rimane valido; ora funziona correttamente grazie a questo fix complementare
+
+**Impatto collaterale positivo**: tutti gli altri callers di `EditorFullscreenModal` (OCL, JS, Javascript, PaletteData, MTM, FunctionComponent) ora beneficiano dello stesso inline style esplicito in source mode — anche se erano apparentemente funzionanti prima, ora hanno dimensioni garantite senza dipendere dall'automaticLayout di Monaco (che è una race condition potenziale).
+
+## 2026-04-11 — fix: disable split mode in JSX template full-screen editor
+**Prompt**: rimuovere split view/preview dal template editor full-screen, forzare solo codice (preview mostrava errori per mancanza di contesto runtime completo, source-only mode aveva bug di rendering)
+**File toccati**: `frontend/src/components/editors/languages/Jsx.tsx`
+**Esito**: ✅ build ok (80 errori TS pre-esistenti invariati, 491 test passing)
+
+**Architettura scoperta**: `EditorFullscreenModal.tsx` (il modal wrapper condiviso) ha una prop opzionale `renderPreview?: (code: string) => React.ReactNode`. La presenza di questa prop è il GATE per mostrare la toolbar con i 3 bottoni Source/Split/Preview (righe 235-265). Senza renderPreview, i bottoni non sono renderizzati e il modal è permanentemente in source-only mode.
+
+**Callers di EditorFullscreenModal grepati**:
+- `languages/Jsx.tsx:166` — passa `renderPreview={(code) => <TemplatePreview jsxCode={code} className={view.name} />}` ← **unico con split mode**
+- `languages/Ocl.tsx:61` — no renderPreview (source-only)
+- `languages/Js.tsx:105` — no renderPreview (source-only)
+- `languages/Javascript.tsx:114` — no renderPreview (source-only)
+- `views/data/PaletteData.tsx:762` — no renderPreview (source-only)
+- `MTM.tsx:195` — no renderPreview (source-only)
+- `forEndUser/FunctionComponent.tsx:399` — no renderPreview (source-only)
+
+**Fix minimale (opzione A)**: rimossa la prop `renderPreview` dal caller Jsx.tsx:166 + rimosso l'import di `TemplatePreview` a riga 13. Il modal rende ora solo l'editor Monaco a tutta larghezza, senza split. **Nessun altro editor impattato** — tutti gli altri callers già usano source-only mode.
+
+**Dead code flaggato (non rimosso)**:
+- `frontend/src/components/editors/TemplatePreview.tsx` — ora zero importers, candidato a cleanup post-release ma lasciato in place per mantenere lo scope del task minimale. Se si vuole rimuoverlo: `rm src/components/editors/TemplatePreview.tsx` — verificato che nessun altro file lo importa.
+
+**Non toccato**:
+- `EditorFullscreenModal.tsx` — il modal wrapper rimane capable di rendere split mode se qualche futuro caller passa `renderPreview`. L'infrastruttura resta in place.
+- `EditorFullscreenModal.scss` — stili split mode invariati (dead CSS selettivo, zero impact se nessun caller li attiva)
+- Altri editor fullscreen (OCL, JS, Style/CSS, Options, Languages MTM, Function) — invariati, già source-only
+
+**Verifica manuale post-deploy**:
+- JSX full-screen → solo editor Monaco, nessuna toolbar split/preview, codice visibile
+- Style/CSS full-screen, OCL/JS full-screen, MTM full-screen → invariati (sempre stati source-only)
+
+## 2026-04-11 — style: reduce observed properties row spacing
+**Prompt**: ridurre gap tra righe observed properties (troppo spaziate, ~20-24px invece di ~8px)
+**File toccati**:
+- `frontend/src/components/forEndUser/FunctionComponent.scss` — 2 regole modificate
+- `frontend/src/styles/style.scss` — 1 regola modificata
+**Esito**: ✅ build ok (80 errori TS pre-esistenti invariati, `vite build` 2m27s)
+
+**Componente identificato**: le righe "Observed Properties" e "Constants" sono renderizzate da `<Function>` (aka `FunctionComponent`) in `TemplateData.tsx:32-36`. Ogni riga è un `<label className="d-flex template-item my-1">` contenente identifier input + arrow + expression input + delete button.
+
+**Valori prima/dopo**:
+| Regola | Prima | Dopo |
+|---|---|---|
+| `.template-item { margin-bottom }` (FunctionComponent.scss:63) | `8px !important` | `4px !important` |
+| `.function-editor-root[data-mode="simpleMode"] .template-item { padding }` (FunctionComponent.scss:243) | `6px 0 !important` | `2px 0 !important` |
+| `.template-item:last-of-type { margin-bottom }` (style.scss:766) | `10px` | `4px` |
+
+**Spaziatura totale per riga**:
+- Prima: 6px (top) + content + 6px (bottom) + 8px (margin) = ~20px per row
+- Dopo: 2px (top) + content + 2px (bottom) + 4px (margin) = ~8px per row
+
+**Non toccato**:
+- `.template-item:first-of-type { margin-top: 0 }` (style.scss:715) — già 0, nessun cambio
+- La Bootstrap utility `my-1` (margin-y 4px) applicata nel TSX quando NOT in advanced mode — interagisce con le regole SCSS ma non la tocco (non SCSS)
+- La struttura grid `grid-template-columns: 35% auto 1fr auto` (FunctionComponent.scss:239) — invariata, serve per il layout identifier / arrow / expression / delete
+- `gap: 8px` nel grid — invariato, è il gap tra le colonne (identifier, arrow, expression, delete), non tra le righe
+
+**Scope**: le 3 modifiche agiscono su `.template-item` che è usato da TUTTI i `<Function>` components — quindi sia "Constants" che "Observed Properties" nel Template tab beneficiano. Se ci sono altri usi di `FunctionComponent` nel codebase, anche quelli avranno le righe più compatte (positive side effect, consistenza).
+
+## 2026-04-11 — fix: reverse spacing direction in Apply to tab
+**Prompt**: la spaziatura era stata ridotta invece che allineata alla baseline (più ariosa)
+**File toccati**: `frontend/src/components/editors/views/data/viewapplyto.scss` (+1 regola scoped)
+**Esito**: ✅ build ok (80 errori TS pre-esistenti invariati, `vite build` 37.51s)
+
+**Root cause**: il fix precedente (`.view-editor-tab-content { padding: 8px → 0 }`) ha ridotto di 8px la spaziatura EXTERNAL attorno al contenuto — direzione sbagliata. Il Properties panel è PIÙ ARIOSO di quanto Apply to fosse prima, non meno. L'errore era assumere che il Properties panel mettesse padding sull'outer container; in realtà la sua airiness viene da `.props-section__body { padding: 4px 14px 12px }` (info-improvements.scss:971) — ogni CollapsibleSection in `Info.tsx` ha 14px di horizontal inset attorno al suo content. InfoData non usa CollapsibleSections (rende `.jj-field` flat), quindi senza il 14px horizontal inset il content tocca i bordi del container.
+
+**Valori reali estratti dal Properties panel**:
+- `.properties-panel { padding: 0 !important }` (info-improvements.scss:1208) — outer 0
+- `.properties-fields { padding: 0 }` (info-improvements.scss:1310) — wrapper 0
+- `.props-section { margin-bottom: 2px }` (info-improvements.scss:919) — tra sezioni
+- `.props-section__header { padding: 6px 14px }` (info-improvements.scss:928) — header con 14px horiz
+- **`.props-section__body { padding: 4px 14px 12px }`** (info-improvements.scss:971) — **questo è il 14px horizontal + 12px bottom che dà l'airiness**
+- `.jj-field { margin-bottom: 14px }` (_form-system.scss:950) — spacing tra campi (invariato per entrambi i path)
+
+**Fix**: aggiunta regola scoped in viewapplyto.scss:
+
+```scss
+.view-editor-tab-content > section.properties-tab.properties-panel {
+  padding: 12px 14px !important;
+}
+```
+
+Questo matcha `.props-section__body { padding: 4px 14px 12px }` approssimativamente (12px vs 4px top è una differenza intenzionale — `.props-section__body` ha 4px top perché il `.props-section__header` sopra ha il suo padding; InfoData non ha header sopra quindi usa 12px per simmetria). Il valore `14px` horizontal è identico.
+
+**Scope del selettore**: `.view-editor-tab-content > section.properties-tab.properties-panel` targetta SOLO InfoData perché:
+- Template (`.template-tab`), Style (`.style-tab`), Events (`.events-tab`), Options (`.options-tab`) rendono root elements differenti con le loro proprie regole di padding interno (24px per Events, 20px per Options, ecc.)
+- Solo InfoData rende `<section class="properties-tab properties-panel">` come direct child di `.view-editor-tab-content`
+
+**Specificità cascade**: il selettore ha specificità `(0,3,1)` (1 combinatore child + 3 classi + 1 elemento) vs `(0,1,0)` della regola `.properties-panel { padding: 0 !important }` (info-improvements.scss:1207). Entrambi hanno `!important` → vince la specificità più alta → mio override prevale.
+
+**Non toccato**:
+- `.view-editor-tab-content { padding: 0 }` (dal fix precedente) — mantenuto perché gli altri sub-tab hanno già la loro padding interna
+- `.jj-field` / `.jj-toggle-row` — invariati, design system shared con Properties
+- `InfoData.tsx` — gli InfoTooltip aggiunti indipendentemente dal user non sono impattati
+
+**Differenza prima/dopo**:
+| Proprietà | Prima (fix errato) | Dopo (corretto) |
+|---|---|---|
+| Outer `.view-editor-tab-content` padding | 0 (my previous mistake) | 0 (unchanged) |
+| Inner `section.properties-tab.properties-panel` padding | 0 (inherited from `!important`) | **12px 14px** (new scoped rule) |
+| Effective content inset | 0px | **12px vertical + 14px horizontal** |
+
+Visualmente: Apply to content ora ha 14px di inset horizontale e 12px di inset verticale, matchando l'airiness del `.props-section__body` di Properties.
+
+## 2026-04-11 — style: fix spacing + add tooltips to Apply to tab
+**Prompt**: uniformare padding/margin, aggiungere InfoTooltip a 7 campi
+**File toccati**:
+- `frontend/src/components/editors/views/nestedView.scss` — `.view-editor-tab-content`: `padding: 0` → `padding: 4px 14px 12px` (valori esatti di `.props-section__body` da `info-improvements.scss:970-972`, che è il wrapper usato da `CollapsibleSection` in Info.tsx per le sezioni GENERAL/FLAGS/TYPE&BOUNDS delle Properties). `.jj-field` resta al baseline `form-system.scss:950` (`margin-bottom: 14px; &:last-child { margin-bottom: 0 }`) — nessun override scoped necessario.
+- `frontend/src/components/editors/views/data/InfoData.tsx` — aggiunto `useState` all'import React + copia locale del componente `InfoTooltip` (pattern identico a `Info.tsx:65-76`, non esportato quindi va duplicato per vincolo "non toccare Info.tsx"). Wired in 7 campi (Name, Is Exclusive, Priority, Preferred appearance, Applicable to, Viewpoint, Parent view) — inserito dopo il label text + dentro lo stesso `<label>`/`<div>`/`<span>` del label, così il wrapper flex di `.jj-field-label { display: flex; align-items: center; gap: 4px }` allinea icona "i" alla baseline del label.
+
+**Esito**: ✅ build ok (80 errori TS pre-esistenti invariati, `vite build` 47.00s, zero regressioni). Un diagnostic TS `6133` ("useState dichiarato ma non letto") segnalato dall'IDE subito dopo l'aggiunta dell'import era transitorio — risolto automaticamente non appena `InfoTooltip` ha cominciato a usare `useState` nel passo successivo.
+
+**Key insight (Fix 1)**: le classi `.jj-info-icon-wrapper`, `.jj-info-icon`, `.jj-info-tooltip` in `info-improvements.scss:975-1016` sono scoped GLOBALMENTE (non sotto un selettore padre), quindi funzionano anche nel contesto del view editor senza serve un import o una regola aggiuntiva. `.jj-field-label` ha già `display: flex; align-items: center; gap: 4px` da `form-system.scss:955-963` — l'icona "i" si allinea correttamente al testo senza override.
+
+**Key insight (Fix 2)**: il valore giusto di padding per `.view-editor-tab-content` è `4px 14px 12px`, NON `padding: 8px` (come era in pre-regresion) né `padding: 0` (come era subito prima di questo task). Il path diretto delle Properties NON è edge-to-edge — usa `CollapsibleSection` → `.props-section__body` che ha esattamente `padding: 4px 14px 12px`. Replicando quel valore sull'outer container del view editor, i `.jj-field` si allineano visivamente al Properties panel (14px horizontal gutter, 4px top inset, 12px bottom inset) senza bisogno di un `CollapsibleSection` wrapper.
+
+**Note**: 
+- `InfoTooltip` duplicato invece che importato perché `Info.tsx:65` lo dichiara come `function` locale (non esportato) — esportarlo richiederebbe toccare Info.tsx, proibito dal vincolo. Il pattern è 12 righe, duplicazione accettabile.
+- Pattern InfoTooltip per il toggle "Is Exclusive": inserito il tooltip DENTRO lo `<span className="jj-toggle-row__label">` dopo il testo "Is Exclusive", stesso pattern del componente `PropertiesToggle` in `Info.tsx:93-102` (`<span className="jj-toggle-row__label">{label}{tooltip && <InfoTooltip text={tooltip} />}</span>`). Così il tooltip appare a destra della label ma a sinistra del toggle.
+- Regressione verificata: il test precedente con `padding: 0` faceva toccare il content al bordo del pannello slate-50 — asimmetrico rispetto al path Properties. Con `padding: 4px 14px 12px` si torna al comportamento baseline.
+
+## 2026-04-11 — style: align view editor spacing to Properties baseline
+**Prompt**: uniformare padding/margin del view editor tab content alla properties-tab
+**File toccati**: `frontend/src/components/editors/views/nestedView.scss` (1 regola modificata)
+**Esito**: ✅ build ok (80 errori TS pre-esistenti invariati, `vite build` 40.01s)
+
+**Root cause**: `.view-editor-tab-content { padding: 8px }` aggiungeva 8px extra attorno al contenuto di ogni sub-tab (Apply to, Template, Style, Events, Options) rispetto al path diretto delle Properties. Il path diretto non ha un wrapper `.view-editor-tab-content`, quindi il content dei `.jj-field` tocca direttamente i bordi del `.properties-panel-container` che è slate-50.
+
+**Catene DOM confrontate**:
+- Properties diretta: `.properties-panel-container (slate-50) → section.properties-tab.properties-panel (padding: 0!) → content`
+- View editor: `.properties-panel-container (slate-50) → section.properties-tab.properties-panel (padding: 0 via :has) → .view-editor-root (padding-right: 4px) → .view-editor-tabs → .view-editor-tab-content (padding: 8px ← EXTRA, slate-50) → section.properties-tab.properties-panel (padding: 0!) → content`
+
+**Fix**: `.view-editor-tab-content { padding: 8px }` → `padding: 0`. Il `background-color: rgb(248, 250, 252)` (slate-50) è rimasto perché matcha già `.properties-panel-container { background: #f8fafc }`.
+
+**Non toccato**:
+- `.view-editor-root { padding-right: 4px }` — cosmetic asymmetric padding che affetta breadcrumb + tab bar oltre al content, rischio di regressioni non legate al task; lasciato in place
+- `.properties-tab { padding: 24px }` (info-improvements.scss:140) — è override completamente dal successivo `.properties-panel { padding: 0px!important }` (info-improvements.scss:1207) quindi il valore effettivo è 0 in entrambi i path; non serve toccarlo
+- Rule `:has(.view-editor-root)` in info.scss:425 — ancora utile per vincolare l'outer section quando contiene il view editor; lasciata in place
+
+**Note**: il doppio wrapper `section.properties-tab.properties-panel` (outer dal view-branch di Info.tsx, inner dal rewrite di InfoData.tsx) non causa problemi perché entrambi i livelli hanno `padding: 0 !important`. La spaziatura interna è ora interamente gestita dai `.jj-field { margin-bottom: 14px }` e `.jj-toggle-row { padding: 5px 0 }` ereditati dal design system form (`styles/components/_form-system.scss`).
+
+## 2026-04-11 — style: refactor InfoData.tsx to use jj-* classes from Info.tsx baseline
+**Prompt**: sostituire classi form-* con jj-*, adottare pattern Toggle, rimuovere className custom da Input/Select
+**File toccati**: `frontend/src/components/editors/views/data/InfoData.tsx` (rewrite: 205 → 200 righe)
+**Esito**: ✅ build ok (80 errori TS pre-esistenti invariati, 491 test passing, `vite build` 1m11s, zero regressioni)
+
+**Trasformazioni className applicate**:
+- `<section className='apply-to-tab'>` → `<section className='properties-tab properties-panel'>`
+- `form-field` → `jj-field` (6 istanze: Name, Priority, Preferred appearance, Applicable to, Viewpoint, Parent view)
+- `form-field form-field--toggle` + struttura interna → `jj-toggle-row` con `<span className="jj-toggle-row__label">` + `<Toggle size="xs">`
+- `form-label` → `jj-field-label` (usa `<div>` per tutti tranne Name che usa `<label>` con `<span className="jj-field-required">*</span>` inline per matchare `builder.class()` in Info.tsx:290-291)
+- Rimossa `className="form-input"` da `<Input>` (5 istanze — il componente Input ha già i suoi stili)
+- Rimossa `className="form-select"` da `<Select>` (5 istanze — idem)
+- **Eliminati** `<div className="toggle-content">`, `<span className="toggle-label">`, `<span className="toggle-description">`, `<button className="apply-to-toggle">`, `<span className="apply-to-toggle-thumb">` — sostituiti dal pattern `jj-toggle-row` + componente `Toggle`
+
+**Pattern Is Exclusive**: inlined il pattern di `PropertiesToggle` (Info.tsx:79-103) invece di usare il componente direttamente, perché `PropertiesToggle` prende `data: LModelElement + field: string` per settare via `(data as any)[field] = checked`, mentre `view.isExclusiveView` è un setter via proxy su LViewElement. Il pattern inline replica la struttura: `handleExclusiveRowClick` (click sulla row salvo se targetta il button role=switch) + `handleExclusiveToggle` (click diretto sul Toggle component).
+
+**Import aggiunto**: `import {Toggle} from '../../../ui'` — verificato che `ui/index.ts:19` esporta `Toggle`, che `Toggle.tsx` accetta `checked/onChange/disabled/size='xs'`, e che Info.tsx usa lo stesso import a riga 32.
+
+**CollapsibleSection non usato**: verificato che `CollapsibleSection` in Info.tsx è una funzione locale NON esportata (`function CollapsibleSection` a riga 37). Per vincolo del task ("non toccare Info.tsx"), ho seguito l'opzione B — raggruppamento senza CollapsibleSection, usando solo le classi `.jj-field` plain. Questo mantiene InfoData in scope minimo. Se si volesse raggruppamento in sezioni (GENERAL / DISPLAY / APPLICABILITY), servirebbe esportare CollapsibleSection da Info.tsx in un task separato.
+
+**Cleanup**: rimosso il `console.log("infodatacomponent", {...})` di debug a riga 34 del file originale. Rimosso anche `classesOptionsJSX` variable inutilizzata (era definita ma mai referenziata).
+
+**Fixes collaterali minor**: cambiato `let` → `const` per `view`, `viewpoints`, `readOnly`, `vp`, `vpid`, `dallVP`, `objectTypes`, `classesOptions`, `isVP`, `isV` (erano tutti assegnati una sola volta). Aggiunto `disabled={readOnly}` al `<Toggle>` per coerenza con il comportamento readOnly degli altri campi.
+
+**Non toccato**:
+- `Info.tsx` — baseline, solo lettura (usato per pattern reference)
+- `Input`, `Select`, `OclEditor`, `JsEditor` — componenti intatti, stesse props
+- `viewapplyto.scss` — gli stili custom `.apply-to-tab`, `.form-field`, `.form-label`, `.form-input`, `.form-select`, `.apply-to-toggle`, `.apply-to-toggle-thumb` sono ora **dead code** ma il file SCSS è lasciato in place (cleanup post-release — rimuoverlo comporterebbe audit di `viewoptions.scss` import che potrebbe cascade). Il file è anche importato dal componente per mantenere la side effect injection di stili legacy usati da altre `section.page-root` (rule a fine file).
+- `InfoData.tsx` logica getter/setter/filtro viewpoint — invariata al 100%
+
 ## 2026-04-11 — style: restyle aggressivo Apply to tab
 **Prompt**: allineare Apply to alla baseline Properties — 9 fix specifici (Name input, Is Exclusive card, Priority, Preferred appearance, Applicable to chip, Viewpoint/Parent view, OCL/JS editor colors, spacing, labels)
 **File toccati**: `frontend/src/components/editors/views/data/viewapplyto.scss` (rewrite completo, ~550 righe → ~470 righe)

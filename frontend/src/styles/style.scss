@@ -762,8 +762,8 @@ html[data-theme="dark"] {
 }
 
 .template-item:last-of-type {
-
-  margin-bottom: 10px;
+  // Reduced from 10px — tighter rhythm per user feedback (~8px row gap)
+  margin-bottom: 4px;
 }
 
 .delete.command-bar{

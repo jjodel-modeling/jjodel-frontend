@@ -55,12 +55,13 @@
   }
 }
 
-// Template item row (key-value pair)
+// Template item row (key-value pair).
+// Compact spacing: ~8px total gap between rows (was ~20px).
 .template-item {
   display: flex !important;
   align-items: center !important;
   gap: 8px !important;
-  margin-bottom: 8px !important;
+  margin-bottom: 4px !important;
   width: 100% !important;
 
   // Prefix text (ret.)
@@ -240,7 +241,8 @@
     gap: 8px !important;
     align-items: center !important;
     width: 100% !important;
-    padding: 6px 0 !important;
+    // Reduced from 6px 0 — tighter vertical rhythm per user feedback (~8px row gap)
+    padding: 2px 0 !important;
 
     // Identifier input (first form-field)
     > .form-field:first-of-type {

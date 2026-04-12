@@ -42,9 +42,9 @@
 // ============================================
 .editor-fullscreen-header {
   display: flex;
-  align-items: center;
+  align-items: center!important;
   justify-content: space-between;
-  padding: 16px 24px;
+  padding: 8px 16px;          // was 16px 24px — tighter, title aligns top-left
   border-bottom: 1px solid #e2e8f0;
   background: white;
   flex-shrink: 0;
@@ -52,18 +52,21 @@
   &__left {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;                  // was 12px — tighter icon→title spacing
 
     i {
-      font-size: 20px;
+      font-size: 18px;         // was 20px
       color: #64748b;
+      line-height: 1;
     }
 
     h2 {
       margin: 0;
-      font-size: 18px;
+      padding: 0;
+      font-size: 16px;         // was 18px — compact header
       font-weight: 600;
       color: #1e293b;
+      line-height: 1;          // prevents browser default 1.2 line-height offset
     }
   }
 
@@ -417,7 +420,9 @@
 
     &.active {
       background: #334155;
-      color: white;
+      & i{
+        color: white;
+      }
     }
 
     &:hover:not(.active) {

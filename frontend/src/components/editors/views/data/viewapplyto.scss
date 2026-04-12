@@ -12,6 +12,24 @@
  */
 
 // ============================================
+// OUTER PADDING — match Properties' airy .props-section__body inset
+// ============================================
+// The Properties panel's airy look comes from `.props-section__body { padding: 4px 14px 12px }`
+// in info-improvements.scss:971. Each CollapsibleSection in Info.tsx adds a 14px horizontal
+// inset around its content. InfoData renders flat <section class="properties-tab properties-panel">
+// (no CollapsibleSections), so without this rule the content would touch the edges.
+//
+// Scoped to `.view-editor-tab-content > section.properties-tab.properties-panel` so it ONLY
+// affects InfoData (the other sub-tabs Template/Style/Events/Options render different root
+// elements — .template-tab, .style-tab, .events-tab, .options-tab — and have their own padding).
+//
+// Uses !important + higher specificity than `.properties-panel { padding: 0px !important }`
+// (info-improvements.scss:1207) so it wins the cascade.
+.view-editor-tab-content > section.properties-tab.properties-panel {
+  padding: 12px 0px !important;
+}
+
+// ============================================
 // MAIN CONTAINER — compact like Properties
 // ============================================
 .apply-to-tab {

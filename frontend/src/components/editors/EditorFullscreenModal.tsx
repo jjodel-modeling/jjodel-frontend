@@ -19,6 +19,12 @@ export interface EditorFullscreenModalProps {
   onChange?: (value: string | undefined) => void;
   onSave?: (value: string) => void;
   language?: string;
+  /**
+   * Optional display label for the status bar language chip. Defaults to `language`
+   * when not provided. Use this when the Monaco language id (e.g. 'typescript')
+   * differs from the user-facing label (e.g. 'jsx').
+   */
+  languageLabel?: string;
   readOnly?: boolean;
   theme?: 'vs' | 'vs-dark';
   /** When provided, enables Source/Split/Preview toggle in toolbar */
@@ -34,6 +40,7 @@ export function EditorFullscreenModal({
   onChange,
   onSave,
   language = 'typescript',
+  languageLabel,
   readOnly = false,
   theme = 'vs',
   renderPreview,
@@ -280,7 +287,15 @@ export function EditorFullscreenModal({
         {/* Editor + Preview */}
         <div className={`editor-fullscreen-body ${viewMode !== 'source' && renderPreview ? 'editor-fullscreen-body--' + viewMode : ''}`}>
           {viewMode !== 'preview' && (
-            <div className={viewMode === 'split' ? 'editor-fullscreen-editor-pane' : undefined}>
+            <div
+              className={viewMode === 'split' ? 'editor-fullscreen-editor-pane' : undefined}
+              // Source mode: explicit 100% sizing so Monaco's height="100%" resolves
+              // against a concrete parent (without this the wrapper is an auto-sized
+              // block div and Monaco collapses to 0px). Split mode uses the pane
+              // class's flex layout instead, so inline style is only applied
+              // when unclassed.
+              style={viewMode === 'source' ? { width: '100%', height: '100%' } : undefined}
+            >
               <Editor
                 width="100%"
                 height="100%"
@@ -309,7 +324,7 @@ export function EditorFullscreenModal({
           </div>
 
           <div className="editor-fullscreen-footer__right">
-            <span className="editor-fullscreen-footer__language">{language}</span>
+            <span className="editor-fullscreen-footer__language">{languageLabel ?? language}</span>
             {!readOnly && onSave && (
               <button
                 type="button"

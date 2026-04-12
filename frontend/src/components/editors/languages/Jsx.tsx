@@ -10,7 +10,6 @@ import monacoTypes from '../../../static/monacotypes';
 import { typescriptMonacoOptions, withReadOnly } from '../monacoConfig';
 import EditorToolbar from "../EditorToolbar";
 import EditorFullscreenModal from "../EditorFullscreenModal";
-import { TemplatePreview } from "../TemplatePreview";
 
 function JsxEditorComponent(props: AllProps) {
     const monaco = useMonaco();
@@ -162,8 +161,8 @@ function JsxEditorComponent(props: AllProps) {
                 setFullscreen(false);
             }}
             language="typescript"
+            languageLabel="jsx"
             readOnly={readOnly}
-            renderPreview={(code) => <TemplatePreview jsxCode={code} className={view.name} />}
         />
     </>);
 }
