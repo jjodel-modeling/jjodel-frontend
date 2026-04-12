@@ -55,12 +55,14 @@
     cursor: not-allowed !important;
   }
   .add-palette-item, .palette-row .color-picker-root{
+    top: 0px;
+
     &:hover::after {
       width: max-content;
       text-shadow: var(--text-shadow-e);
       position: absolute;
-      content: '⚠️This view is read only⚠️';
-      top: -1.25lh;
+      content: '';
+
       left: 0;
       display: inline-block;
       font-size: 1.25em;
@@ -80,6 +82,7 @@
   .color-container{
     outline: 1px solid var(--palette-g);
     border-radius: var(--radius-sm);
+
   }
   .color-container, .suggestion-container, .value.hoverable, .value.hoverable>div{
     // background: white;
@@ -328,10 +331,12 @@
       height: var(--input-height);
       background-color: transparent; // var(--color-bg-secondary, white);
       padding: 0!important;
-      margin: 0!important;
+      margin: 16px 0 0 0!important;
       height: var(--input-height);
       width: var(--input-height);
       border-radius: var(--input-height)!important;
+
+
 
       // & input.my-auto.input {
       //   border-radius: var(--input-height)!important;
@@ -386,6 +391,7 @@
   
 
     & .my-auto {
+
       background-color: blue;
     } 
 
