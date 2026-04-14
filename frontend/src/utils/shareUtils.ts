@@ -5,10 +5,10 @@
 
 /**
  * Generate public URL using project ID
- * Format: http://app.jjodel.io/#/project?id=PROJECT_ID
+ * Format: https://app.jjodel.io/#/project?id=PROJECT_ID
  */
 export function getPublicProjectUrl(projectId: string): string {
-    const baseUrl = 'http://app.jjodel.io';
+    const baseUrl = 'https://app.jjodel.io';
     return `${baseUrl}/#/project?id=${projectId}`;
 }
 

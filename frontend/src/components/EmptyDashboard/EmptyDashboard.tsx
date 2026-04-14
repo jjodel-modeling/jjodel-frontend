@@ -48,7 +48,7 @@ export const EmptyDashboard: React.FC<EmptyDashboardProps> = ({
       <div className="empty-projects__links">
         <a
           className="empty-projects__link"
-          href="https://www.jjodel.io/get-started/"
+          href="https://docs.jjodel.io/getting-started/"
           target="_blank"
           rel="noopener noreferrer"
         >
@@ -57,7 +57,7 @@ export const EmptyDashboard: React.FC<EmptyDashboardProps> = ({
         <span className="empty-projects__sep">&middot;</span>
         <a
           className="empty-projects__link"
-          href="https://www.jjodel.io/tutorials/"
+          href="https://docs.jjodel.io/tutorials/tutorial-01-basic/"
           target="_blank"
           rel="noopener noreferrer"
         >
@@ -66,7 +66,7 @@ export const EmptyDashboard: React.FC<EmptyDashboardProps> = ({
         <span className="empty-projects__sep">&middot;</span>
         <a
           className="empty-projects__link"
-          href="https://www.jjodel.io/documentation/"
+          href="https://docs.jjodel.io"
           target="_blank"
           rel="noopener noreferrer"
         >

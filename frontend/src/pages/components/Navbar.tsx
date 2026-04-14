@@ -999,7 +999,7 @@ function NavbarComponent(props: AllProps) {
         {name: 'Jjodel',
             subItems: [
                 {name: 'About Jjodel', function: () => {AboutDialogController.open();}, icon: <i className="bi bi-shield" />},
-                {name: 'Roadmap', function: () => open('https://www.jjodel.io/roadmap/'), icon: <i className="bi bi-calendar3" />},
+                {name: 'Roadmap', function: () => open('https://github.com/jjodel-modeling/jjodel-frontend/milestones'), icon: <i className="bi bi-calendar3" />},
                 {name: 'divisor'},
                 {name: 'Sign-out', function: async () => {
                     if (isProjectModified()) {
@@ -1263,21 +1263,21 @@ function NavbarComponent(props: AllProps) {
     const helpItems: MenuEntry[] = [
         {name: 'Keyboard Shortcuts', function: () => setShowShortcutsReference(true), icon: <i className="bi bi-keyboard" />, keystroke: [helpMenuModKey, '?']},
         {name: 'divisor'},
-        {name: 'What\'s New in Jjodel', function: ()=> open("https://www.jjodel.io/whats-new/"), icon: <i className="bi bi-bell" />},
-        {name: 'Homepage', function: ()=> open("https://www.jjodel.io"), icon: <i className="bi bi-house" />},
+        {name: 'What\'s New in Jjodel', function: ()=> open("https://github.com/jjodel-modeling/jjodel-frontend/releases"), icon: <i className="bi bi-bell" />},
+        {name: 'Homepage', function: ()=> open("https://jjodel.io"), icon: <i className="bi bi-house" />},
         {name: 'divisor'},
-        {name: 'Learn Jjodel', function: ()=> open("https://www.jjodel.io/learn-jjodel/"), icon: <i className="bi bi-infinity" />},
-        {name: 'Getting Started', function: ()=> open("https://www.jjodel.io/getting-started/"), icon: <i className="bi bi-rocket-takeoff" />},
-        {name: 'Video Tutorials', function: ()=> open("https://www.jjodel.io/video-tutorials/"), icon: <i className="bi bi-play-circle" />},
-        {name: 'User Guide', function: ()=> open('https://www.jjodel.io/getting-started/'), icon: <i className="bi bi-journal-text" />},
-        {name: 'Glossary', function: ()=> open('https://www.jjodel.io/glossary/'), icon: <i className="bi bi-book" />},
-        {name: 'FAQ', function: placeholder, icon: <i className="bi bi-chat-left-dots" />, disabled: true},
+        {name: 'Learn Jjodel', function: ()=> open("https://docs.jjodel.io/getting-started/"), icon: <i className="bi bi-infinity" />},
+        {name: 'Getting Started', function: ()=> open("https://docs.jjodel.io/getting-started/"), icon: <i className="bi bi-rocket-takeoff" />},
+        {name: 'Video Tutorials', function: ()=> open("https://docs.jjodel.io/video-pills/"), icon: <i className="bi bi-play-circle" />},
+        {name: 'User Guide', function: ()=> open('https://docs.jjodel.io/user-guide/dashboard/'), icon: <i className="bi bi-journal-text" />},
+        {name: 'Glossary', function: ()=> open('https://docs.jjodel.io/concepts/glossary/'), icon: <i className="bi bi-book" />},
+        {name: 'FAQ', function: ()=> open('https://docs.jjodel.io/faq/'), icon: <i className="bi bi-chat-left-dots" />},
         {name: 'divisor'},
         {name: 'Support', icon: <i className="bi bi-life-preserver" />,
             subItems: [
-                {name: 'Report a Bug', function: placeholder, icon: <i className="bi bi-bug" />, disabled: true},
-                {name: 'Request a Feature', function: placeholder, icon: <i className="bi bi-hand-index" />, disabled: true},
-                {name: 'Contact', function: placeholder, icon: <i className="bi bi-envelope" />, disabled: true}
+                {name: 'Report a Bug', function: ()=> open('https://github.com/jjodel-modeling/jjodel-frontend/issues/new?labels=bug'), icon: <i className="bi bi-bug" />},
+                {name: 'Request a Feature', function: ()=> open('https://github.com/jjodel-modeling/jjodel-frontend/issues/new?labels=enhancement'), icon: <i className="bi bi-hand-index" />},
+                {name: 'Contact', function: ()=> open('mailto:info@jjodel.io'), icon: <i className="bi bi-envelope" />}
             ]}
     ];
 

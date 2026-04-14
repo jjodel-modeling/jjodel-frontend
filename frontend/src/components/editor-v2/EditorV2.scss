@@ -2728,15 +2728,18 @@
     z-index: 999;
 }
 
+// Context menu is portaled to <body> via createPortal, so CSS variables
+// defined on .editor-v2.theme-dark/.theme-light are NOT inherited.
+// Every var() MUST have a hardcoded fallback matching the dark float palette.
 .context-menu {
     position: fixed;
     z-index: 1000;
-    background: var(--float-bg);
-    border: 1px solid var(--float-border);
+    background: var(--float-bg, #1e293b);
+    border: 1px solid var(--float-border, #334155);
     border-radius: 8px;
     padding: 4px;
     min-width: 160px;
-    box-shadow: 0 2px 12px var(--float-shadow);
+    box-shadow: 0 2px 12px var(--float-shadow, rgba(0, 0, 0, 0.3));
 
     &__item {
         display: flex;
@@ -2746,7 +2749,7 @@
         padding: 5px 8px;
         border: none;
         background: transparent;
-        color: var(--float-text);
+        color: var(--float-text, #cbd5e1);
         font-size: 12px;
         border-radius: 4px;
         cursor: pointer;
@@ -2754,7 +2757,7 @@
         transition: background 0.15s;
 
         &:hover {
-            background: var(--float-hover);
+            background: var(--float-hover, rgba(255, 255, 255, 0.06));
         }
 
         &.disabled {
@@ -2764,10 +2767,10 @@
         }
 
         &.danger {
-            color: var(--float-danger);
+            color: var(--float-danger, #f87171);
 
             &:hover {
-                background: var(--float-danger-bg);
+                background: var(--float-danger-bg, rgba(239, 68, 68, 0.12));
             }
         }
 
@@ -2775,13 +2778,13 @@
             font-size: 13px;
             width: 16px;
             text-align: center;
-            //color: var(--float-icon);
+            color: inherit;
         }
     }
 
     &__divider {
         height: 0.5px;
-        background: var(--float-divider);
+        background: var(--float-divider, rgba(255, 255, 255, 0.08));
         margin: 3px 0;
     }
 }

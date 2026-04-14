@@ -617,11 +617,7 @@ console.log('[DEBUG populate] classifierEntries:', classifierEntries.length, cla
         try {
             // Full transform using L-proxies
             const lGraph: any = LGraph.fromPointer(graphInfo!.graphId);
-console.log('[DEBUG useJjomSync init] lGraph:', lGraph);
-console.log('[DEBUG useJjomSync init] nodes:', lGraph?.nodes?.length, lGraph?.nodes);
-console.log('[DEBUG useJjomSync init] edges:', lGraph?.edges?.length, lGraph?.edges);
-console.log('[DEBUG useJjomSync init] subElementIds:', subElementIds.length, subElementIds);
-if (!lGraph) return;
+            if (!lGraph) return;
 
             const vertices: any[] = lGraph.nodes ?? [];
             const edges: any[] = lGraph.edges ?? [];
@@ -655,7 +651,6 @@ if (!lGraph) return;
 
             // Push to React Flow state
             setNodes(Array.from(nodeCache.values()));
-            console.log('[DEBUG setNodes]', nodeCache.size, 'nodes set:', Array.from(nodeCache.values()).map(n => n.id));
 
             setEdges(deduplicateInheritanceEdges(Array.from(edgeCache.values())));
 

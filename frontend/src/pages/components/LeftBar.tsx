@@ -438,15 +438,15 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                 {/* Resources Section */}
                 <Menu title={'Resources'} mode={'collapsable'}>
                     <Item
-                        action={() => window.open('https://www.jjodel.io/manual/', '_blank')}
+                        action={() => window.open('https://docs.jjodel.io/user-guide/dashboard/', '_blank')}
                         icon={<i className="bi bi-book" />}
                     >Documentation</Item>
                     <Item
-                        action={() => window.open('https://www.jjodel.io/getting-started/', '_blank')}
+                        action={() => window.open('https://docs.jjodel.io/getting-started/', '_blank')}
                         icon={<i className="bi bi-mortarboard" />}
                     >Tutorials</Item>
                     <Item
-                        action={() => window.open('https://www.jjodel.io/api/', '_blank')}
+                        action={() => window.open('https://docs.jjodel.io/reference/jjom-api/', '_blank')}
                         icon={<i className="bi bi-code-square" />}
                     >API Reference</Item>
                     <Item

@@ -87,7 +87,7 @@ const Title = (props: TitleProps) => {
 
     const ProjectProperties = () => {
 
-        const server = 'http://app.jjodel.io';
+        const server = 'https://app.jjodel.io';
         const projectLink = '/#/project?id='+props.projectID;
 
         function copyToClipboard(e: any) {

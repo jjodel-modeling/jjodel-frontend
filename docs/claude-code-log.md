@@ -1,5 +1,57 @@
 # Claude Code Session Log
 
+## 2026-04-14 — fix: Maximum Update Depth Exceeded in EditorV2 (ReactFlow infinite loop)
+**File toccati**:
+- `frontend/src/components/editor-v2/EditorV2.tsx` — rate limiter + debug log cleanup
+- `frontend/src/components/editor-v2/hooks/useJjomSync.ts` — debug log cleanup
+**Esito**: ✅ build ok (80 errori TS, `vite build` 42.49s)
+
+**Root cause**: The existing dimension dedup (lines ~2421-2437) filters identical measurements within 0.5px. But if a node's content causes dimensions to genuinely oscillate by >0.5px between render cycles (ErrorDisplay badge, font loading, CSS transitions), each measurement passes the threshold and creates a new nodes reference → StoreUpdater re-syncs → ReactFlow re-measures → new slightly-different dimensions → infinite loop until React bails with "Maximum update depth exceeded".
+
+**Fix — Rate limiter** (new `dimRateLimitRef`): Added a second protection layer BEFORE the dimension dedup. Tracks the number of auto-measurement dimension changes per node per 500ms window. After 3 changes within 500ms, further changes for that node are dropped regardless of whether dimensions differ. This breaks any oscillation-driven loop. User-initiated resize (`resizing !== undefined`) always passes both layers.
+
+```
+Layer 1 (new): Rate limit — max 3 dim changes / node / 500ms → drop
+Layer 2 (existing): Dimension dedup — same dims within 0.5px → drop
+```
+
+**Debug log cleanup**: Removed 6 `console.log('[DEBUG ...]')` statements:
+- EditorV2.tsx: `[DEBUG EditorV2 nodes state]` useEffect (removed entirely), `[DEBUG EditorV2] modelid:...` in useJjomSync callback
+- useJjomSync.ts: 4 `[DEBUG useJjomSync init]` logs + `[DEBUG setNodes]`
+
+## 2026-04-14 — fix: context menu text color (dark on dark)
+**File toccati**: `frontend/src/components/editor-v2/EditorV2.scss`
+**Esito**: ✅ build ok (80 errori TS, `vite build` 42.60s)
+**Root cause**: Context menu is rendered via `createPortal(menu, document.body)` (EditorV2.tsx:2663-2671) — portaled OUTSIDE the `.editor-v2.theme-dark` / `.editor-v2.theme-light` scope where `--float-text`, `--float-bg`, etc. are defined. At `<body>` level these CSS variables are undefined → `var(--float-text)` resolves to the initial value (browser default: black text) → dark text on dark `#1e293b` background.
+**Fix**: Added hardcoded fallback values to every `var()` call in `.context-menu` rules — `var(--float-bg, #1e293b)`, `var(--float-text, #cbd5e1)`, `var(--float-hover, rgba(255,255,255,0.06))`, `var(--float-danger, #f87171)`, `var(--float-danger-bg, rgba(239,68,68,0.12))`, `var(--float-shadow, rgba(0,0,0,0.3))`, `var(--float-border, #334155)`, `var(--float-divider, rgba(255,255,255,0.08))`. Also set `i { color: inherit }` on icons (was commented out `//color: var(--float-icon)`). If the menu IS inside the theme scope (e.g. portal target changes), the variables override the fallbacks — backward compatible.
+
+## 2026-04-13 — fix: update documentation and GitHub links
+**Prompt**: Update all documentation links from www.jjodel.io to docs.jjodel.io and GitHub links from MDEGroup to jjodel-modeling
+**File toccati**: Navbar.tsx, LeftBar.tsx, EmptyDashboard.tsx, RightPanel.tsx, About.tsx, AboutDialog.tsx, useHelpResolver.ts, U.tsx, Try.tsx, classes.ts, Dashboard.tsx, shareUtils.ts
+**Esito**: ✅ completato (80 errori TS pre-esistenti invariati)
+
+**Docs links** (www.jjodel.io → docs.jjodel.io):
+- Navbar Help menu: Learn Jjodel, Getting Started, Video Tutorials, User Guide, Glossary, FAQ (enabled from disabled)
+- LeftBar: Manual, Getting Started, API Reference
+- EmptyDashboard: 3 resource links
+- RightPanel: user-manual, documentation
+- AboutDialog: Website → `jjodel.io`, Changelog → Documentation
+- useHelpResolver.ts: WEB_BASE for "open in browser" in HelpDrawer
+
+**GitHub links** (MDEGroup → jjodel-modeling/jjodel-frontend):
+- Navbar: Roadmap → milestones, What's New → releases, Support → 3 enabled sub-items (Report Bug, Request Feature, Contact)
+- About.tsx: changelog → GitHub releases
+- U.tsx: error report issue link
+- Try.tsx: automatic bug report owner/repo
+- classes.ts: wiki link → docs.jjodel.io/reference/jjom/
+
+**HTTP → HTTPS**:
+- Dashboard.tsx: `http://app.jjodel.io` → `https://`
+- shareUtils.ts: same
+
+**Remaining www.jjodel.io** (expected exceptions): `Auth.tsx` terms-conditions, `LeftBar.tsx` explore
+**Zero MDEGroup** references remaining
+
 ## 2026-04-12 — fix: RGB input values visible with proper width
 **File toccati**: `frontend/src/components/forEndUser/color.scss`
 **Esito**: ✅ build ok (80 errori TS, `vite build` 43.01s)

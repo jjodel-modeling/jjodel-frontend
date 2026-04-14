@@ -2181,7 +2181,7 @@ as such <code>this.state = {}</code> does nothing. to remove a single entry use<
 To remove a single entry, use <code>this.state = {varname: undefined}</code>.<br/>
 To empty the whole state, use <code>this.clearState()</code>.<br/>
 WARNING! do not set proxies in the state, set pointers instead.<br/>
-<a href='https://github.com/MDEGroup/jjodel/wiki/L%E2%80%90Object-state'>Learn more on the wiki</a></div>`};
+<a href='https://docs.jjodel.io/reference/jjom/'>Learn more in the docs</a></div>`};
 
     // get__state(c: Context): any { return this.wrongAccessMessage('_state',', use obj.state instead.'); }
     // set__state(val: this["_state"], c: Context): boolean { return this.cannotSet('_state', 'use obj.state instead.'); }

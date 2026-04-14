@@ -253,10 +253,6 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [edges, setEdgesRaw, _onEdgesChangeRaw] = useEdgesState(modelid ? [] : initialEdges);
 
-    useEffect(() => {
-    console.log('[DEBUG EditorV2 nodes state]', nodes.length, nodes.map(n => n.id));
-}, [nodes]);
-
     // Deduplicate an edge array, keeping the FIRST occurrence of each ID.
     const deduplicateEdges = useCallback((edgeArray: Edge[]): Edge[] => {
         const seen = new Set<string>();
@@ -306,8 +302,6 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
     setEdgesRef.current = setEdges;
     const autoLayoutRef = useRef<(() => Promise<void>) | null>(null);
     const { isJjomMode, graphId, justCreatedGraphRef } = useJjomSync(modelid, setNodes, setEdges, () => {
-    console.log('[DEBUG EditorV2] modelid:', modelid, 'isJjomMode:', isJjomMode, 'graphId:', graphId);
-
         // Delay slightly so RF has measured nodes before fitting
         setTimeout(async () => {
             // If the graph was just auto-created, apply ELK layout first
@@ -605,6 +599,12 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
     // onNodesChange({type:'dimensions'}) → setNodes → infinite loop.
     // First measurement passes through; only duplicates are skipped.
     const lastMeasuredDimsRef = useRef<Map<string, { w: number; h: number }>>(new Map());
+
+    // Rate limiter for dimension changes: breaks infinite loops where
+    // dimensions oscillate by >0.5px between cycles (e.g. ErrorDisplay
+    // badge, font loading, CSS transitions).  Max 3 dimension changes
+    // per node per 500ms; subsequent ones are dropped.
+    const dimRateLimitRef = useRef<Map<string, { count: number; start: number }>>(new Map());
 
     // Edge type popup: pending connection waiting for user to pick edge type
     const [pendingConnection, setPendingConnection] = useState<PendingConnection | null>(null);
@@ -2412,12 +2412,16 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
             //   React setNodes → StoreUpdater → store.setNodes → RF measure
             //   → onNodesChange({type:'dimensions'}) → setNodes → repeat
             //
-            // First measurement of each node passes through (so React state
-            // gets `measured` values).  Subsequent measurements with the SAME
-            // dimensions are filtered out — they'd create a new nodes reference
-            // without any actual data change, needlessly re-triggering
-            // StoreUpdater.  User-initiated resize (resizing !== undefined)
-            // always passes through.
+            // Two layers of protection:
+            // 1. Dimension dedup: identical measurements (within 0.5px) are
+            //    filtered — they'd create a new nodes reference without any
+            //    actual data change.
+            // 2. Rate limiter: max 3 dimension changes per node per 500ms.
+            //    Breaks oscillation loops where dimensions genuinely differ
+            //    by >0.5px between cycles (ErrorDisplay badge, font loading,
+            //    CSS transitions).
+            // User-initiated resize (resizing !== undefined) always passes.
+            const now = Date.now();
             const changesToApply = changes.filter((c: any) => {
                 if (c.type !== 'dimensions') return true;
                 if (c.resizing !== undefined) return true; // user resize
@@ -2425,6 +2429,17 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                 const dims = c.dimensions;
                 if (!dims) return false;
 
+                // Rate limit: max 3 auto-measurement dimension changes per
+                // node per 500ms.  Prevents oscillation-driven infinite loops.
+                const rl = dimRateLimitRef.current.get(c.id);
+                if (rl && now - rl.start < 500) {
+                    rl.count++;
+                    if (rl.count > 3) return false; // rate-limited
+                } else {
+                    dimRateLimitRef.current.set(c.id, { count: 1, start: now });
+                }
+
+                // Dimension dedup: skip if identical to last measurement
                 const prev = lastMeasuredDimsRef.current.get(c.id);
                 if (prev
                     && Math.abs(prev.w - dims.width) < 0.5

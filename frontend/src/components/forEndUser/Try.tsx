@@ -107,8 +107,8 @@ class TryComponent extends React.Component<AllProps, State> {
     }
 
     private postGitIssue(content: string){
-        let owner = 'MDEGroup';
-        let repo = 'jjodel';
+        let owner = 'jjodel-modeling';
+        let repo = 'jjodel-frontend';
         let obj = {
             owner,
             repo,

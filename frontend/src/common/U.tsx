@@ -2330,7 +2330,7 @@ export class U {
         const msgbody: string = encodeURIComponent(msgbody_notencoded);
         const mailtitle: string =  encodeURIComponent(title);
         // "mailto:no-one@snai1mai1.com?subject=look at this website&body=Hi,I found this website and thought you might like it http://www.geocities.com/wowhtml"
-        const gitissue = "https://github.com/MDEGroup/jjodel/issues/new?title="+mailtitle+"&body="+msgbody;
+        const gitissue = "https://github.com/jjodel-modeling/jjodel-frontend/issues/new?title="+mailtitle+"&body="+msgbody;
         let mailto: string | undefined = "mailto:"+recipients.join(';')+"?subject="+mailtitle+"&body="+msgbody;
         const mailtolimit = 2042 - 23/*for safety*/;
         /*
