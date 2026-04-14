@@ -21,6 +21,7 @@ import { Badge } from '../../components/common/Badge';
 
 import '../dashboard.scss'
 import React, {JSX, ReactElement, useEffect, useRef, useState} from "react";
+import { useSelector } from 'react-redux';
 import {Btn, CommandBar, Sep} from '../../components/commandbar/CommandBar';
 
 import colors000 from '../../static/img/colors-000.png';
@@ -582,18 +583,31 @@ function ProjectDashboard(props: DashProps): any {
         };
     }, []);
 
-    let vparr = project?.viewpoints || [];
-    let allViews = vparr.flatMap((vp: LViewPoint) => vp && vp.allSubViews);
-    allViews.push(...vparr as LViewElement[]);
-    allViews = allViews.filter(v => v);
-    const viewsDeDuplicator: Dictionary<Pointer<DViewElement>, LViewElement> = {};
-    for (let v of allViews) viewsDeDuplicator[v.id] = v;
+    // Reactively collect compiled CSS for ALL DViewElement/DViewPoint in the project.
+    // Uses useSelector so the <style> tag re-renders when any view's CSS changes
+    // (css_MUST_RECOMPILE flag, css field, palette, etc.). The previous one-shot
+    // approach via LProject.fromPointer + allSubViews had no Redux subscription and
+    // missed views created after initial render.
+    const allViewsCss = useSelector((state: DState) => {
+        const parts: string[] = [];
+        for (const id in state.idlookup) {
+            const d = state.idlookup[id];
+            if (!d) continue;
+            if (d.className !== 'DViewElement' && d.className !== 'DViewPoint') continue;
+            try {
+                const lv = LViewElement.fromPointer(id) as LViewElement;
+                const css = lv?.compiled_css;
+                if (css) parts.push(css);
+            } catch { /* skip broken view */ }
+        }
+        return parts.join('\n\n');
+    });
 
     return (<>
         <Try>
             <>
                 <style id={"views-css-injector-d"}>
-                    {Object.values(viewsDeDuplicator).map(v => v.compiled_css).join('\n\n')}
+                    {allViewsCss}
                 </style>
                 {CSS_Units.jsx}
             </>

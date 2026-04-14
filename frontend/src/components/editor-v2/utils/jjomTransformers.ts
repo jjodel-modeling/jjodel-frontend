@@ -297,7 +297,6 @@ function objectVertexToRFNode(vertex: any): Node<ObjectNodeData> {
  */
 export function jjomVertexToRFNode(vertex: any): Node | null {
     const model = vertex?.model;
-        console.log('[DEBUG jjomVertexToRFNode] vertex.id:', vertex?.id, 'model:', !!model, 'className:', model?.className ?? model?.__raw?.className);
     if (!model) return null;
 
     const className = model.className ?? model.__raw?.className;

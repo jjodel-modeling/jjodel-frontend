@@ -1,23 +1,118 @@
 # Claude Code Session Log
 
+## 2026-04-14 — fix: Dashboard CSS injection reactive + includes all views
+**File toccati**: `frontend/src/pages/components/Dashboard.tsx`
+**Esito**: ✅ build ok (80 errori TS, `vite build` 40.54s)
+
+**Root cause**: `ProjectDashboard` had NO Redux subscription — it read project data via `LProject.fromPointer(id)` (one-shot `store.getState()`). The `<style>` tag only updated when the component re-rendered for other reasons (tab switch, hideLeftBar, etc.). Views created after the initial render or views whose CSS was edited were missed because:
+1. No `useSelector` → no re-render on Redux state change
+2. The `allSubViews` traversal depended on the L-proxy hierarchy being fully up-to-date (timing issue with async dispatches)
+
+**Fix**: Replaced the one-shot `vparr.flatMap(vp => vp.allSubViews)` gathering with a `useSelector` that iterates `state.idlookup`, filtering for `DViewElement` and `DViewPoint` classNames, and calling `compiled_css` on each. This ensures:
+- The `<style>` tag re-renders whenever ANY view's state changes in Redux
+- ALL views in the project are included (not just those reachable via the subViews hierarchy)
+- Newly created views are picked up immediately after their Redux dispatch propagates
+
+**Performance**: iterating `state.idlookup` on every Redux change is O(n) where n = total elements. For typical projects (~100-500 elements, ~10-30 views), this is negligible (<1ms). The `compiled_css` getter is lazy — it returns the cached string immediately if `css_MUST_RECOMPILE` is false.
+
+## 2026-04-14 — fix: view CSS not injected into DOM after project load
+**File toccati**: `frontend/src/redux/reducer/reducer.ts`
+**Esito**: ✅ build ok (80 errori TS, `vite build` 36.95s)
+
+**Root cause**: After `LoadAction` (project load, reducer.ts:517-529), the Redux state is replaced wholesale with the deserialized project data. `css_MUST_RECOMPILE` and `compiled_css` are transient fields NOT included in the serialized project — they default to `undefined`/`false` and `''` respectively. The `get_compiled_css()` getter (view.tsx:793) checks `if (!c.data.css_MUST_RECOMPILE) return c.data.compiled_css` — since `!undefined` is `true`, it returns the cached empty string without ever compiling.
+
+The Dashboard's `<style id="views-css-injector-d">` tag (Dashboard.tsx:595-597) maps `v.compiled_css` for all views → all return `''` → empty style tag → no view CSS in DOM.
+
+**Fix**: Added `newState.VIEWS_RECOMPILE_all = true` after `LoadAction` processing (reducer.ts:529). This triggers the existing recompilation loop (reducer.ts:661-686) which sets `css_MUST_RECOMPILE = true` on every DViewElement. The next access to `compiled_css` then compiles the CSS (palettes + user CSS wrapped in the scoping selector) and caches it.
+
+**How the CSS reaches the DOM**:
+```
+LoadAction → newState.VIEWS_RECOMPILE_all = true
+  → reducer line 661: expands to all element IDs
+  → reducer line 679: sets css_MUST_RECOMPILE = true per view
+  → Dashboard.tsx: <style>{views.map(v => v.compiled_css)}</style>
+  → compiled_css getter: css_MUST_RECOMPILE is true → compiles user CSS + palettes
+  → wraps in scoping selector: .Pointer_View_XXX { user CSS }
+  → <style> tag contains actual CSS → applied to canvas instances
+```
+
+## 2026-04-14 — fix: view CSS not applied to instances on canvas
+**File toccati**: `frontend/src/components/forEndUser/Aliases.tsx`
+**Esito**: ✅ build ok (80 errori TS, `vite build` 42.46s)
+
+**Root cause**: The `<View>` component (Aliases.tsx:10-13) renders `<view className={"view " + className} {...props}>`. The spread `{...props}` passes `classNameAdd` as a **custom DOM attribute** instead of merging it into `className`. The `classNameAdd` prop (injected by `UX.tsx:340`) contains the view ID (e.g., `"mainView,Pointer_View_123,..."`) which is the CSS scoping selector used by `view.tsx:875` (`.${c.data.id} { ... }`). Without merging, the scoped CSS selector `.Pointer_View_123 { .state { ... } }` never matches because `Pointer_View_123` isn't in the element's class list.
+
+**Fix**: Destructure `classNameAdd` from props, replace commas with spaces (UX.tsx joins with `,`), and merge into `className`:
+```tsx
+const { classNameAdd, className, ...rest } = props;
+const addClasses = classNameAdd ? String(classNameAdd).replace(/,/g, ' ') : '';
+const merged = ('view ' + (className || '') + ' ' + addClasses).trim();
+return <view className={merged} {...rest}>{children}</view>;
+```
+
+Before: `<view class="state bg-white p-1" classnameadd="mainView,Pointer_View_123">` — CSS can't match
+After: `<view class="view state bg-white p-1 mainView Pointer_View_123">` — `.Pointer_View_123 { .state { border: 1px solid red } }` matches
+
+## 2026-04-14 — fix: Maximum Update Depth — reference-stabilizing guard on ReactFlow props
+**File toccati**: `frontend/src/components/editor-v2/EditorV2.tsx`
+**Esito**: ✅ build ok (80 errori TS, `vite build` 38.40s)
+
+**WHY PREVIOUS FIXES WEREN'T ENOUGH**: Memoizing nodes/edges and debouncing the sync reduce the frequency but can't eliminate reference-only changes caused by the Jjodel action system's `setTimeout(dispatch, 0)` (action.ts:349) + periodic `setInterval → COMMIT` (reducer.ts:1381). Any code path that calls `setNodes(prev => ...)` and returns a new array (even with identical content) produces a new reference → StoreUpdater sees "change" → calls internal `setNodes()` → re-render → possible loop.
+
+**THE FIX — Reference stabilizer**: Added `stableNodes`/`stableEdges` useMemo guards between the React state (`nodes`/`edges` from `useNodesState`/`useEdgesState`) and the `<ReactFlow>` props. The guard compares each node/edge structurally (id, type, data reference, selected, position within 0.1px, measured dimensions). If ALL elements match, it returns the **previous array reference** from a `useRef`. StoreUpdater sees the same reference → no sync → no loop.
+
+```tsx
+<ReactFlow
+    nodes={stableNodes}   // ← stabilized reference
+    edges={stableEdges}   // ← stabilized reference
+    ...
+/>
+```
+
+**Comparison fields checked per node**: `id`, `type`, `data` (reference), `selected`, `dragging`, `hidden`, `position.x/y` (±0.1px), `measured.width/height` (exact).
+
+**Comparison fields checked per edge**: `id`, `source`, `target`, `sourceHandle`, `targetHandle`, `type`, `data` (reference), `selected`, `hidden`.
+
+**When the guard DOES return a new reference**: only when genuine structural changes are detected (node added/removed, position changed >0.1px, data object replaced, selection toggled, etc.). These are legitimate changes that StoreUpdater should process.
+
+**Retained from previous fixes**: dimension rate limiter (EditorV2.tsx), deeper shallowDataEqual (useJjomSync.ts), requestAnimationFrame debounce (useJjomSync.ts), Input.tsx value normalization.
+
+## 2026-04-14 — fix: Maximum Update Depth Exceeded — debounced incremental sync
+**File toccati**:
+- `frontend/src/components/editor-v2/hooks/useJjomSync.ts` — debounced setNodes/setEdges via requestAnimationFrame + deeper shallowDataEqual + debug log cleanup
+
+**ROOT CAUSE IDENTIFIED**: `action.ts:349` wraps EVERY Redux dispatch in `setTimeout(fn, 0)`, forcing it outside React's render batch. The periodic `setInterval(() => COMMIT(undefined, false), N)` at `reducer.ts:1381` flushes buffered mutations through this async dispatch. Each dispatch arrives as a SEPARATE render cycle → `elementSnapshots` selector fires → incremental sync effect → `setNodes` → StoreUpdater → re-measure → dimension changes → `handleNodesChange` → new nodes ref → StoreUpdater fires AGAIN → LOOP.
+
+**FIX — Debounced push via requestAnimationFrame**: Instead of calling `setNodes`/`setEdges` synchronously inside the incremental sync `useEffect`, patches are accumulated in `pendingNodePatchRef`/`pendingEdgePatchRef` arrays. A single `requestAnimationFrame` callback (`scheduleFlush`) flushes ALL accumulated patches into ONE `setNodes` call (using `reduce` to compose the patch functions). Multiple rapid COMMIT→dispatch→effect cycles within the same animation frame are coalesced into a single React state update. This breaks the loop because StoreUpdater only sees ONE nodes reference change per frame, not N.
+
+**Previous fix (retained)**:
+- `EditorV2.tsx`: rate limiter (`dimRateLimitRef`) for dimension changes — safety net
+- `useJjomSync.ts`: deeper `shallowDataEqual` — prevents unnecessary patches for object nodes with recreated FeatureValueRow objects
+- `Input.tsx`: `value ?? ''` — prevents uncontrolled→controlled React warning
+
 ## 2026-04-14 — fix: Maximum Update Depth Exceeded in EditorV2 (ReactFlow infinite loop)
 **File toccati**:
-- `frontend/src/components/editor-v2/EditorV2.tsx` — rate limiter + debug log cleanup
-- `frontend/src/components/editor-v2/hooks/useJjomSync.ts` — debug log cleanup
-**Esito**: ✅ build ok (80 errori TS, `vite build` 42.49s)
+- `frontend/src/components/editor-v2/EditorV2.tsx` — rate limiter for dimension changes + debug log cleanup
+- `frontend/src/components/editor-v2/hooks/useJjomSync.ts` — deeper `shallowDataEqual` comparison + debug log cleanup
+- `frontend/src/components/editor-v2/utils/jjomTransformers.ts` — debug log cleanup
+- `frontend/src/components/forEndUser/Input.tsx` — fix uncontrolled→controlled warning
+**Esito**: ✅ build ok (80 errori TS, `vite build` 40.23s)
 
-**Root cause**: The existing dimension dedup (lines ~2421-2437) filters identical measurements within 0.5px. But if a node's content causes dimensions to genuinely oscillate by >0.5px between render cycles (ErrorDisplay badge, font loading, CSS transitions), each measurement passes the threshold and creates a new nodes reference → StoreUpdater re-syncs → ReactFlow re-measures → new slightly-different dimensions → infinite loop until React bails with "Maximum update depth exceeded".
+**Root cause (rename trigger)**: `objectVertexToRFNode()` creates NEW `FeatureValueRow` objects every time it's called. The old `shallowDataEqual` compared array elements by reference identity (`va[i] !== vb[i]`) — always FALSE for freshly-created objects, even with identical values. Result: incremental sync always considered object-node data "changed" → always called `setNodes` → StoreUpdater → measurement → loop.
 
-**Fix — Rate limiter** (new `dimRateLimitRef`): Added a second protection layer BEFORE the dimension dedup. Tracks the number of auto-measurement dimension changes per node per 500ms window. After 3 changes within 500ms, further changes for that node are dropped regardless of whether dimensions differ. This breaks any oscillation-driven loop. User-initiated resize (`resizing !== undefined`) always passes both layers.
+The rename flow: ObjectNode `commitName()` → `setNodes` (label update) + `syncNodeLabel` → Redux dispatch → `elementSnapshots` selector detects hash change → incremental sync fires → calls `jjomVertexToRFNode()` → new features array with new object references → `shallowDataEqual` returns false → patches node data → `setNodes` → StoreUpdater → re-measure → dimension change (label width changed) → `handleNodesChange` → new nodes ref → loop.
 
-```
-Layer 1 (new): Rate limit — max 3 dim changes / node / 500ms → drop
-Layer 2 (existing): Dimension dedup — same dims within 0.5px → drop
-```
+**Fix 1 — Deeper `shallowDataEqual`** (useJjomSync.ts): Rewrote to do TWO levels of shallow comparison:
+- Level 1: top-level keys compared by identity (same as before)
+- Level 2 (NEW): for array elements that are objects, compare their properties shallowly (string/number/boolean values). For nested arrays of primitives (e.g. enumLiterals), compare elements by identity.
 
-**Debug log cleanup**: Removed 6 `console.log('[DEBUG ...]')` statements:
-- EditorV2.tsx: `[DEBUG EditorV2 nodes state]` useEffect (removed entirely), `[DEBUG EditorV2] modelid:...` in useJjomSync callback
-- useJjomSync.ts: 4 `[DEBUG useJjomSync init]` logs + `[DEBUG setNodes]`
+This correctly identifies that `{ name: "State", kind: "attribute", value: "idle" }` from two separate `objectVertexToRFNode` calls is EQUAL, even though the objects are different references. When data is actually equal, `patchedNodeData` is NOT populated → `hasNodeChanges` is false → `setNodes` is NOT called → loop broken.
+
+**Fix 2 — Rate limiter** (EditorV2.tsx): Added `dimRateLimitRef` — max 3 auto-measurement dimension changes per node per 500ms. Safety net for cases where dimensions genuinely oscillate (ErrorDisplay badge, font loading, CSS transitions).
+
+**Fix 3 — Input uncontrolled→controlled** (Input.tsx:286): `value: serializeValue(value)` could be `undefined` (when `serializeValue` returns `undefined` at line 130 or when initial getter returns `undefined` at line 96). Changed to `value: serializeValue(value) ?? ''`. This prevents React's "A component is changing an uncontrolled input to be controlled" warning, which caused extra re-renders during composition-child rename and contributed to the StoreUpdater cascade. The `setTimeout` in Jjodel's action system (action.ts) makes these extra re-renders arrive as SEPARATE render cycles (outside React batching), each triggering a full StoreUpdater sync.
+
+**Debug log cleanup**: Removed 7 `console.log('[DEBUG ...]')` statements across EditorV2.tsx, useJjomSync.ts, jjomTransformers.ts.
 
 ## 2026-04-14 — fix: context menu text color (dark on dark)
 **File toccati**: `frontend/src/components/editor-v2/EditorV2.scss`

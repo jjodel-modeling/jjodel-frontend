@@ -283,7 +283,9 @@ export function InputComponent(props: AllProps) {
         readOnly,
         disabled: readOnly,
         type,
-        value: serializeValue(value),
+        // Never pass undefined — prevents React "uncontrolled to controlled" warning
+        // that causes extra re-renders and can contribute to the StoreUpdater loop.
+        value: serializeValue(value) ?? '',
         checked,
         onDoubleClick,
         onChange, onBlur, onKeyDown} // key:`${field}.${data?.id}`

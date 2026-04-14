@@ -876,6 +876,65 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
     const selectedNodes = useMemo(() => nodes.filter((n) => n.selected), [nodes]);
     const selectedEdges = useMemo(() => edges.filter((e) => e.selected), [edges]);
 
+    // ── Reference stabilizer for ReactFlow props ─────────────────────
+    // StoreUpdater compares nodes/edges by REFERENCE. If the reference
+    // changes (even with identical content), it calls setNodes() → re-render
+    // → new reference → infinite loop. The Jjodel action system dispatches
+    // via setTimeout (action.ts:349) causing updates outside React's batch,
+    // which can create reference-only changes.
+    //
+    // This guard returns the SAME array reference when the structural
+    // content hasn't changed, breaking the StoreUpdater feedback loop.
+    const stableNodesRef = useRef<Node[]>([]);
+    const stableEdgesRef = useRef<Edge[]>([]);
+
+    const stableNodes = useMemo(() => {
+        const prev = stableNodesRef.current;
+        if (prev.length !== nodes.length) { stableNodesRef.current = nodes; return nodes; }
+        for (let i = 0; i < nodes.length; i++) {
+            const p = prev[i], n = nodes[i];
+            if (p === n) continue; // same object — fast path
+            if (p.id !== n.id
+                || p.type !== n.type
+                || p.data !== n.data
+                || p.selected !== n.selected
+                || p.dragging !== n.dragging
+                || p.hidden !== n.hidden
+                || Math.abs((p.position?.x ?? 0) - (n.position?.x ?? 0)) > 0.1
+                || Math.abs((p.position?.y ?? 0) - (n.position?.y ?? 0)) > 0.1
+                || (p.measured?.width ?? 0) !== (n.measured?.width ?? 0)
+                || (p.measured?.height ?? 0) !== (n.measured?.height ?? 0)
+            ) {
+                stableNodesRef.current = nodes;
+                return nodes;
+            }
+        }
+        return prev; // structurally identical → return SAME reference
+    }, [nodes]);
+
+    const stableEdges = useMemo(() => {
+        const prev = stableEdgesRef.current;
+        if (prev.length !== edges.length) { stableEdgesRef.current = edges; return edges; }
+        for (let i = 0; i < edges.length; i++) {
+            const p = prev[i], e = edges[i];
+            if (p === e) continue;
+            if (p.id !== e.id
+                || p.source !== e.source
+                || p.target !== e.target
+                || p.sourceHandle !== e.sourceHandle
+                || p.targetHandle !== e.targetHandle
+                || p.type !== e.type
+                || p.data !== e.data
+                || p.selected !== e.selected
+                || p.hidden !== e.hidden
+            ) {
+                stableEdgesRef.current = edges;
+                return edges;
+            }
+        }
+        return prev;
+    }, [edges]);
+
     // Handle new connections: save the valid connection, then show edge type popup on drop
     const onConnect = useCallback(
         (connection: Connection) => {
@@ -2586,8 +2645,8 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                     />
                     <div className="editor-v2__canvas" ref={editorContainerRef} style={{ position: 'relative' }}>
                         <ReactFlow
-                            nodes={nodes}
-                            edges={edges}
+                            nodes={stableNodes}
+                            edges={stableEdges}
                             onNodesChange={handleNodesChange}
                             onEdgesChange={onEdgesChange}
                             onConnect={onConnect}
