@@ -9,7 +9,6 @@ COPY frontend/ .
 
 # Installa le dipendenze con le opzioni corrette
 RUN npm i --legacy-peer-deps
-RUN npm i react-json-view --force --legacy-peer-deps
 
 # Imposta le variabili d'ambiente per il build
 ENV NODE_OPTIONS=--openssl-legacy-provider

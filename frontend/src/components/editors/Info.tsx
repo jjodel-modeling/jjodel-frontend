@@ -15,7 +15,7 @@ import { ViewData } from './views/ViewData';
 import ViewpointProperties from './viewpoint/properties/ViewpointProperties';
 import {FakeStateProps, int, windoww} from '../../joiner/types';
 
-import ReactJson from 'react-json-view' // npm i react-json-view --force
+import JsonViewer from '../shared/JsonViewer';
 import React, {Component, Dispatch, JSX, ReactElement, ReactNode, useState} from 'react';
 import HelpButton from '../HelpButton';
 import {connect} from 'react-redux';
@@ -1268,22 +1268,7 @@ function InfoComponent(props: AllProps) {
                                 <div className="props-empty-state">No custom state defined</div>
                             ) : (
                                 <div className="object-state" style={{ margin: 0, border: 'none' }}>
-                                    <ReactJson
-                                        src={ddata._state}
-                                        collapsed={1}
-                                        collapseStringsAfterLength={20}
-                                        displayDataTypes={true}
-                                        displayObjectSize={true}
-                                        enableClipboard={true}
-                                        groupArraysAfterLength={100}
-                                        indentWidth={4}
-                                        name={"state"}
-                                        iconStyle={"triangle"}
-                                        quotesOnKeys={true}
-                                        shouldCollapse={false}
-                                        sortKeys={false}
-                                        theme={"rjv-default"}
-                                    />
+                                    <JsonViewer src={ddata._state} collapsed={1} name={"state"} />
                                 </div>
                             )}
                         </CollapsibleSection>
@@ -1312,21 +1297,7 @@ function InfoComponent(props: AllProps) {
             <h6>State</h6>
             <div className={'object-state'}>
                 {!ddata || Object.keys(ddata._state).length === 0 ? <pre> Empty</pre> :
-                    <ReactJson src={ddata._state}
-                            collapsed={1}
-                            collapseStringsAfterLength={20}
-                            displayDataTypes={true}
-                            displayObjectSize={true}
-                            enableClipboard={true}
-                            groupArraysAfterLength={100}
-                            indentWidth={4}
-                            name={"state"}
-                            iconStyle={"triangle"}
-                            quotesOnKeys={true}
-                            shouldCollapse={false /*((field: CollapsedFieldProps) => { return Object.keys(field.src).length > 3;*/}
-                            sortKeys={false}
-                            theme={"rjv-default"}
-                    />}
+                    <JsonViewer src={ddata._state} collapsed={1} name={"state"} />}
                 {/*<pre>{Object.keys(dnode._state).length ? JSON.stringify(dnode._state, null, '\t') : undefined}</pre>*/}
             </div> </>}
         </section>

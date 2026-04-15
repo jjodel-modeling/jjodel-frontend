@@ -27,7 +27,6 @@ jobs:
         working-directory: ./frontend
         run: |
           npm i
-          npm i react-json-view --force
           CI='' ./node_modules/.bin/vite build --mode staging
 
       - name: Zip artifact for deployment
