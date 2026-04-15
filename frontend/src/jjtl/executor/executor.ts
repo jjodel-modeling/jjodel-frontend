@@ -299,6 +299,15 @@ export class JjtlExecutor {
     private jjelEvaluator: JjelEvaluator = new JjelEvaluator();
     private errors: string[] = [];
     private warnings: string[] = [];
+    // Target classes referenced by mappings that don't exist in the target
+    // metamodel. Populated by validateTargetClasses and consulted by
+    // executeClassMapping to skip the mapping instead of creating orphan
+    // instances under an unknown className.
+    private unknownTargetClasses: Set<string> = new Set();
+    // Source classes referenced by mappings that never appear in the source
+    // model. Populated lazily when executeClassMapping sees them; kept so we
+    // don't emit the same warning per-rule for the same missing class.
+    private warnedSourceClasses: Set<string> = new Set();
     private stats: ExecutionStats = {
         sourceInstancesProcessed: 0,
         targetInstancesCreated: 0,
@@ -397,8 +406,13 @@ export class JjtlExecutor {
             }
 
             // Execute class mappings
-            for (const mapping of this.ast.mappings) {
+            const totalMappings = this.ast.mappings.length;
+            for (let mi = 0; mi < totalMappings; mi++) {
+                const mapping = this.ast.mappings[mi];
+                const mappingLabel = `${mapping.sources.map(s => s.className).join(', ')} -> ${mapping.targetClass}`;
+                console.log(`[JjTL] Processing mapping ${mi + 1}/${totalMappings}: ${mappingLabel}`);
                 await this.executeClassMapping(mapping, sourceInstances, targetModel);
+                console.log(`[JjTL] Completed mapping ${mi + 1}/${totalMappings}: ${mappingLabel}`);
             }
 
             this.stats.executionTimeMs = performance.now() - startTime;
@@ -463,9 +477,12 @@ export class JjtlExecutor {
         }
 
         const classMap = new Map(allClasses.map(c => [c.name, c]));
+        const knownNames = new Set(classMap.keys());
         const abstractNames = new Set(allClasses.filter(c => c.isAbstract).map(c => c.name));
 
-        if (abstractNames.size === 0) return;
+        // Bail only if we couldn't enumerate any classes at all — we can't
+        // validate against an unknown metamodel shape.
+        if (knownNames.size === 0) return;
 
         // Find concrete subclasses for helpful messages
         const findConcreteSubclasses = (abstractName: string): string[] => {
@@ -486,6 +503,11 @@ export class JjtlExecutor {
                 this.errors.push(
                     `Cannot use abstract class '${targetClass}' as transformation target in ${context}.${suggestion}`
                 );
+            } else if (!knownNames.has(targetClass)) {
+                const msg = `Target class '${targetClass}' not found in target metamodel (${context}). Mapping skipped.`;
+                console.warn(`[JjTL] ${msg}`);
+                this.warnings.push(msg);
+                this.unknownTargetClasses.add(targetClass);
             }
         };
 
@@ -693,6 +715,14 @@ export class JjtlExecutor {
         sourceInstances: Map<string, any[]>,
         targetModel: TargetModel
     ): Promise<void> {
+        // Skip mappings whose target class doesn't exist in the target metamodel.
+        // validateTargetClasses already pushed the warning; this prevents orphan
+        // instances from ending up under result.targetModel.instances[unknownName].
+        if (this.unknownTargetClasses.has(mapping.targetClass)) {
+            console.log(`[JjTL] Skipping mapping to unknown target class '${mapping.targetClass}'`);
+            return;
+        }
+
         if (mapping.sources.length > 1) {
             await this.executeMultiSourceClassMapping(mapping, sourceInstances, targetModel);
             return;
@@ -703,17 +733,35 @@ export class JjtlExecutor {
         const sourceClassName = src.className;
         const sourceAlias = src.alias;
         const targetClassName = mapping.targetClass;
+        if (!sourceInstances.has(sourceClassName) && !this.warnedSourceClasses.has(sourceClassName)) {
+            const msg = `Source class '${sourceClassName}' has no instances in the source model. Mapping '${sourceClassName} -> ${mapping.targetClass}' produced no output.`;
+            console.warn(`[JjTL] ${msg}`);
+            this.warnings.push(msg);
+            this.warnedSourceClasses.add(sourceClassName);
+        }
         const instances = sourceInstances.get(sourceClassName) || [];
         const ruleName = `${sourceClassName} -> ${targetClassName}`;
         const hasGuard = !!mapping.condition;
 
         console.log(`[JjTL Executor] executeClassMapping: ${ruleName}`);
-        console.log(`[JjTL Executor] Found ${instances.length} source instances of type "${sourceClassName}"`);
+        console.log(`[JjTL] Found ${instances.length} source elements matching ${sourceClassName}`);
         console.log(`[JjTL Executor] Class mapping body items:`, mapping.body?.length ?? 0);
 
         this.context.currentRuleName = ruleName;
 
+        // Runaway safeguard: bound the per-mapping instance iteration so a malformed
+        // source model (self-referential array, huge synthesized collection, etc.)
+        // fails loudly instead of freezing the main thread.
+        const MAX_INSTANCES_PER_MAPPING = 10000;
+        let iterCount = 0;
+
         for (const sourceInstance of instances) {
+            if (++iterCount > MAX_INSTANCES_PER_MAPPING) {
+                const msg = `Aborted '${ruleName}': exceeded ${MAX_INSTANCES_PER_MAPPING} source instances (possible runaway).`;
+                console.warn(`[JjTL Executor] ${msg}`);
+                this.warnings.push(msg);
+                break;
+            }
             this.context.currentInstanceName =
                 sourceInstance?.name ??
                 sourceInstance?.$name?.value ??
@@ -731,6 +779,8 @@ export class JjtlExecutor {
             }
 
             // Create target instance(s)
+            const sourceLabel = sourceInstance?.name ?? sourceInstance?.id ?? '(anonymous)';
+            console.log(`[JjTL] Creating target element ${mapping.targetClass} for source ${sourceLabel}`);
             const targetInstances = this.createTargetInstances(mapping, sourceInstance, targetModel);
 
             // Trace refs
@@ -781,6 +831,15 @@ export class JjtlExecutor {
         const targetClassName = mapping.targetClass;
         const hasGuard = !!mapping.condition;
         const ruleName = mapping.sources.map(s => `${s.className} ${s.alias}`).join(', ') + ` -> ${targetClassName}`;
+
+        for (const src of mapping.sources) {
+            if (!sourceInstances.has(src.className) && !this.warnedSourceClasses.has(src.className)) {
+                const msg = `Source class '${src.className}' has no instances in the source model. Mapping '${ruleName}' produced no output.`;
+                console.warn(`[JjTL] ${msg}`);
+                this.warnings.push(msg);
+                this.warnedSourceClasses.add(src.className);
+            }
+        }
 
         // Collect instances per source (in declaration order)
         const instanceArrays = mapping.sources.map(s => sourceInstances.get(s.className) || []);
@@ -865,6 +924,15 @@ export class JjtlExecutor {
             } else {
                 count = multiplicity.upper;
             }
+        }
+
+        // Clamp against malformed AST that could otherwise freeze the main thread.
+        const MAX_MULTIPLICITY = 1000;
+        if (count > MAX_MULTIPLICITY) {
+            const msg = `Multiplicity ${count} for target '${targetClassName}' exceeds max ${MAX_MULTIPLICITY}; clamping.`;
+            console.warn(`[JjTL Executor] ${msg}`);
+            this.warnings.push(msg);
+            count = MAX_MULTIPLICITY;
         }
 
         const created: any[] = [];
@@ -1033,6 +1101,7 @@ export class JjtlExecutor {
         alias?: string
     ): Promise<void> {
         try {
+            console.log(`[JjTL] Evaluating attribute mapping: ${mapping.targetAttribute} := ${mapping.sourceAttribute ?? '<expression>'}`);
             let value: JjelValue;
             let sourceValue: any = null;
             const hasExpression = !!mapping.conversion?.expression;
@@ -1069,6 +1138,7 @@ export class JjtlExecutor {
             // Set target attribute
             const finalValue = fromJjelValue(value);
             targetInstance[mapping.targetAttribute] = finalValue;
+            console.log(`[JjTL] Result: ${mapping.targetAttribute} = ${JSON.stringify(finalValue)}`);
 
             // Determine invertibility
             const invertible = this.isBindingInvertible(mapping);

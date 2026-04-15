@@ -1098,7 +1098,16 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 }
 
                 // Prepare source data (deep copy)
-                const sourceObjects = sourceModel.objects || [];
+                // Filter out null/undefined entries: LModel.objects can contain broken
+                // pointers (e.g. deleted DObjects) that dereference to undefined and
+                // would crash downstream property accesses like `obj.instanceof`.
+                const sourceObjects = (sourceModel.objects || []).filter((obj: LObject | null | undefined) => {
+                    if (!obj) {
+                        console.warn('[ProjectEditor] Skipping null/undefined object in source model');
+                        return false;
+                    }
+                    return true;
+                });
                 console.log('[ProjectEditor] Source objects count:', sourceObjects.length);
 
                 const sourceModelData = sourceObjects.map((obj: LObject) => {
@@ -1184,9 +1193,21 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     return result;
                 });
 
-                const sourceModelDataCopy = JSON.parse(JSON.stringify(sourceModelData));
+                // Do not JSON-serialize sourceModelData: feature values can still hold
+                // L-layer proxies (e.g. feature.values[0] when values reference another
+                // DObject), and JSON.stringify walks proxy ownKeys recursively — with
+                // circular back-refs and a per-access cost it freezes the main thread.
+                // executor.execute() runs its own safeDeepCopy (Reflect.ownKeys based)
+                // before touching the data, so pass-through is safe.
+                console.log('[ProjectEditor] sourceModelData built, handing to executor');
+                console.time('[TIMING] JSON deep copy (now pass-through)');
+                const sourceModelDataCopy = sourceModelData;
+                console.timeEnd('[TIMING] JSON deep copy (now pass-through)');
+
                 // Execute transformation
+                console.time('[TIMING] executeTransformation');
                 const result: ExecutionResult = await executeTransformation(ast, sourceModelDataCopy, targetMetamodel);
+                console.timeEnd('[TIMING] executeTransformation');
 
                 if (!result.success) {
                     U.alert('e', 'Transformation Failed', result.errors.join('\n'));
@@ -1199,13 +1220,14 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 // ============================================
 
                 // CRITICAL: Get fresh model names from Redux store, NOT from stale component state
-                // This ensures we catch recently created models that haven't triggered a re-render yet
+                // This ensures we catch recently created models that haven't triggered a re-render yet.
+                // DModels live under state.idlookup (not at the root) — iterating root keys would
+                // only see "idlookup", "graphs", etc. and miss every model.
                 const freshState = store.getState() as any;
                 const freshExistingNames: string[] = [];
-
-                // Iterate through state and collect all model/metamodel names
-                for (const key in freshState) {
-                    const item = freshState[key];
+                const idlookup = freshState?.idlookup || {};
+                for (const key in idlookup) {
+                    const item = idlookup[key];
                     if (item && typeof item === 'object' && item.className === 'DModel' && item.name) {
                         freshExistingNames.push(item.name);
                     }
@@ -1249,14 +1271,17 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     posY: number;
                 }> = [];
 
+                console.time('[TIMING] TRANSACTION total');
                 TRANSACTION('Execute Transformation: Create Target Model', () => {
                     // STEP 1: Crea DModel con il nome UNICO
+                    console.time('[TIMING] DModel.new');
                     const dModel: DModel = DModel.new(
                         uniqueOutputName,       // ← USA IL NOME UNICO!
                         targetMetamodel.id,     // instanceof = target metamodel
                         false,                  // isMetamodel = false
                         true                    // persist = true
                     );
+                    console.timeEnd('[TIMING] DModel.new');
                     createdDModel = dModel;
                     createdModelId = dModel.id;
                     console.log('[ProjectEditor] Created DModel with UNIQUE name:', {
@@ -1265,12 +1290,15 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     });
 
                     // STEP 2: Crea DGraph
+                    console.time('[TIMING] DGraph.new');
                     const graphId = Constructors.DGraph_makeID(dModel.id);
                     const dGraph: DGraph = DGraph.new(0, dModel.id, undefined, undefined, graphId);
+                    console.timeEnd('[TIMING] DGraph.new');
                     createdDGraph = dGraph;
                     createdGraphId = dGraph.id;
                     console.log('[ProjectEditor] Created DGraph:', { id: dGraph.id });
 
+                    console.time('[TIMING] SetFieldActions');
                     // Tag graph as v2-flow so EditorV2/useJjomSync can find it
                     SetFieldAction.new(dGraph.id, 'graphStyle', 'v2-flow', '', false);
 
@@ -1294,8 +1322,10 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             timestamp: Date.now(),
                         }
                     }, '', false);
+                    console.timeEnd('[TIMING] SetFieldActions');
 
                     // STEP 6: Crea istanze
+                    console.time('[TIMING] DObject creation loop');
                     if (result.targetModel?.instances) {
                         const targetClasses: LClass[] = targetMetamodel.classes || [];
                         console.log('[ProjectEditor] Target classes:', targetClasses.map(c => c.name));
@@ -1322,7 +1352,10 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                 console.log(`[ProjectEditor] instanceData from executor:`, instanceData);
 
                                 const objectName = instanceData.name || `${className}_${instancesCreated}`;
+                                const objTimingLabel = `[TIMING] DObject.new #${instancesCreated} (${className})`;
+                                console.time(objTimingLabel);
                                 const dObject = DObject.new(targetClass.id, dModel.id, DModel, objectName, true);
+                                console.timeEnd(objTimingLabel);
                                 console.log(`[ProjectEditor] Created instance:`, { name: objectName, class: className });
 
                                 // Collect for DVertex creation AFTER the TRANSACTION.
@@ -1362,12 +1395,17 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             }
                         });
                     }
+                    console.timeEnd('[TIMING] DObject creation loop');
 
                     console.log(`[ProjectEditor] Total instances created: ${instancesCreated}`);
                 });
+                console.timeEnd('[TIMING] TRANSACTION total');
 
                 // STEP 7: Open tab AFTER a delay for Redux (fire-and-forget)
-                // Schedule this FIRST so tab opens even if DVertex/attribute steps fail.
+                // Scheduled FIRST so tab opens even if DVertex/attribute steps fail.
+                // Delay bumped to 2000ms so it fires after DVertex creation + attribute
+                // setting have settled — otherwise open2 runs while the graph/vertex
+                // dispatches are still in flight and ReactFlow loops on stale state.
                 if (createdDModel) {
                     const modelToOpen = createdDModel;
                     const modelName = uniqueOutputName;
@@ -1383,8 +1421,15 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                         } catch (e) {
                             console.error('[ProjectEditor] Error opening tab:', e);
                         }
-                    }, 200);
+                    }, 2000);
                 }
+
+                // Yield one frame before creating DVertices. TRANSACTION above is an
+                // async function that suspends at `await func()` — outer depth stays
+                // at 1 until the microtask runs FINAL_END. Waiting for the next paint
+                // lets React flush renders + lets Redux drain before N DVertex.new()
+                // calls each open their own internal TRANSACTION.
+                await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
                 // STEP 6b: Create DVertices OUTSIDE the TRANSACTION.
                 // DVertex.new has its own internal TRANSACTION — calling it inside
@@ -1395,15 +1440,22 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     const gid = createdGraphId;
                     const NODE_W = 200;
                     const NODE_H = 80;
+                    console.time('[TIMING] DVertex creation');
                     try {
+                        let dvIdx = 0;
                         for (const pv of pendingVertices) {
                             const size = new GraphSize(pv.posX, pv.posY, NODE_W, NODE_H);
+                            const dvLabel = `[TIMING] DVertex.new #${dvIdx}`;
+                            console.time(dvLabel);
                             DVertex.new(0, pv.objectId, gid, gid, undefined, size);
+                            console.timeEnd(dvLabel);
                             console.log(`[ProjectEditor] Created DVertex for object at (${pv.posX}, ${pv.posY})`);
+                            dvIdx++;
                         }
                     } catch (e) {
                         console.error('[ProjectEditor] Error creating DVertices (non-fatal):', e);
                     }
+                    console.timeEnd('[TIMING] DVertex creation');
                 }
 
                 // STEP 8: Set attributes after delay — use LModel proxy to find objects by name
