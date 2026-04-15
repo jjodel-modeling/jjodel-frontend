@@ -11,7 +11,7 @@ export default defineConfig({
       babel: {
         plugins: [
           ['@babel/plugin-proposal-decorators', { legacy: true }],
-          ['@babel/plugin-proposal-class-properties', { loose: true }]
+          ['@babel/plugin-transform-class-properties', { loose: true }]
         ]
       }
     }),
