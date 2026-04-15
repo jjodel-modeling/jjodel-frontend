@@ -47,7 +47,7 @@ export class OCL{
         if (!obj) {
             obj = new Persona();
             obj.age = -55;
-            obj.name = {notEmpty: () => { console.log('innerfunc'); return true} };
+            obj.name = {notEmpty: () => { /* console.log('innerfunc'); */ return true} };
             obj.f = (a:any) => { console.error('called a', a); return a>0};
             obj.name0= '';
 //obj.$$typeof = Persona;

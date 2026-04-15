@@ -147,7 +147,7 @@ export async function initializeRagSystem(): Promise<void> {
     const indexer = getIndexer();
     await indexer.initialize();
 
-    console.log('[RAG] System initialized');
+    // console.log('[RAG] System initialized');
 }
 
 /**
@@ -168,7 +168,7 @@ export async function resetRagSystem(): Promise<void> {
     resetRetriever();
     resetIndexer();
 
-    console.log('[RAG] System reset');
+    // console.log('[RAG] System reset');
 }
 
 /**
@@ -273,5 +273,5 @@ export async function indexProjectContent(
         );
     }
 
-    console.log(`[RAG] Indexed project ${projectId}`);
+    // console.log(`[RAG] Indexed project ${projectId}`);
 }

@@ -163,7 +163,7 @@ function MetamodelTabComponent(props: AllProps) {
         const graphid = Constructors.DGraph_makeID(model.id);
         if (!DPointerTargetable.pendingCreation[graphid]) {
             const dGraph = DGraph.new(0, model.id);
-            console.log('create m2 graph', {model, graphId: dGraph.id});
+            // console.log('create m2 graph', {model, graphId: dGraph.id});
         }
         return(<div style={{width: "100%", height: "100%", display: "flex"}}>
             <span style={{margin: "auto"}}>Building the Graph...</span>

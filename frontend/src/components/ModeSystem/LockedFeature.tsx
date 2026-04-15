@@ -35,7 +35,7 @@ export const LockedFeature: React.FC<LockedFeatureProps> = ({
     // Don't show if already in advanced mode
     if (advanced) return null;
 
-    console.log('nestedviewtab locked feature 2');
+    // console.log('nestedviewtab locked feature 2');
     const handleUnlock = () => {
         TRANSACTION((advanced ? 'un' : '') +'set advanced mode',
             () => SetRootFieldAction.new('advanced', !advanced),

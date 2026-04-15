@@ -151,7 +151,7 @@ function toolbarClick(item_dname: string, data: LModelElement|undefined, myDictV
             wedge.midPoints = mp;
             let olddebug = [...subelements];
             subelements.splice(prevnodeindex, 0, newmp.id as string);
-            console.log("injecting ep", {prevnodeindex, newmp, prevNodeid, longestSeg, old: olddebug, new: subelements, ledge, dedge});
+            // console.log("injecting ep", {prevnodeindex, newmp, prevNodeid, longestSeg, old: olddebug, new: subelements, ledge, dedge});
             break;
         default:
             if (!data || !myDictValidator) return;

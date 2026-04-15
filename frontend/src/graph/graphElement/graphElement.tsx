@@ -287,7 +287,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         // console.log('dragx GE mapstate addGEStuff', {dGraphElementDataClass, created: new dGraphElementDataClass(false, nodeid, graphid)});
         if (!dnode) {
             /*
-            console.log("making node:", {dGraphElementDataClass, nodeid, parentnodeid, graphid, dataid, ownProps, ret,
+            // console.log("making node:", {dGraphElementDataClass, nodeid, parentnodeid, graphid, dataid, ownProps, ret,
                 pendings: {...DPointerTargetable.pendingCreation}, pending:DPointerTargetable.pendingCreation[nodeid]});*/
             // so this is called once, but createaction is triggered twice only for edgepoints? it works if i create it through console.
             let dge;
@@ -338,7 +338,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             }
             else {
                 let initialSize = ownProps.initialSize;
-                console.log('create node', {ownProps, mid:ret?.data?.id, nodeid});
+                // console.log('create node', {ownProps, mid:ret?.data?.id, nodeid});
                 dge = dGraphElementDataClass.new(ownProps.htmlindex as number, ret.data?.id, parentnodeid, graphid, nodeid, initialSize);
                 if (!tn) transientProperties.node[nodeid] = new NodeTransientProperties();
                 tn.onDelete = ownProps.onDelete;
@@ -841,7 +841,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
     onKeyDown(e: React.KeyboardEvent){
         //NB: triggers only if element has :focus-within, otherwuse use U->register->keydown
-        console.log('GraphElement.keydown', e.key, {e, m:this.props.data?.name});
+        // console.log('GraphElement.keydown', e.key, {e, m:this.props.data?.name});
         let target: HTMLElement = e.target as any;
         switch (target?.tagName.toLowerCase()) {
             case 'input':

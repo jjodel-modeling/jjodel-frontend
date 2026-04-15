@@ -33,12 +33,12 @@ class PerformanceMetricsClass {
 
     enable(): void {
         this.enabled = true;
-        console.log('[PerformanceMetrics] Enabled');
+        // console.log('[PerformanceMetrics] Enabled');
     }
 
     disable(): void {
         this.enabled = false;
-        console.log('[PerformanceMetrics] Disabled');
+        // console.log('[PerformanceMetrics] Disabled');
     }
 
     isEnabled(): boolean {
@@ -150,7 +150,7 @@ class PerformanceMetricsClass {
     reset(): void {
         this.metrics.clear();
         this.renderCounts.clear();
-        console.log('[PerformanceMetrics] Reset');
+        // console.log('[PerformanceMetrics] Reset');
     }
 
     /**
@@ -159,18 +159,18 @@ class PerformanceMetricsClass {
     logReport(): void {
         const report = this.report();
         console.group('📊 Performance Report');
-        console.log('Timestamp:', report.timestamp);
+        // console.log('Timestamp:', report.timestamp);
         if (report.memory) {
-            console.log(`Memory: ${report.memory.usedJSHeapSize}MB / ${report.memory.totalJSHeapSize}MB`);
+            // console.log(`Memory: ${report.memory.usedJSHeapSize}MB / ${report.memory.totalJSHeapSize}MB`);
         }
 
         if (Object.keys(report.timings).length > 0) {
-            console.log('\n⏱️ Timings:');
+            // console.log('\n⏱️ Timings:');
             console.table(report.timings);
         }
 
         if (Object.keys(report.renderCounts).length > 0) {
-            console.log('\n🔄 Render counts:');
+            // console.log('\n🔄 Render counts:');
             console.table(report.renderCounts);
 
             // Calculate SCU hit rate
@@ -178,7 +178,7 @@ class PerformanceMetricsClass {
             const scuFalse = report.renderCounts['SCU_false'] || 0;
             if (scuTrue + scuFalse > 0) {
                 const hitRate = (scuFalse / (scuTrue + scuFalse) * 100).toFixed(1);
-                console.log(`\n📈 SCU Cache Hit Rate: ${hitRate}% (higher is better)`);
+                // console.log(`\n📈 SCU Cache Hit Rate: ${hitRate}% (higher is better)`);
             }
         }
 

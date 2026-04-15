@@ -39,11 +39,11 @@ export function useJjtlParser(options: UseJjtlParserOptions = {}): UseJjtlParser
 
     // Parse source synchronously
     const parseSource = useCallback((source: string): { ast: TransformationAST | null; errors: ParserError[] } => {
-        console.log('[useJjtlParser] Parsing source, length:', source.length);
+        // console.log('[useJjtlParser] Parsing source, length:', source.length);
 
         // Tokenize
         const lexerResult = tokenize(source);
-        console.log('[useJjtlParser] Tokens count:', lexerResult.tokens.length);
+        // console.log('[useJjtlParser] Tokens count:', lexerResult.tokens.length);
 
         // Convert lexer errors to parser errors format
         const lexerErrors: ParserError[] = lexerResult.errors.map(e => ({
@@ -53,13 +53,13 @@ export function useJjtlParser(options: UseJjtlParserOptions = {}): UseJjtlParser
         }));
 
         // DEBUG: log full token stream
-        console.log('[useJjtlParser] Full token stream:', lexerResult.tokens.map(
+        // console.log('[useJjtlParser] Full token stream:', lexerResult.tokens.map(
             (t, i) => `${i}:[${t.type}:${JSON.stringify(t.value)}]`
         ).join(' '));
 
         // Parse
         const parserResult = parse(lexerResult.tokens);
-        console.log('[useJjtlParser] Parse result:', {
+        // console.log('[useJjtlParser] Parse result:', {
             hasAst: !!parserResult.ast,
             mappingsCount: parserResult.ast?.mappings?.length || 0,
             errorsCount: parserResult.errors.length
@@ -138,7 +138,7 @@ export function useJjtlParser(options: UseJjtlParserOptions = {}): UseJjtlParser
 
     // Parse immediately and return result (useful for getting fresh AST at execution time)
     const parseNow = useCallback((source: string): { ast: TransformationAST | null; errors: ParserError[] } => {
-        console.log('[useJjtlParser] parseNow called - immediate parse with result');
+        // console.log('[useJjtlParser] parseNow called - immediate parse with result');
         const result = parseSource(source);
         // Also update state
         setAst(result.ast);

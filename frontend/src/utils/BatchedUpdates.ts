@@ -93,7 +93,7 @@ function flushQueue(dispatch: DispatchFn): void {
     PerformanceMetrics.countRender('BatchedDispatch_flush');
 
     if (PerformanceMetrics.isEnabled()) {
-        console.log(`[BatchedUpdates] Flushing ${actionsToDispatch.length} actions in batch #${batchState.batchCount}`);
+        // console.log(`[BatchedUpdates] Flushing ${actionsToDispatch.length} actions in batch #${batchState.batchCount}`);
     }
 
     unstable_batchedUpdates(() => {
@@ -109,7 +109,7 @@ function flushQueue(dispatch: DispatchFn): void {
  */
 export function enableMicroTaskCoalescing(): void {
     microTaskCoalescingEnabled = true;
-    console.log('[BatchedUpdates] Micro-task coalescing ENABLED');
+    // console.log('[BatchedUpdates] Micro-task coalescing ENABLED');
 }
 
 /**
@@ -118,7 +118,7 @@ export function enableMicroTaskCoalescing(): void {
  */
 export function disableMicroTaskCoalescing(): void {
     microTaskCoalescingEnabled = false;
-    console.log('[BatchedUpdates] Micro-task coalescing DISABLED');
+    // console.log('[BatchedUpdates] Micro-task coalescing DISABLED');
 }
 
 /**

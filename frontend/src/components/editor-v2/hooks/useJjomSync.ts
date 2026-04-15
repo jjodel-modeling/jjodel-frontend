@@ -314,9 +314,9 @@ export function useJjomSync(
 
         for (const pkgId of (rawModel.packages ?? [])) visitElement(pkgId);
 
-        console.log('[DEBUG populate] modelid:', modelid);
-console.log('[DEBUG populate] rawModel.packages:', rawModel.packages);
-console.log('[DEBUG populate] classifierEntries:', classifierEntries.length, classifierEntries.map(e => e.raw.name));
+        // console.log('[DEBUG populate] modelid:', modelid);
+// console.log('[DEBUG populate] rawModel.packages:', rawModel.packages);
+// console.log('[DEBUG populate] classifierEntries:', classifierEntries.length, classifierEntries.map(e => e.raw.name));
 
 
 

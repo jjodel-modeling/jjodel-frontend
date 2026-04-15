@@ -44,7 +44,7 @@ export const FormExample: React.FC = () => {
       return;
     }
 
-    console.log('Form submitted:', formData);
+    // console.log('Form submitted:', formData);
     setErrors({});
   };
 

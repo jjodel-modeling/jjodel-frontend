@@ -26,7 +26,7 @@ function makePolygon(sides: number, radius: number = 0.5, startingPoint?:Point, 
 }
 
 function makeStar(sides: number, radius: number = 0.5, starRadius: number=0.25, niceBugVersion: boolean = true): Point[]{
-    console.log("make star", {sides, starRadius});
+    // console.log("make star", {sides, starRadius});
     let startRad;
     let nextPtRad;
     if (niceBugVersion && sides % 2 == 0) {
@@ -51,7 +51,7 @@ function makeStar(sides: number, radius: number = 0.5, starRadius: number=0.25, 
 }
 
 function makeAsterisk(sides: number, radius: number = 0.5, starRadius: number=0.25): Point[]{
-    console.log("make asterisk, todo", {sides, starRadius});
+    // console.log("make asterisk, todo", {sides, starRadius});
     return [];
 }
 function makeClipPath(pts:Point[]): string {
@@ -78,7 +78,7 @@ function makeSvg(pts: Point[]): string{
         html.setAttribute("cx", pts[i] ? pts[i].x*100 : -500);
         html.setAttribute("cy", pts[i] ? pts[i].y*100 : -500);
     }
-    console.log(html);
+    // console.log(html);
     return val;
 }*/
 

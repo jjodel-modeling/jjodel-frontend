@@ -57,7 +57,7 @@ class JjodieRagServiceClass {
         try {
             await initializeRagSystem();
             this.initialized = true;
-            console.log('[JjodieRagService] RAG system initialized');
+            // console.log('[JjodieRagService] RAG system initialized');
 
             // Index JjScript documentation on first init
             if (!this.jjscriptIndexed) {
@@ -328,7 +328,7 @@ class JjodieRagServiceClass {
         // Check if already indexed with same hash
         const existingInfo = this.indexedProjects.get(projectId);
         if (existingInfo && existingInfo.projectHash === projectHash) {
-            console.log('[JjodieRagService] Project already indexed, skipping');
+            // console.log('[JjodieRagService] Project already indexed, skipping');
             return;
         }
 
@@ -337,7 +337,7 @@ class JjodieRagServiceClass {
 
             // Remove old documents for this project if re-indexing
             if (existingInfo) {
-                console.log('[JjodieRagService] Re-indexing project, removing old documents');
+                // console.log('[JjodieRagService] Re-indexing project, removing old documents');
                 // Note: We'd need to track document IDs to remove them
                 // For now, the new documents will have same IDs and overwrite
             }
@@ -345,7 +345,7 @@ class JjodieRagServiceClass {
             // Convert project to documents
             const documents = this.projectToDocuments(project);
 
-            console.log(`[JjodieRagService] Indexing ${documents.length} documents for project ${projectId}`);
+            // console.log(`[JjodieRagService] Indexing ${documents.length} documents for project ${projectId}`);
 
             // Index each document
             for (const doc of documents) {
@@ -362,7 +362,7 @@ class JjodieRagServiceClass {
 
             this.currentProjectId = projectId;
 
-            console.log(`[JjodieRagService] Project indexed successfully`);
+            // console.log(`[JjodieRagService] Project indexed successfully`);
         } catch (error) {
             console.error('[JjodieRagService] Failed to index project:', error);
         }
@@ -472,14 +472,14 @@ class JjodieRagServiceClass {
             const indexer = getIndexer();
             const documents = this.generateJjScriptDocuments();
 
-            console.log(`[JjodieRagService] Indexing ${documents.length} JjScript documentation documents`);
+            // console.log(`[JjodieRagService] Indexing ${documents.length} JjScript documentation documents`);
 
             for (const doc of documents) {
                 await indexer.indexDocument(doc);
             }
 
             this.jjscriptIndexed = true;
-            console.log('[JjodieRagService] JjScript documentation indexed successfully');
+            // console.log('[JjodieRagService] JjScript documentation indexed successfully');
         } catch (error) {
             console.error('[JjodieRagService] Failed to index JjScript documentation:', error);
         }
@@ -1138,7 +1138,7 @@ create package entities in domain nsUri "http://example.org/entities"
             this.indexedProjects.clear();
             this.currentProjectId = null;
             this.jjscriptIndexed = false;
-            console.log('[JjodieRagService] Index cleared');
+            // console.log('[JjodieRagService] Index cleared');
         } catch (error) {
             console.error('[JjodieRagService] Failed to clear index:', error);
         }

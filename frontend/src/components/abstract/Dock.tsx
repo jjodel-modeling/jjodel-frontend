@@ -63,7 +63,7 @@ export function activateVerticalConsoleMode(): void {
     window.dispatchEvent(new CustomEvent(JjodelEvents.LAYOUT_MODE_CHANGE, {
         detail: { mode: 'vertical-console' as LayoutMode }
     }));
-    console.log('✅ Vertical Console Mode activated. Refresh if needed.');
+    // console.log('✅ Vertical Console Mode activated. Refresh if needed.');
 }
 
 // Expose to window for easy testing

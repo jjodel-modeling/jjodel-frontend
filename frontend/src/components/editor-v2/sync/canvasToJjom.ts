@@ -1296,12 +1296,12 @@ export function reconcileJjomAfterUndoRedo(
             // Also skip temp IDs (client-side, never existed in JjOM)
             if (rfAttr.id.startsWith('attr_')) continue;
 
-            console.log('[UndoReconcile] Re-creating deleted attribute:', { name: rfAttr.name, type: rfAttr.type, oldId: rfAttr.id });
+            // console.log('[UndoReconcile] Re-creating deleted attribute:', { name: rfAttr.name, type: rfAttr.type, oldId: rfAttr.id });
             try {
                 const newLAttr = lClass.addAttribute(rfAttr.name);
                 if (newLAttr?.id) {
                     idMap.set(rfAttr.id, newLAttr.id);
-                    console.log('[UndoReconcile] Created new attribute:', { oldId: rfAttr.id, newId: newLAttr.id, name: rfAttr.name });
+                    // console.log('[UndoReconcile] Created new attribute:', { oldId: rfAttr.id, newId: newLAttr.id, name: rfAttr.name });
                 }
             } catch (err) {
                 console.warn('[UndoReconcile] Failed to re-create attribute:', err);
@@ -1318,7 +1318,7 @@ export function reconcileJjomAfterUndoRedo(
             }
             if (isRemapped) continue;
 
-            console.log('[UndoReconcile] Removing extra JjOM attribute:', { attrId: jjomAttrId });
+            // console.log('[UndoReconcile] Removing extra JjOM attribute:', { attrId: jjomAttrId });
             try {
                 const lAttr: any = LPointerTargetable.fromPointer(jjomAttrId);
                 if (lAttr) {
@@ -1338,7 +1338,7 @@ export function reconcileJjomAfterUndoRedo(
             if (!dAttr) continue;
 
             if (dAttr.name !== rfAttr.name) {
-                console.log('[UndoReconcile] Renaming attribute:', { id: rfAttr.id, from: dAttr.name, to: rfAttr.name });
+                // console.log('[UndoReconcile] Renaming attribute:', { id: rfAttr.id, from: dAttr.name, to: rfAttr.name });
                 try {
                     const lAttr: any = LPointerTargetable.fromPointer(rfAttr.id);
                     if (lAttr) lAttr.name = rfAttr.name;

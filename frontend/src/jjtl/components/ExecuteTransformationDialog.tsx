@@ -54,14 +54,14 @@ export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogPr
     const compatibleModels = useMemo(() => {
         if (!availableModels || availableModels.length === 0) {
             if (isOpen) {
-                console.log('[ExecuteTransformationDialog] No models available');
+                // console.log('[ExecuteTransformationDialog] No models available');
             }
             return [];
         }
 
         // Debug: log what we're looking for
         if (isOpen) {
-            console.log('[ExecuteTransformationDialog] Filtering models...', {
+            // console.log('[ExecuteTransformationDialog] Filtering models...', {
                 sourceMetamodelName,
                 totalModels: availableModels.length,
             });
@@ -87,7 +87,7 @@ export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogPr
 
             // Debug: log each model's matching result
             if (isOpen) {
-                console.log(`[ExecuteTransformationDialog] Model "${model.name}":`, {
+                // console.log(`[ExecuteTransformationDialog] Model "${model.name}":`, {
                     metamodelId: mmId || '(empty)',
                     metamodelName: mmName || '(empty)',
                     lookingFor: sourceMetamodelName,
@@ -101,7 +101,7 @@ export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogPr
         });
 
         if (isOpen) {
-            console.log('[ExecuteTransformationDialog] Result:', {
+            // console.log('[ExecuteTransformationDialog] Result:', {
                 compatibleCount: filtered.length,
                 compatibleModels: filtered.map(m => m.name),
             });
@@ -170,19 +170,19 @@ export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogPr
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('[ExecuteTransformationDialog] handleSubmit called');
+        // console.log('[ExecuteTransformationDialog] handleSubmit called');
 
         if (!validate()) {
-            console.log('[ExecuteTransformationDialog] Validation failed');
+            // console.log('[ExecuteTransformationDialog] Validation failed');
             return;
         }
 
         setIsExecuting(true);
-        console.log('[ExecuteTransformationDialog] Calling onExecute with:', { sourceModelId, outputModelName: outputModelName.trim() });
+        // console.log('[ExecuteTransformationDialog] Calling onExecute with:', { sourceModelId, outputModelName: outputModelName.trim() });
 
         try {
             await onExecute(sourceModelId, outputModelName.trim());
-            console.log('[ExecuteTransformationDialog] onExecute completed successfully');
+            // console.log('[ExecuteTransformationDialog] onExecute completed successfully');
             // Reset and close on success
             setSourceModelId('');
             setOutputModelName('');

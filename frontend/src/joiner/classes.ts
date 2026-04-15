@@ -379,14 +379,14 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
             // @ts-ignore
             currentlevel = currentlevel.__proto__;
         }
-        console.log('constructor chain:', ret);
+        // console.log('constructor chain:', ret);
         return ret;
     }
     /*initBase(){
         let superclasses = this.getAllPrototypeSuperClasses();
         for (let sc of superclasses) {
             if (!sc.hasOwnProperty('init0')) continue;
-            console.log('initbase calling ', {thiss: this, sc, init0: sc.init0, args:sc.constructorArguments});
+            // console.log('initbase calling ', {thiss: this, sc, init0: sc.init0, args:sc.constructorArguments});
             sc.init0.apply(this, ...(sc.constructorArguments || []));
         }
     }*/
@@ -396,7 +396,7 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
     /*protected init0(...constructorParameters: any): void {
         let a = this;
         let finalObject = this;
-        console.log('creation of___ ', {thiss: this, finalObject});
+        // console.log('creation of___ ', {thiss: this, finalObject});
         if (finalObject.constructor.name === "DVoidVertex" || finalObject.constructor.name === "DGraphElement") {
             let breakp = true; }
 
@@ -727,11 +727,11 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         }
         //(thiss as DPointerTargetable)._persistCallbacks.push(()=>{
         // When a feature is added in m2, i loop instanced m1 objects to add that feature as a DValue.
-        console.log('adding feature to existing objects 0 ', {alreadyParsed})
+        // console.log('adding feature to existing objects 0 ', {alreadyParsed})
         let state = store.getState();
         for (let pointer in alreadyParsed) {
             for (let instanceObjPtr of alreadyParsed[pointer].instances) {
-                console.log('adding feature to existing objects 1 ', {alreadyParsed, instanceObjPtr, idl:state.idlookup[instanceObjPtr]})
+                // console.log('adding feature to existing objects 1 ', {alreadyParsed, instanceObjPtr, idl:state.idlookup[instanceObjPtr]})
 
                 // this._derivedSubElements.push(_DValue.new(thiss.name, thiss.id, undefined, instanceObjPtr));
                 thiss._derivedSubElements.push(_DValue.new3({name: undefined, instanceof: thiss.id, father: instanceObjPtr}, undefined, false));
@@ -1328,7 +1328,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
                 // it's already wrapped in a callback
                 // but needs a second one because after node is created, id is auto-appended to this collection
                 // and i need to rewrite that append by inserting my own customized index position
-                console.log("setting subelements 0", {updateEPindex});
+                // console.log("setting subelements 0", {updateEPindex});
                 setTimeout(updateEPindex, 0);
                 // NB: do not use this.callbacks.push because the body of this func is executed after Constructors.end() so end() can never find and execute it.
             }
@@ -2331,7 +2331,7 @@ WARNING! do not set proxies in the state, set pointers instead.<br/>
                 if (v > max) v = max;
                 else if (v < min) v = min;
             }
-            console.log("default Setter["+k.toString()+"] = " + v , {type, v, v0, oldv:(c.data as any)[k], isPointer, c});
+            // console.log("default Setter["+k.toString()+"] = " + v , {type, v, v0, oldv:(c.data as any)[k], isPointer, c});
 
             let oldv = c.data[k as keyof DPointerTargetable];
             let newv = v;
@@ -3717,7 +3717,7 @@ function buildWrapSignature(maxdepth = 100) {
     let dict0 = arr.reduce((a, v) => ({ ...a, [v.name]: v}), {});
     let dict = {}
     for (let name in dict0) { let n = name.substring(1); dict[n] = {"D":dict0["D"+n], "L":dict0["L"+n]}; dict["D"+n] = dict0["L"+n]; dict["L"+n] = dict0["D"+n]; }
-    console.log("dict", dict);
+    // console.log("dict", dict);
     console.table(dict);
     */
     function onlyUnique(value: any, index: number, self: any) { return self.indexOf(value) === index; }
@@ -3743,10 +3743,10 @@ function buildWrapSignature(maxdepth = 100) {
             loopdetecter.push(d.subclasses);
         }
     }
-    console.log("byLevels");
+    // console.log("byLevels");
     console.table(byLevels);
 
-    console.log("depsorted", depsorted);
+    // console.log("depsorted", depsorted);
 
     // console.log("map");
     // console.table(depsorted.map(dn => {let d = window[dn]; return !d ? "" :{name:d.name, scount: d.subclasses.length, subclasses:d.subclasses}}));

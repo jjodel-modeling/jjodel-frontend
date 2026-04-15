@@ -35,7 +35,7 @@ export class SaveManager {
         /*SaveManager.tmpsave = store.getState();
         localStorage.setItem("tmpsave", JSON.stringify(SaveManager.tmpsave));
         console.clear();
-        console.log(JSON.stringify(SaveManager.tmpsave))*/
+        // console.log(JSON.stringify(SaveManager.tmpsave))*/
     }
 
     static load(state0: string | GObject<DState>, project: DProject): void {
@@ -74,7 +74,7 @@ export class SaveManager {
         }
         let ism2 = (lmodel as LModel).isMetamodel;
         let name = (lmodel.name || (ism2 ? 'M2' : 'M1') + '_unnamed')  + (toXML ? ".xml" : '.json') + "."+ (ism2 ? "ecore" : lmodel.instanceof?.name || "shapeless");
-        console.log("download file:", {name, ism2, toXML, lmodel, instanceof:lmodel.instanceof});
+        // console.log("download file:", {name, ism2, toXML, lmodel, instanceof:lmodel.instanceof});
         U.download(name, str);
     }
 
@@ -108,7 +108,7 @@ export class SaveManager {
             if (fileContents.length == 0) return;
             // @ts-ignore
             filename = e.target.files?.[0].name;
-            console.log("file read", {e, fileContents, files, filename});
+            // console.log("file read", {e, fileContents, files, filename});
             filestring = fileContents[0];
 
             // if file is over 500kb, lightmode on
@@ -117,7 +117,7 @@ export class SaveManager {
                 // $(document).one("click", (e) => { Debug.setLightMode(false); });
             }
 
-            console.log('importEcore filestring input: ', filestring);
+            // console.log('importEcore filestring input: ', filestring);
             if (fromXML) {
                 let windoww = window as any;
                 windoww.file = filestring;
@@ -127,7 +127,7 @@ export class SaveManager {
                 // filestring = U.multiReplaceAll(filestring, ["\t", "\r", "\n", '&amp;', '&#38;', '&quot;', '&', '\'', '"'], ["\\t", "\\r", "\\n", '\\&', "\\'", '\\"', '\\&', "\\'", '\\"']);//,  "\\t"), "\r", "\\r"), "\n", "\\n");
 
                 const xmlDoc = new DOMParser().parseFromString(filestring,"text/xml");
-                console.log('importEcore xml:', xmlDoc);
+                // console.log('importEcore xml:', xmlDoc);
                 let jsonstring0 = '';
                 jsonobj = prxml2json.xml2jsonobj(xmlDoc, ' ');//doto: non devo wrappare con \" i nomi di chiavi o valori ma solo i contenuti
                 /*jsonstring = jsonstring0;
@@ -137,11 +137,11 @@ export class SaveManager {
                 */
                 // jsonstring = JSON.stringify(jsonobj);
                 if (jsonobj.parsererror) { Log.ee("failed to parse XML->JSON", {parseError:jsonobj.parseerror, jsonobj});  return; }
-                console.log('importEcore jsonstr input: ', jsonobj);
+                // console.log('importEcore jsonstr input: ', jsonobj);
             }
             else jsonstring = filestring;
             let isMetamodel = filename.indexOf(".ecore") === filename.length - ".ecore".length;
-            console.log("ismetamodel", {filename, isMetamodel});
+            // console.log("ismetamodel", {filename, isMetamodel});
             let end = SaveManager.importEcore(jsonobj || jsonstring || 'null', isMetamodel, filename, true);
         }, extensions, true);
     }

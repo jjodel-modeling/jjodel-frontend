@@ -102,12 +102,12 @@ export class Ohm {
 
     public parse(dsl_instanceText: string){
         const match = this.grammar.match(dsl_instanceText);
-        console.log('ohm', {match, t:this});
+        // console.log('ohm', {match, t:this});
         if (match.failed()) Log.ee('Ohm grammar failed to match, reason: ' + match.message, {match});
         let ret = this.semantics(match);
-        console.log('ohm 2', {ret, match, t:this});
+        // console.log('ohm 2', {ret, match, t:this});
         let ast = ret.ast() as Document;
-        console.log('ohm 3', {ast, ret, match, t:this});
+        // console.log('ohm 3', {ast, ret, match, t:this});
         return ast;
     }
 
@@ -198,7 +198,7 @@ Ohm.flexmi_semantic = String.raw`
             _tagName:     nameNode.sourceString.trim(),
         };
         let attrs = attrsIter.children.map(a => a.ast());
-        console.log('makeelement ' + obj._tagName, {obj, attrs, rawChildren});
+        // console.log('makeelement ' + obj._tagName, {obj, attrs, rawChildren});
         for (let attr of attrs) {
            obj[attr.name] = attr.value;
         }

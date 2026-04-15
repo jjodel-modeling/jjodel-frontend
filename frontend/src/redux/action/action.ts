@@ -345,7 +345,7 @@ export class Action extends RuntimeAccessibleClass {
             printobj['this'] = this;
             printobj['stack'] = this.stack;
             printobj['list'] = (this as any).actions;
-            console.log('firing action:', printobj);
+            // console.log('firing action:', printobj);
             setTimeout(()=>storee.dispatch({...this}), 0); // force action execution to be async, so i can add callbacks like AFTER_TRANSACTION
             /*
             // OPTIMIZATION: Wrap dispatch in batchedUpdates to ensure React batches the render
@@ -394,7 +394,7 @@ export class LoadAction extends Action {
         super('', state, '');
         this.className = LoadAction.cname;
         if (fire) {
-            console.log('load action firing', {thiss:this, list: t.pendingActions, t});
+            // console.log('load action firing', {thiss:this, list: t.pendingActions, t});
             this.fire();
         }
     }
@@ -610,7 +610,7 @@ export class SetFieldAction extends SetRootFieldAction {
         // console.warn("me fire", {thiss:this, d, typeofd:typeof d, field:this.me_field, dfield:d[this.me_field], val:this.value});
         if (d && typeof d === "object") {
             let oldv = U.followPath(d, this.me_field);
-            console.log('set value index firing 0', {ov:d[this.me_field], me_field:this.me_field, oldv, d, newv:this.value});
+            // console.log('set value index firing 0', {ov:d[this.me_field], me_field:this.me_field, oldv, d, newv:this.value});
             if (oldv === this.value) return false;
         }
         return super.fire(forceRelaunch, false);*/
@@ -780,7 +780,7 @@ export class CompositeAction extends Action {
     public static new(actions: Action[], launch: boolean = true): CompositeAction { return new CompositeAction(actions, launch); }
     constructor(actions: Action[], launch: boolean = false) {
         super('', '');
-        console.log('compositeact2', JSON.parse(JSON.stringify(actions || [])));
+        // console.log('compositeact2', JSON.parse(JSON.stringify(actions || [])));
         this.actions = actions;
         this.className = CompositeAction.cname;
         this.fromCollaborative = false;

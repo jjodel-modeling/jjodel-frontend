@@ -892,7 +892,7 @@ export class U {
 /*
     public static log(obj: unknown, label: string = '###') {
         console.clear();
-        console.log(label, obj);
+        // console.log(label, obj);
     }*/
 
     static removeEmptyObjectKeys(obj: GObject): void{
@@ -1014,7 +1014,7 @@ export class U {
         let innerFuncParams = (codestrParamNames as string[]).join(',');
         let _jevalfunc = undefined as any; // is set by eval
         const evalmode = false;
-        console.log('parseFunctionWithContextAndScope', {codeStr, scope, context, params:{scopeParams, innerFuncParams}});
+        // console.log('parseFunctionWithContextAndScope', {codeStr, scope, context, params:{scopeParams, innerFuncParams}});
         scopeParams = scopeParams && innerFuncParams ? scopeParams + ',' + innerFuncParams : scopeParams + innerFuncParams;
         if (evalmode) {
             codeStr = "_jevalfunc = function ("+scopeParams+") { return ("+codeStr+")("+innerFuncParams+") }";
@@ -1023,7 +1023,7 @@ export class U {
             _jevalfunc = new Function(scopeParams, " return ("+codeStr+")("+innerFuncParams+")");
         }
 
-        console.log('parseFunctionWithContextAndScope', {_jevalfunc, params:{scopeParams}});
+        // console.log('parseFunctionWithContextAndScope', {_jevalfunc, params:{scopeParams}});
 
         if (context) return _jevalfunc.bind(context);
         else return _jevalfunc;
@@ -3138,8 +3138,8 @@ export class Uarr{
             //       but need to know it's moved or not because it depends on prepend or append 6
             // [6, __oldItem: 6, __isAlsoRemoved: true]
             if (newi >= 0) {
-                console.log('shiftIndexes: debug 44', {srcArr:[...srcArr], oldITarget:movingElement, oldIndex, newi, totalOffset});
-                console.log('shiftIndexes: debug 55', {srcArr:[...srcArr], srcArr0, oldIndex, oldITarget:movingElement, newi, newiTarget: srcArr[newi], isFake: fakeItems.has(srcArr[newi] as any), isDelete: toDeleteItems.has(srcArr[newi] as any), "in": newi in srcArr});
+                // console.log('shiftIndexes: debug 44', {srcArr:[...srcArr], oldITarget:movingElement, oldIndex, newi, totalOffset});
+                // console.log('shiftIndexes: debug 55', {srcArr:[...srcArr], srcArr0, oldIndex, oldITarget:movingElement, newi, newiTarget: srcArr[newi], isFake: fakeItems.has(srcArr[newi] as any), isDelete: toDeleteItems.has(srcArr[newi] as any), "in": newi in srcArr});
             }
             // moved element fell on empty slot
             if (!(newi in srcArr)) { srcArr[newi] = movingElement; return; } // fakeItems.set(srcArr[newi] = [srcArr[i]] as any, true);
@@ -3193,12 +3193,12 @@ export class Uarr{
         let newArr: T[] = [];
         let holeCount = 0;
         let holecount_debug: { holeCount: number, j?: number, k?: number, i: number, e: any}[] = [];
-        console.log('shiftIndexes: pre expansion', {srcArr:[...srcArr], srcArr0, originalIndexes, moveOffset, moveDirection, totalOffset, allowNegativeIndexes, allowArrayOutOfBound});
+        // console.log('shiftIndexes: pre expansion', {srcArr:[...srcArr], srcArr0, originalIndexes, moveOffset, moveDirection, totalOffset, allowNegativeIndexes, allowArrayOutOfBound});
         srcArr.forEach((e, i) => {
-            console.log('shiftIndexes: expansion', {e, srcArr:[...srcArr], isFake: fakeItems.has(e as any), isDelete: toDeleteItems.has(e as any)});
+            // console.log('shiftIndexes: expansion', {e, srcArr:[...srcArr], isFake: fakeItems.has(e as any), isDelete: toDeleteItems.has(e as any)});
             if (toDeleteItems.has(e as OldItem)) { holeCount--; return; }
             if (fakeItems.has(e as FakeItem)) {
-                console.log('shiftIndexes: expansion 2', {e, srcArr:[...srcArr], isRemoveToo: !!(e as any).__isAlsoRemoved});
+                // console.log('shiftIndexes: expansion 2', {e, srcArr:[...srcArr], isRemoveToo: !!(e as any).__isAlsoRemoved});
 
                 let subarr = e as any as T[];
                 if (moveDirection === 1) { // if direction is >, i prepend old element
@@ -3228,7 +3228,7 @@ export class Uarr{
             newArr[i + holeCount + k] = e as T;
             holecount_debug[i + holeCount] = {e, i, k, holeCount};
         })
-        console.log('shiftIndexes: ret', {srcArr:[...srcArr], srcArr0, holeCount, holecount_debug, fakeItems, toDeleteItems});
+        // console.log('shiftIndexes: ret', {srcArr:[...srcArr], srcArr0, holeCount, holecount_debug, fakeItems, toDeleteItems});
 
         return newArr;
     }
@@ -3283,7 +3283,7 @@ export class Uarr{
                 newArr[i+currentHolesNumber] = srcArr[i];
             }
         }
-        console.log('Array shift debug', {srcArr, newArr, additionalOffsets, moveOffset, moveDirection});
+        // console.log('Array shift debug', {srcArr, newArr, additionalOffsets, moveOffset, moveDirection});
         return newArr;
     }
 }
@@ -3492,7 +3492,7 @@ export class Keystrokes {
         let keydown = (e: KeyDownEvent) => {
             // skip events happened in graph
             let curr = e.target;
-            console.log('keydown', {key: e.key, selector, e, curr, ct:e.currentTarget});
+            // console.log('keydown', {key: e.key, selector, e, curr, ct:e.currentTarget});
             switch (e.key) {
                 case Keystrokes.escape:
                     if (store.getState()?.isEdgePending?.source) SetRootFieldAction.new('isEdgePending', { user: '',  source: '' });
@@ -3511,7 +3511,7 @@ export class Keystrokes {
             if (e.shiftKey) { root = root[Keystrokes.shift] || {}; $elems.addClass('key-shift'); }
             if (e.ctrlKey) { root = root[Keystrokes.control] || {}; $elems.addClass('key-ctrl'); }
             let f = root[e.key];
-            console.log("execute keystrokes", {e, src, root, optimizedKeyPaths, up:{$elems, keydown, optimizedKeyPaths, arr}});
+            // console.log("execute keystrokes", {e, src, root, optimizedKeyPaths, up:{$elems, keydown, optimizedKeyPaths, arr}});
             Log.exDev(f && typeof f !== 'function','found keystroke with invalid func',
                 {key: e.key, shift:e.shiftKey, alt: e.altKey, ctrl: e.ctrlKey, f, root, e})
             f?.();

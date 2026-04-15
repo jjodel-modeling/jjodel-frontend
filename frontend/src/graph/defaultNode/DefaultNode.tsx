@@ -114,7 +114,7 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
     render(): ReactNode {
         if ((this.props as any).skiparenderforloading) {
             windoww.bugged = this;
-            console.log("realoading render: ", {thiss:this, data:this.props.data});
+            // console.log("realoading render: ", {thiss:this, data:this.props.data});
             SetRootFieldAction.new("rerenderforloading", new Date().getTime()); return <div>loading...</div>;}
         const view: LViewElement = this.props.view;
         const modelElement: LModelElement | undefined = this.props.data;

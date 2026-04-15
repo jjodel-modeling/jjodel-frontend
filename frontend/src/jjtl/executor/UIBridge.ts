@@ -118,15 +118,15 @@ export class ConsoleUIBridge implements UIBridge {
             error: '❌ ERROR',
             success: '✅ SUCCESS',
         }[alertType];
-        console.log(`[JjTL] ${prefix}: ${message}`);
+        // console.log(`[JjTL] ${prefix}: ${message}`);
     }
 
     showNotify(message: string, duration?: number): void {
-        console.log(`[JjTL] 📢 NOTIFY (${duration ?? 3000}ms): ${message}`);
+        // console.log(`[JjTL] 📢 NOTIFY (${duration ?? 3000}ms): ${message}`);
     }
 
     async showPrompt(message: string, typeRef: string, defaultValue?: string, _executionContext?: string): Promise<InputResult<string>> {
-        console.log(`[JjTL] ❓ PROMPT: ${message} [type: ${typeRef}] (default: "${defaultValue ?? ''}")`);
+        // console.log(`[JjTL] ❓ PROMPT: ${message} [type: ${typeRef}] (default: "${defaultValue ?? ''}")`);
         return { value: defaultValue ?? '', cancelled: false };
     }
 
@@ -136,16 +136,16 @@ export class ConsoleUIBridge implements UIBridge {
         defaultValue?: T,
         options?: SelectOption[] | string[]
     ): Promise<InputResult<T>> {
-        console.log(`[JjTL] 📝 INPUT (${inputType}): ${message}`);
+        // console.log(`[JjTL] 📝 INPUT (${inputType}): ${message}`);
         if (options) {
-            console.log(`[JjTL]    Options: ${JSON.stringify(options)}`);
+            // console.log(`[JjTL]    Options: ${JSON.stringify(options)}`);
         }
-        console.log(`[JjTL]    Default: ${JSON.stringify(defaultValue)}`);
+        // console.log(`[JjTL]    Default: ${JSON.stringify(defaultValue)}`);
         return { value: defaultValue as T, cancelled: false };
     }
 
     async showConfirm(message: string, _executionContext?: string): Promise<boolean> {
-        console.log(`[JjTL] ❓ CONFIRM: ${message}`);
+        // console.log(`[JjTL] ❓ CONFIRM: ${message}`);
         return false;
     }
 }

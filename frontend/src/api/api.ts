@@ -87,7 +87,7 @@ export class Api {
         try {
             if (allowAnonymous || Api.checkToken()) {
                 const response = await Axios.get(path, {headers: this.headers()});
-                console.log('Api response', {path, response});
+                // console.log('Api response', {path, response});
                 return {code: response.status, data: Api.swapToJodelID(response.data)};
             }
             // means invalid token
@@ -103,7 +103,7 @@ export class Api {
     static async post(path: string, obj: GObject, allowAnonymous:boolean = false, isRefreshToken: boolean = false): Promise<Response> {
         try {
             if (isRefreshToken || allowAnonymous || Api.checkToken()) {
-                console.log('post api call:', {obj, swap:Api.swapToGUID(obj)});
+                // console.log('post api call:', {obj, swap:Api.swapToGUID(obj)});
                 const response = await Axios.post(path, Api.swapToGUID(obj), isRefreshToken ? undefined : {headers: this.headers()});
                 console.trace('Api response', {path, r:response});
                 return {code: response.status, data: Api.swapToJodelID(response.data)};

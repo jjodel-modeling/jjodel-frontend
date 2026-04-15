@@ -123,7 +123,7 @@ windoww.enumerators = {};
 // @ts-ignore
 function handlebarsIfCond_original(v1, operator, v2, options) {
     // @ts-ignore
-    console.log('handlebars helper ifCond', {thiss:this as any, arguments, v1, operator, v2, options});
+    // console.log('handlebars helper ifCond', {thiss:this as any, arguments, v1, operator, v2, options});
     switch (operator) {
         case '==': // @ts-ignore
             return (v1 == v2) ? options.fn(this) : options.inverse(this);
@@ -154,7 +154,7 @@ function handlebarsIfCond_original(v1, operator, v2, options) {
 function handlebarsIfCond(useless: any) {
     let rawArguments = [...arguments].slice(0, arguments.length-1);
     // @ts-ignore
-    console.log('handlebars helper ifCond', {thiss:this as any, arguments, rawArguments});
+    // console.log('handlebars helper ifCond', {thiss:this as any, arguments, rawArguments});
     let arr = rawArguments.map((a, i) => {
         if (a === null) return 'null';
         if (a === undefined) return 'undefined';
@@ -196,7 +196,7 @@ function handlebarsJs(useless: any) {
     let str = rawArguments[rawArguments.length - 1];
     let Log = (window as any).Log;
     // @ts-ignore
-    console.log('handlebars helper js', {thiss:this as any, arguments, rawArguments, str});
+    // console.log('handlebars helper js', {thiss:this as any, arguments, rawArguments, str});
     let msg: string = '';
     if (rawArguments.length < 3) {
         msg = "Error in {{#js}} tag, at least 2 parameters are required. an argument list followed by a string containing a js function to be applied to the arguments";

@@ -128,7 +128,7 @@ function PolarGrid(grid: LGraph['grid'], offset: { x: number; y: number }, zoom:
 
     const transform = `scale(${zoom.x}, ${zoom.y}) translate(${offset.x}, ${offset.y})`; // scale(${zoom.x}, ${zoom.y});
 
-    console.log('radial grid',{minRadius, maxRadius, offset, size, })
+    // console.log('radial grid',{minRadius, maxRadius, offset, size, })
     const radialLines = () => {
         const step = angleStep;
         if (step === 0) return null;
@@ -141,7 +141,7 @@ function PolarGrid(grid: LGraph['grid'], offset: { x: number; y: number }, zoom:
                 const y = Math.sin(a) * maxRadius;
                 if (i == length - 1 && y < step*0.0001) return null; // skip near overlapping last line due to rounding errors.
                 const isThick = i % 10;
-                console.log('radial grid line ' + i, {a, x, y, step, maxRadius});
+                // console.log('radial grid line ' + i, {a, x, y, step, maxRadius});
                 return (
                     <line
                         key={`polar-line-${i}`}
@@ -165,7 +165,7 @@ function PolarGrid(grid: LGraph['grid'], offset: { x: number; y: number }, zoom:
         let i: number = -1;
         if (step === 0) return null;
         for (let radius = Math.floor(minRadius / step) * step/* || step*/; radius <= maxRadius; radius+=step) {
-            console.log('radial grid circle ' + i, {radius, minRadius, step, maxRadius});
+            // console.log('radial grid circle ' + i, {radius, minRadius, step, maxRadius});
             if (++i === 0 && angleStep) continue; // skip first circle if there are already radial lines (invisible anyway)
             if (radius < minRadius) continue; // maybe impossible, maybe for rounding?
             let isThick = i%10 === 0;

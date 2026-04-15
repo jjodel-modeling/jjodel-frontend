@@ -29,11 +29,11 @@ export class ProjectResponseDTO extends Response_DTO<ProjectResponseDTO, DProjec
         pointers.id = this.id;
         pointers.author = this.author;
 
-        console.log('api get one to jodelclass', {thiss:this, pointers});
+        // console.log('api get one to jodelclass', {thiss:this, pointers});
         // projects.collaborators = [] no need, because reading a project directly from backend without a load/decrypt only
         // happens with new empty projects. which can have only author and id.
         let ret = DProject.new2(pointers, (d) => {
-            console.log('api get one to jodelclass ctor', {thiss:this, d, pointers});
+            // console.log('api get one to jodelclass ctor', {thiss:this, d, pointers});
 
             for (let key in this) {
                 if (key in pointers) continue;
@@ -50,10 +50,10 @@ export class ProjectResponseDTO extends Response_DTO<ProjectResponseDTO, DProjec
             d.lastModified = (this.lastModified ? new Date(this.lastModified) : new Date()).getTime();
             (d as any).convertedFromDto = true;
 
-            console.log('api get one to jodelclass ctor end', {thiss:this, d, pointers});
+            // console.log('api get one to jodelclass ctor end', {thiss:this, d, pointers});
         }, [], false); // it is already persisted in ProjectComponent -> useEffect -> load
 
-        console.log('api get one to jodelclass end', {thiss:this, ret, pointers});
+        // console.log('api get one to jodelclass end', {thiss:this, ret, pointers});
         return ret;
     }
 }

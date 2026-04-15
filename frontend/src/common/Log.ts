@@ -88,7 +88,7 @@ export class Log{
     static disableConsole(){
         // @ts-ignore
         console['logg'] = console.log;
-        console.log = () => {};
+        // console.log = () => {};
     }
 
     static enableConsole() {

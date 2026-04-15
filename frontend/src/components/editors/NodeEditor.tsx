@@ -498,7 +498,7 @@ function NodeEditorComponent(props: AllProps) {
                                             id='grid'
                                             setter={( //@ts-ignore
                                                 (val, l, b, c, d, e) => {
-                                                    console.log('select setter grid', {val, l, b, c, d, e})
+                                                    // console.log('select setter grid', {val, l, b, c, d, e})
                                                     l.grid = {center: val} as any
                                                     return 'useless';
                                                 }) as any}>

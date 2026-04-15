@@ -185,7 +185,7 @@ function pruneCache(): void {
     }
 
     if (PerformanceMetrics.isEnabled()) {
-        console.log(`[LazyOCL] Pruned ${pruned} entries, cache size: ${oclCache.size}`);
+        // console.log(`[LazyOCL] Pruned ${pruned} entries, cache size: ${oclCache.size}`);
     }
 }
 
@@ -266,7 +266,7 @@ export function invalidateDataCache(dataId: Pointer): void {
         }
     }
     if (PerformanceMetrics.isEnabled() && removed > 0) {
-        console.log(`[LazyOCL] Invalidated ${removed} cache entries for data ${dataId}`);
+        // console.log(`[LazyOCL] Invalidated ${removed} cache entries for data ${dataId}`);
     }
 }
 
@@ -282,7 +282,7 @@ export function invalidateViewCache(viewId: Pointer): void {
         }
     }
     if (PerformanceMetrics.isEnabled() && removed > 0) {
-        console.log(`[LazyOCL] Invalidated ${removed} cache entries for view ${viewId}`);
+        // console.log(`[LazyOCL] Invalidated ${removed} cache entries for view ${viewId}`);
     }
 }
 
@@ -292,7 +292,7 @@ export function invalidateViewCache(viewId: Pointer): void {
 export function clearOCLCache(): void {
     const size = oclCache.size;
     oclCache.clear();
-    console.log(`[LazyOCL] Cleared cache (${size} entries)`);
+    // console.log(`[LazyOCL] Cleared cache (${size} entries)`);
 }
 
 /**
@@ -323,7 +323,7 @@ export function resetOCLStats(): void {
  */
 export function logOCLStats(): void {
     const s = getOCLStats();
-    console.log(`
+    // console.log(`
 [LazyOCL Statistics]
   Cache Size: ${s.cacheSize} entries
   Cache Hits: ${s.cacheHits}

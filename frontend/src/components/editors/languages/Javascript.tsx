@@ -76,7 +76,7 @@ function JavascriptEditorComponent(props: AllProps) {
             value = msg;
         }
     }
-    console.log('jsEditor', {value, p: props.field, t:props.title, l:props.jsxLabel});
+    // console.log('jsEditor', {value, p: props.field, t:props.title, l:props.jsxLabel});
     return <>
         <EditorToolbar
             title={typeof title === 'string' ? title : (typeof jsxLabel === 'string' ? jsxLabel : 'JavaScript Editor')}

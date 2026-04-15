@@ -101,7 +101,7 @@ export function resolveParentViewpoint(): { dViewpoint: DViewElement; vpName: st
  * (see view/viewElement/view.tsx).
  */
 export function createViewInWorkbench(elementId: string, elementName: string, className: string): boolean {
-    console.log('[createViewInWorkbench] called:', { elementId, elementName, className });
+    // console.log('[createViewInWorkbench] called:', { elementId, elementName, className });
 
     // Resolve parent viewpoint
     const resolved = resolveParentViewpoint();
@@ -111,7 +111,7 @@ export function createViewInWorkbench(elementId: string, elementName: string, cl
         return false;
     }
     const { dViewpoint, vpName } = resolved;
-    console.log('[createViewInWorkbench] using viewpoint:', dViewpoint.id, vpName);
+    // console.log('[createViewInWorkbench] using viewpoint:', dViewpoint.id, vpName);
 
     // Build OCL query and determine appliableTo (matches defaults/views.ts pattern)
     let query = '';
@@ -145,7 +145,7 @@ export function createViewInWorkbench(elementId: string, elementName: string, cl
     }
 
     const viewName = 'View for ' + (elementName || 'unnamed');
-    console.log('[createViewInWorkbench] creating:', viewName, 'query:', query, 'father:', dViewpoint.id);
+    // console.log('[createViewInWorkbench] creating:', viewName, 'query:', query, 'father:', dViewpoint.id);
 
     try {
         // Same JSX template and pattern as DViewElement.newDefault()
@@ -171,7 +171,7 @@ export function createViewInWorkbench(elementId: string, elementName: string, cl
             },
             true
         );
-        console.log('[createViewInWorkbench] created view:', newView?.id, newView?.name);
+        // console.log('[createViewInWorkbench] created view:', newView?.id, newView?.name);
     } catch (e) {
         console.error('[createViewInWorkbench] DViewElement.new2 threw:', e);
         toast.error('Failed to create view. Check console for details.', 'Error');

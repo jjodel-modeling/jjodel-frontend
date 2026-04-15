@@ -65,7 +65,7 @@ function _export(data: LModelElement | undefined, extension: string, content: st
 
 function _import(extension: string, onSave: (newValue: string) => void, setContent: (newValue: string) => void): undefined {
     U.fileRead((e, files, contents)=>{
-        console.log("import", {e, files, contents});
+        // console.log("import", {e, files, contents});
         if (contents?.[0]) { onSave(contents[0]), setContent(contents[0]);}
     }, extension, true);
 }
@@ -316,7 +316,7 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
     }
     // if (m2t_func === '__jj_needs_reset__') set_m2tfunc(m2tobj?.__str || m2t_placeholder);
     // if (t2m_func === '__jj_needs_reset__') set_t2mfunc(t2mobj?.__str || t2m_placeholder);
-    console.log('mtm render', {m2tengine, t2mengine, langObj, m2tobj, t2mobj, m2t_func, t2m_func});
+    // console.log('mtm render', {m2tengine, t2mengine, langObj, m2tobj, t2mobj, m2t_func, t2m_func});
 
     if (!langObj) return <div className="w-100 h-100 d-flex" style={{cursor: "pointer"}} onClick={()=>setEditor(false)}>
         <div className={"m-auto"}>Language "{language}" not found.</div>
@@ -337,7 +337,7 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
             output_tmp = parseT2M(language, test_text, true, errOutput, undefined, className) || errOutput;
             // output_tmp = eval("("+t2m_func+")")(test_text);
         } catch (e: any) { output_tmp = {msg: e.message, stack: e.stack, e}; }
-        console.log('t2m', {output_tmp, t2m_func, test_text});
+        // console.log('t2m', {output_tmp, t2m_func, test_text});
     }
     let m2t = {
         label: 'm2t',
@@ -466,9 +466,9 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
                     <div className={'editor-wrapper w-100 h-100 '+a.label} tabIndex={-1} onBlur={() => {
                         let value = (a.func === a.placeholder) ? '' : a.func;
                         let old = (a.allowPartials ? a.obj.__str : a.obj[a.fragment]) || '';
-                        console.log('onBlur '+a.label, {value, old});
+                        // console.log('onBlur '+a.label, {value, old});
                         if (old === value) return;
-                        console.log('onBlur '+a.label+' pass');
+                        // console.log('onBlur '+a.label+' pass');
 
                         TRANSACTION('Edit '+a.label+' language "'+language+'"', ()=> {
                             SetRootFieldAction.new('languages.'+language+"."+a.label+"."+a.engine+'.' + (a.allowPartials ? a.fragment : '__str'), value, '', false);
@@ -483,7 +483,7 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
             </div>
             <h5>Test Sample</h5>
             <pre className={"w-100 autosize"} contentEditable={true} tabIndex={-1} onBlur={(e) => {
-                console.log('text onblur', {e, target: e.target, txt: e.target.innerText});
+                // console.log('text onblur', {e, target: e.target, txt: e.target.innerText});
                 TRANSACTION('update DSL test snipped for language "' + language + '"', () => {
                     let value = e.target.innerText;
                     SetRootFieldAction.new('languages.' + language + '.t2m.' + t2mengine + '.test_text', value, '', false);

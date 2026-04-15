@@ -108,7 +108,7 @@ export function Jodie(): JSX.Element {
                     // Index project content
                     await JjodieRagService.indexProject(project);
                     lastIndexedProjectRef.current = project.id;
-                    console.log('[Jodie] Project indexed for RAG:', project.id);
+                    // console.log('[Jodie] Project indexed for RAG:', project.id);
                 }
             } catch (error) {
                 console.warn('[Jodie] RAG initialization/indexing failed:', error);
@@ -343,7 +343,7 @@ export function Jodie(): JSX.Element {
     const handleJjScriptExecuted = useCallback(() => {
         // Emit custom event for metamodel refresh
         window.dispatchEvent(new CustomEvent(JjScriptEvents.EXECUTED));
-        console.log('[Jjodie] JjScript executed - metamodel refresh triggered');
+        // console.log('[Jjodie] JjScript executed - metamodel refresh triggered');
     }, []);
 
     return (

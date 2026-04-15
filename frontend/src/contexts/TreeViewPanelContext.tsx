@@ -194,7 +194,7 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
          * When script execution STARTS
          */
         const handleExecutionStart = (event: Event) => {
-            console.log('[TreeView] Script execution starting, opening panel...');
+            // console.log('[TreeView] Script execution starting, opening panel...');
             setIsScriptExecuting(true);
             showWithHighlight();
         };
@@ -215,7 +215,7 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
         const handleExecutionEnd = (event: Event) => {
             const customEvent = event as CustomEvent;
             const { status } = customEvent.detail || {};
-            console.log('[TreeView] Script execution ended:', status);
+            // console.log('[TreeView] Script execution ended:', status);
             setIsScriptExecuting(false);
 
             // Keep panel open after execution so user can see results
@@ -245,7 +245,7 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
             if (!elementId) return;
 
             const action = eventAction || (command ? getActionFromCommand(command) : 'unknown');
-            console.log(`[TreeView] Element modified: ${elementId} (${action})`);
+            // console.log(`[TreeView] Element modified: ${elementId} (${action})`);
 
             // Expand parent node to show the element
             if (parentId) {

@@ -97,22 +97,22 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     useEffect(() => {
         const handler = (e: Event) => {
             const detail = (e as CustomEvent<JjodelToastDetail>).detail;
-            console.log('[ToastContext] jjodel:toast event received:', detail);
+            // console.log('[ToastContext] jjodel:toast event received:', detail);
             if (!detail) return;
 
             // Check per-type preference
             const p = prefsRef.current;
-            console.log('[ToastContext] prefs:', { enableSuccess: p.enableSuccess, enableInfo: p.enableInfo, position: p.position });
+            // console.log('[ToastContext] prefs:', { enableSuccess: p.enableSuccess, enableInfo: p.enableInfo, position: p.position });
             if (detail.priority === 'success' && !p.enableSuccess) {
-                console.log('[ToastContext] Filtered: success disabled');
+                // console.log('[ToastContext] Filtered: success disabled');
                 return;
             }
             if (detail.priority === 'info' && !p.enableInfo) {
-                console.log('[ToastContext] Filtered: info disabled');
+                // console.log('[ToastContext] Filtered: info disabled');
                 return;
             }
 
-            console.log('[ToastContext] Adding toast...');
+            // console.log('[ToastContext] Adding toast...');
             addToastRef.current(detail.message, detail.priority, {
                 title: detail.title,
                 dismiss: detail.dismiss,
@@ -120,7 +120,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
             });
         };
         window.addEventListener(JjodelEvents.TOAST, handler);
-        console.log('[ToastContext] jjodel:toast listener registered');
+        // console.log('[ToastContext] jjodel:toast listener registered');
         return () => window.removeEventListener(JjodelEvents.TOAST, handler);
     }, []);
 

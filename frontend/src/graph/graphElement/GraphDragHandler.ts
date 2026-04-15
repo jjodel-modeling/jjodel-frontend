@@ -16,7 +16,7 @@ export class GraphDragManager extends RuntimeAccessibleClass{
     static draggingGraph?: LGraph;
 
     static startPanning(e: React.MouseEvent, graph: LGraph) {
-        console.log("start panning", !GraphDragManager.draggingGraph, graph, graph.id);
+        // console.log("start panning", !GraphDragManager.draggingGraph, graph, graph.id);
         if (GraphDragManager.draggingGraph) return;
         GraphDragManager.draggingGraph = graph as LGraph;
         GraphDragManager.initialClickPos = Point.fromEvent(e);

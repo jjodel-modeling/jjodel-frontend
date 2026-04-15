@@ -123,7 +123,7 @@ export class UX{
             style.top = offset.y;
             style.transform = "scale(" + scale.x + "," + scale.y + ")"
             injectProps.style = style;
-            console.log("inject offset props:", {re, injectProps});
+            // console.log("inject offset props:", {re, injectProps});
         }*/
         //  fix the injection somehow. override Edge() Vertex() Asterisk() ...
         // const windoww = window as any;
@@ -138,7 +138,7 @@ export class UX{
                 // console.count('ux.injectingProp case default: ' + type);
                 if (indices.length <= 2 && (parentComponent?.props?.childStyle)) {
                     // if first non-component child of a GraphElement with a clipPath shape, i assign clip path to it.
-                    console.log('injecting to first child (A):', {re, indices, il: indices.length, pc: parentComponent, injectProps, cs:parentComponent.props.childStyle});
+                    // console.log('injecting to first child (A):', {re, indices, il: indices.length, pc: parentComponent, injectProps, cs:parentComponent.props.childStyle});
                     let istyle: GObject = injectProps.style = {...(injectProps.style || {})};
                     injectProps.style = injectProps.style ? {...injectProps.style} : {};
                     U.objectMergeInPlace(injectProps.style, parentComponent.props.childStyle);
@@ -264,7 +264,7 @@ export class UX{
                 Log.exDev(!injectProps.graphid, 'vertex is missing mandatory props (graphid).', {graphid: injectProps.graphid, dataid, props: rprops});
                 if (false && indices.length === 2) {
                     // if first component child, of a component? like (DefaultNode -> Vertex)?
-                    console.log('injecting to first child (B):', {re, pc: parentComponent, injectProps});
+                    // console.log('injecting to first child (B):', {re, pc: parentComponent, injectProps});
                     if (parentComponent?.props.style?.clipPath) injectProps.style = {...(injectProps.style || {}), clipPath: parentComponent?.props.style?.clipPath||''}
                 }
                 injectProps.nodeid = idbasename; // U.increaseEndingNumber(idbasename, false, false, validVertexIdCondition);

@@ -184,8 +184,8 @@ export async function duplicateProject(project: DProject, pnames?: Dictionary<st
 
 function Project(props: Props): JSX.Element {
     const {data} = props;
-    console.log('[DEBUG Project] Card props:', props);
-    console.log('[DEBUG Project] data.tagNames:', data.tagNames);
+    // console.log('[DEBUG Project] Card props:', props);
+    // console.log('[DEBUG Project] data.tagNames:', data.tagNames);
 
     const toggleFavorite = async(project: LProject) => {
         await ProjectsApi.favorite(project.__raw as DProject);
@@ -205,13 +205,13 @@ function Project(props: Props): JSX.Element {
     }
 
     const saveTag = async (input: string) => {
-        console.log('[DEBUG saveTag] Input received:', input);
-        console.log('[DEBUG saveTag] Project ID:', data.id);
-        console.log('[DEBUG saveTag] Project __raw:', data.__raw);
+        // console.log('[DEBUG saveTag] Input received:', input);
+        // console.log('[DEBUG saveTag] Project ID:', data.id);
+        // console.log('[DEBUG saveTag] Project __raw:', data.__raw);
 
         if (input && input.trim()) {
             const currentTags = data.tagNames || [];
-            console.log('[DEBUG saveTag] Current tags:', currentTags);
+            // console.log('[DEBUG saveTag] Current tags:', currentTags);
 
             // Split by comma, trim, lowercase, remove empty and duplicates
             const newTags = input
@@ -219,14 +219,14 @@ function Project(props: Props): JSX.Element {
                 .map(tag => tag.trim().toLowerCase())
                 .filter(tag => tag && !currentTags.includes(tag));
 
-            console.log('[DEBUG saveTag] New tags to add:', newTags);
+            // console.log('[DEBUG saveTag] New tags to add:', newTags);
 
             if (newTags.length > 0) {
                 const updatedTags = [...currentTags, ...newTags];
-                console.log('[DEBUG saveTag] Updated tags array:', updatedTags);
-                console.log('[DEBUG saveTag] Calling ProjectsApi.updateTags...');
+                // console.log('[DEBUG saveTag] Updated tags array:', updatedTags);
+                // console.log('[DEBUG saveTag] Calling ProjectsApi.updateTags...');
                 await ProjectsApi.updateTags(data.__raw as DProject, updatedTags);
-                console.log('[DEBUG saveTag] ProjectsApi.updateTags completed');
+                // console.log('[DEBUG saveTag] ProjectsApi.updateTags completed');
             }
         }
     }
@@ -264,7 +264,7 @@ function Project(props: Props): JSX.Element {
         const [tagInput, setTagInput] = useState('');
 
         // Debug: log allTags received
-        console.log('[DEBUG ProjectCard] allTags in popover:', props.allTags);
+        // console.log('[DEBUG ProjectCard] allTags in popover:', props.allTags);
 
         // Filter suggestions based on input
         const suggestions = tagInput.trim()
@@ -276,8 +276,8 @@ function Project(props: Props): JSX.Element {
 
         // Debug: log input and suggestions
         if (tagInput.trim()) {
-            console.log('[DEBUG ProjectCard] Input:', tagInput);
-            console.log('[DEBUG ProjectCard] Suggestions:', suggestions);
+            // console.log('[DEBUG ProjectCard] Input:', tagInput);
+            // console.log('[DEBUG ProjectCard] Suggestions:', suggestions);
         }
 
         function getClickedElement(e: any){

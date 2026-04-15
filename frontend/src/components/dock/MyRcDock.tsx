@@ -87,7 +87,7 @@ export class TabHeader extends React.Component<TabHeaderProps, TabHeaderState>{
         let tabh: HTMLElement = this.html;
         let tabsize = Size.of(tabh);
         //let tabcenter: Point = new Point(tabsize.x + tabsize.w/2, tabsize.y + tabsize.h/2);
-        console.log("setActiveTab", {strip, tabdata, tabcontent, csize, tabh, tabsize});
+        // console.log("setActiveTab", {strip, tabdata, tabcontent, csize, tabh, tabsize});
         let offset: Point = new Point(tabsize.x + tabsize.w/2 - csize.w/2, tabsize.y + tabsize.h/2 - csize.h/2);
         let s: string;
         let tabcontentholder: HTMLElement|null|undefined = tabcontent.parentElement?.parentElement;
@@ -111,13 +111,13 @@ export class TabHeader extends React.Component<TabHeaderProps, TabHeaderState>{
             case "t": case "b":
                 s = "clamp(0px, " + offset.x + "px, 100vw)";
                 //s = "clamp(0px, calc(" + tabcenter.x + "px ), 100vw)";
-                console.log("clamp: ", s);
+                // console.log("clamp: ", s);
                 tabcontentholder.style.left = s;
                 break;
             case "l": case "r":
                 s = "clamp(0px, " + offset.y + "px, 100vw)";
                 //s = "clamp(0px, calc(" + tabcenter.y + "px ), 100vw)";
-                console.log("clamp: ", s);
+                // console.log("clamp: ", s);
                 tabcontentholder.style.top = s;
                 break;
         }
@@ -127,7 +127,7 @@ export class TabHeader extends React.Component<TabHeaderProps, TabHeaderState>{
     render(): ReactNode {
         const props: TabHeaderProps = this.props;
         let pinned = this.state.pinned;
-        let content = <div onMouseDown={()=>{console.log("tab dragging start")}}>{props.children}
+        let content = <div onMouseDown={()=>{/* console.log("tab dragging start") */}}>{props.children}
             {/*<i className={"pin-button bi bi-pin-angle" + (this.state.fixed ? '-fill' : '')} onClick={()=>this.toggleFixed()}/>*/}
             <i className={"pin-button bi bi-arrow-down"} onClick={()=>this.unpin()}/>
         </div>;
@@ -265,7 +265,7 @@ export class PinnableStrip extends PureComponent<PinnableStripProps, PinnableStr
         if (this.tabs[tid]) Log.eDevv("docking tab already exist", this, t);
         this.tabs[tid] = t;
         // if (Object.keys(this.tabs).length === 1) this.forceUpdate(); // updates .empty class
-        console.log("addTab", {t, pp1:this.dockLayout!.getLayout().dockbox.children[0], pp0: this.panel});
+        // console.log("addTab", {t, pp1:this.dockLayout!.getLayout().dockbox.children[0], pp0: this.panel});
         (window as any ).pinnableStrip = this;
         //this.dockLayout!.dockMove(t, 'side_panel' + this.props.side, 'middle');
         (window as any).addTab = (t: any)=> this.addTab(t);
@@ -325,7 +325,7 @@ windoww.highlightAnchorArea = function(side: string){
     //if (!highlightdiv) return;
     //highlightdiv.style.background = '#ff000077';
     let strip = getStripHtml(side);
-    console.log("highlightpin", {strip, side, PinnableStrip});
+    // console.log("highlightpin", {strip, side, PinnableStrip});
     strip.classList.add('dock-drop-indicator');
 }
 windoww.hideAnchorArea = function(side: string){
@@ -354,7 +354,7 @@ windoww.confirmSetAnchor = function(side: AnchorTypes){
     };
     strip.setAfterUpdateCallback(()=>{
         content.setState({pinned: side}); title.setState({pinned: side});
-        console.log("confirm pin anchor", {content, title, strip, side, tabdata, newtabdata, currentDropRect});
+        // console.log("confirm pin anchor", {content, title, strip, side, tabdata, newtabdata, currentDropRect});
     });
     strip.addTab( newtabdata );
     PinnableDock.instance.hideTab(tabdata.id as string, side);
@@ -362,9 +362,9 @@ windoww.confirmSetAnchor = function(side: AnchorTypes){
     /*strip.setState({pinnedTabsid:{...strip.state.pinnedTabsid, [tabdata.id as string]:true}},
         ()=>{
         content.setState({pinned: side}); title.setState({pinned: side});
-        console.log("confirm pin anchor", {content, title, strip, side, tabdata, currentDropRect});
+        // console.log("confirm pin anchor", {content, title, strip, side, tabdata, currentDropRect});
     });*/
-    console.log("confirm pin anchor 0", {tid:tabdata.id, TabHeader, TabContent});
+    // console.log("confirm pin anchor 0", {tid:tabdata.id, TabHeader, TabContent});
 
 
     // how to? i create a new dockiing here for each strip?
@@ -509,7 +509,7 @@ export class PinnableDock extends DockLayout{
         let siblings = this.getSiblings(tid);
         let i = siblings.findIndex((t)=> t.id === tid);
         let newActiveTab = this.getAdiacentTab(tid);
-        console.log("hideTab", {siblings, i, newActiveTab, tabdata});
+        // console.log("hideTab", {siblings, i, newActiveTab, tabdata});
         if (newActiveTab) this.updateTab(newActiveTab.id as string, newActiveTab, true);
         else this.hidePanel(this.getPanelFromTab(tabdata));
     }
@@ -561,7 +561,7 @@ export class PinnableDock extends DockLayout{
     public static getTabFromDropRect(dropRect: LayoutState['dropRect']): TabData{
         if (!dropRect.source) return undefined as any;
         const panel: PanelData = dropRect.source.props.panelData;
-        console.log("getTabFromDropRect", {dropRect, panel, active: panel.activeId});
+        // console.log("getTabFromDropRect", {dropRect, panel, active: panel.activeId});
         const tabdata: TabData = panel.tabs.filter(t=> t.id === panel.activeId)[0];
         return tabdata;
     }
@@ -616,7 +616,7 @@ export class PinnableDock extends DockLayout{
             if (!droplayer) return;
             droplayer.append(...getAnchorControls());
             let tab = PinnableDock.getTabFromDropRect(droparea);
-            console.log('activating pin buttons', {tab, currentDropRect, dockLayout, droparea, prevProps, prevState, snapshot}, );
+            // console.log('activating pin buttons', {tab, currentDropRect, dockLayout, droparea, prevProps, prevState, snapshot}, );
             // todo: tabfocus but not the active one, the clicked one
             // droparea.style.backgroundColor = "red";
         }

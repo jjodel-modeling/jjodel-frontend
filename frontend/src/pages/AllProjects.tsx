@@ -57,7 +57,7 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
     function dropConfirm(e: React.DragEvent<HTMLElement>){
         e.preventDefault();
         e.stopPropagation();
-        console.log('dropevent', {e});
+        // console.log('dropevent', {e});
 
         const droppedFiles = Array.from(e.dataTransfer.files);
         if (droppedFiles.length > 0) {
@@ -66,7 +66,7 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
             reader.onload = function(e) {
                 if (!e.target) { Log.ee('invalid file', e); return; }
                 var contents = e.target.result;
-                console.log('read file', {contents, e, file});
+                // console.log('read file', {contents, e, file});
                 let date: number = file.lastModified;
                 let name = file.name; // including extension
                 if (typeof contents === 'string') ProjectsApi.importFromText(contents, name, date);

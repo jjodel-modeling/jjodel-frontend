@@ -222,7 +222,7 @@ export class TooltipClass extends React.Component<AllProps, State> {
         let child = this.props.children;
         if (Array.isArray(child)) {
             if (child.length !== 1) {
-                console.log('Tooltip component requires exactly 1 element as children', {c:this.props.children});
+                // console.log('Tooltip component requires exactly 1 element as children', {c:this.props.children});
                 return <span>&lt;Tooltip /&gt; component requires exactly 1 element as children. Wrap the subelements in a container element.</span>
             }
             else child = child[0];

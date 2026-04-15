@@ -123,8 +123,8 @@ export abstract class MyProxyHandler<T extends GObject> extends RuntimeAccessibl
 
     ownKeys(target: T): ArrayLike<string | symbol>{
         // return Object.getOwnPropertyNames(target);
-        console.log("ownkeys trap 1", {thiss:this, target})
-        console.log("ownkeys trap 2", {thiss:this, target, ret:Reflect.ownKeys(target)});
+        // console.log("ownkeys trap 1", {thiss:this, target})
+        // console.log("ownkeys trap 2", {thiss:this, target, ret:Reflect.ownKeys(target)});
         return Reflect.ownKeys(target);
     }
     /// proxy methods not used
@@ -154,9 +154,9 @@ export type GetPath<T = GObject> = T;
 * handling proxy += and proxy -=
 *
 * will become var = var + add; which will call Symbol.getPrimitive
-console.log(+obj2);     // 10        — hint is "number"         NaN with +array with multiple vals, +array[0] with array of size 1, NaN with functions & objects
-console.log(`${obj2}`); // "hello"   — hint is "string"         array => array.join(','), object => "[object Object]", function => function.toString() whole func definition with body code
-console.log(obj2 + ""); // "true"    — hint is "default"        array, object, function => same as with hint "string"
+// console.log(+obj2);     // 10        — hint is "number"         NaN with +array with multiple vals, +array[0] with array of size 1, NaN with functions & objects
+// console.log(`${obj2}`); // "hello"   — hint is "string"         array => array.join(','), object => "[object Object]", function => function.toString() whole func definition with body code
+// console.log(obj2 + ""); // "true"    — hint is "default"        array, object, function => same as with hint "string"
 *
 * */
 
@@ -188,8 +188,8 @@ class GetPathHandler<T extends GObject> extends MyProxyHandler<T>{
         this.array.push(propKey);
         this.calls.push(arguments);
         if (propKey === Symbol.toPrimitive) {
-            console.log("toprimitive");
-            return (...a: any)=> {console.log("toprimitive called with parameters", a); }
+            // console.log("toprimitive");
+            return (...a: any)=> {/* console.log("toprimitive called with parameters", a); */}
         }
         if (!GetPathHandler.__asArray && !GetPathHandler.__asCalls) {
             if (typeof propKey === "symbol") { this.strbuilder += propKey.toString(); }

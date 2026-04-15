@@ -65,7 +65,7 @@ function App(props: AllProps): JSX.Element {
     useEffect(() => {
         const debugMouseDown = (e: MouseEvent) => {
             if (e.button === 2) { // Right-click only
-                console.log('[DEBUG-GLOBAL] Right-click mousedown', {
+                // console.log('[DEBUG-GLOBAL] Right-click mousedown', {
                     target: (e.target as HTMLElement)?.className,
                     targetTag: (e.target as HTMLElement)?.tagName,
                     propagationStopped: e.defaultPrevented,

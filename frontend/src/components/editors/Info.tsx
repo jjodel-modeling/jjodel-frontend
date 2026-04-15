@@ -335,7 +335,7 @@ class builder {
                         value={multiselectValue}
                         placeholder="Select models..."
                         onChange={(v) => {
-                            console.log('setting model dependencies', v);
+                            // console.log('setting model dependencies', v);
                             l.dependencies = v.map(e => e.value) as Any<string[]>;
                         }}
                     />
@@ -615,13 +615,13 @@ class builder {
             SetFieldAction.new(value.id, 'values', U.initializeValue(feature?.type), '+=', false);
         }
         const remove = (index: number, isPointer: boolean | undefined) => {
-            console.log('remove clicked');
+            // console.log('remove clicked');
             value = value.r;
             if (isPointer === undefined) isPointer = Pointers.isPointer(filteredValues[index].rawValue); // !!(filteredValues[index].value as any)?.__isProxy ||
             // SetFieldAction.new(value.id, 'values', index, '-=', isPointer);
 
             let result = value.setValueAtPosition(index, undefined, {isPtr: isPointer});
-            console.log('clearing containment DValue', {result, index, value});
+            // console.log('clearing containment DValue', {result, index, value});
         }
         function changeDValue(evt: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>, index: number, isPointer: boolean | undefined) {
             TRANSACTION('change value (sidebar)', ()=>{
@@ -638,11 +638,11 @@ class builder {
                     if (indexDuplicate === index) return;
                     if (indexDuplicate >= 0) {
                         let result = value.setValueAtPosition(indexDuplicate, undefined, {isPtr: true});
-                        console.log('clearing containment DValue', {inputValue, result, indexDuplicate, raw_values, index, oldvi});
+                        // console.log('clearing containment DValue', {inputValue, result, indexDuplicate, raw_values, index, oldvi});
                     }
                 }
                 let result = value.setValueAtPosition(index, inputValue, {isPtr: isPointer});
-                console.log('setting DValue', {inputValue, result, value, index, oldvi, evt, target, field});
+                // console.log('setting DValue', {inputValue, result, value, index, oldvi, evt, target, field});
             })
         }
         const featureType: LClassifier = feature?.type;

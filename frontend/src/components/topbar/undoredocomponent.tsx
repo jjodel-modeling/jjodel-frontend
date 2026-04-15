@@ -67,7 +67,7 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
         this.undoenter(); // updates list
     }
     do_redo = (index: number) => {
-        console.log("redo(" + index + ")");
+        // console.log("redo(" + index + ")");
         RedoAction.new(index+1, this.state.user, false).commit();
         this.redoenter();
     }
@@ -101,7 +101,7 @@ export class SaveManagerComponent extends PureComponent<AllProps, ThisState>{
                 //  console.log("undoredo replace attempt", {pathsegment, idlookup:s.idlookup, dobj:s.idlookup[pathsegment], replacement: this.printablePointer(pathsegment, s)});
                 return this.printablePointer(pathsegment, s); });
             e.str = editedfullpath.join(".") + " = " + e.val;
-            console.log("undoredo replace attempt", {editedfullpath, beststr:e.str, best: e});
+            // console.log("undoredo replace attempt", {editedfullpath, beststr:e.str, best: e});
         }
         if (e.path[0] === "idlookup") e.str = "" + e.str.substring("idlookup.".length);
         if (e.fullvalue.includes("Pointer")) {

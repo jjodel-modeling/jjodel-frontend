@@ -44,7 +44,7 @@ export const useResizableConsole = (): UseResizableConsoleReturn => {
     e.preventDefault();
     e.stopPropagation();
   }
-  console.log('[Hook] Starting drag');
+  // console.log('[Hook] Starting drag');
   setIsDragging(true);
 }, []);
 

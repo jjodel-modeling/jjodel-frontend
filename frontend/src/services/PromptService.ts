@@ -51,7 +51,7 @@ export class PromptService {
             const storedVersion = parseInt(localStorage.getItem(PROMPT_VERSION_KEY) || '0', 10);
 
             if (storedVersion < PROMPT_VERSION) {
-                console.log(`[PromptService] Migrating prompts from v${storedVersion} to v${PROMPT_VERSION}`);
+                // console.log(`[PromptService] Migrating prompts from v${storedVersion} to v${PROMPT_VERSION}`);
 
                 // Check and reset stale prompts
                 for (const [type, markers] of Object.entries(CRITICAL_MARKERS)) {
@@ -62,7 +62,7 @@ export class PromptService {
                         );
 
                         if (isMissingMarkers) {
-                            console.log(`[PromptService] Resetting stale '${type}' prompt (missing critical content)`);
+                            // console.log(`[PromptService] Resetting stale '${type}' prompt (missing critical content)`);
                             this.resetGlobalPrompt(type as PromptType);
                         }
                     }

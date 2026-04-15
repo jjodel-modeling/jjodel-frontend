@@ -433,7 +433,7 @@ function NavbarComponent(props: AllProps) {
         const newVal = !showSingletons;
         localStorage.setItem(`jjodel.showSingletons.${tab.id}`, String(newVal));
         setShowSingletons(newVal);
-        console.log(`[singleton] show=${newVal}, modelId=${tab.id}`);
+        // console.log(`[singleton] show=${newVal}, modelId=${tab.id}`);
         window.dispatchEvent(new CustomEvent(JjodelEvents.TOGGLE_SINGLETONS, { detail: { modelId: tab.id, show: newVal } }));
     }, [getActiveModelTab, showSingletons]);
 
@@ -448,20 +448,20 @@ function NavbarComponent(props: AllProps) {
         const dclasses = classes.map((c: any) => c.__raw);
 
         // DEBUG: Log metamodel structure
-        console.log('[M2 Analytics] Metamodel:', metamodel.name);
-        console.log('[M2 Analytics] Classes count:', classes.length);
+        // console.log('[M2 Analytics] Metamodel:', metamodel.name);
+        // console.log('[M2 Analytics] Classes count:', classes.length);
         if (classes.length > 0) {
             const firstClass = classes[0];
             const firstDClass = dclasses[0];
-            console.log('[M2 Analytics] First LClass:', firstClass);
-            console.log('[M2 Analytics] First LClass keys:', Object.keys(firstClass || {}));
-            console.log('[M2 Analytics] First DClass:', firstDClass);
-            console.log('[M2 Analytics] First DClass keys:', Object.keys(firstDClass || {}));
-            console.log('[M2 Analytics] First class attributes:', firstClass?.attributes);
-            console.log('[M2 Analytics] First class allAttributes:', firstClass?.allAttributes);
-            console.log('[M2 Analytics] First class references:', firstClass?.references);
-            console.log('[M2 Analytics] First class extends:', firstClass?.extends);
-            console.log('[M2 Analytics] First class extendedBy:', firstClass?.extendedBy);
+            // console.log('[M2 Analytics] First LClass:', firstClass);
+            // console.log('[M2 Analytics] First LClass keys:', Object.keys(firstClass || {}));
+            // console.log('[M2 Analytics] First DClass:', firstDClass);
+            // console.log('[M2 Analytics] First DClass keys:', Object.keys(firstDClass || {}));
+            // console.log('[M2 Analytics] First class attributes:', firstClass?.attributes);
+            // console.log('[M2 Analytics] First class allAttributes:', firstClass?.allAttributes);
+            // console.log('[M2 Analytics] First class references:', firstClass?.references);
+            // console.log('[M2 Analytics] First class extends:', firstClass?.extends);
+            // console.log('[M2 Analytics] First class extendedBy:', firstClass?.extendedBy);
         }
 
         // PKG: # Packages (including nested)
@@ -515,7 +515,7 @@ function NavbarComponent(props: AllProps) {
         });
         const SF = allAttrCount + allRefCount;
 
-        console.log('[M2 Analytics] SF calculation - attrs:', allAttrCount, 'refs:', allRefCount, 'total:', SF);
+        // console.log('[M2 Analytics] SF calculation - attrs:', allAttrCount, 'refs:', allRefCount, 'total:', SF);
 
         // ASF: Avg # Structural Features per concrete metaclass
         const ASF = CMC > 0 ? SF / CMC : null;
@@ -526,7 +526,7 @@ function NavbarComponent(props: AllProps) {
         // LIT: # Literals
         const LIT = metamodel.literals?.length || 0;
 
-        console.log('[M2 Analytics] Final metrics:', { PKG, MC, AMC, CMC, IFLMC, MCWS, LMC, SF, ASF, EN, LIT });
+        // console.log('[M2 Analytics] Final metrics:', { PKG, MC, AMC, CMC, IFLMC, MCWS, LMC, SF, ASF, EN, LIT });
 
         // Calculate EMF classification score (based on # metaclasses)
         // Small: 0-30, Medium: 30-80, Large: 80+
@@ -621,7 +621,7 @@ function NavbarComponent(props: AllProps) {
             const modKey = isMac ? event.metaKey : event.ctrlKey;
 
             if (modKey) {
-                console.log('[Jjodel Shortcuts] Handler called:', {
+                // console.log('[Jjodel Shortcuts] Handler called:', {
                     key: event.key,
                     code: event.code,
                     altKey: event.altKey,
@@ -667,7 +667,7 @@ function NavbarComponent(props: AllProps) {
 
             // DEBUG: Log shortcut detection
             if (modKey && event.altKey) {
-                console.log('[Jjodel Shortcuts] Alt+Cmd pressed:', {
+                // console.log('[Jjodel Shortcuts] Alt+Cmd pressed:', {
                     code: event.code,
                     key: event.key,
                     context,
@@ -685,7 +685,7 @@ function NavbarComponent(props: AllProps) {
             if (matchesShortcut(event, SHORTCUTS.NEW)) {
                 event.preventDefault();
                 event.stopPropagation();
-                console.log('[Jjodel Shortcuts] NEW shortcut matched! Context:', context, 'Project:', project?.name);
+                // console.log('[Jjodel Shortcuts] NEW shortcut matched! Context:', context, 'Project:', project?.name);
 
                 switch (context) {
                     case 'DASHBOARD':
@@ -693,7 +693,7 @@ function NavbarComponent(props: AllProps) {
                         window.dispatchEvent(new CustomEvent(JjodelEvents.NEW_PROJECT));
                         break;
                     case 'PROJECT_EDITOR':
-                        console.log('[Jjodel Shortcuts] Creating M2, project:', project);
+                        // console.log('[Jjodel Shortcuts] Creating M2, project:', project);
                         if (project) createM2(project);
                         break;
                     case 'METAMODEL_EDITOR':
@@ -724,20 +724,20 @@ function NavbarComponent(props: AllProps) {
                                 activeMetamodel = selectedMetamodel;
                             }
                         }
-                        console.log('[Jjodel Shortcuts] Creating class, activeMetamodel:', activeMetamodel?.name, 'lastSelectedModel:', lastSelectedModelElement);
+                        // console.log('[Jjodel Shortcuts] Creating class, activeMetamodel:', activeMetamodel?.name, 'lastSelectedModel:', lastSelectedModelElement);
                         if (activeMetamodel) {
                             const defaultPkg = activeMetamodel.packages?.[0];
-                            console.log('[Jjodel Shortcuts] defaultPkg:', defaultPkg?.name, 'packages count:', activeMetamodel.packages?.length);
+                            // console.log('[Jjodel Shortcuts] defaultPkg:', defaultPkg?.name, 'packages count:', activeMetamodel.packages?.length);
                             if (defaultPkg) {
-                                console.log('[Jjodel Shortcuts] Calling defaultPkg.addClass()');
+                                // console.log('[Jjodel Shortcuts] Calling defaultPkg.addClass()');
                                 const newClass = defaultPkg.addClass();
-                                console.log('[Jjodel Shortcuts] addClass() returned:', newClass?.name, 'id:', newClass?.__raw?.id);
+                                // console.log('[Jjodel Shortcuts] addClass() returned:', newClass?.name, 'id:', newClass?.__raw?.id);
                                 // Select the newly created class to make it visible on the canvas
                                 if (newClass && newClass.__raw?.id) {
                                     setTimeout(() => {
                                         const selector = ".Graph [data-dataid='" + newClass.__raw.id + "']";
                                         const elem = document.querySelector(selector);
-                                        console.log('[Jjodel Shortcuts] Selecting element:', selector, 'found:', !!elem);
+                                        // console.log('[Jjodel Shortcuts] Selecting element:', selector, 'found:', !!elem);
                                         if (elem) {
                                             (elem as HTMLElement).click();
                                         }
@@ -770,7 +770,7 @@ function NavbarComponent(props: AllProps) {
             // CMD/Ctrl + S - Context-Aware SAVE
             // ========================================
             if (matchesShortcut(event, SHORTCUTS.SAVE)) {
-                console.log('[Jjodel Shortcuts] SAVE shortcut matched! Context:', context, 'Project:', project?.name);
+                // console.log('[Jjodel Shortcuts] SAVE shortcut matched! Context:', context, 'Project:', project?.name);
                 event.preventDefault();
                 event.stopPropagation();
 

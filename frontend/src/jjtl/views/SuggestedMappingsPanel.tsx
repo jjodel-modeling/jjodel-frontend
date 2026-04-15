@@ -202,7 +202,7 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
         if (result && onSuggestionsChange) {
             // Deep copy suggestions to ensure React detects the change
             const suggestionsCopy = result.suggestions.map(s => ({ ...s }));
-            console.log('[SuggestedMappingsPanel] Notifying parent of suggestions change:',
+            // console.log('[SuggestedMappingsPanel] Notifying parent of suggestions change:',
                 suggestionsCopy.length,
                 suggestionsCopy.map(s => ({ id: s.id, status: s.status })));
             onSuggestionsChange(suggestionsCopy);
@@ -268,7 +268,7 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
         if (toInsertSuggestions.length === 0) return;
 
         const code = generateJjtlCode(toInsertSuggestions);
-        console.log('[SuggestedMappingsPanel] Generated JjTL code:', code);
+        // console.log('[SuggestedMappingsPanel] Generated JjTL code:', code);
 
         onInsertCode?.(code);
     }, [toInsertSuggestions, onInsertCode]);

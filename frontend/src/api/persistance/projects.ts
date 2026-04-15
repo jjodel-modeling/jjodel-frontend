@@ -102,7 +102,7 @@ class ProjectsApi {
         const currentVersion = dProject.version;
         const nextVersion = getNextVersionNumber(currentVersion);
         dProject.version = nextVersion;
-        console.log(`[Version] Project saved: ${formatVersion(currentVersion)} → ${formatVersion(nextVersion)}`);
+        // console.log(`[Version] Project saved: ${formatVersion(currentVersion)} → ${formatVersion(nextVersion)}`);
 
         const state = await U.compressedState(dProject);
         dProject.state = state;
@@ -122,9 +122,9 @@ class ProjectsApi {
     }
 
     static async updateTags(project: DProject, tags: string[]): Promise<void> {
-        console.log('[DEBUG ProjectsApi.updateTags] Called with project:', project);
-        console.log('[DEBUG ProjectsApi.updateTags] Tags to save:', tags);
-        console.log('[DEBUG ProjectsApi.updateTags] Is offline:', U.isOffline());
+        // console.log('[DEBUG ProjectsApi.updateTags] Called with project:', project);
+        // console.log('[DEBUG ProjectsApi.updateTags] Tags to save:', tags);
+        // console.log('[DEBUG ProjectsApi.updateTags] Is offline:', U.isOffline());
         if(U.isOffline()) return Offline.updateTags(project, tags);
         else return await Online.updateTags(project, tags);
     }
@@ -148,14 +148,14 @@ class ProjectsApi {
         let resp_dup = 'Duplicate';
         let response: string = resp_dup;
         TRANSACTION('import project', async ()=>{
-            console.log('importing project:', {id:project.id, project, projects: state.projects, included: state.projects.includes(project.id)});
+            // console.log('importing project:', {id:project.id, project, projects: state.projects, included: state.projects.includes(project.id)});
             let dialogDuplicate: boolean = false;
             if (dialogDuplicate && state.projects.includes(project.id)) {
-                console.log('awaiting...')
+                // console.log('awaiting...')
                 let promise = U.dialog2('Project already imported', '', [{txt:resp_replace}, {txt:resp_dup}]);
                 COMMIT();
                 response = await promise;
-                console.log('awaiting... COMPLETED ', response)
+                // console.log('awaiting... COMPLETED ', response)
             }
             if (response === resp_dup) {
                 let ret = duplicateProject(project);
@@ -207,10 +207,10 @@ class Offline {
     }
     static getAll(): void {
         const projects = Storage.read<DProject[]>('projects') || [];
-        console.log('[DEBUG Offline.getAll] Projects from localStorage:', projects);
+        // console.log('[DEBUG Offline.getAll] Projects from localStorage:', projects);
         TRANSACTION('loading projects (offline)', () => {
             for (const project of projects) {
-                console.log('[DEBUG Offline.getAll] Loading project:', project.name, 'tags:', project.tagNames);
+                // console.log('[DEBUG Offline.getAll] Loading project:', project.name, 'tags:', project.tagNames);
                 /*if (!project._Id || !project.id && project.state) {
                    let decompressed = U.decompressState(project.state);
                    decompressed it is pointless, the db does not have the jid anyway and cannot single get it.
@@ -259,27 +259,27 @@ class Offline {
     }
 
     static async updateTags(project: DProject, tags: string[]): Promise<void> {
-        console.log('[DEBUG Offline.updateTags] Called');
-        console.log('[DEBUG Offline.updateTags] Project:', project);
-        console.log('[DEBUG Offline.updateTags] Tags:', tags);
+        // console.log('[DEBUG Offline.updateTags] Called');
+        // console.log('[DEBUG Offline.updateTags] Project:', project);
+        // console.log('[DEBUG Offline.updateTags] Tags:', tags);
 
         const projects = Storage.read<DProject[]>('projects') || [];
-        console.log('[DEBUG Offline.updateTags] Projects from storage:', projects);
+        // console.log('[DEBUG Offline.updateTags] Projects from storage:', projects);
 
         const filtered = projects.filter(p => p.id !== project.id);
-        console.log('[DEBUG Offline.updateTags] Filtered projects (without current):', filtered);
+        // console.log('[DEBUG Offline.updateTags] Filtered projects (without current):', filtered);
 
         const updatedProject = {...project, tags};
-        console.log('[DEBUG Offline.updateTags] Updated project to save:', updatedProject);
+        // console.log('[DEBUG Offline.updateTags] Updated project to save:', updatedProject);
 
         const newProjectsList = [...filtered, updatedProject];
-        console.log('[DEBUG Offline.updateTags] New projects list to write:', newProjectsList);
+        // console.log('[DEBUG Offline.updateTags] New projects list to write:', newProjectsList);
 
         Storage.write('projects', newProjectsList);
-        console.log('[DEBUG Offline.updateTags] Storage.write completed');
+        // console.log('[DEBUG Offline.updateTags] Storage.write completed');
 
         SetFieldAction.new(project.id, 'tagNames', tags, '', false);
-        console.log('[DEBUG Offline.updateTags] SetFieldAction completed');
+        // console.log('[DEBUG Offline.updateTags] SetFieldAction completed');
     }
 
     static import(project: DProject): void {
@@ -300,7 +300,7 @@ class Online {
 
     static async getAll(): Promise<void> {
         const response = await Api.get(`${U.env('JODEL_PERSISTANCE')}/project/`);
-        console.log('loading projects getall', {response, user: windoww.DUser.current, DUser:windoww});
+        // console.log('loading projects getall', {response, user: windoww.DUser.current, DUser:windoww});
         if (response.code !== 200) {
             Log.ee('Project.getAll() invalid token', {response});
             /* 401: Unauthorized -> Invalid Token (Local Storage)  */
@@ -350,7 +350,7 @@ class Online {
 
 
     static async delete(id :string): Promise<void> {
-        console.log(id);
+        // console.log(id);
         await Api.delete(`${U.env('JODEL_PERSISTANCE')}/project/${id}`);
     }
 
@@ -361,9 +361,9 @@ class Online {
             return null;
         }
 
-        console.log('api get one', {response});
+        // console.log('api get one', {response});
         let ret = new ProjectResponseDTO(response.data).toJodelClass();
-        console.log('api get one ret', {ret});
+        // console.log('api get one ret', {ret});
         return ret;
     }
 
@@ -372,7 +372,7 @@ class Online {
         if (!project.version) project.version = store.getState().version.n;
         if (!('_Id' in project)) (project as any)._Id = undefined;
         const updateProjectRequest = new UpdateProjectRequest(project);
-        console.log('online save request: ', {updateProjectRequest});
+        // console.log('online save request: ', {updateProjectRequest});
         const response = await Api.put(`${U.env('JODEL_PERSISTANCE')}/project/`, updateProjectRequest);
 
         if (response.code !== 200) {
@@ -416,7 +416,7 @@ class Online {
         delete (updateProjectRequest as GObject)._Id;
         const response = await Api.post(`${U.env('JODEL_PERSISTANCE')}/project/`, updateProjectRequest);
         if (response.code === 200) {
-            console.log('import', {project, updateProjectRequest, response});
+            // console.log('import', {project, updateProjectRequest, response});
         } else {
             U.alert('e', 'Cannot import project!', 'Something went wrong ...');
             Log.ee('failed to import project', {response, project});

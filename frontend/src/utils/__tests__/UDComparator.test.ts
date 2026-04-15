@@ -23,7 +23,7 @@ function assertEqual(actual: any, expected: any, testName: string): boolean {
     const actualStr = JSON.stringify(actual);
     const expectedStr = JSON.stringify(expected);
     if (actualStr === expectedStr) {
-        console.log(`✅ ${testName}`);
+        // console.log(`✅ ${testName}`);
         return true;
     } else {
         console.error(`❌ ${testName}`);
@@ -35,7 +35,7 @@ function assertEqual(actual: any, expected: any, testName: string): boolean {
 
 function assertTrue(value: boolean, testName: string): boolean {
     if (value) {
-        console.log(`✅ ${testName}`);
+        // console.log(`✅ ${testName}`);
         return true;
     } else {
         console.error(`❌ ${testName}`);
@@ -208,7 +208,7 @@ export function runTests(): { passed: number; failed: number } {
     ));
 
     console.groupEnd();
-    console.log(`\n📊 Results: ${passed} passed, ${failed} failed`);
+    // console.log(`\n📊 Results: ${passed} passed, ${failed} failed`);
 
     return { passed, failed };
 }
@@ -259,9 +259,9 @@ export function runBenchmark(iterations: number = 1000): void {
     }
     const quickTime = performance.now() - startQuick;
 
-    console.log(`Simple UD (${iterations}x): ${simpleTime.toFixed(2)}ms (${(simpleTime/iterations).toFixed(4)}ms/op)`);
-    console.log(`Complex UD (${iterations}x): ${complexTime.toFixed(2)}ms (${(complexTime/iterations).toFixed(4)}ms/op)`);
-    console.log(`quickUDCheck (${iterations}x): ${quickTime.toFixed(2)}ms (${(quickTime/iterations).toFixed(4)}ms/op)`);
+    // console.log(`Simple UD (${iterations}x): ${simpleTime.toFixed(2)}ms (${(simpleTime/iterations).toFixed(4)}ms/op)`);
+    // console.log(`Complex UD (${iterations}x): ${complexTime.toFixed(2)}ms (${(complexTime/iterations).toFixed(4)}ms/op)`);
+    // console.log(`quickUDCheck (${iterations}x): ${quickTime.toFixed(2)}ms (${(quickTime/iterations).toFixed(4)}ms/op)`);
 
     console.groupEnd();
 }

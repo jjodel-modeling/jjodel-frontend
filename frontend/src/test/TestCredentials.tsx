@@ -5,7 +5,7 @@ export const TestCredentials: React.FC = () => {
   /*
   useEffect(() => {
     // Test save
-    console.log('[Test] Saving OpenAI credentials...');
+    // console.log('[Test] Saving OpenAI credentials...');
     credentialsService.saveProvider({
       provider: 'openai',
       apiKey: 'sk-test-123',
@@ -14,15 +14,15 @@ export const TestCredentials: React.FC = () => {
     });
     
     // Test load
-    console.log('[Test] Loading active provider...');
+    // console.log('[Test] Loading active provider...');
     const active = credentialsService.getActiveProvider();
-    console.log('[Test] Active provider:', active);
+    // console.log('[Test] Active provider:', active);
     
     // Test list
-    console.log('[Test] All providers:', credentialsService.getProviders());
+    // console.log('[Test] All providers:', credentialsService.getProviders());
     
     // Test hasProviders
-    console.log('[Test] Has providers:', credentialsService.hasProviders());
+    // console.log('[Test] Has providers:', credentialsService.hasProviders());
   }, []);*/
   
   return (

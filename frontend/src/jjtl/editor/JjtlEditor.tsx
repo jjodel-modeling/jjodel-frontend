@@ -51,7 +51,7 @@ export const JjtlEditor: React.FC<JjtlEditorProps> = ({
     const parseContent = useCallback((content: string) => {
         const lexerResult = tokenize(content);
         // DEBUG: log full token stream from Monaco editor path
-        console.log('[JjtlEditor] Full token stream:', lexerResult.tokens.map(
+        // console.log('[JjtlEditor] Full token stream:', lexerResult.tokens.map(
             (t, i) => `${i}:[${t.type}:${JSON.stringify(t.value)}]`
         ).join(' '));
         const parserResult = parse(lexerResult.tokens);

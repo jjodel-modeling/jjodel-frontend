@@ -20,7 +20,7 @@ function MqttEditorComponent(props: AllProps) {
         client.off('pull-action');
         client.on('pull-action', (receivedAction: GObject<Action & CompositeAction>) => {
             const action = Action.fromJson(receivedAction); action.hasFired = 0;
-            console.log('Received Action from server.', action);
+            // console.log('Received Action from server.', action);
             action.fire();
         });
         client.connect();

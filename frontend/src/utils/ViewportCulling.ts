@@ -262,7 +262,7 @@ export function resetCullingStats(): void {
  */
 export function logCullingStats(): void {
     const s = getCullingStats();
-    console.log(`
+    // console.log(`
 [ViewportCulling Statistics]
   Total Elements: ${s.totalElements}
   Visible: ${s.visibleElements}

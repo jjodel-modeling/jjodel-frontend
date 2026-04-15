@@ -37,7 +37,7 @@ export class Collaborative {
     public static online: boolean = false;
 
     private static canSend(action: Action): boolean {
-        console.log('Collaborative.canSend', {action,
+        // console.log('Collaborative.canSend', {action,
             sender: action.sender !== DUser.current,
             skip: action.skipCollaborative,
             ignore: action.type === SetRootFieldAction.type && ignoredRootFields.includes(action.field as keyof DState),
@@ -76,12 +76,12 @@ export class Collaborative {
             parsedAction.actions = parsedAction.actions.filter(a => Collaborative.canSend(a));
             if (parsedAction.actions.length === 0) return false;
         }
-        console.log('Collaborative.send pre throttle', {parsedAction});
+        // console.log('Collaborative.send pre throttle', {parsedAction});
         // todo: need to batch emissions for > 300ms? so that model and node creation are paired?
         // or start with batchtimer 300*safety(1.2?), then each time it gets delayed,
         // batchtimer lowers by x% to prevent eternal retention in case of loop/frequent changes but still reduce spam
         U.throttle('collab_send', ()=> {
-            console.log('Collaborative.send POST throttle', {parsedAction});
+            // console.log('Collaborative.send POST throttle', {parsedAction});
             Collaborative.client.emit('pushAction', parsedAction)
         }, true, 300*1.1, 1/1.1);
 
@@ -92,11 +92,11 @@ export class Collaborative {
         if (action.actions) {
             let old = action.actions;
             action.actions = action.actions.filter(a => a.sender !== DUser.current);
-            console.log('collaborative received composite', {actions:action.actions, old, diff: U.arrayDifference(action.actions, old)});
+            // console.log('collaborative received composite', {actions:action.actions, old, diff: U.arrayDifference(action.actions, old)});
             if (!action.actions.length) return false;
         }
         else {
-            console.log('collaborative received single', {action});
+            // console.log('collaborative received single', {action});
             if (action.sender === DUser.current) return false;
         }
         return true;
@@ -112,7 +112,7 @@ export class Collaborative {
             firedActionsNCA.push(ca);
             if (receivedAction.type === CreateElementAction.type && !Constructors.pending[receivedAction.value.id]) {
                 let a = receivedAction;
-                console.log('set2 pending', {a, p:Constructors.pending[a.value.id], dict:{...Constructors.pending}});
+                // console.log('set2 pending', {a, p:Constructors.pending[a.value.id], dict:{...Constructors.pending}});
                 Constructors.pending[receivedAction.value.id] = receivedAction.value;
             }
             // problem: if i stop it here, before the reducer sets it in history, it cannot be rearranged in order in case of conflicts
@@ -121,7 +121,7 @@ export class Collaborative {
         }
         firedActionsCA.push(ca);
         for (let a of ca.actions) if (a.type === CreateElementAction.type && !Constructors.pending[a.value.id]) {
-            console.log('set2 pending', {a, p:Constructors.pending[a.value.id], dict:{...Constructors.pending}});
+            // console.log('set2 pending', {a, p:Constructors.pending[a.value.id], dict:{...Constructors.pending}});
             Constructors.pending[a.value.id] = a.value;
         }
 
@@ -144,7 +144,7 @@ function fire(receivedAction: Action, session: number): void {
     receivedAction.hasFired = 0;
     actions[receivedAction.id] = true;
     U.throttle('collab_receive', ()=> {
-        console.log('Collaborative received action ' + session, receivedAction);
+        // console.log('Collaborative received action ' + session, receivedAction);
         COMMIT(receivedAction);
     }, true, 50, 0.5);
 }
