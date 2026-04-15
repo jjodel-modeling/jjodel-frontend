@@ -343,6 +343,11 @@ export class JjelEvaluator {
                 case 'notEmpty':
                     return obj.length > 0;
             }
+            // Property is not a valid collection accessor — likely a per-element property.
+            // Reject with a helpful message suggesting forall.
+            throw new JjelEvaluationError(
+                `Cannot access property '${property}' on a collection. Use 'forall x in collection : x.${property}' to project it over each element.`
+            );
         }
 
         // String properties
