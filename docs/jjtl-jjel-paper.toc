@@ -27,13 +27,13 @@
 \contentsline {subsection}{\numberline {3.2}Transformation Structure}{11}{subsection.3.2}%
 \contentsline {subsection}{\numberline {3.3}Class Mappings}{11}{subsection.3.3}%
 \contentsline {subsubsection}{\numberline {3.3.1}Multi-Source Mappings}{11}{subsubsection.3.3.1}%
-\contentsline {subsubsection}{\numberline {3.3.2}Multiplicity}{11}{subsubsection.3.3.2}%
+\contentsline {subsubsection}{\numberline {3.3.2}Multiplicity}{12}{subsubsection.3.3.2}%
 \contentsline {subsubsection}{\numberline {3.3.3}Guard Conditions}{12}{subsubsection.3.3.3}%
 \contentsline {subsection}{\numberline {3.4}Attribute Mappings}{12}{subsection.3.4}%
 \contentsline {subsubsection}{\numberline {3.4.1}Direct Mapping}{12}{subsubsection.3.4.1}%
 \contentsline {subsubsection}{\numberline {3.4.2}Value Mapping (Enum Conversion)}{12}{subsubsection.3.4.2}%
 \contentsline {subsubsection}{\numberline {3.4.3}Expression Mapping}{12}{subsubsection.3.4.3}%
-\contentsline {subsubsection}{\numberline {3.4.4}Assignment Syntax}{12}{subsubsection.3.4.4}%
+\contentsline {subsubsection}{\numberline {3.4.4}Arrow Syntax (Alternative)}{12}{subsubsection.3.4.4}%
 \contentsline {subsubsection}{\numberline {3.4.5}Object Creation}{13}{subsubsection.3.4.5}%
 \contentsline {subsection}{\numberline {3.5}Helper Functions}{13}{subsection.3.5}%
 \contentsline {subsection}{\numberline {3.6}Trace Model}{13}{subsection.3.6}%
@@ -48,7 +48,7 @@
 \contentsline {subsubsection}{\numberline {4.2.2}\texttt {confirm}}{15}{subsubsection.4.2.2}%
 \contentsline {paragraph}{Design rationale.}{15}{section*.3}%
 \contentsline {subsection}{\numberline {4.3}Type System}{15}{subsection.4.3}%
-\contentsline {paragraph}{Ecore primitive types.}{15}{section*.4}%
+\contentsline {paragraph}{Ecore primitive types.}{16}{section*.4}%
 \contentsline {paragraph}{Metamodel-relative references.}{16}{section*.5}%
 \contentsline {subsection}{\numberline {4.4}Grammar}{16}{subsection.4.4}%
 \contentsline {subsection}{\numberline {4.5}Embedding and Transparent Recognition}{17}{subsection.4.5}%
@@ -59,7 +59,7 @@
 \contentsline {subsubsection}{\numberline {4.6.4}Confirm in JjScript}{18}{subsubsection.4.6.4}%
 \contentsline {subsection}{\numberline {4.7}Execution Semantics}{18}{subsection.4.7}%
 \contentsline {subsubsection}{\numberline {4.7.1}Blocking from the author's perspective}{18}{subsubsection.4.7.1}%
-\contentsline {subsubsection}{\numberline {4.7.2}Async/await implementation}{18}{subsubsection.4.7.2}%
+\contentsline {subsubsection}{\numberline {4.7.2}Async/await implementation}{19}{subsubsection.4.7.2}%
 \contentsline {subsubsection}{\numberline {4.7.3}Serialisation of interactions}{19}{subsubsection.4.7.3}%
 \contentsline {subsection}{\numberline {4.8}UI Manifestation}{19}{subsection.4.8}%
 \contentsline {subsection}{\numberline {4.9}Relationship to the \textsf {JjTL}{} Interactive Feature Table}{20}{subsection.4.9}%

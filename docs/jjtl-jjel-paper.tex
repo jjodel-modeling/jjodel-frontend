@@ -598,7 +598,7 @@ parent != null and parent?.name.isNotEmpty   -- null-safe via ?. operator
 
 \begin{itemize}
     \item \textbf{Simpler than ATL}: No two-phase execution, no \texttt{thisModule} reference, no distinction between matched/lazy/called rules. Every rule is a class mapping.
-    \item \textbf{More structured than ETL}: Attribute mappings use a declarative binding syntax (\texttt{->}) rather than imperative assignment. Guards are explicit (\kw{where}) rather than statement blocks.
+    \item \textbf{More structured than ETL}: Attribute mappings use a declarative binding syntax (\texttt{:=}) rather than imperative assignment. Guards are explicit (\kw{where}) rather than statement blocks.
     \item \textbf{JjEL instead of OCL}: Expressions use \jjel{}'s set-theoretic semantics, null-safe navigation, and native naming conventions, features that OCL does not provide.
 \end{itemize}
 
@@ -614,8 +614,11 @@ to   PetriNetMM
 
 # Class mappings follow
 State -> Place {
-    name -> label
-    isInitial -> tokens : true=1, false=0
+    tokens := if isInitial then 1 else 0
+}
+
+Transition -> Transition {
+    name := name
 }
 
 # Helper functions
@@ -641,8 +644,8 @@ A class mapping may specify multiple source classes, optionally with aliases, se
 
 \begin{lstlisting}[style=jjtl,numbers=none]
 ClassA a, ClassB b -> MergedClass where { a.name == b.name } {
-    a.name -> name
-    b.description -> description
+    name := a.name
+    description := b.description
 }
 \end{lstlisting}
 
@@ -675,17 +678,17 @@ The implicit context means property access is unqualified: \texttt{isAbstract} r
 
 \subsubsection{Direct Mapping}
 
-The simplest form copies a value from source to target:
+The simplest form copies a value from source to target using the \texttt{:=} operator:
 \begin{lstlisting}[style=jjtl,numbers=none]
-name -> tableName
+tableName := name
 \end{lstlisting}
 
 \subsubsection{Value Mapping (Enum Conversion)}
 
 Discrete value conversions use the \texttt{:} separator followed by comma-separated pairs:
 \begin{lstlisting}[style=jjtl,numbers=none]
-isInitial -> tokens : true=1, false=0
-status -> code : "active"=1, "inactive"=0, "deleted"=-1
+tokens := isInitial : true=1, false=0
+code := status : "active"=1, "inactive"=0, "deleted"=-1
 \end{lstlisting}
 
 Unmapped values pass through unchanged (fallback identity).
@@ -694,19 +697,20 @@ Unmapped values pass through unchanged (fallback identity).
 
 Arbitrary \jjel{} expressions compute the target value:
 \begin{lstlisting}[style=jjtl,numbers=none]
-name -> tableName : name.snakeCase()
--> columnDefs : forall a in attributes: a.name + " " + a.type.toUpper()
+tableName := name.snakeCase()
+columnDefs := forall a in attributes: a.name + " " + a.type.toUpper()
 \end{lstlisting}
 
-\subsubsection{Assignment Syntax}
+\subsubsection{Arrow Syntax (Alternative)}
 
-As an alternative to the \texttt{->} mapping arrow, \jjtl{} also supports the \texttt{:=} assignment operator for attribute bindings:
+As an alternative to the \texttt{:=} assignment operator, \jjtl{} also supports the \texttt{->} mapping arrow for attribute bindings:
 \begin{lstlisting}[style=jjtl,numbers=none]
-name := name.snakeCase()
-label := "prefix_" + name
+name -> tableName
+name -> tableName : name.snakeCase()
+isInitial -> tokens : true=1, false=0
 \end{lstlisting}
 
-The \texttt{:=} syntax is equivalent to the expression mapping form (\texttt{-> target : expr}) but reads more naturally when the target attribute name matches the binding variable. Both syntaxes are interchangeable; \texttt{->} emphasises the directional nature of the mapping, while \texttt{:=} emphasises value assignment.
+The \texttt{->} syntax reads as ``source maps to target'' and emphasises the directional nature of the mapping. Both syntaxes are interchangeable; \texttt{:=} is preferred for its brevity and natural reading when the target attribute name is clear from context, while \texttt{->} is useful when explicitly naming both the source property and the target property.
 
 \subsubsection{Object Creation}
 
@@ -714,8 +718,8 @@ Nested target objects are created inline:
 \begin{lstlisting}[style=jjtl,numbers=none]
 -> inputArcs {
     -> Arc {
-        place -> source
-        weight -> 1
+        source := place
+        weight := 1
     }
 }
 \end{lstlisting}
@@ -746,7 +750,7 @@ Helpers are registered in the evaluation context and callable from any expressio
 
 \jjtl{} automatically determines whether each attribute mapping can be reversed:
 \begin{itemize}
-    \item Direct mappings (\texttt{a -> b}): always invertible.
+    \item Direct mappings (\texttt{b := a}): always invertible.
     \item Value mappings (\texttt{true=1, false=0}): invertible if and only if the mapping is injective (no duplicate target values).
     \item Expression mappings: invertible only for simple property references; function calls and arithmetic are marked non-invertible.
 \end{itemize}
@@ -1011,7 +1015,7 @@ to   UML_MM
  
 -- Add a database prefix to every Table, chosen at run time
 Class -> Table where { not isAbstract } {
-    name -> name : prompt('Table prefix', EString, "tbl_") + name.snakeCase()
+    name := prompt('Table prefix', EString, "tbl_") + name.snakeCase()
     -- The default "tbl_" is pre-filled; the user may override it
 }
 \end{lstlisting}
@@ -1021,8 +1025,8 @@ Note that the \texttt{defaultValue} argument \texttt{"tbl\_"} is a
 against the source element:
  
 \begin{lstlisting}[style=jjtl,numbers=none]
-name -> name : prompt('Table prefix', EString, owner.package?.name ?? "tbl_")
-               + name.snakeCase()
+name := prompt('Table prefix', EString, owner.package?.name ?? "tbl_")
+        + name.snakeCase()
 \end{lstlisting}
  
 Here \texttt{owner.package?.name ?? "tbl\_"} is a \jjel{} expression
@@ -1040,8 +1044,8 @@ to   UML_MM
  
 -- The user selects the target Package from a dropdown of all Package instances
 Class -> Class {
-    name -> name
-    -> package : prompt('Move to package', Package, owner)
+    name := name
+    package := prompt('Move to package', Package, owner)
 }
 \end{lstlisting}
  
@@ -1056,8 +1060,8 @@ to   UML_MM
 -- Only proceed with derived-attribute removal after explicit confirmation
 Attribute -> Attribute
     where { not isDerived or confirm('Remove derived attribute ' + name + '?') } {
-    name -> name
-    type -> type
+    name := name
+    type := type
 }
 \end{lstlisting}
  
@@ -1266,8 +1270,8 @@ occurrence:
 \begin{lstlisting}[style=jjtl,numbers=none]
 -- Without let: dialog opened twice (undesirable)
 Class -> Table where { not isAbstract } {
-    name  -> name  : prompt('Column prefix', EString) + name.snakeCase()
-    label -> label : prompt('Column prefix', EString) + name.toUpper()
+    name  := prompt('Column prefix', EString) + name.snakeCase()
+    label := prompt('Column prefix', EString) + name.toUpper()
 }
 \end{lstlisting}
 
@@ -1277,8 +1281,8 @@ With \jjlet{}, the dialog is opened once and the result is reused:
 -- With let: dialog opened once, $p reused in two bindings
 Class -> Table where { not isAbstract } {
     let $p = prompt('Column prefix', EString, 'col_') in {
-        name  -> name  : $p + name.snakeCase()
-        label -> label : $p + name.toUpper()
+        name  := $p + name.snakeCase()
+        label := $p + name.toUpper()
     }
 }
 \end{lstlisting}
@@ -1389,9 +1393,9 @@ block of attribute mappings:
 
 \begin{lstlisting}[style=jjtl,numbers=none]
 let $p = prompt('Prefix', EString, 'col_') in {
-    name  -> name  : $p + name.snakeCase()
-    label -> label : $p + name.toUpper()
-    -> tag         : $p + "meta"
+    name  := $p + name.snakeCase()
+    label := $p + name.toUpper()
+    tag   := $p + "meta"
 }
 \end{lstlisting}
 
@@ -1473,8 +1477,8 @@ to   Relational_MM
 
 Class -> Table where { not isAbstract } {
     let $prefix = prompt('Column prefix', EString, 'col_') in {
-        name  -> name  : $prefix + name.snakeCase()
-        label -> label : $prefix + name.toUpper()
+        name  := $prefix + name.snakeCase()
+        label := $prefix + name.toUpper()
     }
 }
 \end{lstlisting}
@@ -1487,8 +1491,8 @@ Attribute -> Attribute
         let $ok = confirm('Map derived attribute ' + name + '?') in
             not isDerived or $ok
     } {
-    name -> name
-    type -> type
+    name := name
+    type := type
 }
 \end{lstlisting}
 
@@ -1498,7 +1502,7 @@ Attribute -> Attribute
 Class -> Table where { not isAbstract } {
     let $prefix = prompt('Table prefix', EString, 'tbl_'),
         $suffix = prompt('Table suffix', EString, '') in {
-        name -> name : $prefix + name.snakeCase() + $suffix
+        name := $prefix + name.snakeCase() + $suffix
     }
 }
 \end{lstlisting}
@@ -2169,7 +2173,7 @@ ATL is a hybrid declarative/imperative M2M transformation language developed at 
 \midrule
 Header & \texttt{module Name; create Out from In} & \texttt{transformation Name \textbackslash n from X \textbackslash n to Y} \\
 Rule type & Matched / Lazy / Called / Entrypoint & Single type: class mapping \\
-Binding & \texttt{targetAttr <- expr} & \texttt{sourceAttr -> targetAttr} \\
+Binding & \texttt{targetAttr <- expr} & \texttt{targetAttr := expr} \\
 Guard & OCL expression in \texttt{from} clause & \kw{where} block with \jjel{} \\
 Trace resolution & Implicit via matched rules & Implicit (like ATL) with per-binding invertibility \\
 Imperative block & \texttt{do \{ ... \}} (post-binding) & \kw{do} in \kw{forall} (per-element) \\
@@ -2180,7 +2184,7 @@ Expression language & OCL & \jjel{} \\
 
 \subsubsection{Key Design Differences}
 
-\paragraph{Binding direction.} ATL uses \texttt{<-} (``target receives from expression''), while \jjtl{} uses \texttt{->} (``source maps to target''). The \jjtl{} direction mirrors the natural reading of transformation rules: the \emph{source} drives the transformation. ATL's direction mirrors assignment (\texttt{x := expr}).
+\paragraph{Binding direction.} ATL uses \texttt{<-} (``target receives from expression''), while \jjtl{} uses \texttt{:=} as primary syntax (``target is assigned from expression'') and \texttt{->} as an alternative (``source maps to target''). The \texttt{:=} syntax is concise and familiar, while the \texttt{->} variant makes the directional nature of the mapping explicit.
 
 \paragraph{Rule taxonomy.} ATL distinguishes four rule types (matched, lazy, called, entrypoint), each with different execution semantics. \jjtl{} has a single rule type with optional multiplicity and guard, reducing the conceptual surface.
 
@@ -2203,7 +2207,7 @@ EOL is the imperative base language of the Epsilon platform; ETL extends it for 
 \textbf{Aspect} & \textbf{ETL} & \textbf{JjTL} \\
 \midrule
 Rule syntax & \texttt{rule Name transform s:T to t:T \{ ... \}} & \texttt{S -> T \{ ... \}} \\
-Binding & Imperative assignment: \texttt{t.x = s.y} & Declarative: \texttt{y -> x} \\
+Binding & Imperative assignment: \texttt{t.x = s.y} & Declarative: \texttt{x := y} \\
 Guard & \texttt{guard: expr} or \texttt{guard \{ block \}} & \texttt{where \{ expr \}} \\
 Trace resolution & \texttt{::=} operator / \texttt{equivalent()} & Implicit with per-binding invertibility \\
 Rule modifiers & \texttt{@abstract}, \texttt{@lazy}, \texttt{@primary}, \texttt{@greedy} & Multiplicity (\texttt{[*]}) \\
@@ -2215,7 +2219,7 @@ Control flow & \texttt{for}, \texttt{if/else}, \texttt{while}, \texttt{switch} &
 
 \subsubsection{Key Design Differences}
 
-\paragraph{Declarative vs.\ imperative bindings.} ETL attribute mappings are imperative assignments (\texttt{t.name = s.name.toUpperCase()}). \jjtl{} attribute mappings are declarative bindings (\texttt{name -> tableName : name.toUpper()}). The declarative approach enables automatic invertibility analysis, which is impossible with imperative assignments.
+\paragraph{Declarative vs.\ imperative bindings.} ETL attribute mappings are imperative assignments (\texttt{t.name = s.name.toUpperCase()}). \jjtl{} attribute mappings are declarative bindings (\texttt{tableName := name.toUpper()}). The declarative approach enables automatic invertibility analysis, which is impossible with imperative assignments.
 
 \paragraph{Verbosity.} ETL requires explicit variable declarations, \texttt{new} for object creation, and method call syntax for collection operations. \jjtl{} infers targets from the rule header, creates objects implicitly, and uses \kw{forall} instead of explicit loops or lambda chains.
 
@@ -2274,7 +2278,7 @@ Implicit context & \texttt{self} & Unqualified (source properties) \\
 Object creation & \texttt{object Type \{ ... \}} & Nested \texttt{-> Type \{ ... \}} \\
 Guard & \texttt{when \{ ... \}} & \texttt{where \{ ... \}} \\
 Trace resolution & Implicit via mapping invocation & Implicit with per-binding invertibility \\
-Assignment & \texttt{:=} & \texttt{->} and \texttt{:=} \\
+Assignment & \texttt{:=} & \texttt{:=} and \texttt{->} \\
 Expression language & OCL & \jjel{} \\
 \bottomrule
 \end{tabularx}
@@ -2488,13 +2492,13 @@ to   RelationalMM
 
 # Non-abstract classes become tables
 Class -> Table where { not isAbstract } {
-    name -> name : name.snakeCase()
+    name := name.snakeCase()
 
     # Primary key column
     -> col {
         -> Column {
-            -> name : "id"
-            -> type : "INTEGER"
+            name := "id"
+            type := "INTEGER"
         }
     }
 
@@ -2502,25 +2506,25 @@ Class -> Table where { not isAbstract } {
     -> col {
         forall a in attributes such that not a.multiValued
         -> Column {
-            a.name -> name : a.name.snakeCase()
-            a.type.name -> type
+            name := a.name.snakeCase()
+            type := a.type.name
         }
     }
 }
 
 # Multi-valued attributes become junction tables
 Attribute -> Table where { multiValued } {
-    -> name : owner.name.snakeCase() + "_" + name.snakeCase()
+    name := owner.name.snakeCase() + "_" + name.snakeCase()
 
     -> col {
         -> Column {
-            -> name : "id"
+            name := "id"
         }
     }
     -> col {
         -> Column {
-            name -> name : name.snakeCase()
-            type.name -> type
+            name := name.snakeCase()
+            type := type.name
         }
     }
 }
@@ -2607,26 +2611,25 @@ from StateMachineMM
 to   PetriNetMM
 
 State -> Place {
-    name -> name
-    isInitial -> tokens : true=1, false=0
+    tokens := if isInitial then 1 else 0
 }
 
 Transition -> Transition [*] {
-    label -> name
+    name := label
 
     # Input arc: source state -> this transition
     -> inputArcs {
         -> Arc {
-            source -> source
-            -> weight : 1
+            source := source
+            weight := 1
         }
     }
 
     # Output arc: this transition -> target state
     -> outputArcs {
         -> Arc {
-            target -> target
-            -> weight : 1
+            target := target
+            weight := 1
         }
     }
 }
@@ -2636,7 +2639,7 @@ Transition -> Transition [*] {
 \begin{itemize}
     \item ATL and \jjtl{} both use implicit trace resolution: when a source element (e.g., a \texttt{State}) is assigned to a target property that expects the corresponding target type (e.g., a \texttt{Place}), the engine automatically resolves the trace link. This keeps the mapping syntax clean and declarative.
     \item ETL requires explicit \texttt{.equivalent()} calls to resolve trace links.
-    \item The value mapping \texttt{true=1, false=0} in \jjtl{} replaces ATL's verbose \texttt{if...then...else...endif}.
+    \item The \texttt{if...then...else} expression in \jjtl{} reads naturally and uses \jjel{} conditional semantics, while ATL requires the verbose \texttt{if...then...else...endif} with OCL syntax.
 \end{itemize}
 
 
@@ -2720,16 +2723,16 @@ from UML_MM
 to   JavaMM
 
 Class -> JavaClass {
-    name -> name : name.pascalCase()
-    isAbstract -> isAbstract
-    superClass -> superClass
+    name := name.pascalCase()
+    isAbstract := isAbstract
+    superClass := superClass
 
     # Fields from non-derived attributes
     -> fields {
         forall a in attributes such that not a.isDerived
         -> Field {
-            a.name -> name : a.name.camelCase()
-            a.type -> type
+            name := a.name.camelCase()
+            type := a.type
         }
     }
 
@@ -2737,9 +2740,9 @@ Class -> JavaClass {
     -> methods {
         forall a in attributes such that not a.isDerived
         -> Method {
-            -> name : "get" + a.name.pascalCase()
-            a.type -> returnType
-            -> body : "return this." + a.name.camelCase() + ";"
+            name := "get" + a.name.pascalCase()
+            returnType := a.type
+            body := "return this." + a.name.camelCase() + ";"
         }
     }
 }
