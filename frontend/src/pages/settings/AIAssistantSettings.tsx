@@ -6,6 +6,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import type {Dictionary} from "../../joiner";
 import {TAIProvider, AI, ALL_AI_PROVIDERS, AIConfig} from '../../types/jodie';
 import { ProviderConfigModal } from './ProviderConfigModal';
+import { AIEvents } from '../../events/registry';
 
 export function AIAssistantSettings() {
     const [refresh, setRefresh] = useState(0);
@@ -32,8 +33,8 @@ export function AIAssistantSettings() {
     useEffect(() => {
         // Listen for external changes
         const handleChange = () => setRefresh(refresh +1);
-        window.addEventListener('ai-provider-changed', handleChange);
-        return () => window.removeEventListener('ai-provider-changed', handleChange);
+        window.addEventListener(AIEvents.PROVIDER_CHANGED, handleChange);
+        return () => window.removeEventListener(AIEvents.PROVIDER_CHANGED, handleChange);
     }, []);
 
     // Get model label for display

@@ -8,6 +8,7 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { JjScriptEvents } from '../../events/registry';
 import './ScriptBlock.scss';
 import { ExecutionErrorDialog } from './ExecutionErrorDialog';
 import {parseError, ExecutionPauseInfo, ExecutionSummary, JjScriptError, ExecutionErrorInfo} from '../executor/errors';
@@ -250,7 +251,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
         }
 
         // Emit execution start event for Tree View auto-expand
-        window.dispatchEvent(new CustomEvent('jjscript:execution-start', {
+        window.dispatchEvent(new CustomEvent(JjScriptEvents.EXECUTION_START, {
             detail: {
                 script: code,
                 target: resolvedTarget?.name,
@@ -348,7 +349,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                     setShowErrorDialog(true);
 
                     // Emit execution paused event
-                    window.dispatchEvent(new CustomEvent('jjscript:execution-paused', {
+                    window.dispatchEvent(new CustomEvent(JjScriptEvents.EXECUTION_PAUSED, {
                         detail: {
                             line: i + 1,
                             command: commands[i],
@@ -405,7 +406,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 setShowErrorDialog(true);
 
                 // Emit execution paused event
-                window.dispatchEvent(new CustomEvent('jjscript:execution-paused', {
+                window.dispatchEvent(new CustomEvent(JjScriptEvents.EXECUTION_PAUSED, {
                     detail: {
                         line: i + 1,
                         command: commands[i],
@@ -433,13 +434,13 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
 
         // Dispatch event for auto-expand of Features panel
         if (executedCount > 0) {
-            window.dispatchEvent(new CustomEvent('jjscript:metamodel-created', {
+            window.dispatchEvent(new CustomEvent(JjScriptEvents.METAMODEL_CREATED, {
                 detail: { elementsCreated: executedCount }
             }));
         }
 
         // Emit execution end event
-        window.dispatchEvent(new CustomEvent('jjscript:execution-end', {
+        window.dispatchEvent(new CustomEvent(JjScriptEvents.EXECUTION_END, {
             detail: {
                 status: 'completed',
                 executedCount,
@@ -459,7 +460,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
         // If starting fresh or resuming from completed
         if (executionState === 'idle' || executionState === 'completed') {
             // Emit execution start event for Tree View auto-expand
-            window.dispatchEvent(new CustomEvent('jjscript:execution-start', {
+            window.dispatchEvent(new CustomEvent(JjScriptEvents.EXECUTION_START, {
                 detail: {
                     script: code,
                     target: resolvedTarget?.name,
@@ -533,7 +534,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 setExecutionState('paused');
 
                 // Dispatch event for each successful step (expands Features panel)
-                window.dispatchEvent(new CustomEvent('jjscript:metamodel-created', {
+                window.dispatchEvent(new CustomEvent(JjScriptEvents.METAMODEL_CREATED, {
                     detail: { elementsCreated: 1 }
                 }));
             } else if (success) {
@@ -553,12 +554,12 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 setShowCompleteModal(true);
 
                 // Dispatch event for last step
-                window.dispatchEvent(new CustomEvent('jjscript:metamodel-created', {
+                window.dispatchEvent(new CustomEvent(JjScriptEvents.METAMODEL_CREATED, {
                     detail: { elementsCreated: 1 }
                 }));
 
                 // Emit execution end event
-                window.dispatchEvent(new CustomEvent('jjscript:execution-end', {
+                window.dispatchEvent(new CustomEvent(JjScriptEvents.EXECUTION_END, {
                     detail: {
                         status: 'completed',
                         executedCount: nextIndex + 1,
@@ -591,7 +592,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 setShowCompleteModal(true);
 
                 // Emit execution end event with error
-                window.dispatchEvent(new CustomEvent('jjscript:execution-end', {
+                window.dispatchEvent(new CustomEvent(JjScriptEvents.EXECUTION_END, {
                     detail: {
                         status: 'error',
                         executedCount: nextIndex,
@@ -641,7 +642,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
             setShowCompleteModal(true);
 
             // Emit execution end event with error
-            window.dispatchEvent(new CustomEvent('jjscript:execution-end', {
+            window.dispatchEvent(new CustomEvent(JjScriptEvents.EXECUTION_END, {
                 detail: {
                     status: 'error',
                     executedCount: nextIndex,
@@ -660,7 +661,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
         setLineStates(prev => prev.map(ls => ({ ...ls, status: 'pending', result: undefined })));
 
         // Emit execution end event (cancelled)
-        window.dispatchEvent(new CustomEvent('jjscript:execution-end', {
+        window.dispatchEvent(new CustomEvent(JjScriptEvents.EXECUTION_END, {
             detail: {
                 status: 'cancelled',
             }
@@ -812,7 +813,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
         setShowErrorDialog(true);
 
         // Emit execution end event
-        window.dispatchEvent(new CustomEvent('jjscript:execution-end', {
+        window.dispatchEvent(new CustomEvent(JjScriptEvents.EXECUTION_END, {
             detail: {
                 status: 'completed',
                 executedCount,
@@ -852,7 +853,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
             setExecutionState('error');
 
             // Emit execution end event
-            window.dispatchEvent(new CustomEvent('jjscript:execution-end', {
+            window.dispatchEvent(new CustomEvent(JjScriptEvents.EXECUTION_END, {
                 detail: {
                     status: 'stopped',
                     executedCount,

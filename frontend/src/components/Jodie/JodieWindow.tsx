@@ -9,6 +9,7 @@ import { ChatMessages } from './ChatMessages';
 import { ChatInput } from './ChatInput';
 import {TAIProvider, ChatMessage, ChatImage, ChatDocument, JodieConfig} from '../../types/jodie';
 import { AIDisclaimer } from '../common/AIDisclaimer';
+import { JjScriptEvents } from '../../events/registry';
 
 interface JodieWindowProps {
     messages: ChatMessage[];
@@ -99,12 +100,12 @@ export function JodieWindow({
             setExecutingCommand(null);
         };
 
-        window.addEventListener('jjscript:executing', handleExecuting as EventListener);
-        window.addEventListener('jjscript:execution-end', handleExecutionEnd);
+        window.addEventListener(JjScriptEvents.EXECUTING, handleExecuting as EventListener);
+        window.addEventListener(JjScriptEvents.EXECUTION_END, handleExecutionEnd);
 
         return () => {
-            window.removeEventListener('jjscript:executing', handleExecuting as EventListener);
-            window.removeEventListener('jjscript:execution-end', handleExecutionEnd);
+            window.removeEventListener(JjScriptEvents.EXECUTING, handleExecuting as EventListener);
+            window.removeEventListener(JjScriptEvents.EXECUTION_END, handleExecutionEnd);
         };
     }, []);
 

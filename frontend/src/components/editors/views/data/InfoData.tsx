@@ -1,6 +1,6 @@
-/* Apply to - Redesigned to match Properties tab */
+/* Apply to - Uses the jj-* design system classes from Info.tsx baseline */
 
-import React, {Dispatch} from 'react';
+import React, {Dispatch, useState} from 'react';
 import {
     DState,
     DViewElement,
@@ -12,7 +12,7 @@ import {
     Input,
     LPointerTargetable,
     LViewElement,
-    LViewPoint, MultiSelect,
+    LViewPoint,
     Pointer,
     Select,
     Vertexes
@@ -20,154 +20,188 @@ import {
 import {JsEditor, OclEditor} from "../../languages";
 import {FakeStateProps} from "../../../../joiner/types";
 import {connect} from "react-redux";
+import {Toggle} from '../../../ui';
 import "./viewapplyto.scss";
 import "./viewoptions.scss"
 
+// Inline info icon with hover tooltip — local copy of the `InfoTooltip`
+// helper in `Info.tsx` (not exported). Constrained to not touching Info.tsx.
+function InfoTooltip(props: { text: string }) {
+    const [show, setShow] = useState(false);
+    return (
+        <span className="jj-info-icon-wrapper"
+            onMouseEnter={() => setShow(true)}
+            onMouseLeave={() => setShow(false)}
+        >
+            <span className="jj-info-icon">i</span>
+            {show && <span className="jj-info-tooltip">{props.text}</span>}
+        </span>
+    );
+}
 
 function InfoDataComponent(props: AllProps) {
     const view = props.view;
     const viewpoints = props.viewpoints;
-    let readOnly = props.readonly;
-    let vp = view.viewpoint;
-    let vpid = vp?.id;
-    let dallVP: DViewPoint[] = viewpoints.map(v=>v.__raw);
-    console.log("infodatacomponent", {dallVP, viewpoints, vp, vpid, parents:view.allPossibleParentViews.filter(v=>v.viewpoint?.id === vpid)});
+    const readOnly = props.readonly;
+    const vp = view.viewpoint;
+    const vpid = vp?.id;
+    const dallVP: DViewPoint[] = viewpoints.map(v => v.__raw);
 
     const objectTypes = ['', 'DModel', 'DPackage', 'DEnumerator', 'DEnumLiteral', 'DClass', 'DAttribute', 'DReference', 'DOperation', 'DParameter', 'DObject', 'DValue', 'DStructuralFeature'];
-    const classesOptionsJSX = <optgroup label={'Object type'}>
-            {objectTypes.map((o)=><option key={o} value={o}>{o ? o.substring(1) : 'anything'}</option>)}
-    </optgroup>;
     const classesOptions = [{label:'', options: objectTypes.map(o=>({value:o, label:o ? o.substring(1) : 'anything'}))}];
 
-    let isVP: boolean = view.className === DViewPoint.cname;
-    let isV: boolean = !isVP;
+    const isVP: boolean = view.className === DViewPoint.cname;
+    const isV: boolean = !isVP;
 
-    return(<section className={'apply-to-tab'}>
-        {/* Name field - vertical layout */}
-        <div className="form-field">
-            <label className="form-label">Name</label>
-            <Input data={view} field={'name'} readOnly={readOnly} className="form-input" />
-        </div>
+    const handleExclusiveToggle = (checked: boolean) => {
+        if (!readOnly) view.isExclusiveView = checked;
+    };
 
-        {/* Is Exclusive - Toggle switch */}
-        <div className="form-field form-field--toggle">
-            <div className="toggle-content">
-                <span className="toggle-label">Is Exclusive</span>
-                <span className="toggle-description">This view is exclusive to its viewpoint</span>
+    const handleExclusiveRowClick = (e: React.MouseEvent) => {
+        // Avoid double-trigger when the click lands on the toggle button itself
+        if ((e.target as HTMLElement).closest('button[role="switch"]')) return;
+        if (!readOnly) view.isExclusiveView = !view.isExclusiveView;
+    };
+
+    return (
+        <section className={'properties-tab properties-panel'}>
+            {/* Name */}
+            <div className="jj-field">
+                <label className="jj-field-label">
+                    Name <span className="jj-field-required">*</span>
+                    <InfoTooltip text="Display name of this view" />
+                </label>
+                <Input data={view} field={'name'} readOnly={readOnly} />
             </div>
-            <button
-                type="button"
-                className={`apply-to-toggle ${view.isExclusiveView ? 'active' : ''}`}
-                onClick={() => { if (!readOnly) view.isExclusiveView = !view.isExclusiveView; }}
-                disabled={readOnly}
-            >
-                <span className="apply-to-toggle-thumb" />
-            </button>
-        </div>
 
-        {isV && <>
-            {/* Priority - vertical layout */}
-            <div className="form-field">
-                <label className="form-label">Priority</label>
-                <Input
-                    data={view}
-                    field={'explicitApplicationPriority'}
-                    type={'number'}
-                    readOnly={readOnly}
-                    className="form-input"
-                    getter={(data: LViewElement)=>{ let v = data.__raw.explicitApplicationPriority; return v === undefined ? v : ''+v; }}
-                    setter={(v)=>{ view.explicitApplicationPriority = (v ? +v as number : undefined as any); }}
-                    placeholder={'automatic: ' + view.explicitApplicationPriority}
-                    key={''+view.explicitApplicationPriority}
+            {/* Is Exclusive — inline toggle row matching PropertiesToggle pattern */}
+            <div className="jj-toggle-row" onClick={handleExclusiveRowClick}>
+                <span className="jj-toggle-row__label">
+                    Is Exclusive
+                    <InfoTooltip text="This view is exclusive to its viewpoint" />
+                </span>
+                <Toggle
+                    checked={view.isExclusiveView}
+                    onChange={handleExclusiveToggle}
+                    size="xs"
+                    disabled={readOnly}
                 />
             </div>
 
-            {/* Preferred appearance - vertical layout */}
-            <div className="form-field">
-                <label className="form-label">Preferred appearance</label>
-                <Select
-                    data={view}
-                    field={'forceNodeType'}
-                    readOnly={readOnly}
-                    className="form-select"
-                    options={
-                        <>
-                            <option value={'unset'} key={-1}>Select appearance...</option>
-                            <optgroup label={'Graph'} key={0}>{
-                                Object.keys(Graphs).map((key: string) => <option value={key} key={key}>{GraphElements[key].cname}</option>)
-                            }</optgroup>
-                            <optgroup label={'Edge'} key={1}>{
-                                Object.keys(Edges).map((key: string) => <option value={key} key={key}>{GraphElements[key].cname}</option>)
-                            }</optgroup>
-                            <optgroup label={'Field'} key={3}>{
-                                Object.keys(Fields).map((key: string) => <option value={key} key={key}>{GraphElements[key].cname}</option>)
-                            }</optgroup>
-                            <optgroup label={'Vertex'} key={2}>{
-                                Object.keys(Vertexes).map((key: string) => <option value={key} key={key}>{GraphElements[key].cname}</option>)
-                            }</optgroup>
-                        </>
-                    }
-                    setter={(val, data, key) => { view.forceNodeType = val === 'unset' ? undefined : val; }}
-                    getter={(data, key) => { return data[key] || 'unset'; }}
+            {isV && <>
+                {/* Priority */}
+                <div className="jj-field">
+                    <div className="jj-field-label">
+                        Priority
+                        <InfoTooltip text="Higher priority views are evaluated first; automatic if unset" />
+                    </div>
+                    <Input
+                        data={view}
+                        field={'explicitApplicationPriority'}
+                        type={'number'}
+                        readOnly={readOnly}
+                        getter={(data: LViewElement) => { let v = data.__raw.explicitApplicationPriority; return v === undefined ? v : ''+v; }}
+                        setter={(v) => { view.explicitApplicationPriority = (v ? +v as number : undefined as any); }}
+                        placeholder={'automatic: ' + view.explicitApplicationPriority}
+                        key={''+view.explicitApplicationPriority}
+                    />
+                </div>
+
+                {/* Preferred appearance */}
+                <div className="jj-field">
+                    <div className="jj-field-label">
+                        Preferred appearance
+                        <InfoTooltip text="Force rendering as a specific graph element type" />
+                    </div>
+                    <Select
+                        data={view}
+                        field={'forceNodeType'}
+                        readOnly={readOnly}
+                        options={
+                            <>
+                                <option value={'unset'} key={-1}>Select appearance...</option>
+                                <optgroup label={'Graph'} key={0}>{
+                                    Object.keys(Graphs).map((key: string) => <option value={key} key={key}>{GraphElements[key].cname}</option>)
+                                }</optgroup>
+                                <optgroup label={'Edge'} key={1}>{
+                                    Object.keys(Edges).map((key: string) => <option value={key} key={key}>{GraphElements[key].cname}</option>)
+                                }</optgroup>
+                                <optgroup label={'Field'} key={3}>{
+                                    Object.keys(Fields).map((key: string) => <option value={key} key={key}>{GraphElements[key].cname}</option>)
+                                }</optgroup>
+                                <optgroup label={'Vertex'} key={2}>{
+                                    Object.keys(Vertexes).map((key: string) => <option value={key} key={key}>{GraphElements[key].cname}</option>)
+                                }</optgroup>
+                            </>
+                        }
+                        setter={(val, data, key) => { view.forceNodeType = val === 'unset' ? undefined : val; }}
+                        getter={(data, key) => { return data[key] || 'unset'; }}
+                    />
+                </div>
+
+                {/* Applicable to */}
+                <div className="jj-field">
+                    <div className="jj-field-label">
+                        Applicable to
+                        <InfoTooltip text="Restrict this view to specific metamodel element types" />
+                    </div>
+                    <Select
+                        data={view}
+                        field={'appliableToClasses'}
+                        readOnly={readOnly}
+                        isMultiSelect={true}
+                        options={classesOptions as any}
+                    />
+                </div>
+
+                {/* Viewpoint */}
+                <div className="jj-field">
+                    <div className="jj-field-label">
+                        Viewpoint
+                        <InfoTooltip text="The viewpoint this view belongs to" />
+                    </div>
+                    <Select
+                        readOnly={readOnly}
+                        data={view}
+                        field={'father'}
+                        getter={() => vpid}
+                    >
+                        <option value="">Select viewpoint...</option>
+                        {...dallVP.map((viewpoint) => (
+                            <option key={viewpoint.id} value={viewpoint.id}>{viewpoint.name}</option>
+                        ))}
+                    </Select>
+                </div>
+
+                {/* Parent view */}
+                <div className="jj-field">
+                    <div className="jj-field-label">
+                        Parent view
+                        <InfoTooltip text="Inherit settings from a parent view" />
+                    </div>
+                    <Select
+                        readOnly={readOnly}
+                        data={view}
+                        field={'father'}
+                    >
+                        <option value="">None</option>
+                        {...view.allPossibleParentViews.filter(v => v.viewpoint?.id === vpid).map((view) => (
+                            <option key={view.id} value={view.id}>{view.name}</option>
+                        ))}
+                    </Select>
+                </div>
+
+                {/* OCL Editor */}
+                <OclEditor viewID={view.id} readOnly={readOnly} />
+
+                {/* JS Editor */}
+                <JsEditor
+                    data={view} field={'jsCondition'}
+                    placeHolder={'/* Last line must return a score (number) or boolean*/'}
                 />
-            </div>
-
-            {/* Applicable to - vertical layout */}
-            <div className="form-field">
-                <label className="form-label">Applicable to</label>
-                <Select
-                    data={view}
-                    field={'appliableToClasses'}
-                    readOnly={readOnly}
-                    isMultiSelect={true}
-                    options={classesOptions as any}
-                    className="form-select"
-                />
-            </div>
-
-            {/* Viewpoint - vertical layout */}
-            <div className="form-field">
-                <label className="form-label">Viewpoint</label>
-                <Select
-                    readOnly={readOnly}
-                    data={view}
-                    field={'father'}
-                    getter={()=> vpid}
-                    className="form-select"
-                >
-                    <option value="">Select viewpoint...</option>
-                    {...dallVP.map((viewpoint) => (
-                        <option key={viewpoint.id} value={viewpoint.id}>{viewpoint.name}</option>
-                    ))}
-                </Select>
-            </div>
-
-            {/* Parent view - vertical layout */}
-            <div className="form-field">
-                <label className="form-label">Parent view</label>
-                <Select
-                    readOnly={readOnly}
-                    data={view}
-                    field={'father'}
-                    className="form-select"
-                >
-                    <option value="">None</option>
-                    {...view.allPossibleParentViews.filter(v=>v.viewpoint?.id === vpid).map((view) => (
-                        <option key={view.id} value={view.id}>{view.name}</option>
-                    ))}
-                </Select>
-            </div>
-
-            {/* OCL Editor */}
-            <OclEditor viewID={view.id} readOnly={readOnly} />
-
-            {/* JS Editor */}
-            <JsEditor
-                data={view} field={'jsCondition'}
-                placeHolder={'/* Last line must return a score (number) or boolean*/'}
-            />
-        </>}
-    </section>);
+            </>}
+        </section>
+    );
 }
 
 interface OwnProps {

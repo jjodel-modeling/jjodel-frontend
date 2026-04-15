@@ -154,7 +154,10 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ view, readOnly, onViewU
                     options={{
                         ...withReadOnly(typescriptMonacoOptions, readOnly),
                         automaticLayout: true,
-                        lineNumbers: (lineNumber) => String(lineNumber),
+                        lineNumbers: (lineNumber: number) => {
+                        const adjusted = lineNumber - PREFIX_LINE_COUNT;
+                        return adjusted > 0 ? String(adjusted) : '';
+                    },
                     }}
                     onChange={handleChange}
                     onMount={handleEditorMount}

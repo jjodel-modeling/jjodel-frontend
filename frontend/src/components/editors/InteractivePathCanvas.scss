@@ -49,6 +49,11 @@
         &--dragging {
             filter: drop-shadow(0 0 3px rgba(14, 165, 233, 0.5));
         }
+
+        &--selected {
+            opacity: 1 !important;
+            filter: drop-shadow(0 0 3px rgba(14, 165, 233, 0.4));
+        }
     }
 
     &--handles-visible &__handle {
@@ -58,6 +63,11 @@
     // Endpoint handles (cyan)
     &__handle--endpoint {
         // Styled inline for dynamic sizing
+    }
+
+    // Endpoint handles — always visible
+    &__handle--endpoint {
+        opacity: 1 !important;
     }
 
     // Control point handles (amber)
@@ -72,7 +82,7 @@
 
 .path-context-menu {
     position: fixed;
-    z-index: 10001;  // Above modal (9999)
+    z-index: 999999;  // Above any overlay/modal (99999)
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
@@ -95,7 +105,7 @@
     &__backdrop {
         position: fixed;
         inset: 0;
-        z-index: 10000;
+        z-index: 999998;
     }
 
     &__item {

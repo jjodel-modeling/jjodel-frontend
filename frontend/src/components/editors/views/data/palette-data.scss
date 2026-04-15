@@ -279,9 +279,10 @@ $field-height: 28px;
 .style-tab {
   // Color picker root (individual color)
   .color-picker-root {
-    width: 24px !important;
-    height: 24px !important;
-    border-radius: 50% !important; // CERCHIO
+
+    width: 20px !important;
+    height: 20px !important;
+    border-radius: 50% !important;
     border: 2px solid rgba(255, 255, 255, 0.9) !important;
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1) !important;
     cursor: pointer !important;
@@ -325,6 +326,8 @@ $field-height: 28px;
         border: none !important;
         border-radius: 50% !important;
       }
+
+
     }
 
     // Popover/suggestions content - ensure visibility
@@ -341,9 +344,9 @@ $field-height: 28px;
 
   // Suggestion button colors
   .color-suggestion {
-    width: 24px !important;
-    height: 24px !important;
-    border-radius: 50% !important; // CERCHIO
+    width: 20px !important;
+    height: 20px !important;
+    border-radius: 50% !important;
     border: 2px solid rgba(255, 255, 255, 0.8) !important;
     padding: 0 !important;
     margin: 2px !important;
@@ -489,25 +492,13 @@ $field-height: 28px;
     .style-variables-section,
     .controls {
       overflow: visible !important;
-      .color-picker-root{
+      .color-picker-root {
+        // height: 200% and transform removed — caused oval swatches.
+        // The native <input type="color"> that needed these is gone (replaced
+        // by .jj-color-swatch + custom picker panel via createPortal).
         border: none !important;
         box-shadow: none !important;
-        height: 200% !important;
-        transform: translateY(-25%) !important;
-        input {
-          box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1) !important;
-          border: 2px solid white !important;
-          margin: auto !important;
-          min-width: 25px !important;
-          height: 25px !important;
-        }
-        .delete-color{
-          width: auto !important;
-        }
-        /*.content.suggestions{
-          max-height: 300px !important;
-          overflow-y: auto !important;
-        }*/
+          border: 1px solid #eee !important;
 
       }
     }
@@ -788,7 +779,7 @@ $field-height: 28px;
   &:hover:not(:disabled) {
     background: #e2e8f0;           // slate-200
     border-color: #94a3b8;         // slate-400
-    color: #0ea5e9;                // cyan on hover
+    color: #334155;                // slate-700 (was cyan — unified to slate baseline)
   }
 
   &:active:not(:disabled) {
@@ -797,8 +788,8 @@ $field-height: 28px;
 
   &:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.3);
-    border-color: #0ea5e9;
+    box-shadow: 0 0 0 2px rgba(51, 65, 85, 0.25);   // slate-700 focus ring
+    border-color: #475569;                          // slate-600
   }
 
   &:disabled {
@@ -1604,7 +1595,7 @@ $field-height: 28px;
     &:hover:not(:disabled) {
       background: #334155;         // slate-700
       border-color: #64748b;       // slate-500
-      color: #0ea5e9;              // cyan on hover
+      color: #e2e8f0;              // slate-200 (was cyan — unified to slate baseline)
     }
 
     &:active:not(:disabled) {
@@ -1612,8 +1603,8 @@ $field-height: 28px;
     }
 
     &:focus-visible {
-      box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.4);
-      border-color: #0ea5e9;
+      box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.35);   // slate-400 focus ring
+      border-color: #94a3b8;                             // slate-400
     }
   }
 

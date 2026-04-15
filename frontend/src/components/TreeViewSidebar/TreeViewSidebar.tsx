@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useResolution, Resolution } from '../../hooks/useResolution';
 import { TreeViewContent } from './TreeViewContent';
+import { JjodelEvents } from '../../events/registry';
 import './tree-view-sidebar.scss';
 
 /**
@@ -57,8 +58,8 @@ export const TreeViewSidebar: React.FC<TreeViewSidebarProps> = ({ className }) =
     // Listen for toggle events from navbar and keyboard shortcuts
     useEffect(() => {
         const handleToggleEvent = () => handleToggle();
-        window.addEventListener('jjodel:toggle-tree-view', handleToggleEvent);
-        return () => window.removeEventListener('jjodel:toggle-tree-view', handleToggleEvent);
+        window.addEventListener(JjodelEvents.TOGGLE_TREE_VIEW, handleToggleEvent);
+        return () => window.removeEventListener(JjodelEvents.TOGGLE_TREE_VIEW, handleToggleEvent);
     }, [handleToggle]);
 
     // Handle ESC key to close overlay (laptop mode)

@@ -17,11 +17,11 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { JjodelEvents } from '../events/registry';
 
 export type Theme = 'light' | 'dark';
 
 const STORAGE_KEY = 'theme';
-const EVENT_NAME = 'jjodel:theme-changed';
 
 function read(): Theme {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -32,7 +32,7 @@ function read(): Theme {
 function apply(theme: Theme): void {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem(STORAGE_KEY, theme);
-    window.dispatchEvent(new CustomEvent(EVENT_NAME, { detail: theme }));
+    window.dispatchEvent(new CustomEvent(JjodelEvents.THEME_CHANGED, { detail: theme }));
 }
 
 export const ThemeService = {
@@ -59,8 +59,8 @@ export function useTheme(): [Theme, (t: Theme) => void] {
         const handler = (e: Event) => {
             setLocal((e as CustomEvent).detail as Theme);
         };
-        window.addEventListener(EVENT_NAME, handler);
-        return () => window.removeEventListener(EVENT_NAME, handler);
+        window.addEventListener(JjodelEvents.THEME_CHANGED, handler);
+        return () => window.removeEventListener(JjodelEvents.THEME_CHANGED, handler);
     }, []);
 
     const setTheme = useCallback((t: Theme) => {

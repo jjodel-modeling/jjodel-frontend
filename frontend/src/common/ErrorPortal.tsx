@@ -119,7 +119,7 @@ interface ErrorDisplayProps {
     dataClassName?: string; // The className of the data object (e.g., "DAttribute")
 }
 
-export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
+export const ErrorDisplay = React.forwardRef<HTMLDivElement, ErrorDisplayProps>(({
     viewName,
     viewpointName,
     errorType,
@@ -129,7 +129,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
     nodename,
     onClick,
     dataClassName,
-}) => {
+}, ref) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     // Only show error badge in the editor (project page)
@@ -163,6 +163,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
         <>
             {/* Slick error badge on canvas */}
             <div
+                ref={ref}
                 className='error-badge-slick'
                 tabIndex={0}
                 onClick={handleBadgeClick}
@@ -198,6 +199,8 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
             />
         </>
     );
-};
+});
+
+ErrorDisplay.displayName = 'ErrorDisplay';
 
 export default ErrorPortal;

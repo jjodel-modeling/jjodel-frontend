@@ -54,7 +54,7 @@ function makeNumericInput(prefix: string, number: NumberControl,
     let roundedValue0 = Math.round(((number.value || 0) - (typeof step === "number" ? number.value % step : number.value % 0.1))*10000)/10000; // % works on decimals right.
     let roundedValue = typeof step === "number" ? Math.round(((number.value || 0)  * (1/step))) * step : Math.round(number.value*100)/100; // % works on decimals right.
     return <>
-        <input className={"value"} placeholder={"value"} type={"range"} disabled={readOnly}
+        <input  placeholder={"value"} type={"range"} disabled={readOnly}
             key={"s"+number.value} defaultValue={number.value}
             min={min}
             max={max}
@@ -383,6 +383,7 @@ function PaletteDataComponent(props: AllProps) {
                                                                         <h6 title={"Alter current color transparency"}>Opacity</h6>
 
                                                                         <input style={{width: "auto", marginLeft:"1em", marginRight:"1em"}}
+                                                                            className={"cpanel__hue"}
                                                                             type={"range"} min={0} max={1} step={"any"}
                                                                             value={color.getAlpha()}
                                                                             onChange={(e: any)=>{ transparencyColor(prefix, i, color, +e.target.value) }} />

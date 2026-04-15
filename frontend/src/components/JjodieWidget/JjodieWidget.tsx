@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, JSX } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { JjodieEvents } from '../../events/registry';
 import './jjodie-widget.scss';
 
 /**
@@ -158,9 +159,9 @@ export function JjodieWidget(): JSX.Element {
         const handleOpenEvent = () => {
             setIsOpen(true);
         };
-        window.addEventListener('jodie:open', handleOpenEvent);
+        window.addEventListener(JjodieEvents.OPEN, handleOpenEvent);
         return () => {
-            window.removeEventListener('jodie:open', handleOpenEvent);
+            window.removeEventListener(JjodieEvents.OPEN, handleOpenEvent);
         };
     }, []);
 

@@ -6,7 +6,7 @@
 import { useMemo } from 'react';
 
 const DOCS_BASE = 'https://raw.githubusercontent.com/jjodel-modeling/jjodel-docs/main';
-const WEB_BASE = 'https://github.com/jjodel-modeling/jjodel-docs/blob/main';
+const WEB_BASE = 'https://docs.jjodel.io';
 
 const HELP_MAP: Record<string, string> = {
     // Panels

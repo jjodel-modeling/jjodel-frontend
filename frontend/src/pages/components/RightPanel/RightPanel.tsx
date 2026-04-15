@@ -53,11 +53,11 @@ export function RightPanel(props: RightPanelProps): JSX.Element {
     });
 
     const handleUserManual = () => {
-        window.open('https://www.jjodel.io/user-manual/', '_blank');
+        window.open('https://docs.jjodel.io/user-guide/dashboard/', '_blank');
     };
 
     const handleOpenDocs = () => {
-        window.open('https://www.jjodel.io/documentation/', '_blank');
+        window.open('https://docs.jjodel.io', '_blank');
     };
 
     return (
@@ -92,7 +92,7 @@ export function RightPanel(props: RightPanelProps): JSX.Element {
                         <span className="overview-label">Favorites</span>
                     </div>
                     <div
-                        className="overview-cell"
+                        className="overview-cell overview-cell--highlight"
                         onClick={() => R.navigate('/allProjects?filter=recent', true)}
                         role="button"
                         tabIndex={0}

@@ -71,7 +71,7 @@ const StyleEditor: React.FC<StyleEditorProps> = ({ view, readOnly, onViewUpdate 
                 <Editor
                     className="monaco-editor-container"
                     value={css}
-                    language="css"
+                    language="less"
                     theme="vs"
                     options={{
                         ...withReadOnly(cssMonacoOptions, readOnly),
@@ -86,7 +86,7 @@ const StyleEditor: React.FC<StyleEditorProps> = ({ view, readOnly, onViewUpdate 
                 isOpen={fullscreen}
                 onClose={handleFullscreenClose}
                 title={`Style — ${view.name || 'View'}`}
-                language="css"
+                language="less"
                 value={css}
                 onChange={handleChange}
                 readOnly={readOnly}

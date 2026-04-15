@@ -13,6 +13,7 @@ import {
 } from '../sync/canvasToJjom';
 import type { ClassNodeData } from '../types';
 import { createAttribute, createOperation } from '../types';
+import { JjodelEvents } from '../../../events/registry';
 
 export type ClassNodeType = Node<ClassNodeData, 'classNode'>;
 
@@ -299,7 +300,7 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                                         onContextMenu={(e) => {
                                             e.preventDefault();
                                             e.stopPropagation();
-                                            window.dispatchEvent(new CustomEvent('jjodel:child-context-menu', {
+                                            window.dispatchEvent(new CustomEvent(JjodelEvents.CHILD_CONTEXT_MENU, {
                                                 detail: { childId: attr.id, childKind: 'attr', nodeId: id, x: e.clientX, y: e.clientY }
                                             }));
                                         }}>
@@ -376,7 +377,7 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                                     onContextMenu={(e) => {
                                         e.preventDefault();
                                         e.stopPropagation();
-                                        window.dispatchEvent(new CustomEvent('jjodel:child-context-menu', {
+                                        window.dispatchEvent(new CustomEvent(JjodelEvents.CHILD_CONTEXT_MENU, {
                                             detail: { childId: op.id, childKind: 'op', nodeId: id, x: e.clientX, y: e.clientY }
                                         }));
                                     }}>

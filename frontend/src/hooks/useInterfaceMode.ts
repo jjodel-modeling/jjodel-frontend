@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { U } from '../joiner';
+import { SystemEvents } from '../events/registry';
 
 export type InterfaceMode = 'basic' | 'advanced';
 
@@ -83,7 +84,7 @@ export function useInterfaceMode() {
         setInterfaceMode(newMode);
 
         // Dispatch custom event for other components to listen
-        window.dispatchEvent(new CustomEvent('interfaceModeChange', { detail: { mode: newMode } }));
+        window.dispatchEvent(new CustomEvent(SystemEvents.INTERFACE_MODE_CHANGE, { detail: { mode: newMode } }));
 
         return newMode;
     }, [mode]);
@@ -92,7 +93,7 @@ export function useInterfaceMode() {
     const updateMode = useCallback((newMode: InterfaceMode) => {
         setMode(newMode);
         setInterfaceMode(newMode);
-        window.dispatchEvent(new CustomEvent('interfaceModeChange', { detail: { mode: newMode } }));
+        window.dispatchEvent(new CustomEvent(SystemEvents.INTERFACE_MODE_CHANGE, { detail: { mode: newMode } }));
     }, []);
 
     return {

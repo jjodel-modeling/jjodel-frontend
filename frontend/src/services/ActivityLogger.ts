@@ -10,12 +10,13 @@
 
 import { ActivityRecord, ActivityInput } from '../types/activity';
 import { LocalStorageActivityStorage } from './storage/LocalStorageActivityStorage';
+import { JjodelEvents } from '../events/registry';
 
 // Configuration flag - change this when migrating to backend
 const USE_BACKEND = false;
 
-// Custom event name for activity updates
-export const ACTIVITY_LOGGED_EVENT = 'jjodel:activity-logged';
+// Re-export for backward compatibility
+export const ACTIVITY_LOGGED_EVENT = JjodelEvents.ACTIVITY_LOGGED;
 
 class ActivityLoggerService {
     // Using concrete type for sync operations; change to IActivityStorage when backend is added

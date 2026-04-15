@@ -1,57 +1,79 @@
 /**
- * Apply To Tab - Redesigned to match Properties
- * Using global CSS variables for consistency
+ * Apply To Tab — styled to match the Properties panel baseline.
+ *
+ * Baseline reference: info.scss + info-improvements.scss
+ * - Inputs:   28px height, 12px font, 1px #e2e8f0 border, 4px radius, 4px 8px padding
+ * - Labels:   13px, weight 400, color #64748b
+ * - Toggles:  36×20 .apply-to-toggle, solid #334155 active (NO gradient)
+ * - Fields:   flex column, 5px vertical padding, 4px gap
+ * - Toggle rows: flex row, label LEFT + toggle RIGHT, no card, no shadow
+ *
+ * Class names come from InfoData.tsx — we don't touch the TSX, only restyle.
  */
 
 // ============================================
-// MAIN CONTAINER
+// OUTER PADDING — match Properties' airy .props-section__body inset
+// ============================================
+// The Properties panel's airy look comes from `.props-section__body { padding: 4px 14px 12px }`
+// in info-improvements.scss:971. Each CollapsibleSection in Info.tsx adds a 14px horizontal
+// inset around its content. InfoData renders flat <section class="properties-tab properties-panel">
+// (no CollapsibleSections), so without this rule the content would touch the edges.
+//
+// Scoped to `.view-editor-tab-content > section.properties-tab.properties-panel` so it ONLY
+// affects InfoData (the other sub-tabs Template/Style/Events/Options render different root
+// elements — .template-tab, .style-tab, .events-tab, .options-tab — and have their own padding).
+//
+// Uses !important + higher specificity than `.properties-panel { padding: 0px !important }`
+// (info-improvements.scss:1207) so it wins the cascade.
+.view-editor-tab-content > section.properties-tab.properties-panel {
+  padding: 12px 0px !important;
+}
+
+// ============================================
+// MAIN CONTAINER — compact like Properties
 // ============================================
 .apply-to-tab {
   display: flex !important;
   flex-direction: column !important;
-  gap: 0 !important;
-  padding: var(--space-4, 16px) !important;
-  margin: var(--space-2, 8px) !important;
-  background-color: var(--color-bg-secondary, #f8fafc) !important;
-  font-family: var(--font-family, 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif) !important;
-  font-size: var(--text-sm, 13px) !important;
-  color: var(--color-text-primary, #0f172a) !important;
-  overflow-x: visible !important;  // Allow multi-select to expand horizontally
+  padding: 8px 12px !important;
+  margin: 0 !important;
+  background: var(--color-bg-primary, #ffffff) !important;
+  font-family: var(--font-sans, 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif) !important;
+  font-size: 13px !important;
+  color: var(--color-text-primary, #1e293b) !important;
+  overflow-x: visible !important;
   overflow-y: auto !important;
   height: 100% !important;
   box-sizing: border-box !important;
 
   // ============================================
-  // HEADER
-  // ============================================
-  .apply-to-header {
-    font-size: var(--text-xl, 18px) !important;
-    font-weight: 600 !important;
-    color: var(--color-text-primary, #0f172a) !important;
-    margin: 0 0 var(--space-4, 16px) 0 !important;
-    padding-bottom: var(--space-3, 12px) !important;
-    border-bottom: 1px solid var(--color-border-primary, #e2e8f0) !important;
-  }
-
-  // ============================================
-  // FORM FIELDS - Vertical Layout
+  // FORM FIELD — vertical stacked row (Properties baseline)
   // ============================================
   .form-field {
-    margin-bottom: var(--space-4, 16px) !important;
-    display: block !important;
-    overflow: visible !important;  // Allow multi-select tags to be visible
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 5px 0 !important;
+    margin: 0 !important;
+    gap: 4px !important;
+    border-bottom: none !important;
+    overflow: visible !important;
   }
 
   .form-label {
     display: block !important;
-    font-size: var(--text-sm, 13px) !important;
-    font-weight: 500 !important;
-    color: var(--color-text-secondary, #334155) !important;
-    margin-bottom: var(--space-2, 6px) !important;
+    font-family: var(--font-sans) !important;
+    font-size: 13px !important;
+    font-weight: 400 !important;
+    color: #64748b !important;        // slate-500 — matches Properties labels
+    margin: 0 !important;
+    flex-shrink: 0;
+    white-space: nowrap;
   }
 
   // ============================================
-  // INPUT & SELECT STYLES
+  // INPUTS, SELECTS, TEXTAREAS
+  // Matches info-improvements.scss input-container pattern
   // ============================================
   input,
   input[type="text"],
@@ -61,154 +83,134 @@
   .form-input,
   .form-select {
     width: 100% !important;
-    height: var(--input-height, 40px) !important;
-    padding: 8px 12px !important;
+    max-width: none !important;
+    height: 28px !important;
+    padding: 4px 8px !important;
     font-family: inherit !important;
-    font-size: var(--text-md, 14px) !important;
-    color: var(--color-text-primary, #0f172a) !important;
-    background: var(--color-bg-primary, #ffffff) !important;
-    border: 1px solid var(--color-border-primary, #e2e8f0) !important;
-    border-radius: var(--radius-md, 6px) !important;
-    transition: all 150ms ease !important;
+    font-size: 12px !important;
+    color: #1e293b !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 4px !important;
+    outline: none !important;
     box-sizing: border-box !important;
+    transition: border-color 150ms ease, box-shadow 150ms ease !important;
 
     &:focus {
-      outline: none !important;
-      border-color: var(--color-accent, #475569) !important;
-      box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.1) !important;
+      border-color: #334155 !important;
+      box-shadow: 0 0 0 2px rgba(51, 65, 85, 0.15) !important;
     }
 
     &::placeholder {
-      color: var(--color-text-tertiary, #9ca3af) !important;
+      color: #94a3b8 !important;      // slate-400
     }
 
     &:disabled,
     &[readonly] {
-      background: var(--color-bg-tertiary, #f1f5f9) !important;
-      color: var(--color-text-tertiary, #64748b) !important;
+      background: #f8fafc !important; // slate-50
+      color: #64748b !important;
       cursor: not-allowed !important;
     }
   }
 
-  // EXCEPTION: Multi-select .form-select wrapper - auto height
-  // The className ends up on the label.input-container wrapper
-  .form-select:has([class*="-control"]),
-  .form-select:has(.jjodel-select__control),
-  label.form-select,
-  .input-container.form-select {
-    height: auto !important;
-    min-height: 38px !important;
-    max-height: 60px !important;
-    padding: 0 !important;
-    border: none !important;
-    background: transparent !important;
-    overflow: visible !important;
-  }
-
+  // Native <select> dropdown arrow (slate, not cyan)
   select,
   .form-select {
     appearance: none !important;
     -webkit-appearance: none !important;
     -moz-appearance: none !important;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%2364748b' d='M4.5 5.5L8 9l3.5-3.5'/%3E%3C/svg%3E") !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M2 4l4 4 4-4'/%3E%3C/svg%3E") !important;
     background-repeat: no-repeat !important;
-    background-position: right 12px center !important;
-    padding-right: 36px !important;
+    background-position: right 8px center !important;
+    padding-right: 26px !important;
     cursor: pointer !important;
   }
 
-  // Input container (from Input component)
+  // Input component wrapper — keep it invisible
   .input-container {
     display: block !important;
     width: 100% !important;
     padding: 0 !important;
     margin: 0 !important;
     background: transparent !important;
-    overflow: visible !important;  // Allow multi-select to expand
+    overflow: visible !important;
+    border: none !important;
 
     input, select {
       width: 100% !important;
     }
-
-    // Reset height for react-select multi-select containers - auto with max
-    &:has([class*="-control"]) {
-      height: auto !important;
-      min-height: 38px !important;
-      max-height: 60px !important;
-    }
-
-    // Multi-select with form-select class - auto height
-    &.form-select:has([class*="-control"]),
-    &.form-select:has(.jjodel-select__control) {
-      height: auto !important;
-      min-height: 38px !important;
-      max-height: 60px !important;
-      padding: 0 !important;
-      border: none !important;
-      background: transparent !important;
-      overflow: visible !important;
-    }
   }
 
   // ============================================
-  // TOGGLE SWITCH - For Is Exclusive
+  // IS EXCLUSIVE — inline row, NO card
+  // Label LEFT + toggle RIGHT (matches Properties FLAGS rows)
   // ============================================
   .form-field--toggle {
-    display: flex !important;
+    flex-direction: row !important;
     align-items: center !important;
     justify-content: space-between !important;
-    padding: 12px 16px !important;
-    background: var(--color-bg-primary, #ffffff) !important;
-    border: 1px solid var(--color-border-primary, #e2e8f0) !important;
-    border-radius: var(--radius-md, 6px) !important;
-    margin-bottom: var(--space-4, 16px) !important;
-    transition: border-color 150ms ease !important;
+    padding: 5px 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    min-height: 28px !important;
+    gap: 8px !important;
 
-    // Hover changes only border, not background
     &:hover {
-      border-color: var(--form-input-border-color-hover, #cbd5e1) !important;
-      background: var(--color-bg-primary, #ffffff) !important;
+      background: transparent !important;
+      border: none !important;
     }
   }
 
   .toggle-content {
     display: flex !important;
     flex-direction: column !important;
-    gap: 2px !important;
+    flex: 1 1 auto !important;
+    gap: 0 !important;
   }
 
   .toggle-label {
-    font-size: var(--text-md, 14px) !important;
-    font-weight: 500 !important;
-    color: var(--color-text-primary, #0f172a) !important;
+    font-family: var(--font-sans) !important;
+    font-size: 13px !important;
+    font-weight: 400 !important;
+    color: #64748b !important;        // same as .form-label — uniform baseline
   }
 
+  // Description hidden — Properties FLAGS rows don't have subtitles
   .toggle-description {
-    font-size: var(--text-xs, 12px) !important;
-    color: var(--color-text-tertiary, #64748b) !important;
+    display: none !important;
   }
 }
 
-// Toggle Switch Button (outside container for specificity)
-.apply-to-toggle {
+// ============================================
+// TOGGLE SWITCH — aligned with .properties-toggle
+// 36×20, solid slate active (no gradient)
+// ============================================
+.apply-to-tab .apply-to-toggle {
   position: relative !important;
+  display: inline-block !important;
   width: 36px !important;
   height: 20px !important;
   flex-shrink: 0 !important;
   background: #cbd5e1 !important;
   border: none !important;
-  border-radius: 20px !important;
+  border-radius: 10px !important;
   cursor: pointer !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition: all 200ms ease !important;
   padding: 0 !important;
 
   &.active {
-    background: linear-gradient(135deg, #64748b 0%, #475569 100%) !important;
+    background: #334155 !important;   // solid slate-700, no gradient
+  }
+
+  &:hover:not(.active) {
+    background: #94a3b8 !important;
   }
 
   &:focus {
     outline: none !important;
-    box-shadow: 0 0 0 3px rgba(71, 85, 105, 0.1) !important;
+    box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.15) !important;
   }
 
   &:disabled {
@@ -217,7 +219,7 @@
   }
 }
 
-.apply-to-toggle-thumb {
+.apply-to-tab .apply-to-toggle-thumb {
   position: absolute !important;
   height: 16px !important;
   width: 16px !important;
@@ -225,202 +227,191 @@
   top: 2px !important;
   background: white !important;
   border-radius: 50% !important;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+  transition: transform 200ms ease !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15) !important;
 
-  .apply-to-toggle.active & {
+  .apply-to-tab .apply-to-toggle.active & {
     transform: translateX(16px) !important;
   }
 }
 
 // ============================================
-// COLLAPSIBLE SECTION HEADERS (OCL/JS)
+// OCL EDITOR / JS EDITOR — collapsible sections
+// Keep existing structure, align colors to baseline
 // ============================================
-.section-header--collapsible {
+.apply-to-tab .section-header--collapsible {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
   width: 100% !important;
-  padding: 12px 0 !important;
+  padding: 8px 0 !important;
   background: transparent !important;
   border: none !important;
-  border-bottom: 1px solid var(--color-border-primary, #e2e8f0) !important;
+  border-bottom: 1px solid #e2e8f0 !important;
   cursor: pointer !important;
-  margin-top: var(--space-4, 16px) !important;
+  margin-top: 12px !important;
   text-align: left !important;
 
   &:hover {
-    background: rgba(0, 0, 0, 0.02) !important;
+    background: transparent !important;
   }
 
-  &:focus {
-    outline: none !important;
-  }
+  &:focus { outline: none !important; }
 }
 
-.section-header__left {
+.apply-to-tab .section-header__left {
   display: flex !important;
   align-items: center !important;
-  gap: 8px !important;
+  gap: 6px !important;
 
   i {
     font-size: 12px !important;
-    color: var(--color-text-tertiary, #64748b) !important;
+    color: #94a3b8 !important;        // slate-400 — tertiary icon
     transition: transform 150ms ease !important;
   }
 }
 
-.section-header__right {
+.apply-to-tab .section-header__right {
   display: flex !important;
   align-items: center !important;
-  gap: 8px !important;
+  gap: 6px !important;
+
+  i {
+    font-size: 12px !important;
+    color: #94a3b8 !important;
+
+    &:hover {
+      color: #334155 !important;      // text-primary on hover
+    }
+  }
 }
 
-.section-title {
+.apply-to-tab .section-title {
   font-size: 11px !important;
   font-weight: 600 !important;
-  color: var(--color-text-tertiary, #64748b) !important;
+  color: #64748b !important;          // slate-500 — secondary
   text-transform: uppercase !important;
   letter-spacing: 0.5px !important;
   margin: 0 !important;
 }
 
 // ============================================
-// MONACO EDITOR WRAPPER
+// MONACO EDITOR WRAPPER (OCL / JS)
 // ============================================
-.monaco-editor-wrapper {
-  background: var(--color-bg-primary, #ffffff) !important;
-  border: 1px solid var(--color-border-primary, #e2e8f0) !important;
-  border-radius: var(--radius-md, 6px) !important;
+.apply-to-tab .monaco-editor-wrapper {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 4px !important;
   overflow: hidden !important;
+  margin-top: 4px !important;
 }
 
 // ============================================
-// APPLICABLE TO - Multi-select with auto height
+// APPLICABLE TO — react-select multi-select
+// Simplified, slate-only, no cyan borders
 // ============================================
-.form-field:has([class*="-control"]) {
-  // 1. Control container - auto height with max limit
+.apply-to-tab .form-field:has([class*="-control"]) {
   [class*="-control"] {
-    min-height: 38px !important;
+    min-height: 28px !important;
     height: auto !important;
-    max-height: 60px !important;
-    border: 0px solid var(--color-border-primary, #e2e8f0) !important;
-    border-radius: var(--radius-md, 6px) !important;
-    background: var(--color-bg-primary, #ffffff) !important;
+    max-height: 80px !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 4px !important;
+    background: #ffffff !important;
     cursor: pointer !important;
     overflow: visible !important;
     display: flex !important;
     flex-wrap: wrap !important;
     align-items: center !important;
+    box-shadow: none !important;
 
     &:hover {
-      border-color: transparent!important; // #cbd5e1 !important;
+      border-color: #cbd5e1 !important;
     }
   }
 
-  // Value container - Input LEFT, Tags RIGHT
+  [class*="-control--is-focused"] {
+    border-color: #334155 !important;
+    box-shadow: 0 0 0 2px rgba(51, 65, 85, 0.15) !important;
+  }
+
   [class*="-valueContainer"] {
     display: flex !important;
     flex-direction: row !important;
-    flex-wrap: nowrap !important;
+    flex-wrap: wrap !important;
     align-items: center !important;
-    gap: 0 !important;  // Gap managed by margin
-    padding: 4px 8px !important;
+    gap: 4px !important;
+    padding: 2px 6px !important;
     overflow: visible !important;
     flex: 1 1 0% !important;
   }
 
-  // 2. Filter input - grows to push tags right
   [class*="-Input"] {
     flex: 1 1 auto;
-    min-width: 50px;
+    min-width: 40px;
     margin: 0;
     padding: 0;
 
     input {
-      border: none;
-      outline: none;
-      box-shadow: none;
-      background: transparent;
-      padding: 0;
-      margin: 0;
-      font-size: 13px;
-      width: 100%;
+      border: none !important;
+      outline: none !important;
+      box-shadow: none !important;
+      background: transparent !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      font-size: 12px !important;
+      color: #1e293b !important;
+      width: 100% !important;
     }
   }
 
-  // FIRST tag - pushed to right with margin-left: auto
-  [class*="-multiValue"]:first-of-type {
-    margin-left: auto !important;
-  }
-
-  // ALL tags - styling and spacing
+  // Chips — slate-50 background, slate-700 text, minimal border
   [class*="-multiValue"] {
-    background: #f1f5f9 !important;
+    background: #f1f5f9 !important;   // slate-100
     border: 1px solid #e2e8f0 !important;
-    border-radius: 4px !important;
+    border-radius: 3px !important;
     flex-shrink: 0 !important;
-    margin: 0 0 0 4px !important;
-
-    
+    margin: 1px !important;
   }
 
-  .jjodel-select__input {    
-    width: max-content !important;
-    padding: 0!important;
-    margin-left: 6px !important;
-    height: 24px !important;
-    border: none!important;
-    outline: none!important;
-  }
-    
-  .jjodel-select__input:active, .jjodel-select__input:focus  {
-    border: none!important;
-    outline: none!important;
+  [class*="-multiValue__label"] {
+    color: #1e293b !important;         // slate-900 — matches input text
+    font-size: 11px !important;
+    font-weight: 400 !important;
+    padding: 1px 4px !important;
   }
 
+  [class*="-multiValue__remove"] {
+    color: #94a3b8 !important;         // slate-400
+    padding: 0 3px !important;
+    cursor: pointer !important;
+    border-radius: 0 3px 3px 0 !important;
 
+    &:hover {
+      background: #e2e8f0 !important;
+      color: #64748b !important;       // subtle, no red
+    }
 
+    svg {
+      width: 10px !important;
+      height: 10px !important;
+    }
+  }
 
-  // HIDE clear indicator (X button)
+  // Hide clear-all indicator (slate design doesn't need it)
   [class*="-clearIndicator"] {
     display: none !important;
   }
 
-  [class*="-multiValue__label"] {
-    color: #334155 !important;  // slate-700 — readable
-    font-size: 12px !important;
-    font-weight: 500 !important;
-    padding: 2px 6px !important;
-    padding-right: 4px !important;
-  }
-
-  [class*="-multiValue__remove"] {
-    color: #94a3b8 !important;  // slate-400
-    padding: 0 4px !important;
-    cursor: pointer !important;
-    border-radius: 0 4px 4px 0 !important;
-
-    &:hover {
-      background: #e2e8f0 !important;  // slate-200
-      color: #ef4444 !important;  // red on hover
-    }
-
-    svg {
-      width: 12px !important;
-      height: 12px !important;
-    }
-  }
-
-  // 3. Indicator icons - smaller, lighter
+  // Indicator container (caret dropdown)
   [class*="-indicatorContainer"],
   [class*="-IndicatorsContainer"] {
     padding: 0 4px !important;
     align-self: center !important;
 
     svg {
-      width: 14px !important;
-      height: 14px !important;
+      width: 12px !important;
+      height: 12px !important;
       color: #94a3b8 !important;
     }
 
@@ -429,87 +420,70 @@
     }
   }
 
-  [class*="-dropdownIndicator"] {
-    padding: 4px !important;
-  }
-
-  [class*="-clearIndicator"] {
-    padding: 4px !important;
-
-    &:hover svg {
-      color: #ef4444 !important;
-    }
-  }
-
-  // Hide separator
   [class*="-indicatorSeparator"] {
     display: none !important;
   }
 
-  // Placeholder
   [class*="-placeholder"] {
-    color: #9ca3af !important;
-    font-size: 13px !important;
+    color: #94a3b8 !important;
+    font-size: 12px !important;
   }
 }
 
-// 4. Dropdown menu - match Jjodel design system
-.form-field [class*="-menu"] {
+// Multi-select dropdown menu — slate palette
+.apply-to-tab .form-field [class*="-menu"] {
   z-index: 999 !important;
   border: 1px solid #e2e8f0 !important;
-  border-radius: 6px !important;
+  border-radius: 4px !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
-  background: var(--color-bg-primary, #ffffff) !important;
-  margin-top: 4px !important;
+  background: #ffffff !important;
+  margin-top: 2px !important;
   overflow: hidden !important;
 }
 
-// Option items
-.form-field [class*="-option"] {
-  padding: 8px 12px !important;
-  font-size: 13px !important;
-  color: #334155 !important;
+.apply-to-tab .form-field [class*="-option"] {
+  padding: 6px 8px !important;
+  font-size: 12px !important;
+  color: #1e293b !important;
   cursor: pointer !important;
   background: transparent !important;
 
   &:hover {
-    background: #f1f5f9 !important;  // slate-100
+    background: #f1f5f9 !important;
   }
 }
 
-// Focused option
-.form-field [class*="-option--is-focused"] {
-  background: #f1f5f9 !important;  // slate-100
+.apply-to-tab .form-field [class*="-option--is-focused"] {
+  background: #f1f5f9 !important;
 }
 
-// Selected/active option - subtle cyan
-.form-field [class*="-option--is-selected"] {
-  background: rgba(14, 165, 233, 0.08) !important;  // very subtle cyan
-  color: #0ea5e9 !important;
+// Selected option — subtle slate, no cyan
+.apply-to-tab .form-field [class*="-option--is-selected"] {
+  background: rgba(51, 65, 85, 0.08) !important;
+  color: #1e293b !important;
   font-weight: 500 !important;
 
   &:hover {
-    background: rgba(14, 165, 233, 0.12) !important;
+    background: rgba(51, 65, 85, 0.12) !important;
   }
 }
 
-// Group header ("APPLY TO")
-.form-field [class*="-group"] {
+.apply-to-tab .form-field [class*="-group"] {
   padding: 0 !important;
 }
 
-.form-field [class*="-groupHeading"] {
+.apply-to-tab .form-field [class*="-groupHeading"] {
   font-size: 10px !important;
-  font-weight: 700 !important;
+  font-weight: 600 !important;
   text-transform: uppercase !important;
-  letter-spacing: 0.05em !important;
+  letter-spacing: 0.5px !important;
   color: #94a3b8 !important;
-  padding: 8px 12px 4px !important;
+  padding: 6px 8px 2px !important;
   margin: 0 !important;
 }
 
 // ============================================
-// LEGACY SUPPORT
+// LEGACY SUPPORT — section.page-root (untouched, still used by some paths)
 // ============================================
 section.page-root {
   display: flex;
@@ -522,7 +496,7 @@ section.page-root {
     min-height: min-content;
     height: 32px;
     font-size: 1.1em !important;
-    color: var(--color);
+    color: var(--color-text-primary);
 
     & > span {
       margin: auto;
@@ -536,47 +510,78 @@ section.page-root {
 }
 
 // ============================================
-// DARK MODE SUPPORT
+// DARK MODE — minimal overrides, mirrors baseline
 // ============================================
-[data-theme="dark"] {
-  // Applicable to MultiSelect dark mode - SLATE
+[data-theme="dark"] .apply-to-tab {
+  background: #0f172a !important;
+  color: #e2e8f0 !important;
+
+  .form-label { color: #94a3b8 !important; }
+  .toggle-label { color: #94a3b8 !important; }
+
+  input, input[type="text"], input[type="number"], select, textarea,
+  .form-input, .form-select {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #e2e8f0 !important;
+
+    &:focus {
+      border-color: #64748b !important;
+      box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.25) !important;
+    }
+
+    &::placeholder { color: #64748b !important; }
+
+    &:disabled, &[readonly] {
+      background: #0f172a !important;
+      color: #64748b !important;
+    }
+  }
+
+  .section-header--collapsible {
+    border-bottom-color: #334155 !important;
+  }
+
+  .section-title { color: #94a3b8 !important; }
+  .section-header__left i,
+  .section-header__right i { color: #64748b !important; }
+
+  .monaco-editor-wrapper {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+  }
+
+  // Multi-select dark mode
   .form-field:has([class*="-control"]) {
     [class*="-control"] {
-      background: var(--color-bg-primary, #1e293b) !important;
-      border-color: var(--color-border-primary, #334155) !important;
+      background: #1e293b !important;
+      border-color: #334155 !important;
+
+      &:hover { border-color: #475569 !important; }
     }
 
-    // Light slate badges for dark mode
+    [class*="-control--is-focused"] {
+      border-color: #64748b !important;
+      box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.25) !important;
+    }
+
     [class*="-multiValue"] {
-      background: #334155 !important;  // slate-700 for dark mode
-      border: 1px solid #475569 !important;  // slate-600 border
+      background: #334155 !important;
+      border-color: #475569 !important;
     }
 
-    [class*="-multiValue__label"] {
-      color: #e2e8f0 !important;  // slate-200 — readable on dark
-    }
+    [class*="-multiValue__label"] { color: #e2e8f0 !important; }
 
     [class*="-multiValue__remove"] {
-      color: #94a3b8 !important;  // slate-400
-      border-radius: 0 4px 4px 0 !important;
+      color: #94a3b8 !important;
 
       &:hover {
-        background: #475569 !important;  // slate-600
-        color: #ef4444 !important;  // red on hover
+        background: #475569 !important;
+        color: #cbd5e1 !important;
       }
     }
 
-    [class*="-placeholder"] {
-      color: #64748b !important;
-    }
-
-    [class*="-indicatorContainer"] {
-      color: #64748b !important;
-
-      &:hover {
-        color: #94a3b8 !important;
-      }
-    }
+    [class*="-placeholder"] { color: #64748b !important; }
   }
 
   .form-field [class*="-menu"] {
@@ -587,180 +592,27 @@ section.page-root {
   .form-field [class*="-option"] {
     color: #e2e8f0 !important;
 
-    &:hover {
-      background: rgba(100, 116, 139, 0.2) !important;
-    }
+    &:hover { background: rgba(100, 116, 139, 0.2) !important; }
   }
 
   .form-field [class*="-option--is-selected"] {
-    background: #64748b !important;
-    color: #ffffff !important;
+    background: rgba(148, 163, 184, 0.15) !important;
+    color: #f1f5f9 !important;
   }
 
   .form-field [class*="-option--is-focused"] {
-    background: rgba(100, 116, 139, 0.2) !important;
-  }
-
-  .form-field [class*="-groupHeading"] {
-    color: #94a3b8 !important;
-  }
-
-  .apply-to-tab {
-    background-color: var(--color-bg-secondary, #1e293b) !important;
-    color: var(--color-text-primary, #e2e8f0) !important;
-
-    .apply-to-header {
-      color: var(--color-text-primary, #f1f5f9) !important;
-      border-bottom-color: var(--color-border-primary, #334155) !important;
-    }
-
-    .form-label {
-      color: var(--color-text-secondary, #e2e8f0) !important;
-    }
-
-    input,
-    select,
-    textarea,
-    .form-input,
-    .form-select {
-      background: var(--color-bg-primary, #1e293b) !important;
-      border-color: var(--color-border-primary, #334155) !important;
-      color: var(--color-text-primary, #f1f5f9) !important;
-
-      &:focus {
-        border-color: #64748b !important;
-        box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.2) !important;
-      }
-
-      &::placeholder {
-        color: #64748b !important;
-      }
-
-      &:disabled {
-        background: #334155 !important;
-        color: #64748b !important;
-      }
-    }
-
-    .form-field--toggle {
-      background: var(--color-bg-primary, #1e293b) !important;
-      border-color: var(--color-border-primary, #334155) !important;
-    }
-
-    .toggle-label {
-      color: var(--color-text-primary, #f1f5f9) !important;
-    }
-
-    .toggle-description {
-      color: #94a3b8 !important;
-    }
-
-    .section-header--collapsible {
-      border-bottom-color: var(--color-border-primary, #334155) !important;
-
-      &:hover {
-        background: rgba(255, 255, 255, 0.02) !important;
-      }
-    }
-
-    .section-header__left i {
-      color: #94a3b8 !important;
-    }
-
-    .section-title {
-      color: #9ca3af !important;
-    }
-
-    .monaco-editor-wrapper {
-      background: var(--color-bg-primary, #1e293b) !important;
-      border-color: var(--color-border-primary, #334155) !important;
-    }
+    background: rgba(100, 116, 139, 0.15) !important;
   }
 
   .apply-to-toggle {
-    background-color: #475569 !important;
+    background: #475569 !important;
 
     &.active {
       background: #94a3b8 !important;
 
-      .apply-to-toggle-thumb {
-        background: #1e293b !important;
-      }
+      .apply-to-toggle-thumb { background: #0f172a !important; }
     }
 
-    &:hover:not(.active) {
-      background-color: #64748b !important;
-    }
+    &:hover:not(.active) { background: #64748b !important; }
   }
-}
-
-html[data-theme="dark"] {
-  :root:not([data-theme="light"]) {
-    .apply-to-tab {
-      background-color: var(--color-bg-secondary, #1e293b) !important;
-      color: var(--color-text-primary, #e2e8f0) !important;
-    }
-
-    .apply-to-toggle {
-      background-color: #475569 !important;
-    }
-
-    // Applicable to MultiSelect dark mode
-    .form-field:has([class*="-control"]) {
-      [class*="-control"] {
-        background: #1e293b !important;
-        border-color: #334155 !important;
-      }
-
-      [class*="-multiValue"] {
-        background: #334155 !important;  // slate-700 for dark mode
-        border: 1px solid #475569 !important;  // slate-600 border
-      }
-
-      [class*="-multiValue__label"] {
-        color: #e2e8f0 !important;  // slate-200 — readable on dark
-      }
-
-      [class*="-multiValue__remove"] {
-        color: #94a3b8 !important;  // slate-400
-        border-radius: 0 4px 4px 0 !important;
-
-        &:hover {
-          background: #475569 !important;  // slate-600
-          color: #ef4444 !important;  // red on hover
-        }
-      }
-    }
-
-    .form-field [class*="-menu"] {
-      background: #1e293b !important;
-      border-color: #334155 !important;
-    }
-
-    .form-field [class*="-option"] {
-      color: #e2e8f0 !important;
-    }
-
-    .form-field [class*="-option--is-selected"] {
-      background: #64748b !important;
-      color: #ffffff !important;
-    }
-  }
-}
-
-// ============================================
-// GLOBAL OVERRIDE - Multi-select wrapper auto height
-// This rule has maximum specificity to override all other height rules
-// ============================================
-.apply-to-tab .form-field label.input-container.form-select,
-.apply-to-tab .form-field .input-container.form-select,
-label.input-container.form-select:has([class*="jjodel-select"]),
-label.input-container.form-select:has([class*="-control"]) {
-  height: auto !important;
-  min-height: 38px !important;
-  max-height: 60px !important;
-  padding: 0 !important;
-  border: none !important;
-  background: transparent !important;
-  overflow: visible !important;
 }

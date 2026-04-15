@@ -3,9 +3,11 @@ import {TabData} from 'rc-dock';
 import MetamodelTab from './MetamodelTab';
 import ModelTab from './ModelTab';
 import DocumentationTab from './DocumentationTab';
-import ViewpointWorkbench from '../../editors/ViewpointWorkbench';
+// Viewpoint editing is handled inline in the right-panel "Viewpoints" tab
+// (NestedView + ViewData) — no dedicated dock tab is created.
+// ViewpointEditorPanel files in src/components/panels/viewpoint-editor/ are
+// intentionally kept in the codebase (post-release cleanup).
 import { ConformanceIndicator } from '../../../model/conformance/ConformanceIndicator';
-import type {DViewPoint, LViewPoint} from '../../../joiner';
 import './tab-title.scss';
 
 // CSS-only approach: uses data attribute and ::before pseudo-element
@@ -31,16 +33,10 @@ class TabDataMaker {
         };
     }
 
-    static viewpoint(vp: DViewPoint|LViewPoint): TabData {
-        const tabId = `vp_${vp.id}`;
-        return {
-            id: tabId,
-            title: <div className="tab-title active-on-mouseenter" data-type="viewpoint">{vp.name || 'Viewpoint'}</div>,
-            group: 'models',
-            closable: true,
-            content: <ViewpointWorkbench viewpointId={vp.id} key={tabId} />
-        };
-    }
+    // NOTE: TabDataMaker.viewpoint() was removed — viewpoint editing lives in the
+    // right-panel "Viewpoints" tab (NestedView + ViewData sub-tabs). See
+    // DockManager.openViewpoint() which now activates that tab instead of creating
+    // a dedicated dock tab.
 
     static documentation(model?: DModel|LModel): TabData {
         const tabId = model ? `doc_${model.id}` : 'documentation';

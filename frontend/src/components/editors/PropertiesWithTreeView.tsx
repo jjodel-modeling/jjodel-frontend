@@ -1,14 +1,13 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Info } from './Info';
 import { NodeEditor } from './NodeEditor';
 import { TreeViewContent } from '../TreeViewSidebar/TreeViewContent';
 import { useTreeViewPanel } from '../../contexts/TreeViewPanelContext';
-import { LViewPoint, LPointerTargetable, Pointer } from '../../joiner';
-import ViewpointEditorPanel from '../panels/viewpoint-editor/ViewpointEditorPanel';
 import './properties-with-tree-view.scss';
 // Import tree view styles for icon colors and tree node styling
 import '../TreeViewSidebar/tree-view-sidebar.scss';
+import { JjodelEvents } from '../../events/registry';
 
 /**
  * PropertiesWithTreeView Component
@@ -34,51 +33,13 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     const advanced = useSelector((state: any) => state.advanced);
     const [nodeOpen, setNodeOpen] = useState(false);
 
-    // --- Viewpoint editor mode switching ---
-    const [sidebarMode, setSidebarMode] = useState<'normal' | 'viewpoint-editor'>('normal');
-    const [editingViewpoint, setEditingViewpoint] = useState<LViewPoint | null>(null);
-
-    const openViewpointEditor = useCallback((viewpoint: LViewPoint) => {
-        setEditingViewpoint(viewpoint);
-        setSidebarMode('viewpoint-editor');
-        // Notify toolbar about viewpoint editor state
-        window.dispatchEvent(new CustomEvent('jjodel:viewpoint-editor-state', {
-            detail: { active: true, viewpointName: viewpoint.name || 'Unnamed', viewpointType: (viewpoint as any).type || 'syntax' },
-        }));
-    }, []);
-
-    const closeViewpointEditor = useCallback(() => {
-        setSidebarMode('normal');
-        setEditingViewpoint(null);
-        window.dispatchEvent(new CustomEvent('jjodel:viewpoint-editor-state', {
-            detail: { active: false },
-        }));
-    }, []);
-
-    // Listen for external events to open viewpoint editor (e.g., from dashboard P7)
-    useEffect(() => {
-        const handler = (e: Event) => {
-            const { viewpointId } = (e as CustomEvent).detail || {};
-            if (!viewpointId) return;
-            try {
-                const lVP = LPointerTargetable.fromPointer(viewpointId as Pointer) as LViewPoint | undefined;
-                if (lVP && (lVP as any).className) {
-                    openViewpointEditor(lVP);
-                }
-            } catch {
-                console.warn('[PropertiesWithTreeView] Could not resolve viewpoint:', viewpointId);
-            }
-        };
-        window.addEventListener('jjodel:openViewpointEditor', handler);
-        return () => window.removeEventListener('jjodel:openViewpointEditor', handler);
-    }, [openViewpointEditor]);
-
-    // Listen for close viewpoint editor from toolbar back button
-    useEffect(() => {
-        const handler = () => closeViewpointEditor();
-        window.addEventListener('jjodel:closeViewpointEditor', handler);
-        return () => window.removeEventListener('jjodel:closeViewpointEditor', handler);
-    }, [closeViewpointEditor]);
+    // When a view/viewpoint is selected in the Tree View, Info.tsx renders ViewData
+    // (with Monaco editors for Template/Style) inside the fluid Properties column.
+    // The 260px Tree View would starve it of width, so we auto-collapse the tree
+    // while a view is selected. This override is transient: when _lastSelected.view
+    // becomes falsy again, the user's manual isTreeViewVisible preference is restored
+    // without being mutated.
+    const viewSelected = useSelector((state: any) => !!state._lastSelected?.view);
 
     // Get tree view state from context
     const {
@@ -88,14 +49,17 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
         isScriptExecuting,
     } = useTreeViewPanel();
 
+    // Effective visibility: the user's preference, suppressed while a view is selected
+    const effectiveTreeVisible = viewSelected ? false : isTreeViewVisible;
+
     // Listen for external toggle events (e.g., from keyboard shortcut)
     useEffect(() => {
         const handleExternalToggle = () => {
             toggleTreeView();
         };
-        window.addEventListener('jjodel:toggle-tree-view', handleExternalToggle);
+        window.addEventListener(JjodelEvents.TOGGLE_TREE_VIEW, handleExternalToggle);
         return () => {
-            window.removeEventListener('jjodel:toggle-tree-view', handleExternalToggle);
+            window.removeEventListener(JjodelEvents.TOGGLE_TREE_VIEW, handleExternalToggle);
         };
     }, [toggleTreeView]);
 
@@ -104,26 +68,22 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
         return <Info mode={mode} />;
     }
 
-    // --- Viewpoint editor mode ---
-    if (sidebarMode === 'viewpoint-editor' && editingViewpoint) {
-        return (
-            <ViewpointEditorPanel
-                viewpoint={editingViewpoint}
-                onClose={closeViewpointEditor}
-            />
-        );
-    }
-
     // Right panel visibility is controlled by CSS via body[data-editor-type].
     // Always render content so it's ready when the panel becomes visible.
 
     return (
         <div
             ref={containerRef}
-            className={`properties-with-tree-view ${isTreeViewVisible ? 'tree-visible' : 'tree-hidden'}`}
+            className={`properties-with-tree-view ${effectiveTreeVisible ? 'tree-visible' : 'tree-hidden'}${viewSelected ? ' tree-suppressed' : ''}`}
         >
-            {/* Properties Panel (Left) - FLUID */}
-            <div className="properties-panel-container">
+            {/* Properties Panel (Left) - FLUID.
+                When a view is selected, the tree is suppressed AND the 450px
+                max-width cap (from properties-with-tree-view.scss) is lifted so
+                ViewData's Monaco editors get the full right-panel width. */}
+            <div
+                className="properties-panel-container"
+                style={viewSelected ? { maxWidth: 'none' } : undefined}
+            >
                 <Info mode={mode} />
 
                 {/* NODE section — Expert mode only */}
@@ -147,36 +107,35 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                 )}
             </div>
 
-            {/* Tree View Panel (Right) - Expanded */}
-            {isTreeViewVisible ? (
-                <>
-                    {/* Tree View - FIXED WIDTH */}
-                    <div
-                        className={`tree-view-panel-container ${isHighlighted ? 'tree-view-panel-container--highlighted' : ''} ${isScriptExecuting ? 'tree-view-panel-container--executing' : ''}`}
-                        style={{ width: `${TREE_VIEW_WIDTH}px`, minWidth: `${TREE_VIEW_WIDTH}px`, maxWidth: `${TREE_VIEW_WIDTH}px` }}
-                    >
-                        <div className="tree-view-panel-header">
-                            <i className="bi bi-diagram-2" />
-                            <span>TREE VIEW</span>
-                            {isScriptExecuting && (
-                                <span className="tree-view-executing-badge">
-                                    <span className="pulse-dot" />
-                                    Executing
-                                </span>
-                            )}
-                            <button
-                                className="tree-view-toggle-btn"
-                                onClick={toggleTreeView}
-                                title="Collapse Tree View"
-                            >
-                                <i className="bi bi-chevron-right" />
-                            </button>
-                        </div>
-                        <div className="tree-view-panel-body">
-                            <TreeViewContent />
-                        </div>
+            {/* Tree View Panel: hidden entirely while a view/viewpoint is selected
+                so ViewData (Monaco editors) can use the full panel width. */}
+            {!viewSelected && (effectiveTreeVisible ? (
+                /* Tree View - FIXED WIDTH */
+                <div
+                    className={`tree-view-panel-container ${isHighlighted ? 'tree-view-panel-container--highlighted' : ''} ${isScriptExecuting ? 'tree-view-panel-container--executing' : ''}`}
+                    style={{ width: `${TREE_VIEW_WIDTH}px`, minWidth: `${TREE_VIEW_WIDTH}px`, maxWidth: `${TREE_VIEW_WIDTH}px` }}
+                >
+                    <div className="tree-view-panel-header">
+                        <i className="bi bi-diagram-2" />
+                        <span>TREE VIEW</span>
+                        {isScriptExecuting && (
+                            <span className="tree-view-executing-badge">
+                                <span className="pulse-dot" />
+                                Executing
+                            </span>
+                        )}
+                        <button
+                            className="tree-view-toggle-btn"
+                            onClick={toggleTreeView}
+                            title="Collapse Tree View"
+                        >
+                            <i className="bi bi-chevron-right" />
+                        </button>
                     </div>
-                </>
+                    <div className="tree-view-panel-body">
+                        <TreeViewContent />
+                    </div>
+                </div>
             ) : (
                 /* Tree View Panel - Collapsed */
                 <div
@@ -186,7 +145,7 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                 >
                     <i className="bi bi-chevron-left" />
                 </div>
-            )}
+            ))}
 
         </div>
     );

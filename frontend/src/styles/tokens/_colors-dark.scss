@@ -215,16 +215,4 @@
   --color-badge-obj-bg: rgba(16, 185, 129, 0.15);
   --color-badge-obj-text: #34d399;
 
-  /* ============================================
-     LEGACY COMPATIBILITY
-     Map old variable names to new tokens for dark mode
-     TODO: Remove after full migration
-     ============================================ */
-  --color: #7FA88A;                   /* Legacy: primary color (now accent) */
-  --accent: var(--color-accent);      /* Legacy: accent color */
-  --bg-1: var(--color-bg-secondary);  /* Legacy: main background */
-  --bg-2: var(--color-bg-tertiary);   /* Legacy: secondary bg */
-  --bg-3: var(--color-border-primary);/* Legacy: borders */
-  --danger: var(--color-error);       /* Legacy: error color */
-  --success: var(--color-success);    /* Legacy: success color */
 }

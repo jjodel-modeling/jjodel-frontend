@@ -20,6 +20,7 @@ import type {
 } from '../types/jjodieActions';
 import type { LProject, LClass, LPackage, LAttribute, LReference } from '../joiner';
 import { TRANSACTION } from '../redux/action/action';
+import { JjodieEvents } from '../events/registry';
 
 export class JjodieActionExecutor {
     /**
@@ -119,7 +120,7 @@ export class JjodieActionExecutor {
                     }
 
                     // Dispatch event to notify UI
-                    window.dispatchEvent(new CustomEvent('jjodie:metamodel-updated', {
+                    window.dispatchEvent(new CustomEvent(JjodieEvents.METAMODEL_UPDATED, {
                         detail: { projectId: project.id, action, elementId: newClass.id }
                     }));
 
@@ -152,7 +153,7 @@ export class JjodieActionExecutor {
                     targetClass.delete();
 
                     // Dispatch event
-                    window.dispatchEvent(new CustomEvent('jjodie:metamodel-updated', {
+                    window.dispatchEvent(new CustomEvent(JjodieEvents.METAMODEL_UPDATED, {
                         detail: { projectId: project.id, action }
                     }));
 
@@ -197,7 +198,7 @@ export class JjodieActionExecutor {
                     }
 
                     // Dispatch event
-                    window.dispatchEvent(new CustomEvent('jjodie:metamodel-updated', {
+                    window.dispatchEvent(new CustomEvent(JjodieEvents.METAMODEL_UPDATED, {
                         detail: { projectId: project.id, action, elementId: newAttr.id }
                     }));
 
@@ -239,7 +240,7 @@ export class JjodieActionExecutor {
                     attr.delete();
 
                     // Dispatch event
-                    window.dispatchEvent(new CustomEvent('jjodie:metamodel-updated', {
+                    window.dispatchEvent(new CustomEvent(JjodieEvents.METAMODEL_UPDATED, {
                         detail: { projectId: project.id, action }
                     }));
 
@@ -295,7 +296,7 @@ export class JjodieActionExecutor {
                     }
 
                     // Dispatch event
-                    window.dispatchEvent(new CustomEvent('jjodie:metamodel-updated', {
+                    window.dispatchEvent(new CustomEvent(JjodieEvents.METAMODEL_UPDATED, {
                         detail: { projectId: project.id, action, elementId: newRef.id }
                     }));
 
@@ -337,7 +338,7 @@ export class JjodieActionExecutor {
                     ref.delete();
 
                     // Dispatch event
-                    window.dispatchEvent(new CustomEvent('jjodie:metamodel-updated', {
+                    window.dispatchEvent(new CustomEvent(JjodieEvents.METAMODEL_UPDATED, {
                         detail: { projectId: project.id, action }
                     }));
 
@@ -371,7 +372,7 @@ export class JjodieActionExecutor {
                     console.log('Adding constraint:', action.data.constraint);
 
                     // Dispatch event
-                    window.dispatchEvent(new CustomEvent('jjodie:metamodel-updated', {
+                    window.dispatchEvent(new CustomEvent(JjodieEvents.METAMODEL_UPDATED, {
                         detail: { projectId: project.id, action }
                     }));
 
@@ -426,7 +427,7 @@ export class JjodieActionExecutor {
                     }
 
                     // Dispatch event
-                    window.dispatchEvent(new CustomEvent('jjodie:metamodel-updated', {
+                    window.dispatchEvent(new CustomEvent(JjodieEvents.METAMODEL_UPDATED, {
                         detail: { projectId: project.id, action, elementId: attr.id }
                     }));
 
@@ -487,7 +488,7 @@ export class JjodieActionExecutor {
                     }
 
                     // Dispatch event
-                    window.dispatchEvent(new CustomEvent('jjodie:metamodel-updated', {
+                    window.dispatchEvent(new CustomEvent(JjodieEvents.METAMODEL_UPDATED, {
                         detail: { projectId: project.id, action, elementId: ref.id }
                     }));
 
@@ -532,7 +533,7 @@ export class JjodieActionExecutor {
                     (targetClass as any).extends = [superClass.id];
 
                     // Dispatch event
-                    window.dispatchEvent(new CustomEvent('jjodie:metamodel-updated', {
+                    window.dispatchEvent(new CustomEvent(JjodieEvents.METAMODEL_UPDATED, {
                         detail: { projectId: project.id, action, elementId: targetClass.id }
                     }));
 
@@ -565,7 +566,7 @@ export class JjodieActionExecutor {
                     (targetClass as any).extends = [];
 
                     // Dispatch event
-                    window.dispatchEvent(new CustomEvent('jjodie:metamodel-updated', {
+                    window.dispatchEvent(new CustomEvent(JjodieEvents.METAMODEL_UPDATED, {
                         detail: { projectId: project.id, action, elementId: targetClass.id }
                     }));
 

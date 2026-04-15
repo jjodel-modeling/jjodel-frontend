@@ -2,7 +2,6 @@ import type {FakeStateProps} from '../../../joiner';
 import {DUser, LUser, DState, LProject, windoww} from '../../../joiner';
 import React, {Dispatch, ReactElement, ReactNode} from 'react';
 import {connect} from 'react-redux';
-import {LeftBar} from '../../../pages/components';
 import ProjectEditor from '../../project/ProjectEditor';
 
 function InfoTabComponent(props: AllProps) {
@@ -11,11 +10,8 @@ function InfoTabComponent(props: AllProps) {
     windoww.project = project;
 
     return (
-        <div className="dashboard-container project-summary" tabIndex={-1}>
-            <LeftBar active={'Project'} project={project} />
-            <div className="project-editor-container">
-                <ProjectEditor project={project} />
-            </div>
+        <div className="project-editor-container" tabIndex={-1}>
+            <ProjectEditor project={project} />
         </div>
     );
 }

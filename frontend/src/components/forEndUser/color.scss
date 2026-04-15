@@ -11,7 +11,7 @@
   margin-bottom: 0.3em;
 
   input, select, button {
-    border-radius: var(--radius);
+    border-radius: var(--radius-sm);
     padding-left: 10px;
     border: 1px solid var(--palette-g);
     & :invalid {
@@ -55,12 +55,14 @@
     cursor: not-allowed !important;
   }
   .add-palette-item, .palette-row .color-picker-root{
+    top: 0px;
+
     &:hover::after {
       width: max-content;
       text-shadow: var(--text-shadow-e);
       position: absolute;
-      content: '⚠️This view is read only⚠️';
-      top: -1.25lh;
+      content: '';
+
       left: 0;
       display: inline-block;
       font-size: 1.25em;
@@ -79,7 +81,8 @@
 
   .color-container{
     outline: 1px solid var(--palette-g);
-    border-radius: var(--radius);
+    border-radius: var(--radius-sm);
+
   }
   .color-container, .suggestion-container, .value.hoverable, .value.hoverable>div{
     // background: white;
@@ -126,12 +129,12 @@
     width: 24px;
   }
   div.controls div.palette-row-container div.palette-row.path select {
-    border-radius: var(--radius);
+    border-radius: var(--radius-sm);
   }
 
   input:focus, select:focus {
-    outline-color: var(--accent);
-    border-radius: var(--radius);
+    outline-color: var(--color-accent);
+    border-radius: var(--radius-sm);
     height: var(--input-height);
     padding-left: 10px;
     padding-right: 10px;
@@ -139,7 +142,7 @@
   }
 
   textarea:focus {
-    outline-color: var(--accent);
+    outline-color: var(--color-accent);
   }
 
 
@@ -151,7 +154,7 @@
     padding: 2px 10px;
     height: var(--input-height);
     margin-left: 24px;
-    border-radius: var(--radius);
+    border-radius: var(--radius-sm);
     margin-bottom: 10px;
   }
 
@@ -160,7 +163,7 @@
   }
   // color
   button.btn-success.my-btn.btn-color {
-    background-color: var(--accent);
+    background-color: var(--color-accent);
     margin: 10px 0 20px 0;
     border-radius: 0;
     border-left: 1px solid white;
@@ -171,7 +174,7 @@
   }
   // number
   button.btn-success.my-btn.btn-number {
-    background-color: var(--accent);
+    background-color: var(--color-accent);
     margin: 10px 0 20px 0;
     border-radius: 0;
     border-left: 1px solid white;
@@ -181,7 +184,7 @@
   }
   // textual
   button.btn-success.my-btn.btn-textual {
-    background-color: var(--accent);
+    background-color: var(--color-accent);
     margin: 10px 0 20px 0;
     border-radius: 0;
     border-left: 1px solid white;
@@ -191,11 +194,11 @@
   }
   // path
   button.btn-success.my-btn.btn-path {
-    background-color: var(--accent);
+    background-color: var(--color-accent);
     margin: 10px 0 20px 0;
     border-radius: 0;
-    border-top-right-radius: var(--radius);
-    border-bottom-right-radius: var(--radius);
+    border-top-right-radius: var(--radius-sm);
+    border-bottom-right-radius: var(--radius-sm);
     border-left: 1px solid white;
   }
   button.btn-success.my-btn.btn-path::before {
@@ -216,7 +219,7 @@
 
   button.btn-success.my-btn:hover {
     cursor: pointer;
-    background-color: var(--success);
+    background-color: var(--color-success);
   }
 
   div.controls div.palette-row-container div.palette-row.path div.value.hoverable input.value{
@@ -224,7 +227,7 @@
     top: -10px!important;
     padding-top: 0!important;
     height: var(--input-height);
-    border-radius: var(--radius);
+    border-radius: var(--radius-sm);
   }
 
   div.controls div.palette-row-container div.palette-row.path div.value.hoverable div.content {
@@ -236,7 +239,7 @@
 
 
     & input {
-      border-radius: var(--radius);
+      border-radius: var(--radius-sm);
     }
   }
 
@@ -258,8 +261,9 @@
 
 
     & .suggestions {
-      border-radius: var(--radius);
-      background-color: var(--color)!important;
+      display: none;  // hidden by default — shown via .pinned .content.suggestions { display: flex }
+      border-radius: var(--radius-sm);
+      background-color: var(--color-accent)!important;
       .suggestcontent{
         max-height: 30vh;
         overflow-y: auto;
@@ -291,20 +295,17 @@
     }
 
     & button.btn.color-suggestion {
-        border-radius: var(--input-height)!important;
-        border: none!important;
-        padding: 0!important;
-        margin: 0 4px!important;
-
-        height: var(--input-height);
-        width: var(--input-height);
-
+        width: 22px !important;
+        height: 22px !important;
+        border-radius: 50% !important;
+        flex-shrink: 0;
+        border: none !important;
+        padding: 0 !important;
+        margin: 0 4px !important;
         -webkit-appearance: none;
         -moz-appearance: none;
         appearance: none;
         background-color: transparent;
-        
-        border: none;
         cursor: pointer;
     } 
       
@@ -328,10 +329,12 @@
       height: var(--input-height);
       background-color: transparent; // var(--color-bg-secondary, white);
       padding: 0!important;
-      margin: 0!important;
+      margin: 0;
       height: var(--input-height);
       width: var(--input-height);
       border-radius: var(--input-height)!important;
+
+
 
       // & input.my-auto.input {
       //   border-radius: var(--input-height)!important;
@@ -380,12 +383,13 @@
 
   & .prefix {
     height: var(--input-height);
-    border-radius: var(--radius);
+    border-radius: var(--radius-sm);
   }
 
   
 
     & .my-auto {
+
       background-color: blue;
     } 
 
@@ -417,53 +421,43 @@
       width: auto;
     }
   }
-  .hoverable:hover, .hoverable:focus-within, .hoverable:active, .hoverable.pinned{
-    .content.suggestions{
-      display:flex;
+  // Suggestions panel: ONLY visible when the container has .pinned class (click-toggled in Color.tsx).
+  // Removed :hover, :focus-within, :active — prevents accidental popup on hover and
+  // overlap with the native color picker. The user clicks the color circle area
+  // to pin the suggestions open, clicks outside to close.
+  .pinned {
+
+    .content.suggestions {
+      display: flex;
       flex-flow: column;
       position: absolute;
       z-index: 99999;
-      h6{
-        display:flex;
+      h6 {
+        display: flex;
         margin-bottom: 0.5rem;
         margin-left: 1em;
-        // margin-left: 1rem;
-        &>.command-bar{
+        & > .command-bar {
           margin: auto 0;
           margin-left: 4px;
-          .tab-btn.add{
-            &::before{
-              font-size: 1em;
-            }
-            &:hover::before{
-              color: var(--color-text-primary, black);
-            }
+          .tab-btn.add {
+            &::before { font-size: 1em; }
+            &:hover::before { color: var(--color-text-primary, black); }
           }
         }
-        &>span{
+        & > span {
           margin: auto 0;
         }
       }
     }
-  }
-  .color-picker-root {
-    border-radius: 0.4em;
-  }
-  .color-picker-root.hoverable>input:focus + .content.suggestions {
-    // display: none !important;
+
+    // When the panel is open, the swatch needs overflow visible for the absolute popup
+    // but NO oval border/outline (the open panel is the visual indicator).
+    overflow: visible;
+    z-index: 1;
   }
 
-  .controls:not(:focus-within) .color-picker-root:hover, .color-picker-root:focus-within{
-    // padding: 5px !important;
-    background: var(--color-bg-tertiary, #dedede);
-    outline: 1px solid var(--palette-g);
-    border-radius: 20%;
-    overflow: visible;
-    // height: 200%;
-    z-index:1; // otherwise when hovering the overflow delete button on bottom, it counts as if i'm hovering next line and button disappears. weird bug
-  }
-  .controls:focus-within .content.suggestions:not(:focus-within){
-    display: none !important;
+  .color-picker-root {
+    border-radius: 0.4em;
   }
 
   .suggestions{
@@ -478,6 +472,51 @@
       cursor: pointer;
       &:hover, &:focus-within{
         font-weight: var(--font-bold);
+      }
+    }
+
+    // Opacity slider — matches hue slider (legacy path)
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 10px;
+      border-radius: 5px;
+      background: linear-gradient(to right, transparent, currentColor);
+      outline: none;
+      cursor: pointer;
+      margin: 4px 0;
+
+      &::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #fff;
+        border: 2px solid rgba(0, 0, 0, 0.2);
+        cursor: pointer;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+      }
+
+      &::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #fff;
+        border: 2px solid rgba(0, 0, 0, 0.2);
+        cursor: pointer;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+      }
+
+      &::-webkit-slider-runnable-track {
+        height: 10px;
+        border-radius: 5px;
+      }
+
+      &::-moz-range-track {
+        height: 10px;
+        border-radius: 5px;
+        background: linear-gradient(to right, transparent, currentColor);
       }
     }
 
@@ -642,14 +681,14 @@
       font-size: 1em;
       margin: auto;
       padding: 0.4em 0.8em;
-      background-color: var(--color);
+      background-color: var(--color-accent);
       border: none;
 
       &:first-of-type{
         margin-left: -0.5em;
       }
       &:hover{
-        background-color: var(--color);
+        background-color: var(--color-accent);
       }
       >span, >.bi{
         margin: auto;
@@ -692,8 +731,8 @@
       }
 
     > .btn-path {
-        border-bottom-right-radius: var(--radius)!important;
-        border-top-right-radius: var(--radius)!important;
+        border-bottom-right-radius: var(--radius-sm)!important;
+        border-top-right-radius: var(--radius-sm)!important;
 
        }
   }
@@ -706,6 +745,310 @@
       >button>.preview{
         display: none;
       }
+    }
+  }
+}
+
+// ============================================
+// UNIFIED COLOR PICKER — portal-rendered at document.body
+// Uses .cpanel namespace (unique, avoids specificity wars with
+// palette-data.scss's .content.suggestions rules).
+// ============================================
+
+// Swatch circle (inline, replaces native <input type="color">)
+.jj-color-swatch {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+// ── Panel (rendered via createPortal in <body>) ─────────────
+.cpanel {
+  position: fixed;
+  z-index: 100000;
+  width: 260px;
+  background: #1e293b;
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  // Kill ALL inherited positioning on the suggestions content.
+  // palette-data.scss:333 forces `position: absolute !important` on
+  // .content.suggestions — we need higher specificity to override.
+  // Triple-class .cpanel .content.suggestions.suggestions = (0,4,0) beats (0,2,0).
+  .content.suggestions.suggestions,
+  .content.suggestions {
+    display: flex !important;
+    flex-flow: column !important;
+    position: static !important;
+    transform: none !important;
+    width: auto !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    z-index: auto !important;
+  }
+
+  &__divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 4px 0;
+  }
+
+  // SV canvas
+  &__sv {
+    position: relative;
+    width: 100%;
+    height: 140px;
+    border-radius: 6px;
+    cursor: crosshair;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  &__sv-dark {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, transparent, #000);
+    border-radius: 6px;
+    pointer-events: none;
+  }
+
+  &__sv-cursor {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  // Hue slider
+  &__hue {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 10px;
+    border-radius: 5px;
+    background: linear-gradient(to right,
+      #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
+    outline: none;
+    cursor: pointer;
+
+    &::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #fff;
+      border: 2px solid rgba(0, 0, 0, 0.2);
+      cursor: pointer;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    &::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #fff;
+      border: 2px solid rgba(0, 0, 0, 0.2);
+      cursor: pointer;
+    }
+  }
+
+  // HEX + RGB inputs
+  &__inputs {
+    display: flex;
+    gap: 6px;
+  }
+
+  &__input-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    flex: 1 1 auto;
+    min-width: 0;
+
+    input {
+      width: 100%;
+      min-width: 52px;
+      height: 28px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+      color: #fff;
+      text-align: left;
+      padding: 4px 18px 4px 6px;
+      font-size: 11px;
+      font-family: monospace;
+      outline: none;
+      box-sizing: border-box;
+
+      &:focus {
+        border-color: rgba(255, 255, 255, 0.4);
+      }
+    }
+
+    span {
+      font-size: 9px;
+      color: rgba(255, 255, 255, 0.5);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    &--hex input {
+      width: 70px;
+    }
+  }
+
+  // Opacity range slider — matches hue slider thumb/track dimensions
+  .suggestcontent input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 236px!important;
+
+    border-radius: 5px;
+    // background: linear-gradient(to right, transparent, currentColor);
+    outline: none;
+    cursor: pointer;
+    margin: 4px 0px!important;
+    background-image: linear-gradient(90deg, rgb(14, 165, 233) 0%, rgb(203, 213, 225) 100%);
+    height: 6px;
+    
+
+    &::-webkit-slider-thumb {
+      margin-top: -2px;
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #fff;
+
+      background: #334155;
+      border: 2px solid #ffffff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    &::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #fff;
+      border: 2px solid rgba(0, 0, 0, 0.2);
+      cursor: pointer;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    &::-webkit-slider-runnable-track {
+      height: 10px;
+      border-radius: 5px;
+    }
+
+    &::-moz-range-track {
+      height: 10px;
+      border-radius: 5px;
+      background: linear-gradient(to right, transparent, currentColor);
+    }
+  }
+
+  // Suggestion circles — forced perfect circle via every dimension lock available
+  .btn.color-suggestion,
+  button.btn.color-suggestion,
+  .roww > .btn.color-suggestion {
+    width: 22px !important;
+    height: 22px !important;
+    min-width: 22px !important;
+    min-height: 22px !important;
+    max-width: 22px !important;
+    max-height: 22px !important;
+    border-radius: 50% !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    flex-shrink: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    padding: 0 !important;
+    margin: 2px !important;
+    cursor: pointer !important;
+    transition: transform 0.1s !important;
+    line-height: 1 !important;
+    font-size: 0 !important;  // kill any text baseline offset
+
+    &:hover {
+      transform: scale(1.15) !important;
+      border-color: rgba(255, 255, 255, 0.5) !important;
+    }
+
+    i.bi {
+      font-size: 10px !important;
+      line-height: 1 !important;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    &:hover i.bi {
+      opacity: 1;
+    }
+  }
+
+  // Section headers inside suggestions
+  .suggestcontent h6 {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 8px 0 4px;
+    font-weight: 500;
+  }
+
+  // Row of suggestion colors
+  .roww {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    margin-bottom: 4px !important;
+  }
+
+  // Delete button
+  .jj-delete,
+  .delete-color {
+    width: 100% !important;
+    padding: 8px !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 6px !important;
+    color: rgba(255, 255, 255, 0.7) !important;
+    font-size: 12px !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    margin-top: 4px !important;
+
+    &:hover {
+      background: rgba(239, 68, 68, 0.15) !important;
+      border-color: rgba(239, 68, 68, 0.3) !important;
+      color: #fca5a5 !important;
     }
   }
 }

@@ -196,6 +196,62 @@ $error: #ef4444;      // Rosso
 
 ---
 
+## 🎨 Styling — Stato Token System (aggiornato 2026-04-06)
+
+### Single Source of Truth
+
+Il design system ha un unico layer di token, senza bridge opachi o override nascosti:
+
+| File | Ruolo |
+|------|-------|
+| `styles/tokens/_colors-light.scss` | Token semantici per light mode |
+| `styles/tokens/_colors-dark.scss` | Token semantici per dark mode |
+| `styles/variables.scss` | Variabili attivamente usate (115 righe) |
+| `styles/tokens/index.scss` | Entry point pulito |
+
+### Token Legacy — ELIMINATI (non reintrodurre)
+
+I seguenti token sono stati rimossi nella sessione 2026-04-06. Non usarli mai:
+
+```scss
+// ❌ ELIMINATI — non usare
+--accent           → usare --color-accent
+--bg-1             → usare il token semantico corretto
+--bg-2, --bg-3, --bg-4, --bg-5
+--secondary
+--terziary         // sic — anche il typo è eliminato
+--radius
+--color            // ambiguo — usare --color-text-primary o --color-accent
+```
+
+### Regole per nuovi token
+
+- Prima di aggiungere una nuova variabile CSS, verificare che non esista già con `grep -r`
+- Aggiungere sempre in `_colors-light.scss` + `_colors-dark.scss` (entrambi)
+- Non creare variabili in singoli file di componente — tutto in `tokens/`
+- Le collisioni di nomi CSS non generano errori di compilazione: si manifestano come bug visivi silenziosi
+
+---
+
+## 🗑 Componenti Rimossi (non reintrodurre)
+
+### Editor V3 — rimosso 2026-04-06
+
+23 file rimossi da `panels/viewpoint-editor/`. 5 file esterni aggiornati.
+
+**Perché rimosso:** Sostituito dall'approccio ViewpointWorkbench (editor classic). Il flusso attuale è:
+```
+DockManager.openViewpoint() → TabDataMaker → ViewpointWorkbench
+```
+
+**4 custom events eliminati** (non reintrodurre senza discussione):
+- `jjodel:viewCreated`
+- 3 eventi interni a V3 (vedi git log 2026-04-06)
+
+**3 TODO lasciati come bookmark** per futura sidebar approach — cercare `// TODO: sidebar` nel codebase.
+
+---
+
 ## 📁 Struttura Progetto
 
 ```
@@ -306,6 +362,22 @@ TRANSACTION('Description', () => {
 ### Data vs Logic Layer
 - **D*** (DModel, DObject): Dati puri, serializzabili
 - **L*** (LModel, LObject): Wrapper con logica, computed properties
+
+---
+
+## 📡 Custom Events
+
+### Stato (aggiornato 2026-04-06)
+
+~38 eventi custom sono ancora stringhe hardcoded nei file principali (ProjectEditor, Toolbar, Navbar, TreeViewContent, EditorV2).
+
+**Prossimo step:** centralizzare in `frontend/src/events/registry.ts` come costanti tipizzate. Prompt per Claude Code già pronto in `docs/claude-code-log.md`.
+
+### Regole
+
+- Prima di aggiungere un nuovo evento: `grep -r` per verificare collisioni di nome
+- I nomi degli eventi sono API interne — un rename richiede ricerca globale
+- Non reintrodurre gli eventi di Editor V3 (vedi sezione Componenti Rimossi)
 
 ---
 
@@ -964,6 +1036,8 @@ Zero layout shift — stesso spazio, altezza invariata.
 - ❌ Usare `createM1()` per creare modelli target (genera nomi automatici)
 - ❌ `require()` nel frontend — restituisce `{}` (usare ES module imports)
 - ❌ `model.addChild()` in canvasToJjom — causa nested TRANSACTION (usare `.new()` direttamente)
+- ❌ Token CSS legacy: `--accent`, `--bg-1..5`, `--secondary`, `--terziary`, `--radius`, `--color` — tutti eliminati, non reintrodurre (vedi sezione Token System)
+- ❌ Nuove variabili CSS create direttamente nei file di componente — aggiungerle sempre in `styles/tokens/`
 
 ### Best Practices
 - ✅ Accessibility (WCAG guidelines)
@@ -995,6 +1069,9 @@ Zero layout shift — stesso spazio, altezza invariata.
 | `Navbar.tsx` + `navbar.scss` | App bar (riga 1 header) |
 | `Toolbar.tsx` | Toolbar (riga 2 header) |
 | `Info.tsx` + `info.scss` | Properties panel (form layout, checkbox custom) |
+| `styles/tokens/_colors-light.scss` | Token colori light mode |
+| `styles/tokens/_colors-dark.scss` | Token colori dark mode |
+| `styles/variables.scss` | Variabili CSS attive (115 righe) |
 
 ---
 
@@ -1027,12 +1104,17 @@ correttamente — il comportamento è atteso. Shortcut effettivo: Fn+F1.
 
 ## 📅 Ultimo Aggiornamento
 
-**Data:** Marzo 2026
+**Data:** Aprile 2026 (sessione audit 2026-04-06)
 **Stato JjTL Executor:** Funzionante — class mapping, attribute mapping, forall mapping, guard conditions, helper functions, JjEL expressions via AST bridge
 **Stato JjEL:** Completo — 100+ built-in methods, forall/exists/implies/with...do, scoped contexts
 **Test:** 211 tests passing (JjTL: 4 test files, JjEL: 2 test files)
+**Design System:** Token migration completata — zero legacy, single source of truth
 **Prossimi Step:**
-1. Reference mapping (cross-model object links)
-2. Multiplicity enforcement in executor
-3. Interactive statements (wire to UIBridge)
-4. Completare UI redesign
+1. Event registry centralizzato (`frontend/src/events/registry.ts`) — prompt pronto
+2. Rimozione dipendenze inutilizzate (react-itertools, nearley-unparse, ecc.) — prompt pronto
+3. Reference mapping (cross-model object links) in JjTL
+4. Multiplicity enforcement in executor
+5. Interactive statements (wire to UIBridge)
+6. JjScript test suite (0 test su 60 file, 19 comandi)
+7. Inline styles → SCSS (~600 occorrenze)
+8. Completare UI redesign

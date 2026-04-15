@@ -14,6 +14,17 @@ import { DevModeLabel } from '../../components/DevModeLabel/DevModeLabel';
 import { buildProjectExportJson } from '../../model/megamodelPersistence';
 import { getRuntimeMegamodel } from '../../model/megamodelRuntime';
 
+function relativeTime(date: number | string | Date): string {
+    const d = typeof date === 'number' ? date : (typeof date === 'string' ? new Date(date).getTime() : date.getTime());
+    const diff = Date.now() - d;
+    const h = Math.floor(diff / 3600000);
+    const days = Math.floor(h / 24);
+    if (h < 1) return 'now';
+    if (h < 24) return `${h}h`;
+    if (days < 7) return `${days}d`;
+    return `${Math.floor(days / 7)}w`;
+}
+
 interface StateProps {
     projects: LProject[];
 }
@@ -35,23 +46,31 @@ type ItemProps = {
     dot?: boolean;
     onClick?: MouseEventHandler;
     active?: boolean;
+    count?: number;
+    muted?: boolean;
+    danger?: boolean;
 };
 
 const Item = (props: ItemProps) => {
     let action: (e:any)=>any = props.action as any;
     let navigate = useNavigate();
     if (typeof action === 'string') action = (e => R.navigate(`/${props.action}`, navigate));
-    let finalaction = (e:any) =>{ props.onClick?.(e); action(e); }
-/*
-    let url: string = '';
-    if (typeof props.action === 'string') url = props.action;*/
-    return (<>
+    let finalaction = (e:any) =>{ props.onClick?.(e); action?.(e); }
 
-        {/*<Link to={url} className={'item ' + (props.dot ? 'red-dot' : '')}>{props.icon && props.icon}&nbsp;{props.children}</Link>*/}
-        <div onClick={finalaction} className={'item ' + (props.dot ? 'red-dot' : '') + (props.active ? ' active' : '')}>
+    const cls = [
+        'item',
+        props.dot ? 'red-dot' : '',
+        props.active ? 'active' : '',
+        props.muted ? 'item--muted' : '',
+        props.danger ? 'item--danger' : '',
+    ].filter(Boolean).join(' ');
+
+    return (
+        <div onClick={finalaction} className={cls}>
             {props.icon && props.icon}&nbsp;<span>{props.children}</span>
+            {props.count !== undefined && <span className="item-count">{props.count}</span>}
         </div>
-    </>);
+    );
 }
 
 const Upload = () => {
@@ -97,6 +116,29 @@ const Menu = (props: MenuProps) => {
 
 const Divisor = () => {
     return (<hr className='my-1' />);
+};
+
+const SectionLabel = ({ children }: { children: string }) => (
+    <div className="section-label">{children}</div>
+);
+
+function getProjectStatus(lastModified: number | string | Date | undefined): { label: 'Active' | 'Idle' | 'Stale'; color: string } {
+    if (!lastModified) return { label: 'Stale', color: '#64748b' };
+    const ts = typeof lastModified === 'number' ? lastModified : new Date(lastModified).getTime();
+    const h = (Date.now() - ts) / 3600000;
+    if (h < 48) return { label: 'Active', color: '#166534' };
+    if (h < 168) return { label: 'Idle', color: '#92400e' };
+    return { label: 'Stale', color: '#64748b' };
+}
+
+const ProjectHeader = ({ name, lastModified }: { name: string; lastModified?: number | string | Date }) => {
+    const status = getProjectStatus(lastModified);
+    return (
+        <div className="project-header">
+            <span className="project-header__name" title={name}>{name}</span>
+            <span className="status-badge" style={{ background: status.color }}>{status.label}</span>
+        </div>
+    );
 };
 
 Menu.Item = Item;
@@ -173,6 +215,23 @@ function LeftBar(props: LeftBarProps): JSX.Element {
             doclose();
         }
     }
+
+    // "← All projects" reuses the same unsaved-check flow as closeProject
+    const handleBackToProjects = closeProject;
+
+    // Section navigation — uses ?section= search param (compatible with HashRouter)
+    type ProjectSection = 'metamodels' | 'models' | 'transformations' | 'viewpoints' | 'documentation';
+    const currentSection = (searchParams.get('section') as ProjectSection) || 'metamodels';
+
+    const navigateToSection = (section: ProjectSection) => {
+        const projectId = project?.id;
+        if (!projectId) return;
+        const newParams = new URLSearchParams(searchParams);
+        newParams.set('section', section);
+        if (!newParams.has('id')) newParams.set('id', projectId);
+        setSearchParams(newParams);
+    };
+
     const toggleFavorite = async() => {
         await ProjectsApi.favorite(project?.__raw as DProject);
     };
@@ -241,15 +300,69 @@ function LeftBar(props: LeftBarProps): JSX.Element {
         <DevModeLabel componentId="T2.3" position="top-left" />
 
         {active === 'Project' ?
-            <div className={'leftbar'}>
-                {/* @ts-ignore */}
-                <Menu title={props.project?.name ? props.project.name : 'Unnamed Project'} project>
-                    <Item action={exportProject} icon={icon['download']}>Download</Item>
-                    {/* Export Metamodel removed - now in contextual menu on metamodel/model cards */}
-                    <Item action={toggleFavorite} icon={!project?.isFavorite ? icon['favorite'] : icon['favoriteFill']}>{!project?.isFavorite ? 'Add to favorites ' : 'Remove from favorites '}</Item>
-                    <Item action={closeProject} icon={icon['close']}>Close project </Item>
-                </Menu>
+            <div className={'leftbar leftbar--project'}>
+                {/* Back to all projects — with unsaved check */}
+                <Item action={handleBackToProjects} icon={<i className="bi bi-chevron-left" />} muted>All projects</Item>
 
+                <Divisor />
+
+                {/* Project name + status badge */}
+                <ProjectHeader
+                    name={props.project?.name || 'Unnamed Project'}
+                    lastModified={props.project?.lastModified}
+                />
+
+                {/* Modified indicator (existing) */}
+                {isProjectModified() && <span className="modified-indicator"><i className="bi bi-circle-fill modified" /> Unsaved changes</span>}
+
+                {/* Structure section */}
+                <SectionLabel>Structure</SectionLabel>
+                <Item
+                    action={() => navigateToSection('metamodels')}
+                    icon={icon['metamodel'] || <i className="bi bi-diagram-3" />}
+                    active={currentSection === 'metamodels'}
+                    count={project?.metamodels?.length ?? 0}
+                >Metamodels</Item>
+                <Item
+                    action={() => navigateToSection('models')}
+                    icon={icon['model'] || <i className="bi bi-file-earmark" />}
+                    active={currentSection === 'models'}
+                    count={project?.models?.length ?? 0}
+                >Models</Item>
+
+                {/* Behaviour section */}
+                <SectionLabel>Behaviour</SectionLabel>
+                <Item
+                    action={() => navigateToSection('transformations')}
+                    icon={<i className="bi bi-arrow-left-right" />}
+                    active={currentSection === 'transformations'}
+                >Transforms</Item>
+                <Item
+                    action={() => navigateToSection('viewpoints')}
+                    icon={<i className="bi bi-eye" />}
+                    active={currentSection === 'viewpoints'}
+                    count={project?.viewpoints?.length ?? 0}
+                >Viewpoints</Item>
+
+                {/* Other section */}
+                <SectionLabel>Other</SectionLabel>
+                <Item
+                    action={() => navigateToSection('documentation')}
+                    icon={<i className="bi bi-file-text" />}
+                    active={currentSection === 'documentation'}
+                >Docs</Item>
+
+                {/* Spacer pushes actions to bottom */}
+                <div className="sidebar-spacer" />
+
+                {/* Bottom actions */}
+                <div className="sidebar-actions">
+                    <Item action={exportProject} icon={icon['download']} muted>Download</Item>
+                    <Item action={toggleFavorite} icon={!project?.isFavorite ? icon['favorite'] : icon['favoriteFill']} muted>
+                        {!project?.isFavorite ? 'Add to favorites' : 'Remove from favorites'}
+                    </Item>
+                    <Item action={closeProject} icon={icon['close']} danger>Close project</Item>
+                </div>
             </div>
             :
             <div className={'leftbar'}>
@@ -310,22 +423,30 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                         {[...props.projects]
                             .sort((a,b) => (b.lastModified > a.lastModified) ?  1 : -1)
                             .slice(0,5)
-                            .map(p => <Item key={p.id} icon={<i className="bi bi-file-earmark" />} action={e => selectProject(p)}>{p.name}</Item>)}
+                            .map(p => (
+                                <div key={p.id} className="recmod-item" onClick={() => selectProject(p)}>
+                                    <div className="recmod-left">
+                                        <span className={`recmod-dot${p.isFavorite ? ' recmod-dot--favorite' : ''}`} />
+                                        <span className="recmod-name">{p.name}</span>
+                                    </div>
+                                    <span className="recmod-time">{relativeTime(p.lastModified)}</span>
+                                </div>
+                            ))}
                     </Menu>
                 }
 
                 {/* Resources Section */}
                 <Menu title={'Resources'} mode={'collapsable'}>
                     <Item
-                        action={() => window.open('https://www.jjodel.io/manual/', '_blank')}
+                        action={() => window.open('https://docs.jjodel.io/user-guide/dashboard/', '_blank')}
                         icon={<i className="bi bi-book" />}
                     >Documentation</Item>
                     <Item
-                        action={() => window.open('https://www.jjodel.io/getting-started/', '_blank')}
+                        action={() => window.open('https://docs.jjodel.io/getting-started/', '_blank')}
                         icon={<i className="bi bi-mortarboard" />}
                     >Tutorials</Item>
                     <Item
-                        action={() => window.open('https://www.jjodel.io/api/', '_blank')}
+                        action={() => window.open('https://docs.jjodel.io/reference/jjom-api/', '_blank')}
                         icon={<i className="bi bi-code-square" />}
                     >API Reference</Item>
                     <Item

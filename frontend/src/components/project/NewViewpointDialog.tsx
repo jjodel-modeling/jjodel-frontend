@@ -25,7 +25,7 @@ export const NewViewpointDialog: React.FC<NewViewpointDialogProps> = ({
     existingNames,
 }) => {
     const [name, setName] = useState('');
-    const [vpType, setVpType] = useState<ViewpointType>('decoration');
+    const [vpType, setVpType] = useState<ViewpointType>('syntax');
     const [errors, setErrors] = useState<{ name?: string }>({});
     const inputRef = useRef<HTMLInputElement>(null);
     const wasOpenRef = useRef(false);
@@ -34,7 +34,7 @@ export const NewViewpointDialog: React.FC<NewViewpointDialogProps> = ({
     useEffect(() => {
         if (isOpen && !wasOpenRef.current) {
             setName('');
-            setVpType('decoration');
+            setVpType('syntax');
             setErrors({});
             setTimeout(() => inputRef.current?.focus(), 100);
         }
@@ -70,7 +70,7 @@ export const NewViewpointDialog: React.FC<NewViewpointDialogProps> = ({
 
     const handleCancel = () => {
         setName('');
-        setVpType('decoration');
+        setVpType('syntax');
         setErrors({});
         onClose();
     };

@@ -13,6 +13,7 @@ import type { Node, Edge } from '@xyflow/react';
 import { LPointerTargetable, TRANSACTION, SetFieldAction, store } from '../../../joiner';
 import { syncDeleteVertex } from '../sync/canvasToJjom';
 import type { ClassNodeData } from '../types';
+import { JjodelEvents } from '../../../events/registry';
 
 interface ClassRemovalResult {
     orphanedInstances: number;
@@ -212,7 +213,7 @@ function orphanInstances(
  * in ToastContext.tsx catches 'jjodel:toast' events.
  */
 function fireToast(message: string, duration = 3000) {
-    window.dispatchEvent(new CustomEvent('jjodel:toast', {
+    window.dispatchEvent(new CustomEvent(JjodelEvents.TOAST, {
         detail: { message, priority: 'info', duration, dismiss: 'auto' },
     }));
 }

@@ -2231,7 +2231,12 @@ section.viewpoint-tab {
   }
 
   .dock-layout {
-    flex-grow: 1;
+    // Fill the remaining vertical space below the header. Explicit `flex: 1 1 auto`
+    // + `min-height: 0` lets rc-dock's inner absolute-positioned wrappers compute
+    // a correct height. `position: relative` anchors those absolute children.
+    flex: 1 1 auto;
+    min-height: 0;
+    position: relative;
 
     .dock-nav-wrap {
       margin-left: $spacing-xs;
@@ -2252,6 +2257,8 @@ section.viewpoint-tab {
   }
 
   .view-editor-header {
+    // Fixed-height flex child so the DockLayout sibling can expand.
+    flex: 0 0 auto;
     margin-top: $spacing-xs;
     margin-left: var(--inner-page-padding);
     margin-right: var(--inner-page-padding);
@@ -3565,4 +3572,70 @@ html[data-theme="dark"] {
   * {
     text-align: inherit;
   }
+}
+
+// ============================================
+// VIEW EDITOR TABS (replaces rc-dock DockLayout)
+// Pure React tab system: tab bar + single active panel.
+// Lives below .view-editor-header inside .view-editor-root.
+// ============================================
+.view-editor-tabs {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  background-color: rgb(248, 250, 252);
+  padding-left: 12px; // Compensate for 16px horizontal padding in .view-editor-root
+}
+
+.view-editor-tab-bar {
+  display: flex;
+  flex: 0 0 auto;
+  border-bottom: 1px solid var(--color-border-primary);
+  padding: 0 8px;
+  gap: 0;
+  background: var(--color-bg-secondary);
+}
+
+.view-editor-tab {
+  padding: 8px 16px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+
+  &:hover {
+    color: var(--color-text-primary);
+  }
+
+  &.active {
+    color: var(--color-text-primary);
+    border-bottom-color: var(--color-accent);
+    font-weight: 500;
+  }
+}
+
+.view-editor-tab-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  // Padding mirrors `.props-section__body` (info-improvements.scss:970-972)
+  // so fields in Apply to / Template / Style / Events / Options tabs inherit
+  // the exact horizontal gutter of the Properties panel sections. Without a
+  // CollapsibleSection wrapper, this is the outer container that has to
+  // provide the 14px side padding + 4px top / 12px bottom rhythm.
+  padding: 4px 0px 12px;
+  background-color: rgb(248, 250, 252);
+
+  // Match `.jj-field` spacing used inside `.props-section__body`: the last
+  // field in a section has `margin-bottom: 0` (form-system.scss:951) so the
+  // section's own padding-bottom supplies the trailing space. Since the
+  // view editor has no section wrapper, we rely on the baseline rule to kick
+  // in via `:last-child`. No override needed.
+  //
+  // Toggle rows keep their `.jj-toggle-row { padding: 5px 0 }` baseline.
 }

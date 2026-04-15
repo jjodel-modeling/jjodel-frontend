@@ -392,10 +392,10 @@ $color-subview: #94a3b8;    // Slate - Sub-views
 .tree-node__header {
     display: flex;
     align-items: center;
-    gap: 2px;
-    padding-top: 3px;
-    padding-bottom: 3px;
-    padding-right: 27px; // Large right padding to allow space for badges/icons without affecting text layout
+    gap: 4px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    padding-right: 12px;
     border-radius: $radius-sm;
     cursor: pointer;
     transition: background-color $transition-fast;
@@ -415,15 +415,15 @@ $color-subview: #94a3b8;    // Slate - Sub-views
 }
 
 .tree-node__toggle {
-    width: 20px;
-    height: 20px;
-    display: flex;
+    width: 14px;
+    height: 14px;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     background: none;
     border: none;
     cursor: pointer;
-    color: $color-text-tertiary;
+    color: #94a3b8;
     padding: 0;
     flex-shrink: 0;
     transition: color $transition-fast;
@@ -438,21 +438,22 @@ $color-subview: #94a3b8;    // Slate - Sub-views
 
     i {
         font-size: 10px;
+        line-height: 1;
     }
 }
 
 .tree-node__spacer {
-    width: 20px;
+    width: 14px;
     display: inline-block;
 }
 
 .tree-node__content {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
     flex: 1;
     min-width: 0;
-    padding-left: 10px;
+    padding-left: 2px;
 }
 
 // ============================================
@@ -468,72 +469,73 @@ $color-subview: #94a3b8;    // Slate - Sub-views
     align-items: center;
     justify-content: center;
     border-radius: 3px;
-    font-size: 8px;
-    font-weight: 500;
+    font-size: 10px;
+    font-weight: 600;
     flex-shrink: 0;
 
-    // FILLED PASTEL STYLE - light bg, dark text, no border
+    // BADGE STYLE — colored letter with tinted background
+    // Matches viewpoint tree badge pattern (ViewTreeNode)
     border: none;
 
     &.tree-DModel {
-        background: #EEEDFE;
-        color: #3C3489;
+        color: #7F77DD;
+        background: rgba(127, 119, 221, 0.12);
     }
 
     &.tree-DPackage {
-        background: #F1EFE8;
-        color: #444441;
+        color: #888780;
+        background: rgba(136, 135, 128, 0.12);
     }
 
     &.tree-DClass {
-        background: #E6F1FB;
-        color: #0C447C;
+        color: #378ADD;
+        background: rgba(55, 138, 221, 0.12);
 
         &.abstract-class {
-            border: 1px dashed #0C447C;
+            font-style: italic;
         }
     }
 
     &.tree-DAttribute {
-        background: #EAF3DE;
-        color: #27500A;
+        color: #639922;
+        background: rgba(99, 153, 34, 0.12);
     }
 
     &.tree-DReference {
-        background: #FAECE7;
-        color: #712B13;
+        color: #D85A30;
+        background: rgba(216, 90, 48, 0.12);
     }
 
     &.tree-DEnumerator,
     &.tree-DEnum {
-        background: #FBEAF0;
-        color: #72243E;
+        color: #D4537E;
+        background: rgba(212, 83, 126, 0.12);
     }
 
     &.tree-DEnumLiteral {
-        background: #FBEAF0;
-        color: #72243E;
+        color: #D4537E;
+        background: rgba(212, 83, 126, 0.12);
     }
 
     &.tree-DOperation {
-        background: #E0F7FA;
-        color: #0E7490;
+        color: #06b6d4;
+        background: rgba(6, 182, 212, 0.12);
     }
 
     &.tree-DParameter {
-        background: #F1F5F9;
-        color: #475569;
+        color: #9ca3af;
+        background: rgba(156, 163, 175, 0.12);
     }
 
     &.tree-DObject {
-        background: #F1F5F9;
-        color: #475569;
+        color: #6b7280;
+        background: rgba(107, 114, 128, 0.12);
     }
 
     // Nested M1 model icon — lowercase "m"
     &.tree-nested-model {
-        background: #E1F5EE;
-        color: #085041;
+        color: #1D9E75;
+        background: rgba(29, 158, 117, 0.12);
         font-style: italic;
     }
 }
@@ -871,19 +873,20 @@ $color-highlight-unknown: #f59e0b; // Amber - unknown action
         background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
     }
 
-    // Dark mode — filled pastel icons with dimmed backgrounds for visibility
+    // Dark mode — text-only colored letters (brighter for dark backgrounds)
     .tree-node__icon {
-        &.tree-DModel { background: rgba(#9B95E8, 0.18); color: #B5B0F0; }
-        &.tree-DPackage { background: rgba(#a5a49e, 0.15); color: #c5c4be; }
-        &.tree-DClass { background: rgba(#5ea3e8, 0.18); color: #7BB8F0; }
-        &.tree-DAttribute { background: rgba(#7fb836, 0.18); color: #9AD04E; }
-        &.tree-DReference { background: rgba(#e87a54, 0.18); color: #F09474; }
-        &.tree-DEnumerator, &.tree-DEnum { background: rgba(#e07399, 0.18); color: #F08DB3; }
-        &.tree-DEnumLiteral { background: rgba(#e07399, 0.18); color: #F08DB3; }
-        &.tree-DOperation { background: rgba(#22d3ee, 0.18); color: #44E0F8; }
-        &.tree-DParameter { background: rgba(#d1d5db, 0.12); color: #d1d5db; }
-        &.tree-DObject { background: rgba(#9ca3af, 0.15); color: #b0b8c4; }
-        &.tree-nested-model { background: rgba(#34c48e, 0.18); color: #4ED8A4; }
+        background: transparent;
+        &.tree-DModel { color: #B5B0F0; }
+        &.tree-DPackage { color: #c5c4be; }
+        &.tree-DClass { color: #7BB8F0; }
+        &.tree-DAttribute { color: #9AD04E; }
+        &.tree-DReference { color: #F09474; }
+        &.tree-DEnumerator, &.tree-DEnum { color: #F08DB3; }
+        &.tree-DEnumLiteral { color: #F08DB3; }
+        &.tree-DOperation { color: #44E0F8; }
+        &.tree-DParameter { color: #d1d5db; }
+        &.tree-DObject { color: #b0b8c4; }
+        &.tree-nested-model { color: #4ED8A4; }
     }
 
     .tree-nested-model__badge {
@@ -907,17 +910,11 @@ $color-highlight-unknown: #f59e0b; // Amber - unknown action
         border-color: #333;
 
         &__header {
-            color: #e0e0e0;
-        }
-
-        &__icon {
-            background: rgba(127, 119, 221, 0.15);
-            color: #9B95E8;
+            color: #888;
         }
 
         &__count {
-            background: rgba(255, 255, 255, 0.1);
-            color: #94a3b8;
+            color: #6b7280;
         }
     }
 
@@ -925,12 +922,23 @@ $color-highlight-unknown: #f59e0b; // Amber - unknown action
         border-color: #333;
 
         &__header {
-            color: #e0e0e0;
+            color: #888;
         }
 
         &__count {
-            background: rgba(255, 255, 255, 0.1);
-            color: #94a3b8;
+            color: #6b7280;
+        }
+    }
+
+    .transformation-section {
+        border-color: #333;
+
+        &__header {
+            color: #888;
+        }
+
+        &__count {
+            color: #6b7280;
         }
     }
 
@@ -953,35 +961,45 @@ $color-highlight-unknown: #f59e0b; // Amber - unknown action
     }
 
     .tree-node__icon.tree-subview {
-        background: rgba(#b0bec5, 0.15);
+        background: transparent;
         color: #b0bec5;
     }
 
     .tree-node__icon.tree-rule {
-        background: rgba(#34d399, 0.15);
+        background: transparent;
         color: #34d399;
     }
 
     .tree-node__icon.tree-helper {
-        background: rgba(#94a3b8, 0.15);
+        background: transparent;
         color: #94a3b8;
     }
 
     .tree-viewpoint {
-        background: rgba(#F08DB3, 0.18) !important;
+        background: transparent !important;
         color: #F08DB3 !important;
     }
 
     .tree-transformation {
-        background: rgba(148, 163, 184, 0.15);
+        background: transparent;
         color: #94a3b8;
+    }
+
+    .megamodel-entry {
+        &__header {
+            color: #888;
+        }
+
+        &:hover {
+            background-color: #2a2a2a;
+        }
     }
 
     .documentation-entry {
         border-color: #333;
 
         &__header {
-            color: #e0e0e0;
+            color: #888;
         }
 
         &:hover {
@@ -1039,7 +1057,7 @@ html[data-theme="dark"] {
 
         .megamodel-entry {
             &__header {
-                color: #e0e0e0;
+                color: #888;
             }
 
             &:hover {
@@ -1051,33 +1069,28 @@ html[data-theme="dark"] {
             border-color: #333;
 
             &__header {
-                color: #e0e0e0;
-            }
-
-            &__icon {
-                background: rgba(127, 119, 221, 0.15);
-                color: #9B95E8;
+                color: #888;
             }
 
             &__count {
-                background: rgba(255, 255, 255, 0.1);
-                color: #94a3b8;
+                color: #6b7280;
             }
         }
 
         .transformation-section {
+            border-color: #333;
+
             &__header {
-                color: #e0e0e0;
+                color: #888;
             }
 
             &__count {
-                background: rgba(255, 255, 255, 0.1);
-                color: #94a3b8;
+                color: #6b7280;
             }
         }
 
         .tree-transformation {
-            background: rgba(148, 163, 184, 0.15);
+            background: transparent;
             color: #94a3b8;
         }
 
@@ -1085,12 +1098,11 @@ html[data-theme="dark"] {
             border-color: #333;
 
             &__header {
-                color: #e0e0e0;
+                color: #888;
             }
 
             &__count {
-                background: rgba(255, 255, 255, 0.1);
-                color: #94a3b8;
+                color: #6b7280;
             }
         }
 
@@ -1113,27 +1125,27 @@ html[data-theme="dark"] {
         }
 
         .tree-node__icon.tree-subview {
-            background: rgba(#b0bec5, 0.15);
+            background: transparent;
             color: #b0bec5;
         }
 
         .tree-node__icon.tree-rule {
-            background: rgba(#34d399, 0.15);
+            background: transparent;
             color: #34d399;
         }
 
         .tree-node__icon.tree-helper {
-            background: rgba(#94a3b8, 0.15);
+            background: transparent;
             color: #94a3b8;
         }
 
         .tree-viewpoint {
-            background: rgba(#F08DB3, 0.18) !important;
+            background: transparent !important;
             color: #F08DB3 !important;
         }
 
         .tree-transformation {
-            background: rgba(148, 163, 184, 0.15);
+            background: transparent;
             color: #94a3b8;
         }
 
@@ -1141,7 +1153,7 @@ html[data-theme="dark"] {
             border-color: #333;
 
             &__header {
-                color: #e0e0e0;
+                color: #888;
             }
 
             &:hover {
@@ -1155,33 +1167,22 @@ html[data-theme="dark"] {
 
 .megamodel-entry {
     cursor: pointer;
-    // No border-bottom — metamodels-section has border-top for separation
 
     &__header {
         display: flex;
         align-items: center;
-        gap: 8px;
-        padding: 8px 12px;
-        font-size: 13px;
+        gap: 6px;
+        padding: 6px 12px;
+        font-size: 11px;
         font-weight: 600;
-        color: #334155;
+        color: $color-text-secondary;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
         transition: background-color 0.15s;
     }
 
     &:hover {
         background-color: #f1f5f9;
-    }
-
-    &__icon {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 22px;
-        height: 22px;
-        border-radius: 4px;
-        background: rgba(14, 165, 233, 0.12);
-        color: #0ea5e9;
-        font-size: 13px;
     }
 
     &__label {
@@ -1192,7 +1193,7 @@ html[data-theme="dark"] {
 // ─── Metamodels Section ───────────────────────────────────
 
 .metamodels-section {
-    border-top: 1px solid #e2e8f0;
+    border-top: 0.5px solid $color-border;
     margin-top: 4px;
 
     &__header {
@@ -1200,21 +1201,11 @@ html[data-theme="dark"] {
         align-items: center;
         gap: 6px;
         padding: 6px 12px;
-        font-size: 13px;
+        font-size: 11px;
         font-weight: 600;
-        color: #334155;
-    }
-
-    &__icon {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 22px;
-        height: 22px;
-        border-radius: 4px;
-        background: rgba(127, 119, 221, 0.10);
-        color: #7F77DD;
-        font-size: 12px;
+        color: $color-text-secondary;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
     }
 
     &__label {
@@ -1222,17 +1213,9 @@ html[data-theme="dark"] {
     }
 
     &__count {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 20px;
-        height: 18px;
-        padding: 0 6px;
-        border-radius: 9px;
-        background: #f1f5f9;
-        color: #64748b;
         font-size: 11px;
         font-weight: 500;
+        color: #94a3b8;
     }
 
     &__content {
@@ -1243,7 +1226,7 @@ html[data-theme="dark"] {
 // ─── Transformation Section ───────────────────────────────
 
 .transformation-section {
-    border-top: 1px solid #e2e8f0;
+    border-top: 0.5px solid $color-border;
     margin-top: 4px;
 
     &__header {
@@ -1251,21 +1234,11 @@ html[data-theme="dark"] {
         align-items: center;
         gap: 6px;
         padding: 6px 12px;
-        font-size: 13px;
+        font-size: 11px;
         font-weight: 600;
-        color: #334155;
-    }
-
-    &__icon {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 22px;
-        height: 22px;
-        border-radius: 4px;
-        background: rgba(100, 116, 139, 0.10);
-        color: #94a3b8;
-        font-size: 12px;
+        color: $color-text-secondary;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
     }
 
     &__label {
@@ -1273,17 +1246,9 @@ html[data-theme="dark"] {
     }
 
     &__count {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 20px;
-        height: 18px;
-        padding: 0 6px;
-        border-radius: 9px;
-        background: #f1f5f9;
-        color: #64748b;
         font-size: 11px;
         font-weight: 500;
+        color: #94a3b8;
     }
 
     &__content {
@@ -1299,18 +1264,18 @@ html[data-theme="dark"] {
     height: 16px;
     min-width: 16px;
     border-radius: 3px;
-    background: #F1F5F9;
+    background: transparent;
     border: none;
     color: #64748b;
-    font-size: 8px;
-    font-weight: 500;
+    font-size: 10px;
+    font-weight: 600;
     margin-right: 4px;
 }
 
 // ─── Viewpoint Section ──────────────────────────────────────
 
 .viewpoint-section {
-    border-top: 1px solid #e2e8f0;
+    border-top: 0.5px solid $color-border;
     margin-top: 4px;
 
     &__header {
@@ -1318,21 +1283,11 @@ html[data-theme="dark"] {
         align-items: center;
         gap: 6px;
         padding: 6px 12px;
-        font-size: 13px;
+        font-size: 11px;
         font-weight: 600;
-        color: #334155;
-    }
-
-    &__icon {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 22px;
-        height: 22px;
-        border-radius: 4px;
-        background: rgba(83, 74, 183, 0.10);
-        color: #534AB7;
-        font-size: 12px;
+        color: $color-text-secondary;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
     }
 
     &__label {
@@ -1340,17 +1295,9 @@ html[data-theme="dark"] {
     }
 
     &__count {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 20px;
-        height: 18px;
-        padding: 0 6px;
-        border-radius: 9px;
-        background: #f1f5f9;
-        color: #64748b;
         font-size: 11px;
         font-weight: 500;
+        color: #94a3b8;
     }
 
     &__content {
@@ -1358,12 +1305,10 @@ html[data-theme="dark"] {
     }
 }
 
-// Viewpoint icon in tree node
+// Viewpoint icon in tree node — matches viewpoint tree VP badge (purple)
 .tree-viewpoint {
-    font-weight: 500;
+    font-weight: 600;
     font-size: 8px;
-    background: #FBEAF0 !important;
-    color: #72243E !important;
     border: none;
 }
 
@@ -1406,20 +1351,6 @@ html[data-theme="dark"] {
         }
     }
 
-    // Colored left indicator per type
-    &__indicator {
-        width: 3px;
-        height: 12px;
-        border-radius: 2px;
-        flex-shrink: 0;
-
-        &[data-type="syntax"] { background: #378ADD; }
-        &[data-type="decoration"] { background: #7F77DD; }
-        &[data-type="validation"] { background: #EF9F27; }
-        &[data-type="semantics"] { background: #1D9E75; }
-        &[data-type="editor_behavior"] { background: #888780; }
-    }
-
     &__label {
         font-size: 11px;
         text-transform: uppercase;
@@ -1427,12 +1358,6 @@ html[data-theme="dark"] {
         letter-spacing: 0.06em;
         color: $color-text-tertiary;
         flex: 1;
-
-        &[data-type="syntax"] { color: #0C447C; }
-        &[data-type="decoration"] { color: #3C3489; }
-        &[data-type="validation"] { color: #633806; }
-        &[data-type="semantics"] { color: #085041; }
-        &[data-type="editor_behavior"] { color: #444441; }
     }
 
     &__count {
@@ -1454,67 +1379,53 @@ html[data-theme="dark"] {
 
 // ─── Sub-view icon in tree ─────────────────────────────────────
 
+// View icon in tree node — matches viewpoint tree V badge (blue)
 .tree-node__icon.tree-subview {
-    background: #F1F5F9;
-    color: #64748b;
     border: none;
+    font-weight: 600;
     font-size: 10px;
-
-    i {
-        font-size: 10px;
-    }
 }
 
 // ─── Transformation rule/helper icons ─────────────────────────
 
 .tree-node__icon.tree-rule {
-    background: #E1F5EE;
-    color: #085041;
+    background: rgba(29, 158, 117, 0.12);
+    color: #1D9E75;
     border: none;
-    font-weight: 500;
-    font-size: 8px;
+    font-weight: 600;
+    font-size: 10px;
 }
 
 .tree-node__icon.tree-helper {
-    background: #F1F5F9;
-    color: #475569;
+    background: rgba(136, 135, 128, 0.12);
+    color: #888780;
     border: none;
-    font-weight: 500;
-    font-size: 8px;
+    font-weight: 600;
+    font-size: 10px;
 }
 
 // ─── Documentation Entry ────────────────────────────────────
 
 .documentation-entry {
-    border-top: 1px solid #e2e8f0;
+    border-top: 0.5px solid $color-border;
     margin-top: 4px;
     cursor: pointer;
 
     &__header {
         display: flex;
         align-items: center;
-        gap: 8px;
-        padding: 8px 12px;
-        font-size: 13px;
+        gap: 6px;
+        padding: 6px 12px;
+        font-size: 11px;
         font-weight: 600;
-        color: #334155;
+        color: $color-text-secondary;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
         transition: background-color 0.15s;
     }
 
     &:hover {
         background-color: #f1f5f9;
-    }
-
-    &__icon {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 22px;
-        height: 22px;
-        border-radius: 4px;
-        background: rgba(100, 116, 139, 0.10);
-        color: #64748b;
-        font-size: 13px;
     }
 
     &__label {

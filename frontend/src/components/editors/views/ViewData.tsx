@@ -1,4 +1,4 @@
-import React, {Dispatch, ReactElement, ReactNode} from 'react';
+import React, {Dispatch, ReactElement, ReactNode, useState} from 'react';
 import {
     Defaults,
     DState,
@@ -14,8 +14,6 @@ import {
 } from '../../../joiner';
 import InfoData from './data/InfoData';
 import TemplateData from './data/TemplateData';
-import {DockLayout} from 'rc-dock';
-import {LayoutData} from 'rc-dock';
 import EventsData from './data/CustomData';
 import {FakeStateProps, Overlap} from "../../../joiner/types";
 import {connect} from "react-redux";
@@ -24,74 +22,137 @@ import GenericNodeData from "./data/GenericNodeData";
 
 import {Btn, CommandBar} from '../../commandbar/CommandBar';
 import "./nestedView.scss";
-import {PermissionViewTab} from "./data/PermissionViewTab";
 import {ComponentsTab} from "./data/ComponentsTab";
-import {PermissionViewpointTab} from "./data/PermissionViewpointTab";
 
-const tabidprefix = "Dock_in_view_detail";
+type TabId = 'apply-to' | 'template' | 'style' | 'events' | 'options' | 'components';
+
+interface TabDescriptor {
+    id: TabId;
+    label: string;
+    render: () => ReactElement;
+}
 
 function ViewDataComponent(props: AllProps) {
     const view = props.view;
     (window as any).view = view;
-    /*
-        if(!view) {
-            SetRootFieldAction.new('stackViews', undefined, '-=', false);
-            return(<></>);
-        }*/
     const viewpoints = props.viewpoints;
     const debug = props.debug;
     const readOnly = !debug && Defaults.check(view.id);
-    let viewChain: LViewElement[] = [...view.fatherChain.reverse(), view];
+    const viewChain: LViewElement[] = [...view.fatherChain.reverse(), view];
 
-    const layout: LayoutData = {dockbox: {mode: 'horizontal', children: []}};
+    const isVP: boolean = view.className === DViewPoint.cname;
+    const isV: boolean = !isVP;
 
-    let idcounter = 0;
-    function id(){ // NB: cannot use just indexes or tab title because the id is injected in html, so it must be unique in the whole page.
-        return tabidprefix + (idcounter++);
-    }
+    // Build the tab list. Each `render` closure captures the current view/readonly
+    // so the children stay in sync with Redux updates.
+    const tabs: TabDescriptor[] = [
+        {
+            id: 'apply-to',
+            label: 'Apply to',
+            render: () => (
+                <Try>
+                    <InfoData viewID={view.id} viewpointsID={viewpoints.map(vp => vp.id)} readonly={readOnly} />
+                </Try>
+            ),
+        },
+        ...(isV ? [{
+            id: 'template' as TabId,
+            label: 'Template',
+            render: () => (
+                <Try>
+                    <TemplateData viewID={view.id} readonly={readOnly} />
+                </Try>
+            ),
+        }] : []),
+        {
+            id: 'style',
+            label: 'Style',
+            render: () => (
+                <Try>
+                    <PaletteData viewID={view.id} readonly={readOnly} />
+                </Try>
+            ),
+        },
+        ...(isV ? [{
+            id: 'events' as TabId,
+            label: 'Events',
+            render: () => (
+                <Try>
+                    <EventsData viewID={view.id} readonly={readOnly} />
+                </Try>
+            ),
+        }] : []),
+        ...(isV ? [{
+            id: 'options' as TabId,
+            label: 'Options',
+            render: () => (
+                <Try>
+                    <GenericNodeData viewID={view.id} readonly={readOnly} />
+                </Try>
+            ),
+        }] : []),
+        ...(isVP ? [{
+            id: 'components' as TabId,
+            label: 'Components',
+            render: () => (
+                <Try>
+                    <ComponentsTab viewID={view.id} readonly={readOnly} />
+                </Try>
+            ),
+        }] : []),
+    ];
 
-    let isVP: boolean = view.className === DViewPoint.cname;
-    let isV: boolean = !isVP;
+    // Active tab state. Defaults to the first tab in the list (always 'apply-to').
+    const [activeTab, setActiveTab] = useState<TabId>(tabs[0].id);
 
-    const tabs = [];
-    tabs.push({id: id(), title: 'Apply to', group: '1', closable: false, content: <Try><InfoData viewID={view.id} viewpointsID={viewpoints.map(vp => vp.id)} readonly={readOnly} /></Try>});
-    if(isV) tabs.push({id: id(), title: 'Template', group: '1', closable: false, content: <Try><TemplateData viewID={view.id} readonly={readOnly} /></Try>});
-    tabs.push({id: id(), title: 'Style', group: '1', closable: false, content: <Try><PaletteData viewID={view.id} readonly={readOnly} /></Try>});
-    if(isV) tabs.push({id: id(), title: 'Events', group: '1', closable: false, content: <Try><EventsData viewID={view.id} readonly={readOnly} /></Try>});
-    if(isV) tabs.push({id: id(), title: 'Options', group: '1', closable: false, content: <Try><GenericNodeData viewID={view.id} readonly={readOnly} /></Try>});
-    // Permissions tabs removed from UI (kept components for future use)
-    // if(isV) tabs.push({id: id(), title: 'Permissions', group: '1', closable: false, content: <Try><PermissionViewTab viewID={view.id} readonly={readOnly} /></Try>});
-    // if(isVP) tabs.push({id: id(), title: 'Permissions', group: '1', closable: false, content: <Try><PermissionViewpointTab viewID={view.id} readonly={readOnly} /></Try>});
-    if(isVP) tabs.push({id: id(), title: 'Components', group: '1', closable: false, content: <Try><ComponentsTab viewID={view.id} readonly={readOnly} /></Try>});
+    // Fallback: if the currently-active tab is not in the list (e.g. switched
+    // from a view to a viewpoint), snap to the first available.
+    const activeDescriptor = tabs.find(t => t.id === activeTab) ?? tabs[0];
 
+    return (
+        <div className={"view-editor-root"}>
+            <div className={'view-editor-header'}>
+                <CommandBar>
+                    <Btn icon={'back'} action={() => props.setSelectedView(undefined)} tip={'Back'}/>
+                </CommandBar>
+                <div className={"path-list"}>{
+                    (viewChain.map((v, i) => <>
+                        <div className={"path-element"} onClick={()=>props.setSelectedView(v.id)}>
+                            {U.cropStr(v.name, 1,1, 10, 10)}
+                        </div>
+                        {i === viewChain.length - 1 && (
+                            <span className={`breadcrumb-type-badge ${isVP ? 'viewpoint' : 'view'}`}>
+                                {isVP ? 'VIEWPOINT' : 'VIEW'}
+                            </span>
+                        )}
+                    </>) as any
+                    ).separator(
+                        <i className={"path-separator bi bi-chevron-right"} />
+                    )
+                }</div>
+            </div>
 
-    // Log.exx('$crash', "test crash", {propss:props});
-    layout.dockbox.children.push({tabs});
-    // let allParentViews = view.father
-
-    return(<div className={"view-editor-root"}>
-        {<div className={'view-editor-header'}>
-            <CommandBar>
-                <Btn icon={'back'} action={() => props.setSelectedView(undefined)} tip={'Back'}/>
-            </CommandBar>
-            <div className={"path-list"}>{
-                (viewChain.map((v, i) => <>
-                    <div className={"path-element"} onClick={()=>props.setSelectedView(v.id)}>
-                        {U.cropStr(v.name, 1,1, 10, 10)}
-                    </div>
-                    {i === viewChain.length - 1 && (
-                        <span className={`breadcrumb-type-badge ${isVP ? 'viewpoint' : 'view'}`}>
-                            {isVP ? 'VIEWPOINT' : 'VIEW'}
-                        </span>
-                    )}
-                </>) as any
-                ).separator(
-                    <i className={"path-separator bi bi-chevron-right"} />
-                )
-            }</div>
-        </div>}
-        <DockLayout defaultLayout={layout} />
-    </div>);
+            <div className={"view-editor-tabs"}>
+                <div className={"view-editor-tab-bar"} role="tablist">
+                    {tabs.map(tab => (
+                        <button
+                            key={tab.id}
+                            type="button"
+                            role="tab"
+                            aria-selected={activeDescriptor.id === tab.id}
+                            className={`view-editor-tab${activeDescriptor.id === tab.id ? ' active' : ''}`}
+                            onClick={() => setActiveTab(tab.id)}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+                <div className={"view-editor-tab-content"} role="tabpanel">
+                    {activeDescriptor.render()}
+                </div>
+            </div>
+        </div>
+    );
 }
 interface OwnProps {
     viewid: Pointer<DViewElement>;

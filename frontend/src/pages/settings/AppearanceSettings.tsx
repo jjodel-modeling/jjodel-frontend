@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import type { ToastPosition, ToastPreferences } from '../../components/Toast/toastTypes';
 import { loadToastPrefs, saveToastPrefs } from '../../components/Toast/toastTypes';
 import { useTheme } from '../../services/ThemeService';
+import { JjodelEvents } from '../../events/registry';
 
 type Theme = 'light' | 'dark';
 export function AppearanceSettings({onDirtyChange}: {onDirtyChange?:((b:boolean)=>any)}) {
@@ -25,7 +26,7 @@ export function AppearanceSettings({onDirtyChange}: {onDirtyChange?:((b:boolean)
         setToastPrefs(prev => {
             const next = { ...prev, [key]: value };
             saveToastPrefs(next);
-            window.dispatchEvent(new CustomEvent('jjodel:toast-prefs-changed'));
+            window.dispatchEvent(new CustomEvent(JjodelEvents.TOAST_PREFS_CHANGED));
             return next;
         });
     }, []);

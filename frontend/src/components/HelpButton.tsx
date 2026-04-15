@@ -1,4 +1,5 @@
 import React, { useCallback } from 'react';
+import { JjodelEvents } from '../events/registry';
 import './HelpButton.scss';
 
 interface HelpButtonProps {
@@ -13,7 +14,7 @@ const HelpButton: React.FC<HelpButtonProps> = ({ helpKey }) => {
     const handleClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
         window.dispatchEvent(
-            new CustomEvent('jjodel:help-open', { detail: { helpKey } })
+            new CustomEvent(JjodelEvents.HELP_OPEN, { detail: { helpKey } })
         );
     }, [helpKey]);
 

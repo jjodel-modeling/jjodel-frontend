@@ -21,6 +21,7 @@ import { useStateIfMounted } from 'use-state-if-mounted';
 import { useTreeViewPanel, ElementAction } from '../../contexts/TreeViewPanelContext';
 import { getLastEditedViewpointId, getLastEditedViewpointName, createViewInWorkbench } from '../../utils/lastViewpoint';
 import DockManager from '../abstract/DockManager';
+import { JjodelEvents, SystemEvents } from '../../events/registry';
 
 /**
  * TreeViewContent Component (Optimized)
@@ -585,12 +586,21 @@ const InstanceItem = memo(function InstanceItem({
 
     const handleClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
+        // Update Redux _lastSelected so the Properties panel (Info.tsx) re-renders
+        // with this instance's data. Without this, clicking an instance in the
+        // tree view would only highlight it on the canvas but leave the Properties
+        // panel showing the previously selected element.
+        SetRootFieldAction.new('_lastSelected' as any, {
+            node: '',
+            view: '',
+            modelElement: instance.objectId,
+        }, '', false);
         // Dispatch custom event for EditorV2 to select the node on the canvas
-        window.dispatchEvent(new CustomEvent('jjodel:selectNode', {
+        window.dispatchEvent(new CustomEvent(JjodelEvents.SELECT_NODE, {
             detail: { nodeId: instance.id, modelId: instance.modelId }
         }));
         onSelect?.();
-    }, [instance.id, instance.modelId, onSelect]);
+    }, [instance.id, instance.objectId, instance.modelId, onSelect]);
 
     return (
         <div className="tree-node" data-element-id={instance.objectId}>
@@ -715,15 +725,12 @@ interface TreeTransformationData {
  */
 const MegamodelEntry = memo(function MegamodelEntry(): ReactElement {
     const handleClick = useCallback(() => {
-        window.dispatchEvent(new CustomEvent('jjodel:openMegamodel'));
+        window.dispatchEvent(new CustomEvent(JjodelEvents.OPEN_MEGAMODEL));
     }, []);
 
     return (
         <div className="megamodel-entry" onClick={handleClick}>
             <div className="megamodel-entry__header">
-                <span className="megamodel-entry__icon">
-                    <i className="bi bi-diagram-3-fill" />
-                </span>
                 <span className="megamodel-entry__label">Megamodel</span>
             </div>
         </div>
@@ -752,7 +759,7 @@ const TransformationItem = memo(function TransformationItem({
     const handleClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
         // Dispatch event to open transformation tab (ProjectEditor listens)
-        window.dispatchEvent(new CustomEvent('jjodel:openTransformation', {
+        window.dispatchEvent(new CustomEvent(JjodelEvents.OPEN_TRANSFORMATION, {
             detail: { id: transformation.id }
         }));
         SetRootFieldAction.new('_lastSelected', {
@@ -834,9 +841,6 @@ const TransformationSection = memo(function TransformationSection({
     return (
         <div className="transformation-section">
             <div className="transformation-section__header">
-                <span className="transformation-section__icon">
-                    <i className={`bi ${entityIcon('transformation')}`} />
-                </span>
                 <span className="transformation-section__label">Transformations</span>
                 <span className="transformation-section__count">{transformations.length}</span>
             </div>
@@ -885,8 +889,11 @@ const VP_TYPE_COLORS: Record<ViewpointType, { bg: string; color: string }> = {
     editor_behavior: { bg: '#F1EFE8', color: '#5F5E5A' },
 };
 
-/** Unified pink color for all viewpoint V badges — outline style */
-const VP_ICON_COLOR = { color: '#D4537E' };
+/** Viewpoint badge color — matches viewpoint tree (purple) */
+const VP_ICON_COLOR = { color: '#8b5cf6', bg: 'rgba(139,92,246,0.15)' };
+
+/** View badge color — matches viewpoint tree (blue) */
+const VIEW_ICON_COLOR = { color: '#3b82f6', bg: 'rgba(59,130,246,0.15)' };
 
 /**
  * SubViewItem — a single view entry inside an expanded viewpoint
@@ -908,19 +915,17 @@ const SubViewItem = memo(function SubViewItem({
     const handleClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
         try {
-            // Open the viewpoint workbench tab, then notify it to select this view
-            DockManager.openViewpoint(viewpointRaw);
-            // Dispatch event to select this specific view in the workbench
-            setTimeout(() => {
-                window.dispatchEvent(new CustomEvent('jjodel:selectViewInWorkbench', {
-                    detail: { viewpointId: viewpointRaw.id, viewId: view.id }
-                }));
-            }, 100);
+            // Select this view in _lastSelected so the Properties panel renders ViewData
+            SetRootFieldAction.new('_lastSelected' as any, {
+                node: '',
+                view: view.id,
+                modelElement: '',
+            });
         } catch (err) {
-            console.warn('[TreeView] Failed to open view in workbench:', err);
+            console.warn('[TreeView] Failed to select view:', err);
         }
         onSelect?.();
-    }, [viewpointRaw, view.id, onSelect]);
+    }, [view.id, onSelect]);
 
     const toggleExpand = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
@@ -941,8 +946,11 @@ const SubViewItem = memo(function SubViewItem({
                     )}
                 </button>
                 <div className="tree-node__content" onClick={handleClick}>
-                    <span className="tree-node__icon tree-subview">
-                        <i className="bi bi-eye" />
+                    <span
+                        className="tree-node__icon tree-subview"
+                        style={{ color: VIEW_ICON_COLOR.color, background: VIEW_ICON_COLOR.bg }}
+                    >
+                        V
                     </span>
                     <span className="tree-node__name">{view.name}</span>
                 </div>
@@ -981,12 +989,17 @@ const ViewpointItem = memo(function ViewpointItem({
     const handleClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
         try {
-            DockManager.openViewpoint(viewpoint.raw);
+            // Select this viewpoint in _lastSelected so the Properties panel renders ViewpointProperties
+            SetRootFieldAction.new('_lastSelected' as any, {
+                node: '',
+                view: viewpoint.id,
+                modelElement: '',
+            });
         } catch (err) {
-            console.warn('[TreeView] Failed to open viewpoint:', err);
+            console.warn('[TreeView] Failed to select viewpoint:', err);
         }
         onSelect?.();
-    }, [viewpoint.raw, onSelect]);
+    }, [viewpoint.id, onSelect]);
 
     const toggleExpand = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
@@ -1009,9 +1022,9 @@ const ViewpointItem = memo(function ViewpointItem({
                 <div className="tree-node__content" onClick={handleClick}>
                     <span
                         className="tree-node__icon tree-viewpoint"
-                        style={{ color: iconStyle.color }}
+                        style={{ color: iconStyle.color, background: iconStyle.bg }}
                     >
-                        V
+                        VP
                     </span>
                     <span className="tree-node__name">{viewpoint.name}</span>
 
@@ -1075,7 +1088,6 @@ const ViewpointTypeGroup = memo(function ViewpointTypeGroup({
                 <button className="tree-node__toggle">
                     <i className={`bi bi-chevron-${isExpanded ? 'down' : 'right'}`} />
                 </button>
-                <span className="tree-type-group__indicator" data-type={type} />
                 <span className="tree-type-group__label" data-type={type}>
                     {VP_TYPE_LABELS[type]}
                 </span>
@@ -1121,9 +1133,6 @@ const ViewpointSection = memo(function ViewpointSection({
     return (
         <div className="viewpoint-section">
             <div className="viewpoint-section__header">
-                <span className="viewpoint-section__icon">
-                    <i className="bi bi-eye" />
-                </span>
                 <span className="viewpoint-section__label">Viewpoints</span>
                 <span className="viewpoint-section__count">{viewpoints.length}</span>
             </div>
@@ -1167,9 +1176,6 @@ const MetamodelsSection = memo(function MetamodelsSection({
     return (
         <div className="metamodels-section">
             <div className="metamodels-section__header">
-                <span className="metamodels-section__icon">
-                    <i className="bi bi-boxes" />
-                </span>
                 <span className="metamodels-section__label">Metamodels</span>
                 <span className="metamodels-section__count">{totalCount}</span>
             </div>
@@ -1214,16 +1220,13 @@ const DocumentationEntry = memo(function DocumentationEntry({
 }): ReactElement {
     const handleClick = useCallback(() => {
         // Open the dashboard scrolled to documentation section
-        window.dispatchEvent(new CustomEvent('jjodel:openMegamodel'));
+        window.dispatchEvent(new CustomEvent(JjodelEvents.OPEN_MEGAMODEL));
         onSelect?.();
     }, [onSelect]);
 
     return (
         <div className="documentation-entry">
             <div className="documentation-entry__header" onClick={handleClick}>
-                <span className="documentation-entry__icon">
-                    <i className="bi bi-file-text" />
-                </span>
                 <span className="documentation-entry__label">Documentation</span>
             </div>
         </div>
@@ -1250,8 +1253,8 @@ function TreeViewContentComponent(props: AllProps & TreeViewContentProps) {
             const detail = (e as CustomEvent).detail as TreeTransformationData[] | undefined;
             setTransformations(detail || []);
         };
-        window.addEventListener('jjodel:transformations', handler);
-        return () => window.removeEventListener('jjodel:transformations', handler);
+        window.addEventListener(JjodelEvents.TRANSFORMATIONS, handler);
+        return () => window.removeEventListener(JjodelEvents.TRANSFORMATIONS, handler);
     }, []);
 
     // Listen for scroll-to-element events
@@ -1275,10 +1278,10 @@ function TreeViewContentComponent(props: AllProps & TreeViewContentProps) {
             }
         };
 
-        window.addEventListener('treeview:scroll-to-element', handleScrollToElement);
+        window.addEventListener(SystemEvents.TREEVIEW_SCROLL, handleScrollToElement);
 
         return () => {
-            window.removeEventListener('treeview:scroll-to-element', handleScrollToElement);
+            window.removeEventListener(SystemEvents.TREEVIEW_SCROLL, handleScrollToElement);
         };
     }, []);
 

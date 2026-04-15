@@ -14,6 +14,7 @@ import { Button } from '../components/common/Button';
 import {ProjectsApi} from "../api/persistance";
 import { LatestUpdates } from './components/LatestUpdates';
 import { CreateProjectDialog, ProjectFormData } from '../components/CreateProjectDialog/CreateProjectDialog';
+import { JjodelEvents } from '../events/registry';
 
 function AllProjectsComponent(props: AllProps): JSX.Element {
     const {projects} = props;
@@ -47,9 +48,9 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
             handleOpenCreateDialog();
         };
 
-        window.addEventListener('jjodel:new-project', handleNewProjectShortcut);
+        window.addEventListener(JjodelEvents.NEW_PROJECT, handleNewProjectShortcut);
         return () => {
-            window.removeEventListener('jjodel:new-project', handleNewProjectShortcut);
+            window.removeEventListener(JjodelEvents.NEW_PROJECT, handleNewProjectShortcut);
         };
     }, [handleOpenCreateDialog]);
 

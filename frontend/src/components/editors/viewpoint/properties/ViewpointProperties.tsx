@@ -1,6 +1,10 @@
 import React, { useCallback } from 'react';
 import { LViewPoint } from '../../../../joiner';
 import { ViewpointType, getViewpointType } from '../../../../view/viewPoint/viewpoint';
+// Self-import the stylesheet so .wp-type-segmented + .wp-field + .workbench-properties
+// render correctly even when this component is mounted outside WorkbenchProperties
+// (e.g., directly from Info.tsx's view-branch).
+import './properties.scss';
 
 interface ViewpointPropertiesProps {
     viewpoint: LViewPoint;
@@ -12,7 +16,7 @@ const typeOptions: { value: ViewpointType; label: string }[] = [
     { value: 'decoration', label: 'Decoration' },
     { value: 'validation', label: 'Validation' },
     { value: 'semantics', label: 'Semantics' },
-    { value: 'editor_behavior', label: 'Editor behavior' },
+    { value: 'editor_behavior', label: 'Editor' },
 ];
 
 const ViewpointProperties: React.FC<ViewpointPropertiesProps> = ({ viewpoint, readOnly }) => {
@@ -50,16 +54,17 @@ const ViewpointProperties: React.FC<ViewpointPropertiesProps> = ({ viewpoint, re
 
             <div className="wp-field">
                 <label className="wp-field__label">Type</label>
-                <div className="wp-type-select">
+                <div className="wp-type-segmented">
                     {typeOptions.map(opt => (
-                        <div
+                        <button
                             key={opt.value}
-                            className={`wp-type-select__option ${currentType === opt.value ? 'wp-type-select__option--selected' : ''}`}
+                            type="button"
+                            className={`wp-type-segmented__option ${currentType === opt.value ? 'wp-type-segmented__option--selected' : ''}`}
                             onClick={() => handleTypeChange(opt.value)}
+                            disabled={readOnly}
                         >
-                            <span className="wp-type-select__dot" />
                             {opt.label}
-                        </div>
+                        </button>
                     ))}
                 </div>
             </div>

@@ -90,7 +90,7 @@ const AboutDialogContent = ({ isOpen, onClose }: AboutDialogProps) => {
                 {/* Links */}
                 <div className="about-dialog__links">
                     <a
-                        href="https://www.jjodel.io"
+                        href="https://jjodel.io"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="about-dialog__link"
@@ -108,13 +108,13 @@ const AboutDialogContent = ({ isOpen, onClose }: AboutDialogProps) => {
                         GitHub
                     </a>
                     <a
-                        href="https://www.jjodel.io/releases/"
+                        href="https://docs.jjodel.io"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="about-dialog__link"
                     >
                         <i className="bi bi-journal-text" />
-                        Changelog
+                        Documentation
                     </a>
                 </div>
 

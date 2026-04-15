@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { PromptType, PromptContext, PROMPT_REGISTRY } from '../types/prompts';
 import { PromptService } from '../services/PromptService';
 import { DEFAULT_PROMPTS } from '../constants/defaultPrompts';
+import { AIEvents } from '../events/registry';
 
 interface UsePromptOptions {
     projectId?: string;
@@ -54,9 +55,9 @@ export function usePrompt(
             }
         };
 
-        window.addEventListener('prompt-changed', handleChange);
+        window.addEventListener(AIEvents.PROMPT_CHANGED, handleChange);
         return () => {
-            window.removeEventListener('prompt-changed', handleChange);
+            window.removeEventListener(AIEvents.PROMPT_CHANGED, handleChange);
         };
     }, [type, projectId]);
 
@@ -122,8 +123,8 @@ export function useAllPrompts(projectId?: string) {
 
     // Listen for changes
     useEffect(() => {
-        window.addEventListener('prompt-changed', refresh);
-        return () => window.removeEventListener('prompt-changed', refresh);
+        window.addEventListener(AIEvents.PROMPT_CHANGED, refresh);
+        return () => window.removeEventListener(AIEvents.PROMPT_CHANGED, refresh);
     }, [refresh]);
 
     return {

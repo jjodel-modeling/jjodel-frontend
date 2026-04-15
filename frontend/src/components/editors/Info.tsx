@@ -1,16 +1,18 @@
 import {
     Any,
     DAttribute, DClass, DEnumerator, Dictionary, DModel, DocString, DReference,
-    DPackage, DState,
+    DPackage, DState, DViewElement, DViewPoint,
     Input, LAttribute, LClass, LClassifier, LEnumerator,
     LGraphElement,
     LModel,
     LModelElement,
-    LObject, LPackage, LPointerTargetable, LReference, LStructuralFeature, LValue,
-    LViewElement, MultiSelect, Pointer, Pointers,
+    LObject, LPackage, LPointerTargetable, LProject, LReference, LStructuralFeature, LValue,
+    LViewElement, LViewPoint, MultiSelect, Pointer, Pointers,
     Select,
     Selectors, SetFieldAction, SetRootFieldAction, store, TRANSACTION, U, ValueDetail
 } from '../../joiner';
+import { ViewData } from './views/ViewData';
+import ViewpointProperties from './viewpoint/properties/ViewpointProperties';
 import {FakeStateProps, int, windoww} from '../../joiner/types';
 
 import ReactJson from 'react-json-view' // npm i react-json-view --force
@@ -307,7 +309,18 @@ class builder {
             return undefined;
         }).filter(e=>!!e) as {value: string, label: string}[];
 
+        // Conformance banner — show only for M1 models (which have a metamodel).
+        // Mirrors the pattern used for objects (see `object()` below).
+        const metamodel = !l.isMetamodel ? (l as any).instanceof as LModel | undefined : undefined;
+
         return (<>
+            {metamodel && (
+                <div className="jj-conformance-bar">
+                    <span className="jj-conformance-dot" />
+                    Conforms to <strong>{metamodel.name}</strong>
+                </div>
+            )}
+
             <CollapsibleSection title="GENERAL">
                 {this.named(data, advanced, true)}
             </CollapsibleSection>
@@ -1107,6 +1120,40 @@ function InfoComponent(props: AllProps) {
 
     let ddata = data?.__raw || data;
     let jsx: ReactNode = null;
+
+    // View / Viewpoint selection from Tree View takes precedence over model-element rendering.
+    // - DViewPoint → ViewpointProperties (simple Name / Type / Exclusive form)
+    // - DViewElement → ViewData (Apply to / Template / Style / Events / Options sub-tabs)
+    const selectedView = props.view;
+    const selectedViewClass = (selectedView as any)?.__raw?.className || (selectedView as any)?.className;
+    if (tab && selectedView && (selectedViewClass === DViewPoint.cname || selectedViewClass === DViewElement.cname)) {
+        const isVP = selectedViewClass === DViewPoint.cname;
+        const clearSelection = () => {
+            SetRootFieldAction.new('_lastSelected' as any, {
+                node: '',
+                view: '',
+                modelElement: '',
+            });
+        };
+        return (
+            <section className="properties-tab properties-panel">
+                {isVP ? (
+                    <ViewpointProperties
+                        key={selectedView.id as any}
+                        viewpoint={selectedView as unknown as LViewPoint}
+                        readOnly={false}
+                    />
+                ) : (
+                    <ViewData
+                        key={selectedView.id as any}
+                        viewid={selectedView.id as any}
+                        viewpoints={(LProject.getProject()?.viewpoints || []).map((vp: LViewPoint) => vp.id) as any}
+                        setSelectedView={clearSelection as any}
+                    />
+                )}
+            </section>
+        );
+    }
 
     // Check if we should use the new panel design (tab mode with valid className)
     const useNewDesign = !!(tab && data && ddata?.className && !['DObject', 'DValue'].includes(ddata.className));

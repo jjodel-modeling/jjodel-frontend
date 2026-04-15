@@ -36,7 +36,6 @@ import React, {Component, Dispatch, ReactElement, ReactNode, useState, useEffect
 import {FakeStateProps} from '../../joiner/types';
 import {connect} from 'react-redux';
 import {AuthApi, ProjectsApi} from '../../api/persistance';
-import TabDataMaker from "../../../src/components/abstract/tabs/TabDataMaker";
 import DockManager from "../../components/abstract/DockManager";
 
 import {Divisor, Item, Menu, UserHeader, SubMenu, SubMenuItem} from '../components/menu/Menu';
@@ -65,6 +64,7 @@ import { getRuntimeMegamodel } from '../../model/megamodelRuntime';
 import { useAvatar } from '../../hooks/useAvatar';
 import { AVATAR_COLORS, AVATAR_ICONS } from '../../constants/avatarConfig';
 import { JjScriptConsole } from '../../jjscript/components/JjScriptConsole';
+import { JjodelEvents, EnvGenEvents } from '../../events/registry';
 
 
 let windoww = window as any;
@@ -80,8 +80,8 @@ export function createM2(project: LProject, name0?: string) {
     const dPackage = lModel.addChild('package');
     const lPackage: LPackage = LPackage.fromD(dPackage);
     lPackage.name = 'default';
-    const tab = TabDataMaker.metamodel(dModel);
-    DockManager.open('models', tab);
+    // Use open2() so EDITOR_TYPE_CHANGE dispatches and Dashboard hides the LeftBar.
+    DockManager.open2(lModel);
 
     // Log activity
     ActivityLogger.log({
@@ -101,8 +101,8 @@ export function createM1(project: LProject, metamodel: LModel) {
     const lModel: LModel = LModel.fromD(dModel);
     project.models = [...project.models, lModel];
     project.graphs = [...project.graphs, lModel.node as LGraph];
-    const tab = TabDataMaker.model(dModel);
-    DockManager.open('models', tab);
+    // Use open2() so EDITOR_TYPE_CHANGE dispatches and Dashboard hides the LeftBar.
+    DockManager.open2(lModel);
 
     // Log activity
     ActivityLogger.log({
@@ -387,10 +387,10 @@ function NavbarComponent(props: AllProps) {
                 setIsTreeViewOpen(saved === 'true');
             }, 50);
         };
-        window.addEventListener('jjodel:toggle-tree-view', handleTreeViewToggle);
+        window.addEventListener(JjodelEvents.TOGGLE_TREE_VIEW, handleTreeViewToggle);
         return () => {
             window.removeEventListener('storage', handleStorageChange);
-            window.removeEventListener('jjodel:toggle-tree-view', handleTreeViewToggle);
+            window.removeEventListener(JjodelEvents.TOGGLE_TREE_VIEW, handleTreeViewToggle);
         };
     }, []);
 
@@ -423,8 +423,8 @@ function NavbarComponent(props: AllProps) {
             if (!tab) { setShowSingletons(false); return; }
             setShowSingletons(localStorage.getItem(`jjodel.showSingletons.${tab.id}`) === 'true');
         };
-        window.addEventListener('jjodel:active-tab', syncSingletonState);
-        return () => window.removeEventListener('jjodel:active-tab', syncSingletonState);
+        window.addEventListener(JjodelEvents.ACTIVE_TAB, syncSingletonState);
+        return () => window.removeEventListener(JjodelEvents.ACTIVE_TAB, syncSingletonState);
     }, [getActiveModelTab]);
 
     const toggleShowSingletons = useCallback(() => {
@@ -434,7 +434,7 @@ function NavbarComponent(props: AllProps) {
         localStorage.setItem(`jjodel.showSingletons.${tab.id}`, String(newVal));
         setShowSingletons(newVal);
         console.log(`[singleton] show=${newVal}, modelId=${tab.id}`);
-        window.dispatchEvent(new CustomEvent('jjodel:toggle-singletons', { detail: { modelId: tab.id, show: newVal } }));
+        window.dispatchEvent(new CustomEvent(JjodelEvents.TOGGLE_SINGLETONS, { detail: { modelId: tab.id, show: newVal } }));
     }, [getActiveModelTab, showSingletons]);
 
     // Function to open M2 Analytics with computed data
@@ -603,7 +603,7 @@ function NavbarComponent(props: AllProps) {
         // Apply layout mode to body for CSS targeting
         document.body.setAttribute('data-layout-mode', mode);
         // Dispatch event to notify dock to update (includes resetToDefault flag)
-        window.dispatchEvent(new CustomEvent('jjodel:layout-mode-change', {
+        window.dispatchEvent(new CustomEvent(JjodelEvents.LAYOUT_MODE_CHANGE, {
             detail: { mode, resetToDefault }
         }));
     };
@@ -690,7 +690,7 @@ function NavbarComponent(props: AllProps) {
                 switch (context) {
                     case 'DASHBOARD':
                         // Dispatch event for AllProjects to handle (opens Create Project dialog)
-                        window.dispatchEvent(new CustomEvent('jjodel:new-project'));
+                        window.dispatchEvent(new CustomEvent(JjodelEvents.NEW_PROJECT));
                         break;
                     case 'PROJECT_EDITOR':
                         console.log('[Jjodel Shortcuts] Creating M2, project:', project);
@@ -931,7 +931,7 @@ function NavbarComponent(props: AllProps) {
                 if (matchesShortcut(event, SHORTCUTS.TOGGLE_TREE_VIEW)) {
                     event.preventDefault();
                     event.stopPropagation();
-                    window.dispatchEvent(new CustomEvent('jjodel:toggle-tree-view'));
+                    window.dispatchEvent(new CustomEvent(JjodelEvents.TOGGLE_TREE_VIEW));
                     return;
                 }
             }
@@ -999,7 +999,7 @@ function NavbarComponent(props: AllProps) {
         {name: 'Jjodel',
             subItems: [
                 {name: 'About Jjodel', function: () => {AboutDialogController.open();}, icon: <i className="bi bi-shield" />},
-                {name: 'Roadmap', function: () => open('https://www.jjodel.io/roadmap/'), icon: <i className="bi bi-calendar3" />},
+                {name: 'Roadmap', function: () => open('https://github.com/jjodel-modeling/jjodel-frontend/milestones'), icon: <i className="bi bi-calendar3" />},
                 {name: 'divisor'},
                 {name: 'Sign-out', function: async () => {
                     if (isProjectModified()) {
@@ -1072,11 +1072,11 @@ function NavbarComponent(props: AllProps) {
                 isDashboard ? null : {name: 'Export Canvas', icon: <i className="bi bi-image" />,
                     disabled: metamodels.length === 0,
                     subItems: [
-                        {name: 'Export as PNG', function: () => window.dispatchEvent(new CustomEvent('jjodel:export-canvas', { detail: { format: 'png' } })), icon: <i className="bi bi-file-image" />, disabled: metamodels.length === 0},
-                        {name: 'Export as JPEG', function: () => window.dispatchEvent(new CustomEvent('jjodel:export-canvas', { detail: { format: 'jpeg' } })), icon: <i className="bi bi-file-image" />, disabled: metamodels.length === 0},
-                        {name: 'Export as SVG', function: () => window.dispatchEvent(new CustomEvent('jjodel:export-canvas', { detail: { format: 'svg' } })), icon: <i className="bi bi-filetype-svg" />, disabled: metamodels.length === 0},
+                        {name: 'Export as PNG', function: () => window.dispatchEvent(new CustomEvent(JjodelEvents.EXPORT_CANVAS, { detail: { format: 'png' } })), icon: <i className="bi bi-file-image" />, disabled: metamodels.length === 0},
+                        {name: 'Export as JPEG', function: () => window.dispatchEvent(new CustomEvent(JjodelEvents.EXPORT_CANVAS, { detail: { format: 'jpeg' } })), icon: <i className="bi bi-file-image" />, disabled: metamodels.length === 0},
+                        {name: 'Export as SVG', function: () => window.dispatchEvent(new CustomEvent(JjodelEvents.EXPORT_CANVAS, { detail: { format: 'svg' } })), icon: <i className="bi bi-filetype-svg" />, disabled: metamodels.length === 0},
                         {name: 'divisor'},
-                        {name: 'Copy to Clipboard', function: () => window.dispatchEvent(new CustomEvent('jjodel:export-canvas', { detail: { format: 'clipboard' } })), icon: <i className="bi bi-clipboard" />, disabled: metamodels.length === 0},
+                        {name: 'Copy to Clipboard', function: () => window.dispatchEvent(new CustomEvent(JjodelEvents.EXPORT_CANVAS, { detail: { format: 'clipboard' } })), icon: <i className="bi bi-clipboard" />, disabled: metamodels.length === 0},
                     ]
                 },
                 isDashboard ? null : {name: 'divisor'},
@@ -1211,7 +1211,7 @@ function NavbarComponent(props: AllProps) {
                 {name: 'divisor'},
                 {name: 'Generate Environment...',
                     function: () => {
-                        window.dispatchEvent(new CustomEvent('envgen-open-wizard'));
+                        window.dispatchEvent(new CustomEvent(EnvGenEvents.OPEN_WIZARD));
                     },
                     icon: <i className="bi bi-box-seam" />,
                     disabled: isDashboard || metamodels.length === 0
@@ -1220,7 +1220,7 @@ function NavbarComponent(props: AllProps) {
                 {name: 'Polymetric View',
                     jsx: <span>Polymetric View <span style={{ fontSize: '10px', color: '#94a3b8', marginLeft: '4px', fontWeight: 400 }}>(beta)</span></span>,
                     function: () => {
-                        window.dispatchEvent(new CustomEvent('jjodel:open-polymetric'));
+                        window.dispatchEvent(new CustomEvent(JjodelEvents.OPEN_POLYMETRIC));
                     },
                     icon: <i className="bi bi-grid-3x3-gap" />,
                     disabled: isDashboard || metamodels.length === 0
@@ -1263,21 +1263,21 @@ function NavbarComponent(props: AllProps) {
     const helpItems: MenuEntry[] = [
         {name: 'Keyboard Shortcuts', function: () => setShowShortcutsReference(true), icon: <i className="bi bi-keyboard" />, keystroke: [helpMenuModKey, '?']},
         {name: 'divisor'},
-        {name: 'What\'s New in Jjodel', function: ()=> open("https://www.jjodel.io/whats-new/"), icon: <i className="bi bi-bell" />},
-        {name: 'Homepage', function: ()=> open("https://www.jjodel.io"), icon: <i className="bi bi-house" />},
+        {name: 'What\'s New in Jjodel', function: ()=> open("https://github.com/jjodel-modeling/jjodel-frontend/releases"), icon: <i className="bi bi-bell" />},
+        {name: 'Homepage', function: ()=> open("https://jjodel.io"), icon: <i className="bi bi-house" />},
         {name: 'divisor'},
-        {name: 'Learn Jjodel', function: ()=> open("https://www.jjodel.io/learn-jjodel/"), icon: <i className="bi bi-infinity" />},
-        {name: 'Getting Started', function: ()=> open("https://www.jjodel.io/getting-started/"), icon: <i className="bi bi-rocket-takeoff" />},
-        {name: 'Video Tutorials', function: ()=> open("https://www.jjodel.io/video-tutorials/"), icon: <i className="bi bi-play-circle" />},
-        {name: 'User Guide', function: ()=> open('https://www.jjodel.io/getting-started/'), icon: <i className="bi bi-journal-text" />},
-        {name: 'Glossary', function: ()=> open('https://www.jjodel.io/glossary/'), icon: <i className="bi bi-book" />},
-        {name: 'FAQ', function: placeholder, icon: <i className="bi bi-chat-left-dots" />, disabled: true},
+        {name: 'Learn Jjodel', function: ()=> open("https://docs.jjodel.io/getting-started/"), icon: <i className="bi bi-infinity" />},
+        {name: 'Getting Started', function: ()=> open("https://docs.jjodel.io/getting-started/"), icon: <i className="bi bi-rocket-takeoff" />},
+        {name: 'Video Tutorials', function: ()=> open("https://docs.jjodel.io/video-pills/"), icon: <i className="bi bi-play-circle" />},
+        {name: 'User Guide', function: ()=> open('https://docs.jjodel.io/user-guide/dashboard/'), icon: <i className="bi bi-journal-text" />},
+        {name: 'Glossary', function: ()=> open('https://docs.jjodel.io/concepts/glossary/'), icon: <i className="bi bi-book" />},
+        {name: 'FAQ', function: ()=> open('https://docs.jjodel.io/faq/'), icon: <i className="bi bi-chat-left-dots" />},
         {name: 'divisor'},
         {name: 'Support', icon: <i className="bi bi-life-preserver" />,
             subItems: [
-                {name: 'Report a Bug', function: placeholder, icon: <i className="bi bi-bug" />, disabled: true},
-                {name: 'Request a Feature', function: placeholder, icon: <i className="bi bi-hand-index" />, disabled: true},
-                {name: 'Contact', function: placeholder, icon: <i className="bi bi-envelope" />, disabled: true}
+                {name: 'Report a Bug', function: ()=> open('https://github.com/jjodel-modeling/jjodel-frontend/issues/new?labels=bug'), icon: <i className="bi bi-bug" />},
+                {name: 'Request a Feature', function: ()=> open('https://github.com/jjodel-modeling/jjodel-frontend/issues/new?labels=enhancement'), icon: <i className="bi bi-hand-index" />},
+                {name: 'Contact', function: ()=> open('mailto:info@jjodel.io'), icon: <i className="bi bi-envelope" />}
             ]}
     ];
 
@@ -1379,7 +1379,7 @@ function NavbarComponent(props: AllProps) {
 
         // Sync on layout changes
         const handleActiveTab = () => setTimeout(syncTabs, 50);
-        window.addEventListener('jjodel:active-tab', handleActiveTab);
+        window.addEventListener(JjodelEvents.ACTIVE_TAB, handleActiveTab);
 
         // Initial sync
         const initialTimer = setTimeout(syncTabs, 200);
@@ -1387,7 +1387,7 @@ function NavbarComponent(props: AllProps) {
         const interval = setInterval(syncTabs, 1000);
 
         return () => {
-            window.removeEventListener('jjodel:active-tab', handleActiveTab);
+            window.removeEventListener(JjodelEvents.ACTIVE_TAB, handleActiveTab);
             clearTimeout(initialTimer);
             clearInterval(interval);
         };

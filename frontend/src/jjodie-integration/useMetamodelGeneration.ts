@@ -4,6 +4,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
+import { JjScriptEvents } from '../events/registry';
 
 // ============================================
 // TYPES
@@ -299,7 +300,7 @@ export function useMetamodelGeneration(
         if (!command) return false;
 
         // Emit event before executing
-        window.dispatchEvent(new CustomEvent('jjscript:executing', {
+        window.dispatchEvent(new CustomEvent(JjScriptEvents.EXECUTING, {
             detail: {
                 command,
                 lineNumber,
@@ -326,7 +327,7 @@ export function useMetamodelGeneration(
             } else {
                 setState(prev => ({ ...prev, error: result.message }));
                 // Emit execution end event on error
-                window.dispatchEvent(new CustomEvent('jjscript:execution-end', {
+                window.dispatchEvent(new CustomEvent(JjScriptEvents.EXECUTION_END, {
                     detail: { status: 'error', error: result.message }
                 }));
                 setPhase('error');
@@ -337,7 +338,7 @@ export function useMetamodelGeneration(
             const msg = error instanceof Error ? error.message : 'Execution error';
             setState(prev => ({ ...prev, error: msg }));
             // Emit execution end event on error
-            window.dispatchEvent(new CustomEvent('jjscript:execution-end', {
+            window.dispatchEvent(new CustomEvent(JjScriptEvents.EXECUTION_END, {
                 detail: { status: 'error', error: msg }
             }));
             setPhase('error');
@@ -374,7 +375,7 @@ export function useMetamodelGeneration(
         }
 
         // Emit execution end event
-        window.dispatchEvent(new CustomEvent('jjscript:execution-end', {
+        window.dispatchEvent(new CustomEvent(JjScriptEvents.EXECUTION_END, {
             detail: { status: 'completed', executedCount: state.commands?.length }
         }));
 
@@ -413,7 +414,7 @@ export function useMetamodelGeneration(
         }
 
         // Emit execution end event
-        window.dispatchEvent(new CustomEvent('jjscript:execution-end', {
+        window.dispatchEvent(new CustomEvent(JjScriptEvents.EXECUTION_END, {
             detail: { status: 'cancelled', executedCount: state.executedCommands.length }
         }));
 
@@ -425,7 +426,7 @@ export function useMetamodelGeneration(
         pauseRef.current = false;
 
         // Emit execution end event
-        window.dispatchEvent(new CustomEvent('jjscript:execution-end', {
+        window.dispatchEvent(new CustomEvent(JjScriptEvents.EXECUTION_END, {
             detail: { status: 'reset' }
         }));
 

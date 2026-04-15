@@ -1,10 +1,11 @@
 import './style.scss';
 import React, {Dispatch, ReactElement, ReactNode, useEffect, useState} from 'react';
+import { JjodelEvents } from '../../events/registry';
 import {connect} from 'react-redux';
 import {DProject, DState, DUser, LProject, LUser} from '../../joiner';
 import {FakeStateProps, windoww} from '../../joiner/types';
 import {LayoutData} from 'rc-dock';
-import {Collaborative, Console, Logger, MetaData, NestedView} from "../editors";
+import {Collaborative, Console, Logger, MetaData} from "../editors";
 import {NodeEditor} from "../editors/NodeEditor";
 import {PropertiesWithTreeView} from "../editors/PropertiesWithTreeView";
 import DockManager from './DockManager';
@@ -59,7 +60,7 @@ export function getDefaultPanelRatio(mode: LayoutMode): number {
  */
 export function activateVerticalConsoleMode(): void {
     saveLayoutMode('vertical-console');
-    window.dispatchEvent(new CustomEvent('jjodel:layout-mode-change', {
+    window.dispatchEvent(new CustomEvent(JjodelEvents.LAYOUT_MODE_CHANGE, {
         detail: { mode: 'vertical-console' as LayoutMode }
     }));
     console.log('✅ Vertical Console Mode activated. Refresh if needed.');
@@ -224,7 +225,7 @@ function DockComponent(props: AllProps) {
             }
         };
 
-        window.addEventListener('jjodel:layout-mode-change', handleLayoutChange as EventListener);
+        window.addEventListener(JjodelEvents.LAYOUT_MODE_CHANGE, handleLayoutChange as EventListener);
 
         // Debounced resize save (save after user stops resizing)
         let resizeTimeout: ReturnType<typeof setTimeout>;
@@ -235,7 +236,7 @@ function DockComponent(props: AllProps) {
         window.addEventListener('mouseup', debouncedResize);
 
         return () => {
-            window.removeEventListener('jjodel:layout-mode-change', handleLayoutChange as EventListener);
+            window.removeEventListener(JjodelEvents.LAYOUT_MODE_CHANGE, handleLayoutChange as EventListener);
             window.removeEventListener('mouseup', debouncedResize);
             clearTimeout(resizeTimeout);
         };
@@ -250,10 +251,10 @@ function DockComponent(props: AllProps) {
             document.body.setAttribute('data-editor-type', editorType || 'none');
         };
 
-        window.addEventListener('jjodel:editor-type-change', handleEditorTypeChange);
+        window.addEventListener(JjodelEvents.EDITOR_TYPE_CHANGE, handleEditorTypeChange);
 
         return () => {
-            window.removeEventListener('jjodel:editor-type-change', handleEditorTypeChange);
+            window.removeEventListener(JjodelEvents.EDITOR_TYPE_CHANGE, handleEditorTypeChange);
             document.body.removeAttribute('data-editor-type');
         };
     }, []);
@@ -267,12 +268,14 @@ function DockComponent(props: AllProps) {
 
     let advanced:boolean = props.advanced;
 
-    const ModelsSummary = {id: id(), title: <TabHeader tid={tid()}><Logo style={{marginLeft: '-10px', fontSize: '1.5rem', paddingRight: '6px'}}/> {DProject.getProject()?.name}</TabHeader>, group: 'models', closable: false, content: <TabContent tid={tid()}><ModelsSummaryTab /></TabContent>};
+    const summaryTid = (id(), tid()); // advance counter for TabHeader/TabContent pairing
+    const ModelsSummary = {id: 'project_summary', title: <TabHeader tid={summaryTid}><Logo style={{marginLeft: '-10px', fontSize: '1.5rem', paddingRight: '6px'}}/> {DProject.getProject()?.name}</TabHeader>, group: 'models', closable: false, content: <TabContent tid={summaryTid}><ModelsSummaryTab /></TabContent>};
     const structure = {id: id(), title: <TabHeader tid={tid()}>Properties</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><PropertiesWithTreeView mode={'tab'}/></TabContent>};
     const metadata = {id: id(), title: <TabHeader tid={tid()}>Metadata</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><MetaData /></TabContent>};
     // Tree View tab removed - now using dedicated TreeViewSidebar component
     const node = {id: id(), title: <TabHeader tid={tid()}>Node</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><NodeEditor /></TabContent>};
-    const views = {id: id(), title: <TabHeader tid={tid()}>Viewpoints</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><NestedView /></TabContent>};
+    // Viewpoint/view editing is rendered inline by the Properties tab (Info.tsx)
+    // when a view or viewpoint is selected in the Tree View sidebar.
     const collaborative = {id: id(), title: <TabHeader tid={tid()}>Collaborative</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><Collaborative /></TabContent>};
     // const mqtt = {id: id(), title: <TabHeader tid={tid()}>Mqtt</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><MqttEditor /></TabContent>};
     // const broker = {id: id(), title: <TabHeader tid={tid()}>Broker</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><BrokerEditor /></TabContent>};
@@ -323,8 +326,7 @@ function DockComponent(props: AllProps) {
     // Console → will become bottom drawer (Prompt 7)
     // Components are kept intact, only removed from tab navigation.
     const tabs = [];
-    tabs.push(structure);  // Properties
-    tabs.push(views);      // Viewpoints
+    tabs.push(structure);  // Properties (renders ViewData/ViewpointProperties when a view/viewpoint is selected in the Tree View)
     if (advanced) tabs.push(node);  // Node (Advanced only)
     tabs.push(console);    // Console
     if (advanced) tabs.push(mtm);
@@ -337,13 +339,19 @@ function DockComponent(props: AllProps) {
     layout.dockbox.children.push({tabs, size: rightSize});
 
     // Emit custom event when the active tab in the left panel changes
-    // so that StatusBar can switch between project stats and editor breadcrumb.
+    // so that StatusBar can switch between project stats and editor breadcrumb,
+    // and Dashboard can hide project sidebar when metamodel editor is active.
     const handleLayoutChange = (newLayout: any) => {
-        const activeId = newLayout?.dockbox?.children?.[0]?.activeId;
+        const panel = newLayout?.dockbox?.children?.[0];
+        const activeId = panel?.activeId;
         if (!activeId) return;
 
-        // Evento per StatusBar — mantenerlo
-        window.dispatchEvent(new CustomEvent('jjodel:active-tab', { detail: { activeId } }));
+        // Extract tab type from the title element's data-type attribute
+        const tabs = panel?.tabs || [];
+        const activeTab = tabs.find((t: any) => t.id === activeId);
+        const tabType: string | null = (activeTab?.title as any)?.props?.['data-type'] ?? null;
+
+        window.dispatchEvent(new CustomEvent(JjodelEvents.ACTIVE_TAB, { detail: { activeId, tabType } }));
 
         // Hide properties panel when Documentation tab is active
         const isDocTab = activeId === 'documentation' || activeId.startsWith('doc_');

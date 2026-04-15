@@ -46,13 +46,13 @@ div.toggle{
     width: var(--width);
     transition: all 0.3s ease-in;
     border-radius: var(--dimension);
-    background-color: var(--bg-4);
-    border: var(--border) solid var(--bg-4); // 2px
+    background-color: var(--color-text-tertiary);
+    border: var(--border) solid var(--color-text-tertiary); // 2px
 
     &::after {
       content: '';
       display: block;
-      border: none; // var(--border) solid var(--bg-3-1);
+      border: none; // var(--border) solid var(--color-border-hover);
       border-radius: var(--dimension);
       background: var(--color-bg-secondary, white);
       transition: all 0.3s ease-in;
@@ -97,18 +97,18 @@ div.toggle{
 
   input[type="checkbox"]:checked ~ label{
     transition: all 0.3s ease-in;
-    background-color: var(--color);
-    border: var(--border) solid var(--color); // 2px
+    background-color: var(--color-accent);
+    border: var(--border) solid var(--color-accent); // 2px
 
     &::after {
       margin-left: 0;
-      border-color: var(--color);
+      border-color: var(--color-accent);
     }
   }
 }
 
  .toggle span {
-    color: var(--color);
+    color: var(--color-text-primary);
     font-weight: var(--font-normal);
     position: relative;
     display: block;

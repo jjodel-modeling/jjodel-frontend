@@ -99,8 +99,20 @@
   /* Icon colors per quadrant */
   &:nth-child(1) .overview-icon { color: #64748b; } /* Projects - slate */
   &:nth-child(2) .overview-icon { color: #f59e0b; } /* Favorites - amber */
-  &:nth-child(3) .overview-icon { color: #3b82f6; } /* Modified - blue */
+  &:nth-child(3) .overview-icon { color: #0ea5e9; } /* Modified - cyan */
   &:nth-child(4) .overview-icon { color: #10b981; } /* Account - green */
+
+  /* Highlight variant - Modified Today */
+  &--highlight {
+    background: #e0f2fe; // cyan-100
+
+    .overview-label { color: #0369a1; }
+    .cell-value { color: #0ea5e9; }
+
+    &:hover {
+      background: #bae6fd; // cyan-200
+    }
+  }
 }
 
 /* Dark mode for overview grid */

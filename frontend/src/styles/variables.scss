@@ -1,182 +1,53 @@
 body{
 
-
   // fallbacks - mapped to design tokens
   --border-color: var(--color-border-primary, #333);
   --border-width: 1px;
 
-  // console 
-
-    --keyword-color: orange;
-    --keyword-weight: 400;
-
     // btn generic
-    --btn-generic: var(--accent);
-    --btn-generic-accent: var(--accent);
-    --btn-bg: var(--bg-3);
-    
-    // btn-up
-    --btn-up: var(--terziary);
-    --btn-up-accent: var(--terziary);
-    --btn-up-icon: "\F147";
-    --btn-up-icon-accent: "\F146";
-   
-    // btn-down
-    --btn-up: var(--terziary);
-    --btn-up-accent: var(--terziary);
-    --btn-up-icon: \F126;
-    --btn-up-icon-accent: \F125;
+    --btn-bg: var(--color-border-primary, #e2e2e1);
 
     // btn-back
-    --btn-back: var(--bg-5);
-    --btn-back-accent: var(--terziary);
-    --btn-back-icon: \F12F;
-    --btn-back-icon-accent: \F12F;
-
-    // btn-fwd
-    --btn-up: var(--terziary);
-    --btn-up-accent: var(--terziary);
-    --btn-up-icon: \F137;
-    --btn-up-icon-accent: \F136;
-
-    // btn-delete
-
-    --btn-delete2: var(--falure);
-  
-    // btn sizes
-    
-    --btn-x-small-size: 10px;
-    --btn-small-size: 24px;
-    --btn-medium-size: 20px;
-    --btn-large-size: 28px;
-
-    --btn-radius: 4px;
-    
-    --btn-font-x-small-size: 1.3em;
-    --btn-font-small-size: 1.5em;
-    --btn-font-medium-size: 1.8em;
-    --btn-font-large-size: 2.1em;
-    
+    --btn-back: var(--color-text-secondary, #525251);
 
   // radius
-
     --tab-radius: 4px;
 
-
   // input
-
     --input-height: 36px;
-    --input-width: 170px;
 
   // select
-
     --select-height: 36px;
     --select-width: 170px;
 
-
-
   // palette - mapped to design tokens
-
     --color: var(--color-accent, #5B8266); // primary color - now uses design token
-    --accent: var(--color-accent, #5B8266); // accent color - now uses design token
     --accent-secondary: var(--color-warning, #f59e0b); // secondary accent - uses warning color
     --neutral: var(--color-text-secondary, #525251); // neutral gray
-    --disabled: var(--color-bg-tertiary);
 
 // backgrounds - mapped to design tokens
-
     --bg: var(--color-accent-active, #233d4d);
-
-    --bg-1: var(--color-bg-secondary, white); // main background
-    --bg-1-1: var(--color-bg-secondary, #fefefe);
-    --bg-1-3: var(--color-bg-secondary, #fcfcfc);
-    --bg-1-5: var(--color-bg-primary, #f8f8f8);
-    --bg-2: var(--color-bg-tertiary, #f5f5f5);
-    --bg-2-5: var(--color-text-tertiary, #c0c0c0); // placeholder color
-    --bg-3: var(--color-border-primary, #e2e2e1);
-    --bg-3-1: var(--color-border-hover, #c3c3c1);
-    --bg-4: var(--color-text-tertiary, #8f908e);
-    --bg-4-1: var(--color-text-tertiary, #777777);
-    --bg-5: var(--color-text-secondary, #525251);
-
 
 // success/failure - mapped to design tokens
     --danger: var(--color-error, #ed474a);
     --failure: var(--color-error, #ed474a);
-    --delete: var(--color-error, #ed474a);
     --success: var(--color-success, #3ddc97);
 
-// alerting - mapped to design tokens
-
-    --alert-color: var(--color-error, #721c25);
-    --alert-border: var(--color-error-muted, #f5c6cc);
-    --alert-background: var(--color-error-subtle, #f8d7db);
-
 // control panel
-
-    --control-color: var(--control);
-    --control-border: none; // 1px solid var(--bg-4);
-    --control-background-dark: var(--bg-5);
-    --control-background-light: var(--bg-2);
-    --control-opacity: 0.7;
-
-// font-size, font-weight
-
-    --h1-size: 1.2em;
-    --h1-weight: 600;
-    --h1-lg-size: 1.4rem!important;
-    --h1-lg-weight: 600;
-    --h2-size: 1.2em;
-    --h2-weight: 600;
-    --h3-size: 1.1em;
-    --h3-weight: 500;
-    --text-lg-size: 1.1em;
-    --text-lg-weight: 300;
-    --text-md-size: 1em;
-    --text-md-weight: 300;
-    --text-sm-size: 0.8em;
-    --text-sm-weight: 300;
+    --control-background-light: var(--color-bg-tertiary, #f5f5f5);
 
   // model palette - mapped to design tokens
-
     --model-color: var(--color-accent, rgb(45, 78, 98))!important;
-    --model-accent: var(--color-accent, #087E8B);
-    --model-accent-secondary: var(--color-warning, #f3b700);
-    --model-background: var(--color-bg-secondary, white);
-    --model-radius: var(--radius);
-    --model-shadow: var(--shadow-md, 0 0 6px silver);
-
 
     --knob: 16px;
 
-
-
-    // *******
-
-    --disabled: var(--bg-3);
-
     --side-padding: 31px;
-    --sep-padding: 4em;
 
-    --secondary: var(--color-accent, #087e8b);
-    --terziary: var(--color-error, #EE4266);
-
-    --color-disabled: var(--bg-3-1);
-    --bg-disabled: var(--bg-1-3);
-
-    --radius: 4px;
-
-    --tab-sep: 8px;
-    --tab-margin: 0.75rem;
+    --color-disabled: var(--color-text-tertiary);
+    --bg-disabled: var(--color-bg-secondary);
 
     // default meta-element color
-
-    --default-color: #233d4d;
     --model-color: #5F0F40;
-    --package-color: #5F0F40;
-    --class-color: #087E8B;
-    --abstract-class-color: rgba(ed,47,4a,0.5);
-    --enum-color: #f3b700;
 
     --gr-1: linear-gradient(90deg, hsla(208, 33%, 21%, 1) 0%, hsla(186, 89%, 29%, 1) 100%);
     --gr-2: linear-gradient(90deg, hsla(186, 89%, 29%, 1) 0%, hsla(154, 69%, 55%, 1) 100%);
@@ -191,29 +62,14 @@ body{
     --gr-11: linear-gradient(90deg, hsla(323, 73%, 22%, 1) 0%, hsla(323, 73%, 64%, 1) 100%);
     --gr-12: linear-gradient(90deg, hsla(186, 33%, 94%, 1) 0%, hsla(216, 41%, 79%, 1) 100%);
 
-
-
-    --gr-card: var(--gr-12);
-
     --color-bg-1: #fbdada;
     --color-bg-2: #eefcf6;
     --color-bg-3: #FFFAEB;
-    --color-bg-4: #FCEDF7;
-    --color-bg-5: #ECFCFE;
-    --color-bg-6: #F1F6F9;
-    --color-bg-7: #F5F5F5;
-
-
 
     --dockpane-bg: var(--color-bg-secondary, white);
 
   // palette - mapped to design tokens where applicable
   --palette-1: var(--color-accent-active, #084c61);
-  --palette-2: var(--color-error, #db504a);
-  --palette-3: var(--color-warning, #e3b505);
-  --palette-4: var(--color-info, #53b3cb);
-  --palette-5: var(--color-success, #00A896);
-  --palette-b: var(--palette-1);
   --palette-w: var(--color-text-inverse, #fff);
   --palette-r: var(--color-error, #dc3545); // btn-danger
   --palette-g: var(--color-text-secondary, #6c757d); // btn-secondary
@@ -221,16 +77,9 @@ body{
   --palette-1-hover: var(--color-accent-hover, #185f91);
   --palette-w-hover: var(--color-text-inverse, #fff);
 
-  --background-color-add: var(--palette-5);
-  --background-color-warn: var(--palette-3);
-  --background-color-danger: var(--palette-2);
+  --background-color-add: var(--color-success, #00A896);
   --font-color-1: var(--palette-1);
-  --font-color-1-hover: var(--palette-1-hover);
-  --font-color-2: var(--palette-w);
   --border-color-1: var(--palette-1);
-  --background-color-1: var(--background-color-add);
-  --background-color-2: var(--background-color-warn);
-  --background-color-3: var(--background-color-danger);
 }
 
 
@@ -251,27 +100,7 @@ body{
 
 $radius: .2em;
 $border-color: var(--color-border-hover);
-$background: var(--color-bg-secondary);
-$true: var(--color-success);
-$false: var(--color-error);
 $fill: -webkit-fill-available;
-
-// damiano: i verified scss variables cannot be used at runtime in user jsx, so i'm making classic css variables below.
-
-$model-color: purple;
-$package-color: green;
-$class-color: red;
-$enum-color: orange;
-$feature-color: blue;
-$attribute-color: $feature-color;
-$reference-color: $feature-color;
-$operation-color: $feature-color;
-$literal-color: $feature-color;
-$parameter-color: pink;
-$object-color: indigo;
-$value-color: $feature-color;
-$annotation-color: black;
-$vertex-color: brown;
 
 .w-fit {width: fit-content}
 .h-fit {height: fit-content}

@@ -1,6 +1,7 @@
 import {DockLayout, TabData} from 'rc-dock';
+import { JjodelEvents } from '../../events/registry';
 import type {GObject, DViewPoint, LViewPoint} from '../../joiner';
-import {LModel, LProject, RuntimeAccessible, U} from '../../joiner';
+import {LModel, LProject, RuntimeAccessible, SetRootFieldAction, U} from '../../joiner';
 import TabDataMaker from "./tabs/TabDataMaker";
 import {DocumentationTab} from "./tabs/DocumentationTab";
 import React from 'react';
@@ -106,7 +107,7 @@ class DockManager {
         await DockManager.open('models', tab);
         const editorType = me.isMetamodel ? 'metamodel' : 'model';
         console.log('[OPEN2] about to dispatch', { editorType });
-        window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
+        window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
             detail: { editorType }
         }));
     }
@@ -136,7 +137,7 @@ class DockManager {
             if (existingTab) {
                 console.log('[DockManager] Activating existing documentation tab');
                 DockManager.dock.updateTab(tabId, null as any, true);
-                window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
+                window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
                     detail: { editorType: 'summary' }
                 }));
                 return;
@@ -158,7 +159,7 @@ class DockManager {
             if (layout?.dockbox?.children?.[0]) {
                 console.log('[DockManager] Creating new documentation tab');
                 DockManager.dock.dockMove(tab, layout.dockbox.children[0], 'middle');
-                window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
+                window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
                     detail: { editorType: 'summary' }
                 }));
             } else {
@@ -172,15 +173,60 @@ class DockManager {
     }
 
     /**
-     * Open Viewpoint Workbench Tab
+     * Select a viewpoint in the Properties panel. Sets `_lastSelected.view` so that
+     * Info.tsx renders the `ViewpointProperties` form (Name, Type, Exclusive).
+     *
+     * Called from the dashboard (project summary) and tree view clicks. The
+     * Properties panel is CSS-hidden in summary mode (`body[data-editor-type="summary"]`),
+     * so if no editor tab is currently active we first open the project's first
+     * metamodel via `open2()` — which dispatches EDITOR_TYPE_CHANGE and reveals
+     * the right-side Properties panel — and then set the selection after a short
+     * delay to let the tab mount.
      */
     static openViewpoint(vp: DViewPoint | LViewPoint): void {
-        if (!DockManager.dock) {
-            console.warn('[DockManager] Dock not available, cannot open viewpoint');
+        if (!vp?.id) {
+            console.warn('[DockManager] openViewpoint: invalid viewpoint');
             return;
         }
-        const tab = TabDataMaker.viewpoint(vp);
-        DockManager.open('models', tab);
+
+        const applySelection = () => {
+            try {
+                SetRootFieldAction.new('_lastSelected' as any, {
+                    node: '',
+                    view: vp.id,
+                    modelElement: '',
+                });
+            } catch (error) {
+                console.error('[DockManager] Error selecting viewpoint:', error);
+            }
+        };
+
+        // If a metamodel/model editor is already active, just update the selection.
+        const currentEditorType = document.body.getAttribute('data-editor-type');
+        if (currentEditorType === 'metamodel' || currentEditorType === 'model') {
+            applySelection();
+            return;
+        }
+
+        // No editor active — open the project's first metamodel so the Properties
+        // panel becomes visible (CSS keys off body[data-editor-type]).
+        try {
+            const project = LProject.getProject();
+            const firstMetamodel = project?.metamodels?.[0] as LModel | undefined;
+            if (!firstMetamodel) {
+                console.warn('[DockManager] openViewpoint: no metamodel in project; selecting anyway (Properties panel may be hidden).');
+                applySelection();
+                return;
+            }
+            DockManager.open2(firstMetamodel).then(() => {
+                // Delay lets the tab mount + EDITOR_TYPE_CHANGE propagate before
+                // Info.tsx reads _lastSelected.view.
+                setTimeout(applySelection, 200);
+            });
+        } catch (error) {
+            console.error('[DockManager] Error opening viewpoint:', error);
+            applySelection();
+        }
     }
 
     /**
@@ -253,7 +299,7 @@ class DockManager {
                 console.log('[DockManager] Updating and activating existing transformation tab');
                 // CRITICAL: Update tab content with fresh callbacks to avoid stale closures
                 DockManager.dock.updateTab(tabId, { content: tabContent } as any, true);
-                window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
+                window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
                     detail: { editorType: 'transformation' }
                 }));
                 return;
@@ -278,7 +324,7 @@ class DockManager {
             if (layout?.dockbox?.children?.[0]) {
                 console.log('[DockManager] Creating new transformation tab');
                 DockManager.dock.dockMove(tab, layout.dockbox.children[0], 'middle');
-                window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
+                window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
                     detail: { editorType: 'transformation' }
                 }));
             } else {

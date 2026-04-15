@@ -3,6 +3,7 @@ import { ToastContainer } from './ToastContainer';
 import type { ToastType } from './Toast';
 import type { ToastMessage, ToastPreferences, ToastDismiss, JjodelToastDetail } from './toastTypes';
 import { loadToastPrefs } from './toastTypes';
+import { JjodelEvents } from '../../events/registry';
 
 interface ToastOptions {
     title?: ReactNode;
@@ -33,8 +34,8 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     // Reload prefs when localStorage changes (from settings page)
     useEffect(() => {
         const onPrefsChange = () => setPrefs(loadToastPrefs());
-        window.addEventListener('jjodel:toast-prefs-changed', onPrefsChange);
-        return () => window.removeEventListener('jjodel:toast-prefs-changed', onPrefsChange);
+        window.addEventListener(JjodelEvents.TOAST_PREFS_CHANGED, onPrefsChange);
+        return () => window.removeEventListener(JjodelEvents.TOAST_PREFS_CHANGED, onPrefsChange);
     }, []);
 
     const addToast = useCallback((
@@ -88,8 +89,8 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                 { title: 'Guard Violation', dismiss: 'manual' },
             );
         };
-        window.addEventListener('jjodel:guard-violation', handler);
-        return () => window.removeEventListener('jjodel:guard-violation', handler);
+        window.addEventListener(JjodelEvents.GUARD_VIOLATION, handler);
+        return () => window.removeEventListener(JjodelEvents.GUARD_VIOLATION, handler);
     }, []);
 
     // Listen to jjodel:toast generic events
@@ -118,9 +119,9 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                 duration: detail.duration,
             });
         };
-        window.addEventListener('jjodel:toast', handler);
+        window.addEventListener(JjodelEvents.TOAST, handler);
         console.log('[ToastContext] jjodel:toast listener registered');
-        return () => window.removeEventListener('jjodel:toast', handler);
+        return () => window.removeEventListener(JjodelEvents.TOAST, handler);
     }, []);
 
     const value: ToastContextValue = {

@@ -1,7 +1,7 @@
 import type { EnvGenConfig, EnvGenConfigSummary } from '../types';
+import { EnvGenEvents } from '../../../events/registry';
 
 const STORAGE_KEY = 'jjodel_envgen_configs';
-const CHANGE_EVENT = 'envgen-config-changed';
 
 export class EnvGenPersistence {
     static getAll(): EnvGenConfigSummary[] {
@@ -44,7 +44,7 @@ export class EnvGenPersistence {
                 configs.push(config);
             }
             localStorage.setItem(STORAGE_KEY, JSON.stringify(configs));
-            window.dispatchEvent(new CustomEvent(CHANGE_EVENT));
+            window.dispatchEvent(new CustomEvent(EnvGenEvents.CONFIG_CHANGED));
         } catch (e) {
             console.error('[EnvGenPersistence] Failed to save config:', e);
         }
@@ -57,7 +57,7 @@ export class EnvGenPersistence {
             const configs: EnvGenConfig[] = JSON.parse(raw);
             const filtered = configs.filter(c => c.id !== id);
             localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
-            window.dispatchEvent(new CustomEvent(CHANGE_EVENT));
+            window.dispatchEvent(new CustomEvent(EnvGenEvents.CONFIG_CHANGED));
         } catch (e) {
             console.error('[EnvGenPersistence] Failed to delete config:', e);
         }
@@ -89,6 +89,3 @@ export class EnvGenPersistence {
         return parts.join(' · ') || 'No tech stack configured';
     }
 }
-
-export const ENVGEN_CHANGE_EVENT = CHANGE_EVENT;
-export const ENVGEN_OPEN_WIZARD_EVENT = 'envgen-open-wizard';

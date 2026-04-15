@@ -6,6 +6,7 @@ import { LayoutMode, getSavedLayoutMode, saveLayoutMode } from '../abstract/Dock
 import { isProjectOverviewPage } from '../../utils/navigationUtils';
 import { LPointerTargetable, LViewPoint } from '../../joiner';
 import { activateViewpoint } from '../../utils/lastViewpoint';
+import { JjodelEvents } from '../../events/registry';
 
 interface ToolbarProps {
     snapEnabled: boolean;
@@ -170,22 +171,6 @@ function Toolbar({
         activateViewpoint(vpId || null);
     }, []);
 
-    // ── Viewpoint editor state (from sidebar) ──
-    const [vpEditorState, setVpEditorState] = useState<{ active: boolean; viewpointName?: string; viewpointType?: string }>({ active: false });
-
-    useEffect(() => {
-        const handler = (e: Event) => {
-            const detail = (e as CustomEvent).detail;
-            setVpEditorState(detail);
-        };
-        window.addEventListener('jjodel:viewpoint-editor-state', handler);
-        return () => window.removeEventListener('jjodel:viewpoint-editor-state', handler);
-    }, []);
-
-    const handleBackFromViewpointEditor = useCallback(() => {
-        window.dispatchEvent(new CustomEvent('jjodel:closeViewpointEditor'));
-    }, []);
-
     // ── Layout mode state (synced via CustomEvent + localStorage) ──
     const [layoutMode, setLayoutMode] = useState<LayoutMode>(getSavedLayoutMode);
 
@@ -194,15 +179,15 @@ function Toolbar({
             const detail = (e as CustomEvent).detail;
             if (detail?.mode) setLayoutMode(detail.mode);
         };
-        window.addEventListener('jjodel:layout-mode-change', handleLayoutChange);
-        return () => window.removeEventListener('jjodel:layout-mode-change', handleLayoutChange);
+        window.addEventListener(JjodelEvents.LAYOUT_MODE_CHANGE, handleLayoutChange);
+        return () => window.removeEventListener(JjodelEvents.LAYOUT_MODE_CHANGE, handleLayoutChange);
     }, []);
 
     const handleLayoutModeChange = useCallback((mode: LayoutMode, resetToDefault = false) => {
         setLayoutMode(mode);
         saveLayoutMode(mode);
         document.body.setAttribute('data-layout-mode', mode);
-        window.dispatchEvent(new CustomEvent('jjodel:layout-mode-change', {
+        window.dispatchEvent(new CustomEvent(JjodelEvents.LAYOUT_MODE_CHANGE, {
             detail: { mode, resetToDefault }
         }));
     }, []);
@@ -242,25 +227,6 @@ function Toolbar({
 
     return (
         <div className="editor-v2-toolbar">
-            {/* ── Viewpoint editor back button + badge ── */}
-            {vpEditorState.active && (
-                <div className="toolbar-group toolbar-vp-editor-group">
-                    <button
-                        className="toolbar-btn toolbar-vp-back-btn"
-                        onClick={handleBackFromViewpointEditor}
-                        title="Exit viewpoint editor"
-                    >
-                        <i className="bi bi-arrow-left" />
-                    </button>
-                    <span
-                        className={`toolbar-vp-badge toolbar-vp-badge--${vpEditorState.viewpointType === 'validation' ? 'validation' : 'syntax'}`}
-                    >
-                        {vpEditorState.viewpointName}
-                    </span>
-                    <div className="toolbar-separator" />
-                </div>
-            )}
-
             {/* ── Actions / Alignment group (swaps in-place) ── */}
             {selectedCount >= 2 && onAlignLeft ? (
                 <div className="toolbar-group toolbar-group--align">

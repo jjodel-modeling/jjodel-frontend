@@ -17,6 +17,7 @@ import { useJjtlParser } from '../hooks/useJjtlParser';
 import { useJjtlExecutor } from '../hooks/useJjtlExecutor';
 import { ParserError } from '../types';
 import { ExecuteTransformationDialog, ModelOption } from './ExecuteTransformationDialog';
+import { SystemEvents, JjodelEvents } from '../../events/registry';
 
 // Import JjTL styles
 import '../styles/jjtl.scss';
@@ -157,15 +158,15 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
                 setResultFromExternal(result, 0);
             }
         };
-        window.addEventListener('jjtl-execution-result', handler);
-        return () => window.removeEventListener('jjtl-execution-result', handler);
+        window.addEventListener(SystemEvents.JJTL_EXECUTION_RESULT, handler);
+        return () => window.removeEventListener(SystemEvents.JJTL_EXECUTION_RESULT, handler);
     }, [setResultFromExternal]);
 
     // Notify the app StatusBar that JjTL editor is visible (so it hides itself)
     useEffect(() => {
-        window.dispatchEvent(new CustomEvent('jjodel:jjtl-statusbar', { detail: { active: true } }));
+        window.dispatchEvent(new CustomEvent(JjodelEvents.JJTL_STATUSBAR, { detail: { active: true } }));
         return () => {
-            window.dispatchEvent(new CustomEvent('jjodel:jjtl-statusbar', { detail: { active: false } }));
+            window.dispatchEvent(new CustomEvent(JjodelEvents.JJTL_STATUSBAR, { detail: { active: false } }));
         };
     }, []);
 

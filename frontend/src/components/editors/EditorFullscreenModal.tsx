@@ -8,6 +8,8 @@ import Editor, { OnMount } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import './EditorFullscreenModal.scss';
 
+export type EditorViewMode = 'source' | 'split' | 'preview';
+
 export interface EditorFullscreenModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -17,8 +19,16 @@ export interface EditorFullscreenModalProps {
   onChange?: (value: string | undefined) => void;
   onSave?: (value: string) => void;
   language?: string;
+  /**
+   * Optional display label for the status bar language chip. Defaults to `language`
+   * when not provided. Use this when the Monaco language id (e.g. 'typescript')
+   * differs from the user-facing label (e.g. 'jsx').
+   */
+  languageLabel?: string;
   readOnly?: boolean;
   theme?: 'vs' | 'vs-dark';
+  /** When provided, enables Source/Split/Preview toggle in toolbar */
+  renderPreview?: (code: string) => React.ReactNode;
 }
 
 export function EditorFullscreenModal({
@@ -30,12 +40,15 @@ export function EditorFullscreenModal({
   onChange,
   onSave,
   language = 'typescript',
+  languageLabel,
   readOnly = false,
   theme = 'vs',
+  renderPreview,
 }: EditorFullscreenModalProps): JSX.Element | null {
   const [wrap, setWrap] = useState(false);
   const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
   const [copyFeedback, setCopyFeedback] = useState(false);
+  const [viewMode, setViewMode] = useState<EditorViewMode>('source');
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
 
   // Handle ESC key
@@ -118,11 +131,27 @@ export function EditorFullscreenModal({
   const lineCount = value.split('\n').length;
   const charCount = value.length;
 
+  // Undo / Redo
+  const handleUndo = useCallback(() => {
+    editorRef.current?.trigger('toolbar', 'undo', null);
+  }, []);
+
+  const handleRedo = useCallback(() => {
+    editorRef.current?.trigger('toolbar', 'redo', null);
+  }, []);
+
+  // Search (toggle Monaco find widget)
+  const handleSearch = useCallback(() => {
+    editorRef.current?.trigger('toolbar', 'actions.find', null);
+  }, []);
+
   // Simple Monaco options
   const editorOptions: editor.IStandaloneEditorConstructionOptions = {
     readOnly,
     wordWrap: wrap ? 'on' : 'off',
     lineNumbers: 'on',
+    lineNumbersMinChars: 4,
+    lineDecorationsWidth: 8,
     fontSize: 14,
     fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
     fontLigatures: false,
@@ -131,6 +160,7 @@ export function EditorFullscreenModal({
     scrollBeyondLastLine: false,
     padding: { top: 12, bottom: 12 },
     renderLineHighlight: 'line',
+    glyphMargin: false,
   };
 
   if (!isOpen) return null;
@@ -147,6 +177,39 @@ export function EditorFullscreenModal({
           </div>
 
           <div className="editor-fullscreen-header__actions">
+            {!readOnly && (
+              <>
+                <button
+                  type="button"
+                  className="editor-fullscreen-btn"
+                  onClick={handleUndo}
+                  title="Undo"
+                >
+                  <i className="bi bi-arrow-counterclockwise" />
+                </button>
+
+                <button
+                  type="button"
+                  className="editor-fullscreen-btn"
+                  onClick={handleRedo}
+                  title="Redo"
+                >
+                  <i className="bi bi-arrow-clockwise" />
+                </button>
+
+                <div className="editor-fullscreen-divider" />
+              </>
+            )}
+
+            <button
+              type="button"
+              className="editor-fullscreen-btn"
+              onClick={handleSearch}
+              title="Search (Ctrl+F)"
+            >
+              <i className="bi bi-search" />
+            </button>
+
             <button
               type="button"
               className={`editor-fullscreen-btn ${wrap ? 'active' : ''}`}
@@ -176,6 +239,38 @@ export function EditorFullscreenModal({
               </button>
             )}
 
+            {renderPreview && (
+              <>
+                <div className="editor-fullscreen-divider" />
+                <div className="editor-view-mode-toggle">
+                  <button
+                    type="button"
+                    className={viewMode === 'source' ? 'active' : ''}
+                    onClick={() => setViewMode('source')}
+                    title="Source only"
+                  >
+                    <i className="bi bi-code-slash" />
+                  </button>
+                  <button
+                    type="button"
+                    className={viewMode === 'split' ? 'active' : ''}
+                    onClick={() => setViewMode('split')}
+                    title="Split view"
+                  >
+                    <i className="bi bi-layout-split" />
+                  </button>
+                  <button
+                    type="button"
+                    className={viewMode === 'preview' ? 'active' : ''}
+                    onClick={() => setViewMode('preview')}
+                    title="Preview only"
+                  >
+                    <i className="bi bi-eye" />
+                  </button>
+                </div>
+              </>
+            )}
+
             <div className="editor-fullscreen-divider" />
 
             <button
@@ -189,18 +284,33 @@ export function EditorFullscreenModal({
           </div>
         </div>
 
-        {/* Editor - SIMPLIFIED */}
-        <div className="editor-fullscreen-body">
-          <Editor
-            width="100%"
-            height="100%"
-            value={value}
-            onChange={onChange}
-            language={language}
-            theme={theme}
-            options={editorOptions}
-            onMount={handleEditorMount}
-          />
+        {/* Editor + Preview */}
+        <div className={`editor-fullscreen-body ${viewMode !== 'source' && renderPreview ? 'editor-fullscreen-body--' + viewMode : ''}`}>
+          {viewMode !== 'preview' && (
+            <div
+              className={viewMode === 'split' ? 'editor-fullscreen-editor-pane' : undefined}
+              // Source mode: explicit 100% sizing so Monaco's height="100%" resolves
+              // against a concrete parent (without this the wrapper is an auto-sized
+              // block div and Monaco collapses to 0px). Split mode uses the pane
+              // class's flex layout instead, so inline style is only applied
+              // when unclassed.
+              style={viewMode === 'source' ? { width: '100%', height: '100%' } : undefined}
+            >
+              <Editor
+                width="100%"
+                height="100%"
+                value={value}
+                onChange={onChange}
+                language={language}
+                theme={theme}
+                options={editorOptions}
+                onMount={handleEditorMount}
+              />
+            </div>
+          )}
+          {viewMode !== 'source' && renderPreview && (
+            renderPreview(value)
+          )}
         </div>
 
         {/* Footer */}
@@ -214,7 +324,7 @@ export function EditorFullscreenModal({
           </div>
 
           <div className="editor-fullscreen-footer__right">
-            <span className="editor-fullscreen-footer__language">{language}</span>
+            <span className="editor-fullscreen-footer__language">{languageLabel ?? language}</span>
             {!readOnly && onSave && (
               <button
                 type="button"

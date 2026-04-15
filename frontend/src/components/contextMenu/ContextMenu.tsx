@@ -50,6 +50,7 @@ import { forEach } from 'lodash';
 import './ContextMenu.scss';
 import { getLastEditedViewpointId, getLastEditedViewpointName, createViewInWorkbench } from '../../utils/lastViewpoint';
 import { toast } from '../Toast/toastDispatch';
+import { JjodelEvents } from '../../events/registry';
 
 function ContextMenuComponent(props: AllProps) {
     return ContextMenuComponentInner(props);
@@ -393,7 +394,7 @@ function ContextMenuComponentInner(props: AllProps) {
                     if (cn.includes("enum")) helpKey = 'element-enum'; // both literal and enumerator shares the same help section?
                     else helpKey =  'element-' + cn.substring(1);
                 }
-                window.dispatchEvent(new CustomEvent('jjodel:help-open', { detail: { helpKey } }));
+                window.dispatchEvent(new CustomEvent(JjodelEvents.HELP_OPEN, { detail: { helpKey } }));
                 close();
                 }, []);
             separator();

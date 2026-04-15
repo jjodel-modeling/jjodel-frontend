@@ -161,6 +161,7 @@ function JsxEditorComponent(props: AllProps) {
                 setFullscreen(false);
             }}
             language="typescript"
+            languageLabel="jsx"
             readOnly={readOnly}
         />
     </>);

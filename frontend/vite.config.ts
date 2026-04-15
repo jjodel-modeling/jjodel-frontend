@@ -40,6 +40,9 @@ export default defineConfig({
       }
     }
   },
+  optimizeDeps: {
+    include: ['svgpath']
+  },
   define: {
     'global': 'globalThis',
     // 'window.jQuery': 'window.$',

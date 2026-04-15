@@ -44,7 +44,7 @@ $transition: 150ms ease;
 .project-card {
   position: relative;
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   background: #ffffff; // Pure white, NO gradient!
   border: none; // NO border
   border-radius: $card-radius;
@@ -59,6 +59,11 @@ $transition: 150ms ease;
     // Issue 3 fix: Update icon backgrounds on card hover
     .project-card__action:not(.is-favorite) {
       background: #f1f5f9;
+    }
+
+    // Show actions on hover
+    .project-card__actions {
+      opacity: 1;
     }
   }
 
@@ -88,18 +93,19 @@ $transition: 150ms ease;
     position: absolute;
   }
 
-  // Accent Bar (3px left side) - Subtle slate color
+  // Accent Bar (3px top) - Colored by project type
   &__accent {
-    width: 3px;
+    height: 3px;
+    width: 100%;
     flex-shrink: 0;
-    background-color: #64748b; // slate-500 - subtle, refined
+    background-color: #cbd5e1; // neutral default (private)
     transition: background-color 150ms ease;
-    border-radius: 6px 0 0 6px;
+    border-radius: $card-radius $card-radius 0 0;
   }
 
-  &:hover &__accent {
-    background-color: #475569; // slate-600 on hover
-  }
+  &--public &__accent { background-color: #0ea5e9; }   // cyan
+  &--collaborative &__accent { background-color: #f59e0b; } // amber
+  &--favorite &__accent { background-color: #f59e0b; }  // amber
 
   // Content Area
   &__content {
@@ -137,6 +143,8 @@ $transition: 150ms ease;
     align-items: center;
     gap: 4px;
     flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.15s ease;
   }
 
   &__action {
@@ -207,12 +215,13 @@ $transition: 150ms ease;
   &__version {
     flex-shrink: 0;
     margin-left: auto;
-    background: #d1fae5;  // green-100 for content/revision version
-    color: #065f46;       // green-800
+    background: #f1f5f9;          // neutral slate-100
+    color: #94a3b8;               // slate-400 — de-emphasized
+    border: 0.5px solid #e2e8f0;  // subtle border
     padding: 2px 8px;
     border-radius: 4px;
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 500;
     cursor: help;
   }
@@ -686,111 +695,112 @@ $transition: 150ms ease;
 // PROJECT ROW - List View with Colored Dot
 // ============================================
 
+// ============================================
+// LIST VIEW — Table-style rows in a single card
+// Updated: 2026-04-04
+// ============================================
+
 .project-rows-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 24px;
-  width: 100%;
+  background: #ffffff;
+  border: 0.5px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 12px 24px 24px; // top margin separates from toolbar
 }
 
 .project-row {
   display: grid;
   grid-template-columns:
-    28px           // checkbox
-    minmax(150px, 200px)  // nome
-    70px           // badge (Private/Public)
-    minmax(80px, 120px)   // autore
-    1fr            // tag (spazio flessibile)
-    70px           // versione
-    80px           // tempo
-    60px;          // azioni
+    36px               // checkbox
+    32px               // dot
+    minmax(140px, 1fr)  // name
+    110px               // type badge
+    70px                // rev
+    110px               // metamodels
+    90px                // models
+    100px               // modified
+    64px;               // actions
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  background: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  gap: 8px;
+  padding: 14px 16px;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition: background 0.12s;
+  border-bottom: 1px solid #f1f5f9;
   position: relative;
 
-  &:hover {
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  &:last-child {
+    border-bottom: none;
+  }
 
-    // Issue 3 fix: Update icon backgrounds on row hover
-    .project-row__favorite:not(.active) {
-      background: #f1f5f9;
+  &:hover:not(.project-row--header) {
+    background: #fafbfc;
+
+    .project-row__actions { opacity: 1; }
+  }
+
+  // Header row
+  &--header {
+    cursor: default;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e2e8f0;
+
+    span {
+      font-size: 11px;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
     }
   }
 
-  // Elevate row when dropdown is open
-  &:focus-within {
-    z-index: 100;
+  // Selected row
+  &--selected {
+    background: #f1f5f9;
+
+    &:hover { background: #e2e8f0; }
   }
 
-  // Modern browsers - elevate when has open dropdown
-  &:has(.dropdown),
-  &:has(.dropdown-menu),
-  &:has([class*="menu-dropdown"]),
-  &.menu-open {
-    z-index: 100;
-  }
-
-  &:focus-visible {
-    outline: 2px solid #475569;
-    outline-offset: 2px;
-  }
-
-  // All dropdown variations
-  .dropdown,
-  .dropdown-menu,
-  [class*="menu-dropdown"] {
-    z-index: 9999 !important;
-    position: absolute;
-  }
-
-  // Checkbox wrapper (replaces colored dot)
+  // Checkbox
   &__checkbox {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    flex-shrink: 0;
   }
 
-  // Selected row state
-  &--selected {
-    background: #f1f5f9;
-
-    &:hover {
-      background: #e2e8f0;
-    }
+  // Colored dot
+  &__dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    justify-self: center;
   }
 
   // Project name
   &__name {
-    font-family: 'Inter Variable', -apple-system, sans-serif;
     font-weight: 600;
     font-size: 14px;
     color: #1e293b;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    display: flex;
+    align-items: center;
   }
 
-  // Badge (Private/Public/Collab)
+  // Type badge
   &__badge {
-    padding: 2px 8px;
+    padding: 3px 10px;
     border-radius: 4px;
-    font-family: 'Inter Variable', -apple-system, sans-serif;
     font-size: 11px;
     font-weight: 500;
     text-align: center;
+    width: fit-content;
 
     &--private {
       background: #f1f5f9;
       color: #64748b;
+      border: 0.5px solid #e2e8f0;
     }
 
     &--public {
@@ -804,131 +814,38 @@ $transition: 150ms ease;
     }
   }
 
-  // Author
-  &__author {
-    font-family: 'Inter Variable', -apple-system, sans-serif;
-    color: #64748b;
-    font-size: 12px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  // Tags container
-  &__tags {
-    display: flex;
-    gap: 4px;
-    overflow: hidden;
-  }
-
-  // Individual tag
-  &__tag {
-    background: #e2e8f0;
+  // Rev number
+  &__rev {
+    font-size: 13px;
     color: #475569;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-family: 'Inter Variable', -apple-system, sans-serif;
-    font-size: 10px;
     font-weight: 500;
-    white-space: nowrap;
   }
 
-  // "+N more" tag indicator with tooltip
-  &__tag-more {
-    position: relative;
-    background: #f1f5f9;
-    color: #94a3b8;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-family: 'Inter Variable', -apple-system, sans-serif;
-    font-size: 10px;
-    font-weight: 500;
-    white-space: nowrap;
-    cursor: default;
-
-    &:hover {
-      background: #e2e8f0;
-      color: #64748b;
-    }
-  }
-
-  &__tag-tooltip {
-    position: absolute;
-    bottom: calc(100% + 6px);
-    left: 50%;
-    transform: translateX(-50%);
-    background: #1e293b;
-    color: #ffffff;
-    padding: 6px 10px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 400;
-    white-space: nowrap;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.15s, visibility 0.15s;
-    z-index: 100;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    pointer-events: none;
-
-    // Arrow
-    &::after {
-      content: '';
-      position: absolute;
-      top: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      border: 5px solid transparent;
-      border-top-color: #1e293b;
-    }
-  }
-
-  &__tag-tooltip-icon {
-    width: 12px;
-    height: 12px;
-    flex-shrink: 0;
-  }
-
-  &__tag-more:hover &__tag-tooltip {
-    opacity: 1;
-    visibility: visible;
-  }
-
-  // Version badge - Green accent for content/revision version
-  &__version {
-    background: #d1fae5;  // green-100
-    color: #065f46;       // green-800
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
-    font-size: 11px;
-    font-weight: 500;
-    text-align: center;
-    cursor: help;
+  // Metamodels / Models count
+  &__count {
+    font-size: 13px;
+    color: #475569;
+    font-weight: 600;
   }
 
   // Time ago
   &__time {
-    font-family: 'Inter Variable', -apple-system, sans-serif;
     color: #94a3b8;
     font-size: 12px;
-    text-align: right;
     white-space: nowrap;
   }
 
-  // Actions container - Issue 2 fix: proper alignment
+  // Actions — visible on row hover
   &__actions {
     display: flex;
     align-items: center;
-    gap: 4px;
     justify-content: flex-end;
-    height: 100%;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
   }
 
-  // Favorite button - Clean, borderless
-  &__favorite {
+  &__action-btn {
     width: 28px;
     height: 28px;
     display: flex;
@@ -939,32 +856,16 @@ $transition: 150ms ease;
     border-radius: 6px;
     color: #94a3b8;
     cursor: pointer;
-    transition: all 150ms ease;
+    font-size: 14px;
+    transition: all 0.12s;
 
     &:hover {
       background: #f1f5f9;
       color: #64748b;
     }
-
-    &.active {
-      color: #facc15 !important;
-      background: transparent;
-
-      i {
-        color: #facc15 !important;
-      }
-
-      &:hover {
-        background: #fffbeb;
-      }
-    }
-
-    i {
-      font-size: 14px;
-    }
   }
 
-  // Menu button - Clean, borderless
+  // Menu button inside list row
   &__menu {
     position: relative;
     background: transparent !important;
@@ -986,16 +887,13 @@ $transition: 150ms ease;
       font-size: 14px;
     }
 
-    &:hover i {
-      color: #64748b;
-    }
+    &:hover i { color: #64748b; }
 
-    // Fix: Dropdown positioning - align to right edge, override menu.scss left:0
     .dropdown {
       position: absolute;
       top: calc(100% + 4px);
       right: 0;
-      left: auto !important; // Override menu.scss .dropdown.right { left: 0 }
+      left: auto !important;
       z-index: 9999 !important;
       margin-top: 0;
       background: #ffffff;
@@ -1006,46 +904,35 @@ $transition: 150ms ease;
     }
   }
 
-  // Tag popover positioning - LEFT of menu, higher z-index
-  .tag-popover {
-    top: -8px;
-    right: 50px; // Position to the LEFT of the menu
-    z-index: 10001; // Higher than menu dropdown (9999)
+  // Elevate when dropdown open
+  &:focus-within,
+  &:has(.dropdown) {
+    z-index: 100;
   }
 
-  // Responsive adjustments
-  @media (max-width: 1024px) {
+  // Responsive
+  @media (max-width: 900px) {
     grid-template-columns:
-      20px           // pallino
-      minmax(120px, 1fr)  // nome
-      70px           // badge
-      1fr            // tag
-      60px;          // azioni
+      36px 32px 1fr 90px 60px 64px;
 
-    &__author,
-    &__version,
-    &__time {
-      display: none;
-    }
+    &__count,
+    &__time { display: none; }
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 600px) {
     grid-template-columns:
-      20px           // pallino
-      1fr            // nome
-      70px           // badge
-      60px;          // azioni
+      36px 32px 1fr 80px 64px;
 
-    &__tags {
-      display: none;
-    }
+    &__rev,
+    &__count,
+    &__time { display: none; }
   }
+}
 
-  // Skeleton loading state
-  &--skeleton {
-    pointer-events: none;
-    animation: none;
-  }
+.project-row--entering {
+  animation: slideInUp 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  opacity: 0;
+  transform: translateY(12px);
 }
 
 // ============================================
@@ -1170,10 +1057,231 @@ $transition: 150ms ease;
   }
 }
 
-.project-row--entering {
-  animation: slideInUp 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+// ============================================
+// GALLERY CARD O — Status-forward design
+// Updated: 2026-04-05
+// ============================================
+
+.gallery-card {
+  background: var(--color-bg-primary, #ffffff);
+  border: 0.5px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  padding: 13px 14px;
+  cursor: pointer;
+  position: relative;
+  overflow: visible;
+  transition: border-color 0.15s;
+
+  &:hover {
+    border-color: var(--color-border-medium, #94a3b8);
+    .gallery-card__header-actions { opacity: 1; }
+  }
+
+  &:focus-within { z-index: 100; }
+  &:has(.dropdown),
+  &:has(.dropdown-menu) { z-index: 100; }
+
+  &:focus-visible {
+    outline: 2px solid #475569;
+    outline-offset: 2px;
+  }
+}
+
+// Header: dot + name + actions
+.gallery-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.gallery-card__name-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  flex: 1;
+}
+
+.gallery-card__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.gallery-card__name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gallery-card__header-actions {
+  display: flex;
+  gap: 3px;
   opacity: 0;
-  transform: translateY(12px);
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.gallery-card__action-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.9);
+  border: 0.5px solid var(--color-border, #e2e8f0);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--color-text-secondary, #64748b);
+  font-size: 14px;
+  transition: all 0.15s;
+  backdrop-filter: blur(4px);
+
+  &:hover {
+    background: #f1f5f9;
+    color: #1e293b;
+  }
+}
+
+// Menu button inside gallery card
+.gallery-card__header-actions .menu-button {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border: 0.5px solid var(--color-border, #e2e8f0) !important;
+  box-shadow: none !important;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  margin: 0;
+  position: relative;
+  backdrop-filter: blur(4px);
+
+  &:hover {
+    background: #f1f5f9 !important;
+  }
+
+  i {
+    color: var(--color-text-secondary, #64748b);
+    font-size: 14px;
+  }
+
+  &:hover i { color: #1e293b; }
+
+  .dropdown {
+    position: absolute;
+    bottom: calc(100% + 4px);
+    right: 0;
+    left: auto !important;
+    z-index: 9999 !important;
+    margin-bottom: 0;
+  }
+}
+
+// Status + Rev row
+.gallery-card__status-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.gallery-card__status {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 9px;
+}
+
+.gallery-card__rev {
+  font-size: 10px;
+  color: var(--color-text-tertiary, #94a3b8);
+  background: var(--color-bg-secondary, #f8fafc);
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 0.5px solid var(--color-border, #e2e8f0);
+}
+
+// Progress bar
+.gallery-card__progress-wrap {
+  margin-bottom: 10px;
+}
+
+.gallery-card__progress-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: var(--color-text-tertiary, #94a3b8);
+  margin-bottom: 4px;
+}
+
+.gallery-card__progress-track {
+  height: 4px;
+  background: var(--color-bg-secondary, #f1f5f9);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.gallery-card__progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+// Footer
+.gallery-card__footer {
+  padding-top: 9px;
+  border-top: 0.5px solid var(--color-border, #e2e8f0);
+}
+
+.gallery-card__footer-time {
+  font-size: 10.5px;
+  color: var(--color-text-tertiary, #94a3b8);
+}
+
+// Dark mode
+[data-theme="dark"] {
+  .gallery-card {
+    background: #1e293b;
+    border-color: #334155;
+
+    &:hover { border-color: #475569; }
+  }
+
+  .gallery-card__action-btn {
+    background: rgba(30, 41, 59, 0.9);
+    border-color: #475569;
+    color: #94a3b8;
+
+    &:hover {
+      background: #334155;
+      color: #e2e8f0;
+    }
+  }
+
+  .gallery-card__header-actions .menu-button {
+    background: rgba(30, 41, 59, 0.9) !important;
+    border-color: #475569 !important;
+  }
+
+  .gallery-card__rev {
+    background: rgba(15, 23, 42, 0.72);
+    border-color: #475569;
+  }
+
+  .gallery-card__status[style*="dcfce7"] {
+    background: rgba(22, 101, 52, 0.25) !important;
+  }
+  .gallery-card__status[style*="fef3c7"] {
+    background: rgba(146, 64, 14, 0.25) !important;
+  }
 }
 
 // ============================================

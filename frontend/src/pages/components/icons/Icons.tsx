@@ -79,7 +79,7 @@ export let icon: { [name: string]: any} = {
     about: <Logo style={{width: 15}} className={'menuitem'}/>,
     'jjodel-dark': <img src={jj} width={15} className={'menuitem'} alt={'jjodel logo'}/>,
     'jjodel-clear': <img
-        style={{border: '1px solid var(--color)', borderRadius: '2px', marginTop: '2px', marginRight: '-2px'}} src={jj}
+        style={{border: '1px solid var(--color-accent)', borderRadius: '2px', marginTop: '2px', marginRight: '-2px'}} src={jj}
         width={16} className={'menuitem'} alt={'jjodel logo'}/>,
 
     jjodel: <Logo style={{fontSize: '1.5em'}} className={'menuitem'}/>,

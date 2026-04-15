@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
     LModel,
     LProject,
@@ -21,7 +22,6 @@ import {
     DViewPoint,
 } from '../../joiner';
 import DockManager from '../abstract/DockManager';
-import TabDataMaker from '../abstract/tabs/TabDataMaker';
 import { createM2, createM1 } from '../../pages/components/Navbar';
 import { formatVersionNumber } from '../../utils/versionUtils';
 import ShareProjectModal from './ShareProjectModal';
@@ -33,14 +33,14 @@ import { NewViewpointDialog } from './NewViewpointDialog';
 import { JjtlTransformation, createTransformation, TransformationAST } from '../../jjtl/types';
 import { execute as executeTransformation, ExecutionResult } from '../../jjtl/executor';
 import { convertMetamodelToJjtl, findMetamodelById } from '../../jjtl/utils/metamodelConverter';
-import { EnvGenWizardModal, EnvGenPersistence, ENVGEN_CHANGE_EVENT, ENVGEN_OPEN_WIZARD_EVENT } from '../envgen';
+import { EnvGenWizardModal, EnvGenPersistence } from '../envgen';
 import type { EnvGenConfigSummary } from '../envgen';
 import { loadMegamodel, getSerializedMegamodel } from '../../model/megamodelPersistence';
 import { setRuntimeMegamodel, clearRuntimeMegamodel, getRuntimeMegamodel } from '../../model/megamodelRuntime';
 import MegamodelView, { type ArtifactStats } from '../megamodel/MegamodelView';
 import { Badge } from '../common/Badge';
-import { Button } from '../common/Button';
 import { EmptyState } from '../ui/EmptyState';
+import { JjodelEvents, SystemEvents, EnvGenEvents } from '../../events/registry';
 import './project-editor.scss';
 
 
@@ -91,6 +91,7 @@ function SectionHeader({ title, count, primaryAction, secondaryAction, children 
                 <span className="project-section-header__count">({count})</span>
             </h2>
             <div className="project-section-header__actions">
+                {children}
                 {secondaryAction && (
                     <button
                         className="btn btn--ghost btn--xs"
@@ -116,7 +117,6 @@ function SectionHeader({ title, count, primaryAction, secondaryAction, children 
                         )}
                     </button>
                 )}
-                {children}
             </div>
         </div>
     );
@@ -171,9 +171,11 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     const [showProjectMenu, setShowProjectMenu] = useState(false);
     const projectMenuRef = useRef<HTMLDivElement>(null);
 
-    // Section navigator — active section tracking
-    const [activeSection, setActiveSection] = useState('metamodels');
-    const mainContentRef = useRef<HTMLDivElement>(null);
+    // Section from URL search params (driven by LeftBar sidebar)
+    const [searchParams] = useSearchParams();
+    const currentSection = (searchParams.get('section') || 'metamodels') as
+        'metamodels' | 'models' | 'transformations' | 'viewpoints' | 'documentation';
+
     const [showShareModal, setShowShareModal] = useState(false);
     const [showMegamodelModal, setShowMegamodelModal] = useState(false);
 
@@ -298,27 +300,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         }
     }, [showProjectMenu]);
 
-    // IntersectionObserver for section navigator active state
-    useEffect(() => {
-        const sectionIds = ['metamodels', 'models', 'transformations', 'viewpoints', 'documentation'];
-        const observer = new IntersectionObserver(
-            (entries) => {
-                for (const entry of entries) {
-                    if (entry.isIntersecting && entry.target.id) {
-                        setActiveSection(entry.target.id.replace('section-', ''));
-                    }
-                }
-            },
-            { threshold: 0.3, root: mainContentRef.current }
-        );
-
-        sectionIds.forEach(id => {
-            const el = document.getElementById(`section-${id}`);
-            if (el) observer.observe(el);
-        });
-
-        return () => observer.disconnect();
-    }, []);
+    // IntersectionObserver removed — section is now driven by URL ?section= param via LeftBar sidebar
 
     // Focus rename input when renaming starts
     useEffect(() => {
@@ -342,8 +324,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     useEffect(() => {
         setEnvGenConfigs(EnvGenPersistence.getAll());
         const handler = () => setEnvGenConfigs(EnvGenPersistence.getAll());
-        window.addEventListener(ENVGEN_CHANGE_EVENT, handler);
-        return () => window.removeEventListener(ENVGEN_CHANGE_EVENT, handler);
+        window.addEventListener(EnvGenEvents.CONFIG_CHANGED, handler);
+        return () => window.removeEventListener(EnvGenEvents.CONFIG_CHANGED, handler);
     }, []);
 
     // Environment Generation: listen for open-wizard event from Navbar
@@ -352,15 +334,15 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             setEditingEnvGenId(undefined);
             setShowEnvGenWizard(true);
         };
-        window.addEventListener(ENVGEN_OPEN_WIZARD_EVENT, handler);
-        return () => window.removeEventListener(ENVGEN_OPEN_WIZARD_EVENT, handler);
+        window.addEventListener(EnvGenEvents.OPEN_WIZARD, handler);
+        return () => window.removeEventListener(EnvGenEvents.OPEN_WIZARD, handler);
     }, []);
 
     // Open megamodel modal when TreeView entry is clicked
     useEffect(() => {
         const handler = () => setShowMegamodelModal(true);
-        window.addEventListener('jjodel:openMegamodel', handler);
-        return () => window.removeEventListener('jjodel:openMegamodel', handler);
+        window.addEventListener(JjodelEvents.OPEN_MEGAMODEL, handler);
+        return () => window.removeEventListener(JjodelEvents.OPEN_MEGAMODEL, handler);
     }, []);
 
     // Broadcast transformations to TreeView via CustomEvent
@@ -373,7 +355,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             rules: t.ast?.mappings?.map(m => `${m.sources?.map(s => s.className).join(', ') || '?'} → ${m.targetClass}`) || [],
             helpers: t.ast?.helpers?.map(h => h.name) || [],
         }));
-        window.dispatchEvent(new CustomEvent('jjodel:transformations', { detail }));
+        window.dispatchEvent(new CustomEvent(JjodelEvents.TRANSFORMATIONS, { detail }));
     }, [transformations]);
 
     // Megamodel: compute and register runtime megamodel whenever artifacts change
@@ -474,14 +456,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         }
     }, [clearDirty]);
 
-    // Section navigator scroll handler
-    const scrollToSection = useCallback((sectionId: string) => {
-        const el = document.getElementById(`section-${sectionId}`);
-        if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            setActiveSection(sectionId);
-        }
-    }, []);
+    // scrollToSection removed — section navigation is now URL-based via LeftBar sidebar
 
     // Download entire project as JSON
     const handleDownloadProject = useCallback(() => {
@@ -879,20 +854,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     };
 
     const handleOpenViewpoint = async (vp: LViewPoint) => {
-        // Open the first metamodel tab, then activate the ViewpointEditorPanel in the sidebar
-        const mm = metamodels[0];
-        if (mm) {
-            await DockManager.open2(mm);
-            // Small delay to ensure PropertiesWithTreeView is mounted and listening
-            setTimeout(() => {
-                window.dispatchEvent(new CustomEvent('jjodel:openViewpointEditor', {
-                    detail: { viewpointId: vp.id },
-                }));
-            }, 150);
-        } else {
-            // Fallback: no metamodel available, open old viewpoint workbench
-            DockManager.openViewpoint(vp);
-        }
+        // TODO: redirect to panels/viewpoint-editor
+        DockManager.openViewpoint(vp);
     };
 
     const handleDuplicateViewpoint = (vp: LViewPoint) => {
@@ -925,19 +888,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         });
         setShowNewViewpointDialog(false);
 
-        // Open the new viewpoint in the sidebar editor
-        const mm = metamodels[0];
-        if (mm) {
-            DockManager.open2(mm).then(() => {
-                setTimeout(() => {
-                    window.dispatchEvent(new CustomEvent('jjodel:openViewpointEditor', {
-                        detail: { viewpointId: dVp.id },
-                    }));
-                }, 150);
-            });
-        } else {
-            DockManager.openViewpoint(dVp);
-        }
+        // TODO: redirect to panels/viewpoint-editor
+        DockManager.openViewpoint(dVp);
     };
 
     // Transformation handlers
@@ -1423,8 +1375,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
 
                     setTimeout(() => {
                         try {
-                            const tab = TabDataMaker.model(modelToOpen);
-                            DockManager.open('models', tab);
+                            // Use open2() so EDITOR_TYPE_CHANGE dispatches and Dashboard hides the LeftBar.
+                            DockManager.open2(LModel.fromD(modelToOpen));
                             U.alert('i', 'Transformation Executed',
                                 `Created model "${modelName}" with ${count} instances.`);
                             markDirty();
@@ -1509,7 +1461,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 // Return the execution result IMMEDIATELY so JjtlDevelopmentEnv can update trace display
                 // Tab opening and attribute setting happen in the background (fire-and-forget)
                 // Broadcast execution result via custom event (for JjtlDevelopmentEnv trace display)
-                window.dispatchEvent(new CustomEvent('jjtl-execution-result', { detail: result }));
+                window.dispatchEvent(new CustomEvent(SystemEvents.JJTL_EXECUTION_RESULT, { detail: result }));
 
                 // Reset execution guard
                 isExecutingTransformation = false;
@@ -1563,8 +1515,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             const t = transformationsRef.current.find((tr: any) => tr.id === id);
             if (t) handleOpenTransformationRef.current(t);
         };
-        window.addEventListener('jjodel:openTransformation', handler);
-        return () => window.removeEventListener('jjodel:openTransformation', handler);
+        window.addEventListener(JjodelEvents.OPEN_TRANSFORMATION, handler);
+        return () => window.removeEventListener(JjodelEvents.OPEN_TRANSFORMATION, handler);
     }, []);
 
     const handleRenameTransformation = (id: string, newName: string) => {
@@ -1600,19 +1552,17 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         }
     };
 
-    // Section definitions for the sidebar navigator
-    const sections = [
-        { id: 'metamodels', label: 'Metamodels', iconLetter: 'M', iconClass: 'list-card__icon--mm', count: metamodels.length, group: 'structure' },
-        { id: 'models', label: 'Models', iconLetter: 'm', iconClass: 'list-card__icon--model', count: models.length, group: 'structure' },
-        { id: 'transformations', label: 'Transforms', iconLetter: '⇄', iconClass: 'list-card__icon--transformation', count: transformations.length, group: 'transformation' },
-        { id: 'viewpoints', label: 'Viewpoints', iconLetter: 'V', iconClass: 'list-card__icon--vp', count: viewpoints.length, group: 'perspectives' },
-        { id: 'documentation', label: 'Docs', iconLetter: 'D', iconClass: 'list-card__icon--docs', count: 0, group: 'perspectives' },
-    ];
+    // Section definitions removed — navigation is now in LeftBar sidebar
 
     const versionList = store.getState().version.conversionList;
     return (
         <div className="project-editor">
-            {/* Compact Header */}
+
+            <div className="project-editor__body">
+                {/* Main content — single section driven by URL ?section= param */}
+                <div className="project-editor__main">
+
+            {/* Project Header — inside centered container */}
             <div className="project-header-compact">
                 <div className="project-header-compact__row1">
                     {isEditingName ? (
@@ -1634,23 +1584,14 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             {project.name || 'Unnamed Project'}
                         </h1>
                     )}
-                    <Badge category="version" className="badge--engine"
-                                  title={"Current Jjodel platform version - Same for all projects" + (versionList.length ? "\nProject Version history:" + (versionList.map(v=>"\n\t"+v)) : null)}>
+                    <span className="project-header-compact__version">
                         <i className="bi bi-gear" />
                         {getEngineVersion()}
-                    </Badge>
-                    <Badge category="version">
+                    </span>
+                    <span className="project-header-compact__version">
                         Rev {formatVersionNumber(project.version)}
-                    </Badge>
+                    </span>
                     <div className="project-header-compact__actions">
-                        <Button
-                            variant="primary"
-                            onClick={() => setShowMegamodelModal(true)}
-                            title="View relationships between project artifacts"
-                        >
-                            <i className="bi bi-diagram-3" />
-                            View Megamodel
-                        </Button>
                         {isAddingTag ? (
                             <div className="project-tag__input-wrapper" style={{ display: 'inline-flex' }}>
                                 <input
@@ -1666,10 +1607,12 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             </div>
                         ) : (
                             <button
-                                className="project-tag project-tag--add"
+                                className="btn btn--ghost btn--xs"
                                 onClick={() => setIsAddingTag(true)}
+                                title="Add tags to organize your project"
                             >
-                                + Tags
+                                <i className="bi bi-tag" />
+                                Tags
                             </button>
                         )}
                         <div className="project-menu-wrapper" ref={projectMenuRef}>
@@ -1703,9 +1646,40 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     </div>
                 </div>
                 <div className="project-header-compact__row2">
-                    <span>{project.description || 'No description'}</span>
-                    <span className="project-header-compact__sep">&middot;</span>
-                    <span>Created by {(project as any).author?.name || 'Unknown'}</span>
+                    {isEditingDescription ? (
+                        <div className="project-header-compact__desc-editor">
+                            <textarea
+                                ref={descriptionInputRef}
+                                className="project-header__description-input"
+                                value={editedDescription}
+                                onChange={(e) => setEditedDescription(e.target.value)}
+                                onBlur={handleSaveDescription}
+                                onKeyDown={handleDescriptionKeyDown}
+                                rows={3}
+                                placeholder="Add a project description..."
+                            />
+                        </div>
+                    ) : (
+                        <span className="project-header-compact__desc-row">
+                            {project.description ? (
+                                <span>{project.description}</span>
+                            ) : (
+                                <span
+                                    className="project-header-compact__desc-placeholder"
+                                    onClick={handleStartEditDescription}
+                                >
+                                    Add a description...
+                                </span>
+                            )}
+                            <button
+                                className="edit-btn edit-btn--inline"
+                                onClick={handleStartEditDescription}
+                                title="Edit description"
+                            >
+                                <i className="bi bi-pencil" />
+                            </button>
+                        </span>
+                    )}
                     <span className="project-header-compact__sep">&middot;</span>
                     <span>{formatDate(project.creation)}</span>
                     {tags.length > 0 && (
@@ -1725,64 +1699,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             ))}
                         </>
                     )}
-                    <button
-                        className="edit-btn edit-btn--inline"
-                        onClick={handleStartEditDescription}
-                        title="Edit description"
-                    >
-                        <i className="bi bi-pencil" />
-                    </button>
-                    {/* Hidden description editor */}
-                    {isEditingDescription && (
-                        <div className="project-header-compact__desc-editor">
-                            <textarea
-                                ref={descriptionInputRef}
-                                className="project-header__description-input"
-                                value={editedDescription}
-                                onChange={(e) => setEditedDescription(e.target.value)}
-                                onBlur={handleSaveDescription}
-                                onKeyDown={handleDescriptionKeyDown}
-                                rows={3}
-                                placeholder="Add a project description..."
-                            />
-                        </div>
-                    )}
                 </div>
             </div>
-
-            <div className="project-editor__body">
-                {/* Section Navigator Sidebar */}
-                <nav className="section-nav">
-                    {sections.map((sec, i) => (
-                        <React.Fragment key={sec.id}>
-                            {i > 0 && sections[i - 1].group !== sec.group && (
-                                <div className="section-nav__divider" />
-                            )}
-                            <button
-                                className={`section-nav__item ${activeSection === sec.id ? 'section-nav__item--active' : ''}`}
-                                onClick={() => scrollToSection(sec.id)}
-                            >
-                                <span className={`section-nav__icon ${sec.iconClass}`}>
-                                    {sec.iconClass
-                                        ? <i className={`bi ${sec.iconClass}`} />
-                                        : sec.iconLetter
-                                    }
-                                </span>
-                                <span className="section-nav__label">{sec.label}</span>
-                                {sec.count > 0 && (
-                                    <span className="section-nav__count">({sec.count})</span>
-                                )}
-                            </button>
-                        </React.Fragment>
-                    ))}
-                </nav>
-
-                {/* Main scrollable content */}
-                <div className="project-editor__main" ref={mainContentRef}>
-
-            {/* Group 1: Structure (Metamodels + Models) */}
-            <div className="section-group section-group--structure">
-              <span className="section-group__label">Structure</span>
 
             {/* Metamodels Section */}
             <div className="project-section" id="section-metamodels">
@@ -1798,6 +1716,14 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                         isDropdownOpen: showImportMenu,
                     }}
                 >
+                    <button
+                        className="btn btn--ghost btn--xs"
+                        onClick={() => setShowMegamodelModal(true)}
+                        title="View relationships between project artifacts"
+                    >
+                        <i className="bi bi-diagram-3" />
+                        View Megamodel
+                    </button>
                     {/* Import dropdown menu (rendered inside actions area) */}
                     {showImportMenu && (
                         <div className="import-select-menu" ref={importMenuRef}>
@@ -2091,22 +2017,6 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 )}
             </div>
 
-            </div>{/* end section-group--structure */}
-
-            {/* TODO: [cleanup] Environment Generation section removed from dashboard UI.
-                Remove environment generation from:
-                - Model types/interfaces (EnvGenConfigSummary, etc.)
-                - API/service layer (EnvGenPersistence, EnvGenPromptBuilder)
-                - SCSS styles (.list-card__icon--envgen, .envgen-pulse)
-                - State management (showEnvGenWizard, envGenConfigs, editingEnvGenId)
-                - EnvGenWizardModal component usage below
-                - Navbar "Environment Generation" menu entry
-            */}
-
-            {/* Group 2: Transformation */}
-            <div className="section-group section-group--transformation">
-              <span className="section-group__label">Transformation</span>
-
             {/* Transformations Section */}
             <div className="project-section" id="section-transformations">
                 <SectionHeader
@@ -2132,12 +2042,6 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     />
                 )}
             </div>
-
-            </div>{/* end section-group--transformation */}
-
-            {/* Group 3: Perspectives (Viewpoints + Documentation) */}
-            <div className="section-group section-group--perspectives">
-              <span className="section-group__label">Perspectives</span>
 
             {/* Viewpoints Section */}
             <div className="project-section" id="section-viewpoints">
@@ -2223,8 +2127,6 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             <div id="section-documentation">
                 <DocumentationSection project={project} />
             </div>
-
-            </div>{/* end section-group--perspectives */}
 
                 </div>{/* end project-editor__main */}
             </div>{/* end project-editor__body */}

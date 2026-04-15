@@ -25,6 +25,7 @@ import ContextMenu from "../../contextMenu/ContextMenu";
 import { FeaturesPalette, getFeatureByDragType } from "../../FeaturesPalette";
 import { CanvasExportService, ExportFormat } from "../../../services/CanvasExportService";
 import { EditorSwitch } from "./EditorSwitch";
+import { JjodelEvents } from '../../../events/registry';
 
 
 function MetamodelTabComponent(props: AllProps) {
@@ -65,9 +66,9 @@ function MetamodelTabComponent(props: AllProps) {
             }
         };
 
-        window.addEventListener('jjodel:export-canvas', handleExportCanvas as any);
+        window.addEventListener(JjodelEvents.EXPORT_CANVAS, handleExportCanvas as any);
         return () => {
-            window.removeEventListener('jjodel:export-canvas', handleExportCanvas as any);
+            window.removeEventListener(JjodelEvents.EXPORT_CANVAS, handleExportCanvas as any);
         };
     }, [model]);
 

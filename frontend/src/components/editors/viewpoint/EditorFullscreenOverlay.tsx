@@ -115,7 +115,12 @@ const EditorFullscreenOverlay: React.FC<EditorFullscreenOverlayProps> = ({
         ...withReadOnly(baseMonacoOptions, readOnly),
         automaticLayout: true,
         fontSize: 14,
-        lineNumbers: 'on',
+        lineNumbers: jsxWrapping
+            ? ((lineNumber: number) => {
+                const adjusted = lineNumber - PREFIX_LINE_COUNT;
+                return adjusted > 0 ? String(adjusted) : '';
+            })
+            : 'on' as const,
         folding: true,
         scrollBeyondLastLine: false,
         padding: { top: 12, bottom: 12 },

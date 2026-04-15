@@ -41,6 +41,7 @@ import { ProjectsApi } from '../../api/persistance';
 import {Cards} from "./cards/Cards";
 import {createM2} from "./Navbar";
 import StatusBar from "../../components/StatusBar";
+import { JjodelEvents } from '../../events/registry';
 
 
 type UserProps = {
@@ -86,7 +87,7 @@ const Title = (props: TitleProps) => {
 
     const ProjectProperties = () => {
 
-        const server = 'http://app.jjodel.io';
+        const server = 'https://app.jjodel.io';
         const projectLink = '/#/project?id='+props.projectID;
 
         function copyToClipboard(e: any) {
@@ -256,7 +257,7 @@ function GenericDashboard(props: DashProps): any {
     // Dashboard is not a rc-dock tab, so Dock's handleLayoutChange never fires.
     // Dispatch 'summary' so panels hide correctly.
     useEffect(() => {
-        window.dispatchEvent(new CustomEvent('jjodel:editor-type-change', {
+        window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
             detail: { editorType: 'summary' }
         }));
     }, []);
@@ -303,7 +304,9 @@ function GenericDashboard(props: DashProps): any {
     };
 
     // Determine layout mode: three-column for dashboard pages, two-column for project editing
-    const layoutClass = active !== 'Project' ? 'three-column' : 'two-column';
+    const hasProjects = user?.projects && user.projects.length > 0;
+    const showRightPanel = active !== 'Project' && hasProjects;
+    const layoutClass = showRightPanel ? 'three-column' : active !== 'Project' ? 'two-column' : 'two-column';
 
     return (<>
         <Navbar />
@@ -329,8 +332,8 @@ function GenericDashboard(props: DashProps): any {
                 <Catalog children={children}/>
             </div>
 
-            {/* Right Panel - Only visible on dashboard pages (three-column layout) */}
-            {active !== 'Project' && (
+            {/* Right Panel - Only visible when there are projects (three-column layout) */}
+            {showRightPanel && (
                 <RightPanel user={user} projects={user?.projects} onNewProject={props.onNewProject} />
             )}
 
@@ -463,18 +466,15 @@ function ProjectCatalog(props: ProjectProps) {
                 return (!vp ? <div key={name||'error_'+vp}>errorvp: {vp + ''}</div> :
                     <div className="row data viewpoint" key={name}>
                         <div className={'col-4'} style={{ cursor: 'pointer' }} onClick={() => {
-                            window.dispatchEvent(new CustomEvent('jjodel:openViewpointEditor', {
-                                detail: { viewpointId: vp.id },
-                            }));
+                            // TODO: redirect to panels/viewpoint-editor
+                            DockManager.openViewpoint(vp);
                         }}><ElementBadge type="viewpoint" /> {name}</div>
                         <div className={'col-2 artifact-type'}>Viewpoint</div>
                         <div className={'buttons'}>
                             <CommandBar noBorder={true} style={{marginBottom: '0'}}>
                                 <Btn icon={'open'} tip={'Open viewpoint'} action={() => {
-                                    // Navigate to metamodel tab and open viewpoint editor
-                                    window.dispatchEvent(new CustomEvent('jjodel:openViewpointEditor', {
-                                        detail: { viewpointId: vp.id },
-                                    }));
+                                    // TODO: redirect to panels/viewpoint-editor
+                                    DockManager.openViewpoint(vp);
                                 }}/>
                                 <Btn icon={'minispace'}/>
                                 <Btn icon={'copy'} action={e => vp.duplicate()} tip={'Duplicate viewpoint'}/>
@@ -543,6 +543,44 @@ function ProjectDashboard(props: DashProps): any {
     const query = useQuery();
     const id = query.get('id') || '';
     const project: LProject = LProject.fromPointer(id);
+    const [hideLeftBar, setHideLeftBar] = useState(false);
+    const tabTypeMapRef = useRef<Map<string, string>>(new Map());
+
+    // Hide project sidebar when metamodel OR model editor tab is active.
+    // Project structure (Metamodels/Models/Transforms/Viewpoints/Docs) is
+    // redundant inside these editors — the editor has its own palette sidebar.
+    // Two events cooperate: EDITOR_TYPE_CHANGE (fired on new tab open by
+    // DockManager.open2) and ACTIVE_TAB (fired on every tab switch by Dock).
+    // A local map keeps track of each tab's editor type so that switching
+    // back to an already-open tab resolves correctly even when rc-dock's
+    // onLayoutChange does not preserve React element props.
+    useEffect(() => {
+        const isEditorTab = (t: string | null | undefined) =>
+            t === 'metamodel' || t === 'model';
+
+        const handleEditorType = (e: Event) => {
+            const { editorType } = (e as CustomEvent).detail;
+            try {
+                const layout = DockManager.dock?.getLayout();
+                const activeId = layout?.dockbox?.children?.[0]?.activeId;
+                if (activeId) tabTypeMapRef.current.set(activeId, editorType);
+            } catch { /* dock not ready */ }
+            setHideLeftBar(isEditorTab(editorType));
+        };
+
+        const handleActiveTab = (e: Event) => {
+            const { activeId, tabType } = (e as CustomEvent).detail;
+            const resolved = tabType || tabTypeMapRef.current.get(activeId) || null;
+            setHideLeftBar(isEditorTab(resolved));
+        };
+
+        window.addEventListener(JjodelEvents.EDITOR_TYPE_CHANGE, handleEditorType);
+        window.addEventListener(JjodelEvents.ACTIVE_TAB, handleActiveTab);
+        return () => {
+            window.removeEventListener(JjodelEvents.EDITOR_TYPE_CHANGE, handleEditorType);
+            window.removeEventListener(JjodelEvents.ACTIVE_TAB, handleActiveTab);
+        };
+    }, []);
 
     let vparr = project?.viewpoints || [];
     let allViews = vparr.flatMap((vp: LViewPoint) => vp && vp.allSubViews);
@@ -561,7 +599,17 @@ function ProjectDashboard(props: DashProps): any {
             </>
         </Try>
         <Try><Navbar /></Try>
-        <Try><Dock /></Try>
+        <div className={`dashboard-container two-column${hideLeftBar ? ' hide-leftbar' : ''}`}>
+            {!hideLeftBar && <LeftBar active={'Project'} project={project} />}
+            <div className="project-dock-wrapper">
+                <Try><Dock /></Try>
+            </div>
+            {/* TODO: Add contextual RightPanel for project view with:
+                - Overview: Rev, creation date, owner
+                - Quick Actions: "View Megamodel", "New Metamodel"
+                - Recent Activity: project-specific feed
+                Requires RightPanel to accept a mode/context prop. */}
+        </div>
         <Try><StatusBar /></Try>
     </>);
 }

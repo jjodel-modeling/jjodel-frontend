@@ -62,6 +62,18 @@ const ListViewWithLoadMore = ({
 
     return (
         <div className="project-rows-grid">
+            {/* Column headers */}
+            <div className="project-row project-row--header">
+                <span />
+                <span />
+                <span>NAME</span>
+                <span>TYPE</span>
+                <span>REV</span>
+                <span>METAMODELS</span>
+                <span>MODELS</span>
+                <span>MODIFIED</span>
+                <span />
+            </div>
             {visibleProjects.map((p, i) => {
                 // Calculate animation index for newly loaded projects
                 const isNewlyLoaded = i >= previousCount;
@@ -127,6 +139,7 @@ const Catalog = (props: ChildrenType) => {
     const [viewMode, setViewMode] = useState<ViewMode>('slider');
     const [currentPage, setCurrentPage] = useState(0);
     const [activeTag, setActiveTag] = useState<string | null>(null); // Single-select Netflix-style
+    const [visibleGridCount, setVisibleGridCount] = useState(PROJECTS_PER_BATCH);
 
     // Search input ref for keyboard shortcut
     const searchInputRef = useRef<HTMLInputElement>(null);
@@ -328,9 +341,10 @@ const Catalog = (props: ChildrenType) => {
         return 3;                            // 1×3
     }, [windowWidth]);
 
-    // Reset page when cardsPerPage changes (prevents out-of-bounds page on resize)
+    // Reset page/grid count when cardsPerPage changes (prevents out-of-bounds page on resize)
     useEffect(() => {
         setCurrentPage(0);
+        setVisibleGridCount(PROJECTS_PER_BATCH);
     }, [cardsPerPage]);
 
     // Collect all unique tags from projects, sorted by frequency
@@ -403,11 +417,16 @@ const Catalog = (props: ChildrenType) => {
         }
     }
 
-    // Slider pagination
+    // Slider pagination (legacy, kept for cardsPerPage calculation)
     const totalPages = Math.ceil(filteredProjects.length / cardsPerPage);
 
     const prevPage = () => setCurrentPage(p => Math.max(0, p - 1));
     const nextPage = () => setCurrentPage(p => Math.min(totalPages - 1, p + 1));
+
+    // Grid "Load More" handler
+    const handleGridLoadMore = () => {
+        setVisibleGridCount(prev => prev + cardsPerPage);
+    };
 
     // Render projects based on view mode
     const renderProjects = () => {
@@ -421,69 +440,61 @@ const Catalog = (props: ChildrenType) => {
             );
         }
 
-        // Slider view - 3x3 grid with pagination and smooth animation
+        // Slider/grid view - progressive grid with Load More
         if (viewMode === 'slider') {
+            const visibleGridProjects = filteredProjects.slice(0, visibleGridCount);
+            const gridRemaining = filteredProjects.length - visibleGridCount;
+            const hasGridMore = gridRemaining > 0;
+
             return (
                 <div className="projects-slider">
-                    <div className="slider-grid-container">
-                        <div
-                            className="slider-track"
-                            style={{
-                                transform: `translateX(-${currentPage * 100}%)`,
-                                transition: 'transform 400ms ease-out'
-                            }}
-                        >
-                            {Array.from({ length: totalPages }).map((_, pageIndex) => (
-                                <div className="slider-page" key={pageIndex}>
-                                    {filteredProjects
-                                        .slice(pageIndex * cardsPerPage, (pageIndex + 1) * cardsPerPage)
-                                        .map((p, i) => (
-                                            <Project
-                                                key={p.id || `${pageIndex}-${i}`}
-                                                data={p}
-                                                mode="cards"
-                                                index={pageIndex * cardsPerPage + i}
-                                                pnames={projectNames}
-                                                allTags={allTags}
-                                            />
-                                        ))}
-                                </div>
-                            ))}
-                        </div>
+                    <div className="slider-page slider-page--gallery">
+                        {visibleGridProjects.map((p, i) => (
+                            <Project
+                                key={p.id || i}
+                                data={p}
+                                mode="gallery"
+                                index={i}
+                                pnames={projectNames}
+                                allTags={allTags}
+                            />
+                        ))}
                     </div>
 
-                    {totalPages > 1 && (
-                        <div className="slider-navigation">
-                            <button
-                                className="slider-arrow prev"
-                                onClick={prevPage}
-                                disabled={currentPage === 0}
-                                aria-label="Previous page"
-                            >
-                                <i className="bi bi-chevron-left" />
-                            </button>
-
-                            <div className="slider-dots">
-                                {Array.from({ length: totalPages }).map((_, i) => (
-                                    <button
-                                        key={i}
-                                        className={`slider-dot ${i === currentPage ? 'active' : ''}`}
-                                        onClick={() => setCurrentPage(i)}
-                                        aria-label={`Go to page ${i + 1}`}
-                                    />
-                                ))}
-                            </div>
-
-                            <button
-                                className="slider-arrow next"
-                                onClick={nextPage}
-                                disabled={currentPage >= totalPages - 1}
-                                aria-label="Next page"
-                            >
-                                <i className="bi bi-chevron-right" />
+                    {hasGridMore ? (
+                        <div className="project-list__load-more">
+                            <button className="load-more-button" onClick={handleGridLoadMore}>
+                                <svg
+                                    className="load-more-icon"
+                                    width="20"
+                                    height="20"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                >
+                                    <polyline points="6 9 12 15 18 9" />
+                                </svg>
+                                <span>Load More</span>
+                                <span className="remaining-count">({gridRemaining} remaining)</span>
                             </button>
                         </div>
-                    )}
+                    ) : filteredProjects.length > cardsPerPage ? (
+                        <div className="project-list__all-loaded">
+                            <svg
+                                className="check-icon"
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                            >
+                                <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                            <span>All projects loaded ({filteredProjects.length} total)</span>
+                        </div>
+                    ) : null}
                 </div>
             );
         }

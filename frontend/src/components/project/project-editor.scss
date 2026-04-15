@@ -15,31 +15,35 @@
   &__main {
     flex: 1;
     min-width: 0;
-    padding: 24px 40px 40px;
+    padding: var(--space-6);
     max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
     overflow-y: auto;
   }
 }
 
-// Compact Header (2-row layout, ~56px)
-// ------------------------------------
+// Project Header (inside centered __main container)
+// -------------------------------------------------
 .project-header-compact {
-  padding: 12px 24px;
-  border-bottom: 1px solid #e2e8f0;
+  padding-top: 24px;
+  padding-bottom: 16px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--color-border-primary, #e2e8f0);
 
   &__row1 {
     display: flex;
     align-items: center;
     gap: 10px;
-    min-height: 32px;
+    min-height: 36px;
     flex-wrap: wrap;
   }
 
   &__title {
     margin: 0;
-    font-size: 20px;
+    font-size: 24px;
     font-weight: 700;
-    color: #1e293b;
+    color: var(--color-text-primary, #0f172a);
     cursor: pointer;
     border-radius: 4px;
     padding: 2px 6px;
@@ -51,9 +55,9 @@
   }
 
   &__title-input {
-    font-size: 20px;
+    font-size: 24px;
     font-weight: 700;
-    color: #1e293b;
+    color: var(--color-text-primary, #0f172a);
     border: 2px solid var(--form-input-border-color-focus, #334155);
     border-radius: 4px;
     padding: 2px 6px;
@@ -63,6 +67,15 @@
     &:focus {
       box-shadow: var(--form-input-focus-shadow, 0 0 0 3px rgba(51, 65, 85, 0.15));
     }
+  }
+
+  &__version {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--color-text-secondary, #334155);
+    font-weight: 500;
   }
 
   &__actions {
@@ -76,11 +89,11 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    font-size: 11px;
-    color: #94a3b8;
-    margin-top: 2px;
+    font-size: 12px;
+    color: var(--color-text-secondary, #334155);
+    opacity: 0.6;
+    margin-top: 6px;
     flex-wrap: wrap;
-    position: relative;
   }
 
   &__sep {
@@ -88,12 +101,31 @@
     color: #cbd5e1;
   }
 
+  &__desc-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+
+    .edit-btn--inline {
+      opacity: 0;
+    }
+
+    &:hover .edit-btn--inline {
+      opacity: 0.5;
+    }
+  }
+
+  &__desc-placeholder {
+    color: #94a3b8;
+    font-style: italic;
+    cursor: pointer;
+
+    &:hover {
+      color: #64748b;
+    }
+  }
+
   &__desc-editor {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    z-index: 50;
-    margin-top: 4px;
     width: 400px;
   }
 }
@@ -291,7 +323,6 @@
   }
 
   &--inline {
-    opacity: 0.5;
     width: 18px;
     height: 18px;
 

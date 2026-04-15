@@ -24,7 +24,7 @@ section .properties-tab label input {
     height: 24px;
     text-align: left!important;
     border-radius: 0!important;
-    //border-bottom: 1px dotted var(--bg-3);
+    //border-bottom: 1px dotted var(--color-border-primary);
 
     // CommandBar button
 
@@ -80,7 +80,7 @@ section .properties-tab label input {
       padding-right: 0px!important;
     }
     & .tab-btn.bi.disabled::before {
-      color: var(--bg-3-1)/*!important;
+      color: var(--color-border-hover)/*!important;
       margin-left: 0px!important;
       margin-right: 5px!important;*/
     }
@@ -112,8 +112,8 @@ section .properties-tab label input {
 
     & .tab-btn.up::before {
 
-      border: 1px solid var(--bg-2);
-      border-radius: var(--radius);
+      border: 1px solid var(--color-bg-tertiary);
+      border-radius: var(--radius-sm);
       display: block;
       padding: 0px 0px;
       text-align: center;
@@ -125,7 +125,7 @@ section .properties-tab label input {
     & .tab-btn.up:hover::before {
       border: 1px solid var(--btn-bg);
       background-color: var(--btn-bg);
-      border-radius: var(--radius);
+      border-radius: var(--radius-sm);
     }
 
     & .no-border & .tab-btn.up::before {
@@ -150,8 +150,8 @@ section .properties-tab label input {
     }
     & .tab-btn.favorite::before {
 
-      border: 1px solid var(--bg-2);
-      border-radius: var(--radius);
+      border: 1px solid var(--color-bg-tertiary);
+      border-radius: var(--radius-sm);
       display: block;
       padding: 0px 0px;
       text-align: center;
@@ -163,7 +163,7 @@ section .properties-tab label input {
     & .tab-btn.favorite:hover::before {
       border: 1px solid var(--btn-bg);
       background-color: var(--btn-bg);
-      border-radius: var(--radius);
+      border-radius: var(--radius-sm);
     }
 
     // edit
@@ -181,8 +181,8 @@ section .properties-tab label input {
     }
     & .tab-btn.edit::before {
 
-      border: 1px solid var(--bg-2);
-      border-radius: var(--radius);
+      border: 1px solid var(--color-bg-tertiary);
+      border-radius: var(--radius-sm);
       display: block;
       padding: 0px 0px;
       text-align: center;
@@ -194,7 +194,7 @@ section .properties-tab label input {
     & .tab-btn.edit:hover::before {
       border: 1px solid var(--btn-bg);
       background-color: var(--btn-bg);
-      border-radius: var(--radius);
+      border-radius: var(--radius-sm);
     }
 
     // open
@@ -212,8 +212,8 @@ section .properties-tab label input {
     }
     & .tab-btn.open::before {
 
-      border: 1px solid var(--bg-2);
-      border-radius: var(--radius);
+      border: 1px solid var(--color-bg-tertiary);
+      border-radius: var(--radius-sm);
       display: block;
       padding: 0px 0px;
       text-align: center;
@@ -225,7 +225,7 @@ section .properties-tab label input {
     & .tab-btn.open:hover::before {
       border: 1px solid var(--btn-bg);
       background-color: var(--btn-bg);
-      border-radius: var(--radius);
+      border-radius: var(--radius-sm);
     }
 
     // download
@@ -243,8 +243,8 @@ section .properties-tab label input {
     }
     & .tab-btn.download::before {
 
-      border: 1px solid var(--bg-2);
-      border-radius: var(--radius);
+      border: 1px solid var(--color-bg-tertiary);
+      border-radius: var(--radius-sm);
       display: block;
       padding: 0px 0px;
       text-align: center;
@@ -256,7 +256,7 @@ section .properties-tab label input {
     & .tab-btn.download:hover::before {
       border: 1px solid var(--btn-bg);
       background-color: var(--btn-bg);
-      border-radius: var(--radius);
+      border-radius: var(--radius-sm);
     }
 
 
@@ -274,8 +274,8 @@ section .properties-tab label input {
     }
     & .tab-btn.down::before {
 
-      border: 1px solid var(--bg-2);
-      border-radius: var(--radius);
+      border: 1px solid var(--color-bg-tertiary);
+      border-radius: var(--radius-sm);
       display: block;
       padding: 0px 0px;
       text-align: center;
@@ -287,7 +287,7 @@ section .properties-tab label input {
     & .tab-btn.down:hover::before {
       border: 1px solid var(--btn-bg);
       background-color: var(--btn-bg);
-      border-radius: var(--radius);
+      border-radius: var(--radius-sm);
     }
 
 
@@ -305,8 +305,8 @@ section .properties-tab label input {
     }
     & .tab-btn.back::before {
 
-      border: 1px solid var(--bg-2);
-      border-radius: var(--radius);
+      border: 1px solid var(--color-bg-tertiary);
+      border-radius: var(--radius-sm);
       display: block;
       padding: 1px 1px;
       text-align: center;
@@ -317,7 +317,7 @@ section .properties-tab label input {
     & .tab-btn.back:hover::before {
       border: 1px solid var(--btn-bg);
       background-color: var(--btn-bg);
-      border-radius: var(--radius);
+      border-radius: var(--radius-sm);
     }
 
     // delete 2
@@ -376,8 +376,8 @@ section .properties-tab label input {
     }
     & .tab-btn.show::before {
 
-      border: 1px solid var(--bg-2);
-      border-radius: var(--radius);
+      border: 1px solid var(--color-bg-tertiary);
+      border-radius: var(--radius-sm);
       display: block;
       padding: 3px 3px;
       text-align: center;
@@ -389,7 +389,7 @@ section .properties-tab label input {
     & .tab-btn.show:hover::before {
       border: 1px solid var(--btn-bg);
       background-color: var(--btn-bg);
-      border-radius: var(--radius);
+      border-radius: var(--radius-sm);
     }
 
     // open-down
@@ -406,8 +406,8 @@ section .properties-tab label input {
     }
     & .tab-btn.open-down::before {
 
-      border: 1px solid var(--bg-2);
-      border-radius: var(--radius);
+      border: 1px solid var(--color-bg-tertiary);
+      border-radius: var(--radius-sm);
       display: block;
       padding: 3px 3px;
       text-align: center;
@@ -419,7 +419,7 @@ section .properties-tab label input {
     & .tab-btn.open-down:hover::before {
       border: 1px solid var(--btn-bg);
       background-color: var(--btn-bg);
-      border-radius: var(--radius);
+      border-radius: var(--radius-sm);
     }
     // close-up
 
@@ -435,8 +435,8 @@ section .properties-tab label input {
     }
     & .tab-btn.close-up::before {
 
-      border: 1px solid var(--bg-2);
-      border-radius: var(--radius);
+      border: 1px solid var(--color-bg-tertiary);
+      border-radius: var(--radius-sm);
       display: block;
       padding: 3px 3px;
       text-align: center;
@@ -448,7 +448,7 @@ section .properties-tab label input {
     & .tab-btn.close-up:hover::before {
       border: 1px solid var(--btn-bg);
       background-color: var(--btn-bg);
-      border-radius: var(--radius);
+      border-radius: var(--radius-sm);
     }
 
     // information
@@ -461,8 +461,8 @@ section .properties-tab label input {
     }
     & .tab-btn.info:hover {}
     & .tab-btn.info::before {
-      border: 1px solid var(--bg-2);
-      border-radius: var(--radius);
+      border: 1px solid var(--color-bg-tertiary);
+      border-radius: var(--radius-sm);
       display: block;
       padding: 3px;
       text-align: center;
@@ -473,14 +473,14 @@ section .properties-tab label input {
     & .tab-btn.info:hover::before {
       border: 1px solid var(--btn-bg);
       background-color: var(--btn-bg);
-      border-radius: var(--radius);
+      border-radius: var(--radius-sm);
     }
 
     & .tab-btn.info.negative {
       color: white!important;
     }
     & .tab-btn.info.negative::before {
-      background-color: var(--accent);
+      background-color: var(--color-accent);
     }
 
     // info dark
@@ -495,7 +495,7 @@ section .properties-tab label input {
     & .tab-btn.info.dark::before {
       color: white;
       border: 1px solid transparent;
-      border-radius: var(--radius);
+      border-radius: var(--radius-sm);
       display: block;
       padding: 3px 3px;
       text-align: center;
@@ -508,7 +508,7 @@ section .properties-tab label input {
     & .tab-btn.info.dark:hover::before {
       border: 1px solid transparent;
       background-color: transparent;
-      border-radius: var(--radius);
+      border-radius: var(--radius-sm);
     }
 
 
@@ -523,8 +523,8 @@ section .properties-tab label input {
     }
     & .tab-btn.settings:hover {}
     & .tab-btn.settings::before {
-      border: 1px solid var(--bg-2);
-      border-radius: var(--radius);
+      border: 1px solid var(--color-bg-tertiary);
+      border-radius: var(--radius-sm);
       display: block;
       padding: 3px;
       text-align: center;
@@ -536,13 +536,13 @@ section .properties-tab label input {
     & .tab-btn.settings:hover::before {
       border: 1px solid var(--btn-bg);
       background-color: var(--btn-bg);
-      border-radius: var(--radius);
+      border-radius: var(--radius-sm);
     }
     & .tab-btn.settings.negative {
       color: white!important;
     }
     & .tab-btn.settings.negative::before {
-      background-color: var(--accent);
+      background-color: var(--color-accent);
 
     }
 
@@ -562,8 +562,8 @@ section .properties-tab label input {
     }
     & .tab-btn.shrink::before {
 
-      border: 1px solid var(--bg-2);
-      border-radius: var(--radius);
+      border: 1px solid var(--color-bg-tertiary);
+      border-radius: var(--radius-sm);
       display: block;
       padding: 3px 3px;
       text-align: center;
@@ -575,7 +575,7 @@ section .properties-tab label input {
     & .tab-btn.shrink:hover::before {
       border: 1px solid var(--btn-bg);
       background-color: var(--btn-bg);
-      border-radius: var(--radius);
+      border-radius: var(--radius-sm);
     }
 
     // expand
@@ -592,8 +592,8 @@ section .properties-tab label input {
     }
     & .tab-btn.expand::before {
 
-      border: 1px solid var(--bg-2);
-      border-radius: var(--radius);
+      border: 1px solid var(--color-bg-tertiary);
+      border-radius: var(--radius-sm);
       display: block;
       padding: 3px 3px;
       text-align: center;
@@ -605,7 +605,7 @@ section .properties-tab label input {
     & .tab-btn.expand:hover::before {
       border: 1px solid var(--btn-bg);
       background-color: var(--btn-bg);
-      border-radius: var(--radius);
+      border-radius: var(--radius-sm);
     }
 
      // check
@@ -622,8 +622,8 @@ section .properties-tab label input {
     }
     & .tab-btn.check::before {
 
-      border: 1px solid var(--bg-2);
-      border-radius: var(--radius);
+      border: 1px solid var(--color-bg-tertiary);
+      border-radius: var(--radius-sm);
       display: block;
       padding: 3px 3px;
       text-align: center;
@@ -635,7 +635,7 @@ section .properties-tab label input {
     & .tab-btn.check:hover::before {
       border: 1px solid var(--btn-bg);
       background-color: var(--btn-bg);
-      border-radius: var(--radius);
+      border-radius: var(--radius-sm);
     }
 
     // copy
@@ -652,8 +652,8 @@ section .properties-tab label input {
     }
     & .tab-btn.copy::before {
 
-      border: 1px solid var(--bg-2);
-      border-radius: var(--radius);
+      border: 1px solid var(--color-bg-tertiary);
+      border-radius: var(--radius-sm);
       display: block;
       padding: 3px 3px;
       text-align: center;
@@ -665,7 +665,7 @@ section .properties-tab label input {
     & .tab-btn.copy:hover::before {
       border: 1px solid var(--btn-bg);
       background-color: var(--btn-bg);
-      border-radius: var(--radius);
+      border-radius: var(--radius-sm);
     }
 
 
@@ -684,8 +684,8 @@ section .properties-tab label input {
     }
     & † {
 
-      border: 1px solid var(--bg-2);
-      border-radius: var(--radius);
+      border: 1px solid var(--color-bg-tertiary);
+      border-radius: var(--radius-sm);
       display: block;
       padding: 3px 3px;
       text-align: center;
@@ -697,7 +697,7 @@ section .properties-tab label input {
     & .tab-btn.close:hover::before {
       border: 1px solid var(--btn-bg);
       background-color: var(--btn-bg);
-      border-radius: var(--radius);
+      border-radius: var(--radius-sm);
     }
 
     // close dark
@@ -712,7 +712,7 @@ section .properties-tab label input {
     & .tab-btn.close.dark::before {
       color: white;
       border: 1px solid transparent;
-      border-radius: var(--radius);
+      border-radius: var(--radius-sm);
       display: block;
       padding: 3px 3px;
       text-align: center;
@@ -725,7 +725,7 @@ section .properties-tab label input {
     & .tab-btn.close.dark:hover::before {
       border: 1px solid transparent;
       background-color: transparent;
-      border-radius: var(--radius);
+      border-radius: var(--radius-sm);
     }
 
 
@@ -739,9 +739,9 @@ section .properties-tab label input {
     }
 
     & .tab-btn.sep::before {
-      color: var(--bg-3)!important;
+      color: var(--color-border-primary)!important;
       display: block;
-      border-left: 1px solid var(--bg-3);
+      border-left: 1px solid var(--color-border-primary);
       width: 1px;
       height: 18px;
       margin: 3px 6px 0 8px;
@@ -808,11 +808,11 @@ section .properties-tab label input {
 
 
   &::before {
-    border: 1px solid var(--bg-2);
-    border-radius: var(--radius);
+    border: 1px solid var(--color-bg-tertiary);
+    border-radius: var(--radius-sm);
     display: block;
     margin-right: 2px;
-    border: 1px solid var(--bg-2);
+    border: 1px solid var(--color-bg-tertiary);
     padding: 2px 2px!important;
     text-align: center;
     font-size: 0.89em;
@@ -822,7 +822,7 @@ section .properties-tab label input {
   &:hover::before {
     border: 1px solid var(--btn-bg);
     background-color: var(--btn-bg);
-    border-radius: var(--radius);
+    border-radius: var(--radius-sm);
   }
 }
 
@@ -840,11 +840,11 @@ section .properties-tab label input {
 
 
   &::before {
-    border: 1px solid var(--bg-2);
-    border-radius: var(--radius);
+    border: 1px solid var(--color-bg-tertiary);
+    border-radius: var(--radius-sm);
     display: block;
     margin-right: 2px;
-    border: 1px solid var(--bg-2);
+    border: 1px solid var(--color-bg-tertiary);
     padding: 2px 2px!important;
     text-align: center;
     font-size: 0.89em;
@@ -856,7 +856,7 @@ section .properties-tab label input {
   &:hover::before {
     border: 1px solid var(--btn-bg);
     background-color: var(--btn-bg);
-    border-radius: var(--radius);
+    border-radius: var(--radius-sm);
   }
 }
 
