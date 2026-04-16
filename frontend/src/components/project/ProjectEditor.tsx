@@ -924,20 +924,20 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         // Models (not metamodels) with their conforming metamodel info
         // DEBUG: Log raw data to understand the structure
         // console.log('[ProjectEditor] DEBUG - Raw data:', {
-            modelsCount: models?.length || 0,
-            metamodelsCount: metamodels?.length || 0,
-            metamodelIds: metamodels?.map(m => ({ id: m.id, name: m.name })),
-            sourceMetamodelName: transformation.sourceMetamodelName,
-            firstModel: models?.[0] ? {
-                id: models[0].id,
-                name: models[0].name,
-                instanceof: models[0].instanceof,
-                instanceofType: typeof models[0].instanceof,
-                // Also try to access as proxy
-                instanceofId: (models[0].instanceof as any)?.id,
-                instanceofName: (models[0].instanceof as any)?.name,
-            } : null,
-        });
+        //     modelsCount: models?.length || 0,
+        //     metamodelsCount: metamodels?.length || 0,
+        //     metamodelIds: metamodels?.map(m => ({ id: m.id, name: m.name })),
+        //     sourceMetamodelName: transformation.sourceMetamodelName,
+        //     firstModel: models?.[0] ? {
+        //         id: models[0].id,
+        //         name: models[0].name,
+        //         instanceof: models[0].instanceof,
+        //         instanceofType: typeof models[0].instanceof,
+        //         // Also try to access as proxy
+        //         instanceofId: (models[0].instanceof as any)?.id,
+        //         instanceofName: (models[0].instanceof as any)?.name,
+        //     } : null,
+        // });
 
         const availableModels = (models || []).map(model => {
             // model.instanceof can be:
@@ -962,12 +962,12 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             }
 
             // console.log('[ProjectEditor] DEBUG - Model mapping:', {
-                modelName: model.name,
-                instanceofRaw: instanceOf,
-                instanceofType: typeof instanceOf,
-                extractedMmId: mmId,
-                extractedMmName: mmName,
-            });
+            //     modelName: model.name,
+            //     instanceofRaw: instanceOf,
+            //     instanceofType: typeof instanceOf,
+            //     extractedMmId: mmId,
+            //     extractedMmName: mmName,
+            // });
 
             return {
                 id: model.id,
@@ -984,19 +984,19 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         ].filter(Boolean);
 
         // console.log('[ProjectEditor] Opening transformation', {
-            name: transformation.name,
-            sourceMetamodelId: transformation.sourceMetamodelId,
-            sourceMetamodelName: transformation.sourceMetamodelName,
-            sourceElements: sourceMetamodelElements.length,
-            targetElements: targetMetamodelElements.length,
-            modelsInProject: models?.length || 0,
-            availableModels: availableModels.map(m => ({
-                id: m.id,
-                name: m.name,
-                metamodelId: m.metamodelId,
-                metamodelName: m.metamodelName
-            }))
-        });
+        //     name: transformation.name,
+        //     sourceMetamodelId: transformation.sourceMetamodelId,
+        //     sourceMetamodelName: transformation.sourceMetamodelName,
+        //     sourceElements: sourceMetamodelElements.length,
+        //     targetElements: targetMetamodelElements.length,
+        //     modelsInProject: models?.length || 0,
+        //     availableModels: availableModels.map(m => ({
+        //         id: m.id,
+        //         name: m.name,
+        //         metamodelId: m.metamodelId,
+        //         metamodelName: m.metamodelName
+        //     }))
+        // });
 
         // Create getter functions that fetch FRESH metamodel data on demand
         // These are called when user clicks "Analyze" in Suggested Mappings panel
@@ -1066,10 +1066,10 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             isExecutingTransformation = true;
 
             // console.log('[ProjectEditor] handleExecuteTransformation called', {
-                sourceModelId,
-                outputModelName,
-                astMappings: ast?.mappings?.length || 0
-            });
+            //     sourceModelId,
+            //     outputModelName,
+            //     astMappings: ast?.mappings?.length || 0
+            // });
 
             // Validate AST
             if (!ast || !ast.mappings || ast.mappings.length === 0) {
@@ -1175,11 +1175,11 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     }
 
                     // console.log(`[ProjectEditor] Source object mapped:`, {
-                        id: obj.id,
-                        name: obj.name,
-                        resolvedClassName: className,
-                        featureCount: obj.features?.length || 0
-                    });
+                    //     id: obj.id,
+                    //     name: obj.name,
+                    //     resolvedClassName: className,
+                    //     featureCount: obj.features?.length || 0
+                    // });
 
                     return result;
                 });
@@ -1222,11 +1222,11 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 const uniqueOutputName = generateUniqueModelName(outputModelName, existingNames);
 
                 // console.log('[ProjectEditor] Output model name:', {
-                    requested: outputModelName,
-                    unique: uniqueOutputName,
-                    existingNames: existingNames,
-                    freshNamesCount: freshExistingNames.length
-                });
+                //     requested: outputModelName,
+                //     unique: uniqueOutputName,
+                //     existingNames: existingNames,
+                //     freshNamesCount: freshExistingNames.length
+                // });
 
                 let createdDModel: DModel | null = null;
                 let createdDGraph: DGraph | null = null;
@@ -1260,9 +1260,9 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     createdDModel = dModel;
                     createdModelId = dModel.id;
                     // console.log('[ProjectEditor] Created DModel with UNIQUE name:', {
-                        id: dModel.id,
-                        name: uniqueOutputName
-                    });
+                    //     id: dModel.id,
+                    //     name: uniqueOutputName
+                    // });
 
                     // STEP 2: Crea DGraph
                     const graphId = Constructors.DGraph_makeID(dModel.id);

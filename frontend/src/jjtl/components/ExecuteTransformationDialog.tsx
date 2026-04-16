@@ -62,9 +62,9 @@ export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogPr
         // Debug: log what we're looking for
         if (isOpen) {
             // console.log('[ExecuteTransformationDialog] Filtering models...', {
-                sourceMetamodelName,
-                totalModels: availableModels.length,
-            });
+            //     sourceMetamodelName,
+            //     totalModels: availableModels.length,
+            // });
         }
 
         const filtered = availableModels.filter(model => {
@@ -88,13 +88,13 @@ export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogPr
             // Debug: log each model's matching result
             if (isOpen) {
                 // console.log(`[ExecuteTransformationDialog] Model "${model.name}":`, {
-                    metamodelId: mmId || '(empty)',
-                    metamodelName: mmName || '(empty)',
-                    lookingFor: sourceMetamodelName,
-                    matchesByName,
-                    matchesById,
-                    matches,
-                });
+                //     metamodelId: mmId || '(empty)',
+                //     metamodelName: mmName || '(empty)',
+                //     lookingFor: sourceMetamodelName,
+                //     matchesByName,
+                //     matchesById,
+                //     matches,
+                // });
             }
 
             return matches;
@@ -102,9 +102,9 @@ export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogPr
 
         if (isOpen) {
             // console.log('[ExecuteTransformationDialog] Result:', {
-                compatibleCount: filtered.length,
-                compatibleModels: filtered.map(m => m.name),
-            });
+            //     compatibleCount: filtered.length,
+            //     compatibleModels: filtered.map(m => m.name),
+            // });
         }
 
         return filtered;

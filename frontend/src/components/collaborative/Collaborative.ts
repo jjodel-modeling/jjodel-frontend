@@ -38,10 +38,10 @@ export class Collaborative {
 
     private static canSend(action: Action): boolean {
         // console.log('Collaborative.canSend', {action,
-            sender: action.sender !== DUser.current,
-            skip: action.skipCollaborative,
-            ignore: action.type === SetRootFieldAction.type && ignoredRootFields.includes(action.field as keyof DState),
-        });
+        //     sender: action.sender !== DUser.current,
+        //     skip: action.skipCollaborative,
+        //     ignore: action.type === SetRootFieldAction.type && ignoredRootFields.includes(action.field as keyof DState),
+        // });
 
         if (action.sender !== DUser.current) return false;
         if (action.skipCollaborative) return false;

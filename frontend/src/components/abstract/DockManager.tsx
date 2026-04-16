@@ -253,13 +253,13 @@ class DockManager {
         onExecuteTransformation?: (sourceModelId: string, outputModelName: string, ast: TransformationAST) => Promise<ExecutionResult | void>
     ): void {
         // console.log('[DockManager] openTransformation called', {
-            transformationId: transformation?.id,
-            name: transformation?.name,
-            dockAvailable: !!DockManager.dock,
-            hasSourceMetamodel: !!sourceMetamodel?.length,
-            hasTargetMetamodel: !!targetMetamodel?.length,
-            hasGetters: !!(getSourceMetamodel && getTargetMetamodel)
-        });
+        //     transformationId: transformation?.id,
+        //     name: transformation?.name,
+        //     dockAvailable: !!DockManager.dock,
+        //     hasSourceMetamodel: !!sourceMetamodel?.length,
+        //     hasTargetMetamodel: !!targetMetamodel?.length,
+        //     hasGetters: !!(getSourceMetamodel && getTargetMetamodel)
+        // });
 
         if (!DockManager.dock) {
             console.warn('[DockManager] Dock not available, cannot open transformation');

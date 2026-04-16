@@ -31,7 +31,7 @@ export class VersionFixer {
         console.clear();
         let i: number  = 1;
 
-        // console.log(`
+        /* console.log(`
 Before deploying a new version you should:
 
 ${i++}) Update changelog
@@ -39,7 +39,7 @@ ${i++}) Update changelog
 ${i++}) build a new empty versioning function with signature like: private ['2.1 -> 2.3'](s: DState): DState
         fill this function in a way that translates from the state shape of the old version, to the state shape of the new one
 
-`);
+`); */
 
 
 

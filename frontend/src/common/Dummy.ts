@@ -641,9 +641,9 @@ export class Dummy {
                 const registerPhase = ()=> {
                     // checks if there is an ambiguous match between id and name, to move it to ambiguous unregistered collection
                     // console.log('childrenToUpdateByName, register phase ' + c.data.name, {
-                        childrenToUpdateByName_pre: {...childrenToUpdateByName},
-                        unregisteredChildren_pre: [...unregisteredChildren],
-                    })
+                    //     childrenToUpdateByName_pre: {...childrenToUpdateByName},
+                    //     unregisteredChildren_pre: [...unregisteredChildren],
+                    // })
                     for (let name in childrenToUpdateByName) {
                         let l = childrenToUpdateByName[name].l;
 
@@ -664,9 +664,9 @@ export class Dummy {
                         registerByCollection(e.k, e.i); // todo: remove all delete from json's subelement collections or get by index fails.
                     }
                     // console.log('childrenToUpdateByName, register phase end ' + c.data.name, {
-                        childrenToUpdateByName_post: {...childrenToUpdateByName},
-                        unregisteredChildren_post: [...unregisteredChildren],
-                    })
+                    //     childrenToUpdateByName_post: {...childrenToUpdateByName},
+                    //     unregisteredChildren_post: [...unregisteredChildren],
+                    // })
                 }
                 registerPhase();
 

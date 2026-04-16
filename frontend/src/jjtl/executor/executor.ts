@@ -410,10 +410,10 @@ export class JjtlExecutor {
             const traceStats = this.context.traceBuilder.getStats();
             // console.log('[JjTL Executor] Trace stats:', traceStats);
             // console.log('[JjTL Executor] Trace model:', {
-                transformationName: traceModel.transformationName,
-                linksCount: traceModel.links.length,
-                invertiblePercentage: traceStats.invertiblePercentage + '%',
-            });
+            //     transformationName: traceModel.transformationName,
+            //     linksCount: traceModel.links.length,
+            //     invertiblePercentage: traceStats.invertiblePercentage + '%',
+            // });
 
             return {
                 success: this.errors.length === 0,
@@ -618,7 +618,7 @@ export class JjtlExecutor {
         const instances = new Map<string, any[]>();
 
         // console.log('[JjTL Executor] extractSourceInstances: input type:',
-            Array.isArray(sourceModel) ? 'array' : typeof sourceModel);
+            // Array.isArray(sourceModel) ? 'array' : typeof sourceModel);
 
         // Handle ARRAY of objects directly (from Jjodel model.objects)
         if (Array.isArray(sourceModel)) {
@@ -634,7 +634,7 @@ export class JjtlExecutor {
                 }
             }
             // console.log('[JjTL Executor] Instances by class:',
-                Array.from(instances.entries()).map(([k, v]) => `${k}: ${v.length}`).join(', '));
+                // Array.from(instances.entries()).map(([k, v]) => `${k}: ${v.length}`).join(', '));
             return instances;
         }
 
@@ -680,7 +680,7 @@ export class JjtlExecutor {
         }
 
         // console.log('[JjTL Executor] Final instances by class:',
-            Array.from(instances.entries()).map(([k, v]) => `${k}: ${v.length}`).join(', '));
+            // // Array.from(instances.entries()).map(([k, v]) => `${k}: ${v.length}`).join(', '));
 
         return instances;
     }
@@ -924,11 +924,11 @@ export class JjtlExecutor {
         alias?: string
     ): Promise<void> {
         // console.log('[JjTL Executor] executeAttributeMappings called:', {
-            bodyLength: body?.length || 0,
-            bodyTypes: body?.map(b => b?.type) || [],
-            sourceInstanceName: sourceInstance?.name,
-            targetInstanceClassName: targetInstance?.className
-        });
+        //     bodyLength: body?.length || 0,
+        //     bodyTypes: body?.map(b => b?.type) || [],
+        //     sourceInstanceName: sourceInstance?.name,
+        //     targetInstanceClassName: targetInstance?.className
+        // });
 
         if (!body || body.length === 0) {
             // console.log('[JjTL Executor] WARNING: No attribute mappings in body!');
@@ -937,13 +937,13 @@ export class JjtlExecutor {
 
         for (const item of body) {
             // console.log('[JjTL Executor] Processing body item:', {
-                type: item?.type,
-                sourceAttribute: item?.sourceAttribute,
-                targetAttribute: item?.targetAttribute,
-                hasConversion: !!item?.conversion,
-                conversionType: item?.conversion?.type,
-                hasExpression: !!item?.conversion?.expression
-            });
+            //     type: item?.type,
+            //     sourceAttribute: item?.sourceAttribute,
+            //     targetAttribute: item?.targetAttribute,
+            //     hasConversion: !!item?.conversion,
+            //     conversionType: item?.conversion?.type,
+            //     hasExpression: !!item?.conversion?.expression
+            // });
 
             if (item.type === 'AttributeMapping') {
                 await this.executeAttributeMapping(item as AttributeMappingAST, sourceInstance, targetInstance, alias);
@@ -1220,13 +1220,13 @@ export class JjtlExecutor {
         alias?: string
     ): Promise<void> {
         // console.log('[JjTL Executor] executeAttributeMapping:', {
-            sourceAttribute: mapping.sourceAttribute,
-            targetAttribute: mapping.targetAttribute,
-            hasObjectCreation: !!mapping.objectCreation,
-            hasConversion: !!mapping.conversion,
-            conversionExpression: mapping.conversion?.expression?.type,
-            conversionMappings: mapping.conversion?.mappings?.length
-        });
+        //     sourceAttribute: mapping.sourceAttribute,
+        //     targetAttribute: mapping.targetAttribute,
+        //     hasObjectCreation: !!mapping.objectCreation,
+        //     hasConversion: !!mapping.conversion,
+        //     conversionExpression: mapping.conversion?.expression?.type,
+        //     conversionMappings: mapping.conversion?.mappings?.length
+        // });
 
         try {
             let value: JjelValue;
@@ -1287,22 +1287,22 @@ export class JjtlExecutor {
         alias?: string
     ): Promise<JjelValue> {
         // console.log('[JjTL Executor] executeConversion:', {
-            hasExpression: !!conversion.expression,
-            expressionType: conversion.expression?.type,
-            hasMappings: !!(conversion.mappings && conversion.mappings.length > 0),
-            sourceAttribute,
-            sourceInstanceKeys: Object.keys(sourceInstance || {})
-        });
+        //     hasExpression: !!conversion.expression,
+        //     expressionType: conversion.expression?.type,
+        //     hasMappings: !!(conversion.mappings && conversion.mappings.length > 0),
+        //     sourceAttribute,
+        //     sourceInstanceKeys: Object.keys(sourceInstance || {})
+        // });
 
         if (conversion.expression) {
             // JjEL expression
             // console.log('[JjTL Executor] Evaluating expression type:', conversion.expression?.type);
             const ctx = this.createInstanceContext(sourceInstance, alias);
             // console.log('[JjTL Executor] Context bindings for expression:', {
-                name: ctx.get('name'),
-                source: ctx.get('source'),
-                self: ctx.get('self')
-            });
+            //     name: ctx.get('name'),
+            //     source: ctx.get('source'),
+            //     self: ctx.get('self')
+            // });
             const result = await this.evaluateExpressionAsync(conversion.expression, ctx);
             // console.log('[JjTL Executor] Expression result:', result);
             return result;
@@ -2148,12 +2148,12 @@ export class JjtlExecutor {
         const right = this.evaluateExpression(expr.right, ctx);
 
         // console.log('[JjTL Executor] evaluateBinaryExpression:', {
-            operator: expr.operator,
-            left,
-            right,
-            leftType: typeof left,
-            rightType: typeof right
-        });
+        //     operator: expr.operator,
+        //     left,
+        //     right,
+        //     leftType: typeof left,
+        //     rightType: typeof right
+        // });
 
         switch (expr.operator) {
             // Arithmetic

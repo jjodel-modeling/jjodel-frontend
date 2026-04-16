@@ -203,9 +203,9 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
             // Deep copy suggestions to ensure React detects the change
             const suggestionsCopy = result.suggestions.map(s => ({ ...s }));
             // console.log('[SuggestedMappingsPanel] Notifying parent of suggestions change:',
-                suggestionsCopy.length,
-                suggestionsCopy.map(s => ({ id: s.id, status: s.status })));
-            onSuggestionsChange(suggestionsCopy);
+            //     suggestionsCopy.length,
+            //     suggestionsCopy.map(s => ({ id: s.id, status: s.status })));
+            // onSuggestionsChange(suggestionsCopy);
         }
     }, [result, onSuggestionsChange]);
 

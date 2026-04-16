@@ -622,13 +622,13 @@ function NavbarComponent(props: AllProps) {
 
             if (modKey) {
                 // console.log('[Jjodel Shortcuts] Handler called:', {
-                    key: event.key,
-                    code: event.code,
-                    altKey: event.altKey,
-                    shiftKey: event.shiftKey,
-                    hash: window.location.hash,
-                    projectInClosure: project ? project.name : 'undefined'
-                });
+                //     key: event.key,
+                //     code: event.code,
+                //     altKey: event.altKey,
+                //     shiftKey: event.shiftKey,
+                //     hash: window.location.hash,
+                //     projectInClosure: project ? project.name : 'undefined'
+                // });
             }
 
             const target = event.target as HTMLElement;
@@ -666,18 +666,18 @@ function NavbarComponent(props: AllProps) {
             const context = detectCurrentContext();
 
             // DEBUG: Log shortcut detection
-            if (modKey && event.altKey) {
-                // console.log('[Jjodel Shortcuts] Alt+Cmd pressed:', {
-                    code: event.code,
-                    key: event.key,
-                    context,
-                    matchesNEW: matchesShortcut(event, SHORTCUTS.NEW),
-                    matchesSAVE: matchesShortcut(event, SHORTCUTS.SAVE),
-                    matchesCLOSE: matchesShortcut(event, SHORTCUTS.CLOSE),
-                    project: project ? project.name : 'undefined',
-                    metamodelsCount: metamodels?.length || 0
-                });
-            }
+            // if (modKey && event.altKey) {
+            //     // console.log('[Jjodel Shortcuts] Alt+Cmd pressed:', {
+            //         code: event.code,
+            //         key: event.key,
+            //         context,
+            //         matchesNEW: matchesShortcut(event, SHORTCUTS.NEW),
+            //         matchesSAVE: matchesShortcut(event, SHORTCUTS.SAVE),
+            //         matchesCLOSE: matchesShortcut(event, SHORTCUTS.CLOSE),
+            //         project: project ? project.name : 'undefined',
+            //         metamodelsCount: metamodels?.length || 0
+            //     });
+            // }
 
             // ========================================
             // CMD/Ctrl + N - Context-Aware NEW

@@ -112,7 +112,7 @@ export const CanvasBenchmark = {
      * Instructions for comparing before/after
      */
     compareInstructions(): void {
-        // console.log(`
+        /* console.log(`
 ╔════════════════════════════════════════════════════════════════╗
 ║              PERFORMANCE COMPARISON GUIDE                       ║
 ╠════════════════════════════════════════════════════════════════╣
@@ -138,7 +138,7 @@ export const CanvasBenchmark = {
 ║  • Overall render count: Lower is better                        ║
 ║                                                                 ║
 ╚════════════════════════════════════════════════════════════════╝
-        `);
+        `); */
     },
 };
 

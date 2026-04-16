@@ -54,16 +54,16 @@ export function useJjtlParser(options: UseJjtlParserOptions = {}): UseJjtlParser
 
         // DEBUG: log full token stream
         // console.log('[useJjtlParser] Full token stream:', lexerResult.tokens.map(
-            (t, i) => `${i}:[${t.type}:${JSON.stringify(t.value)}]`
-        ).join(' '));
+            // (t, i) => `${i}:[${t.type}:${JSON.stringify(t.value)}]`
+        // ).join(' '));
 
         // Parse
         const parserResult = parse(lexerResult.tokens);
         // console.log('[useJjtlParser] Parse result:', {
-            hasAst: !!parserResult.ast,
-            mappingsCount: parserResult.ast?.mappings?.length || 0,
-            errorsCount: parserResult.errors.length
-        });
+            // hasAst: !!parserResult.ast,
+            // mappingsCount: parserResult.ast?.mappings?.length || 0,
+            // errorsCount: parserResult.errors.length
+        // });
 
         // Combine errors
         const allErrors = [...lexerErrors, ...parserResult.errors];

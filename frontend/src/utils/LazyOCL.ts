@@ -323,7 +323,7 @@ export function resetOCLStats(): void {
  */
 export function logOCLStats(): void {
     const s = getOCLStats();
-    // console.log(`
+    /* console.log(`
 [LazyOCL Statistics]
   Cache Size: ${s.cacheSize} entries
   Cache Hits: ${s.cacheHits}
@@ -331,7 +331,7 @@ export function logOCLStats(): void {
   Hit Rate: ${s.hitRate}
   Total Evaluations: ${s.evaluations}
   Skipped (no condition): ${s.skippedEvaluations}
-`);
+`); */
 }
 
 // Expose to window for debugging

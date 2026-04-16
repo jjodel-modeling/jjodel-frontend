@@ -151,17 +151,17 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
     const startTimeRef = useRef<number>(0);
 
     // DEBUG: Log execution stats when modal is shown
-    useEffect(() => {
-        if (showCompleteModal && executionStats) {
-            // console.log('[ScriptBlock] Modal shown with stats:', {
-                executedCommands: executionStats.executedCommands,
-                duration: executionStats.duration,
-                errors: executionStats.errors,
-                totalCommands: executionStats.totalCommands,
-                skippedLines: executionStats.skippedLines,
-            });
-        }
-    }, [showCompleteModal, executionStats]);
+    // useEffect(() => {
+        // if (showCompleteModal && executionStats) {
+        //     // console.log('[ScriptBlock] Modal shown with stats:', {
+        //         executedCommands: executionStats.executedCommands,
+        //         duration: executionStats.duration,
+        //         errors: executionStats.errors,
+        //         totalCommands: executionStats.totalCommands,
+        //         skippedLines: executionStats.skippedLines,
+        //     });
+        // }
+    // }, [showCompleteModal, executionStats]);
 
     // Memoized values - always use original code (normalized internally if needed)
     const displayCode = code;

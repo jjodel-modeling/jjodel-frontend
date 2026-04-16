@@ -141,9 +141,9 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
     useEffect(() => {
         astRef.current = ast;
         // console.log('[JjtlDevelopmentEnv] AST updated in ref:', {
-            hasAst: !!ast,
-            mappingsCount: ast?.mappings?.length || 0
-        });
+        //     hasAst: !!ast,
+        //     mappingsCount: ast?.mappings?.length || 0
+        // });
     }, [ast]);
 
     // Executor hook - we use setResultFromExternal to update trace from ProjectEditor's execution
@@ -280,9 +280,9 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
         // First try the ref, if it has mappings use it; otherwise re-parse
         let currentAst = astRef.current;
         // console.log('[JjtlDevelopmentEnv] AST from ref:', {
-            hasAst: !!currentAst,
-            mappingsCount: currentAst?.mappings?.length || 0
-        });
+        //     hasAst: !!currentAst,
+        //     mappingsCount: currentAst?.mappings?.length || 0
+        // });
 
         // If AST is stale (no mappings), force a fresh parse
         if (!currentAst || !currentAst.mappings || currentAst.mappings.length === 0) {
@@ -291,10 +291,10 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
             const freshResult = parseNow(code);
             currentAst = freshResult.ast;
             // console.log('[JjtlDevelopmentEnv] Fresh parse result:', {
-                hasAst: !!currentAst,
-                mappingsCount: currentAst?.mappings?.length || 0,
-                errorsCount: freshResult.errors.length
-            });
+            //     hasAst: !!currentAst,
+            //     mappingsCount: currentAst?.mappings?.length || 0,
+            //     errorsCount: freshResult.errors.length
+            // });
         }
 
         if (!currentAst) {
@@ -316,11 +316,11 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
                 const result = await onExecuteTransformation(sourceModelId, outputModelName, currentAst);
                 const executionTimeMs = Math.round(performance.now() - startTime);
                 // console.log('[JjtlDevelopmentEnv] onExecuteTransformation returned:', {
-                    hasResult: !!result,
-                    success: result?.success,
-                    hasTraceModel: !!result?.traceModel,
-                    linksCount: result?.traceModel?.links?.length
-                });
+                //     hasResult: !!result,
+                //     success: result?.success,
+                //     hasTraceModel: !!result?.traceModel,
+                //     linksCount: result?.traceModel?.links?.length
+                // });
 
                 // Update trace display from the result returned by ProjectEditor
                 if (result) {
