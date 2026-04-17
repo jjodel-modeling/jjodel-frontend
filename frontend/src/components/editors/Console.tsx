@@ -125,7 +125,7 @@ function safeStringify(obj: any, maxDepth: number = 20): string {
 
         // Log progress every 1000 iterations
         if (iterationCount % 1000 === 0) {
-            console.log('[safeStringify DEBUG] iterations:', iterationCount, 'depth:', depth, 'key:', key);
+            // console.log('[safeStringify DEBUG] iterations:', iterationCount, 'depth:', depth, 'key:', key);
         }
 
         // Handle primitives
@@ -204,11 +204,11 @@ function safeStringify(obj: any, maxDepth: number = 20): string {
     }
 
     try {
-        console.log('[safeStringify DEBUG] Starting...');
+        // console.log('[safeStringify DEBUG] Starting...');
         const processed = replacer('', obj, 0);
-        console.log('[safeStringify DEBUG] Processing done, total iterations:', iterationCount);
+        // console.log('[safeStringify DEBUG] Processing done, total iterations:', iterationCount);
         const jsonStr = JSON.stringify(processed, null, 2);
-        console.log('[safeStringify DEBUG] JSON.stringify done');
+        // console.log('[safeStringify DEBUG] JSON.stringify done');
         return jsonStr;
     } catch (e) {
         console.error('[safeStringify DEBUG] Error:', e);
@@ -236,14 +236,14 @@ class ThisState{
 function fixproxy(output: any/*but not array*/, addDKeys: boolean = true, addLKeys: boolean = true):
     { output: any, shortcuts?: GObject<'L singleton'>, comments?: Dictionary<string, string | {type:string, txt:string}>} {
 
-    console.log('[fixproxy DEBUG] Starting, type:', typeof output, 'isArray:', Array.isArray(output));
+    // console.log('[fixproxy DEBUG] Starting, type:', typeof output, 'isArray:', Array.isArray(output));
 
     let ret: ReturnType<typeof fixproxy> = {output};
     if (!output) return ret;
 
     // Handle arrays of proxies
     if (Array.isArray(output)) {
-        console.log('[fixproxy DEBUG] Processing array of', output.length, 'items');
+        // console.log('[fixproxy DEBUG] Processing array of', output.length, 'items');
         // Don't try to convert each proxy in the array - just return simplified info
         const simplified = output.slice(0, 50).map((item, i) => {
             if (item?.__isProxy) {
@@ -264,19 +264,19 @@ function fixproxy(output: any/*but not array*/, addDKeys: boolean = true, addLKe
         if (output.length > 50) {
             simplified.push({ _truncated: true, _totalItems: output.length });
         }
-        console.log('[fixproxy DEBUG] Array simplified');
+        // console.log('[fixproxy DEBUG] Array simplified');
         return { output: simplified };
     }
 
     let proxy: LPointerTargetable | undefined;
     if (output?.__isProxy) {
-        console.log('[fixproxy DEBUG] Found proxy, accessing .json...');
+        // console.log('[fixproxy DEBUG] Found proxy, accessing .json...');
         proxy = output;
         output = output.json; //.__raw; Object.fromEntries(Object.getOwnPropertyNames(p).map(k => [k, p[k]]));
-        console.log('[fixproxy DEBUG] .json accessed');
+        // console.log('[fixproxy DEBUG] .json accessed');
     } else proxy = undefined;
 
-    console.log('[fixproxy DEBUG] Checkpoint 1', {output: typeof output, proxy: !!proxy, addLKeys});
+    // console.log('[fixproxy DEBUG] Checkpoint 1', {output: typeof output, proxy: !!proxy, addLKeys});
 
     switch (typeof output) {
         case "function": {
@@ -292,7 +292,7 @@ function fixproxy(output: any/*but not array*/, addDKeys: boolean = true, addLKe
                 let Lsingleton: GObject<'L singleton'> = (RuntimeAccessibleClass.get(output?.className)?.logic?.singleton) || {};
                 let comments: Dictionary<string, string | {type:string, txt:string}> = {};
                 ret.shortcuts = {...Lsingleton};
-                console.log('console short in 2', {output, rett:{...ret, shortt:{...(ret.shortcuts||{})}}, Lsingleton, DClass:RuntimeAccessibleClass.get(output?.className), LClass:RuntimeAccessibleClass.get(output?.className)?.logic});
+                // console.log('console short in 2', {output, rett:{...ret, shortt:{...(ret.shortcuts||{})}}, Lsingleton, DClass:RuntimeAccessibleClass.get(output?.className), LClass:RuntimeAccessibleClass.get(output?.className)?.logic});
                 ret.comments = comments;
                 for (let key in output) {
                     if (Lsingleton["__info_of__" + key]) comments[key] = Lsingleton["__info_of__" + key];
@@ -320,7 +320,7 @@ function fixproxy(output: any/*but not array*/, addDKeys: boolean = true, addLKe
                             break;
                     }
                 }
-                console.log('console short in 3', {ret});
+                // console.log('console short in 3', {ret});
 
             }
             break;
@@ -546,7 +546,7 @@ Sorting:
   [...data.classes].sort((a, b) => b.attributes.length - a.attributes.length)
 
 Debugging:
-  console.log(data)
+  // console.log(data)
   JSON.stringify(node, null, 2)`;
             return { output: examples, isError: false };
         }
@@ -671,7 +671,7 @@ Tip: Click the keyboard icon in the toolbar for quick reference.`;
         if (this.state.language === 'jjel') {
             // Execute as JjEL expression
             try {
-                console.log('[JjEL DEBUG] 1. Starting parse for:', code);
+                // console.log('[JjEL DEBUG] 1. Starting parse for:', code);
                 // Build implicit context: flatten data properties (including prototype getters)
                 // as top-level variables so users can write `name` instead of `data.name`.
                 // Explicit context keys (data, node, view) override any same-named data properties.
@@ -688,9 +688,9 @@ Tip: Click the keyboard icon in the toolbar for quick reference.`;
                 }
                 // jjelEval throws on parse/evaluation errors, returns the value directly on success
                 output = jjelEval(code, jjelContext);
-                console.log('[JjEL DEBUG] 2. jjelEval completed, output type:', typeof output);
-                console.log('[JjEL DEBUG] 2b. output isProxy:', output?.__isProxy);
-                console.log('[JjEL DEBUG] 2c. output isArray:', Array.isArray(output));
+                // console.log('[JjEL DEBUG] 2. jjelEval completed, output type:', typeof output);
+                // console.log('[JjEL DEBUG] 2b. output isProxy:', output?.__isProxy);
+                // console.log('[JjEL DEBUG] 2c. output isArray:', Array.isArray(output));
             } catch (e: any) {
                 console.error("[JjEL DEBUG] ERROR in jjelEval:", e);
                 // Extract JjEL-specific error message
@@ -714,16 +714,16 @@ Tip: Click the keyboard icon in the toolbar for quick reference.`;
         // Process output
         let contentStr: string;
         try {
-            console.log('[JjEL DEBUG] 3. Starting fixproxy...');
+            // console.log('[JjEL DEBUG] 3. Starting fixproxy...');
             const processed = fixproxy(output);
-            console.log('[JjEL DEBUG] 4. fixproxy completed');
+            // console.log('[JjEL DEBUG] 4. fixproxy completed');
             const finalOutput = processed.output;
-            console.log('[JjEL DEBUG] 5. finalOutput type:', typeof finalOutput);
+            // console.log('[JjEL DEBUG] 5. finalOutput type:', typeof finalOutput);
 
             if (typeof finalOutput === 'object' && finalOutput !== null) {
-                console.log('[JjEL DEBUG] 6. Starting safeStringify...');
+                // console.log('[JjEL DEBUG] 6. Starting safeStringify...');
                 contentStr = safeStringify(finalOutput);
-                console.log('[JjEL DEBUG] 7. safeStringify completed, length:', contentStr.length);
+                // console.log('[JjEL DEBUG] 7. safeStringify completed, length:', contentStr.length);
             } else if (finalOutput === undefined) {
                 contentStr = 'undefined';
             } else if (finalOutput === null) {

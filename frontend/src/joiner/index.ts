@@ -54,7 +54,7 @@ let useless = pathDataPolyfill; // just to force compiler to not ignore the impo
 /*
 let oldRequire = pathDataPolyfill.prototype.require;
 function newRequire(...args: any): any {
-    console.log('require', {args, arguments});
+    // console.log('require', {args, arguments});
     if (args[0] === 'fs') return {'fake_fs': true};
     return oldRequire(...args);
 }

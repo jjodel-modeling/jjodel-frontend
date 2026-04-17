@@ -112,7 +112,7 @@ export function parseT2M(language: string, text0: string, canThrow: boolean = fa
                 return null;
             }
             // ret = ret?.ast?.() || ret;
-            console.log('ohm ret', {ret})
+            // console.log('ohm ret', {ret})
             break;
         case 'nearley':
             let te = getLanguageCache(language, engine);
@@ -285,7 +285,7 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
     }
     let func: (model: LModelElement)=>string = ()=> '';
 
-    console.log('dom2t', {data0, language, languageObj});
+    // console.log('dom2t', {data0, language, languageObj});
     switch (engine) {
         default:
             let msg = 'M2T transformation failed, unsupported parser: ' + engine;
@@ -298,7 +298,7 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
                 views: '/',            // dummy value — satisfies the resolver check
             });
             eta.readFile = (name: string, ...a: any) => {  // intercepts all include() calls
-                console.log("eta custom read file", {name, a});
+                // console.log("eta custom read file", {name, a});
                 if (name[0] === '/' || name[0] === '@') { name = name.substring(1); }
                 if (name[0] === '/' || name[0] === '@') { name = name.substring(1); }
                 if (name[name.length -1] === '/') name = name.substring(0, name.length - 1);
@@ -328,7 +328,7 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
                 let k2 = k.toLowerCase();
                 if (!(k2 in eta_partials)) eta_partials[k2] = eta_partials[k];
             }
-            console.log('eta m2t', {eta, eta_partials, cname});
+            // console.log('eta m2t', {eta, eta_partials, cname});
             let selectedPartial: string = '';
             // try to find correct partial name
             switch (cname) {
@@ -346,7 +346,7 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
                     let name = meta?.name;
                     let ambiguousNames = ["Value", "DValue", "Model", "DModel", "Object", "DObject", "Attribute", "DAttribute", "Reference", "DReference"];
                     /*console.log("eta m2t object attempt 1: ", {name, eta_partials, ret: fixPartialName(name, eta_partials, false)});
-                    console.log("eta m2t object attempt 2: ", {name, eta_partials, ret: fixPartialName("DObject", eta_partials, true)});*/
+                    // console.log("eta m2t object attempt 2: ", {name, eta_partials, ret: fixPartialName("DObject", eta_partials, true)});*/
                     if (!ambiguousNames.includes(name || '')) selectedPartial = fixPartialName(name, eta_partials, false);
                     if (!selectedPartial) selectedPartial = fixPartialName("DObject", eta_partials, true);
                     break;
@@ -359,7 +359,7 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
             }
             catch (e: any) {
                 ret = e.message;
-                console.log('eta m2t error', {e, selectedPartial, eta});
+                // console.log('eta m2t error', {e, selectedPartial, eta});
             }
             // cleanup
             /*for (let name in m2tobj) {
@@ -367,7 +367,7 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
                 Handlebars.unregisterPartial(name);
             }*/
             // Handlebars.partials = {}; // unofficial fallback to make sure i erase all partials
-            console.log('eta m2t', {func_str, eta_partials, ret});
+            // console.log('eta m2t', {func_str, eta_partials, ret});
             return ret;
         case 'handlebars':
             if (allowPartials) for (let name in m2tobj) {
@@ -383,7 +383,7 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
                 if (msg.includes('doesn\'t match ')) msg+='\ntip: did you forget a # sign before commands such as {{#if}}?'
                 template = () => msg;
             }
-            console.log('handlebars 2', {func_str, template});
+            // console.log('handlebars 2', {func_str, template});
             try { ret = template(data, {allowProtoMethodsByDefault: true, allowProtoPropertiesByDefault: true, allowedProtoProperties: {__proto__:true}}); }
             catch (e: any) {
                 let errorFragment: string = e.stack.split('\n')
@@ -403,7 +403,7 @@ export function doM2T(data0: LPointerTargetable | Pointer | null | undefined, la
                 Handlebars.unregisterPartial(name);
             }*/
             // Handlebars.partials = {}; // unofficial fallback to make sure i erase all partials
-            console.log('handlebars 3', {func_str, template, ret});
+            // console.log('handlebars 3', {func_str, template, ret});
             return ret;
 
         case 'javascript':
@@ -440,7 +440,7 @@ export function T2M(data: LModelElement, language: string, text: string) {
 export function T2M_API(data: LModelElement, language: string, text: string): void{ return doT2M(data, language, text); }
 
 export function doT2M(data0: LPointerTargetable | Pointer | null | undefined, language: string, text: string): void {
-    console.log('doT2M', {data0, language, text});
+    // console.log('doT2M', {data0, language, text});
     if (!text) return;
     if (typeof (text as unknown) !== 'string') { Log.ee('T2M transformation called with an object instead of text', {text, data:data0, language}); return; }
     if (!DPointerTargetable.isD(data0)) { Log.ee('T2M transformation must be called on a modelling element, found instead: ' + typeof data0, {element:data0, text, language}); return; }
@@ -462,7 +462,7 @@ export function doT2M(data0: LPointerTargetable | Pointer | null | undefined, la
         if (ret.length === 1) ret = ret[0];
         else Log.ee('T2M returned an array instead of an object', {ret, data, language});
     }
-    console.log('doT2M json pre', {data, text, ret:JSON.parse(JSON.stringify(ret))});
+    // console.log('doT2M json pre', {data, text, ret:JSON.parse(JSON.stringify(ret))});
     if (!(data as LObject).t2m) {
         Log.ee("The T2M transformation cannot be applied yet to " + className + " elements.", {className, ret, data, language});
         return;
@@ -474,7 +474,7 @@ export function doT2M(data0: LPointerTargetable | Pointer | null | undefined, la
 export function T2M_Component(props: T2M_AllProps, child?: any): ReactNode {
     const data: LPointerTargetable = L.from(props.data as any) || L.fromPointer(props.dataid);
     const language = props.language || 'JSON';
-    console.log('T2M render called', {data, language, arguments});
+    // console.log('T2M render called', {data, language, arguments});
     let debug = true;
     function onBlur(e: any){
         props.onChange?.(e);
@@ -538,7 +538,7 @@ export function T2M_WithEditor(props: T2M_AllProps, child?: any) {
         (props as any).onChange?.(evt);
         if (readOnly) return;
 
-        console.log("setValue", {value, nv: getValueFromEvent(evt), evt, ev: evt.target.value});
+        // console.log("setValue", {value, nv: getValueFromEvent(evt), evt, ev: evt.target.value});
         setValue(getValueFromEvent(evt));
         setIsTouched(true);     // I'm editing the element in my local state.
         // the actual set is done in onBlur
@@ -556,7 +556,7 @@ export function T2M_WithEditor(props: T2M_AllProps, child?: any) {
         if (readOnly) return;
         const newValue = val;
         const _oldValue: any = getter ? getter(data, language) : oldValue;
-        console.log("onChange confirm", {evt, newValue, _oldValue, data, changed: valueDidChange(newValue, oldValue), readOnly, language, setter});
+        // console.log("onChange confirm", {evt, newValue, _oldValue, data, changed: valueDidChange(newValue, oldValue), readOnly, language, setter});
         if (valueDidChange(newValue, _oldValue)){
             if (setter) setter(newValue as any, data, language);
             else {

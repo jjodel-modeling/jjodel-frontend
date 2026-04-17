@@ -50,8 +50,8 @@ export class CanvasExportService {
             // Find the actual graph element (the SVG container)
             const graphElement = canvasElement.querySelector('.Graph') as HTMLElement || canvasElement;
 
-            console.log('[CanvasExportService] Exporting element:', graphElement);
-            console.log('[CanvasExportService] Element dimensions:', graphElement.offsetWidth, 'x', graphElement.offsetHeight);
+            // console.log('[CanvasExportService] Exporting element:', graphElement);
+            // console.log('[CanvasExportService] Element dimensions:', graphElement.offsetWidth, 'x', graphElement.offsetHeight);
 
             // Generate image data URL directly from the element
             const dataUrl = await this.generateDataUrl(graphElement, opts);

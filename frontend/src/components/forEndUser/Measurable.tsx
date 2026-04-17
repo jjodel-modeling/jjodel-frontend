@@ -105,21 +105,21 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
                     Log.ee('child not found', {child, evt, oc, e}); return;
                 }
                 let oldpos = this.oldPos; // positionMap.get(e);
-                console.log('measurable default event child ' + evtkind, {ui, e, oc, oldpos});
+                // console.log('measurable default event child ' + evtkind, {ui, e, oc, oldpos});
                 //if (evtkind === 'e') { positionMap.set(e, ui.position); }
 
                 /*if (evtkind === 's') {
                     ui.originalPosition.left = 300;
                     ui.offset.left = 300;
                     ui.position.left = 300;
-                    console.log('measurable sstart ', {type, e, oc, ui, el: e.style.left, cl: child.style.left});
+                    // console.log('measurable sstart ', {type, e, oc, ui, el: e.style.left, cl: child.style.left});
                 }* /
 
                 let key: any;
                 for (key of childmodekeys) {
                     let fixpos = () => {
                         if (oldpos && (oldpos as any)[key] !== undefined) {
-                            if (key ==='left') console.log('measurable fixpos ' + evtkind, (oldpos as any)[key] + ui.position[key] + 'px', (oldpos as any)[key]);
+                            // if (key ==='left') console.log('measurable fixpos ' + evtkind, (oldpos as any)[key] + ui.position[key] + 'px', (oldpos as any)[key]);
                             let newpos = (oldpos as any)[key] + ui.position[key];
                             child.style[key] = (newpos) + 'px';
                             if (evtkind === 'e') this.oldPos[key] = newpos;
@@ -149,7 +149,7 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
             };
 
             if (props[optionkey] === false || !props[optionkey]) {
-                console.log("measurable off " + type, {$measurable, type, datamap, optionkey, props});
+                // console.log("measurable off " + type, {$measurable, type, datamap, optionkey, props});
                 if ($measurable.data(datamap[type])) ($measurable as GObject)[type]('disable');
                 return;
             }
@@ -197,7 +197,7 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
             ui.originalPosition.left = 300;
             ui.offset.left = 300;
             ui.position.left = 300;
-            console.log('measurable sstart ', {type, e, oc, ui, el: e.style.left, cl: child.style.left});
+            // console.log('measurable sstart ', {type, e, oc, ui, el: e.style.left, cl: child.style.left});
         }*/
 
         let key: any;
@@ -470,7 +470,7 @@ export class ScrollableComponent extends Component<ScrollOwnProps & MeasurableIn
                                 isPanning={graph}
                                 onDragEnd={graph ? (coords, ...args: any) => {
                                     if (!graph) return; // just for ts-lint
-                                    console.log("drag odee", {coords, graph, args});
+                                    // console.log("drag odee", {coords, graph, args});
                                     let offset = graph.offset;
                                     if (!offset.equals(coords)) graph.offset = coords as any;
                                 } : undefined}

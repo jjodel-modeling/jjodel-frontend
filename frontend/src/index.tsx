@@ -28,7 +28,7 @@ import HtmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker';
 // @ts-ignore
 import TsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
 
-console.log("monaco workers load", {EditorWorker, JsonWorker, CssWorker, HtmlWorker, TsWorker});
+// console.log("monaco workers load", {EditorWorker, JsonWorker, CssWorker, HtmlWorker, TsWorker});
 // Configura @monaco-editor/react per usare l'istanza locale invece del CDN
 loader.config({ monaco });
 

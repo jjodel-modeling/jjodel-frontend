@@ -504,7 +504,7 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
         const prevAction: ParsedAction = actions[i-1];
         const action: ParsedAction = actions[i];
         const actiontype = action.type.indexOf('@@') === 0 ? 'redux' : action.type;
-        if (U.debug) console.log('executing action:', {a:action, t:actiontype, field: action.field, v:action.value}); //, count: ++action.executionCount});
+        // if (U.debug) console.log('executing action:', {a:action, t:actiontype, field: action.field, v:action.value}); //, count: ++action.executionCount});
 
         switch (actiontype) {
             /*
@@ -599,7 +599,7 @@ export function reducer(oldState: DState = initialState, action: Action, liveCha
     if (!windoww.jjactions) windoww.jjactions = [];
     windoww.jjactions.push(action);
     let safeMode = false;
-    console.log('execute action', action);
+    // console.log('execute action', action);
     if (!safeMode) {
         let ret = unsafereducer(oldState, action);
         DO_AFTER_TRANSACTION_NOT_FOR_USERS(ret);
@@ -735,9 +735,9 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
         for (let k of tv.constantsList) if (!allContextKeys[k]) allContextKeys[k] = true;
         for (let k of tv.UDList) if (!allContextKeys[k]) allContextKeys[k] = true;
         let paramStr = '{'+Object.keys(allContextKeys).join(',')+'}';
-        console.log('labels parse', { allContextKeys, ud:tv.UDList, c:tv.constantsList });
+        // console.log('labels parse', { allContextKeys, ud:tv.UDList, c:tv.constantsList });
         const body: string =  'return (' + val + ')';
-        console.log('labels parse', {vid: ptr, paramStr, body});
+        // console.log('labels parse', {vid: ptr, paramStr, body});
         try {
             if (isNode) {
                 // need to store the function in tnv instead of tn since if v changes, ud changes as well? in all of them?what if i make a new view?
@@ -972,7 +972,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
             tv.jsCondition = new Function(paramStr, body) as ((...a:any)=>any);
         } catch (e) {
             tv.jsCondition = undefined;
-            console.log('JS Condition parsed error', e);
+            // console.log('JS Condition parsed error', e);
         }
     }
     ret.VIEWS_RECOMPILE_jsCondition = [];
@@ -1109,7 +1109,7 @@ function doUndoRedo(oldState: DState, action: Action, isUndo:'undo'|'redo'): DSt
     let removedDeltas: (GObject | undefined)[] = [];
     let steps = times;
     Log.exDev(times<=0, isUndo+" must be positive", action);
-    console.log('redo debug 0', {oldState, action, isUndo, times, steps});
+    // console.log('redo debug 0', {oldState, action, isUndo, times, steps});
     let isUndoCheck = isUndo === 'undo';
     while (times--) {
         let forUser = (action as UndoAction | RedoAction).forUser;
@@ -1119,7 +1119,7 @@ function doUndoRedo(oldState: DState, action: Action, isUndo:'undo'|'redo'): DSt
         }
         if (!delta) continue;
         removedDeltas.push(delta);
-        console.log('redo debug 1', {delta, times: times});
+        // console.log('redo debug 1', {delta, times: times});
         state = undo(state, action as UndoAction | RedoAction, delta, isUndoCheck);
     }
 
@@ -1177,7 +1177,7 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
 
             // update state history
             let delta = Uobj.objectDelta(ret, oldState, true, false);
-            if (U.debug) console.log('reducer delta', {start:oldState, end: ret, delta});
+            // if (U.debug) console.log('reducer delta', {start:oldState, end: ret, delta});
             let debug = Uobj.applyObjectDelta(ret, delta, false, oldState);
             delta.timestamp = ret.timestamp;
             delta.timestampdiff = ret.timestampdiff = ret.timestamp - (oldState?.timestamp || 0);
@@ -1222,8 +1222,8 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
                     // todo: this is troublesome because ['id1', 'empty'] + ['id2'] =  ['id1', 'empty', 'id2'] but should not have side effects? can the empty sparse arr make problems?
                     if (!Array.isArray((delta as GObject)[k] || [])) console.error('mergerecompilearr err',
                         {sm:shouldMerge, pd:!!pastDelta, delta, pastDelta, k, dk: (delta as any)?.[k], pdk: pastDelta?.[k]});
-                    if (!Array.isArray((delta as GObject)[k]||[])) console.log('err in delta merge', {arr:(delta as GObject)[k]||[], delta, k});
-                    if (!Array.isArray((pastDelta as GObject)[k]||[])) console.log('err in past delta merge', {arr:(pastDelta as GObject)[k]||[], pastDelta, k});
+                    // if (!Array.isArray((delta as GObject)[k]||[])) console.log('err in delta merge', {arr:(delta as GObject)[k]||[], delta, k});
+                    // if (!Array.isArray((pastDelta as GObject)[k]||[])) console.log('err in past delta merge', {arr:(pastDelta as GObject)[k]||[], pastDelta, k});
                     gdelta[k] = [...new Set(U.arrayMergeInPlace((delta as GObject)[k]||[], pastDelta[k]||[]))] as string[];
                 }
 
@@ -1288,7 +1288,7 @@ function undorecursive(deltalevel: GObject, statelevel: GObject): void {
     // statelevel = {...statelevel}; not working if i do it here, just a new var. first time copy id done in caller func undo(). recursive copies are done before recursive step
     for (let key in deltalevel) {
         let delta = deltalevel[key];
-        console.log("undoing", {delta, key, deltalevel, statelevel})
+        // console.log("undoing", {delta, key, deltalevel, statelevel})
         //if (key.indexOf("_-") === 0) { delete statelevel[key.substring(2)]; continue; }
         if (typeof delta === "object") {
         // if (U.isObject(delta, false, false, true)) {
@@ -1404,19 +1404,19 @@ function test(){
         '    unique ordered attr EString attr_0;\n' +
         '    unique ordered ref Concept_0 ref_0;\n' +
         '}';
-    console.log('t2m test', parseT2M('Emfatic', s, true, undefined, undefined, 'DModel'));
+    // console.log('t2m test', parseT2M('Emfatic', s, true, undefined, undefined, 'DModel'));
 }
 
 function fixEnv(){
     let windoww = window as any;
-    console.log("fix env start", {meta: import.meta, menv:(import.meta as any).env, process:windoww.process, penv:windoww.env});
+    // console.log("fix env start", {meta: import.meta, menv:(import.meta as any).env, process:windoww.process, penv:windoww.env});
     if (!windoww.process) windoww.process = {};
     const process = windoww.process.env = (import.meta as any).env;
     const prefix = "VITE_";
     for (const k in process) {
         if (k.indexOf(prefix) === 0) process['JODEL_' + k.substring(prefix.length)] = process[k];
     }
-    console.log("fix env end", {meta: import.meta, menv:(import.meta as any).env, process, penv:process.env});
+    // console.log("fix env end", {meta: import.meta, menv:(import.meta as any).env, process, penv:process.env});
 }
 export async function stateInitializer() {
     console.warn('stateinitializer');
@@ -1463,7 +1463,7 @@ export async function stateInitializer() {
         if (isProjectPage) {
             let pid: Pointer<DProject> = U.getProjectID_URL() as string;
             const project = await ProjectsApi.getOne(pid);
-            console.log('11 project load api response', {project, isOff:U.isOffline(), userid:DUser.current, user:DUser.getUser()});
+            // console.log('11 project load api response', {project, isOff:U.isOffline(), userid:DUser.current, user:DUser.getUser()});
             if (!project) {
                 // todo: maybe add a retry counter in hash params and reload?
                 console.error('failed to get project', {project});
@@ -1479,7 +1479,7 @@ export async function stateInitializer() {
                     return false;
                 }
                 ProjectsApi.isLoading = false; // quits loading screen on project page
-                console.log('init completed');
+                // console.log('init completed');
                 return true;
                 /*
                 clearTimeout(windoww.__tmp_init_timer);
@@ -1495,7 +1495,7 @@ export async function stateInitializer() {
                     // setTimeout(recursiveCheck, 0);
                 });
             }
-            console.log('12 project load api response', {project, isOff:U.isOffline(), userid:DUser.current, user:DUser.getUser()});
+            // console.log('12 project load api response', {project, isOff:U.isOffline(), userid:DUser.current, user:DUser.getUser()});
 
             if (!project.state) {
                 // state = {...store.getState()} as DState; // NEEDS TO BE SHALLOW COPIED or the state won't update. new project just created, never saved.
@@ -1507,11 +1507,11 @@ export async function stateInitializer() {
             else state = JSON.parse(await U.decompressState(project.state));
             /*state['idlookup'][DUser.current] = user.__raw;
             if (!state['users'].includes(DUser.current)) state['users'].push(DUser.current);*/
-            console.log('project load', state);
+            // console.log('project load', state);
             recursiveCheck();
             // needs to stay before load for some reason? seems like action firing can be done synchronously some times?
             SaveManager.load(state, project);
-            console.log('init (load) completed');
+            // console.log('init (load) completed');
             // user.project = LProject.fromPointer(project.id);
         }
         else if (isDashboardPage) {

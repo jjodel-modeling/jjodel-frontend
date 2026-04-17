@@ -220,12 +220,12 @@ class TryComponent extends React.Component<AllProps, State> {
                 try { o = JSON.parse(s2=v as any) } catch (e) { console.error("crashed decompress p", e, v); }
             }).finally(()=>{
                 let out = {s, uri:s1, lz:s2, o};
-                console.log('decompress final', out);
+                // console.log('decompress final', out);
                 $('#decompress')[0].innerText = JSON.stringify(o ||  out, null, 4);
 
             })} else {
                 let out = {s, uri:s1, lz:s2, o};
-                console.log('decompress else', out);
+                // console.log('decompress else', out);
                 $('#decompress')[0].innerText = JSON.stringify(o ||  out, null, 4);
             }
         }

@@ -3,13 +3,15 @@ import react from '@vitejs/plugin-react'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 import path from 'path'
 
+const __dirname = import.meta.dirname
+
 export default defineConfig({
   plugins: [
     react({
       babel: {
         plugins: [
           ['@babel/plugin-proposal-decorators', { legacy: true }],
-          ['@babel/plugin-proposal-class-properties', { loose: true }]
+          ['@babel/plugin-transform-class-properties', { loose: true }]
         ]
       }
     }),

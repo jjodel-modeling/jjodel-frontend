@@ -59,7 +59,7 @@ export class EdgeComponent<AllProps extends AllPropss = AllPropss, ThisState ext
         if (!ret.node) return []; // "node missing"
         let coords: GraphPoint[] = (ret.node.midnodes as { x:number, y:number }[] as GraphPoint[]) || [];
         let grouping = groupingsize[svgletter];
-        console.log("edgeee", {coords, svgletter, groupingsize, midnodes:ret.node.midnodes, mnraw: ret.node.midnodes.map(mn=>mn.__raw), ret});
+        // console.log("edgeee", {coords, svgletter, groupingsize, midnodes:ret.node.midnodes, mnraw: ret.node.midnodes.map(mn=>mn.__raw), ret});
         let scoord: GraphPoint = ret.node.startPoint || new GraphPoint(10, 10);
         let ecoord: GraphPoint = ret.node.endPoint || new GraphPoint(100, 100);
         return [scoord, ...coords, ecoord]; }

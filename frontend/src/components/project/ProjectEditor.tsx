@@ -939,21 +939,21 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         // Build available models list for transformation execution
         // Models (not metamodels) with their conforming metamodel info
         // DEBUG: Log raw data to understand the structure
-        console.log('[ProjectEditor] DEBUG - Raw data:', {
-            modelsCount: models?.length || 0,
-            metamodelsCount: metamodels?.length || 0,
-            metamodelIds: metamodels?.map(m => ({ id: m.id, name: m.name })),
-            sourceMetamodelName: transformation.sourceMetamodelName,
-            firstModel: models?.[0] ? {
-                id: models[0].id,
-                name: models[0].name,
-                instanceof: models[0].instanceof,
-                instanceofType: typeof models[0].instanceof,
-                // Also try to access as proxy
-                instanceofId: (models[0].instanceof as any)?.id,
-                instanceofName: (models[0].instanceof as any)?.name,
-            } : null,
-        });
+        // console.log('[ProjectEditor] DEBUG - Raw data:', {
+        //     modelsCount: models?.length || 0,
+        //     metamodelsCount: metamodels?.length || 0,
+        //     metamodelIds: metamodels?.map(m => ({ id: m.id, name: m.name })),
+        //     sourceMetamodelName: transformation.sourceMetamodelName,
+        //     firstModel: models?.[0] ? {
+        //         id: models[0].id,
+        //         name: models[0].name,
+        //         instanceof: models[0].instanceof,
+        //         instanceofType: typeof models[0].instanceof,
+        //         // Also try to access as proxy
+        //         instanceofId: (models[0].instanceof as any)?.id,
+        //         instanceofName: (models[0].instanceof as any)?.name,
+        //     } : null,
+        // });
 
         const availableModels = (models || []).map(model => {
             // model.instanceof can be:
@@ -977,13 +977,13 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 }
             }
 
-            console.log('[ProjectEditor] DEBUG - Model mapping:', {
-                modelName: model.name,
-                instanceofRaw: instanceOf,
-                instanceofType: typeof instanceOf,
-                extractedMmId: mmId,
-                extractedMmName: mmName,
-            });
+            // console.log('[ProjectEditor] DEBUG - Model mapping:', {
+            //     modelName: model.name,
+            //     instanceofRaw: instanceOf,
+            //     instanceofType: typeof instanceOf,
+            //     extractedMmId: mmId,
+            //     extractedMmName: mmName,
+            // });
 
             return {
                 id: model.id,
@@ -999,34 +999,34 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             ...(metamodels || []).map(m => m.name || '')
         ].filter(Boolean);
 
-        console.log('[ProjectEditor] Opening transformation', {
-            name: transformation.name,
-            sourceMetamodelId: transformation.sourceMetamodelId,
-            sourceMetamodelName: transformation.sourceMetamodelName,
-            sourceElements: sourceMetamodelElements.length,
-            targetElements: targetMetamodelElements.length,
-            modelsInProject: models?.length || 0,
-            availableModels: availableModels.map(m => ({
-                id: m.id,
-                name: m.name,
-                metamodelId: m.metamodelId,
-                metamodelName: m.metamodelName
-            }))
-        });
+        // console.log('[ProjectEditor] Opening transformation', {
+        //     name: transformation.name,
+        //     sourceMetamodelId: transformation.sourceMetamodelId,
+        //     sourceMetamodelName: transformation.sourceMetamodelName,
+        //     sourceElements: sourceMetamodelElements.length,
+        //     targetElements: targetMetamodelElements.length,
+        //     modelsInProject: models?.length || 0,
+        //     availableModels: availableModels.map(m => ({
+        //         id: m.id,
+        //         name: m.name,
+        //         metamodelId: m.metamodelId,
+        //         metamodelName: m.metamodelName
+        //     }))
+        // });
 
         // Create getter functions that fetch FRESH metamodel data on demand
         // These are called when user clicks "Analyze" in Suggested Mappings panel
         const getSourceMetamodel = () => {
             const freshMM = findMetamodelById(project.metamodels || [], transformation.sourceMetamodelId);
             const result = freshMM ? convertMetamodelToJjtl(freshMM) : [];
-            console.log('[ProjectEditor] getSourceMetamodel called, classes:', result.filter(e => e.type === 'class').length);
+            // console.log('[ProjectEditor] getSourceMetamodel called, classes:', result.filter(e => e.type === 'class').length);
             return result;
         };
 
         const getTargetMetamodel = () => {
             const freshMM = findMetamodelById(project.metamodels || [], transformation.targetMetamodelId);
             const result = freshMM ? convertMetamodelToJjtl(freshMM) : [];
-            console.log('[ProjectEditor] getTargetMetamodel called, classes:', result.filter(e => e.type === 'class').length);
+            // console.log('[ProjectEditor] getTargetMetamodel called, classes:', result.filter(e => e.type === 'class').length);
             return result;
         };
 
@@ -1089,11 +1089,11 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             }
             isExecutingTransformation = true;
 
-            console.log('[ProjectEditor] handleExecuteTransformation called', {
-                sourceModelId,
-                outputModelName,
-                astMappings: ast?.mappings?.length || 0
-            });
+            // console.log('[ProjectEditor] handleExecuteTransformation called', {
+            //     sourceModelId,
+            //     outputModelName,
+            //     astMappings: ast?.mappings?.length || 0
+            // });
 
             // Validate AST
             if (!ast || !ast.mappings || ast.mappings.length === 0) {
@@ -1127,12 +1127,13 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 // would crash downstream property accesses like `obj.instanceof`.
                 const sourceObjects = (sourceModel.objects || []).filter((obj: LObject | null | undefined) => {
                     if (!obj) {
-                        console.warn('[ProjectEditor] Skipping null/undefined object in source model');
+                        //console.warn('[ProjectEditor] Skipping null/undefined object in source model');
                         return false;
                     }
                     return true;
                 });
-                console.log('[ProjectEditor] Source objects count:', sourceObjects.length);
+                // console.log('[ProjectEditor] Source objects count:', sourceObjects.length);
+
 
                 const sourceModelData = sourceObjects.map((obj: LObject) => {
                     // Resolve className with multiple fallback paths
@@ -1141,7 +1142,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     // Method 1: Direct instanceof.name (standard path)
                     if (obj.instanceof && obj.instanceof.name) {
                         className = obj.instanceof.name;
-                        console.log(`[ProjectEditor] className from instanceof.name: "${className}"`);
+                        // console.log(`[ProjectEditor] className from instanceof.name: "${className}"`);
                     }
 
                     // Method 2: Check __raw.instanceof and resolve via Redux state
@@ -1151,7 +1152,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                         const classData = state[classPointer];
                         if (classData && classData.name) {
                             className = classData.name;
-                            console.log(`[ProjectEditor] className from __raw.instanceof lookup: "${className}"`);
+                            // console.log(`[ProjectEditor] className from __raw.instanceof lookup: "${className}"`);
                         }
                     }
 
@@ -1162,7 +1163,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                 const val = feature.values?.length > 0 ? feature.values[0] : feature.value;
                                 if (typeof val === 'string') {
                                     className = val;
-                                    console.log(`[ProjectEditor] className from feature "${feature.name}": "${className}"`);
+                                    // console.log(`[ProjectEditor] className from feature "${feature.name}": "${className}"`);
                                     break;
                                 }
                             }
@@ -1174,7 +1175,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                         const match = obj.name.match(/^([A-Za-z]+)_\d+$/);
                         if (match) {
                             className = match[1];
-                            console.log(`[ProjectEditor] className extracted from name pattern "${obj.name}": "${className}"`);
+                            // console.log(`[ProjectEditor] className extracted from name pattern "${obj.name}": "${className}"`);
                         }
                     }
 
@@ -1221,12 +1222,12 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                         }
                     }
 
-                    console.log(`[ProjectEditor] Source object mapped:`, {
-                        id: obj.id,
-                        name: obj.name,
-                        resolvedClassName: className,
-                        featureCount: obj.features?.length || 0
-                    });
+                    // console.log(`[ProjectEditor] Source object mapped:`, {
+                    //     id: obj.id,
+                    //     name: obj.name,
+                    //     resolvedClassName: className,
+                    //     featureCount: obj.features?.length || 0
+                    // });
 
                     return result;
                 });
@@ -1278,12 +1279,12 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 // Genera nome unico
                 const uniqueOutputName = generateUniqueModelName(outputModelName, existingNames);
 
-                console.log('[ProjectEditor] Output model name:', {
-                    requested: outputModelName,
-                    unique: uniqueOutputName,
-                    existingNames: existingNames,
-                    freshNamesCount: freshExistingNames.length
-                });
+                // console.log('[ProjectEditor] Output model name:', {
+                //     requested: outputModelName,
+                //     unique: uniqueOutputName,
+                //     existingNames: existingNames,
+                //     freshNamesCount: freshExistingNames.length
+                // });
 
                 let createdDModel: DModel | null = null;
                 let createdDGraph: DGraph | null = null;
@@ -1336,10 +1337,10 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     console.timeEnd('[TIMING] DModel.new');
                     createdDModel = dModel;
                     createdModelId = dModel.id;
-                    console.log('[ProjectEditor] Created DModel with UNIQUE name:', {
-                        id: dModel.id,
-                        name: uniqueOutputName
-                    });
+                    // console.log('[ProjectEditor] Created DModel with UNIQUE name:', {
+                    //     id: dModel.id,
+                    //     name: uniqueOutputName
+                    // });
 
                     // STEP 2: Crea DGraph
                     console.time('[TIMING] DGraph.new');
@@ -1348,7 +1349,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     console.timeEnd('[TIMING] DGraph.new');
                     createdDGraph = dGraph;
                     createdGraphId = dGraph.id;
-                    console.log('[ProjectEditor] Created DGraph:', { id: dGraph.id });
+                    // console.log('[ProjectEditor] Created DGraph:', { id: dGraph.id });
 
                     console.time('[TIMING] SetFieldActions');
                     // Tag graph as v2-flow so EditorV2/useJjomSync can find it
@@ -1356,15 +1357,15 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
 
                     // STEP 3: Aggiungi model a project.models
                     SetFieldAction.new(project.id, 'models', dModel.id, '+=', true);
-                    console.log('[ProjectEditor] Added model to project.models');
+                    // console.log('[ProjectEditor] Added model to project.models');
 
                     // STEP 4: Aggiungi graph a state.graphs (ROOT!) - per ModelTab
                     SetRootFieldAction.new('graphs', dGraph.id, '+=', true);
-                    console.log('[ProjectEditor] Added graph to state.graphs (ROOT)');
+                    // console.log('[ProjectEditor] Added graph to state.graphs (ROOT)');
 
                     // STEP 5: Aggiungi graph a project.graphs - per persistenza
                     SetFieldAction.new(project.id, 'graphs', dGraph.id, '+=', true);
-                    console.log('[ProjectEditor] Added graph to project.graphs');
+                    // console.log('[ProjectEditor] Added graph to project.graphs');
 
                     // STEP 5b: Tag model as generated by transformation
                     SetFieldAction.new(dModel.id, '_state', {
@@ -1380,10 +1381,10 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     console.time('[TIMING] DObject creation loop');
                     if (result.targetModel?.instances) {
                         const targetClasses: LClass[] = targetMetamodel.classes || [];
-                        console.log('[ProjectEditor] Target classes:', targetClasses.map(c => c.name));
+                        // console.log('[ProjectEditor] Target classes:', targetClasses.map(c => c.name));
 
                         result.targetModel.instances.forEach((instances: any[], className: string) => {
-                            console.log(`[ProjectEditor] Creating ${instances.length} instances of "${className}"`);
+                            // console.log(`[ProjectEditor] Creating ${instances.length} instances of "${className}"`);
 
                             const targetClass = targetClasses.find(c => c.name === className);
                             if (!targetClass) {
@@ -1401,14 +1402,18 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             const START_Y = 50;
 
                             for (const instanceData of instances) {
-                                console.log(`[ProjectEditor] instanceData from executor:`, instanceData);
+                                // console.log(`[ProjectEditor] instanceData from executor:`, instanceData);
 
                                 const objectName = instanceData.name || `${className}_${instancesCreated}`;
                                 const objTimingLabel = `[TIMING] DObject.new #${instancesCreated} (${className})`;
                                 console.time(objTimingLabel);
                                 const dObject = DObject.new(targetClass.id, dModel.id, DModel, objectName, true);
+<<<<<<< HEAD
                                 console.timeEnd(objTimingLabel);
                                 console.log(`[ProjectEditor] Created instance:`, { name: objectName, class: className });
+=======
+                                // console.log(`[ProjectEditor] Created instance:`, { name: objectName, class: className });
+>>>>>>> staging
 
                                 // Map __sourceId → objectName for reference wiring in STEP 8b
                                 if (instanceData.__sourceId) {
@@ -1445,7 +1450,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                         className,
                                         attributes: attrs,
                                     });
-                                    console.log(`[ProjectEditor] Queued attributes for "${objectName}":`, attrs);
+                                    // console.log(`[ProjectEditor] Queued attributes for "${objectName}":`, attrs);
                                 }
 
                                 // Collect reference values (marked by executor with __ref_result)
@@ -1468,7 +1473,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     console.timeEnd('[TIMING] DObject creation loop');
                     console.log('[ProjectEditor] sourceId→name map:', Object.fromEntries(sourceIdToObjectName));
 
-                    console.log(`[ProjectEditor] Total instances created: ${instancesCreated}`);
+                    // console.log(`[ProjectEditor] Total instances created: ${instancesCreated}`);
                 });
                 console.timeEnd('[TIMING] TRANSACTION total');
 
@@ -1519,9 +1524,13 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             const dvLabel = `[TIMING] DVertex.new #${dvIdx}`;
                             console.time(dvLabel);
                             DVertex.new(0, pv.objectId, gid, gid, undefined, size);
+<<<<<<< HEAD
                             console.timeEnd(dvLabel);
                             console.log(`[ProjectEditor] Created DVertex for object at (${pv.posX}, ${pv.posY})`);
                             dvIdx++;
+=======
+                            // console.log(`[ProjectEditor] Created DVertex for object at (${pv.posX}, ${pv.posY})`);
+>>>>>>> staging
                         }
                     } catch (e) {
                         console.error('[ProjectEditor] Error creating DVertices (non-fatal):', e);
@@ -1532,7 +1541,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 // STEP 8: Set attributes after delay — use LModel proxy to find objects by name
                 if (pendingAttributeSets.length > 0 && createdModelId) {
                     const modelId = createdModelId;
-                    console.log(`[ProjectEditor] STEP 8: Will set attributes for ${pendingAttributeSets.length} objects via LModel proxy`);
+                    // console.log(`[ProjectEditor] STEP 8: Will set attributes for ${pendingAttributeSets.length} objects via LModel proxy`);
 
                     // Use setTimeout to wait for Redux propagation and rendering
                     setTimeout(() => {
@@ -1544,7 +1553,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             }
 
                             const objects = lModel.objects || [];
-                            console.log(`[ProjectEditor] LModel has ${objects.length} objects:`, objects.map((o: LObject) => o.name));
+                            // console.log(`[ProjectEditor] LModel has ${objects.length} objects:`, objects.map((o: LObject) => o.name));
 
                             for (const pending of pendingAttributeSets) {
                                 // Find object by name
@@ -1554,14 +1563,14 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                     continue;
                                 }
 
-                                console.log(`[ProjectEditor] Found "${pending.objectName}", setting attributes...`);
+                                // console.log(`[ProjectEditor] Found "${pending.objectName}", setting attributes...`);
 
                                 for (const [attrName, attrValue] of Object.entries(pending.attributes)) {
                                     try {
                                         const feature = (lObject as any)['$' + attrName];
                                         if (feature) {
                                             feature.value = attrValue;
-                                            console.log(`[ProjectEditor] ✅ Set ${pending.objectName}.${attrName} = ${JSON.stringify(attrValue)}`);
+                                            // console.log(`[ProjectEditor] ✅ Set ${pending.objectName}.${attrName} = ${JSON.stringify(attrValue)}`);
                                         } else {
                                             console.warn(`[ProjectEditor] ❌ Feature "$${attrName}" not found on "${pending.objectName}"`);
                                             // Try listing available features for debugging
@@ -1574,6 +1583,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                 }
                             }
 
+<<<<<<< HEAD
                             console.log(`[ProjectEditor] ✅ Attribute setting complete`);
 
                             // STEP 8b: Set references — same LModel proxy, same objects list.
@@ -1631,6 +1641,9 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                 }
                                 console.log(`[ProjectEditor] ✅ Reference setting complete`);
                             }
+=======
+                            // console.log(`[ProjectEditor] ✅ Attribute setting complete`);
+>>>>>>> staging
                         } catch (e) {
                             console.error(`[ProjectEditor] Error in STEP 8:`, e);
                         }

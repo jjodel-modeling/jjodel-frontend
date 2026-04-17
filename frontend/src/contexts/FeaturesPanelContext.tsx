@@ -64,7 +64,7 @@ export const FeaturesPanelProvider: React.FC<{ children: React.ReactNode }> = ({
     // Listen for JjScript metamodel creation events
     useEffect(() => {
         const handleMetamodelCreated = (event: CustomEvent<{ elementsCreated: number }>) => {
-            console.log('[FeaturesPanelContext] Metamodel elements created:', event.detail.elementsCreated);
+            // console.log('[FeaturesPanelContext] Metamodel elements created:', event.detail.elementsCreated);
             // Auto-expand the panel when elements are created
             if (event.detail.elementsCreated > 0) {
                 expand();

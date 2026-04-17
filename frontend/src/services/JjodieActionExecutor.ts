@@ -369,7 +369,7 @@ export class JjodieActionExecutor {
 
                     // Add constraint - this depends on the specific implementation
                     // For now, store in annotations or a constraints field if available
-                    console.log('Adding constraint:', action.data.constraint);
+                    // console.log('Adding constraint:', action.data.constraint);
 
                     // Dispatch event
                     window.dispatchEvent(new CustomEvent(JjodieEvents.METAMODEL_UPDATED, {

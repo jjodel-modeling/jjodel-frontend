@@ -81,7 +81,7 @@ export function ShowContextMenu(nodeid: Pointer<DGraphElement>, x: number, y: nu
         graph_html = graph_html.parentElement;
     }
     if (!graphid) { Log.eDevv('contextmenu graph not found', {nodeid, graphid}); return; }
-    console.log('showctx', {contextMenuMap, graphid, cg:contextMenuMap[graphid]});
+    // console.log('showctx', {contextMenuMap, graphid, cg:contextMenuMap[graphid]});
     contextMenuMap[graphid]?.(nodeid, x, y);
 }
 
@@ -199,7 +199,7 @@ function ContextEntry(key: string, icon: ReactNode, label: ReactNode, action: nu
         let ret: any = undefined;
         if (action) try { ret = action(); } catch (e) { Log.eDevv('Error in ctxmenu default action', {label, action, e}); }
         else ret = false;
-        console.log('ctx action', {action, ret});
+        // console.log('ctx action', {action, ret});
         if (U.isPromise(ret)) (ret as Promise<any>).then(
             ret => { if (ret !== false) closefunc(); },
             reason=>{  Log.ee('Error in Contextmenu user action', {reason, label}); }
@@ -237,7 +237,7 @@ function test(){
     /*let data: any = null, View: any = null, Input: any = null as any, view: any, decorators: any;
     L.from(s().viewelements).filter(v=>v.name === "View for Product")[0].onDataUpdate = (
 `let oldQt = data.state.oldQuantity, qt= +data.$quantity;
-console.log("check qt", {n: data.name, qt, oldQt, cc:data.clonedCounter});
+// console.log("check qt", {n: data.name, qt, oldQt, cc:data.clonedCounter});
 if (oldQt === undefined) { data.state = {oldQuantity: qt, editN:data.clonedCounter}; return; }
 if (oldQt / qt > 2 || oldQt / qt <= 0.5) {
     if (data.state.editN !== data.clonedCounter) { data.state = {requiresValidation: false, oldQuantity: qt, editN: data.clonedCounter}; }
@@ -260,7 +260,7 @@ function ContextMenuComponentInner(props: AllProps) {
     const [editPanel, setEditPanel] = useStateIfMounted(false);
     //if (!contextMenuMap[props.graph]) {// NB: do not cache/initialize only once, otherwise closure will not update nodeid, x and y
     contextMenuMap[props.graph] = (nodeid: Pointer<DGraphElement>, x: number, y: number)=> {
-        console.log('ShowContextMenu', {graph:props.graph, nodeid, x, y, display} );
+        // console.log('ShowContextMenu', {graph:props.graph, nodeid, x, y, display} );
         if (display && (nodeid === display.nodeid && x === display.x && y === display.y)) return;
         setDisplay({nodeid, x, y});
     };
@@ -333,7 +333,7 @@ function ContextMenuComponentInner(props: AllProps) {
         out = [type, ...type.allSubClasses].filter(e=>!!e);
         out = U.proxyDeduplicator(out);
         let jsxret: ReactNode;
-        console.log('contextmenu add options', {out, sc: type.allSubClasses, type});
+        // console.log('contextmenu add options', {out, sc: type.allSubClasses, type});
         if (out.length === 1) {
             let name = out[0].name;
             jsxret = <Tooltip tooltip={'add to "' + lref.name + '" reference'}><div key={'single_' + l.id} onClick={() => { close(); l.addObject({}, out[0]); }}

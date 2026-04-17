@@ -23,14 +23,14 @@ export function createJjodieAPI(): JjodieAPI {
                 if (user?.project) {
                     const project = user.project as LProject;
                     if (project?.id) {
-                        console.log('[JjodieAPI] Open project found:', project.id, project.name);
+                        // console.log('[JjodieAPI] Open project found:', project.id, project.name);
                         return { id: project.id, name: project.name || 'Unnamed Project' };
                     }
                 }
             } catch (err) {
                 console.warn('[JjodieAPI] getOpenProject error:', err);
             }
-            console.log('[JjodieAPI] No project open');
+            // console.log('[JjodieAPI] No project open');
             return null;
         },
 
@@ -42,7 +42,7 @@ export function createJjodieAPI(): JjodieAPI {
                     // Check metamodels first (M2), then models (M1)
                     const metamodels = project?.metamodels || project?.models || [];
                     if (metamodels.length > 0) {
-                        console.log('[JjodieAPI] Open metamodels:', metamodels.length);
+                        // console.log('[JjodieAPI] Open metamodels:', metamodels.length);
                         return (metamodels as LModel[]).map(m => ({
                             id: m.id,
                             name: m.name || 'Unnamed',
@@ -53,7 +53,7 @@ export function createJjodieAPI(): JjodieAPI {
             } catch (err) {
                 console.warn('[JjodieAPI] getOpenMetamodels error:', err);
             }
-            console.log('[JjodieAPI] No metamodels found');
+            // console.log('[JjodieAPI] No metamodels found');
             return [];
         },
 
@@ -79,7 +79,7 @@ export function createJjodieAPI(): JjodieAPI {
                 // damiano: it is already inserted by DProject.new, this makes a duplicate reference.
                 // SetFieldAction.new(DUser.current, 'projects', newProject.id, '+=', true);
 
-                console.log('[JjodieAPI] Project created:', newProject.id, newProject.name);
+                // console.log('[JjodieAPI] Project created:', newProject.id, newProject.name);
                 return { id: newProject.id };
             } catch (err) {
                 console.error('[JjodieAPI] createProject error:', err);
@@ -100,7 +100,7 @@ export function createJjodieAPI(): JjodieAPI {
                 // Add to project's metamodels
                 SetFieldAction.new(projectId, 'metamodels', newModel.id, '+=', true);
 
-                console.log('[JjodieAPI] Metamodel created:', newModel.id, newModel.name);
+                // console.log('[JjodieAPI] Metamodel created:', newModel.id, newModel.name);
                 return { id: newModel.id };
             } catch (err) {
                 console.error('[JjodieAPI] createMetamodel error:', err);
@@ -114,7 +114,7 @@ export function createJjodieAPI(): JjodieAPI {
                 if (model) {
                     // Set as current model for the user
                     SetFieldAction.new(DUser.current, 'currentModel', id, undefined, true);
-                    console.log('[JjodieAPI] Metamodel opened:', id, model.name);
+                    // console.log('[JjodieAPI] Metamodel opened:', id, model.name);
                 }
             } catch (err) {
                 console.warn('[JjodieAPI] openMetamodel error:', err);
@@ -137,7 +137,7 @@ export function createJjodieAPI(): JjodieAPI {
                     metamodelIds: metamodels.map((m: LModel) => m.id)
                 });
 
-                console.log('[JjodieAPI] Snapshot saved:', id);
+                // console.log('[JjodieAPI] Snapshot saved:', id);
             } catch (err) {
                 console.error('[JjodieAPI] saveSnapshot error:', err);
             }
@@ -150,18 +150,18 @@ export function createJjodieAPI(): JjodieAPI {
 
             // Note: Full undo requires implementing state restoration
             // For now, we just clean up the snapshot
-            console.log('[JjodieAPI] Snapshot restore requested:', id);
+            // console.log('[JjodieAPI] Snapshot restore requested:', id);
             snapshots.delete(id);
         },
 
         async discardSnapshot(id: string) {
             snapshots.delete(id);
-            console.log('[JjodieAPI] Snapshot discarded:', id);
+            // console.log('[JjodieAPI] Snapshot discarded:', id);
         },
 
         async executeCommand(command: string) {
             try {
-                console.log('[JjodieAPI] executeCommand:', command);
+                // console.log('[JjodieAPI] executeCommand:', command);
 
                 // Get current project context
                 const user: LUser = L.fromPointer(DUser.current);
@@ -183,7 +183,7 @@ export function createJjodieAPI(): JjodieAPI {
                 const result = await jjScriptExecuteCommand(command, projectId, modelId);
 
                 if (result.success) {
-                    console.log('[JjodieAPI] Command succeeded:', result.message);
+                    // console.log('[JjodieAPI] Command succeeded:', result.message);
                     return {
                         success: true,
                         message: result.message || 'Command executed successfully'

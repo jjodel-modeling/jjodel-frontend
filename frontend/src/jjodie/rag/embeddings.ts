@@ -259,7 +259,7 @@ export class EmbeddingService {
         // Build vocabulary
         this.vocabulary = buildVocabulary(this.corpusTokens, 10000);
 
-        console.log(`[EmbeddingService] Initialized with ${documents.length} documents, ${this.vocabulary.terms.length} terms`);
+        // console.log(`[EmbeddingService] Initialized with ${documents.length} documents, ${this.vocabulary.terms.length} terms`);
     }
 
     /**

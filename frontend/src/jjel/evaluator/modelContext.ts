@@ -32,9 +32,9 @@ export function extractAttributeValues(proxy: any, context: Record<string, any>)
 
     // === DEBUG: extractAttributeValues ===
     const dollarKeys = (keys as string[]).filter(k => typeof k === 'string' && k.startsWith('$'));
-    console.log('=== extractAttributeValues ===');
-    console.log('all keys count:', keys.length);
-    console.log('$ keys found:', dollarKeys);
+    // console.log('=== extractAttributeValues ===');
+    // console.log('all keys count:', keys.length);
+    // console.log('$ keys found:', dollarKeys);
     // === END DEBUG ===
 
     // Strategy 1: Find $-prefixed properties and extract .value
@@ -45,7 +45,7 @@ export function extractAttributeValues(proxy: any, context: Record<string, any>)
         try {
             const attrProxy = proxy[key];
             // === DEBUG ===
-            console.log(`  extractAttributeValues: ${key} ->`, typeof attrProxy, attrProxy != null ? ('value' in attrProxy ? `has .value = ${attrProxy.value}` : 'NO .value') : 'null/undefined');
+            // console.log(`  extractAttributeValues: ${key} ->`, typeof attrProxy, attrProxy != null ? ('value' in attrProxy ? `has .value = ${attrProxy.value}` : 'NO .value') : 'null/undefined');
             // === END DEBUG ===
             if (attrProxy != null && typeof attrProxy === 'object' && 'value' in attrProxy) {
                 const val = attrProxy.value;

@@ -95,7 +95,7 @@ const Title = (props: TitleProps) => {
             //const server = document.getElementById('server');
             //const link = document.getElementById('link');
             let full_link = server + projectLink;
-            console.log('copy to clipboard');
+            // console.log('copy to clipboard');
             U.clipboardCopy(full_link, ()=>U.alert('i', "Copied", "The project link has been copied to the Clipboard."));
         }
 
@@ -181,11 +181,11 @@ const Title = (props: TitleProps) => {
                                 cols={80}
                                 value={description}
                                 onChange={(e)=> {
-                                    console.log('onchange', {e, tv:e.target.value, pv:props.description, sv:description})
+                                    // console.log('onchange', {e, tv:e.target.value, pv:props.description, sv:description})
                                     setDescription(e.target.value)
                                 }}
                                 onInput={(e)=> {
-                                    console.log('onInput', {e, tv:e.target, pv:props.description, sv:description})
+                                    // console.log('onInput', {e, tv:e.target, pv:props.description, sv:description})
                                 }}
                                 onBlur={e => {
                                     if (!props.projectID) return;
@@ -528,7 +528,7 @@ function ProjectCatalog(props: ProjectProps) {
                         style={'dark-blue my-3'}
                         action={() => {
                             let html = document.getElementById('navbar_mmid_'+metamodels[0]?.id) || document.getElementById('navbar_new_model');
-                            console.log('create m1 dash', {html, query: "document.getElementById('navbar_mmid_"+metamodels[0]?.id+"')"})
+                            // console.log('create m1 dash', {html, query: "document.getElementById('navbar_mmid_"+metamodels[0]?.id+"')"})
                             // nb: timeout because click interferes with .focus() undoing it.
                             setTimeout(()=>U.ancestorArray(html).reverse().forEach(e=>e.focus?.()), 0);
                         }}/> : null

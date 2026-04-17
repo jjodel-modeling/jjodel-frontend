@@ -601,14 +601,14 @@ export class DocumentationService {
         let wikidataDefinitions: Record<string, string> = {};
         try {
             wikidataDefinitions = await this.fetchWikidataDefinitions(terms.filter(t => t.length > 2));
-            console.log('[DocumentationService] Wikidata definitions:', wikidataDefinitions);
+            // console.log('[DocumentationService] Wikidata definitions:', wikidataDefinitions);
         } catch (error) {
             console.warn('[DocumentationService] Wikidata fetch failed:', error);
         }
 
         // Build prompt
         const prompt = this.buildJjodiePrompt(lexicalData, wikidataDefinitions);
-        console.log('[DocumentationService] Jjodie prompt built, length:', prompt.length);
+        // console.log('[DocumentationService] Jjodie prompt built, length:', prompt.length);
 
         // Get active provider
         const activeProvider = JodieConfig.current.activeProvider;
@@ -617,20 +617,20 @@ export class DocumentationService {
         }
 
         // Call AI
-        console.log('[DocumentationService] Calling AI provider:', activeProvider);
+        // console.log('[DocumentationService] Calling AI provider:', activeProvider);
         const responseText = await AIProviderService.chat(
             prompt,
             activeProvider,
             [],
             undefined
         );
-        console.log('[DocumentationService] AI response received, length:', responseText.length);
+        // console.log('[DocumentationService] AI response received, length:', responseText.length);
 
         // Parse JSON response with robust extraction
         let aiResponse: JjodieResponse;
         try {
             aiResponse = this.extractJsonFromResponse(responseText);
-            console.log('[DocumentationService] Successfully parsed AI response');
+            // console.log('[DocumentationService] Successfully parsed AI response');
         } catch (parseError) {
             console.error('[DocumentationService] Failed to parse AI response.');
             console.error('[DocumentationService] Response preview:', responseText.substring(0, 1000));

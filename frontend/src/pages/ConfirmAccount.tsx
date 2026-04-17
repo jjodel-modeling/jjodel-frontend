@@ -25,7 +25,7 @@ function ConfirmAccount() {
 
             });
         } catch (e) {
-            console.log("Errore nella conferma account:", e);
+            // console.log("Errore nella conferma account:", e);
             setLoading(false);
         }
     };

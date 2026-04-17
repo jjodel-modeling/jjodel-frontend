@@ -46,7 +46,7 @@ function SelectorComponent(props: AllProps) {
 
     function getOptions(): any {
         
-        console.log('ALF ',l, data);
+        // console.log('ALF ',l, data);
         return (<>
             {/* @ts-ignore */}
             {l.type.father.instanceof[field].type.allInstances.map(cl => 

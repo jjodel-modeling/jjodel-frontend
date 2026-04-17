@@ -762,12 +762,12 @@ export class GraphSize extends ISize<GraphPoint> {
     this.owner.mark(this.owner.toHtmlCoord(B), false, 'violet');
     this.owner.mark(this.owner.toHtmlCoord(L), false, 'red');
     this.owner.mark(this.owner.toHtmlCoord(R), false, 'orange');*/
-        console.log("intersect pt1:", {T, B, L, R});
+        // console.log("intersect pt1:", {T, B, L, R});
         if ( (B.x >= pt.x && B.x <= prevPt.x) || (B.x >= prevPt.x && B.x <= pt.x) ) { } else { B = null; }
         if ( (T.x >= pt.x && T.x <= prevPt.x) || (T.x >= prevPt.x && T.x <= pt.x) ) { } else { T = null; }
         if ( (L.y >= pt.y && L.y <= prevPt.y) || (L.y >= prevPt.y && L.y <= pt.y) ) { } else { L = null; }
         if ( (R.y >= pt.y && R.y <= prevPt.y) || (R.y >= prevPt.y && R.y <= pt.y) ) { } else { R = null; }
-        console.log("intersect pt2:", {T, B, L, R});
+        // console.log("intersect pt2:", {T, B, L, R});
         function closestmix(pt: GraphPoint, closest: GraphPoint, segStart: GraphPoint, segEnd: GraphPoint, mode: "TB" | "LR"): void {
             // changes pt
             pt.x = closest.x; pt.y = closest.y; return;
@@ -791,7 +791,7 @@ export class GraphSize extends ISize<GraphPoint> {
             else if (Math.abs(closest[sub]-segEnd[sub]) < Math.abs(closest[sub]-segStart[sub])) closest[sub] = segEnd[sub];
             else closest[sub] = segStart[sub];
         }
-        console.log("intersect pt2.5:");
+        // console.log("intersect pt2.5:");
         try{
             if(T) closestmix2(pt, T, vertexGSize.tl(), vertexGSize.tr(), "TB");
             if(B) closestmix2(pt, B, vertexGSize.bl(), vertexGSize.br(), "TB");
@@ -799,13 +799,13 @@ export class GraphSize extends ISize<GraphPoint> {
             if(L) closestmix2(pt, L, vertexGSize.tl(), vertexGSize.bl(), "LR");
         } catch(e){ console.error("intersect error",e)}
         // console.log('superstiti step1: (LTBR):', L, T, B, R);
-        console.log("intersect pt2.9:");
+        // console.log("intersect pt2.9:");
         const vicinanzaT = !T ? Number.POSITIVE_INFINITY : ((T.x - pt.x) * (T.x - pt.x)) + ((T.y - pt.y) * (T.y - pt.y));
         const vicinanzaB = !B ? Number.POSITIVE_INFINITY : ((B.x - pt.x) * (B.x - pt.x)) + ((B.y - pt.y) * (B.y - pt.y));
         const vicinanzaL = !L ? Number.POSITIVE_INFINITY : ((L.x - pt.x) * (L.x - pt.x)) + ((L.y - pt.y) * (L.y - pt.y));
         const vicinanzaR = !R ? Number.POSITIVE_INFINITY : ((R.x - pt.x) * (R.x - pt.x)) + ((R.y - pt.y) * (R.y - pt.y));
         const closest = Math.min(vicinanzaT, vicinanzaB, vicinanzaL, vicinanzaR);
-        console.log("intersect pt3:", {vicinanzaT, vicinanzaB, vicinanzaL, vicinanzaR, closest});
+        // console.log("intersect pt3:", {vicinanzaT, vicinanzaB, vicinanzaL, vicinanzaR, closest});
 
         // console.log( 'closest:', closest);
         // succede quando pt e prevPt sono entrambi all'interno del rettangolo del vertice.

@@ -106,7 +106,7 @@ export function useMetamodelGeneration(
     const pauseRef = useRef(false);
 
     const setPhase = useCallback((phase: GenerationPhase) => {
-        console.log('[Generation] setPhase:', phase);
+        // console.log('[Generation] setPhase:', phase);
         setState(prev => ({ ...prev, phase }));
         onPhaseChange?.(phase);
     }, [onPhaseChange]);
@@ -152,8 +152,8 @@ export function useMetamodelGeneration(
 
     // Start generation flow
     const startGeneration = useCallback(async (request: GenerationRequest) => {
-        console.log('[Generation] startGeneration called');
-        console.log('[Generation] Script preview:', request.script?.substring(0, 100));
+        // console.log('[Generation] startGeneration called');
+        // console.log('[Generation] Script preview:', request.script?.substring(0, 100));
 
         const parsed = parseScript(request.script);
 
@@ -169,16 +169,16 @@ export function useMetamodelGeneration(
             suggestedMetamodelName: request.metamodelName,
         });
 
-        console.log('[Generation] State set to checking-state');
+        // console.log('[Generation] State set to checking-state');
 
         try {
-            console.log('[Generation] Calling api.getOpenProject()...');
+            // console.log('[Generation] Calling api.getOpenProject()...');
             const project = await api.getOpenProject();
-            console.log('[Generation] Project result:', project);
+            // console.log('[Generation] Project result:', project);
 
             if (!project) {
                 // No project - show info message, don't ask to create
-                console.log('[Generation] No project - showing info message');
+                // console.log('[Generation] No project - showing info message');
                 setState(prev => ({
                     ...prev,
                     phase: 'no-project',
@@ -193,7 +193,7 @@ export function useMetamodelGeneration(
 
             if (metamodels.length === 0) {
                 // No metamodel - show info message, don't ask to create
-                console.log('[Generation] No metamodel - showing info message');
+                // console.log('[Generation] No metamodel - showing info message');
                 setState(prev => ({
                     ...prev,
                     phase: 'no-metamodel',

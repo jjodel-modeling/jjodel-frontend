@@ -199,10 +199,10 @@ export class Dummy {
                 }
                 /*
                 if ((root === 'idlookup') && obj && field) {
-                    console.log('Delete', `SetFieldAction.new('${obj}', '${field}', '${val}', '${op}');`, {dependency});
+                    // console.log('Delete', `SetFieldAction.new('${obj}', '${field}', '${val}', '${op}');`, {dependency});
                     SetFieldAction.new(obj, field, val, op, false);
                 } else {
-                    console.log('Delete', `SetRootFieldAction.new('${root}', '${val}', '${op}');`);
+                    // console.log('Delete', `SetRootFieldAction.new('${root}', '${val}', '${op}');`);
                     SetRootFieldAction.new(root, val, op, false);
                 }
                 */
@@ -249,7 +249,7 @@ export class Dummy {
             let old = json;
             TRANSACTION(thiss.get_name(c) + '.t2m()', () => {
                 json = thiss._convertEcoreToJom_m2(json);
-                console.log('L'+c.data.className.substring(1)+'.t2m() called.', {d:c.data, j: JSON.parse(JSON.stringify(json)), jj: json, old});
+                // console.log('L'+c.data.className.substring(1)+'.t2m() called.', {d:c.data, j: JSON.parse(JSON.stringify(json)), jj: json, old});
                 let childrenToUpdateByID: Dictionary<Pointer,  {json:GObject, l: LModelElement, id: Pointer, k: string}> = {};
                 let childrenToUpdateByName: Dictionary<string, {json:GObject, l: LModelElement, id: Pointer, k: string, i: number}> = {};
                 let childrenToUpdateByIndex: {json:GObject, l: LModelElement, id: Pointer, k: string, i: number}[] = [];
@@ -264,7 +264,7 @@ export class Dummy {
                     let dparent: DModelElement = null as any;
                     let lparent: LModelElement = null as any;
 
-                    console.log('t2m children by name getparent', {k, gv, json});
+                    // console.log('t2m children by name getparent', {k, gv, json});
                     if (c.data.className !== 'DModel') {
                         dparent = c.data;
                         lparent = c.proxyObject as LModelElement;
@@ -393,7 +393,7 @@ export class Dummy {
                         k = collection;
                     }
 
-                    console.log('convert delete children', {gv:JSON.parse(JSON.stringify(gv)), k, json:JSON.parse(JSON.stringify(json)), arr, i});
+                    // console.log('convert delete children', {gv:JSON.parse(JSON.stringify(gv)), k, json:JSON.parse(JSON.stringify(json)), arr, i});
                     // move element from mixed collection (__childrenToSort) to existing proper collection
                     if (k !== '__childrenToSort') {
                         if (!json[k]) json[k] = [];
@@ -540,7 +540,7 @@ export class Dummy {
                 // calls [getparent]
                 const doChildrenUpdate = (child: LModelElement | null, k: string, v: GObject, matchedBy: 'id' | 'name' | 'index' | 'new') => {
                     let lparent: LModelElement, dparent: DModelElement;
-                    console.log('doChildrenUpdate ' + v.name, {cn: child?.name, child, k, v, matchedBy, json});
+                    // console.log('doChildrenUpdate ' + v.name, {cn: child?.name, child, k, v, matchedBy, json});
                     // should never happen, v should only be pointer or object.
                     if (typeof v !== 'object') { return; }
                     if (true as any /*matchedBy !== 'name' && matchedBy !== 'index'*/) {
@@ -568,7 +568,7 @@ export class Dummy {
                         let ptrs = {id: Pointers.from(v) as any as Pointer<any>, father: dparent.id as Pointer<any>, 'instanceof': undefined};
                         let callback: (d: any) => void = (d: DModelElement) => {};
                         let d: DModelElement = null as any;
-                        console.log('m2t create subelement', {ptrs, v, thisData:c.data, dparent});
+                        // console.log('m2t create subelement', {ptrs, v, thisData:c.data, dparent});
                         // try to automatically determine the holding collection (class, enumerator or attrib, reference
                         switch (k) {
                             default: Log.ee('eCore unexpected child collection found', {k, c, json}); break;
@@ -582,7 +582,7 @@ export class Dummy {
                             case 'operations': d = DOperation.new3(ptrs, callback, true); break;
                             case 'parameters': d = DParameter.new3(ptrs, callback, true); break;
                         }
-                        console.log('M2 L'+c.data.className.substring(1)+'.t2m()', {d, v: JSON.parse(JSON.stringify(v))});
+                        // console.log('M2 L'+c.data.className.substring(1)+'.t2m()', {d, v: JSON.parse(JSON.stringify(v))});
                         child = L.from(d); // (this as LValue).get_addObject(c)({});
                     }
                     if (!child) return;
@@ -621,7 +621,7 @@ export class Dummy {
                             json[k][i] = child = thiss._convertEcoreToJom_m2(child);
                             let collection = getChildrenCollection(k, child, child, json[k], i);
 
-                            console.log('getChildrenCollection post', {collection, k, child, json, old, i});
+                            // console.log('getChildrenCollection post', {collection, k, child, json, old, i});
                         }
                         break;
                 }}
@@ -640,10 +640,10 @@ export class Dummy {
                 // uses [registerByCollection]
                 const registerPhase = ()=> {
                     // checks if there is an ambiguous match between id and name, to move it to ambiguous unregistered collection
-                    console.log('childrenToUpdateByName, register phase ' + c.data.name, {
-                        childrenToUpdateByName_pre: {...childrenToUpdateByName},
-                        unregisteredChildren_pre: [...unregisteredChildren],
-                    })
+                    // console.log('childrenToUpdateByName, register phase ' + c.data.name, {
+                    //     childrenToUpdateByName_pre: {...childrenToUpdateByName},
+                    //     unregisteredChildren_pre: [...unregisteredChildren],
+                    // })
                     for (let name in childrenToUpdateByName) {
                         let l = childrenToUpdateByName[name].l;
 
@@ -663,10 +663,10 @@ export class Dummy {
                     for (let e of unregisteredChildren) {
                         registerByCollection(e.k, e.i); // todo: remove all delete from json's subelement collections or get by index fails.
                     }
-                    console.log('childrenToUpdateByName, register phase end ' + c.data.name, {
-                        childrenToUpdateByName_post: {...childrenToUpdateByName},
-                        unregisteredChildren_post: [...unregisteredChildren],
-                    })
+                    // console.log('childrenToUpdateByName, register phase end ' + c.data.name, {
+                    //     childrenToUpdateByName_post: {...childrenToUpdateByName},
+                    //     unregisteredChildren_post: [...unregisteredChildren],
+                    // })
                 }
                 registerPhase();
 
@@ -682,7 +682,7 @@ export class Dummy {
                     let json = childrenToUpdateByName[name].json;
                     let l = childrenToUpdateByName[name].l;
                     let k = childrenToUpdateByName[name].k;
-                    console.log('t2m children by name', {l, k, json});
+                    // console.log('t2m children by name', {l, k, json});
                     doChildrenUpdate(l, k, json, 'name');
                 }
                 for (let elem of childrenToUpdateByIndex) {

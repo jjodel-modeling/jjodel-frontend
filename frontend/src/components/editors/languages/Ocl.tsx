@@ -52,7 +52,7 @@ function OclEditorComponent(props: AllProps) {
                     }}
                     defaultLanguage={'js'} value={view.oclCondition || ""}
                     onMount={(editor) => {
-                        console.log('[Monaco OCL] Mounted!');
+                        // console.log('[Monaco OCL] Mounted!');
                     }}
                     loading={<div style={{padding: '20px'}}>Loading OCL Editor...</div>}
                 />

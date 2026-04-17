@@ -791,7 +791,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
          this code updates the parent of removed subelements, but it risks to go in conflict if subelem.father is in a pending action
                 so i choose to handle this safely from set_father instead, and never use set_subElements directly;
         */
-        console.log("isDeepStrictEqual", {isDeepStrictEqual});
+        // console.log("isDeepStrictEqual", {isDeepStrictEqual});
         Log.eDev([...new Set(val)].length !== val.length, "subelemnts setter have duplicates", {val, context});
         // if (isDeepStrictEqual(context.data.subElements, val)) return true;
         let pointers: Pointer<DGraphElement, 0, 'N', LGraphElement> = Pointers.from(val) || [];
@@ -1280,7 +1280,7 @@ export class LGraph<Context extends LogicContext<DGraph> = any, D extends DGraph
             let ret: T = (size.hasOwnProperty("w") ? new GraphSize(size.x, size.y, (size as GraphSize).w, (size as GraphSize).h) : new GraphPoint(size.x, size.y)) as T;
             Log.ex(!graph_of_size, "translateSize() graph parameter is invalid: "+graph_of_size, graph_of_size, c);
             let ancestors: LGraph[] = [graph_of_size, ...graph_of_size.graphAncestors];
-            console.log("translateSize", {innerGraph: graph_of_size, ret, ancestors, c});
+            // console.log("translateSize", {innerGraph: graph_of_size, ret, ancestors, c});
             Log.ex(ancestors.indexOf(c.proxyObject) !== -1, "translateSize() graph parameter is invalid: it must be a graph containing the current one.", graph_of_size, c);
             for (let g of ancestors) ret.add(g.size.tl(), false);
             // for (let g of ancestors) ret.subtract(g.offset, false);
@@ -1576,7 +1576,7 @@ export class LEdgePoint<Context extends LogicContext<DEdgePoint> = any, C extend
                     var s00 = LEdgePoint.decodeCoords(s1, sp, ep);
                     // @ts-ignore
                     var error = Object.keys(s0).map( k=> s0[k].toFixed(3) === s00[k].toFixed(3) ? '' : k).join('');
-                    (mode != "relative%" && error ? console.error : console.log)({diff:[s00.x-s0.x, s00.y-s0.y].join(), i, j, mode, s1:[s1.x, s1.y].join(), s0, s00, error});
+                    // (mode != "relative%" && error ? console.error : console.log)({diff:[s00.x-s0.x, s00.y-s0.y].join(), i, j, mode, s1:[s1.x, s1.y].join(), s0, s00, error});
                     if (mode != "relative%" && error ) break outer;
                 }
     }
@@ -2799,12 +2799,12 @@ replaced by startPoint
     set_startFollow(val: boolean, c: Context): boolean { return this._set_start_endFollow(val, c, true); }
     _set_start_endFollow(val: boolean, c: Context, isStart: boolean): boolean {
         val = !!val;
-        console.log("_set_start_endFollow", {val, c, isStart});
+        // console.log("_set_start_endFollow", {val, c, isStart});
         if (val) {
             if (isStart) LVoidEdge.startFollow = c.data.id;
             else LVoidEdge.endFollow = c.data.id;
             if (!LVoidEdge.following) {
-                console.log("_set_start_endFollow event attached");
+                // console.log("_set_start_endFollow event attached");
                 document.body.addEventListener("mousemove", LVoidEdge.mousemove_pendingEdge, false);
                 document.body.addEventListener("keydown", LVoidEdge.onKeyDown_pendingEdge, false);
                 LVoidEdge.following = true;
@@ -2953,7 +2953,7 @@ replaced by startPoint
                     break;
             }
             segList[LVoidEdge.endFollow ? segList.length-1 : 0] = lastSeg;
-            if (LVoidEdge.tmp%20===0) console.log("svg set path data,", {segList, oldSeglist:p.getPathData(), p});
+            // if (LVoidEdge.tmp%20===0) console.log("svg set path data,", {segList, oldSeglist:p.getPathData(), p});
             p.setPathData(segList);
         }
 
@@ -2976,7 +2976,7 @@ replaced by startPoint
 
             let headPos = gcursorPos.subtract({x:headSize.w/2, y:headSize.h/2}, true);//.subtract({x:Math.cos(rotation)*headSize.w/2, y: -Math.sin(rotation)*headSize.h/2}, true);
 
-            if (LVoidEdge.tmp%20===0) console.log("_set_start_endFollow move head", {selector:LVoidEdge.endFollow ? '.edgeHead' : '.edgeTail', headTail, root});
+            // if (LVoidEdge.tmp%20===0) console.log("_set_start_endFollow move head", {selector:LVoidEdge.endFollow ? '.edgeHead' : '.edgeTail', headTail, root});
             ht.style.transform = 'translate('+headPos.x+"px, "+headPos.y+"px) rotate("+rotation+"rad)";
         }
     }

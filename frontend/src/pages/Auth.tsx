@@ -153,7 +153,7 @@ function AuthPage(): JSX.Element {
             const response: GObject = await AuthApi.login(loginRequest);
             const raw: TokenResponse | null = response.data;
 
-            console.log('login debug', {loginRequest, response, raw, env: process.env, ue: U.env("")});
+            // console.log('login debug', {loginRequest, response, raw, env: process.env, ue: U.env("")});
 
             if ((response.code+'')[0] !== '2') {
                 let title: string = response.data?.title;
@@ -171,7 +171,7 @@ function AuthPage(): JSX.Element {
                 return false; }
 
             const claims = AuthApi.readJwtToken(raw.token);
-            console.log('login claims', {response, raw, claims});
+            // console.log('login claims', {response, raw, claims});
             if (!claims) { U.alert('e', 'Invalid token.', ''); return false; }
             let te = new Date(raw.expires as unknown as string).getTime();
             let rte = new Date(raw.refreshTokenExpiryTime as unknown as string).getTime();
@@ -183,7 +183,7 @@ function AuthPage(): JSX.Element {
             const user: DUser|null = await UsersApi.getUserByGUID(claims.id);
             // name-surname error is on server-side get or set. not on client side.
             /*if ((window as any).debug1 && user && user.surname === user.name) {
-                console.log('error name debug', {user});
+                // console.log('error name debug', {user});
                 return;
             }*/
             if (!user) {
@@ -219,7 +219,7 @@ function AuthPage(): JSX.Element {
         registerRequest.Nickname = nickname;
         registerRequest.Email = email;
         registerRequest.Password = password;
-        console.log(registerRequest);
+        // console.log(registerRequest);
         const response: GObject = await AuthApi.register(registerRequest);
 
         if ((response.code+'')[0] !== '2') {

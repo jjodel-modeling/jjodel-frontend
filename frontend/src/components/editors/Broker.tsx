@@ -39,7 +39,7 @@ function BrokerEditorComponent(props: AllProps) {
         client.on('pull-action', (receivedAction: GObject<Action & CompositeAction>) => {
             // if(actions.includes(receivedAction.id)) return;
             const action = Action.fromJson(receivedAction);
-            console.log('Received Action from server.', action);
+            // console.log('Received Action from server.', action);
             action.fire();
         });
         await U.sleep(1);

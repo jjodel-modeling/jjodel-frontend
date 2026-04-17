@@ -836,7 +836,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                     let py = palette.y;
                     let constants: GObject = this.get_constants(c);
                     let context: GObject =  {...constants, constants, 'this': c.proxyObject, view: c.proxyObject};
-                    console.log('evaluating path variables pre:', {val, pre: [...pathArr], post:pathArr, palette, px:palette.x, context});
+                    // console.log('evaluating path variables pre:', {val, pre: [...pathArr], post:pathArr, palette, px:palette.x, context});
                     px = U.evalInContextAndScope("("+px+")", context, context);
                     context.x = px;
                     py = U.evalInContextAndScope("("+py+")", context, context);
@@ -854,7 +854,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                     })
                     val = pathArr2.join('');
                     val = "'"+val+"'";
-                    console.log('evaluating path variables post:', {val, post:pathArr, pathArr2});
+                    // console.log('evaluating path variables post:', {val, post:pathArr, pathArr2});
                     if (allowLESS) s += "\t@" + paletteName + ": " + val + ';\n';
                     s += "\t--" + paletteName + ': ' + val + ';\n';
                 } catch (e) {
@@ -1493,7 +1493,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             }
             let vsize: EPSize = (c.data.size[id] || vp?.__raw.size[id]) as EPSize || {} as any;
             let newSize: EPSize = new GraphSize() as EPSize;
-            console.log({vsize, newSize, size, vp, d:c.data})
+            // console.log({vsize, newSize, size, vp, d:c.data})
             if (size.currentCoordType === vsize?.currentCoordType) { // if samecoord system mix them.
                 newSize.x = size?.x !== undefined ? size.x : vsize.x;
                 newSize.y = size?.y !== undefined ? size.y : vsize.y;
@@ -1543,7 +1543,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         return impl_getSize; }
 
     set_generic_entry(c: Context, key: keyof DViewElement, val: any): boolean {
-        console.log('set_generic_entry', {c, key, val});
+        // console.log('set_generic_entry', {c, key, val});
         SetFieldAction.new(c.data, key, val);
         return true;
     }
@@ -1570,7 +1570,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             default: forceNodeType = val;
         }
 
-        console.log("set_appliableTo", {forceNodeType, val});
+        // console.log("set_appliableTo", {forceNodeType, val});
         TRANSACTION('change '+this.get_name(c)+'.appliableTo', ()=>{
             if (forceNodeType !== c.data.forceNodeType) SetFieldAction.new(c.data, "forceNodeType", forceNodeType, '', false);
             SetFieldAction.new(c.data, "appliableTo", val, '', false);
@@ -1638,7 +1638,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                 let pvid: Pointer<DViewPoint> = c.data.father as Pointer<DViewPoint>;
                 const new_vp: DuplicateVPChange = new_vp0 || {pvid};
                 const dfather = DPointerTargetable.fromPointer(new_vp.pvid);
-                console.log("DViewelement.duplicate", {cn: c.data.className, n:c.data.name, deep, new_vp0, dfather});
+                // console.log("DViewelement.duplicate", {cn: c.data.className, n:c.data.name, deep, new_vp0, dfather});
                 const dclone: DViewElement = c.data.className === 'DViewPoint' ?
                     DViewPoint.newVP(`${c.data.name} Copy`) :
                     DViewElement.new2(`${c.data.name} Copy`, '', dfather,
@@ -1688,7 +1688,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                         case 'clonedCounter': break;
                         case 'css_MUST_RECOMPILE': break;
                         case 'isValidation':
-                            console.log("duplicate " + c.data.name + " set isvalidation", {data:c.data, iv:c.data.isValidation});
+                            // console.log("duplicate " + c.data.name + " set isvalidation", {data:c.data, iv:c.data.isValidation});
                             (lview as any)[key] = (c.data as any)[key];
                             break;
                         default:

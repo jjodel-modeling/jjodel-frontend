@@ -30,7 +30,7 @@ class DockManager {
             const existingTab = DockManager.dock.find(tabId);
             // Check if it's a TabData (has 'content' property) or PanelData (has 'tabs' property)
             if (existingTab && ('content' in existingTab || 'tabs' in existingTab)) {
-                console.log('[DockManager] Closing tab:', tabId);
+                // console.log('[DockManager] Closing tab:', tabId);
                 DockManager.dock.dockMove(existingTab as TabData, null, 'remove');
                 return true;
             }
@@ -56,7 +56,7 @@ class DockManager {
             return;
         }
 
-        console.log('[DockManager] Closing tabs for entity:', { entityId, entityType });
+        // console.log('[DockManager] Closing tabs for entity:', { entityId, entityType });
 
         // Tab IDs to try closing
         const tabIds: string[] = [];
@@ -106,7 +106,7 @@ class DockManager {
         const tab = (me.isMetamodel) ? TabDataMaker.metamodel(me) : TabDataMaker.model(me);
         await DockManager.open('models', tab);
         const editorType = me.isMetamodel ? 'metamodel' : 'model';
-        console.log('[OPEN2] about to dispatch', { editorType });
+        // console.log('[OPEN2] about to dispatch', { editorType });
         window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
             detail: { editorType }
         }));
@@ -116,7 +116,7 @@ class DockManager {
      * Open Documentation Tab in the left dock area
      */
     static openDocumentation(project: LProject, documentation?: any): void {
-        console.log('[DockManager] openDocumentation called', { projectId: project?.id, dockAvailable: !!DockManager.dock });
+        // console.log('[DockManager] openDocumentation called', { projectId: project?.id, dockAvailable: !!DockManager.dock });
 
         if (!DockManager.dock) {
             console.warn('[DockManager] Dock not available, cannot open documentation');
@@ -135,7 +135,7 @@ class DockManager {
             // Check if tab already exists
             const existingTab = DockManager.dock.find(tabId);
             if (existingTab) {
-                console.log('[DockManager] Activating existing documentation tab');
+                // console.log('[DockManager] Activating existing documentation tab');
                 DockManager.dock.updateTab(tabId, null as any, true);
                 window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
                     detail: { editorType: 'summary' }
@@ -157,7 +157,7 @@ class DockManager {
 
             const layout = DockManager.dock.getLayout();
             if (layout?.dockbox?.children?.[0]) {
-                console.log('[DockManager] Creating new documentation tab');
+                // console.log('[DockManager] Creating new documentation tab');
                 DockManager.dock.dockMove(tab, layout.dockbox.children[0], 'middle');
                 window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
                     detail: { editorType: 'summary' }
@@ -252,14 +252,14 @@ class DockManager {
         existingModelNames?: string[],
         onExecuteTransformation?: (sourceModelId: string, outputModelName: string, ast: TransformationAST) => Promise<ExecutionResult | void>
     ): void {
-        console.log('[DockManager] openTransformation called', {
-            transformationId: transformation?.id,
-            name: transformation?.name,
-            dockAvailable: !!DockManager.dock,
-            hasSourceMetamodel: !!sourceMetamodel?.length,
-            hasTargetMetamodel: !!targetMetamodel?.length,
-            hasGetters: !!(getSourceMetamodel && getTargetMetamodel)
-        });
+        // console.log('[DockManager] openTransformation called', {
+        //     transformationId: transformation?.id,
+        //     name: transformation?.name,
+        //     dockAvailable: !!DockManager.dock,
+        //     hasSourceMetamodel: !!sourceMetamodel?.length,
+        //     hasTargetMetamodel: !!targetMetamodel?.length,
+        //     hasGetters: !!(getSourceMetamodel && getTargetMetamodel)
+        // });
 
         if (!DockManager.dock) {
             console.warn('[DockManager] Dock not available, cannot open transformation');
@@ -320,7 +320,7 @@ class DockManager {
             // Check if tab already exists
             const existingTab = DockManager.dock.find(tabId);
             if (existingTab) {
-                console.log('[DockManager] Updating and activating existing transformation tab');
+                // console.log('[DockManager] Updating and activating existing transformation tab');
                 // CRITICAL: Update tab content with fresh callbacks to avoid stale closures
                 DockManager.dock.updateTab(tabId, { content: tabContent } as any, true);
                 window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
@@ -346,7 +346,7 @@ class DockManager {
 
             const layout = DockManager.dock.getLayout();
             if (layout?.dockbox?.children?.[0]) {
-                console.log('[DockManager] Creating new transformation tab');
+                // console.log('[DockManager] Creating new transformation tab');
                 DockManager.dock.dockMove(tab, layout.dockbox.children[0], 'middle');
                 window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
                     detail: { editorType: 'transformation' }

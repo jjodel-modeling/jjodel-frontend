@@ -271,7 +271,7 @@ function PaletteDataComponent(props: AllProps) {
         for (let i = colors.length-1; i >= (skipFirst ? 1 : 0); i--) {
             let color: Instance = colors[i];
             let rgba = color.toRgb();
-            console.log("addingColor:", {rgba, lastAdded, color});
+            // console.log("addingColor:", {rgba, lastAdded, color});
             if (rgba === lastAdded) continue;
             lastAdded = rgba;
             if (!tmp[prefix]) tmp[prefix] = {type:'color', value:[]};
@@ -307,7 +307,7 @@ function PaletteDataComponent(props: AllProps) {
         tmp[prefix].value[index] = {...tmp[prefix].value[index]};
         tmp[prefix].value[index].a = alpha;
         color.setAlpha(alpha);
-        console.log("set transparency", {color, tinycolor, oldcolor: tmp[prefix].value[index]});
+        // console.log("set transparency", {color, tinycolor, oldcolor: tmp[prefix].value[index]});
         view.palette = palette = tmp;
     }
     const removeColor = (prefix: string, index?: number) => {

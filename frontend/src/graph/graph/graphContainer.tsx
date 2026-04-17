@@ -75,7 +75,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as any;
-    console.log('mapStateToProps', {ret, state, ownProps, models: state.models})
+    // console.log('mapStateToProps', {ret, state, ownProps, models: state.models})
     ret.models = state.models.length ? LPointerTargetable.fromArr(state.models, state) as LModel[] : [];
     ret.graphs = state.graphs.length ? LGraph.fromArr(state.graphs, state) as LGraph[] : [];
     /// to fill

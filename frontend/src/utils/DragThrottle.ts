@@ -193,7 +193,7 @@ export class DragOptimizer {
 
         const duration = performance.now() - this.startTime;
         if (PerformanceMetrics.isEnabled()) {
-            console.log(`[DragOptimizer] Completed: ${this.updateCount} updates in ${duration.toFixed(0)}ms (${(this.updateCount / duration * 1000).toFixed(1)} updates/sec)`);
+            // console.log(`[DragOptimizer] Completed: ${this.updateCount} updates in ${duration.toFixed(0)}ms (${(this.updateCount / duration * 1000).toFixed(1)} updates/sec)`);
         }
 
         this.isActive = false;

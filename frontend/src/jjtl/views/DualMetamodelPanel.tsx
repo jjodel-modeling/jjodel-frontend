@@ -159,8 +159,8 @@ export const DualMetamodelPanel: React.FC<DualMetamodelPanelProps> = ({
             status: mapping.status,
         }));
 
-        console.log('[DualMetamodelPanel] Mappings received:', mappings.length, mappings.map(m => ({ id: m.id, status: m.status })));
-        console.log('[DualMetamodelPanel] MappingLines created:', lines.length, lines.map(l => ({ id: l.id, status: l.status })));
+        // console.log('[DualMetamodelPanel] Mappings received:', mappings.length, mappings.map(m => ({ id: m.id, status: m.status })));
+        // console.log('[DualMetamodelPanel] MappingLines created:', lines.length, lines.map(l => ({ id: l.id, status: l.status })));
 
         setMappingLines(lines);
     }, [mappings, selectedMapping]);

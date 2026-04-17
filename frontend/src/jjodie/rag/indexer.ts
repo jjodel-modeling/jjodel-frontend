@@ -317,7 +317,7 @@ export class Indexer {
         await this.vectorStore.initialize();
         this.initialized = true;
 
-        console.log('[Indexer] Initialized');
+        // console.log('[Indexer] Initialized');
     }
 
     /**

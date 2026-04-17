@@ -53,7 +53,7 @@ export class Nearley{
                 Log.ee('Failed to parse Nearley fragment "'+fragmentName+'" check parenthesis and syntax validity. https://omrelli.ug/nearley-playground/', {sourceCode});
                 return null;
             }
-            console.log('compiled fragment ' + fragmentName, {grammarAst, sourceCode, grammarParser});
+            // console.log('compiled fragment ' + fragmentName, {grammarAst, sourceCode, grammarParser});
             // Compile the AST into a set of rules
             const grammarInfoObject: GrammarInfoObject = compile(grammarAst, {});
             grammarFragments[fragmentName] = grammarInfoObject;
@@ -81,7 +81,7 @@ export class Nearley{
             return null;
         }
         let ret =  nearley.Grammar.fromCompiled(module.exports as any);
-        console.log('nearley compile', {ret, module, grammarJs, joined, fragments, grammarFragments});
+        // console.log('nearley compile', {ret, module, grammarJs, joined, fragments, grammarFragments});
         return ret;
     }
 
@@ -109,7 +109,7 @@ export class Nearley{
             return null;
         }
         let ret =  nearley.Grammar.fromCompiled(module.exports as any);
-        console.log('nearley compile', {ret, module, grammarJs, grammarInfoObject, grammarAst});
+        // console.log('nearley compile', {ret, module, grammarJs, grammarInfoObject, grammarAst});
         return ret;
     }
     static compileGrammar(sourceCode: string | Dictionary<string, string>): Grammar | null{
@@ -135,10 +135,10 @@ export class Nearley{
         let options: ParserOptions = {};
         options.keepHistory = false;
         const parser: Parser = new nearley.Parser(grammar, options);
-        console.log('pre parsing', {parser, grammar, options, text});
+        // console.log('pre parsing', {parser, grammar, options, text});
         try{
             let result: Parser = parser.feed(text);
-            console.log('post parsing', {parser, result, ret:result.results});
+            // console.log('post parsing', {parser, result, ret:result.results});
             return result.results;
         }
         catch(e: any) {

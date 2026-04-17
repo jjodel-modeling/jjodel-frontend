@@ -151,17 +151,17 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
     const startTimeRef = useRef<number>(0);
 
     // DEBUG: Log execution stats when modal is shown
-    useEffect(() => {
-        if (showCompleteModal && executionStats) {
-            console.log('[ScriptBlock] Modal shown with stats:', {
-                executedCommands: executionStats.executedCommands,
-                duration: executionStats.duration,
-                errors: executionStats.errors,
-                totalCommands: executionStats.totalCommands,
-                skippedLines: executionStats.skippedLines,
-            });
-        }
-    }, [showCompleteModal, executionStats]);
+    // useEffect(() => {
+        // if (showCompleteModal && executionStats) {
+        //     // console.log('[ScriptBlock] Modal shown with stats:', {
+        //         executedCommands: executionStats.executedCommands,
+        //         duration: executionStats.duration,
+        //         errors: executionStats.errors,
+        //         totalCommands: executionStats.totalCommands,
+        //         skippedLines: executionStats.skippedLines,
+        //     });
+        // }
+    // }, [showCompleteModal, executionStats]);
 
     // Memoized values - always use original code (normalized internally if needed)
     const displayCode = code;
@@ -426,7 +426,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
             errors: 0,
             duration: duration > 0 ? duration : 0,
         };
-        console.log('[ScriptBlock] Setting execution stats (handleExecute):', stats);
+        // console.log('[ScriptBlock] Setting execution stats (handleExecute):', stats);
         setExecutionStats(stats);
         setExecutionState('completed');
         setCurrentLineIndex(-1);
@@ -498,7 +498,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 errors: 0,
                 duration: duration > 0 ? duration : 0,
             };
-            console.log('[ScriptBlock] Setting execution stats (handleStep start):', stats);
+            // console.log('[ScriptBlock] Setting execution stats (handleStep start):', stats);
             setExecutionStats(stats);
             setExecutionState('completed');
             setShowCompleteModal(true);
@@ -547,7 +547,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                     errors: 0,
                     duration: duration > 0 ? duration : 0,
                 };
-                console.log('[ScriptBlock] Setting execution stats (handleStep success):', stats);
+                // console.log('[ScriptBlock] Setting execution stats (handleStep success):', stats);
                 setExecutionStats(stats);
                 setExecutionState('completed');
                 setCurrentLineIndex(-1);
@@ -586,7 +586,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                     errors: 1,
                     duration: duration > 0 ? duration : 0,
                 };
-                console.log('[ScriptBlock] Setting execution stats (handleStep error):', stats);
+                // console.log('[ScriptBlock] Setting execution stats (handleStep error):', stats);
                 setExecutionStats(stats);
                 setExecutionState('error');
                 setShowCompleteModal(true);
@@ -636,7 +636,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 errors: 1,
                 duration: elapsedMs,
             };
-            console.log('[ScriptBlock] Setting execution stats (handleStep catch):', stats);
+            // console.log('[ScriptBlock] Setting execution stats (handleStep catch):', stats);
             setExecutionStats(stats);
             setExecutionState('error');
             setShowCompleteModal(true);

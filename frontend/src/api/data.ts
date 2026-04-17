@@ -141,7 +141,7 @@ export class EcoreParser{
         let parsedjson: GObject;
         if (typeof ecorejson === "string") try { parsedjson = JSON.parse(ecorejson); } catch(e) { windoww.temp = ecorejson; Log.exx("error while parsing json:", e, ecorejson.substring(0, 1000)); throw e; }
         else parsedjson = ecorejson;
-        console.log("root parse", {ecorejson, parsedjson});
+        // console.log("root parse", {ecorejson, parsedjson});
         // isMetamodel = !!parsedjson[ECoreRoot.ecoreEPackage];
 
         Constructors.paused = true;
@@ -159,7 +159,7 @@ export class EcoreParser{
 
         this.tempfix_untilopennewtabisdone(parsedElements, isMetamodel);
 
-        console.log('parsedElem', parsedElements)
+        // console.log('parsedElem', parsedElements)
         return parsedElements;
     }
 
@@ -175,7 +175,7 @@ export class EcoreParser{
             let newvalues = v.values.map((e) => {
                 if (!m1pointermap[e as any]) return e;
                 modified = true;
-                console.log("m1 pointer resolved:", {from:e, to:m1pointermap[e as any].id});
+                // console.log("m1 pointer resolved:", {from:e, to:m1pointermap[e as any].id});
                 return m1pointermap[e as any].id;
             });
             if (!modified) continue;
@@ -342,7 +342,7 @@ export class EcoreParser{
                     target.pointedBy.push(PointedBy.new("idlookup." + dobj.id + "." + ptrkey));
                 } else {
                     target = DfromPtr(value);
-                    console.log("fixalltypes", {ptrkey, valtmp, dobj, value, values, target, idMap});
+                    // console.log("fixalltypes", {ptrkey, valtmp, dobj, value, values, target, idMap});
                     if (!target) throw new Error("target undefined");
                     SetFieldAction.new(target, "pointedBy", PointedBy.new("idlookup." + dobj.id + "." + ptrkey),'+=', false);
                 }
@@ -373,7 +373,7 @@ export class EcoreParser{
             let pos = filename.indexOf(".");
             modelname = pos === -1 ? filename : filename.substring(0, pos); }
         let dObject: DModel = DModel.new( modelname || "imported_metamodel_1", undefined, true, true);
-        console.log("made model", json);
+        // console.log("made model", json);
         generated.push(dObject); // dObject.father = 'modeltmp' as any;
         // const annotations: Json[] = this.getAnnotations(json); i set them on root package
         // for (let child of annotations) EcoreParser.parseDAnnotation(dObject, child, generated, (dObject as GObject).__fullname + "/");
@@ -391,21 +391,21 @@ export class EcoreParser{
             let pos = filename.indexOf(".");
             modelname = pos === -1 ? filename : filename.substring(0, pos); }
         let dObject: DModel = DModel.new( modelname || "imported_metamodel_1", undefined, true, true);
-        console.log("made model", json);
+        // console.log("made model", json);
         generated.push(dObject); // dObject.father = 'modeltmp' as any;
         /// *** specific  *** ///
         const children = EcoreParser.getChildren(json);
         const annotations = EcoreParser.getAnnotations(json);
         // dObject.name = json[ECoreNamed.namee] as string || "imported_metamodel_1";
-        console.log("made model 2", children, annotations);
+        // console.log("made model 2", children, annotations);
         for (let child of annotations) {
             EcoreParser.parseDAnnotation(dObject, child, generated, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa');
         }
-        console.log("made annotations");
+        // console.log("made annotations");
         for (let child of children) {
             EcoreParser.parseRootPackage(dObject, child, generated);
         }
-        console.log("made packages");
+        // console.log("made packages");
         return generated;
     }
 
@@ -450,7 +450,7 @@ export class EcoreParser{
             let pos = filename.indexOf(".");
             modelname = (pos === -1 ? filename : filename.substring(0, pos)); }
         let dObject: DModel = DModel.new( modelname || "imported_model_1", meta?.id, false, true);
-        console.log("made model", json);
+        // console.log("made model", json);
         generated.push(dObject);
 
         for (let key in json) {
@@ -471,7 +471,7 @@ export class EcoreParser{
 
                     const namespacedclass: string = key;
                     const mmclass: LClass | undefined = meta && meta.getClassByNameSpace(namespacedclass);
-                    if (!mmclass) console.log("failed to get mmclass", {meta, key, mmclass})
+                    // if (!mmclass) console.log("failed to get mmclass", {meta, key, mmclass})
                     const roots_for_this_metaclass: Json[] = Array.isArray(val) ? val : [val]; // there might be N roots of class A, M of type B...
                     for(let rootjson of roots_for_this_metaclass) {
                         // DObject.new(mmclass.id, dObject.id, DModel, undefined, true)
@@ -531,7 +531,7 @@ export class EcoreParser{
             if (parentType === DModel) (parent as DModel).objects.push(dObject.id);
             else (parent as DValue).values.push(dObject.id);
         }
-        console.log("made dobject", {json, dObject, meta, metaname: meta?.name});
+        // console.log("made dobject", {json, dObject, meta, metaname: meta?.name});
         /// *** specific  *** ///
         for (let key in json) {
             switch(key) {
@@ -549,7 +549,7 @@ export class EcoreParser{
                     if (key[0] === EcoreParser.XMLinlineMarker) key = key.substring(1);
                     if (key.indexOf("xmlns:") === 0) continue; // "-xmlns:org.eclipse.example.modelname": "https://org/eclipse/example/modelname",
                     let metafeature: LAttribute | LReference | undefined = meta && (meta as any)["@"+key];
-                    console.log("feature meta", {json, dObject, key, val, metafeature, classmeta: meta});
+                    // console.log("feature meta", {json, dObject, key, val, metafeature, classmeta: meta});
                     let values: any[];
                     if (Array.isArray(val)) values = val;
                     else if (val as unknown === undefined) values = [];
@@ -564,12 +564,12 @@ export class EcoreParser{
     private static parseDValue(name:string | undefined, jsonvalues: any[], parent: DObject, meta: LAttribute | LReference | undefined, generated: DModelElement[]): DModelElement[] {
         if (!jsonvalues) { jsonvalues = []; }
         // let dObject: DObject = DObject.new(meta?.id, parent.id, parentType, json["name"] as string || "obj_1");
-        console.log("DValue.new(meta ? undefined : name, meta?.id, jsonvalues, parent.id, true, false)")
-        console.log("DValue.new(", meta ? undefined : name, ",",meta?.id, ",",jsonvalues, ",",parent.id);
+        // console.log("DValue.new(meta ? undefined : name, meta?.id, jsonvalues, parent.id, true, false)")
+        // console.log("DValue.new(", meta ? undefined : name, ",",meta?.id, ",",jsonvalues, ",",parent.id);
         let dValue: DValue = DValue.new(meta ? undefined : name, meta?.id, [], parent.id, true, false);
         generated.push(dValue); dValue.father = parent.id;
         parent.features.push(dValue.id);
-        console.log("made dValue", {jsonvalues, dValue, meta, metaname: meta?.name});
+        // console.log("made dValue", {jsonvalues, dValue, meta, metaname: meta?.name});
         if (meta && meta.className === DAttribute.cname) { dValue.values = jsonvalues; return generated; }
 
         for (let v of jsonvalues) {

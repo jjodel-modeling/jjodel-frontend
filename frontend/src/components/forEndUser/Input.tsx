@@ -237,7 +237,7 @@ export function InputComponent(props: AllProps) {
         if (readOnly || isBoolean) return;
         const newValue = val || (evt && getValueFromEvent(evt));
         const oldValue = getter ? getter(data, field) : data[field];
-        console.log("onChange confirm", {evt, newValue, oldValue, data, field, changed: valueDidChange(newValue, oldValue), readOnly, isBoolean, setter, nnv:serializeValue(newValue)});
+        // console.log("onChange confirm", {evt, newValue, oldValue, data, field, changed: valueDidChange(newValue, oldValue), readOnly, isBoolean, setter, nnv:serializeValue(newValue)});
         if (valueDidChange(newValue, oldValue)){
             if (setter) setter(newValue as any, data, field);
             else data[field] = serializeValue(newValue);
@@ -344,7 +344,7 @@ export function InputComponent(props: AllProps) {
                 for (let optgrp of multiOptions) for (let opt of optgrp.options) if (valuesMap[opt.value]) inputProps.value.push(opt);
                 // rootprops.className = (rootprops.className || '') + ' clearfix';
                 let old = {...rootprops};
-                rootprops.onMouseMove = (e:any) => { UX.stopEvt(e); old.onMouseMove?.(); console.log('multiselect onmove'); };
+                rootprops.onMouseMove = (e:any) => { UX.stopEvt(e); old.onMouseMove?.(); /* console.log('multiselect onmove'); */ };
                 /*rootprops.onMouseDown = (e:any) => { UX.stopEvt(e); old.onMouseDown?.(); console.log('multiselect onMouseDown'); };
                 rootprops.onMouseUp = (e:any) => { UX.stopEvt(e); old.onMouseUp?.(); console.log('multiselect onMouseUp'); };
                 rootprops.onClick = (e:any) => { UX.stopEvt(e); old.onClick?.(); console.log('multiselect onClick'); };
@@ -440,7 +440,7 @@ export function InputComponent(props: AllProps) {
         if (props.tag !== "select") return;
         let t: HTMLElement = (e.target) as any;
         let select = (t.tagName === 'select') ? t : t.querySelector('select');
-        console.log("click select root", {t, select});
+        // console.log("click select root", {t, select});
         select?.click();
     }
     return <label className={'input-container'} {...rootprops} /*onClick={openSelect}*/>

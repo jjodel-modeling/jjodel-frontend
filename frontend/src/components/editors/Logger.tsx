@@ -154,7 +154,7 @@ class LoggerComponent extends PureComponent<AllProps, ThisState> {
                 <button title={"copy to clipboard"} className={"bg btn-clipboard my-auto ms-2"}
                         onClick={()=> {
                             (window as any).lastmsg = msg;
-                            console.log(msg);
+                            // console.log(msg);
                             U.clipboardCopy(msg.long_string)
                         }}
                 ><i className={"copy bi bi-clipboard"} /></button>

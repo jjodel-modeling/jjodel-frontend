@@ -22,10 +22,10 @@ export const CanvasBenchmark = {
         const entries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
         if (entries.length > 0) {
             const nav = entries[0];
-            console.log('📊 Initial Load Metrics:');
-            console.log(`  DOM Content Loaded: ${Math.round(nav.domContentLoadedEventEnd - nav.startTime)}ms`);
-            console.log(`  Load Complete: ${Math.round(nav.loadEventEnd - nav.startTime)}ms`);
-            console.log(`  DOM Interactive: ${Math.round(nav.domInteractive - nav.startTime)}ms`);
+            // console.log('📊 Initial Load Metrics:');
+            // console.log(`  DOM Content Loaded: ${Math.round(nav.domContentLoadedEventEnd - nav.startTime)}ms`);
+            // console.log(`  Load Complete: ${Math.round(nav.loadEventEnd - nav.startTime)}ms`);
+            // console.log(`  DOM Interactive: ${Math.round(nav.domInteractive - nav.startTime)}ms`);
         }
     },
 
@@ -47,17 +47,17 @@ export const CanvasBenchmark = {
      */
     printSCUStats(): void {
         const stats = this.getSCUStats();
-        console.log('\n📈 SCU (shouldComponentUpdate) Statistics:');
-        console.log(`  Cache Hits (skipped re-renders): ${stats.hits}`);
-        console.log(`  Cache Misses (triggered re-renders): ${stats.misses}`);
-        console.log(`  Hit Rate: ${stats.hitRate.toFixed(1)}%`);
+        // console.log('\n📈 SCU (shouldComponentUpdate) Statistics:');
+        // console.log(`  Cache Hits (skipped re-renders): ${stats.hits}`);
+        // console.log(`  Cache Misses (triggered re-renders): ${stats.misses}`);
+        // console.log(`  Hit Rate: ${stats.hitRate.toFixed(1)}%`);
 
         if (stats.hitRate > 70) {
-            console.log('  ✅ Good! High cache hit rate means fewer unnecessary renders.');
+            // console.log('  ✅ Good! High cache hit rate means fewer unnecessary renders.');
         } else if (stats.hitRate > 40) {
-            console.log('  ⚠️ Moderate. There\'s room for improvement.');
+            // console.log('  ⚠️ Moderate. There\'s room for improvement.');
         } else {
-            console.log('  ❌ Low hit rate. Many components are re-rendering unnecessarily.');
+            // console.log('  ❌ Low hit rate. Many components are re-rendering unnecessarily.');
         }
     },
 
@@ -65,16 +65,16 @@ export const CanvasBenchmark = {
      * Run interactive benchmark instructions
      */
     startInteractiveBenchmark(): void {
-        console.log('\n🚀 Starting Interactive Benchmark');
-        console.log('================================');
-        console.log('1. PerformanceMetrics is now ENABLED');
-        console.log('2. Interact with the canvas for 1-2 minutes:');
-        console.log('   - Create/delete classes');
-        console.log('   - Drag elements around');
-        console.log('   - Select/deselect elements');
-        console.log('   - Zoom in/out');
-        console.log('3. When done, run: CanvasBenchmark.endBenchmark()');
-        console.log('================================\n');
+        // console.log('\n🚀 Starting Interactive Benchmark');
+        // console.log('================================');
+        // console.log('1. PerformanceMetrics is now ENABLED');
+        // console.log('2. Interact with the canvas for 1-2 minutes:');
+        // console.log('   - Create/delete classes');
+        // console.log('   - Drag elements around');
+        // console.log('   - Select/deselect elements');
+        // console.log('   - Zoom in/out');
+        // console.log('3. When done, run: CanvasBenchmark.endBenchmark()');
+        // console.log('================================\n');
 
         PerformanceMetrics.reset();
         PerformanceMetrics.enable();
@@ -84,14 +84,14 @@ export const CanvasBenchmark = {
      * End benchmark and show results
      */
     endBenchmark(): void {
-        console.log('\n================================');
-        console.log('📊 BENCHMARK RESULTS');
-        console.log('================================\n');
+        // console.log('\n================================');
+        // console.log('📊 BENCHMARK RESULTS');
+        // console.log('================================\n');
 
         this.measureInitialRender();
         this.printSCUStats();
 
-        console.log('\n⏱️ Timing Details:');
+        // console.log('\n⏱️ Timing Details:');
         PerformanceMetrics.logReport();
 
         PerformanceMetrics.disable();
@@ -101,10 +101,10 @@ export const CanvasBenchmark = {
      * Quick status check
      */
     status(): void {
-        console.log(`\nPerformanceMetrics: ${PerformanceMetrics.isEnabled() ? 'ENABLED' : 'DISABLED'}`);
+        // console.log(`\nPerformanceMetrics: ${PerformanceMetrics.isEnabled() ? 'ENABLED' : 'DISABLED'}`);
         if (PerformanceMetrics.isEnabled()) {
             const stats = this.getSCUStats();
-            console.log(`SCU: ${stats.hits} hits, ${stats.misses} misses (${stats.hitRate.toFixed(1)}% hit rate)`);
+            // console.log(`SCU: ${stats.hits} hits, ${stats.misses} misses (${stats.hitRate.toFixed(1)}% hit rate)`);
         }
     },
 
@@ -112,7 +112,7 @@ export const CanvasBenchmark = {
      * Instructions for comparing before/after
      */
     compareInstructions(): void {
-        console.log(`
+        /* console.log(`
 ╔════════════════════════════════════════════════════════════════╗
 ║              PERFORMANCE COMPARISON GUIDE                       ║
 ╠════════════════════════════════════════════════════════════════╣
@@ -138,7 +138,7 @@ export const CanvasBenchmark = {
 ║  • Overall render count: Lower is better                        ║
 ║                                                                 ║
 ╚════════════════════════════════════════════════════════════════╝
-        `);
+        `); */
     },
 };
 

@@ -392,7 +392,7 @@ export class EcoreService {
             // Convert XML DOM to JSON format expected by EcoreParser
             const json = this.xmlToJson(doc.documentElement);
 
-            console.log('Ecore XML to JSON:', json);
+            // console.log('Ecore XML to JSON:', json);
 
             // Use existing EcoreParser
             const parsedElements = EcoreParser.parse(json, true, filename || 'imported', true);

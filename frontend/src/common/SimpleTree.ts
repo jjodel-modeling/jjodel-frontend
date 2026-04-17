@@ -48,7 +48,7 @@ export class SimpleTree<T extends GObject> {
             // if (o === this) continue;
             for (let subo of o) {
                 let subname = subo.node[namekey];
-                if (!subname) { console.log("skipped"); continue; }
+                if (!subname) { /* console.log("skipped"); */ continue; }
                 ret[name as string][subname as string] = true;
             }
         }

@@ -468,7 +468,7 @@ function renderEntry(d: DViewElement, childrens: GObject, isExpanded: boolean, t
     let [view, setView] = useStateIfMounted(undefined as (undefined | Pointer<DViewElement>));
 
     // Basic mode: show locked feature placeholder
-    console.log('nestedViewTab', {props, isad:props.isAdvanced});
+    // console.log('nestedViewTab', {props, isad:props.isAdvanced});
     if (!props.isAdvanced) {
         return (
             <div className={"view-editor-root"}>

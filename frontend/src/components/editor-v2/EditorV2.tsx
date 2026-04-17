@@ -531,7 +531,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         nextX += 220;
                     }
                 }
-                console.log(`[singleton] shown ${singletonClassIds.size} singleton class(es) for model ${modelid}`);
+                // console.log(`[singleton] shown ${singletonClassIds.size} singleton class(es) for model ${modelid}`);
             } else {
                 // ── HIDE: suppress singleton instance vertices ──
                 const graph = lookup[graphId] as any;
@@ -554,7 +554,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     suppressSingleton(vid);
                 }
                 setNodes(nds => nds.filter(n => !vertexIdsToHide.includes(n.id)));
-                console.log(`[singleton] hidden ${vertexIdsToHide.length} singleton node(s) for model ${modelid}`);
+                // console.log(`[singleton] hidden ${vertexIdsToHide.length} singleton node(s) for model ${modelid}`);
             }
         };
 
@@ -2215,13 +2215,13 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         icon: 'bi-eye',
                         disabled: !resolved,
                         onClick: () => {
-                            console.log('[EditorV2] Create View clicked, node:', node.id, node.type);
+                            // console.log('[EditorV2] Create View clicked, node:', node.id, node.type);
                             // node.id is a vertex ID; resolve to the DClass model element ID
                             const vertexProxy: any = LPointerTargetable.fromPointer(node.id);
                             const modelElement = vertexProxy?.model;
                             const classId = modelElement?.id ?? node.id;
                             const className = modelElement?.__raw?.className ?? 'DClass';
-                            console.log('[EditorV2] resolved classId:', classId, 'className:', className);
+                            // console.log('[EditorV2] resolved classId:', classId, 'className:', className);
                             createViewInWorkbench(classId, data?.label ?? 'unnamed', className);
                         },
                     },

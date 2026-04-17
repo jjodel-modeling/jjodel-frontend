@@ -276,7 +276,7 @@ export class VectorStore {
         }
 
         this.initialized = true;
-        console.log(`[VectorStore] Initialized with ${this.vectors.size} vectors`);
+        // console.log(`[VectorStore] Initialized with ${this.vectors.size} vectors`);
     }
 
     /**

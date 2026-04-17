@@ -513,7 +513,7 @@ export class JodieConfig {
 
             // todo: is it really needed? individual configs are already saved in split format
             // along with windows size etc.
-            console.log('[CredentialsService] Store saved successfully');
+            // console.log('[CredentialsService] Store saved successfully');
         } catch (error) {
             console.error('[CredentialsService] Failed to save store:', error);
             throw new Error('Failed to save credentials');

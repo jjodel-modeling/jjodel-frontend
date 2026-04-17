@@ -89,7 +89,7 @@ export const Vertexes = {
     Trapezoid: Trapezoid
 }
 export const GraphElements: dict = {...Graphs, ...Vertexes, ...Fields, ...Edges}; // T & {vertexes: T, edges: T, graphs: T, fields: T} = {} as any;
-for (let key in GraphElements) if (!(GraphElements as any)[key]) { console.log({GraphElements, v:(GraphElements as any)[key]}); throw new Error("wrong initialization fo components"); }
+for (let key in GraphElements) if (!(GraphElements as any)[key]) { throw new Error("wrong initialization fo components"); }
 // U.objectMergeInPlace(GraphElements, Graphs, Edges as any, Vertexes, Fields, {Graphs, Edges, Vertexes, Fields});
 // console.info('components loaded');
 export {Measurable, MeasurableComponent, ScrollableComponent, Scrollable, Pan, Viewport, ViewPort, Draggable, Resizable, Rotatable, Scalable, Transformable, Interactive} from "../components/forEndUser/Measurable";

@@ -27,7 +27,7 @@ export const Btn = (props: BtnProps) => {
     let needConfirm = props.needConfirm || (props.icon === 'delete' && !props.disabled);
     let i_classes = (props.className||'') + ` bi tab-btn commandbar-btn ${askingConfirm ? 'bi-question-square-fill question': props.icon} ${props.theme ? props.theme : 'light'} ${props.size||''} ${mode} ${props.disabled ? 'disabled ' : ''}`
     let action = (e: React.MouseEvent<any,any>) => {
-        console.log('commandbar action', {disabled: props.disabled, action:props.action, askingConfirm, needConfirm});
+        // console.log('commandbar action', {disabled: props.disabled, action:props.action, askingConfirm, needConfirm});
         if (props.disabled || !props.action) return;
         if (!askingConfirm && needConfirm) {
             setConfirm(true);

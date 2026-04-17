@@ -7,8 +7,8 @@ This guide provides complete instructions for installing and running JJodel in d
 ## 📋 Prerequisites
 
 ### For local development:
-- **Node.js** 22.x or higher
-- **npm** (included with Node.js)
+- **Node.js** 22.12 or higher (use [nvm](https://github.com/nvm-sh/nvm) to manage versions)
+- **npm** 10+ (included with Node.js)
 - **Git**
 
 ### For Docker deployment:
@@ -17,18 +17,17 @@ This guide provides complete instructions for installing and running JJodel in d
 
 ## 🚀 Quick Installation with Docker
 
-### Option 1: Pre-built image
-Mac
+### Option 1: Pre-built image from Docker Hub
+
 ```bash
-docker run --platform=linux/amd64 --rm -p 80:80 --name jjodel \
-  md2manoppello/jjodel-standalone:dotnet-backend-integration-970935f
-```
-Linux
-```bash
-docker pull md2manoppello/jjodel-standalone:dotnet-backend-integration-366d4f5
+# Standalone (no backend required)
+docker run --rm -p 3000:80 --name jjodel \
+  md2manoppello/jjodel-standalone:latest
+
+# Open browser at http://localhost:3000
 ```
 
-### Option 2: Local build
+### Option 2: Local build from source
 ```bash
 # Clone the repository
 git clone https://github.com/MDEGroup/jjodel.git
@@ -38,7 +37,7 @@ cd jjodel
 docker build -t jjodel:latest .
 
 # Start the container
-docker run -p 3000:80 jjodel:latest
+docker run --rm -p 3000:80 jjodel:latest
 
 # Open browser at http://localhost:3000
 ```
@@ -51,53 +50,48 @@ git clone https://github.com/MDEGroup/jjodel.git
 cd jjodel/frontend
 ```
 
-### 2. Install dependencies
-```bash
-# Install main dependencies
-npm i
+### 2. Check Node.js version
+Vite 7 requires Node.js **22.12+** or **20.19+**. If you use nvm:
 
-# Install react-json-view (requires --force)
-npm i react-json-view --force --no-save
+```bash
+nvm install 22
+nvm use 22
+node --version  # should be v22.12.0 or higher
 ```
 
-### 3. Configure environment
+### 3. Install dependencies
 ```bash
-# Set Node.js options for compatibility
-export NODE_OPTIONS=--openssl-legacy-provider
+npm i
 ```
 
 ### 4. Start in development mode
 ```bash
-npm run start
+npm start
 ```
 
 The application will be available at http://localhost:3000
 
 ### 5. Build for production
 ```bash
-# Set CI variable
 CI='' npm run build
 
-# Serve static files
+# Preview the production build locally
 npm run serve
 ```
 
 ## 🐳 Deploy with Docker Compose
 
-### 1. Create docker-compose.yml
 ```yaml
+# docker-compose.yml
 version: '3.8'
 services:
   jjodel:
-    image: md2manoppello/jjodel:latest
+    image: md2manoppello/jjodel-standalone:latest
     ports:
       - "3000:80"
     restart: unless-stopped
-    environment:
-      - NGINX_ENVSUBST_TEMPLATE_SUFFIX=.template
 ```
 
-### 2. Start services
 ```bash
 docker-compose up -d
 ```
@@ -105,35 +99,26 @@ docker-compose up -d
 ## 🔧 Troubleshooting
 
 ### npm dependency errors
-If you encounter errors during dependency installation:
-
 ```bash
-# Clean npm cache
-npm cache clean --force
-
-# Remove node_modules and package-lock.json
+# Clean and reinstall
 rm -rf node_modules package-lock.json
+npm i
+```
 
-# Reinstall with correct options
-npm i --legacy-peer-deps
-npm i react-json-view --force --legacy-peer-deps --no-save
+### Node.js version error (Vite 7 requirement)
+If you see `Vite requires Node.js version 20.19+ or 22.12+`:
+```bash
+nvm install 22        # installs latest Node 22
+nvm use 22
+npm start
 ```
 
 ### Build errors
-For build issues:
-
 ```bash
-# Make sure to set environment variables
-export NODE_OPTIONS=--openssl-legacy-provider
-export CI=''
-
-# Try building
-npm run build
+CI='' npm run build
 ```
 
 ### Docker issues
-If Docker won't start:
-
 ```bash
 # Verify Docker is running
 docker --version
@@ -144,96 +129,75 @@ open -a Docker
 
 ## 📚 Available Scripts
 
-In the `package.json` file, these scripts are available:
+From the `frontend/` directory:
 
 ```bash
-# Development
-npm run start          # Start in development mode
-npm run build          # Build for production
-npm run serve          # Serve production build
-
-# Utilities
-npm run ii             # Install dependencies (including react-json-view)
-npm run dev            # Docker compose for development
+npm start          # Start dev server at http://localhost:3000
+npm run build      # Build for production (output: frontend/dist/)
+npm run serve      # Preview production build locally
+npm run ii         # Clean install (npm i)
+npm run dev        # Docker Compose dev environment
 ```
 
 ## 🌐 Automated Deployment
 
-### GitHub Actions
+### GitHub Actions Workflows
 
-The project includes automatic workflows for:
-- **Docker build and push** on push to `master` branch
-- **Azure deploy** on push to `dotnet-backend-integration` branch
+| Workflow | Trigger branch | Target |
+|----------|---------------|--------|
+| `staging_test-jjodel(staging).yml` | `staging` | Azure Web App (staging slot) |
+| `dotnet-backend-integration_test-jjodel.yml` | `dotnet-backend-integration` | Azure Web App (production slot) |
+| `docker-staging.yml` | `staging` | Docker Hub → `jjodel-standalone-staging:latest` |
+| `docker.yml` | `dotnet-backend-integration` | Docker Hub → `jjodel-standalone:latest` |
+| `docker-microserices.yml` | `dotnet-backend-integration` | Docker Hub → `jjodel-microservices:latest` |
 
-### Secrets Configuration
+### Required GitHub Secrets
 
-For automatic deployment, configure these secrets in GitHub:
-- `DOCKER_HUB_USERNAME`
-- `DOCKER_HUB_PASSWORD`
+| Secret | Used by |
+|--------|---------|
+| `DOCKERHUB_USERNAME` | Docker workflows |
+| `DOCKERHUB_TOKEN` | Docker workflows |
+| `AZUREAPPSERVICE_CLIENTID_*` | Azure deploy workflows |
+| `AZUREAPPSERVICE_TENANTID_*` | Azure deploy workflows |
+| `AZUREAPPSERVICE_SUBSCRIPTIONID_*` | Azure deploy workflows |
 
 ## 🔗 Access URLs
 
-- **Main website** https://www.jjodel.io/
-- **Public deployment**: https://app.jjodel.io
-- **Local development**: http://localhost:3000
-- **Local Docker**: http://localhost:3000 (or configured port)
+| Environment | URL |
+|-------------|-----|
+| Main website | https://www.jjodel.io/ |
+| Production app | https://app.jjodel.io |
+| Local dev | http://localhost:3000 |
+| Local Docker | http://localhost:3000 |
 
+## 🎨 Design System
 
-## 🎨 Recent UI/UX Improvements
+The application uses a custom design system documented in [`CLAUDE.md`](CLAUDE.md):
 
-**Latest Update**: January 24, 2026
+- **Color Palette**: Slate base (`#0f172a`) with Cyan accents (`#0ea5e9`)
+- **Typography**: System fonts + IBM Plex Mono for code
+- **Icons**: Bootstrap Icons (`bi bi-*`) exclusively
+- **Spacing**: 8px grid base
 
-The Jjodel frontend has undergone significant UI/UX improvements following a modern design system:
-
-### Design System
-- **Color Palette**: Slate base (#475569) with Cyan accents (#06b6d4)
-- **Typography**: Inter Variable font family with consistent sizing
-- **Spacing**: Systematic 8px-based spacing scale
-- **Components**: Production-ready UI component library
-
-### Key Features
-- ✅ **10 Reusable UI Components** - Button, Input, Select, Textarea, Toggle, Field, FormSection, Label, HelpText, ErrorText
-- ✅ **Design Tokens** - Complete CSS custom properties system
-- ✅ **Accessibility** - WCAG AA compliant with keyboard navigation
-- ✅ **TypeScript** - Fully typed with strict mode
-- ✅ **Responsive** - Mobile-first, adaptive layouts
-
-### Documentation
-For detailed UI/UX documentation, see:
-- [`/docs/handover/HANDOVER-UI-REDESIGN-2026-01-24.md`](/docs/handover/HANDOVER-UI-REDESIGN-2026-01-24.md) - Latest improvements
-- [`/docs/CHANGELOG.md`](/docs/CHANGELOG.md) - Complete change history
-- [`/docs/redesign/implementation-log.md`](/docs/redesign/implementation-log.md) - Technical implementation details
-- [`/CLAUDE.md`](/CLAUDE.md) - Complete design system specification
-
-### Development Methodology
-This project uses **Agentic Conversational Development (ACD)** - a collaborative methodology where humans work with AI agents through iterative dialogue:
-- [`/docs/AGENTIC-CONVERSATIONAL-DEVELOPMENT.md`](/docs/AGENTIC-CONVERSATIONAL-DEVELOPMENT.md) - Full methodology documentation
-
-## 📖 Additional Documentation
-
-- `README.md` - General project information
-- `DOCKER_README.md` - Docker-specific details
-- `frontend/package.json` - Dependencies and scripts configuration
-- `/docs/` - Complete project documentation
+For full design system reference: [`docs/DESIGN-SYSTEM.md`](docs/DESIGN-SYSTEM.md)
 
 ## ⚠️ Important Notes
 
-1. **Node.js Legacy**: The project requires `--openssl-legacy-provider` for compatibility
-2. **React JSON View**: Requires installation with `--force` due to dependency conflicts
-3. **CI Variable**: Set `CI=''` for production builds
-4. **Ports**: Make sure port 3000 is available
+- **Build output**: Vite outputs to `frontend/dist/` (not `build/`)
+- **CI variable**: Set `CI=''` for production builds to suppress warnings-as-errors
+- **Ports**: Make sure port 3000 is available for local development
 
 ## 🆘 Support
 
 If you encounter issues:
-1. Check prerequisites
-2. Verify environment variables
-3. Review error logs
-4. Open an issue in the GitHub repository
+1. Check Node.js version (`node --version`, must be 22.12+)
+2. Delete `node_modules` and run `npm i` again
+3. Open an issue at [github.com/MDEGroup/jjodel](https://github.com/MDEGroup/jjodel/issues)
 
-## ✉️Contact us
+## ✉️ Contact
+
 [Mail](mailto:info@jjodel.io)
+
 ---
 
-**Document version**: 2.0
-**Last updated**: January 24, 2026
+**Last updated**: April 2026

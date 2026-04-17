@@ -64,7 +64,7 @@ export const DevModeProvider: React.FC<{ children: React.ReactNode }> = ({ child
         e.preventDefault();
         setIsDevMode(prev => {
           const newState = !prev;
-          console.log(`Dev Mode: ${newState ? 'ON' : 'OFF'}`);
+          // console.log(`Dev Mode: ${newState ? 'ON' : 'OFF'}`);
           return newState;
         });
       }

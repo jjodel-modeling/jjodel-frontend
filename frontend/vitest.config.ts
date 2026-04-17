@@ -1,5 +1,7 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 import path from 'path';
+
+const __dirname = import.meta.dirname
 
 export default defineConfig({
     resolve: {
@@ -13,4 +15,4 @@ export default defineConfig({
         globals: true,
         include: ['src/**/__tests__/**/*.test.ts'],
     },
-} as any);
+});

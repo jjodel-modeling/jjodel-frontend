@@ -99,7 +99,7 @@ export class JjScriptExecutor {
                     console.warn(`[JjScript] Unresolved dependencies after ${waitResult.waitedMs}ms: ${missing}`);
                     // Don't fail here - let the command handler produce the proper error message
                 } else if (waitResult.waitedMs > 0) {
-                    console.log(`[JjScript] Dependencies resolved after ${waitResult.waitedMs}ms`);
+                    // console.log(`[JjScript] Dependencies resolved after ${waitResult.waitedMs}ms`);
                 }
             }
 

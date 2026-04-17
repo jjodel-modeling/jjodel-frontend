@@ -40,7 +40,7 @@ function ProjectComponent(props: AllProps): JSX.Element {
         (async function() {
             console.error('init_project');
             const project = await ProjectsApi.getOne(id);
-            console.log('project load api response', {project, isOff:U.isOffline()});
+            // console.log('project load api response', {project, isOff:U.isOffline()});
             if (!project) {
                 // U.resetState();
                 // R.navigate('/allProject');

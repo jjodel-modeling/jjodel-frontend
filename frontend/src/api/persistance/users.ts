@@ -28,7 +28,7 @@ class UsersApi {
 
     static async getUserByGUID(guid: string): Promise<DUser|null> {
         let response: GObject = await Api.get(`${U.env('JODEL_PERSISTANCE')}/account/by-id/${guid}`);
-        console.log('getUserByGUID', {guid, response, code:response.code, data:response.data});
+        // console.log('getUserByGUID', {guid, response, code:response.code, data:response.data});
 
         if ((response.code+'')[0] !== '2') {
             let title: string = response.data?.title;
@@ -42,7 +42,7 @@ class UsersApi {
 
     static async updateUserById(updateUserRequest: UpdateUserRequest): Promise<boolean> {
         const response: GObject = await Api.put(`${U.env('JODEL_PERSISTANCE')}/account/`, {...updateUserRequest});
-        console.log('UpdateUserById', {updateUserRequest, code:response.code, data:response.data, response});
+        // console.log('UpdateUserById', {updateUserRequest, code:response.code, data:response.data, response});
 
         if ((response.code+'')[0] !== '2') {
             let title: string = response.data?.title;

@@ -333,7 +333,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     // used in Dummy.t2m()
     protected _convertEcoreToJom_m2(ecore: GObject): GObject{
         let ogKeys = Object.keys(ecore || {});
-        console.log('pre convert ecore', JSON.parse(JSON.stringify(ecore||{})));
+        // console.log('pre convert ecore', JSON.parse(JSON.stringify(ecore||{})));
         // remove xmi inline prefixs (@)
         function todo(key: string) { Log.exDevv('ecoreParser found unsupported key, this is dev\'s fault.', {key, val:ecore[key]}); }
         function del(k: string) { delete ecore[k] }
@@ -394,7 +394,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
             // ecore[k.substring(1)] = ecore[k];
             // delete ecore[k];
         }
-        console.log('post convert ecore', JSON.parse(JSON.stringify(ecore||{})));
+        // console.log('post convert ecore', JSON.parse(JSON.stringify(ecore||{})));
         return ecore || {};
     }
 
@@ -1445,7 +1445,7 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
             if (c.data.className !== 'DAttribute') {
                 if (!model) this.get_model(c);
                 // NB: in newly created elements, model is still null
-                console.log('getClassByName', {ptr});
+                // console.log('getClassByName', {ptr});
                 if (model) ptr = (model.getClassByName(ptr)?.id || ptr);
                 else ptr = Selectors.getByName(DClass, ptr, false, false)?.id as Pointer<DClass>;
                 // if (!ptr) { for( DPointerTargetable.pendingCreation no point, they are not named yet, need to wait action to finish in t2m}
@@ -1864,7 +1864,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
     public addPackage(name?: D["name"], uri?: D["uri"], prefix?: D["prefix"]): LPackage { return this.cannotCall("addPackage"); }
 
     protected get_addPackage(context: Context): this["addPackage"] {
-        console.log("Package.get_addPackage()", {context, thiss:this});
+        // console.log("Package.get_addPackage()", {context, thiss:this});
         return (name?: D["name"], uri?: D["uri"], prefix?: D["prefix"]) => {
             return LPointerTargetable.fromD(DPackage.new(name, uri, prefix, context.data.id, true, DPackage));
         }
@@ -3331,7 +3331,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     }
 
     private _canExtend(c: Context, superclass0: LClass | DClass | Pointer<DClass>, output: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}): boolean {
-        console.log('_canExtends', {c, superclass0, output});
+        // console.log('_canExtends', {c, superclass0, output});
         if (!output) output = {allTargetSuperClasses:[]} as any;
         let superclass: LClass = superclass0 && LPointerTargetable.wrap(superclass0) as any;
         let dsuperclass = superclass?.__raw;
@@ -3430,7 +3430,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         const list = Pointers.fromArr(val, true);
         let ptrs: Pointer<DClass>[] = list.filter(e=>!!e && !c.data.extends.includes(e)) as Pointer<DClass>[];
 
-        console.log('addExtend', {n:this.get_name(c), ptrs, val});
+        // console.log('addExtend', {n:this.get_name(c), ptrs, val});
         let out0 = {reason: '', allTargetSuperClasses: []};
         let outArr: {reason: string, allTargetSuperClasses: LClass[]}[] = ptrs.map(p=>({...out0}));
 
@@ -3462,7 +3462,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         return (superclass: LClass)=>{
             superclass = LPointerTargetable.wrap(superclass) as any;
             if (!superclass) return;
-            console.log('UnsetExtend:', c, superclass);
+            // console.log('UnsetExtend:', c, superclass);
             // todo: when Object is loaded in m3, set him there for easy access.
             //  if (superclass.id === LClass.genericObjectid) { Log.w(true, 'Cannot un-extend "Object"'); return; }
             const thiss: LClass = c.proxyObject;
@@ -3972,14 +3972,14 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
             let containedObjects: Dictionary<Pointer, LObject> = {};
             let removedValues: Pointer[] = [];
             let parentChanges: LObject[] = [];
-            console.log('containment set', {instances: this.get_instances(c)});
+            // console.log('containment set', {instances: this.get_instances(c)});
             for (let lval of this.get_instances(c) as LValue[]) {
                 // todo: in set_values crop the arr to max upperbound
                 let dval = lval.__raw
                 let values = dval.values;
                 let lmodel = lval.model;
                 let dmodel = lmodel.__raw;
-                console.log('containment set vals', {lval, values});
+                // console.log('containment set vals', {lval, values});
                 for (let ptr of values) {
                     if (!Pointers.isPointer(ptr)) continue;
                     if (val && containedObjects[ptr]) { // check if element is found twice in the same collection --> one needs to be removed
@@ -3993,7 +3993,7 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
                     let pointedobj = containedObjects[ptr] = LPointerTargetable.fromPointer(ptr);
                     let newid = (val ? dval.id : dmodel.id) as any;
                     let oldparent = pointedobj.father;
-                    console.log('containment set val update', {ptr, oldparent:oldparent.id, newid, modelid:dmodel.id, valid: dval.id, pointedobj});
+                    // console.log('containment set val update', {ptr, oldparent:oldparent.id, newid, modelid:dmodel.id, valid: dval.id, pointedobj});
                     if (oldparent?.id === newid) continue;
                     pointedobj.father = newid;
                     parentChanges.push(pointedobj);
@@ -4825,7 +4825,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
 
     public addPackage(name?: DPackage["name"], uri?: DPackage["uri"], prefix?: DPackage["prefix"]): LPackage { return this.cannotCall("addPackage"); }
     public get_addPackage(context: Context): ((name?: DPackage["name"], uri?: DPackage["uri"], prefix?: DPackage["prefix"]) => LPackage) {
-        console.log("Model.addPackage()", {context, thiss: this});
+        // console.log("Model.addPackage()", {context, thiss: this});
         return (name?: DPackage["name"], uri?: DPackage["uri"], prefix?: DPackage["prefix"]) => {
             return LPointerTargetable.fromD(DPackage.new(name, uri, prefix, context.data.id, true, DModel));
         }
@@ -5342,7 +5342,7 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         const oldList = c.data.packages;
         const diff = U.arrayDifference(oldList, list);
         if (diff.added.length + diff.removed.length === 0) return true;
-        console.log('setpackages', diff);
+        // console.log('setpackages', diff);
         TRANSACTION(this.get_name(c)+'.packages', ()=>{
             SetFieldAction.new(c.data, 'packages', list, "", true);
             for (let id of diff.added) {
@@ -5845,7 +5845,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
                     default: Log.ee('L'+c.data.className.substring(1)+'.t2m() todo, still unsupported.'); return this;
                     case 'DObject': isPartial = (this as any as LObject).get_partial(c); break;
                 }
-                console.log(c.data.className+'.t2m()  called.', {d: c.data, json});
+                // console.log(c.data.className+'.t2m()  called.', {d: c.data, json});
                 let fout : {featureCreated: LValue[], featureRemoved: Pointer<DValue>[]} = {featureCreated: [], featureRemoved: []};
                 let newFeatures: Dictionary< Pointer | DocString<'feature.name'>, LValue> = {};
                 // START: check if it's necessary to change type
@@ -5855,7 +5855,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
                 /*LValue.getInstantiableClasses(this, c maybe real problem here, json, true, undefined, undefined, false) as any;*/
                 let bestmatch = validMatches[0];
 
-                console.log('L'+c.data.className.substring(1)+'.t2m() change type', {bestmatch, validMatches, d: c.data, json});
+                // console.log('L'+c.data.className.substring(1)+'.t2m() change type', {bestmatch, validMatches, d: c.data, json});
                 if ((c.data as DObject | DValue).instanceof !== bestmatch?.id) {
                     if (bestmatch.instantiable) {
                         /* problema
@@ -5900,7 +5900,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
                         if (v.id) pointers.id = v.id;
                         child = (this as any as LObject).get_addValue(c, true)();//DValue.new3(pointers, ()=>{}, true);
 
-                        console.log(c.data.className+'.t2m() add child value', {k, v});
+                        // console.log(c.data.className+'.t2m() add child value', {k, v});
                         // todo: support to create with correct pointer if the specified key is a pointer.
                     }
                     if (!child) return null;
@@ -5929,10 +5929,10 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
                         if (!(k in c.data) && k in childNames) isChildKey = true;
                         if (!(k in c.data) && k in newFeatures) isChildKey = true;
                     }
-                    console.log(c.data.className+'.t2m() subkey', {isChildKey, k, v, childNames, newFeatures, c});
+                    // console.log(c.data.className+'.t2m() subkey', {isChildKey, k, v, childNames, newFeatures, c});
 
                     if (!isChildKey) {
-                        console.log(c.data.className+'.t2m() set key', {k, k0: prefixed_k, isChildKey, json});
+                        // console.log(c.data.className+'.t2m() set key', {k, k0: prefixed_k, isChildKey, json});
                         let oldV = (c.data as any)[k];
                         switch (k) {
                             case "features":
@@ -6061,7 +6061,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         let asEcoreRoot = (c.proxyObject.isRoot);
         const json: GObject = {};
         if (asEcoreRoot) {
-            console.log("generate object ecore", {c, asEcoreRoot, json});
+            // console.log("generate object ecore", {c, asEcoreRoot, json});
             const lc = c.proxyObject.instanceof;
             json[ECorePackage.xmiversion] = '2.0';
             json[ECorePackage.xmlnsxmi] = 'http://www.omg.org/XMI';
@@ -6070,7 +6070,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         }
 
         let features = deep ? c.proxyObject.features : [];
-        console.log("features", {features});
+        // console.log("features", {features});
 
         // keep sub-elements last
         for (let f of features) {
@@ -6146,11 +6146,11 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         let idmap: Dictionary<string, LAttribute | LReference> = {};
         for (let a of attrs) { idmap[a.id] = a; }
         for (let a of refs) { idmap[a.id] = a; }
-        console.log({idmap, values, data: context.data, l:context.proxyObject});
+        // console.log({idmap, values, data: context.data, l:context.proxyObject});
         // damiano: todo quando viene cancellato una feature il puntatore in features e values rimane. use pointedby's
         // then remove attributes and references that are already instantiated in the object
         for (let v of values) { if(v && v.__raw.instanceof) delete idmap[v.__raw.instanceof]; }
-        console.log("forceconformity", {attrs, refs, valuesPre: values.map(v => v && v.__raw.instanceof), toadd:idmap});
+        // console.log("forceconformity", {attrs, refs, valuesPre: values.map(v => v && v.__raw.instanceof), toadd:idmap});
         for (let id in idmap) {
             // let l = idmap[id];
             let v = context.proxyObject.addValue(undefined, id, [], true);
@@ -6187,7 +6187,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         return () => "@//" + this.get_fatherList(context).map( (f: LModelElement | LObject | LValue) => {
             if (f.className === DObject.cname) { lastvisited = (f as LObject).id; return ''; }
             if (f.className === DModel.cname) { return ''; }
-            console.log("get_ecorepointer", f, f.__raw, lastvisited);
+            // console.log("get_ecorepointer", f, f.__raw, lastvisited);
             return (f as LValue).name + "." + ((f as LValue).__raw.values.indexOf(lastvisited));
         }).filter(v=>!!v).join("@/");
     }
@@ -6380,7 +6380,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     public get_t2m(c: Context): LValue['t2m'] {
         return (json: GObject, out: {objectCreated: LObject[]} = {objectCreated: []}): this => {
             json = this._convertEcoreToJom_m1(c, json);
-            console.log('L'+c.data.className.substring(1)+'.t2m() called.', {d:c.data, j:json});
+            // console.log('L'+c.data.className.substring(1)+'.t2m() called.', {d:c.data, j:json});
 
             let json_4val!: GObject[];
             if (!json) { json = []; Log.eDevv('t2m deletion still unsupported'); return this; }
@@ -6400,7 +6400,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             if (json_4val === null || json_4val === undefined) json_4val = [];
             else if (!Array.isArray(json_4val)) json_4val = [json_4val];
 
-            console.log('isvalueroot',  {isValueRoot, jcn:json.className, vin: "values" in json, json })
+            // console.log('isvalueroot',  {isValueRoot, jcn:json.className, vin: "values" in json, json })
             // let childNames = this.get_childNames(c);
 
             let m1: LModel = null as any;
@@ -6435,7 +6435,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             const validSubTypesMap: Dictionary<Pointer, LClassifier> = {};
             for (let l of validSubTypes) validSubTypesMap[l.id] = l;
 
-            console.log('L'+c.data.className.substring(1)+'.t2m() types found.', {d:c.data, json, json_4val, validSubTypesMap, includeEnum, type});
+            // console.log('L'+c.data.className.substring(1)+'.t2m() types found.', {d:c.data, json, json_4val, validSubTypesMap, includeEnum, type});
 
             // START: actually set the values
             let i: number = -1;
@@ -6470,7 +6470,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                         if (!child2) {
                             // create a subelement or update an existing one
                             let d = DObject.new3({id: v.id || undefined, father: c.data.id as Pointer<DValue>, 'instanceof': undefined}, ()=>{}, DValue);
-                            console.log('L'+c.data.className.substring(1)+'.t2m() sub-object NEW ' + d.name, {gn: json.name || json.title, json, d, v});
+                            // console.log('L'+c.data.className.substring(1)+'.t2m() sub-object NEW ' + d.name, {gn: json.name || json.title, json, d, v});
                             child2 = L.from(d); // (this as LValue).get_addObject(c)({});
                             if (!child2) continue;
                             out.objectCreated.push(child2);
@@ -6486,7 +6486,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                         */
                     }
                     else { uniformedValues.push(v as any as PrimitiveType); }
-                    console.log('L'+c.data.className.substring(1)+'.t2m() sub-object t2m', {child2, v});
+                    // console.log('L'+c.data.className.substring(1)+'.t2m() sub-object t2m', {child2, v});
 
                     if (child2) {
                         // done in setvalues if (this.get_isContainment(c) && child2.__raw.father !== c.data.id) child2.father = c.data.id as any;
@@ -6494,7 +6494,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                     }
                 }
                 if (this.get_instanceof(c)?.name === 'expression') console.error('set val', {uniformedValues, json, validSubTypesMap, out, oldValues})
-                console.log('t2m setvalues',  {uniformedValues, c, json, json_4val});
+                // console.log('t2m setvalues',  {uniformedValues, c, json, json_4val});
                 this.set_values(uniformedValues, c);
                 // set other properties
 
@@ -6622,7 +6622,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 let childNameArr = score.class.childNames;
                 score.namesMap = U.objectFromArrayValues(childNameArr);
                 let diff = Uobj.objdiff(score.namesMap, schema);
-                console.log( "objDiff", {schema, names:score.namesMap, data:score.class});
+                // console.log( "objDiff", {schema, names:score.namesMap, data:score.class});
                 score.id = ptr;
                 score.excessFeatures = diff.removed;
                 score.missingFeatures = diff.added;
@@ -6779,7 +6779,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             }
             // both dmodel.objects nad dvalue.values are updated by the Constructors by passing father parameter.
             // phase 3: create object according to schema (or shapeless) and update parent container collection.
-            console.log("Object.new3", {constructorPointers});
+            // console.log("Object.new3", {constructorPointers});
             if (!constructorPointers.name && constructorPointers.instanceof){
                 let meta = L.from(constructorPointers.instanceof) as LClass;
                 if (meta.isSingleton){ constructorPointers.name = meta.name; }
@@ -6787,7 +6787,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             TRANSACTION(this.get_name(c as any)+'.addObject()', () => {
                 let dobj = DObject.new3(constructorPointers, () => { }, isDModel?DModel:DValue, true);
                 if (isReference && !isContainment){
-                    console.log("set values in addobject", {dobj, c, d: c.data, vals: (c.data as any).values, m2v: c.proxyObject.instanceof});
+                    // console.log("set values in addobject", {dobj, c, d: c.data, vals: (c.data as any).values, m2v: c.proxyObject.instanceof});
                     // if is ref containment, object.father is set to value, which also appends the object to this.values
                     // if it's model, object.father = model, and it goes in model.objects and not in values.
                     // if it's non-containment value, it goes in model but also appended to this.values
@@ -7274,7 +7274,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                         if (info.instanceof && info.type && (lvale.father.id !== info.type.id)) return {success: false, reason: "target is not of correct literal type"};
                         // no need to do checks / other sideeffects other than pointedBy i think.
                     }
-                    console.log('set_value_' + index, {isContainment: info.isContainment, isRef: lval.className === DObject.cname, val})
+                    // console.log('set_value_' + index, {isContainment: info.isContainment, isRef: lval.className === DObject.cname, val})
                     // is ref
                     if (lval.className === DObject.cname){
 

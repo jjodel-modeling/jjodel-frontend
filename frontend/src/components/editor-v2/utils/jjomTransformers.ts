@@ -108,7 +108,7 @@ function classVertexToRFNode(vertex: any): Node<ClassNodeData> {
     const x = typeof raw.x === 'number' ? raw.x : 0;
     const y = typeof raw.y === 'number' ? raw.y : 0;
 
-    console.log('[DEBUG classVertexToRFNode] x:', x, 'y:', y, 'raw:', raw?.x, raw?.y, 'id:', vertex.id);
+    // console.log('[DEBUG classVertexToRFNode] x:', x, 'y:', y, 'raw:', raw?.x, raw?.y, 'id:', vertex.id);
 
 
 
@@ -297,6 +297,7 @@ function objectVertexToRFNode(vertex: any): Node<ObjectNodeData> {
  */
 export function jjomVertexToRFNode(vertex: any): Node | null {
     const model = vertex?.model;
+
     if (!model) return null;
 
     const className = model.className ?? model.__raw?.className;

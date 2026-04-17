@@ -48,7 +48,7 @@ class AuthApi {
         try {
             const decoded = jwtDecode<any>(token);
             claims = new JwtClaims();
-            console.log('claims debug', {decoded, JwtPayloadKey, claims})
+            // console.log('claims debug', {decoded, JwtPayloadKey, claims})
 
             claims.id = decoded[JwtPayloadKey.Id];
             claims.nickname = decoded[JwtPayloadKey.Nickname];

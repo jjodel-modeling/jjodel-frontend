@@ -371,7 +371,7 @@ export class XMIService {
             delete modelJson['xmi:Documentation'];
             delete modelJson['Documentation'];
 
-            console.log('XMI to JSON:', modelJson);
+            // console.log('XMI to JSON:', modelJson);
 
             // If we have an imported metamodel, use it
             // Otherwise try to find matching metamodel by namespace

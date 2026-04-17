@@ -49,7 +49,7 @@ export class Debug {
         for (let key in windoww.GraphElementComponent.all) {
             windoww.GraphElementComponent.all[key].forceUpdate();
         }
-        console.log(windoww.GraphElementComponent.all);
+        // console.log(windoww.GraphElementComponent.all);
     }
 
     // 16s 50 classi vuote
@@ -101,10 +101,10 @@ export class Debug {
         if (!callbacks.checkDelayMin) callbacks.checkDelayMin = 300;
         if (!callbacks.additionalDelayMax) callbacks.additionalDelayMax = 2000;
         if (!callbacks.onStuck) callbacks.onStuck = (time:number, start: Date, end:Date, $complete: number) => {
-            console.log("Benchmarked operation stuck at same completion% for: " + callbacks.maxStuckTime/1000+" s. \n" +
+             console.log("Benchmarked operation stuck at same completion% for: " + callbacks.maxStuckTime/1000+" s. \n" +
                 "After " + time/100 + "s total time passed and " + $complete*100 + "% of the task was completed. \nBenchmark aborted."); }
         if (!callbacks.onFinish) callbacks.onFinish = (time:number, start: Date, end:Date) => {
-            console.log("Benchmarked operation completed after: " + time/1000 + " s."); }
+             console.log("Benchmarked operation completed after: " + time/1000 + " s."); }
 
         windoww.Log.exDev(!callbacks.times, ".times is a mandatory option");
         windoww.Log.exDev(!callbacks.checkCompletionFunction, ".checkCompletionFunction is a mandatory option");

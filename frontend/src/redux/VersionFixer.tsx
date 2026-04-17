@@ -31,7 +31,7 @@ export class VersionFixer {
         console.clear();
         let i: number  = 1;
 
-        console.log(`
+        /* console.log(`
 Before deploying a new version you should:
 
 ${i++}) Update changelog
@@ -39,7 +39,7 @@ ${i++}) Update changelog
 ${i++}) build a new empty versioning function with signature like: private ['2.1 -> 2.3'](s: DState): DState
         fill this function in a way that translates from the state shape of the old version, to the state shape of the new one
 
-`);
+`); */
 
 
 
@@ -112,12 +112,12 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         while (currVer !== VersionFixer.highestVersion) {
             Log.exDev(!VersionFixer.versionAdapters[currVer], "missing version adapter from \""+ currVer+"\", please notify the developers.",
                 {adapers: VersionFixer.versionAdapters, curr: VersionFixer.versionAdapters[currVer]});
-            console.log('versionfixer update pre', {prevVer, currVer, entry: VersionFixer.versionAdapters[currVer]});
+            // console.log('versionfixer update pre', {prevVer, currVer, entry: VersionFixer.versionAdapters[currVer]});
             let {n, f} = VersionFixer.versionAdapters[currVer];
             s.version.conversionList = [...s.version.conversionList, currVer];
             s = f.call(singleton, s);
             currVer = s.version.n = n || 0;
-            console.log('versionfixer update post', {prevVer, currVer, n});
+            // console.log('versionfixer update post', {prevVer, currVer, n});
             //Log.exDev(currVer !== n, "version updater updated to incorrect target versionn \""+prevVer+"\" -> \""+n+"\" , please notify the developers.");
             Log.exDev(currVer <= prevVer, "version updater found loop at version \""+currVer+"\", please notify the developers.");
             prevVer = currVer;
@@ -172,7 +172,7 @@ everytime you put hands into a D-Object shape or valid values, you should docume
 
 
             if (v.id !== ptr || Object.keys(v).length < 5 || deleteDState && v.className === 'DState') { // totally euristic lowerbound to detect semi-deleted objects or ill-created
-                console.log('autocorrect: removed incomplete object ', {d:s.idlookup[ptr], cn:s.idlookup[ptr]?.className, ptr})
+                // console.log('autocorrect: removed incomplete object ', {d:s.idlookup[ptr], cn:s.idlookup[ptr]?.className, ptr})
                 delete s.idlookup[ptr];
             }
             // for nulls and undefined is handled below, handled also in do loop but it won't detect missing "in" properties. while this does.
@@ -209,7 +209,7 @@ everytime you put hands into a D-Object shape or valid values, you should docume
                 let isPointer = Pointers.isPointer(obj);
                 let isValidPointer = isPointer && s.idlookup[obj]?.id === obj;
                 let id: Pointer<any> = fullpath?.[1];
-                if (id === 'Pointer1745981301328_USER_504') console.log('deepreplace 0', {isPointer, isValidPointer, key, obj, fullpath, removedPointers, removedElements});
+                // if (id === 'Pointer1745981301328_USER_504') console.log('deepreplace 0', {isPointer, isValidPointer, key, obj, fullpath, removedPointers, removedElements});
                 if (isPointer && isValidPointer) return obj;
                 // if: undef or invalid pointer implicates full object removal
                 // NB: critical pointers missing are also handled above, but the above part is including also missing properties ("in") while this part doesn't
@@ -220,7 +220,7 @@ everytime you put hands into a D-Object shape or valid values, you should docume
                     || (key === 'start' && fullpath.length === 3))
                     //|| key === 'viewpoint' && fullpath.length === 3
                 ) {
-                    if (key === 'father' && id === 'Pointer1745981301328_USER_504') console.log('deepreplace 1', {});
+                    // if (key === 'father' && id === 'Pointer1745981301328_USER_504') console.log('deepreplace 1', {});
 
                     if (!Pointers.isPointer(id)) { Log.eDevv('found mandatory key in an unexpected position', {fullpath, final_id:obj, s}); return obj; }
                     let d: GObject = s.idlookup[id];
@@ -228,7 +228,7 @@ everytime you put hands into a D-Object shape or valid values, you should docume
                     removedElements.push({d, d_id: id, final_id:obj, key: key as any, fullpath});
                     if (!(id in s.idlookup)) return undefined;
                     hasDeleted = true;
-                    if (key === 'father' && id === 'Pointer1745981301328_USER_504') console.log('deepreplace 2', {hasDeleted});
+                    // if (key === 'father' && id === 'Pointer1745981301328_USER_504') console.log('deepreplace 2', {hasDeleted});
                     return undefined;
                 }
 
@@ -632,7 +632,7 @@ public static registerNewVersion(): boolean {
     let updatedVersionSignature = this.update(prevVersionSignature);
     let versionDiff: GObject = VersionFixer.checkVersionChanges_inner(updatedVersionSignature, newVersionSignature);
     if (Object.keys(versionDiff).length !== 0) {
-        console.log("failed to save new version, the conversion function is not updating state properly.",
+        // console.log("failed to save new version, the conversion function is not updating state properly.",
             {versionDiff, prevVersionSignature, newVersionSignature, updatedVersionSignature});
         return false;
     }
