@@ -585,6 +585,100 @@ parent != null and parent?.name.isNotEmpty   -- null-safe via ?. operator
 \end{itemize}
 
 
+\subsection{JjEL and the JjOM: Three-Level Abstraction}\label{sec:jjel-jjom}
+
+\jjel{} expressions do not operate on raw data structures. They operate on the \emph{Jjodel Object Model} (JjOM), the in-memory representation of all modeling artifacts in a Jjodel project. The JjOM is organized into three submodels: \emph{Data} (abstract syntax: classes, attributes, references, instances), \emph{Node} (layout: position, dimensions, edge routing), and \emph{View} (presentation: viewpoints, templates, styles).
+
+The relationship between \jjel{} and the JjOM is structured into three access levels, from highest abstraction to lowest.
+
+\subsubsection{Level 1: Built-in Collections}
+
+The primary interface for \jjel{} users. These collections are pre-populated in the evaluation context and provide direct access to the metamodel and model:
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Expression} & \textbf{Returns} \\
+\midrule
+\texttt{classes} & All classes in the current metamodel \\
+\texttt{attributes} & All attributes in the current metamodel \\
+\texttt{references} & All references in the current metamodel \\
+\texttt{packages} & All packages in the current metamodel \\
+\texttt{enumerations} & All enumerations in the current metamodel \\
+\texttt{instances} & All object instances in the current model \\
+\texttt{Person} & The class named \texttt{Person} (resolved by name) \\
+\texttt{Person.instances} & Direct instances of \texttt{Person} \\
+\texttt{Person.allInstances} & All instances, including subclass instances \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Class names are registered as first-level variables in the evaluation context. Writing \texttt{State} resolves to the class object, enabling natural navigation: \texttt{State.attributes}, \texttt{State.isAbstract}, \texttt{State.extends}.
+
+\subsubsection{Level 2: Context Variables}
+
+Two context variables provide access to the currently selected element:
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Variable} & \textbf{Submodel} & \textbf{Access} \\
+\midrule
+\texttt{data} & Data & Abstract syntax of the selected element \\
+\texttt{node} & Node & Layout information of the selected element \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\texttt{data} provides access to user-defined features (attributes and references defined in the metamodel) and built-in JjOM properties (\texttt{className}, \texttt{id}, \texttt{instanceof}). \texttt{node} provides access to spatial properties (\texttt{x}, \texttt{y}, \texttt{width}, \texttt{height}).
+
+In the Console, \texttt{data} acts as an escape hatch for explicit navigation; most queries use Level~1 collections instead.
+
+\subsubsection{Level 3: Raw JjOM API}
+
+The full JjOM API (D-layer data classes and L-layer proxy classes) is available for advanced use cases such as viewpoint templates and event handlers. This level uses the \texttt{\$} prefix to distinguish user-defined features from built-in properties:
+
+\begin{lstlisting}[style=jjel,numbers=none]
+data.$name               -- user-defined attribute (JSX templates)
+data.$ownedAttributes    -- user-defined reference (JSX templates)
+data.instanceOf          -- built-in JjOM property
+\end{lstlisting}
+
+The \texttt{\$} prefix is required only at Level~3 (JSX templates and raw JjOM access). At Levels~1 and~2, \jjel{} resolves feature names transparently.
+
+\subsubsection{Feature Resolution Without \texttt{\$}}
+
+In \jjel{} expressions, user-defined features are accessed directly by name, without any prefix:
+
+\begin{lstlisting}[style=jjel,numbers=none]
+p.name                   -- user-defined attribute, returns "Alice"
+p.age                    -- user-defined attribute, returns 25
+p.sex                    -- enumeration, returns "Male" (not DEnumLiteral)
+p.instanceof             -- built-in JjOM property, returns Person
+\end{lstlisting}
+
+The evaluator applies a \emph{user-feature-first} resolution strategy: when a property name is accessed on a model instance, the evaluator first searches user-defined features (attributes and references from the metamodel), then falls back to built-in JjOM properties. This eliminates the \texttt{\$} prefix for the vast majority of expressions.
+
+\paragraph{Disambiguation.} In the rare case where a user-defined feature shares a name with a built-in property (e.g., a metamodel attribute named \texttt{id}), the user feature takes priority. The built-in can be accessed explicitly via \texttt{data.id}.
+
+\subsubsection{Enum Value Collapsing}
+
+Enumerations are collapsed to their string representation at the \jjel{} level:
+
+\begin{lstlisting}[style=jjel,numbers=none]
+p.sex                    -- returns "Male" (string)
+p.sex == "Male"          -- returns true
+\end{lstlisting}
+
+At the JjOM level, the same access would require \texttt{p.\$sex.value.name}. \jjel{} collapses the \texttt{DValue} $\to$ \texttt{DEnumLiteral} $\to$ \texttt{.name} chain into a single property access. The user never interacts with the internal representation.
+
+\subsubsection{Design Rationale}
+
+The three-level architecture serves a precise purpose. Level~1 covers 90\% of user queries with zero boilerplate: the user writes \texttt{forall c in classes : c.name}, not \texttt{metamodel.allClasses.map(c => c.getName())}. Level~2 provides explicit control when needed (e.g., accessing layout properties via \texttt{node.x}). Level~3 is reserved for template authors and internal development, where the \texttt{\$} prefix provides necessary disambiguation in the JSX/React context.
+
+This layering ensures that \jjel{} remains a high-level expression language. If a user finds themselves writing \texttt{model.allSubObjects.filter(o => o.instanceof.name == "Person")}, the correct response is to add a Level~1 built-in, not to expose the raw API.
+
+
 % ============================================
 % 3. JjTL
 % ============================================

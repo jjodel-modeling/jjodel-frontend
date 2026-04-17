@@ -154,8 +154,24 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     const viewpoints = project.viewpoints || [];
     const tags = project.tagNames || [];
 
-    // Transformations state (in-memory for now)
-    const [transformations, setTransformations] = useState<JjtlTransformation[]>([]);
+    // Transformations: hydrated from persisted DProject.transformations,
+    // synced back to Redux on every change so SaveManager picks them up.
+    // TODO: include documentation in project save
+    const [transformations, setTransformationsRaw] = useState<JjtlTransformation[]>(
+        () => ((project as any).transformations as JjtlTransformation[]) || []
+    );
+    const setTransformations = useCallback(
+        (updater: React.SetStateAction<JjtlTransformation[]>) => {
+            setTransformationsRaw(prev => {
+                const next = typeof updater === 'function'
+                    ? (updater as (p: JjtlTransformation[]) => JjtlTransformation[])(prev)
+                    : updater;
+                SetFieldAction.new(project.id, 'transformations', next, '', false);
+                return next;
+            });
+        },
+        [project.id]
+    );
     const [showNewTransformationDialog, setShowNewTransformationDialog] = useState(false);
     const [showNewViewpointDialog, setShowNewViewpointDialog] = useState(false);
 
@@ -1051,6 +1067,14 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         // Execution guard to prevent double-firing
         let isExecutingTransformation = false;
 
+        // Wrap Pointer IDs as { __ref: id } so the executor can distinguish
+        // reference values from plain strings during cross-type resolution.
+        // Jjodel Pointer IDs follow the pattern "Pointer<digits>_<context>_<digits>".
+        const wrapIfRef = (val: any): any => {
+            if (typeof val === 'string' && val.startsWith('Pointer')) return { __ref: val };
+            return val;
+        };
+
         // Callback when transformation is executed
         // Returns ExecutionResult so JjtlDevelopmentEnv can update trace display
         const handleExecuteTransformation = async (
@@ -1175,10 +1199,24 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     };
                     if (obj.features) {
                         for (const feature of obj.features) {
-                            if (feature.name) {
-                                result[feature.name] = feature.values?.length > 0
-                                    ? (feature.values.length === 1 ? feature.values[0] : feature.values)
-                                    : feature.value;
+                            if (!feature.name) continue;
+                            // Read from the raw DValue rather than the L-layer getter.
+                            // L-layer `.values` resolves Pointer IDs to LObject proxies
+                            // which have circular back-refs (e.g., LClass.attributes[0].owner)
+                            // that freeze the thread during deep copy.
+                            // Raw values are either primitives (for attributes) or Pointer
+                            // ID strings (for references).
+                            const rawVals: any[] = (() => {
+                                const r = (feature as any).__raw?.values;
+                                return Array.isArray(r) ? r : [];
+                            })();
+                            const meaningful = rawVals.filter((v: any) => v != null && v !== '');
+                            if (meaningful.length === 0) {
+                                result[feature.name] = null;
+                            } else if (meaningful.length === 1) {
+                                result[feature.name] = wrapIfRef(meaningful[0]);
+                            } else {
+                                result[feature.name] = meaningful.map(wrapIfRef);
                             }
                         }
                     }
@@ -1193,12 +1231,9 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     return result;
                 });
 
-                // Do not JSON-serialize sourceModelData: feature values can still hold
-                // L-layer proxies (e.g. feature.values[0] when values reference another
-                // DObject), and JSON.stringify walks proxy ownKeys recursively — with
-                // circular back-refs and a per-access cost it freezes the main thread.
-                // executor.execute() runs its own safeDeepCopy (Reflect.ownKeys based)
-                // before touching the data, so pass-through is safe.
+                // Source data is now safe to pass directly: reference values
+                // are wrapped as { __ref: PointerId } (no L-layer proxies),
+                // and attribute values are primitives from __raw.values.
                 console.log('[ProjectEditor] sourceModelData built, handing to executor');
                 console.time('[TIMING] JSON deep copy (now pass-through)');
                 const sourceModelDataCopy = sourceModelData;
@@ -1262,6 +1297,23 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     className: string;
                     attributes: Record<string, any>;
                 }> = [];
+
+                // Pending references: { __ref_result: true, targets: [...] } values
+                // from executor cross-type resolution. Written via LValue.setValueAtPosition
+                // with isPtr: true (same API as the Properties panel dropdown).
+                const pendingReferenceSets: Array<{
+                    objectName: string;
+                    references: Record<string, { targets: any[] }>;
+                }> = [];
+
+                // Map __sourceId → objectName: the reliable bridge between executor
+                // target instances and the DObjects created from them.
+                // Each executor target has __sourceId (the Pointer ID of the source
+                // element that produced it). We key by __sourceId so STEP 8b can
+                // resolve reference targets without depending on JS object identity
+                // (which breaks across deep copies) or on .name (which may not be
+                // set if the transformation has no `name := name` binding).
+                const sourceIdToObjectName = new Map<string, string>();
 
                 // Collect object IDs + positions for DVertex creation AFTER the TRANSACTION
                 // (DVertex.new has its own internal TRANSACTION — nesting causes coordinates to be lost)
@@ -1358,6 +1410,11 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                 console.timeEnd(objTimingLabel);
                                 console.log(`[ProjectEditor] Created instance:`, { name: objectName, class: className });
 
+                                // Map __sourceId → objectName for reference wiring in STEP 8b
+                                if (instanceData.__sourceId) {
+                                    sourceIdToObjectName.set(String(instanceData.__sourceId), objectName);
+                                }
+
                                 // Collect for DVertex creation AFTER the TRANSACTION.
                                 // DVertex.new has its own internal TRANSACTION — nesting
                                 // causes coordinates to be lost (all positions become 0,0).
@@ -1391,11 +1448,25 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                     console.log(`[ProjectEditor] Queued attributes for "${objectName}":`, attrs);
                                 }
 
+                                // Collect reference values (marked by executor with __ref_result)
+                                const refs: Record<string, { targets: any[] }> = {};
+                                for (const [key, val] of Object.entries(instanceData)) {
+                                    if (val && typeof val === 'object' && (val as any).__ref_result) {
+                                        refs[key] = val as { targets: any[] };
+                                    }
+                                }
+                                if (Object.keys(refs).length > 0) {
+                                    pendingReferenceSets.push({ objectName, references: refs });
+                                    console.log(`[ProjectEditor] Queued references for "${objectName}":`,
+                                        Object.keys(refs).map(k => `${k}(${refs[k].targets.length})`));
+                                }
+
                                 instancesCreated++;
                             }
                         });
                     }
                     console.timeEnd('[TIMING] DObject creation loop');
+                    console.log('[ProjectEditor] sourceId→name map:', Object.fromEntries(sourceIdToObjectName));
 
                     console.log(`[ProjectEditor] Total instances created: ${instancesCreated}`);
                 });
@@ -1504,6 +1575,62 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             }
 
                             console.log(`[ProjectEditor] ✅ Attribute setting complete`);
+
+                            // STEP 8b: Set references — same LModel proxy, same objects list.
+                            // Uses setValueAtPosition with isPtr:true (same API the Properties
+                            // panel dropdown uses in Info.tsx changeDValue).
+                            //
+                            // Lookup strategy: each executor target has __sourceId (the Pointer
+                            // ID of the source element that produced it). sourceIdToObjectName
+                            // maps __sourceId → the DObject name assigned during creation.
+                            // We then find the real DObject via LModel proxy by name to get
+                            // the real Pointer ID.
+                            if (pendingReferenceSets.length > 0) {
+                                console.log(`[ProjectEditor] STEP 8b: Setting references for ${pendingReferenceSets.length} objects`);
+                                for (const pending of pendingReferenceSets) {
+                                    const lObject = objects.find((o: LObject) => o.name === pending.objectName);
+                                    if (!lObject) {
+                                        console.warn(`[ProjectEditor] Ref: Object "${pending.objectName}" not found`);
+                                        continue;
+                                    }
+                                    for (const [refName, refData] of Object.entries(pending.references)) {
+                                        try {
+                                            const feature = (lObject as any)['$' + refName];
+                                            if (!feature) {
+                                                console.warn(`[ProjectEditor] Ref: Feature "$${refName}" not found on "${pending.objectName}"`);
+                                                continue;
+                                            }
+                                            const targets = refData.targets || [];
+                                            for (let ri = 0; ri < targets.length; ri++) {
+                                                const target = targets[ri];
+                                                const sourceId = target?.__sourceId;
+                                                const targetName = sourceId
+                                                    ? sourceIdToObjectName.get(String(sourceId))
+                                                    : target?.name;
+                                                if (!targetName) {
+                                                    if (sourceId) {
+                                                        console.warn(`[ProjectEditor] Ref: sourceId not found in map: ${sourceId} (for ${pending.objectName}.${refName}[${ri}])`);
+                                                    } else {
+                                                        console.warn(`[ProjectEditor] Ref: target has no __sourceId or name for ${pending.objectName}.${refName}[${ri}]`);
+                                                    }
+                                                    continue;
+                                                }
+                                                const targetLObj = objects.find((o: LObject) => o.name === targetName);
+                                                if (!targetLObj) {
+                                                    console.warn(`[ProjectEditor] Ref: Target "${targetName}" not found in model for ${pending.objectName}.${refName}[${ri}]`);
+                                                    continue;
+                                                }
+                                                const targetRealId = targetLObj.id;
+                                                feature.setValueAtPosition(ri, targetRealId, { isPtr: true });
+                                                console.log(`[ProjectEditor] ✅ Ref: ${pending.objectName}.${refName}[${ri}] → ${targetName} (${targetRealId})`);
+                                            }
+                                        } catch (e) {
+                                            console.error(`[ProjectEditor] Error setting ref ${refName} on "${pending.objectName}":`, e);
+                                        }
+                                    }
+                                }
+                                console.log(`[ProjectEditor] ✅ Reference setting complete`);
+                            }
                         } catch (e) {
                             console.error(`[ProjectEditor] Error in STEP 8:`, e);
                         }

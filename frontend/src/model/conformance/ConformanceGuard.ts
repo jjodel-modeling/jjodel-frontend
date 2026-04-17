@@ -37,20 +37,45 @@ export function checkLinkCreation(
         const ub = ref.upperBound ?? 1;
         if (ub < 0) return { allowed: true }; // -1 = unbounded
 
-        // Count existing links for this reference
+        // Count existing links for this reference.
+        // We read the raw DValue.values directly (bypassing the LValue.values getter,
+        // which can pad with `undefined` placeholders when length < lowerBound — see
+        // LModelElement get_values around line 6989) and filter out empty entries.
+        // Without this, the count can be artificially inflated.
         const features: LValue[] = sourceObj.features || [];
         let currentCount = 0;
+        // [BUG-DIAG-GUARD] inspect every feature considered in the count
+        const featureTrace: any[] = [];
+        const isMeaningful = (v: any): boolean => v !== null && v !== undefined && v !== '';
         for (const feat of features) {
             if (!feat) continue;
             const metaFeat = feat.instanceof as LStructuralFeature | undefined;
-            if (metaFeat?.id !== ref.id) continue;
-            const vals = feat.values;
-            if (Array.isArray(vals)) {
-                currentCount += vals.length;
-            } else if (feat.value !== null && feat.value !== undefined) {
-                currentCount++;
-            }
+            const matches = metaFeat?.id === ref.id;
+            const rawValuesUnknown: any = (feat as any).__raw?.values;
+            const rawValues: any[] = Array.isArray(rawValuesUnknown) ? rawValuesUnknown : [];
+            const meaningfulCount = rawValues.filter(isMeaningful).length;
+            featureTrace.push({
+                featId: (feat as any).id,
+                metaFeatId: metaFeat?.id,
+                metaFeatName: metaFeat?.name,
+                matchesRef: matches,
+                rawValuesLen: rawValues.length,
+                rawValues,
+                meaningfulCount,
+            });
+            if (!matches) continue;
+            currentCount += meaningfulCount;
         }
+        // eslint-disable-next-line no-console
+        console.log('[BUG-DIAG-GUARD] checkLinkCreation', {
+            sourceObjectId,
+            sourceObjectName: sourceObj.name,
+            referenceName: associationName,
+            referenceId: ref.id,
+            upperBound: ub,
+            currentCount,
+            featureTrace,
+        });
 
         if (currentCount >= ub) {
             return {

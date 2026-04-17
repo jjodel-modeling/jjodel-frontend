@@ -236,7 +236,7 @@ describe('toJjelAst — FunctionCall to MethodCall', () => {
         expect((result as any).args[0].type).toBe('Lambda');
     });
 
-    test('standalone fn() → Identifier (for builtin handling)', () => {
+    test('standalone fn() → FunctionCall (builtin/bound lookup)', () => {
         const expr: FunctionCallAST = {
             type: 'FunctionCall',
             callee: id('resolve'),
@@ -244,10 +244,10 @@ describe('toJjelAst — FunctionCall to MethodCall', () => {
             location: LOC,
         };
         const result = toJjelAst(expr);
-        // Standalone calls can't be mapped to MethodCall, so we get Identifier
-        // The executor handles builtin calls before delegating to the bridge
-        expect(result.type).toBe('Identifier');
+        // JjEL now has a standalone FunctionCall node for builtin/bound lookup.
+        expect(result.type).toBe('FunctionCall');
         expect((result as any).name).toBe('resolve');
+        expect((result as any).args).toHaveLength(1);
     });
 });
 

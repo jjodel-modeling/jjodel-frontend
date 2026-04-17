@@ -2935,6 +2935,7 @@ export class DProject extends DPointerTargetable {
     state!: string;
     version!: number;
     tagNames!: string[];
+    transformations: any[] = [];
 
     public static new(type: DProject['type'], name?: string, state?: DProject['state'],
                       m2?: DProject['metamodels'], m1?: DProject['models'], id?: DProject['id'], otherProjects?:LProject[]): DProject {
@@ -3007,6 +3008,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     state!: string;
     version!: number;
     tagNames!: string[];
+    transformations!: any[];
 
     /* DATA */
     readonly packages!: LPackage[];

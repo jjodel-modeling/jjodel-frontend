@@ -323,6 +323,15 @@ export class JjtlParser {
             };
         }
 
+        // Helpful error: user wrote `=` instead of `:=` for the attribute binding.
+        // Catch this before the legacy path so the diagnostic points at the wrong
+        // operator and not at a missing `->`.
+        if (this.check(TokenType.IDENTIFIER) && this.peekNext()?.type === TokenType.EQUALS) {
+            this.advance(); // consume the identifier
+            const equalsToken = this.peek(); // the '=' token
+            throw this.error(equalsToken, "Use ':=' for attribute binding, not '='");
+        }
+
         // Legacy syntax: sourceAttr -> targetAttr [: conversion]
         // DEBUG: log when falling through to legacy path
         console.warn(`[JjtlParser] LEGACY PATH: token=${this.peek().type}:${JSON.stringify(this.peek().value)}, peekNext=${this.peekNext()?.type}:${JSON.stringify(this.peekNext()?.value)}`);

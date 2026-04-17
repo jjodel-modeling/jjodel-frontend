@@ -13,6 +13,7 @@ import {
     NullSafeMemberAccessExpr,
     MethodCallExpr,
     NullSafeMethodCallExpr,
+    FunctionCallExpr,
     IfThenElseExpr,
     NullCoalesceExpr,
     IsTypeExpr,
@@ -135,6 +136,8 @@ export class JjelEvaluator {
                 return this.evaluateMethodCall(expr, evalCtx);
             case 'NullSafeMethodCall':
                 return this.evaluateNullSafeMethodCall(expr, evalCtx);
+            case 'FunctionCall':
+                return this.evaluateFunctionCall(expr, evalCtx);
             case 'IfThenElse':
                 return this.evaluateIfThenElse(expr, evalCtx);
             case 'NullCoalesce':
@@ -587,6 +590,28 @@ export class JjelEvaluator {
 
         const args = expr.args.map(arg => this.evaluate(arg, ctx));
         return this.callMethod(obj, expr.method, args, ctx);
+    }
+
+    /**
+     * Evaluate a standalone function call: name(args).
+     * Resolves `name` first as a registered builtin, then as a bound function
+     * value in the context. Throws if nothing callable is bound under that name.
+     */
+    private evaluateFunctionCall(expr: FunctionCallExpr, ctx: EvaluationContext): JjelValue {
+        const args = expr.args.map(arg => this.evaluate(arg, ctx));
+
+        const builtin = ctx.getBuiltin(expr.name);
+        if (builtin) return builtin.call(args, ctx);
+
+        const bound = ctx.has(expr.name) ? ctx.get(expr.name) : undefined;
+        if (bound !== undefined && bound !== null && isJjelFunction(bound)) {
+            return bound.call(args, ctx);
+        }
+
+        throw new JjelEvaluationError(
+            `Function '${expr.name}' is not defined`,
+            expr,
+        );
     }
 
     private callMethod(obj: JjelValue, method: string, args: JjelValue[], ctx: EvaluationContext): JjelValue {

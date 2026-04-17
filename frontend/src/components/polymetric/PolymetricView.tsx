@@ -75,7 +75,6 @@ export const PolymetricView: React.FC<PolymetricViewProps> = ({
 
     const openModels: OpenModelItem[] = useSelector((_state: DState) => {
     const dModels = Selectors.getModels();
-    console.log('[DEBUG PolymetricView] getModels():', dModels?.length, dModels?.map(m => m.name));
     return dModels.map(m => ({
         id: m.id,
         name: m.name || 'unnamed',

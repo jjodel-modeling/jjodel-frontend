@@ -240,13 +240,21 @@ export interface EditorV2Props {
     modelid?: string;
     /** Callback to switch back to the classic editor. */
     onSwitchEditor?: () => void;
+    /** Classic editor content rendered in `classic` and `split` modes. */
+    classicSlot?: React.ReactNode;
+    /** Current editor mode. Falsy/`'flow'` keeps the existing flow-only layout. */
+    editorMode?: 'flow' | 'classic' | 'split';
+    /** Whether a viewpoint is active — controls visibility of the mode toggle. */
+    hasViewpoint?: boolean;
+    /** Handler invoked when the user clicks the segmented mode toggle. */
+    onEditorModeChange?: (mode: 'flow' | 'classic' | 'split') => void;
 }
 
 /**
  * Inner editor component that uses React Flow hooks.
  * Must be wrapped in ReactFlowProvider.
  */
-function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
+function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasViewpoint, onEditorModeChange }: EditorV2Props) {
     // Phase 3: React Flow state — initialised from demo data when standalone,
     // or populated by useJjomSync when modelid is provided.
     const [nodes, setNodes, onNodesChange] = useNodesState(modelid ? [] : initialNodes);
@@ -644,6 +652,25 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
         localStorage.setItem('editor-v2-color-scheme', colorScheme);
     }, [colorScheme]);
 
+    // Block native text selection on the canvas. CSS `user-select: none` is
+    // not enough — the browser ignores it once a drag is already in flight,
+    // so dragging from a node to draw an edge would still highlight the
+    // node's text. Inputs/textareas/contenteditable opt out so inline
+    // editing keeps working. Re-runs on mode change because the canvas div
+    // (and its ref) is unmounted in `classic` mode.
+    useEffect(() => {
+        const container = editorContainerRef.current;
+        if (!container) return;
+        const onSelectStart = (e: Event) => {
+            const t = e.target as HTMLElement | null;
+            if (!t) return;
+            if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable) return;
+            e.preventDefault();
+        };
+        container.addEventListener('selectstart', onSelectStart);
+        return () => container.removeEventListener('selectstart', onSelectStart);
+    }, [editorMode]);
+
     // Listen for jjodel:selectNode events from the TreeView to select nodes on canvas
     useEffect(() => {
         const handleSelectNode = (event: Event) => {
@@ -938,6 +965,14 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
     // Handle new connections: save the valid connection, then show edge type popup on drop
     const onConnect = useCallback(
         (connection: Connection) => {
+            // [BUG-DIAG-DROP] ReactFlow accepted the connection at framework level.
+            // eslint-disable-next-line no-console
+            console.log('[BUG-DIAG-DROP] onConnect fired', {
+                source: connection.source,
+                target: connection.target,
+                sourceHandle: connection.sourceHandle,
+                targetHandle: connection.targetHandle,
+            });
             // Store the valid connection; onConnectEnd will show the popup
             pendingConnectionRef.current = connection;
         },
@@ -949,8 +984,19 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
             const connection = pendingConnectionRef.current;
             pendingConnectionRef.current = null;
 
+            // [BUG-DIAG-DROP] onConnectEnd fired — log the connection state.
+            // If onConnect never fired, connection will be null here (drop on empty canvas).
+            // eslint-disable-next-line no-console
+            console.log('[BUG-DIAG-DROP] onConnectEnd fired', {
+                hasConnection: !!connection,
+                source: connection?.source,
+                target: connection?.target,
+            });
+
             if (!connection || !connection.source || !connection.target) {
                 // Invalid connection (dropped on empty canvas) — ignore
+                // eslint-disable-next-line no-console
+                console.log('[BUG-DIAG-DROP] onConnectEnd → invalid connection, exit');
                 return;
             }
 
@@ -964,10 +1010,38 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                 const sourceNode = currentNodes.find(n => n.id === connection.source);
                 const targetNode = currentNodes.find(n => n.id === connection.target);
 
+                // [BUG-DIAG-DROP] Inspect the resolved nodes for the M1 branch.
+                // eslint-disable-next-line no-console
+                console.log('[BUG-DIAG-DROP] M1 branch — node resolution', {
+                    sourceFound: !!sourceNode,
+                    targetFound: !!targetNode,
+                    sourceType: sourceNode?.type,
+                    targetType: targetNode?.type,
+                });
+
                 if (sourceNode?.type === 'objectNode' && targetNode?.type === 'objectNode') {
                     const sourceData = sourceNode.data as ObjectNodeData;
                     const targetData = targetNode.data as ObjectNodeData;
                     const sourceMetaclass = mi.allClasses.find(c => c.id === sourceData.instanceOfClassId);
+                    const targetMetaclass = mi.allClasses.find(c => c.id === targetData.instanceOfClassId);
+
+                    // [BUG-DIAG-DROP] Inspect metaclass resolution + full reference list of source.
+                    // eslint-disable-next-line no-console
+                    console.log('[BUG-DIAG-DROP] M1 branch — metaclass resolution', {
+                        sourceClassId: sourceData.instanceOfClassId,
+                        targetClassId: targetData.instanceOfClassId,
+                        sourceMetaclassName: sourceMetaclass?.name,
+                        targetMetaclassName: targetMetaclass?.name,
+                        sourceMetaclassFound: !!sourceMetaclass,
+                        targetMetaclassInAllClasses: !!targetMetaclass,
+                        sourceReferences: sourceMetaclass?.references.map(r => ({
+                            name: r.name,
+                            targetClassId: r.targetClassId,
+                            targetClassName: r.targetClassName,
+                            containment: r.containment,
+                            upperBound: r.upperBound,
+                        })),
+                    });
 
                     if (sourceMetaclass) {
                         const compatibleRefs = getCompatibleReferences(
@@ -976,20 +1050,42 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                             mi.allClasses,
                         );
 
-                        if (compatibleRefs.length === 0) return; // no compatible refs — ignore
+                        // [BUG-DIAG-DROP] Compatible references computed.
+                        // eslint-disable-next-line no-console
+                        console.log('[BUG-DIAG-DROP] M1 branch — compatibleRefs', {
+                            count: compatibleRefs.length,
+                            refs: compatibleRefs.map(c => ({
+                                name: c.ref.name,
+                                isContainment: c.isContainment,
+                                upperBound: c.ref.upperBound,
+                            })),
+                        });
+
+                        if (compatibleRefs.length === 0) {
+                            // eslint-disable-next-line no-console
+                            console.log('[BUG-DIAG-DROP] M1 branch → 0 compatible refs, exit silently');
+                            return; // no compatible refs — ignore
+                        }
 
                         if (compatibleRefs.length === 1) {
                             // Auto-select: skip popup, create edge directly
+                            // eslint-disable-next-line no-console
+                            console.log('[BUG-DIAG-DROP] M1 branch → auto-select single ref:', compatibleRefs[0].ref.name);
                             handleM1ReferenceSelectedRef.current(compatibleRefs[0].ref, connection);
                             return;
                         }
 
                         // Multiple options: show picker popup
+                        // eslint-disable-next-line no-console
+                        console.log('[BUG-DIAG-DROP] M1 branch → show picker popup');
                         setPendingM1Connection({
                             connection,
                             position: { x: clientX, y: clientY },
                             compatibleRefs,
                         });
+                    } else {
+                        // eslint-disable-next-line no-console
+                        console.log('[BUG-DIAG-DROP] M1 branch → sourceMetaclass NOT found in allClasses, exit silently');
                     }
                     return;
                 }
@@ -1208,6 +1304,15 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
             const targetIndex = getNextFreeHandleIndex(edgeTarget, targetSide, 'target', currentEdges);
 
             // Create in JjOM
+            // [BUG-DIAG] trace M1 reference creation entry point.
+            // eslint-disable-next-line no-console
+            console.log('[BUG-DIAG] M1 ref drop', {
+                refName: metaRef.name,
+                refId: metaRef.id,
+                containment: metaRef.containment,
+                source: edgeSource,
+                target: edgeTarget,
+            });
             const edgeId = metaRef.containment
                 ? syncCreateCompositionLink(edgeSource, edgeTarget, metaRef.name)
                 : syncCreateReferenceLink(edgeSource, edgeTarget, metaRef.name);
@@ -1217,6 +1322,8 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                 setPendingM1Connection(null);
                 return;
             }
+            // eslint-disable-next-line no-console
+            console.log('[BUG-DIAG] M1 ref drop → edgeId', edgeId);
 
             markDropCreated(edgeId);
 
@@ -2602,13 +2709,132 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
         if (modelid) setModelUri(modelid, uri);
     }, [modelid]);
 
+    // Split-mode divider drag — resizes the classic/flow ratio between 15–85%.
+    // Resets to 40 every time the user re-enters split mode (no persistence).
+    const [splitPercent, setSplitPercent] = useState(40);
+    const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        const container = e.currentTarget.parentElement;
+        if (!container) return;
+        const containerRect = container.getBoundingClientRect();
+
+        const onMouseMove = (moveEvent: MouseEvent) => {
+            const deltaX = moveEvent.clientX - containerRect.left;
+            const percent = Math.min(Math.max((deltaX / containerRect.width) * 100, 15), 85);
+            setSplitPercent(percent);
+        };
+
+        const onMouseUp = () => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        };
+
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    }, []);
+
+    // Canvas inner JSX — extracted so the same React Flow tree can be embedded
+    // either in the standalone `.editor-v2__canvas` (flow / no-viewpoint) or
+    // inside the `.editor-split-flow` pane (split mode).
+    const flowCanvas = (
+        <>
+            <ReactFlow
+                nodes={stableNodes}
+                edges={stableEdges}
+                onNodesChange={handleNodesChange}
+                onEdgesChange={onEdgesChange}
+                onConnect={onConnect}
+                onConnectEnd={onConnectEnd}
+                onReconnect={handleReconnect}
+                onReconnectStart={handleReconnectStart}
+                reconnectRadius={15}
+                onDrop={onDrop}
+                onDragOver={onDragOver}
+                onNodeContextMenu={onNodeContextMenu}
+                onEdgeContextMenu={onEdgeContextMenu}
+                onNodeClick={jjomSelection.onNodeClick}
+                onEdgeClick={jjomSelection.onEdgeClick}
+                onPaneClick={onPaneClick}
+                nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
+                defaultEdgeOptions={defaultEdgeOptions}
+                connectionMode={ConnectionMode.Loose}
+                fitView={!isJjomMode && nodes.length > 0}
+                fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
+                defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+                snapToGrid={snapEnabled}
+                snapGrid={[16, 16]}
+                multiSelectionKeyCode="Shift"
+                selectionMode={SelectionMode.Partial}
+                panOnDrag={[0, 1, 2]}
+                zoomOnScroll={false}
+                panOnScroll={false}
+                panOnScrollMode={PanOnScrollMode.Free}
+                zoomActivationKeyCode="Shift"
+                preventScrolling={false}
+                zoomOnPinch={true}
+                deleteKeyCode={null}
+                connectionRadius={40}
+            >
+                <svg className="editor-v2__dot-grid" style={{ opacity: gridVisible ? 1 : 0 }}>
+                    <defs>
+                        <pattern id="dot-grid-pattern" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
+                            <circle cx="12" cy="12" r="1"
+                                fill={theme === 'dark' ? '#334155' : '#cbd5e1'}
+                                fillOpacity={theme === 'dark' ? 0.6 : 0.55}
+                            />
+                        </pattern>
+                    </defs>
+                    <rect width="100%" height="100%" fill="url(#dot-grid-pattern)" />
+                </svg>
+                {/* Zoom controls moved to toolbar */}
+                <MiniMap
+                    style={{ position: 'absolute', margin: 0, right: '20px', bottom: '100px', borderRadius: '4px', opacity: 0.8 }}
+                    nodeStrokeWidth={3}
+                    nodeColor={(node) => {
+                        if (node.type === 'classNode') return theme === 'dark' ? '#0ea5e9' : '#0284c7';
+                        if (node.type === 'enumNode') return '#7c3aed';
+                        if (node.type === 'packageNode') return theme === 'dark' ? '#64748b' : '#94a3b8';
+                        if (node.type === 'objectNode') return theme === 'dark' ? '#f59e0b' : '#d97706';
+                        return theme === 'dark' ? '#334155' : '#e2e8f0';
+                    }}
+                    maskColor={theme === 'dark' ? 'rgba(30, 41, 59, 0.8)' : 'rgba(241, 245, 249, 0.8)'}
+                />
+            </ReactFlow>
+
+            {pendingConnection && (
+                <EdgeTypePopup
+                    position={pendingConnection.position}
+                    containerRef={editorContainerRef}
+                    onSelect={handleEdgeTypeSelected}
+                    onCancel={handleEdgeTypeCancelled}
+                />
+            )}
+
+            {pendingM1Connection && (
+                <M1ReferencePopup
+                    position={pendingM1Connection.position}
+                    containerRef={editorContainerRef}
+                    options={pendingM1Connection.compatibleRefs}
+                    onSelect={(ref) => handleM1ReferenceSelected(ref)}
+                    onCancel={() => setPendingM1Connection(null)}
+                />
+            )}
+        </>
+    );
+
     return (
         <EditorContext.Provider value={editorContextValue}>
             <div className={`editor-v2 theme-${theme} notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}`} tabIndex={0} onKeyDown={onKeyDown}>
                 <PalettePanel
                     editorMode={modeInfo.mode}
                     rootableClasses={modeInfo.rootableClasses}
-                    allConcreteClasses={modeInfo.allClasses.filter(c => !c.isAbstract)}
+                    allClasses={modeInfo.allClasses}
+                    selectedNodes={selectedNodes}
                 />
                 <div className="editor-v2__main">
                     <Toolbar
@@ -2642,92 +2868,38 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
                         onDistributeH={() => withSnapshot(distributeHorizontally)}
                         onDistributeV={() => withSnapshot(distributeVertically)}
                         isMetamodel={!isModelMode}
+                        editorMode={editorMode}
+                        hasViewpoint={hasViewpoint}
+                        onEditorModeChange={onEditorModeChange}
                     />
-                    <div className="editor-v2__canvas" ref={editorContainerRef} style={{ position: 'relative' }}>
-                        <ReactFlow
-                            nodes={stableNodes}
-                            edges={stableEdges}
-                            onNodesChange={handleNodesChange}
-                            onEdgesChange={onEdgesChange}
-                            onConnect={onConnect}
-                            onConnectEnd={onConnectEnd}
-                            onReconnect={handleReconnect}
-                            onReconnectStart={handleReconnectStart}
-                            reconnectRadius={15}
-                            onDrop={onDrop}
-                            onDragOver={onDragOver}
-                            onNodeContextMenu={onNodeContextMenu}
-                            onEdgeContextMenu={onEdgeContextMenu}
-                            onNodeClick={jjomSelection.onNodeClick}
-                            onEdgeClick={jjomSelection.onEdgeClick}
-                            onPaneClick={onPaneClick}
-                            nodeTypes={nodeTypes}
-                            edgeTypes={edgeTypes}
-                            defaultEdgeOptions={defaultEdgeOptions}
-                            connectionMode={ConnectionMode.Loose}
-                            fitView={!isJjomMode && nodes.length > 0}
-                            fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
-                            defaultViewport={{ x: 0, y: 0, zoom: 1 }}
-                            snapToGrid={snapEnabled}
-                            snapGrid={[16, 16]}
-                            multiSelectionKeyCode="Shift"
-                            selectionMode={SelectionMode.Partial}
-                            panOnDrag={[0, 1, 2]}
-                            zoomOnScroll={false}
-                            panOnScroll={false}
-                            panOnScrollMode={PanOnScrollMode.Free}
-                            zoomActivationKeyCode="Shift"
-                            preventScrolling={false}
-                            zoomOnPinch={true}
-                            deleteKeyCode={null}
-                            connectionRadius={40}
-                        >
-                            <svg className="editor-v2__dot-grid" style={{ opacity: gridVisible ? 1 : 0 }}>
-                                <defs>
-                                    <pattern id="dot-grid-pattern" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
-                                        <circle cx="12" cy="12" r="1"
-                                            fill={theme === 'dark' ? '#334155' : '#cbd5e1'}
-                                            fillOpacity={theme === 'dark' ? 0.6 : 0.55}
-                                        />
-                                    </pattern>
-                                </defs>
-                                <rect width="100%" height="100%" fill="url(#dot-grid-pattern)" />
-                            </svg>
-                            {/* Zoom controls moved to toolbar */}
-                            <MiniMap
-                                    style={{ position: 'absolute', margin: 0, right: '20px', bottom: '100px', borderRadius: '4px', opacity: 0.8 }}
-                                    nodeStrokeWidth={3}
-                                    nodeColor={(node) => {
-                                        if (node.type === 'classNode') return theme === 'dark' ? '#0ea5e9' : '#0284c7';
-                                        if (node.type === 'enumNode') return '#7c3aed';
-                                        if (node.type === 'packageNode') return theme === 'dark' ? '#64748b' : '#94a3b8';
-                                        if (node.type === 'objectNode') return theme === 'dark' ? '#f59e0b' : '#d97706';
-                                        return theme === 'dark' ? '#334155' : '#e2e8f0';
-                                    }}
-                                    maskColor={theme === 'dark' ? 'rgba(30, 41, 59, 0.8)' : 'rgba(241, 245, 249, 0.8)'}
-                                />
-                        </ReactFlow>
-
-                        
-                        {pendingConnection && (
-                            <EdgeTypePopup
-                                position={pendingConnection.position}
-                                containerRef={editorContainerRef}
-                                onSelect={handleEdgeTypeSelected}
-                                onCancel={handleEdgeTypeCancelled}
+                    {(editorMode === 'classic' && classicSlot) ? (
+                        <div className="editor-classic-only">{classicSlot}</div>
+                    ) : (editorMode === 'split' && classicSlot) ? (
+                        <div className="editor-split-container">
+                            <div
+                                className="editor-split-classic"
+                                style={{ flex: `0 0 ${splitPercent}%` }}
+                            >
+                                {classicSlot}
+                            </div>
+                            <div
+                                className="editor-split-divider"
+                                onMouseDown={handleDividerMouseDown}
+                                role="separator"
+                                aria-orientation="vertical"
+                                title="Drag to resize"
                             />
-                        )}
-
-                        {pendingM1Connection && (
-                            <M1ReferencePopup
-                                position={pendingM1Connection.position}
-                                containerRef={editorContainerRef}
-                                options={pendingM1Connection.compatibleRefs}
-                                onSelect={(ref) => handleM1ReferenceSelected(ref)}
-                                onCancel={() => setPendingM1Connection(null)}
-                            />
-                        )}
-                    </div>
+                            <div className="editor-split-flow">
+                                <div className="editor-v2__canvas" ref={editorContainerRef} style={{ position: 'relative' }}>
+                                    {flowCanvas}
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="editor-v2__canvas" ref={editorContainerRef} style={{ position: 'relative' }}>
+                            {flowCanvas}
+                        </div>
+                    )}
 
                     {/* Bottom drawer removed — right-side Info panel handles properties */}
                 </div>
@@ -2764,10 +2936,17 @@ function EditorV2Inner({ modelid, onSwitchEditor }: EditorV2Props) {
  * Editor V2 - Metamodel Editor based on React Flow.
  * Supports Package, Class, Enumeration nodes and Reference edges.
  */
-function EditorV2({ modelid, onSwitchEditor }: EditorV2Props) {
+function EditorV2({ modelid, onSwitchEditor, classicSlot, editorMode, hasViewpoint, onEditorModeChange }: EditorV2Props) {
     return (
         <ReactFlowProvider>
-            <EditorV2Inner modelid={modelid} onSwitchEditor={onSwitchEditor} />
+            <EditorV2Inner
+                modelid={modelid}
+                onSwitchEditor={onSwitchEditor}
+                classicSlot={classicSlot}
+                editorMode={editorMode}
+                hasViewpoint={hasViewpoint}
+                onEditorModeChange={onEditorModeChange}
+            />
         </ReactFlowProvider>
     );
 }
