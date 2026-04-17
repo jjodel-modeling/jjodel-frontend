@@ -101,6 +101,20 @@ export class Dummy {
                     break;
             }
 
+            // Safety net: directly remove from father's collection.
+            // The pointedBy-based loop below handles this too (field 'objects'
+            // at case line 170), but if pointedBy data is stale or incomplete,
+            // the Pointer would be left dangling. The redundant -= is a no-op
+            // when pointedBy already fired the same action.
+            if (dDeleted.father) {
+                const fatherField = dDeleted.className === 'DObject' ? 'objects'
+                    : dDeleted.className === 'DValue' ? 'features'
+                    : null;
+                if (fatherField) {
+                    SetFieldAction.new(dDeleted.father as any, fatherField, deletedID, '-=', true);
+                }
+            }
+
             for (let dependency of dependencies) {
                 const root: keyof DState = dependency.firstKey;
                 if (root !== 'idlookup') {

@@ -1,5 +1,141 @@
 # Claude Code Session Log
 
+## 2026-04-17 — fix: duplicate reference values in JjTL executor output
+**File toccati**:
+- `frontend/src/components/project/ProjectEditor.tsx` — deduplicazione nel feature extraction: `rawVals` filtrato con `Set<string>` per eliminare Pointer ID duplicati nel DValue.values
+- `frontend/src/jjtl/executor/executor.ts` — deduplicazione guard in `wrapIfTargetReference`: array di target deduplicated by `__sourceId`
+
+**Esito**: ✅ 277 test passati. `tsc --noEmit` pulito.
+
+**Problema**: `outputPlace := nextState` produceva `targets: [Place, Place]` (stesso `__sourceId` duplicato) anche se `nextState` ha molteplicità 1.
+
+**Root cause**: il raw `DValue.values` array può contenere lo stesso Pointer ID più volte — per esempio quando `syncCreateReferenceLink` appende senza dedup (il fix precedente usa `[...meaningful, targetObject.id]`), o per data corruption. Con `meaningful.length > 1`, ProjectEditor wrappa come array: `[{__ref: P}, {__ref: P}]`. L'executor risolve ogni elemento indipendentemente → `[PlaceObj, PlaceObj]`. `wrapIfTargetReference` wrappa l'intero array → `targets` duplicati.
+
+**Fix 1 — ProjectEditor (source)**: nel feature extraction loop, `meaningful` ora viene deduplicated da un `Set<string>` che traccia i valori già visti. Per Pointer strings identici, il secondo viene scartato. Per primitivi non-string (numeri, booleani), non vengono deduplicated (valori legittimamente ripetuti in attributi multi-valued).
+
+**Fix 2 — Executor (guard)**: `wrapIfTargetReference` deduplica l'array di target by `__sourceId` (o `id`, o `name` come fallback) prima di wrappare come `__ref_result`. Questo è un guard difensivo — il fix primario è nel ProjectEditor.
+
+---
+
+## 2026-04-17 — feat: `parent` (eContainer) for JjTL transformations
+**File toccati**:
+- `frontend/src/components/project/ProjectEditor.tsx` — computa `_containerId` dal father chain di DObject quando costruisce sourceModelData: `DObject.father → DValue → DValue.father → owning DObject`
+- `frontend/src/jjtl/executor/executor.ts` — `createInstanceContext` risolve `_containerId` al parent object nella source model; fallback preservato per test/L-layer proxy
+
+**Esito**: ✅ 277 test passati. `tsc --noEmit` pulito.
+
+**Approccio**: il prompt chiedeva di aggiungere un campo stored `_containerId` a DObject. Invece ho scelto di **computarlo on-the-fly** dalla catena `father` esistente durante la costruzione del sourceModelData — zero migration, zero campi aggiunti alla serializzazione, zero punti di sync da mantenere.
+
+La catena: `DObject.father` punta a DModel (root object) o DValue (oggetto contenuto). Se DValue, `DValue.father` punta al DObject proprietario. Traversando due hop in `idlookup`, ottengo il container DObject ID.
+
+**ProjectEditor**: dopo l'estrazione features, legge `(obj).__raw.father`, cerca in `idlookup`: se è un DValue, prende `fatherData.father` (il DObject owner). Setta `result._containerId`.
+
+**Executor**: in `createInstanceContext`, ordine di risoluzione:
+1. Feature utente `parent` (già nei bindings da proxyEntries — priorità utente preservata)
+2. `_containerId` → cerca nella source model flat array l'oggetto con quell'ID → lo binda come `parent`
+3. Fallback `.father / .eContainer / .owner` per L-layer proxy e test
+
+Risultato: `parent` in JjTL trasformazioni (es. `inputPlace := parent`) ora risolve al DObject container, che poi passa attraverso la cross-type resolution del trace model.
+
+**Follow-up**: `data.parent` nella Console JjEL richiede un intervento sul L-layer proxy o sull'evaluator — out of scope per questa sessione.
+
+---
+
+## 2026-04-17 — fix: reference edges not drawn for transformation-generated models
+**File toccati**:
+- `frontend/src/components/editor-v2/hooks/useJjomSync.ts` — aggiunto Step 4 nell'auto-populate effect: crea DVoidEdge per reference M1 instance che hanno valori ma nessun edge nel grafo; aggiunto `modelObjectCount` selector per triggerare l'effect per modelli M1; rimossi gli early-exit che bloccavano modelli senza classifier
+
+**Esito**: ✅ 277 test passati. `tsc --noEmit` pulito.
+
+**Problema**: nei modelli generati da trasformazione, le reference (es. `output → Place_1`) erano settate correttamente (visibili nel Properties panel) ma nessun edge veniva disegnato nel flow editor.
+
+**Root cause**: il flow editor genera edges SOLO da oggetti DEdge/DVoidEdge espliciti nel grafo. Non ha un path per derivare edges da `DValue.values` (reference feature values). Il flusso di creazione:
+
+1. Trasformazione (ProjectEditor): crea DObject + DVertex ✅ + scrive reference values ✅ ma **NON crea DVoidEdge**
+2. Auto-populate effect (useJjomSync): crea DVoidEdge per reference M2 (DClass→DClass) ma **ignora M1** (DObject→DObject)
+3. Due early-exit bloccavano l'effect per modelli M1:
+   - Line 352: `modelClassCount === 0` → M1 models have no classifiers → exit
+   - Line 393: `classifierEntries.length === 0` → M1 models have no DClass/DEnumerator → exit
+
+**Fix — 3 modifiche in useJjomSync.ts**:
+
+1. **Nuovo selector `modelObjectCount`**: conta `rawModel.objects.length`. Aggiunto alle deps dell'effect. Per modelli M1, `modelObjectCount > 0` impedisce l'early-exit a line 352.
+
+2. **Early-exit estesi**: 
+   - Line 352: `&& modelObjectCount === 0` — non uscire se ci sono DObject
+   - Line 393: `&& !hasM1Objects` — non uscire se ci sono objects M1
+   - Line 469: `&& missingM1EdgeCount === 0` — non uscire se mancano edge M1
+
+3. **Step 4 — M1 instance reference edges**: dopo lo Step 3 (M2 edges). Per ogni DObject:
+   - Itera `dObj.features` (DValue Pointer array)
+   - Per ogni feature il cui `instanceof` è un `DReference` (non `DAttribute`)
+   - Legge `dFeat.values` (raw Pointer IDs dei target)
+   - Per ogni target che ha un vertex nel grafo: crea `DVoidEdge.new2(metaId, graphId, ..., isReference: true)`
+   - Usa `existingEdgeKeys` + `hasCanvasEdgePair` per deduplicazione (idempotente)
+
+Il DVoidEdge appena creato viene aggiunto ai subElements del grafo → l'incremental sync effect (line 729) lo raccoglie automaticamente → `jjomEdgeToRFEdge` lo converte in RF Edge → l'edge appare nel diagramma.
+
+---
+
+## 2026-04-17 — fix: flow editor edge connect does not persist reference value
+**File toccati**:
+- `frontend/src/components/editor-v2/sync/canvasToJjom.ts` — `syncCreateReferenceLink` (line 1260) e `syncCreateCompositionLink` (line 1192): letto `__raw.values` al posto del getter L-layer `.values`
+
+**Esito**: ✅ 277 test passati. `tsc --noEmit` pulito.
+
+**Problema**: trascinando un edge da Transition a State, l'edge compariva nel diagramma ma il Properties panel mostrava `nextState [1..1]` come `-----` (vuoto). La reference non veniva persistita nel DObject.
+
+**Root cause**: in `syncCreateReferenceLink` e `syncCreateCompositionLink`, il codice leggeva `refProxy.values ?? []` per ottenere i valori correnti prima di appendere il nuovo target. Ma `refProxy.values` è il getter L-layer (`LValue.get_values`), che **padda con `undefined`** quando `ret.length < dmeta.lowerBound` (cfr. LModelElement.tsx ~line 6989). Per `nextState [1..1]` con nessun valore settato: `lowerBound = 1`, raw values = `[]`, getter returns `[undefined]`.
+
+Risultato: `[...current, targetObject.id]` = `[undefined, "Pointer_xxx"]`. Il nuovo Pointer finisce a index 1 anziché index 0. Il `set_values` scrive `undefined` a index 0 (clearing) e il Pointer a index 1 (fuori dal range utile per [1..1]). Il Properties panel legge index 0 → `undefined` → `-----`.
+
+**Fix**: sostituito `refProxy.values ?? []` con `refProxy.__raw?.values ?? []` (il DValue raw, senza padding), filtrato per `v != null && v !== ''`. Per `nextState [1..1]` vuoto: `rawVals = []`, `meaningful = []`, risultato = `["Pointer_xxx"]` → correttamente scritto a index 0.
+
+Stessa fix applicata a entrambe le funzioni:
+- `syncCreateCompositionLink` (containment references)
+- `syncCreateReferenceLink` (non-containment references)
+
+**Flow completo investigato**:
+```
+User drag edge Transition → State
+  → ReactFlow.onConnect → pendingConnectionRef
+  → ReactFlow.onConnectEnd → M1 branch
+  → getCompatibleReferences(Transition metaclass, State id) → [{name: 'nextState', ...}]
+  → auto-select (1 ref) → handleM1ReferenceSelected
+  → guardLink check (upper-bound) → allowed
+  → syncCreateReferenceLink(vertexId_source, vertexId_target, 'nextState')
+    → sourceObject = LVertex.model (= LObject Transition)
+    → targetObject = LVertex.model (= LObject State)
+    → refProxy = sourceObject.$nextState (= LValue proxy)
+    → [FIX] rawVals = refProxy.__raw.values (no padding)
+    → refProxy.values = [...meaningful, targetObject.id]
+    → DVoidEdge.new2() → visual edge
+```
+
+---
+
+## 2026-04-17 — fix: DObject delete leaves dangling Pointers + referenceFeatures crash
+**File toccati**:
+- `frontend/src/components/project/ProjectEditor.tsx:2343` — `o.referenceFeatures` → `o?.referenceFeatures` (guard contro `undefined` in `.reduce()`)
+- `frontend/src/common/Dummy.ts:104-113` — safety-net in `get_delete()`: rimozione diretta da `father.objects`/`father.features` prima del loop `pointedBy`-based
+
+**Esito**: ✅ 277 test passati. `tsc --noEmit` pulito (errore `Dummy.ts:46` è pre-esistente, Vite internal).
+
+**Crash `referenceFeatures`**: `ProjectEditor.tsx:2343` — `.reduce()` su `objects` dove qualche elemento è `undefined`. Causa: `LModel.get_objects()` risolve i Pointer nell'array `objects` via `LPointerTargetable.from(pointer)`. Quando il target è stato cancellato (non esiste in `idlookup`), `from()` ritorna `undefined`. Fix: `o?.referenceFeatures?.length` (una `?` in più).
+
+**Dangling Pointers — investigazione**:
+- **Delete flow** (`Dummy.get_delete()`, lines 50-228): corretto in principio. Legge `dDeleted.pointedBy` → per ogni dependency con `field === 'objects'` (line 170) → `SetFieldAction.new(father, 'objects', deletedId, '-=', true)`.
+- **Perché fallisce**: `pointedBy` è persistito su ogni DObject. Ma se i record sono stale/incompleti (dati creati prima che il tracking fosse robusto, import batch, sessioni di sviluppo), `get__jjdependencies` non trova la dependency `objects` → `-=` non viene mai eseguito → Pointer resta nell'array.
+- **Evidenza**: ~220 warning "is deleted" all'apertura del progetto "Stame Machine" (pre-esistenti, non causati da operazioni correnti).
+
+**Safety-net fix** (`Dummy.ts`): aggiunto blocco prima del loop `pointedBy` che rimuove direttamente il Pointer dalla collection del father:
+- `DObject` → `SetFieldAction.new(father, 'objects', deletedId, '-=', true)`
+- `DValue` → `SetFieldAction.new(father, 'features', deletedId, '-=', true)`
+
+Questo è ridondante quando `pointedBy` funziona (il `-=` su un valore non presente nell'array è un no-op), ma garantisce la pulizia anche con dati corrotti. I ~220 warning esistenti richiederebbero una pulizia dati separata (out of scope).
+
+---
+
 ## 2026-04-17 — fix: reference materialization via __sourceId map
 **File toccati**:
 - `frontend/src/components/project/ProjectEditor.tsx` — STEP 8b reference lookup riscritta: `executorObjToName` (object identity, inaffidabile) sostituita con `sourceIdToObjectName: Map<string, string>` che mappa `__sourceId → objectName` assegnato durante creazione DObject

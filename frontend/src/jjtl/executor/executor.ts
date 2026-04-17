@@ -1954,19 +1954,33 @@ export class JjtlExecutor {
             bindings[alias] = shallowToJjelValue(sourceInstance);
         }
 
-        // `parent` keyword: evaluates to the eContainer of the current source
-        // instance. Jjodel L-layer proxies expose the container as `.father`;
-        // plain objects (as in tests) may use `.parent` or `.owner`. Only inject
-        // the fallback when the source doesn't already expose a `parent` key
-        // — the direct proxyEntries binding above already covers that case.
+        // `parent` keyword: evaluates to the eContainer (owning DObject) of
+        // the current source instance.
+        //
+        // Resolution order:
+        //   1. User-defined feature named "parent" (already in bindings from proxyEntries)
+        //   2. _containerId → look up the containing DObject in the source model
+        //   3. Fallback to .father / .eContainer / .owner (for L-layer proxies or tests)
         if (sourceInstance && typeof sourceInstance === 'object' && bindings.parent === undefined) {
-            const container =
-                (sourceInstance as any).father ??
-                (sourceInstance as any).eContainer ??
-                (sourceInstance as any).owner ??
-                null;
-            if (container !== null && container !== undefined) {
-                bindings.parent = shallowToJjelValue(container);
+            let resolved = false;
+            const containerId = (sourceInstance as any)._containerId;
+            if (containerId && typeof containerId === 'string') {
+                const sourceArr = Array.isArray(this.context.sourceModel) ? this.context.sourceModel : [];
+                const parentObj = sourceArr.find((o: any) => o.id === containerId);
+                if (parentObj) {
+                    bindings.parent = shallowToJjelValue(parentObj);
+                    resolved = true;
+                }
+            }
+            if (!resolved) {
+                const container =
+                    (sourceInstance as any).father ??
+                    (sourceInstance as any).eContainer ??
+                    (sourceInstance as any).owner ??
+                    null;
+                if (container !== null && container !== undefined) {
+                    bindings.parent = shallowToJjelValue(container);
+                }
             }
         }
 
@@ -2180,7 +2194,17 @@ export class JjtlExecutor {
             if (value.length > 0 && value.every(el =>
                 el && typeof el === 'object' && el.__createdBy === 'JjTL'
             )) {
-                return { __ref_result: true, targets: value };
+                // Deduplicate by __sourceId — duplicate entries can arise when
+                // the raw DValue.values array has the same Pointer twice.
+                const seen = new Set<string>();
+                const unique = value.filter(el => {
+                    const key = el.__sourceId || el.id || el.name;
+                    if (!key) return true;
+                    if (seen.has(key)) return false;
+                    seen.add(key);
+                    return true;
+                });
+                return { __ref_result: true, targets: unique };
             }
             return value;
         }
