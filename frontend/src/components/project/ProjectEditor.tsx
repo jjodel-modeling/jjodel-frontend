@@ -1408,12 +1408,6 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                 const objTimingLabel = `[TIMING] DObject.new #${instancesCreated} (${className})`;
                                 console.time(objTimingLabel);
                                 const dObject = DObject.new(targetClass.id, dModel.id, DModel, objectName, true);
-<<<<<<< HEAD
-                                console.timeEnd(objTimingLabel);
-                                console.log(`[ProjectEditor] Created instance:`, { name: objectName, class: className });
-=======
-                                // console.log(`[ProjectEditor] Created instance:`, { name: objectName, class: className });
->>>>>>> staging
 
                                 // Map __sourceId → objectName for reference wiring in STEP 8b
                                 if (instanceData.__sourceId) {
@@ -1524,13 +1518,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             const dvLabel = `[TIMING] DVertex.new #${dvIdx}`;
                             console.time(dvLabel);
                             DVertex.new(0, pv.objectId, gid, gid, undefined, size);
-<<<<<<< HEAD
-                            console.timeEnd(dvLabel);
-                            console.log(`[ProjectEditor] Created DVertex for object at (${pv.posX}, ${pv.posY})`);
-                            dvIdx++;
-=======
-                            // console.log(`[ProjectEditor] Created DVertex for object at (${pv.posX}, ${pv.posY})`);
->>>>>>> staging
+
                         }
                     } catch (e) {
                         console.error('[ProjectEditor] Error creating DVertices (non-fatal):', e);
@@ -1583,7 +1571,6 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                 }
                             }
 
-<<<<<<< HEAD
                             console.log(`[ProjectEditor] ✅ Attribute setting complete`);
 
                             // STEP 8b: Set references — same LModel proxy, same objects list.
@@ -1641,9 +1628,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                 }
                                 console.log(`[ProjectEditor] ✅ Reference setting complete`);
                             }
-=======
-                            // console.log(`[ProjectEditor] ✅ Attribute setting complete`);
->>>>>>> staging
+
                         } catch (e) {
                             console.error(`[ProjectEditor] Error in STEP 8:`, e);
                         }
