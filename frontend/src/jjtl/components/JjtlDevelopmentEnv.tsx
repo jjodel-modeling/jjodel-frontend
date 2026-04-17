@@ -875,7 +875,7 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
             <JjtlStatusBar
                 parserStatus={parserStatus}
                 errorCount={parserErrors.length}
-                warningCount={0}
+                warningCount={trace.filter(t => t.status === 'warning').length}
                 cursorLine={cursorPosition.line}
                 cursorColumn={cursorPosition.column}
                 executionStatus={executionStatus}

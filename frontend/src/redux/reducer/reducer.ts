@@ -526,6 +526,11 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
                     newState.idlookup[p.id] = p;
                 }
                 U.debug = newState.debug;
+                // Force recompilation of all view CSS after project load.
+                // css_MUST_RECOMPILE and compiled_css are transient fields not
+                // in the serialized project data — without this, compiled_css
+                // returns '' and no view CSS is injected into the DOM.
+                newState.VIEWS_RECOMPILE_all = true;
                 break;
             case CreateElementAction.type:
             case SetRootFieldAction.type:

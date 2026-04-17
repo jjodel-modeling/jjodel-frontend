@@ -2850,16 +2850,14 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
         return true;
     }
 
+    // Must not log on every call: the proxy's ownKeys trap exposes `token`, so
+    // any Object.keys / JSON.stringify walk of an LUser proxy invokes this
+    // getter per enumerated key, and Log.eDev's U.getCaller + new Error +
+    // LoggerComponent.setState path freezes the main thread in tight loops.
     protected get_token(context: Context): this['token'] {
-        return Log.eDevv('getToken method is obsolete');
-        // return context.data.token;
+        return context.data.token;
     }
     protected set_token(val: this['token'], c: Context): boolean {
-        Log.eDevv('setToken method is obsolete');
-        /*
-        TRANSACTION(this.get_name(c)+'.token', ()=>{
-            SetFieldAction.new(c.data.id, 'token', val, '', false);
-        }, c.data.token, val)*/
         return true;
     }
 
@@ -2880,15 +2878,6 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
         return project && LProject.fromPointer(project) || null;*/
     }
     protected set_project(val: Pack<Exclude<this['project'], null>>|null, c: Context): boolean {
-        Log.eDevv('User.setProject method is obsolete');
-        /*
-        let ptr: Pointer<DProject> = Pointers.from(val as any);
-        if (!ptr) ptr = '';
-        if (ptr === c.data.project) return true;
-
-        TRANSACTION(this.get_name(c)+'.project', ()=>{
-            SetFieldAction.new(c.data.id, 'project', ptr, '', true);
-        })*/
         return true;
     }
 }
@@ -2946,6 +2935,7 @@ export class DProject extends DPointerTargetable {
     state!: string;
     version!: number;
     tagNames!: string[];
+    transformations: any[] = [];
 
     public static new(type: DProject['type'], name?: string, state?: DProject['state'],
                       m2?: DProject['metamodels'], m1?: DProject['models'], id?: DProject['id'], otherProjects?:LProject[]): DProject {
@@ -3018,6 +3008,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     state!: string;
     version!: number;
     tagNames!: string[];
+    transformations!: any[];
 
     /* DATA */
     readonly packages!: LPackage[];

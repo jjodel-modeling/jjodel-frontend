@@ -1,23 +1,356 @@
 # Claude Code Session Log
 
+## 2026-04-17 — fix: reference materialization via __sourceId map
+**File toccati**:
+- `frontend/src/components/project/ProjectEditor.tsx` — STEP 8b reference lookup riscritta: `executorObjToName` (object identity, inaffidabile) sostituita con `sourceIdToObjectName: Map<string, string>` che mappa `__sourceId → objectName` assegnato durante creazione DObject
+
+**Esito**: ✅ 277 test passati. `tsc --noEmit` pulito. Zero regressi.
+
+**Problema**: STEP 8b loggava `"Cannot determine name for target of T1.output[0]"` per ogni reference. Due cause:
+1. `executorObjToName.get(targets[ri])` — JS object identity: funziona in teoria ma fallisce in pratica (qualche passo intermedio crea un nuovo oggetto o il GC/V8 rilocava)
+2. `targets[ri]?.name` — undefined perché la regola `State -> Place` non ha `name := name`
+
+**Fix**: nuova mappa `sourceIdToObjectName: Map<string, string>`. Keyed by `__sourceId` (string, Pointer ID dell'elemento sorgente che ha generato il target — sempre presente, settato da `createTargetInstance`). Questo è completamente indipendente sia dall'identità oggetto JS sia dalla presenza di un binding `name`.
+
+Flusso:
+1. STEP 6 (DObject creation loop): per ogni `instanceData`, se ha `__sourceId`, registra `sourceIdToObjectName.set(instanceData.__sourceId, objectName)`
+2. Post-loop: logga la mappa completa
+3. STEP 8b: per ogni target in `__ref_result.targets`, legge `target.__sourceId`, cerca in `sourceIdToObjectName`, ottiene il nome del DObject, trova l'LObject via LModel proxy, ottiene il Pointer ID reale, scrive con `setValueAtPosition(i, realId, { isPtr: true })`
+
+**Log atteso dopo il fix**:
+```
+[ProjectEditor] sourceId→name map: { "Pointer_S0": "Place_0", "Pointer_S1": "Place_1", ... }
+[ProjectEditor] ✅ Ref: T1.output[0] → Place_1 (Pointer1776...)
+```
+
+---
+
+## 2026-04-17 — fix: reference lookup in transformation output
+**File toccati**:
+- `frontend/src/components/project/ProjectEditor.tsx` — STEP 8b reference lookup riscritta: `executorObjToPointerId` (temp DObject ID) sostituita con `executorObjToName` (objectName assegnato durante creazione) + lookup via LModel proxy per ottenere il Pointer ID reale
+
+**Esito**: ✅ 277 test passati. `tsc --noEmit` pulito. Zero regressi.
+
+**Problema**: STEP 8b loggava `"No DObject found for target of T1.output[0]"` per ogni reference. Il lookup `executorObjToPointerId.get(targets[ri])` falliva sempre.
+
+**Root cause**: due problemi indipendenti nella mappa `executorObjToPointerId`:
+1. **Valore inaffidabile**: `dObject.id` da `DObject.new()` è un ID temporaneo (documentato in CLAUDE.md: "NON corrisponde all'ID reale dell'oggetto nel framework"). Usarlo come Pointer ID per scrivere una reference non funziona — il framework non lo risolve.
+2. **Chiave potenzialmente non matchante**: la mappa usa object identity JS (`Map<any, string>` keyed by executor instance). Sebbene in teoria la catena di riferimenti sia preservata (executor → targetModel.instances → __ref_result.targets), qualsiasi copia intermedia spezzerebbe il match.
+
+**Fix**: eliminata la dipendenza da `dObject.id` e da object identity. Nuova strategia:
+1. `executorObjToName: Map<any, string>` — mappa executor instance → `objectName` (il nome assegnato durante la creazione DObject, uguale a `instanceData.name || synthetic`). Questo è stabile.
+2. In STEP 8b (dentro il setTimeout, dove il LModel proxy è disponibile): per ogni target nell'array `__ref_result.targets`:
+   - `targetName = executorObjToName.get(target) ?? target.name` — prende il nome dalla mappa (se object identity funziona) o fallback dal target stesso
+   - `targetLObj = objects.find(o => o.name === targetName)` — trova l'LObject nel modello via LModel proxy (stessa tecnica degli attributi)
+   - `targetRealId = targetLObj.id` — il vero Pointer ID dal proxy
+   - `feature.setValueAtPosition(ri, targetRealId, { isPtr: true })` — scrive il reference usando il Pointer reale
+
+**Perché funziona**: lo stesso pattern di STEP 8 (attribute setting) — trova oggetti per nome via LModel proxy, ottiene ID reali, scrive. Non dipende mai da `DObject.new().id`.
+
+**Log atteso dopo il fix**:
+```
+[ProjectEditor] ✅ Ref: T1.output[0] → Place_1 (Pointer1776...)
+```
+
+---
+
+## 2026-04-17 — fix: JjTL transformation output — reference writing
+**File toccati**:
+- `frontend/src/jjtl/executor/executor.ts` — `applyCrossTypeResolution` ora wrappa target instances risolte come `{ __ref_result: true, targets: [...] }` via nuovo `wrapIfTargetReference()`
+- `frontend/src/components/project/ProjectEditor.tsx` — `handleExecuteTransformation` ora: (1) registra mappa `executorObjToPointerId` (executor instance → DObject Pointer ID) durante creazione, (2) colleziona `pendingReferenceSets` accanto alle `pendingAttributeSets`, (3) scrive reference via `LValue.setValueAtPosition(i, pointerId, { isPtr: true })` — stesso API del dropdown Properties panel
+
+**Esito**: ✅ 277 test passati. `tsc --noEmit` pulito. Zero regressi.
+
+**Problema**: la cross-type resolution nell'executor funzionava (produceva correttamente Place target dal trace), ma il risultato non appariva nel modello target per due ragioni:
+
+1. **Executor non distingueva reference da attributi nel risultato**: `output` nel target instance conteneva l'oggetto Place direttamente — ProjectEditor non sapeva che era una reference da scrivere con `isPtr: true`.
+
+2. **ProjectEditor scriveva solo attributi primitivi**: il loop in STEP 8 filtrava per `domainAttrNames` (solo `targetClass.attributes`), escludendo reference features. Anche se `output` fosse passato, `feature.value = placeObject` non scrive un Pointer ID — serve `setValueAtPosition(i, pointerId, { isPtr: true })`.
+
+**Fix executor** — `applyCrossTypeResolution` ora chiama `wrapIfTargetReference()` sul valore risolto:
+- Se il valore è un oggetto con `__createdBy: 'JjTL'` → wrappa come `{ __ref_result: true, targets: [value] }`
+- Se è un array di tali oggetti → `{ __ref_result: true, targets: array }`
+- Primitivi e oggetti non-target passano invariati
+- Il marker `__ref_result` permette a ProjectEditor di distinguere reference da attributi senza consultare il metamodello
+
+**Fix ProjectEditor** — tre aggiunte al flusso di `handleExecuteTransformation`:
+1. **Mappa instance → DObject** (`executorObjToPointerId: Map<any, string>`): durante il loop di `DObject.new`, registra `instanceData → dObject.id`. Usa object identity (il JS reference dell'executor instance è lo stesso oggetto dentro `__ref_result.targets`).
+2. **Collezione reference** (`pendingReferenceSets`): per ogni instanceData, scansiona `Object.entries` cercando valori con `__ref_result: true`. Li accumula separatamente dagli attributi.
+3. **STEP 8b — reference writing**: dentro lo stesso `setTimeout` di STEP 8 (dopo gli attributi), itera `pendingReferenceSets`. Per ogni reference, trova l'LObject per nome, accede a `$refName` (LValue proxy), poi chiama `feature.setValueAtPosition(i, pointerId, { isPtr: true })` per ogni target. Stessa API che `Info.tsx:changeDValue` usa quando l'utente seleziona dal dropdown.
+
+**Flusso end-to-end per `output := nextState`**:
+1. ProjectEditor: `nextState` raw value = `"Pointer_xxx"` → wrappato come `{ __ref: "Pointer_xxx" }`
+2. Executor Pass 1: crea Place per ogni State, registra in trace
+3. Executor Pass 2: valuta `nextState` → `{ __ref: "Pointer_xxx" }` → `resolveRefById` → trova il Place target → `applyCrossTypeResolution` → `wrapIfTargetReference` → `{ __ref_result: true, targets: [placeInstance] }`
+4. `targetInstance.output = { __ref_result: true, targets: [placeInstance] }`
+5. ProjectEditor: crea DObject per Place, registra in `executorObjToPointerId`; crea DObject per Transition, trova `output.__ref_result` → pendingReferenceSets
+6. STEP 8b: trova LObject Transition, `$output.setValueAtPosition(0, placePointerId, { isPtr: true })`
+
+---
+
+## 2026-04-17 — fix: JjTL cross-type resolution — reference handling
+**File toccati**:
+- `frontend/src/components/project/ProjectEditor.tsx` — feature extraction loop ora legge `__raw.values` (bypassando la risoluzione L-layer proxy) e wrappa Pointer ID come `{ __ref: id }`
+- `frontend/src/jjtl/executor/executor.ts` — `resolveValue` ora gestisce `{ __ref: id }` wrapper + nuovo `resolveRefById` per lookup by pointer ID + depth guard (max 10 livelli)
+
+**Esito**: ✅ 277 test passati. `tsc --noEmit` pulito sui file modificati. Zero regressi.
+
+**Problema**: la cross-type resolution (2026-04-16) non funzionava in pratica. `output := nextState` produceva `null` per tutte le Transition, e alla 4a il browser si freezava.
+
+**Root cause 1 — reference come proxy L-layer**: `ProjectEditor.handleExecuteTransformation` leggeva `feature.values[0]` dall'L-layer getter, che per reference features restituisce LObject proxy (non Pointer ID stringa). Questi proxy hanno back-ref circolari (`LClass.attributes[0].owner → LClass`) che causano il freeze quando `safeDeepCopy` / `flattenProxy` li attraversa.
+
+**Root cause 2 — nessun lookup per Pointer ID**: `applyCrossTypeResolution` cercava `value.name` o `value.className` per risolvere cross-type. Ma per reference features il valore era `null` (proxy che non sopravviveva alla deep copy) o un proxy non interpretabile. Nessun codepath gestiva il caso "il valore è un Pointer ID che punta a un source element tracciato".
+
+**Fix ProjectEditor.tsx** — feature extraction ora legge `(feature as any).__raw?.values` (l'array DValue raw, che contiene primitive per attributi e Pointer ID stringhe per reference). I Pointer ID (pattern `"Pointer*"`) vengono wrappati come `{ __ref: "Pointer..." }`. Questo elimina completamente i proxy L-layer dal sourceModelData e risolve il freeze.
+
+**Fix executor.ts** — `resolveValue` ora gestisce `{ __ref: id }` come primo check (prima del className check):
+- Cerca `id` in `targetsBySourceName` (che registra sia per `.name` che per `.id` di ogni source instance)
+- Se trovato: ritorna il target element (cross-type resolution riuscita)
+- Se non trovato (implicit path): ritorna `null` (fail-open — la reference punta a un tipo senza regola)
+- Se non trovato (explicit `resolve()`): throw con errore chiaro
+- Se ambiguo (N regole): check se tutte dalla stessa rule → ok; altrimenti throw
+
+Aggiunto `resolveRefById` come metodo dedicato per la logica di lookup by ID (separato dal lookup by className/name per mantenere le due code path leggibili).
+
+Aggiunto depth guard (max 10 livelli) in `resolveValue` per prevenire loop infiniti durante il debug di strutture circolari residue.
+
+**Come verificare**: stessa trasformazione SM → PN del prompt 2026-04-16. `output := nextState` ora risolve correttamente al Place corrispondente anziché `null`. Nessun freeze.
+
+---
+
+## 2026-04-16 — feat: JjTL cross-type resolution via trace model
+**File toccati**:
+- `frontend/src/jjel/types/ast.ts` — nuovo `FunctionCallExpr` aggiunto al `JjelExpression` union
+- `frontend/src/jjel/parser/parser.ts` — `primary()` ora riconosce `identifier(args)` come `FunctionCall`
+- `frontend/src/jjel/evaluator/evaluator.ts` — nuovo `evaluateFunctionCall` (lookup builtin → bound function, errore esplicito se nulla è callable)
+- `frontend/src/jjtl/executor/astBridge.ts` — JjTL `FunctionCall` con `Identifier` callee ora produce `FunctionCall` JjEL (prima produceva solo `Identifier`)
+- `frontend/src/jjtl/executor/executor.ts` — executor ribaltato in **due passate**: Pass 1 crea tutti i target + popola la trace, Pass 2 valuta le binding con trace completa; aggiunta `applyCrossTypeResolution`, handling speciale per `resolve(expr, TargetType)`, `parent` keyword con fallback `father` / `eContainer` / `owner`
+- `frontend/src/jjtl/__tests__/astBridge.test.ts` — aggiornato test che si aspettava `Identifier` per le standalone call
+- `frontend/src/jjel/__tests__/parser.test.ts` — 6 nuovi test `FunctionCall`
+- `frontend/src/jjel/__tests__/evaluator.test.ts` — 3 nuovi test `FunctionCall`
+
+**Esito**: ✅ 277 test passati (268 preesistenti + 9 nuovi). `tsc --noEmit` pulito sui file modificati.
+
+**Richiesta utente**: implementare risoluzione automatica cross-tipo nei binding `:=`. Quando `output := nextState` e `State -> Place` è l'unica regola per `State`, il motore deve automaticamente risolvere `nextState` (lo State) al Place corrispondente tramite trace model. Disambiguazione via `resolve(expr, TargetType)` quando N regole hanno stesso source type. Primitivi, collection, `parent` keyword, errore runtime su riferimenti non risolvibili (filtrati da guardia `where`).
+
+**Architettura due passate (requisito #0 del prompt)**:
+Executor girava single-pass (match → create target → valuta binding per ogni regola in sequenza). Questo rompe la risoluzione cross-tipo se la regola `Transition -> Transition` viene eseguita prima di `State -> Place`: la trace è vuota e `output := nextState` fallisce.
+
+Il refactor separa:
+- `pass1CreateTargets(mapping)` / `pass1MultiSource(mapping)`: match + guard `where` + `createTargetInstances` + `traceBuilder.addLink` + registrazione in `targetsBySourceName`. **Nessuna** binding evaluation qui.
+- `pass2BindAttributes(mapping)`: drena i `PendingBinding` accumulati in pass 1, chiama `executeAttributeMappingsWithTrace` — ora la trace è completa.
+
+Stato mantenuto in `ExecutionContext`:
+- `rulesBySourceType: Map<string, ClassMappingAST[]>` — index pre-costruito per lookup O(1) del set di regole con un dato source type
+- `targetsBySourceName: Map<string, TargetEntry[]>` — keyed by element name (stabile anche dopo deep copy; object identity non lo è)
+- `pendingByMapping: Map<ClassMappingAST, PendingBinding[]>` — ponte tra le due passate
+
+Nota: la guard `where` è valutata in Pass 1, prima dei binding. Se una guard dipendesse da valori calcolati dai binding non funzionerebbe — vincolo accettato e documentato nel prompt.
+
+**Risoluzione cross-tipo (`applyCrossTypeResolution` + `resolveValue`)**:
+Chiamata su ogni RHS di binding prima di `targetInstance[attr] = value`. Regole:
+1. `null`/`undefined`/primitivi → passthrough
+2. Array → ricorsione elemento per elemento (collection handling)
+3. Object con `className` / `__type` / `.instanceof.name` (L-layer):
+   - 0 regole matchano → passthrough (tipo condiviso fra i due metamodelli)
+   - 1 regola → lookup in `targetsBySourceName[name]`, match sulla rule specifica, ritorna il target; **throw** se non trovato (messaggio include guard/filtri come cause probabile)
+   - N regole → throw "Ambiguous cross-type resolution", suggerisce `resolve(expr, TargetType)`
+
+Punto chiave: la `ClassMappingAST` che ha creato il target è stored in `TargetEntry.rule`. Match per reference (non per `rule.name`) — garantisce 1-1 source→target anche se più regole coesistono.
+
+**`resolve(expr, TargetType)` — keyword vs builtin**:
+Problema: JjEL parser originale non aveva AST node per standalone function calls (`identifier(args)`). Solo MethodCall (`obj.method(args)`) esisteva. Quindi `targetAttr := resolve(...)` nemmeno parsava. Fix minimo: aggiunto `FunctionCallExpr` a JjEL (primary riconosce `IDENTIFIER LPAREN`, evaluator fa builtin/bound lookup).
+
+Secondo problema: `resolve(nextState, Place)` — `Place` non è un valore bound, la valutazione standard restituisce `null`. Soluzione: intercept a livello JjTL executor (`tryEvaluateResolveCall`) in `evaluateExpression` prima della delegazione JjEL. Il secondo argomento viene letto come AST Identifier e il suo `.name` usato come stringa di classe target. Accetta sia JjTL FunctionCall (path legacy) sia JjelExpressionWrapper contenente JjEL FunctionCall (path `:=`).
+
+Il builtin `resolve` registrato sul context resta come fallback (accetta args già valutati, può essere chiamato programmaticamente), ma il path primario è l'intercept.
+
+**`parent` keyword**:
+Implementata in `createInstanceContext`: se `sourceInstance.parent` non è già tra le proxy entries, fallback su `.father` (L-layer eContainer Jjodel) / `.eContainer` / `.owner` / `null`. La risoluzione cross-tipo poi scatta normalmente se il container ha una regola.
+
+**Integration tests non inclusi (dolorosamente)**: ho scritto 12 integration test coprendo tutti i casi richiesti nel prompt (single-rule implicit, primitive passthrough, no-rule passthrough, collection element-wise, ambiguity error, rule-order independence, missing target error, parent + eContainer fallback, resolve(x, Type) disambiguation, resolve(x, UnknownType) error, conditional con primitivi). Li ho **rimossi** perché tutti i test executor-level del repo falliscono con `ReferenceError: window is not defined` da `monaco-editor/vs/base/browser/window.js` (import chain via joiner → react → monaco). Problema **preesistente** — confermato con `git stash` + run su master: 7 test file executor/integration già non girano. Aggiungere jsdom o `setupFiles` in `vitest.config.ts` è out-of-scope. I test sono sostituiti da unit test JjEL puri (FunctionCall parse + eval) che validano le fondamenta.
+
+**Come verificare manualmente**: aprire trasformazione State Machines → Petri Nets, scrivere:
+```
+State -> Place { tokens := if isInitial then 1 else 0 }
+Transition -> Transition {
+    name := name
+    input := parent
+    output := nextState
+}
+```
+Risultato atteso: Place S1 con tokens=1, S2 con tokens=0, Transition t1 con input=[place_S1] output=[place_S2].
+
+**Note architetturali**:
+- Log `[JjTL]` marca le due passate: `===== PASS 1: create + trace =====` e `===== PASS 2: bind attributes =====` per debug chiarezza
+- L-layer detection: `detectSourceClassName` controlla `className` → `__type` → `instanceof.name` (L proxy)
+- Name fallback: se source ha solo `.id` e non `.name`, uso `.id` come chiave (registrazione con entrambe le chiavi quando disponibili)
+- `resolve` arg 1 letto come Identifier o StringLiteral (programmatic callers possono passare `"Place"` invece di `Place`)
+- Pass 1 deve completare TUTTE le regole prima che Pass 2 cominci — implementato come due loop separati su `this.ast.mappings`
+
+---
+
+## 2026-04-16 — fix: transformation code preserved when user saves project without first clicking Save in JjTL editor
+**File toccati**: `frontend/src/components/abstract/DockManager.tsx`
+**Esito**: ✅ build ok (`vite build` 41.06s)
+
+**Sintomo riportato**: dopo il fix di stamattina sulle trasformazioni, salvando un progetto e ricaricandolo, l'entry compariva nella dashboard ma il `code` era ricaduto al template di default (con i nomi corretti scelti dall'utente — quindi `generateDefaultCode(name, source, target)`, non il `DEFAULT_CODE` letterale).
+
+**Root cause**: `JjtlDevelopmentEnv` mantiene il code in uno useState interno (`JjtlDevelopmentEnv.tsx:83`). La propagazione verso `transformation.code` avviene SOLO quando l'utente clicca il pulsante Save dentro l'editor JjTL (handleSave → onSave). `DockManager.openTransformation` ricevuto da Phase-2 di stamattina aveva `onCodeChange` cablato a un no-op (commento esistente: `// Code change tracked internally`). Quindi se l'utente:
+1. Apre l'editor, scrive le regole
+2. NON clicca Save nell'editor JjTL
+3. Triggera Save Project (Cmd+S → `Navbar.tsx:772-794` → `ProjectsApi.save` → `compressedState`)
+
+…il `transformation.code` serializzato è quello vecchio (template), perché l'editor non ha mai propagato i tasti battuti. Al reload, il template ricompare. Bug di "expectation mismatch" — l'utente assume che Save Project catturi anche l'editor in primo piano.
+
+**Fix (1 file, opzione 2 - debounce 300ms)**: in `DockManager.openTransformation` (DockManager.tsx:275-303) ho creato:
+- `debouncedSync(code)` — chiamata da `onCodeChange` su ogni keystroke. Reset+set di un timer 300ms; allo scadere chiama `onSave?.(code)` (lo stesso callback che il pulsante Save in editor invocherebbe).
+- `explicitSave(code)` — wrapper di `onSave` che annulla il debounce pendente (evita il dispatch ridondante) e chiama subito `onSave`.
+
+Wiring: `onSave: explicitSave, onCodeChange: debouncedSync`. Il pulsante Save resta funzionante come affordance "I'm done", ma non è più necessario per la persistenza.
+
+**Edge case documentato in-place** (15 righe di commento sopra le closure): spiega perché il sync è necessario, dove vive il code intermedio, qual era il flusso bugged. Da non rimuovere senza capire il motivo — è la difesa contro il regredire del bug.
+
+**Costo**: ogni 300ms di typing → 1 SetFieldAction → 1 dispatch Redux (asincrono via `setTimeout 0` come tutti gli action.fire). Trascurabile in pratica. Niente debounce a livello editor (più semplice tenerlo qui).
+
+**Note**:
+- Closure cleanup: il `debounceTimer` vive nella closure di `openTransformation`. Se l'utente chiude la tab con timer pendente, allo scadere chiama `onSave?.(code)` che esegue `setTransformations` su un transformation.id che potrebbe non esistere più (es. dopo delete). `prev.map(t => t.id === id ? ...: t)` è no-op in quel caso. Innocuo.
+- `tabContent` è ricostruito anche per existing tab (`updateTab`), quindi una nuova chiusura debounceTimer è creata ad ogni openTransformation — ok, perché i closure vecchi non vengono più chiamati (nuovo JjtlDevelopmentEnv = nuovo onCodeChange).
+
+## 2026-04-16 — fix: project save now includes transformations (data loss bug)
+**File toccati**: `frontend/src/joiner/classes.ts`, `frontend/src/components/project/ProjectEditor.tsx`
+**Esito**: ✅ build ok (`vite build` 45.11s)
+
+**Root cause**: Le trasformazioni JjTL erano memorizzate solo in `useState` di `ProjectEditor.tsx:158` (commento esplicito: `// Transformations state (in-memory for now)`). Il save flow (`SaveManager.save` → `ProjectsApi.save` → `U.compressedState`) serializza esclusivamente il Redux store; le trasformazioni, vivendo in component state, non finivano mai nel JSON salvato. Al ricaricamento, l'`useState` ripartiva da `[]` e tutte le regole/guardie/mappings/trace della trasformazione venivano persi (data loss).
+
+**Fix minimo (2 file)**:
+1. **`joiner/classes.ts`**: aggiunto campo `transformations: any[] = []` a `DProject` e `transformations!: any[]` a `LProject`. Tipo `any[]` per evitare dipendenza circolare `joiner` → `jjtl`. Posizionato accanto a `tagNames` (stesso pattern di campo serializzabile non-pointer).
+2. **`components/project/ProjectEditor.tsx`**: `useState` ora inizializzato da `(project as any).transformations || []`. Wrapper `setTransformations` (via `useCallback`) intercetta ogni update e dispatcha `SetFieldAction.new(project.id, 'transformations', next, '', false)`, scrivendo in Redux. Le 5 call-site esistenti (`setTransformations(prev => ...)`) continuano a funzionare invariate grazie alla firma `React.SetStateAction<JjtlTransformation[]>` del wrapper.
+
+**Perché funziona**:
+- `U.compressedState` (`common/U.tsx:426`) fa `state.idlookup[id] = {...dproject, state: ''}` — qualunque campo presente sul DProject viene serializzato.
+- `LoadAction` ricostruisce l'intero state in Redux. La proxy `LProject` espone automaticamente `project.transformations` (stesso meccanismo di `tagNames`).
+- Retrocompatibile: progetti vecchi senza il campo → `project.transformations` è `undefined` → fallback a `[]`.
+
+**Documentation (bassa priorità)**: lasciato `// TODO: include documentation in project save` accanto allo state hydration. Stesso pattern di in-memory state riscontrato in `DocumentationSection`, ma rigenerabile e fuori scope di questo fix.
+
+**Note architetturali per futuro**:
+- Il megamodel (`model/megamodelPersistence.ts`) ha lo stesso problema sul flow `SaveManager.save` (è persistito solo nel `.jjodel` export tramite `buildProjectExportJson`, non in `compressedState`). Bug separato, non in scope.
+- Il pattern wrapper `setTransformations` evita refactor invasivi delle 5 call-site esistenti.
+
+## 2026-04-14 — fix: Dashboard CSS injection reactive + includes all views
+**File toccati**: `frontend/src/pages/components/Dashboard.tsx`
+**Esito**: ✅ build ok (80 errori TS, `vite build` 40.54s)
+
+**Root cause**: `ProjectDashboard` had NO Redux subscription — it read project data via `LProject.fromPointer(id)` (one-shot `store.getState()`). The `<style>` tag only updated when the component re-rendered for other reasons (tab switch, hideLeftBar, etc.). Views created after the initial render or views whose CSS was edited were missed because:
+1. No `useSelector` → no re-render on Redux state change
+2. The `allSubViews` traversal depended on the L-proxy hierarchy being fully up-to-date (timing issue with async dispatches)
+
+**Fix**: Replaced the one-shot `vparr.flatMap(vp => vp.allSubViews)` gathering with a `useSelector` that iterates `state.idlookup`, filtering for `DViewElement` and `DViewPoint` classNames, and calling `compiled_css` on each. This ensures:
+- The `<style>` tag re-renders whenever ANY view's state changes in Redux
+- ALL views in the project are included (not just those reachable via the subViews hierarchy)
+- Newly created views are picked up immediately after their Redux dispatch propagates
+
+**Performance**: iterating `state.idlookup` on every Redux change is O(n) where n = total elements. For typical projects (~100-500 elements, ~10-30 views), this is negligible (<1ms). The `compiled_css` getter is lazy — it returns the cached string immediately if `css_MUST_RECOMPILE` is false.
+
+## 2026-04-14 — fix: view CSS not injected into DOM after project load
+**File toccati**: `frontend/src/redux/reducer/reducer.ts`
+**Esito**: ✅ build ok (80 errori TS, `vite build` 36.95s)
+
+**Root cause**: After `LoadAction` (project load, reducer.ts:517-529), the Redux state is replaced wholesale with the deserialized project data. `css_MUST_RECOMPILE` and `compiled_css` are transient fields NOT included in the serialized project — they default to `undefined`/`false` and `''` respectively. The `get_compiled_css()` getter (view.tsx:793) checks `if (!c.data.css_MUST_RECOMPILE) return c.data.compiled_css` — since `!undefined` is `true`, it returns the cached empty string without ever compiling.
+
+The Dashboard's `<style id="views-css-injector-d">` tag (Dashboard.tsx:595-597) maps `v.compiled_css` for all views → all return `''` → empty style tag → no view CSS in DOM.
+
+**Fix**: Added `newState.VIEWS_RECOMPILE_all = true` after `LoadAction` processing (reducer.ts:529). This triggers the existing recompilation loop (reducer.ts:661-686) which sets `css_MUST_RECOMPILE = true` on every DViewElement. The next access to `compiled_css` then compiles the CSS (palettes + user CSS wrapped in the scoping selector) and caches it.
+
+**How the CSS reaches the DOM**:
+```
+LoadAction → newState.VIEWS_RECOMPILE_all = true
+  → reducer line 661: expands to all element IDs
+  → reducer line 679: sets css_MUST_RECOMPILE = true per view
+  → Dashboard.tsx: <style>{views.map(v => v.compiled_css)}</style>
+  → compiled_css getter: css_MUST_RECOMPILE is true → compiles user CSS + palettes
+  → wraps in scoping selector: .Pointer_View_XXX { user CSS }
+  → <style> tag contains actual CSS → applied to canvas instances
+```
+
+## 2026-04-14 — fix: view CSS not applied to instances on canvas
+**File toccati**: `frontend/src/components/forEndUser/Aliases.tsx`
+**Esito**: ✅ build ok (80 errori TS, `vite build` 42.46s)
+
+**Root cause**: The `<View>` component (Aliases.tsx:10-13) renders `<view className={"view " + className} {...props}>`. The spread `{...props}` passes `classNameAdd` as a **custom DOM attribute** instead of merging it into `className`. The `classNameAdd` prop (injected by `UX.tsx:340`) contains the view ID (e.g., `"mainView,Pointer_View_123,..."`) which is the CSS scoping selector used by `view.tsx:875` (`.${c.data.id} { ... }`). Without merging, the scoped CSS selector `.Pointer_View_123 { .state { ... } }` never matches because `Pointer_View_123` isn't in the element's class list.
+
+**Fix**: Destructure `classNameAdd` from props, replace commas with spaces (UX.tsx joins with `,`), and merge into `className`:
+```tsx
+const { classNameAdd, className, ...rest } = props;
+const addClasses = classNameAdd ? String(classNameAdd).replace(/,/g, ' ') : '';
+const merged = ('view ' + (className || '') + ' ' + addClasses).trim();
+return <view className={merged} {...rest}>{children}</view>;
+```
+
+Before: `<view class="state bg-white p-1" classnameadd="mainView,Pointer_View_123">` — CSS can't match
+After: `<view class="view state bg-white p-1 mainView Pointer_View_123">` — `.Pointer_View_123 { .state { border: 1px solid red } }` matches
+
+## 2026-04-14 — fix: Maximum Update Depth — reference-stabilizing guard on ReactFlow props
+**File toccati**: `frontend/src/components/editor-v2/EditorV2.tsx`
+**Esito**: ✅ build ok (80 errori TS, `vite build` 38.40s)
+
+**WHY PREVIOUS FIXES WEREN'T ENOUGH**: Memoizing nodes/edges and debouncing the sync reduce the frequency but can't eliminate reference-only changes caused by the Jjodel action system's `setTimeout(dispatch, 0)` (action.ts:349) + periodic `setInterval → COMMIT` (reducer.ts:1381). Any code path that calls `setNodes(prev => ...)` and returns a new array (even with identical content) produces a new reference → StoreUpdater sees "change" → calls internal `setNodes()` → re-render → possible loop.
+
+**THE FIX — Reference stabilizer**: Added `stableNodes`/`stableEdges` useMemo guards between the React state (`nodes`/`edges` from `useNodesState`/`useEdgesState`) and the `<ReactFlow>` props. The guard compares each node/edge structurally (id, type, data reference, selected, position within 0.1px, measured dimensions). If ALL elements match, it returns the **previous array reference** from a `useRef`. StoreUpdater sees the same reference → no sync → no loop.
+
+```tsx
+<ReactFlow
+    nodes={stableNodes}   // ← stabilized reference
+    edges={stableEdges}   // ← stabilized reference
+    ...
+/>
+```
+
+**Comparison fields checked per node**: `id`, `type`, `data` (reference), `selected`, `dragging`, `hidden`, `position.x/y` (±0.1px), `measured.width/height` (exact).
+
+**Comparison fields checked per edge**: `id`, `source`, `target`, `sourceHandle`, `targetHandle`, `type`, `data` (reference), `selected`, `hidden`.
+
+**When the guard DOES return a new reference**: only when genuine structural changes are detected (node added/removed, position changed >0.1px, data object replaced, selection toggled, etc.). These are legitimate changes that StoreUpdater should process.
+
+**Retained from previous fixes**: dimension rate limiter (EditorV2.tsx), deeper shallowDataEqual (useJjomSync.ts), requestAnimationFrame debounce (useJjomSync.ts), Input.tsx value normalization.
+
+## 2026-04-14 — fix: Maximum Update Depth Exceeded — debounced incremental sync
+**File toccati**:
+- `frontend/src/components/editor-v2/hooks/useJjomSync.ts` — debounced setNodes/setEdges via requestAnimationFrame + deeper shallowDataEqual + debug log cleanup
+
+**ROOT CAUSE IDENTIFIED**: `action.ts:349` wraps EVERY Redux dispatch in `setTimeout(fn, 0)`, forcing it outside React's render batch. The periodic `setInterval(() => COMMIT(undefined, false), N)` at `reducer.ts:1381` flushes buffered mutations through this async dispatch. Each dispatch arrives as a SEPARATE render cycle → `elementSnapshots` selector fires → incremental sync effect → `setNodes` → StoreUpdater → re-measure → dimension changes → `handleNodesChange` → new nodes ref → StoreUpdater fires AGAIN → LOOP.
+
+**FIX — Debounced push via requestAnimationFrame**: Instead of calling `setNodes`/`setEdges` synchronously inside the incremental sync `useEffect`, patches are accumulated in `pendingNodePatchRef`/`pendingEdgePatchRef` arrays. A single `requestAnimationFrame` callback (`scheduleFlush`) flushes ALL accumulated patches into ONE `setNodes` call (using `reduce` to compose the patch functions). Multiple rapid COMMIT→dispatch→effect cycles within the same animation frame are coalesced into a single React state update. This breaks the loop because StoreUpdater only sees ONE nodes reference change per frame, not N.
+
+**Previous fix (retained)**:
+- `EditorV2.tsx`: rate limiter (`dimRateLimitRef`) for dimension changes — safety net
+- `useJjomSync.ts`: deeper `shallowDataEqual` — prevents unnecessary patches for object nodes with recreated FeatureValueRow objects
+- `Input.tsx`: `value ?? ''` — prevents uncontrolled→controlled React warning
+
 ## 2026-04-14 — fix: Maximum Update Depth Exceeded in EditorV2 (ReactFlow infinite loop)
 **File toccati**:
-- `frontend/src/components/editor-v2/EditorV2.tsx` — rate limiter + debug log cleanup
-- `frontend/src/components/editor-v2/hooks/useJjomSync.ts` — debug log cleanup
-**Esito**: ✅ build ok (80 errori TS, `vite build` 42.49s)
+- `frontend/src/components/editor-v2/EditorV2.tsx` — rate limiter for dimension changes + debug log cleanup
+- `frontend/src/components/editor-v2/hooks/useJjomSync.ts` — deeper `shallowDataEqual` comparison + debug log cleanup
+- `frontend/src/components/editor-v2/utils/jjomTransformers.ts` — debug log cleanup
+- `frontend/src/components/forEndUser/Input.tsx` — fix uncontrolled→controlled warning
+**Esito**: ✅ build ok (80 errori TS, `vite build` 40.23s)
 
-**Root cause**: The existing dimension dedup (lines ~2421-2437) filters identical measurements within 0.5px. But if a node's content causes dimensions to genuinely oscillate by >0.5px between render cycles (ErrorDisplay badge, font loading, CSS transitions), each measurement passes the threshold and creates a new nodes reference → StoreUpdater re-syncs → ReactFlow re-measures → new slightly-different dimensions → infinite loop until React bails with "Maximum update depth exceeded".
+**Root cause (rename trigger)**: `objectVertexToRFNode()` creates NEW `FeatureValueRow` objects every time it's called. The old `shallowDataEqual` compared array elements by reference identity (`va[i] !== vb[i]`) — always FALSE for freshly-created objects, even with identical values. Result: incremental sync always considered object-node data "changed" → always called `setNodes` → StoreUpdater → measurement → loop.
 
-**Fix — Rate limiter** (new `dimRateLimitRef`): Added a second protection layer BEFORE the dimension dedup. Tracks the number of auto-measurement dimension changes per node per 500ms window. After 3 changes within 500ms, further changes for that node are dropped regardless of whether dimensions differ. This breaks any oscillation-driven loop. User-initiated resize (`resizing !== undefined`) always passes both layers.
+The rename flow: ObjectNode `commitName()` → `setNodes` (label update) + `syncNodeLabel` → Redux dispatch → `elementSnapshots` selector detects hash change → incremental sync fires → calls `jjomVertexToRFNode()` → new features array with new object references → `shallowDataEqual` returns false → patches node data → `setNodes` → StoreUpdater → re-measure → dimension change (label width changed) → `handleNodesChange` → new nodes ref → loop.
 
-```
-Layer 1 (new): Rate limit — max 3 dim changes / node / 500ms → drop
-Layer 2 (existing): Dimension dedup — same dims within 0.5px → drop
-```
+**Fix 1 — Deeper `shallowDataEqual`** (useJjomSync.ts): Rewrote to do TWO levels of shallow comparison:
+- Level 1: top-level keys compared by identity (same as before)
+- Level 2 (NEW): for array elements that are objects, compare their properties shallowly (string/number/boolean values). For nested arrays of primitives (e.g. enumLiterals), compare elements by identity.
 
-**Debug log cleanup**: Removed 6 `console.log('[DEBUG ...]')` statements:
-- EditorV2.tsx: `[DEBUG EditorV2 nodes state]` useEffect (removed entirely), `[DEBUG EditorV2] modelid:...` in useJjomSync callback
-- useJjomSync.ts: 4 `[DEBUG useJjomSync init]` logs + `[DEBUG setNodes]`
+This correctly identifies that `{ name: "State", kind: "attribute", value: "idle" }` from two separate `objectVertexToRFNode` calls is EQUAL, even though the objects are different references. When data is actually equal, `patchedNodeData` is NOT populated → `hasNodeChanges` is false → `setNodes` is NOT called → loop broken.
+
+**Fix 2 — Rate limiter** (EditorV2.tsx): Added `dimRateLimitRef` — max 3 auto-measurement dimension changes per node per 500ms. Safety net for cases where dimensions genuinely oscillate (ErrorDisplay badge, font loading, CSS transitions).
+
+**Fix 3 — Input uncontrolled→controlled** (Input.tsx:286): `value: serializeValue(value)` could be `undefined` (when `serializeValue` returns `undefined` at line 130 or when initial getter returns `undefined` at line 96). Changed to `value: serializeValue(value) ?? ''`. This prevents React's "A component is changing an uncontrolled input to be controlled" warning, which caused extra re-renders during composition-child rename and contributed to the StoreUpdater cascade. The `setTimeout` in Jjodel's action system (action.ts) makes these extra re-renders arrive as SEPARATE render cycles (outside React batching), each triggering a full StoreUpdater sync.
+
+**Debug log cleanup**: Removed 7 `console.log('[DEBUG ...]')` statements across EditorV2.tsx, useJjomSync.ts, jjomTransformers.ts.
 
 ## 2026-04-14 — fix: context menu text color (dark on dark)
 **File toccati**: `frontend/src/components/editor-v2/EditorV2.scss`

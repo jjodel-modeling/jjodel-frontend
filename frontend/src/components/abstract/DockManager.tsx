@@ -274,6 +274,32 @@ class DockManager {
 
         const tabId = `jjtl_${transformation.id}`;
 
+        // EDGE CASE — keystroke autosync (debounced 300ms).
+        // JjtlDevelopmentEnv keeps typed code in its own internal state and only
+        // calls onSave when the user clicks the editor toolbar's Save button. If
+        // the user instead triggers Save Project (Cmd+S, etc.) without first
+        // saving in the editor, compressedState would serialize the stale
+        // transformation.code (the template generated at createTransformation
+        // time), and on reload the user would see the template instead of their
+        // edits. To prevent this data loss, mirror every keystroke into the
+        // ProjectEditor's transformation store via the same onSave callback,
+        // debounced so we don't dispatch a Redux action per character.
+        let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+        const flushDebounce = () => {
+            if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
+        };
+        const debouncedSync = (code: string) => {
+            flushDebounce();
+            debounceTimer = setTimeout(() => {
+                debounceTimer = null;
+                onSave?.(code);
+            }, 300);
+        };
+        const explicitSave = onSave ? (code: string) => {
+            flushDebounce();
+            onSave(code);
+        } : undefined;
+
         // Create tab content with current props (needed for both new and existing tabs)
         const tabContent = React.createElement(JjtlDevelopmentEnv, {
             initialCode: transformation.code,
@@ -285,10 +311,8 @@ class DockManager {
             targetMetamodelName: transformation.targetMetamodelName || 'Target',
             availableModels: availableModels || [],
             existingModelNames: existingModelNames || [],
-            onSave: onSave,
-            onCodeChange: (_code: string) => {
-                // Code change tracked internally
-            },
+            onSave: explicitSave,
+            onCodeChange: debouncedSync,
             onExecuteTransformation: onExecuteTransformation
         });
 

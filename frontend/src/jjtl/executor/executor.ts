@@ -32,7 +32,9 @@ import {
     PromptExpressionAST,
     InputExpressionAST,
     ConfirmExpressionAST,
+    JjelExpressionWrapperAST,
 } from '../types';
+import type { JjelExpression } from '../../jjel/types/ast';
 
 import { getUIBridge } from './UIBridge';
 
@@ -222,6 +224,31 @@ function safeDeepCopy(sourceModel: any): any {
 // ============================================
 
 /**
+ * Entry in the name-keyed trace map.
+ * One source element can produce multiple target elements (from different rules).
+ */
+interface TargetEntry {
+    source: any;
+    target: any;
+    rule: ClassMappingAST;
+    targetClass: string;
+}
+
+/**
+ * State carried from Pass 1 to Pass 2 for a single source/target pair.
+ * Holds everything the binding phase needs to evaluate attributes on the
+ * already-created target instance.
+ */
+interface PendingBinding {
+    sourceInstance: any;
+    /** Synthetic source for multi-source mappings; identical to sourceInstance for single-source */
+    evalSource: any;
+    targetInstance: any;
+    traceLink: TraceLinkBuilder;
+    sourceAlias?: string;
+}
+
+/**
  * Context for transformation execution
  */
 export interface ExecutionContext {
@@ -241,6 +268,23 @@ export interface ExecutionContext {
     currentRuleName?: string;
     /** Current source instance name for dialog context (e.g. "Mario") */
     currentInstanceName?: string;
+    /**
+     * Cross-type resolution index: source class name → rules that match it.
+     * Built once before Pass 1; consulted during binding evaluation.
+     */
+    rulesBySourceType: Map<string, ClassMappingAST[]>;
+    /**
+     * Name-keyed trace: source element name → target entries created from it.
+     * Populated in Pass 1; consulted by resolve() and implicit cross-type
+     * resolution during Pass 2.
+     */
+    targetsBySourceName: Map<string, TargetEntry[]>;
+    /**
+     * Pending bindings per mapping: Pass 1 populates this list for each mapping,
+     * Pass 2 drains it to evaluate attribute bindings on the already-created
+     * target instances.
+     */
+    pendingByMapping: Map<ClassMappingAST, PendingBinding[]>;
 }
 
 /**
@@ -299,6 +343,15 @@ export class JjtlExecutor {
     private jjelEvaluator: JjelEvaluator = new JjelEvaluator();
     private errors: string[] = [];
     private warnings: string[] = [];
+    // Target classes referenced by mappings that don't exist in the target
+    // metamodel. Populated by validateTargetClasses and consulted by
+    // executeClassMapping to skip the mapping instead of creating orphan
+    // instances under an unknown className.
+    private unknownTargetClasses: Set<string> = new Set();
+    // Source classes referenced by mappings that never appear in the source
+    // model. Populated lazily when executeClassMapping sees them; kept so we
+    // don't emit the same warning per-rule for the same missing class.
+    private warnedSourceClasses: Set<string> = new Set();
     private stats: ExecutionStats = {
         sourceInstancesProcessed: 0,
         targetInstancesCreated: 0,
@@ -396,9 +449,29 @@ export class JjtlExecutor {
                 };
             }
 
-            // Execute class mappings
-            for (const mapping of this.ast.mappings) {
-                await this.executeClassMapping(mapping, sourceInstances, targetModel);
+            // Two-pass execution:
+            //   Pass 1 — match each mapping against source instances, evaluate
+            //   guard (`where`), create empty target instances, register them
+            //   in the trace. No bindings evaluated here.
+            //   Pass 2 — evaluate bindings with the full trace available, so
+            //   cross-type resolution (source element → target element) works
+            //   regardless of rule order.
+            const totalMappings = this.ast.mappings.length;
+
+            console.log(`[JjTL] ===== PASS 1: create + trace =====`);
+            for (let mi = 0; mi < totalMappings; mi++) {
+                const mapping = this.ast.mappings[mi];
+                const mappingLabel = `${mapping.sources.map(s => s.className).join(', ')} -> ${mapping.targetClass}`;
+                console.log(`[JjTL] Pass1 ${mi + 1}/${totalMappings}: ${mappingLabel}`);
+                await this.pass1CreateTargets(mapping, sourceInstances, targetModel);
+            }
+
+            console.log(`[JjTL] ===== PASS 2: bind attributes =====`);
+            for (let mi = 0; mi < totalMappings; mi++) {
+                const mapping = this.ast.mappings[mi];
+                const mappingLabel = `${mapping.sources.map(s => s.className).join(', ')} -> ${mapping.targetClass}`;
+                console.log(`[JjTL] Pass2 ${mi + 1}/${totalMappings}: ${mappingLabel}`);
+                await this.pass2BindAttributes(mapping);
             }
 
             this.stats.executionTimeMs = performance.now() - startTime;
@@ -463,9 +536,12 @@ export class JjtlExecutor {
         }
 
         const classMap = new Map(allClasses.map(c => [c.name, c]));
+        const knownNames = new Set(classMap.keys());
         const abstractNames = new Set(allClasses.filter(c => c.isAbstract).map(c => c.name));
 
-        if (abstractNames.size === 0) return;
+        // Bail only if we couldn't enumerate any classes at all — we can't
+        // validate against an unknown metamodel shape.
+        if (knownNames.size === 0) return;
 
         // Find concrete subclasses for helpful messages
         const findConcreteSubclasses = (abstractName: string): string[] => {
@@ -486,6 +562,11 @@ export class JjtlExecutor {
                 this.errors.push(
                     `Cannot use abstract class '${targetClass}' as transformation target in ${context}.${suggestion}`
                 );
+            } else if (!knownNames.has(targetClass)) {
+                const msg = `Target class '${targetClass}' not found in target metamodel (${context}). Mapping skipped.`;
+                console.warn(`[JjTL] ${msg}`);
+                this.warnings.push(msg);
+                this.unknownTargetClasses.add(targetClass);
             }
         };
 
@@ -538,6 +619,16 @@ export class JjtlExecutor {
         const targetModelName = this.ast.targetMetamodel || 'target';
         const traceBuilder = new TraceModelBuilder(transformationName, sourceModelName, targetModelName);
 
+        // Build rules-by-source-type index for cross-type resolution
+        const rulesBySourceType = new Map<string, ClassMappingAST[]>();
+        for (const mapping of this.ast.mappings) {
+            for (const src of mapping.sources) {
+                const list = rulesBySourceType.get(src.className) || [];
+                list.push(mapping);
+                rulesBySourceType.set(src.className, list);
+            }
+        }
+
         this.context = {
             sourceModel,
             targetMetamodel,
@@ -545,6 +636,9 @@ export class JjtlExecutor {
             evalContext: new EvaluationContext(bindings),
             helpers: new Map(),
             traceBuilder,
+            rulesBySourceType,
+            targetsBySourceName: new Map(),
+            pendingByMapping: new Map(),
         };
 
         // Register resolve() and resolveAll() as JjEL builtins
@@ -563,19 +657,27 @@ export class JjtlExecutor {
     }
 
     /**
-     * Register trace-related builtins: resolve() and resolveAll()
+     * Register trace-related builtins.
+     *
+     * `resolve` is intercepted at the JjTL executor level (so the optional
+     * target-type argument can be read as an identifier name without being
+     * evaluated), and the builtin registered here is a fallback that receives
+     * already-evaluated args. See `evaluateExpression` for the intercept path.
+     *
+     * `resolveAll` is kept as a debugging/serialization helper returning
+     * TraceElementRefs (names only) — not the actual target instances.
      */
     private registerTraceBuiltins(): void {
         const traceBuilder = this.context.traceBuilder;
 
-        // resolve(sourceElementName, targetClassName?) -> TraceElementRef | null
+        // resolve(sourceElement, targetClassName?) — fallback path (no AST-level
+        // identifier hint). Accepts either a source element object or its name.
         const resolveFn = createFunction(
-            ['sourceElementName', 'targetClassName'],
+            ['source', 'targetClass'],
             (args: JjelValue[]) => {
-                const sourceElementName = String(args[0] ?? '');
-                const targetClassName = args[1] ? String(args[1]) : undefined;
-                const result = traceBuilder.resolve(sourceElementName, targetClassName);
-                return result ? toJjelValue(result) : null;
+                const srcArg = args[0] as any;
+                const typeHint = args[1] != null ? String(args[1]) : undefined;
+                return this.resolveValue(srcArg, '<resolve>', typeHint) as JjelValue;
             }
         );
         this.context.evalContext.registerBuiltin('resolve', resolveFn);
@@ -686,34 +788,58 @@ export class JjtlExecutor {
     }
 
     /**
-     * Execute a class mapping for all matching source instances
+     * Pass 1: match source instances to this mapping, evaluate its guard (`where`),
+     * create empty target instances, and register them in the trace.
+     *
+     * No attribute bindings are evaluated here — that happens in Pass 2 once the
+     * full trace is available, so cross-type resolution (source element → target
+     * element) works regardless of rule declaration order.
      */
-    private async executeClassMapping(
+    private async pass1CreateTargets(
         mapping: ClassMappingAST,
         sourceInstances: Map<string, any[]>,
         targetModel: TargetModel
     ): Promise<void> {
-        if (mapping.sources.length > 1) {
-            await this.executeMultiSourceClassMapping(mapping, sourceInstances, targetModel);
+        if (this.unknownTargetClasses.has(mapping.targetClass)) {
+            console.log(`[JjTL] Skipping mapping to unknown target class '${mapping.targetClass}'`);
             return;
         }
 
-        // Single-source path
+        if (mapping.sources.length > 1) {
+            await this.pass1MultiSource(mapping, sourceInstances, targetModel);
+            return;
+        }
+
         const src = mapping.sources[0];
         const sourceClassName = src.className;
         const sourceAlias = src.alias;
         const targetClassName = mapping.targetClass;
+
+        if (!sourceInstances.has(sourceClassName) && !this.warnedSourceClasses.has(sourceClassName)) {
+            const msg = `Source class '${sourceClassName}' has no instances in the source model. Mapping '${sourceClassName} -> ${targetClassName}' produced no output.`;
+            console.warn(`[JjTL] ${msg}`);
+            this.warnings.push(msg);
+            this.warnedSourceClasses.add(sourceClassName);
+        }
+
         const instances = sourceInstances.get(sourceClassName) || [];
         const ruleName = `${sourceClassName} -> ${targetClassName}`;
         const hasGuard = !!mapping.condition;
 
-        // console.log(`[JjTL Executor] executeClassMapping: ${ruleName}`);
-        // console.log(`[JjTL Executor] Found ${instances.length} source instances of type "${sourceClassName}"`);
-        // console.log(`[JjTL Executor] Class mapping body items:`, mapping.body?.length ?? 0);
 
         this.context.currentRuleName = ruleName;
 
+        const MAX_INSTANCES_PER_MAPPING = 10000;
+        let iterCount = 0;
+        const pending: PendingBinding[] = [];
+
         for (const sourceInstance of instances) {
+            if (++iterCount > MAX_INSTANCES_PER_MAPPING) {
+                const msg = `Aborted '${ruleName}': exceeded ${MAX_INSTANCES_PER_MAPPING} source instances (possible runaway).`;
+                console.warn(`[JjTL Executor] ${msg}`);
+                this.warnings.push(msg);
+                break;
+            }
             this.context.currentInstanceName =
                 sourceInstance?.name ??
                 sourceInstance?.$name?.value ??
@@ -721,19 +847,15 @@ export class JjtlExecutor {
 
             this.stats.sourceInstancesProcessed++;
 
-            // Check condition if present
             if (mapping.condition) {
                 const condResult = this.evaluateCondition(mapping.condition, sourceInstance, sourceAlias);
                 if (!condResult) {
-                    // console.log(`[JjTL Executor] Instance skipped due to condition`);
                     continue;
                 }
             }
 
-            // Create target instance(s)
             const targetInstances = this.createTargetInstances(mapping, sourceInstance, targetModel);
 
-            // Trace refs
             const sourceRef: TraceElementRef = {
                 modelName: this.ast.sourceMetamodel || 'source',
                 elementName: sourceInstance.name || sourceInstance.id || `${sourceClassName}_${this.stats.sourceInstancesProcessed}`,
@@ -746,28 +868,34 @@ export class JjtlExecutor {
             }));
             const traceLink = this.context.traceBuilder.addLink(ruleName, sourceRef, targetRefs, hasGuard);
 
+            // Register by name for cross-type resolution during Pass 2
+            this.registerTargetsBySourceName(sourceInstance, targetInstances, mapping, targetClassName);
+
             for (const targetInstance of targetInstances) {
-                await this.executeAttributeMappingsWithTrace(mapping.body, sourceInstance, targetInstance, traceLink, sourceAlias);
+                pending.push({
+                    sourceInstance,
+                    evalSource: sourceInstance,
+                    targetInstance,
+                    traceLink,
+                    sourceAlias,
+                });
             }
-
-            this.context.currentInstanceName = undefined;
-
-            this.stats.classMappingsExecuted++;
         }
 
+        this.context.pendingByMapping.set(mapping, pending);
+        this.context.currentInstanceName = undefined;
         this.context.currentRuleName = undefined;
     }
 
     /**
-     * Execute a multi-source class mapping using cartesian product of all source instances.
-     * All sources must have aliases; missing aliases produce an error.
+     * Pass 1 for multi-source mapping (cartesian product). Identical shape to
+     * pass1CreateTargets but builds a synthetic evalSource per combo.
      */
-    private async executeMultiSourceClassMapping(
+    private async pass1MultiSource(
         mapping: ClassMappingAST,
         sourceInstances: Map<string, any[]>,
         targetModel: TargetModel
     ): Promise<void> {
-        // Validate: every source must have an alias
         for (const src of mapping.sources) {
             if (!src.alias) {
                 this.errors.push(
@@ -782,40 +910,39 @@ export class JjtlExecutor {
         const hasGuard = !!mapping.condition;
         const ruleName = mapping.sources.map(s => `${s.className} ${s.alias}`).join(', ') + ` -> ${targetClassName}`;
 
-        // Collect instances per source (in declaration order)
-        const instanceArrays = mapping.sources.map(s => sourceInstances.get(s.className) || []);
+        for (const src of mapping.sources) {
+            if (!sourceInstances.has(src.className) && !this.warnedSourceClasses.has(src.className)) {
+                const msg = `Source class '${src.className}' has no instances in the source model. Mapping '${ruleName}' produced no output.`;
+                console.warn(`[JjTL] ${msg}`);
+                this.warnings.push(msg);
+                this.warnedSourceClasses.add(src.className);
+            }
+        }
 
-        // Cartesian product of all instance arrays
+        const instanceArrays = mapping.sources.map(s => sourceInstances.get(s.className) || []);
         const combinations = cartesianProduct(instanceArrays);
+        const pending: PendingBinding[] = [];
 
         for (const combo of combinations) {
             this.stats.sourceInstancesProcessed++;
 
-            // Build a synthetic source object:
-            //   • alias names → the corresponding combo instances (for p.name, c.name)
-            //   • also spread the first source's own properties at the top level (implicit context)
             const syntheticSource: Record<string, any> = {};
-            // Spread first source's own properties first (lowest priority)
             if (combo[0] && typeof combo[0] === 'object') {
                 for (const [k, v] of proxyEntries(combo[0])) {
                     if (!k.startsWith('__')) syntheticSource[k] = v;
                 }
             }
-            // Then bind each alias (higher priority, may override)
             for (let i = 0; i < mapping.sources.length; i++) {
                 syntheticSource[mapping.sources[i].alias!] = combo[i];
             }
 
-            // Check condition
             if (mapping.condition) {
                 const condResult = this.evaluateCondition(mapping.condition, syntheticSource);
                 if (!condResult) continue;
             }
 
-            // Create target instance (use first combo element as "primary" source)
             const targetInstances = this.createTargetInstances(mapping, combo[0], targetModel);
 
-            // Trace refs
             const sourceRef: TraceElementRef = {
                 modelName: this.ast.sourceMetamodel || 'source',
                 elementName: mapping.sources.map((s, i) => combo[i]?.name || combo[i]?.id || s.alias!).join('+'),
@@ -828,12 +955,78 @@ export class JjtlExecutor {
             }));
             const traceLink = this.context.traceBuilder.addLink(ruleName, sourceRef, targetRefs, hasGuard);
 
-            for (const targetInstance of targetInstances) {
-                await this.executeAttributeMappingsWithTrace(mapping.body, syntheticSource, targetInstance, traceLink);
+            // Register by name for each combo element (so cross-type resolution works)
+            for (let i = 0; i < mapping.sources.length; i++) {
+                this.registerTargetsBySourceName(combo[i], targetInstances, mapping, targetClassName);
             }
 
+            for (const targetInstance of targetInstances) {
+                pending.push({
+                    sourceInstance: combo[0],
+                    evalSource: syntheticSource,
+                    targetInstance,
+                    traceLink,
+                });
+            }
+        }
+
+        this.context.pendingByMapping.set(mapping, pending);
+    }
+
+    /**
+     * Register target instances under the source element's name (and id) so
+     * both implicit cross-type resolution and explicit `resolve()` can find
+     * the target(s) from a source reference.
+     */
+    private registerTargetsBySourceName(
+        sourceInstance: any,
+        targetInstances: any[],
+        mapping: ClassMappingAST,
+        targetClass: string
+    ): void {
+        const keys = new Set<string>();
+        if (sourceInstance?.name) keys.add(String(sourceInstance.name));
+        if (sourceInstance?.id) keys.add(String(sourceInstance.id));
+        if (keys.size === 0) return;
+        for (const key of keys) {
+            const entries = this.context.targetsBySourceName.get(key) || [];
+            for (const target of targetInstances) {
+                entries.push({ source: sourceInstance, target, rule: mapping, targetClass });
+            }
+            this.context.targetsBySourceName.set(key, entries);
+        }
+    }
+
+    /**
+     * Pass 2: evaluate attribute bindings on every pending (source, target) pair
+     * for this mapping. The full trace is available, so cross-type resolution
+     * succeeds regardless of rule order.
+     */
+    private async pass2BindAttributes(mapping: ClassMappingAST): Promise<void> {
+        const pending = this.context.pendingByMapping.get(mapping);
+        if (!pending || pending.length === 0) return;
+
+        const ruleName = `${mapping.sources.map(s => s.className).join(', ')} -> ${mapping.targetClass}`;
+        this.context.currentRuleName = ruleName;
+
+        for (const entry of pending) {
+            this.context.currentInstanceName =
+                entry.sourceInstance?.name ??
+                entry.sourceInstance?.$name?.value ??
+                (entry.sourceInstance != null ? String(entry.sourceInstance) : undefined);
+
+            await this.executeAttributeMappingsWithTrace(
+                mapping.body,
+                entry.evalSource,
+                entry.targetInstance,
+                entry.traceLink,
+                entry.sourceAlias,
+            );
             this.stats.classMappingsExecuted++;
         }
+
+        this.context.currentInstanceName = undefined;
+        this.context.currentRuleName = undefined;
     }
 
     /**
@@ -865,6 +1058,15 @@ export class JjtlExecutor {
             } else {
                 count = multiplicity.upper;
             }
+        }
+
+        // Clamp against malformed AST that could otherwise freeze the main thread.
+        const MAX_MULTIPLICITY = 1000;
+        if (count > MAX_MULTIPLICITY) {
+            const msg = `Multiplicity ${count} for target '${targetClassName}' exceeds max ${MAX_MULTIPLICITY}; clamping.`;
+            console.warn(`[JjTL Executor] ${msg}`);
+            this.warnings.push(msg);
+            count = MAX_MULTIPLICITY;
         }
 
         const created: any[] = [];
@@ -1033,6 +1235,7 @@ export class JjtlExecutor {
         alias?: string
     ): Promise<void> {
         try {
+            console.log(`[JjTL] Evaluating attribute mapping: ${mapping.targetAttribute} := ${mapping.sourceAttribute ?? '<expression>'}`);
             let value: JjelValue;
             let sourceValue: any = null;
             const hasExpression = !!mapping.conversion?.expression;
@@ -1066,9 +1269,15 @@ export class JjtlExecutor {
                 value = null;
             }
 
+            // Cross-type resolution: if the binding value is (or contains) a
+            // source element whose type has a rule, swap it for the
+            // corresponding target element via the trace.
+            const resolved = this.applyCrossTypeResolution(value, mapping.targetAttribute);
+
             // Set target attribute
-            const finalValue = fromJjelValue(value);
+            const finalValue = fromJjelValue(resolved);
             targetInstance[mapping.targetAttribute] = finalValue;
+            console.log(`[JjTL] Result: ${mapping.targetAttribute} = ${JSON.stringify(finalValue)}`);
 
             // Determine invertibility
             const invertible = this.isBindingInvertible(mapping);
@@ -1264,8 +1473,11 @@ export class JjtlExecutor {
                 value = null;
             }
 
+            // Cross-type resolution: swap source elements for target elements via trace.
+            const resolved = this.applyCrossTypeResolution(value, mapping.targetAttribute);
+
             // Set target attribute
-            const finalValue = fromJjelValue(value);
+            const finalValue = fromJjelValue(resolved);
             targetInstance[mapping.targetAttribute] = finalValue;
             // console.log(`[JjTL Executor] Set ${mapping.targetAttribute} = ${JSON.stringify(finalValue)}`);
         } catch (error) {
@@ -1371,7 +1583,7 @@ export class JjtlExecutor {
                     value = null;
                 }
 
-                newObject[attrMapping.targetAttribute] = value;
+                newObject[attrMapping.targetAttribute] = this.applyCrossTypeResolution(value, attrMapping.targetAttribute) as JjelValue;
             } else if (item.type === 'ForAllMapping') {
                 await this.executeForAllMappingOnObject(item as ForAllMappingAST, sourceInstance, newObject, extraBindings);
             } else if (item.type === 'AlertStatement') {
@@ -1419,7 +1631,7 @@ export class JjtlExecutor {
                         } else {
                             value = null;
                         }
-                        newObject[attrMapping.targetAttribute] = value;
+                        newObject[attrMapping.targetAttribute] = this.applyCrossTypeResolution(value, attrMapping.targetAttribute) as JjelValue;
                     } else if (bodyItem.type === 'ForAllMapping') {
                         await this.executeForAllMappingOnObject(bodyItem as ForAllMappingAST, sourceInstance, newObject, extraBindings);
                     }
@@ -1603,7 +1815,7 @@ export class JjtlExecutor {
                 } else {
                     value = null;
                 }
-                targetInstance[mapping.targetAttribute] = fromJjelValue(value);
+                targetInstance[mapping.targetAttribute] = fromJjelValue(this.applyCrossTypeResolution(value, mapping.targetAttribute));
                 this.stats.attributeMappingsExecuted++;
             } else if (item.type === 'ForAllMapping') {
                 await this.executeForAllMapping(item as ForAllMappingAST, sourceInstance, targetInstance);
@@ -1669,7 +1881,8 @@ export class JjtlExecutor {
                     value = null;
                 }
 
-                const finalValue = fromJjelValue(value);
+                const resolved = this.applyCrossTypeResolution(value, mapping.targetAttribute);
+                const finalValue = fromJjelValue(resolved);
                 targetInstance[mapping.targetAttribute] = finalValue;
                 const invertible = this.isBindingInvertible(mapping);
                 const userProvided = mapping.expression !== undefined
@@ -1741,12 +1954,22 @@ export class JjtlExecutor {
             bindings[alias] = shallowToJjelValue(sourceInstance);
         }
 
-        // === DEBUG: Step 2 — What does the context look like? ===
-        // console.log('=== INSTANCE CONTEXT ===');
-        // console.log('context keys:', Object.keys(bindings));
-        // console.log('context.surname:', bindings['surname']);
-        // console.log('context.name:', bindings['name']);
-        // === END DEBUG Step 2 ===
+        // `parent` keyword: evaluates to the eContainer of the current source
+        // instance. Jjodel L-layer proxies expose the container as `.father`;
+        // plain objects (as in tests) may use `.parent` or `.owner`. Only inject
+        // the fallback when the source doesn't already expose a `parent` key
+        // — the direct proxyEntries binding above already covers that case.
+        if (sourceInstance && typeof sourceInstance === 'object' && bindings.parent === undefined) {
+            const container =
+                (sourceInstance as any).father ??
+                (sourceInstance as any).eContainer ??
+                (sourceInstance as any).owner ??
+                null;
+            if (container !== null && container !== undefined) {
+                bindings.parent = shallowToJjelValue(container);
+            }
+        }
+
 
         return this.context.evalContext.child(bindings);
     }
@@ -1815,9 +2038,15 @@ export class JjtlExecutor {
      *   function call AST node.
      */
     private evaluateExpression(expr: ExpressionAST, ctx: EvaluationContext): JjelValue {
+        // Special case: resolve(expr) / resolve(expr, TargetType) — the second
+        // argument is an identifier that names a target class; it must NOT be
+        // evaluated (no binding exists for class names in the value context).
+        const resolved = this.tryEvaluateResolveCall(expr, ctx);
+        if (resolved !== undefined) return resolved;
+
         // Special case: standalone function calls (builtins/helpers)
-        // JjEL doesn't have a "FunctionCall" node for standalone calls like resolve("x").
-        // We handle these by looking up the function in context and calling it directly.
+        // JjEL now has its own FunctionCall node, but this branch still handles
+        // the JjTL-native FunctionCall produced by the legacy expression path.
         if (expr.type === 'FunctionCall') {
             const fc = expr as FunctionCallAST;
             if (fc.callee.type === 'Identifier') {
@@ -1911,6 +2140,309 @@ export class JjtlExecutor {
             return result.value as unknown as JjelValue;
         }
         return this.evaluateExpression(expr, ctx);
+    }
+
+    // ============================================
+    // CROSS-TYPE RESOLUTION
+    // ============================================
+
+    /**
+     * If a binding RHS produced a source element whose type has a rule in
+     * this transformation, swap the source element for the corresponding
+     * target element via the trace. Primitives and objects of types without
+     * rules pass through unchanged. Arrays are resolved element-wise.
+     *
+     * Ambiguity (N>1 rules for the same source type) throws; use
+     * `resolve(expr, TargetType)` in the JjTL binding to disambiguate.
+     *
+     * Missing target (no trace entry for this source) also throws: silently
+     * dropping a reference would be much harder to debug than failing loud.
+     *
+     * @param value            The evaluated RHS value
+     * @param targetAttribute  The target attribute being bound (used only for error messages)
+     */
+    private applyCrossTypeResolution(value: any, targetAttribute: string): any {
+        const resolved = this.resolveValue(value, targetAttribute, undefined, 0);
+        return this.wrapIfTargetReference(resolved);
+    }
+
+    /**
+     * If `value` is (or contains) a target instance produced by this
+     * transformation, wrap it as `{ __ref_result: true, targets: [...] }`
+     * so ProjectEditor can distinguish resolved references from primitive
+     * attribute values and write them using the correct (pointer-aware) API.
+     */
+    private wrapIfTargetReference(value: any): any {
+        if (value == null || typeof value !== 'object') return value;
+        if ((value as any).__ref_result) return value;
+
+        if (Array.isArray(value)) {
+            if (value.length > 0 && value.every(el =>
+                el && typeof el === 'object' && el.__createdBy === 'JjTL'
+            )) {
+                return { __ref_result: true, targets: value };
+            }
+            return value;
+        }
+
+        if (value.__createdBy === 'JjTL') {
+            return { __ref_result: true, targets: [value] };
+        }
+        return value;
+    }
+
+    /**
+     * Core resolution logic — shared between the implicit path (invoked on
+     * every binding RHS) and the explicit `resolve(expr, Type)` builtin.
+     *
+     * Handles three value shapes:
+     *   1. `{ __ref: pointerId }` — reference wrapper produced by ProjectEditor
+     *      when reading raw DValue values. Looked up by pointer ID in the trace.
+     *   2. Plain object with `className` / `__type` — source element (from tests
+     *      or from proxy flattening). Looked up by name/id in the trace.
+     *   3. Primitive / null / array — passthrough or element-wise recursion.
+     *
+     * @param expectedTarget  Optional target class filter (from resolve(e, T))
+     * @param depth           Recursion guard against circular structures
+     */
+    private resolveValue(
+        value: any,
+        targetAttribute: string,
+        expectedTarget: string | undefined,
+        depth: number = 0,
+    ): any {
+        if (value == null) return value;
+        if (depth > 10) {
+            console.error('[JjTL] resolveValue: max depth exceeded, returning raw value');
+            return value;
+        }
+
+        const t = typeof value;
+        if (t === 'number' || t === 'boolean') return value;
+        if (t === 'string') return value;
+
+        if (Array.isArray(value)) {
+            const out: any[] = [];
+            for (const el of value) {
+                const resolved = this.resolveValue(el, targetAttribute, expectedTarget, depth + 1);
+                if (resolved !== undefined) out.push(resolved);
+            }
+            return out;
+        }
+
+        if (t !== 'object') return value;
+
+        // ── Reference wrapper: { __ref: pointerId } ───────────────────────
+        // Produced by ProjectEditor when serializing reference features.
+        // The pointer ID is looked up in targetsBySourceName (which registers
+        // both name and id for every source element in Pass 1).
+        if ('__ref' in value && typeof value.__ref === 'string') {
+            return this.resolveRefById(value.__ref, targetAttribute, expectedTarget);
+        }
+
+        // ── Object with className (test / flattened proxy path) ───────────
+        const className = this.detectSourceClassName(value);
+        if (!className) return value;
+
+        const rules = this.context.rulesBySourceType.get(className);
+        if (!rules || rules.length === 0) return value;
+
+        let chosenRule: ClassMappingAST | undefined;
+        if (expectedTarget) {
+            chosenRule = rules.find(r => r.targetClass === expectedTarget);
+            if (!chosenRule) {
+                throw new Error(
+                    `resolve(${targetAttribute}, ${expectedTarget}): no rule maps '${className}' to '${expectedTarget}'`
+                );
+            }
+        } else if (rules.length === 1) {
+            chosenRule = rules[0];
+        } else {
+            const targetClasses = rules.map(r => r.targetClass).join(', ');
+            throw new Error(
+                `Ambiguous cross-type resolution for attribute '${targetAttribute}': ` +
+                `source type '${className}' has ${rules.length} rules (${targetClasses}). ` +
+                `Use resolve(expr, TargetType) to disambiguate.`
+            );
+        }
+
+        const elementName = value.name || value.id;
+        if (!elementName) {
+            throw new Error(
+                `Cross-type resolution failed for attribute '${targetAttribute}': ` +
+                `source element of type '${className}' has no name or id to look up in the trace.`
+            );
+        }
+
+        const entries = this.context.targetsBySourceName.get(String(elementName));
+        const match = entries?.find(e => e.rule === chosenRule);
+        if (!match) {
+            throw new Error(
+                `Unresolved reference: no target found for ${className} '${elementName}' ` +
+                `in rule '${chosenRule.sources.map(s => s.className).join(',')} -> ${chosenRule.targetClass}' ` +
+                `(attribute '${targetAttribute}'). ` +
+                `The source element may have been filtered by a 'where' guard.`
+            );
+        }
+        return match.target;
+    }
+
+    /**
+     * Resolve a `{ __ref: pointerId }` wrapper by looking up the pointer ID
+     * in the trace. Returns `null` (fail-open) if the ID has no corresponding
+     * target — the reference may point to an element whose type has no rule.
+     *
+     * When `expectedTarget` is set (explicit resolve()), ambiguity is resolved
+     * by filtering to the matching target class; missing entries throw.
+     */
+    private resolveRefById(
+        sourceId: string,
+        targetAttribute: string,
+        expectedTarget: string | undefined,
+    ): any {
+        const entries = this.context.targetsBySourceName.get(sourceId);
+
+        if (!entries || entries.length === 0) {
+            if (expectedTarget) {
+                throw new Error(
+                    `resolve(<ref>, ${expectedTarget}): no traced element with id '${sourceId}'`
+                );
+            }
+            // Implicit path — fail open: reference points to a type without a rule.
+            return null;
+        }
+
+        if (expectedTarget) {
+            const match = entries.find(e => e.targetClass === expectedTarget);
+            if (!match) {
+                const available = [...new Set(entries.map(e => e.targetClass))].join(', ');
+                throw new Error(
+                    `resolve(<ref>, ${expectedTarget}): id '${sourceId}' has targets [${available}], none match '${expectedTarget}'`
+                );
+            }
+            return match.target;
+        }
+
+        // Single entry (common case: 1 rule, 1 target per source)
+        if (entries.length === 1) return entries[0].target;
+
+        // Multiple entries — check if they all come from the same rule
+        const distinctRules = new Set(entries.map(e => e.rule));
+        if (distinctRules.size === 1) return entries[0].target;
+
+        // Ambiguous — multiple rules produced targets for the same source ID
+        const targetClasses = [...new Set(entries.map(e => e.targetClass))].join(', ');
+        throw new Error(
+            `Ambiguous cross-type resolution for attribute '${targetAttribute}': ` +
+            `source id '${sourceId}' has targets from ${distinctRules.size} rules (${targetClasses}). ` +
+            `Use resolve(expr, TargetType) to disambiguate.`
+        );
+    }
+
+    /**
+     * Intercept `resolve(expr)` / `resolve(expr, TargetType)` calls.
+     *
+     * Recognized in two AST shapes:
+     *   1. JjTL FunctionCall with Identifier callee (legacy expression path)
+     *   2. JjelExpressionWrapper around JjEL FunctionCall (new `:=` path)
+     *
+     * The second argument is read as an identifier (class name) WITHOUT being
+     * evaluated — this is what makes `resolve(x, Place)` work even though
+     * `Place` is not a bound value at runtime. A string literal is also
+     * accepted for programmatic callers.
+     *
+     * Returns `undefined` when the expression is not a resolve call, so the
+     * caller falls through to the normal evaluation path.
+     */
+    private tryEvaluateResolveCall(expr: ExpressionAST, ctx: EvaluationContext): JjelValue | undefined {
+        // Case 1: JjTL FunctionCall with Identifier callee named 'resolve'
+        if (expr.type === 'FunctionCall') {
+            const fc = expr as FunctionCallAST;
+            if (fc.callee.type === 'Identifier' && (fc.callee as IdentifierAST).name === 'resolve') {
+                return this.runResolveCall(
+                    fc.arguments,
+                    (arg) => this.evaluateExpression(arg, ctx),
+                    (arg) => this.extractJjTLTypeName(arg),
+                );
+            }
+            return undefined;
+        }
+
+        // Case 2: JjelExpressionWrapper containing a JjEL FunctionCall named 'resolve'
+        if (expr.type === 'JjelExpression') {
+            const wrapper = expr as JjelExpressionWrapperAST;
+            const inner = wrapper.expression;
+            if (inner && inner.type === 'FunctionCall' && inner.name === 'resolve') {
+                return this.runResolveCall(
+                    inner.args,
+                    (arg) => this.jjelEvaluator.evaluate(arg as JjelExpression, ctx),
+                    (arg) => this.extractJjelTypeName(arg as JjelExpression),
+                );
+            }
+            return undefined;
+        }
+
+        return undefined;
+    }
+
+    /**
+     * Shared resolve(...) driver: evaluates arg 0 as the source element and
+     * extracts arg 1 (optional) as a target class name string, then calls
+     * `resolveValue` with both.
+     */
+    private runResolveCall<A>(
+        args: A[],
+        evalArg: (arg: A) => JjelValue,
+        extractTypeName: (arg: A) => string | undefined,
+    ): JjelValue {
+        if (args.length === 0) {
+            throw new Error(`resolve() requires at least one argument (a source element)`);
+        }
+        const srcValue = evalArg(args[0]);
+        const srcRaw = fromJjelValue(srcValue);
+        let typeName: string | undefined;
+        if (args.length >= 2) {
+            typeName = extractTypeName(args[1]);
+            if (!typeName) {
+                throw new Error(`resolve(expr, TargetType): the second argument must be a class name identifier`);
+            }
+        }
+        return this.resolveValue(srcRaw, '<resolve>', typeName) as JjelValue;
+    }
+
+    /** Read a JjTL expression AST as a type-name identifier, if possible. */
+    private extractJjTLTypeName(arg: ExpressionAST): string | undefined {
+        if (arg.type === 'Identifier') return (arg as IdentifierAST).name;
+        if (arg.type === 'Literal') {
+            const lit = arg as LiteralAST;
+            return typeof lit.value === 'string' ? lit.value : undefined;
+        }
+        if (arg.type === 'JjelExpression') {
+            return this.extractJjelTypeName((arg as JjelExpressionWrapperAST).expression);
+        }
+        return undefined;
+    }
+
+    /** Read a JjEL expression AST as a type-name identifier, if possible. */
+    private extractJjelTypeName(arg: JjelExpression): string | undefined {
+        if (arg.type === 'Identifier') return arg.name;
+        if (arg.type === 'Literal' && typeof arg.value === 'string') return arg.value;
+        return undefined;
+    }
+
+    /**
+     * Detect the source class name of an object. Looks at the usual Jjodel
+     * markers (__type, className) and falls back to the L-layer `instanceof`
+     * pointer when available (produced by L proxies).
+     */
+    private detectSourceClassName(obj: any): string | undefined {
+        if (!obj || typeof obj !== 'object') return undefined;
+        if (typeof obj.className === 'string') return obj.className;
+        if (typeof obj.__type === 'string') return obj.__type;
+        // L-layer: .instanceof is an LClass proxy whose .name is the source type
+        const inst = obj.instanceof;
+        if (inst && typeof inst === 'object' && typeof inst.name === 'string') return inst.name;
+        return undefined;
     }
 
     // ============================================

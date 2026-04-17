@@ -41,6 +41,9 @@ interface ToolbarProps {
     onDistributeH?: () => void;
     onDistributeV?: () => void;
     isMetamodel?: boolean;
+    editorMode?: 'flow' | 'classic' | 'split';
+    hasViewpoint?: boolean;
+    onEditorModeChange?: (mode: 'flow' | 'classic' | 'split') => void;
 }
 
 const NOTATION_OPTIONS: Array<{ id: NotationMode; name: string; desc: string; icon: string }> = [
@@ -150,7 +153,15 @@ function Toolbar({
     onDistributeH,
     onDistributeV,
     isMetamodel = false,
+    editorMode,
+    hasViewpoint = false,
+    onEditorModeChange,
 }: ToolbarProps) {
+    // Toggle is always rendered. When no viewpoint is active the buttons are
+    // visible but inert (greyed out, "flow" stays highlighted as the default).
+    const activeEditorMode = editorMode ?? 'flow';
+    const modeToggleDisabled = !hasViewpoint;
+    const layoutDisabled = editorMode === 'classic';
     const [notationOpen, setNotationOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const prevPanelMode = useRef<LayoutMode>('sidebar');
@@ -350,7 +361,8 @@ function Toolbar({
                 <button
                     className={`toolbar-btn ${gridVisible ? 'active' : ''}`}
                     onClick={onToggleGrid}
-                    title={gridVisible ? 'Hide dot grid' : 'Show dot grid'}
+                    disabled={layoutDisabled}
+                    title={layoutDisabled ? 'Layout controls only available with the flow editor' : (gridVisible ? 'Hide dot grid' : 'Show dot grid')}
                 >
                     <svg width="11" height="11" viewBox="0 0 11 11" fill="currentColor">
                         <circle cx="1.5" cy="1.5" r="1.2" />
@@ -367,7 +379,8 @@ function Toolbar({
                 <button
                     className={`toolbar-btn ${snapEnabled ? 'active' : ''}`}
                     onClick={onToggleSnap}
-                    title={snapEnabled ? 'Disable snap to grid' : 'Enable snap to grid'}
+                    disabled={layoutDisabled}
+                    title={layoutDisabled ? 'Layout controls only available with the flow editor' : (snapEnabled ? 'Disable snap to grid' : 'Enable snap to grid')}
                 >
                     <i className="bi bi-grid-3x3" />
                 </button>
@@ -375,7 +388,8 @@ function Toolbar({
                     <button
                         className="toolbar-btn"
                         onClick={onAutoLayout}
-                        title="Auto layout"
+                        disabled={layoutDisabled}
+                        title={layoutDisabled ? 'Layout controls only available with the flow editor' : 'Auto layout'}
                     >
                         <i className="bi bi-diagram-3" />
                     </button>
@@ -412,6 +426,46 @@ function Toolbar({
 
             {/* ── Spacer ── */}
             <div className="toolbar-spacer" />
+
+            {/* ── Editor mode toggle (always visible; disabled without an active viewpoint) ── */}
+            <div
+                className={`editor-mode-toggle${modeToggleDisabled ? ' disabled' : ''}`}
+                role="group"
+                aria-label="Editor mode"
+                aria-disabled={modeToggleDisabled || undefined}
+                title={modeToggleDisabled ? 'Select a viewpoint to enable classic / split modes' : undefined}
+            >
+                <button
+                    type="button"
+                    className={`editor-mode-btn ${activeEditorMode === 'flow' ? 'active' : ''}`}
+                    onClick={() => onEditorModeChange?.('flow')}
+                    disabled={modeToggleDisabled}
+                    title="Abstract syntax only"
+                    aria-pressed={activeEditorMode === 'flow'}
+                >
+                    <i className="bi bi-diagram-3" />
+                </button>
+                <button
+                    type="button"
+                    className={`editor-mode-btn ${activeEditorMode === 'classic' ? 'active' : ''}`}
+                    onClick={() => onEditorModeChange?.('classic')}
+                    disabled={modeToggleDisabled}
+                    title="Concrete syntax only"
+                    aria-pressed={activeEditorMode === 'classic'}
+                >
+                    <i className="bi bi-eye" />
+                </button>
+                <button
+                    type="button"
+                    className={`editor-mode-btn ${activeEditorMode === 'split' ? 'active' : ''}`}
+                    onClick={() => onEditorModeChange?.('split')}
+                    disabled={modeToggleDisabled}
+                    title="Split: Abstract + concrete syntax"
+                    aria-pressed={activeEditorMode === 'split'}
+                >
+                    <i className="bi bi-layout-split" />
+                </button>
+            </div>
 
             {/* ── Zoom controls (right-aligned) ── */}
             {onZoomOut && onZoomIn && onResetZoom && zoomLevel !== undefined && (

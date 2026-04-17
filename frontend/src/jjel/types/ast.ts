@@ -30,6 +30,7 @@ export type JjelExpression =
     | NullSafeMemberAccessExpr
     | MethodCallExpr
     | NullSafeMethodCallExpr
+    | FunctionCallExpr
     | IfThenElseExpr
     | NullCoalesceExpr
     | IsTypeExpr
@@ -158,6 +159,19 @@ export interface NullSafeMethodCallExpr extends JjelASTNode {
     type: 'NullSafeMethodCall';
     object: JjelExpression;
     method: string;
+    args: JjelExpression[];
+}
+
+/**
+ * Standalone function call: name(args)
+ * The callee resolves as either a registered builtin (from the evaluation
+ * context) or a bound lambda. Used for JjTL constructs like `resolve(expr)`
+ * and for helpers/builtins that take no receiver object.
+ * Examples: resolve(nextState), formatName(person), now()
+ */
+export interface FunctionCallExpr extends JjelASTNode {
+    type: 'FunctionCall';
+    name: string;
     args: JjelExpression[];
 }
 

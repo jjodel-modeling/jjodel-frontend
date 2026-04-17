@@ -218,23 +218,13 @@ function convertFunctionCall(fc: FunctionCallAST): JjelExpression {
         };
     }
 
-    // Standalone function call: resolve("x"), helper(a, b)
-    // JjEL evaluator handles this via Identifier → builtin lookup.
-    // We model it as MethodCall on a synthetic "self" identifier
-    // so the JjEL evaluator's callMethod path is used, OR we can
-    // just return Identifier and let the caller handle it.
-    //
-    // Actually, the JjEL evaluator doesn't have a standalone function call node.
-    // Builtins are resolved via Identifier (returns JjelFunction), then the
-    // executor would need to invoke it. To keep things simple, we keep
-    // this as an Identifier — the executor handles calling builtins separately.
+    // Standalone function call: resolve(x), helper(a, b), now()
+    // JjEL now has a FunctionCall AST node that handles builtin/bound lookup.
     if (fc.callee.type === 'Identifier') {
-        // Return null — this case needs special handling in the executor
-        // because JjEL doesn't have a "FunctionCall" AST node for standalone calls.
-        // The executor will check for builtins/helpers before converting.
         return {
-            type: 'Identifier',
+            type: 'FunctionCall',
             name: (fc.callee as IdentifierAST).name,
+            args,
         };
     }
 

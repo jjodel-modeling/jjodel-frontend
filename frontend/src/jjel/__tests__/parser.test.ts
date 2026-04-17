@@ -461,3 +461,59 @@ describe('unsupported syntax errors', () => {
         parseOk('a == b');
     });
 });
+
+// ============================================================
+// FUNCTION CALLS — standalone builtin/bound invocation
+// Added for JjTL cross-type resolution: `targetAttr := resolve(expr, Type)`
+// ============================================================
+
+describe('FunctionCall (standalone)', () => {
+    test('no-arg call', () => {
+        expect(parse('now()')).toMatchObject({
+            type: 'FunctionCall',
+            name: 'now',
+            args: [],
+        });
+    });
+
+    test('single-arg call', () => {
+        expect(parse('resolve(x)')).toMatchObject({
+            type: 'FunctionCall',
+            name: 'resolve',
+            args: [{ type: 'Identifier', name: 'x' }],
+        });
+    });
+
+    test('resolve with type identifier', () => {
+        const ast = parse('resolve(nextState, Place)') as any;
+        expect(ast.type).toBe('FunctionCall');
+        expect(ast.name).toBe('resolve');
+        expect(ast.args).toHaveLength(2);
+        expect(ast.args[0]).toMatchObject({ type: 'Identifier', name: 'nextState' });
+        expect(ast.args[1]).toMatchObject({ type: 'Identifier', name: 'Place' });
+    });
+
+    test('function call with expression args', () => {
+        const ast = parse('helper(a + b, c.method())') as any;
+        expect(ast.type).toBe('FunctionCall');
+        expect(ast.name).toBe('helper');
+        expect(ast.args).toHaveLength(2);
+        expect(ast.args[0].type).toBe('Binary');
+        expect(ast.args[1].type).toBe('MethodCall');
+    });
+
+    test('function call result chains into member access', () => {
+        const ast = parse('resolve(x).name') as any;
+        expect(ast.type).toBe('MemberAccess');
+        expect(ast.property).toBe('name');
+        expect(ast.object.type).toBe('FunctionCall');
+        expect(ast.object.name).toBe('resolve');
+    });
+
+    test('function call inside binary expression', () => {
+        const ast = parse('resolve(x) ?? defaultValue') as any;
+        expect(ast.type).toBe('NullCoalesce');
+        expect(ast.left.type).toBe('FunctionCall');
+        expect(ast.right.type).toBe('Identifier');
+    });
+});

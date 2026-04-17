@@ -426,6 +426,28 @@ export function syncUpdateAttribute(
 }
 
 /**
+ * Resolve a DReference ID by walking from a source DObject's L-proxy to its
+ * metaclass and matching the reference by name. Returns undefined if the
+ * lookup fails for any reason (caller should keep working with undefined as
+ * a fallback to preserve previous behavior).
+ */
+function resolveReferenceIdByName(sourceObject: any, referenceName: string): string | undefined {
+    try {
+        const klass: any = sourceObject?.instanceof;
+        if (!klass) return undefined;
+        const refs: any[] = klass.allReferences ?? klass.references ?? [];
+        for (const r of refs) {
+            const lr: any = typeof r === 'string' ? LPointerTargetable.fromPointer(r) : r;
+            const name = lr?.name ?? lr?.__raw?.name;
+            if (name === referenceName) {
+                return lr?.id ?? lr?.__raw?.id ?? (typeof r === 'string' ? r : undefined);
+            }
+        }
+    } catch { /* fall through */ }
+    return undefined;
+}
+
+/**
  * Update a DReference property by its ID — same pattern as syncUpdateAttribute.
  * The refId is the JjOM DReference ID, obtained from the edge registry or data.reference.id.
  */
@@ -1154,6 +1176,14 @@ export function syncCreateCompositionLink(
 
         let edgeId: string | null = null;
 
+        const refDefId = resolveReferenceIdByName(parentObject, referenceName);
+        // [BUG-DIAG] log when the metaclass reference id can't be resolved —
+        // this is the path that left edge.model = undefined and caused the
+        // M1 reference edge to render with empty label / wrong type.
+        if (!refDefId) {
+            console.warn('[BUG-DIAG] syncCreateCompositionLink: cannot resolve DReference id', { referenceName, parentObjectId: parentObject?.id });
+        }
+
         TRANSACTION('EditorV2 create composition link', () => {
             // Append child object ID to reference values
             const refProxy = (parentObject as any)['$' + referenceName];
@@ -1162,9 +1192,11 @@ export function syncCreateCompositionLink(
                 refProxy.values = [...current, childObject.id];
             }
 
-            // Create visual edge
+            // Create visual edge — pass the metaclass DReference id so the
+            // JjOM→RF transformer (jjomEdgeToRFEdge) can recover the
+            // reference name, type and composition flag.
             const dEdge = DVoidEdge.new2(
-                undefined,
+                refDefId,
                 graphId,
                 graphId,
                 undefined,
@@ -1212,6 +1244,14 @@ export function syncCreateReferenceLink(
 
         let edgeId: string | null = null;
 
+        const refDefId = resolveReferenceIdByName(sourceObject, referenceName);
+        // [BUG-DIAG] log when the metaclass reference id can't be resolved —
+        // this is the path that left edge.model = undefined and caused the
+        // M1 reference edge to render with empty label / wrong type.
+        if (!refDefId) {
+            console.warn('[BUG-DIAG] syncCreateReferenceLink: cannot resolve DReference id', { referenceName, sourceObjectId: sourceObject?.id });
+        }
+
         TRANSACTION('EditorV2 create reference link', () => {
             // Append target object ID to reference values
             const refProxy = (sourceObject as any)['$' + referenceName];
@@ -1220,9 +1260,11 @@ export function syncCreateReferenceLink(
                 refProxy.values = [...current, targetObject.id];
             }
 
-            // Create visual edge
+            // Create visual edge — pass the metaclass DReference id so the
+            // JjOM→RF transformer (jjomEdgeToRFEdge) can recover the
+            // reference name and type.
             const dEdge = DVoidEdge.new2(
-                undefined,
+                refDefId,
                 graphId,
                 graphId,
                 undefined,

@@ -1,6 +1,7 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.12.4)  25 MAR 2026 15:59
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.12.4)  16 APR 2026 14:28
 entering extended mode
  restricted \write18 enabled.
+ file:line:error style messages enabled.
  %&-line parsing enabled.
 **jjtl-jjel-paper.tex
 (./jjtl-jjel-paper.tex
@@ -759,10 +760,10 @@ Overfull \hbox (16.62392pt too wide) in paragraph at lines 577--578
 [10]
 
 [11]
-Overfull \hbox (8.02307pt too wide) in paragraph at lines 671--672
-[]\T1/cmr/m/n/10.95 (-20) The im-plicit con-text means prop-erty ac-cess is un-
-qual-i-fied: \T1/cmtt/m/n/10.95 isAbstract \T1/cmr/m/n/10.95 (-20) refers to \T
-1/cmtt/m/n/10.95 source.isAbstract\T1/cmr/m/n/10.95 (-20) .
+Overfull \hbox (5.1785pt too wide) in paragraph at lines 677--678
+\T1/cmr/m/n/10.95 (-20) boil-er-plate: the user writes \T1/cmtt/m/n/10.95 foral
+l c in classes : c.name\T1/cmr/m/n/10.95 (-20) , not \T1/cmtt/m/n/10.95 metamod
+el.allClasses.map(c
  []
 
 
@@ -770,17 +771,24 @@ qual-i-fied: \T1/cmtt/m/n/10.95 isAbstract \T1/cmr/m/n/10.95 (-20) refers to \T
 [12]
 
 [13]
+Overfull \hbox (8.02307pt too wide) in paragraph at lines 768--769
+[]\T1/cmr/m/n/10.95 (-20) The im-plicit con-text means prop-erty ac-cess is un-
+qual-i-fied: \T1/cmtt/m/n/10.95 isAbstract \T1/cmr/m/n/10.95 (-20) refers to \T
+1/cmtt/m/n/10.95 source.isAbstract\T1/cmr/m/n/10.95 (-20) .
+ []
+
+
 
 [14]
 
 [15]
-Package hyperref Info: bookmark level for unknown lstlisting defaults to 0 on i
-nput line 944.
-
 
 [16]
 
 [17]
+Package hyperref Info: bookmark level for unknown lstlisting defaults to 0 on i
+nput line 1042.
+
 
 [18]
 
@@ -795,7 +803,11 @@ nput line 944.
 [23]
 
 [24]
-Overfull \hbox (32.75804pt too wide) in paragraph at lines 1542--1549
+
+[25]
+
+[26]
+Overfull \hbox (32.75804pt too wide) in paragraph at lines 1640--1647
 \T1/cmr/m/n/10.95 (-20) text. Five files: \T1/cmtt/m/n/10.95 jjscript/types.ts\
 T1/cmr/m/n/10.95 (-20) , \T1/cmtt/m/n/10.95 jjscript/parser/parser.ts\T1/cmr/m/
 n/10.95 (-20) , \T1/cmtt/m/n/10.95 jjscript/executor/executor.ts\T1/cmr/m/n/10.
@@ -804,8 +816,8 @@ n/10.95 (-20) , \T1/cmtt/m/n/10.95 jjscript/executor/executor.ts\T1/cmr/m/n/10.
 
 
 
-[25]
-Overfull \hbox (7.37943pt too wide) in paragraph at lines 1640--1648
+[27]
+Overfull \hbox (7.37943pt too wide) in paragraph at lines 1738--1746
 \T1/cmtt/m/n/10.95 KEYWORD\T1/cmr/m/n/10.95 (-20) , \T1/cmtt/m/n/10.95 IDENTIFI
 ER\T1/cmr/m/n/10.95 (-20) , \T1/cmtt/m/n/10.95 QUALIFIED_NAME\T1/cmr/m/n/10.95 
 (-20) , \T1/cmtt/m/n/10.95 STRING\T1/cmr/m/n/10.95 (-20) , \T1/cmtt/m/n/10.95 N
@@ -815,9 +827,7 @@ UMBER\T1/cmr/m/n/10.95 (-20) , \T1/cmtt/m/n/10.95 BOOLEAN\T1/cmr/m/n/10.95 (-20
  []
 
 
-
-[26]
-Overfull \hbox (66.56642pt too wide) in paragraph at lines 1685--1695
+Overfull \hbox (66.56642pt too wide) in paragraph at lines 1783--1793
 \T1/cmr/m/n/10.95 (-20) in-put into for-mal \T1/cmss/m/n/10.95 (-20) JjScript \
 T1/cmr/m/n/10.95 (-20) com-mands via pattern-based rules. A com-pan-ion \T1/cmr
 /bx/n/10.95 (-20) de-tec-tor \T1/cmr/m/n/10.95 (-20) (\T1/cmtt/m/n/10.95 normal
@@ -825,57 +835,55 @@ izer/detector.ts\T1/cmr/m/n/10.95 (-20) )
  []
 
 
-Underfull \hbox (badness 1584) in paragraph at lines 1746--1746
+
+[28]
+Underfull \hbox (badness 1584) in paragraph at lines 1844--1844
 []|\T1/cmr/m/n/10 (+20) Creates a new meta-model
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1746--1746
+Underfull \hbox (badness 10000) in paragraph at lines 1844--1844
 \T1/cmr/m/n/10 (+20) con-tain-ment, com-po-si-tion,
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1746--1746
+Underfull \hbox (badness 10000) in paragraph at lines 1844--1844
 \T1/cmr/m/n/10 (+20) specific op-tions in-clude
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1746--1746
+Underfull \hbox (badness 10000) in paragraph at lines 1844--1844
 \T1/cmtt/m/n/10 type\T1/cmr/m/n/10 (+20) , \T1/cmtt/m/n/10 [multiplicity]\T1/cm
 r/m/n/10 (+20) ,
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1746--1746
+Underfull \hbox (badness 10000) in paragraph at lines 1844--1844
 \T1/cmtt/m/n/10 default\T1/cmr/m/n/10 (+20) , \T1/cmtt/m/n/10 abstract\T1/cmr/m
 /n/10 (+20) ,
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1746--1746
+Underfull \hbox (badness 10000) in paragraph at lines 1844--1844
 []|\T1/cmr/m/n/10 (+20) Removes an el-e-ment.
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1746--1746
+Underfull \hbox (badness 10000) in paragraph at lines 1844--1844
 \T1/cmtt/m/n/10 cascade \T1/cmr/m/n/10 (+20) deletes chil-dren;
  []
 
 
-Underfull \hbox (badness 1742) in paragraph at lines 1746--1746
+Underfull \hbox (badness 1742) in paragraph at lines 1844--1844
 []|\T1/cmr/m/n/10 (+20) Removes an el-e-ment from
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1746--1746
+Underfull \hbox (badness 10000) in paragraph at lines 1844--1844
 \T1/cmtt/m/n/10 remove extends from
  []
 
 
-
-[27]
-
-[28]
 
 [29]
 
@@ -886,24 +894,26 @@ Underfull \hbox (badness 10000) in paragraph at lines 1746--1746
 [32]
 
 [33]
-Underfull \hbox (badness 10000) in paragraph at lines 2178--2178
+
+[34]
+
+[35]
+Underfull \hbox (badness 10000) in paragraph at lines 2276--2276
 []|\T1/cmtt/m/n/10.95 module Name; create Out from
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2178--2178
+Underfull \hbox (badness 10000) in paragraph at lines 2276--2276
 []|\T1/cmtt/m/n/10.95 transformation Name \n from X
  []
 
 
-
-[34]
-Underfull \hbox (badness 10000) in paragraph at lines 2213--2213
+Underfull \hbox (badness 10000) in paragraph at lines 2311--2311
 []|\T1/cmtt/m/n/10.95 rule Name transform s:T to t:T
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2213--2213
+Underfull \hbox (badness 10000) in paragraph at lines 2311--2311
 []|\T1/cmtt/m/n/10.95 @abstract\T1/cmr/m/n/10.95 (+20) , \T1/cmtt/m/n/10.95 @la
 zy\T1/cmr/m/n/10.95 (+20) , \T1/cmtt/m/n/10.95 @primary\T1/cmr/m/n/10.95 (+20) 
 ,
@@ -911,133 +921,131 @@ zy\T1/cmr/m/n/10.95 (+20) , \T1/cmtt/m/n/10.95 @primary\T1/cmr/m/n/10.95 (+20)
 
 
 
-[35]
-
 [36]
-Overfull \hbox (0.37589pt too wide) in paragraph at lines 2262--2263
+
+[37]
+Overfull \hbox (0.37589pt too wide) in paragraph at lines 2360--2361
 \T1/cmr/m/n/10.95 (-20) matic trace man-age-ment, OCL-based ex-pres-sions, and 
 a three-section body (\T1/cmtt/m/n/10.95 init\T1/cmr/m/n/10.95 (-20) /populatio
 n/\T1/cmtt/m/n/10.95 end\T1/cmr/m/n/10.95 (-20) ). 
  []
 
 
-Underfull \hbox (badness 10000) in alignment at lines 2312--2312
+Underfull \hbox (badness 10000) in alignment at lines 2410--2410
 [][][][][][] 
  []
 
 
 
-[37]
+[38]
 LaTeX Font Info:    Font shape `T1/cmtt/bx/n' in size <9> not available
-(Font)              Font shape `T1/cmtt/m/n' tried instead on input line 2316.
+(Font)              Font shape `T1/cmtt/m/n' tried instead on input line 2414.
 
-Overfull \hbox (158.47626pt too wide) in paragraph at lines 2355--2355
+Overfull \hbox (158.47626pt too wide) in paragraph at lines 2453--2453
 []|\T1/cmtt/m/n/10 self.attr->select(a|a.isPublic)->collect(a|a.name)| 
  []
 
 
-Overfull \hbox (147.97882pt too wide) in paragraph at lines 2355--2355
+Overfull \hbox (147.97882pt too wide) in paragraph at lines 2453--2453
 []|\T1/cmtt/m/n/10 self.attr.select(a|a.isPublic).collect(a|a.name)| 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2355--2355
+Underfull \hbox (badness 10000) in paragraph at lines 2453--2453
 []|\T1/cmtt/m/n/10 forall a in
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2355--2355
+Underfull \hbox (badness 10000) in paragraph at lines 2453--2453
 \T1/cmtt/m/n/10 attr such that
  []
 
 
-Overfull \hbox (111.2378pt too wide) in paragraph at lines 2355--2355
+Overfull \hbox (111.2378pt too wide) in paragraph at lines 2453--2453
 []|\T1/cmtt/m/n/10 self.attr->exists(a|a.type.name='String')| 
  []
 
 
-Overfull \hbox (105.98907pt too wide) in paragraph at lines 2355--2355
+Overfull \hbox (105.98907pt too wide) in paragraph at lines 2453--2453
 []|\T1/cmtt/m/n/10 self.attr.exists(a|a.type.name='String')| 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2355--2355
+Underfull \hbox (badness 10000) in paragraph at lines 2453--2453
 []|\T1/cmtt/m/n/10 exists a in attr |
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2355--2355
+Underfull \hbox (badness 10000) in paragraph at lines 2453--2453
 []|\T1/cmtt/m/n/10 self.isAbstract
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2355--2355
+Underfull \hbox (badness 10000) in paragraph at lines 2453--2453
 \T1/cmtt/m/n/10 implies
  []
 
 
-Overfull \hbox (37.75574pt too wide) in paragraph at lines 2355--2355
+Overfull \hbox (37.75574pt too wide) in paragraph at lines 2453--2453
 \T1/cmtt/m/n/10 self.subClasses->notEmpty()| 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2355--2355
+Underfull \hbox (badness 10000) in paragraph at lines 2453--2453
 []|\T1/cmtt/m/n/10 self.isAbstract
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2355--2355
+Underfull \hbox (badness 10000) in paragraph at lines 2453--2453
 \T1/cmtt/m/n/10 implies
  []
 
 
-Overfull \hbox (32.50702pt too wide) in paragraph at lines 2355--2355
+Overfull \hbox (32.50702pt too wide) in paragraph at lines 2453--2453
 \T1/cmtt/m/n/10 self.subClasses.notEmpty()| 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2355--2355
+Underfull \hbox (badness 10000) in paragraph at lines 2453--2453
 []|\T1/cmtt/m/n/10 isAbstract implies
  []
 
 
-Overfull \hbox (6.26343pt too wide) in paragraph at lines 2355--2355
+Overfull \hbox (6.26343pt too wide) in paragraph at lines 2453--2453
 \T1/cmtt/m/n/10 subClasses.isNotEmpty| 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2355--2355
+Underfull \hbox (badness 10000) in paragraph at lines 2453--2453
 []|\T1/cmtt/m/n/10 if
  []
 
 
-Overfull \hbox (41.95471pt too wide) in paragraph at lines 2355--2355
+Overfull \hbox (41.95471pt too wide) in paragraph at lines 2453--2453
 \T1/cmtt/m/n/10 self.parent.oclIsUndefined()
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2355--2355
+Underfull \hbox (badness 10000) in paragraph at lines 2453--2453
 \T1/cmtt/m/n/10 then 'none' else
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2355--2355
+Underfull \hbox (badness 10000) in paragraph at lines 2453--2453
 \T1/cmtt/m/n/10 self.parent.name
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2355--2355
+Underfull \hbox (badness 10000) in paragraph at lines 2453--2453
 []|\T1/cmtt/m/n/10 self.parent?.name ?:
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2355--2355
+Underfull \hbox (badness 10000) in paragraph at lines 2453--2453
 []|\T1/cmtt/m/n/10 parent?.name ??
  []
 
 
-
-[38]
 
 [39]
 
@@ -1046,163 +1054,157 @@ Underfull \hbox (badness 10000) in paragraph at lines 2355--2355
 [41]
 
 [42]
-Overfull \hbox (27.85693pt too wide) in paragraph at lines 2639--2640
-[]\T1/cmr/m/n/10.95 (-20) The value map-ping \T1/cmtt/m/n/10.95 true=1, false=0
- \T1/cmr/m/n/10.95 (-20) in \T1/cmss/m/n/10.95 (-20) JjTL \T1/cmr/m/n/10.95 (-2
-0) re-places ATL's ver-bose \T1/cmtt/m/n/10.95 if...then...else...endif\T1/cmr/
-m/n/10.95 (-20) . 
- []
-
-
 
 [43]
 
 [44]
-Underfull \hbox (badness 10000) in paragraph at lines 2787--2787
+
+[45]
+Underfull \hbox (badness 10000) in paragraph at lines 2884--2884
 []|\T1/cmtt/m/n/10 Class.allInstances()->forAll(c
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2787--2787
+Underfull \hbox (badness 10000) in paragraph at lines 2884--2884
 []|\T1/cmtt/m/n/10 forall c in classes:
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2787--2787
+Underfull \hbox (badness 10000) in paragraph at lines 2884--2884
 []|\T1/cmtt/m/n/10 self.isAbstract implies
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2787--2787
+Underfull \hbox (badness 10000) in paragraph at lines 2884--2884
 []|\T1/cmtt/m/n/10 isAbstract implies
  []
 
 
-Overfull \hbox (2.12924pt too wide) in paragraph at lines 2787--2787
+Overfull \hbox (2.12924pt too wide) in paragraph at lines 2884--2884
 []|\T1/cmtt/m/n/10 Class.allInstances()->isUnique(c
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2787--2787
+Underfull \hbox (badness 10000) in paragraph at lines 2884--2884
 []|\T1/cmtt/m/n/10 (forall c in classes:
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2787--2787
+Underfull \hbox (badness 10000) in paragraph at lines 2884--2884
 \T1/cmtt/m/n/10 c.name).distinct().size ==
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2787--2787
+Underfull \hbox (badness 10000) in paragraph at lines 2884--2884
 []|\T1/cmtt/m/n/10 self.attributes->forAll(a | not
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2787--2787
+Underfull \hbox (badness 10000) in paragraph at lines 2884--2884
 []|\T1/cmtt/m/n/10 forall a in attributes: a.type
  []
 
 
-Underfull \hbox (badness 3343) in paragraph at lines 2787--2787
+Underfull \hbox (badness 3343) in paragraph at lines 2884--2884
 []|\T1/cmr/m/n/10 (+20) Public at-tributes $\OMS/cmsy/m/n/10 )$
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2787--2787
+Underfull \hbox (badness 10000) in paragraph at lines 2884--2884
 []|\T1/cmtt/m/n/10 self.attributes->select(a |
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2787--2787
+Underfull \hbox (badness 10000) in paragraph at lines 2884--2884
 \T1/cmtt/m/n/10 a.isPublic)->forAll(a | not
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2787--2787
+Underfull \hbox (badness 10000) in paragraph at lines 2884--2884
 []|\T1/cmtt/m/n/10 forall a in attributes such
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2787--2787
+Underfull \hbox (badness 10000) in paragraph at lines 2884--2884
 \T1/cmtt/m/n/10 that a.isPublic: a.type !=
  []
 
 
 
-[45]
-Underfull \hbox (badness 10000) in paragraph at lines 2818--2818
+[46]
+Underfull \hbox (badness 10000) in paragraph at lines 2915--2915
 []|\T1/cmtt/m/n/10 not c.isAbstract and
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2818--2818
+Underfull \hbox (badness 10000) in paragraph at lines 2915--2915
 []|\T1/cmtt/m/n/10 not c.isAbstract and
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2818--2818
+Underfull \hbox (badness 10000) in paragraph at lines 2915--2915
 []|\T1/cmtt/m/n/10 not isAbstract and
  []
 
 
-Underfull \hbox (badness 1194) in paragraph at lines 2818--2818
+Underfull \hbox (badness 1194) in paragraph at lines 2915--2915
 []|\T1/cmr/m/n/10 (+20) Has a string at-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2818--2818
+Underfull \hbox (badness 10000) in paragraph at lines 2915--2915
 []|\T1/cmtt/m/n/10 c.attr->exists(a
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2818--2818
+Underfull \hbox (badness 10000) in paragraph at lines 2915--2915
 \T1/cmtt/m/n/10 | a.type.name =
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2818--2818
+Underfull \hbox (badness 10000) in paragraph at lines 2915--2915
 []|\T1/cmtt/m/n/10 c.attr.exists(a
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2818--2818
+Underfull \hbox (badness 10000) in paragraph at lines 2915--2915
 \T1/cmtt/m/n/10 | a.type.name =
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2818--2818
+Underfull \hbox (badness 10000) in paragraph at lines 2915--2915
 []|\T1/cmtt/m/n/10 exists a in
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2818--2818
+Underfull \hbox (badness 10000) in paragraph at lines 2915--2915
 \T1/cmtt/m/n/10 attributes | a.type
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2818--2818
+Underfull \hbox (badness 10000) in paragraph at lines 2915--2915
 []|\T1/cmtt/m/n/10 c.refs->forAll(r |
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2818--2818
+Underfull \hbox (badness 10000) in paragraph at lines 2915--2915
 []|\T1/cmtt/m/n/10 c.refs.forAll(r |
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2818--2818
+Underfull \hbox (badness 10000) in paragraph at lines 2915--2915
 []|\T1/cmtt/m/n/10 forall r in
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 2818--2818
+Underfull \hbox (badness 10000) in paragraph at lines 2915--2915
 \T1/cmtt/m/n/10 references:
  []
 
 
 
-[46]
-Overfull \hbox (55.55505pt too wide) in paragraph at lines 2858--2859
+[47]
+Overfull \hbox (55.55505pt too wide) in paragraph at lines 2955--2956
 []\T1/cmtt/m/n/10.95 if/then/else \T1/cmr/bx/n/10.95 (-20) syn-tax\T1/cmr/m/n/1
 0.95 (-20) : The con-di-tional has a pro-ce-du-ral fla-vor. Al-ter-na-tives lik
 e \T1/cmtt/m/n/10.95 when/then/otherwise
@@ -1210,26 +1212,26 @@ e \T1/cmtt/m/n/10.95 when/then/otherwise
 
 
 
-[47]
+[48]
 
-[48] [49] [50]
+[49] [50] [51]
 
-[51]
+[52]
 
-[52] (./jjtl-jjel-paper.aux)
+[53] (./jjtl-jjel-paper.aux)
  ***********
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
  ***********
 Package rerunfilecheck Info: File `jjtl-jjel-paper.out' has not changed.
-(rerunfilecheck)             Checksum: 489BEC6F55A0B361A1949B055AF9BAC9;24921.
+(rerunfilecheck)             Checksum: BF0F82DA86C57F86AF12BD96FA9C328F;26442.
  ) 
 Here is how much of TeX's memory you used:
- 21834 strings out of 473190
- 354474 string characters out of 5715800
- 1200138 words of memory out of 5000000
- 43414 multiletter control sequences out of 15000+600000
- 598473 words of font info for 282 fonts, out of 8000000 for 9000
+ 21874 strings out of 473190
+ 355126 string characters out of 5715800
+ 1147262 words of memory out of 5000000
+ 43428 multiletter control sequences out of 15000+600000
+ 598638 words of font info for 283 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  75i,13n,79p,1116b,2234s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb
@@ -1263,10 +1265,10 @@ pe1/public/cm-super/sftt0900.pfb></usr/local/texlive/2025/texmf-dist/fonts/type
 1/public/cm-super/sftt1000.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/
 public/cm-super/sftt1095.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/pu
 blic/cm-super/sftt1200.pfb>
-Output written on jjtl-jjel-paper.pdf (52 pages, 782254 bytes).
+Output written on jjtl-jjel-paper.pdf (53 pages, 792762 bytes).
 PDF statistics:
- 2226 PDF objects out of 2487 (max. 8388607)
- 2086 compressed objects within 21 object streams
- 1053 named destinations out of 1200 (max. 500000)
- 62105 words of extra memory for PDF output out of 74296 (max. 10000000)
+ 2286 PDF objects out of 2487 (max. 8388607)
+ 2144 compressed objects within 22 object streams
+ 1077 named destinations out of 1200 (max. 500000)
+ 62161 words of extra memory for PDF output out of 74296 (max. 10000000)
 

@@ -119,6 +119,15 @@ function shallowArrayEqual(a: string[], b: string[]): boolean {
  * reference (and triggering RF re-measurement) when only the DClass Redux
  * reference changed but the derived RF data is semantically identical.
  */
+/**
+ * Two-level shallow comparison for RF node `data` objects.
+ * Level 1: compare each top-level key by identity.
+ * Level 2: for arrays, compare elements shallowly (keys + primitive values).
+ * This handles FeatureValueRow[] and similar arrays whose objects are recreated
+ * by jjomVertexToRFNode on every call — without this, every incremental sync
+ * cycle considers object-node data "changed" even when values are identical,
+ * causing setNodes → StoreUpdater → re-measurement → infinite loop.
+ */
 function shallowDataEqual(a: any, b: any): boolean {
     if (a === b) return true;
     if (!a || !b) return false;
@@ -129,12 +138,37 @@ function shallowDataEqual(a: any, b: any): boolean {
         const va = a[key];
         const vb = b[key];
         if (va === vb) continue;
-        // For arrays (attributes, references, operations, literals), compare
-        // by length and element identity.
         if (Array.isArray(va) && Array.isArray(vb)) {
             if (va.length !== vb.length) return false;
             for (let i = 0; i < va.length; i++) {
-                if (va[i] !== vb[i]) return false;
+                if (va[i] === vb[i]) continue;
+                // One level deeper: compare object properties shallowly
+                if (va[i] && vb[i] && typeof va[i] === 'object' && typeof vb[i] === 'object') {
+                    const ka = Object.keys(va[i]);
+                    const kb = Object.keys(vb[i]);
+                    if (ka.length !== kb.length) return false;
+                    let objEqual = true;
+                    for (const ok of ka) {
+                        const oa = va[i][ok];
+                        const ob = vb[i][ok];
+                        if (oa !== ob) {
+                            // Deepest level: arrays of primitives (e.g. enumLiterals)
+                            if (Array.isArray(oa) && Array.isArray(ob)) {
+                                if (oa.length !== ob.length) { objEqual = false; break; }
+                                for (let j = 0; j < oa.length; j++) {
+                                    if (oa[j] !== ob[j]) { objEqual = false; break; }
+                                }
+                                if (!objEqual) break;
+                                continue;
+                            }
+                            objEqual = false;
+                            break;
+                        }
+                    }
+                    if (!objEqual) return false;
+                    continue;
+                }
+                return false;
             }
             continue;
         }
@@ -187,6 +221,38 @@ export function useJjomSync(
     const layout = layoutOptions
         ? { ...DEFAULT_LAYOUT, ...layoutOptions }
         : DEFAULT_LAYOUT;
+
+    // ── Debounced push to React Flow ─────────────────────────────────
+    // The Jjodel action system dispatches via setTimeout(fn, 0) (action.ts:349),
+    // which means every COMMIT exits React's render batch. The periodic
+    // setInterval → COMMIT in reducer.ts:1381 can fire multiple rapid
+    // dispatches during editing. Without debouncing, each dispatch triggers
+    // a separate incremental sync → setNodes → StoreUpdater → re-measure
+    // → infinite loop.
+    //
+    // We accumulate patch operations and flush them in a single
+    // requestAnimationFrame callback, coalescing multiple rapid syncs.
+    const pendingNodePatchRef = useRef<((prev: Node[]) => Node[])[]>([]);
+    const pendingEdgePatchRef = useRef<((prev: Edge[]) => Edge[])[]>([]);
+    const rafIdRef = useRef<number>(0);
+
+    const scheduleFlush = useCallback(() => {
+        if (rafIdRef.current) return; // already scheduled
+        rafIdRef.current = requestAnimationFrame(() => {
+            rafIdRef.current = 0;
+            const nodeFns = pendingNodePatchRef.current.splice(0);
+            const edgeFns = pendingEdgePatchRef.current.splice(0);
+            if (nodeFns.length > 0) {
+                setNodes(prev => nodeFns.reduce((acc, fn) => fn(acc), prev));
+            }
+            if (edgeFns.length > 0) {
+                setEdges(prev => edgeFns.reduce((acc, fn) => fn(acc), prev));
+            }
+        });
+    }, [setNodes, setEdges]);
+
+    // Cleanup raf on unmount
+    useEffect(() => () => { if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current); }, []);
     // ── rfCache: Map<elementId, RF Node | RF Edge> ─────────────────────
     const rfNodeCache = useRef<Map<string, Node>>(new Map());
     const rfEdgeCache = useRef<Map<string, Edge>>(new Map());
@@ -313,12 +379,6 @@ export function useJjomSync(
         };
 
         for (const pkgId of (rawModel.packages ?? [])) visitElement(pkgId);
-
-        // console.log('[DEBUG populate] modelid:', modelid);
-// console.log('[DEBUG populate] rawModel.packages:', rawModel.packages);
-// console.log('[DEBUG populate] classifierEntries:', classifierEntries.length, classifierEntries.map(e => e.raw.name));
-
-
 
         // If no classifiers found AND we don't need a new graph, nothing to do.
         // When needsNewGraph, we must still create the graph (empty metamodel scenario).
@@ -713,9 +773,24 @@ export function useJjomSync(
                         // Skip if already in cache (from a previous cycle's
                         // consumeDropCreated or ID replacement in setEdges).
                         const inCache = rfEdgeCache.current.has(id);
-                        if (inCache) continue;
+                        if (inCache) {
+                            // eslint-disable-next-line no-console
+                            console.log('[BUG-DIAG] useJjomSync skip edge already in cache', { edgeId: id });
+                            continue;
+                        }
 
                         const rfEdge = jjomEdgeToRFEdge(lProxy);
+                        // [BUG-DIAG] trace edge addition decisions.
+                        // eslint-disable-next-line no-console
+                        console.log('[BUG-DIAG] useJjomSync edge addition candidate', {
+                            edgeId: id,
+                            isDropCreated,
+                            rfEdgeProduced: !!rfEdge,
+                            sourceInGraph: rfEdge ? currentIds.has(rfEdge.source) : null,
+                            targetInGraph: rfEdge ? currentIds.has(rfEdge.target) : null,
+                            type: rfEdge?.type,
+                            label: rfEdge?.label,
+                        });
                         // Guard: skip orphan edges (source/target vertex deleted)
                         if (rfEdge && currentIds.has(rfEdge.source) && currentIds.has(rfEdge.target)) {
                             // Deduplicate: skip if an RF edge with the same
@@ -845,20 +920,26 @@ export function useJjomSync(
         const hasEdgeChanges = addedEdges.length > 0 || removedEdgeIds.size > 0 || patchedEdges.size > 0;
 
         if (hasNodeChanges) {
-            setNodes(prev => {
+            // Capture patch data in closure for the deferred callback.
+            // Spread into local copies since the Maps are reused across effect runs.
+            const _addedNodes = [...addedNodes];
+            const _removedNodeIds = new Set(removedNodeIds);
+            const _patchedNodeData = new Map(patchedNodeData);
+            const _patchedNodePositions = new Map(patchedNodePositions);
+            const _patchedNodeStyles = new Map(patchedNodeStyles);
+
+            pendingNodePatchRef.current.push(prev => {
                 let result = prev;
 
-                if (removedNodeIds.size > 0) {
-                    result = result.filter(n => !removedNodeIds.has(n.id));
+                if (_removedNodeIds.size > 0) {
+                    result = result.filter(n => !_removedNodeIds.has(n.id));
                 }
 
-                // Patch data/position/style on changed nodes (preserves node object
-                // identity for unchanged fields → RF skips re-measurement)
-                if (patchedNodeData.size > 0 || patchedNodePositions.size > 0 || patchedNodeStyles.size > 0) {
+                if (_patchedNodeData.size > 0 || _patchedNodePositions.size > 0 || _patchedNodeStyles.size > 0) {
                     result = result.map(n => {
-                        const newData = patchedNodeData.get(n.id);
-                        const newPos = patchedNodePositions.get(n.id);
-                        const newStyle = patchedNodeStyles.get(n.id);
+                        const newData = _patchedNodeData.get(n.id);
+                        const newPos = _patchedNodePositions.get(n.id);
+                        const newStyle = _patchedNodeStyles.get(n.id);
                         if (newData || newPos || newStyle) {
                             return {
                                 ...n,
@@ -871,40 +952,38 @@ export function useJjomSync(
                     });
                 }
 
-                if (addedNodes.length > 0) {
-                    result = [...result, ...addedNodes];
+                if (_addedNodes.length > 0) {
+                    result = [...result, ..._addedNodes];
                 }
 
                 return result;
             });
+            scheduleFlush();
         }
 
         if (hasEdgeChanges) {
-            setEdges(prev => {
+            const _addedEdges = [...addedEdges];
+            const _removedEdgeIds = new Set(removedEdgeIds);
+            const _patchedEdges = new Map(patchedEdges);
+
+            pendingEdgePatchRef.current.push(prev => {
                 let result = prev;
 
-                if (removedEdgeIds.size > 0) {
-                    result = result.filter(e => !removedEdgeIds.has(e.id));
+                if (_removedEdgeIds.size > 0) {
+                    result = result.filter(e => !_removedEdgeIds.has(e.id));
                 }
 
-                if (patchedEdges.size > 0) {
+                if (_patchedEdges.size > 0) {
                     result = result.map(e => {
-                        const newEdge = patchedEdges.get(e.id);
+                        const newEdge = _patchedEdges.get(e.id);
                         if (!newEdge) return e;
-                        // Merge: take JjOM-authoritative fields (label, name,
-                        // cardinality) from newEdge, but preserve RF-side
-                        // properties (kind, containment, handles) from current.
                         const merged = { ...newEdge };
-                        // RF-side handles (from getOptimalAnchors + applyDistribution) are
-                        // authoritative. Always preserve them over JjOM-computed handles.
                         if (e.sourceHandle) merged.sourceHandle = e.sourceHandle;
                         if (e.targetHandle) merged.targetHandle = e.targetHandle;
-                        // Preserve jjomRefId (direct DReference ID for property writes)
                         const existingJjomRefId = (e.data as any)?.jjomRefId;
                         if (existingJjomRefId && !(merged.data as any)?.jjomRefId) {
                             (merged.data as any).jjomRefId = existingJjomRefId;
                         }
-                        // Preserve reference kind from RF if JjOM lost it
                         const existingRef = (e.data as any)?.reference;
                         const newRef = (merged.data as any)?.reference;
                         if (existingRef && newRef && newRef.kind === 'association' && existingRef.kind !== 'association') {
@@ -914,20 +993,20 @@ export function useJjomSync(
                                 containment: existingRef.containment,
                             };
                         }
-                        // Update cache so future patches preserve this kind
                         rfEdgeCache.current.set(e.id, merged);
                         return merged;
                     });
                 }
 
-                if (addedEdges.length > 0) {
-                    result = [...result, ...addedEdges];
+                if (_addedEdges.length > 0) {
+                    result = [...result, ..._addedEdges];
                 }
 
                 return deduplicateInheritanceEdges(result);
             });
+            scheduleFlush();
         }
-    }, [isJjomMode, elementSnapshots, subElementIds, setNodes, setEdges]);
+    }, [isJjomMode, elementSnapshots, subElementIds, scheduleFlush]);
 
     // ── Cleanup on unmount ─────────────────────────────────────────────
     useEffect(() => {

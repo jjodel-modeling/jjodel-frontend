@@ -8,6 +8,20 @@ import { execute, ExecutionResult } from '../executor';
 import { TransformationAST } from '../types';
 import { TraceEntry } from '../views/MappingTraceView';
 
+function warningsToTraceEntries(warnings: string[] | undefined, offset: number = 0): TraceEntry[] {
+    if (!warnings || warnings.length === 0) return [];
+    const now = Date.now();
+    return warnings.map((msg, i) => ({
+        id: `warning-${offset + i}`,
+        timestamp: now,
+        sourceElement: { id: '', className: '—' },
+        targetElement: { id: '', className: '—' },
+        mappingRule: msg,
+        status: 'warning' as const,
+        details: msg,
+    }));
+}
+
 export type ExecutionStatus = 'idle' | 'running' | 'success' | 'failed';
 
 export interface UseJjtlExecutorResult {
@@ -74,9 +88,10 @@ export function useJjtlExecutor(options: UseJjtlExecutorOptions = {}): UseJjtlEx
             if (result.success) {
                 setExecutionStatus('success');
 
+                let successEntries: TraceEntry[] = [];
                 // Prefer structured traceModel if available
                 if (result.traceModel && result.traceModel.links.length > 0) {
-                    const traceEntries: TraceEntry[] = result.traceModel.links.map((link, index) => ({
+                    successEntries = result.traceModel.links.map((link, index) => ({
                         id: `trace-${index}`,
                         timestamp: result.traceModel!.executedAt,
                         sourceElement: {
@@ -101,15 +116,12 @@ export function useJjtlExecutor(options: UseJjtlExecutorOptions = {}): UseJjtlEx
                             userProvided: b.userProvided,
                         })),
                     }));
-                    setTrace(traceEntries);
                 }
                 // Fallback to legacy trace if no traceModel
                 else if (result.trace) {
-                    const traceEntries: TraceEntry[] = [];
                     let traceIndex = 0;
-
                     result.trace.forEach((targetObj, sourceObj) => {
-                        traceEntries.push({
+                        successEntries.push({
                             id: `trace-${traceIndex++}`,
                             timestamp: Date.now(),
                             sourceElement: {
@@ -126,15 +138,14 @@ export function useJjtlExecutor(options: UseJjtlExecutorOptions = {}): UseJjtlEx
                             status: 'success',
                         });
                     });
-
-                    setTrace(traceEntries);
                 }
+                setTrace([...successEntries, ...warningsToTraceEntries(result.warnings, successEntries.length)]);
             } else {
                 setExecutionStatus('failed');
                 setErrors(result.errors);
 
-                // Add failed trace entries
-                setTrace([{
+                // Failed entry + any warnings that were accumulated before the failure
+                const failedEntry: TraceEntry = {
                     id: 'trace-failed',
                     timestamp: Date.now(),
                     sourceElement: {
@@ -148,7 +159,8 @@ export function useJjtlExecutor(options: UseJjtlExecutorOptions = {}): UseJjtlEx
                     mappingRule: 'Execution failed',
                     status: 'failed',
                     details: result.errors.join('; '),
-                }]);
+                };
+                setTrace([failedEntry, ...warningsToTraceEntries(result.warnings, 1)]);
             }
 
             onExecutionComplete?.(result);
@@ -206,9 +218,10 @@ export function useJjtlExecutor(options: UseJjtlExecutorOptions = {}): UseJjtlEx
             setExecutionStatus('success');
             setErrors([]);
 
+            let successEntries: TraceEntry[] = [];
             // Prefer structured traceModel if available
             if (result.traceModel && result.traceModel.links.length > 0) {
-                const traceEntries: TraceEntry[] = result.traceModel.links.map((link, index) => ({
+                successEntries = result.traceModel.links.map((link, index) => ({
                     id: `trace-${index}`,
                     timestamp: result.traceModel!.executedAt,
                     sourceElement: {
@@ -233,15 +246,12 @@ export function useJjtlExecutor(options: UseJjtlExecutorOptions = {}): UseJjtlEx
                         userProvided: b.userProvided,
                     })),
                 }));
-                setTrace(traceEntries);
             }
             // Fallback to legacy trace if no traceModel
             else if (result.trace) {
-                const traceEntries: TraceEntry[] = [];
                 let traceIndex = 0;
-
                 result.trace.forEach((targetObj, sourceObj) => {
-                    traceEntries.push({
+                    successEntries.push({
                         id: `trace-${traceIndex++}`,
                         timestamp: Date.now(),
                         sourceElement: {
@@ -258,15 +268,13 @@ export function useJjtlExecutor(options: UseJjtlExecutorOptions = {}): UseJjtlEx
                         status: 'success',
                     });
                 });
-
-                setTrace(traceEntries);
             }
+            setTrace([...successEntries, ...warningsToTraceEntries(result.warnings, successEntries.length)]);
         } else {
             setExecutionStatus('failed');
             setErrors(result.errors);
 
-            // Add failed trace entries
-            setTrace([{
+            const failedEntry: TraceEntry = {
                 id: 'trace-failed',
                 timestamp: Date.now(),
                 sourceElement: {
@@ -280,7 +288,8 @@ export function useJjtlExecutor(options: UseJjtlExecutorOptions = {}): UseJjtlEx
                 mappingRule: 'Execution failed',
                 status: 'failed',
                 details: result.errors.join('; '),
-            }]);
+            };
+            setTrace([failedEntry, ...warningsToTraceEntries(result.warnings, 1)]);
         }
     }, []);
 

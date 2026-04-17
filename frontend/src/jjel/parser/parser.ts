@@ -33,6 +33,7 @@ import {
     NullSafeMemberAccessExpr,
     MethodCallExpr,
     NullSafeMethodCallExpr,
+    FunctionCallExpr,
     IfThenElseExpr,
     NullCoalesceExpr,
     IsTypeExpr,
@@ -473,7 +474,7 @@ export class JjelParser {
             } as IdentifierExpr;
         }
 
-        // Identifier or single-param lambda
+        // Identifier or single-param lambda or function call
         if (this.match(JjelTokenType.IDENTIFIER)) {
             const token = this.previous();
 
@@ -486,6 +487,24 @@ export class JjelParser {
                     body,
                     location: this.makeLocation(token, this.previous()),
                 } as LambdaExpr;
+            }
+
+            // Check for standalone function call: name(args)
+            // Examples: resolve(x), formatName(p), now()
+            if (this.match(JjelTokenType.LPAREN)) {
+                const args: JjelExpression[] = [];
+                if (!this.check(JjelTokenType.RPAREN)) {
+                    do {
+                        args.push(this.expression());
+                    } while (this.match(JjelTokenType.COMMA));
+                }
+                this.consume(JjelTokenType.RPAREN, "Expected ')' after function arguments");
+                return {
+                    type: 'FunctionCall',
+                    name: token.value,
+                    args,
+                    location: this.makeLocation(token, this.previous()),
+                } as FunctionCallExpr;
             }
 
             // Regular identifier
