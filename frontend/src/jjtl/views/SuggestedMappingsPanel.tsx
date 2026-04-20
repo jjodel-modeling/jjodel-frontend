@@ -8,7 +8,7 @@
  * - X button = rejected - removed from list
  */
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { EmptyState as JjEmptyState } from '../../components/ui/EmptyState';
 import { MetamodelElement } from './MetamodelTreeView';
 import {
@@ -22,6 +22,7 @@ import GrammarTab from './GrammarTab';
 import type { GrammarRule } from '../components/GrammarDiagram/types';
 import { ProviderSelector, LocalOption } from '../../components/common/ProviderSelector';
 import {AIConfig, JodieConfig} from "../../types/jodie";
+import { useSettingsModalSafe } from '../../contexts/SettingsModalContext';
 
 export interface SuggestedMappingsPanelProps {
     /** Static source metamodel data (use getSourceMetamodel for fresh data) */
@@ -159,6 +160,11 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [internalHoveredId, setInternalHoveredId] = useState<string | null>(null);
     const [selectedId, setSelectedId] = useState<string | null>(null);
+    const abortRef = useRef<AbortController | null>(null);
+
+    // Settings navigation: mirrors the pattern in ProviderSelector, Jodie, and StatusBarRightZone —
+    // `useSettingsModalSafe` from `contexts/SettingsModalContext` + `openSettings('providers')`.
+    const settingsModal = useSettingsModalSafe();
 
     // AI provider preference for mappings feature
     const resolvedProvider= AIConfig.getPreferred('mappings');
@@ -177,7 +183,7 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
     const isAIAvailable = useMemo(() => JodieConfig.hasEnabledProviders(), []);
     const aiProviderName = useMemo(() => {
         if (selectedLocalOption === 'simple') return null;
-        return JodieConfig.current.activeProvider || resolvedProvider;
+        return resolvedProvider;
     }, [selectedLocalOption, resolvedProvider]);
 
     // Filter suggestions by status
@@ -205,7 +211,7 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
             // console.log('[SuggestedMappingsPanel] Notifying parent of suggestions change:',
             //     suggestionsCopy.length,
             //     suggestionsCopy.map(s => ({ id: s.id, status: s.status })));
-            // onSuggestionsChange(suggestionsCopy);
+            onSuggestionsChange(suggestionsCopy);
         }
     }, [result, onSuggestionsChange]);
 
@@ -224,6 +230,10 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
             return;
         }
 
+        abortRef.current?.abort();
+        const controller = new AbortController();
+        abortRef.current = controller;
+
         setIsAnalyzing(true);
         setResult(null);
 
@@ -235,15 +245,74 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
                     mode,
                     sourceMetamodelName,
                     targetMetamodelName,
+                    aiProvider: resolvedProvider,
+                    signal: controller.signal,
                 }
             );
+            if (controller.signal.aborted) return;
             setResult(analysisResult);
-        } catch (error) {
+        } catch (error: any) {
+            if (error?.name === 'AbortError') {
+                return;
+            }
             console.error('[SuggestedMappingsPanel] Analysis error:', error);
         } finally {
-            setIsAnalyzing(false);
+            if (abortRef.current === controller) {
+                setIsAnalyzing(false);
+                abortRef.current = null;
+            }
         }
-    }, [getSourceMetamodel, getTargetMetamodel, staticSourceMetamodel, staticTargetMetamodel, mode, sourceMetamodelName, targetMetamodelName]);
+    }, [getSourceMetamodel, getTargetMetamodel, staticSourceMetamodel, staticTargetMetamodel, mode, sourceMetamodelName, targetMetamodelName, resolvedProvider]);
+
+    // Cancel an in-flight analysis
+    const handleCancel = useCallback(() => {
+        abortRef.current?.abort();
+        abortRef.current = null;
+        setIsAnalyzing(false);
+    }, []);
+
+    // Explicit user-driven fallback: re-run analysis in simple mode without changing dropdown state
+    const handleFallbackToSimple = useCallback(async () => {
+        const sourceMetamodel = getSourceMetamodel ? getSourceMetamodel() : (staticSourceMetamodel || []);
+        const targetMetamodel = getTargetMetamodel ? getTargetMetamodel() : (staticTargetMetamodel || []);
+
+        if (sourceMetamodel.length === 0 || targetMetamodel.length === 0) return;
+
+        abortRef.current?.abort();
+        const controller = new AbortController();
+        abortRef.current = controller;
+
+        setIsAnalyzing(true);
+        setResult(null);
+
+        try {
+            const analysisResult = await mappingSuggestionService.analyze(
+                sourceMetamodel,
+                targetMetamodel,
+                {
+                    mode: 'simple',
+                    sourceMetamodelName,
+                    targetMetamodelName,
+                    signal: controller.signal,
+                }
+            );
+            if (controller.signal.aborted) return;
+            setResult(analysisResult);
+        } catch (error: any) {
+            if (error?.name === 'AbortError') return;
+            console.error('[SuggestedMappingsPanel] Fallback error:', error);
+        } finally {
+            if (abortRef.current === controller) {
+                setIsAnalyzing(false);
+                abortRef.current = null;
+            }
+        }
+    }, [getSourceMetamodel, getTargetMetamodel, staticSourceMetamodel, staticTargetMetamodel, sourceMetamodelName, targetMetamodelName]);
+
+    // Open Settings → Providers
+    const handleOpenSettings = useCallback(() => {
+        settingsModal?.openSettings('providers');
+    }, [settingsModal]);
 
     // Toggle suggestion between pending and toInsert
     const handleToggle = useCallback((suggestion: MappingSuggestion) => {
@@ -357,18 +426,62 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
                                 </>
                             )}
                         </button>
+                        {isAnalyzing && (
+                            <button
+                                className="btn-analyze btn-secondary"
+                                onClick={handleCancel}
+                                title="Cancel analysis"
+                            >
+                                <i className="bi bi-x-circle" />
+                                Cancel
+                            </button>
+                        )}
                         {!canAnalyze && (
                             <p className="analyze-hint">Load both metamodels to analyze</p>
                         )}
                     </div>
 
                     {/* Error Message */}
-                    {result?.error && (
-                        <div className="error-message">
-                            <i className="bi bi-exclamation-triangle" />
-                            {result.error}
-                        </div>
-                    )}
+                    {result?.error && (() => {
+                        const isNoProviderError = result.error.toLowerCase().includes('not configured');
+                        if (isNoProviderError) {
+                            return (
+                                <div className="error-message">
+                                    <i className="bi bi-exclamation-triangle" />
+                                    <div>
+                                        <div>No AI provider is configured.</div>
+                                        <button
+                                            className="btn-analyze btn-secondary"
+                                            onClick={handleOpenSettings}
+                                            style={{ marginTop: 8 }}
+                                        >
+                                            <i className="bi bi-gear" />
+                                            Open Settings → Providers
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        }
+                        return (
+                            <div className="error-message">
+                                <i className="bi bi-exclamation-triangle" />
+                                <div>
+                                    <div>{result.error}</div>
+                                    {result.canFallbackToSimple && (
+                                        <button
+                                            className="btn-analyze btn-secondary"
+                                            onClick={handleFallbackToSimple}
+                                            disabled={isAnalyzing}
+                                            style={{ marginTop: 8 }}
+                                        >
+                                            <i className="bi bi-cpu" />
+                                            Try simple matching instead
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })()}
 
                     {/* Results */}
                     {result && !result.error && (

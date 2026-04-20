@@ -13,6 +13,7 @@ import './ExecutionErrorDialog.scss';
 import {ExecutionError} from "../types";
 import {ExecutionStats} from "./ScriptBlock";
 import {Keystrokes} from "../../common/U";
+import type { RecoveryAction } from '../recovery';
 
 // ============================================
 // TYPES
@@ -38,6 +39,15 @@ export interface ExecutionErrorDialogProps {
     onReEvaluate?: (cmd: string) => Promise<boolean>;
     onStop?: () => void;
     onContinue?: () => void;
+
+    /**
+     * Optional contextual recovery actions, produced by the recovery rule registry.
+     * Rendered in a dedicated "Quick actions" section above the standard Skip/Close row.
+     * When empty or absent, no section is rendered (current-behavior preserved).
+     */
+    recoveryActions?: RecoveryAction[];
+    /** Dispatched when the user clicks a recovery action. */
+    onRecoveryAction?: (action: RecoveryAction) => void;
 }
 
 // ============================================
@@ -51,6 +61,8 @@ export const ExecutionErrorDialog: React.FC<ExecutionErrorDialogProps> = ({
     summary,
     onSkip,
     onRetry,
+    recoveryActions,
+    onRecoveryAction,
 }) => {
     // Handle keyboard shortcuts
     useEffect(() => {
@@ -156,6 +168,30 @@ export const ExecutionErrorDialog: React.FC<ExecutionErrorDialogProps> = ({
                         </>
                     )}
                 </div>
+
+                {/* Quick actions — contextual recovery proposals from the recovery rule
+                    registry. Only rendered when at least one rule matched the failing
+                    command + error combination. Standard Skip/Close row below is
+                    unchanged and always rendered in paused mode. */}
+                {isPaused && recoveryActions && recoveryActions.length > 0 && onRecoveryAction && (
+                    <div
+                        className={`exec-error-recovery ${recoveryActions.length > 2 ? 'exec-error-recovery--stacked' : ''}`}
+                    >
+                        <div className="exec-error-recovery-title">Quick actions</div>
+                        <div className="exec-error-recovery-list">
+                            {recoveryActions.map(action => (
+                                <button
+                                    key={action.id}
+                                    className="exec-error-btn exec-error-btn--secondary exec-error-recovery-btn"
+                                    onClick={() => onRecoveryAction(action)}
+                                >
+                                    {action.icon && <i className={`bi bi-${action.icon}`} />}
+                                    {action.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {/* Actions */}
                 <div className="exec-error-actions">

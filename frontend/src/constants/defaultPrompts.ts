@@ -76,6 +76,15 @@ create enum EnumName
 create literal VALUE1 in EnumName
 create literal VALUE2 in EnumName
 
+# To use an enum as a field type on a class, declare the enum first,
+# then create an attribute of that enum type on the class:
+create enum TaskType
+create literal USER_TASK in TaskType
+create literal SYSTEM_TASK in TaskType
+create class Task
+create attribute taskType in Task type TaskType
+# FORBIDDEN: create literal USER_TASK in taskType  (taskType is an attribute, not an enum)
+
 # Delete elements
 delete class ClassName
 delete attribute attributeName in ClassName
@@ -94,6 +103,25 @@ rename attribute oldAttr to newAttr in ClassName
 4. Use the \`jjscript\` language marker in code blocks
 5. One command per line for clarity
 6. Add comments with # to explain sections
+7. **NEVER add literals to an attribute**: \`literal\` belongs to enums, never to attributes. If a class needs an enum-typed field (e.g., a \`Task\` with a \`taskType\` that can be USER_TASK or SYSTEM_TASK), emit TWO separate declarations:
+   - first, create the enum and its literals: \`create enum TaskType\`, then \`create literal USER_TASK in TaskType\`, \`create literal SYSTEM_TASK in TaskType\`
+   - then, create the attribute on the class with the enum as its type: \`create attribute taskType in Task type TaskType\`
+   FORBIDDEN: \`create literal USER_TASK in taskType\` (taskType is an attribute, not an enum). Literals MUST target an enum by name.
+8. **NEVER use JjScript reserved keywords as identifiers**: the names of classes, attributes, references, containments, enums and literals MUST NOT coincide (case-insensitive) with any JjScript keyword or primitive type. If the user's domain concept naturally matches a reserved word, rename it to a non-colliding alternative (e.g., \`abstract\` on a Project becomes \`isAbstract\` for a boolean flag, or \`abstractText\` / \`summary\` for a textual summary).
+
+   Reserved words (case-insensitive):
+   - keywords: \`create\`, \`delete\`, \`rename\`, \`class\`, \`abstract\`, \`attribute\`, \`reference\`, \`containment\`, \`enum\`, \`literal\`, \`extends\`, \`in\`, \`to\`, \`type\`
+   - primitive types: \`String\`, \`int\`, \`boolean\`, \`Date\`
+
+   FORBIDDEN examples:
+   - \`create attribute abstract in Project type String\` (uses reserved \`abstract\`)
+   - \`create class Type\` (uses reserved \`type\`)
+   - \`create attribute String in Book type String\` (uses reserved primitive \`String\`)
+
+   CORRECT alternatives:
+   - \`create attribute isAbstract in Project type boolean\` (if the intent was a boolean flag)
+   - \`create attribute abstractText in Project type String\` (if the intent was a textual summary)
+   - \`create class DataType\` (rename the class to avoid collision)
 
 #### EXAMPLE - Correct Response
 
@@ -138,6 +166,7 @@ create reference borrowedBooks in Member type Book [0..*]
 - **Avoid Deep Hierarchies**: Keep inheritance trees shallow (max 3-4 levels)
 - **Meaningful Constraints**: Add constraints that enforce business rules
 - **Composition vs Association**: Use composition for strong ownership
+- **Avoid reserved names**: identifiers (class, attribute, reference, enum, literal names) must not collide with JjScript keywords (\`create\`, \`delete\`, \`rename\`, \`class\`, \`abstract\`, \`attribute\`, \`reference\`, \`containment\`, \`enum\`, \`literal\`, \`extends\`, \`in\`, \`to\`, \`type\`) or primitive types (\`String\`, \`int\`, \`boolean\`, \`Date\`). When a domain term collides, prefer a descriptive alternative (e.g., \`isAbstract\` for a boolean, \`abstractText\` or \`summary\` for a string).
 
 {{#if projectContext}}
 ## CURRENT PROJECT CONTEXT

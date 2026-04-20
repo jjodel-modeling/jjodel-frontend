@@ -88,12 +88,7 @@ export function AISettingsContent({
 }: AISettingsContentProps) {
     const [testStatus, setTestStatus] = useState<Dictionary<string, 'idle' | 'testing' | 'success' | 'error'>>({});
     const [expandedProvider, setExpandedProvider] = useState<TAIProvider | null>(null);
-    const [defaultProvider, setDefaultProvider] = useState<TAIProvider | null>(JodieConfig.current.activeProvider);
     // const [update, setUpdate] = useState(0);
-
-    // List of configured providers for the default selector
-    const configuredProvidersList =
-        Object.values(JodieConfig.current.providers).filter(e=>e.isConfigured())
 
     // Test provider connection
     const handleTestConnection = async (providerId: string) => {
@@ -128,8 +123,11 @@ export function AISettingsContent({
         const isExpanded = expandedProvider === name;
         const config = AIConfig.get(name);
         let llm = AI[name];
-        let versions = Object.values(llm.versions);
-        let description: string = versions.slice(0, 3).map(e=>e.label).join() + (versions.length>3 ? "..." : "");
+        // Dynamic subtitle: first 3 non-deprecated models from the registry, truncated with "…".
+        // Source of truth for models is this registry — the Settings panel no longer selects
+        // per-provider model; the app-level picker chooses per-feature.
+        let nonLegacyVersions = Object.values(llm.versions).filter(v => !v.deprecated);
+        let description: string = nonLegacyVersions.slice(0, 3).map(e=>e.label).join(', ') + (nonLegacyVersions.length>3 ? "…" : "");
         if (!description) description = 'OpenAI-compatible endpoint';
         const isConfigured: boolean = config.isConfigured();
 
@@ -213,34 +211,10 @@ export function AISettingsContent({
                                     <a href={llm.keyUrl} target={"_blank"} title={"Get your key"}><i className="bi bi-link-45deg"/></a>
                                     : null}</label>
 
-                                {field.key === 'model' && Object.keys(llm.versions).length > 0 ? (
-                                    // Model select with capabilities
-                                    <div className="model-select-wrapper">
-                                        <select
-                                            className="model-select"
-                                            value={config[field.key] || ''}
-                                            onChange={(e) => {
-                                                let val = e.target.value;
-                                                config.model = val;
-                                                config.save();
-                                                setUpdate(update + 1);
-                                            }}
-                                        ><optgroup label="Select a model">
-                                            {Object.keys(llm.versions).map(name => {
-                                                let version = llm.versions[name];
-                                                let attachments: string[] = [
-                                                    version.capabilities.pdf ? "📄" : nbsp,
-                                                    version.capabilities.vision ? "🖼️" : nbsp
-                                                ];
-                                                return (
-                                                    <option key={name} value={name} disabled={version.deprecated}>
-                                                        {version.label + nbsp + attachments.join("") + (version.deprecated ? ' (deprecated)' : '')}
-                                                    </option>);
-                                            })}
-                                        </optgroup></select>
-                                        <ModelCapabilitiesBadges model={selectedModel} />
-                                    </div>
-                                ) : (
+                                {/* Model selection moved to app-level picker (common/ProviderModelSelector)
+                                    per 2026-04-20 single-source-of-truth refactor. Settings panel only
+                                    validates credentials and provider-specific config (endpoint, etc.). */}
+                                {(
                                     // Regular input (text/password)
                                     <input
                                         type={field.type}
@@ -293,34 +267,9 @@ export function AISettingsContent({
             {showHeader && (
                 <div className="settings-header">
                     <h2>AI Providers</h2>
-                    <p>Configure your AI providers for documentation generation and chat.</p>
+                    <p>Configure AI providers used by Jjodel features</p>
                 </div>
             )}
-
-            {/* Default Provider Selector */}
-            <div className="default-provider-section">
-                <div className="default-provider-header">
-                    <label className="default-provider-label">Default Provider</label>
-                    <p className="default-provider-hint">
-                        Used when no specific provider is selected for a feature.
-                    </p>
-                </div>
-                <select
-                    className="default-provider-select"
-                    value={defaultProvider || ''}
-                    onChange={(e) => {
-                        const newDefault = (e.target.value as TAIProvider) || null;
-                        setDefaultProvider(newDefault);
-                        JodieConfig.setGlobalDefault(newDefault);
-                    }}
-                >
-                    <option value="">Auto (first available)</option>
-                    {configuredProvidersList.map((p, i) => <option key={`${i}-${p.name}`} value={p.name}>{p.name}</option>)}
-                </select>
-                {configuredProvidersList.length === 0 && (
-                    <p className="default-provider-empty">Configure at least one provider below to set a default.</p>
-                )}
-            </div>
 
             <div className="providers-list">
                 {ALL_AI_PROVIDERS.map(provider => {
@@ -328,7 +277,6 @@ export function AISettingsContent({
                     return llm.name === AIProvider.Custom ? null :
                         renderProviderCard(llm.name, [
                             { key: 'apiKey', label: 'API Key', type: 'password', placeholder: llm.keyPlaceholder || "Your " + llm.name + " API key" },
-                            { key: 'model', label: 'Model', type: 'model', placeholder: '' },
                         ]);
                 })}
 

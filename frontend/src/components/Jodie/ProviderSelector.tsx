@@ -6,6 +6,9 @@
 import React from 'react';
 import {TAIProvider, AI, JodieConfig, AIConfig} from '../../types/jodie';
 
+// Jodie-specific dropdown (distinct from common/ProviderSelector). Writes per-feature
+// preference for 'chat'; the parent (Jodie.tsx) mirrors the write in its own callback.
+
 interface ProviderSelectorProps {
     activeProvider: TAIProvider;
     onProviderChange: (provider: TAIProvider) => void;
@@ -20,9 +23,8 @@ export function ProviderSelector({ activeProvider, onProviderChange, onOpenSetti
 
     const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newProvider = e.target.value as TAIProvider;
-        // Persist to localStorage first
-        JodieConfig.current.activeProvider = newProvider;
-        JodieConfig.current.save();
+        // Persist as per-feature preference for 'chat'
+        AIConfig.setPreferred('chat', newProvider);
         // Then notify parent component
         onProviderChange(newProvider);
     };

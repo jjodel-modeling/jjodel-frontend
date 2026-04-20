@@ -1,5 +1,231 @@
 # Claude Code Session Log
 
+## 2026-04-21 — fix: remove horizontal slide animation on tab switch
+**Prompt**: Tab switches in the top tab bar (Test Matching / Unnamed / metamodel_1 / metamodel_2 / transformation tabs) animated the content panel with a horizontal slide. Remove only that slide; leave every other animation intact.
+**File toccati**:
+- frontend/src/components/abstract/style.scss (`.dock-content-animated { transition: margin 0.3s }` → `transition: none`)
+- docs/claude-code-log.md
+**Esito**: ✅ completato
+**Note**: **Case C (CSS puro)** per the prompt's taxonomy. The slide was produced by the rc-tabs pattern (used via rc-dock): rc-tabs' `TabPanelList/index.js:44` sets an inline `style={{ marginLeft: "-N00%" }}` on the content container to scroll to the active tab pane, and `.dock-content-animated { transition: margin 0.3s }` turns the margin change into a 300ms horizontal slide. Removing only the transition keeps the positioning logic intact (tabs still display correctly) while making the switch instantaneous. **Discovery subtlety**: the `.dock-content-animated` rule exists in 3 places: (1) `node_modules/rc-dock/dist/rc-dock.css:114` — NOT imported by our code, (2) `src/components/abstract/style.scss:194` — **imported transitively via `Dock.tsx:1`, this is the live one**, (3) `src/components/abstract/style_ap.scss:199` — orphan copy, never imported. Fixed only the live source (option 2). No `!important` needed — rc-dock's own CSS is never imported, so nothing fights with our rule. The orphan `style_ap.scss` copy is left untouched (cleanup is out of scope). The vertical fade-in animation (`tabFadeIn` at `dock-tabs.scss:400-413`, 150ms translateY 4→0 + opacity) is **intentionally preserved** — it's not a horizontal slide and the prompt's Case C instructs to avoid touching unrelated transitions. All other transitions in the dock area (hover, focus, ink-bar, pinned-strip rotation, etc.) unchanged. Build `✓ built in 1m 12s`. Manual smoke test (steps 1-4 in the prompt) required on the user's side.
+**Nome del documento prompt**: 2026-04-21 (remove tab switch slide animation)
+
+---
+
+## 2026-04-21 — fix: restore match arrows rendering in Suggested Mappings (one-line uncomment)
+**Prompt**: Suggested Mappings generates 12 mappings but the SVG arrows between source/target metamodels on the center canvas no longer render. Diagnosis (prior prompt) traced the silent failure to a bulk console.log cleanup on 2026-04-16 that over-shot by one line, commenting the functionally-essential `onSuggestionsChange(suggestionsCopy)` call along with the log's orphan arguments.
+**File toccati**:
+- frontend/src/jjtl/views/SuggestedMappingsPanel.tsx (line 214: removed `// ` prefix restoring the parent-notification call)
+- docs/claude-code-log.md
+**Esito**: ✅ completato
+**Note**: One-line change. Regression commit `4d81bbed33` (Juri Di Rocco, 2026-04-16, "Fixed synbtax errors: refactorung console.log") had commented three consecutive lines: two were orphan arguments of a multi-line `console.log` that the previous day's commit `0787639fdf` (2026-04-15) had only partially commented (first line only), leaving the rest as invalid expressions — correct to comment. The third line was `onSuggestionsChange(suggestionsCopy);`, a separate essential call that ran the parent-notify pipeline. Uncommented that one only. Lines 211-213 (the original console.log and its arguments) remain commented — they were the genuine target of the cleanup and restoring them would reintroduce verbose logging. Data pipeline now fully connected: SuggestedMappingsPanel.setResult → useEffect → onSuggestionsChange → JjtlDevelopmentEnv.handleSuggestionsChange → setSuggestions → suggestionMappings memo → DualMetamodelPanel → MappingLinesOverlay (SVG renderer, 12-color palette at MappingLinesOverlay.tsx:51-64). Build `✓ built in 47.17s`. Manual smoke test (click Analyze → verify 12 arrows appear between the two trees) required on the user's side. Sibling observation (noted but not addressed in this fix): commit 4d81bbed33 touched 18 files with the same multi-line-log-overshoot pattern; a follow-up audit of those files would be prudent since the same mistake could have caught other essential calls.
+**Nome del documento prompt**: 2026-04-21 (restore match arrows one-line uncomment)
+
+---
+
+## 2026-04-20 — fix: common ProviderSelector — gate option disable by `isConfigured()` not `.enabled`
+**Prompt**: In the Suggested Mappings (and DocumentationTab) dropdown, every provider except the currently-selected one appeared disabled even with a valid API key. Regression introduced in commit 1ed5f4862 (24 Feb 2026, "nearly done refractor ai") which changed `disabled={!provider.available}` to `disabled={!AIConfig.get(provider).enabled}`. The `.enabled` flag is flipped true ONLY from `ProviderConfigModal.tsx:84` after a successful "Test Connection"; providers with saved keys but never-tested stayed disabled indefinitely.
+**File toccati**:
+- frontend/src/components/common/ProviderSelector.tsx (line 120, single-line change: `!AIConfig.get(provider).enabled` → `!AIConfig.get(provider).isConfigured()`)
+- docs/claude-code-log.md
+**Esito**: ✅ completato
+**Note**: Defensive Option B chosen (per the diagnostic report): align the per-option disable gate with the upstream list filter `JodieConfig.getEnabledProviders()` which already uses `isConfigured()`. Option A (remove the attribute entirely) would have been equivalent functionally but less defensive — keeping the check means that if an entry somehow bypasses the list filter, it still gets gated by the same predicate. Both predicates now resolve to "has API key (or baseUrl for Ollama/Custom)". `JodieConfig.getEnabledProviders()` unchanged; `Jodie/ProviderSelector.tsx` unchanged (has no per-option gate); `AIConfig.enabled` field + its write paths in `ProviderConfigModal.tsx` unchanged — the `.enabled` flag is now unused in this read site, but it's still written after Test Connection and consulted by `getStatus()` for the "Connected"/"Error" badge in Settings. Build `✓ built in 1m 15s`. Manual smoke test (Claude+Groq with Groq untested) required on the user's side to confirm Groq is now clickable.
+**Nome del documento prompt**: 2026-04-20 (fix disabled options common ProviderSelector)
+
+---
+
+## 2026-04-20 — fix: scope edge-crossing jump markers to the active canvas only
+**Prompt**: In editor v2, switching between metamodel_1 / metamodel_2 tabs showed phantom jump arcs on edges that only cross edges from the *other* metamodel. Scope the crossing detection to the active React Flow instance.
+**File toccati**:
+- frontend/src/components/editor-v2/utils/edgeUtils.ts (getEdgeCrossings: new optional `activeNodeIds?: Set<string>` 3rd param; registry filter inside the loop skips entries whose source or target isn't in the active set; `nodeRects?` shifts to 4th param)
+- frontend/src/components/editor-v2/edges/UnifiedEdge.tsx (build activeNodeIds from `useNodes()`, pass as 3rd arg to getEdgeCrossings; useMemo dep list updated)
+- frontend/src/components/editor-v2/hooks/useTreeLayout.ts (same: compute activeNodeIds once from allNodes; both getEdgeCrossings call sites — trunk + tree segments — now pass activeNodeIds as 3rd arg and keep `[]` as 4th for nodeRects)
+- docs/claude-code-log.md
+**Esito**: ✅ completato
+**Note**: **Scenario B confirmed**: `edgePathRegistry` at edgeUtils.ts:1141 is a module-level singleton `Map<string, EdgePathEntry>`. Every UnifiedEdge across every React Flow instance writes into it; with DockManager keeping tabs mounted, edges from hidden tabs persist in the registry and contaminate the visible tab's crossing detection. **Fix chosen: Option 1** (React Flow hook-based scoping). Both call sites (UnifiedEdge.tsx and useTreeLayout.ts) already use `useNodes()` which returns canvas-scoped nodes — just built a Set of node IDs from it and threaded to `getEdgeCrossings`. Filter logic: `if (activeNodeIds && (!has(sourceNode) || !has(targetNode))) continue` — both endpoints must be in the active canvas (no false positives from edges crossing the boundary; in v2 this case doesn't happen). Backward-compatible: omitted `activeNodeIds` → no filter (legacy behaviour). **Alternative considered and rejected**: clearing the registry on canvas unmount — doesn't work because Jjodel's DockManager keeps tabs in DOM. **No Redux touched, no store-side change**: fix is purely on the consumer (detection side), per the constraint. Tree-segment entries registered by useTreeLayout (suffixed edge IDs like `__trunk`, `__tree_0`) share source/target node IDs with the parent inheritance edge, so they're scoped correctly for free. Manual smoke test (metamodel_1 ↔ metamodel_2 switching) still required; code-level math: Set lookup is O(1), filter runs inside the existing O(N) registry scan, no performance regression. Build `✓ built in 1m 14s`.
+**Nome del documento prompt**: 2026-04-20 (scope edge-crossing jumps to active canvas)
+
+---
+
+## 2026-04-20 — docs: Jjodie system prompt — add "reserved keywords" rule
+**Prompt**: Jjodie was emitting commands like `create attribute abstract in Project type String` where `abstract` is a JjScript keyword, causing parser errors. Add an explicit rule forbidding reserved words (keywords + primitive types) as identifiers, with concrete FORBIDDEN/CORRECT examples and a matching bullet in Best Practices.
+**File toccati**:
+- frontend/src/constants/defaultPrompts.ts (CHAT_PROMPT only — added rule #8 + new Best Practices bullet)
+- docs/claude-code-log.md
+**Esito**: ✅ completato
+**Note**: MANDATORY RULES now ends at point 8. Rule 7 (enum vs attribute, added earlier today) still resolves correctly. Reserved-word list as provided in the prompt: keywords (create, delete, rename, class, abstract, attribute, reference, containment, enum, literal, extends, in, to, type) + primitive types (String, int, boolean, Date). Applied case-insensitive rule per spec. Prompt's closing note flagged that list was deduced from the Syntax Reference; if parser exposes more keywords (e.g. package, import, constraint), a follow-up prompt will extend it. No other CHAT_PROMPT content changed; other prompt constants in the same file (DOCUMENTATION, VALIDATION, REFACTORING, OCL, IMPORT) untouched. tsc clean for defaultPrompts.ts.
+**Nome del documento prompt**: 2026-04-20 (reserved keywords rule)
+
+---
+
+## 2026-04-20 — feat: contextual recovery actions for JjScript execution error modal
+**Prompt**: When JjScript execution fails on a systematic, mechanically-fixable pattern (e.g. repeated `create literal X in Y` where Y is actually an attribute, not an enum), offer one-click recovery actions in the error modal instead of forcing N manual Skip Line clicks. Extensible architecture for future rules.
+**File toccati**:
+- frontend/src/jjscript/recovery/types.ts (NEW — RecoveryContext/RecoveryAction/RecoveryRule)
+- frontend/src/jjscript/recovery/rules.ts (NEW — literalInAttributeRule, RECOVERY_RULES registry, findRecoveryActions scanner, isCreateLiteralInTarget utility)
+- frontend/src/jjscript/recovery/index.ts (NEW — barrel)
+- frontend/src/jjscript/components/ExecutionErrorDialog.tsx (+2 optional props: recoveryActions + onRecoveryAction; new "Quick actions" section above the existing Skip/Close row)
+- frontend/src/jjscript/components/ExecutionErrorDialog.scss (new .exec-error-recovery + .exec-error-recovery-title + .exec-error-recovery-list + .exec-error-recovery-btn styles, additive only)
+- frontend/src/jjscript/components/ScriptBlock.tsx (recoveryActions state + effect computing it from pauseInfo; runCommandsFromIndex helper; handleRecoveryAction dispatcher with cases 'createEnumAndRetry' and 'skipMatchingCreateLiteral'; props passed to dialog)
+- docs/claude-code-log.md
+**Esito**: ✅ completato
+**Note**: **Architecture**: rules are pure matchers returning discriminated-union actions (id/kind/label/icon + kind-specific payload); no closures cross the rule→component boundary, so rule authors can't accidentally hold references to component state. Handlers live in ScriptBlock.tsx where they have access to state setters + onExecute. Adding a new rule is 4 steps documented in types.ts. **First match wins** in the registry to avoid action-button spam. **Rule implemented**: `literalInAttributeRule` checks 4 conditions (command matches regex, error contains "Literals can only be added to enums", an attribute with case-insensitive name Y exists, NO enum with exact name Y exists); proposes 2 actions: (A) "Create enum Y and retry" — runs `create enum Y` via onExecute, then re-runs from the failed line; if enum creation itself fails, surfaces that as the new pause (not swallowed); (B) "Skip all `create literal ... in Y`" — scans remaining lines case-sensitive on Y, marks all matches as skipped in lineStates + skippedLinesSet, resumes from first non-matching line. **ScriptExecutionWindow.tsx** (another consumer of the dialog) NOT wired — props are optional so backward compatible; only ScriptBlock gets recovery UX in this iteration. **Did not refactor** handleSkipAndContinue; instead duplicated the execution loop in a new local `runCommandsFromIndex(startIdx, skipSet)` helper used only by recovery dispatchers. **Enum existence check** tries model.children, model.classes (filtering by className containing "Enum"), model.enumerators, and project.enumerators — robust to whichever representation the framework uses. **No CSS class collisions** (verified via grep: `exec-error-recovery` was not previously used). Recovery action logged via `JjScriptEvents.EXECUTED` with `recovery: true` detail flag so console listeners can visually distinguish. Build `✓ built in 1m 14s`. Manual UI smoke test by user still required.
+**Nome del documento prompt**: 2026-04-20 (recovery actions in JjScript error modal)
+
+---
+
+## 2026-04-20 — docs: Jjodie system prompt — add "enum vs attribute" disambiguation rule
+**Prompt**: Jjodie was generating JjScript that creates an attribute and then tries to add literals to it, triggering "Cannot create literal in attribute 'X'". Add a mandatory rule explaining the correct two-step pattern (declare enum + literals first, then attribute typed on the enum).
+**File toccati**:
+- frontend/src/constants/defaultPrompts.ts (CHAT_PROMPT — added rule #7 + expanded Enumerations example)
+- docs/claude-code-log.md
+**Esito**: ✅ completato
+**Note**: Verified current state before editing: MANDATORY RULES ended at point 6 (comments), so the no-circular-inheritance rule from earlier orphan fragments was NEVER actually applied — the prompt's conditional wording ("se la regola no-circular-inheritance è già stata inserita come punto 6, questa diventa punto 7") resolved to point 7 since point 6 is "Add comments with #". Both modifications applied verbatim from spec. Enumerations block expanded with inline FORBIDDEN example mirroring the runtime error message. No refactoring, no rename; only CHAT_PROMPT modified (other prompt constants untouched). tsc clean for defaultPrompts.ts.
+**Nome del documento prompt**: 2026-04-20 (enum vs attribute rule)
+
+---
+
+## 2026-04-20 — fix: AI picker popover — correct width overrides (compact mode specificity + stray flex:1)
+**Prompt**: Previous popover width fix didn't take effect. All model names showed ellipsis even for short ones (e.g. "Claude Opus 4.7"). Root-cause and fix properly.
+**File toccati**:
+- frontend/src/components/common/ProviderModelSelector.scss (two fixes below)
+- docs/claude-code-log.md
+**Esito**: ✅ completato
+**Note**: **Root cause discovery (CSS specificity)**: (1) `.provider-selector.compact .provider-menu { min-width: 180px }` in ProviderSelector.scss (specificity 0,3,0) was beating my `.pm-popover { min-width: 280px }` (0,1,0) because both JodieHeader and DocumentationTab pass `compact`. Popover stayed at 180px. (2) `.provider-option span { flex: 1 }` (0,1,1) was applying to **every** span inside a model button, including my `.pm-caps` icon span. So label AND caps both had `flex: 1` and split the row equally — label got narrow → ellipsis fired even for 15-char names. **Fix (1)**: scoped my popover rule as `.provider-selector .pm-popover, .provider-selector.compact .pm-popover` to match/beat the compact override; bumped values to `min-width: 320px / max-width: 480px` per new prompt. **Fix (2)**: explicitly set `.pm-model-label { flex: 0 0 auto }` and `.pm-caps { flex: 0 0 auto; margin-left: auto }` inside `.pm-model-option`, neutralizing the inherited `flex: 1` from ProviderSelector's span rule; removed `text-overflow: ellipsis` and `min-width: 0` from the label (with `width: max-content` on popover, the container now widens naturally to fit the longest nowrap label; for labels that still exceed max-width, the parent `.provider-menu { overflow: hidden }` clips and the `title` attribute tooltip already added previously provides the full name). No `!important` used — specificity increase was sufficient. Trigger dedup (Option B) was already correct in the prior turn: "Groq Canopy Labs Orphe…" in the header is correct output of the dedup (Groq + "Canopy…") truncated by the trigger's own compact 160px max-width, NOT a "Groq Groq" duplication. Build `✓ built in 1m 13s`. **Manual visual verification by user required** — I cannot run dev server; CSS specificity math verified against the actual rules in ProviderSelector.scss.
+**Nome del documento prompt**: 2026-04-20 16:30
+
+---
+
+## 2026-04-20 — fix: AI picker popover — single-line model names with ellipsis overflow
+**Prompt**: Fix multi-line wrapping of long model names in ProviderModelSelector popover (observed with Groq: "Whisper Large V3 Turbo", "Canopy Labs Orpheus V1 English"). Widen popover within sensible bounds and truncate long names with tooltip fallback.
+**File toccati**:
+- frontend/src/components/common/ProviderModelSelector.scss (.pm-popover → width:max-content + min-width:280px + max-width:420px; .pm-model-label → white-space:nowrap + overflow:hidden + text-overflow:ellipsis + min-width:0 for flex-child shrinkage)
+- frontend/src/components/common/ProviderModelSelector.tsx (title={m.version.label} on both non-legacy and legacy model buttons for full-name tooltip on truncated labels)
+- docs/claude-code-log.md
+**Esito**: ✅ completato
+**Note**: Applied all 4 rules from prompt. Auto-sizing via `width: max-content` within [280px, 420px] band — popover widens to fit longest visible name, truncates with `…` beyond 420px. `min-width: 0` on `.pm-model-label` is the non-obvious piece: without it, flex children default to `min-width: auto` (content-size) and ellipsis never triggers inside a flex row. No new CSS classes introduced; only extended existing `.pm-popover` and `.pm-model-label`. No HTML structure change, no logic change, trigger untouched. Build `✓ built in 1m 18s` with only pre-existing chunk-size warning.
+**Nome del documento prompt**: 2026-04-20 16:00
+
+---
+
+## 2026-04-20 — refactor: AI providers — single source of truth for models (Pattern B)
+**Prompt**: Rimuovi select modello dal pannello Settings; combina provider+model in un picker comune (deploy JodieHeader + DocumentationTab); persistenza per-feature `{providerId, modelId?}`; legacy ID map per Claude con migration silenziosa; plumbing `model?` attraverso `AIProviderService.chat()` e call site; SuggestedMappingsPanel NON toccato.
+**File toccati**:
+- frontend/src/types/jodie.ts (AIVersion.contextWindow, .add() signature, Claude registry rewrite, claudeLegacyIdMap, resolveLegacyModelId, ProviderPreference.modelId, setPreferred signature + SETTINGS_CHANGED dispatch, getPreferredModel, resolveFeatureSelection, migrateLegacyModelIds + load() wiring)
+- frontend/src/services/AIProviderService.ts (chat() accepts optional model; resolves via resolveLegacyModelId; threads effectiveModel to all 8 provider adapters)
+- frontend/src/components/Settings/AISettingsContent.tsx (removed model <select> block; removed model field entry from provider fields; removed defaultProvider/configuredProvidersList state; subtitle dynamic non-legacy top-3)
+- frontend/src/components/common/ProviderModelSelector.tsx (NEW — combined picker: trigger "Provider Model" + popover with sub-select provider + model list + "Show legacy models" toggle)
+- frontend/src/components/common/ProviderModelSelector.scss (NEW — additive styles, reuses .provider-selector/.provider-btn/.provider-menu base)
+- frontend/src/components/Jodie/JodieHeader.tsx (swap Jodie/ProviderSelector → common/ProviderModelSelector feature="chat")
+- frontend/src/components/Jodie/Jodie.tsx (pass model via AIConfig.getPreferredModel('chat') to chat())
+- frontend/src/components/abstract/tabs/DocumentationTab.tsx (replace inline provider dropdown with <ProviderModelSelector feature="documentation" />; remove now-dead showProviderMenu state + click-outside effect + availableProviders)
+- frontend/src/services/DocumentationService.ts (pass model via AIConfig.getPreferredModel('documentation'))
+- frontend/src/jjtl/services/AIMatcher.ts (pass model via AIConfig.getPreferredModel('mappings') — service-layer change only, UI of SuggestedMappingsPanel not touched)
+- frontend/src/components/ExplainModal.tsx (streamExplain resolves model = getPreferredModel('explain') ?? config.model)
+- docs/claude-code-log.md
+**Esito**: ✅ completato
+**Note**: **Discovery flagged**: prompt-vocabulary mismatches with codebase (no `AIProviderSelector`, no `useAIProvider`, no `src/ai/`); used actual names `ProviderSelector`/`AIConfig.getPreferred`/registry-in-`jodie.ts`. Built-in `AIVersion.deprecated` reused as "legacy" flag (no alias). New component created at `common/ProviderModelSelector.tsx` rather than overloading `common/ProviderSelector` with conditional mode — keeps SuggestedMappingsPanel's API untouched and safe. `claudeLegacyIdMap`: `claude-sonnet-4-20250514`→`claude-sonnet-4-6`, `claude-opus-4-20250514`→`claude-opus-4-6`, `claude-haiku-4-20250514`→`claude-haiku-4-5-20251001`, `claude-3-5-sonnet-20241022`→`claude-3-5-sonnet-latest`, `claude-3-opus-20240229`→`claude-3-opus-latest`. One-shot migration `migrateLegacyModelIds()` runs once per install (sentinel `jjodel_migration:legacy_model_ids_v1`), rewrites both per-feature `jjodel_provider_<feature>.modelId` and per-provider `jjodie_provider_<name>.model`. Legacy entries 3-5-sonnet/3-opus also added to registry (deprecated:true) so persisted selections still match after migration. `SuggestedMappingsPanel.tsx`: **non toccato in questo prompt** (è apparso nei diff di sessione solo per via dei prompt precedenti di provider threading e Phase 2 di Default Provider removal; in questo task nessuna modifica). AIProviderService.chat() signature extended with optional `model?: string` as 7th param — backward compatible: callers omitting it fall back to `AIConfig.get(provider).model`. Ollama/Custom non hanno ancora UX nel picker perché `AI.Custom.versions` è vuoto (registry-driven); è una limitazione nota — l'utente può comunque selezionarli dal sub-select provider e il picker mostrerà "No models in registry".
+**Nome del documento prompt**: 2026-04-20 15:00
+
+---
+
+## 2026-04-20 — refactor: Default Provider removal — Phase 3 (removal)
+**Prompt**: Remove "Default Provider" UI block, setGlobalDefault, activeProvider field, persistence. Update panel subtitle.
+**File toccati**:
+- frontend/src/components/Settings/AISettingsContent.tsx
+- frontend/src/types/jodie.ts
+- frontend/src/jjtl/services/AIMatcher.ts (still referenced removed `activeProvider` — fixed to `AIConfig.getPreferred('mappings')`)
+- docs/claude-code-log.md
+**Esito**: ✅ completato
+**Note**: Opzione 2 scelta per la chiave localStorage (`jjodel_default_provider` lasciata in place per un rilascio + TODO commentato accanto al sentinel). Rimosso: campo `activeProvider` dal corpo JodieConfig; persistenza di `activeProvider` in save() (righe ~545-549 del pre-fix); dispatch `PROVIDER_CHANGED` type 'global-default'; `setGlobalDefault` completamente; stato `defaultProvider` + `configuredProvidersList` + blocco UI in AISettingsContent.tsx (righe 300-323 del pre-fix). Subtitle aggiornato a "Configure AI providers used by Jjodel features". `AI.GLOBAL_DEFAULT_KEY` costante TRATTENUTA (ancora usata dalla migrazione one-shot). `AI.getActiveVersion` refactored: param ora REQUIRED (single caller Jodie.tsx:58 lo passa già); rimosso fallback `if (!provider) provider = JodieConfig.current.activeProvider`. Acceptance: `grep -r "JodieConfig\\.(current|default)\\.activeProvider|setGlobalDefault"` → zero matches. tsc pulito per i miei file (81 errori pre-esistenti non correlati restano: SVG imports, casing, Measurable.tsx).
+**Nome del documento prompt**: 2026-04-20 18:10
+
+---
+
+## 2026-04-20 — refactor: Default Provider removal — Phase 2 (feature alignment)
+**Prompt**: Align Chat, Documentation, Explain, Mappings to per-feature preferences exclusively; make AIDisclaimer feature-aware. Default Provider UI still present but dormant.
+**File toccati**:
+- frontend/src/components/Jodie/Jodie.tsx (4 sites: init, settings-change, provider-change, auto-switch)
+- frontend/src/components/Jodie/ProviderSelector.tsx (Opzione 1 scelta: tenuto il componente Jodie-specifico e cambiata solo la write)
+- frontend/src/services/DocumentationService.ts (line 614 read → getPreferred('documentation'); + import AIConfig)
+- frontend/src/components/abstract/tabs/DocumentationTab.tsx (line 998 write → setPreferred)
+- frontend/src/components/ExplainModal.tsx (streamExplain read → getPreferred('explain'); no UI dropdown, auto-resolve sufficient)
+- frontend/src/jjtl/views/SuggestedMappingsPanel.tsx (drop `JodieConfig.current.activeProvider || resolvedProvider` fallback chain)
+- frontend/src/components/common/AIDisclaimer.tsx (add required `feature: AIFeature` prop)
+- frontend/src/components/Jodie/JodieWindow.tsx (pass feature="chat")
+- frontend/src/components/abstract/tabs/DocumentationTab.tsx (pass feature="documentation")
+- frontend/src/jjtl/views/InferredMappingsPanel.tsx (pass feature="mappings")
+- docs/claude-code-log.md
+**Esito**: ✅ completato
+**Note**: Opzione 1 per Jodie/ProviderSelector — è un <select> native con UX distinta dal common/ProviderSelector (Bootstrap styling, parent-controlled props); non interscambiabile. AIDisclaimer call sites: 3 attivi aggiornati (JodieWindow, DocumentationTab, InferredMappingsPanel); `ScriptBlock.tsx:15` importa AIDisclaimer ma NON lo rende (dead import) — lasciato intatto. ExplainModal non ha dropdown UI visibile: resolve via `getPreferred('explain')` + fallback first-enabled (sufficiente per ora; UI selector aggiunta solo se necessario). SuggestedMappingsPanel: rimosso `JodieConfig.current.activeProvider` check; ora usa solo `resolvedProvider = getPreferred('mappings')`. Tutti i file modificati tsc-clean.
+**Nome del documento prompt**: 2026-04-20 18:05
+
+---
+
+## 2026-04-20 — refactor: Default Provider removal — Phase 1 (foundation)
+**Prompt**: Fix ProviderSelector to write per-feature; register 'explain' in AIFeature; refactor getPreferred fallback to per-feature → first-enabled; add idempotent one-shot migration from global to per-feature prefs. Visible UX unchanged.
+**File toccati**:
+- frontend/src/components/common/ProviderSelector.tsx
+- frontend/src/types/jodie.ts
+- docs/claude-code-log.md
+**Esito**: ✅ completato
+**Note**: **Discrepancy rispetto al prompt**: il prompt afferma che la pattern delle chiavi per-feature è `jjodie_pref:<feature>`, ma il codice reale (jodie.ts:381,396) usa `${AI.STORAGE_PREFIX}${feature}` dove `STORAGE_PREFIX = 'jjodel_provider_'`. Chiavi effettive: `jjodel_provider_chat`, `jjodel_provider_mappings`, ecc. La funzione di migrazione usa la pattern reale (coerente con getPreferred/setPreferred). Nessun call site di `common/ProviderSelector` ha richiesto l'aggiunta del prop `feature` — era già required nell'interface (line 16) e l'unico call site (`SuggestedMappingsPanel.tsx:373`) lo passa già come `feature="mappings"`. Aggiunto `'explain'` all'union AIFeature. `getPreferred` nuovo fallback: per-feature → `getFirstEnabledProvider()` (private helper nuovo, ordine deterministico via `ALL_AI_PROVIDERS`). `migrateGlobalDefaultToPerFeature` chiamata da `JodieConfig.load()` al suo inizio (sentinel-protected, idempotente, copre tutti gli exit paths). Sentinel key: `jjodel_migration:global_to_per_feature = '1'`. `setGlobalDefault` e `activeProvider` LASCIATI in place per Phase 2/3.
+**Nome del documento prompt**: 2026-04-20 18:00
+
+---
+
+## 2026-04-20 — docs: Default Provider removal diagnostic
+**Prompt**: Read-only analysis of global Default Provider usage, LLM feature inventory, and fallback strategy options
+**File toccati**: none (read-only) + docs/claude-code-log.md
+**Esito**: ✅ completato
+**Note**: Blast radius = 13 files (7 direct global reads, 3 setGlobalDefault calls, 1 Settings UI, 1 core fallback logic, 1 persistence). Critical path: remove "Default Provider" UI from AISettingsContent.tsx, convert chat/documentation/mappings features to per-feature prefs via AIConfig.setPreferred(feature, providerId), update ProviderSelector to require feature ID parameter. Current state: documentation & mappings already use getPreferred(); chat uses global directly; scriptblock stubbed; explain ad-hoc (not in AIFeature union). Recommended strategy: (A) immediate UI removal, (B) phase per-feature adoption starting with chat, (C) refactor ProviderSelector to enforce per-feature persistence. Auto-switch fallback to first-enabled-provider (not UI-forced) suitable for all features except documentation (which should have user choice via toolbar dropdown). One-time migration feasible: seed per-feature prefs from old global default localStorage key on first load.
+**Nome del documento prompt**: 2026-04-20 17:30
+
+---
+
+## 2026-04-20 — fix: transformation assistant error UX (explicit fallback + settings link)
+**Prompt**: Replace silent fallback with explicit user choice; route unconfigured-provider error to Settings → Providers
+**File toccati**:
+- frontend/src/jjtl/services/MappingSuggestionService.ts
+- frontend/src/jjtl/types/suggestions.ts
+- frontend/src/jjtl/views/SuggestedMappingsPanel.tsx
+- docs/claude-code-log.md
+**Esito**: ✅ completato
+**Note**: Added optional `canFallbackToSimple?: boolean` to `SuggestionResult` (suggestions.ts:54-61); service sets it on AI errors and rethrows AbortError (MappingSuggestionService.ts catch block). UI distinguishes "no provider" (error string contains "not configured") from generic LLM errors: first shows "No AI provider is configured." + "Open Settings → Providers" button; second shows the real error message + "Try simple matching instead" button. Fallback uses a separate `handleFallbackToSimple` callback that bypasses `selectedLocalOption` state so the dropdown isn't clobbered. Settings navigation uses `useSettingsModalSafe().openSettings('providers')` — same mechanism already used in ProviderSelector, Jodie, StatusBarRightZone, DocumentationTab. TypeScript clean for modified files; 81 pre-existing unrelated errors remain untouched.
+**Nome del documento prompt**: 2026-04-20 17:05
+
+---
+
+## 2026-04-20 — fix: transformation assistant provider threading + cancellation
+**Prompt**: Thread user-selected AI provider from SuggestedMappingsPanel through service layer; add AbortController cancellation
+**File toccati**:
+- frontend/src/jjtl/services/AIMatcher.ts
+- frontend/src/jjtl/services/MappingSuggestionService.ts
+- frontend/src/jjtl/views/SuggestedMappingsPanel.tsx
+- docs/claude-code-log.md
+**Esito**: ✅ completato
+**Note**: Added optional `aiProvider?: TAIProvider` + `signal?: AbortSignal` to `AnalyzeOptions` and `AIMatcher.analyze()`. AIMatcher now uses `aiProvider ?? JodieConfig.current.activeProvider`. Threaded from `SuggestedMappingsPanel.handleAnalyze` via existing `resolvedProvider` variable (line 164). **Discrepancy**: prompt specified `AnalyzeOptions` lives in `types/suggestions.ts`, but it actually lives in `services/MappingSuggestionService.ts:16-20` (re-exported via services/index.ts:8); applied change where interface actually is, `suggestions.ts` untouched by this task. **AbortSignal caveat**: `AIProviderService.chat` has 8 provider branches each with its own fetch() — modifying all was not trivial per prompt criteria, so added the prescribed TODO comment above the chat call. Added post-await `signal?.aborted` check to throw AbortError if user cancelled. Cancel button (`bi bi-x-circle`) rendered next to Analyze button only while `isAnalyzing`, reuses `btn-analyze btn-secondary` classes. AbortError silently resets state in UI catch block. TypeScript clean for modified files.
+**Nome del documento prompt**: 2026-04-20 17:00
+
+---
+
+## 2026-04-20 — docs: Transformation assistant diagnostic
+**Prompt**: Read-only diagnostic of transformation assistant (name matching, LLM integration, provider selector gap)
+**File toccati**: none (read-only) + docs/claude-code-log.md
+**Esito**: ✅ completato
+**Note**: SuggestedMappingsPanel + AIMatcher + MappingSuggestionService form a ~85% integrated AI-assisted name-matching system using canonical AIProviderService + AIConfig infrastructure. Current bug: AIMatcher reads JodieConfig.current.activeProvider directly (line 42) instead of respecting provider selected in ProviderSelector dropdown—the UI computes resolvedProvider but doesn't pass it to service layer. Fix is atomic: add optional aiProvider parameter to AnalyzeOptions→MappingSuggestionService.analyze()→AIMatcher.analyze(), pass from SuggestedMappingsPanel.handleAnalyze(). Tested paths: SimpleMatcher (deterministic fuzzy match + type compat), AIMatcher (LLM prompt with JjEL syntax rules + JSON response parsing). All 8 providers supported (Claude/GPT/DeepSeek/Gemini/Mistral/Groq/Kimi/Ollama). No parallel provider abstraction. Feature ID 'mappings' registered in AIFeature union at types/jodie.ts:80.
+**Nome del documento prompt**: 2026-04-20 16:30
+
+---
+
+## 2026-04-20 — docs: JjTL parser diagnostic
+**Prompt**: Read-only diagnostic of JjTL parser to assess helper declaration feasibility
+**File toccati**: none (read-only) + docs/claude-code-log.md
+**Esito**: ✅ completato
+**Note**: `helper` is fully implemented end-to-end — lexer (tokens.ts:16,111), parser (parser.ts:563-604, integrated at :94-95), AST (HelperAST in types/ast.ts:119-126), executor registration via `EvaluationContext.registerBuiltin()` (executor.ts:651-657); primitive types in TypeRegistry.isInstance (context.ts:98-125) accept EInt/Integer, EString/String, EBoolean/Boolean, EDouble/EFloat/Double/Float/Number — EReal NOT registered; only gap is runtime type validation of helper params/return (parsed but unchecked).
+**Nome del documento prompt**: 2026-04-20 16:00
+
+---
+
 ## 2026-04-17 — fix: duplicate reference values in JjTL executor output
 **File toccati**:
 - `frontend/src/components/project/ProjectEditor.tsx` — deduplicazione nel feature extraction: `rawVals` filtrato con `Set<string>` per eliminare Pointer ID duplicati nel DValue.values

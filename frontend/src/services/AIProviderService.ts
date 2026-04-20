@@ -3,7 +3,7 @@
  * Handles API calls to different AI providers (Claude, OpenAI, DeepSeek, Gemini)
  */
 
-import {AIProvider, TAIProvider, ChatMessage, ChatImage, ChatDocument, AI, AIConfig} from '../types/jodie';
+import {AIProvider, TAIProvider, ChatMessage, ChatImage, ChatDocument, AI, AIConfig, resolveLegacyModelId} from '../types/jodie';
 import { PromptService } from './PromptService';
 import { PromptContext } from '../types/prompts';
 
@@ -16,6 +16,8 @@ export class AIProviderService {
      * @param projectContext - Optional context string about the current project/metamodel
      * @param images - Optional images to include with the message
      * @param documents - Optional PDF documents to include with the message
+     * @param model - Optional explicit model ID. When omitted, falls back to `AIConfig.get(provider).model`
+     *                (legacy per-provider field, still honoured during the deprecation window).
      */
     static async chat(
         message: string,
@@ -23,7 +25,8 @@ export class AIProviderService {
         conversationHistory: ChatMessage[] = [],
         projectContext?: string,
         images?: ChatImage[],
-        documents?: ChatDocument[]
+        documents?: ChatDocument[],
+        model?: string
     ): Promise<string> {
         const config = AIConfig.get(provider);
         let llm = AI[provider];
@@ -35,6 +38,10 @@ export class AIProviderService {
             throw new Error(`Provider ${provider} is not configured. Please add your API key in Settings.`);
         }
 
+        // Resolve effective model: explicit param > per-provider config. Run through legacy ID map
+        // so stale identifiers (e.g. persisted before a rename) reach the current canonical form.
+        const effectiveModel = resolveLegacyModelId(provider, model ?? config.model) ?? config.model;
+
         // Build system prompt with optional project context using PromptService
         const context: PromptContext | undefined = projectContext
             ? { customVariables: { projectContext } }
@@ -43,21 +50,21 @@ export class AIProviderService {
 
         switch (provider) {
             case AIProvider.Claude:
-                return await this.chatClaude(message, config.apiKey, config.model, conversationHistory, systemPrompt, images, documents);
+                return await this.chatClaude(message, config.apiKey, effectiveModel, conversationHistory, systemPrompt, images, documents);
             case AIProvider.GPT:
-                return await this.chatOpenAI(message, config.apiKey, config.model, conversationHistory, systemPrompt, images);
+                return await this.chatOpenAI(message, config.apiKey, effectiveModel, conversationHistory, systemPrompt, images);
             case AIProvider.DeepSeek:
-                return await this.chatDeepSeek(message, config.apiKey, config.model, conversationHistory, systemPrompt);
+                return await this.chatDeepSeek(message, config.apiKey, effectiveModel, conversationHistory, systemPrompt);
             case AIProvider.Gemini:
-                return await this.chatGemini(message, config.apiKey, config.model, conversationHistory, systemPrompt, images, documents);
+                return await this.chatGemini(message, config.apiKey, effectiveModel, conversationHistory, systemPrompt, images, documents);
             case AIProvider.Mistral:
-                return await this.chatMistral(message, config.apiKey, config.model, conversationHistory, systemPrompt, images);
+                return await this.chatMistral(message, config.apiKey, effectiveModel, conversationHistory, systemPrompt, images);
             case AIProvider.Groq:
-                return await this.chatGroq(message, config.apiKey, config.model, conversationHistory, systemPrompt);
+                return await this.chatGroq(message, config.apiKey, effectiveModel, conversationHistory, systemPrompt);
             case AIProvider.Kimi:
-                return await this.chatKimi(message, config.apiKey, config.model, conversationHistory, systemPrompt);
+                return await this.chatKimi(message, config.apiKey, effectiveModel, conversationHistory, systemPrompt);
             case AIProvider.Ollama:
-                return await this.chatOllama(message, config.model, conversationHistory, systemPrompt, config.baseUrl);
+                return await this.chatOllama(message, effectiveModel, conversationHistory, systemPrompt, config.baseUrl);
             default:
                 throw new Error(`Unsupported provider: ${provider}`);
         }

@@ -549,3 +549,52 @@ $dialog-secondary-hover: #e2e8f0;
         }
     }
 }
+
+// ============================================
+// RECOVERY ACTIONS ("Quick actions" section)
+// ============================================
+// Rendered only in paused mode when at least one recovery rule matched the failing
+// command + error combination. Sits between the stats bar and the standard
+// Skip/Close row. Secondary visual weight (outlined), so the primary Close button
+// below stays the strongest CTA.
+
+.exec-error-recovery {
+    padding: 12px 20px;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.exec-error-recovery-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+    margin-bottom: 8px;
+}
+
+.exec-error-recovery-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    .exec-error-recovery--stacked & {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+.exec-error-recovery-btn {
+    // Reuses .exec-error-btn--secondary base styles; these are additions only.
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    i {
+        font-size: 13px;
+    }
+}

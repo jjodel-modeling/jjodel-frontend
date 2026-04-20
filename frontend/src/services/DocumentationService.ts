@@ -11,7 +11,7 @@ import type { Dictionary } from '../joiner';
 import { LProject } from '../joiner';
 import AIProviderService from './AIProviderService';
 import { JjodieContextService } from './JjodieContext';
-import {AI, JodieConfig} from "../types/jodie";
+import {AI, AIConfig, JodieConfig} from "../types/jodie";
 
 // ============================================
 // TYPES
@@ -610,19 +610,23 @@ export class DocumentationService {
         const prompt = this.buildJjodiePrompt(lexicalData, wikidataDefinitions);
         // console.log('[DocumentationService] Jjodie prompt built, length:', prompt.length);
 
-        // Get active provider
-        const activeProvider = JodieConfig.current.activeProvider;
+        // Get per-feature provider + model for documentation
+        const activeProvider = AIConfig.getPreferred('documentation');
+        const activeModel = AIConfig.getPreferredModel('documentation');
         if (!activeProvider) {
             throw new Error('No AI provider configured');
         }
 
         // Call AI
-        // console.log('[DocumentationService] Calling AI provider:', activeProvider);
+        // console.log('[DocumentationService] Calling AI provider:', activeProvider, 'model:', activeModel);
         const responseText = await AIProviderService.chat(
             prompt,
             activeProvider,
             [],
-            undefined
+            undefined,
+            undefined,
+            undefined,
+            activeModel
         );
         // console.log('[DocumentationService] AI response received, length:', responseText.length);
 

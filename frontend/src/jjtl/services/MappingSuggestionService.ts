@@ -11,12 +11,16 @@ import {
 } from '../types/suggestions';
 import { SimpleMatcher } from './SimpleMatcher';
 import { AIMatcher } from './AIMatcher';
-import {JodieConfig} from "../../types/jodie";
+import {JodieConfig, TAIProvider} from "../../types/jodie";
 
 export interface AnalyzeOptions {
     mode: SuggestionMode;
     sourceMetamodelName?: string;
     targetMetamodelName?: string;
+    /** Optional: provider selected by the user in the UI. Falls back to the global active provider if omitted. */
+    aiProvider?: TAIProvider;
+    /** Optional: allows the caller to cancel an in-flight analysis. */
+    signal?: AbortSignal;
 }
 
 export class MappingSuggestionService {
@@ -37,7 +41,7 @@ export class MappingSuggestionService {
         targetElements: MetamodelElement[],
         options: AnalyzeOptions
     ): Promise<SuggestionResult> {
-        const { mode, sourceMetamodelName, targetMetamodelName } = options;
+        const { mode, sourceMetamodelName, targetMetamodelName, aiProvider, signal } = options;
 
         try {
             let suggestions: MappingSuggestion[];
@@ -59,7 +63,9 @@ export class MappingSuggestionService {
                     sourceElements,
                     targetElements,
                     sourceMetamodelName,
-                    targetMetamodelName
+                    targetMetamodelName,
+                    aiProvider,
+                    signal
                 );
             }
 
@@ -71,6 +77,9 @@ export class MappingSuggestionService {
 
             return this.lastResult;
         } catch (error) {
+            if (error instanceof Error && error.name === 'AbortError') {
+                throw error;
+            }
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             console.error('[MappingSuggestionService] Error:', errorMessage);
 
@@ -79,6 +88,7 @@ export class MappingSuggestionService {
                 suggestions: [],
                 analyzedAt: Date.now(),
                 error: errorMessage,
+                canFallbackToSimple: mode === 'ai' ? true : undefined,
             };
         }
     }

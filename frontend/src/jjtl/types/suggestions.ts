@@ -56,4 +56,6 @@ export interface SuggestionResult {
     suggestions: MappingSuggestion[];
     analyzedAt: number;
     error?: string;
+    /** True when the AI mode errored and the UI can offer to retry with SimpleMatcher. */
+    canFallbackToSimple?: boolean;
 }
