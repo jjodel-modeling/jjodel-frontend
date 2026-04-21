@@ -15,6 +15,12 @@ import {parseError, ExecutionPauseInfo, ExecutionSummary, JjScriptError, Executi
 import { AIDisclaimer } from '../../components/common/AIDisclaimer';
 import {TransformationAST} from "../../jjtl";
 import {ExecutionContext} from "../../jjtl/executor";
+import {
+    findRecoveryActions,
+    isCreateLiteralInTarget,
+    type RecoveryAction,
+} from '../recovery';
+import { LPointerTargetable, LModel } from '../../joiner';
 
 // ============================================
 // TYPES
@@ -145,6 +151,9 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
     const [executionSummary, setExecutionSummary] = useState<ExecutionSummary | null>(null);
     const [skippedLinesSet, setSkippedLinesSet] = useState<Set<number>>(new Set());
     const [errorsList, setErrorsList] = useState<Array<{ line: number; command: string; error: JjScriptError }>>([]);
+    // Contextual recovery actions proposed by the rule registry for the current pause.
+    // Recomputed reactively from pauseInfo — rule matchers are pure.
+    const [recoveryActions, setRecoveryActions] = useState<RecoveryAction[]>([]);
 
     // Refs
     const abortRef = useRef(false);
@@ -823,6 +832,249 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
         }));
     }, [pauseInfo, onExecute, commands, lineStates, skippedLinesSet, errorsList, resolvedTarget]);
 
+    // ============================================
+    // RECOVERY ACTIONS — contextual one-click fixes
+    // ============================================
+    // Recompute the proposed actions whenever the pause state changes. Rule matchers
+    // are pure, so this is safe to call on every pauseInfo transition.
+    useEffect(() => {
+        if (!pauseInfo) {
+            setRecoveryActions([]);
+            return;
+        }
+        const errAny = pauseInfo.error as any;
+        const errorMessage: string = (errAny && typeof errAny === 'object' && typeof errAny.message === 'string')
+            ? errAny.message
+            : (typeof errAny === 'string' ? errAny : '');
+        const metamodel = resolvedTarget?.id
+            ? (LPointerTargetable.fromPointer(resolvedTarget.id) as LModel | null)
+            : null;
+        const actions = findRecoveryActions({
+            command: pauseInfo.command,
+            lineNumber: pauseInfo.lineNumber,
+            allCommands: commands,
+            errorMessage,
+            metamodel,
+        });
+        setRecoveryActions(actions);
+    }, [pauseInfo, commands, resolvedTarget]);
+
+    /**
+     * Resume execution from a given 0-based index, optionally honouring a skip set.
+     * Duplicates the loop used by handleSkipAndContinue (intentionally: we're asked
+     * not to refactor that handler). Used by recovery dispatchers below.
+     */
+    const runCommandsFromIndex = useCallback(async (startIdx: number, skipSet: Set<number>) => {
+        if (!onExecute) return;
+        setExecutionState('running');
+        let executedCount = lineStates.filter(ls => ls.status === 'success').length;
+        const localErrors = [...errorsList];
+
+        for (let i = startIdx; i < commands.length; i++) {
+            if (abortRef.current) break;
+            if (skipSet.has(i + 1)) continue;
+
+            setCurrentLineIndex(i);
+            setLineStates(prev =>
+                prev.map((ls, idx) => idx === i ? { ...ls, status: 'running' } : ls)
+            );
+
+            try {
+                const [result] = await onExecute([commands[i]], resolvedTarget?.id);
+                const success = result.success;
+                setLineStates(prev =>
+                    prev.map((ls, idx) => idx === i
+                        ? { ...ls, status: success ? 'success' : 'error', result }
+                        : ls
+                    )
+                );
+
+                if (success) {
+                    executedCount++;
+                } else {
+                    const parsedError = parseError(result.message || 'Unknown error', commands[i]);
+                    localErrors.push({ line: i + 1, command: commands[i], error: parsedError });
+                    setErrorsList(localErrors);
+                    const currentElapsed = Date.now() - startTimeRef.current;
+                    setPauseInfo({
+                        lineNumber: i + 1,
+                        command: commands[i],
+                        error: parsedError,
+                        executedSoFar: executedCount,
+                        totalCommands: commands.length,
+                        elapsedMs: currentElapsed,
+                    });
+                    setExecutionState('paused');
+                    setShowErrorDialog(true);
+                    return;
+                }
+            } catch (err) {
+                const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+                const parsedError = parseError(errorMessage, commands[i]);
+                localErrors.push({ line: i + 1, command: commands[i], error: parsedError });
+                setErrorsList(localErrors);
+                setLineStates(prev =>
+                    prev.map((ls, idx) => idx === i
+                        ? { ...ls, status: 'error', result: { command: commands[i], success: false, message: errorMessage } }
+                        : ls
+                    )
+                );
+                const currentElapsed = Date.now() - startTimeRef.current;
+                setPauseInfo({
+                    lineNumber: i + 1,
+                    command: commands[i],
+                    error: parsedError,
+                    executedSoFar: executedCount,
+                    totalCommands: commands.length,
+                    elapsedMs: currentElapsed,
+                });
+                setExecutionState('paused');
+                setShowErrorDialog(true);
+                return;
+            }
+        }
+
+        // Completed — show summary
+        const duration = Date.now() - startTimeRef.current;
+        const allSkippedLines = Array.from(skipSet).sort((a, b) => a - b);
+        setExecutionSummary({
+            totalCommands: commands.length,
+            executedCount,
+            skippedCount: allSkippedLines.length,
+            skippedLines: allSkippedLines,
+            errors: localErrors,
+            duration,
+            errorCount: localErrors.length,
+        });
+        setExecutionState('completed');
+        setShowErrorDialog(true);
+    }, [commands, lineStates, onExecute, resolvedTarget, errorsList]);
+
+    /**
+     * Dispatcher for recovery-action clicks. Handlers live here (not in the rule
+     * registry) because they need to manipulate component-local state (lineStates,
+     * pauseInfo, skippedLinesSet) and call onExecute. Rules stay data-only.
+     */
+    const handleRecoveryAction = useCallback(async (action: RecoveryAction) => {
+        if (!pauseInfo || !onExecute) return;
+
+        switch (action.kind) {
+            case 'createEnumAndRetry': {
+                const enumName = action.enumName;
+                const retryIndex = pauseInfo.lineNumber - 1;
+
+                // Close the modal + clear pause state before running any commands.
+                setShowErrorDialog(false);
+                setPauseInfo(null);
+                setExecutionErrorInfo(null);
+
+                // Side-effect: create the enum. This path reuses the same executor that
+                // handles a normal `create enum Y` line, so validation/duplication checks
+                // are consistent with scripted creation.
+                const [createResult] = await onExecute([`create enum ${enumName}`], resolvedTarget?.id);
+                if (!createResult?.success) {
+                    // Surface the enum-creation failure as a fresh pause so the user can
+                    // see what went wrong (e.g. name collision with an existing class).
+                    const parsedError = parseError(
+                        createResult?.message || 'Enum creation failed',
+                        `create enum ${enumName}`
+                    );
+                    const currentElapsed = Date.now() - startTimeRef.current;
+                    setPauseInfo({
+                        lineNumber: pauseInfo.lineNumber,
+                        command: `create enum ${enumName}`,
+                        error: parsedError,
+                        executedSoFar: lineStates.filter(ls => ls.status === 'success').length,
+                        totalCommands: commands.length,
+                        elapsedMs: currentElapsed,
+                    });
+                    setExecutionState('paused');
+                    setShowErrorDialog(true);
+                    return;
+                }
+
+                // Log the auto-recovery step so the execution log reflects what happened.
+                // We reuse JjScriptEvents.EXECUTED with a marker tag so downstream console
+                // listeners can render it distinctly if they choose.
+                window.dispatchEvent(new CustomEvent(JjScriptEvents.EXECUTED, {
+                    detail: {
+                        recovery: true,
+                        command: `create enum ${enumName}`,
+                        success: true,
+                        note: `Auto-created via recovery rule "literal-in-attribute" before retrying line ${pauseInfo.lineNumber}`,
+                    },
+                }));
+                // Also a visible console line — useful in dev, harmless in prod.
+                // eslint-disable-next-line no-console
+                console.log(`[jjscript recovery] auto-created enum "${enumName}", retrying line ${pauseInfo.lineNumber}`);
+
+                // Reset the failed line to "running" state before retrying.
+                setLineStates(prev =>
+                    prev.map((ls, idx) => idx === retryIndex ? { ...ls, status: 'running' } : ls)
+                );
+
+                // Retry FROM the failed line (inclusive), not the next one.
+                await runCommandsFromIndex(retryIndex, skippedLinesSet);
+                return;
+            }
+
+            case 'skipMatchingCreateLiteral': {
+                const targetName = action.targetName;
+
+                // Collect every remaining line that matches `create literal ... in <targetName>`
+                // starting from the currently-failed line. These become the new skip set.
+                const newSkippedLines = new Set(skippedLinesSet);
+                for (let i = pauseInfo.lineNumber - 1; i < commands.length; i++) {
+                    if (isCreateLiteralInTarget(commands[i], targetName)) {
+                        newSkippedLines.add(i + 1);
+                    }
+                }
+                setSkippedLinesSet(newSkippedLines);
+                setLineStates(prev =>
+                    prev.map((ls, idx) => newSkippedLines.has(idx + 1) ? { ...ls, status: 'skipped' } : ls)
+                );
+
+                // Close modal + clear pause.
+                setShowErrorDialog(false);
+                setPauseInfo(null);
+                setExecutionErrorInfo(null);
+
+                // Resume from the first non-skipped line at or after the failed line.
+                let resumeIdx = pauseInfo.lineNumber - 1;
+                while (resumeIdx < commands.length && newSkippedLines.has(resumeIdx + 1)) {
+                    resumeIdx++;
+                }
+
+                // If everything from here is skipped, jump straight to summary.
+                if (resumeIdx >= commands.length) {
+                    const duration = Date.now() - startTimeRef.current;
+                    const executedCount = lineStates.filter(ls => ls.status === 'success').length;
+                    setExecutionSummary({
+                        totalCommands: commands.length,
+                        executedCount,
+                        skippedCount: newSkippedLines.size,
+                        skippedLines: Array.from(newSkippedLines).sort((a, b) => a - b),
+                        errors: errorsList,
+                        duration,
+                        errorCount: errorsList.length,
+                    });
+                    setExecutionState('completed');
+                    setShowErrorDialog(true);
+                    return;
+                }
+
+                await runCommandsFromIndex(resumeIdx, newSkippedLines);
+                return;
+            }
+
+            default: {
+                // Exhaustiveness guard: TypeScript will flag missing cases at compile time.
+                const _exhaustive: never = action;
+                void _exhaustive;
+            }
+        }
+    }, [pauseInfo, commands, lineStates, onExecute, resolvedTarget, skippedLinesSet, errorsList, runCommandsFromIndex]);
+
     // Close error dialog (stop execution and show summary)
     const handleCloseErrorDialog = useCallback(() => {
         if (executionSummary) {
@@ -1097,13 +1349,15 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 </div>
             )}
 
-            {/* New Error Dialog with Skip functionality */}
+            {/* New Error Dialog with Skip functionality + contextual recovery actions */}
             <ExecutionErrorDialog
                 isOpen={showErrorDialog}
                 onClose={handleCloseErrorDialog}
                 pauseInfo={pauseInfo || undefined}
                 summary={executionSummary || undefined}
                 onSkip={(pauseInfo?.error as JjScriptError)?.skippable ? handleSkipAndContinue : undefined}
+                recoveryActions={recoveryActions}
+                onRecoveryAction={handleRecoveryAction}
             />
 
             {/* Legacy Execution Complete Modal (for non-error completion) */}

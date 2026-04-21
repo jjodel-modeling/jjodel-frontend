@@ -77,10 +77,47 @@ export type TAICompany  = Exclude<Exclude<Exclude<keyof typeof AICompany,  "prot
 export const ALL_AI_PROVIDERS: TAIProvider[] = Object.keys(companymap) as any;
 export const ALL_AI_COMPANIES: TAICompany[] = Object.keys(aimap) as any;
 
-export type AIFeature = 'documentation' | 'chat' | 'scriptblock' | 'mappings';
+export type AIFeature = 'documentation' | 'chat' | 'scriptblock' | 'mappings' | 'explain';
 export interface ProviderPreference {
     providerId: string;
+    /** Optional model identifier, persisted per-feature. When absent, callers fall back
+     * to the provider's `AIConfig.model` (legacy location during the deprecation window). */
+    modelId?: string;
     updatedAt: number;
+}
+
+/**
+ * Maps older/renamed Claude model IDs onto current ones. Used at load-time to migrate
+ * persisted selections silently, and at read-time as a safety net. Extend per-provider
+ * if future renames happen elsewhere.
+ *
+ * NOTE(future — Pattern C): when dynamic model discovery lands, these maps should still
+ * apply as a pre-filter before querying the provider endpoint, so a rollback does not
+ * strand users on a name the endpoint no longer recognizes.
+ */
+export const claudeLegacyIdMap: Record<string, string> = {
+    'claude-sonnet-4-20250514':   'claude-sonnet-4-6',
+    'claude-opus-4-20250514':     'claude-opus-4-6',
+    'claude-haiku-4-20250514':    'claude-haiku-4-5-20251001',
+    'claude-3-5-sonnet-20241022': 'claude-3-5-sonnet-latest',
+    'claude-3-opus-20240229':     'claude-3-opus-latest',
+};
+
+/** Per-provider legacy ID maps. Only Claude has renames in this pass; other providers
+ * preserve their existing IDs unchanged. Add more entries here when renaming elsewhere. */
+const legacyIdMaps: Partial<Record<TAIProvider, Record<string, string>>> = {
+    Claude: claudeLegacyIdMap,
+} as any;
+
+/**
+ * Resolve a (possibly legacy) model ID to its current canonical form for the given provider.
+ * Returns the input unchanged if no mapping applies.
+ */
+export function resolveLegacyModelId(provider: TAIProvider, modelId: string | undefined): string | undefined {
+    if (!modelId) return modelId;
+    const map = legacyIdMaps[provider];
+    if (!map) return modelId;
+    return map[modelId] ?? modelId;
 }
 
 @RuntimeAccessible('AI')
@@ -138,8 +175,8 @@ export class AI{
         this.logo = logo;
     }
 
-    add(name: string, label: string, pdf: boolean = false, vision: boolean = false, deprecated: boolean = false): this {
-        this.versions[name] = new AIVersion(label, pdf, vision, deprecated);
+    add(name: string, label: string, pdf: boolean = false, vision: boolean = false, deprecated: boolean = false, contextWindow?: number): this {
+        this.versions[name] = new AIVersion(label, pdf, vision, deprecated, contextWindow);
         // if (!this.version) this.version = name;
         return this;
     }
@@ -172,8 +209,7 @@ export class AI{
         else return Object.values(this.versions).some(v=> v.capabilities.vision || v.capabilities.pdf);
     }
 
-    static getActiveVersion(provider?: TAIProvider): AIVersion | null {
-        if (!provider) provider = JodieConfig.current.activeProvider;
+    static getActiveVersion(provider: TAIProvider): AIVersion | null {
         return AI[provider].versions[AIConfig.get(provider).model] || null;
     }
 }
@@ -185,10 +221,16 @@ export class AIVersion {
         vision: boolean;
     }
     deprecated: boolean;
-    constructor(label: string, pdf: boolean = false, vision: boolean = false, deprecated: boolean = false) {
+    /**
+     * Context window size in tokens. Optional — omit when the figure is unknown or
+     * provider-dependent. Used by UI to surface capability badges.
+     */
+    contextWindow?: number;
+    constructor(label: string, pdf: boolean = false, vision: boolean = false, deprecated: boolean = false, contextWindow?: number) {
         this.label = label;
         this.capabilities = {pdf, vision};
         this.deprecated = deprecated;
+        this.contextWindow = contextWindow;
     }
 }
 
@@ -225,12 +267,14 @@ AI.GPT
     .add('gpt-4',                     'GPT-4',            false, false)
     .add('gpt-3.5-turbo',             'GPT-3.5 Turbo',    false, false)
 AI.Claude
-    .add('claude-sonnet-4-20250514',  'Claude Sonnet 4',  true,  true)
-    .add('claude-opus-4-20250514',    'Claude Opus 4',    true,  true)
-    .add('claude-haiku-4-20250514',   'Claude Haiku 4',   true,  true)
-    .add('claude-3-5-sonnet-20241022','Claude 3.5 Sonnet',true,  true)
-    .add('claude-3-opus-20240229',    'Claude 3 Opus',    true,  true)
-    .add('claude-3-haiku-20240307',   'Claude 3 Haiku',   true,  true)
+    .add('claude-opus-4-7',           'Claude Opus 4.7',  true,  true, false, 200_000)
+    .add('claude-opus-4-6',           'Claude Opus 4.6',  true,  true, false, 200_000)
+    .add('claude-sonnet-4-6',         'Claude Sonnet 4.6',true,  true, false, 200_000)
+    .add('claude-haiku-4-5-20251001', 'Claude Haiku 4.5', true,  true, false, 200_000)
+    // Legacy — kept for users with persisted selections on older IDs
+    .add('claude-3-5-sonnet-latest',  'Claude 3.5 Sonnet',true,  true, true,  200_000)
+    .add('claude-3-opus-latest',      'Claude 3 Opus',    true,  true, true,  200_000)
+    .add('claude-3-haiku-20240307',   'Claude 3 Haiku',   true,  true, true,  200_000)
 AI.DeepSeek
     .add('deepseek-chat',             'DeepSeek Chat',    false, false)
     .add('deepseek-coder',            'DeepSeek Coder',   false, false)
@@ -387,13 +431,152 @@ export class AIConfig{
             console.warn(`Failed to read provider preference for ${feature}:`, e);
         }
 
-        // 2. default
-        return JodieConfig.default.activeProvider;
+        // 2. First enabled provider in declaration order (no global default).
+        return AIConfig.getFirstEnabledProvider();
     }
 
-    static setPreferred(feature: AIFeature, providerId: TAIProvider): void {
-        const pref: ProviderPreference = {providerId, updatedAt: Date.now()};
+    /**
+     * Returns the first provider that is configured/enabled, in declaration order.
+     * Falls back to the first declared provider if none are enabled, preserving today's
+     * behavior (Claude was the pre-seeded default) so callers get a non-null TAIProvider.
+     */
+    private static getFirstEnabledProvider(): TAIProvider {
+        const enabled = JodieConfig.getEnabledProviders();
+        if (enabled.length > 0) return enabled[0];
+        return ALL_AI_PROVIDERS[0];
+    }
+
+    static setPreferred(feature: AIFeature, providerId: TAIProvider, modelId?: string): void {
+        // If modelId not supplied, preserve any previously-stored modelId for this feature.
+        let preservedModelId = modelId;
+        if (preservedModelId === undefined) {
+            try {
+                const existing = localStorage.getItem(`${AI.STORAGE_PREFIX}${feature}`);
+                if (existing) {
+                    const prev: ProviderPreference = JSON.parse(existing);
+                    // Only preserve if the previous modelId still belongs to this provider's registry.
+                    if (prev.providerId === providerId && prev.modelId) preservedModelId = prev.modelId;
+                }
+            } catch { /* ignore */ }
+        }
+        const pref: ProviderPreference = {providerId, modelId: preservedModelId, updatedAt: Date.now()};
         localStorage.setItem(`${AI.STORAGE_PREFIX}${feature}`, JSON.stringify(pref));
+        // Notify listeners (e.g. Jodie.tsx re-reads current provider/model) that a preference changed.
+        window.dispatchEvent(new CustomEvent(AIEvents.SETTINGS_CHANGED, {
+            detail: { type: 'feature-preference', feature, providerId, modelId: preservedModelId }
+        }));
+    }
+
+    /**
+     * Returns the per-feature model selection, resolving legacy IDs through the map.
+     * Returns undefined when no model has been chosen for this feature.
+     * Callers should fall back to the provider's AIConfig.model if they need a concrete ID.
+     */
+    static getPreferredModel(feature: AIFeature): string | undefined {
+        try {
+            const stored = localStorage.getItem(`${AI.STORAGE_PREFIX}${feature}`);
+            if (!stored) return undefined;
+            const pref: ProviderPreference = JSON.parse(stored);
+            if (!pref.modelId) return undefined;
+            return resolveLegacyModelId(pref.providerId as TAIProvider, pref.modelId);
+        } catch {
+            return undefined;
+        }
+    }
+
+    /**
+     * Resolve the effective (provider, model) pair for a feature. The provider falls back
+     * to first-enabled; the model falls back to the provider's AIConfig.model if no per-feature
+     * modelId has been recorded yet (legacy location during deprecation window).
+     */
+    static resolveFeatureSelection(feature: AIFeature): { providerId: TAIProvider; modelId: string } {
+        const providerId = AIConfig.getPreferred(feature);
+        const perFeature = AIConfig.getPreferredModel(feature);
+        const modelId = perFeature ?? AIConfig.get(providerId)?.model ?? '';
+        return { providerId, modelId };
+    }
+
+    /**
+     * One-shot migration from the legacy global default (`jjodel_default_provider`)
+     * to per-feature preferences (`jjodel_provider_<feature>`). Idempotent: protected
+     * by a sentinel key so it never runs twice. Silent unless something fails.
+     *
+     * Deprecation window (Phase 3): the legacy `jjodel_default_provider` key is NOT
+     * deleted here — leaving it for one release so that users rolling back do not
+     * lose their preference. TODO: remove the key read + the `AI.GLOBAL_DEFAULT_KEY`
+     * constant in the next release once migration has run on all installs.
+     */
+    /**
+     * One-shot migration that rewrites any persisted legacy model IDs to their current
+     * canonical form, for both per-feature preferences and per-provider AIConfig.model.
+     * Idempotent: sentinel-protected. Silent.
+     */
+    static migrateLegacyModelIds(): void {
+        const SENTINEL_KEY = 'jjodel_migration:legacy_model_ids_v1';
+        try {
+            if (localStorage.getItem(SENTINEL_KEY) === '1') return;
+
+            // 1. Per-feature preferences (jjodel_provider_<feature>)
+            const features: AIFeature[] = ['documentation', 'chat', 'scriptblock', 'mappings', 'explain'];
+            for (const feature of features) {
+                const key = `${AI.STORAGE_PREFIX}${feature}`;
+                const raw = localStorage.getItem(key);
+                if (!raw) continue;
+                try {
+                    const pref: ProviderPreference = JSON.parse(raw);
+                    if (!pref.modelId) continue;
+                    const resolved = resolveLegacyModelId(pref.providerId as TAIProvider, pref.modelId);
+                    if (resolved && resolved !== pref.modelId) {
+                        pref.modelId = resolved;
+                        pref.updatedAt = Date.now();
+                        localStorage.setItem(key, JSON.stringify(pref));
+                    }
+                } catch { /* skip malformed entries */ }
+            }
+
+            // 2. Per-provider AIConfig.model (stored under AI[provider].storageKey)
+            for (const providerName of ALL_AI_PROVIDERS) {
+                const llm = AI[providerName];
+                if (!llm?.storageKey) continue;
+                const raw = localStorage.getItem(llm.storageKey);
+                if (!raw) continue;
+                try {
+                    const cfg = JSON.parse(raw);
+                    const currentModel: string | undefined = cfg?.model;
+                    const resolved = resolveLegacyModelId(providerName, currentModel);
+                    if (resolved && resolved !== currentModel) {
+                        cfg.model = resolved;
+                        localStorage.setItem(llm.storageKey, JSON.stringify(cfg));
+                    }
+                } catch { /* skip malformed entries */ }
+            }
+
+            localStorage.setItem(SENTINEL_KEY, '1');
+        } catch (e) {
+            console.warn('[jodie] migrateLegacyModelIds failed:', e);
+        }
+    }
+
+    static migrateGlobalDefaultToPerFeature(): void {
+        const SENTINEL_KEY = 'jjodel_migration:global_to_per_feature';
+        try {
+            if (localStorage.getItem(SENTINEL_KEY) === '1') return;
+            const globalDefault = localStorage.getItem(AI.GLOBAL_DEFAULT_KEY);
+            if (globalDefault) {
+                // Enumerate every feature in the AIFeature union. Keep in sync with the type.
+                const features: AIFeature[] = ['documentation', 'chat', 'scriptblock', 'mappings', 'explain'];
+                for (const feature of features) {
+                    const key = `${AI.STORAGE_PREFIX}${feature}`;
+                    if (localStorage.getItem(key) === null) {
+                        const pref: ProviderPreference = { providerId: globalDefault, updatedAt: Date.now() };
+                        localStorage.setItem(key, JSON.stringify(pref));
+                    }
+                }
+            }
+            localStorage.setItem(SENTINEL_KEY, '1');
+        } catch (e) {
+            console.warn('[jodie] migrateGlobalDefaultToPerFeature failed:', e);
+        }
     }
 
     /**
@@ -482,7 +665,6 @@ export class JodieConfig {
     static default: JodieConfig = new JodieConfig();
     static current: JodieConfig = JodieConfig.load();
     providers: Dictionary<TAIProvider, ProviderConfig>;
-    activeProvider: TAIProvider = AIProvider.Claude;
     position?: { x: number; y: number };
     size?: { width: number; height: number };
     appVersion: string =  '1.0.0';
@@ -504,16 +686,6 @@ export class JodieConfig {
             if (cascadeIndividuals) for (name in this.providers) {
                 this.providers[name]?.save(false);
             }
-            if (this.activeProvider) localStorage.setItem(AI.GLOBAL_DEFAULT_KEY, this.activeProvider);
-            else localStorage.removeItem(AI.GLOBAL_DEFAULT_KEY);
-
-            window.dispatchEvent(new CustomEvent(AIEvents.PROVIDER_CHANGED, {
-                detail: { type: 'global-default', provider:this.activeProvider, config: AIConfig.get(this.activeProvider) }
-            }));
-
-            // todo: is it really needed? individual configs are already saved in split format
-            // along with windows size etc.
-            // console.log('[CredentialsService] Store saved successfully');
         } catch (error) {
             console.error('[CredentialsService] Failed to save store:', error);
             throw new Error('Failed to save credentials');
@@ -521,6 +693,13 @@ export class JodieConfig {
         return this;
     }
     static load(json?: string | GObject | null): JodieConfig {
+        // One-shot migrations (both sentinel-protected + idempotent).
+        // (1) Legacy global default → per-feature preferences.
+        // (2) Legacy/renamed model IDs in persisted state → current canonical IDs.
+        // Placed at the very start so they run regardless of which exit path load() takes.
+        AIConfig.migrateGlobalDefaultToPerFeature();
+        AIConfig.migrateLegacyModelIds();
+
         let data: GObject<JodieConfig>;
         if (!json) json = localStorage.getItem(AI.STORAGE_GLOBAL_CONFIG);
         try {
@@ -550,11 +729,6 @@ export class JodieConfig {
         }
         JodieConfig.current = data;
         return data.save(true);
-    }
-
-    static setGlobalDefault(providerId?: TAIProvider | null): void {
-        JodieConfig.default.activeProvider = providerId || AI.Claude.name;
-        JodieConfig.default.save();
     }
 
     static hasEnabledProviders() { return JodieConfig.getEnabledProviders().length > 0; }

@@ -148,10 +148,14 @@ function UnifiedEdge(props: EdgeProps) {
     }, [id, adjustedPoints, source, target, treeGroupId, isInheritance, isGrouped]);
 
     // ─── Detect crossings with other edges ───
+    // Scope detection to the current React Flow canvas by passing the active node IDs.
+    // `useNodes()` returns only the nodes of this flow instance, so this Set is
+    // implicitly tab-local — no need to inspect global Redux state.
+    const activeNodeIds = useMemo(() => new Set(allNodes.map(n => n.id)), [allNodes]);
     const crossings = useMemo(
-        () => getEdgeCrossings(id, adjustedPoints),
+        () => getEdgeCrossings(id, adjustedPoints, activeNodeIds),
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [id, adjustedPoints, allNodes, allEdges]
+        [id, adjustedPoints, activeNodeIds, allEdges]
     );
 
     // ─── Final path with rounding and bridge arcs ───

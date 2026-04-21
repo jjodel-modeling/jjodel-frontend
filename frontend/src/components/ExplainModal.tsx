@@ -125,24 +125,27 @@ async function* streamOpenAI(endpoint: string, apiKey: string, model: string, pr
 }
 
 async function* streamExplain(prompt: string, signal: AbortSignal) {
-    // Use the same active provider as Jjodie chat
-    const providerId = JodieConfig.current.activeProvider;
+    // Resolve per-feature provider for 'explain'. Falls back to first-enabled via getPreferred.
+    const providerId = AIConfig.getPreferred('explain');
     const config = AIConfig.get(providerId);
 
     if (!config?.apiKey && providerId !== AIProvider.Ollama) {
         throw new Error('No AI provider configured. Please add an API key in Settings.');
     }
 
+    // Prefer per-feature model when set; otherwise fall back to provider's legacy AIConfig.model.
+    const modelToUse = AIConfig.getPreferredModel('explain') ?? config!.model;
+
     const llm = AI[providerId];
     switch (providerId) {
         case AIProvider.Claude:
-            yield* streamClaude(config!.apiKey, config!.model, prompt, signal);
+            yield* streamClaude(config!.apiKey, modelToUse, prompt, signal);
             break;
         case AIProvider.GPT:
         case AIProvider.DeepSeek:
         case AIProvider.Mistral:
         case AIProvider.Groq:
-            yield* streamOpenAI(llm.endpoint, config!.apiKey, config!.model, prompt, signal);
+            yield* streamOpenAI(llm.endpoint, config!.apiKey, modelToUse, prompt, signal);
             break;
         default:
             throw new Error(`Streaming not supported for provider "${providerId}". Configure Claude or OpenAI in Settings.`);

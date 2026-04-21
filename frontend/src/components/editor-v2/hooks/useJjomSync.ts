@@ -294,6 +294,14 @@ export function useJjomSync(
     const isJjomMode = !!modelid && hasGraph;
     const subElementIds = graphInfo?.subElements ?? EMPTY_ARRAY;
 
+    // ── Selector: watch M1 object count (triggers edge auto-population
+    //    for transformation-generated models) ──────────────────────────
+    const modelObjectCount = useSelector((state: DState) => {
+        if (!modelid) return 0;
+        const rawModel = state.idlookup?.[modelid] as any;
+        return (rawModel?.objects ?? []).length;
+    });
+
     // ── Selector: watch model's class count (triggers repopulation when
     //    model data arrives in store after script execution) ──────────
     const modelClassCount = useSelector((state: DState) => {
@@ -341,7 +349,7 @@ export function useJjomSync(
         // needed to create classes, which populate classCount. We only wait for
         // classCount when the graph already exists (for incremental population).
         const needsNewGraph = !hasGraph;
-        if (!needsNewGraph && modelClassCount === 0) return; // graph exists but model not ready
+        if (!needsNewGraph && modelClassCount === 0 && modelObjectCount === 0) return;
 
         // ── Determine what needs to be created ──────────────────────────
         // This effect is IDEMPOTENT: it checks existing graph elements and
@@ -380,9 +388,9 @@ export function useJjomSync(
 
         for (const pkgId of (rawModel.packages ?? [])) visitElement(pkgId);
 
-        // If no classifiers found AND we don't need a new graph, nothing to do.
-        // When needsNewGraph, we must still create the graph (empty metamodel scenario).
-        if (classifierEntries.length === 0 && !needsNewGraph) return;
+        // If no classifiers AND no M1 objects AND graph exists → nothing to do.
+        const hasM1Objects = (rawModel.objects ?? []).length > 0;
+        if (classifierEntries.length === 0 && !hasM1Objects && !needsNewGraph) return;
 
         // ── Check existing graph elements ───────────────────────────────
         // Build maps of what already exists so we only create missing items.
@@ -439,8 +447,38 @@ export function useJjomSync(
             }
         }
 
+        // Count missing M1 instance reference edges.
+        // For each DObject, check if its reference features have values
+        // that point to other DObjects with vertices — if the edge doesn't
+        // exist yet, it needs to be created.
+        let missingM1EdgeCount = 0;
+        for (const objId of (rawModel.objects ?? [])) {
+            if (typeof objId !== 'string') continue;
+            const dObj = idlookup[objId] as any;
+            if (!dObj) continue;
+            const srcV = vertexIdByModelId.get(objId);
+            if (!srcV) continue;
+            for (const featId of (dObj.features ?? [])) {
+                if (typeof featId !== 'string') continue;
+                const dFeat = idlookup[featId] as any;
+                if (!dFeat) continue;
+                const metaId = dFeat.instanceof;
+                if (!metaId) continue;
+                const meta = idlookup[metaId] as any;
+                if (!meta || meta.className !== 'DReference') continue;
+                for (const tgtObjId of (dFeat.values ?? [])) {
+                    if (typeof tgtObjId !== 'string') continue;
+                    const tgtV = vertexIdByModelId.get(tgtObjId);
+                    if (!tgtV) continue;
+                    const ek = `${srcV}→${tgtV}`;
+                    if (!existingEdgeKeys.has(ek) && !hasCanvasEdgePair(ek)) missingM1EdgeCount++;
+                }
+            }
+        }
+
         // Nothing to do? Early exit.
-        if (!needsNewGraph && missingClassifiers.length === 0 && missingEdgeCount === 0) return;
+        if (!needsNewGraph && missingClassifiers.length === 0
+            && missingEdgeCount === 0 && missingM1EdgeCount === 0) return;
 
         // ── Create missing elements ─────────────────────────────────────
         // Each DVertex.new / DVoidEdge.new2 has its own internal TRANSACTION,
@@ -549,6 +587,61 @@ export function useJjomSync(
                     }
                 }
             }
+
+            // Step 4: Create missing M1 instance reference edges.
+            // For each DObject in the model, scan its reference features and
+            // create DVoidEdge for every (sourceVertex, targetVertex) pair that
+            // doesn't have an edge yet. This makes reference values written by
+            // JjTL transformations (or by STEP 8b in ProjectEditor) visible as
+            // edges in the flow diagram.
+            if (missingM1EdgeCount > 0) {
+                // Re-read store in case Step 2 just created vertices
+                const freshLookup = store.getState()?.idlookup;
+                if (freshLookup) {
+                    const freshGraph = freshLookup[graphId] as any;
+                    for (const seId of (freshGraph?.subElements ?? [])) {
+                        const se = freshLookup[seId] as any;
+                        if (!se) continue;
+                        if (se.className?.includes('Vertex') && se.model && !vertexIdByModelId.has(se.model)) {
+                            vertexIdByModelId.set(se.model, seId);
+                        }
+                        if (se.className?.includes('Edge') && se.start && se.end) {
+                            existingEdgeKeys.add(`${se.start}→${se.end}`);
+                        }
+                    }
+                }
+                for (const objId of (rawModel.objects ?? [])) {
+                    if (typeof objId !== 'string') continue;
+                    const dObj = (freshLookup ?? idlookup)[objId] as any;
+                    if (!dObj) continue;
+                    const srcVertex = vertexIdByModelId.get(objId);
+                    if (!srcVertex) continue;
+                    for (const featId of (dObj.features ?? [])) {
+                        if (typeof featId !== 'string') continue;
+                        const dFeat = (freshLookup ?? idlookup)[featId] as any;
+                        if (!dFeat) continue;
+                        const metaId = dFeat.instanceof;
+                        if (!metaId) continue;
+                        const meta = (freshLookup ?? idlookup)[metaId] as any;
+                        if (!meta || meta.className !== 'DReference') continue;
+                        for (const tgtObjId of (dFeat.values ?? [])) {
+                            if (typeof tgtObjId !== 'string') continue;
+                            const tgtVertex = vertexIdByModelId.get(tgtObjId);
+                            if (!tgtVertex) continue;
+                            const ek = `${srcVertex}→${tgtVertex}`;
+                            if (!existingEdgeKeys.has(ek) && !hasCanvasEdgePair(ek)) {
+                                DVoidEdge.new2(
+                                    metaId, graphId, graphId, undefined,
+                                    srcVertex, tgtVertex,
+                                    (d: DEdge) => { d.isReference = true; }
+                                );
+                                existingEdgeKeys.add(ek);
+                                markCanvasEdgePair(srcVertex, tgtVertex);
+                            }
+                        }
+                    }
+                }
+            }
         } catch (err) {
             console.warn('[useJjomSync] Failed to create/populate v2-flow graph:', err);
         } finally {
@@ -557,7 +650,7 @@ export function useJjomSync(
             // before the effect can run again (avoids stale snapshots).
             setTimeout(() => { creatingGraphRef.current = false; }, 150);
         }
-    }, [modelid, hasGraph, subElementIds.length, modelClassCount, modelRefCount]);
+    }, [modelid, hasGraph, subElementIds.length, modelClassCount, modelRefCount, modelObjectCount]);
 
     // ── Selector 2: Per-element D-object references ────────────────────
     // For each ID in subElements, select state.idlookup[id].

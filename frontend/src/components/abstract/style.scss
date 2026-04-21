@@ -191,8 +191,13 @@ body > .dragging-layer > div:last-child {
    DOCK CONTENT ANIMATION
    ============================================ */
 
+/* Horizontal slide on tab switch disabled 2026-04-21.
+   rc-dock (via rc-tabs) applies `marginLeft: -N00%` inline on .dock-content-animated
+   to expose the active tab pane. The 0.3s margin transition used to animate this
+   into a horizontal slide; removing the transition makes the switch instantaneous
+   while leaving the positioning logic intact (tabs still show correctly). */
 .dock-content-animated {
-  transition: margin 0.3s;
+  transition: none;
 }
 
 .dock-bottom > .dock-nav .dock-ink-bar-animated,

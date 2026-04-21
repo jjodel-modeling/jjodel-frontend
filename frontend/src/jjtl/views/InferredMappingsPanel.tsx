@@ -227,7 +227,7 @@ export const InferredMappingsPanel: React.FC<InferredMappingsPanelProps> = ({
             </div>
 
             {/* AI Disclaimer */}
-            {mappings.length > 0 && <AIDisclaimer />}
+            {mappings.length > 0 && <AIDisclaimer feature="mappings" />}
         </div>
     );
 };

@@ -44,8 +44,8 @@ export function Jodie(): JSX.Element {
         hasUnread: false,
     });
 
-    // Active provider
-    const [activeProvider, setActiveProvider] = useState<TAIProvider>(() => JodieConfig.current.activeProvider);
+    // Active provider (per-feature: 'chat')
+    const [activeProvider, setActiveProvider] = useState<TAIProvider>(() => AIConfig.getPreferred('chat'));
 
     // RAG state
     const lastIndexedProjectRef = useRef<string | null>(null);
@@ -81,7 +81,7 @@ export function Jodie(): JSX.Element {
     useEffect(() => {
         const handleSettingsChanged = () => {
             // Refresh active provider when settings change
-            setActiveProvider(JodieConfig.current.activeProvider);
+            setActiveProvider(AIConfig.getPreferred('chat'));
         };
 
         window.addEventListener(AIEvents.SETTINGS_CHANGED, handleSettingsChanged);
@@ -142,8 +142,7 @@ export function Jodie(): JSX.Element {
     // Change provider
     const handleProviderChange = useCallback((provider: TAIProvider) => {
         setActiveProvider(provider);
-        JodieConfig.current.activeProvider = provider;
-        JodieConfig.current.save();
+        AIConfig.setPreferred('chat', provider);
     }, []);
 
     // Send message
@@ -235,8 +234,7 @@ export function Jodie(): JSX.Element {
             const firstEnabled = enabledProviders[0];
             providerToUse = firstEnabled;
             setActiveProvider(firstEnabled);
-            JodieConfig.current.activeProvider = firstEnabled;
-            JodieConfig.current.save();
+            AIConfig.setPreferred('chat', firstEnabled);
 
             // Add info message about switching
             const switchMessage: ChatMessage = {
@@ -288,8 +286,10 @@ export function Jodie(): JSX.Element {
                 }
             }
 
-            // Call AI provider with augmented context, images and documents
-            const response = await AIProviderService.chat(content, providerToUse, history, augmentedContext, images, documents);
+            // Call AI provider with augmented context, images and documents.
+            // Pass per-feature model (falls back to provider's AIConfig.model inside chat()).
+            const chatModel = AIConfig.getPreferredModel('chat');
+            const response = await AIProviderService.chat(content, providerToUse, history, augmentedContext, images, documents, chatModel);
 
             // Add assistant message
             const assistantMessage: ChatMessage = {

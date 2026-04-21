@@ -302,7 +302,7 @@ export function JodieWindow({
                 supportsPDF={supportsPDF}
             />
 
-            <AIDisclaimer />
+            <AIDisclaimer feature="chat" />
         </div>
     );
 }

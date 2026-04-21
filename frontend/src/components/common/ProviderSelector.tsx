@@ -80,8 +80,8 @@ export function ProviderSelector({
     // Handle selecting a local option
     const handleLocalSelect = (optionId: TAIProvider) => {
         if (onLocalOptionSelect) onLocalOptionSelect(optionId);
-        // Backward compatibility: store as provider preference
-        else JodieConfig.setGlobalDefault(optionId);
+        // Backward compatibility: store as per-feature provider preference
+        else AIConfig.setPreferred(feature, optionId);
         setShowMenu(false);
     };
 
@@ -89,7 +89,7 @@ export function ProviderSelector({
     const handleProviderSelect = (providerId: TAIProvider) => {
         // Clear local option selection if callback provided
         if (onLocalOptionSelect) onLocalOptionSelect(null);
-        JodieConfig.setGlobalDefault(providerId);
+        AIConfig.setPreferred(feature, providerId);
         setShowMenu(false);
     };
 
@@ -117,7 +117,7 @@ export function ProviderSelector({
                                 key={provider}
                                 className={`provider-option ${isActive ? 'active' : ''}`}
                                 onClick={() => handleProviderSelect(provider)}
-                                disabled={!AIConfig.get(provider).enabled}
+                                disabled={!AIConfig.get(provider).isConfigured()}
                             >
                                 <i className={`bi ${AI[provider].bi_icon}`} />
                                 <span>{provider}</span>

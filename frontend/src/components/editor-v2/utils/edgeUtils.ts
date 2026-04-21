@@ -1163,10 +1163,19 @@ export function unregisterEdgePath(edgeId: string): void {
  *
  * Only H×V crossings: the horizontal edge draws the bridge arc to hop
  * over the vertical edge. The vertical edge passes underneath unchanged.
+ *
+ * @param activeNodeIds - Optional Set of node IDs belonging to the currently
+ * rendered React Flow canvas. When provided, registry entries whose source OR
+ * target is NOT in this set are ignored — this scopes detection to the active
+ * metamodel/model tab so phantom jumps from edges of other canvases (they share
+ * the module-level `edgePathRegistry`) never appear. Pass the result of
+ * `new Set(useNodes().map(n => n.id))` from inside a React Flow edge/hook.
+ * Omitted → no filter (legacy behaviour, all registered edges considered).
  */
 export function getEdgeCrossings(
     edgeId: string,
     myPoints: { x: number; y: number }[],
+    activeNodeIds?: Set<string>,
     nodeRects?: NodeRect[],
 ): CrossingPoint[] {
     if (myPoints.length < 2) return [];
@@ -1187,6 +1196,15 @@ export function getEdgeCrossings(
 
     for (const [otherId, entry] of edgePathRegistry) {
         if (otherId === edgeId) continue;
+
+        // Canvas-scope filter: the registry is module-level and shared across every
+        // React Flow instance mounted in the app (e.g. metamodel_1 and metamodel_2 tabs).
+        // Without this, an edge on the hidden tab would still contribute crossings to
+        // the visible tab. Both endpoints must belong to the active canvas.
+        // Tree-segment entries (registered by useTreeLayout with the same source/target
+        // as the parent tree's inheritance edge) pass through this test for free since
+        // they reuse those node IDs.
+        if (activeNodeIds && (!activeNodeIds.has(entry.sourceNode) || !activeNodeIds.has(entry.targetNode))) continue;
 
         // Skip entries in the same tree group (inheritance edges + their
         // tree segments all share the same treeGroupId = parent node ID).

@@ -7,7 +7,7 @@
 import { MetamodelElement } from '../views/MetamodelTreeView';
 import { MappingSuggestion, SuggestionConfidence } from '../types/suggestions';
 import { AIProviderService } from '../../services/AIProviderService';
-import {JodieConfig} from "../../types/jodie";
+import {AIConfig, JodieConfig, TAIProvider} from "../../types/jodie";
 
 export class AIMatcher {
     // Store elements for ID lookup after AI response
@@ -21,7 +21,9 @@ export class AIMatcher {
         sourceElements: MetamodelElement[],
         targetElements: MetamodelElement[],
         sourceMetamodelName: string = 'Source',
-        targetMetamodelName: string = 'Target'
+        targetMetamodelName: string = 'Target',
+        aiProvider?: TAIProvider,
+        signal?: AbortSignal
     ): Promise<MappingSuggestion[]> {
         if (JodieConfig.getEnabledProviders().length == 0) {
             throw new Error('AI provider not configured. Please configure an AI provider in Settings.');
@@ -39,8 +41,17 @@ export class AIMatcher {
         );
 
         try {
-            const provider = JodieConfig.current.activeProvider;
-            const response = await AIProviderService.chat(prompt, provider, [], undefined);
+            const provider = aiProvider ?? AIConfig.getPreferred('mappings');
+            const model = AIConfig.getPreferredModel('mappings');
+            // TODO: AIProviderService.chat does not yet accept AbortSignal.
+            // To enable real cancellation, add `signal?: AbortSignal` to its signature
+            // and forward it to the underlying fetch() calls in each provider adapter.
+            const response = await AIProviderService.chat(prompt, provider, [], undefined, undefined, undefined, model);
+            if (signal?.aborted) {
+                const abortErr = new Error('Analysis was cancelled');
+                abortErr.name = 'AbortError';
+                throw abortErr;
+            }
             return this.parseResponse(response);
         } catch (error) {
             console.error('[AIMatcher] Error:', error);

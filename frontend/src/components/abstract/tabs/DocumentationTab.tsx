@@ -25,6 +25,7 @@ import { ALL_AI_PROVIDERS, DocumentationStatus } from '../../../types/jodie';
 import { markdownMonacoOptions } from '../../editors/monacoConfig';
 import { AIDisclaimer } from '../../common/AIDisclaimer';
 import { Badge } from '../../common/Badge';
+import { ProviderModelSelector } from '../../common/ProviderModelSelector';
 import './DocumentationTab.scss';
 
 // ============================================
@@ -580,7 +581,6 @@ function DocumentationTabComponent(props: AllProps) {
 
     // AI Provider selector (with persistence)
     const selectedProvider = AIConfig.getPreferred('documentation'); // useAIProviderPreference('documentation');
-    const [showProviderMenu, setShowProviderMenu] = useState(false);
     const settingsModal = useSettingsModalSafe();
 
     // Progress modal for regeneration
@@ -636,17 +636,6 @@ function DocumentationTabComponent(props: AllProps) {
     }, [documentation?.content, editContent, viewMode]);
 
     // Get available AI providers
-    const availableProviders = JodieConfig.getEnabledProviders();
-
-    // Close provider menu when clicking outside
-    useEffect(() => {
-        const handleClickOutside = () => setShowProviderMenu(false);
-        if (showProviderMenu) {
-            document.addEventListener('click', handleClickOutside);
-            return () => document.removeEventListener('click', handleClickOutside);
-        }
-    }, [showProviderMenu]);
-
     // Generate initial documentation
     const handleGenerate = useCallback(async () => {
         if (!project) return;
@@ -974,52 +963,12 @@ function DocumentationTabComponent(props: AllProps) {
                         </>
                     ) : (
                         <>
-                            {/* AI Provider Selector */}
-                            <div className="provider-selector" onClick={(e) => e.stopPropagation()}>
-                                <button
-                                    className="provider-btn"
-                                    onClick={() => setShowProviderMenu(!showProviderMenu)}
-                                    title="Select AI provider for generation"
-                                >
-                                    <i className="bi bi-cpu" />
-                                    <span>{selectedProvider}</span>
-                                    <i className={`bi bi-chevron-${showProviderMenu ? 'up' : 'down'}`} />
-                                </button>
-
-                                {showProviderMenu && (
-                                    <div className="provider-menu">
-                                        <div className="provider-menu-header">AI Provider</div>
-
-                                        {availableProviders.map(provider => (
-                                            <button
-                                                key={provider}
-                                                className={`provider-option ${selectedProvider === provider ? 'active' : ''}`}
-                                                onClick={() => {
-                                                    JodieConfig.setGlobalDefault(provider);
-                                                    setShowProviderMenu(false);
-                                                }}
-                                                disabled={!AIConfig.get(provider).enabled}
-                                            >
-                                                <i className={`bi ${provider === AIProvider.Custom ? 'bi-lightning' : 'bi-stars'}`} />
-                                                <span>{provider}</span>
-                                                {selectedProvider === provider && <i className="bi bi-check-lg check-icon" />}
-                                            </button>
-                                        ))}
-
-                                        <div className="provider-menu-footer">
-                                            <button
-                                                className="provider-hint"
-                                                onClick={() => {
-                                                    setShowProviderMenu(false);
-                                                    settingsModal?.openSettings('providers');
-                                                }}
-                                            >
-                                                <i className="bi bi-gear" /> Configure in Settings
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
+                            {/* AI Provider + Model picker (combined, per 2026-04-20 refactor) */}
+                            <ProviderModelSelector
+                                feature="documentation"
+                                compact
+                                onNavigateToSettings={() => settingsModal?.openSettings('providers')}
+                            />
 
                             <button
                                 className="toolbar-btn"
@@ -1158,7 +1107,7 @@ function DocumentationTabComponent(props: AllProps) {
 
             {/* AI Disclaimer */}
             {documentation && viewMode !== 'edit' && (
-                <AIDisclaimer />
+                <AIDisclaimer feature="documentation" />
             )}
 
             {/* Footer with metadata */}

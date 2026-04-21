@@ -1185,11 +1185,16 @@ export function syncCreateCompositionLink(
         }
 
         TRANSACTION('EditorV2 create composition link', () => {
-            // Append child object ID to reference values
+            // Append child object ID to reference values.
+            // Read from __raw.values (the DValue array) instead of the L-layer
+            // .values getter, which pads empty slots with `undefined` when
+            // length < lowerBound. That padding caused new targets to land at
+            // index 1+ instead of index 0 for [1..1] references.
             const refProxy = (parentObject as any)['$' + referenceName];
             if (refProxy) {
-                const current = refProxy.values ?? [];
-                refProxy.values = [...current, childObject.id];
+                const rawVals: any[] = refProxy.__raw?.values ?? [];
+                const meaningful = rawVals.filter((v: any) => v != null && v !== '');
+                refProxy.values = [...meaningful, childObject.id];
             }
 
             // Create visual edge — pass the metaclass DReference id so the
@@ -1253,11 +1258,13 @@ export function syncCreateReferenceLink(
         }
 
         TRANSACTION('EditorV2 create reference link', () => {
-            // Append target object ID to reference values
+            // Append target object ID to reference values.
+            // Read from __raw.values — see comment in syncCreateCompositionLink.
             const refProxy = (sourceObject as any)['$' + referenceName];
             if (refProxy) {
-                const current = refProxy.values ?? [];
-                refProxy.values = [...current, targetObject.id];
+                const rawVals: any[] = refProxy.__raw?.values ?? [];
+                const meaningful = rawVals.filter((v: any) => v != null && v !== '');
+                refProxy.values = [...meaningful, targetObject.id];
             }
 
             // Create visual edge — pass the metaclass DReference id so the

@@ -58,3 +58,4 @@ frontend/build.rar
 frontend/src/todo_others
 /cloudflare-worker/node_modules
 /frontend/dist
+CLAUDE.md

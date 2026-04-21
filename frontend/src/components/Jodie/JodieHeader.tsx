@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { ProviderSelector } from './ProviderSelector';
+import { ProviderModelSelector } from '../common/ProviderModelSelector';
 import { TAIProvider, AIProvider } from '../../types/jodie';
 import { DUser, L, LUser, LProject, LModel, store } from '../../joiner';
 import { Selectors } from '../../redux/selectors/selectors';
@@ -122,11 +122,10 @@ export function JodieHeader({
                 </div>
                 <div className="jodie-title">
                     <span className="jodie-name">Jjodie</span>
-                    <ProviderSelector
-                        activeProvider={activeProvider}
-                        onProviderChange={onProviderChange}
-                        onOpenSettings={onOpenSettings}
-                        disabled={isWaiting}
+                    <ProviderModelSelector
+                        feature="chat"
+                        compact
+                        onNavigateToSettings={onOpenSettings}
                     />
                 </div>
             </div>

@@ -149,18 +149,21 @@ export function useTreeLayout(
         return () => { treeIds.forEach(tid => unregisterEdgePath(tid)); };
     }, [edgeId, isPrimary, isGrouped, treeGeometry, source, target, treeGroupId]);
 
+    // Active-canvas filter for crossing detection (see getEdgeCrossings docs).
+    const activeNodeIds = useMemo(() => new Set(allNodes.map(n => n.id)), [allNodes]);
+
     // Compute crossings for tree segments so they also get bridge arcs
     const trunkPathFinal = useMemo(() => {
         if (!isPrimary || !isGrouped || !treeGeometry) return '';
         const trunkPts = parsePathPoints(treeGeometry.trunkPath);
         if (trunkPts.length < 2) return treeGeometry.trunkPath;
-        const trunkCrossings = getEdgeCrossings(`${edgeId}__trunk`, trunkPts, []);
+        const trunkCrossings = getEdgeCrossings(`${edgeId}__trunk`, trunkPts, activeNodeIds, []);
         if (trunkCrossings.length > 0) {
             return buildFinalPath(trunkPts, trunkCrossings, 4, 6);
         }
         return roundManhattanPath(treeGeometry.trunkPath, 4);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [edgeId, isPrimary, isGrouped, treeGeometry, allNodes, allEdges]);
+    }, [edgeId, isPrimary, isGrouped, treeGeometry, activeNodeIds, allEdges]);
 
     const barBranchesPathFinal = useMemo(() => {
         if (!isPrimary || !isGrouped || !treeGeometry?.barAndBranchesPath) return treeGeometry?.barAndBranchesPath || '';
@@ -172,7 +175,7 @@ export function useTreeLayout(
                 finalParts.push(pointsToPath(pts));
                 continue;
             }
-            const segCrossings = getEdgeCrossings(`${edgeId}__tree_${idx}`, pts, []);
+            const segCrossings = getEdgeCrossings(`${edgeId}__tree_${idx}`, pts, activeNodeIds, []);
             if (segCrossings.length > 0) {
                 finalParts.push(buildFinalPath(pts, segCrossings, 4, 6));
             } else {

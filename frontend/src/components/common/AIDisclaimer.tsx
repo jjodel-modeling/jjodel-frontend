@@ -10,20 +10,22 @@
  */
 
 import React from 'react';
-import {AI, AIProvider, JodieConfig} from '../../types/jodie';
+import {AI, AIConfig, AIFeature} from '../../types/jodie';
 import './AIDisclaimer.scss';
 
 interface AIDisclaimerProps {
+    /** Feature context: determines which per-feature provider preference to display. */
+    feature: AIFeature;
     /** Compact mode: single line, smaller text. Use inside tight spaces like code blocks */
     compact?: boolean;
 }
 
 /**
  * Disclaimer shown wherever AI-generated content appears.
- * Automatically reads the current provider name from settings.
+ * Reads the per-feature provider name from settings.
  */
-export const AIDisclaimer: React.FC<AIDisclaimerProps> = ({ compact = false }) => {
-    const llm = AI[JodieConfig.current.activeProvider];
+export const AIDisclaimer: React.FC<AIDisclaimerProps> = ({ feature, compact = false }) => {
+    const llm = AI[AIConfig.getPreferred(feature)];
 
     if (compact) {
         return (

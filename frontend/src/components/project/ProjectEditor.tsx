@@ -1211,7 +1211,18 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                 const r = (feature as any).__raw?.values;
                                 return Array.isArray(r) ? r : [];
                             })();
-                            const meaningful = rawVals.filter((v: any) => v != null && v !== '');
+                            // Filter empty and deduplicate: DValue.values can contain
+                            // the same Pointer ID twice (e.g., edge created via canvas
+                            // and then via auto-populate, or data corruption).
+                            const seen = new Set<string>();
+                            const meaningful = rawVals.filter((v: any) => {
+                                if (v == null || v === '') return false;
+                                if (typeof v === 'string') {
+                                    if (seen.has(v)) return false;
+                                    seen.add(v);
+                                }
+                                return true;
+                            });
                             if (meaningful.length === 0) {
                                 result[feature.name] = null;
                             } else if (meaningful.length === 1) {
@@ -1222,12 +1233,18 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                         }
                     }
 
-                    // console.log(`[ProjectEditor] Source object mapped:`, {
-                    //     id: obj.id,
-                    //     name: obj.name,
-                    //     resolvedClassName: className,
-                    //     featureCount: obj.features?.length || 0
-                    // });
+                    // Compute _containerId: the DObject that owns this object through
+                    // a containment reference. Traverses the father chain:
+                    //   DObject.father → DValue (containment feature) → DValue.father → owning DObject
+                    // If father points to a DModel, the object is root → _containerId = null.
+                    const fatherPtr = (obj as any).__raw?.father;
+                    if (fatherPtr && typeof fatherPtr === 'string') {
+                        const idl = (store.getState() as any).idlookup;
+                        const fatherData = idl?.[fatherPtr];
+                        if (fatherData?.className === 'DValue' && fatherData.father) {
+                            result._containerId = String(fatherData.father);
+                        }
+                    }
 
                     return result;
                 });
@@ -2340,7 +2357,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                         stats: {
                             objectCount: objects.length,
                             linkCount: objects.reduce((sum: number, o: any) =>
-                                sum + (o.referenceFeatures?.length ?? 0), 0),
+                                sum + (o?.referenceFeatures?.length ?? 0), 0),
                         },
                         status: objects.length === 0
                             ? { type: 'warning', label: 'Empty model' }
