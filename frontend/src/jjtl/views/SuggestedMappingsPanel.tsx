@@ -20,7 +20,12 @@ import { mappingSuggestionService } from '../services';
 import { MappingCard } from './MappingCard';
 import GrammarTab from './GrammarTab';
 import type { GrammarRule } from '../components/GrammarDiagram/types';
-import { ProviderSelector, LocalOption } from '../../components/common/ProviderSelector';
+import { ProviderModelSelector } from '../../components/common/ProviderModelSelector';
+import { MappingAnalysisProgressModal } from '../components/MappingAnalysisProgressModal';
+import {
+    MappingAnalysisStep,
+    MappingAnalysisStepEntry,
+} from '../types/suggestions';
 import {AIConfig, JodieConfig} from "../../types/jodie";
 import { useSettingsModalSafe } from '../../contexts/SettingsModalContext';
 
@@ -135,11 +140,6 @@ function generateJjtlCode(mappings: MappingSuggestion[]): string {
     return code.trim();
 }
 
-// Local options for the ProviderSelector
-const MAPPINGS_LOCAL_OPTIONS: LocalOption[] = [
-    { id: 'simple', label: 'Simple (Local)', icon: 'lightning-charge' }
-];
-
 export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
     sourceMetamodel: staticSourceMetamodel,
     targetMetamodel: staticTargetMetamodel,
@@ -155,12 +155,20 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
 }) => {
     // State
     const [showGrammar, setShowGrammar] = useState(false);
-    const [selectedLocalOption, setSelectedLocalOption] = useState<string | null>('simple');
     const [result, setResult] = useState<SuggestionResult | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [internalHoveredId, setInternalHoveredId] = useState<string | null>(null);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const abortRef = useRef<AbortController | null>(null);
+
+    // Multi-step progress modal state. Populated only in AI mode; the simple-matching
+    // fallback path (handleFallbackToSimple) intentionally does NOT open this modal
+    // — SimpleMatcher is synchronous and finishes too fast to warrant dialog chrome.
+    const [analysisSteps, setAnalysisSteps] = useState<MappingAnalysisStepEntry[]>([]);
+    const [showAnalysisModal, setShowAnalysisModal] = useState(false);
+    // Wall-clock timestamp used to enforce a 200ms minimum display for each step's
+    // "running" state. Avoids flashing of sub-100ms phases (building-prompt, parsing).
+    const lastProgressAppliedAtRef = useRef<number>(0);
 
     // Settings navigation: mirrors the pattern in ProviderSelector, Jodie, and StatusBarRightZone —
     // `useSettingsModalSafe` from `contexts/SettingsModalContext` + `openSettings('providers')`.
@@ -169,22 +177,20 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
     // AI provider preference for mappings feature
     const resolvedProvider= AIConfig.getPreferred('mappings');
 
-    // Determine current mode based on selection
+    // Determine current mode. LocalOption was removed 2026-04-21: Mappings is AI-first.
+    // The Grammar tab remains an orthogonal option; AI is the default matcher.
+    // Simple matching is still reachable as an error-recovery button (see handleFallbackToSimple).
     const mode: SuggestionMode = useMemo(() => {
         if (showGrammar) return 'grammar';
-        if (selectedLocalOption === 'simple') return 'simple';
         return 'ai';
-    }, [showGrammar, selectedLocalOption]);
+    }, [showGrammar]);
 
     // Combine internal hover state with external prop
     const hoveredId = hoveredMapping ?? internalHoveredId;
 
     // Check AI availability
     const isAIAvailable = useMemo(() => JodieConfig.hasEnabledProviders(), []);
-    const aiProviderName = useMemo(() => {
-        if (selectedLocalOption === 'simple') return null;
-        return resolvedProvider;
-    }, [selectedLocalOption, resolvedProvider]);
+    const aiProviderName = useMemo(() => resolvedProvider, [resolvedProvider]);
 
     // Filter suggestions by status
     const toInsertSuggestions = useMemo(() => {
@@ -237,6 +243,50 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
         setIsAnalyzing(true);
         setResult(null);
 
+        // Build initial step list. Only AI mode gets the modal; simple mode runs
+        // inline (no modal) because SimpleMatcher is sub-second synchronous.
+        const providerLabel = resolvedProvider || 'AI';
+        const initialSteps: MappingAnalysisStepEntry[] = mode === 'ai' ? [
+            { id: 'building-prompt', label: 'Building prompt', status: 'pending' },
+            { id: 'calling-ai', label: `Generating with ${providerLabel}`, status: 'pending' },
+            { id: 'parsing', label: 'Parsing response', status: 'pending' },
+        ] : [];
+
+        if (mode === 'ai') {
+            setAnalysisSteps(initialSteps);
+            setShowAnalysisModal(true);
+            lastProgressAppliedAtRef.current = 0;
+        }
+
+        // Applies a progress transition with a 200ms minimum since the last applied
+        // transition. This keeps fast phases (building-prompt, parsing) perceivable
+        // without lying about the underlying timeline.
+        const applyTransition = (mutate: (steps: MappingAnalysisStepEntry[]) => MappingAnalysisStepEntry[]) => {
+            const now = Date.now();
+            const last = lastProgressAppliedAtRef.current;
+            const elapsed = last === 0 ? Infinity : now - last;
+            const delay = Math.max(0, 200 - elapsed);
+            const scheduledAt = now + delay;
+            lastProgressAppliedAtRef.current = scheduledAt;
+            if (delay === 0) {
+                setAnalysisSteps(mutate);
+            } else {
+                setTimeout(() => setAnalysisSteps(mutate), delay);
+            }
+        };
+
+        // onProgress contract: "step X is now starting; any previously running step
+        // becomes completed (with `detail` attached to it, if provided)." The final
+        // step's completion is applied in the success branch below, when analyze()
+        // resolves.
+        const onProgress = (step: MappingAnalysisStep, detail?: string) => {
+            applyTransition(prev => prev.map(s => {
+                if (s.status === 'running') return { ...s, status: 'completed', detail: detail ?? s.detail };
+                if (s.id === step) return { ...s, status: 'running' };
+                return s;
+            }));
+        };
+
         try {
             const analysisResult = await mappingSuggestionService.analyze(
                 sourceMetamodel,
@@ -247,15 +297,47 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
                     targetMetamodelName,
                     aiProvider: resolvedProvider,
                     signal: controller.signal,
+                    onProgress: mode === 'ai' ? onProgress : undefined,
                 }
             );
             if (controller.signal.aborted) return;
+
+            if (mode === 'ai') {
+                // Terminal transition: mark the last 'running' step (parsing) as completed
+                // with the suggestion count, then auto-close the modal after the 200ms min
+                // has elapsed. If analysisResult has an `error`, surface it on the currently
+                // running step instead.
+                const suggestionCount = analysisResult.suggestions?.length ?? 0;
+                if (analysisResult.error) {
+                    applyTransition(prev => prev.map(s =>
+                        s.status === 'running'
+                            ? { ...s, status: 'error', detail: analysisResult.error }
+                            : s
+                    ));
+                } else {
+                    applyTransition(prev => prev.map(s =>
+                        s.status === 'running'
+                            ? { ...s, status: 'completed', detail: `${suggestionCount} suggestions parsed` }
+                            : s
+                    ));
+                    // Give the user a brief moment to see the all-green state before the
+                    // modal dismisses (matches the 200ms min transition cadence).
+                    setTimeout(() => setShowAnalysisModal(false), 400);
+                }
+            }
             setResult(analysisResult);
         } catch (error: any) {
             if (error?.name === 'AbortError') {
+                if (mode === 'ai') setShowAnalysisModal(false);
                 return;
             }
             console.error('[SuggestedMappingsPanel] Analysis error:', error);
+            if (mode === 'ai') {
+                const message = error?.message ?? 'Unknown error';
+                applyTransition(prev => prev.map(s =>
+                    s.status === 'running' ? { ...s, status: 'error', detail: message } : s
+                ));
+            }
         } finally {
             if (abortRef.current === controller) {
                 setIsAnalyzing(false);
@@ -368,17 +450,12 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
                 </h3>
             </div>
 
-            {/* Mode Selector - Provider dropdown + Grammar button */}
+            {/* Mode Selector - Provider+Model picker + Grammar button */}
             <div className="mode-selector">
-                <ProviderSelector
+                <ProviderModelSelector
                     feature="mappings"
-                    localOptions={MAPPINGS_LOCAL_OPTIONS}
-                    selectedLocalOption={selectedLocalOption}
-                    onLocalOptionSelect={(optionId) => {
-                        setSelectedLocalOption(optionId);
-                        setShowGrammar(false);
-                    }}
                     compact
+                    onNavigateToSettings={() => settingsModal?.openSettings('providers')}
                 />
                 <button
                     className={`mode-btn grammar-btn ${showGrammar ? 'active' : ''}`}
@@ -397,14 +474,10 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
                 <>
                     {/* Mode Description */}
                     <div className="mode-description">
-                        {selectedLocalOption === 'simple' ? (
-                            <p>Matches elements by name similarity and type compatibility.</p>
-                        ) : (
-                            <p>
-                                Uses AI to find semantic relationships between metamodels.
-                                {aiProviderName && <span className="provider-indicator"> ({aiProviderName})</span>}
-                            </p>
-                        )}
+                        <p>
+                            Uses AI to find semantic relationships between metamodels.
+                            {aiProviderName && <span className="provider-indicator"> ({aiProviderName})</span>}
+                        </p>
                     </div>
 
                     {/* Analyze Button */}
@@ -585,6 +658,16 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
                     )}
                 </>
             )}
+
+            {/* Multi-step progress modal — rendered only during AI analysis.
+                Mounted at panel root (after the main content) so its fixed
+                overlay layers above the panel without CSS stacking tricks. */}
+            <MappingAnalysisProgressModal
+                isOpen={showAnalysisModal}
+                steps={analysisSteps}
+                onClose={() => setShowAnalysisModal(false)}
+                isComplete={analysisSteps.length > 0 && analysisSteps.every(s => s.status === 'completed' || s.status === 'error')}
+            />
         </div>
     );
 };

@@ -5,7 +5,7 @@
  */
 
 import { MetamodelElement } from '../views/MetamodelTreeView';
-import { MappingSuggestion, SuggestionConfidence } from '../types/suggestions';
+import { MappingSuggestion, SuggestionConfidence, AnalysisProgressCallback } from '../types/suggestions';
 import { AIProviderService } from '../../services/AIProviderService';
 import {AIConfig, JodieConfig, TAIProvider} from "../../types/jodie";
 
@@ -23,7 +23,8 @@ export class AIMatcher {
         sourceMetamodelName: string = 'Source',
         targetMetamodelName: string = 'Target',
         aiProvider?: TAIProvider,
-        signal?: AbortSignal
+        signal?: AbortSignal,
+        onProgress?: AnalysisProgressCallback
     ): Promise<MappingSuggestion[]> {
         if (JodieConfig.getEnabledProviders().length == 0) {
             throw new Error('AI provider not configured. Please configure an AI provider in Settings.');
@@ -33,12 +34,18 @@ export class AIMatcher {
         this.sourceElements = sourceElements;
         this.targetElements = targetElements;
 
+        // Phase 1 — building prompt. Fire progress BEFORE the work so the UI shows
+        // the step as running while buildPrompt executes (even if it's sub-50ms).
+        onProgress?.('building-prompt');
         const prompt = this.buildPrompt(
             sourceElements,
             targetElements,
             sourceMetamodelName,
             targetMetamodelName
         );
+        // Count source + target classes for the completed-state sub-label.
+        const sourceClassCount = this.countClasses(sourceElements);
+        const targetClassCount = this.countClasses(targetElements);
 
         try {
             const provider = aiProvider ?? AIConfig.getPreferred('mappings');
@@ -46,17 +53,46 @@ export class AIMatcher {
             // TODO: AIProviderService.chat does not yet accept AbortSignal.
             // To enable real cancellation, add `signal?: AbortSignal` to its signature
             // and forward it to the underlying fetch() calls in each provider adapter.
+            //
+            // Phase 2 — calling AI. Fire progress with the detail from phase 1 attached
+            // to that (now completing) phase. Contract: onProgress(step) means "step is
+            // starting; previous one is complete; detail below belongs to the previous one".
+            onProgress?.('calling-ai', `${sourceClassCount} source classes, ${targetClassCount} target classes`);
             const response = await AIProviderService.chat(prompt, provider, [], undefined, undefined, undefined, model);
             if (signal?.aborted) {
                 const abortErr = new Error('Analysis was cancelled');
                 abortErr.name = 'AbortError';
                 throw abortErr;
             }
-            return this.parseResponse(response);
+            // Phase 3 — parsing. The detail for phase 2 is empty (a response arrived; the
+            // "duration" itself was the message).
+            onProgress?.('parsing');
+            const suggestions = this.parseResponse(response);
+            // The panel attaches the final count as phase-3 detail when it applies the
+            // terminal transition after analyze() resolves (see SuggestedMappingsPanel).
+            // We return the suggestions; the caller decides how to mark phase 3 completed.
+            return suggestions;
         } catch (error) {
             console.error('[AIMatcher] Error:', error);
             throw error;
         }
+    }
+
+    /**
+     * Counts `type === 'class'` entries recursively in a MetamodelElement tree.
+     * Used for the building-prompt sub-label in the progress modal.
+     */
+    private countClasses(elements: MetamodelElement[]): number {
+        let n = 0;
+        const walk = (list: MetamodelElement[] | undefined) => {
+            if (!list) return;
+            for (const el of list) {
+                if (el.type === 'class') n++;
+                if (el.children) walk(el.children);
+            }
+        };
+        walk(elements);
+        return n;
     }
 
     /**
