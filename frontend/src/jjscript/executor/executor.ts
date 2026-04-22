@@ -47,10 +47,11 @@ export class JjScriptExecutor {
     private undoStack: (() => void)[] = [];
     private redoStack: (() => void)[] = [];
 
-    constructor(projectId: string, modelId?: string) {
+    constructor(projectId: string, modelId?: string, targetMetamodelId?: string) {
         this.context = {
             projectId,
             modelId,
+            targetMetamodelId,
             history: [],
             variables: new Map()
         };
@@ -287,20 +288,40 @@ export class JjScriptExecutor {
 let executorInstance: JjScriptExecutor | null = null;
 
 /**
- * Get or create executor instance
+ * Get or create executor instance.
+ *
+ * The singleton is invalidated when EITHER `projectId` OR `targetMetamodelId`
+ * changes, not just `projectId`. Two scripts in the same project but bound to
+ * different host metamodels (e.g. two Jjodie sessions selecting different
+ * metamodels) must get distinct executors so that `self` keyword resolution
+ * and any other context-sensitive logic see the correct host.
  */
-export function getExecutor(projectId?: string, modelId?: string): JjScriptExecutor {
-    if (!executorInstance || (projectId && executorInstance.getContext().projectId !== projectId)) {
-        executorInstance = new JjScriptExecutor(projectId || '', modelId);
+export function getExecutor(
+    projectId?: string,
+    modelId?: string,
+    targetMetamodelId?: string
+): JjScriptExecutor {
+    const ctx = executorInstance?.getContext();
+    const needsNew = !executorInstance
+        || (projectId && ctx?.projectId !== projectId)
+        || (targetMetamodelId !== undefined && ctx?.targetMetamodelId !== targetMetamodelId);
+
+    if (needsNew) {
+        executorInstance = new JjScriptExecutor(projectId || '', modelId, targetMetamodelId);
     }
-    return executorInstance;
+    return executorInstance!;
 }
 
 /**
  * Execute a JjScript command (convenience function)
  */
-export async function executeCommand(input: string, projectId?: string, modelId?: string): Promise<ExecutionResult> {
-    const executor = getExecutor(projectId, modelId);
+export async function executeCommand(
+    input: string,
+    projectId?: string,
+    modelId?: string,
+    targetMetamodelId?: string
+): Promise<ExecutionResult> {
+    const executor = getExecutor(projectId, modelId, targetMetamodelId);
     return executor.execute(input);
 }
 
@@ -314,9 +335,10 @@ export async function executeCommand(input: string, projectId?: string, modelId?
 export async function executeBatch(
     commands: string[],
     projectId?: string,
-    modelId?: string
+    modelId?: string,
+    targetMetamodelId?: string
 ): Promise<ExecutionResult[]> {
-    const executor = getExecutor(projectId, modelId);
+    const executor = getExecutor(projectId, modelId, targetMetamodelId);
     const results: ExecutionResult[] = [];
 
     for (const command of commands) {
@@ -342,10 +364,11 @@ export async function executeBatch(
 export async function executeScript(
     script: string,
     projectId?: string,
-    modelId?: string
+    modelId?: string,
+    targetMetamodelId?: string
 ): Promise<ExecutionResult[]> {
     const commands = groupBlockCommands(script.split('\n'));
-    return executeBatch(commands, projectId, modelId);
+    return executeBatch(commands, projectId, modelId, targetMetamodelId);
 }
 
 /**

@@ -6,6 +6,7 @@
 import { JjodieAPI } from './useMetamodelGeneration';
 import {DUser, DProject, DModel, L, LUser, LProject, LModel, SetFieldAction, Pointer} from '../joiner';
 import { executeCommand as jjScriptExecuteCommand } from '../jjscript/executor/executor';
+import { getActiveMetamodel } from '../jjscript/executor/utils';
 
 // Snapshot storage for undo functionality
 const snapshots = new Map<string, unknown>();
@@ -179,8 +180,18 @@ export function createJjodieAPI(): JjodieAPI {
                 const metamodels = project?.metamodels || [];
                 const modelId = metamodels.length > 0 ? (metamodels[0] as LModel).id : undefined;
 
+                // Bind the host metamodel for `self` keyword resolution. Prefer the
+                // currently-selected/active metamodel from the UI state; fall back to
+                // `modelId` if it's itself a metamodel in this project; otherwise leave
+                // unbound — `self` will surface a clean error rather than silently
+                // resolving to an arbitrary metamodel.
+                const activeMM = getActiveMetamodel();
+                const targetMetamodelId = (activeMM && metamodels.some((m: LModel) => m.id === activeMM.id))
+                    ? activeMM.id
+                    : undefined;
+
                 // Execute via JjScript executor
-                const result = await jjScriptExecuteCommand(command, projectId, modelId);
+                const result = await jjScriptExecuteCommand(command, projectId, modelId, targetMetamodelId);
 
                 if (result.success) {
                     // console.log('[JjodieAPI] Command succeeded:', result.message);

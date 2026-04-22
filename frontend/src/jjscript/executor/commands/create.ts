@@ -23,8 +23,66 @@ import {
     DPackage,
     DEnumerator,
     DEnumLiteral,
+    Defaults,
     SetFieldAction
 } from '../../../joiner';
+
+// ============================================
+// ATTRIBUTE TYPE NORMALIZATION
+// ============================================
+
+/**
+ * Map user-facing type aliases to the E-prefixed names expected by ShortAttribETypes.
+ * Covers both the JjScript TYPE_ALIASES ('String', 'Integer', 'bool', ...) and the
+ * raw Ecore names ('EString', 'EInt', 'EBoolean', ...) that parseTypeReference
+ * parks under `kind: 'class'` because they are not in TYPE_ALIASES.
+ */
+export function normalizeAttributeType(raw: string): string {
+    const map: Record<string, string> = {
+        'estring':  'EString',
+        'string':   'EString',
+        'str':      'EString',
+        'echar':    'EChar',
+        'char':     'EChar',
+        'eint':     'EInt',
+        'int':      'EInt',
+        'integer':  'EInt',
+        'eshort':   'EShort',
+        'short':    'EShort',
+        'elong':    'ELong',
+        'long':     'ELong',
+        'ebyte':    'EByte',
+        'byte':     'EByte',
+        'eboolean': 'EBoolean',
+        'boolean':  'EBoolean',
+        'bool':     'EBoolean',
+        'edate':    'EDate',
+        'date':     'EDate',
+        'edouble':  'EDouble',
+        'double':   'EDouble',
+        'efloat':   'EFloat',
+        'float':    'EFloat',
+        'evoid':    'EVoid',
+        'void':     'EVoid',
+    };
+    return map[raw.toLowerCase()] ?? 'EString';
+}
+
+/**
+ * Extract the raw type name string from a TypeReference produced by the parser.
+ * parseTypeReference returns `{ kind: 'primitive', type }` for names in TYPE_ALIASES,
+ * and `{ kind: 'class', name }` as a fallback for unknown identifiers — which includes
+ * the E-prefixed names (EString, EInt, ...) users commonly type.
+ */
+function rawTypeName(typeRef: any): string | undefined {
+    if (!typeRef) return undefined;
+    if (typeRef.kind === 'primitive') return typeRef.type;
+    if (typeRef.kind === 'class' || typeRef.kind === 'enum') {
+        return typeRef.name?.raw
+            ?? typeRef.name?.segments?.[typeRef.name.segments.length - 1];
+    }
+    return undefined;
+}
 
 // ============================================
 // VALIDATION HELPERS
@@ -327,17 +385,20 @@ async function createAttribute(
         try {
             const parentId = parent.id || parent;
 
-            // Get type if specified
-            const typeName = options?.type?.kind === 'primitive' ? options.type.type : 'EString';
+            const rawType = rawTypeName(options?.type);
+            const shortType = rawType ? normalizeAttributeType(rawType) : 'EString';
+            // Convert short-name (e.g. 'EInt') to the stable Pointer ID the framework
+            // expects. Requires the companion fix in DTypedElement (joiner/classes.ts)
+            // which short-circuits lookup when it receives an already-valid Pointer_E* ID.
+            const typePointer = (Defaults as any)['Pointer_' + shortType.toUpperCase()] ?? Defaults.Pointer_ESTRING;
 
-            // DAttribute.new(name, type, father, persist)
-            const newAttr = DAttribute.new(name, typeName, parentId, true);
+            const newAttr = DAttribute.new(name, typePointer, parentId, true);
 
             resolve({
                 success: true,
                 command: 'create',
                 message: `Created attribute '${name}'`,
-                data: { id: newAttr.id, name, type: 'attribute' },
+                data: { id: newAttr.id, name, type: 'attribute', attributeType: shortType },
                 affectedElements: [newAttr.id, parentId],
                 undoable: true
             });

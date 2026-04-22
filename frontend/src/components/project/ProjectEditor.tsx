@@ -361,6 +361,13 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         return () => window.removeEventListener(JjodelEvents.OPEN_MEGAMODEL, handler);
     }, []);
 
+    // Open New Transformation dialog when Navbar's "+" dropdown requests it
+    useEffect(() => {
+        const handler = () => setShowNewTransformationDialog(true);
+        window.addEventListener(JjodelEvents.OPEN_NEW_TRANSFORMATION_DIALOG, handler);
+        return () => window.removeEventListener(JjodelEvents.OPEN_NEW_TRANSFORMATION_DIALOG, handler);
+    }, []);
+
     // Broadcast transformations to TreeView via CustomEvent
     useEffect(() => {
         const detail = transformations.map(t => ({

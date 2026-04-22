@@ -547,9 +547,11 @@ function ProjectDashboard(props: DashProps): any {
     const [hideLeftBar, setHideLeftBar] = useState(false);
     const tabTypeMapRef = useRef<Map<string, string>>(new Map());
 
-    // Hide project sidebar when metamodel OR model editor tab is active.
-    // Project structure (Metamodels/Models/Transforms/Viewpoints/Docs) is
-    // redundant inside these editors — the editor has its own palette sidebar.
+    // Hide project sidebar when metamodel, model, OR transformation editor tab
+    // is active. Project structure (Metamodels/Models/Transforms/Viewpoints/Docs)
+    // is redundant inside these editors: the top menus (File / Edit / Jjodel)
+    // already expose Download, Favorites, Close Project, and the logo navigates
+    // back to All projects.
     // Two events cooperate: EDITOR_TYPE_CHANGE (fired on new tab open by
     // DockManager.open2) and ACTIVE_TAB (fired on every tab switch by Dock).
     // A local map keeps track of each tab's editor type so that switching
@@ -557,7 +559,7 @@ function ProjectDashboard(props: DashProps): any {
     // onLayoutChange does not preserve React element props.
     useEffect(() => {
         const isEditorTab = (t: string | null | undefined) =>
-            t === 'metamodel' || t === 'model';
+            t === 'metamodel' || t === 'model' || t === 'transformation';
 
         const handleEditorType = (e: Event) => {
             const { editorType } = (e as CustomEvent).detail;

@@ -844,6 +844,15 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         const thiss: DTypedElement = this.thiss as any;
         thiss.allowCrossReference = false;
 
+        // Short-circuit: if `type` is already a primitive Pointer ID (e.g. 'Pointer_EINT'),
+        // trust it and assign directly. `getByName2` does by-name lookup and would fail
+        // for these Pointer IDs, falling through to the hardcoded ESTRING fallback below
+        // — silently downgrading every non-EString input.
+        if (typeof type === 'string' && /^Pointer_E[A-Z]+$/.test(type)) {
+            this.setPtr("type", type);
+            return this;
+        }
+
         let dtype = Selectors.getByName2(type) as DClassifier | null;
         switch (dtype?.className){
             default: type = undefined; break;

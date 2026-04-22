@@ -430,6 +430,144 @@ Help map external data (CSV, JSON, XML) to the metamodel structure.
 }`;
 
 // ============================================
+// MAPPINGS PROMPT (Analyze Metamodels)
+// ============================================
+
+const MAPPINGS_PROMPT = `You are an expert in model-driven engineering and metamodel transformations.
+You generate mappings for JjTL (Jjodel Transformation Language).
+
+Analyze these two metamodels and suggest semantic mappings between them.
+
+## Source Metamodel: {{sourceName}}
+
+{{sourceMetamodel}}
+
+## Target Metamodel: {{targetName}}
+
+{{targetMetamodel}}
+
+## Task
+
+Identify which elements from the Source metamodel should map to which elements in the Target metamodel.
+Consider:
+1. Semantic similarity (even if names are different)
+2. Structural similarity
+3. Type compatibility
+4. Common modeling patterns
+
+## JjTL Syntax Rules (MUST follow)
+
+conversionHint values MUST be valid JjEL expressions following these rules:
+- Equality uses '==' (NOT '===' or '=')
+- Inequality uses '!='
+- Conditionals: if x == 1 then "a" else "b" (NOT ternary '?:')
+- Boolean operators: and, or, not, implies
+- Null-safe navigation: parent?.name
+- Null coalesce: parent?.name ?? "default"
+- Value mappings: true=1, false=0
+- Comments use '--' (NOT '#' or '//')
+
+DO NOT use in conversionHint:
+- Ternary '?:' — use if/then/else instead
+- Triple equals '===' — use == instead
+- Hash '#' or '//' for comments — use -- instead
+- JavaScript/TypeScript syntax
+
+## Metamodel Rules
+
+- NEVER use abstract classes as target classes — abstract classes cannot be instantiated
+- If the target metamodel has an abstract class with concrete subclasses, create SEPARATE mappings for each concrete subclass
+- When mapping to different concrete subclasses, provide a "guardHint" explaining the distinguishing condition
+
+## Response Format
+
+Respond ONLY with a JSON array of mapping suggestions. No explanation, no markdown code blocks, just the raw JSON array:
+
+[
+    {
+        "sourceClass": "ClassName",
+        "sourceAttribute": null,
+        "targetClass": "ConcreteClassName",
+        "targetAttribute": null,
+        "confidence": "high",
+        "reason": "Explanation",
+        "guardHint": "optional: condition for choosing this target subclass"
+    },
+    {
+        "sourceClass": "ClassName",
+        "sourceAttribute": "attrName",
+        "targetClass": "ConcreteClassName",
+        "targetAttribute": "attrName",
+        "confidence": "medium",
+        "reason": "Explanation",
+        "conversionHint": "sourceAttr.toUpper()"
+    }
+]
+
+Notes:
+- sourceAttribute/targetAttribute should be null for class-level mappings
+- confidence should be "high", "medium", or "low"
+- Only suggest mappings you are confident about
+- Quality over quantity
+- conversionHint MUST be a valid JjEL expression (e.g., "name.toUpper()", "value.toString()", "true=1, false=0") or omitted entirely. NEVER put human-readable text or notes in conversionHint — use the "reason" field for explanations instead. If no conversion is needed, omit conversionHint.
+- guardHint is optional — use it when the same source class maps to different target subclasses to explain the distinguishing condition
+
+## Do Not Map Abstract Classes
+
+Do not generate mapping entries where sourceClass is abstract. Instead, fold the attribute
+bindings inherited from abstract superclasses into the mapping rules for the concrete subclasses
+that inherit from them.
+
+Example: if State and Transition both inherit \`name\` from abstract NamedElement, do not
+generate a \`NamedElement -> X\` rule. Instead include \`name := name\` directly in the
+\`State -> Place\` and \`Transition -> Transition\` rules.
+
+## Target Attribute Must Exist
+
+Do not generate attribute mapping entries where the target class has no matching attribute.
+An entry with \`targetAttribute: null\` (or any name that does not exist on the target class)
+is invalid — omit the entry entirely rather than mapping to the class itself or inventing
+a placeholder. This is a grammar violation of JjTL, not a style preference: emitting an
+attribute mapping without a valid target attribute produces a binding with an empty left-hand
+side (\` := name\`), which is unparseable.
+
+Example: if State has attribute \`name\` and the target class Place has only \`tokens\`, do
+NOT emit \`{ sourceClass: "State", sourceAttribute: "name", targetClass: "Place",
+targetAttribute: null }\`. The correct action is to skip it — Jjodie generates transformations,
+it does not modify the target metamodel.
+
+## Two-Pass Bindings for Cross-Type References
+
+When a feature in the target metaclass is a REFERENCE (not an attribute) whose type is a metaclass
+that is itself the TARGET of another mapping rule in the same transformation, that binding requires
+two-pass resolution. In the JSON response, set conversionHint to the string:
+
+    "resolve(<sourceFeature>, <TargetType>)"
+
+where <TargetType> is the target metaclass name.
+
+Example: if Transition.nextState has type State and State maps to Place in this transformation, set:
+    conversionHint: "resolve(nextState, Place)"
+
+## Container / Parent Bindings
+
+When a feature in the target metaclass is a reference of type T, and the source metaclass is contained
+(via a containment reference) in another metaclass that maps to T in the same transformation, generate
+a SEPARATE mapping entry with:
+
+    sourceAttribute: "parent"
+    conversionHint: null
+    reason: "source container maps to <T> via <SourceContainer>-><T> rule"
+
+Example: Transition is owned by State (State.ownedTransitions is a containment), State maps to Place,
+and Transition.inputPlace has type Place → generate an entry with sourceAttribute "parent".
+
+## Unresolvable References
+
+If a reference in the target has no clear mapping (not direct, not two-pass, not parent), include it in
+the JSON response with confidence "low" and a reason explaining what is missing.`;
+
+// ============================================
 // EXPORT DEFAULT PROMPTS
 // ============================================
 
@@ -440,6 +578,7 @@ export const DEFAULT_PROMPTS: Record<PromptType, string> = {
     refactoring: REFACTORING_PROMPT,
     ocl: OCL_PROMPT,
     import: IMPORT_PROMPT,
+    mappings: MAPPINGS_PROMPT,
 };
 
 export default DEFAULT_PROMPTS;

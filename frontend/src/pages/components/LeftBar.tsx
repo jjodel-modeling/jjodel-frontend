@@ -13,6 +13,9 @@ import {Link, useNavigate, useSearchParams} from "react-router-dom";
 import { DevModeLabel } from '../../components/DevModeLabel/DevModeLabel';
 import { buildProjectExportJson } from '../../model/megamodelPersistence';
 import { getRuntimeMegamodel } from '../../model/megamodelRuntime';
+import DockManager from '../../components/abstract/DockManager';
+import { createM2 } from './Navbar';
+import { JjodelEvents } from '../../events/registry';
 
 function relativeTime(date: number | string | Date): string {
     const d = typeof date === 'number' ? date : (typeof date === 'string' ? new Date(date).getTime() : date.getTime());
@@ -295,6 +298,65 @@ function LeftBar(props: LeftBarProps): JSX.Element {
     // Check if there are any projects for "Recently Modified" section
     const hasProjects = props.projects && props.projects.length > 0;
 
+    // Collapsed state for project-sidebar sections (local-only)
+    const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+    const toggleSection = (key: string) =>
+        setCollapsedSections(prev => ({ ...prev, [key]: !prev[key] }));
+
+    const openMegamodel = () => {
+        window.dispatchEvent(new CustomEvent(JjodelEvents.OPEN_MEGAMODEL));
+    };
+    // Listener is added in a follow-up task (ProjectEditor mounts ShareProjectModal).
+    const openShareModal = () => {
+        window.dispatchEvent(new CustomEvent('jjodel:openShareModal'));
+    };
+
+    const pMetamodels = project?.metamodels || [];
+    const pModels = project?.models || [];
+    const pViewpoints = project?.viewpoints || [];
+    // LProject.transformations is synced by ProjectEditor via SetFieldAction (see ProjectEditor.tsx:169)
+    const pTransformations = (((project as any)?.transformations) || []) as Array<{ id: string; name: string }>;
+
+    const renderSection = (
+        key: string,
+        label: string,
+        badge: 'M' | 'm' | 'T' | 'V',
+        items: Array<{ id: string; name: string }>,
+        onItemClick: (item: any) => void,
+        onNewClick: () => void,
+        newLabel: string,
+    ) => {
+        const isCollapsed = !!collapsedSections[key];
+        return (
+            <div className={`psb-section${isCollapsed ? ' collapsed' : ''}`}>
+                <div className="psb-section-header" onClick={() => toggleSection(key)}>
+                    <span className="psb-section-label">{label}</span>
+                    <i className="bi bi-chevron-down psb-chevron" />
+                </div>
+                <div className="psb-section-body">
+                    {items.map(item => (
+                        <div
+                            key={item.id}
+                            className="psb-item"
+                            onClick={() => onItemClick(item)}
+                            title={item.name}
+                        >
+                            <span className={`psb-badge psb-badge--${badge}`}>{badge}</span>
+                            <span className="psb-item-name">{item.name}</span>
+                            <i className="bi bi-arrow-right psb-item-arrow" />
+                        </div>
+                    ))}
+                    <div className="psb-new" onClick={onNewClick}>
+                        <i className="bi bi-plus" />
+                        <span>{newLabel}</span>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    const isProjectActionsCollapsed = !!collapsedSections['project'];
+
     return(<>
         {/* Dev Mode Label */}
         <DevModeLabel componentId="T2.3" position="top-left" />
@@ -302,66 +364,76 @@ function LeftBar(props: LeftBarProps): JSX.Element {
         {active === 'Project' ?
             <div className={'leftbar leftbar--project'}>
                 {/* Back to all projects — with unsaved check */}
-                <Item action={handleBackToProjects} icon={<i className="bi bi-chevron-left" />} muted>All projects</Item>
+                <div className="psb-back" onClick={handleBackToProjects}>
+                    <i className="bi bi-chevron-left" />
+                    <span>All projects</span>
+                </div>
 
-                <Divisor />
+                {/* Project Megamodel — single entry (listener in ProjectEditor.tsx:360) */}
+                <div className="psb-megamodel" onClick={openMegamodel} title="Project Megamodel">
+                    <i className="bi bi-diagram-3" />
+                    <span className="psb-item-name">{project?.name || 'Project Megamodel'}</span>
+                    <i className="bi bi-arrow-right psb-item-arrow" />
+                </div>
 
-                {/* Project name + status badge */}
-                <ProjectHeader
-                    name={props.project?.name || 'Unnamed Project'}
-                    lastModified={props.project?.lastModified}
-                />
+                {renderSection(
+                    'metamodels', 'Metamodels', 'M',
+                    pMetamodels.map(m => ({ id: m.id, name: m.name })),
+                    (m) => { const lm = pMetamodels.find(x => x.id === m.id); if (lm) DockManager.open2(lm); },
+                    () => { if (project) createM2(project); },
+                    'New metamodel',
+                )}
 
-                {/* Modified indicator (existing) */}
-                {isProjectModified() && <span className="modified-indicator"><i className="bi bi-circle-fill modified" /> Unsaved changes</span>}
+                {renderSection(
+                    'models', 'Models', 'm',
+                    pModels.map(m => ({ id: m.id, name: m.name })),
+                    (m) => { const lm = pModels.find(x => x.id === m.id); if (lm) DockManager.open2(lm); },
+                    () => navigateToSection('models'),
+                    'New model',
+                )}
 
-                {/* Structure section */}
-                <SectionLabel>Structure</SectionLabel>
-                <Item
-                    action={() => navigateToSection('metamodels')}
-                    icon={icon['metamodel'] || <i className="bi bi-diagram-3" />}
-                    active={currentSection === 'metamodels'}
-                    count={project?.metamodels?.length ?? 0}
-                >Metamodels</Item>
-                <Item
-                    action={() => navigateToSection('models')}
-                    icon={icon['model'] || <i className="bi bi-file-earmark" />}
-                    active={currentSection === 'models'}
-                    count={project?.models?.length ?? 0}
-                >Models</Item>
+                {renderSection(
+                    'transformations', 'Transforms', 'T',
+                    pTransformations.map(t => ({ id: t.id, name: t.name })),
+                    // Click on single transform navigates to section; opening requires
+                    // source/target metamodels + execute callback that live in ProjectEditor.
+                    () => navigateToSection('transformations'),
+                    () => navigateToSection('transformations'),
+                    'New transform',
+                )}
 
-                {/* Behaviour section */}
-                <SectionLabel>Behaviour</SectionLabel>
-                <Item
-                    action={() => navigateToSection('transformations')}
-                    icon={<i className="bi bi-arrow-left-right" />}
-                    active={currentSection === 'transformations'}
-                >Transforms</Item>
-                <Item
-                    action={() => navigateToSection('viewpoints')}
-                    icon={<i className="bi bi-eye" />}
-                    active={currentSection === 'viewpoints'}
-                    count={project?.viewpoints?.length ?? 0}
-                >Viewpoints</Item>
+                {renderSection(
+                    'viewpoints', 'Viewpoints', 'V',
+                    pViewpoints.map(v => ({ id: v.id, name: v.name })),
+                    (v) => { const lv = pViewpoints.find(x => x.id === v.id); if (lv) DockManager.openViewpoint(lv); },
+                    () => navigateToSection('viewpoints'),
+                    'New viewpoint',
+                )}
 
-                {/* Other section */}
-                <SectionLabel>Other</SectionLabel>
-                <Item
-                    action={() => navigateToSection('documentation')}
-                    icon={<i className="bi bi-file-text" />}
-                    active={currentSection === 'documentation'}
-                >Docs</Item>
-
-                {/* Spacer pushes actions to bottom */}
-                <div className="sidebar-spacer" />
-
-                {/* Bottom actions */}
-                <div className="sidebar-actions">
-                    <Item action={exportProject} icon={icon['download']} muted>Download</Item>
-                    <Item action={toggleFavorite} icon={!project?.isFavorite ? icon['favorite'] : icon['favoriteFill']} muted>
-                        {!project?.isFavorite ? 'Add to favorites' : 'Remove from favorites'}
-                    </Item>
-                    <Item action={closeProject} icon={icon['close']} danger>Close project</Item>
+                {/* Project actions — collapsable, pushed to bottom by auto margin */}
+                <div className={`psb-section psb-section--actions${isProjectActionsCollapsed ? ' collapsed' : ''}`}>
+                    <div className="psb-section-header" onClick={() => toggleSection('project')}>
+                        <span className="psb-section-label">Project</span>
+                        <i className="bi bi-chevron-down psb-chevron" />
+                    </div>
+                    <div className="psb-section-body">
+                        <div className="psb-action" onClick={exportProject}>
+                            <i className="bi bi-download" />
+                            <span>Download</span>
+                        </div>
+                        <div className="psb-action" onClick={toggleFavorite}>
+                            <i className={`bi ${project?.isFavorite ? 'bi-star-fill' : 'bi-star'}`} />
+                            <span>{project?.isFavorite ? 'Remove from favorites' : 'Add to favorites'}</span>
+                        </div>
+                        <div className="psb-action" onClick={openShareModal}>
+                            <i className="bi bi-share" />
+                            <span>Share</span>
+                        </div>
+                        <div className="psb-action psb-action--danger" onClick={closeProject}>
+                            <i className="bi bi-x-circle" />
+                            <span>Close project</span>
+                        </div>
+                    </div>
                 </div>
             </div>
             :

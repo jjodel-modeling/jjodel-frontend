@@ -149,13 +149,34 @@
     color: #64748b;
 }
 
-.conversion-badge {
-    background: #fef3c7;
-    color: #92400e;
+// "auto-*" pill family (auto-resolved, auto-converted).
+// Distinctive violet/indigo palette — informational, never a warning. The family hue
+// avoids collisions with the rest of the design system (slate accent, cyan selection,
+// amber warning, green success, red error) and reads well on card-green backgrounds.
+// Base class handles layout + typography; modifiers apply the colors via tokens so
+// dark mode adapts automatically. See MappingCard.tsx for content (icon + label + title).
+.auto-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     padding: 1px 6px;
     border-radius: 4px;
     font-size: 10px;
     font-weight: 500;
+
+    i {
+        font-size: 11px;
+    }
+
+    &--resolved {
+        background: var(--color-auto-resolved-bg);
+        color: var(--color-auto-resolved-text);
+    }
+
+    &--converted {
+        background: var(--color-auto-converted-bg);
+        color: var(--color-auto-converted-text);
+    }
 }
 
 // Confidence badge

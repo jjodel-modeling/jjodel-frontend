@@ -31,6 +31,7 @@ export const JjodelEvents = {
   NEW_PROJECT: 'jjodel:new-project',
   OPEN_TRANSFORMATION: 'jjodel:openTransformation',
   TRANSFORMATIONS: 'jjodel:transformations',
+  OPEN_NEW_TRANSFORMATION_DIALOG: 'jjodel:open-new-transformation-dialog',
   // Export
   EXPORT_CANVAS: 'jjodel:export-canvas',
   // Layout
