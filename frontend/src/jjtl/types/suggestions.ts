@@ -59,3 +59,29 @@ export interface SuggestionResult {
     /** True when the AI mode errored and the UI can offer to retry with SimpleMatcher. */
     canFallbackToSimple?: boolean;
 }
+
+// ============================================
+// Analysis progress (AI pipeline phases)
+// ============================================
+
+/**
+ * Real, user-visible phases of the AI-backed mapping analysis pipeline.
+ * Fired in order by AIMatcher; UI maps each to a visual step.
+ *
+ * Contract for the onProgress callback: `onProgress(step, detail?)` means "the
+ * phase identified by `step` is NOW STARTING; any previously running phase is
+ * implicitly complete (with `detail` attached to it, if provided)." The panel's
+ * terminal "analyze() resolved" moment marks the last phase as completed — the
+ * service does not emit a separate end-of-pipeline event.
+ */
+export type MappingAnalysisStep = 'building-prompt' | 'calling-ai' | 'parsing';
+
+export type AnalysisProgressCallback = (step: MappingAnalysisStep, detail?: string) => void;
+
+/** UI-side per-step entry, one per phase. Managed as state in the panel. */
+export interface MappingAnalysisStepEntry {
+    id: MappingAnalysisStep;
+    label: string;
+    status: 'pending' | 'running' | 'completed' | 'error';
+    detail?: string;
+}

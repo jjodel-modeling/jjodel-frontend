@@ -7,7 +7,8 @@ import { MetamodelElement } from '../views/MetamodelTreeView';
 import {
     MappingSuggestion,
     SuggestionMode,
-    SuggestionResult
+    SuggestionResult,
+    AnalysisProgressCallback
 } from '../types/suggestions';
 import { SimpleMatcher } from './SimpleMatcher';
 import { AIMatcher } from './AIMatcher';
@@ -21,6 +22,10 @@ export interface AnalyzeOptions {
     aiProvider?: TAIProvider;
     /** Optional: allows the caller to cancel an in-flight analysis. */
     signal?: AbortSignal;
+    /** Optional: progress callback fired at each AI-pipeline phase boundary.
+     *  Only invoked in 'ai' mode — SimpleMatcher runs synchronously with no exposed
+     *  internal phases. Omitting this preserves legacy behavior fully. */
+    onProgress?: AnalysisProgressCallback;
 }
 
 export class MappingSuggestionService {
@@ -41,7 +46,7 @@ export class MappingSuggestionService {
         targetElements: MetamodelElement[],
         options: AnalyzeOptions
     ): Promise<SuggestionResult> {
-        const { mode, sourceMetamodelName, targetMetamodelName, aiProvider, signal } = options;
+        const { mode, sourceMetamodelName, targetMetamodelName, aiProvider, signal, onProgress } = options;
 
         try {
             let suggestions: MappingSuggestion[];
@@ -65,7 +70,8 @@ export class MappingSuggestionService {
                     sourceMetamodelName,
                     targetMetamodelName,
                     aiProvider,
-                    signal
+                    signal,
+                    onProgress
                 );
             }
 
