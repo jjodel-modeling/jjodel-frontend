@@ -1,5 +1,26 @@
 # Claude Code Session Log
 
+## 2026-04-22 — build: strip `console.log/debug/info/trace` dal bundle di produzione
+**Prompt**: configurare Vite per rimuovere automaticamente i `console.log/debug/info/trace` in production build, preservando `console.warn/error` per diagnostica utente. Zero modifiche al sorgente — dev mode (`npm run dev`) mantiene tutti i log attivi. Motivazione: prevenire regressioni come commit `4d81bbed33` (cleanup manuale di `console.log` ha accidentalmente commentato `onSuggestionsChange` in SuggestedMappingsPanel rompendo le match arrows per un mese).
+**File toccati**:
+- frontend/vite.config.ts (convertito `defineConfig({...})` in `defineConfig(({ mode }) => ({...}))` per poter gating sulla mode; aggiunto campo `esbuild` top-level condizionato a `mode === 'production'` — in production: `drop: ['debugger']` + `pure: ['console.log', 'console.debug', 'console.info', 'console.trace']`, in dev: `{}` — oggetto vuoto per lasciare esbuild transformer default e preservare tutti i log in HMR.)
+- docs/claude-code-log.md
+**Esito**: ✅ completato
+**Note**:
+  - **`pure` vs `drop` — scelta consapevole**. `drop: ['console']` avrebbe rimosso TUTTE le chiamate a `console.*` inclusi `warn` e `error` — troppo aggressivo, rompe l'osservabilità user-facing. `pure: ['console.log', ...]` marca solo le chiamate specifiche come "side-effect-free": minifier le rimuove solo se il valore di ritorno non è usato (che per `console.log` è sempre true). `console.warn/error` non elencati in `pure` → preservati.
+  - **Gating su `mode === 'production'`**. La config `esbuild` top-level in Vite è applicata anche al dev transformer (non solo al build). Se avessi messo `pure` senza gating, la rimozione sarebbe avvenuta anche in dev, perdendo la diagnostica durante lo sviluppo. Il controllo `mode === 'production' ? {...} : {}` limita lo stripping al solo build (`vite build` → mode=production, `vite dev` → mode=development).
+  - **Verifica bundle pre/post-fix**. Sorgente: 989 `console.log` (grep ricorsivo su `src/**/*.ts[x]`). Bundle post-fix: 15 residui, tutti *legitimate*:
+    - (a) stringhe letterali in error messages: `"console.log inside postprocess blocks."` (Nearley runtime), blacklist array `["console.log", "console.error", "console.warn", "JSON.stringify", ...]` per introspezione
+    - (b) codice dentro template strings del template engine Eta embedded — pattern tipo `console.log('eta value', {it, obj, tagName})` — sono contenuto di stringhe che Eta compila dinamicamente, non statement JS visibili a esbuild
+    - (c) aliasing deliberato `console.logg = console.log` + `enableConsole/disableConsole` — meccanismo in-code di toggle debug
+    - Nessuna chiamata live a `console.log` sopravvive. `console.debug/info/trace` → 0 residui. `console.warn/error` → 113 preservati.
+  - **Chunk principale sceso da 15,525.17 kB a 15,520.02 kB** (~5 kB risparmiati). Il risparmio è modesto perché la maggior parte dei 989 `console.log` sono una-riga, ma cumulativamente ne toglie quasi 1000 chiamate. Benefit reale è architetturale (no regressioni da cleanup manuale), non dimensionale.
+  - **Follow-up non applicato in questo commit**: audit dei `console.log` per identificare quelli che dovrebbero essere promossi a `console.warn` (casi utili in produzione tipo "type XYZ sconosciuto, fallback a EString") vs quelli puramente diagnostici. Task separato.
+  - **Verifica**: `npx vite build` → completato in 38.95s, nessun warning nuovo. `npx tsc --noEmit 2>&1 | grep vite.config` → 0 match. Nessun test regression atteso — la config è build-time-only, non tocca il runtime.
+**Nome del documento prompt**: 2026-04-22 prompt-vite-strip-console-log.md
+
+---
+
 ## 2026-04-22 — fix: JjScript `create attribute type` — fix finale a 2 file (Pointer ID + early-return in DTypedElement)
 **Prompt**: entrambi i tentativi precedenti (short-name → Pointer ID, poi reversal a short-name) hanno fallito runtime — short-name pure cade in ESTRING. Il blocco reale è `DTypedElement.Selectors.getByName2(type)` che fallisce per *entrambe* le forme di input. Il prompt prescrive fix a 2 file: (1) ripristinare la conversione a Pointer ID in `create.ts`, (2) aggiungere un early-return in `DTypedElement` che bypassi `getByName2` quando riceve già un Pointer ID primitivo valido (`/^Pointer_E[A-Z]+$/`).
 **File toccati**:
