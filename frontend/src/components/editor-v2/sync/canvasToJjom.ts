@@ -29,6 +29,7 @@ import {
 import type { Node } from '@xyflow/react';
 import type { ClassNodeData } from '../types';
 import { markCanvasUpdated, markCanvasUpdatedBatch, markCanvasEdgePair } from './syncState';
+import { captureAttributeOrphanValues } from '../hooks/useOrphanFeatures';
 
 // ---------------------------------------------------------------------------
 // Position sync
@@ -471,11 +472,20 @@ export function syncUpdateReference(
 export function syncRemoveAttribute(attrId: string, _vertexId: string): void {
     try {
         const lAttr: any = LPointerTargetable.fromPointer(attrId);
-        if (lAttr) {
-            TRANSACTION('EditorV2 remove attribute', () => {
-                DeleteElementAction.new(lAttr.__raw ?? lAttr);
-            });
-        }
+        if (!lAttr) return;
+
+        // Snapshot instance values into OrphanStore BEFORE delete: the
+        // lAttr.delete() cascade (Dummy.get_delete, case 'instanceof') removes
+        // every DValue bound to this attribute, so a post-hoc capture would
+        // find nothing. Values become restorable on a later re-add matching
+        // {classId, attrName, attrType} — see useOrphanFeatures.
+        captureAttributeOrphanValues(attrId);
+
+        // Use lAttr.delete() (not DeleteElementAction direct) so Dummy's
+        // cascade fires and every zombie DValue with instanceof === attrId
+        // gets properly removed from idlookup. lAttr.delete() wraps its own
+        // TRANSACTION internally, so no outer wrapper here.
+        lAttr.delete();
     } catch (err) {
         console.warn('[canvasToJjom] Failed to remove attribute:', err);
     }
