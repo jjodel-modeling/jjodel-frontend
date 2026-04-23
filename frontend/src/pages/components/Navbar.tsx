@@ -119,8 +119,67 @@ interface NewDocumentButtonProps {
 function NewDocumentButton({ project, metamodels }: NewDocumentButtonProps) {
     const [open, setOpen] = useState(false);
     const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+    const [submenuOpen, setSubmenuOpen] = useState(false);
+    const [submenuPos, setSubmenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
     const containerRef = useRef<HTMLDivElement>(null);
     const btnRef = useRef<HTMLButtonElement>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
+    const modelItemRef = useRef<HTMLButtonElement>(null);
+    const openTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const hasMetamodel = metamodels.length > 0;
+    const isModelSubmenu = metamodels.length > 1;
+    // DModel has no lastModified/createdAt field — sort alphabetically by name (user choice).
+    const sortedMetamodels = useMemo(
+        () => (isModelSubmenu ? [...metamodels].sort((a, b) => a.name.localeCompare(b.name)) : []),
+        [metamodels, isModelSubmenu]
+    );
+
+    const clearTimers = useCallback(() => {
+        if (openTimerRef.current) { clearTimeout(openTimerRef.current); openTimerRef.current = null; }
+        if (closeTimerRef.current) { clearTimeout(closeTimerRef.current); closeTimerRef.current = null; }
+    }, []);
+
+    const computeSubmenuPos = useCallback((): { top: number; left: number } => {
+        if (!modelItemRef.current || !menuRef.current) return { top: 0, left: 0 };
+        const itemRect = modelItemRef.current.getBoundingClientRect();
+        const menuRect = menuRef.current.getBoundingClientRect();
+        const SUBMENU_WIDTH = 240;
+        const rightSideX = menuRect.right + 4;
+        const fitsRight = rightSideX + SUBMENU_WIDTH + 8 <= window.innerWidth;
+        return {
+            top: itemRect.top,
+            left: fitsRight ? rightSideX : Math.max(8, menuRect.left - SUBMENU_WIDTH - 4),
+        };
+    }, []);
+
+    const openSubmenuNow = useCallback(() => {
+        setSubmenuPos(computeSubmenuPos());
+        setSubmenuOpen(true);
+    }, [computeSubmenuPos]);
+
+    const scheduleOpenSubmenu = useCallback(() => {
+        if (closeTimerRef.current) { clearTimeout(closeTimerRef.current); closeTimerRef.current = null; }
+        if (openTimerRef.current || submenuOpen) return;
+        openTimerRef.current = setTimeout(() => {
+            openTimerRef.current = null;
+            openSubmenuNow();
+        }, 150);
+    }, [submenuOpen, openSubmenuNow]);
+
+    const scheduleCloseSubmenu = useCallback(() => {
+        if (openTimerRef.current) { clearTimeout(openTimerRef.current); openTimerRef.current = null; }
+        if (closeTimerRef.current) return;
+        closeTimerRef.current = setTimeout(() => {
+            closeTimerRef.current = null;
+            setSubmenuOpen(false);
+        }, 100);
+    }, []);
+
+    const cancelCloseSubmenu = useCallback(() => {
+        if (closeTimerRef.current) { clearTimeout(closeTimerRef.current); closeTimerRef.current = null; }
+    }, []);
 
     // When opening, snapshot the trigger's viewport rect so the menu can render with
     // position: fixed and escape the .appbar-tabs { overflow: hidden } clipping context.
@@ -144,18 +203,26 @@ function NewDocumentButton({ project, metamodels }: NewDocumentButtonProps) {
         };
     }, [open]);
 
+    useEffect(() => {
+        if (!open) {
+            setSubmenuOpen(false);
+            clearTimers();
+        }
+    }, [open, clearTimers]);
+
+    useEffect(() => () => clearTimers(), [clearTimers]);
+
     // Build runtime entries: apply project-state gates on top of DOCUMENT_TYPES defaults.
-    // model requires ≥1 metamodel (uses metamodels[0] — same pattern as Navbar.tsx:764 and ProjectEditor.tsx:846).
+    // model behavior branches on metamodel count (0 → disabled with tooltip; 1 → direct create; N>1 → submenu).
     // transformation requires ≥1 metamodel (the NewTransformationDialog needs source + target pickers).
-    const hasMetamodel = metamodels.length > 0;
     const entries: Array<DocumentTypeEntry & { onCreate?: () => void; disabledReason?: string }> = DOCUMENT_TYPES.map(entry => {
         switch (entry.type) {
             case 'metamodel':
                 return { ...entry, onCreate: () => createM2(project) };
             case 'model':
-                return hasMetamodel
-                    ? { ...entry, onCreate: () => createM1(project, metamodels[0]) }
-                    : { ...entry, available: false, disabledReason: 'Create a metamodel first' };
+                if (!hasMetamodel) return { ...entry, available: false, disabledReason: 'Create a metamodel first' };
+                if (isModelSubmenu) return { ...entry };
+                return { ...entry, onCreate: () => createM1(project, metamodels[0]) };
             case 'transformation':
                 return hasMetamodel
                     ? { ...entry, onCreate: () => window.dispatchEvent(new CustomEvent(JjodelEvents.OPEN_NEW_TRANSFORMATION_DIALOG)) }
@@ -186,38 +253,82 @@ function NewDocumentButton({ project, metamodels }: NewDocumentButtonProps) {
                 <div
                     className="new-document__menu"
                     role="menu"
+                    ref={menuRef}
                     style={{ top: menuPos.top, left: menuPos.left }}
                 >
-                    {entries.map((entry, i) => (
-                        <React.Fragment key={entry.type}>
-                            {firstUnavailableIdx > 0 && i === firstUnavailableIdx && (
-                                <div className="new-document__divider" />
-                            )}
-                            <button
-                                type="button"
-                                role="menuitem"
-                                className={`new-document__item ${!entry.available ? 'new-document__item--disabled' : ''}`}
-                                onClick={() => {
-                                    if (!entry.available || !entry.onCreate) return;
-                                    entry.onCreate();
-                                    setOpen(false);
-                                }}
-                                disabled={!entry.available}
-                                title={entry.disabledReason}
-                            >
-                                <span
-                                    className="new-document__badge"
-                                    style={{ background: entry.badgeBg, color: entry.badgeColor }}
-                                >{entry.badge}</span>
-                                <span className="new-document__text">
-                                    <span className="new-document__label">
-                                        {entry.label}
-                                        {!entry.available && <span className="new-document__soon">coming soon</span>}
+                    {entries.map((entry, i) => {
+                        const isModelWithSubmenu = entry.type === 'model' && isModelSubmenu;
+                        return (
+                            <React.Fragment key={entry.type}>
+                                {firstUnavailableIdx > 0 && i === firstUnavailableIdx && (
+                                    <div className="new-document__divider" />
+                                )}
+                                <button
+                                    ref={isModelWithSubmenu ? modelItemRef : undefined}
+                                    type="button"
+                                    role="menuitem"
+                                    aria-haspopup={isModelWithSubmenu ? 'menu' : undefined}
+                                    aria-expanded={isModelWithSubmenu ? submenuOpen : undefined}
+                                    className={`new-document__item ${!entry.available ? 'new-document__item--disabled' : ''}`}
+                                    onClick={() => {
+                                        if (isModelWithSubmenu) {
+                                            clearTimers();
+                                            if (!submenuOpen) openSubmenuNow();
+                                            return;
+                                        }
+                                        if (!entry.available || !entry.onCreate) return;
+                                        entry.onCreate();
+                                        setOpen(false);
+                                    }}
+                                    onMouseEnter={isModelWithSubmenu ? scheduleOpenSubmenu : undefined}
+                                    onMouseLeave={isModelWithSubmenu ? scheduleCloseSubmenu : undefined}
+                                    disabled={!entry.available}
+                                    title={entry.disabledReason}
+                                >
+                                    <span
+                                        className="new-document__badge"
+                                        style={{ background: entry.badgeBg, color: entry.badgeColor }}
+                                    >{entry.badge}</span>
+                                    <span className="new-document__text">
+                                        <span className="new-document__label">
+                                            {entry.label}
+                                            {entry.comingSoon && <span className="new-document__soon">coming soon</span>}
+                                        </span>
+                                        <span className="new-document__desc">{entry.description}</span>
                                     </span>
-                                    <span className="new-document__desc">{entry.description}</span>
-                                </span>
-                            </button>
-                        </React.Fragment>
+                                    {isModelWithSubmenu && <i className="bi bi-chevron-right new-document__chevron" />}
+                                </button>
+                            </React.Fragment>
+                        );
+                    })}
+                </div>
+            )}
+            {open && submenuOpen && isModelSubmenu && (
+                <div
+                    className="new-document__submenu"
+                    role="menu"
+                    style={{ top: submenuPos.top, left: submenuPos.left }}
+                    onMouseEnter={cancelCloseSubmenu}
+                    onMouseLeave={scheduleCloseSubmenu}
+                >
+                    {sortedMetamodels.map(mm => (
+                        <button
+                            key={mm.id}
+                            type="button"
+                            role="menuitem"
+                            className="new-document__submenu-item"
+                            onClick={() => {
+                                createM1(project, mm);
+                                setSubmenuOpen(false);
+                                setOpen(false);
+                            }}
+                        >
+                            <span
+                                className="new-document__badge"
+                                style={{ background: '#E9D5FF', color: '#7C3AED' }}
+                            >{(mm.name || 'M').charAt(0).toUpperCase()}</span>
+                            <span className="new-document__submenu-label">{mm.name}</span>
+                        </button>
                     ))}
                 </div>
             )}

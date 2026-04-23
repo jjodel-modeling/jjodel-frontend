@@ -8,6 +8,7 @@ export interface DocumentTypeEntry {
     badgeBg: string;
     badgeColor: string;
     available: boolean;
+    comingSoon?: boolean;
 }
 
 export const DOCUMENT_TYPES: readonly DocumentTypeEntry[] = [
@@ -63,5 +64,6 @@ export const DOCUMENT_TYPES: readonly DocumentTypeEntry[] = [
         badgeBg: '#f1f5f9',
         badgeColor: '#94a3b8',
         available: false,
+        comingSoon: true,
     },
 ];

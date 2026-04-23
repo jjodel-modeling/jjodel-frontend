@@ -5,13 +5,23 @@
 
 import { MetamodelElement } from '../views/MetamodelTreeView';
 
+export interface ConvertMetamodelOptions {
+    /**
+     * When true, concrete classes also expose features inherited from their
+     * superclasses (direct + transitive), flagged via `MetamodelElement.inherited`.
+     * Only used by the Transformation Editor. Default: false.
+     */
+    includeInherited?: boolean;
+}
+
 /**
  * Convert a Jjodel metamodel (LModel) to JjTL MetamodelElement array
  *
  * @param metamodel - The Jjodel LModel metamodel
+ * @param opts - Optional flags (see ConvertMetamodelOptions)
  * @returns Array of MetamodelElement for use in JjTL views
  */
-export function convertMetamodelToJjtl(metamodel: any): MetamodelElement[] {
+export function convertMetamodelToJjtl(metamodel: any, opts: ConvertMetamodelOptions = {}): MetamodelElement[] {
     if (!metamodel) {
         return [];
     }
@@ -22,13 +32,13 @@ export function convertMetamodelToJjtl(metamodel: any): MetamodelElement[] {
     const packages = metamodel.packages || [];
 
     for (const pkg of packages) {
-        elements.push(convertPackage(pkg));
+        elements.push(convertPackage(pkg, opts));
     }
 
     // If no packages, try to get classes directly (some metamodels may not use packages)
     if (elements.length === 0 && metamodel.classes) {
         for (const cls of metamodel.classes) {
-            elements.push(convertClass(cls));
+            elements.push(convertClass(cls, opts));
         }
     }
 
@@ -38,13 +48,13 @@ export function convertMetamodelToJjtl(metamodel: any): MetamodelElement[] {
 /**
  * Convert a Jjodel LPackage to MetamodelElement
  */
-function convertPackage(pkg: any): MetamodelElement {
+function convertPackage(pkg: any, opts: ConvertMetamodelOptions = {}): MetamodelElement {
     const children: MetamodelElement[] = [];
 
     // Convert classes
     const classes = pkg.classes || [];
     for (const cls of classes) {
-        children.push(convertClass(cls));
+        children.push(convertClass(cls, opts));
     }
 
     // Convert enumerators
@@ -56,7 +66,7 @@ function convertPackage(pkg: any): MetamodelElement {
     // Convert subpackages recursively
     const subpackages = pkg.subpackages || [];
     for (const subpkg of subpackages) {
-        children.push(convertPackage(subpkg));
+        children.push(convertPackage(subpkg, opts));
     }
 
     return {
@@ -70,26 +80,59 @@ function convertPackage(pkg: any): MetamodelElement {
 /**
  * Convert a Jjodel LClass to MetamodelElement
  */
-function convertClass(cls: any): MetamodelElement {
+function convertClass(cls: any, opts: ConvertMetamodelOptions = {}): MetamodelElement {
     const children: MetamodelElement[] = [];
+    const isAbstract = cls.abstract || cls.isAbstract || false;
 
-    // Convert attributes
+    // Convert own attributes
     const attributes = cls.attributes || [];
     for (const attr of attributes) {
         children.push(convertAttribute(attr));
     }
 
-    // Convert references
+    // Convert own references
     const references = cls.references || [];
     for (const ref of references) {
         children.push(convertReference(ref));
+    }
+
+    // Convert inherited features (concrete classes only). Uses the LClass proxy's
+    // `extendsChain` (direct + transitive supertypes, cycle-safe). Grouped by
+    // superclass (alphabetical) so that entries stay predictable under multiple
+    // inheritance. Synthetic IDs guarantee DOM uniqueness for MappingLinesOverlay.
+    if (opts.includeInherited && !isAbstract) {
+        const superChain = cls.extendsChain ?? cls.superclasses ?? [];
+        const sortedSupers = [...superChain].sort((a: any, b: any) =>
+            (a?.name ?? '').localeCompare(b?.name ?? '')
+        );
+
+        for (const superCls of sortedSupers) {
+            const fromClassName = superCls?.name ?? 'unknown';
+            const ownAttrs = superCls?.ownAttributes ?? [];
+            const ownRefs = superCls?.ownReferences ?? [];
+
+            for (const attr of ownAttrs) {
+                children.push({
+                    ...convertAttribute(attr),
+                    id: `${cls.id}__inherited__${attr.id}`,
+                    inherited: { fromClassName },
+                });
+            }
+            for (const ref of ownRefs) {
+                children.push({
+                    ...convertReference(ref),
+                    id: `${cls.id}__inherited__${ref.id}`,
+                    inherited: { fromClassName },
+                });
+            }
+        }
     }
 
     return {
         id: cls.id || `cls-${cls.name}`,
         name: cls.name || 'Unnamed Class',
         type: 'class',
-        isAbstract: cls.abstract || cls.isAbstract || false,
+        isAbstract,
         children: children.length > 0 ? children : undefined,
     };
 }
