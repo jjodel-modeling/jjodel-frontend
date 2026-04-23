@@ -1386,13 +1386,26 @@ export function reconcileJjomAfterUndoRedo(
             const dAttr = lookup[rfAttr.id] as any;
             if (!dAttr) continue;
 
-            if (dAttr.name !== rfAttr.name) {
-                // console.log('[UndoReconcile] Renaming attribute:', { id: rfAttr.id, from: dAttr.name, to: rfAttr.name });
-                try {
-                    const lAttr: any = LPointerTargetable.fromPointer(rfAttr.id);
-                    if (lAttr) lAttr.name = rfAttr.name;
-                } catch { /* ignore */ }
-            }
+            // DISABLED (2026-04-23): Opzione 4 interim fix per bug "undo/attr_0" / "attributi rinominati tornano a default".
+            // Il rename branch forzava sincronizzazione JjOM al RF snapshot name, ma il snapshot non cattura
+            // i rename fatti via Info panel (dock destro) che vanno solo in Redux. Il risultato era che Ctrl+Z
+            // post-rename riportava il nome al valore pre-rename presente nel RF snapshot.
+            //
+            // Trade-off accettato: Ctrl+Z dopo inline-edit rename non revoca più il rename. Per revocarlo,
+            // l'utente deve ri-rinominare manualmente.
+            //
+            // Fix strutturale (opzione 3 del report): unificare il dual undo system. Tracked come debito
+            // tecnico in docs/TECH-DEBT.md.
+            //
+            // Riferimento: docs/reports/2026-04-23-undo-attr-zero-analysis.md (sezioni B.3, B.5, E.2)
+            //
+            // if (dAttr.name !== rfAttr.name) {
+            //     // console.log('[UndoReconcile] Renaming attribute:', { id: rfAttr.id, from: dAttr.name, to: rfAttr.name });
+            //     try {
+            //         const lAttr: any = LPointerTargetable.fromPointer(rfAttr.id);
+            //         if (lAttr) lAttr.name = rfAttr.name;
+            //     } catch { /* ignore */ }
+            // }
         }
     }
 
