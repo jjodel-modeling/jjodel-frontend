@@ -76,7 +76,7 @@ const AboutDialogContent = ({ isOpen, onClose }: AboutDialogProps) => {
 
                 {/* Version & License */}
                 <div className="about-dialog__meta">
-                    <span className="about-dialog__version">v2.0.6</span>
+                    <span className="about-dialog__version">v3.0.0</span>
                     <a
                         href="https://opensource.org/licenses/MIT"
                         target="_blank"

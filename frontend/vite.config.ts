@@ -5,7 +5,7 @@ import path from 'path'
 
 const __dirname = import.meta.dirname
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     react({
       babel: {
@@ -49,5 +49,14 @@ export default defineConfig({
     'global': 'globalThis',
     // 'window.jQuery': 'window.$',
     // 'window.$': 'window.$'
-  }
-})
+  },
+  // Production-only: strip diagnostic console.log/debug/info/trace calls and
+  // debugger statements. console.warn and console.error are preserved so user
+  // bug reports still surface useful signals. Source files are untouched — this
+  // prevents the class of regressions where manual cleanup of console.log
+  // accidentally comments out live code (see commit 4d81bbed33).
+  esbuild: mode === 'production' ? {
+    drop: ['debugger'],
+    pure: ['console.log', 'console.debug', 'console.info', 'console.trace'],
+  } : {},
+}))

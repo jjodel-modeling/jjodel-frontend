@@ -123,6 +123,31 @@ describe('Parser: create', () => {
         const a = args<CreateArgs>('create reference items in Order type Item [0..*] containment');
         expect(a.options?.containment).toBe(true);
     });
+
+    // Regression: create attribute used to ignore the `type` parameter and always
+    // produce EString. These assertions document the parser output for every
+    // alias that the executor's normalizeAttributeType is expected to accept.
+    describe('create attribute — type parameter aliases', () => {
+        const primitiveAliases = ['String', 'string', 'str', 'Integer', 'integer', 'int',
+                                  'Boolean', 'boolean', 'bool', 'Date', 'date',
+                                  'Double', 'double', 'Float', 'float'];
+        it.each(primitiveAliases)('parses alias %s as primitive type', (alias) => {
+            const a = args<CreateArgs>(`create attribute x in Person type ${alias}`);
+            expect(a.options?.type?.kind).toBe('primitive');
+        });
+
+        // E-prefixed Ecore names are not in TYPE_ALIASES, so the parser stores them
+        // as class-kind references. The executor's normalizeAttributeType is what
+        // maps them back to ShortAttribETypes values.
+        const ecoreNames = ['EString', 'EInt', 'EBoolean', 'EDate', 'EDouble',
+                            'EFloat', 'ELong', 'EShort', 'EByte', 'EChar'];
+        it.each(ecoreNames)('parses Ecore name %s as class-kind with raw name preserved', (name) => {
+            const a = args<CreateArgs>(`create attribute x in Person type ${name}`);
+            expect(a.options?.type?.kind).toBe('class');
+            const classType = a.options?.type as { kind: 'class'; name: { raw: string } };
+            expect(classType.name.raw).toBe(name);
+        });
+    });
 });
 
 // ─── DELETE ──────────────────────────────────────────────────

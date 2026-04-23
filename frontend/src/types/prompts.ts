@@ -15,7 +15,8 @@ export type PromptType =
     | 'validation'     // Model validation suggestions
     | 'refactoring'    // Metamodel improvement suggestions
     | 'ocl'            // OCL constraint generation
-    | 'import';        // Import mapping assistant
+    | 'import'         // Import mapping assistant
+    | 'mappings';      // Analyze Metamodels (JjTL suggestion generation)
 
 /**
  * Prompt metadata
@@ -104,6 +105,13 @@ export const PROMPT_REGISTRY: Record<PromptType, PromptMeta> = {
         name: 'Import Assistant',
         description: 'Prompt for helping map external data to metamodel',
         category: 'assistant',
+        supportsVariables: true,
+    },
+    mappings: {
+        id: 'mappings',
+        name: 'Analyze Metamodels',
+        description: 'System prompt used by the AI when analyzing source and target metamodels to suggest mappings',
+        category: 'analysis',
         supportsVariables: true,
     },
 };

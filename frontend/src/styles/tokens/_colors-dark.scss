@@ -88,6 +88,17 @@
   --color-info-subtle: rgba(96, 165, 250, 0.08);
 
   /* ============================================
+     AUTO-* PILL FAMILY (Violet / Indigo) — Dark
+     Paired with the light-mode tokens in _colors-light.scss.
+     Lighter text shades (violet-300 / indigo-300) on higher-opacity backgrounds
+     (0.20 vs light's 0.12) for visibility against dark card backgrounds.
+     ============================================ */
+  --color-auto-resolved-bg: rgba(139, 92, 246, 0.20);     /* violet-500 @ 20% */
+  --color-auto-resolved-text: #c4b5fd;                     /* violet-300 */
+  --color-auto-converted-bg: rgba(99, 102, 241, 0.20);    /* indigo-500 @ 20% */
+  --color-auto-converted-text: #a5b4fc;                    /* indigo-300 */
+
+  /* ============================================
      CANVAS & GRAPH COLORS
      For metamodel/model nodes in dark mode
      ============================================ */

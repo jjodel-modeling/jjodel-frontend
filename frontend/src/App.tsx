@@ -49,6 +49,7 @@ import { ToastProvider } from './components/Toast';
 import { DonationBanner } from './components/DonationBanner/DonationBanner';
 import HelpDrawer from './components/HelpDrawer';
 import ExplainModal from './components/ExplainModal';
+import WelcomeModal from './components/WelcomeModal';
 
 let firstLoading = true;
 let browserData = U.getOSBrowserData();
@@ -162,6 +163,7 @@ function App(props: AllProps): JSX.Element {
                 {user && <Try><HelpDrawer/></Try>}
                 {user && <Try><ExplainModal/></Try>}
                 {user && <Try><DonationBanner/></Try>}
+                {user && <Try><WelcomeModal/></Try>}
 
             </div>
         </TreeViewPanelProvider>

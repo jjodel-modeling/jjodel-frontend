@@ -58,67 +58,6 @@ export const JjtlToolbar: React.FC<JjtlToolbarProps> = ({
 
     return (
         <div className="jjtl-toolbar">
-            {/* Left section - File operations */}
-            <div className="jjtl-toolbar-section">
-                <button
-                    className="jjtl-toolbar-btn"
-                    onClick={onNew}
-                    title={`New Transformation (${getShortcutHint('N')})`}
-                >
-                    <i className="bi bi-file-earmark-plus" />
-                </button>
-
-                <button
-                    className="jjtl-toolbar-btn"
-                    onClick={onOpen}
-                    title={`Open (${getShortcutHint('O')})`}
-                >
-                    <i className="bi bi-folder2-open" />
-                </button>
-
-                <button
-                    className="jjtl-toolbar-btn"
-                    onClick={onSave}
-                    disabled={!hasUnsavedChanges}
-                    title={`Save (${getShortcutHint('S')})`}
-                >
-                    <i className="bi bi-floppy" />
-                </button>
-
-                <button
-                    className="jjtl-toolbar-btn"
-                    onClick={onSaveAs}
-                    title="Save As..."
-                >
-                    <i className="bi bi-floppy2" />
-                </button>
-
-                <div className="jjtl-toolbar-divider" />
-            </div>
-
-            {/* Edit operations */}
-            <div className="jjtl-toolbar-section">
-                <button
-                    className="jjtl-toolbar-btn"
-                    onClick={onUndo}
-                    disabled={!canUndo}
-                    title={`Undo (${getShortcutHint('Z')})`}
-                >
-                    <i className="bi bi-arrow-counterclockwise" />
-                </button>
-
-                <button
-                    className="jjtl-toolbar-btn"
-                    onClick={onRedo}
-                    disabled={!canRedo}
-                    title={`Redo (${getShortcutHint('Y')})`}
-                >
-                    <i className="bi bi-arrow-clockwise" />
-                </button>
-
-                <div className="jjtl-toolbar-divider" />
-            </div>
-
             {/* Metamodel selectors */}
             <div className="jjtl-toolbar-section jjtl-toolbar-section--metamodels">
                 <div className="jjtl-toolbar-metamodel">

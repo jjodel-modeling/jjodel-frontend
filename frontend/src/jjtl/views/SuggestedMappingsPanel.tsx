@@ -62,82 +62,162 @@ function isJjelExpression(hint: string): boolean {
 }
 
 /**
- * Format a single attribute mapping line in JjTL syntax.
- * conversionHint is either a JjEL expression (: expr) or falls back to a -- comment.
+ * Infer the helper's return type by probing the body for literal shapes.
+ * Order per spec: digits → EInt; true/false → EBoolean; quoted strings → EString; fallback EString.
  */
-function formatAttrMapping(attr: MappingSuggestion): string {
-    let line = `    ${attr.targetAttribute} := ${attr.sourceAttribute}`;
-    if (attr.conversionHint) {
-        if (isJjelExpression(attr.conversionHint)) {
-            line += ` : ${attr.conversionHint}`;
-        } else {
-            line += `  -- ${attr.conversionHint}`;
-        }
-    }
-    return line;
+function inferHelperReturnType(body: string): string {
+    if (/\b\d+\b/.test(body)) return 'EInt';
+    if (/\b(true|false)\b/.test(body)) return 'EBoolean';
+    if (/"[^"]*"/.test(body)) return 'EString';
+    return 'EString';
 }
 
 /**
- * Generate JjTL code from toInsert mapping suggestions
+ * Derive a helper function name from the target attribute name.
+ * Rule: if targetAttr ends with 's' AND length > 4, strip the trailing 's' and append 'Count'.
+ * Otherwise use targetAttr as-is.
+ * Examples: tokens → tokenCount, users → userCount, weight → weight, bus → bus.
  */
-function generateJjtlCode(mappings: MappingSuggestion[]): string {
+function deriveHelperName(targetAttr: string): string {
+    if (targetAttr.length > 4 && targetAttr.endsWith('s')) {
+        return targetAttr.slice(0, -1) + 'Count';
+    }
+    return targetAttr;
+}
+
+/**
+ * Walk the source metamodel tree to determine whether `className` is marked abstract.
+ * Returns false if the class is not found or no metamodel is provided — callers should
+ * treat an unknown class as concrete to avoid spurious warnings.
+ */
+function isAbstractSourceClass(
+    className: string,
+    metamodel: MetamodelElement[] | undefined
+): boolean {
+    if (!metamodel) return false;
+    for (const el of metamodel) {
+        if (el.type === 'class' && el.name === className) {
+            return !!el.isAbstract;
+        }
+        if (el.children && isAbstractSourceClass(className, el.children)) return true;
+    }
+    return false;
+}
+
+/**
+ * Format a single attribute mapping line in JjTL syntax.
+ *
+ * Rules:
+ *  - LHS empty/missing        → `''` (defensive skip: the LLM can produce mapping entries
+ *                               whose target attribute does not exist on the target class;
+ *                               emitting them would yield ` := source`, which is unparseable.
+ *                               The caller filters empty strings out of the rule body.)
+ *  - no hint                  → `target := source`
+ *  - hint is `resolve(...)`   → `target := source` (cross-type resolution is implicit in
+ *                               JjTL when N=1 rule per source type; the executor handles
+ *                               ambiguity when N>1 — the generator never emits resolve())
+ *  - hint starts with `if `   → extracted into a helper (always, no length threshold);
+ *                               the binding becomes `target := helperName(self)`
+ *  - looks like JjEL          → `target := source : <hint>`
+ *  - looks like prose         → `target := source -- <hint>` (inline comment)
+ */
+function formatAttrMapping(attr: MappingSuggestion, helperAccumulator: string[]): string {
+    const targetAttr = attr.targetAttribute ?? '';
+    const sourceAttr = attr.sourceAttribute ?? '';
+    const hint = attr.conversionHint?.trim();
+
+    if (!targetAttr.trim()) return '';
+
+    if (!hint) return `    ${targetAttr} := ${sourceAttr}`;
+
+    if (/^resolve\s*\(/.test(hint)) {
+        return `    ${targetAttr} := ${sourceAttr}`;
+    }
+
+    if (hint.startsWith('if ')) {
+        // Qualify bare references to the source attribute with the helper parameter `s.`
+        const body = sourceAttr
+            ? hint.replace(new RegExp(`\\b${sourceAttr}\\b`, 'g'), `s.${sourceAttr}`)
+            : hint;
+        const returnType = inferHelperReturnType(body);
+        const helperName = deriveHelperName(targetAttr);
+        helperAccumulator.push(
+            `helper ${helperName}(s: ${attr.sourceClass}) -> ${returnType} { ${body} }`
+        );
+        return `    ${targetAttr} := ${helperName}(self)`;
+    }
+
+    if (isJjelExpression(hint)) {
+        return `    ${targetAttr} := ${sourceAttr} : ${hint}`;
+    }
+    return `    ${targetAttr} := ${sourceAttr}  -- ${hint}`;
+}
+
+/**
+ * Generate JjTL code from toInsert mapping suggestions.
+ *
+ * Grouping: all mappings sharing the same (sourceClass, targetClass) pair collapse into a
+ * SINGLE rule block — no duplicate `X -> Y { }` emissions.
+ *
+ * Abstract source classes: when `sourceMetamodel` is provided, rules whose source class is
+ * marked `isAbstract` are suppressed (bindings should live on concrete subclass rules).
+ * A `-- <Source> is abstract` marker comment is emitted in their place. When no metamodel
+ * is provided, the class is treated as concrete (no false positives).
+ *
+ * TODO(parent-binding): detect target references with no explicit binding and emit
+ * `ref := parent` when the reference's target class matches the class produced by a rule
+ * that maps the CONTAINER of the current source class; otherwise emit a TODO comment.
+ * NOT IMPLEMENTED: would additionally need the target metamodel tree and the source
+ * containment graph. Enriching `MappingSuggestion` upstream is an alternative.
+ */
+function generateJjtlCode(
+    mappings: MappingSuggestion[],
+    sourceMetamodel?: MetamodelElement[]
+): string {
     if (mappings.length === 0) return '';
 
-    // Separate class mappings from attribute mappings
-    const classMappings = mappings.filter(m => !m.sourceAttribute);
-    const attrMappings = mappings.filter(m => m.sourceAttribute);
-
-    // Group attribute mappings by source-target class pair
-    const attrByClassPair = new Map<string, MappingSuggestion[]>();
-
-    for (const attr of attrMappings) {
-        const key = `${attr.sourceClass}|${attr.targetClass}`;
-        if (!attrByClassPair.has(key)) {
-            attrByClassPair.set(key, []);
-        }
-        attrByClassPair.get(key)!.push(attr);
+    // Group ALL mappings (class-level + attribute-level) by (sourceClass, targetClass).
+    const grouped = new Map<string, MappingSuggestion[]>();
+    for (const m of mappings) {
+        const key = `${m.sourceClass}::${m.targetClass}`;
+        if (!grouped.has(key)) grouped.set(key, []);
+        grouped.get(key)!.push(m);
     }
 
-    let code = '';
-    const processedPairs = new Set<string>();
+    const helpers: string[] = [];
+    const rules: string[] = [];
 
-    // First: Generate code for class mappings with their matching attributes
-    for (const classMapping of classMappings) {
-        const pairKey = `${classMapping.sourceClass}|${classMapping.targetClass}`;
-        const matchingAttrs = attrByClassPair.get(pairKey) || [];
+    for (const [key, group] of grouped) {
+        const [sourceClass, targetClass] = key.split('::');
 
-        code += `${classMapping.sourceClass} -> ${classMapping.targetClass}`;
-
-        if (classMapping.guardHint) {
-            code += ` where ${classMapping.guardHint}`;
+        if (isAbstractSourceClass(sourceClass, sourceMetamodel)) {
+            rules.push(
+                `-- ${sourceClass} is abstract; bindings should be inherited by concrete subclass rules`
+            );
+            continue;
         }
 
-        if (matchingAttrs.length > 0) {
-            code += ' {\n';
-            for (const attr of matchingAttrs) {
-                code += formatAttrMapping(attr) + '\n';
+        const classMapping = group.find(m => !m.sourceAttribute);
+        const attrMappings = group.filter(m => m.sourceAttribute);
+
+        let rule = `${sourceClass} -> ${targetClass}`;
+        if (classMapping?.guardHint) rule += ` where ${classMapping.guardHint}`;
+
+        if (attrMappings.length > 0) {
+            rule += ' {\n';
+            for (const attr of attrMappings) {
+                const line = formatAttrMapping(attr, helpers);
+                if (line) rule += line + '\n';
             }
-            code += '}';
+            rule += '}';
         }
 
-        code += '\n\n';
-        processedPairs.add(pairKey);
+        rules.push(rule);
     }
 
-    // Second: Handle attribute mappings with different target classes
-    for (const [pairKey, attrs] of attrByClassPair) {
-        if (processedPairs.has(pairKey)) continue;
-
-        const [sourceClass, targetClass] = pairKey.split('|');
-
-        code += `${sourceClass} -> ${targetClass} {\n`;
-        for (const attr of attrs) {
-            code += formatAttrMapping(attr) + '\n';
-        }
-        code += '}\n\n';
-    }
-
-    return code.trim();
+    let code = rules.join('\n\n');
+    if (helpers.length > 0) code += '\n\n' + helpers.join('\n');
+    return code;
 }
 
 export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
@@ -418,11 +498,13 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
     const handleInsertMappings = useCallback(() => {
         if (toInsertSuggestions.length === 0) return;
 
-        const code = generateJjtlCode(toInsertSuggestions);
+        // Pass the source metamodel so the generator can suppress rules for abstract classes.
+        const sourceMetamodel = getSourceMetamodel ? getSourceMetamodel() : staticSourceMetamodel;
+        const code = generateJjtlCode(toInsertSuggestions, sourceMetamodel);
         // console.log('[SuggestedMappingsPanel] Generated JjTL code:', code);
 
         onInsertCode?.(code);
-    }, [toInsertSuggestions, onInsertCode]);
+    }, [toInsertSuggestions, onInsertCode, getSourceMetamodel, staticSourceMetamodel]);
 
     // Handle hover
     const handleHover = useCallback((id: string | null) => {

@@ -28,11 +28,9 @@ import {
 } from '../../joiner';
 
 import {icon} from '../components/icons/Icons';
-import { JjodelProjectIcon } from '../../components/icons/JjodelProjectIcon';
-
 import {useNavigate} from 'react-router-dom';
 
-import React, {Component, Dispatch, ReactElement, ReactNode, useState, useEffect, useMemo, useCallback} from 'react';
+import React, {Component, Dispatch, ReactElement, ReactNode, useState, useEffect, useMemo, useCallback, useRef} from 'react';
 import {FakeStateProps} from '../../joiner/types';
 import {connect} from 'react-redux';
 import {AuthApi, ProjectsApi} from '../../api/persistance';
@@ -65,6 +63,7 @@ import { useAvatar } from '../../hooks/useAvatar';
 import { AVATAR_COLORS, AVATAR_ICONS } from '../../constants/avatarConfig';
 import { JjScriptConsole } from '../../jjscript/components/JjScriptConsole';
 import { JjodelEvents, EnvGenEvents } from '../../events/registry';
+import { DOCUMENT_TYPES, DocumentTypeEntry } from '../../constants/documentTypes';
 
 
 let windoww = window as any;
@@ -113,6 +112,119 @@ export function createM1(project: LProject, metamodel: LModel) {
         entityName: name,
     });
 }
+interface NewDocumentButtonProps {
+    project: LProject;
+    metamodels: LModel[];
+}
+function NewDocumentButton({ project, metamodels }: NewDocumentButtonProps) {
+    const [open, setOpen] = useState(false);
+    const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+    const containerRef = useRef<HTMLDivElement>(null);
+    const btnRef = useRef<HTMLButtonElement>(null);
+
+    // When opening, snapshot the trigger's viewport rect so the menu can render with
+    // position: fixed and escape the .appbar-tabs { overflow: hidden } clipping context.
+    useEffect(() => {
+        if (!open) return;
+        if (btnRef.current) {
+            const rect = btnRef.current.getBoundingClientRect();
+            setMenuPos({ top: rect.bottom + 6, left: rect.left });
+        }
+        const handleMouseDown = (e: MouseEvent) => {
+            if (!containerRef.current?.contains(e.target as Node)) setOpen(false);
+        };
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setOpen(false);
+        };
+        document.addEventListener('mousedown', handleMouseDown);
+        document.addEventListener('keydown', handleKeyDown);
+        return () => {
+            document.removeEventListener('mousedown', handleMouseDown);
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [open]);
+
+    // Build runtime entries: apply project-state gates on top of DOCUMENT_TYPES defaults.
+    // model requires ≥1 metamodel (uses metamodels[0] — same pattern as Navbar.tsx:764 and ProjectEditor.tsx:846).
+    // transformation requires ≥1 metamodel (the NewTransformationDialog needs source + target pickers).
+    const hasMetamodel = metamodels.length > 0;
+    const entries: Array<DocumentTypeEntry & { onCreate?: () => void; disabledReason?: string }> = DOCUMENT_TYPES.map(entry => {
+        switch (entry.type) {
+            case 'metamodel':
+                return { ...entry, onCreate: () => createM2(project) };
+            case 'model':
+                return hasMetamodel
+                    ? { ...entry, onCreate: () => createM1(project, metamodels[0]) }
+                    : { ...entry, available: false, disabledReason: 'Create a metamodel first' };
+            case 'transformation':
+                return hasMetamodel
+                    ? { ...entry, onCreate: () => window.dispatchEvent(new CustomEvent(JjodelEvents.OPEN_NEW_TRANSFORMATION_DIALOG)) }
+                    : { ...entry, available: false, disabledReason: 'Create a metamodel first' };
+            case 'refactoring':
+                // TODO: wire when refactoring document type lands
+                return entry;
+            default:
+                return entry;
+        }
+    });
+
+    const firstUnavailableIdx = entries.findIndex(e => !e.available);
+
+    return (
+        <div className="new-document" ref={containerRef}>
+            <button
+                ref={btnRef}
+                className={`new-document__btn ${open ? 'new-document__btn--open' : ''}`}
+                onClick={() => setOpen(v => !v)}
+                title="New document"
+                aria-haspopup="menu"
+                aria-expanded={open}
+            >
+                <i className="bi bi-plus-lg" />
+            </button>
+            {open && (
+                <div
+                    className="new-document__menu"
+                    role="menu"
+                    style={{ top: menuPos.top, left: menuPos.left }}
+                >
+                    {entries.map((entry, i) => (
+                        <React.Fragment key={entry.type}>
+                            {firstUnavailableIdx > 0 && i === firstUnavailableIdx && (
+                                <div className="new-document__divider" />
+                            )}
+                            <button
+                                type="button"
+                                role="menuitem"
+                                className={`new-document__item ${!entry.available ? 'new-document__item--disabled' : ''}`}
+                                onClick={() => {
+                                    if (!entry.available || !entry.onCreate) return;
+                                    entry.onCreate();
+                                    setOpen(false);
+                                }}
+                                disabled={!entry.available}
+                                title={entry.disabledReason}
+                            >
+                                <span
+                                    className="new-document__badge"
+                                    style={{ background: entry.badgeBg, color: entry.badgeColor }}
+                                >{entry.badge}</span>
+                                <span className="new-document__text">
+                                    <span className="new-document__label">
+                                        {entry.label}
+                                        {!entry.available && <span className="new-document__soon">coming soon</span>}
+                                    </span>
+                                    <span className="new-document__desc">{entry.description}</span>
+                                </span>
+                            </button>
+                        </React.Fragment>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
 function getKeyStrokes(keys?: string[], shortcutPills?: string[]){
     // Use new shortcut pills if provided (adaptive to OS)
     if (shortcutPills && shortcutPills.length > 0) {
@@ -1308,7 +1420,8 @@ function NavbarComponent(props: AllProps) {
                 const activeId = (modelsPanel as any).activeId || tabs[0]?.id;
                 const state = store.getState();
 
-                const tabList = tabs.map((tab: any) => {
+                type TabListItem = { id: string; title: string; type: string; active: boolean; closable: boolean };
+                const tabList: TabListItem[] = (tabs.map((tab: any): TabListItem | null => {
                     const id = tab.id || '';
                     let title = '';
                     let type = 'project';
@@ -1357,19 +1470,21 @@ function NavbarComponent(props: AllProps) {
                             }
                         }
                     } else {
-                        // Model/Metamodel — look up in state
+                        // Model/Metamodel — look up in state. If the id does not resolve,
+                        // the backing DModel was deleted (or never existed) and the tab is
+                        // a ghost: skip it instead of fabricating a placeholder "Unnamed M".
+                        // Same existence-check pattern used in ProjectEditor.tsx:2343.
                         const raw = (state as any)[id] || (state as any).idlookup?.[id];
                         if (raw) {
                             title = raw.name || 'Unnamed';
                             type = raw.isMetamodel ? 'metamodel' : 'model';
                         } else {
-                            title = 'Unnamed';
-                            type = 'metamodel';
+                            return null;
                         }
                     }
 
                     return { id, title, type, active: id === activeId, closable };
-                });
+                }) as (TabListItem | null)[]).filter((t): t is TabListItem => t !== null);
 
                 setOpenTabs(tabList);
             } catch (e) {
@@ -1430,6 +1545,17 @@ function NavbarComponent(props: AllProps) {
         }
     };
 
+    // Human-readable artifact type for tab tooltips (e.g. "SM2PN — JjTL Transformation").
+    const getTabTypeLabel = (type: string): string => {
+        switch (type) {
+            case 'metamodel': return 'Metamodel';
+            case 'model': return 'Model';
+            case 'transformation': return 'JjTL Transformation';
+            case 'viewpoint': return 'Viewpoint';
+            default: return '';
+        }
+    };
+
     // Overflow logic
     const MAX_VISIBLE_TABS = 6;
     const visibleTabs = openTabs.filter(t => t.type !== 'project'); // Don't show project summary in navbar
@@ -1446,7 +1572,6 @@ function NavbarComponent(props: AllProps) {
         tabsToShow.push(activeTab);
     }
 
-    const isProjectSelected = !visibleTabs.some(t => t.active);
     const [showOverflow, setShowOverflow] = useState(false);
 
     // Level badge component
@@ -1470,11 +1595,10 @@ function NavbarComponent(props: AllProps) {
                 {project && debuggerr ? <DebuggerComponent /> : null}
             </section>
 
-            {/* Project link */}
-            {project && (<>
-                <div className="appbar__sep" />
-                <button
-                    className={`appbar-project-link ${isProjectSelected ? 'appbar-project-link--selected' : 'appbar-project-link--unselected'}`}
+            {/* Project label — click activates the project-summary tab (dashboard) */}
+            {project && (
+                <div
+                    className="project-label"
                     onClick={() => {
                         const dock = DockManager.dock;
                         if (dock) {
@@ -1488,14 +1612,15 @@ function NavbarComponent(props: AllProps) {
                     }}
                     title="Project overview"
                 >
-                    <JjodelProjectIcon className="appbar-project-link__icon" />
-                    <span className="appbar-project-link__name">{project.name || 'Unnamed'}</span>
-                </button>
-            </>)}
+                    <div className="project-icon">
+                        <i className="bi bi-collection" />
+                    </div>
+                    <span className="project-name">{project.name || 'Unnamed'}</span>
+                </div>
+            )}
 
             {/* Custom Tab Strip */}
-            {visibleTabs.length > 0 && (<>
-                <div className="appbar__sep" />
+            {project && (
                 <div className="appbar-tabs">
                     {tabsToShow.map(tab => {
                         const badge = getTabBadge(tab.type);
@@ -1504,7 +1629,10 @@ function NavbarComponent(props: AllProps) {
                                 key={tab.id}
                                 className={`appbar-tab appbar-tab--${tab.type} ${tab.active ? 'appbar-tab--active' : ''}`}
                                 onClick={() => handleTabClick(tab.id)}
-                                title={tab.title}
+                                title={(() => {
+                                    const typeLabel = getTabTypeLabel(tab.type);
+                                    return typeLabel ? `${tab.title} — ${typeLabel}` : tab.title;
+                                })()}
                             >
                                 {(badge.letter || badge.icon) && (
                                     <span className={`appbar-tab__badge ${badge.className}`}>
@@ -1555,18 +1683,12 @@ function NavbarComponent(props: AllProps) {
                             )}
                         </div>
                     )}
-                    {/* New tab button */}
-                    {project && (
-                        <button
-                            className="appbar-tabs__new"
-                            onClick={() => project && createM2(project)}
-                            title="New metamodel"
-                        >
-                            +
-                        </button>
-                    )}
+                    {/* New document dropdown — trigger lives inside .appbar-tabs after the last tab.
+                        The menu uses position:fixed (top/left computed from the trigger's
+                        getBoundingClientRect) to escape .appbar-tabs { overflow: hidden } clipping. */}
+                    <NewDocumentButton project={project} metamodels={metamodels} />
                 </div>
-            </>)}
+            )}
 
             <div className="main-header-right">
                 {/* Level badge (read-only) — inlined */}

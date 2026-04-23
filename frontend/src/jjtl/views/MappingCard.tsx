@@ -11,6 +11,23 @@ import React, { useState } from 'react';
 import { MappingSuggestion, SuggestionConfidence } from '../types/suggestions';
 import './MappingCard.scss';
 
+/**
+ * Lowercase set of primitive type names we accept when deciding whether a mapping
+ * is an attribute (primitive ↔ primitive) or a reference (at least one side is a class).
+ * Covers Ecore-style names (EInt, EString, EBoolean, EDouble/EFloat) and common aliases
+ * (Integer, String, Boolean, Double, Float, Number). Mirror of the primitives
+ * enumerated in TypeRegistry (frontend/src/jjel/evaluator/context.ts).
+ */
+const PRIMITIVE_TYPE_NAMES = new Set<string>([
+    'int', 'integer', 'eint', 'einteger',
+    'string', 'estring',
+    'boolean', 'eboolean',
+    'double', 'edouble',
+    'float', 'efloat',
+    'real', 'ereal',
+    'number', 'date',
+]);
+
 interface MappingCardProps {
     mapping: MappingSuggestion;
     isHovered: boolean;
@@ -62,9 +79,20 @@ export const MappingCard: React.FC<MappingCardProps> = ({
         ? `${mapping.targetClass}.${mapping.targetAttribute}`
         : mapping.targetClass;
 
-    // Check if type conversion is needed
-    const needsConversion = mapping.sourceType && mapping.targetType &&
+    // Split the old umbrella "conversion needed" trigger into two semantically-distinct
+    // cases — deliberately checked INDEPENDENTLY (no `!otherCase` coupling) so that if a
+    // mapping ever trips both (unlikely in practice but not precluded by the data shape),
+    // both pills render. The discriminator is the primitiveness of the type name:
+    //   - auto-resolved: at least one side is NOT a primitive → cross-class reference
+    //     mapping; the executor does two-pass resolution.
+    //   - auto-converted: both sides are primitives (and differ) → value coercion at
+    //     execution time (numeric↔string, boolean↔int, enum↔literal, etc.).
+    const typesDiffer = !!mapping.sourceType && !!mapping.targetType &&
         mapping.sourceType.toLowerCase() !== mapping.targetType.toLowerCase();
+    const sourceIsPrimitive = !!mapping.sourceType && PRIMITIVE_TYPE_NAMES.has(mapping.sourceType.toLowerCase());
+    const targetIsPrimitive = !!mapping.targetType && PRIMITIVE_TYPE_NAMES.has(mapping.targetType.toLowerCase());
+    const needsTypeConversion = typesDiffer && sourceIsPrimitive && targetIsPrimitive;
+    const needsReferenceResolution = typesDiffer && (!sourceIsPrimitive || !targetIsPrimitive);
 
     // Determine card state classes
     const cardClass = [
@@ -108,7 +136,24 @@ export const MappingCard: React.FC<MappingCardProps> = ({
                     </div>
                     <div className="mapping-subtitle">
                         <span>{typeLabel}</span>
-                        {needsConversion && <span className="conversion-badge">conversion needed</span>}
+                        {needsReferenceResolution && (
+                            <span
+                                className="auto-pill auto-pill--resolved"
+                                title="References between objects are resolved automatically by the executor using a two-pass strategy: all target objects are created first, then references are linked."
+                            >
+                                <i className="bi bi-info-circle" aria-hidden="true" />
+                                <span>auto-resolved</span>
+                            </span>
+                        )}
+                        {needsTypeConversion && (
+                            <span
+                                className="auto-pill auto-pill--converted"
+                                title="Attribute values are automatically converted by the executor to match the target type — for example, numeric to string, or enum to literal."
+                            >
+                                <i className="bi bi-info-circle" aria-hidden="true" />
+                                <span>auto-converted</span>
+                            </span>
+                        )}
                     </div>
                 </div>
 

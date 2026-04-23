@@ -1015,37 +1015,206 @@ project-card .tip {
     }
   }
 
-  /* ---- State B: Project sidebar ---- */
+  /* ---- State B: Project sidebar (psb- prefix) ---- */
 
   &.leftbar--project {
     display: flex;
     flex-direction: column;
-  }
+    background: #f8fafc;
+    border-right: 1px solid #e2e8f0;
+    padding: 0;
 
-  .section-label {
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--color-text-tertiary);
-    padding: var(--space-3) var(--space-4) var(--space-1);
-    margin-top: var(--space-2);
-  }
+    .psb-back {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 16px 12px;
+      font-size: 12.5px;
+      color: #64748b;
+      border-bottom: 1px solid #e2e8f0;
+      cursor: pointer;
+      transition: color 0.12s;
 
-  .project-header {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-2) var(--space-4);
+      &:hover { color: #0f172a; }
+      .bi { font-size: 11px; }
+    }
 
-    &__name {
-      font-size: var(--text-sm);
-      font-weight: var(--font-semibold);
-      color: var(--color-text-primary);
+    .psb-megamodel {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 11px 16px;
+      font-size: 12.5px;
+      font-weight: 500;
+      color: #0f172a;
+      border-bottom: 1px solid #e2e8f0;
+      cursor: pointer;
+      transition: background 0.1s;
+      position: relative;
+      overflow: hidden;
+
+      &:hover { background: #f1f5f9; }
+      &:hover .psb-item-arrow { opacity: 1; }
+
+      .bi-diagram-3 {
+        color: #0ea5e9;
+        font-size: 14px;
+        flex-shrink: 0;
+      }
+    }
+
+    .psb-section {
+      border-bottom: 1px solid #e2e8f0;
+
+      &--actions {
+        margin-top: auto;
+        border-bottom: none;
+        border-top: 1px solid #e2e8f0;
+      }
+    }
+
+    .psb-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px 8px;
+      cursor: pointer;
+      user-select: none;
+
+      &:hover .psb-section-label { color: #334155; }
+    }
+
+    .psb-section-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: #94a3b8;
+      transition: color 0.12s;
+    }
+
+    .psb-chevron {
+      font-size: 11px;
+      color: #cbd5e1;
+      transition: transform 0.18s ease;
+
+      .psb-section.collapsed & { transform: rotate(-90deg); }
+    }
+
+    .psb-section-body {
+      padding: 0 0 8px;
+
+      .psb-section.collapsed & { display: none; }
+    }
+
+    .psb-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 5px 16px;
+      font-size: 12.5px;
+      color: #334155;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.1s, color 0.1s;
+      overflow: hidden;
+
+      &:hover {
+        background: #f1f5f9;
+        color: #0f172a;
+      }
+      &:hover .psb-item-arrow {
+        opacity: 1;
+        color: #94a3b8;
+      }
+
+      &.active {
+        background: #e0f2fe;
+        color: #0369a1;
+        font-weight: 500;
+
+        &::before {
+          content: '';
+          position: absolute;
+          left: 0; top: 0; bottom: 0;
+          width: 2.5px;
+          background: #0ea5e9;
+          border-radius: 0 2px 2px 0;
+        }
+      }
+    }
+
+    .psb-badge {
+      width: 18px; height: 18px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-weight: 700;
+      flex-shrink: 0;
+
+      &--M { background: #e0e7ff; color: #4338ca; }
+      &--m { background: #fef3c7; color: #92400e; }
+      &--T { background: #dcfce7; color: #15803d; }
+      &--V { background: #fce7f3; color: #9d174d; }
+    }
+
+    .psb-item-name {
+      flex: 1;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      flex: 1;
+    }
+
+    .psb-item-arrow {
+      font-size: 10px;
+      color: #cbd5e1;
+      flex-shrink: 0;
+      opacity: 0;
+      transition: opacity 0.1s, color 0.1s;
+    }
+
+    .psb-new {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 4px 16px;
+      margin-top: 1px;
+      font-size: 12px;
+      color: #94a3b8;
+      cursor: pointer;
+      transition: color 0.12s;
+
+      &:hover { color: #0ea5e9; }
+      .bi { font-size: 11px; }
+    }
+
+    .psb-action {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 6px 16px;
+      font-size: 12.5px;
+      color: #64748b;
+      cursor: pointer;
+      transition: background 0.1s, color 0.1s;
+
+      &:hover {
+        background: #f1f5f9;
+        color: #0f172a;
+      }
+
+      .bi { font-size: 13px; flex-shrink: 0; }
+
+      &--danger {
+        color: #94a3b8;
+
+        &:hover {
+          background: #fff1f2;
+          color: #dc2626;
+        }
+      }
     }
   }
 
@@ -1058,19 +1227,6 @@ project-card .tip {
     border-radius: 8px;
     line-height: 1.4;
     flex-shrink: 0;
-  }
-
-  .modified-indicator {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    font-size: 11px;
-    color: var(--color-accent);
-    padding: 0 var(--space-4) var(--space-1);
-
-    .bi-circle-fill {
-      font-size: 6px;
-    }
   }
 
   .item--muted {
@@ -1106,16 +1262,6 @@ project-card .tip {
     padding: 0 6px;
     border-radius: 8px;
     line-height: 1.6;
-  }
-
-  .sidebar-spacer {
-    flex: 1;
-  }
-
-  .sidebar-actions {
-    border-top: 1px solid var(--color-border-primary);
-    padding-top: var(--space-2);
-    margin-top: var(--space-2);
   }
 }
 
