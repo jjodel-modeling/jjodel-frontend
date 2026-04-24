@@ -48,6 +48,7 @@ import { useEditorMode, type MetaclassInfo, type MetaclassReference } from './ho
 import { useClassRemoval } from './hooks/useClassRemoval';
 import { useConformanceGuard } from '../../model/conformance/useConformanceGuard';
 import { useOrphanFeatures } from './hooks/useOrphanFeatures';
+import { UniquenessProblemSync } from './problems/UniquenessProblemSync';
 import { getSyncMode, markDropCreated, suppressSingleton, unsuppressSingleton, clearSuppressedSingletons, getSuppressedSingletonIds } from './sync/syncState';
 import {
     syncPositionToJjom,
@@ -2830,6 +2831,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     return (
         <EditorContext.Provider value={editorContextValue}>
             <div className={`editor-v2 theme-${theme} notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}`} tabIndex={0} onKeyDown={onKeyDown}>
+                <UniquenessProblemSync modelid={modelid} />
                 <PalettePanel
                     editorMode={modeInfo.mode}
                     rootableClasses={modeInfo.rootableClasses}

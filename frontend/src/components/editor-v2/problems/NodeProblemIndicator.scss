@@ -1,0 +1,60 @@
+.node-problem-dot {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    z-index: 3;
+    box-shadow: 0 0 0 2px white, 0 1px 3px rgba(15, 23, 42, 0.25);
+
+    // Pulsing aura: a duplicate of the dot expanding outward and fading.
+    // Scoped keyframe name to avoid collision with global `pulse`.
+    &::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        background: inherit;
+        animation: node-problem-pulse 1.6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+        pointer-events: none;
+        z-index: -1;
+    }
+
+    &--warning { background: #f59e0b; }
+    &--error   { background: #dc2626; }
+    &--resolved {
+        background: #22c55e;
+        &::before { display: none; }
+    }
+
+    &--paused::before {
+        animation-play-state: paused;
+        opacity: 0;
+    }
+
+    &:hover { filter: brightness(1.08); }
+
+    &:focus-visible {
+        outline: 2px solid #0ea5e9;
+        outline-offset: 2px;
+    }
+}
+
+@keyframes node-problem-pulse {
+    0%   { transform: scale(1);   opacity: 0.7; }
+    100% { transform: scale(3);   opacity: 0;   }
+}
+
+// Highlight ring applied to a node when the problem overlay targets it as the
+// "related" node. Kept in this stylesheet because the trigger is the problems
+// system (not a node-intrinsic state).
+.mm-object--problem-highlighted,
+.mm-node.mm-object--problem-highlighted {
+    outline: 2px solid #0ea5e9;
+    outline-offset: 4px;
+    transition: outline-color 0.2s ease;
+}

@@ -106,8 +106,12 @@ const TreeNode: React.FC<TreeNodeProps> = ({
                 {/* Element name */}
                 <span className="jjtl-tree-name">
                     {element.name}
-                    {element.isAbstract && <span className="jjtl-tree-abstract">abstract</span>}
                 </span>
+                {element.isAbstract && (
+                    <Badge category="context" title="Abstract class">
+                        abstract
+                    </Badge>
+                )}
 
                 {/* Data type or multiplicity */}
                 {element.dataType && (
