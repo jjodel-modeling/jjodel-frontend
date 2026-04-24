@@ -283,11 +283,11 @@ function getDiagramForRule(rule: GrammarRule): DiagramNode {
         case 'transformation':
             return Sequence(
                 Terminal('transformation'),
-                NonTerminal('ID'),
+                NonTerminal('name'),
                 Terminal('from'),
-                NonTerminal('ID'),
+                NonTerminal('sourceMM'),
                 Terminal('to'),
-                NonTerminal('ID'),
+                NonTerminal('targetMM'),
                 ZeroOrMore(
                     Choice(
                         NonTerminal('classMapping'),
@@ -298,93 +298,42 @@ function getDiagramForRule(rule: GrammarRule): DiagramNode {
 
         case 'classMapping':
             return Sequence(
-                NonTerminal('ID'),
+                NonTerminal('SourceClass'),
                 Terminal('->'),
-                NonTerminal('ID'),
+                NonTerminal('TargetClass'),
                 Optional(NonTerminal('multiplicity')),
                 Optional(NonTerminal('condition')),
-                Optional(NonTerminal('mappingBody'))
+                Terminal('{'),
+                NonTerminal('mappingBody'),
+                Terminal('}')
             );
 
         case 'multiplicity':
             return Sequence(
                 Terminal('['),
+                NonTerminal('int'),
+                Terminal('..'),
                 Choice(
-                    Terminal('*'),
-                    NonTerminal('NUMBER'),
-                    Sequence(
-                        NonTerminal('NUMBER'),
-                        Terminal('..'),
-                        Choice(
-                            NonTerminal('NUMBER'),
-                            Terminal('*')
-                        )
-                    )
+                    NonTerminal('int'),
+                    Terminal('*')
                 ),
                 Terminal(']')
             );
 
         case 'condition':
             return Sequence(
-                Terminal('when'),
+                Terminal('where'),
                 NonTerminal('expression')
             );
 
         case 'mappingBody':
-            return Sequence(
-                Terminal('{'),
-                ZeroOrMore(NonTerminal('attrMapping')),
-                Terminal('}')
-            );
+            return ZeroOrMore(NonTerminal('attributeMapping'));
 
         case 'attributeMapping':
-            return Choice(
-                Sequence(
-                    NonTerminal('ID'),
-                    Terminal('->'),
-                    NonTerminal('ID'),
-                    Optional(NonTerminal('conversion'))
-                ),
-                Sequence(
-                    Terminal('->'),
-                    NonTerminal('ID'),
-                    Optional(NonTerminal('objectCreate'))
-                )
-            );
-
-        case 'conversion':
             return Sequence(
-                Terminal(':'),
-                Choice(
-                    NonTerminal('valueMappings'),
-                    NonTerminal('expression')
-                )
-            );
-
-        case 'valueMapping':
-            return Sequence(
-                NonTerminal('literal'),
-                Terminal('='),
-                NonTerminal('literal'),
-                ZeroOrMore(
-                    Sequence(
-                        Terminal(','),
-                        NonTerminal('literal'),
-                        Terminal('='),
-                        NonTerminal('literal')
-                    )
-                )
-            );
-
-        case 'objectCreation':
-            return Sequence(
-                Terminal('{'),
-                Terminal('->'),
-                NonTerminal('ID'),
-                Terminal('{'),
-                ZeroOrMore(NonTerminal('attrMapping')),
-                Terminal('}'),
-                Terminal('}')
+                NonTerminal('targetFeature'),
+                Terminal(':='),
+                NonTerminal('expression')
             );
 
         case 'helper':
