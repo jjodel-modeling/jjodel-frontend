@@ -34,7 +34,7 @@ import EditorV2 from "./components/editor-v2/EditorV2";
 
 import {ExternalLibraries} from "./components/forEndUser/ExternalLibraries";
 import {TooltipVisualizer} from "./components/forEndUser/Tooltip";
-import AlertVisualizer from "./components/alert/Alert";
+// AlertVisualizer (legacy Redux toast) replaced by ToastProvider — see U.alert facade in common/U.tsx
 import DialogVisualizer from './components/alert/Dialog';
 import { NotificationWidget } from './components/NotificationWidget/NotificationWidget';
 import { Jodie } from './components/Jodie';
@@ -118,7 +118,7 @@ function App(props: AllProps): JSX.Element {
                 <Try><TooltipVisualizer/></Try>
 
                 {/*<MessageVisualizer />*/}
-                <Try><AlertVisualizer/></Try>
+                {/* <AlertVisualizer/> removed: U.alert now dispatches to ToastProvider via JjodelEvents.TOAST */}
                 <Try><DialogVisualizer/></Try>
                 <Try><JjtlDialogManager/></Try>
                 <HashRouter>

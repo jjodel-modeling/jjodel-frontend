@@ -1,5 +1,39 @@
 # Claude Code Session Log
 
+## 2026-04-25 — feat: notification system redesign + U.alert facade
+**Prompt**: Restyle ToastProvider (side-stripe variant), migrate name clash sites, U.alert facade su toast, sezione Settings → Notifications, badge unread Jodie, cleanup. 10 task ordinati.
+**File toccati**:
+- `frontend/src/styles/tokens/_z-index.scss` — `--z-toast` 10100 → 10200 (sopra `--z-modal` 9999)
+- `frontend/src/components/Toast/toast.scss` — riscritto con BEM + design tokens, side-stripe 4px, width 320px, default bottom-right, no hex hardcoded
+- `frontend/src/components/Toast/toastTypes.ts` — `ToastPreferences` ristrutturata con per-type `{enabled, duration}`, `ToastAction` esposta, `ToastMessage` con `timestamp` e `action`, `JjodelToastDetail` con `action`, migrazione legacy in `loadToastPrefs()`
+- `frontend/src/components/Toast/Toast.tsx` — refactor BEM (`.toast__row/__icon/__title/__time/__close/__body/__action`), hover-pause individuale (clearTimeout/setTimeout con elapsed tracking), timestamp relativo via `useRelativeTime`, action button opzionale
+- `frontend/src/components/Toast/ToastContext.tsx` — prepend invece di append (`[new, ...prev].slice(0, MAX_TOASTS)` → newest in alto), per-type prefs (enabled + duration), action propagata da CustomEvent
+- `frontend/src/components/Toast/ToastContainer.tsx` — passaggio timestamp+action al `<Toast>`, default position `bottom-right`
+- `frontend/src/components/Toast/toastDispatch.ts` — `toast.{info|success|warning|error}(message, opts?)` accetta `string | ToastShortOptions` (compat) con supporto `action`
+- `frontend/src/components/Toast/useRelativeTime.ts` — **nuovo**, hook con shared 10s tick (subscriber pattern, niente N timer per N toast); export anche `formatRelativeTime`
+- `frontend/src/components/Toast/index.ts` — export di `ToastAction`, `ToastTypePref`, `useRelativeTime`, `formatRelativeTime`
+- `frontend/src/model/logicWrapper/LModelElement.tsx` — 3 punti name clash migrati a `toast.error(...)` con title `Validation failed` e action button (placeholder onClick); messaggio riformulato a `Name "X" already used by Type "Y"`
+- `frontend/src/joiner/classes.ts` — punto rename generico migrato analogamente
+- `frontend/src/common/U.tsx` — `U.alert()` riscritta come **facade** che dispatch su `JjodelEvents.TOAST` (mantiene firma identica per le ~118 callsite restanti); `console.warn` di deprecazione in dev mode (`import.meta.env.DEV`)
+- `frontend/src/App.tsx` — `<AlertVisualizer/>` rimosso (commentato + import sostituito da nota), il legacy reducer `state.alert` resta come dead code per safety
+- `frontend/src/components/Settings/UnifiedSettingsModal/sections/NotificationsSection.tsx` — **nuovo**, per-type toggle Enabled + select Duration (1s/3s/5s/10s/30s/Persistent), select Position (4 varianti), toggle Guard Violations, bottone Reset, bottoni Test per tipo
+- `frontend/src/components/Settings/UnifiedSettingsModal/sections/index.ts` — export `NotificationsSection`
+- `frontend/src/components/Settings/UnifiedSettingsModal/UnifiedSettingsModal.tsx` — `'notifications'` aggiunto a `SettingsSection`, nuovo gruppo `FEEDBACK` (icon `bi-bell`) tra `DISPLAY` e `DEVELOPER`, switch case
+- `frontend/src/components/Jodie/Jodie.tsx` — listener su `JjodelEvents.TOAST` che setta `hasUnread:true` su priority `warning|error` quando Jodie è chiusa (badge dot già presente in `JodieMinimized.tsx`, niente count); reset a `false` su open già esistente
+- `frontend/src/pages/settings/AppearanceSettings.tsx` — rimossa la duplicate notifications UI (ora vive in `NotificationsSection`); state/imports/options-list rimossi (toccato fuori scope per fix build dopo restructuring `ToastPreferences`)
+**Esito**: ✅ completato — `tsc --noEmit` passa per i file modificati (errori residui pre-existing: casing `Settings/settings`, asset module declarations Vite, Measurable.tsx, Dashboard.tsx, ProjectEditor.tsx — non toccati)
+**Note**: Deviazioni dalla spec emerse durante l'implementazione:
+1. **`react-hot-toast` NON rimosso**: la discovery indicava che l'import in `SizeInput.tsx:3` fosse morto, ma è effettivamente usato (righe 51-55, 77) per tooltip-on-click. Per il vincolo "una pulizia tocca file non previsti — fermarsi", non rimosso. Resta in `package.json` deps.
+2. **`NotificationCenter.tsx` NON rimosso**: la discovery indicava "mockup non collegato" ma è importato e usato attivamente in `StatusBarRightZone.tsx:15,100`. Per spec ("delete if no importers"), non rimosso.
+3. **`U.alert` signature reale è `'i'|'w'|'e'`** (non include `'s'`). Il facade supporta comunque `'s'` (priority success) per estensibilità futura. Le 118 callsite esistenti non vengono toccate; passano automaticamente al nuovo render via JjodelEvents.TOAST.
+4. **Migrazione legacy `ToastPreferences`** implementata in `loadToastPrefs()`: vecchi prefs con `autoDismissDuration`/`enableSuccess`/`enableInfo` vengono convertiti al nuovo `types.{info,success,warning,error}.{enabled,duration}` al primo load. Nessun reset utente.
+5. **Default position `bottom-right`**: per spec. Jodie minimized è a `bottom: 100px; right: 30px` (CSS `JodieWindow.css:780`), Toast a `bottom: 16px; right: 16px` width 320px → primo toast non si sovrappone verticalmente; stack di 5 sì, ma `--z-toast: 10200 > Jodie z-index 10000` → rimane leggibile.
+6. **Nessun nuovo evento custom registrato** (riusato `JjodelEvents.TOAST` esistente per Jodie hook).
+7. **AppearanceSettings.tsx toccato fuori scope**: necessario perché il restructuring di `ToastPreferences` rompeva il typecheck. Le notifiche UI duplicate sono state rimosse (ora vive solo in `NotificationsSection`).
+**Nome del documento prompt**: 2026-04-25 16:30 implementazione-toast-redesign
+
+---
+
 ## 2026-04-24 — feat(editor-v2): NodeProblem registry + pulsing indicator + directional overlay; migrate uniqueness from inline badge
 **Prompt**: sostituire il badge inline "dup" con (a) registry generale di node problems estendibile a conformance/validation/orphan; (b) pallino pulsante top-right color-coded per severity con transizione resolved verde 5s; (c) overlay ancorato click-to-open con placement quantizzato a 4 direzioni + freccia + flip su overflow + highlight cyan ring sul nodo correlato; (d) producer scan-driven che riflette `detectDuplicateNames` nel registry. Tre fasi (recon → implementazione → verifica). Implementare solo uniqueness; architettura estesa per futuri kinds.
 **File toccati**:
@@ -3562,6 +3596,16 @@ Dark mode overrides for `.toolbar-btn` also scoped under `.documentation-toolbar
 **Esito**: ✅ completato
 **Note**: completa la serie di fix sintattici helper del 2026-04-22 (delimitatori body `{ }` + rimozione `: resolve(...)` + return type `->`). Diff di 1 riga: `SuggestedMappingsPanel.tsx:145` — `): ${returnType}` → `) -> ${returnType}`. Il `:` nei parameter types (`s: State`) resta invariato. Autocomplete Monaco (`jjtlCompletions.ts:15`) era già corretto (usava `->` da prima). Nessun test da aggiornare: le fixture in `jjel-delegation.test.ts` usavano già la sintassi `-> <Type>` (asseriscono che il parser la accetta — quindi il parser è già allineato).
 **Nome del documento prompt**: 2026-04-22 16-00 fix-helper-return-type-separator
+
+---
+
+## 2026-04-25 — discovery: sistema notifiche/toast esistente
+**Tipo**: discovery (solo lettura)
+**Prompt**: Discovery sistema notifiche esistente per redesign toast
+**File toccati**: `discovery-notifications.md` (creato nella root)
+**Esito**: ✅ completato
+**Note**: 4 agenti Explore in parallelo su 5 topic (sistema notifiche centralizzato, trigger del name clash, componente Jjodie, Settings panel, convenzioni). Risultato chiave: **coesistono due sistemi paralleli di toast** — (1) `ToastProvider` Context-based moderno in `frontend/src/components/Toast/` (mounted in App.tsx:110, API completa con `useToastContext`/`toast()` standalone, preferenze in localStorage) e (2) sistema legacy Redux-based via `U.alert()` (`common/U.tsx:393`) → `state.alert` → `Alert.tsx` (122 chiamate sparse nel codebase). Il toast del name clash che l'utente vede oggi proviene dal sistema **legacy** (`LModelElement.tsx:5981` chiama `U.alert('e', ...)`). Jjodie produzione: `components/Jodie/Jodie.tsx` (mounted in App.tsx:~193, draggable/resizable, ascolta `JjodieEvents.OPEN`); esiste anche `JjodieWidget` demo non montato. Settings panel: `UnifiedSettingsModal` con pattern dichiarativo `NAV_GROUPS` array + switch case — aggiungere sezione "Notifications" è 4 step zero-refactor. Raccomandazione: **estendere `ToastProvider` esistente, non crearne uno nuovo**; restyling SCSS con design tokens, migrare il name clash, eventualmente trasformare `U.alert()` in facade che delega a `toast()` per non toccare le 122 chiamate. Altri sistemi rilevati da decidere: `NotificationCenter` (mockup popover), `JjtlNotifyToast` (toast locale JjTL — duplicato), import morto `react-hot-toast` in `SizeInput.tsx:3`.
+**Nome del documento prompt**: 2026-04-25 14-30 discovery-notifications
 
 ---
 

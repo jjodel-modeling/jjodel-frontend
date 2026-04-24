@@ -90,6 +90,7 @@ import {
 import {ValuePointers} from "./PointerDefinitions";
 import {transientProperties} from "../../joiner/classes";
 import {validateNameUniqueness} from "./nameUniqueness";
+import { toast } from "../../components/Toast";
 import React, {JSX} from "react";
 import { checkObjectCreation, checkLinkCreation, checkValueAssignment, emitGuardViolation } from '../conformance/ConformanceGuard';
 import {Dummy} from "../../common/Dummy";
@@ -5290,7 +5291,10 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         if (c.data.name === val) return true;
         const models: LModel[] = LModel.fromPointer(store.getState()['models']);
         if (models.filter((model) => { return model.name === val }).length > 0) {
-            U.alert('e', 'Cannot rename the selected model, this name is already taken.');
+            toast.error(`Model name "${val}" is already taken`, {
+                title: 'Validation failed',
+                action: { label: 'View errors →', onClick: () => { /* TODO: wire to errors panel when available */ } },
+            });
         } else {
             TRANSACTION(this.get_name(c)+'.name', ()=>{
                 SetFieldAction.new(c.data, 'name', val, '', false);
@@ -5977,8 +5981,13 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         const self = c.proxyObject as unknown as LObject;
         const result = validateNameUniqueness(self, name);
         if (!result.valid) {
-            const others = (result.collidingWith ?? []).map(o => o.name).join(', ');
-            U.alert('e', `Name '${name}' is already used in this scope by: ${others}`);
+            const collider = (result.collidingWith ?? [])[0];
+            const ownerType = (collider?.className ?? 'Element').replace(/^[DLW]/, '');
+            const ownerName = collider?.name ?? '?';
+            toast.error(`Name "${name}" already used by ${ownerType} "${ownerName}"`, {
+                title: 'Validation failed',
+                action: { label: 'View errors →', onClick: () => { /* TODO: wire to errors panel when available */ } },
+            });
             return true;
         }
 
@@ -6001,8 +6010,13 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         if (newFather) {
             const result = validateNameUniqueness(self, self.name, { overrideFather: newFather });
             if (!result.valid) {
-                const others = (result.collidingWith ?? []).map(o => o.name).join(', ');
-                U.alert('e', `Cannot reparent '${self.name}': name is already used in the new scope by: ${others}`);
+                const collider = (result.collidingWith ?? [])[0];
+                const ownerType = (collider?.className ?? 'Element').replace(/^[DLW]/, '');
+                const ownerName = collider?.name ?? '?';
+                toast.error(`Cannot reparent "${self.name}": name conflicts with ${ownerType} "${ownerName}" in the new scope`, {
+                    title: 'Validation failed',
+                    action: { label: 'View errors →', onClick: () => { /* TODO: wire to errors panel when available */ } },
+                });
                 return true;
             }
         }

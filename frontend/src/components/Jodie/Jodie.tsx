@@ -17,7 +17,7 @@ import {
 } from '../../types/jodie';
 import { AIProviderService } from '../../services/AIProviderService';
 import { useSettingsModalSafe } from '../../contexts/SettingsModalContext';
-import { JjodieEvents, AIEvents, JjScriptEvents } from '../../events/registry';
+import { JjodelEvents, JjodieEvents, AIEvents, JjScriptEvents } from '../../events/registry';
 import { JjodieContextService } from '../../services/JjodieContext';
 import { JjodieRagService } from '../../services/JjodieRagService';
 import {DUser, L, LUser, LProject, store} from '../../joiner';
@@ -88,6 +88,18 @@ export function Jodie(): JSX.Element {
         return () => {
             window.removeEventListener(AIEvents.SETTINGS_CHANGED, handleSettingsChanged);
         };
+    }, []);
+
+    // Surface unread badge when warning/error toasts arrive while Jodie is closed
+    useEffect(() => {
+        const handleToast = (e: Event) => {
+            const detail = (e as CustomEvent<{ priority?: string }>).detail;
+            const p = detail?.priority;
+            if (p !== 'warning' && p !== 'error') return;
+            setChatState(prev => prev.isOpen ? prev : { ...prev, hasUnread: true });
+        };
+        window.addEventListener(JjodelEvents.TOAST, handleToast);
+        return () => window.removeEventListener(JjodelEvents.TOAST, handleToast);
     }, []);
 
     // Initialize RAG and index project content

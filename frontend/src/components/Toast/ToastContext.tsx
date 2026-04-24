@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react';
 import { ToastContainer } from './ToastContainer';
 import type { ToastType } from './Toast';
-import type { ToastMessage, ToastPreferences, ToastDismiss, JjodelToastDetail } from './toastTypes';
+import type { ToastAction, ToastMessage, ToastPreferences, ToastDismiss, JjodelToastDetail } from './toastTypes';
 import { loadToastPrefs } from './toastTypes';
 import { JjodelEvents } from '../../events/registry';
 
@@ -9,6 +9,7 @@ interface ToastOptions {
     title?: ReactNode;
     duration?: number;
     dismiss?: ToastDismiss;
+    action?: ToastAction;
 }
 
 interface ToastContextValue {
@@ -31,7 +32,6 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     const prefsRef = useRef(prefs);
     prefsRef.current = prefs;
 
-    // Reload prefs when localStorage changes (from settings page)
     useEffect(() => {
         const onPrefsChange = () => setPrefs(loadToastPrefs());
         window.addEventListener(JjodelEvents.TOAST_PREFS_CHANGED, onPrefsChange);
@@ -44,10 +44,10 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         options: ToastOptions = {},
     ) => {
         const id = `toast-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-        const p = prefsRef.current;
-
-        // Default dismiss mode: warning/error → manual, info/success → auto
-        const dismiss = options.dismiss ?? (type === 'warning' || type === 'error' ? 'manual' : 'auto');
+        const typePref = prefsRef.current.types[type];
+        const defaultDuration = typePref?.duration ?? 0;
+        const requestedDuration = options.duration ?? defaultDuration;
+        const dismiss: ToastDismiss = options.dismiss ?? (requestedDuration > 0 ? 'auto' : 'manual');
 
         const toast: ToastMessage = {
             id,
@@ -55,10 +55,12 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
             message,
             title: options.title,
             dismiss,
-            duration: options.duration ?? p.autoDismissDuration,
+            duration: dismiss === 'auto' ? requestedDuration : undefined,
+            timestamp: Date.now(),
+            action: options.action,
         };
 
-        setToasts(prev => [...prev.slice(-(MAX_TOASTS - 1)), toast]);
+        setToasts(prev => [toast, ...prev].slice(0, MAX_TOASTS));
         return id;
     }, []);
 
@@ -73,11 +75,9 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     const info = useCallback((msg: ReactNode, opts?: ToastOptions) => addToast(msg, 'info', opts), [addToast]);
     const warning = useCallback((msg: ReactNode, opts?: ToastOptions) => addToast(msg, 'warning', opts), [addToast]);
 
-    // Stable ref so event listeners always use latest addToast
     const addToastRef = useRef(addToast);
     addToastRef.current = addToast;
 
-    // Listen to jjodel:guard-violation events
     useEffect(() => {
         const handler = (e: Event) => {
             if (!prefsRef.current.enableGuardViolations) return;
@@ -93,34 +93,22 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         return () => window.removeEventListener(JjodelEvents.GUARD_VIOLATION, handler);
     }, []);
 
-    // Listen to jjodel:toast generic events
     useEffect(() => {
         const handler = (e: Event) => {
             const detail = (e as CustomEvent<JjodelToastDetail>).detail;
-            // console.log('[ToastContext] jjodel:toast event received:', detail);
             if (!detail) return;
 
-            // Check per-type preference
-            const p = prefsRef.current;
-            // console.log('[ToastContext] prefs:', { enableSuccess: p.enableSuccess, enableInfo: p.enableInfo, position: p.position });
-            if (detail.priority === 'success' && !p.enableSuccess) {
-                // console.log('[ToastContext] Filtered: success disabled');
-                return;
-            }
-            if (detail.priority === 'info' && !p.enableInfo) {
-                // console.log('[ToastContext] Filtered: info disabled');
-                return;
-            }
+            const typePref = prefsRef.current.types[detail.priority];
+            if (typePref && !typePref.enabled) return;
 
-            // console.log('[ToastContext] Adding toast...');
             addToastRef.current(detail.message, detail.priority, {
                 title: detail.title,
                 dismiss: detail.dismiss,
                 duration: detail.duration,
+                action: detail.action,
             });
         };
         window.addEventListener(JjodelEvents.TOAST, handler);
-        // console.log('[ToastContext] jjodel:toast listener registered');
         return () => window.removeEventListener(JjodelEvents.TOAST, handler);
     }, []);
 
