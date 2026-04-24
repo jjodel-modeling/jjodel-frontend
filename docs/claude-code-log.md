@@ -1,5 +1,36 @@
 # Claude Code Session Log
 
+## 2026-04-25 — feat(v3): toast history + Bell icon popover + Jodie revert + react-hot-toast cleanup
+**Prompt**: estensione v3 dell'implementazione toast: storico warning/error in localStorage (max 20), Bell icon nella StatusBar con popover che riusa `NotificationCenter`, badge count in StatusBar, revert del listener Jodie aggiunto in v2 (Jodie torna pulito), cleanup definitivo `react-hot-toast` (migrazione `SizeInput.tsx` al nuovo sistema).
+**File toccati**:
+- `frontend/src/components/Toast/toastHistory.ts` — **nuovo**, store localStorage `'jjodel-toast-history'` MAX 20, API `add/getAll/getUnreadCount/markAllRead/remove/clearAll`, dispatch `JjodelEvents.HISTORY_CHANGED` su ogni mutation, FIFO con prepend+slice
+- `frontend/src/events/registry.ts` — aggiunto `JjodelEvents.HISTORY_CHANGED: 'jjodel:history-changed'`
+- `frontend/src/components/Toast/ToastContext.tsx` — `addToast` ora chiama `toastHistory.add(...)` per `warning|error`, con `nodeToString()` helper per estrarre testo da ReactNode (title/message)
+- `frontend/src/components/Toast/toastDispatch.ts` — `ToastInputOptions.message` e `title` cambiati a `ReactNode` (era string), `toast.{info|success|warning|error}` accettano ReactNode → permette JSX in tooltip
+- `frontend/src/components/Toast/index.ts` — export `toastHistory`, types `HistoryEntry`, `HistoryEntryType`
+- `frontend/src/components/NotificationCenter.tsx` — **riscritto**: rimossi `useNotifications` mockup + `SAMPLE_NOTIFICATIONS`, nuovo hook `useToastHistorySnapshot()` che subscriba a `HISTORY_CHANGED`, popover con `{open, onClose, anchorRef?}` props, click-outside + Esc, mark-all-read 250ms dopo apertura, per-entry close button, empty state, icon mapping warning/error, formato tempo via `formatRelativeTime`
+- `frontend/src/components/NotificationCenter.scss` — riscritto con design tokens (rimossi tutti gli hex hardcoded), nuova classe `&__count` e `&__item-close`, hover state via `--color-bg-hover`, unread state via `--color-info-subtle`/`muted`
+- `frontend/src/components/StatusBarRightZone.tsx` — usa `useToastHistorySnapshot()` invece del mock; aggiunto `bellRef` per anchorRef del popover; `<NotificationCenter open=... onClose=... anchorRef=...>` con nuova API; **dot → badge count** con label `99+` per overflow; aria-label dinamico con count
+- `frontend/src/components/StatusBarRightZone.scss` — nuova classe `&__bell-badge` (badge rosso 14px, `--color-error` bg, `--color-text-inverse` text, `99+` ready)
+- `frontend/src/components/forEndUser/SizeInput.tsx` — **migrato fuori da react-hot-toast**: `import toast from 'react-hot-toast'` → `import { toast } from '../Toast'`; `notify()` ora usa `toast({ message: <JSX>, priority: 'info', duration: 4000, dismiss: 'auto' })` (preserva il behavior tooltip-on-click con auto-dismiss 4s)
+- `frontend/package.json` — rimosso `"react-hot-toast": "^2.5.2"` da dependencies (zero usi rimasti, modulo `node_modules/` non rimosso fisicamente: lascio al prossimo `npm install`)
+- `frontend/src/components/Jodie/Jodie.tsx` — **revertato listener `JjodelEvents.TOAST`** aggiunto in v2 + rimosso `JjodelEvents` dall'import (Jodie torna pulito, `hasUnread` resta nel chatState ma è usato solo per la chat AI)
+**Esito**: ✅ completato — `tsc --noEmit` (via `node_modules/.bin/tsc`) passa per i file modificati. Errori residui pre-existing (casing `Settings/settings`, asset module declarations Vite, Measurable.tsx, Dashboard.tsx, ProjectEditor.tsx) invariati.
+**Note**: Deviazioni e decisioni:
+1. **`useNotifications` rimosso** dall'export di NotificationCenter: non era importato altrove (solo da `StatusBarRightZone.tsx` che ora usa `useToastHistorySnapshot`). Sostituito.
+2. **Badge count, non dot**: la spec v3 mostra `<span className="statusbar-bell__badge">{unreadCount}</span>` — implementato con stesso prefisso BEM `sb-rz` esistente (`.sb-rz__bell-badge`). Vecchia classe `.sb-rz__bell-dot` lasciata in SCSS come dead style (zero side effect).
+3. **Mark-all-read implicito** all'apertura del popover (delay 250ms per evitare flash visivo del badge che svanisce). User-friendly: aprire = letto.
+4. **`nodeToString()` in ToastContext**: estrae testo da ReactNode (`Element` con `props.children`) per persistere lo storico. Best-effort: se il toast ha JSX complesso, ne salva il testo plain. Sufficient per name clash e maggior parte dei casi.
+5. **`react-hot-toast` rimosso da `package.json` ma non da `node_modules/`**: rimozione fisica richiede `npm install` (manuale). La dichiarazione resta solo in `ParameterForm.tsx:13` ma è commento (zero esecuzione).
+6. **ToastInputOptions accetta ora ReactNode** per `message`/`title` — necessario per migrare SizeInput senza perdere il behavior JSX. Backward-compatible (string è subset di ReactNode).
+7. **Popover z-index = `var(--z-toast)` (10200)**: same layer dei toast → si sovrappone correttamente a modali/Jodie.
+8. **`anchorRef` opzionale**: NotificationCenter testa `anchorRef?.current?.contains()` prima di chiudere su click-outside, evita che il click sul bell stesso chiuda subito il popover appena aperto.
+9. **Storico solo warning/error** (per spec). Info/success non vengono persistite — restano transient nei toast.
+10. **Migrazione name clash** già emessa via `toast.error(...)` in v2 → automaticamente loggata nello storico nel commit corrente (zero modifiche aggiuntive).
+**Nome del documento prompt**: 2026-04-25 17:00 v3 — finale
+
+---
+
 ## 2026-04-25 — feat: notification system redesign + U.alert facade
 **Prompt**: Restyle ToastProvider (side-stripe variant), migrate name clash sites, U.alert facade su toast, sezione Settings → Notifications, badge unread Jodie, cleanup. 10 task ordinati.
 **File toccati**:

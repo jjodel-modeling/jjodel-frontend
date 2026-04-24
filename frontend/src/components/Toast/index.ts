@@ -15,3 +15,5 @@ export type {
 export { loadToastPrefs, saveToastPrefs, DEFAULT_TOAST_PREFS, TOAST_PREFS_KEY } from './toastTypes';
 export { toast } from './toastDispatch';
 export { useRelativeTime, formatRelativeTime } from './useRelativeTime';
+export { toastHistory } from './toastHistory';
+export type { HistoryEntry, HistoryEntryType } from './toastHistory';

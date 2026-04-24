@@ -41,6 +41,7 @@ export const JjodelEvents = {
   // Notifications
   TOAST: 'jjodel:toast',
   TOAST_PREFS_CHANGED: 'jjodel:toast-prefs-changed',
+  HISTORY_CHANGED: 'jjodel:history-changed',
   GUARD_VIOLATION: 'jjodel:guard-violation',
   // Status
   JJTL_STATUSBAR: 'jjodel:jjtl-statusbar',

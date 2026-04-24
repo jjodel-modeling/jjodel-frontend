@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { ToastAction, ToastDismiss, ToastPriority } from './toastTypes';
 import { JjodelEvents } from '../../events/registry';
 
@@ -27,25 +28,25 @@ const TYPE_MAP: Record<string, ToastPriority> = {
 };
 
 interface ToastInputOptions {
-    message: string;
+    message: ReactNode;
     priority?: ToastPriority;
-    title?: string;
+    title?: ReactNode;
     duration?: number;
     dismiss?: ToastDismiss;
     action?: ToastAction;
 }
 
 interface ToastShortOptions {
-    title?: string;
+    title?: ReactNode;
     duration?: number;
     dismiss?: ToastDismiss;
     action?: ToastAction;
 }
 
 function dispatch(detail: {
-    message: string;
+    message: ReactNode;
     priority: ToastPriority;
-    title?: string;
+    title?: ReactNode;
     duration?: number;
     dismiss?: ToastDismiss;
     action?: ToastAction;
@@ -55,10 +56,10 @@ function dispatch(detail: {
 
 interface ToastFn {
     (input: string | ToastInputOptions): void;
-    info:    (message: string, opts?: string | ToastShortOptions) => void;
-    success: (message: string, opts?: string | ToastShortOptions) => void;
-    warning: (message: string, opts?: string | ToastShortOptions) => void;
-    error:   (message: string, opts?: string | ToastShortOptions) => void;
+    info:    (message: ReactNode, opts?: string | ToastShortOptions) => void;
+    success: (message: ReactNode, opts?: string | ToastShortOptions) => void;
+    warning: (message: ReactNode, opts?: string | ToastShortOptions) => void;
+    error:   (message: ReactNode, opts?: string | ToastShortOptions) => void;
 }
 
 function normalizeShort(opts?: string | ToastShortOptions): ToastShortOptions {
@@ -68,8 +69,8 @@ function normalizeShort(opts?: string | ToastShortOptions): ToastShortOptions {
 }
 
 export const toast: ToastFn = ((input: string | ToastInputOptions): void => {
-    let title: string | undefined;
-    let message: string;
+    let title: ReactNode;
+    let message: ReactNode;
     let priority: ToastPriority = 'info';
     let duration: number | undefined;
     let dismiss: ToastDismiss | undefined;

@@ -3,7 +3,19 @@ import { ToastContainer } from './ToastContainer';
 import type { ToastType } from './Toast';
 import type { ToastAction, ToastMessage, ToastPreferences, ToastDismiss, JjodelToastDetail } from './toastTypes';
 import { loadToastPrefs } from './toastTypes';
+import { toastHistory } from './toastHistory';
 import { JjodelEvents } from '../../events/registry';
+
+function nodeToString(node: ReactNode): string {
+    if (node == null || typeof node === 'boolean') return '';
+    if (typeof node === 'string') return node;
+    if (typeof node === 'number') return String(node);
+    if (Array.isArray(node)) return node.map(nodeToString).join('');
+    if (typeof node === 'object' && 'props' in (node as any)) {
+        return nodeToString((node as any).props?.children);
+    }
+    return '';
+}
 
 interface ToastOptions {
     title?: ReactNode;
@@ -61,6 +73,18 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         };
 
         setToasts(prev => [toast, ...prev].slice(0, MAX_TOASTS));
+
+        if (type === 'warning' || type === 'error') {
+            const messageStr = nodeToString(message);
+            const titleStr = options.title != null ? nodeToString(options.title) : undefined;
+            toastHistory.add({
+                type,
+                title: titleStr || undefined,
+                message: messageStr,
+                timestamp: toast.timestamp,
+            });
+        }
+
         return id;
     }, []);
 
