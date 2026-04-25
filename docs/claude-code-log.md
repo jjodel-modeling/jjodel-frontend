@@ -1,5 +1,12 @@
 # Claude Code Session Log
 
+## 2026-04-25 — feat: Jodie hide-on-popover + Ask Jjodie shortcut
+**Prompt**: Jodie sfuma (opacity 0 + pointer-events none) quando popover notifiche è aperto. Entry di tipo error mostrano link "Need help? Ask Jjodie" che chiude popover, apre Jodie e pre-popola input con prompt formattato. L'utente preme invio per inviare. Comunicazione via due custom events.
+**File toccati**: `frontend/src/events/registry.ts`, `frontend/src/components/NotificationCenter.tsx` + `.scss`, `frontend/src/components/Jodie/Jodie.tsx`, `frontend/src/components/Jodie/JodieWindow.tsx`, `frontend/src/components/Jodie/ChatInput.tsx`, `frontend/src/components/Jodie/JodieWindow.css`.
+**Esito**: ✅ — commit `0f9746a5a`, build OK (`✓ built in 40.38s`).
+**Note**: L'apertura di Jodie è in `Jodie.tsx` ma l'input è in `ChatInput.tsx` (sotto-sotto-componente di `JodieWindow`). Lift di state nel parent comune `Jodie.tsx` + prop drilling `prefilledMessage` fino a `ChatInput`. Il prefill usa sentinel `{ prompt: string; nonce: number }` per garantire re-trigger anche quando lo stesso prompt viene richiesto due volte (referential equality break). Il listener prefill apre Jodie + setta state in un solo handler; React batcha → al re-render `JodieWindow` mounta `ChatInput`, useEffect setta `message`. `Jodie.tsx` ritornava un Fragment, sostituito con `<div className="jodie-root">` per applicare opacity transition; i child `position: fixed` non sono affetti (wrapper non ha transform). Aggiunti due eventi a `JjodelEvents`: `NOTIFICATIONS_POPOVER_TOGGLE`, `JODIE_PREFILL_AND_OPEN`. Modificate 3 interface (`ChatInputProps`, `JodieWindowProps`) ma sono interne al modulo Jodie — nessun consumer esterno.
+**Nome del documento prompt**: 2026-04-25 21:30
+
 ## 2026-04-25 — style: notification entries restyle (stripe + icon + tint + dot)
 **Prompt**: Restyle delle entry nel popover NotificationCenter con stripe colorato a sinistra (3px), icona del tipo colorata, tinta di sfondo a 0.04 (0.07 hover), dot cyan per entry non lette.
 **File toccati**: `frontend/src/components/NotificationCenter.tsx`, `frontend/src/components/NotificationCenter.scss`
