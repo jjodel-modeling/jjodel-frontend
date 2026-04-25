@@ -100,19 +100,19 @@ export const Toast: React.FC<ToastProps> = ({
 
     return (
         <div
-            className={`toast toast--${type}${isExiting ? ' toast--exiting' : ''}`}
+            className={`jj-toast jj-toast--${type}${isExiting ? ' jj-toast--exiting' : ''}`}
             role="alert"
             aria-live="polite"
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
         >
-            <div className="toast__row">
-                <i className={`toast__icon bi ${ICON_MAP[type]}`} aria-hidden="true" />
-                <span className="toast__title">{headerLabel}</span>
-                <span className="toast__time" title={new Date(timestamp).toLocaleString()}>{relativeTime}</span>
+            <div className="jj-toast__row">
+                <i className={`jj-toast__icon bi ${ICON_MAP[type]}`} aria-hidden="true" />
+                <span className="jj-toast__title">{headerLabel}</span>
+                <span className="jj-toast__time" title={new Date(timestamp).toLocaleString()}>{relativeTime}</span>
                 <button
                     type="button"
-                    className="toast__close"
+                    className="jj-toast__close"
                     onClick={handleClose}
                     aria-label="Dismiss"
                 >
@@ -120,10 +120,10 @@ export const Toast: React.FC<ToastProps> = ({
                 </button>
             </div>
             {message != null && message !== '' && (
-                <div className="toast__body">{message}</div>
+                <div className="jj-toast__body">{message}</div>
             )}
             {action && (
-                <button type="button" className="toast__action" onClick={handleAction}>
+                <button type="button" className="jj-toast__action" onClick={handleAction}>
                     {action.label}
                 </button>
             )}

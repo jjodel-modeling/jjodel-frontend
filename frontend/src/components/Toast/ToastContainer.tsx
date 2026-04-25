@@ -17,7 +17,7 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
     if (toasts.length === 0) return null;
 
     return (
-        <div className={`toast-container toast-container--${position}`}>
+        <div className={`jj-toast-container jj-toast-container--${position}`}>
             {toasts.map(toast => (
                 <Toast
                     key={toast.id}

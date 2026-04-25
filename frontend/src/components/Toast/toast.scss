@@ -3,7 +3,7 @@
    Side-stripe variant — uses design tokens
    ============================================ */
 
-.toast-container {
+.jj-toast-container {
   position: fixed;
   z-index: var(--z-toast);
   display: flex;
@@ -22,7 +22,7 @@
 /* ============================================
    SINGLE TOAST — side-stripe
    ============================================ */
-.toast {
+.jj-toast {
   position: relative;
   width: 320px;
   max-width: 100%;
@@ -36,8 +36,8 @@
   overflow: hidden;
   animation: toastSlideInRight 280ms cubic-bezier(0.16, 1, 0.3, 1);
 
-  .toast-container--bottom-left &,
-  .toast-container--top-left & {
+  .jj-toast-container--bottom-left &,
+  .jj-toast-container--top-left & {
     border-left-width: 1px;
     border-right-width: 4px;
     border-radius: var(--radius-md) 0 0 var(--radius-md);
@@ -47,8 +47,8 @@
   &--exiting {
     animation: toastSlideOutRight 220ms ease-in forwards;
 
-    .toast-container--bottom-left &,
-    .toast-container--top-left & {
+    .jj-toast-container--bottom-left &,
+    .jj-toast-container--top-left & {
       animation-name: toastSlideOutLeft;
     }
   }
@@ -58,27 +58,27 @@
   &--warning { border-left-color: var(--color-warning); }
   &--error   { border-left-color: var(--color-error);   }
 
-  .toast-container--bottom-left &--info,
-  .toast-container--top-left    &--info    { border-left-color: var(--color-border-secondary); border-right-color: var(--color-info); }
-  .toast-container--bottom-left &--success,
-  .toast-container--top-left    &--success { border-left-color: var(--color-border-secondary); border-right-color: var(--color-success); }
-  .toast-container--bottom-left &--warning,
-  .toast-container--top-left    &--warning { border-left-color: var(--color-border-secondary); border-right-color: var(--color-warning); }
-  .toast-container--bottom-left &--error,
-  .toast-container--top-left    &--error   { border-left-color: var(--color-border-secondary); border-right-color: var(--color-error); }
+  .jj-toast-container--bottom-left &--info,
+  .jj-toast-container--top-left    &--info    { border-left-color: var(--color-border-secondary); border-right-color: var(--color-info); }
+  .jj-toast-container--bottom-left &--success,
+  .jj-toast-container--top-left    &--success { border-left-color: var(--color-border-secondary); border-right-color: var(--color-success); }
+  .jj-toast-container--bottom-left &--warning,
+  .jj-toast-container--top-left    &--warning { border-left-color: var(--color-border-secondary); border-right-color: var(--color-warning); }
+  .jj-toast-container--bottom-left &--error,
+  .jj-toast-container--top-left    &--error   { border-left-color: var(--color-border-secondary); border-right-color: var(--color-error); }
 }
 
 /* ============================================
    ROW: icon + title + time + close
    ============================================ */
-.toast__row {
+.jj-toast__row {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
 }
 
-.toast__icon {
+.jj-toast__icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -86,13 +86,13 @@
   font-size: 16px;
   line-height: 1;
 
-  .toast--info    & { color: var(--color-info);    }
-  .toast--success & { color: var(--color-success); }
-  .toast--warning & { color: var(--color-warning); }
-  .toast--error   & { color: var(--color-error);   }
+  .jj-toast--info    & { color: var(--color-info);    }
+  .jj-toast--success & { color: var(--color-success); }
+  .jj-toast--warning & { color: var(--color-warning); }
+  .jj-toast--error   & { color: var(--color-error);   }
 }
 
-.toast__title {
+.jj-toast__title {
   flex: 1;
   min-width: 0;
   font-size: 13px;
@@ -104,7 +104,7 @@
   text-overflow: ellipsis;
 }
 
-.toast__time {
+.jj-toast__time {
   flex-shrink: 0;
   font-size: 11px;
   font-weight: 400;
@@ -112,7 +112,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-.toast__close {
+.jj-toast__close {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -144,7 +144,7 @@
 /* ============================================
    BODY: message
    ============================================ */
-.toast__body {
+.jj-toast__body {
   margin-top: var(--space-1);
   padding-left: calc(16px + var(--space-2)); /* align with title (icon width + gap) */
   font-size: 12px;
@@ -158,7 +158,7 @@
 /* ============================================
    ACTION button (optional)
    ============================================ */
-.toast__action {
+.jj-toast__action {
   display: inline-block;
   margin-top: var(--space-2);
   margin-left: calc(16px + var(--space-2));
@@ -207,7 +207,7 @@
    RESPONSIVE
    ============================================ */
 @media (max-width: 480px) {
-  .toast-container {
+  .jj-toast-container {
     width: auto;
     left: var(--space-3);
     right: var(--space-3);
@@ -218,5 +218,5 @@
     &--bottom-left { bottom: var(--space-3); }
   }
 
-  .toast { width: 100%; }
+  .jj-toast { width: 100%; }
 }
