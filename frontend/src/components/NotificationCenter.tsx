@@ -72,11 +72,11 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose, 
         }
     }, [open]);
 
-    if (!open) return null;
-
     const handleClearAll = useCallback(() => {
         toastHistory.clearAll();
     }, []);
+
+    if (!open) return null;
 
     const handleRemove = (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
