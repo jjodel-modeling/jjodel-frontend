@@ -110,12 +110,15 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose, 
                     entries.map(entry => (
                         <div
                             key={entry.id}
-                            className={`app-notif-popover__item${entry.read ? '' : ' app-notif-popover__item--unread'}`}
+                            className={`app-notif-popover__item app-notif-popover__item--${entry.type}${entry.read ? '' : ' app-notif-popover__item--unread'}`}
                         >
                             <i className={`bi ${ICON_MAP[entry.type]} app-notif-popover__icon app-notif-popover__icon--${entry.type}`} />
                             <div className="app-notif-popover__body">
                                 {entry.title && (
-                                    <div className="app-notif-popover__item-title">{entry.title}</div>
+                                    <div className="app-notif-popover__item-title">
+                                        <span className="app-notif-popover__item-unread-dot" aria-hidden="true" />
+                                        {entry.title}
+                                    </div>
                                 )}
                                 <div className="app-notif-popover__item-desc">{entry.message}</div>
                                 <div
