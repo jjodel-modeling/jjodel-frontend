@@ -17,7 +17,7 @@ import {
 } from '../../types/jodie';
 import { AIProviderService } from '../../services/AIProviderService';
 import { useSettingsModalSafe } from '../../contexts/SettingsModalContext';
-import { JjodieEvents, AIEvents, JjScriptEvents } from '../../events/registry';
+import { JjodieEvents, AIEvents, JjScriptEvents, JjodelEvents } from '../../events/registry';
 import { JjodieContextService } from '../../services/JjodieContext';
 import { JjodieRagService } from '../../services/JjodieRagService';
 import {DUser, L, LUser, LProject, store} from '../../joiner';
@@ -51,6 +51,12 @@ export function Jodie(): JSX.Element {
     const lastIndexedProjectRef = useRef<string | null>(null);
     const [ragInitialized, setRagInitialized] = useState(false);
 
+    // Hidden when notifications popover is open (visual focus)
+    const [hiddenForPopover, setHiddenForPopover] = useState(false);
+
+    // Pending input prefill (from "Ask Jjodie" link in notifications popover)
+    const [pendingPrefill, setPendingPrefill] = useState<{ prompt: string; nonce: number } | null>(null);
+
     // using state just for caching, so project is not re-computed.
     const user = useMemo(()=> (L.fromPointer(DUser.current) as LUser), []);
     const project = useMemo(()=> user.project, []);
@@ -75,6 +81,29 @@ export function Jodie(): JSX.Element {
         return () => {
             window.removeEventListener(JjodieEvents.OPEN, handleOpenJodie);
         };
+    }, []);
+
+    // Listen for notifications popover toggle (hide Jodie while open)
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const ce = e as CustomEvent<{ open: boolean }>;
+            setHiddenForPopover(!!ce.detail?.open);
+        };
+        window.addEventListener(JjodelEvents.NOTIFICATIONS_POPOVER_TOGGLE, handler);
+        return () => window.removeEventListener(JjodelEvents.NOTIFICATIONS_POPOVER_TOGGLE, handler);
+    }, []);
+
+    // Listen for prefill-and-open (from "Ask Jjodie" link in notifications)
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const ce = e as CustomEvent<{ prompt: string }>;
+            const prompt = ce.detail?.prompt;
+            if (!prompt) return;
+            setChatState(prev => ({ ...prev, isOpen: true, hasUnread: false }));
+            setPendingPrefill({ prompt, nonce: Date.now() });
+        };
+        window.addEventListener(JjodelEvents.JODIE_PREFILL_AND_OPEN, handler);
+        return () => window.removeEventListener(JjodelEvents.JODIE_PREFILL_AND_OPEN, handler);
     }, []);
 
     // Listen for settings changes from Settings page
@@ -347,7 +376,7 @@ export function Jodie(): JSX.Element {
     }, []);
 
     return (
-        <>
+        <div className={`jodie-root${hiddenForPopover ? ' jodie-root--hidden' : ''}`}>
             {/* Main chat window or FAB */}
             {chatState.isOpen ? (
                 <JodieWindow
@@ -362,6 +391,7 @@ export function Jodie(): JSX.Element {
                     onJjScriptExecuted={handleJjScriptExecuted}
                     supportsVision={activeVersion?.capabilities.vision || false}
                     supportsPDF={activeVersion?.capabilities.pdf || false}
+                    prefilledMessage={pendingPrefill}
                 />
             ) : (
                 <JodieMinimized
@@ -370,7 +400,7 @@ export function Jodie(): JSX.Element {
                     onClick={handleOpen}
                 />
             )}
-        </>
+        </div>
     );
 }
 

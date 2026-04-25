@@ -24,6 +24,8 @@ interface JodieWindowProps {
     onJjScriptExecuted?: () => void;
     supportsVision?: boolean;
     supportsPDF?: boolean;
+    /** External prefill for the chat input (nonce changes to re-trigger same prompt) */
+    prefilledMessage?: { prompt: string; nonce: number } | null;
 }
 
 interface Position {
@@ -71,6 +73,7 @@ export function JodieWindow({
     onJjScriptExecuted,
     supportsVision,
     supportsPDF,
+    prefilledMessage,
 }: JodieWindowProps): JSX.Element {
     // Load initial position/size from config
     const config = JodieConfig.current;
@@ -300,6 +303,7 @@ export function JodieWindow({
                 disabled={isWaiting}
                 supportsVision={supportsVision}
                 supportsPDF={supportsPDF}
+                prefilledMessage={prefilledMessage}
             />
 
             <AIDisclaimer feature="chat" />

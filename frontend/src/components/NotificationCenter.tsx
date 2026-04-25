@@ -10,6 +10,9 @@ import { formatRelativeTime } from './Toast/useRelativeTime';
 import { JjodelEvents } from '../events/registry';
 import './NotificationCenter.scss';
 
+const ASK_JJODIE_PROMPT = (message: string) =>
+    `Can you explain this error and how to fix it?\n\n"${message}"`;
+
 const ICON_MAP: Record<HistoryEntry['type'], string> = {
     warning: 'bi-exclamation-triangle-fill',
     error: 'bi-x-circle-fill',
@@ -72,9 +75,24 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose, 
         }
     }, [open]);
 
+    useEffect(() => {
+        window.dispatchEvent(
+            new CustomEvent(JjodelEvents.NOTIFICATIONS_POPOVER_TOGGLE, { detail: { open } })
+        );
+    }, [open]);
+
     const handleClearAll = useCallback(() => {
         toastHistory.clearAll();
     }, []);
+
+    const handleAskJjodie = useCallback((entry: HistoryEntry) => {
+        const messageStr = typeof entry.message === 'string' ? entry.message : String(entry.message);
+        const prompt = ASK_JJODIE_PROMPT(messageStr);
+        onClose();
+        window.dispatchEvent(
+            new CustomEvent(JjodelEvents.JODIE_PREFILL_AND_OPEN, { detail: { prompt } })
+        );
+    }, [onClose]);
 
     if (!open) return null;
 
@@ -121,6 +139,15 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose, 
                                     </div>
                                 )}
                                 <div className="app-notif-popover__item-desc">{entry.message}</div>
+                                {entry.type === 'error' && (
+                                    <button
+                                        type="button"
+                                        className="app-notif-popover__item-ask-jjodie"
+                                        onClick={() => handleAskJjodie(entry)}
+                                    >
+                                        Need help? Ask Jjodie
+                                    </button>
+                                )}
                                 <div
                                     className="app-notif-popover__item-time"
                                     title={new Date(entry.timestamp).toLocaleString()}

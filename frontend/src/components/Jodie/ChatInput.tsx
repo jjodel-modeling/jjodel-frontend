@@ -14,6 +14,8 @@ interface ChatInputProps {
     placeholder?: string;
     supportsVision?: boolean;
     supportsPDF?: boolean;
+    /** External prefill (e.g. from "Ask Jjodie" notifications link). Nonce changes to re-trigger same prompt. */
+    prefilledMessage?: { prompt: string; nonce: number } | null;
 }
 
 // Generate unique ID for attachments
@@ -73,7 +75,8 @@ export function ChatInput({
     disabled,
     placeholder,
     supportsVision = false,
-    supportsPDF = false
+    supportsPDF = false,
+    prefilledMessage,
 }: ChatInputProps): JSX.Element {
     const [message, setMessage] = useState('');
     const [images, setImages] = useState<ChatImage[]>([]);
@@ -85,6 +88,21 @@ export function ChatInput({
 
     // Check if any attachments are supported
     const supportsAttachments = supportsVision || supportsPDF;
+
+    // External prefill: set the textarea content and focus it. Nonce ensures
+    // re-trigger when the same prompt is requested twice in a row.
+    useEffect(() => {
+        if (!prefilledMessage?.prompt) return;
+        setMessage(prefilledMessage.prompt);
+        setHistoryIndex(-1);
+        setSavedMessage('');
+        const ta = textareaRef.current;
+        if (ta) {
+            ta.focus();
+            const len = prefilledMessage.prompt.length;
+            try { ta.setSelectionRange(len, len); } catch { /* ignore */ }
+        }
+    }, [prefilledMessage]);
 
     // Auto-resize textarea
     useEffect(() => {

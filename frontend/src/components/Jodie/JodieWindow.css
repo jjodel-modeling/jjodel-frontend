@@ -4,6 +4,19 @@
  */
 
 /* ========================================
+   Root wrapper (hide-on-popover)
+   ======================================== */
+
+.jodie-root {
+    transition: opacity 180ms ease-out;
+}
+
+.jodie-root--hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* ========================================
    Window Container
    ======================================== */
 
