@@ -1,5 +1,12 @@
 # Claude Code Session Log
 
+## 2026-04-25 — fix v2: NotificationCenter hooks order (verifica empirica)
+**Prompt**: Verifica completa del file con diff a schermo, identificazione di TUTTI gli hook condizionali, fix solo dopo conferma utente.
+**File toccati**: `frontend/src/components/NotificationCenter.tsx`
+**Esito**: ✅ — diff non vuoto applicato e committato (`aee806609`), build OK (`✓ built in 40.01s`, zero errori TS nuovi). In attesa di conferma runtime dall'utente.
+**Note**: Step 0 ha confermato che il fix v1 non era mai stato applicato sul disco (`useCallback` ancora alla riga 77, dopo `if (!open) return null;` alla riga 75 — esattamente come da prompt v1). Step 1 ha mappato 5 hook al top-level (useRef, useToastHistorySnapshot wrapper, 2× useEffect) + 1 hook (useCallback handleClearAll) sotto l'early return → 5 hook con `open=false`, 6 con `open=true`, esatta corrispondenza con il warning React `5 → 6`. Step 3 fix puntuale: `handleClearAll` (useCallback, deps `[]`) spostato sopra `if (!open) return null;`. `handleRemove` resta funzione regolare invariata. Diff: 2 inserzioni, 2 rimozioni — solo riordinamento.
+**Nome del documento prompt**: 2026-04-25 19:00 v2
+
 ## 2026-04-25 — feat(v3): toast history + Bell icon popover + Jodie revert + react-hot-toast cleanup
 **Prompt**: estensione v3 dell'implementazione toast: storico warning/error in localStorage (max 20), Bell icon nella StatusBar con popover che riusa `NotificationCenter`, badge count in StatusBar, revert del listener Jodie aggiunto in v2 (Jodie torna pulito), cleanup definitivo `react-hot-toast` (migrazione `SizeInput.tsx` al nuovo sistema).
 **File toccati**:
