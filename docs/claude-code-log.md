@@ -1,5 +1,12 @@
 # Claude Code Session Log
 
+## 2026-04-25 — refactor: rename .toast* CSS classes to .jj-toast* (Bootstrap collision fix)
+**Prompt**: Bootstrap CSS importato globalmente in index.tsx definisce `.toast:not(.show) { display: none }` con specificità 0,2,0 superiore al nostro `.toast` (0,1,0) → tutti i toast invisibili. Rinominato l'intero namespace CSS da `.toast*` a `.jj-toast*` per eliminare la collisione e rendere il sistema toast indipendente da qualunque framework CSS globale. Componenti React (`Toast`, `ToastContainer`, `ToastProvider`), eventi (`jjodel:toast`), type, variabili JS/TS, token CSS (`--z-toast`) e localStorage keys restano invariati.
+**File toccati**: `frontend/src/components/Toast/Toast.tsx`, `frontend/src/components/Toast/ToastContainer.tsx`, `frontend/src/components/Toast/toast.scss`.
+**Esito**: ✅ — commit `31854567a`, build OK (`✓ built in 39.32s`).
+**Note**: 32 occorrenze rinominate (24 SCSS + 7 Toast.tsx + 1 ToastContainer.tsx). Sostituzione atomica via `sed`. Falsi positivi esclusi: `.jjtl-toast*` (sistema parallelo JjTL, prefix diverso) e `.toast-alert*` (sistema legacy in `components/alert/`, dead code dopo rimozione `<AlertVisualizer>`). Niente cambiamenti a JSX, type, eventi, store keys o token. Diff puramente di nomenclatura. Anche il commit precedente `83d15343c` (`--z-toast: 999998`) può essere mantenuto: la sua motivazione (stacking context safety) resta valida indipendentemente dal rename.
+**Nome del documento prompt**: 2026-04-25 23:00
+
 ## 2026-04-25 — feat: Jodie hide-on-popover + Ask Jjodie shortcut
 **Prompt**: Jodie sfuma (opacity 0 + pointer-events none) quando popover notifiche è aperto. Entry di tipo error mostrano link "Need help? Ask Jjodie" che chiude popover, apre Jodie e pre-popola input con prompt formattato. L'utente preme invio per inviare. Comunicazione via due custom events.
 **File toccati**: `frontend/src/events/registry.ts`, `frontend/src/components/NotificationCenter.tsx` + `.scss`, `frontend/src/components/Jodie/Jodie.tsx`, `frontend/src/components/Jodie/JodieWindow.tsx`, `frontend/src/components/Jodie/ChatInput.tsx`, `frontend/src/components/Jodie/JodieWindow.css`.
