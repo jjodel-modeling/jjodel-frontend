@@ -1,5 +1,12 @@
 # Claude Code Session Log
 
+## 2026-04-25 — style: notification entries restyle (stripe + icon + tint + dot)
+**Prompt**: Restyle delle entry nel popover NotificationCenter con stripe colorato a sinistra (3px), icona del tipo colorata, tinta di sfondo a 0.04 (0.07 hover), dot cyan per entry non lette.
+**File toccati**: `frontend/src/components/NotificationCenter.tsx`, `frontend/src/components/NotificationCenter.scss`
+**Esito**: ✅ — commit `c8cc259d8`, build OK (`✓ built in 38.49s`).
+**Note**: Nomi BEM allineati al pattern reale del file (`.app-notif-popover__*`, NON `.notification-item` come nell'esempio del prompt). Nuovi modifier su `&__item`: `--warning` (stripe + bg 0.04 + hover 0.07), `--error` (idem). Sub-element nuovo: `&__item-unread-dot` (con trattino, allineato a `&__item-title`/`&__item-time`/`&__item-close` esistenti). `&__list` trasformato in flex column con `gap: 6px`; rimossi `border-bottom` su `&__item` e `&:last-child` (separazione ora via gap). `&--unread` non controlla più `background` (lo controllano `--warning|--error`); resta come marker per il dot tramite la regola `&__item--unread &__item-unread-dot { opacity: 1; }` (default 0 → fade-in/fade-out smooth a 200ms al `markAllRead`). `&__icon--warning|error` già esistenti, non duplicati. Edge case: entry senza `title` non mostra il dot (il prompt dice "dentro la riga del title", rispettato letteralmente).
+**Nome del documento prompt**: 2026-04-25 19:30
+
 ## 2026-04-25 — fix v2: NotificationCenter hooks order (verifica empirica)
 **Prompt**: Verifica completa del file con diff a schermo, identificazione di TUTTI gli hook condizionali, fix solo dopo conferma utente.
 **File toccati**: `frontend/src/components/NotificationCenter.tsx`
