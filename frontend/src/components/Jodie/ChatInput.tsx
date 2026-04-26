@@ -3,9 +3,10 @@
  * Text input for sending messages to the AI with image and PDF support
  */
 
-import React, { useState, useRef, useEffect, KeyboardEvent, ClipboardEvent, useCallback } from 'react';
-import { ChatImage, ChatDocument } from '../../types/jodie';
+import React, { useState, useRef, useEffect, KeyboardEvent, ClipboardEvent, useCallback, useMemo } from 'react';
+import { ChatImage, ChatDocument, JodieConfig, ConsoleMode, CodeFlavor } from '../../types/jodie';
 import { JjScriptService } from '../../jjscript';
+import { AIEvents } from '../../events/registry';
 import './ChatInput.scss';
 
 interface ChatInputProps {
@@ -16,7 +17,21 @@ interface ChatInputProps {
     supportsPDF?: boolean;
     /** External prefill (e.g. from "Ask Jjodie" notifications link). Nonce changes to re-trigger same prompt. */
     prefilledMessage?: { prompt: string; nonce: number } | null;
+    /** Stop the in-flight AI response (UI-only — fetch is not actually aborted). */
+    onStop?: () => void;
+    /** Open the AI Settings modal (used by the no-provider warning state). */
+    onOpenSettings?: () => void;
+    /** Active console mode (Chat / Code). Drives placeholder, font, prompt glyph and submit behavior. */
+    consoleMode: ConsoleMode;
+    /** Switch to a different mode (used by the backtick-on-empty-input shortcut). */
+    onConsoleModeChange: (m: ConsoleMode) => void;
+    /** Active flavor in Code mode (today: 'jjel'). */
+    codeFlavor: CodeFlavor;
+    /** Submit handler for Code mode: parent evaluates and appends a CodeEntry. */
+    onSubmitCode: (input: string) => void;
 }
+
+type SendBtnState = 'empty' | 'ready' | 'sending' | 'no-provider';
 
 // Generate unique ID for attachments
 function generateAttachmentId(prefix: string): string {
@@ -77,17 +92,33 @@ export function ChatInput({
     supportsVision = false,
     supportsPDF = false,
     prefilledMessage,
+    onStop,
+    onOpenSettings,
+    consoleMode,
+    onConsoleModeChange,
+    codeFlavor,
+    onSubmitCode,
 }: ChatInputProps): JSX.Element {
+    const isCode = consoleMode === 'code';
     const [message, setMessage] = useState('');
     const [images, setImages] = useState<ChatImage[]>([]);
     const [documents, setDocuments] = useState<ChatDocument[]>([]);
     const [historyIndex, setHistoryIndex] = useState(-1);
     const [savedMessage, setSavedMessage] = useState(''); // Save current input when navigating history
+    const [hasProvider, setHasProvider] = useState<boolean>(() => JodieConfig.hasEnabledProviders());
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Check if any attachments are supported
     const supportsAttachments = supportsVision || supportsPDF;
+
+    // Track AI provider configuration to drive the send button "no-provider" state
+    useEffect(() => {
+        const refresh = () => setHasProvider(JodieConfig.hasEnabledProviders());
+        refresh();
+        window.addEventListener(AIEvents.SETTINGS_CHANGED, refresh);
+        return () => window.removeEventListener(AIEvents.SETTINGS_CHANGED, refresh);
+    }, []);
 
     // External prefill: set the textarea content and focus it. Nonce ensures
     // re-trigger when the same prompt is requested twice in a row.
@@ -115,8 +146,18 @@ export function ChatInput({
 
     const handleSubmit = useCallback(() => {
         const trimmed = message.trim();
-        const hasAttachments = images.length > 0 || documents.length > 0;
 
+        if (isCode) {
+            if (!trimmed) return;
+            onSubmitCode(trimmed);
+            setMessage('');
+            setHistoryIndex(-1);
+            setSavedMessage('');
+            if (textareaRef.current) textareaRef.current.style.height = 'auto';
+            return;
+        }
+
+        const hasAttachments = images.length > 0 || documents.length > 0;
         if ((trimmed || hasAttachments) && !disabled) {
             onSend(
                 trimmed,
@@ -134,12 +175,29 @@ export function ChatInput({
                 textareaRef.current.style.height = 'auto';
             }
         }
-    }, [message, images, documents, disabled, onSend]);
+    }, [message, images, documents, disabled, onSend, isCode, onSubmitCode]);
 
     const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+        // Backtick on an empty Chat input switches to Code mode (and swallows the char).
+        if (!isCode && e.key === '`' && message === '') {
+            e.preventDefault();
+            onConsoleModeChange('code');
+            return;
+        }
+
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            handleSubmit();
+            const trimmed = message.trim();
+            if (isCode) {
+                if (trimmed) handleSubmit();
+                return;
+            }
+            // Chat: only submit when the send button would actually send (state === 'ready').
+            // Other states (empty, sending, no-provider) ignore Enter.
+            const hasAttachments = images.length > 0 || documents.length > 0;
+            if (hasProvider && !disabled && (trimmed || hasAttachments)) {
+                handleSubmit();
+            }
             return;
         }
 
@@ -313,16 +371,77 @@ export function ChatInput({
     // Build placeholder text
     const getPlaceholder = () => {
         if (placeholder) return placeholder;
+        if (isCode) return codeFlavor === 'jjel' ? 'JjEL expression...' : 'JS expression...';
         if (supportsVision && supportsPDF) return 'Message, paste image, or attach PDF...';
         if (supportsVision) return 'Message or paste an image...';
         if (supportsPDF) return 'Message or attach a PDF...';
         return 'Ask Jjodie about metamodeling...';
     };
 
+    // Send button: 4 mutually-exclusive states.
+    // In Code mode, the provider check is irrelevant: JjEL evaluates locally.
+    const sendBtnState: SendBtnState = useMemo(() => {
+        if (isCode) return message.trim() ? 'ready' : 'empty';
+        if (!hasProvider) return 'no-provider';
+        if (disabled) return 'sending';
+        if (!hasContent) return 'empty';
+        return 'ready';
+    }, [hasProvider, disabled, hasContent, isCode, message]);
+
+    // TODO: real abort wired to AbortController in AIProviderService — currently UI-only
+    const handleStopClick = useCallback(() => {
+        if (onStop) onStop();
+    }, [onStop]);
+
+    const handleOpenSettingsClick = useCallback(() => {
+        if (onOpenSettings) onOpenSettings();
+    }, [onOpenSettings]);
+
+    const sendBtnConfig = useMemo(() => {
+        switch (sendBtnState) {
+            case 'empty':
+                return {
+                    modifier: 'jodie-send-btn--empty',
+                    icon: 'bi-arrow-up',
+                    onClick: undefined,
+                    disabled: true,
+                    title: 'Type a message',
+                    ariaLabel: 'Type a message to enable send',
+                };
+            case 'ready':
+                return {
+                    modifier: 'jodie-send-btn--ready',
+                    icon: 'bi-arrow-up',
+                    onClick: handleSubmit,
+                    disabled: false,
+                    title: 'Send (Enter)',
+                    ariaLabel: 'Send message',
+                };
+            case 'sending':
+                return {
+                    modifier: 'jodie-send-btn--sending',
+                    icon: 'bi-stop-fill',
+                    onClick: handleStopClick,
+                    disabled: false,
+                    title: 'Stop generation',
+                    ariaLabel: 'Stop AI response',
+                };
+            case 'no-provider':
+                return {
+                    modifier: 'jodie-send-btn--no-provider',
+                    icon: 'bi-exclamation-triangle-fill',
+                    onClick: handleOpenSettingsClick,
+                    disabled: false,
+                    title: 'Configure an AI provider in Settings',
+                    ariaLabel: 'No AI provider configured. Open Settings.',
+                };
+        }
+    }, [sendBtnState, handleSubmit, handleStopClick, handleOpenSettingsClick]);
+
     return (
-        <div className="jodie-input-container">
-            {/* Attachment previews */}
-            {(images.length > 0 || documents.length > 0) && (
+        <div className={`jodie-input-container${isCode ? ' jodie-input-container--code' : ''}`}>
+            {/* Attachment previews (chat mode only) */}
+            {!isCode && (images.length > 0 || documents.length > 0) && (
                 <div className="jodie-attachment-previews">
                     {/* Image previews */}
                     {images.map(img => (
@@ -363,8 +482,8 @@ export function ChatInput({
             )}
 
             <div className="jodie-input-row">
-                {/* Attachment button (if any attachments supported) */}
-                {supportsAttachments && (
+                {/* Attachment button (chat mode + provider supports it) */}
+                {!isCode && supportsAttachments && (
                     <button
                         className="jodie-attach-btn"
                         onClick={openFilePicker}
@@ -375,26 +494,32 @@ export function ChatInput({
                     </button>
                 )}
 
-                <textarea
-                    ref={textareaRef}
-                    className="jodie-input"
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    onPaste={handlePaste}
-                    placeholder={getPlaceholder()}
-                    disabled={disabled}
-                    rows={1}
-                />
+                <div className={`jodie-composer${isCode ? ' jodie-composer--code' : ''}`}>
+                    {isCode && (
+                        <span className="jodie-code-prompt" aria-hidden="true">›</span>
+                    )}
+                    <textarea
+                        ref={textareaRef}
+                        className={`jodie-input${isCode ? ' jodie-input--code' : ''}`}
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        onPaste={handlePaste}
+                        placeholder={getPlaceholder()}
+                        disabled={isCode ? false : disabled}
+                        rows={1}
+                    />
 
-                <button
-                    className="jodie-send-btn"
-                    onClick={handleSubmit}
-                    disabled={disabled || !hasContent}
-                    title="Send message"
-                >
-                    <i className="bi bi-send-fill" />
-                </button>
+                    <button
+                        className={`jodie-send-btn ${sendBtnConfig.modifier}`}
+                        onClick={sendBtnConfig.onClick}
+                        disabled={sendBtnConfig.disabled}
+                        title={sendBtnConfig.title}
+                        aria-label={sendBtnConfig.ariaLabel}
+                    >
+                        <i className={`bi ${sendBtnConfig.icon}`} />
+                    </button>
+                </div>
             </div>
 
             {/* Hidden file input */}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import './notification-widget.scss';
 
 interface NotificationPost {
@@ -13,12 +13,60 @@ interface APIResponse {
   posts: NotificationPost[];
 }
 
+interface QuickTipsState {
+  seen: Record<string, number>;
+  pauseUntil: number | null;
+}
+
 const API_URL = 'https://jjodel-notifications.alfonso-pierantonio.workers.dev';
+
+const TIP_HIDE_WINDOW_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
+
+function loadTipsState(): QuickTipsState {
+  try {
+    const raw = localStorage.getItem('jjodel-quick-tips-state');
+    if (!raw) return { seen: {}, pauseUntil: null };
+    const parsed = JSON.parse(raw);
+    return {
+      seen: parsed?.seen && typeof parsed.seen === 'object' ? parsed.seen : {},
+      pauseUntil: typeof parsed?.pauseUntil === 'number' ? parsed.pauseUntil : null,
+    };
+  } catch {
+    return { seen: {}, pauseUntil: null };
+  }
+}
+
+function saveTipsState(state: QuickTipsState): void {
+  try {
+    localStorage.setItem('jjodel-quick-tips-state', JSON.stringify(state));
+  } catch {
+    // localStorage full or disabled: silent noop
+  }
+}
+
+function getUnseenTips(allTips: NotificationPost[], state: QuickTipsState, now: number): NotificationPost[] {
+  return allTips.filter(t => {
+    const seenAt = state.seen[t.id];
+    return seenAt === undefined || (now - seenAt) >= TIP_HIDE_WINDOW_MS;
+  });
+}
+
+// Pause is honored only if every tip in the current payload has a recent seen entry.
+// A new tip (no seen entry) implicitly breaks the pause so it appears immediately.
+function isPauseActive(allTips: NotificationPost[], state: QuickTipsState, now: number): boolean {
+  if (state.pauseUntil === null || now >= state.pauseUntil) return false;
+  const allSeenRecently = allTips.every(t => {
+    const seenAt = state.seen[t.id];
+    return seenAt !== undefined && (now - seenAt) < TIP_HIDE_WINDOW_MS;
+  });
+  return allSeenRecently;
+}
 
 export const NotificationWidget: React.FC = () => {
   const [posts, setPosts] = useState<NotificationPost[]>([]);
   const [isVisible, setIsVisible] = useState(true);
-  const [tipIndex, setTipIndex] = useState(0);
+  const [tipsQueue, setTipsQueue] = useState<NotificationPost[]>([]);
+  const [queueIndex, setQueueIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [dismissedIds, setDismissedIds] = useState<string[]>(() => {
     const saved = localStorage.getItem('jjodel-dismissed-notifications');
@@ -47,12 +95,30 @@ export const NotificationWidget: React.FC = () => {
     localStorage.setItem('jjodel-dismissed-notifications', JSON.stringify(dismissedIds));
   }, [dismissedIds]);
 
-  // Signal to other components (like Jjodie FAB) when notification is visible
+  const tips = useMemo(() => posts.filter(p => p.category === 'tip'), [posts]);
+
+  // Build the queue of unseen-or-stale tips after fetch.
+  // Re-runs whenever the payload changes (e.g. new tip appears in Notion).
+  useEffect(() => {
+    if (tips.length === 0) return;
+    const now = Date.now();
+    const state = loadTipsState();
+
+    if (isPauseActive(tips, state, now)) {
+      setTipsQueue([]);
+      return;
+    }
+
+    setTipsQueue(getUnseenTips(tips, state, now));
+    setQueueIndex(0);
+  }, [tips]);
+
+  // Signal to other components (like Jjodie FAB) when the widget is actually visible
   useEffect(() => {
     const shouldShow = isVisible && posts.length > 0 && !isLoading;
-    const hasTipsDismissed = sessionStorage.getItem('jjodel-tips-dismissed') === 'true';
     const hasSystemNotice = posts.filter(p => p.category === 'system-notice' && !dismissedIds.includes(p.id)).length > 0;
-    const isActuallyVisible = shouldShow && (hasSystemNotice || !hasTipsDismissed);
+    const hasTipToShow = tipsQueue.length > 0 && queueIndex < tipsQueue.length;
+    const isActuallyVisible = shouldShow && (hasSystemNotice || hasTipToShow);
 
     if (isActuallyVisible) {
       document.body.setAttribute('data-notification-visible', 'true');
@@ -63,7 +129,7 @@ export const NotificationWidget: React.FC = () => {
     return () => {
       document.body.removeAttribute('data-notification-visible');
     };
-  }, [isVisible, posts, isLoading, dismissedIds]);
+  }, [isVisible, posts, isLoading, dismissedIds, tipsQueue, queueIndex]);
 
   // Hide widget on auth page
   if (window.location.hash.includes('auth')) return null;
@@ -73,28 +139,51 @@ export const NotificationWidget: React.FC = () => {
     .filter(p => p.category === 'system-notice')
     .filter(p => !dismissedIds.includes(p.id));
 
-  const tips = posts.filter(p => p.category === 'tip');
-
   // Determine what to show
   const hasSystemNotice = systemNotices.length > 0;
   const currentNotice = systemNotices[0];
-  const currentTip = tips.length > 0 ? tips[tipIndex % tips.length] : null;
+  const currentTip = tipsQueue.length > 0 && queueIndex < tipsQueue.length ? tipsQueue[queueIndex] : null;
 
-  // Hide tips if dismissed this session (system notices still show)
-  if (sessionStorage.getItem('jjodel-tips-dismissed') === 'true' && !hasSystemNotice) return null;
+  const dismissSystemNotice = (id: string) => {
+    setDismissedIds(prev => [...prev, id]);
+  };
 
-  const dismiss = (id?: string) => {
-    if (id) {
-      setDismissedIds(prev => [...prev, id]);
+  const handleNext = () => {
+    const current = tipsQueue[queueIndex];
+    if (!current) return;
+    const now = Date.now();
+    const state = loadTipsState();
+    state.seen[current.id] = now;
+
+    const wasLast = queueIndex >= tipsQueue.length - 1;
+    if (wasLast) {
+      state.pauseUntil = now + TIP_HIDE_WINDOW_MS;
+      saveTipsState(state);
+      setTipsQueue([]);
     } else {
-      // Save tip dismissal in sessionStorage (reappears next session)
-      sessionStorage.setItem('jjodel-tips-dismissed', 'true');
-      setIsVisible(false);
+      saveTipsState(state);
+      setQueueIndex(queueIndex + 1);
     }
   };
 
-  const nextTip = () => {
-    setTipIndex(prev => (prev + 1) % tips.length);
+  // Closing on the last tip starts the pause; closing mid-queue just hides for now,
+  // so the remaining tips reappear next mount.
+  const handleClose = () => {
+    const current = tipsQueue[queueIndex];
+    if (!current) {
+      setTipsQueue([]);
+      return;
+    }
+    const now = Date.now();
+    const state = loadTipsState();
+    state.seen[current.id] = now;
+
+    const wasLast = queueIndex >= tipsQueue.length - 1;
+    if (wasLast) {
+      state.pauseUntil = now + TIP_HIDE_WINDOW_MS;
+    }
+    saveTipsState(state);
+    setTipsQueue([]);
   };
 
   const getPriorityIcon = (priority?: string) => {
@@ -119,7 +208,7 @@ export const NotificationWidget: React.FC = () => {
             <i className={`bi ${getPriorityIcon(currentNotice.priority)}`} />
             <span>System Notice</span>
           </div>
-          <button className="notification-close" onClick={() => dismiss(currentNotice.id)}>
+          <button className="notification-close" onClick={() => dismissSystemNotice(currentNotice.id)}>
             <i className="bi bi-x-lg" />
           </button>
         </div>
@@ -134,7 +223,7 @@ export const NotificationWidget: React.FC = () => {
   }
 
   // TIPS
-  if (tips.length > 0 && currentTip) {
+  if (tipsQueue.length > 0 && currentTip) {
     return (
       <div className="notification-widget is-tip">
         <div className="notification-header">
@@ -144,7 +233,7 @@ export const NotificationWidget: React.FC = () => {
             </div>
             <span>Quick Tip</span>
           </div>
-          <button className="notification-close" onClick={() => dismiss()}>
+          <button className="notification-close" onClick={handleClose}>
             <i className="bi bi-x-lg" />
           </button>
         </div>
@@ -152,8 +241,8 @@ export const NotificationWidget: React.FC = () => {
           <p className="notification-message">{currentTip.message}</p>
         </div>
         <div className="notification-footer">
-          <span className="tip-counter">Tip {(tipIndex % tips.length) + 1} of {tips.length}</span>
-          <button className="tip-next-btn" onClick={nextTip}>
+          <span className="tip-counter">Tip {queueIndex + 1} of {tipsQueue.length}</span>
+          <button className="tip-next-btn" onClick={handleNext}>
             Next <i className="bi bi-arrow-right" />
           </button>
         </div>

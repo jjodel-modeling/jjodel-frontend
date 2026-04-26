@@ -768,6 +768,8 @@ export interface ChatDocument {
 
 export interface ChatMessage {
     id: string;
+    /** Discriminator. Optional for backwards-compatibility; absent treated as 'chat'. */
+    kind?: 'chat';
     role: 'user' | 'assistant';
     content: string;
     timestamp: number;
@@ -779,6 +781,36 @@ export interface ChatMessage {
         success: boolean;
         command: string;
     };
+}
+
+// ============================================
+// CONSOLE MODE (Chat / Code)
+// ============================================
+
+export type ConsoleMode = 'chat' | 'code';
+export type CodeFlavor = 'jjel' | 'js';
+
+/** REPL-style entry produced when the console runs in Code mode. */
+export interface CodeEntry {
+    id: string;
+    kind: 'code';
+    flavor: CodeFlavor;
+    input: string;
+    output:
+        | { ok: true; value: unknown }
+        | { ok: false; error: string };
+    timestamp: number;
+}
+
+/** Anything that may appear in the unified Jjodie history. */
+export type ConsoleEntry = ChatMessage | CodeEntry;
+
+export function isCodeEntry(e: ConsoleEntry): e is CodeEntry {
+    return (e as CodeEntry).kind === 'code';
+}
+
+export function isChatEntry(e: ConsoleEntry): e is ChatMessage {
+    return (e as CodeEntry).kind !== 'code';
 }
 
 /**
@@ -832,7 +864,8 @@ export function supportsAttachments(provider: TAIProvider, model?: string): bool
 */
 
 export interface ChatState {
-    messages: ChatMessage[];
+    /** Unified history: chat messages and code REPL entries, sorted chronologically. */
+    messages: ConsoleEntry[];
     isOpen: boolean;
     isMinimized: boolean;
     isWaiting: boolean;

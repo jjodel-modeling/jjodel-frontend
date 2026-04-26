@@ -224,7 +224,7 @@ export type DashProps = {
     children?: JSX.Element,
     className?: string;
     // NB: account and profile are both used, i don't know which to keep
-    active: 'Account'|'Profile'|'Settings'|'Updates'|'Community'|'All'|'Archive'|'Templates'|'Recent' | 'Notes' | 'Project' | 'UsersInfo' | 'ProjectsInfo' | 'News';
+    active: 'Account'|'Profile'|'Settings'|'Updates'|'Community'|'All'|'Archive'|'Templates'|'Explore'|'Recent' | 'Notes' | 'Project' | 'UsersInfo' | 'ProjectsInfo' | 'News';
     version?: Partial<DState["version"]>;
     project?: LProject;
     projects?:LProject[];
@@ -320,11 +320,12 @@ function GenericDashboard(props: DashProps): any {
         >
             <LeftBar active={active} projects={user?.projects}/>
             <div className={`dash-content ${active === 'All' ? 'projects-view' : 'user'} ${props.style && props.style}`}>
-                {/* Title for non-All views only - All view title is in AllProjects.tsx CTA row */}
-                {active !== "All" && (
+                {/* Title for non-All views only - All view title is in AllProjects.tsx CTA row.
+                    Templates and Explore render a centered ComingSoonPlaceholder with its own title,
+                    so we suppress the top-bar Title here to avoid duplication. */}
+                {active !== "All" && active !== "Templates" && active !== "Explore" && (
                     <div>
                         {active === "Recent" && <Title  active={active} title={'Recent'} icon={<i className="bi bi-clock"></i>} />}
-                        {active === "Templates" && <Title  active={active} title={'Templates'} icon={<i className="bi bi-lightbulb"></i>} />}
                         {active === "Notes" && <Title  active={active} title={'Project Notes'} icon={<i className="bi bi-pencil-square"></i>} />}
                         {active === "Updates" && <Title  active={active} title={'What\'s new'} icon={<i className="bi bi-clock-history"></i>} />}
                         {active === "Profile" && <Title  active={active} title={'Profile'} icon={<i className="bi bi-clock-history"></i>} />}

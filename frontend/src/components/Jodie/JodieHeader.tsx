@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { ProviderModelSelector } from '../common/ProviderModelSelector';
-import { TAIProvider, AIProvider } from '../../types/jodie';
+import { TAIProvider, AIProvider, ConsoleMode, CodeFlavor } from '../../types/jodie';
 import { DUser, L, LUser, LProject, LModel, store } from '../../joiner';
 import { Selectors } from '../../redux/selectors/selectors';
 
@@ -17,6 +17,20 @@ interface JodieHeaderProps {
     onOpenSettings: () => void;
     onOpenDocumentation?: () => void;
     isWaiting?: boolean;
+    /** Whether at least one AI provider is configured */
+    isAlive?: boolean;
+    /** Whether the window is currently in fullscreen mode */
+    isFullscreen?: boolean;
+    /** Toggle fullscreen on/off (parent decides which based on isFullscreen) */
+    onToggleFullscreen?: () => void;
+    /** Reset window to default position and size */
+    onResetPosition?: () => void;
+    /** Active console mode (Chat / Code). */
+    consoleMode: ConsoleMode;
+    onConsoleModeChange: (m: ConsoleMode) => void;
+    /** Active code flavor (JjEL / JS). JS is disabled in stage 1. */
+    codeFlavor: CodeFlavor;
+    onCodeFlavorChange: (f: CodeFlavor) => void;
 }
 
 interface MetamodelContext {
@@ -111,22 +125,65 @@ export function JodieHeader({
     onOpenSettings,
     onOpenDocumentation,
     isWaiting,
+    isAlive,
+    isFullscreen,
+    onToggleFullscreen,
+    onResetPosition,
+    consoleMode,
+    onConsoleModeChange,
+    codeFlavor,
+    onCodeFlavorChange,
 }: JodieHeaderProps): JSX.Element {
     const context = useMetamodelContext();
+    const aliveTitle = isAlive
+        ? 'AI provider connected'
+        : 'No AI provider configured. Open Settings to add one.';
 
     return (
+        <>
         <div className="jodie-header">
             <div className="jodie-header-left">
                 <div className="jodie-avatar">
                     <i className="bi bi-robot" />
                 </div>
                 <div className="jodie-title">
-                    <span className="jodie-name">Jjodie</span>
+                    <span className="jodie-name">
+                        Jjodie
+                        <span
+                            className={`jodie-alive-dot ${isAlive ? 'jodie-alive-dot--alive' : 'jodie-alive-dot--idle'}`}
+                            title={aliveTitle}
+                            aria-label={aliveTitle}
+                        />
+                    </span>
                     <ProviderModelSelector
                         feature="chat"
                         compact
                         onNavigateToSettings={onOpenSettings}
                     />
+                </div>
+
+                {/* Console mode switch (Chat / Code). Right of the title block. */}
+                <div className="jodie-mode-switch" role="tablist" aria-label="Console mode">
+                    <button
+                        type="button"
+                        role="tab"
+                        aria-selected={consoleMode === 'chat'}
+                        className={`jodie-mode-switch__opt${consoleMode === 'chat' ? ' jodie-mode-switch__opt--active' : ''}`}
+                        onClick={() => onConsoleModeChange('chat')}
+                        title="Chat with Jjodie (Cmd+J)"
+                    >
+                        Chat
+                    </button>
+                    <button
+                        type="button"
+                        role="tab"
+                        aria-selected={consoleMode === 'code'}
+                        className={`jodie-mode-switch__opt${consoleMode === 'code' ? ' jodie-mode-switch__opt--active' : ''}`}
+                        onClick={() => onConsoleModeChange('code')}
+                        title="Evaluate code against the model (Cmd+J)"
+                    >
+                        Code
+                    </button>
                 </div>
             </div>
 
@@ -156,6 +213,26 @@ export function JodieHeader({
             </div>
 
             <div className="jodie-header-right">
+                {onResetPosition && (
+                    <button
+                        className="jodie-header-btn jodie-reset-btn"
+                        onClick={onResetPosition}
+                        title="Reset position and size"
+                        aria-label="Reset Jjodie window to default position and size"
+                    >
+                        <i className="bi bi-arrow-counterclockwise" />
+                    </button>
+                )}
+                {onToggleFullscreen && (
+                    <button
+                        className={`jodie-header-btn ${isFullscreen ? 'jodie-fullscreen-exit-btn' : 'jodie-fullscreen-btn'}`}
+                        onClick={onToggleFullscreen}
+                        title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+                        aria-label={isFullscreen ? 'Exit fullscreen mode' : 'Enter fullscreen mode'}
+                    >
+                        <i className={`bi ${isFullscreen ? 'bi-fullscreen-exit' : 'bi-arrows-fullscreen'}`} />
+                    </button>
+                )}
                 <button
                     className="jodie-header-btn"
                     onClick={onOpenSettings}
@@ -172,6 +249,39 @@ export function JodieHeader({
                 </button>
             </div>
         </div>
+
+        {consoleMode === 'code' && (
+            <div className="jodie-code-subrow">
+                <div className="jodie-flavor-switch" role="tablist" aria-label="Code flavor">
+                    <button
+                        type="button"
+                        role="tab"
+                        aria-selected={codeFlavor === 'jjel'}
+                        className={`jodie-flavor-switch__opt${codeFlavor === 'jjel' ? ' jodie-flavor-switch__opt--active' : ''}`}
+                        onClick={() => onCodeFlavorChange('jjel')}
+                        title="Evaluate JjEL expressions"
+                    >
+                        JjEL
+                    </button>
+                    <button
+                        type="button"
+                        role="tab"
+                        aria-selected={false}
+                        aria-disabled={true}
+                        disabled
+                        className="jodie-flavor-switch__opt jodie-flavor-switch__opt--disabled"
+                        title="JS flavor is coming next"
+                    >
+                        JS
+                        <span className="jodie-flavor-switch__badge">coming next</span>
+                    </button>
+                </div>
+                <div className="jodie-code-scope" title="Variables available in JjEL expressions">
+                    scope: self, model, classes
+                </div>
+            </div>
+        )}
+        </>
     );
 }
 

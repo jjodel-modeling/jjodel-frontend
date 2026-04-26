@@ -13,8 +13,10 @@ import {
     ChatImage,
     ChatDocument,
     ChatState,
-    TAIProvider, AIConfig, AI, JodieConfig
+    TAIProvider, AIConfig, AI, JodieConfig,
+    ConsoleMode, CodeFlavor, CodeEntry, isChatEntry
 } from '../../types/jodie';
+import { evaluateJjelInJodie } from './jodieJjelContext';
 import { AIProviderService } from '../../services/AIProviderService';
 import { useSettingsModalSafe } from '../../contexts/SettingsModalContext';
 import { JjodieEvents, AIEvents, JjScriptEvents, JjodelEvents } from '../../events/registry';
@@ -29,6 +31,27 @@ import './JodieWindow.css';
 // Generate unique message ID
 function generateMessageId(): string {
     return `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+// localStorage keys for the console mode switcher (Chat / Code).
+const CONSOLE_MODE_KEY = 'jjodel.console.mode';
+const CONSOLE_CODE_FLAVOR_KEY = 'jjodel.console.codeFlavor';
+
+// Persisted, string-typed local state. Local to Jodie: not exported.
+function useLocalStorageString<T extends string>(key: string, defaultValue: T): [T, (v: T) => void] {
+    const [value, setValue] = useState<T>(() => {
+        try {
+            const stored = localStorage.getItem(key);
+            return (stored as T | null) ?? defaultValue;
+        } catch {
+            return defaultValue;
+        }
+    });
+    const set = useCallback((v: T) => {
+        setValue(v);
+        try { localStorage.setItem(key, v); } catch { /* ignore quota / privacy */ }
+    }, [key]);
+    return [value, set];
 }
 
 export function Jodie(): JSX.Element {
@@ -56,6 +79,14 @@ export function Jodie(): JSX.Element {
 
     // Pending input prefill (from "Ask Jjodie" link in notifications popover)
     const [pendingPrefill, setPendingPrefill] = useState<{ prompt: string; nonce: number } | null>(null);
+
+    // Console mode (Chat / Code) and code flavor (JjEL / JS), persisted in localStorage.
+    // JS flavor is reserved for a later phase; rendered but disabled in the UI.
+    const [consoleMode, setConsoleMode] = useLocalStorageString<ConsoleMode>(CONSOLE_MODE_KEY, 'chat');
+    const [codeFlavor, setCodeFlavor] = useLocalStorageString<CodeFlavor>(CONSOLE_CODE_FLAVOR_KEY, 'jjel');
+
+    // Root ref used by the Cmd+J listener to detect "focus is inside Jjodie".
+    const jodieRootRef = useRef<HTMLDivElement>(null);
 
     // using state just for caching, so project is not re-computed.
     const user = useMemo(()=> (L.fromPointer(DUser.current) as LUser), []);
@@ -151,6 +182,49 @@ export function Jodie(): JSX.Element {
         return () => clearInterval(interval);
     }, [ragInitialized]);
 
+    // Cmd+J / Ctrl+J: toggle Chat <-> Code console mode.
+    // Skip when focus is in another editable surface (Monaco or any input/textarea
+    // outside Jjodie); always handle when focus is inside Jjodie or nowhere editable.
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => {
+            const isToggle = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'j';
+            if (!isToggle) return;
+
+            const target = e.target as HTMLElement | null;
+            const focusInJjodie = !!jodieRootRef.current && !!target && jodieRootRef.current.contains(target);
+            const isEditable = !!target && !!target.closest('input, textarea, [contenteditable], .monaco-editor');
+            if (isEditable && !focusInJjodie) return;
+
+            e.preventDefault();
+            setConsoleMode(consoleMode === 'chat' ? 'code' : 'chat');
+            // Make sure the window is open so the user sees the switch take effect.
+            setChatState(prev => prev.isOpen ? prev : { ...prev, isOpen: true, hasUnread: false });
+        };
+        document.addEventListener('keydown', handler);
+        return () => document.removeEventListener('keydown', handler);
+    }, [consoleMode, setConsoleMode]);
+
+    // Submit a JjEL expression from the Code-mode input. Synchronous evaluator:
+    // append the input + result (or error) as a single CodeEntry to the unified history.
+    const handleSubmitCode = useCallback((rawInput: string) => {
+        const input = rawInput.trim();
+        if (!input) return;
+        const outcome = codeFlavor === 'jjel'
+            ? evaluateJjelInJodie(input)
+            : { ok: false, text: 'JS flavor is not yet available.' };
+        const entry: CodeEntry = {
+            id: generateMessageId(),
+            kind: 'code',
+            flavor: codeFlavor,
+            input,
+            output: outcome.ok
+                ? { ok: true, value: outcome.text }
+                : { ok: false, error: outcome.text },
+            timestamp: Date.now(),
+        };
+        setChatState(prev => ({ ...prev, messages: [...prev.messages, entry] }));
+    }, [codeFlavor]);
+
     // Open the chat window
     const handleOpen = useCallback(() => {
         setChatState(prev => ({
@@ -181,6 +255,7 @@ export function Jodie(): JSX.Element {
             // Add user message
             const userMessage: ChatMessage = {
                 id: generateMessageId(),
+                kind: 'chat',
                 role: 'user',
                 content,
                 timestamp: Date.now(),
@@ -202,6 +277,7 @@ export function Jodie(): JSX.Element {
 
                 const assistantMessage: ChatMessage = {
                     id: generateMessageId(),
+                    kind: 'chat',
                     role: 'assistant',
                     content: responseContent,
                     timestamp: Date.now(),
@@ -219,6 +295,7 @@ export function Jodie(): JSX.Element {
             } catch (error) {
                 const errorMessage: ChatMessage = {
                     id: generateMessageId(),
+                    kind: 'chat',
                     role: 'assistant',
                     content: `**JjScript Error:** ${(error as Error).message}`,
                     timestamp: Date.now(),
@@ -248,6 +325,7 @@ export function Jodie(): JSX.Element {
                 // No providers configured at all
                 const errorMessage: ChatMessage = {
                     id: generateMessageId(),
+                    kind: 'chat',
                     role: 'assistant',
                     content: 'No AI providers configured. Please click the Settings button to configure at least one provider with your API key.',
                     timestamp: Date.now(),
@@ -268,6 +346,7 @@ export function Jodie(): JSX.Element {
             // Add info message about switching
             const switchMessage: ChatMessage = {
                 id: generateMessageId(),
+                kind: 'chat',
                 role: 'assistant',
                 content: `Switched to ${AI[firstEnabled].name} (your configured provider).`,
                 timestamp: Date.now(),
@@ -281,6 +360,7 @@ export function Jodie(): JSX.Element {
         // Add user message (with images/documents if present)
         const userMessage: ChatMessage = {
             id: generateMessageId(),
+            kind: 'chat',
             role: 'user',
             content,
             timestamp: Date.now(),
@@ -296,8 +376,9 @@ export function Jodie(): JSX.Element {
         }));
 
         try {
-            // Get conversation history (excluding the message we just added)
-            const history = chatState.messages;
+            // Get conversation history (excluding the message we just added).
+            // Filter out CodeEntry items: AIProviderService consumes ChatMessage[] only.
+            const history = chatState.messages.filter(isChatEntry);
 
             // Get RAG-augmented context based on query
             let augmentedContext = projectContext;
@@ -323,6 +404,7 @@ export function Jodie(): JSX.Element {
             // Add assistant message
             const assistantMessage: ChatMessage = {
                 id: generateMessageId(),
+                kind: 'chat',
                 role: 'assistant',
                 content: response,
                 timestamp: Date.now(),
@@ -339,6 +421,7 @@ export function Jodie(): JSX.Element {
             // Add error message
             const errorMessage: ChatMessage = {
                 id: generateMessageId(),
+                kind: 'chat',
                 role: 'assistant',
                 content: `Sorry, I encountered an error: ${(error as Error).message}. Please check your API key in Settings.`,
                 timestamp: Date.now(),
@@ -375,10 +458,50 @@ export function Jodie(): JSX.Element {
         // console.log('[Jjodie] JjScript executed - metamodel refresh triggered');
     }, []);
 
+    // Stop AI generation (UI-only — fetch is not actually aborted, see context-2026-04-21).
+    // The in-flight request will still resolve in the background; we only flip isWaiting
+    // so the user can type again.
+    const handleStop = useCallback(() => {
+        setChatState(prev => ({ ...prev, isWaiting: false }));
+    }, []);
+
+    // Open/close transition: keep JodieWindow mounted during the exit fade-out.
+    // - `windowRendered`: controls whether <JodieWindow> is in the React tree
+    // - `windowVisible`: drives the --visible/--hidden CSS modifier (opacity/transform)
+    const JODIE_EXIT_DURATION_MS = 170;
+    const [windowRendered, setWindowRendered] = useState<boolean>(chatState.isOpen);
+    const [windowVisible, setWindowVisible] = useState<boolean>(chatState.isOpen);
+
+    useEffect(() => {
+        let raf1: number | null = null;
+        let raf2: number | null = null;
+        let exitTimeout: number | null = null;
+
+        if (chatState.isOpen) {
+            setWindowRendered(true);
+            // Two rAFs: ensure the initial --hidden frame paints before flipping
+            // to --visible, otherwise React batching skips the entry transition.
+            raf1 = requestAnimationFrame(() => {
+                raf2 = requestAnimationFrame(() => setWindowVisible(true));
+            });
+        } else {
+            setWindowVisible(false);
+            exitTimeout = window.setTimeout(() => {
+                setWindowRendered(false);
+            }, JODIE_EXIT_DURATION_MS);
+        }
+
+        return () => {
+            if (raf1 !== null) cancelAnimationFrame(raf1);
+            if (raf2 !== null) cancelAnimationFrame(raf2);
+            if (exitTimeout !== null) window.clearTimeout(exitTimeout);
+        };
+    }, [chatState.isOpen]);
+
     return (
-        <div className={`jodie-root${hiddenForPopover ? ' jodie-root--hidden' : ''}`}>
-            {/* Main chat window or FAB */}
-            {chatState.isOpen ? (
+        <div ref={jodieRootRef} className={`jodie-root${hiddenForPopover ? ' jodie-root--hidden' : ''}`}>
+            {/* Window stays mounted during exit transition; FAB only renders after unmount. */}
+            {windowRendered ? (
                 <JodieWindow
                     messages={chatState.messages}
                     activeProvider={activeProvider}
@@ -392,6 +515,13 @@ export function Jodie(): JSX.Element {
                     supportsVision={activeVersion?.capabilities.vision || false}
                     supportsPDF={activeVersion?.capabilities.pdf || false}
                     prefilledMessage={pendingPrefill}
+                    onStop={handleStop}
+                    isVisible={windowVisible}
+                    consoleMode={consoleMode}
+                    onConsoleModeChange={setConsoleMode}
+                    codeFlavor={codeFlavor}
+                    onCodeFlavorChange={setCodeFlavor}
+                    onSubmitCode={handleSubmitCode}
                 />
             ) : (
                 <JodieMinimized

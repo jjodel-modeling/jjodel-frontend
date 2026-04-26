@@ -1,6 +1,7 @@
 /* DASHBOARD */
 /* ALLPROJECTS */
 import React, {Component, Dispatch, ReactElement, ReactNode, useState, useEffect, useCallback} from 'react';
+import {useSearchParams} from 'react-router-dom';
 
 import {connect} from 'react-redux';
 import {DProject, DState, Log, LProject, R, SetRootFieldAction, Try, U} from '../joiner';
@@ -20,6 +21,21 @@ function AllProjectsComponent(props: AllProps): JSX.Element {
     const {projects} = props;
     const [isDropping, setDropping] = useState(false);
     const [showCreateDialog, setShowCreateDialog] = useState(false);
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    // Force "All projects" as the default filter at mount, ignoring any persisted
+    // ?filter= value (left over from prior session, deep-link, or RightPanel quick
+    // links). The sidebar highlight and Catalog tab both read from this URL param,
+    // so clearing it resets both deterministically. Filters set during the session
+    // still work normally — only the initial mount is forced back to "all".
+    useEffect(() => {
+        if (searchParams.get('filter')) {
+            const newParams = new URLSearchParams(searchParams);
+            newParams.delete('filter');
+            setSearchParams(newParams, {replace: true});
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Centralized handler for opening create project dialog - used by ALL "New Project" buttons
     // Wrapped in useCallback to maintain stable reference for event listeners
