@@ -432,6 +432,7 @@ export function JodieWindow({
                 onConsoleModeChange={onConsoleModeChange}
                 codeFlavor={codeFlavor}
                 onSubmitCode={onSubmitCode}
+                entries={messages}
             />
 
             <AIDisclaimer feature="chat" />

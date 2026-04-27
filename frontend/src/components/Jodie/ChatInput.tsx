@@ -4,8 +4,10 @@
  */
 
 import React, { useState, useRef, useEffect, KeyboardEvent, ClipboardEvent, useCallback, useMemo } from 'react';
-import { ChatImage, ChatDocument, JodieConfig, ConsoleMode, CodeFlavor } from '../../types/jodie';
-import { JjScriptService } from '../../jjscript';
+import {
+    ChatImage, ChatDocument, JodieConfig, ConsoleMode, CodeFlavor,
+    ConsoleEntry, ChatMessage, CodeEntry,
+} from '../../types/jodie';
 import { AIEvents } from '../../events/registry';
 import './ChatInput.scss';
 
@@ -29,6 +31,8 @@ interface ChatInputProps {
     codeFlavor: CodeFlavor;
     /** Submit handler for Code mode: parent evaluates and appends a CodeEntry. */
     onSubmitCode: (input: string) => void;
+    /** Unified history; ChatInput filters by mode (and flavor in code) for the up/down nav. */
+    entries: ConsoleEntry[];
 }
 
 type SendBtnState = 'empty' | 'ready' | 'sending' | 'no-provider';
@@ -78,6 +82,16 @@ async function fileToDocument(file: File): Promise<ChatDocument> {
     });
 }
 
+// Cursor row helpers for textarea history navigation: "first/last visual line".
+// Using newline scan rather than caret coordinates keeps behavior consistent across
+// fonts and zoom levels.
+function isCursorOnFirstLine(el: HTMLTextAreaElement): boolean {
+    return !el.value.substring(0, el.selectionStart).includes('\n');
+}
+function isCursorOnLastLine(el: HTMLTextAreaElement): boolean {
+    return !el.value.substring(el.selectionEnd).includes('\n');
+}
+
 // Format file size for display
 function formatFileSize(bytes: number): string {
     if (bytes < 1024) return `${bytes} B`;
@@ -98,6 +112,7 @@ export function ChatInput({
     onConsoleModeChange,
     codeFlavor,
     onSubmitCode,
+    entries,
 }: ChatInputProps): JSX.Element {
     const isCode = consoleMode === 'code';
     const [message, setMessage] = useState('');
@@ -109,6 +124,22 @@ export function ChatInput({
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // Filtered, in-session history for ↑/↓ navigation.
+    // Chat: user messages only (assistant replies excluded). Code: same flavor only.
+    // Newest first so historyIndex 0 is the most recent submission.
+    const userHistory = useMemo<string[]>(() => {
+        if (isCode) {
+            return entries
+                .filter((e): e is CodeEntry => e.kind === 'code' && e.flavor === codeFlavor)
+                .map(e => e.input)
+                .reverse();
+        }
+        return entries
+            .filter((e): e is ChatMessage => e.kind !== 'code' && e.role === 'user')
+            .map(e => e.content)
+            .reverse();
+    }, [entries, isCode, codeFlavor]);
+
     // Check if any attachments are supported
     const supportsAttachments = supportsVision || supportsPDF;
 
@@ -119,6 +150,14 @@ export function ChatInput({
         window.addEventListener(AIEvents.SETTINGS_CHANGED, refresh);
         return () => window.removeEventListener(AIEvents.SETTINGS_CHANGED, refresh);
     }, []);
+
+    // Switching console mode or code flavor invalidates the in-flight history
+    // navigation: the underlying list changes, so caret position and draft are no
+    // longer meaningful.
+    useEffect(() => {
+        setHistoryIndex(-1);
+        setSavedMessage('');
+    }, [consoleMode, codeFlavor]);
 
     // External prefill: set the textarea content and focus it. Nonce ensures
     // re-trigger when the same prompt is requested twice in a row.
@@ -201,47 +240,55 @@ export function ChatInput({
             return;
         }
 
-        // History navigation with ArrowUp/ArrowDown
-        const history = JjScriptService.getHistory();
-        if (history.length === 0) return;
+        // Esc: leave history navigation, restore the draft. If not navigating,
+        // do not intercept (let any future Esc handler take it).
+        if (e.key === 'Escape') {
+            if (historyIndex !== -1) {
+                e.preventDefault();
+                setMessage(savedMessage);
+                setHistoryIndex(-1);
+            }
+            return;
+        }
+
+        // History navigation with ArrowUp/ArrowDown.
+        // Source: per-mode/per-flavor user history derived from `entries`.
+        if (userHistory.length === 0) return;
+        const textarea = textareaRef.current;
 
         if (e.key === 'ArrowUp') {
-            // Only navigate if cursor is at the start of the input
-            const textarea = textareaRef.current;
-            if (textarea && textarea.selectionStart === 0 && textarea.selectionEnd === 0) {
-                e.preventDefault();
+            // First-line check: in a textarea, only steal ↑ when the caret is on
+            // the first visual line. Otherwise let the browser move the caret up.
+            if (textarea && !isCursorOnFirstLine(textarea)) return;
 
-                if (historyIndex === -1) {
-                    // Save current message before navigating
-                    setSavedMessage(message);
-                }
+            e.preventDefault();
 
-                const newIndex = historyIndex + 1;
-                if (newIndex < history.length) {
-                    setHistoryIndex(newIndex);
-                    // History is stored oldest to newest, so we read from the end
-                    const historyMessage = history[history.length - 1 - newIndex];
-                    setMessage(historyMessage);
-                }
-            }
+            // Already at the oldest entry: nothing to do.
+            if (historyIndex >= userHistory.length - 1) return;
+
+            // Entering navigation: save the current draft.
+            if (historyIndex === -1) setSavedMessage(message);
+
+            const newIndex = historyIndex + 1;
+            setHistoryIndex(newIndex);
+            setMessage(userHistory[newIndex]);
         } else if (e.key === 'ArrowDown') {
-            // Only navigate if we're in history mode
-            if (historyIndex > -1) {
-                const textarea = textareaRef.current;
-                if (textarea) {
-                    e.preventDefault();
+            // Not navigating: pass through.
+            if (historyIndex === -1) return;
 
-                    const newIndex = historyIndex - 1;
-                    if (newIndex === -1) {
-                        // Return to saved message
-                        setHistoryIndex(-1);
-                        setMessage(savedMessage);
-                    } else if (newIndex >= 0) {
-                        setHistoryIndex(newIndex);
-                        const historyMessage = history[history.length - 1 - newIndex];
-                        setMessage(historyMessage);
-                    }
-                }
+            // Last-line check.
+            if (textarea && !isCursorOnLastLine(textarea)) return;
+
+            e.preventDefault();
+
+            if (historyIndex === 0) {
+                // Step back out to the draft.
+                setHistoryIndex(-1);
+                setMessage(savedMessage);
+            } else {
+                const newIndex = historyIndex - 1;
+                setHistoryIndex(newIndex);
+                setMessage(userHistory[newIndex]);
             }
         }
     };
@@ -502,7 +549,12 @@ export function ChatInput({
                         ref={textareaRef}
                         className={`jodie-input${isCode ? ' jodie-input--code' : ''}`}
                         value={message}
-                        onChange={(e) => setMessage(e.target.value)}
+                        onChange={(e) => {
+                            setMessage(e.target.value);
+                            // User-driven typing while navigating: drop out of history
+                            // and treat the recovered text as the new draft.
+                            if (historyIndex !== -1) setHistoryIndex(-1);
+                        }}
                         onKeyDown={handleKeyDown}
                         onPaste={handlePaste}
                         placeholder={getPlaceholder()}
