@@ -483,10 +483,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                 {/* Browse Section - Templates & Explore (moved from navbar tabs) */}
                 <Menu title={'Browse'} mode={'collapsable'}>
                     <Item action={'templates'} icon={<i className="bi bi-grid-3x3-gap" />}>Templates</Item>
-                    <Item
-                        action={() => window.open('https://www.jjodel.io/explore/', '_blank')}
-                        icon={<i className="bi bi-compass" />}
-                    >Explore</Item>
+                    <Item action={'explore'} icon={<i className="bi bi-compass" />}>Explore</Item>
                 </Menu>
 
                 {/* Recently Modified - ONLY show if projects exist */}

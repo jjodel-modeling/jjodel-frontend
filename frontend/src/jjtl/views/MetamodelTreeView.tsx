@@ -14,6 +14,7 @@ export interface MetamodelElement {
     dataType?: string;
     multiplicity?: string;
     isAbstract?: boolean;
+    inherited?: { fromClassName: string };
 }
 
 export interface MetamodelTreeViewProps {
@@ -105,8 +106,12 @@ const TreeNode: React.FC<TreeNodeProps> = ({
                 {/* Element name */}
                 <span className="jjtl-tree-name">
                     {element.name}
-                    {element.isAbstract && <span className="jjtl-tree-abstract">abstract</span>}
                 </span>
+                {element.isAbstract && (
+                    <Badge category="context" title="Abstract class">
+                        abstract
+                    </Badge>
+                )}
 
                 {/* Data type or multiplicity */}
                 {element.dataType && (
@@ -114,6 +119,11 @@ const TreeNode: React.FC<TreeNodeProps> = ({
                 )}
                 {element.multiplicity && (
                     <span className="jjtl-tree-multiplicity">[{element.multiplicity}]</span>
+                )}
+                {element.inherited && (
+                    <Badge category="context" title={`from ${element.inherited.fromClassName}`}>
+                        inherited
+                    </Badge>
                 )}
             </div>
 

@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useRef, useCallback, useState } from 'react';
-import {AI, ChatMessage} from '../../types/jodie';
+import {AI, ChatMessage, ConsoleEntry, CodeEntry, isCodeEntry} from '../../types/jodie';
 import { MarkdownMessage } from './MarkdownMessage';
 import { executeCommand, ScriptLineResult } from '../../jjscript';
 import { DUser, L, LUser, LProject, LModel, store } from '../../joiner';
@@ -14,7 +14,7 @@ import { useAvatar } from '../../hooks/useAvatar';
 import { AVATAR_COLORS, AVATAR_ICONS } from '../../constants/avatarConfig';
 
 interface ChatMessagesProps {
-    messages: ChatMessage[];
+    messages: ConsoleEntry[];
     isWaiting?: boolean;
     /** Optional callback when JjScript execution completes (for refresh/update) */
     onJjScriptExecuted?: () => void;
@@ -119,6 +119,28 @@ function MessageBubble({ message, onJjScriptExecute }: { message: ChatMessage; o
                         </span>
                     )}
                 </div>
+            </div>
+        </div>
+    );
+}
+
+function CodeReplEntry({ entry }: { entry: CodeEntry }): JSX.Element {
+    const isError = !entry.output.ok;
+    const outputText = entry.output.ok
+        ? String(entry.output.value)
+        : entry.output.error;
+    return (
+        <div className={`jodie-code-entry${isError ? ' jodie-code-entry--error' : ''}`}>
+            <div className="jodie-code-entry__row jodie-code-entry__input-row">
+                <span className="jodie-code-entry__prompt" aria-hidden="true">›</span>
+                <code className="jodie-code-entry__input">{entry.input}</code>
+                <span className="jodie-code-entry__flavor">{entry.flavor}</span>
+            </div>
+            <div className={`jodie-code-entry__row jodie-code-entry__output-row${isError ? ' jodie-code-entry__output-row--error' : ''}`}>
+                <code className="jodie-code-entry__output">{outputText}</code>
+            </div>
+            <div className="jodie-message-meta jodie-code-entry__meta">
+                <span className="jodie-message-time">{formatTimestamp(entry.timestamp)}</span>
             </div>
         </div>
     );
@@ -275,12 +297,16 @@ export function ChatMessages({ messages, isWaiting, onJjScriptExecuted }: ChatMe
                 </div>
             ) : (
                 <>
-                    {messages.map(message => (
-                        <MessageBubble
-                            key={message.id}
-                            message={message}
-                            onJjScriptExecute={handleJjScriptExecute}
-                        />
+                    {messages.map(entry => (
+                        isCodeEntry(entry) ? (
+                            <CodeReplEntry key={entry.id} entry={entry} />
+                        ) : (
+                            <MessageBubble
+                                key={entry.id}
+                                message={entry as ChatMessage}
+                                onJjScriptExecute={handleJjScriptExecute}
+                            />
+                        )
                     ))}
                     {isWaiting && <TypingIndicator />}
                 </>

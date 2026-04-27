@@ -38,6 +38,7 @@ import {
     windoww
 } from "../joiner";
 import Swal from "sweetalert2";
+import { JjodelEvents } from "../events/registry";
 import Storage from '../data/storage';
 import {compressToUTF16, decompressFromUTF16} from "async-lz-string";
 import {NumberControl, PaletteControl, PaletteType, PathControl, StringControl} from "../view/viewElement/view";
@@ -380,17 +381,27 @@ export class U {
         return v;
     }
     static alertSeparator: string = '£';
-    static alert(type: 'i'|'w'|'e', title: React.ReactNode, message: React.ReactNode = ''): void {
-        if (typeof title !== 'string') {
-            windoww.__jjAlertTitle = title;
-            title = '';
-        } else windoww.__jjAlertTitle = null;
-        if (typeof message !== 'string') {
-            windoww.__jjAlertMessage = message;
-            message = '';
-        } else windoww.__jjAlertMessage = null;
+    /**
+     * @deprecated Use `toast.{error|warning|info|success}()` from `components/Toast` instead.
+     * This facade dispatches to the modern ToastProvider for backward compatibility.
+     */
+    static alert(type: 'i'|'w'|'e'|'s', title: React.ReactNode, message: React.ReactNode = ''): void {
+        try {
+            // @ts-ignore — Vite-defined env var, may be undefined in tests
+            if (import.meta?.env?.DEV) {
+                // eslint-disable-next-line no-console
+                console.warn('[Jjodel] U.alert() is deprecated. Use toast.* from components/Toast.', { type, title, message });
+            }
+        } catch { /* ignore */ }
 
-        SetRootFieldAction.new('alert', type + U.alertSeparator + title + U.alertSeparator + message, '');
+        const priority = ({ i: 'info', w: 'warning', e: 'error', s: 'success' } as const)[type] ?? 'info';
+        const hasMessage = message !== '' && message !== null && message !== undefined;
+        const finalTitle = hasMessage ? title : undefined;
+        const finalMessage = hasMessage ? message : title;
+
+        window.dispatchEvent(new CustomEvent(JjodelEvents.TOAST, {
+            detail: { priority, title: finalTitle, message: finalMessage },
+        }));
     }
 
     static dialog(message: string, label: string, action: () => any): void {

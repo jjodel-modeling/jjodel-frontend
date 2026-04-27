@@ -32,7 +32,9 @@
 
   /* Top layer - alerts, notifications */
   --z-alert: 10000;
-  --z-toast: 10100;
+  /* Toasts must sit above any page-content stacking context (list-card actions,
+     menus, contextual overlays) — only --z-debug is allowed above. */
+  --z-toast: 999998;
 
   /* Critical layer - loading overlays, debugging */
   --z-loading: 99999;

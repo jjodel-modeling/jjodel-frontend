@@ -149,6 +149,7 @@ import type {VersionFixer as TypeVersionFixer} from "../redux/VersionFixer";
 import type {ProjectsApi as TypeProjectsAPI, UsersApi} from "../api/persistance";
 import type {Collaborative as CollaborativeT} from "../components/collaborative/Collaborative";
 import {names} from "tinycolor2";
+import { toast } from "../components/Toast";
 var windoww = window as any;
 
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
@@ -2117,7 +2118,10 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
                 return child.id !== c.data.id && (D.fromPointer(child.id) as DNamedElement).name === name;
             });
             if (check.length > 0) {
-                U.alert('e', 'Cannot rename the selected element since this name is already taken.');
+                toast.error(`Element name "${name}" is already taken in this scope`, {
+                    title: 'Validation failed',
+                    action: { label: 'View errors →', onClick: () => { /* TODO: wire to errors panel when available */ } },
+                });
                 return true;
             }
         }

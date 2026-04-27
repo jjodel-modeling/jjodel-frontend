@@ -25,6 +25,8 @@ import InlineEnumSelect from '../components/InlineEnumSelect';
 import { useEditorContextSafe } from '../contexts/EditorContext';
 import { syncNodeLabel, syncUpdateFeatureValue } from '../sync/canvasToJjom';
 import type { ObjectNodeData } from '../types';
+import { NodeProblemIndicator } from '../problems/NodeProblemIndicator';
+import { useIsHighlighted } from '../problems/useNodeProblems';
 
 export type ObjectNodeType = Node<ObjectNodeData, 'objectNode'>;
 
@@ -144,6 +146,8 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
         }
         return result;
     }, [metaclassAttrSig, coveredAttrIds]);
+
+    const isProblemHighlighted = useIsHighlighted(id);
 
     // Header editing
     const [editing, setEditing] = useState(false);
@@ -333,7 +337,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
     const isOrphan = !data.instanceOfClassId;
 
     return (
-        <div className={`mm-node mm-object ${selected ? 'selected' : ''} ${isOrphan ? 'mm-object--orphan' : ''}`}>
+        <div className={`mm-node mm-object ${selected ? 'selected' : ''} ${isOrphan ? 'mm-object--orphan' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''}`}>
             <NodeResizer
                 isVisible={selected}
                 minWidth={140}
@@ -349,6 +353,8 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                     <i className="bi bi-diamond-fill" />
                 </span>
             )}
+
+            <NodeProblemIndicator nodeId={id} />
 
             {/* Header: objectName : ClassName — underlined per UML convention */}
             <div

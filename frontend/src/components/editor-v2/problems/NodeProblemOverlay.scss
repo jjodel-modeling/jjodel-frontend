@@ -1,0 +1,127 @@
+.node-problem-overlay {
+    position: fixed;
+    z-index: 10000;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-left-width: 4px;
+    border-radius: 6px;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18), 0 2px 4px rgba(15, 23, 42, 0.06);
+    padding: 12px 14px 12px 14px;
+    min-width: 220px;
+    max-width: 320px;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 13px;
+    color: #334155;
+
+    &--warning  { border-left-color: #f59e0b; }
+    &--error    { border-left-color: #dc2626; }
+    &--resolved { border-left-color: #22c55e; }
+
+    &__accent-bar { display: none; }
+
+    &__close {
+        position: absolute;
+        top: 4px;
+        right: 6px;
+        width: 22px;
+        height: 22px;
+        border: none;
+        background: transparent;
+        color: #94a3b8;
+        cursor: pointer;
+        font-size: 18px;
+        line-height: 1;
+        padding: 0;
+        border-radius: 4px;
+
+        &:hover {
+            background: #f1f5f9;
+            color: #334155;
+        }
+    }
+
+    &__problems {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    &__problem {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+    }
+
+    &__title {
+        font-weight: 600;
+        font-size: 13px;
+        color: #0f172a;
+        padding-right: 22px;
+    }
+
+    &__description {
+        font-size: 12px;
+        line-height: 1.45;
+        color: #475569;
+    }
+
+    &__action {
+        margin-top: 4px;
+        align-self: flex-start;
+        background: transparent;
+        border: none;
+        padding: 2px 0;
+        color: #0ea5e9;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+
+        &:hover { text-decoration: underline; }
+        &:focus-visible {
+            outline: 2px solid #0ea5e9;
+            outline-offset: 2px;
+            border-radius: 2px;
+        }
+    }
+
+    &__arrow {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        background: white;
+        transform: rotate(45deg);
+        border: 1px solid #e2e8f0;
+    }
+
+    &[data-direction='right'] &__arrow {
+        top: 50%;
+        left: -6px;
+        margin-top: -5px;
+        border-right: none;
+        border-top: none;
+    }
+
+    &[data-direction='left'] &__arrow {
+        top: 50%;
+        right: -6px;
+        margin-top: -5px;
+        border-left: none;
+        border-bottom: none;
+    }
+
+    &[data-direction='bottom'] &__arrow {
+        left: 50%;
+        top: -6px;
+        margin-left: -5px;
+        border-right: none;
+        border-bottom: none;
+    }
+
+    &[data-direction='top'] &__arrow {
+        left: 50%;
+        bottom: -6px;
+        margin-left: -5px;
+        border-left: none;
+        border-top: none;
+    }
+}

@@ -142,6 +142,24 @@
         background: #0ea5e9;
     }
 
+    &__bell-badge {
+        position: absolute;
+        top: -6px;
+        right: -8px;
+        min-width: 14px;
+        height: 14px;
+        padding: 0 3px;
+        border-radius: 7px;
+        background: var(--color-error);
+        color: var(--color-text-inverse);
+        font-size: 9px;
+        font-weight: 700;
+        line-height: 14px;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+        pointer-events: none;
+    }
+
     // ── Version ──
 
     &__version {

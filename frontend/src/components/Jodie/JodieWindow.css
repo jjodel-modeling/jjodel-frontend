@@ -4,6 +4,19 @@
  */
 
 /* ========================================
+   Root wrapper (hide-on-popover)
+   ======================================== */
+
+.jodie-root {
+    transition: opacity 180ms ease-out;
+}
+
+.jodie-root--hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* ========================================
    Window Container
    ======================================== */
 
@@ -17,7 +30,52 @@
     border-radius: 16px;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
     overflow: hidden;
-    transition: box-shadow 0.2s ease;
+    /* Base transitions: opacity/transform for open/close fade.
+       width/height/left/top are NOT here so manual drag/resize stays instant.
+       Programmatic geometry changes opt in via .jodie-window--animating. */
+    transition:
+        box-shadow 0.2s ease,
+        opacity 180ms ease-out,
+        transform 220ms ease-out;
+}
+
+/* Open/close transitions */
+.jodie-window--hidden {
+    opacity: 0;
+    transform: translateY(8px);
+    pointer-events: none;
+    transition:
+        box-shadow 0.2s ease,
+        opacity 150ms ease-in,
+        transform 170ms ease-in;
+}
+
+.jodie-window--visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Programmatic geometry changes (fullscreen toggle, reset). Manual drag/resize
+   never adds this class, so width/height/left/top stay instant under user input. */
+.jodie-window--animating {
+    transition:
+        box-shadow 0.2s ease,
+        opacity 180ms ease-out,
+        transform 220ms ease-out,
+        width 220ms cubic-bezier(0.4, 0, 0.2, 1),
+        height 220ms cubic-bezier(0.4, 0, 0.2, 1),
+        left 220ms cubic-bezier(0.4, 0, 0.2, 1),
+        top 220ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .jodie-window,
+    .jodie-window--hidden,
+    .jodie-window--visible,
+    .jodie-window--animating {
+        transition: none !important;
+        transform: none !important;
+    }
 }
 
 .jodie-window.jodie-dragging,
@@ -28,6 +86,21 @@
 .jodie-window.jodie-dragging {
     cursor: grabbing;
     box-shadow: var(--shadow-2xl);
+}
+
+/* Fullscreen modifier: right-anchored, full viewport height. Drag/resize disabled. */
+.jodie-window--fullscreen {
+    border-radius: 0;
+    border-right: none;
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.12);
+}
+
+.jodie-window--fullscreen .jodie-header {
+    cursor: default;
+}
+
+.jodie-window--fullscreen .jodie-input-container {
+    border-radius: 0;
 }
 
 /* ========================================
@@ -188,6 +261,38 @@
     font-weight: var(--font-semibold);
     font-size: var(--text-sm);
     color: var(--color-text-primary);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Alive indicator: pulses green when at least one AI provider is configured */
+.jodie-alive-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.jodie-alive-dot--alive {
+    background: var(--color-success, #22c55e);
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6);
+    animation: jodie-alive-pulse 2s ease-out infinite;
+}
+
+.jodie-alive-dot--idle {
+    background: #94a3b8;
+}
+
+@keyframes jodie-alive-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6); }
+    70%  { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+
+[data-theme="dark"] .jodie-alive-dot--idle {
+    background: #475569;
 }
 
 .jodie-header-center {
@@ -728,49 +833,7 @@
     cursor: not-allowed;
 }
 
-.jodie-send-btn {
-    width: 48px;
-    height: 48px;
-    min-width: 48px;
-    border: none;
-    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
-    color: white;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 2px 8px rgba(71, 85, 105, 0.25);
-}
-
-.jodie-send-btn i {
-    font-size: 18px;
-    color: white;
-}
-
-.jodie-send-btn:disabled i {
-    color: #94a3b8;
-}
-
-.jodie-send-btn:hover:not(:disabled) {
-    background: linear-gradient(135deg, #475569 0%, #334155 100%);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(71, 85, 105, 0.35);
-}
-
-.jodie-send-btn:active:not(:disabled) {
-    transform: translateY(0);
-    box-shadow: 0 1px 4px rgba(71, 85, 105, 0.3);
-}
-
-.jodie-send-btn:disabled {
-    background: #cbd5e1;
-    color: #94a3b8;
-    cursor: not-allowed;
-    box-shadow: none;
-    opacity: 0.6;
-}
+/* .jodie-send-btn styles moved to ChatInput.scss (state-driven: empty/ready/sending/no-provider) */
 
 /* ========================================
    Minimized Button
@@ -2052,4 +2115,277 @@ body[data-notification-visible="true"] .jodie-minimized {
 
 [data-theme="dark"] .jodie-executing-command {
     color: #e2e8f0;
+}
+
+/* ========================================
+   CONSOLE MODE SWITCHER (Chat / Code)
+   ======================================== */
+
+/* Pill-style segmented control in the header */
+.jodie-mode-switch {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 12px;
+    padding: 2px;
+    border-radius: 8px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+}
+
+.jodie-mode-switch__opt {
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: #475569;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 120ms ease, color 120ms ease;
+}
+
+.jodie-mode-switch__opt:hover {
+    color: #0f172a;
+}
+
+.jodie-mode-switch__opt--active {
+    background: #0ea5e9;
+    color: #ffffff;
+}
+
+.jodie-mode-switch__opt--active:hover {
+    color: #ffffff;
+}
+
+[data-theme="dark"] .jodie-mode-switch {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .jodie-mode-switch__opt {
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .jodie-mode-switch__opt:hover {
+    color: #f1f5f9;
+}
+
+/* Sub-row shown only in Code mode (JjEL/JS toggle + scope indicator) */
+.jodie-code-subrow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 16px;
+    background: #fafafa;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 11px;
+}
+
+.jodie-flavor-switch {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px;
+    border-radius: 8px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+}
+
+.jodie-flavor-switch__opt {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: #475569;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    padding: 4px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 120ms ease, color 120ms ease;
+}
+
+.jodie-flavor-switch__opt--active {
+    background: #0ea5e9;
+    color: #ffffff;
+}
+
+.jodie-flavor-switch__opt--disabled,
+.jodie-flavor-switch__opt:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.jodie-flavor-switch__badge {
+    display: inline-block;
+    padding: 1px 5px;
+    border-radius: 6px;
+    background: #f1f5f9;
+    color: #64748b;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1;
+}
+
+.jodie-code-scope {
+    color: #94a3b8;
+    font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+    font-size: 11px;
+    user-select: none;
+}
+
+[data-theme="dark"] .jodie-code-subrow {
+    background: rgba(255, 255, 255, 0.02);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .jodie-flavor-switch {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .jodie-flavor-switch__opt {
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .jodie-flavor-switch__badge {
+    background: rgba(255, 255, 255, 0.08);
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .jodie-code-scope {
+    color: #64748b;
+}
+
+/* ========================================
+   CODE INPUT PROMPT (in ChatInput composer)
+   ======================================== */
+
+.jodie-composer--code {
+    align-items: center;
+}
+
+.jodie-code-prompt {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 6px 0 4px;
+    color: #0ea5e9;
+    font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+    font-size: 16px;
+    font-weight: 600;
+    user-select: none;
+    line-height: 1;
+}
+
+.jodie-input--code {
+    font-family: 'IBM Plex Mono', Monaco, Consolas, monospace !important;
+    font-size: 13px;
+}
+
+/* ========================================
+   CODE REPL ENTRIES (in ChatMessages history)
+   ======================================== */
+
+.jodie-code-entry {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 12px;
+    margin: 4px 0;
+    border-radius: 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.jodie-code-entry--error {
+    background: rgba(239, 68, 68, 0.06);
+    border-color: rgba(239, 68, 68, 0.25);
+}
+
+.jodie-code-entry__row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    word-break: break-word;
+}
+
+.jodie-code-entry__prompt {
+    color: #0ea5e9;
+    font-weight: 600;
+    flex-shrink: 0;
+    user-select: none;
+}
+
+.jodie-code-entry__input {
+    flex: 1;
+    color: var(--color-text-primary, #0f172a);
+    background: transparent;
+    white-space: pre-wrap;
+}
+
+.jodie-code-entry__flavor {
+    flex-shrink: 0;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: rgba(14, 165, 233, 0.08);
+    color: #0ea5e9;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+}
+
+.jodie-code-entry__output-row {
+    padding-left: 14px;
+}
+
+.jodie-code-entry__output {
+    color: var(--color-text-secondary, #64748b);
+    background: transparent;
+    white-space: pre-wrap;
+}
+
+.jodie-code-entry__output-row--error .jodie-code-entry__output {
+    color: #b91c1c;
+}
+
+.jodie-code-entry__meta {
+    margin-top: 2px;
+    padding-left: 14px;
+    opacity: 0.7;
+}
+
+[data-theme="dark"] .jodie-code-entry {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .jodie-code-entry--error {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+[data-theme="dark"] .jodie-code-entry__input {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .jodie-code-entry__output {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .jodie-code-entry__output-row--error .jodie-code-entry__output {
+    color: #fca5a5;
 }

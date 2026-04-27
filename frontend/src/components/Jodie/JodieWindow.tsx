@@ -7,12 +7,12 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { JodieHeader } from './JodieHeader';
 import { ChatMessages } from './ChatMessages';
 import { ChatInput } from './ChatInput';
-import {TAIProvider, ChatMessage, ChatImage, ChatDocument, JodieConfig} from '../../types/jodie';
+import {TAIProvider, ChatImage, ChatDocument, JodieConfig, ConsoleEntry, ConsoleMode, CodeFlavor} from '../../types/jodie';
 import { AIDisclaimer } from '../common/AIDisclaimer';
-import { JjScriptEvents } from '../../events/registry';
+import { AIEvents, JjScriptEvents } from '../../events/registry';
 
 interface JodieWindowProps {
-    messages: ChatMessage[];
+    messages: ConsoleEntry[];
     activeProvider: TAIProvider;
     isWaiting: boolean;
     onSendMessage: (message: string, images?: ChatImage[], documents?: ChatDocument[]) => void;
@@ -24,6 +24,20 @@ interface JodieWindowProps {
     onJjScriptExecuted?: () => void;
     supportsVision?: boolean;
     supportsPDF?: boolean;
+    /** External prefill for the chat input (nonce changes to re-trigger same prompt) */
+    prefilledMessage?: { prompt: string; nonce: number } | null;
+    /** Stop the in-flight AI response (UI-only — no real network abort yet) */
+    onStop?: () => void;
+    /** Driven by parent: false during enter/exit transitions, true when fully visible */
+    isVisible?: boolean;
+    /** Active console mode (Chat or Code). Controlled by parent. */
+    consoleMode: ConsoleMode;
+    onConsoleModeChange: (m: ConsoleMode) => void;
+    /** Active code flavor (JjEL today; JS reserved for a later phase). */
+    codeFlavor: CodeFlavor;
+    onCodeFlavorChange: (f: CodeFlavor) => void;
+    /** Submit handler for Code mode: parent evaluates and appends a CodeEntry. */
+    onSubmitCode: (input: string) => void;
 }
 
 interface Position {
@@ -55,9 +69,18 @@ interface ResizeStart {
     posY: number;
 }
 
-const DEFAULT_SIZE: Size = { width: 380, height: 520 };
+const JODIE_DEFAULT_WIDTH = 760;
+const JODIE_DEFAULT_HEIGHT = 520;
+const JODIE_DEFAULT_MARGIN = 20;
+const JODIE_ANIMATION_MS = 220;
+const DEFAULT_SIZE: Size = { width: JODIE_DEFAULT_WIDTH, height: JODIE_DEFAULT_HEIGHT };
 const MIN_SIZE: Size = { width: 320, height: 400 };
 const MAX_SIZE: Size = { width: 1200, height: 900 };
+
+const computeDefaultPosition = (size: Size = DEFAULT_SIZE): Position => ({
+    x: Math.max(0, window.innerWidth - size.width - JODIE_DEFAULT_MARGIN),
+    y: Math.max(0, window.innerHeight - size.height - JODIE_DEFAULT_MARGIN),
+});
 
 export function JodieWindow({
     messages,
@@ -71,24 +94,52 @@ export function JodieWindow({
     onJjScriptExecuted,
     supportsVision,
     supportsPDF,
+    prefilledMessage,
+    onStop,
+    isVisible = true,
+    consoleMode,
+    onConsoleModeChange,
+    codeFlavor,
+    onCodeFlavorChange,
+    onSubmitCode,
 }: JodieWindowProps): JSX.Element {
     // Load initial position/size from config
     const config = JodieConfig.current;
-    const initialPosition: Position = config.position || {
-        x: window.innerWidth - DEFAULT_SIZE.width - 20,
-        y: window.innerHeight - DEFAULT_SIZE.height - 20,
-    };
     const initialSize: Size = config.size || DEFAULT_SIZE;
+    const initialPosition: Position = config.position || computeDefaultPosition(initialSize);
 
     const [position, setPosition] = useState<Position>(initialPosition);
     const [size, setSize] = useState<Size>(initialSize);
     const [isDragging, setIsDragging] = useState(false);
     const [resizeDirection, setResizeDirection] = useState<ResizeDirection>(null);
     const [executingCommand, setExecutingCommand] = useState<ExecutingCommand | null>(null);
+    const [isFullscreen, setIsFullscreen] = useState(false);
+    const [savedGeometry, setSavedGeometry] = useState<{ position: Position; size: Size } | null>(null);
+    const [isAlive, setIsAlive] = useState<boolean>(() => JodieConfig.hasEnabledProviders());
+    const [isAnimating, setIsAnimating] = useState(false);
 
     const windowRef = useRef<HTMLDivElement>(null);
     const dragOffset = useRef<Position>({ x: 0, y: 0 });
     const resizeStart = useRef<ResizeStart>({ x: 0, y: 0, width: 0, height: 0, posX: 0, posY: 0 });
+    const animationTimeoutRef = useRef<number | null>(null);
+
+    // Programmatic geometry changes (fullscreen/exit/reset) animate; manual drag/resize do not.
+    const triggerAnimation = useCallback(() => {
+        setIsAnimating(true);
+        if (animationTimeoutRef.current !== null) {
+            window.clearTimeout(animationTimeoutRef.current);
+        }
+        animationTimeoutRef.current = window.setTimeout(() => {
+            setIsAnimating(false);
+            animationTimeoutRef.current = null;
+        }, JODIE_ANIMATION_MS);
+    }, []);
+
+    useEffect(() => () => {
+        if (animationTimeoutRef.current !== null) {
+            window.clearTimeout(animationTimeoutRef.current);
+        }
+    }, []);
 
     // Listen for JjScript execution events
     useEffect(() => {
@@ -123,6 +174,7 @@ export function JodieWindow({
 
     // Handle dragging
     const handleMouseDown = (e: React.MouseEvent) => {
+        if (isFullscreen) return;
         const target = e.target as HTMLElement;
         // Don't start drag if clicking on buttons
         if (target.closest('button')) return;
@@ -138,6 +190,7 @@ export function JodieWindow({
 
     // Handle resize start for any direction
     const handleResizeStart = (direction: ResizeDirection) => (e: React.MouseEvent) => {
+        if (isFullscreen) return;
         e.stopPropagation();
         setResizeDirection(direction);
         resizeStart.current = {
@@ -149,6 +202,53 @@ export function JodieWindow({
             posY: position.y,
         };
     };
+
+    // Enter fullscreen: anchor right, full viewport height, default width
+    const enterFullscreen = useCallback(() => {
+        triggerAnimation();
+        setSavedGeometry({ position, size });
+        const fsSize: Size = { width: JODIE_DEFAULT_WIDTH, height: window.innerHeight };
+        const fsPosition: Position = {
+            x: Math.max(0, window.innerWidth - fsSize.width),
+            y: 0,
+        };
+        setSize(fsSize);
+        setPosition(fsPosition);
+        setIsFullscreen(true);
+    }, [position, size, triggerAnimation]);
+
+    // Exit fullscreen: restore previously saved geometry
+    const exitFullscreen = useCallback(() => {
+        triggerAnimation();
+        if (savedGeometry) {
+            setSize(savedGeometry.size);
+            setPosition(savedGeometry.position);
+        }
+        setSavedGeometry(null);
+        setIsFullscreen(false);
+    }, [savedGeometry, triggerAnimation]);
+
+    // Reset: bottom-right with default size; also exits fullscreen if active
+    const resetPosition = useCallback(() => {
+        triggerAnimation();
+        const defaultSize = DEFAULT_SIZE;
+        const defaultPos = computeDefaultPosition(defaultSize);
+        setSize(defaultSize);
+        setPosition(defaultPos);
+        setIsFullscreen(false);
+        setSavedGeometry(null);
+        JodieConfig.current.size = defaultSize;
+        JodieConfig.current.position = defaultPos;
+        JodieConfig.current.save();
+    }, [triggerAnimation]);
+
+    // Track AI provider configuration to drive the alive indicator
+    useEffect(() => {
+        const refreshAlive = () => setIsAlive(JodieConfig.hasEnabledProviders());
+        refreshAlive();
+        window.addEventListener(AIEvents.SETTINGS_CHANGED, refreshAlive);
+        return () => window.removeEventListener(AIEvents.SETTINGS_CHANGED, refreshAlive);
+    }, []);
 
     // Handle dragging movement
     useEffect(() => {
@@ -232,9 +332,17 @@ export function JodieWindow({
         };
     }, [resizeDirection, size, position, saveSize, savePosition]);
 
-    // Keep window in bounds on resize
+    // Keep window in bounds on resize (or re-anchor when fullscreen)
     useEffect(() => {
         const handleWindowResize = () => {
+            if (isFullscreen) {
+                setSize(prev => ({ width: prev.width, height: window.innerHeight }));
+                setPosition(prev => ({
+                    x: Math.max(0, window.innerWidth - size.width),
+                    y: 0,
+                }));
+                return;
+            }
             setPosition(prev => ({
                 x: Math.min(prev.x, window.innerWidth - size.width),
                 y: Math.min(prev.y, window.innerHeight - size.height),
@@ -243,12 +351,19 @@ export function JodieWindow({
 
         window.addEventListener('resize', handleWindowResize);
         return () => window.removeEventListener('resize', handleWindowResize);
-    }, [size]);
+    }, [size, isFullscreen]);
 
     return (
         <div
             ref={windowRef}
-            className={`jodie-window ${isDragging ? 'jodie-dragging' : ''} ${resizeDirection ? 'jodie-resizing' : ''}`}
+            className={[
+                'jodie-window',
+                isDragging ? 'jodie-dragging' : '',
+                resizeDirection ? 'jodie-resizing' : '',
+                isFullscreen ? 'jodie-window--fullscreen' : '',
+                isAnimating ? 'jodie-window--animating' : '',
+                isVisible ? 'jodie-window--visible' : 'jodie-window--hidden',
+            ].filter(Boolean).join(' ')}
             style={{
                 left: position.x,
                 top: position.y,
@@ -257,17 +372,19 @@ export function JodieWindow({
             }}
             onMouseDown={handleMouseDown}
         >
-            {/* Resize Handles - Corners */}
-            <div className="jodie-resize-handle nw" onMouseDown={handleResizeStart('nw')} />
-            <div className="jodie-resize-handle ne" onMouseDown={handleResizeStart('ne')} />
-            <div className="jodie-resize-handle sw" onMouseDown={handleResizeStart('sw')} />
-            <div className="jodie-resize-handle se" onMouseDown={handleResizeStart('se')} />
-
-            {/* Resize Handles - Edges */}
-            <div className="jodie-resize-handle n" onMouseDown={handleResizeStart('n')} />
-            <div className="jodie-resize-handle e" onMouseDown={handleResizeStart('e')} />
-            <div className="jodie-resize-handle s" onMouseDown={handleResizeStart('s')} />
-            <div className="jodie-resize-handle w" onMouseDown={handleResizeStart('w')} />
+            {/* Resize Handles (hidden in fullscreen) */}
+            {!isFullscreen && (
+                <>
+                    <div className="jodie-resize-handle nw" onMouseDown={handleResizeStart('nw')} />
+                    <div className="jodie-resize-handle ne" onMouseDown={handleResizeStart('ne')} />
+                    <div className="jodie-resize-handle sw" onMouseDown={handleResizeStart('sw')} />
+                    <div className="jodie-resize-handle se" onMouseDown={handleResizeStart('se')} />
+                    <div className="jodie-resize-handle n" onMouseDown={handleResizeStart('n')} />
+                    <div className="jodie-resize-handle e" onMouseDown={handleResizeStart('e')} />
+                    <div className="jodie-resize-handle s" onMouseDown={handleResizeStart('s')} />
+                    <div className="jodie-resize-handle w" onMouseDown={handleResizeStart('w')} />
+                </>
+            )}
 
             <JodieHeader
                 activeProvider={activeProvider}
@@ -276,6 +393,14 @@ export function JodieWindow({
                 onOpenSettings={onOpenSettings}
                 onOpenDocumentation={onOpenDocumentation}
                 isWaiting={isWaiting}
+                isAlive={isAlive}
+                isFullscreen={isFullscreen}
+                onToggleFullscreen={isFullscreen ? exitFullscreen : enterFullscreen}
+                onResetPosition={resetPosition}
+                consoleMode={consoleMode}
+                onConsoleModeChange={onConsoleModeChange}
+                codeFlavor={codeFlavor}
+                onCodeFlavorChange={onCodeFlavorChange}
             />
 
             {/* Executing Command Toolbar */}
@@ -300,6 +425,13 @@ export function JodieWindow({
                 disabled={isWaiting}
                 supportsVision={supportsVision}
                 supportsPDF={supportsPDF}
+                prefilledMessage={prefilledMessage}
+                onStop={onStop}
+                onOpenSettings={onOpenSettings}
+                consoleMode={consoleMode}
+                onConsoleModeChange={onConsoleModeChange}
+                codeFlavor={codeFlavor}
+                onSubmitCode={onSubmitCode}
             />
 
             <AIDisclaimer feature="chat" />

@@ -12,9 +12,10 @@ import { ProvidersSection } from './sections/ProvidersSection';
 import { PromptsSection } from './sections/PromptsSection';
 import { AppearanceSection } from './sections/AppearanceSection';
 import { AdvancedSection } from './sections/AdvancedSection';
+import { NotificationsSection } from './sections/NotificationsSection';
 import './UnifiedSettingsModal.scss';
 
-export type SettingsSection = 'profile' | 'security' | 'providers' | 'prompts' | 'appearance' | 'advanced';
+export type SettingsSection = 'profile' | 'security' | 'providers' | 'prompts' | 'appearance' | 'notifications' | 'advanced';
 
 interface UnifiedSettingsModalProps {
     isOpen: boolean;
@@ -50,6 +51,12 @@ const NAV_GROUPS: NavGroup[] = [
         label: 'DISPLAY',
         items: [
             { id: 'appearance', label: 'Appearance', icon: 'bi-palette' },
+        ],
+    },
+    {
+        label: 'FEEDBACK',
+        items: [
+            { id: 'notifications', label: 'Notifications', icon: 'bi-bell' },
         ],
     },
     {
@@ -128,6 +135,8 @@ export const UnifiedSettingsModal: React.FC<UnifiedSettingsModalProps> = ({
                 return <PromptsSection />;
             case 'appearance':
                 return <AppearanceSection />;
+            case 'notifications':
+                return <NotificationsSection />;
             case 'advanced':
                 return <AdvancedSection />;
             default:

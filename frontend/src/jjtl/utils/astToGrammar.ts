@@ -203,15 +203,6 @@ function nodeTypeToGrammarRule(node: ASTNode): GrammarRule | null {
         case 'AttributeMapping':
             return 'attributeMapping';
 
-        case 'Conversion':
-            return 'conversion';
-
-        case 'ValueMapping':
-            return 'valueMapping';
-
-        case 'ObjectCreation':
-            return 'objectCreation';
-
         case 'Helper':
             return 'helper';
 

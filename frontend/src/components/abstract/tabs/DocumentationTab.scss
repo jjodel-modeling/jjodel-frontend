@@ -1047,7 +1047,7 @@ $transition: 0.15s ease;
     
     i {
         font-size: 24px;
-        color: $color-accent;
+        color: $color-accent!important;
     }
     
     h3 {
@@ -1080,7 +1080,7 @@ $transition: 0.15s ease;
         color: $color-text-secondary;
         
         i {
-            color: $color-accent;
+            color: $color-accent!important;
             margin-top: 2px;
         }
         

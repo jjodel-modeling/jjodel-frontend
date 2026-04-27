@@ -1,149 +1,168 @@
 /**
  * NotificationCenter Component
- * Popover that displays notifications, anchored to the bell icon in the StatusBar.
- * Minimal initial implementation — real notifications will be wired later.
+ * Popover anchored to the StatusBar bell icon. Renders the persistent toast
+ * history (warning + error) backed by `toastHistory` (localStorage-backed).
  */
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { toastHistory, type HistoryEntry } from './Toast/toastHistory';
+import { formatRelativeTime } from './Toast/useRelativeTime';
+import { JjodelEvents } from '../events/registry';
 import './NotificationCenter.scss';
 
-// --- Types ---
+const ASK_JJODIE_PROMPT = (message: string) =>
+    `Can you explain this error and how to fix it?\n\n"${message}"`;
 
-export interface Notification {
-    id: string;
-    type: 'success' | 'warning' | 'error' | 'info';
-    title: string;
-    description?: string;
-    timestamp: Date;
-    read: boolean;
-}
-
-interface NotificationsState {
-    notifications: Notification[];
-    unreadCount: number;
-    markAsRead: (id: string) => void;
-    markAllRead: () => void;
-    clearAll: () => void;
-    addNotification: (n: Omit<Notification, 'id' | 'timestamp' | 'read'>) => void;
-}
-
-// --- Hook ---
-
-const SAMPLE_NOTIFICATIONS: Notification[] = [
-    {
-        id: 'sample-1',
-        type: 'info',
-        title: 'Welcome to Jjodel',
-        description: 'Start by creating a metamodel.',
-        timestamp: new Date(Date.now() - 60_000 * 5),
-        read: false,
-    },
-];
-
-export function useNotifications(): NotificationsState {
-    const [notifications, setNotifications] = useState<Notification[]>(SAMPLE_NOTIFICATIONS);
-
-    const unreadCount = notifications.filter(n => !n.read).length;
-
-    const markAsRead = useCallback((id: string) => {
-        setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-    }, []);
-
-    const markAllRead = useCallback(() => {
-        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    }, []);
-
-    const clearAll = useCallback(() => {
-        setNotifications([]);
-    }, []);
-
-    const addNotification = useCallback((n: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
-        const newNotif: Notification = {
-            ...n,
-            id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-            timestamp: new Date(),
-            read: false,
-        };
-        setNotifications(prev => [newNotif, ...prev]);
-    }, []);
-
-    return { notifications, unreadCount, markAsRead, markAllRead, clearAll, addNotification };
-}
-
-// --- Helpers ---
-
-const ICON_MAP: Record<Notification['type'], string> = {
-    success: 'bi-check-circle-fill',
+const ICON_MAP: Record<HistoryEntry['type'], string> = {
     warning: 'bi-exclamation-triangle-fill',
     error: 'bi-x-circle-fill',
-    info: 'bi-info-circle-fill',
 };
 
-function relativeTime(date: Date): string {
-    const diff = Math.floor((Date.now() - date.getTime()) / 1000);
-    if (diff < 60) return 'just now';
-    if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    return `${Math.floor(diff / 86400)}d ago`;
-}
-
-// --- Component ---
-
 interface NotificationCenterProps {
-    notifications: Notification[];
-    onMarkAsRead: (id: string) => void;
-    onClearAll: () => void;
+    open: boolean;
     onClose: () => void;
+    anchorRef?: React.RefObject<HTMLElement>;
 }
 
-const NotificationCenter: React.FC<NotificationCenterProps> = ({
-    notifications,
-    onMarkAsRead,
-    onClearAll,
-    onClose,
-}) => {
-    const ref = useRef<HTMLDivElement>(null);
+export function useToastHistorySnapshot(): { entries: HistoryEntry[]; unreadCount: number } {
+    const [entries, setEntries] = useState<HistoryEntry[]>(() => toastHistory.getAll());
 
-    // Close on click outside
     useEffect(() => {
-        const handler = (e: MouseEvent) => {
-            if (ref.current && !ref.current.contains(e.target as Node)) {
-                onClose();
-            }
+        const refresh = () => setEntries(toastHistory.getAll());
+        window.addEventListener(JjodelEvents.HISTORY_CHANGED, refresh);
+        window.addEventListener('storage', refresh);
+        return () => {
+            window.removeEventListener(JjodelEvents.HISTORY_CHANGED, refresh);
+            window.removeEventListener('storage', refresh);
         };
-        document.addEventListener('mousedown', handler);
-        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    const unreadCount = entries.reduce((acc, e) => acc + (e.read ? 0 : 1), 0);
+    return { entries, unreadCount };
+}
+
+const NotificationCenter: React.FC<NotificationCenterProps> = ({ open, onClose, anchorRef }) => {
+    const popoverRef = useRef<HTMLDivElement>(null);
+    const { entries } = useToastHistorySnapshot();
+
+    useEffect(() => {
+        if (!open) return;
+
+        const handleClickOutside = (e: MouseEvent) => {
+            const target = e.target as Node;
+            if (popoverRef.current?.contains(target)) return;
+            if (anchorRef?.current?.contains(target)) return;
+            onClose();
+        };
+
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('keydown', handleEsc);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('keydown', handleEsc);
+        };
+    }, [open, onClose, anchorRef]);
+
+    useEffect(() => {
+        if (open) {
+            // Mark unread as read shortly after opening so badge clears.
+            const t = setTimeout(() => toastHistory.markAllRead(), 250);
+            return () => clearTimeout(t);
+        }
+    }, [open]);
+
+    useEffect(() => {
+        window.dispatchEvent(
+            new CustomEvent(JjodelEvents.NOTIFICATIONS_POPOVER_TOGGLE, { detail: { open } })
+        );
+    }, [open]);
+
+    const handleClearAll = useCallback(() => {
+        toastHistory.clearAll();
+    }, []);
+
+    const handleAskJjodie = useCallback((entry: HistoryEntry) => {
+        const messageStr = typeof entry.message === 'string' ? entry.message : String(entry.message);
+        const prompt = ASK_JJODIE_PROMPT(messageStr);
+        onClose();
+        window.dispatchEvent(
+            new CustomEvent(JjodelEvents.JODIE_PREFILL_AND_OPEN, { detail: { prompt } })
+        );
     }, [onClose]);
 
+    if (!open) return null;
+
+    const handleRemove = (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        toastHistory.remove(id);
+    };
+
     return (
-        <div className="app-notif-popover" ref={ref}>
+        <div className="app-notif-popover" ref={popoverRef} role="dialog" aria-label="Notifications">
             <div className="app-notif-popover__header">
-                <span className="app-notif-popover__title">Notifications</span>
-                {notifications.length > 0 && (
-                    <button className="app-notif-popover__clear" onClick={onClearAll}>
+                <span className="app-notif-popover__title">
+                    Notifications
+                    {entries.length > 0 && (
+                        <span className="app-notif-popover__count"> ({entries.length})</span>
+                    )}
+                </span>
+                {entries.length > 0 && (
+                    <button
+                        type="button"
+                        className="app-notif-popover__clear"
+                        onClick={handleClearAll}
+                    >
                         Clear all
                     </button>
                 )}
             </div>
 
             <div className="app-notif-popover__list">
-                {notifications.length === 0 ? (
-                    <div className="app-notif-popover__empty">No notifications</div>
+                {entries.length === 0 ? (
+                    <div className="app-notif-popover__empty">No notifications yet</div>
                 ) : (
-                    notifications.map(n => (
+                    entries.map(entry => (
                         <div
-                            key={n.id}
-                            className={`app-notif-popover__item ${n.read ? '' : 'app-notif-popover__item--unread'}`}
-                            onClick={() => onMarkAsRead(n.id)}
+                            key={entry.id}
+                            className={`app-notif-popover__item app-notif-popover__item--${entry.type}${entry.read ? '' : ' app-notif-popover__item--unread'}`}
                         >
-                            <i className={`bi ${ICON_MAP[n.type]} app-notif-popover__icon app-notif-popover__icon--${n.type}`} />
+                            <i className={`bi ${ICON_MAP[entry.type]} app-notif-popover__icon app-notif-popover__icon--${entry.type}`} />
                             <div className="app-notif-popover__body">
-                                <div className="app-notif-popover__item-title">{n.title}</div>
-                                {n.description && (
-                                    <div className="app-notif-popover__item-desc">{n.description}</div>
+                                {entry.title && (
+                                    <div className="app-notif-popover__item-title">
+                                        <span className="app-notif-popover__item-unread-dot" aria-hidden="true" />
+                                        {entry.title}
+                                    </div>
                                 )}
-                                <div className="app-notif-popover__item-time">{relativeTime(n.timestamp)}</div>
+                                <div className="app-notif-popover__item-desc">{entry.message}</div>
+                                {entry.type === 'error' && (
+                                    <button
+                                        type="button"
+                                        className="app-notif-popover__item-ask-jjodie"
+                                        onClick={() => handleAskJjodie(entry)}
+                                    >
+                                        Need help? Ask Jjodie
+                                    </button>
+                                )}
+                                <div
+                                    className="app-notif-popover__item-time"
+                                    title={new Date(entry.timestamp).toLocaleString()}
+                                >
+                                    {formatRelativeTime(entry.timestamp)}
+                                </div>
                             </div>
+                            <button
+                                type="button"
+                                className="app-notif-popover__item-close"
+                                onClick={(e) => handleRemove(entry.id, e)}
+                                aria-label="Remove notification"
+                            >
+                                <i className="bi bi-x" />
+                            </button>
                         </div>
                     ))
                 )}

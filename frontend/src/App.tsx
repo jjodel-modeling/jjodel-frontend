@@ -8,7 +8,7 @@ import {DState, DUser, Log, LUser, Pointer, R, SetRootFieldAction, statehistory,
 import {connect} from "react-redux";
 import Loader from "./components/loader/Loader";
 import {FakeStateProps} from "./joiner/types";
-import {HashRouter, Route, Routes} from 'react-router-dom';
+import {HashRouter, Navigate, Route, Routes} from 'react-router-dom';
 import PathChecker from "./components/pathChecker/PathChecker";
 
 import {
@@ -24,6 +24,7 @@ import {
     RecentPage_Obsolete,
     SettingsPage,
     TemplatePage,
+    ExplorePage,
     TokenPreviewPage,
     UpdatesPage,
     UsersInfoPage,
@@ -34,7 +35,7 @@ import EditorV2 from "./components/editor-v2/EditorV2";
 
 import {ExternalLibraries} from "./components/forEndUser/ExternalLibraries";
 import {TooltipVisualizer} from "./components/forEndUser/Tooltip";
-import AlertVisualizer from "./components/alert/Alert";
+// AlertVisualizer (legacy Redux toast) replaced by ToastProvider — see U.alert facade in common/U.tsx
 import DialogVisualizer from './components/alert/Dialog';
 import { NotificationWidget } from './components/NotificationWidget/NotificationWidget';
 import { Jodie } from './components/Jodie';
@@ -118,13 +119,14 @@ function App(props: AllProps): JSX.Element {
                 <Try><TooltipVisualizer/></Try>
 
                 {/*<MessageVisualizer />*/}
-                <Try><AlertVisualizer/></Try>
+                {/* <AlertVisualizer/> removed: U.alert now dispatches to ToastProvider via JjodelEvents.TOAST */}
                 <Try><DialogVisualizer/></Try>
                 <Try><JjtlDialogManager/></Try>
                 <HashRouter>
                     <Try><PathChecker/></Try>
                     <Try><Routes>
                         {user ? <>
+                            <Route path={'/'} element={<Navigate to="/allProjects" replace/>}/>
                             <Route path={'allProjects'} element={<AllProjectsPage/>}/>
                             <Route path={'project'} element={<ProjectPage/>}/>
                             <Route path={'updates'} element={<UpdatesPage/>}/>
@@ -145,6 +147,7 @@ function App(props: AllProps): JSX.Element {
                             <Route path={'archive'} element={<ArchivePage/>}/>
                             <Route path={'notes'} element={<NotesPage/>}/>
                             <Route path={'templates'} element={<TemplatePage/>}/>
+                            <Route path={'explore'} element={<ExplorePage/>}/>
                             <Route path={'recent'} element={<RecentPage_Obsolete/>}/>
                             <Route path={'community'} element={<CommunityPage/>}/>
                             { /* working fallback, keep it last */}

@@ -7,14 +7,14 @@
  * @param variant 'light' (default, app StatusBar) | 'dark' (JjTL status bar)
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import type { DState } from '../joiner';
 import { useInterfaceMode } from '../hooks/useInterfaceMode';
 import { useSettingsModalSafe } from '../contexts/SettingsModalContext';
-import NotificationCenter, { useNotifications } from './NotificationCenter';
+import NotificationCenter, { useToastHistorySnapshot } from './NotificationCenter';
 import './StatusBarRightZone.scss';
-import {AIConfig, JodieConfig} from "../types/jodie";
+import { AIConfig, JodieConfig } from "../types/jodie";
 import { AIEvents } from '../events/registry';
 
 interface StatusBarRightZoneProps {
@@ -24,16 +24,16 @@ interface StatusBarRightZoneProps {
 const StatusBarRightZone: React.FC<StatusBarRightZoneProps> = ({ variant = 'light' }) => {
     const { mode, toggleMode } = useInterfaceMode();
     const settingsModal = useSettingsModalSafe();
-    const { notifications, unreadCount, markAsRead, clearAll } = useNotifications();
+    const { unreadCount } = useToastHistorySnapshot();
     const [showNotifications, setShowNotifications] = useState(false);
     const [aiConnected, setAiConnected] = useState(() => JodieConfig.hasEnabledProviders());
+    const bellRef = useRef<HTMLButtonElement>(null);
 
     const engineVersion = useSelector((state: DState) => {
         const v = (state as any).version;
         return v?.n ? `v${v.n}` : 'v2.0';
     });
 
-    // Listen for AI provider config changes
     useEffect(() => {
         const handler = () => setAiConnected(JodieConfig.hasEnabledProviders());
         window.addEventListener(AIEvents.PROVIDER_CHANGED, handler);
@@ -57,6 +57,7 @@ const StatusBarRightZone: React.FC<StatusBarRightZoneProps> = ({ variant = 'ligh
     }, [settingsModal]);
 
     const isDark = variant === 'dark';
+    const badgeLabel = unreadCount > 99 ? '99+' : String(unreadCount);
 
     return (
         <div className={`sb-rz${isDark ? ' sb-rz--dark' : ''}`}>
@@ -75,7 +76,7 @@ const StatusBarRightZone: React.FC<StatusBarRightZoneProps> = ({ variant = 'ligh
             <button
                 className="sb-rz__jjodie"
                 onClick={handleJjodieClick}
-                title={aiConnected ? 'AI connected \u2014 Open settings' : 'AI not configured \u2014 Open settings'}
+                title={aiConnected ? 'AI connected — Open settings' : 'AI not configured — Open settings'}
             >
                 <span className={`sb-rz__jjodie-icon ${aiConnected ? '' : 'sb-rz__jjodie-icon--off'}`}>
                     <i className="bi bi-robot" />
@@ -88,22 +89,23 @@ const StatusBarRightZone: React.FC<StatusBarRightZoneProps> = ({ variant = 'ligh
             {/* Notifications bell */}
             <div className="sb-rz__bell-wrapper">
                 <button
+                    ref={bellRef}
                     className="sb-rz__bell"
                     onClick={handleToggleNotifications}
+                    aria-label={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : 'Notifications'}
                     title="Notifications"
                 >
                     <i className="bi bi-bell-fill" />
-                    {unreadCount > 0 && <span className="sb-rz__bell-dot" />}
+                    {unreadCount > 0 && (
+                        <span className="sb-rz__bell-badge">{badgeLabel}</span>
+                    )}
                 </button>
 
-                {showNotifications && (
-                    <NotificationCenter
-                        notifications={notifications}
-                        onMarkAsRead={markAsRead}
-                        onClearAll={clearAll}
-                        onClose={handleCloseNotifications}
-                    />
-                )}
+                <NotificationCenter
+                    open={showNotifications}
+                    onClose={handleCloseNotifications}
+                    anchorRef={bellRef}
+                />
             </div>
 
             <span className="sb-rz__sep" />

@@ -81,6 +81,130 @@
     font-family: 'JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', monospace;
     font-size: 13px;
     letter-spacing: -0.01em;
+
+    // Hide scrollbar visually; scroll still works via wheel/keyboard
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+// Composer wrapper: textarea + send button as a unified bordered control.
+// Paperclip stays outside (as a sibling in `.jodie-input-row`).
+.jodie-composer {
+    flex: 1;
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    padding: 6px 6px 6px 14px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+
+    &:hover {
+        border-color: #94a3b8;
+    }
+
+    &:focus-within {
+        border-color: #334155;
+        box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.12);
+    }
+
+    // Reset textarea chrome inside the composer — wrapper owns border/background.
+    // Keeps min/max height + monospace font from the base `.jodie-input` rule.
+    .jodie-input {
+        border: none;
+        background: transparent;
+        border-radius: 0;
+        padding: 8px 0;
+        box-shadow: none;
+        min-height: 32px;
+
+        &:focus,
+        &:hover:not(:focus):not(:disabled),
+        &:disabled {
+            border: none;
+            background: transparent;
+            box-shadow: none;
+        }
+    }
+}
+
+// Send button: 4 mutually-exclusive states (empty / ready / sending / no-provider).
+// Icon color is targeted on the descendant `<i>` (with `.bi` fallback) to beat
+// the global `i.bi { color: var(--font-color-1) }` rule in styles/style.scss
+// (specificity 0,1,1). `.jodie-send-btn--ready i` is (0,2,1) — wins.
+// Hover-state color is repeated explicitly to outrank `i.bi:hover` (0,2,1).
+.jodie-send-btn {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 120ms ease, transform 100ms ease;
+    padding: 0;
+
+    i, .bi {
+        font-size: 14px;
+        line-height: 1;
+        transition: color 120ms ease;
+    }
+
+    &:active:not(:disabled) {
+        transform: scale(0.94);
+    }
+
+    &--empty {
+        background: #e2e8f0; // slate-200
+        cursor: not-allowed;
+
+        i, .bi { color: #94a3b8; } // slate-400
+    }
+
+    &--ready {
+        background: var(--color-accent, #0ea5e9);
+
+        i, .bi { color: #ffffff; }
+
+        &:hover {
+            background: #0284c7;
+            i, .bi { color: #ffffff; }
+        }
+    }
+
+    &--sending {
+        background: var(--color-accent, #0ea5e9);
+        animation: jodie-send-pulse 1.4s ease-in-out infinite;
+
+        i, .bi { color: #ffffff; }
+
+        &:hover {
+            background: #0284c7;
+            i, .bi { color: #ffffff; }
+        }
+    }
+
+    &--no-provider {
+        background: #fef3c7; // amber-100
+
+        i, .bi { color: #b45309; } // amber-700
+
+        &:hover {
+            background: #fde68a;
+            i, .bi { color: #b45309; }
+        }
+    }
+}
+
+@keyframes jodie-send-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.5); }
+    50%      { box-shadow: 0 0 0 4px rgba(14, 165, 233, 0); }
 }
 
 // Attachment button
@@ -170,5 +294,36 @@
 
     .jodie-vision-hint {
         color: #64748b;
+    }
+
+    .jodie-composer {
+        background: #0f172a;  // slate-900
+        border-color: #334155;
+
+        &:hover {
+            border-color: #475569;
+        }
+
+        &:focus-within {
+            border-color: #94a3b8;
+            box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.18);
+        }
+    }
+
+    .jodie-send-btn--empty {
+        background: #334155;
+
+        i, .bi { color: #64748b; }
+    }
+
+    .jodie-send-btn--no-provider {
+        background: rgba(245, 158, 11, 0.18);
+
+        i, .bi { color: #fbbf24; }
+
+        &:hover {
+            background: rgba(245, 158, 11, 0.28);
+            i, .bi { color: #fbbf24; }
+        }
     }
 }

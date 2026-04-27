@@ -940,8 +940,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         const targetMM = findMetamodelById(metamodels, transformation.targetMetamodelId);
 
         // Convert metamodels to JjTL format (initial snapshot)
-        const sourceMetamodelElements = sourceMM ? convertMetamodelToJjtl(sourceMM) : [];
-        const targetMetamodelElements = targetMM ? convertMetamodelToJjtl(targetMM) : [];
+        const sourceMetamodelElements = sourceMM ? convertMetamodelToJjtl(sourceMM, { includeInherited: true }) : [];
+        const targetMetamodelElements = targetMM ? convertMetamodelToJjtl(targetMM, { includeInherited: true }) : [];
 
         // Build available models list for transformation execution
         // Models (not metamodels) with their conforming metamodel info
@@ -1025,14 +1025,14 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         // These are called when user clicks "Analyze" in Suggested Mappings panel
         const getSourceMetamodel = () => {
             const freshMM = findMetamodelById(project.metamodels || [], transformation.sourceMetamodelId);
-            const result = freshMM ? convertMetamodelToJjtl(freshMM) : [];
+            const result = freshMM ? convertMetamodelToJjtl(freshMM, { includeInherited: true }) : [];
             // console.log('[ProjectEditor] getSourceMetamodel called, classes:', result.filter(e => e.type === 'class').length);
             return result;
         };
 
         const getTargetMetamodel = () => {
             const freshMM = findMetamodelById(project.metamodels || [], transformation.targetMetamodelId);
-            const result = freshMM ? convertMetamodelToJjtl(freshMM) : [];
+            const result = freshMM ? convertMetamodelToJjtl(freshMM, { includeInherited: true }) : [];
             // console.log('[ProjectEditor] getTargetMetamodel called, classes:', result.filter(e => e.type === 'class').length);
             return result;
         };

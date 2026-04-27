@@ -29,6 +29,7 @@ import {
 import type { Node } from '@xyflow/react';
 import type { ClassNodeData } from '../types';
 import { markCanvasUpdated, markCanvasUpdatedBatch, markCanvasEdgePair } from './syncState';
+import { captureAttributeOrphanValues } from '../hooks/useOrphanFeatures';
 
 // ---------------------------------------------------------------------------
 // Position sync
@@ -471,11 +472,20 @@ export function syncUpdateReference(
 export function syncRemoveAttribute(attrId: string, _vertexId: string): void {
     try {
         const lAttr: any = LPointerTargetable.fromPointer(attrId);
-        if (lAttr) {
-            TRANSACTION('EditorV2 remove attribute', () => {
-                DeleteElementAction.new(lAttr.__raw ?? lAttr);
-            });
-        }
+        if (!lAttr) return;
+
+        // Snapshot instance values into OrphanStore BEFORE delete: the
+        // lAttr.delete() cascade (Dummy.get_delete, case 'instanceof') removes
+        // every DValue bound to this attribute, so a post-hoc capture would
+        // find nothing. Values become restorable on a later re-add matching
+        // {classId, attrName, attrType} — see useOrphanFeatures.
+        captureAttributeOrphanValues(attrId);
+
+        // Use lAttr.delete() (not DeleteElementAction direct) so Dummy's
+        // cascade fires and every zombie DValue with instanceof === attrId
+        // gets properly removed from idlookup. lAttr.delete() wraps its own
+        // TRANSACTION internally, so no outer wrapper here.
+        lAttr.delete();
     } catch (err) {
         console.warn('[canvasToJjom] Failed to remove attribute:', err);
     }
@@ -1386,13 +1396,26 @@ export function reconcileJjomAfterUndoRedo(
             const dAttr = lookup[rfAttr.id] as any;
             if (!dAttr) continue;
 
-            if (dAttr.name !== rfAttr.name) {
-                // console.log('[UndoReconcile] Renaming attribute:', { id: rfAttr.id, from: dAttr.name, to: rfAttr.name });
-                try {
-                    const lAttr: any = LPointerTargetable.fromPointer(rfAttr.id);
-                    if (lAttr) lAttr.name = rfAttr.name;
-                } catch { /* ignore */ }
-            }
+            // DISABLED (2026-04-23): Opzione 4 interim fix per bug "undo/attr_0" / "attributi rinominati tornano a default".
+            // Il rename branch forzava sincronizzazione JjOM al RF snapshot name, ma il snapshot non cattura
+            // i rename fatti via Info panel (dock destro) che vanno solo in Redux. Il risultato era che Ctrl+Z
+            // post-rename riportava il nome al valore pre-rename presente nel RF snapshot.
+            //
+            // Trade-off accettato: Ctrl+Z dopo inline-edit rename non revoca più il rename. Per revocarlo,
+            // l'utente deve ri-rinominare manualmente.
+            //
+            // Fix strutturale (opzione 3 del report): unificare il dual undo system. Tracked come debito
+            // tecnico in docs/TECH-DEBT.md.
+            //
+            // Riferimento: docs/reports/2026-04-23-undo-attr-zero-analysis.md (sezioni B.3, B.5, E.2)
+            //
+            // if (dAttr.name !== rfAttr.name) {
+            //     // console.log('[UndoReconcile] Renaming attribute:', { id: rfAttr.id, from: dAttr.name, to: rfAttr.name });
+            //     try {
+            //         const lAttr: any = LPointerTargetable.fromPointer(rfAttr.id);
+            //         if (lAttr) lAttr.name = rfAttr.name;
+            //     } catch { /* ignore */ }
+            // }
         }
     }
 

@@ -12,14 +12,12 @@ interface ToastContainerProps {
 export const ToastContainer: React.FC<ToastContainerProps> = ({
     toasts,
     onRemove,
-    position = 'bottom-left',
+    position = 'bottom-right',
 }) => {
     if (toasts.length === 0) return null;
 
-    // console.log('[ToastContainer] Rendering', toasts.length, 'toasts, position:', position);
-
     return (
-        <div className={`toast-container toast-container--${position}`}>
+        <div className={`jj-toast-container jj-toast-container--${position}`}>
             {toasts.map(toast => (
                 <Toast
                     key={toast.id}
@@ -29,6 +27,8 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
                     message={toast.message}
                     dismiss={toast.dismiss}
                     duration={toast.duration}
+                    timestamp={toast.timestamp}
+                    action={toast.action}
                     onClose={onRemove}
                 />
             ))}

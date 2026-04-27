@@ -9,6 +9,7 @@ export {ProjectPage} from './Project';
 export {RecentPage_Obsolete} from './Recent';
 export {SettingsPage} from './Settings';
 export {TemplatePage} from './Templates';
+export {ExplorePage} from './Explore';
 export {UpdatesPage} from './Updates';
 export {ErrorPage} from './Error';
 export {UsersInfoPage} from './UsersInfo';

@@ -1,6 +1,6 @@
 import React, {Dispatch, JSX, PureComponent, ReactNode} from "react";
 import { connect } from "react-redux";
-import toast from "react-hot-toast";
+import { toast } from "../Toast";
 import {GObject, Pointer, Info, L, Overlap} from "../../joiner";
 import {
     DPointerTargetable,
@@ -48,11 +48,12 @@ function SizeInputComponent(props: AllProps): ReactNode {
         if (props.tooltip === true && field) { tooltip = (ll["__info_of__" + field])?.txt || ''; }
         else { tooltip = (props.tooltip || '') as any; }
 
-        const notify = () => toast((t: GObject) => (
-            <div onClick={() => toast.dismiss(t.id)}>
-                <label className={'ms-1'}>{tooltip}</label>
-            </div>
-        ));
+        const notify = () => toast({
+            message: <label className={'ms-1'}>{tooltip}</label>,
+            priority: 'info',
+            duration: 4000,
+            dismiss: 'auto',
+        });
 
 
         let getter = (ll: LPointerTargetable, propkey: 'x'|'y'|'w'|'h', f: typeof props.xgetter)=> {

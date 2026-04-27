@@ -89,6 +89,8 @@ import {
 } from "../../api/data";
 import {ValuePointers} from "./PointerDefinitions";
 import {transientProperties} from "../../joiner/classes";
+import {validateNameUniqueness} from "./nameUniqueness";
+import { toast } from "../../components/Toast";
 import React, {JSX} from "react";
 import { checkObjectCreation, checkLinkCreation, checkValueAssignment, emitGuardViolation } from '../conformance/ConformanceGuard';
 import {Dummy} from "../../common/Dummy";
@@ -5289,7 +5291,10 @@ instanceof === undefined or missing  --> auto-detect and assign the type
         if (c.data.name === val) return true;
         const models: LModel[] = LModel.fromPointer(store.getState()['models']);
         if (models.filter((model) => { return model.name === val }).length > 0) {
-            U.alert('e', 'Cannot rename the selected model, this name is already taken.');
+            toast.error(`Model name "${val}" is already taken`, {
+                title: 'Validation failed',
+                action: { label: 'View errors →', onClick: () => { /* TODO: wire to errors panel when available */ } },
+            });
         } else {
             TRANSACTION(this.get_name(c)+'.name', ()=>{
                 SetFieldAction.new(c.data, 'name', val, '', false);
@@ -5968,7 +5973,56 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         let l: LValue | LObject | LModel = context.proxyObject;
         while (l && l.className !== DModel.cname) l = l.father;
         return l as LModel; }
-    // protected set_name(val: string, context: Context): boolean { return this.cannotSet("name"); }
+
+    protected set_name(val: this["name"], c: Context): boolean {
+        const name = val;
+        if (c.data.name === name) return true;
+
+        const self = c.proxyObject as unknown as LObject;
+        const result = validateNameUniqueness(self, name);
+        if (!result.valid) {
+            const collider = (result.collidingWith ?? [])[0];
+            const ownerType = (collider?.className ?? 'Element').replace(/^[DLW]/, '');
+            const ownerName = collider?.name ?? '?';
+            toast.error(`Name "${name}" already used by ${ownerType} "${ownerName}"`, {
+                title: 'Validation failed',
+                action: { label: 'View errors →', onClick: () => { /* TODO: wire to errors panel when available */ } },
+            });
+            return true;
+        }
+
+        TRANSACTION(this.get_name(c) + '.name', () => {
+            const nameattribute = (c.proxyObject as any).$name;
+            if (nameattribute && nameattribute.className === 'LValue') {
+                nameattribute.value = val;
+            }
+            SetFieldAction.new(c.data, 'name', name, '', false);
+        }, undefined, val);
+        return true;
+    }
+
+    protected set_father(val: Pointer<any>, c: Context): boolean {
+        if (!val || !Pointers.isPointer(val)) return false;
+        if (c.data.father === val) return false;
+
+        const self = c.proxyObject as unknown as LObject;
+        const newFather = LPointerTargetable.from(val) as LModelElement;
+        if (newFather) {
+            const result = validateNameUniqueness(self, self.name, { overrideFather: newFather });
+            if (!result.valid) {
+                const collider = (result.collidingWith ?? [])[0];
+                const ownerType = (collider?.className ?? 'Element').replace(/^[DLW]/, '');
+                const ownerName = collider?.name ?? '?';
+                toast.error(`Cannot reparent "${self.name}": name conflicts with ${ownerType} "${ownerName}" in the new scope`, {
+                    title: 'Validation failed',
+                    action: { label: 'View errors →', onClick: () => { /* TODO: wire to errors panel when available */ } },
+                });
+                return true;
+            }
+        }
+
+        return super.set_father(val, c);
+    }
     protected set_namespace(val: string, context: Context): boolean { return this.cannotSet("namespace"); }
     // protected get_namespace(context: Context): LClass["namespace"] { return context.proxyObject.instanceof.namespace; }
     protected set_fullname(val: string, context: Context): boolean { return this.cannotSet("fullname"); }
