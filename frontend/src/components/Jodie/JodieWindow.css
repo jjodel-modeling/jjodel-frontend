@@ -2389,3 +2389,112 @@ body[data-notification-visible="true"] .jodie-minimized {
 [data-theme="dark"] .jodie-code-entry__output-row--error .jodie-code-entry__output {
     color: #fca5a5;
 }
+
+/* ========================================
+   CODE ENTRY WARNING BLOCK
+   Surfaces silent-null events (undefined identifiers) from the JjEL evaluator.
+   Visual: amber pill, 11px, aligned with the output row's left padding.
+   ======================================== */
+
+.jodie-code-entry__warnings {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-left: 14px;
+    margin-top: 2px;
+}
+
+.jodie-code-entry__warning {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: #fef3c7; /* amber-100 */
+    color: #78350f;      /* amber-900 */
+    font-size: 11px;
+    line-height: 1.4;
+    font-family: inherit;
+}
+
+.jodie-code-entry__warning i {
+    flex-shrink: 0;
+    color: #b45309; /* amber-700 */
+    font-size: 12px;
+}
+
+.jodie-code-entry__warning code {
+    font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+    font-size: 11px;
+    background: rgba(120, 53, 15, 0.08);
+    padding: 0 4px;
+    border-radius: 3px;
+    color: #78350f;
+}
+
+[data-theme="dark"] .jodie-code-entry__warning {
+    background: rgba(245, 158, 11, 0.14);
+    color: #fcd34d; /* amber-300 */
+}
+
+[data-theme="dark"] .jodie-code-entry__warning i {
+    color: #fbbf24; /* amber-400 */
+}
+
+[data-theme="dark"] .jodie-code-entry__warning code {
+    background: rgba(252, 211, 77, 0.12);
+    color: #fde68a;
+}
+
+/* ========================================
+   PROMOTION BUTTONS (Chat ↔ Code)
+   Style modeled on .md-toggle-btn for consistency.
+   ======================================== */
+
+.jodie-promote-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    margin-top: 6px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 11px;
+    color: #64748b;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    font-weight: 500;
+    font-family: inherit;
+    align-self: flex-start;
+}
+
+.jodie-promote-btn:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #475569;
+}
+
+.jodie-promote-btn:active {
+    transform: scale(0.98);
+}
+
+.jodie-promote-btn i {
+    font-size: 12px;
+}
+
+.jodie-code-entry__promote {
+    margin-left: 14px;
+}
+
+[data-theme="dark"] .jodie-promote-btn {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .jodie-promote-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.18);
+    color: #e2e8f0;
+}

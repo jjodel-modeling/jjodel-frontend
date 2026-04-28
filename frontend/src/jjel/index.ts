@@ -46,16 +46,16 @@ export {
     toJjelValue,
     fromJjelValue
 } from './evaluator';
-export type { JjelValue, JjelObject, JjelFunction } from './evaluator';
+export type { JjelValue, JjelObject, JjelFunction, JjelWarning } from './evaluator';
 
 // ============================================
 // CONVENIENCE API
 // ============================================
 
 import { parseExpression } from './parser';
-import { evaluate } from './evaluator';
+import { evaluate, JjelEvaluator } from './evaluator';
 import { EvaluationContext } from './evaluator';
-import type { JjelValue } from './evaluator';
+import type { JjelValue, JjelWarning } from './evaluator';
 
 /**
  * Parse and evaluate a JjEL expression in one step
@@ -87,6 +87,56 @@ export function jjelEval(
 
     const ctx = variables ? new EvaluationContext(variables) : undefined;
     return evaluate(result.expression, ctx);
+}
+
+/**
+ * Result of `jjelEvalWithDiagnostics`: the value (which may be `null` when
+ * an undefined identifier was hit), plus any diagnostics collected during
+ * evaluation. The list is deduplicated by identifier name.
+ */
+export interface JjelEvalResult {
+    value: JjelValue;
+    warnings: JjelWarning[];
+}
+
+/**
+ * Parse and evaluate a JjEL expression, collecting diagnostic warnings.
+ *
+ * Unlike {@link jjelEval}, this variant exposes silent-null events to the
+ * caller (e.g. references to identifiers that aren't bound in `variables`).
+ * The value semantics are unchanged: a misspelled identifier still resolves
+ * to `null`, but the caller can surface a warning to the user.
+ *
+ * Existing consumers of {@link jjelEval} are unaffected — this is an
+ * additive API specifically for surfaces (Jodie Code mode) that want to
+ * help the user notice typos.
+ *
+ * @example
+ * ```ts
+ * const { value, warnings } = jjelEvalWithDiagnostics(
+ *   'forall c in classe: c.name',
+ *   { classes: [...] }
+ * );
+ * // value: []
+ * // warnings: [{ kind: 'undefined-identifier', identifier: 'classe', suggestion: 'classes' }]
+ * ```
+ */
+export function jjelEvalWithDiagnostics(
+    source: string,
+    variables?: Record<string, JjelValue>,
+): JjelEvalResult {
+    const result = parseExpression(source);
+
+    if (result.errors.length > 0) {
+        throw new Error(`JjEL parse error: ${result.errors[0].message}`);
+    }
+    if (!result.expression) {
+        throw new Error('JjEL parse error: No expression produced');
+    }
+
+    const ctx = variables ? new EvaluationContext(variables) : undefined;
+    const evaluator = new JjelEvaluator(ctx);
+    return evaluator.evaluateWithDiagnostics(result.expression, ctx);
 }
 
 /**

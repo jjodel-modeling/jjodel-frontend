@@ -211,7 +211,7 @@ export function Jodie(): JSX.Element {
         if (!input) return;
         const outcome = codeFlavor === 'jjel'
             ? evaluateJjelInJodie(input)
-            : { ok: false, text: 'JS flavor is not yet available.' };
+            : { ok: false as const, text: 'JS flavor is not yet available.', warnings: [] };
         const entry: CodeEntry = {
             id: generateMessageId(),
             kind: 'code',
@@ -221,9 +221,31 @@ export function Jodie(): JSX.Element {
                 ? { ok: true, value: outcome.text }
                 : { ok: false, error: outcome.text },
             timestamp: Date.now(),
+            warnings: outcome.warnings.length > 0 ? outcome.warnings : undefined,
         };
         setChatState(prev => ({ ...prev, messages: [...prev.messages, entry] }));
     }, [codeFlavor]);
+
+    // Promotion: from a Jjodie chat reply with a code block, switch to Code mode
+    // and prefill the input with the extracted snippet (no auto-run).
+    const handleTestInCode = useCallback((code: string, _language: string | null) => {
+        // TODO stadio 3: when JS flavor is enabled, route 'js'/'javascript' tags to flavor 'js'.
+        // For now everything goes to JjEL; JS-tagged snippets may show JjEL syntax errors,
+        // which the user can refine in place.
+        setConsoleMode('code');
+        setCodeFlavor('jjel');
+        setPendingPrefill({ prompt: code, nonce: Date.now() });
+    }, [setConsoleMode, setCodeFlavor]);
+
+    // Promotion: from a failed Code-mode result, switch to Chat mode and prefill the input
+    // with a template that describes the failed expression (no auto-send).
+    const handleAskJjodie = useCallback((entry: CodeEntry) => {
+        if (entry.output.ok) return;
+        const langLabel = entry.flavor === 'jjel' ? 'JjEL' : 'JS';
+        const template = `This ${langLabel} expression failed:\n\n\`${entry.input}\`\n\nError: ${entry.output.error}\n\n`;
+        setConsoleMode('chat');
+        setPendingPrefill({ prompt: template, nonce: Date.now() });
+    }, [setConsoleMode]);
 
     // Open the chat window
     const handleOpen = useCallback(() => {
@@ -522,6 +544,8 @@ export function Jodie(): JSX.Element {
                     codeFlavor={codeFlavor}
                     onCodeFlavorChange={setCodeFlavor}
                     onSubmitCode={handleSubmitCode}
+                    onTestInCode={handleTestInCode}
+                    onAskJjodie={handleAskJjodie}
                 />
             ) : (
                 <JodieMinimized

@@ -11,6 +11,18 @@ import {
     JJEL_KEYWORDS,
 } from '../types';
 
+// OCL syntax recognition: JjEL is intentionally not OCL-compatible
+// (spec sections 1 and 7.6), but users coming from MDE often write OCL by
+// reflex. We surface targeted parse errors instead of generic ones, in the
+// same lexer-level pattern already used for `?:`, `===`, single `!`.
+const OCL_METHOD_MESSAGES: Record<string, string> = {
+    oclIsTypeOf:    "JjEL uses 'expr is Type', not 'expr.oclIsTypeOf(Type)' (which is OCL syntax).",
+    oclIsKindOf:    "JjEL uses 'expr is Type', not 'expr.oclIsKindOf(Type)' (which is OCL syntax).",
+    oclIsUndefined: "JjEL uses 'expr == null' to test for null, not 'oclIsUndefined()' (which is OCL syntax).",
+    oclAsType:      "JjEL does not have explicit type casts. Type checks via 'is' are sufficient.",
+};
+const OCL_COLLECTION_CONSTRUCTORS = new Set<string>(['Set', 'Sequence', 'Bag', 'OrderedSet']);
+
 export class JjelLexer {
     private source: string;
     private tokens: JjelToken[] = [];
@@ -76,6 +88,8 @@ export class JjelLexer {
                         this.advance();
                     }
                     // No token emitted
+                } else if (this.match('>')) {
+                    this.error("JjEL uses '.' for method calls, not '->' (which is OCL syntax). Replace '->' with '.'.");
                 } else {
                     this.addToken(JjelTokenType.MINUS);
                 }
@@ -364,6 +378,22 @@ export class JjelLexer {
         }
 
         const text = this.source.substring(this.start, this.current);
+
+        // OCL `ocl*` methods: the prefix is OCL-specific, false positives are
+        // implausible in JjEL contexts, so we flag the bare identifier.
+        if (text in OCL_METHOD_MESSAGES) {
+            this.error(OCL_METHOD_MESSAGES[text]);
+            return;
+        }
+
+        // OCL collection constructors (`Set{...}`, `Sequence{...}`, ...): only
+        // flag when followed by `{`, so a metamodel class literally named
+        // `Set` is still usable as a bare identifier.
+        if (OCL_COLLECTION_CONSTRUCTORS.has(text) && this.peek() === '{') {
+            this.error("JjEL uses '[...]' for collections (no Set/Sequence/Bag/OrderedSet distinction). Try '[1, 2, 3]'.");
+            return;
+        }
+
         const textLower = text.toLowerCase();
 
         // Check if it's a keyword

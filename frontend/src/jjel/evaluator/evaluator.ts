@@ -34,11 +34,13 @@ import {
     JjelValue,
     JjelFunction,
     JjelObject,
+    JjelWarning,
     EvaluationContext,
     createFunction,
     isJjelFunction,
     isJjelObject
 } from './context';
+import { closestName } from '../util/levenshtein';
 
 import {
     getCollectionMethod,
@@ -111,6 +113,33 @@ export class JjelEvaluator {
         this.context.registerBuiltin('Array', createFunction(['...values'], (args) => {
             return args;
         }));
+    }
+
+    /**
+     * Evaluate an expression and collect diagnostic warnings (e.g. references
+     * to undefined identifiers). The base value semantics are unchanged: if the
+     * underlying expression resolves to null silently, this method also returns
+     * null — but populated `warnings` lets the caller surface the cause.
+     *
+     * Diagnostics are scoped to a single call: a fresh array is allocated and
+     * threaded through child contexts via `EvaluationContext.diagnostics`.
+     * `try/finally` clears the sink even if the evaluator throws, so the
+     * context is never left in a "dirty" state.
+     */
+    evaluateWithDiagnostics(
+        expr: JjelExpression,
+        ctx?: EvaluationContext,
+    ): { value: JjelValue; warnings: JjelWarning[] } {
+        const evalCtx = ctx || this.context;
+        const warnings: JjelWarning[] = [];
+        const previous = evalCtx.diagnostics;
+        evalCtx.diagnostics = warnings;
+        try {
+            const value = this.evaluate(expr, evalCtx);
+            return { value, warnings };
+        } finally {
+            evalCtx.diagnostics = previous;
+        }
     }
 
     /**
@@ -190,7 +219,25 @@ export class JjelEvaluator {
             return ctx.get(expr.name)!;
         }
 
-        // Undefined variable
+        // Undefined variable: silent-null (existing behavior, unchanged for
+        // template/viewpoint/JjScript consumers). When the caller has opted in
+        // to diagnostics, push a deduplicated warning with a Levenshtein-based
+        // suggestion. The evaluation result remains null either way.
+        if (ctx.diagnostics) {
+            const sink = ctx.diagnostics;
+            const already = sink.some(
+                w => w.kind === 'undefined-identifier' && w.identifier === expr.name,
+            );
+            if (!already) {
+                const suggestion = closestName(expr.name, ctx.allNames(), 3);
+                const warning: JjelWarning = {
+                    kind: 'undefined-identifier',
+                    identifier: expr.name,
+                    suggestion,
+                };
+                sink.push(warning);
+            }
+        }
         return null;
     }
 

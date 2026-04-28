@@ -800,6 +800,24 @@ export interface CodeEntry {
         | { ok: true; value: unknown }
         | { ok: false; error: string };
     timestamp: number;
+    /**
+     * Diagnostic warnings emitted during evaluation (e.g. references to
+     * undefined identifiers). Always defined; absent when the source had no
+     * issues. Independent of `output.ok` — a successful expression can carry
+     * warnings, and a failure does not necessarily produce them.
+     */
+    warnings?: CodeWarning[];
+}
+
+/**
+ * UI-side projection of a JjEL evaluator warning. Decoupled from
+ * `JjelWarning` so the type used in chat history doesn't bleed jjel internals
+ * into types/jodie. Today they map 1:1.
+ */
+export interface CodeWarning {
+    kind: 'undefined-identifier';
+    identifier: string;
+    suggestion: string | null;
 }
 
 /** Anything that may appear in the unified Jjodie history. */

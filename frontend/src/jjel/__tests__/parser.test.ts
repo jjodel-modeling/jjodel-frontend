@@ -463,6 +463,109 @@ describe('unsupported syntax errors', () => {
 });
 
 // ============================================================
+// OCL-isms produce specific helpful errors (stadio 6.8)
+// ============================================================
+
+describe('OCL-isms produce helpful errors', () => {
+    test('-> arrow produces specific error', () => {
+        const result = parseExpression('self.segments->size()');
+        expect(result.errors.length).toBeGreaterThan(0);
+        expect(result.errors[0].message).toContain("JjEL uses '.'");
+        expect(result.errors[0].message).toContain("'->'");
+    });
+
+    test('-> on collection literal also caught', () => {
+        const result = parseExpression('[1,2,3]->first()');
+        expect(result.errors.length).toBeGreaterThan(0);
+        expect(result.errors[0].message).toContain("'->'");
+    });
+
+    test('Set{...} collection constructor produces specific error', () => {
+        const result = parseExpression('Set{1, 2, 3}');
+        expect(result.errors.length).toBeGreaterThan(0);
+        expect(result.errors[0].message).toContain("'[...]'");
+        expect(result.errors[0].message).toContain('Set/Sequence/Bag/OrderedSet');
+    });
+
+    test('Sequence{...} also caught', () => {
+        const result = parseExpression('Sequence{1, 2, 3}');
+        expect(result.errors.length).toBeGreaterThan(0);
+        expect(result.errors[0].message).toContain("'[...]'");
+    });
+
+    test('oclIsTypeOf produces specific error', () => {
+        const result = parseExpression('x.oclIsTypeOf(Y)');
+        expect(result.errors.length).toBeGreaterThan(0);
+        expect(result.errors[0].message).toContain("'expr is Type'");
+        expect(result.errors[0].message).toContain('oclIsTypeOf');
+    });
+
+    test('oclIsKindOf produces specific error', () => {
+        const result = parseExpression('x.oclIsKindOf(Y)');
+        expect(result.errors.length).toBeGreaterThan(0);
+        expect(result.errors[0].message).toContain('oclIsKindOf');
+    });
+
+    test('oclIsUndefined produces specific error', () => {
+        const result = parseExpression('x.oclIsUndefined()');
+        expect(result.errors.length).toBeGreaterThan(0);
+        expect(result.errors[0].message).toContain("'expr == null'");
+        expect(result.errors[0].message).toContain('oclIsUndefined');
+    });
+
+    test('oclAsType produces specific error', () => {
+        const result = parseExpression('x.oclAsType(Y)');
+        expect(result.errors.length).toBeGreaterThan(0);
+        expect(result.errors[0].message).toContain('explicit type casts');
+    });
+});
+
+// ============================================================
+// Regression: valid syntax adjacent to OCL-isms still parses
+// ============================================================
+
+describe('OCL-ism regression checks', () => {
+    test('subtraction still parses', () => {
+        parseOk('a - b');
+        parseOk('1 - 2 - 3');
+    });
+
+    test('unary minus still parses', () => {
+        parseOk('-x');
+        parseOk('-(a + b)');
+    });
+
+    test('Set as plain identifier still parses (no following brace)', () => {
+        parseOk('Set');
+    });
+
+    test('member access on Set-named class still parses', () => {
+        parseOk('Set.instances');
+    });
+
+    test('method call on Set-named class still parses', () => {
+        parseOk('Set.instances.size()');
+    });
+
+    test('"is" type check still parses', () => {
+        parseOk('x is Y');
+    });
+
+    test('null comparison still parses', () => {
+        parseOk('x == null');
+    });
+
+    test('array literal still parses', () => {
+        parseOk('[1, 2, 3]');
+    });
+
+    test('chained method calls still parse', () => {
+        parseOk('self.segments.size()');
+        parseOk('a.b.c.d');
+    });
+});
+
+// ============================================================
 // FUNCTION CALLS — standalone builtin/bound invocation
 // Added for JjTL cross-type resolution: `targetAttr := resolve(expr, Type)`
 // ============================================================

@@ -9,6 +9,8 @@ import {
     ConsoleEntry, ChatMessage, CodeEntry,
 } from '../../types/jodie';
 import { AIEvents } from '../../events/registry';
+import { getJjelSuggestions, applyJjelSuggestion } from '../../jjel/autocomplete';
+import type { Suggestion } from '../../jjscript/autocomplete/types';
 import './ChatInput.scss';
 
 interface ChatInputProps {
@@ -121,8 +123,16 @@ export function ChatInput({
     const [historyIndex, setHistoryIndex] = useState(-1);
     const [savedMessage, setSavedMessage] = useState(''); // Save current input when navigating history
     const [hasProvider, setHasProvider] = useState<boolean>(() => JodieConfig.hasEnabledProviders());
+    // Autocomplete dropdown state. Active only in Code mode + JjEL flavor.
+    const [completions, setCompletions] = useState<Suggestion[]>([]);
+    const [completionIndex, setCompletionIndex] = useState(0);
+    const [isCompletionVisible, setIsCompletionVisible] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const completionDebounceRef = useRef<number | null>(null);
+    // Cursor position last seen by the autocompletion effect — kept in a ref so
+    // ↑/↓ don't trigger re-runs (only the textarea selectionStart matters at fire time).
+    const cursorRef = useRef<number>(0);
 
     // Filtered, in-session history for ↑/↓ navigation.
     // Chat: user messages only (assistant replies excluded). Code: same flavor only.
@@ -153,11 +163,64 @@ export function ChatInput({
 
     // Switching console mode or code flavor invalidates the in-flight history
     // navigation: the underlying list changes, so caret position and draft are no
-    // longer meaningful.
+    // longer meaningful. Also drop the autocomplete dropdown — its state is tied
+    // to a specific flavor.
     useEffect(() => {
         setHistoryIndex(-1);
         setSavedMessage('');
+        setCompletions([]);
+        setCompletionIndex(0);
+        setIsCompletionVisible(false);
     }, [consoleMode, codeFlavor]);
+
+    // Recompute JjEL autocomplete suggestions when the user types or the cursor moves.
+    // Active only in Code+JjEL. Debounced ~50ms to avoid recomputing on every keystroke
+    // when typing fast.
+    const jjelAutocompleteEnabled = isCode && codeFlavor === 'jjel';
+    useEffect(() => {
+        if (!jjelAutocompleteEnabled) {
+            setCompletions([]);
+            setIsCompletionVisible(false);
+            return;
+        }
+        if (completionDebounceRef.current !== null) {
+            window.clearTimeout(completionDebounceRef.current);
+        }
+        completionDebounceRef.current = window.setTimeout(() => {
+            const ta = textareaRef.current;
+            const caret = ta ? ta.selectionStart : message.length;
+            cursorRef.current = caret;
+            const sugs = getJjelSuggestions(message, caret);
+            setCompletions(sugs);
+            setCompletionIndex(0);
+            setIsCompletionVisible(sugs.length > 0);
+        }, 50);
+        return () => {
+            if (completionDebounceRef.current !== null) {
+                window.clearTimeout(completionDebounceRef.current);
+                completionDebounceRef.current = null;
+            }
+        };
+    }, [message, jjelAutocompleteEnabled]);
+
+    /** Insert the selected suggestion into the textarea. */
+    const acceptCompletion = useCallback((suggestion: Suggestion) => {
+        const ta = textareaRef.current;
+        const caret = ta ? ta.selectionStart : message.length;
+        const { text, cursorPosition } = applyJjelSuggestion(message, suggestion, caret);
+        setMessage(text);
+        setIsCompletionVisible(false);
+        setCompletions([]);
+        setCompletionIndex(0);
+        // Restore caret after React re-renders the controlled textarea.
+        requestAnimationFrame(() => {
+            const el = textareaRef.current;
+            if (el) {
+                try { el.setSelectionRange(cursorPosition, cursorPosition); } catch { /* ignore */ }
+                el.focus();
+            }
+        });
+    }, [message]);
 
     // External prefill: set the textarea content and focus it. Nonce ensures
     // re-trigger when the same prompt is requested twice in a row.
@@ -222,6 +285,36 @@ export function ChatInput({
             e.preventDefault();
             onConsoleModeChange('code');
             return;
+        }
+
+        // Autocomplete dropdown takes priority over history nav and Enter/Tab/Esc
+        // when it is open. This is the JjEL Code-mode-only path.
+        if (isCompletionVisible && completions.length > 0) {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setCompletionIndex(prev => (prev + 1) % completions.length);
+                return;
+            }
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setCompletionIndex(prev => (prev - 1 + completions.length) % completions.length);
+                return;
+            }
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                acceptCompletion(completions[completionIndex]);
+                return;
+            }
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                acceptCompletion(completions[completionIndex]);
+                return;
+            }
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                setIsCompletionVisible(false);
+                return;
+            }
         }
 
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -571,6 +664,46 @@ export function ChatInput({
                     >
                         <i className={`bi ${sendBtnConfig.icon}`} />
                     </button>
+
+                    {/* JjEL autocomplete dropdown — anchored above the composer (bottom of the Jodie window).
+                        Visible only in Code+JjEL when there are matching suggestions. */}
+                    {jjelAutocompleteEnabled && isCompletionVisible && completions.length > 0 && (
+                        <div
+                            className="jodie-completion-dropdown"
+                            role="listbox"
+                            // Keep focus on the textarea: if the click lands on the dropdown chrome
+                            // (between rows), the textarea would lose focus and the dropdown would
+                            // close before the row's onClick fires.
+                            onMouseDown={(e) => e.preventDefault()}
+                        >
+                            {completions.map((sug, i) => {
+                                const kind = (sug.metadata as any)?.jjelKind ?? sug.type;
+                                return (
+                                    <div
+                                        key={`${sug.type}:${sug.text}:${i}`}
+                                        className={`jodie-completion-row${i === completionIndex ? ' jodie-completion-row--active' : ''}`}
+                                        role="option"
+                                        aria-selected={i === completionIndex}
+                                        onMouseEnter={() => setCompletionIndex(i)}
+                                        onClick={() => acceptCompletion(sug)}
+                                    >
+                                        <span className={`jodie-completion-badge jodie-completion-badge--${kind}`}>
+                                            {kind === 'method' ? 'fn'
+                                                : kind === 'collection' ? 'coll'
+                                                : kind === 'class' ? 'class'
+                                                : kind === 'context' ? 'var'
+                                                : kind === 'keyword' ? 'kw'
+                                                : sug.type}
+                                        </span>
+                                        <span className="jodie-completion-text">{sug.displayText}</span>
+                                        {sug.description && (
+                                            <span className="jodie-completion-desc">{sug.description}</span>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             </div>
 

@@ -127,6 +127,22 @@ export class TypeRegistry {
 }
 
 // ============================================
+// DIAGNOSTICS
+// ============================================
+
+/**
+ * A diagnostic emitted during evaluation. Today only one kind exists; the
+ * union may grow (e.g. `'undefined-property'` once type inference lands).
+ */
+export type JjelWarning =
+    | {
+        kind: 'undefined-identifier';
+        identifier: string;
+        /** Closest known name within Levenshtein distance ≤ 3, or null. */
+        suggestion: string | null;
+    };
+
+// ============================================
 // EVALUATION CONTEXT
 // ============================================
 
@@ -137,6 +153,13 @@ export class EvaluationContext {
     private scopes: Map<string, JjelValue>[] = [];
     private builtins: Map<string, JjelFunction> = new Map();
     readonly typeRegistry: TypeRegistry;
+    /**
+     * Optional diagnostics sink. When set on a context, the evaluator pushes
+     * warnings here as they are discovered. Child contexts inherit the same
+     * array reference, so nested scopes (forall, lambda, with...do) share
+     * the sink. `undefined` means: don't collect — back to silent-null.
+     */
+    diagnostics?: JjelWarning[];
 
     constructor(
         initialBindings?: Record<string, JjelValue>,
@@ -206,6 +229,8 @@ export class EvaluationContext {
         const child = new EvaluationContext(undefined, this.typeRegistry);
         child.scopes = [...this.scopes];
         child.builtins = this.builtins;
+        // Propagate the same diagnostics sink reference to nested evaluations.
+        child.diagnostics = this.diagnostics;
         child.pushScope();
 
         if (bindings) {
@@ -215,6 +240,26 @@ export class EvaluationContext {
         }
 
         return child;
+    }
+
+    /**
+     * Names visible at the current scope chain, including builtins.
+     * Used by the evaluator to compute Levenshtein suggestions for
+     * undefined identifiers. Order: builtins first, then innermost scope
+     * to outermost (so closer bindings rank earlier on ties).
+     */
+    allNames(): string[] {
+        const seen = new Set<string>();
+        const out: string[] = [];
+        for (const name of this.builtins.keys()) {
+            if (!seen.has(name)) { seen.add(name); out.push(name); }
+        }
+        for (let i = this.scopes.length - 1; i >= 0; i--) {
+            for (const name of this.scopes[i].keys()) {
+                if (!seen.has(name)) { seen.add(name); out.push(name); }
+            }
+        }
+        return out;
     }
 
     /**

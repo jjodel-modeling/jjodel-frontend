@@ -92,6 +92,7 @@
 
 // Composer wrapper: textarea + send button as a unified bordered control.
 // Paperclip stays outside (as a sibling in `.jodie-input-row`).
+// `position: relative` anchors the JjEL autocomplete dropdown above the composer.
 .jodie-composer {
     flex: 1;
     display: flex;
@@ -102,6 +103,7 @@
     border: 1px solid #cbd5e1;
     border-radius: 12px;
     transition: border-color 120ms ease, box-shadow 120ms ease;
+    position: relative;
 
     &:hover {
         border-color: #94a3b8;
@@ -325,5 +327,123 @@
             background: rgba(245, 158, 11, 0.28);
             i, .bi { color: #fbbf24; }
         }
+    }
+}
+
+// =====================================================================
+// JjEL autocomplete dropdown (Code mode + JjEL flavor)
+// Anchored to .jodie-composer (position:relative).
+// Always opens upward — there's no room below: the composer sits at the
+// bottom of the Jodie window.
+// =====================================================================
+
+.jodie-completion-dropdown {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(100% + 6px);
+    max-height: 240px; // ~8 rows
+    overflow-y: auto;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+    z-index: 1000;
+    font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+    font-size: 12px;
+    padding: 4px 0;
+}
+
+.jodie-completion-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    cursor: pointer;
+    color: #334155;
+
+    &:hover {
+        background: #f1f5f9;
+    }
+
+    &--active {
+        background: #0ea5e9; // cyan-500
+        color: #ffffff;
+
+        &:hover {
+            background: #0ea5e9; // keep selection color on hover
+        }
+
+        .jodie-completion-desc {
+            color: rgba(255, 255, 255, 0.78);
+        }
+
+        .jodie-completion-badge {
+            // Selected row: invert badge to a translucent white pill
+            background: rgba(255, 255, 255, 0.22) !important;
+            color: #ffffff !important;
+        }
+    }
+}
+
+.jodie-completion-badge {
+    flex-shrink: 0;
+    min-width: 38px;
+    text-align: center;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1.4;
+
+    &--keyword    { background: rgba(139, 92, 246, 0.14); color: #6d28d9; }   // violet
+    &--collection { background: rgba(14, 165, 233, 0.14); color: #0369a1; }   // cyan
+    &--class      { background: rgba(34, 197, 94, 0.14);  color: #15803d; }   // green
+    &--method     { background: rgba(100, 116, 139, 0.16); color: #334155; }  // slate
+    &--context    { background: rgba(245, 158, 11, 0.16); color: #b45309; }   // amber (Level 2 vars)
+}
+
+.jodie-completion-text {
+    flex-shrink: 0;
+    font-weight: 500;
+}
+
+.jodie-completion-desc {
+    flex: 1;
+    margin-left: 6px;
+    color: #94a3b8;
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+[data-theme="dark"] {
+    .jodie-completion-dropdown {
+        background: #0f172a; // slate-900
+        border-color: #334155;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+    }
+
+    .jodie-completion-row {
+        color: #e2e8f0;
+
+        &:hover {
+            background: #1e293b;
+        }
+    }
+
+    .jodie-completion-desc {
+        color: #64748b;
+    }
+
+    .jodie-completion-badge {
+        &--keyword    { background: rgba(139, 92, 246, 0.22); color: #c4b5fd; }
+        &--collection { background: rgba(14, 165, 233, 0.20); color: #7dd3fc; }
+        &--class      { background: rgba(34, 197, 94, 0.20);  color: #86efac; }
+        &--method     { background: rgba(148, 163, 184, 0.22); color: #cbd5e1; }
+        &--context    { background: rgba(245, 158, 11, 0.22); color: #fcd34d; }
     }
 }
