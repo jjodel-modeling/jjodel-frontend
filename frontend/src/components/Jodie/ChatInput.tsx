@@ -133,6 +133,11 @@ export function ChatInput({
     // Cursor position last seen by the autocompletion effect — kept in a ref so
     // ↑/↓ don't trigger re-runs (only the textarea selectionStart matters at fire time).
     const cursorRef = useRef<number>(0);
+    // Suppress the JjEL dropdown after a submit until the user types a printable
+    // character (or Backspace). Prevents the dropdown from re-opening over the
+    // freshly-printed result entry when setMessage('') triggers the suggestion
+    // effect with an empty/typo prefix that some providers still return matches for.
+    const suppressUntilNextCharRef = useRef<boolean>(false);
 
     // Filtered, in-session history for ↑/↓ navigation.
     // Chat: user messages only (assistant replies excluded). Code: same flavor only.
@@ -185,6 +190,24 @@ export function ChatInput({
         }
         if (completionDebounceRef.current !== null) {
             window.clearTimeout(completionDebounceRef.current);
+        }
+        // Regola B: don't open the dropdown when the input is empty or contains
+        // only whitespace. Skip the suggestion computation entirely.
+        if (message.trim().length === 0) {
+            setCompletions([]);
+            setCompletionIndex(0);
+            setIsCompletionVisible(false);
+            return;
+        }
+        // Regola C: while the suppression flag is armed (post-submit), keep the
+        // dropdown closed even if `message` would otherwise produce suggestions.
+        // The flag is cleared by handleKeyDown when the user types a printable
+        // character or Backspace.
+        if (suppressUntilNextCharRef.current) {
+            setCompletions([]);
+            setCompletionIndex(0);
+            setIsCompletionVisible(false);
+            return;
         }
         completionDebounceRef.current = window.setTimeout(() => {
             const ta = textareaRef.current;
@@ -256,6 +279,16 @@ export function ChatInput({
             setHistoryIndex(-1);
             setSavedMessage('');
             if (textareaRef.current) textareaRef.current.style.height = 'auto';
+            // Regola A: close the autocomplete dropdown explicitly on submit and
+            // reset its tracked state. Same reset shape as the mode/flavor effect
+            // and acceptCompletion, so callers see a consistent post-submit state.
+            setCompletions([]);
+            setCompletionIndex(0);
+            setIsCompletionVisible(false);
+            // Regola C: arm the suppression flag so the next message-driven effect
+            // run (caused by setMessage('') above) does not re-open the dropdown.
+            // The flag is cleared by handleKeyDown on the next printable keypress.
+            suppressUntilNextCharRef.current = true;
             return;
         }
 
@@ -280,6 +313,14 @@ export function ChatInput({
     }, [message, images, documents, disabled, onSend, isCode, onSubmitCode]);
 
     const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+        // Regola C: any printable character or Backspace counts as the user
+        // resuming typing after a submit, so disarm the suppression flag here.
+        // Non-printable keys (arrows, modifiers, Tab, Esc, ...) leave the flag
+        // intact, keeping the dropdown closed during caret moves and history nav.
+        if (suppressUntilNextCharRef.current && (e.key.length === 1 || e.key === 'Backspace')) {
+            suppressUntilNextCharRef.current = false;
+        }
+
         // Backtick on an empty Chat input switches to Code mode (and swallows the char).
         if (!isCode && e.key === '`' && message === '') {
             e.preventDefault();
@@ -691,6 +732,8 @@ export function ChatInput({
                                             {kind === 'method' ? 'fn'
                                                 : kind === 'collection' ? 'coll'
                                                 : kind === 'class' ? 'class'
+                                                : kind === 'class-property' ? 'cls'
+                                                : kind === 'meta-property' ? 'meta'
                                                 : kind === 'context' ? 'var'
                                                 : kind === 'keyword' ? 'kw'
                                                 : sug.type}

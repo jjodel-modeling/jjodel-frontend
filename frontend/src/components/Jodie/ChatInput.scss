@@ -398,11 +398,13 @@
     letter-spacing: 0.04em;
     line-height: 1.4;
 
-    &--keyword    { background: rgba(139, 92, 246, 0.14); color: #6d28d9; }   // violet
-    &--collection { background: rgba(14, 165, 233, 0.14); color: #0369a1; }   // cyan
-    &--class      { background: rgba(34, 197, 94, 0.14);  color: #15803d; }   // green
-    &--method     { background: rgba(100, 116, 139, 0.16); color: #334155; }  // slate
-    &--context    { background: rgba(245, 158, 11, 0.16); color: #b45309; }   // amber (Level 2 vars)
+    &--keyword        { background: rgba(139, 92, 246, 0.14); color: #6d28d9; }   // violet
+    &--collection     { background: rgba(14, 165, 233, 0.14); color: #0369a1; }   // cyan
+    &--class          { background: rgba(34, 197, 94, 0.14);  color: #15803d; }   // green
+    &--class-property { background: rgba(244, 63, 94, 0.12);  color: #9f1239; }   // rose (class structural property)
+    &--meta-property  { background: rgba(79, 70, 229, 0.12);  color: #3730a3; }   // indigo (meta-level bridge)
+    &--method         { background: rgba(100, 116, 139, 0.16); color: #334155; }  // slate
+    &--context        { background: rgba(245, 158, 11, 0.16); color: #b45309; }   // amber (Level 2 vars)
 }
 
 .jodie-completion-text {
@@ -440,10 +442,12 @@
     }
 
     .jodie-completion-badge {
-        &--keyword    { background: rgba(139, 92, 246, 0.22); color: #c4b5fd; }
-        &--collection { background: rgba(14, 165, 233, 0.20); color: #7dd3fc; }
-        &--class      { background: rgba(34, 197, 94, 0.20);  color: #86efac; }
-        &--method     { background: rgba(148, 163, 184, 0.22); color: #cbd5e1; }
-        &--context    { background: rgba(245, 158, 11, 0.22); color: #fcd34d; }
+        &--keyword        { background: rgba(139, 92, 246, 0.22); color: #c4b5fd; }
+        &--collection     { background: rgba(14, 165, 233, 0.20); color: #7dd3fc; }
+        &--class          { background: rgba(34, 197, 94, 0.20);  color: #86efac; }
+        &--class-property { background: rgba(244, 63, 94, 0.22);  color: #fda4af; }
+        &--meta-property  { background: rgba(99, 102, 241, 0.22); color: #c7d2fe; }
+        &--method         { background: rgba(148, 163, 184, 0.22); color: #cbd5e1; }
+        &--context        { background: rgba(245, 158, 11, 0.22); color: #fcd34d; }
     }
 }

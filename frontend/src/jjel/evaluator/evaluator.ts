@@ -377,6 +377,22 @@ export class JjelEvaluator {
     }
 
     private getProperty(obj: JjelValue, property: string): JjelValue {
+        // Pedagogical error: `className` is strict-on-classes (M2->M3) per the
+        // v2 design (2026-04-28). On instances it must redirect users to
+        // `instanceOf.name` rather than silently returning a constant string.
+        // Check runs before the array/string branches because objects that
+        // carry `__type === 'Object'` are never arrays/strings.
+        if (
+            property === 'className' &&
+            isJjelObject(obj) &&
+            (obj as any).__type === 'Object'
+        ) {
+            throw new JjelEvaluationError(
+                "'className' applies to classes (M2→M3), not to instances.\n" +
+                "For the metaclass name of an instance, use 'obj.instanceOf.name'."
+            );
+        }
+
         // Array properties
         if (Array.isArray(obj)) {
             switch (property) {
@@ -662,6 +678,20 @@ export class JjelEvaluator {
     }
 
     private callMethod(obj: JjelValue, method: string, args: JjelValue[], ctx: EvaluationContext): JjelValue {
+        // Pedagogical error mirror of getProperty: catches the paren form
+        // `obj.className()` on instances. Same redirection to `instanceOf.name`.
+        if (
+            method === 'className' &&
+            args.length === 0 &&
+            isJjelObject(obj) &&
+            (obj as any).__type === 'Object'
+        ) {
+            throw new JjelEvaluationError(
+                "'className' applies to classes (M2→M3), not to instances.\n" +
+                "For the metaclass name of an instance, use 'obj.instanceOf.name'."
+            );
+        }
+
         // Array methods
         if (Array.isArray(obj)) {
             const collectionMethod = getCollectionMethod(method);
@@ -702,6 +732,13 @@ export class JjelEvaluator {
             const methodValue = obj[method];
             if (isJjelFunction(methodValue)) {
                 return methodValue.call(args, ctx);
+            }
+            // Dual form for zero-arg builtins (spec 2.11): if the property
+            // resolves to a non-function value and no arguments were passed,
+            // return the value directly. Mirrors the existing behavior for
+            // zero-arg string/collection methods.
+            if (args.length === 0 && methodValue !== undefined) {
+                return methodValue;
             }
         }
 

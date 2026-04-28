@@ -42,6 +42,10 @@ interface JodieWindowProps {
     onTestInCode: (code: string, language: string | null) => void;
     /** Promotion: switch to Chat mode and prefill the input with a template describing a failed code entry. */
     onAskJjodie: (entry: CodeEntry) => void;
+    /** Clear all entries of the active console mode (Chat or Code). Optional for backward compat. */
+    onClearCurrentMode?: () => void;
+    /** True iff the active console mode has at least one entry. Drives the Clear button hint state. */
+    canClearCurrentMode?: boolean;
 }
 
 interface Position {
@@ -108,6 +112,8 @@ export function JodieWindow({
     onSubmitCode,
     onTestInCode,
     onAskJjodie,
+    onClearCurrentMode,
+    canClearCurrentMode,
 }: JodieWindowProps): JSX.Element {
     // Load initial position/size from config
     const config = JodieConfig.current;
@@ -407,6 +413,8 @@ export function JodieWindow({
                 onConsoleModeChange={onConsoleModeChange}
                 codeFlavor={codeFlavor}
                 onCodeFlavorChange={onCodeFlavorChange}
+                onClearCurrentMode={onClearCurrentMode}
+                canClearCurrentMode={canClearCurrentMode}
             />
 
             {/* Executing Command Toolbar */}

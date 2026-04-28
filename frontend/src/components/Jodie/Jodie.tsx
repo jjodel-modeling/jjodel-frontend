@@ -487,6 +487,27 @@ export function Jodie(): JSX.Element {
         setChatState(prev => ({ ...prev, isWaiting: false }));
     }, []);
 
+    // Clear the entries belonging to the current console mode (Chat or Code).
+    // History is non-persisted, so we just filter the in-memory unified array.
+    // Returns prev unchanged when nothing matches, so the button click is a true
+    // no-op when the active mode is already empty (no spurious re-render).
+    const handleClearCurrentMode = useCallback(() => {
+        setChatState(prev => {
+            const next = prev.messages.filter(e =>
+                consoleMode === 'code' ? e.kind !== 'code' : e.kind === 'code'
+            );
+            if (next.length === prev.messages.length) return prev;
+            return { ...prev, messages: next };
+        });
+    }, [consoleMode]);
+
+    const canClearCurrentMode = useMemo(
+        () => chatState.messages.some(e =>
+            consoleMode === 'code' ? e.kind === 'code' : e.kind !== 'code'
+        ),
+        [chatState.messages, consoleMode]
+    );
+
     // Open/close transition: keep JodieWindow mounted during the exit fade-out.
     // - `windowRendered`: controls whether <JodieWindow> is in the React tree
     // - `windowVisible`: drives the --visible/--hidden CSS modifier (opacity/transform)
@@ -546,6 +567,8 @@ export function Jodie(): JSX.Element {
                     onSubmitCode={handleSubmitCode}
                     onTestInCode={handleTestInCode}
                     onAskJjodie={handleAskJjodie}
+                    onClearCurrentMode={handleClearCurrentMode}
+                    canClearCurrentMode={canClearCurrentMode}
                 />
             ) : (
                 <JodieMinimized

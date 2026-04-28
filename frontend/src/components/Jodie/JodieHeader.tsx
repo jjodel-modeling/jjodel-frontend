@@ -31,6 +31,10 @@ interface JodieHeaderProps {
     /** Active code flavor (JjEL / JS). JS is disabled in stage 1. */
     codeFlavor: CodeFlavor;
     onCodeFlavorChange: (f: CodeFlavor) => void;
+    /** Clear all entries of the active console mode (Chat or Code). Optional for backward compat. */
+    onClearCurrentMode?: () => void;
+    /** True iff the active console mode has at least one entry. Used to switch the aria-label. */
+    canClearCurrentMode?: boolean;
 }
 
 interface MetamodelContext {
@@ -133,6 +137,8 @@ export function JodieHeader({
     onConsoleModeChange,
     codeFlavor,
     onCodeFlavorChange,
+    onClearCurrentMode,
+    canClearCurrentMode,
 }: JodieHeaderProps): JSX.Element {
     const context = useMetamodelContext();
     const aliveTitle = isAlive
@@ -213,6 +219,16 @@ export function JodieHeader({
             </div>
 
             <div className="jodie-header-right">
+                {onClearCurrentMode && (
+                    <button
+                        className="jodie-header-btn"
+                        onClick={onClearCurrentMode}
+                        title={consoleMode === 'code' ? 'Clear code history' : 'Clear chat history'}
+                        aria-label={consoleMode === 'code' ? 'Clear code history' : 'Clear chat history'}
+                    >
+                        <i className="bi bi-eraser" />
+                    </button>
+                )}
                 {onResetPosition && (
                     <button
                         className="jodie-header-btn jodie-reset-btn"

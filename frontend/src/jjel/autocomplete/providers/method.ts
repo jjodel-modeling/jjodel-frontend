@@ -55,14 +55,24 @@ export function getJjelMethodSuggestions(context: JjelAutocompleteContext): Sugg
         const description = defs.length > 1
             ? `${primary.signature} — ${primary.description} [${categories}]`
             : `${primary.signature} — ${primary.description}`;
+        const jjelKind = primary.category === 'class-structural'
+            ? 'class-property'
+            : primary.category === 'meta'
+                ? 'meta-property'
+                : 'method';
+        const icon = primary.category === 'class-structural'
+            ? 'bi-square-fill'
+            : primary.category === 'meta'
+                ? 'bi-diagram-3'
+                : 'bi-three-dots';
         out.push({
             text: name,
             displayText: name,
-            type: 'attribute', // reuse SuggestionType; UI maps jjelKind=method to a slate badge
+            type: 'attribute', // reuse SuggestionType; UI maps jjelKind to a category-specific badge
             description,
             priority: priorityFor(primary, filter),
-            icon: 'bi-three-dots',
-            metadata: { jjelKind: 'method', category: primary.category, signature: primary.signature },
+            icon,
+            metadata: { jjelKind, category: primary.category, signature: primary.signature },
         });
     }
 

@@ -16,7 +16,7 @@
  * Used by the JjEL autocomplete method provider.
  */
 
-export type BuiltinCategory = 'string' | 'collection' | 'number' | 'date';
+export type BuiltinCategory = 'string' | 'collection' | 'number' | 'date' | 'class-structural' | 'meta';
 
 export interface BuiltinMethod {
     /** Method name as written by the user (e.g. 'snakeCase'). */
@@ -196,6 +196,29 @@ export const DATE_METHODS: BuiltinMethod[] = [
 ];
 
 // ============================================
+// CLASS STRUCTURAL PROPERTIES (7 — exposed on metamodel classes)
+// ============================================
+
+export const CLASS_STRUCTURAL_PROPERTIES: BuiltinMethod[] = [
+    { name: 'isAbstract',       category: 'class-structural', signature: '() -> Boolean', description: 'True if this class is abstract.' },
+    { name: 'isInterface',      category: 'class-structural', signature: '() -> Boolean', description: 'True if this class is an interface.' },
+    { name: 'allowCrossExtend', category: 'class-structural', signature: '() -> Boolean', description: 'True if this class allows cross-extension across packages.' },
+    { name: 'isFinal',          category: 'class-structural', signature: '() -> Boolean', description: 'True if this class is final (cannot be extended).' },
+    { name: 'isSingleton',      category: 'class-structural', signature: '() -> Boolean', description: 'True if this class is a singleton (one instance per model).' },
+    { name: 'isRootable',       category: 'class-structural', signature: '() -> Boolean', description: 'True if instances of this class can be model roots.' },
+    { name: 'isPartial',        category: 'class-structural', signature: '() -> Boolean', description: 'True if this class is partial (allows unlisted features).' },
+];
+
+// ============================================
+// META PROPERTIES (2 — bridge meta-levels: M1->M2 and M*->M3)
+// ============================================
+
+export const META_PROPERTIES: BuiltinMethod[] = [
+    { name: 'instanceOf', category: 'meta', signature: '() -> Class',  description: 'The class this object is an instance of (M2 element).' },
+    { name: 'className',  category: 'meta', signature: '() -> String', description: 'The meta-metaclass type name (M3, e.g. "DClass").' },
+];
+
+// ============================================
 // AGGREGATED EXPORTS
 // ============================================
 
@@ -205,6 +228,8 @@ export const ALL_BUILTIN_METHODS: BuiltinMethod[] = [
     ...COLLECTION_METHODS,
     ...NUMBER_METHODS,
     ...DATE_METHODS,
+    ...CLASS_STRUCTURAL_PROPERTIES,
+    ...META_PROPERTIES,
 ];
 
 /**
