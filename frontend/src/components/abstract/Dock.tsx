@@ -10,6 +10,7 @@ import {NodeEditor} from "../editors/NodeEditor";
 import {PropertiesWithTreeView} from "../editors/PropertiesWithTreeView";
 import DockManager from './DockManager';
 import {PinnableDock, TabContent, TabHeader} from '../dock/MyRcDock';
+import { TabsOverflowMenu } from '../dock/TabsOverflowMenu';
 import ModelsSummaryTab from "./tabs/ModelsSummaryTab";
 import BrokerEditor from "../editors/Broker";
 import {PermissionModelTab} from "../editors/PermissionModelTab";
@@ -362,7 +363,12 @@ function DockComponent(props: AllProps) {
         }
     };
 
-    return (<PinnableDock key={''+advanced} ref={dock => { DockManager.dock = dock }} defaultLayout={layout} groups={groups} onLayoutChange={handleLayoutChange} />);
+    return (
+        <>
+            <PinnableDock key={''+advanced} ref={dock => { DockManager.dock = dock }} defaultLayout={layout} groups={groups} onLayoutChange={handleLayoutChange} />
+            <TabsOverflowMenu />
+        </>
+    );
 }
 interface OwnProps {}
 interface StateProps {

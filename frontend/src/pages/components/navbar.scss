@@ -1859,16 +1859,14 @@ $transition-menu: 150ms ease;
 }
 
 .appbar-tabs__overflow-dropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
+  position: fixed;
   min-width: 180px;
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   padding: 4px;
-  z-index: 1000;
+  z-index: var(--z-dropdown);
 }
 
 .appbar-tabs__overflow-item {
