@@ -1,5 +1,31 @@
 # Claude Code Session Log
 
+## 2026-04-29 — fix: duplicate React keys in Navbar Submenu
+**Prompt**: sostituire key={project.name} con key={project.id} nei map progetti del Navbar
+**File toccati**: frontend/src/pages/components/Navbar.tsx
+**Esito**: ✅ completato — `npm run build` verde (1m 32s).
+**Note**: La causa effettiva non era nel JSX `key=` ma nella costruzione dei MenuEntry per i recent projects (L1178): `pid = Pointers.from(p)` veniva calcolato ma non assegnato al campo `id` dell'oggetto `MenuEntry`. La strategia di key esistente in `makeEntry` (L386: `key={i.id||i.name}`) cadeva in fallback su `i.name`, generando duplicati per progetti omonimi (es. "Stame Machine copy", "Release Test"). Fix di una riga: aggiunto `id: 'project_' + pid,` in coerenza con altri MenuEntry dello stesso file (L1189 `id: 'new_model'`, L1193 `id: 'mmid_'+...`). Nessun fallback `${name}-${index}` necessario: il `pid` reale esisteva già. Non toccati: `<Submenu key={m.name}>` a L454 (top-level menu names hardcoded unici), `key={i.id||i.name}` a L386 (strategia corretta, mancava solo il dato).
+**Nome del documento prompt**: 2026-04-29 12:00
+
+---
+
+## 2026-04-28 — fix(jjel-autocomplete): receiver kind inference (collection vs item)
+**Prompt**: filtrare i metodi proposti in base al tipo di receiver inferito staticamente (collezione vs singolo item) per ridurre rumore visivo
+**File toccati**: `frontend/src/jjel/autocomplete/util/receiverKind.ts` (nuovo, ~80 righe), `frontend/src/jjel/autocomplete/providers/method.ts` (delta ~15 righe).
+**Esito**: ✅ completato — `npm run build` ✓ built in 38.96s. `vitest run` 294 test passati. Le 7 suite Monaco fallite restano pre-esistenti.
+**Note**:
+1. **Nessun meccanismo `applicableTo` esistente** sui metadata `BuiltinMethod`: solo `category` (`'string' | 'collection' | 'number' | 'date' | 'class-structural' | 'meta'`). Aggiunte le **3 lookup come constants module-level** in `util/receiverKind.ts`: `KNOWN_COLLECTION_IDENTIFIERS` (`instances`, `classes`, `attributes`, `references`, `enumerations`, `packages`), `SINGLE_ITEM_METHODS` (`first`, `last`, `at`), `COLLECTION_RETURNING_METHODS` (`filter`, `where`, `select`, `reject`, `sortBy`, `distinct`).
+2. **Funzione `inferReceiverKind(input: string, dotPos: number): ReceiverKind` pura** (no side effects, no context esterno, niente accesso al metamodel runtime). Parsing backward dal `.`: gestisce `?.` null-safe (skip del `?`), method-call con depth counter sulle parentesi, identifier-form (cattura forma duale zero-arg di stadio 6.9, es. `instances.first.`).
+3. **File util/ separato** invece di inline in `method.ts`: il parsing è ~50 righe di logica concettualmente distinta dal provider (ranking, dedupe, suggestion mapping). Mantiene `method.ts` focused (~85 righe).
+4. **Filter pipeline in `method.ts`**: nuovo `isCategoryAllowed(cat)` chiamato come early-skip in entrambi i loop di dedup. `dotPos = context.wordStart - 1` (la posizione del `.` è garantita dal parser quando `parseContext === 'after-dot'`).
+5. **Regola 4 implementata letteralmente** ("identifier non in lookup → `'item'`"): copre i casi `RoadNetwork.` (filtri collezione fuori, restano `class-structural` + `meta` + scalar) come da smoke test 7. **Osservazione su smoke test 8**: `someUnknown.` (identifier non noto) viene anch'esso classificato `'item'`, quindi le suggerimenti collezione sono filtrate fuori. Il prompt autorizza la degradazione a `'unknown'` se "causa falsi negativi noti", ma per ora seguo la rule 4 alla lettera. Se nel test #8 si osserva un'esperienza utente peggiorata, basta cambiare `return 'item'` in `return 'unknown'` nell'ultimo branch di `inferReceiverKind` (1 riga).
+6. **Forma duale zero-arg gestita**: `instances.first.` (no paren) → identifier-form branch, cerca `first` in `SINGLE_ITEM_METHODS` → `'item'`. Coerente con stadio 6.9 (la forma duale è valida per metodi zero-arg). Test smoke #4 pass.
+7. **`instances.filter(c | c.isAbstract).` gestito**: method-call branch con depth counter sulle parentesi. Stop a `(` quando depth === 0, leggi `filter` indietro → `COLLECTION_RETURNING_METHODS` → `'collection'`. Test smoke #5 pass.
+8. **No nuove dipendenze npm, no refactoring opportunistico** (rimosso solo il TODO header che descriveva la mancanza di type inference, ora superato), no toccati altri provider/engine/parser/lexer/evaluator/metadata.
+**Nome del documento prompt**: 2026-04-28 18:00
+
+---
+
 ## 2026-04-28 — feat(jjel): meta-properties instanceOf + className (strict on classes) — v2 over v1
 **Prompt**: stadio 6.10 v2 — refactor two-pass di buildEvalContext, override esplicito in wrapSelectedElement, alias lasco instanceof/instanceOf, **className strict on classes con errore parlante sulle istanze**
 **File toccati**: `frontend/src/jjscript/executor/commands/eval.ts`, `frontend/src/jjel/evaluator/evaluator.ts`. **Non toccati** in questo intervento: `frontend/src/jjel/metadata/builtins.ts` (le entry `instanceOf`/`className` erano già corrette dal v1 di stamattina).

@@ -1176,6 +1176,7 @@ function NavbarComponent(props: AllProps) {
             .forEach(p => {
                     let pid = Pointers.from(p);
                     recentProjects.push({
+                        id: 'project_' + pid,
                         icon: <i className="bi bi-folder" />, name: p.name, disabled: pid === projectid,
                         function: ()=> R.navigate('/project?id=' + pid)
                     })
