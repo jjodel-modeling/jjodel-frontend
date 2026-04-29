@@ -139,17 +139,18 @@ export function COMMIT(action?:Action, deep: boolean = true): boolean {
     return true;
 }
 
-export function END(actionstoPrepend: Action[] = [], path?: string, oldval?: any, newval?: any, desc?:string): boolean {
+export function END(): boolean {
     t.transactionDepthLevel--;
     // if (inCommit) console.log('commit end', {lv: +t.transactionDepthLevel});
     if (!inCommit) windoww.updateDebuggerComponent();
     // console.warn('TRANSACTION END', {depth: t.transactionDepthLevel});
-    if (actionstoPrepend.length) t.pendingActions = [...actionstoPrepend, ...t.pendingActions];
+    //if (actionstoPrepend.length) t.pendingActions = [...actionstoPrepend, ...t.pendingActions];
 
     if (t.transactionDepthLevel < 0) { console.debug("mismatching END() - transaction already closed"); t.transactionDepthLevel = 0; }
-    if (t.transactionDepthLevel === 0) return FINAL_END(path, oldval, newval, desc);
+    if (t.transactionDepthLevel === 0) return FINAL_END();
     return false;
 }
+
 function FINAL_END(path?: string, oldval?: any, newval?: any, desc?:string): boolean{
     t.hasBegun = false;
     // pendingActions.sort( (a, b) => a.timestamp - b.timestamp)
@@ -207,7 +208,12 @@ let lastDescription: {name: string, oldval: any, newval: any, desc?: string} | u
 // NB: cannot be async, it changes execution order and break many codes where return value is determined in a transaction.
 // also because BEGIN() becomes stuck and actions cannot fire until the server replies or times out.
 // export function TRANSACTION<F extends (...args: any)=>any>(func: NoAsyncFn<F>, ...params: Parameters<F>): boolean | DState {
-export async function TRANSACTION(name:string, func: ()=> void, oldval?: any, newval?: any, desc?:string): Promise<boolean> {
+
+
+export async function TRANSACTION_MERGE(name:string, func: ()=> void, oldval?: any, newval?: any, desc?:string): Promise<boolean> {
+    return TRANSACTION(name, func, oldval, newval, desc, true)
+}
+export async function TRANSACTION(name:string, func: ()=> void, oldval?: any, newval?: any, desc?:string, mergeWithPrevious = false): Promise<boolean> {
 //export function TRANSACTION<F extends NoAsyncFn)>(func: F, ...params: Parameters<F>): boolean | DState {
     BEGIN();
     if (!lastDescription) lastDescription = {name, oldval, newval, desc};
@@ -222,7 +228,7 @@ export async function TRANSACTION(name:string, func: ()=> void, oldval?: any, ne
             Log.ee('Transaction aborted.', {depth: t.transactionDepthLevel});
         }
     }
-    return END([]);
+    return END();
 }
 let at_transaction: ((...a:any)=>void)[] = [];
 let after_transaction: ((newState: DState)=>void)[] = [];

@@ -1,6 +1,6 @@
 // import * as detectzoooom from 'detect-zoom'; alternative: https://www.npmjs.com/package/zoom-level
 // import {Mixin} from "ts-mixer";
-import type {NestedArray} from "../joiner";
+import type {NamedArr, NestedArray} from "../joiner";
 import {Any, DClass, DGraphElement, LClass, LGraphElement} from "../joiner";
 import {
     AbstractConstructor,
@@ -1661,11 +1661,11 @@ export class U {
      return !!v;
     }
 
-    static fromBoolString<T extends any>(str: string | boolean): boolean;
-    static fromBoolString<T extends any>(str: string | boolean, defaultVal?: T): boolean | T;
-    static fromBoolString<T extends any>(str: string | boolean, defaultVal?: T, nullValue?: T): boolean | T;
-    static fromBoolString<T extends any>(str: string | boolean, defaultVal?: T, nullValue?: T, undefValue?: T): boolean | T;
-    static fromBoolString<T extends any>(str: string | boolean, defaultVal: T = false as any, nullValue: T = null as any, undefValue: T = undefined as any): boolean | T {
+    static fromBoolString<T extends any>(str?: string | boolean): boolean;
+    static fromBoolString<T extends any>(str?: string | boolean, defaultVal?: T): boolean | T;
+    static fromBoolString<T extends any>(str?: string | boolean, defaultVal?: T, nullValue?: T): boolean | T;
+    static fromBoolString<T extends any>(str?: string | boolean, defaultVal?: T, nullValue?: T, undefValue?: T): boolean | T;
+    static fromBoolString<T extends any>(str?: string | boolean, defaultVal: T = false as any, nullValue: T = null as any, undefValue: T = undefined as any): boolean | T {
         if (str === false) return false;
         if (str === true) return true;
         str = ('' + str).toLowerCase().trim();
@@ -2067,7 +2067,7 @@ export class U {
         // or err.toString --> "Error: message" dunno if stack is printed too i tested with a fake error.
     }
 
-    static toNamedArray<D extends DPointerTargetable, L extends LPointerTargetable>(larr:L[], darr?:D[]): L[] & Dictionary<DocString<"$name">, L>{
+    static toNamedArray<D extends DPointerTargetable, L extends LPointerTargetable>(larr:L[], darr?:D[]): NamedArr<L>{
         if (!darr || darr.length !== larr.length) darr = larr.map(l=>l.__raw as D);
 
         for (let i = 0; i < larr.length; i++) if (darr[i] && larr[i]) (larr as GObject)["$"+(darr[i] as GObject).name] = larr[i];
@@ -2940,6 +2940,150 @@ export class U {
         return window['process'].env[varr] || '';
     }
 
+    public static ecoreSerializeValue(value: any, type: string): string {
+        switch (type.toLowerCase()) {
+
+            // ── Integer types — plain decimal, no frills ──────────────────────────
+            case "byte":
+            case "ebyte":
+            case "short":
+            case "eshort":
+            case "int":
+            case "eint":
+            case "long":
+            case "elong":
+            case "biginteger":
+            case "ebiginteger":
+                return Math.trunc(value).toString(10);
+
+            // ── Floating point — mirror Java's Double.toString() / Float.toString()
+            //    Rules:
+            //      - always at least one decimal digit (never "12", always "12.0")
+            //      - scientific notation if abs >= 1e7 or (abs < 1e-3 and abs > 0)
+            //      - canonical sign: "E" uppercase, no leading zeros in exponent
+            //      - special values: NaN, Infinity, -Infinity
+            case "float":
+            case "efloat":
+            case "double":
+            case "edouble":
+            case "bigdecimal":
+            case "ebigdecimal":
+                const n = Number(value);
+                if (isNaN(n)) return "NaN";
+                if (!isFinite(n)) return n > 0 ? "Infinity" : "-Infinity";
+                if (n === 0) return Object.is(n, -0) ? "-0.0" : "0.0";
+                const abs = Math.abs(n);
+                const needsSci = abs !== 0 && (abs >= 1e7 || abs < 1e-3);
+                /**
+                 * Formats a number in decimal form, always with at least one decimal digit,
+                 * trimming unnecessary trailing zeros beyond the first decimal digit.
+                 * Mirrors Java Double.toString() decimal output.
+                 */
+                let formatFloat = (n: number): string => {
+                    let s = n.toPrecision(17).replace(/0+$/, "");
+                    if (!s.includes(".")) s += ".0";
+                    if (s.endsWith(".")) s += "0";
+                    return s;
+                }
+
+                // Produce Java-style scientific notation: 1.5E7 not 1.5e+7
+                // JavaScript's toExponential uses lowercase 'e' and explicit '+' sign
+                // We need to match Java: uppercase E, no '+', no leading zeros in exponent
+                if (needsSci) {
+                    const exp = Math.floor(Math.log10(abs));
+                    const mantissa = n / Math.pow(10, exp);
+                    return `${formatFloat(mantissa)}E${exp}`;
+                } else return formatFloat(n);
+            // ── Date — EMF uses ISO 8601 via Java's XMLTypeFactory ────────────────────
+            case "date":
+            case "edate": {
+                const d = value as Date;
+                const yyyy = d.getUTCFullYear().toString().padStart(4, "0");
+                const MM   = (d.getUTCMonth() + 1).toString().padStart(2, "0");
+                const dd   = d.getUTCDate().toString().padStart(2, "0");
+                const HH   = d.getUTCHours().toString().padStart(2, "0");
+                const mm   = d.getUTCMinutes().toString().padStart(2, "0");
+                const ss   = d.getUTCSeconds().toString().padStart(2, "0");
+                const SSS  = d.getUTCMilliseconds().toString().padStart(3, "0");
+                return `${yyyy}-${MM}-${dd}T${HH}:${mm}:${ss}.${SSS}+0000`;
+            }
+
+// ── Duration (XMLType) ─────────────────────────────────────────────────────
+// ISO 8601 duration: P1Y2M3DT4H5M6S
+            case "duration":
+            case "eduration": {
+                // value is expected as total milliseconds
+                const ms    = value as number;
+                const sign  = ms < 0 ? "-" : "";
+                const abs   = Math.abs(ms);
+
+                const sec  = 1000;
+                const min  = 60 * sec;
+                const hr   = 60 * min;
+                const day  = 24 * hr;
+
+                const days  = Math.floor(abs / day);
+                const hours = Math.floor((abs % day) / hr);
+                const mins  = Math.floor((abs % hr)  / min);
+                const secs  = Math.floor((abs % min) / sec);
+                const frac  = abs % sec;
+                const secStr = frac > 0
+                    ? `${secs}.${frac.toString().padStart(3, "0")}S`
+                    : `${secs}S`;
+                return `${sign}P${days}DT${hours}H${mins}M${secStr}`;
+            }
+
+// ── EByteArray — Base64 ───────────────────────────────────────────────────
+            case "bytearray":
+            case "ebytearray": {
+                const bytes = value as Uint8Array;
+                return btoa(String.fromCharCode(...bytes));
+            }
+
+// ── EChar / ECharacterObject ──────────────────────────────────────────────
+            case "char":
+            case "echar":
+            case "character":
+            case "echaracterobject":
+                return String(value);
+
+// ── Object wrapper types (boxed primitives) ───────────────────────────────
+// EMF generates EIntegerObject, EDoubleObject etc. for boxed Java types
+// they serialize identically to their primitive counterparts
+            case "integerobject":
+            case "eintegerobject":
+            case "shortobject":
+            case "eshortobject":
+            case "longobject":
+            case "elongobject":
+            case "byteobject":
+            case "ebyteobject":
+                return Math.trunc(value).toString(10);
+
+            case "floatobject":
+            case "efloatobject":
+            case "doubleobject":
+            case "edoubleobject":
+                // reuse float/double logic — delegate to the double case
+                return U.ecoreSerializeValue(value, "double");
+
+            case "booleanobject":
+            case "ebooleanobject":
+                return value ? "true" : "false";
+
+// ── EFeatureMapEntry ──────────────────────────────────────────────────────
+// not directly serializable as a scalar — omit or throw
+            case "efeaturemapentry":
+                throw new Error("EFeatureMapEntry is not scalar-serializable");
+
+// ── EJavaObject / EJavaClass ──────────────────────────────────────────────
+// no canonical serialization — EMF uses toString() as fallback
+            case "ejavaobject":
+            case "ejavaclass":
+                return String(value);
+        }
+    return "";
+    }
 }
 export type ThrottleState = {timerID: null|number, decay: number, initialDelay:number, currentDelay:number, minDelay: number,
     pending:Function[], cumulative: boolean};
@@ -3017,6 +3161,12 @@ export class myFileReader {
 }
 @RuntimeAccessible('Uarr')
 export class Uarr{
+    static clampIndex(index: number, length: number): number {
+        if (index > 0 && index <= length -1) return index;
+        // index += length * Math.abs(Math.ceil(index / length));
+        return ((index % length) + length) % length;
+    }
+
     // filter can either be a value or a filter function
     static findAllIndexes<T extends any>(arr: T[], filter: T | ((val: T, index: number, arr: T[]) => boolean)): number[] {
         const ret: number[] = [];
@@ -3285,6 +3435,10 @@ export class Uarr{
         }
         console.log('Array shift debug', {srcArr, newArr, additionalOffsets, moveOffset, moveDirection});
         return newArr;
+    }
+
+    static toDictionary<V extends any>(arr: V[], getKey?: keyof V|((entry:V) => string)): Dictionary<string, V>{
+        return U.objectFromArray(arr, getKey);
     }
 }
 

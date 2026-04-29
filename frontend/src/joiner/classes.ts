@@ -441,6 +441,20 @@ export function Leaf<T extends any>( constructor: T & GObject): T { return const
 export function Node<T extends any>( constructor: T & GObject): T { return constructor; }
 export function Abstract<T extends any>( constructor: T & GObject): T { return constructor; }
 export function Instantiable<T extends any>(constructor: T & GObject, instanceConstructor?: Constructor): T { return constructor; } // for m2 cklasses that have m1 instances
+// export function Alias<T extends any>(constructor: T & GObject, instanceConstructor?: Constructor): T { return constructor; } // for L proxy aliases
+export function Alias(
+    commentOrTarget: string | any,
+    propertyKey?: string,
+    descriptor?: PropertyDescriptor
+): any {
+    if (typeof commentOrTarget === "string") {
+        // called as @Alias("some comment")
+        return (_target: any, _key: string, desc: PropertyDescriptor) => desc;
+    }
+    // called as @Alias
+    return descriptor!;
+}
+
 // export function RuntimeAccessible<T extends any>(cname: string): ((constructor: T & GObject) => T) {
 export function RuntimeAccessible(cname: string) {
     return (ctor: any) => RuntimeAccessible_inner(ctor, cname);
@@ -747,6 +761,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.aggregation = false;
         thiss.composition = false;
         thiss.rootable = undefined;
+        thiss.EKeys = [];
         this.setExternalPtr(thiss.father, "references", "+=");
         return this; }
 
@@ -2119,6 +2134,15 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
                 nameattribute.value = val;
             }
             SetFieldAction.new(c.data, 'name', name, '', false);
+            // some names are isID by default in attributes
+            if (c.data.className === "DAttribute" && (c.data as DAttribute).isID === undefined) switch (name.toLowerCase()) {
+                case "id": case "uid": case "uuid": case "guid": case "key":
+                case "name": case "title": case "username":
+                    let parent = (c.proxyObject as LAttribute).father;
+                    if (parent.eidFeature) break;
+                    (c.proxyObject as LAttribute).isID = true;
+
+            }
         }, undefined, val)
         return true;
     }
@@ -2374,6 +2398,14 @@ WARNING! do not set proxies in the state, set pointers instead.<br/>
 
 
 
+    // ecore-xmi based id, defined by m2attribute.isID or m2reference.Ekeys
+    static fromID(anchor: string, model: LModel, crossReference: boolean = true): LObject | null {
+        if (!anchor) return null;
+        if (anchor[0] === '#') anchor.substring(1);
+        let objects: LObject[] = crossReference ? model.allCrossSubObjects : model.allSubObjects;
+        objects.filter(o => o.eid === anchor);
+        return objects[0];
+    }
 
     static fromD<DX extends DPointerTargetable,
         LX = DX extends DEnumerator ? LEnumerator : (DX extends DAttribute ? LAttribute : (DX extends DReference ? LReference : (DX extends DRefEdge ? LRefEdge : (DX extends DExtEdge ? LExtEdge : (DX extends DDataType ? LDataType : (DX extends DClass ? LClass : (DX extends DStructuralFeature ? LStructuralFeature : (DX extends DParameter ? LParameter : (DX extends DOperation ? LOperation : (DX extends DEdge ? LEdge : (DX extends DEdgePoint ? LEdgePoint : (DX extends DGraphVertex ? LGraphVertex : (DX extends DModel ? LModel : (DX extends DValue ? LValue : (DX extends DObject ? LObject : (DX extends DEnumLiteral ? LEnumLiteral : (DX extends DPackage ? LPackage : (DX extends DClassifier ? LClassifier : (DX extends DTypedElement ? LTypedElement : (DX extends DVertex ? LVertex : (DX extends DVoidEdge ? LVoidEdge : (DX extends DVoidVertex ? LVoidVertex : (DX extends DGraph ? LGraph : (DX extends DNamedElement ? LNamedElement : (DX extends DAnnotation ? LAnnotation : (DX extends DGraphElement ? LGraphElement : (DX extends DMap ? LMap : (DX extends DModelElement ? LModelElement : (DX extends DUser ? LUser : (DX extends DPointerTargetable ? LPointerTargetable : (ERROR))))))))))))))))))))))))))))))),

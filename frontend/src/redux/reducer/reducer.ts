@@ -51,9 +51,7 @@ import {
 } from "../../joiner";
 import React from "react";
 import {
-    BEGIN,
     COMMIT,
-    END,
     AFTER_TRANSACTION,
     DO_AFTER_TRANSACTION_NOT_FOR_USERS,
     CollabClearHistoryAction, CollabRefreshAction,

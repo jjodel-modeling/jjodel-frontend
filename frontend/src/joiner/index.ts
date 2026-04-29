@@ -72,7 +72,7 @@ export const $: JQueryStatic = $$;
 // nb: export type è un export "finto" che esiste solo in compilazione per fare capire a typescript i tipi. permette export di alias con nomi diversi (l'export normale no)
 export type {GetPath} from './proxy';
 
-export type {Subtract, Class, Empty, Json, GObject, bool, Dictionary, Proxyfied, Temporary, RawObject, NotFoundv,
+export type {Subtract, Class, Empty, Json, GObject, bool, Dictionary, NamedArr, NamedArray, Proxyfied, Temporary, RawObject, NotFoundv,
     NotFound, DocString, nbool, nnumber, nstring, Nullable, TODO, UnixTimestamp, UObject, IsActually,
     Function, Function2, InOutParam,
     unArr, orArr, PrimitiveType, CClass, NonEmptyString, Overlap,

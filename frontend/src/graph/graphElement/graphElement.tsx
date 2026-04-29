@@ -946,6 +946,8 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }
         //console.log('mousedown select() check:', {e, isSelected: this.props.node.isSelected(), 'nodeIsSelectedMapProxy': this.props.node?.isSelected, nodeIsSelectedRaw:this.props.node?.__raw.isSelected});
         windoww.node = this.props.node;
+        windoww.data = this.props.data;
+        windoww.model = this.props.data;
 
         TRANSACTION('select', ()=>{
             this.props.node.toggleSelected(DUser.current);

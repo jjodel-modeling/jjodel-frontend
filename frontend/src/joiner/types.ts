@@ -87,6 +87,8 @@ export type NestedArray<T> = (T | NestedArray<T>)[];
 export type Empty = any;
 export type UObject = { [key: string]: unknown; }
 export type GObject<DocSubType = ''> = DocSubType extends object ? { [key: string]: any; } & DocSubType : { [key: string]: any; };
+export type NamedArray<T> = T[] & Dictionary<DocString<"$name">, T>;
+export type NamedArr<T> = NamedArray<T>;
 export type RawObject = { [key: string]: NotFunction; };
 // Json<T> = oggetto con le chiavi di T senza le funzioni (post deserializzazione)
 export type Json<T extends GObject = RawObject> =

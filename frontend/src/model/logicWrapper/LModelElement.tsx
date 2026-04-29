@@ -14,9 +14,10 @@ import {
     DocString,
     DPointerTargetable,
     DState,
-    DtoL, ECoreDetail,
+    DtoL,
     ECoreObject,
-    ECoreSubPackage, EcoreXmiTags,
+    ECoreSubPackage,
+    EcoreXmiTags,
     EnumPointers,
     Function2,
     getWParams,
@@ -41,6 +42,7 @@ import {
     ModelPointers,
     MultiSelectOptGroup,
     MultiSelectOption,
+    NamedArray,
     Node,
     ObjectPointers,
     ObjectWithoutPointers,
@@ -88,9 +90,10 @@ import {
     ECoreRoot
 } from "../../api/data";
 import {ValuePointers} from "./PointerDefinitions";
-import {transientProperties} from "../../joiner/classes";
+import {Alias, transientProperties} from "../../joiner/classes";
 import React, {JSX} from "react";
 import {Dummy} from "../../common/Dummy";
+import {AFTER_TRANSACTION, TRANSACTION_MERGE} from "../../redux/action/action";
 
 type outactions = {clear:(()=>void)[], set:(()=>void)[], immediatefire?: boolean};
 export type SchemaMatchingScore = {
@@ -302,8 +305,13 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
             return root.getByPath(patharr);
         }
     }
+    /*
+    protected _convertEcoreToJom_m1(c: Context, ecore: GObject, asValue: boolean = false): GObject{
+        if (asValue) return this._convertEcoreToJom_m1_val(c, ecore);
+        else return this._convertEcoreToJom_m1_obj(c, ecore);
+    }*/
 
-    protected _convertEcoreToJom_m1(c: Context, ecore0: GObject): GObject{
+    protected _convertEcoreToJom_m1_obj(c: Context, ecore0: GObject): GObject {
         let ecore = {...ecore0};
         if (typeof ecore.features === "object" && ecore.features && !Array.isArray(ecore.features)) {
             // transform feature dictionary into array keeping name
@@ -326,6 +334,21 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
         // ecore.children = Uarr.asArray(ecore.children);
         // U.arrayMergeInPlace(ecore.features, ecore.children || []);
         // delete ecore.children;
+        return ecore;
+    }
+
+    protected _convertEcoreToJom_m1_val(c: Context, ecore0: any): any {
+        let isValueRoot = typeof ecore0 === "object" && !Array.isArray(ecore0) &&
+            (ecore0.hasOwnProperty("values") || ecore0.hasOwnProperty("value") || ecore0.className && ecore0.className.toLowerCase().includes("value"));
+        if (!isValueRoot) return ecore0;
+        let ecore = {...ecore0};
+        ecore.values = Uarr.asArray(ecore.values);
+        if (ecore.hasOwnProperty("value") && ecore.value !== ecore.values[0]) { ecore.values[0] = ecore.value; }
+        delete ecore.value;
+        ecore.__childrenToSort = Uarr.asArray(ecore.__childrenToSort);
+        U.arrayMergeInPlace(ecore.values, ecore.__childrenToSort);
+        delete ecore.__childrenToSort;
+        ecore.__isValueRoot = true;
         return ecore;
     }
 
@@ -1280,7 +1303,7 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
         this.get_validTargets(c, opts);
         return opts;
     }
-    validTargets!: (LObject | LEnumLiteral)[];
+    validTargets!: NamedArray<LObject | LEnumLiteral>;
     get_validTargets(c: Context, out?: MultiSelectOptGroup[]): this['validTargets'] {
         let addClasses: boolean = false;
         let addModels: boolean = false;
@@ -1347,7 +1370,8 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
             } else validEnums = (isCrossRef ? m2.crossEnumerators : m2.enumerators);
             //if (out) out.push({label: 'Enumerators', options: validEnums.map(map).sort(sort)});
         }
-        return U.arrayMergeInPlace(validClasses as any[], validPrimitives, validEnums, validModels);
+        let arr = U.arrayMergeInPlace(validClasses as any[], validPrimitives, validEnums, validModels);
+        return U.toNamedArray(arr);
     }
 
 
@@ -1462,7 +1486,18 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
         TRANSACTION(this.get_name(c)+'.type', ()=> {
             Log.w(ptr !== val, 'autocorrected setting type: ', {old:val, ptr, tn:LPointerTargetable.from(ptr)?.name});
             SetFieldAction.new(c.data, 'type', ptr, "", true);
+            let ekeys = (c.data as DReference).EKeys;
+            if (c.data.className === "DReference" && ekeys?.length) {
+                let newEEkeys: Pointer<DAttribute>[] = [];
+                for (let ptr of ekeys) {
+                    let target: LClass = L.fromPointer(ptr);
+                    let attributes = target ? U.objectFromArray(target.attributes || [], 'id') : {}
+                    if (attributes[ptr]) newEEkeys.push(ptr);
+                }
+                if (newEEkeys.length !== newEEkeys.length) (c.proxyObject as any as WReference).EKeys = newEEkeys;
+            }
         }, LPointerTargetable.from(c.data.type)?.fullname || c.data.type, LPointerTargetable.wrap(ptr)?.fullname);
+
         return true;
     }
 
@@ -2651,6 +2686,7 @@ export class DClass extends DModelElement { // extends DClassifier
     sealed!: Pointer<DClass>[];
     final!: boolean;
     allowCrossReference!: boolean;//for extend
+    eidFeature?: Pointer<DAttribute>; // pointing to isID=true attribute
 
     // for m1:
     // hideExcessFeatures: boolean = true; // isn't it like partial?? // old comment: se attivo questo e creo una DClass di sistema senza nessuna feature e di nome Object, ho creato lo schema di un oggetto schema-less a cui tutti sono conformi
@@ -2802,7 +2838,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         this.get_validTargets(c, opts);
         return opts;
     }
-    validTargets!: LClass[];
+    validTargets!: NamedArray<LClass>;
     get_validTargets(c: Context, out?: MultiSelectOptGroup[]): this['validTargets'] {
         let lclass: LClass = c.proxyObject as any;
         // let extendOptions: {value: string, label: string}[] lclass.extends.map(lsubclass=> ({value: lsubclass.id, label: lsubclass.name}));
@@ -2822,8 +2858,117 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
                     ret.push(c);
                     return undefined;
                 }).filter(e=>!!e) as {value: string, label: string}[]})));
-        return ret;
+        return U.toNamedArray(ret);
     }
+
+    @Alias protected get_eidAttribute(c: Context): LAttribute | null { return this.get_eidFeature(c); }
+    @Alias protected set_eidAttribute(v: Pack1<LAttribute>, c: Context): true { return this.set_eidFeature(v, c); }
+
+    @Alias protected get_idAttribute(c: Context): LAttribute | null { return this.get_eidFeature(c); }
+    @Alias protected set_idAttribute(v: Pack1<LAttribute>, c: Context): true { return this.set_eidFeature(v, c); }
+
+    @Alias protected get_idFeature(c: Context): LAttribute | null { return this.get_eidFeature(c); }
+    @Alias protected set_idFeature(v: Pack1<LAttribute>, c: Context): true { return this.set_eidFeature(v, c); }
+
+    static inheritanceDistance(lclass: LClass<DClass, any, any>, la: LAttribute<any, any, DAttribute>, direction:  "up" | "down" | "both" = "both"): number | undefined {
+        let current = la.father;
+        let cid = lclass.id;
+        if (current.id === cid) return 0;
+
+        if (direction !== "down") {
+            let arr = lclass.extends;
+            let level = 1;
+            let duplicates: Dictionary<Pointer, LClass> = {};
+            while (arr.length) {
+                let nextLevel: LClass[] = [];
+                for (let lc of arr) {
+                    let id = lc.id;
+                    if (duplicates[id]) continue;
+                    if (id === cid) return level;
+                    duplicates[id] = lc;
+                    U.arrayMergeInPlace(nextLevel, lc.extends);
+                }
+                level++;
+                arr = nextLevel;
+            }
+        }
+        if (direction !== "up") {
+            let arr = lclass.extendedBy;
+            let level = -1;
+            let duplicates: Dictionary<Pointer, LClass> = {};
+            while (arr.length) {
+                let nextLevel: LClass[] = [];
+                for (let lc of arr) {
+                    let id = lc.id;
+                    if (duplicates[id]) continue;
+                    if (id === cid) return level;
+                    duplicates[id] = lc;
+                    U.arrayMergeInPlace(nextLevel, lc.extendedBy);
+                }
+                level--;
+                arr = nextLevel;
+            }
+        }
+        return undefined;
+    }
+
+    protected get_eidFeature(c: Context): LAttribute | null {
+        let eid: Pointer | undefined = c.data.eidFeature;
+
+        if (eid !== "__recalculating__") return L.fromPointer(eid) || null;
+        // recompute
+        let allDistances: {dist: number, l: LAttribute, c?: LClass}[] = [];
+        for (let la of this.get_allAttributes(c)) {
+            if (!la.isID) continue;
+            let dist = LClass.inheritanceDistance(c.proxyObject, la);
+            if (dist === undefined) { Log.ee("found invalid subattribute", {class:c, attr:la}); continue; }
+            allDistances.push({dist, l:la, c: undefined});
+        }
+        allDistances.sort((e1, e2) => e1.dist - e2.dist);
+        eid = allDistances[0]?.l?.id;
+        // todo: trigger the same setting eidFeature = __recalculating__ after setting a feature to isID = true or false. for class and all his subclasses.
+        TRANSACTION_MERGE("cache update: eidFeature", ()=> {
+            SetFieldAction.new(c.data.id, "eidFeature", eid, '', true);
+        });
+        return L.from(eid) || null;
+    }
+
+    protected set_eidFeature(v: Pack1<LAttribute>, c: Context): true {
+        let ptr = Pointers.from(v);
+        if (c.data.eidFeature === ptr) return true;
+
+        let old = this.get_eidFeature(c);
+        let newFeature: LAttribute = L.from(v);
+        TRANSACTION("change eidFeature", ()=> {
+            let toupdate: LClass[] = [];
+            let delay: boolean = false;
+            let updateSubClasses = ()=> {
+                if (old) {
+                    old.isID = false;
+                    U.arrayMergeInPlace(toupdate, old.father.allSubClasses);
+                }
+                if (newFeature){
+                    let lclass = newFeature.father;
+                    if (!lclass) { delay = true; }
+                    U.arrayMergeInPlace(toupdate, newFeature.father.allSubClasses);
+                    newFeature.isID = true;
+                }
+                let dict = U.objectFromArray(toupdate, "id");
+                for (let sc_id in toupdate) { dict[sc_id].eidFeature = "__recalculating__" as any; }
+            }
+            if (old) old.isID = false;
+            if (newFeature) SetFieldAction.new(c.data.id, "eidFeature", ptr, '', true);
+            if (!delay) updateSubClasses();
+            else AFTER_TRANSACTION(()=>{ TRANSACTION_MERGE("invalidating cache for eidFeatures change", updateSubClasses); });
+        });
+        return true;
+    }
+    protected get_eid(c: Context): LAttribute | null{ return this.get_eidFeature(c); }
+    protected set_eid(v: Pack1<LAttribute>, c: Context): boolean { return this.set_eidFeature(v, c); }
+
+    public eidFeature!: LAttribute | null;
+    __info_of__eidFeature: Info = {type: ShortAttribETypes.EBoolean, txt: "If present, returns the attribute whose isID=true and is closest in the hierarchy of subclasses inhritance.\n" +
+            "Read Attribute.isID for more info."}
 
     get_childNames(c: Context): string[] { return this.get_allChildren(c).map( c => c.name).filter(c=>!!c) as string[]; }
     //get_isSealed(c: Context): LClass['sealed'] { return this.get_sealed(c); }
@@ -3319,10 +3464,108 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             list = list.filter(e=>!invalid.includes(e));
         }
         if (diff.removed.length === 0 && diff.added.length === invalid.length) return true;
+        let deduplicate: Dictionary<Pointer, LClass | true> = {};
+        for (let sc of this.get_allSubClasses(c)) { deduplicate[sc.id] = sc; } // allSubClasses
+        for (let id of list) { if (!deduplicate[id]) deduplicate[id] = true; } // allSubClasses
 
+        /*
+        // find closest eid among the new superclasses (including this)
+        {
+            // find new eidFeaature
+            let superclasses = [c.proxyObject, ...list.map(e=>L.fromPointer(e))] as LClass[];
+            let superclasses_map = U.objectFromArray(superclasses, "id");
+            let duplicates: Dictionary<Pointer, LClass> = {};
+            let all_EID_insuperclasses: LAttribute[] = [];
+            let nestedLevel = -1;
+            let index = -1;
+
+            // get all id attribute among new superclasses (all_EID_insuperclasses)
+            while (superclasses.length) {
+                let arr: LClass[] = [];
+                nestedLevel++;
+                for (let sc of superclasses) {
+                    index++;
+                    let d = sc?.__raw;
+                    if (!d || !sc || duplicates[d.id]) continue;
+                    duplicates[d.id] = sc;
+                    let eidfeature = sc.eidFeature;
+                    if (eidfeature) all_EID_insuperclasses.push(eidfeature)
+                    // if (eidfeature) all_EID_insuperclasses.push({feat:eidfeature, nestedLevel, index++})
+                }
+                superclasses = arr;
+            }
+            // for all inherited id attributes, find all possible inheritance paths (the same attr might be inherited twice if there is a diamond) and store distance from current element.
+            let all_EID_distances: {n: number, l: LAttribute, id: Pointer}[] = all_EID_insuperclasses.map(e=> {
+                // i got a superclass with a iedfeature (which might be inherited from an upper level)
+                // now i need to find the distance from the current element i'm extending AFTER the extend.
+                // so the min distance to all the future superclasses in list
+                let subclasses = e.father.extendedBy;
+                let arr = [...subclasses];
+                let nestedLevel = -1;
+                let duplicates: Dictionary<Pointer, LClass> = {};
+                let eattr = e;
+                // navigate tier by tier downward in subclassing until you find one of the classes i'm inserting as new superclasses.
+                while (arr.length) {
+                    nestedLevel ++;
+                    let next = [];
+                    for (let e of arr) {
+                        let id = e?.id;
+                        if (!e || !id || duplicates[id]) continue;
+                        if (superclasses_map[id]) return {n: nestedLevel, l: eattr};
+                        duplicates[id] = e;
+                        next.push(...e.extendedBy);
+                    }
+                    arr = next;
+                }
+                Log.exDevv("extend error: cannot find distance from an eid attribute to current class", {idFeature: e, d: c.data, extendList:superclasses_map});
+                return {n: Number.POSITIVE_INFINITY, l:e, id:e.id};
+            });
+            all_EID_distances.sort((e1, e2) => (e1.n - e2.n));
+            duplicates = {};
+            // since in diamond inheritance an attribute id might be inherited twice, i filter out the longest path for each in case of duplicates.
+            all_EID_distances = all_EID_distances.filter(e=> { if (duplicates[e.id]) return false; duplicates[e.id] = e.l; return true;});
+        }
+        // check if subclasses need to update their new id attribute from this or new superclasses.
+        {
+            let closestNewEIDFeature = all_EID_distances[0].l.__raw;
+            let closestNewEIDDistance = all_EID_distances[0].n;
+
+            let closestNewEID: Pointer<DAttribute> = closestNewEIDFeature.id;
+            let closestNewEIDOwner: Pointer<DClass> = closestNewEIDFeature.father;
+
+            let updatesSubClassesDebug: LClass[] = [];
+            /*
+            among all subclasses, check their eidFeature.
+            if it's inherited from a level more ancient than new superclasses set, replace them.
+            ...
+            * * /
+            for (let sc of this.get_allSubClasses(c)) {
+                let eidFeature = sc.eidFeature;
+                if (!eidFeature) {
+                    (sc as any as WClass).eidFeature = closestNewEID;
+                    continue;
+                }
+                let eidParent = eidFeature.father; // might be inherited and !== from sc
+                let allSuperclasses = eidParent.allSuperclasses;
+                // if eidParent is extending one of list or c.data
+                let distance: number = distance between eid.father and sc
+                if (allSuperclasses.some(e=>superclasses_map[e.id])) {
+                }
+                let distancefromthis = distance between sc and c.data;
+
+                if (distance < all_EID_distances.n + distancefromthis) {
+                    (sc as any as WClass).eidFeature = closestNewEID;
+                }
+            }
+        }
+
+        console.log("set extend", {closestNewEID: D.from(closestNewEID), updatesSubClassesDebug, all_EID_distances})*/
         TRANSACTION(this.get_name(c)+'.extends', ()=>{
             // adapt instances
             this._fixExtendInstances(c, list);
+            for (let id in deduplicate) {
+                SetFieldAction.new(id as Pointer<LClass>, 'eidFeature', "__recalculating__" as any as Pointer, "", true);
+            }
             // finalize
             SetFieldAction.new(c.data, 'extends', list, "", true);
         }, undefined, ('+'+diff.added.length+', -'+diff.removed.length))
@@ -3762,6 +4005,7 @@ export class DReference extends DModelElement { // DStructuralFeature
     opposite?: Pointer<DReference>;
     target: Pointer<DClass, 0, 'N', LClass> = [];
     edges: Pointer<DEdge, 0, 'N', LEdge> = [];
+    EKeys!: Pointer<DAttribute>[]; // instructions for xmi pointers resolution
 
     public static new(name?: DReference["name"], type?: DReference["type"], father?: DReference["father"], persist: boolean = true): DReference {
         if (!type) type = father // default type is self-reference
@@ -3849,6 +4093,24 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
     protected set_isComposition(v: boolean, c: Context): boolean { return this.set_composition(v, c); }
     protected set_isAggregation(v: boolean, c: Context): boolean { return this.set_aggregation(v, c); }
 
+    EKeys!: LAttribute[];
+    __info_of__EKeys: Info = {type: "string[]", txt: "A subset of the attributes on the referenced type that uniquely identify an instance within this reference."}
+    set_EKeys(v: Pointer[], c: Context) {
+        if (!v) v = [];
+        if (!Array.isArray(v)) v = [v];
+        const ptrs: Pointer[] = U.arrayUnique(v.map(e=>Pointers.from(e)).filter(e=>!!e));
+        let old = c.data.EKeys;
+        let diff = Uarr.arrayDifference(old, ptrs);
+        if (diff.added.length + diff.removed.length == 0) return true;
+        TRANSACTION("set EKeys", ()=> { SetFieldAction.new(c.data, "EKeys", ptrs, "", true)});
+    }
+    get_addEKey(c: Context): (v: Pointer[]) => void {
+        return (v: Pointer[])=> {
+            U.arrayMergeInPlace(v, c.data.EKeys);
+            this.set_EKeys(v, c);
+        }
+    }
+    set_ekeys(v: string[], c: Context) { return this.set_EKeys(v, c); }
 
 
     defaultValueLiteral!: string;
@@ -3935,7 +4197,9 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
             return ret; }
     }
 
-    protected set_type(val: Pack1<this["type"]>, context: Context): boolean { return super.set_type(val, context); }
+    protected set_type(val: Pack1<this["type"]>, context: Context): boolean {
+        return super.set_type(val, context);
+    }
 
     public addClass(name?: DClass["name"], isInterface?: DClass["interface"], isAbstract?: DClass["abstract"], isPrimitive?: DClass["isPrimitive"],
                     isPartial?: DClass["partial"], partialDefaultName?: DClass["partialdefaultname"]): LClass {
@@ -4119,7 +4383,7 @@ export class DAttribute extends DModelElement { // DStructuralFeature
     defaultValue!: PrimitiveType[];
 
     // personal
-    isID: boolean = false; // ? exist in ecore as "iD" ?
+    isID?: boolean = false; // from ecore, a way to identify the object. undefined is automatic (default false, true if it's named "id" or similar)
     isIoT: boolean = false;
 
     public static new(name?: DAttribute["name"], type?: DAttribute["type"], father?: DAttribute["father"], persist: boolean = true): DAttribute {
@@ -4233,15 +4497,54 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
     protected get_addEnumerator(context: Context): this["addEnumerator"] {
         return (name?: DEnumerator["name"], father?: DEnumerator["father"]) => LPointerTargetable.fromD(DEnumerator.new(name, context.proxyObject.package?.id, true)); }
 
-    protected get_isID(context: Context): this["isID"] { return context.data.isID; }
-    protected set_isID(val: this["isID"], c: Context): boolean {
-        val = U.fromBoolString(val);
+    __info_of__isID: Info = {type: ShortAttribETypes.EBoolean, txt: "Defines an attribute as a way to identify the hosting object in references through a string.\n" +
+            "The expression \"model.$foo\" will by default look for an object named \"foo\"." +
+            "\nBut if the foo object has an attribute with isID and with value = \"bar\", it will now be instead identified by model.$bar.\n" +
+            "As the value of the attribute with isID changes, the methods to access the object will change as well.\n" +
+            "If an attribute is set as isID=true, all other attributes in this class are set to isID=false.\n"+
+            "About inheritance:\n" +
+            "\tSuppose you have a class A with an isID attribute, and a class B, extending A, with a second own attribute that isID." +
+            "\tRemoving the isID status from A would leave A objects without an identifier, but keeping it would leave B with 2 identifiers, one inherited and one of his own.\n" +
+            "\tWe decided to keep the duplicate identifier, but always use the identifier closest in hierarchy, so B will use B\'s identifier, and A will use A's identifier." +
+            "\tAn eventual subclass of B without his own isID attribute, will use B'\s identifier as well." +
+            "\tThe identifier attribute can be accessed with \"class.eidFeature\" or \"object.eidFeature\"."}
+
+    // todo: update setextend to update the getEIDReference field
+    protected get_isID(context: Context): this["isID"] { return context.data.isID as any; }
+    protected set_isID(val: boolean | undefined, c: Context): boolean {
+        val = U.fromBoolString(val, undefined, undefined, undefined);
         if (!!c.data.isID === val) return true;
-        TRANSACTION(this.get_name(c)+'.isID', ()=>{
+        TRANSACTION(this.get_name(c)+'.isID', ()=> {
+            let lclass = this.get_father(c) as LClass;
+            let oldAttrID = lclass.eidFeature;
+            let oldID = oldAttrID?.id;
             SetFieldAction.new(c.data, 'isID', val);
+            // remove isID from other attributes within this class (not sub or superclasses!)
+            if (val) {
+                if (oldID === c.data.id) return true; // no-op
+                if (oldID) SetFieldAction.new(oldID, "isID", false, "", false);
+                lclass.eidFeature = c.data.id as any;
+            }
+            else {
+                if (oldID) lclass.eidFeature = undefined as any;
+            }
+            let oldAttrParent = oldAttrID?.father;
+            let oldsc = oldAttrParent ? [oldAttrParent, ...oldAttrParent.allSubClasses] : [];
+            let newsc = [lclass, ...lclass.allSubClasses];
+            let deduplicate: Dictionary<Pointer, LClass> = {};
+            // NB: no need to handle isID removal from superclasses.
+            // this might cause a subclass to have 2 id, one inherited and one personal.
+            // but will use the nearest one as active id, ignoring the inherited one.
+            for (let sc of [...oldsc, ...newsc]) {
+                let id = sc?.id;
+                if (!id || deduplicate[id]) continue;
+                deduplicate[id] = sc;
+                SetFieldAction.new(sc.id, "eidFeature",  "__recalculating__" as Pointer, '', true);
+            }
         }, c.data.isID, val)
         return true;
     }
+
     protected get_isIoT(context: Context): this["isIoT"] { return context.data.isIoT; }
     protected set_isIoT(val: this["isIoT"], c: Context): boolean {
         val = U.fromBoolString(val);
@@ -4485,7 +4788,7 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
     isClass!: false;
     isEnum!: true;
     // personal
-    literals!: LEnumLiteral[];
+    literals!: Dictionary<string, LEnumLiteral> & LEnumLiteral[];
     ordinals!: LEnumLiteral[]; // literal array ordered by ordinal number
 
     protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}, deep: boolean = true, crossRef: boolean = true): Json {
@@ -4529,9 +4832,11 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
         return (name?: DEnumLiteral["name"], value?: DEnumLiteral["value"]) => LPointerTargetable.fromD(DEnumLiteral.new(name, value, c.data.id, true)); }
 
     protected get_literals(context: Context): this["literals"] {
-        return context.data.literals.map((pointer) => {
+        let larr: LEnumLiteral[] = context.data.literals.map((pointer) => {
             return LPointerTargetable.from(pointer)
-        }).filter(e=>!!e) as any; }
+        }).filter(e=>!!e) as any;
+        return U.toNamedArray(larr, larr.map(l=> l?.__raw));
+    }
 
     protected set_literals(val: PackArr<this["literals"]>, context: Context): boolean {
         const list = Pointers.fromArr(val, true);
@@ -5711,8 +6016,32 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
             'undefined means the property is inherited by his metamodel class, a boolean value means it overrides it.'}
 
 
-    protected get_name(context: Context): this['name'] {
-        return (context.proxyObject as GObject)['$name']?.value || context.data.name || context.proxyObject.instanceof?.name;
+    protected set_eid(v: any, c: Context): true {
+        let eid = this.get_eidFeature(c);
+        if (!eid) return true;
+        TRANSACTION(this.get_name(c) + ".eid = " + v, () => eid.values = v);
+        return true;
+    }
+    protected get_eidFeature(c: Context): LValue | null {
+        let meta: LClass | undefined = this.get_instanceof(c);
+        if (!meta) return null;
+        let eid: Pointer<DAttribute> | undefined = meta.eidFeature?.id;
+        if (!eid) return null;
+        for (let f of this.get_features(c)) {
+            if (f.instanceof?.id === eid) return f;
+        }
+        return null;
+    }
+    protected get_eid(c: Context): string { return this.get_eidFeature(c)?.value + ""; }
+    protected get_idFeature(c: Context): LValue | null { return this.get_idFeature(c); }
+    protected eidFeature!: LValue | null;
+    __info_of__eidFeature: Info = {type: "LValue | null", txt: "if present, gets the structural feature with isID == true"}
+
+    eid!: string; // ecore id based on m2attribute.isID or m2reference.Ekeys, then serialized.
+    __info_of__eid: Info = {type: "LValue | null", txt: "if present, gets the value of the feature with isID == true"}
+
+    protected get_name(c: Context): this['name'] {
+        return (c.proxyObject as GObject)['$name']?.value || c.data.name || this.get_instanceof(c)?.name;
     }
 
     composed!:boolean;
@@ -5830,7 +6159,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
 
     public get_t2m(c: Context): LObject['t2m'] {
         return (json: GObject, out_global_useless: {objectCreated: LObject[]} = {objectCreated: []}): this => {
-            json = this._convertEcoreToJom_m1(c, json);
+            json = this._convertEcoreToJom_m1_obj(c, json);
             // if (true as any) return Dummy.doT2M(c, this)(json) as this;
             if (!LObject.maxDepth--) return c.proxyObject as this;
 
@@ -6179,16 +6508,103 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         return this.get_children(context);
         // return context.data.features.map((feature) => { return LPointerTargetable.from(feature) });
     }
+    // ancestors: [LModel, ...Array<LObject | LValue>];
+    ancestors!: [...Array<LObject | LValue>, LModel];
+    __info_of__ancestors: Info = {type: "[...Array<LObject | LValue>, LModel]", txt: "Collection of containers of the current element." +
+            "\nStarting from the closest, going upward to the root and the model itself." };
+    set_ancestors(v: never, c: Context): true { return this.cannotSet("LObject.ancestors"); }
+
+    // order is from recent to oldest (element -> ... -> root -> model)
+    get_ancestors(c: Context): this["ancestors"] {
+        let a: any[] = [];
+        let current = this.get_father(c);
+        let map: Dictionary<Pointer, LModelElement> = {[c.data.id]: c.proxyObject};
+        while (current) {
+            let cid = current.id;
+            if (map[cid]) {
+                Log.ee("found loop in m1 get ancestors", {c, map, current});
+                return a as any;
+            }
+            map[cid] = current;
+            a.push(current);
+            if (current.className === "DModel") break;
+            current = current.parent as any;
+        }
+        return a as this["ancestors"];
+    }
 
     public ecorePointer(): string { return this.cannotCall("ecorePointer"); }
-    protected get_ecorePointer(context: Context): () => string {
-        let lastvisited: Pointer<DObject, 1, 1, LObject> = context.data.id;
-        return () => "@//" + this.get_fatherList(context).map( (f: LModelElement | LObject | LValue) => {
-            if (f.className === DObject.cname) { lastvisited = (f as LObject).id; return ''; }
-            if (f.className === DModel.cname) { return ''; }
-            console.log("get_ecorepointer", f, f.__raw, lastvisited);
-            return (f as LValue).name + "." + ((f as LValue).__raw.values.indexOf(lastvisited));
-        }).filter(v=>!!v).join("@/");
+    protected get_ecorePointer(c: Context): string { return this.get_getEcorePointer(c)(); }
+    // opposite function to resolve ecore pointers is: LValue.resolveReference()
+    protected get_getEcorePointer(c: Context): (roots?: LObject[]) => string {
+        return (roots0?: LObject[], canUseAnchor: boolean = true, anchorPrefix = "#") => {
+            const roots: LObject[] = roots0 || this.get_model(c).roots;
+            let s: string[] = [];
+            let ancestors = this.get_ancestors(c); // for # selector
+            let anchor: string = '';
+
+            if (canUseAnchor) {
+                let thiseid = this.get_eid(c);
+                if (thiseid) return anchorPrefix + thiseid;
+                // find closest parent object with a ecoreID
+                if (false as any) for (let i = 0; i < ancestors.length; i++) {
+                    let a = ancestors[i] as LObject;
+                    if (a.className !== 'DObject') continue;
+                    let eid = a.eid;
+                    if (!eid) continue;
+                    anchor = eid;
+                    ancestors.splice(i, ancestors.length);
+                    break;
+                }
+            }
+            if (ancestors[ancestors.length - 1]?.className === "DModel") ancestors.pop();
+            ancestors = ancestors.reverse() as any;
+            ancestors.push(c.proxyObject);
+            // build positional selector starting from root or anchor
+            if (anchor) s.push(anchorPrefix + anchor);
+            console.log({ancestors, aid: ancestors.map(e=>e?.id), roots, rid:roots.map(r=>r?.id)});
+            let first = true;
+
+            for (let i = 0; i < ancestors.length; i++) {
+                let a: LValue = ancestors[i] as any;
+                // if (a?.id === c.data.id) break; // end loop, reached the target.
+                let cname = a.className;
+                // model -> skip: i handle the root object which comes at next iteration.
+                if (cname === "DModel") { Log.exDevv("found model in getEcorePointer. should be filtered out", {ancestors, a, i, c}); continue; }
+                if (first && !anchor) {
+                    if (cname !== "DObject") { Log.exDevv("found invalid first ancestor in getEcorePointer.", {ancestors, a, i, c}); return null as any; }
+                    first = false; // don't use i === 0, dvalue and dmodel might be filtered if they are [0]
+                    let obj: LObject = a as any; // only first elem can be a lmodel or obj having a #ecoreid
+                    // todo: if root can be omitted, how do i make a positional /@ ref to root? is it an empty "//@" ?
+                    // special case, if you are pointing the only root is just "/"
+                    let index = roots.findIndex( root => root.id === obj.id);
+                    if (index === -1) {
+                        Log.exDevv("get_ecorePointer first element is not a model root", {roots, obj, ancestors, thiss:c.data, model:this.get_model(c)});
+                        return null as any;
+                    }
+                    if (index === 0) { s.push("/"); }
+                    else s.push("/"+index+"");
+                    /* syntax for /@m2classnameroot.1/@featurename... should be wrong.
+                    let meta = obj.instanceof;
+                    let name = meta?.name || "shapeless";
+                    name = name[0].toLowerCase() + name.substring(1); // ecore/xmi convention
+                    s.push(name);*/
+                    continue;
+                }
+                if (cname !== 'DValue') continue;
+                let next: LObject | DObject = ancestors[i+1] as LObject;// || c.data;
+                if (!next) break;
+                let index = a.values.findIndex(e => (e as any)?.id === next.id);
+                console.log("getecorepointsr " + i, {index, a, an: a.name, av: a.__raw.values, i, nid: next?.id,
+                    ancestors:ancestors.map(a=>a?.__raw), c, next});
+                s.push(a.name + (index === 0 ? "" : "." + index));
+            }
+            return s.join("/@");
+            /*let prefix: string;
+            if (anchor) prefix = "/#" + anchor;
+            else prefix = "/"
+            return prefix + (s.length > 1 ? "/@" : "") + s.join("/@");*/
+        };
     }
 
 }
@@ -6290,6 +6706,8 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     edges!: LEdge[];
     // IoT Section
     topic!: string;
+    isID!: boolean; // inherited from m2
+    EKeys!: Pointer<DAttribute>[]; // inherited from m2
 
 
     // personal
@@ -6303,12 +6721,226 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
 
     length!: number;
     __info_of__length: Info = {type: 'number', txt: "shortcut for data.values.length."};
+    set_length(v: never, c: Context): string[] { return this.cannotSet("LValue.length"); }
     get_length(c: Context): number{
         return this.get_values(c).length;
     }
 
+    get_isID(c: Context): boolean {
+        return (this.get_instanceof(c) as LAttribute)?.isID || false;
+    }
+    get_EKeys(c: Context): LAttribute[] { return (this.get_instanceof(c) as LReference)?.EKeys || []; }
+    get_Ekeys(c: Context): LAttribute[] { return this.get_EKeys(c); }
+    get_ekeys(c: Context): LAttribute[] { return this.get_EKeys(c); }
+    set_isID(v: never, c: Context): boolean { return this.cannotSet("LValue.isID"); }
+    set_EKeys(v: never, c: Context): string[] { return this.cannotSet("LValue.Ekeys"); }
+    set_Ekeys(v: never, c: Context): string[] { return this.set_EKeys(v, c); }
+    set_ekeys(v: never, c: Context): string[] { return this.set_EKeys(v, c); }
+
+    /**
+     * Resolves a composed XMI M1 reference string to an LObject.
+     *
+     * Supported forms (composable):
+     *   #someId                  — xmi:id lookup
+     *   #someValue               — intrinsic iD attribute lookup
+     *   //@feature               — single-valued feature from root
+     *   //@feature.n             — nth element of multi-valued feature from root
+     *   #someId/@feature.n/...   — id anchor + positional navigation
+     *   //@feature.n/@nested/... — fully positional path
+     */
+    // opposite is LObject.get_ecorePointer
+    public static resolveReference(query: string, baseObj: LValue): LObject | null {
+        query = query.trim();
+        let model = baseObj.model;
+        if (query === "/") return model.roots[0];
+        if (query[0] === "/") query = query.substring(1);
+        let segments = query.split("/");
+        let current: LObject | null = null;
+        console.log("resolvereference 000", {segments, current});
+        outer:
+        for (let i = 0; i < segments.length; i++) {
+            let segment = segments[i];
+            console.log("resolvereference "+i, {segment, i, segments, current});
+
+            if (i === 0 && segment === "") segment = "0"; // "//" has implicit index, it means "/0/" which is first root element
+            if (i === 0 && U.isNumericString(segment)) {
+                current = model.roots[+segment];
+                continue;
+            }
+            if (segment[0] !== '@') {
+                /// resolve anchor part
+                // anchor becomes: "#@name", or "@name" if anchor is hidden. ref becomes ["","@name"]
+                // so if first char !== "@" it is an anchor
+                let allObjects = model.allSubObjects;
+                let segmentStripped = segment[0] === '#' ? segment.substring(1) : segment;
+                inner: for (let o of allObjects) {
+                    let eid = o?.eid;
+                    if (eid !== segment && eid !== segmentStripped) continue inner;
+                    current = o;
+                    continue outer;
+                }
+            } // resolve positional ref part
+            else segment = segment.substring(1);
+            let indexPos = segment.lastIndexOf(".");
+            let name: string;
+            let index: number;
+            if (indexPos > 1) {
+                name = segment.substring(0, indexPos);
+                let sindex = segment.substring(indexPos+1);
+                if (U.isNumericString(sindex)) index = +sindex;
+                else index = 0;
+            } else { name = segment; index = 0; }
+            console.log("resolvereference "+i, {segment, index, name, current});
+            let feature: LValue = (current as any)["$"+name];
+            if (!feature) return null;
+            let values = feature.values;
+            index = Uarr.clampIndex(index, values.length);
+            current = feature.values[index] as any;
+            if (current?.className !== "DObject") return null;
+        }
+        return current;
+    }
+
+    /*
+    notes about m1 references:
+    m2Attr.isID is only for LAttributes and at most 1 attribute within a class can have it = true (like primary key)
+    m2Ref.EKeys is only for references and can point >1 attributes (EKey = ["name", "surname"] making a composite key, in m1 is used as ref="damiano divincenzo"
+     (space-delimited, values are not supposed to contain spaces as it messes up resolution and it becomes ambiguous, implementation--dependent)
+     multiple values pointed are treated as pairs (if 2 attributes in ekeys) "name1 surname1 name2 surname2"
+      treated as if it were (name1, surname1), (name2, surname2). notes that commas and parenthesis are not actually valid separators in a ekey reference.
+      // if the attribute targeted by eKey is not type string, "EMF serializes them using the type's EFactory converter"
+       which is java's Double.toString for doubles, and can automatically switch to scientific notation for large and small decimals. whole numbers have ".0" appended.
+    * */
 
 
+    /*
+    public static resolveReference_old(query: string, current: LValue): LObject | null {
+        const model: LModel = current.model;
+
+        // ── 1. Split into anchor + navigation tail ─────────────────────────────────
+
+        let anchor: string;
+        let tail: string = "";
+
+        // need to adress for "/1/@something.2" selectors for multiroot, remove roots by classname
+        if (query.startsWith("//")) {
+            // Purely positional from resource root — no anchor object, root is model
+            tail = query.slice(1); // strip leading "//"
+            anchor = '';         // will navigate from model root
+        } else if (query.startsWith("#")) {
+            // Id-based anchor, optionally followed by positional tail
+            const slashAt = query.indexOf("/@");
+            if (slashAt !== -1) {
+                anchor = query.slice(1, slashAt);   // between # and first /@
+                tail   = query.slice(slashAt + 1);  // from /@ onward, strip leading /
+            } else {
+                // Pure id reference, no tail
+                anchor = query.slice(1);
+            }
+        } else {
+            // Unrecognised format
+            return null;
+        }
+
+        // ── 2. Navigate the tail path segments ────────────────────────────────────
+        // tail looks like: @feature.n/@nested/@another.m  (leading / already stripped)
+        /**
+         * Walks a chain of /@feature.index segments starting from an anchor LObject
+         * (or from the model root if anchor is null).
+         *
+         * @param path   remaining path string, e.g. "@feature.2/@nested"
+         * @param anchor id string to resolve as starting object, or null for model root
+         * @param model  the M1 model root
+         * /
+        function navigatePath(
+            path:   string,
+            anchor0: LObject | string | null,
+            model:  LModel
+        ): LObject | null {
+            let anchor: LObject | null = (typeof anchor0 === "string") ? L.fromID(anchor0, model) : anchor0;
+            // Resolve starting object
+            let current: LObject | LModel | null = anchor || model;
+            let isRoot = current?.id === model?.id;
+            console.log("resolveref 1", {current, path});
+
+            if (!current) return null;
+            if (!path)    return current as any as LObject;
+
+            // Split path into segments on "/@"
+            // Input examples:
+            //   "/@feature.2/@nested"      → ["feature.2", "nested"]
+            //   "/@a/@b.1/@c"              → ["a", "b.1", "c"]
+            const segments = path.split("/@").slice(1);
+            console.log("resolveref 2", {current, segments});
+
+            let fragIndex = -1;
+            let cname: string | undefined = current.className;
+            if (cname !== "DModel" && cname !== "DObject") return null;
+            outer: for (const segment of segments) {
+                ++fragIndex;
+                if (!current) return null;
+                // Strip leading "@" then split on last "." to separate name from index
+                const raw = segment;
+                const dotPos = raw.lastIndexOf(".");
+                let featureName: string;
+                let index: number;
+
+                if (dotPos !== -1) {
+                    featureName = raw.slice(0, dotPos);
+                    index = +raw.slice(dotPos + 1) || 0;
+                } else {
+                    featureName = raw;
+                    index = 0;
+                }
+                console.log("resolveref 2 loop", {current, segment, featureName, index});
+                let rootNameMatched = false;
+                // attempt by root first
+                // special case: the first identifier in a /@ sequence can be a root tag (m2 class name), all the followings instead are feature names of an object
+                // es: @feat1.2/@feat2.3/@feat3.0
+                // vs: @Library.2/@authors.3/@books.0 (in jom is like: libraryinstances[2].$authors[3].$books[0]; identifiers are feature names: Library.authors, Author.books
+                if (fragIndex === 0 && isRoot) {
+                    // if it fails, i test it again for lowercase because:
+                    //Class names at the root level must match the XML element name exactly as serialized, which follows the Ecore class name casing (typically UpperCamelCase for classes, so the root segment would be library — lowercased first letter)
+                    for (let i = 0; i <= 1; i++) {
+                        let tagname = "$" + (i === 0 ? featureName : featureName[0].toLowerCase() + featureName.substring(1)) + "s";
+                        let rootCandidates: LObject[] = ((model as any)[tagname] as LObject[]|| []).filter(e=> e?.className === "DObject" );
+                        let tmp = rootCandidates?.[index];
+                        cname = tmp?.className;
+                        // if (cname !== "DModel" && cname !== "DObject") return null;
+                        if (tmp && cname === "DObject") {
+                            current = tmp;
+                            rootNameMatched = true;
+                            continue outer;
+                        }
+                    }
+
+                    // if the element is single-rooted, the first selector for root can be implicit in the query.
+                    if (isRoot && !rootNameMatched) {
+                        let roots = model.roots;
+                        if (roots.length === 1) { current = roots[0]; continue outer; }
+                        else return null;
+                    }
+                }
+                // as fallback for first segment, or as mandatory for all others, match by feature name + index
+                if (!rootNameMatched) {
+                    // Retrieve the LValue for this feature on the current object
+                    const feature: LValue | undefined = (current as GObject)["$"+featureName];
+                    if (!feature) return null; // unknown feature
+                    // let tcname = feature.instanceof?.className; if (tcname && tcname !== "DReference") return null; // attributes are not LObjects
+                    current = (feature.values?.[index]) as any;
+                    cname = current?.className;
+                }
+                if (cname !== "DModel" && cname !== "DObject") return null;
+            }
+
+            return current as LObject;
+        }
+
+        console.log("resolveref 0", {tail, anchor, model});
+        return navigatePath(tail, anchor, model);
+
+    }
+    */
     protected set___readonly(val: any, c: Context): boolean {
         val = U.fromBoolString(val);
         if (val === !!c.data.__readonly) return true;
@@ -6377,20 +7009,20 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
 
     // NB: only usable if this is LObject or LValue, make a fallback if this is model to create/recover a new root object
     public get_t2m(c: Context): LValue['t2m'] {
-        return (json: GObject, out: {objectCreated: LObject[]} = {objectCreated: []}): this => {
-            json = this._convertEcoreToJom_m1(c, json);
-            console.log('L'+c.data.className.substring(1)+'.t2m() called.', {d:c.data, j:json});
+        return (json0: GObject, out: {objectCreated: LObject[]} = {objectCreated: []}): this => {
+            let json: GObject = this._convertEcoreToJom_m1_val(c, json0);
+            console.log('L'+c.data.className.substring(1)+'.t2m() called.', {d:c.data, j: {...json}, json0});
 
             let json_4val!: GObject[];
-            if (!json) { json = []; Log.eDevv('t2m deletion still unsupported'); return this; }
+            // if (!json) { json = []; Log.eDevv('t2m deletion still unsupported'); return this; }
             // check if the root json is a dvalue object or an array of values or a single value (object pointed)
-            let isValueRoot: boolean = false;
+            let isObj = typeof json === 'object';
+            let isValueRoot: boolean = json?.__isValueRoot;
+            if (isObj) delete json.__isValueRoot;
             switch (c.data.className) {
                 default: Log.ee('L'+c.data.className.substring(1)+'.t2m() todo, still unsupported.'); return this;
                 case 'DValue':
                     // NB: do not use "values" in json, because Object.values() is a native function of all objects in js and always present.
-                    isValueRoot = typeof json === "object" && !Array.isArray(json) &&
-                        (json.hasOwnProperty("values") || json.hasOwnProperty("value") || json.className && json.className.toLowerCase().includes("value"));
                     if (isValueRoot) {
                         json_4val = json.values || json.value || [];
                     }
@@ -6399,7 +7031,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             if (json_4val === null || json_4val === undefined) json_4val = [];
             else if (!Array.isArray(json_4val)) json_4val = [json_4val];
 
-            console.log('isvalueroot',  {isValueRoot, jcn:json.className, vin: "values" in json, json })
+            console.log('isvalueroot',  {isValueRoot, jcn:json?.className, vin: isObj && ("values" in json), json })
             // let childNames = this.get_childNames(c);
 
             let m1: LModel = null as any;
@@ -6407,9 +7039,12 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
 
             // filter typings
             let uniformedValues: (Pointer|PrimitiveType)[] = [];
-            let type: LClassifier = (this as LValue).get_type(c);
+            const meta = this.get_instanceof(c);
+            const metaCname = meta?.className || 'shapeless';
+            const type: LClassifier | null = meta ? meta.type : null;
+            const typeCname = type?.className || 'shapeless';
             let validSubTypes: LClassifier[];
-            let validTargets: (LObject|LEnumLiteral)[];
+            let validTargets: NamedArray<LObject | LEnumLiteral> = metaCname === "DReference" ? this.get_validTargets(c) : [] as any;
             const includeEnum: boolean = false;
             if (type?.className === 'DEnumerator') {
                 if (includeEnum) validSubTypes = [type];
@@ -6434,23 +7069,80 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             const validSubTypesMap: Dictionary<Pointer, LClassifier> = {};
             for (let l of validSubTypes) validSubTypesMap[l.id] = l;
 
-            console.log('L'+c.data.className.substring(1)+'.t2m() types found.', {d:c.data, json, json_4val, validSubTypesMap, includeEnum, type});
+            console.log('L'+c.data.className.substring(1)+'.t2m() types found.', {d:c.data, json:{...json}, json_4val, validSubTypesMap, includeEnum, type});
 
             // START: actually set the values
             let i: number = -1;
             let oldValues: any[] = c.data.values; //this.get_values(c);
+            let ekeys = metaCname === "DReference" ? (meta as LReference).EKeys || [] : [];
+            let ekeysID = ekeys.map(e=>e.id);
             TRANSACTION(this.get_name(c) + '.t2m()', ()=> {
-                for (let v of json_4val) {
+                // handling ekeys-based ref
+                if (ekeys?.length) {
+                    outer: for (let i = 0; i < json_4val.length; i+= ekeys.length) {
+                        let entry = json_4val.slice(i, ekeys.length);
+                        let validObjects = [...validTargets.filter(e=>!!e)] as LObject[];
+                        let targetedFeatures: LValue[][] = [];
+                        for (let j = 0; j < ekeys.length; j++) {
+                            targetedFeatures.push(validObjects.map(o=> o.features.find(f=> f?.id === ekeysID[j]) as LValue));
+                            if (targetedFeatures.findIndex(e=> !e) >= 0) {
+                                Log.ee("found invalid EKeys pointing to non-existent attributes", {d: c.data, ekeys, targetedFeatures});
+                                break outer;
+                            }
+                        }
+                        console.log("loop ekeys 0", {ekeys, ekeysID, entry, targetedFeatures});
+
+                        for (let j = 0; j < ekeys.length; j++) {
+                            let v = entry[j];
+                            // if there are N ekeys, and 1 value of the block is invalid/unmatching,
+                            // i discard the whole block (they act as a composite key for a single target value)
+                            if (typeof v !== "string") break;
+                            let targetAttr = ekeys[j];
+                            validObjects = validObjects.filter((o, vi) => {
+                                console.log("loop ekeys targets", {v, target:targetedFeatures[j][vi], ekeys, ekeysID, entry, targetedFeatures, j, vi});
+                                return targetedFeatures[j][vi].value === v
+                            })
+
+                        }
+                        let target = validObjects[0]?.id;
+                        console.log("loop ekeys end", {target, ekeys, ekeysID, entry, targetedFeatures});
+                        if (!target) break;
+                        uniformedValues.push(target);
+                    }
+                }
+                // handling all other kinds of ref
+                else for (let v of json_4val) {
                     ++i;
                     let child2: LObject | undefined = undefined;
                     if (!v) { uniformedValues.push(v); continue; }
                     let isPointer = Pointers.isPointer(v);
                     if (isPointer) { uniformedValues.push(v as Pointer); continue; }
-                    let isL: boolean = v.__isProxy;
-                    let isD: boolean = !!(isL || (v.className && v.id));
-                    if (isD) { uniformedValues.push(v.id); continue; }
-                    // if (typeof v === 'string') { set by $name but cannot happen in array? }
 
+                    let isL: boolean = v.__isProxy;
+                    let isD: boolean = !!(isL || (v?.className && v?.id));
+                    if (isD) { uniformedValues.push(v.id); continue; }
+                    if (typeCname === 'DEnumerator') {
+                        let enumm: LEnumerator = type as any;
+                        let literals: Dictionary<string, LEnumLiteral> & LEnumLiteral[] = enumm.literals;
+                        let name: string = v?.name || v as any;
+                        if (typeof name !== 'string') { Log.ee("lvalue t2m() invalid literal value:", {data:c.data, v, json, i, type}); continue; }
+                        let lit = literals[v as any] || literals["$"+v as any];
+                        if (lit) uniformedValues.push(lit.id);
+                        else if (typeof v === "string") uniformedValues.push(v);
+                        else Log.ee("lvalue t2m() invalid literal value:", {data:c.data, v, json, i, type});
+                        continue;
+                    }
+                    //  if it's reference to object try to cast strings to object names -> id
+                    let sv = v as unknown as string;
+                    console.log("resolve reference pre", {sv, meta, metaCname, type});
+
+                    if (typeof sv === "string" && metaCname === 'DReference'/* || metaCname === 'shapeless'*/) {
+                        let target: LObject | LEnumLiteral | null = validTargets[sv] || validTargets["$"+sv];
+                        console.log("resolve reference", {validTargets, target, v, eresolve: LValue.resolveReference(sv, c.proxyObject)});
+                        if (!target) target = LValue.resolveReference(sv, c.proxyObject);
+                        if (target?.id) { uniformedValues.push(target.id); continue; }
+                    }
+                    // if (typeof v === 'string') { set by $name but cannot happen in array? }
                     // if child is not a pointer, check if object needs to be created.
                     if (typeof v === 'object' && !Array.isArray(v)) {
                         if (isL) child2 = v as any;
@@ -6493,7 +7185,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                     }
                 }
                 if (this.get_instanceof(c)?.name === 'expression') console.error('set val', {uniformedValues, json, validSubTypesMap, out, oldValues})
-                console.log('t2m setvalues',  {uniformedValues, c, json, json_4val});
+                console.log('t2m setvalues',  {uniformedValues, c, json:{...json}, json_4val});
                 this.set_values(uniformedValues, c);
                 // set other properties
 
@@ -6504,6 +7196,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                     let oldV = (c.data as any)[k];
                     let v = json[k];
                     if (!Dummy.t2mIgnoreKeys.includes(k) && !EcoreXmiTags.includes(k) && !U.isShallowEqual(v, oldV)) {
+                        console.log("set val key", {k, v, oldV, json, d:c.data});
                         (c.proxyObject as any)[k] = v;
                     }
                 }
@@ -7339,7 +8032,6 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         }
     }
     protected set_values(val0: orArr<D["values"]>, c: Context): boolean {
-        let val: any = val0 as any;
         let modified = false;
         let meta = this.get_instanceof(c);
         let dmeta: DReference | DAttribute | undefined = meta?.__raw;
@@ -7369,7 +8061,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             }
         }
 
-        val = (Array.isArray(val0) ? val0 : [val0]) as D["values"];
+        let val = (Array.isArray(val0) ? val0 : [val0]) as D["values"];
         // val.length = Math.max(val.length, c.data.values.length);
         let isContainment = this.get_isContainment(c);
         if (isContainment) { // remove duplicates in containment
@@ -7475,7 +8167,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         this.get_validTargets(c, opts);
         return UX.options(opts);
     }
-    validTargets!: (LObject | LEnumLiteral)[];
+    validTargets!: NamedArray<LObject | LEnumLiteral>;
     get_validTargets(c: Context, out?: MultiSelectOptGroup[]): this['validTargets'] {
         let meta: LReference | LAttribute = this.get_instanceof(c) as LReference | LAttribute;
         let isShapeless = !meta;
@@ -7523,7 +8215,8 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 literals.push(...currLiterals);
                 if (out) out.push({label: 'Literals of ' + e.name, options: currLiterals.map(map)});
             }}
-        return U.arrayMergeInPlace(freeObjects, boundObjects, literals as any);
+        let arr = U.arrayMergeInPlace(freeObjects, boundObjects, literals as any);
+        return U.toNamedArray(arr);
     }
 
     protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}, deep: boolean = true, crossRef: boolean = true): Json {
