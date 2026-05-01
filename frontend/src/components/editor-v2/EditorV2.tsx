@@ -1582,6 +1582,38 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         event.dataTransfer.dropEffect = 'move';
     }, []);
 
+    // Drop handler for the classic editor wrapper (used in 'classic' and 'split' modes).
+    // Reads the metaclassId from dataTransfer (set by PalettePanel under
+    // 'application/jjodel-classic'), resolves the LModel, and creates a DObject.
+    // The classic view engine handles positioning automatically; drop coordinates
+    // are intentionally ignored here.
+    const onClassicDrop = useCallback((event: React.DragEvent) => {
+        event.preventDefault();
+        const metaclassId = event.dataTransfer.getData('application/jjodel-classic');
+        if (!metaclassId || !modelid) return;
+
+        try {
+            const lModel: any = LPointerTargetable.fromPointer(modelid);
+            const lClass: any = LPointerTargetable.fromPointer(metaclassId);
+            if (!lModel || !lClass) {
+                console.warn('[EditorV2] Classic drop: cannot resolve LModel/LClass', { modelid, metaclassId });
+                return;
+            }
+            lModel.addObject({}, lClass);
+        } catch (err) {
+            console.warn('[EditorV2] Classic drop failed:', err);
+        }
+    }, [modelid]);
+
+    // Allow drop only when the dataTransfer carries the classic payload.
+    // dataTransfer.types is readable during dragOver (unlike getData), so we
+    // can filter out unrelated drags (e.g. files from the desktop) early.
+    const onClassicDragOver = useCallback((event: React.DragEvent) => {
+        if (!event.dataTransfer.types.includes('application/jjodel-classic')) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+    }, []);
+
     // Delete selected nodes and edges
     const deleteSelected = useCallback(() => {
         const selectedNodes = getNodes().filter((n) => n.selected);
@@ -2986,6 +3018,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         <div
                             className={`editor-classic-only${activeEditorId === 'classic' ? ' is-active-editor' : ''}`}
                             onMouseDownCapture={() => setActive('classic')}
+                            onDrop={onClassicDrop}
+                            onDragOver={onClassicDragOver}
                         >
                             {classicSlot}
                         </div>
@@ -2995,6 +3029,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                                 className={`editor-split-classic${activeEditorId === 'classic' ? ' is-active-editor' : ''}`}
                                 style={{ flex: `0 0 ${splitPercent}%` }}
                                 onMouseDownCapture={() => setActive('classic')}
+                                onDrop={onClassicDrop}
+                                onDragOver={onClassicDragOver}
                             >
                                 {classicSlot}
                             </div>

@@ -31,12 +31,11 @@ import {
     WVoidEdge,
     Log,
     LEdgePoint, DUser,
-    U, LPointerTargetable, SetRootFieldAction, GObject, EMeasurableEvents, TRANSACTION, LClass
+    LPointerTargetable, SetRootFieldAction, GObject, EMeasurableEvents, TRANSACTION, LClass
 } from "../../joiner";
 
 import {InitialVertexSizeObj} from "../../joiner/types";
 import ModellingIcon from "../forEndUser/ModellingIcon";
-import {Tooltip} from "../forEndUser/Tooltip";
 import ActivityLogger from '../../services/ActivityLogger';
 import { ActivityType } from '../../types/activity';
 
@@ -360,8 +359,6 @@ function ToolBarComponent(props: AllProps) {
                     <div key={'se'} className={'se'}>{subelements}</div>]);
             }
         } else {
-            const classes = metamodel?.crossClasses || [];
-            const model: LModel = LModel.fromPointer(props.model);
             const lobj: LObject | undefined = data.className === "DObject" ? data as LObject : undefined;
             const lfeat: LValue | undefined = data.className === "DValue" ? data as LValue : undefined;
 
@@ -379,54 +376,7 @@ function ToolBarComponent(props: AllProps) {
                 </div>
             );*/
             if (node) subleveloptions.push(...addChildren(downward[node.className]));
-            //let m1entries: Dictionary<string, LClass> = {};
-            
-            //let m1entries = classes.filter((lClass) => lClass.rootable);
-            let m1entries = classes.filter((lClass) => isRootable(lClass));
-
-
-            
-            
-
-
-
-
-            /*for (let lc of classes){
-                let n = lc.name;
-                if (!m1entries[n]) { m1entries[n] = lc; continue; }
-                let omonimo = m1entries[n]; // can happen with multiple packages and classes with same name
-                delete m1entries[n];
-                todo: maybe toltip instead?
-                m1entries[omonimo.fullname] = omonimo;
-                m1entries[lc.fullname] = lc;
-            }*/
-            let rootobjs = m1entries.filter(lClass => !lClass.isSingleton).map(lClass => {
-                let dclass = lClass.__raw;
-                return (
-                    <div key={"LObject_" + dclass.id}
-                          onMouseEnter={() => Tooltip.show(lClass.fullname)}
-                          onMouseLeave={() => Tooltip.hide()}
-                          className={"toolbar-item LObject"} tabIndex={ti}
-                          onClick={() => select(model.addObject({}, lClass))}>
-                        {dclass._state.icon ? <ModellingIcon src={dclass._state.icon}/> : <ModellingIcon name={'object'}/>}
-                        <span className={'ms-1 my-auto text-capitalize'}>{U.stringMiddleCut(dclass.name, 14)} </span>
-                    </div>)
-            }) || [];
-
-            rootobjs.push(<>
-                <hr className={'my-1 toolbar-hr'} key={'h_robj'}/>
-                <div key={"RawObject"} className={'toolbar-item'} tabIndex={ti}
-                      onClick={() => select(model.addObject({}, null))}>
-                    <ModellingIcon name={'object'}/>
-                    <span className={'ms-1 my-auto text-capitalize'}>Untyped Object</span>
-                </div>
-            </>);
-
-
-            if (rootobjs.length > 0) {
-                contentarr.push([<b key={'rlvl'} className={'toolbar-section-label'}
-                                    style={{marginRight: ""/*to avoid overlap with pin*/}}>Root level</b>,<hr className={'my-1 toolbar-hr'}/>, rootobjs]);
-            }
+            // Root-level instance creation lives in components/editor-v2/panels/PalettePanel.tsx.
             if (subleveloptions.length > 0) {
                 contentarr.push(
                     [<div key={'slobj'} className={'slobj'}>

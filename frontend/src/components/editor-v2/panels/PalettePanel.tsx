@@ -74,6 +74,10 @@ function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClass
         event.dataTransfer.setData('application/reactflow', type);
         if (metaclassId) {
             event.dataTransfer.setData('metaclassId', metaclassId);
+            // Payload for the classic editor drop handler.
+            // Both flow and classic read from the same dataTransfer; flow uses
+            // 'application/reactflow', classic uses 'application/jjodel-classic'.
+            event.dataTransfer.setData('application/jjodel-classic', metaclassId);
             setDraggedMetaclassId(metaclassId);
         }
         event.dataTransfer.effectAllowed = 'move';
