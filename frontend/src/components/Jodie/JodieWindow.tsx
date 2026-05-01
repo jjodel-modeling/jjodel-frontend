@@ -453,6 +453,7 @@ export function JodieWindow({
                 codeFlavor={codeFlavor}
                 onSubmitCode={onSubmitCode}
                 entries={messages}
+                onClearRequested={onClearCurrentMode}
             />
 
             <AIDisclaimer feature="chat" />

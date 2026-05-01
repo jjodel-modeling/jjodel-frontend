@@ -13,6 +13,7 @@ import {
 import { resolveElement } from '../resolvers';
 import { qualifiedNameToString, literalValueToString } from '../../parser/grammar';
 import { getProject } from '../utils';
+import { executeSetInstance } from './instance';
 
 import {
     SetFieldAction,
@@ -40,6 +41,11 @@ export async function executeSet(
                 message: 'No active project',
                 errors: [{ code: 'NO_PROJECT', message: 'Cannot set property without an active project' }]
             };
+        }
+
+        // M1 routing: in an M1 model editor, 'set' targets instance values (attribute or reference link).
+        if (context.level === 'M1') {
+            return executeSetInstance(args, context, project);
         }
 
         // Resolve the target element

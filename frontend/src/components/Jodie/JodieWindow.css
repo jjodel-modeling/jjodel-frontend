@@ -309,6 +309,7 @@
     gap: 6px;
     padding: 4px 10px;
     background: rgba(16, 185, 129, 0.1);
+    border: 1px solid #0ea5e9;
     border-radius: 6px;
     font-size: 11px;
     font-weight: 500;
@@ -326,6 +327,13 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.jodie-metamodel-level {
+    font-size: 10px;
+    font-weight: 600;
+    opacity: 0.75;
+    letter-spacing: 0.02em;
 }
 
 .jodie-metamodel-count {
@@ -2447,6 +2455,151 @@ body[data-notification-visible="true"] .jodie-minimized {
 }
 
 /* ========================================
+   INLINE OBJECT INSPECTOR (Code mode)
+   Toggleable per-entry tree view of plain-object results from JjEL.
+   ======================================== */
+
+.jodie-inspect-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0 4px;
+    margin-left: 2px;
+    color: var(--color-text-tertiary, #64748b);
+    font-size: 10px;
+    display: inline-flex;
+    align-items: center;
+    transition: color 0.15s;
+    flex-shrink: 0;
+}
+
+.jodie-inspect-toggle:hover {
+    color: #0ea5e9;
+}
+
+.jodie-inspector {
+    font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+    font-size: 11px;
+    padding: 6px 8px;
+    margin-top: 4px;
+    margin-left: 14px;
+    border-left: 2px solid #0ea5e9;
+    background: rgba(14, 165, 233, 0.04);
+    border-radius: 0 4px 4px 0;
+    max-height: 240px;
+    overflow-y: auto;
+    line-height: 1.5;
+}
+
+.jodie-inspector-row {
+    display: flex;
+    gap: 8px;
+    padding: 1px 0;
+    align-items: baseline;
+    flex-wrap: wrap;
+}
+
+.jodie-inspector-key {
+    color: var(--color-text-tertiary, #64748b);
+    flex-shrink: 0;
+}
+
+.jodie-inspector-key::after {
+    content: ':';
+}
+
+.jodie-inspector-value-string {
+    color: #0ea5e9;
+    word-break: break-word;
+}
+
+.jodie-inspector-value-number {
+    color: var(--color-text-primary, #0f172a);
+}
+
+.jodie-inspector-value-bool {
+    color: #0ea5e9;
+}
+
+.jodie-inspector-value-null {
+    color: var(--color-text-placeholder, #94a3b8);
+    font-style: italic;
+}
+
+.jodie-inspector-value-expandable {
+    cursor: pointer;
+    color: var(--color-text-tertiary, #64748b);
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.jodie-inspector-value-expandable:hover {
+    color: #0ea5e9;
+}
+
+.jodie-inspector-value-expandable:focus-visible {
+    outline: 1px solid #0ea5e9;
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+.jodie-inspector-value-expandable i {
+    font-size: 9px;
+}
+
+.jodie-inspector-nested {
+    flex-basis: 100%;
+    padding-left: 12px;
+    border-left: 1px solid var(--color-border-secondary, #e2e8f0);
+    margin-left: 4px;
+    margin-top: 1px;
+}
+
+[data-theme="dark"] .jodie-inspect-toggle {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .jodie-inspect-toggle:hover {
+    color: #38bdf8;
+}
+
+[data-theme="dark"] .jodie-inspector {
+    background: rgba(56, 189, 248, 0.06);
+    border-left-color: #38bdf8;
+}
+
+[data-theme="dark"] .jodie-inspector-key {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .jodie-inspector-value-string,
+[data-theme="dark"] .jodie-inspector-value-bool {
+    color: #38bdf8;
+}
+
+[data-theme="dark"] .jodie-inspector-value-number {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .jodie-inspector-value-null {
+    color: #64748b;
+}
+
+[data-theme="dark"] .jodie-inspector-value-expandable {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .jodie-inspector-value-expandable:hover {
+    color: #38bdf8;
+}
+
+[data-theme="dark"] .jodie-inspector-nested {
+    border-left-color: rgba(255, 255, 255, 0.08);
+}
+
+/* ========================================
    PROMOTION BUTTONS (Chat ↔ Code)
    Style modeled on .md-toggle-btn for consistency.
    ======================================== */
@@ -2497,4 +2650,136 @@ body[data-notification-visible="true"] .jodie-minimized {
     background: rgba(255, 255, 255, 0.08);
     border-color: rgba(255, 255, 255, 0.18);
     color: #e2e8f0;
+}
+
+/* ========================================
+   JjEL Value Inspector — two-level layout (headline / extra)
+   New BEM child classes used by the rewritten JjelValueInspector.
+   The container `.jodie-inspector` and chevron `.jodie-inspect-toggle`
+   continue to use the rules defined earlier in this file.
+   ======================================== */
+
+.jodie-inspector__rows {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.jodie-inspector__rows--extra {
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px solid #1e293b;
+}
+
+.jodie-inspector__row {
+    display: flex;
+    gap: 10px;
+    line-height: 1.6;
+}
+
+.jodie-inspector__key {
+    color: #94a3b8;
+    min-width: 100px;
+    flex-shrink: 0;
+}
+.jodie-inspector__key::after {
+    content: '';
+}
+
+.jodie-inspector__value {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.jodie-inspector__null    { color: #64748b; font-style: italic; }
+.jodie-inspector__bool--true  { color: #22c55e; }
+.jodie-inspector__bool--false { color: #f97316; }
+.jodie-inspector__number  { color: #a78bfa; }
+.jodie-inspector__string  { color: #0ea5e9; }
+.jodie-inspector__array   { color: #94a3b8; }
+.jodie-inspector__object  { color: #94a3b8; font-style: italic; }
+.jodie-inspector__meta    { color: #475569; font-style: italic; }
+
+.jodie-inspector__expand-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 3px 0 0 0;
+    color: #64748b;
+    font-size: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    transition: color 0.15s;
+}
+.jodie-inspector__expand-toggle:hover {
+    color: #0ea5e9;
+}
+
+/* ========================================
+   JjEL Value Inspector — three-level (v2)
+   Level 2 grid (Properties), Level 3 internal (dim).
+   ======================================== */
+
+.jodie-inspector__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px 16px;
+    margin-top: 4px;
+}
+
+@media (max-width: 360px) {
+    .jodie-inspector__grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.jodie-inspector__section {
+    margin-top: 6px;
+    padding-top: 4px;
+    border-top: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.jodie-inspector__section--internal {
+    border-top-style: dashed;
+}
+
+.jodie-inspector__section-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    color: #64748b;
+    font-size: 10px;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    transition: color 0.15s;
+}
+.jodie-inspector__section-toggle:hover {
+    color: #0ea5e9;
+}
+
+.jodie-inspector__section-toggle--dim {
+    color: #475569;
+    font-size: 10px;
+}
+.jodie-inspector__section-toggle--dim:hover {
+    color: #94a3b8;
+}
+
+.jodie-inspector__rows--internal {
+    margin-top: 4px;
+    opacity: 0.7;
+}
+
+.jodie-inspector__key--dim {
+    color: #475569;
+}
+
+.jodie-inspector__value--dim {
+    color: #475569;
 }

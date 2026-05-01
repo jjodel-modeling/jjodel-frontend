@@ -8,7 +8,7 @@
  * - Parse and merge sections for intelligent regeneration
  */
 
-import type { LProject, LClass, LAttribute, LReference, LPackage, LEnumerator } from '../joiner';
+import type { LProject, LClass, LAttribute, LReference, LPackage, LEnumerator, LModel } from '../joiner';
 import { DocumentationSection } from '../types/jodie';
 
 // ============================================
@@ -18,6 +18,22 @@ import { DocumentationSection } from '../types/jodie';
 export interface DocumentationData {
     content: string;
     sections: DocumentationSection[];
+}
+
+/**
+ * Identifies the artefact currently focused in the editor — used to scope the
+ * context string to the metamodel relevant to the user's current work.
+ *
+ * - level 'M2': the artefact IS the metamodel; `id` is its DModel id.
+ * - level 'M1': the artefact is a model instance; `id` is the model's DModel id,
+ *   and `metamodelId` is the conformity metamodel's id.
+ */
+export interface ActiveArtifact {
+    id: string;
+    name: string;
+    level: 'M1' | 'M2';
+    /** Metamodel of conformity — required when level === 'M1'. */
+    metamodelId?: string;
 }
 
 interface ParsedSections {
@@ -62,17 +78,66 @@ interface ProjectContext {
 
 export class JjodieContextService {
     /**
-     * Extract context from LProject
+     * Resolve the metamodel scope from an active artefact.
+     * Returns the LModel of the metamodel to walk, or null if no scoping applies
+     * (caller should fall back to the global project collections).
      */
-    static extractFromProject(project: LProject): ProjectContext {
+    private static resolveMetamodelScope(
+        project: LProject,
+        activeArtifact?: ActiveArtifact
+    ): LModel | null {
+        if (!activeArtifact) return null;
+        const metamodels: LModel[] = (project as any).metamodels || [];
+
+        if (activeArtifact.level === 'M2') {
+            return metamodels.find((mm) => mm.id === activeArtifact.id) ?? null;
+        }
+
+        // level === 'M1': prefer the supplied metamodelId, otherwise resolve via the model's instanceof
+        if (activeArtifact.metamodelId) {
+            const found = metamodels.find((mm) => mm.id === activeArtifact.metamodelId);
+            if (found) return found;
+        }
+        const models: LModel[] = (project as any).models || [];
+        const m1 = models.find((m) => m.id === activeArtifact.id);
+        if (m1) {
+            const inst = (m1 as any).instanceof ?? (m1 as any).metamodel;
+            const mmId = typeof inst === 'string' ? inst : inst?.id;
+            if (mmId) {
+                const found = metamodels.find((mm) => mm.id === mmId);
+                if (found) return found;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Extract context from LProject. When `activeArtifact` is supplied, the
+     * extraction is scoped to the metamodel relevant to the active artefact;
+     * otherwise it walks the global project collections (backward-compatible).
+     */
+    static extractFromProject(project: LProject, activeArtifact?: ActiveArtifact): ProjectContext {
         const metaclasses: MetaclassInfo[] = [];
         const enumerations: EnumInfo[] = [];
         const packages: string[] = [];
 
+        const scope = this.resolveMetamodelScope(project, activeArtifact);
+
+        // Use the metamodel scope when available; fall back to the global project view.
+        const classSource: any = scope
+            ? ((scope as any).classes ?? [])
+            : (project.classes ?? []);
+        const enumSource: any = scope
+            ? ((scope as any).enumerations ?? (scope as any).enumerators ?? [])
+            : (project.enumerators ?? []);
+        const packageSource: any = scope
+            ? ((scope as any).packages ?? [])
+            : (project.packages ?? []);
+
         try {
             // Extract packages
-            if (project.packages) {
-                project.packages.forEach((pkg: LPackage) => {
+            if (packageSource) {
+                packageSource.forEach((pkg: LPackage) => {
                     if (pkg?.name) {
                         packages.push(pkg.name);
                     }
@@ -80,8 +145,8 @@ export class JjodieContextService {
             }
 
             // Extract classes
-            if (project.classes) {
-                project.classes.forEach((cls: LClass) => {
+            if (classSource) {
+                classSource.forEach((cls: LClass) => {
                     try {
                         const classInfo: MetaclassInfo = {
                             id: cls.id || '',
@@ -136,8 +201,8 @@ export class JjodieContextService {
             }
 
             // Extract enumerations
-            if (project.enumerators) {
-                project.enumerators.forEach((enumItem: LEnumerator) => {
+            if (enumSource) {
+                enumSource.forEach((enumItem: LEnumerator) => {
                     try {
                         if (enumItem?.name) {
                             const literals: string[] = [];
@@ -174,8 +239,15 @@ export class JjodieContextService {
     /**
      * Build context string for AI prompt
      */
-    static buildContextString(context: ProjectContext): string {
+    static buildContextString(context: ProjectContext, activeArtifact?: ActiveArtifact): string {
         const lines: string[] = [];
+
+        // Active artefact header — tells the LLM what the user is currently looking at.
+        if (activeArtifact) {
+            const levelLabel = activeArtifact.level === 'M1' ? 'M1 model' : 'M2 metamodel';
+            lines.push(`**Currently editing**: ${activeArtifact.name} (${levelLabel})`);
+            lines.push('');
+        }
 
         // Project info
         lines.push(`**Project**: ${context.projectName}`);
@@ -237,11 +309,13 @@ export class JjodieContextService {
     }
 
     /**
-     * Get full context string from project
+     * Get full context string from project. When `activeArtifact` is supplied,
+     * the context is scoped to the metamodel relevant to the user's current
+     * editor tab and prepended with a "Currently editing" header.
      */
-    static getContextString(project: LProject): string {
-        const context = this.extractFromProject(project);
-        return this.buildContextString(context);
+    static getContextString(project: LProject, activeArtifact?: ActiveArtifact): string {
+        const context = this.extractFromProject(project, activeArtifact);
+        return this.buildContextString(context, activeArtifact);
     }
 
     /**

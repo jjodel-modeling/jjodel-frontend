@@ -463,6 +463,30 @@ function wrapSelectedElement(me: any, classByName?: Map<string, JjelValue> | nul
         result.instanceof = classObj;
     }
 
+    // If the selected element is a metaclass (M2), hydrate `result` with the
+    // structural properties exposed by shallowClassToJjelValue at Level 1, so
+    // `self.isAbstract` / `self.instances` resolve identically to
+    // `Attribute.isAbstract` / `Attribute.instances` (reference identity for
+    // arrays). Reading from the shared plain class object avoids L-proxy
+    // getters and the D-layer naming mismatch (`abstract` vs `isAbstract`).
+    if (classByName && typeof result.name === 'string') {
+        const classPlainObj: any = classByName.get(result.name);
+        if (classPlainObj && typeof classPlainObj === 'object') {
+            result.isAbstract       = classPlainObj.isAbstract       ?? null;
+            result.isInterface      = classPlainObj.isInterface      ?? null;
+            result.isFinal          = classPlainObj.isFinal          ?? null;
+            result.isSingleton      = classPlainObj.isSingleton      ?? null;
+            result.isRootable       = classPlainObj.isRootable       ?? null;
+            result.isPartial        = classPlainObj.isPartial        ?? null;
+            result.allowCrossExtend = classPlainObj.allowCrossExtend ?? null;
+            result.instances        = classPlainObj.instances        ?? [];
+            result.allInstances     = classPlainObj.allInstances     ?? [];
+            result.attributes       = classPlainObj.attributes       ?? [];
+            result.references       = classPlainObj.references       ?? [];
+            result.className        = classPlainObj.className        ?? null;
+        }
+    }
+
     return result as JjelValue;
 }
 

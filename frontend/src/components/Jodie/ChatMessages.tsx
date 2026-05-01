@@ -6,6 +6,7 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import {AI, ChatMessage, ConsoleEntry, CodeEntry, isCodeEntry} from '../../types/jodie';
 import { MarkdownMessage } from './MarkdownMessage';
+import { JjelValueInspector, detectKind } from './JjelValueInspector';
 import { executeCommand, ScriptLineResult } from '../../jjscript';
 import { DUser, L, LUser, LProject, LModel, store } from '../../joiner';
 import { Selectors } from '../../redux/selectors/selectors';
@@ -126,10 +127,10 @@ function MessageBubble({ message, onJjScriptExecute, onTestInCode }: { message: 
                     <button
                         className="jodie-promote-btn"
                         onClick={() => onTestInCode(promoteCodeBlock.content, promoteCodeBlock.language)}
-                        title="Switch to code mode and prefill this snippet"
+                        title="Switch to console mode and prefill this snippet"
                     >
                         <i className="bi bi-arrow-right-square" />
-                        <span>Test in code mode</span>
+                        <span>Test in console mode</span>
                     </button>
                 )}
                 <div className="jodie-message-meta">
@@ -162,6 +163,8 @@ function CodeReplEntry({ entry, onAskJjodie }: { entry: CodeEntry; onAskJjodie?:
         ? String(entry.output.value)
         : entry.output.error;
     const warnings = entry.warnings ?? [];
+    const inspectorKind = !isError ? detectKind(entry.rawValue) : null;
+    const [inspectorOpen, setInspectorOpen] = useState(false);
     return (
         <div className={`jodie-code-entry${isError ? ' jodie-code-entry--error' : ''}`}>
             <div className="jodie-code-entry__row jodie-code-entry__input-row">
@@ -171,14 +174,34 @@ function CodeReplEntry({ entry, onAskJjodie }: { entry: CodeEntry; onAskJjodie?:
             </div>
             <div className={`jodie-code-entry__row jodie-code-entry__output-row${isError ? ' jodie-code-entry__output-row--error' : ''}`}>
                 <code className="jodie-code-entry__output">{outputText}</code>
+                {inspectorKind && (
+                    <button
+                        type="button"
+                        className="jodie-inspect-toggle"
+                        onClick={() => setInspectorOpen(prev => !prev)}
+                        title={inspectorOpen ? 'Collapse properties' : 'Inspect properties'}
+                        aria-expanded={inspectorOpen}
+                        aria-label={inspectorOpen ? 'Collapse object inspector' : 'Inspect object properties'}
+                    >
+                        <i className={`bi bi-chevron-${inspectorOpen ? 'down' : 'right'}`} aria-hidden="true" />
+                    </button>
+                )}
             </div>
+            {inspectorKind && inspectorOpen && entry.rawValue && (
+                <JjelValueInspector
+                    value={entry.rawValue as Record<string, unknown>}
+                    kind={inspectorKind}
+                />
+            )}
             {warnings.length > 0 && (
                 <div className="jodie-code-entry__warnings">
                     {warnings.map((w, i) => (
                         <div key={`${w.kind}:${w.identifier}:${i}`} className="jodie-code-entry__warning">
                             <i className="bi bi-exclamation-triangle-fill" aria-hidden="true" />
                             <span>
-                                Unknown identifier <code>{w.identifier}</code>.
+                                {w.kind === 'property-not-found'
+                                    ? <>Property <code>{w.identifier}</code> not found on object.</>
+                                    : <>Unknown identifier <code>{w.identifier}</code>.</>}
                                 {w.suggestion && <> Did you mean <code>{w.suggestion}</code>?</>}
                             </span>
                         </div>

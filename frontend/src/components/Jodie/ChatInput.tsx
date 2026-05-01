@@ -35,6 +35,8 @@ interface ChatInputProps {
     onSubmitCode: (input: string) => void;
     /** Unified history; ChatInput filters by mode (and flavor in code) for the up/down nav. */
     entries: ConsoleEntry[];
+    /** Clear the entries of the active mode. Triggered by the `/clear` slash command. */
+    onClearRequested?: () => void;
 }
 
 type SendBtnState = 'empty' | 'ready' | 'sending' | 'no-provider';
@@ -115,6 +117,7 @@ export function ChatInput({
     codeFlavor,
     onSubmitCode,
     entries,
+    onClearRequested,
 }: ChatInputProps): JSX.Element {
     const isCode = consoleMode === 'code';
     const [message, setMessage] = useState('');
@@ -272,6 +275,18 @@ export function ChatInput({
     const handleSubmit = useCallback(() => {
         const trimmed = message.trim();
 
+        // Slash commands: intercepted before mode-specific submit so they
+        // don't reach onSend/onSubmitCode and aren't appended to the unified
+        // history (= invisible to the up/down nav). Case-sensitive by design.
+        if (trimmed === '/clear') {
+            onClearRequested?.();
+            setMessage('');
+            setHistoryIndex(-1);
+            setSavedMessage('');
+            if (textareaRef.current) textareaRef.current.style.height = 'auto';
+            return;
+        }
+
         if (isCode) {
             if (!trimmed) return;
             onSubmitCode(trimmed);
@@ -310,7 +325,7 @@ export function ChatInput({
                 textareaRef.current.style.height = 'auto';
             }
         }
-    }, [message, images, documents, disabled, onSend, isCode, onSubmitCode]);
+    }, [message, images, documents, disabled, onSend, isCode, onSubmitCode, onClearRequested]);
 
     const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
         // Regola C: any printable character or Backspace counts as the user
@@ -361,6 +376,13 @@ export function ChatInput({
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             const trimmed = message.trim();
+            // Slash commands bypass the mode/provider/disabled gates so the
+            // user can always clear history via the keyboard, even when the
+            // chat send button would otherwise refuse Enter.
+            if (trimmed === '/clear') {
+                handleSubmit();
+                return;
+            }
             if (isCode) {
                 if (trimmed) handleSubmit();
                 return;

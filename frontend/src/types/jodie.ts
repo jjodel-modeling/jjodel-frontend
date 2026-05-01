@@ -807,6 +807,8 @@ export interface CodeEntry {
      * warnings, and a failure does not necessarily produce them.
      */
     warnings?: CodeWarning[];
+    /** Raw JjEL value when ok, retained for the inline inspector. */
+    rawValue?: unknown;
 }
 
 /**
@@ -815,7 +817,7 @@ export interface CodeEntry {
  * into types/jodie. Today they map 1:1.
  */
 export interface CodeWarning {
-    kind: 'undefined-identifier';
+    kind: 'undefined-identifier' | 'property-not-found';
     identifier: string;
     suggestion: string | null;
 }

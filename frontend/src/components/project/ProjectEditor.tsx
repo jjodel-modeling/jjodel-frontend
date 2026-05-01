@@ -24,6 +24,7 @@ import {
 import DockManager from '../abstract/DockManager';
 import { createM2, createM1 } from '../../pages/components/Navbar';
 import { formatVersionNumber } from '../../utils/versionUtils';
+import { getPublicProjectUrl, copyToClipboard } from '../../utils/shareUtils';
 import ShareProjectModal from './ShareProjectModal';
 import UnsavedChangesDialog from './UnsavedChangesDialog';
 import DocumentationSection from './DocumentationSection';
@@ -185,6 +186,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
 
     // Project menu (⋮) state
     const [showProjectMenu, setShowProjectMenu] = useState(false);
+    const [linkCopied, setLinkCopied] = useState(false);
     const projectMenuRef = useRef<HTMLDivElement>(null);
 
     // Section from URL search params (driven by LeftBar sidebar)
@@ -599,6 +601,19 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     const handleToggleType = () => {
         project.type = project.type === 'public' ? 'private' : 'public';
         markDirty();
+    };
+
+    const handleSetVisibility = (target: 'private' | 'public' | 'collaborative') => {
+        project.type = target;
+        markDirty();
+        setShowProjectMenu(false);
+    };
+
+    const handleCopyLink = async () => {
+        const url = getPublicProjectUrl(project.id);
+        await copyToClipboard(url);
+        setLinkCopied(true);
+        setTimeout(() => setLinkCopied(false), 2000);
     };
 
     // Contextual menu handlers with smart positioning
@@ -1826,20 +1841,46 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             </button>
                             {showProjectMenu && (
                                 <div className="project-menu-dropdown">
+                                    {project.type !== 'private' && (
+                                        <>
+                                            <button onClick={handleCopyLink}>
+                                                <i className="bi bi-link-45deg" />
+                                                {linkCopied ? 'Link copied!' : 'Copy link'}
+                                            </button>
+                                            <div className="project-menu-dropdown__divider" />
+                                        </>
+                                    )}
                                     <button onClick={handleDownloadProject}>
                                         <i className="bi bi-download" />
                                         Download project
                                     </button>
-                                    <button onClick={() => { handleVisibilityBadgeClick(); setShowProjectMenu(false); }}>
-                                        <i className={`bi bi-${project.type === 'public' ? 'lock' : 'globe'}`} />
-                                        {project.type === 'public' ? 'Make private' : 'Make public'}
-                                    </button>
                                     <div className="project-menu-dropdown__divider" />
-                                    {onNavigateBack && (
-                                        <button onClick={() => { handleBackNavigation(); setShowProjectMenu(false); }}>
-                                            <i className="bi bi-x-lg" />
-                                            Close project
+                                    {project.type !== 'public' && (
+                                        <button onClick={() => handleSetVisibility('public')}>
+                                            <i className="bi bi-globe" />
+                                            Make public
                                         </button>
+                                    )}
+                                    {project.type !== 'collaborative' && (
+                                        <button onClick={() => handleSetVisibility('collaborative')}>
+                                            <i className="bi bi-people" />
+                                            Make collaborative
+                                        </button>
+                                    )}
+                                    {project.type !== 'private' && (
+                                        <button onClick={() => handleSetVisibility('private')}>
+                                            <i className="bi bi-lock" />
+                                            Make private
+                                        </button>
+                                    )}
+                                    {onNavigateBack && (
+                                        <>
+                                            <div className="project-menu-dropdown__divider" />
+                                            <button onClick={() => { handleBackNavigation(); setShowProjectMenu(false); }}>
+                                                <i className="bi bi-x-lg" />
+                                                Close project
+                                            </button>
+                                        </>
                                     )}
                                 </div>
                             )}

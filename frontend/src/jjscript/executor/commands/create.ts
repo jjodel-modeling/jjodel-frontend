@@ -12,6 +12,7 @@ import {
 import { resolveElement, resolveElementInMetamodel } from '../resolvers';
 import { qualifiedNameToString } from '../../parser/grammar';
 import { getProject, getDefaultParent, needsParent, getTargetMetamodel } from '../utils';
+import { executeCreateInstance } from './instance';
 
 // Import Jjodel model types and actions
 import {
@@ -153,6 +154,24 @@ export async function executeCreate(
                 command: 'create',
                 message: 'No active project',
                 errors: [{ code: 'NO_PROJECT', message: 'Cannot create element without an active project' }]
+            };
+        }
+
+        // M1 routing: 'create instance <ClassName>' delegates to the instance handler.
+        if (elementType === 'instance') {
+            return executeCreateInstance(args, context, project);
+        }
+
+        // M2 guard: every other elementType modifies the metamodel.
+        if (context.level === 'M1') {
+            return {
+                success: false,
+                command: 'create',
+                message: `'create ${elementType}' modifies the metamodel`,
+                errors: [{
+                    code: 'WRONG_LEVEL',
+                    message: `Open a metamodel editor (M2) to create a ${elementType}. To create an instance in M1, use 'create instance <ClassName>'.`
+                }]
             };
         }
 

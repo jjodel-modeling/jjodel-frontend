@@ -11,6 +11,7 @@ import {
 import { resolveElement } from '../resolvers';
 import { qualifiedNameToString } from '../../parser/grammar';
 import { getProject } from '../utils';
+import { executeDeleteInstance } from './instance';
 
 import {
     DeleteElementAction,
@@ -38,6 +39,11 @@ export async function executeDelete(
                 message: 'No active project',
                 errors: [{ code: 'NO_PROJECT', message: 'Cannot delete element without an active project' }]
             };
+        }
+
+        // M1 routing: 'delete instance X' or any 'delete X' in M1 context targets an instance.
+        if (args.elementType === 'instance' || context.level === 'M1') {
+            return executeDeleteInstance(args, context, project);
         }
 
         // Resolve the target element

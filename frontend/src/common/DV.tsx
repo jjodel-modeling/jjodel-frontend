@@ -1294,7 +1294,7 @@ export class DefaultView {
 
 {/* editor zoom controls */}
 
-<Zoom node={node}/>
+<ClassicZoomBridge node={node}/>
 </View>`
 );}
 

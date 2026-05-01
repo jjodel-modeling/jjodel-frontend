@@ -16,6 +16,8 @@ export const JjodelEvents = {
   SELECT_VIEW_IN_WORKBENCH: 'jjodel:selectViewInWorkbench',
   POLYMETRIC_NODE_SELECTED: 'jjodel:polymetric-node-selected',
   CHILD_CONTEXT_MENU: 'jjodel:child-context-menu',
+  CLASSIC_NODE_MOUNTED: 'jjodel:classic-node-mounted',
+  CLASSIC_NODE_UNMOUNTED: 'jjodel:classic-node-unmounted',
   // Viewpoint
   OPEN_VIEWPOINT_EDITOR: 'jjodel:openViewpointEditor',
   CLOSE_VIEWPOINT_EDITOR: 'jjodel:closeViewpointEditor',

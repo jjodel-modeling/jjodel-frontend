@@ -33,6 +33,7 @@ import PalettePanel from './panels/PalettePanel';
 // PropertiesPanel removed — properties editing is handled by the dock-based Info panel
 // import PropertiesPanel from './panels/PropertiesPanel';
 import Toolbar from './Toolbar';
+import { useActiveEditor, CLASSIC_ZOOM_MIN, CLASSIC_ZOOM_MAX, type ZoomController } from './ActiveEditorContext';
 import ContextMenu, { type ContextMenuItem } from './ContextMenu';
 import { useHistory } from './hooks/useHistory';
 import { useAlignment } from './hooks/useAlignment';
@@ -76,7 +77,7 @@ import {
 import { computeElkLayout } from './utils/elkLayout';
 import { rafThrottle, cancelThrottle } from '../../utils/DragThrottle';
 import { getCompositionChildOptions, getCompatibleReferences, type CompatibleReference } from './utils/compositionCompat';
-import { LPointerTargetable, store, DState, SetRootFieldAction, DVertex, GraphSize } from '../../joiner';
+import { LPointerTargetable, store, DState, SetRootFieldAction, DVertex, GraphSize, GraphPoint, SetFieldAction, TRANSACTION } from '../../joiner';
 import { jjomVertexToRFNode } from './utils/jjomTransformers';
 import { useTheme } from '../../services/ThemeService';
 import { getDraggedMetaclassId } from './utils/dragState';
@@ -424,6 +425,14 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const { screenToFlowPosition, getNodes, getEdges, zoomIn, zoomOut, fitView, getViewport, setViewport } = useReactFlow();
     const storeApi = useStoreApi();
     fitViewRef.current = () => fitView({ padding: 0.2, maxZoom: 1 });
+
+    const {
+        activeEditorId,
+        setActive,
+        registerZoomController,
+        unregisterZoomController,
+        getActiveZoomController,
+    } = useActiveEditor();
     const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
     const [snapEnabled, setSnapEnabled] = useState(true);
     const [gridVisible, setGridVisible] = useState(() => {
@@ -2276,8 +2285,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         return [];
     };
 
-    // Zoom level (reactive via useStore, snapped to 10% for display)
-    const zoomLevel = useStore((s) => Math.round(s.transform[2] * 100 / 10) * 10);
+    // Flow zoom level (reactive via useStore, snapped to 10% for display)
+    const flowZoomFromStore = useStore((s) => Math.round(s.transform[2] * 100 / 10) * 10);
 
     // Zoom handlers — step by 10%
     const handleZoomIn = useCallback(() => {
@@ -2294,6 +2303,105 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         fitView({ padding: 0.2, maxZoom: 1, duration: 200 });
     }, [fitView]);
     const handleFitView = useCallback(() => fitView({ padding: 0.2, maxZoom: 1, duration: 200 }), [fitView]);
+
+    // Register the flow editor as a ZoomController with the active-editor context.
+    useEffect(() => {
+        const controller: ZoomController = {
+            getZoom: () => getViewport().zoom,
+            zoomIn: handleZoomIn,
+            zoomOut: handleZoomOut,
+            resetZoom: handleResetZoom,
+        };
+        registerZoomController('flow', controller);
+        return () => unregisterZoomController('flow');
+    }, [getViewport, handleZoomIn, handleZoomOut, handleResetZoom, registerZoomController, unregisterZoomController]);
+
+    // Classic editor zoom controller registration via CustomEvent.
+    // The bridge in DV.tsx jsxString cannot use hooks, so it dispatches
+    // JjodelEvents.CLASSIC_NODE_MOUNTED with the graph node payload, and
+    // we register the controller from here (real React tree).
+    const classicNodeRef = useRef<any>(null);
+    useEffect(() => {
+        const handleNodeMounted = (e: Event) => {
+            const { node } = (e as CustomEvent).detail || {};
+            if (!node) return;
+            if (classicNodeRef.current === node) return;
+            classicNodeRef.current = node;
+
+            const clamp = (v: number) => Math.max(CLASSIC_ZOOM_MIN, Math.min(CLASSIC_ZOOM_MAX, v));
+
+            const controller: ZoomController = {
+                getZoom: () => node?.zoom?.x ?? 1,
+                zoomIn: () => {
+                    const next = clamp((node?.zoom?.x ?? 1) * 1.1);
+                    TRANSACTION('Zoom in', () => {
+                        SetFieldAction.new(node, 'zoom.x' as any, next, '');
+                        SetFieldAction.new(node, 'zoom.y' as any, next, '');
+                    });
+                },
+                zoomOut: () => {
+                    const next = clamp((node?.zoom?.x ?? 1) / 1.1);
+                    TRANSACTION('Zoom out', () => {
+                        SetFieldAction.new(node, 'zoom.x' as any, next, '');
+                        SetFieldAction.new(node, 'zoom.y' as any, next, '');
+                    });
+                },
+                resetZoom: () => {
+                    TRANSACTION('Zoom reset', () => {
+                        node.zoom = new GraphPoint(1, 1);
+                    });
+                },
+            };
+            registerZoomController('classic', controller);
+        };
+
+        window.addEventListener(JjodelEvents.CLASSIC_NODE_MOUNTED, handleNodeMounted);
+        return () => {
+            window.removeEventListener(JjodelEvents.CLASSIC_NODE_MOUNTED, handleNodeMounted);
+        };
+    }, [registerZoomController]);
+
+    // Unregister classic controller when the classic editor is no longer mounted.
+    useEffect(() => {
+        const classicMounted = (editorMode === 'classic' || editorMode === 'split') && hasViewpoint;
+        if (!classicMounted && classicNodeRef.current) {
+            unregisterZoomController('classic');
+            classicNodeRef.current = null;
+        }
+    }, [editorMode, hasViewpoint, unregisterZoomController]);
+
+    // Reset on modelid change (defensive — covers viewpoint switches that
+    // don't go through the editorMode/hasViewpoint guard above).
+    useEffect(() => {
+        return () => {
+            if (classicNodeRef.current) {
+                unregisterZoomController('classic');
+                classicNodeRef.current = null;
+            }
+        };
+    }, [modelid, unregisterZoomController]);
+
+    // Bridge active controller -> Toolbar zoom props. zoomTick forces re-read
+    // when the classic editor mutates its zoom (no reactive subscription).
+    const [zoomTick, setZoomTick] = useState(0);
+    const activeController = getActiveZoomController();
+    const activeZoomLevel = useMemo(() => {
+        if (!activeController) return 100;
+        if (activeEditorId === 'flow') return flowZoomFromStore;
+        return Math.round(activeController.getZoom() * 100);
+    }, [activeController, activeEditorId, flowZoomFromStore, zoomTick]);
+    const handleActiveZoomIn = useCallback(() => {
+        activeController?.zoomIn();
+        setZoomTick((t) => t + 1);
+    }, [activeController]);
+    const handleActiveZoomOut = useCallback(() => {
+        activeController?.zoomOut();
+        setZoomTick((t) => t + 1);
+    }, [activeController]);
+    const handleActiveResetZoom = useCallback(() => {
+        activeController?.resetZoom?.();
+        setZoomTick((t) => t + 1);
+    }, [activeController]);
     const handleToggleSnap = useCallback(() => setSnapEnabled((prev) => !prev), []);
 
     // Auto-layout handler: compute ELK layout, apply to RF, sync to JjOM
@@ -2856,10 +2964,10 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         onNotationChange={setNotation}
                         colorScheme={colorScheme}
                         onColorSchemeChange={setColorScheme}
-                        zoomLevel={zoomLevel}
-                        onZoomIn={handleZoomIn}
-                        onZoomOut={handleZoomOut}
-                        onResetZoom={handleResetZoom}
+                        zoomLevel={activeController ? activeZoomLevel : undefined}
+                        onZoomIn={activeController ? handleActiveZoomIn : undefined}
+                        onZoomOut={activeController ? handleActiveZoomOut : undefined}
+                        onResetZoom={activeController ? handleActiveResetZoom : undefined}
                         selectedCount={selectedNodes.length}
                         onAlignLeft={() => withSnapshot(alignLeft)}
                         onAlignCenterV={() => withSnapshot(alignCenterVertical)}
@@ -2875,12 +2983,18 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         onEditorModeChange={onEditorModeChange}
                     />
                     {(editorMode === 'classic' && classicSlot) ? (
-                        <div className="editor-classic-only">{classicSlot}</div>
+                        <div
+                            className={`editor-classic-only${activeEditorId === 'classic' ? ' is-active-editor' : ''}`}
+                            onMouseDownCapture={() => setActive('classic')}
+                        >
+                            {classicSlot}
+                        </div>
                     ) : (editorMode === 'split' && classicSlot) ? (
                         <div className="editor-split-container">
                             <div
-                                className="editor-split-classic"
+                                className={`editor-split-classic${activeEditorId === 'classic' ? ' is-active-editor' : ''}`}
                                 style={{ flex: `0 0 ${splitPercent}%` }}
+                                onMouseDownCapture={() => setActive('classic')}
                             >
                                 {classicSlot}
                             </div>
@@ -2892,13 +3006,23 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                                 title="Drag to resize"
                             />
                             <div className="editor-split-flow">
-                                <div className="editor-v2__canvas" ref={editorContainerRef} style={{ position: 'relative' }}>
+                                <div
+                                    className={`editor-v2__canvas${activeEditorId === 'flow' ? ' is-active-editor' : ''}`}
+                                    ref={editorContainerRef}
+                                    style={{ position: 'relative' }}
+                                    onMouseDownCapture={() => setActive('flow')}
+                                >
                                     {flowCanvas}
                                 </div>
                             </div>
                         </div>
                     ) : (
-                        <div className="editor-v2__canvas" ref={editorContainerRef} style={{ position: 'relative' }}>
+                        <div
+                            className={`editor-v2__canvas${activeEditorId === 'flow' ? ' is-active-editor' : ''}`}
+                            ref={editorContainerRef}
+                            style={{ position: 'relative' }}
+                            onMouseDownCapture={() => setActive('flow')}
+                        >
                             {flowCanvas}
                         </div>
                     )}

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, ReactNode } from 'react';
 import { useSelector } from 'react-redux';
 import { EditorV2 } from '../../editor-v2/EditorV2';
+import { ActiveEditorProvider } from '../../editor-v2/ActiveEditorContext';
 import './EditorSwitch.scss';
 
 export type EditorMode = 'classic' | 'v2';
@@ -37,26 +38,30 @@ export function EditorSwitch({ modelid, children, isMetamodel }: EditorSwitchPro
 
     if (!hasViewpoint) {
         return (
-            <div className="editor-switch-container">
-                <div className="editor-switch-stage">
-                    <EditorV2 modelid={modelid} hasViewpoint={false} />
+            <ActiveEditorProvider>
+                <div className="editor-switch-container">
+                    <div className="editor-switch-stage">
+                        <EditorV2 modelid={modelid} hasViewpoint={false} />
+                    </div>
                 </div>
-            </div>
+            </ActiveEditorProvider>
         );
     }
 
     return (
-        <div className="editor-switch-container">
-            <div className="editor-switch-stage">
-                <EditorV2
-                    modelid={modelid}
-                    classicSlot={children}
-                    editorMode={editorMode}
-                    hasViewpoint
-                    onEditorModeChange={setEditorMode}
-                />
+        <ActiveEditorProvider>
+            <div className="editor-switch-container">
+                <div className="editor-switch-stage">
+                    <EditorV2
+                        modelid={modelid}
+                        classicSlot={children}
+                        editorMode={editorMode}
+                        hasViewpoint
+                        onEditorModeChange={setEditorMode}
+                    />
+                </div>
             </div>
-        </div>
+        </ActiveEditorProvider>
     );
 }
 

@@ -131,14 +131,21 @@ export class TypeRegistry {
 // ============================================
 
 /**
- * A diagnostic emitted during evaluation. Today only one kind exists; the
- * union may grow (e.g. `'undefined-property'` once type inference lands).
+ * A diagnostic emitted during evaluation. The union may grow as more
+ * silent-null events become introspectable.
  */
 export type JjelWarning =
     | {
         kind: 'undefined-identifier';
         identifier: string;
         /** Closest known name within Levenshtein distance ≤ 3, or null. */
+        suggestion: string | null;
+    }
+    | {
+        kind: 'property-not-found';
+        /** The property name that was looked up but not present on the host. */
+        identifier: string;
+        /** Closest available property name within Levenshtein distance ≤ 3, or null. */
         suggestion: string | null;
     };
 

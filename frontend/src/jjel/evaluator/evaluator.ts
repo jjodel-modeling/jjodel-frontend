@@ -363,7 +363,7 @@ export class JjelEvaluator {
             );
         }
 
-        return this.getProperty(obj, expr.property);
+        return this.getProperty(obj, expr.property, ctx);
     }
 
     private evaluateNullSafeMemberAccess(expr: NullSafeMemberAccessExpr, ctx: EvaluationContext): JjelValue {
@@ -373,10 +373,10 @@ export class JjelEvaluator {
             return null;
         }
 
-        return this.getProperty(obj, expr.property);
+        return this.getProperty(obj, expr.property, ctx);
     }
 
-    private getProperty(obj: JjelValue, property: string): JjelValue {
+    private getProperty(obj: JjelValue, property: string, ctx: EvaluationContext): JjelValue {
         // Pedagogical error: `className` is strict-on-classes (M2->M3) per the
         // v2 design (2026-04-28). On instances it must redirect users to
         // `instanceOf.name` rather than silently returning a constant string.
@@ -490,16 +490,27 @@ export class JjelEvaluator {
                 return obj[property] ?? null;
             }
 
-            // Property doesn't exist - warn about potential typo
-            const availableKeys = Object.keys(obj).filter(k => !k.startsWith('__'));
-            const similar = this.findSimilarProperty(property, availableKeys);
-
-            if (similar) {
-                console.warn(`[JjEL] Property '${property}' not found. Did you mean '${similar}'?`);
-            } else if (availableKeys.length > 0 && availableKeys.length <= 20) {
-                console.warn(`[JjEL] Property '${property}' not found. Available: ${availableKeys.slice(0, 10).join(', ')}${availableKeys.length > 10 ? '...' : ''}`);
-            } else {
-                console.warn(`[JjEL] Property '${property}' not found on object`);
+            // Property doesn't exist on the host. When the caller has opted
+            // in to diagnostics (via `jjelEvalWithDiagnostics`), push a
+            // deduplicated warning with a Levenshtein suggestion computed
+            // over the user-visible keys (internal `__`-prefixed markers
+            // such as `__type`, `__jjelFunction`, `__isProxy` are excluded).
+            // When no channel is active, stay silent — consistent with the
+            // spec's "silent null" semantics for undefined identifiers.
+            if (ctx.diagnostics) {
+                const sink = ctx.diagnostics;
+                const already = sink.some(
+                    w => w.kind === 'property-not-found' && w.identifier === property,
+                );
+                if (!already) {
+                    const availableKeys = Object.keys(obj).filter(k => !k.startsWith('__'));
+                    const suggestion = closestName(property, availableKeys, 3);
+                    sink.push({
+                        kind: 'property-not-found',
+                        identifier: property,
+                        suggestion,
+                    });
+                }
             }
 
             return null;

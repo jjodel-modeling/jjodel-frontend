@@ -64,6 +64,56 @@ create enum EnumName: LITERAL1, LITERAL2, LITERAL3
 ChildClass extends ParentClass
 \`\`\`
 
+### M1 INSTANCE COMMANDS
+
+When the user is editing an M1 model (instance level, not metamodel level), use these commands. The class must already exist in the active metamodel.
+
+**M1 instance creation:**
+\`\`\`jjscript
+create instance of ClassName
+create instance of ClassName "instanceName"
+\`\`\`
+Pass a quoted instance name when you need to reference the instance later (set, delete, cross-read). Without it, a unique name based on the class is generated automatically.
+
+**M1 setting attribute values:**
+\`\`\`jjscript
+set instanceName.attrName = value
+\`\`\`
+
+**M1 cross-instance references in expressions:**
+\`\`\`jjscript
+create instance of Person "alice"
+set alice.age = 30
+create instance of Person "bob"
+set bob.age = alice.age + 5
+\`\`\`
+
+**M1 deletion:**
+\`\`\`jjscript
+delete instance instanceName
+\`\`\`
+
+**Notes on M1:**
+- Always use the \`of\` keyword: \`create instance of <ClassName>\`. The form without \`of\` is not accepted.
+- Pass an explicit \`"name"\` after the class so the instance can be addressed later by that name.
+- Class must already exist in the active metamodel. Mixed M2 + M1 scripts are valid: declare the class first, then instantiate.
+- Strings must be double-quoted; integers and booleans literal as-is; enum literals as \`EnumName.LITERAL\`.
+
+**Mixed M2 + M1 example:**
+\`\`\`jjscript
+create class Person
+create attribute name in Person type String
+create attribute age in Person type int
+
+create instance of Person "alice"
+set alice.name = "Alice"
+set alice.age = 30
+
+create instance of Person "bob"
+set bob.name = "Bob"
+set bob.age = alice.age + 5
+\`\`\`
+
 ### PRIMITIVE TYPES
 String, Int, Integer, Boolean, Float, Double, Date
 

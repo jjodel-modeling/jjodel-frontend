@@ -1,12 +1,11 @@
 /**
  * JjEL Method Provider
  *
- * Triggered after `.` or `?.`. Returns all known built-in methods, filtered by
- * the prefix that follows the dot.
- *
- * TODO (next stage): infer the type of the receiver expression and restrict
- * the method set to the compatible category. For now we surface the union and
- * boost commonly used names.
+ * Triggered after `.` or `?.`. Returns built-in methods filtered by the
+ * prefix that follows the dot, additionally narrowed by a static, conservative
+ * inference of the receiver kind (collection vs single item) — see
+ * `util/receiverKind.ts`. Receivers the inference cannot classify fall back
+ * to the original "show everything" behavior.
  */
 
 import type { Suggestion } from '../../../jjscript/autocomplete/types';
@@ -16,6 +15,7 @@ import {
     COMMON_METHOD_NAMES,
     BuiltinMethod,
 } from '../../metadata/builtins';
+import { inferReceiverKind, ReceiverKind } from '../util/receiverKind';
 
 function matchesPrefix(name: string, filter: string): boolean {
     if (!filter) return true;
@@ -36,6 +36,20 @@ export function getJjelMethodSuggestions(context: JjelAutocompleteContext): Sugg
     const filter = context.currentWord;
     const out: Suggestion[] = [];
 
+    // Receiver kind inference: when we can classify the receiver as collection
+    // or item, prune the catalog to relevant categories. Otherwise leave the
+    // catalog as-is to preserve the legacy "show everything" behavior.
+    // The dot we anchor on lives at `wordStart - 1` (the parser already
+    // confirmed parseContext === 'after-dot').
+    const dotPos: number = context.wordStart - 1;
+    const receiverKind: ReceiverKind = inferReceiverKind(context.input, dotPos);
+
+    function isCategoryAllowed(cat: BuiltinMethod['category']): boolean {
+        if (receiverKind === 'collection') return cat === 'collection';
+        if (receiverKind === 'item') return cat !== 'collection';
+        return true;
+    }
+
     // Deduplicate by name: some methods (e.g. `reverse`, `contains`, `indexOf`,
     // `isEmpty`, `isNotEmpty`, `format`) appear in more than one category.
     // We keep the first occurrence (string comes first in ALL_BUILTIN_METHODS)
@@ -43,6 +57,7 @@ export function getJjelMethodSuggestions(context: JjelAutocompleteContext): Sugg
     // inference lands.
     const seen = new Map<string, BuiltinMethod[]>();
     for (const m of ALL_BUILTIN_METHODS) {
+        if (!isCategoryAllowed(m.category)) continue;
         if (!matchesPrefix(m.name, filter)) continue;
         const existing = seen.get(m.name);
         if (existing) existing.push(m);

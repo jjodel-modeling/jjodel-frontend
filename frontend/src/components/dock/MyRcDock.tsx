@@ -598,7 +598,7 @@ export class PinnableDock extends DockLayout{
     }
 
     window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
-        detail: { editorType }
+        detail: { editorType, modelId: activeId }
     }));
 }
 
