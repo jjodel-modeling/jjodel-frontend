@@ -1,5 +1,32 @@
 # Claude Code Session Log
 
+## 2026-05-02 — chore: remove legacy "Select a node." widget from classic editor
+**Prompt**: 2026-05-02 10:41 — chore: remove legacy "Select a node" widget from classic editor
+**File toccati**:
+- `frontend/src/components/toolbar/ToolBar.tsx` — **DELETED** (533 righe, il floating draggable widget legacy con sezioni Structure/Features/Sublevel/Shape/Root level + fallback "Select a node.").
+- `frontend/src/components/toolbar/toolbar.scss` — **DELETED** (CSS dedicato del widget; classi `toolbar-draggable`, `toolbar-collapsed`, `toolbar-section-label`, `toolbar-hr` ecc. non usate altrove in JSX).
+- `frontend/src/components/toolbar/` — **DIRECTORY removed** (vuota dopo i due file sopra).
+- `frontend/src/components/abstract/tabs/ModelTab.tsx` (rimosso `import ToolBar from "../../toolbar/ToolBar";` riga 20 e `<ToolBar model={model.id} isMetamodel={model.isMetamodel} metamodelId={props.metamodelid} />` riga 45 — net -2 righe).
+**Esito**: ✅ completato — `vite build` verde (39.83s); `tsc --noEmit` zero errori sui file toccati; 545/545 test passano (gli stessi 9 file-failure preesistenti non legati al cambio).
+**Note**:
+- **Caso A scelto** (vs B/C). Discovery ha confermato: (1) il widget vive in un componente React standard (`components/toolbar/ToolBar.tsx`), NON in un template `DV.tsx`/jsxString → no migration, no `VersionFixer.tsx` bump richiesto. (2) **Importato da UN SOLO file**: `ModelTab.tsx:20`. `MetamodelTab.tsx` NON lo usa — ha la sua palette `<FeaturesPalette />` (riga 188). Quindi la branca `isMetamodel === true` dentro `getItems`/`ToolBarComponent` (Structure/Features sections) è **dead code** dal routing: M2 non passa MAI per ModelTab → ToolBar. Rimozione full safe, no perdita di funzionalità M2.
+- **Funzionalità coperte da palette+context menu**:
+  - M1 root instance creation → `PalettePanel.tsx` (drag&drop, fixate stamattina).
+  - M1 children (composition) → `ContextMenu.tsx` `getAddChildren` (sync flow incluso, fix di stamattina).
+  - M2 strutture e features → `FeaturesPalette` (in MetamodelTab) + `ContextMenu` + `EditorV2` ContextMenu.
+  - Edge case: il bottone "Feature" per DObject shapeless (subleveloptions L367-372 originale) era l'unica funzionalità M1 specifica al ToolBar. Shapeless objects sono molto rari; la stessa azione `lobj.addValue()` resta accessibile via Properties panel / Edit dialog. Considerato non-bloccante.
+- **CSS orphan rule**: `App.scss:54` ha `.toolbar-item>span{...}` che era usata dal widget rimosso. Lasciata intatta per rispetto del vincolo "Non rinominare classi CSS, identificatori, file diversi da quelli oggetto della rimozione" — la regola dead non causa problemi (semplicemente non matchera più nessun elemento DOM). Cleanup separato consigliato.
+- **Riferimenti residui in commenti** (NON modificati, sono solo doc-strings storiche, non import attivi):
+  - `MetamodelTab.tsx:117`: `// Create the element using model.addChild() - same API as ToolBar`
+  - `canvasToJjom.ts:832`: `* Pattern from ToolBar.tsx: try calling as function, catch means it's the element.`
+  Questi riferimenti restano per ragioni di archeologia del codice; non rotti, non funzionali. Cleanup separato consigliato se si vuole purizzare.
+- **No `VersionFixer.tsx` bump** perché Caso A: il widget non era persistito come jsxString in Redux, ma renderizzato runtime. Progetti salvati esistenti aprono ModelTab senza il `<ToolBar />` automaticamente, niente migration necessaria.
+- **Test manuali NON eseguibili da CLI** (browser open, classic mode visual confirmation). Verifica build/typecheck/test-suite OK.
+- **Diff totale**: -2 file, -1 directory, -2 righe in ModelTab.tsx. ~535 righe di codice morto rimosse.
+**Nome del documento prompt**: 2026-05-02 10:41 — chore: remove legacy "Select a node" widget from classic editor
+
+---
+
 ## 2026-05-02 — fix: classic add-child must sync flow editor (Option 4)
 **Prompt**: 2026-05-02 10:24 — fix: classic add-child must sync flow editor (Option 4)
 **File toccati**:
