@@ -829,7 +829,7 @@ function resolveModelIdFromGraph(graphId: string): string | null {
 
 /**
  * Safely call addChild, which may return a function or an element directly.
- * Pattern from ToolBar.tsx: try calling as function, catch means it's the element.
+ * Pattern: try calling as function, catch means it's the element.
  *
  * @param name  Optional name forwarded to the constructor (e.g. DClass.new(name, ...)).
  *              When provided, the JjOM constructor uses it directly instead of

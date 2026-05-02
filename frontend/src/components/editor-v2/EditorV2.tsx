@@ -31,7 +31,6 @@ import ObjectNode from './nodes/ObjectNode';
 import UnifiedEdge from './edges/UnifiedEdge';
 import PalettePanel from './panels/PalettePanel';
 // PropertiesPanel removed — properties editing is handled by the dock-based Info panel
-// import PropertiesPanel from './panels/PropertiesPanel';
 import Toolbar from './Toolbar';
 import { useActiveEditor, CLASSIC_ZOOM_MIN, CLASSIC_ZOOM_MAX, type ZoomController } from './ActiveEditorContext';
 import ContextMenu, { type ContextMenuItem } from './ContextMenu';
@@ -912,6 +911,15 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // Get selected nodes and edges for properties panel
     const selectedNodes = useMemo(() => nodes.filter((n) => n.selected), [nodes]);
     const selectedEdges = useMemo(() => edges.filter((e) => e.selected), [edges]);
+
+    // Canonical selection channel — `_lastSelected.modelElement` is written by both
+    // flow (`useJjomSelection.selectElement`) and classic (`graphElement.select` /
+    // `onMouseDown`). Used to drive PalettePanel's context-aware sections so the
+    // palette reacts to selection from either editor. React Flow's `n.selected`
+    // (above) only tracks flow-initiated selection and is unsuitable for this.
+    const lastSelectedModelElement = useSelector((s: DState) =>
+        (s as any)._lastSelected?.modelElement as string | undefined
+    );
 
     // ── Reference stabilizer for ReactFlow props ─────────────────────
     // StoreUpdater compares nodes/edges by REFERENCE. If the reference
@@ -2976,7 +2984,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     editorMode={modeInfo.mode}
                     rootableClasses={modeInfo.rootableClasses}
                     allClasses={modeInfo.allClasses}
-                    selectedNodes={selectedNodes}
+                    selectedDObjectId={lastSelectedModelElement ?? null}
                 />
                 <div className="editor-v2__main">
                     <Toolbar

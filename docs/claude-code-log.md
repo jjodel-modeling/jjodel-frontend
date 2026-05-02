@@ -1,5 +1,59 @@
 # Claude Code Session Log
 
+## 2026-05-02 — refactor: remove PropertiesPanel dead code from editor-v2
+**Prompt**: rimuovere PropertiesPanel.tsx (dead code dopo sostituzione con dock-based Info.tsx) + accessori SCSS/barrel se presenti, dopo verifica zero usages
+**File toccati**:
+- `frontend/src/components/editor-v2/panels/PropertiesPanel.tsx` — **eliminato** (1380 righe). Conteneva PropertiesPanel + 7 sub-componenti interni (PanelHeader, PanelActions, ClassNodeProperties, EnumNodeProperties, PackageNodeProperties, ReferenceProperties, ModelProperties + helper CollapsibleSection/InfoTooltip/PropertiesToggle) + import di vari sync helpers. Tutto rimosso in blocco.
+- `frontend/src/components/editor-v2/EditorV2.tsx` (-1 riga): rimossa `// import PropertiesPanel from './panels/PropertiesPanel';` (L34). **Preservato verbatim** il commento informativo a L33 `// PropertiesPanel removed — properties editing is handled by the dock-based Info panel` come standalone, conformemente al vincolo del prompt "preservare la nota come commento standalone".
+**Esito**: ✅ completato — `vite build` verde (38.15s); `tsc --noEmit` totale errori invariato (83 pre-esistenti, **zero nuovi** dal cleanup).
+**Note**:
+- **Step 0 — verifica zero usages**: `grep -rn "PropertiesPanel" frontend/src/` ha mostrato:
+  - **Codice**: solo self-references dentro il file stesso (interface, function, default export), il commento+import a `EditorV2.tsx:33-34`, e 3 commenti descrittivi non-funzionali (`EditorV2.tsx:2848` `// Model info for PropertiesPanel`, `EditorV2.tsx:3078` `{/* PropertiesPanel removed */}` JSX placeholder, `canvasToJjom.ts:990` `// Model/Metamodel info (for PropertiesPanel...)`. **Nessun import attivo nel codebase**.
+  - **Doc**: 18 menzioni in `docs/` (CLAUDE_DEVELOPMENT_GUIDE, EDITOR-V3-DESIGN, feature-inventory, viewpoint-codebase-map, audit-2026-04-05, EDITOR-V2-INTEGRATION-PHASE0, redesign mockup, reports/2026-04-23-attribute-coevolution-analysis, reports/2026-04-23-undo-attr-zero-analysis, reports/2026-04-23-sibling-uniqueness-analysis, 2026-04-10_fix-view-selection-properties, claude-code-log entries pre-cleanup) + `frontend/docs/discovery/2026-05-02_palette-classic-selection.md`. **Tutte storiche, lasciate intatte** (storia, non dipendenze).
+- **Step 1 — accessori**: zero file accessori. `find` per `PropertiesPanel.scss`, `.css`, `.test*`, `.spec*` → solo `PropertiesPanel.tsx` stesso. Nessun `index.ts` barrel in `panels/` (la dir contiene 3 file: M1PropertiesPanel.tsx, PalettePanel.tsx, PropertiesPanel.tsx; il primo importato solo da PropertiesPanel, gli altri due sono entry points indipendenti).
+- **Sibling orfano transitivo**: `frontend/src/components/editor-v2/panels/M1PropertiesPanel.tsx` (143 righe) era importato **solo** da `PropertiesPanel.tsx:21,355`. Dopo il cleanup, **diventa orfano** (zero import nel codebase). **NON rimosso in questo task** per rispetto del vincolo "Scope chiuso. Nessun refactoring opportunistico, nessun 'ho visto che anche X è dead, lo tolgo'" — il prompt elenca esplicitamente solo PropertiesPanel.tsx + accessori (.scss/.css/barrel index), e M1PropertiesPanel è un sibling .tsx, non un accessorio per definizione del prompt. **Follow-up consigliato**: cleanup separato per M1PropertiesPanel.tsx (già verificato zero usages globali post-rimozione).
+- **Commenti descrittivi residui in `EditorV2.tsx` e `canvasToJjom.ts`** che menzionano PropertiesPanel (non listati in scope): lasciati intatti per minimal-diff. Sono note informative, non dipendenze; il commento JSX placeholder a `EditorV2.tsx:3078` documenta dove il pannello renderizzava — rimuoverlo è opportunistico. Cleanup separato consigliato se si vuole purizzare.
+- **Build/typecheck OK**: `tsc --noEmit` 83 errori (identici al pre-cleanup, tutti su asset module declarations + casing collisions Settings/settings, non legati al cambio). `vite build` verde 38.15s. La rimozione era safe perché PropertiesPanel non aveva nessun import attivo (la funzionalità è già completamente coperta da `editors/Info.tsx`).
+- **No git operations**: rimozione fisica via `rm`, edit di una sola linea; commit lasciato all'utente.
+- **Diff totale**: -1 file (1380 righe), -1 riga in EditorV2.tsx. Pulizia netta.
+**Nome del documento prompt**: 2026-05-02 11:14 cleanup propertiespanel dead code
+
+---
+
+## 2026-05-02 — fix: palette context-aware reagisce alla selezione classic
+**Prompt**: la palette unificata mostra CHILDREN/REFERENCES anche quando il nodo è selezionato dal classic editor (non solo dal flow); fix via Opzione B della discovery — palette legge `_lastSelected.modelElement` Redux invece di `selectedNodes` React Flow
+**File toccati**:
+- `frontend/src/components/editor-v2/panels/PalettePanel.tsx` (+18 / -10): rimossi import `Node` da `@xyflow/react` e `ObjectNodeData` da `../types` (non più usati); aggiunto import `LPointerTargetable` da `../../../joiner`. Prop `selectedNodes?: Node[]` sostituita con `selectedDObjectId?: string | null` (commentata: legge da `_lastSelected.modelElement`, filtra non-DObject). `selectedMetaclass` useMemo riscritto: invece di leggere `selectedNodes[0].data.instanceOfClassId`, ora fa `LPointerTargetable.fromPointer(selectedDObjectId)`, filtra `lme.className !== 'DObject'`, prende `lme.instanceof?.id`, lookup in `allClasses`. Deps useMemo: `[editorMode, selectedDObjectId, allClasses]`. Logica rendering CHILDREN/REFERENCES, drag&drop, dataTransfer, M2 mode invariate.
+- `frontend/src/components/editor-v2/EditorV2.tsx` (+10 / -1): aggiunto `useSelector` (già importato L2) per leggere `(s as any)._lastSelected?.modelElement` come `lastSelectedModelElement: string | undefined`, posizionato dopo le derivazioni `selectedNodes`/`selectedEdges` (L913-921) con commento esplicativo del canale canonico. Prop verso `<PalettePanel>`: cambiato `selectedNodes={selectedNodes}` → `selectedDObjectId={lastSelectedModelElement ?? null}`. **`selectedNodes` invariato** (ancora usato da Toolbar via `selectedCount={selectedNodes.length}` a L3003).
+**Esito**: ✅ completato — `vite build` verde (40.43s); `tsc --noEmit` zero errori sui 2 file toccati (gli 83 errori pre-esistenti sono asset module declarations + casing collisions, non legati al cambio).
+**Note**:
+- **OQ4 risolta**: `frontend/src/components/editor-v2/panels/PropertiesPanel.tsx` **NON è renderizzato** in `EditorV2.tsx` — l'import è commentato a L33-34 con la nota "PropertiesPanel removed — properties editing is handled by the dock-based Info panel". Il pannello Properties effettivo è `editors/Info.tsx` (dock-based) che già legge correttamente da `_lastSelected`. Quindi **PropertiesPanel.tsx + M1PropertiesPanel.tsx** restano invariati: anche se `M1PropertiesPanel` riceve `selectedNode: Node<ObjectNodeData>` (stesso pattern React-Flow-centric), il bug non si manifesta perché il pannello stesso non è montato. **Side effect**: codice di `PropertiesPanel.tsx` è dead code per l'editor v2 — cleanup separato consigliato (non in scope).
+- **OQ2 risolta** (deselect-default): il filtro `lme.className !== 'DObject'` esclude correttamente i casi in cui `_lastSelected.modelElement` punta a un classifier (`'DClass'`, `'DPackage'`) o al model stesso (`'DModel'`) come fallback di `useJjomSelection.ts:160-172`. La palette mostra "Select an element to see available operations" come prima.
+- **OQ3 risolta** (selezione singola): `_lastSelected` è un singolo modelElement per design, quindi la palette resta naturalmente single-selection. Niente logica di intersezione metaclassi.
+- **Pattern useSelector consistente**: già 1 useSelector in EditorV2 (L359 per `liveRefNameSig`); il nuovo usa lo stesso stile `(s: DState) => (s as any)._lastSelected?.modelElement`. La cast `as any` è necessaria perché `_lastSelected` non è tipizzato in `DState` (root field aggiunto a runtime, vedi `Collaborative.ts:21`); pattern coerente con `Info.tsx:1328-1330` e `EditorV2.tsx:2828`.
+- **Naming verificato**: `selectedDObjectId` zero collisioni nel codebase. `lastSelectedModelElement` usato solo come variabile locale in `Navbar.tsx:928,944,945` — nessun conflitto cross-file.
+- **Niente nuovi eventi custom**: il fix è puro consumer-side, niente `dispatchEvent` aggiunti. `_lastSelected` è già scritto correttamente sia da `useJjomSelection.ts:125` (flow) sia da `graphElement.tsx:560,953` (classic).
+- **Niente loop di sync**: la palette diventa puro consumer di Redux. Nessuna scrittura su `n.selected` di React Flow, nessuna interazione con `useJjomSelection` o `markCanvasUpdatedBatch`. Il pattern fragile dei selection-loop documentato in `useJjomSelection.ts:1-15` resta intatto.
+- **Re-render performance**: `useSelector` con shallow eq (default) re-renderizza solo quando `_lastSelected.modelElement` cambia (string compare). Frequenza: 1 volta per click sull'editor, accettabile. La useMemo del `selectedMetaclass` ricomputa solo su cambio di `selectedDObjectId` o `allClasses`, evitando il lookup `LPointerTargetable.fromPointer` superfluo.
+- **Test manuali NON eseguibili da CLI** (browser open, click su nodi nel flow vs classic, deselect, modalità M2). Sequenza di smoke test post-fix per Alfonso:
+  1. Click su nodo nel **flow editor** in split mode → palette mostra CHILDREN/REFERENCES (zero regressione).
+  2. Click sullo stesso nodo nel **classic editor** in split mode → palette mostra CHILDREN/REFERENCES (bug fixato).
+  3. Click su pane vuota (deselect) → palette torna a "Select an element to see available operations" (no falsi positivi quando `_lastSelected` punta al model di default).
+  4. Click su un classifier in modalità M2 → palette M2 si comporta come prima (`editorMode !== 'model'` short-circuit).
+- **Diff totale**: 28 inserzioni, 15 cancellazioni su 2 file. Ben dentro la stima 25-50 righe del prompt.
+**Nome del documento prompt**: 2026-05-02 11:06 fix palette classic selection
+
+---
+
+## 2026-05-02 — docs: discovery palette classic selection
+**Prompt**: read-only discovery: identificare perché la palette unificata non reagisce alla selezione dal classic editor
+**File toccati**: frontend/docs/discovery/2026-05-02_palette-classic-selection.md (nuovo), docs/claude-code-log.md
+**Esito**: ✅ completato (read-only, no commit funzionale)
+**Note**: report di sola discovery, fix nel round successivo. Root cause: la palette legge `selectedNodes` da React Flow internal state (`EditorV2.tsx:913`), ma il classic scrive solo su `_lastSelected` Redux + `LElement.isSelected` (`graphElement.tsx:560,953`). Il commit unification di stamattina (`2b96f36c5`) ha unificato il componente ma non l'input di selezione. Tre opzioni di fix valutate: A (classic emette `JjodelEvents.SELECT_NODE`), B (palette legge `_lastSelected` come fa già `Info.tsx`), C (reverse-sync in `EditorV2`). Raccomandazione: Opzione B.
+**Nome del documento prompt**: 2026-05-02 11:06 discovery palette classic selection
+
+---
+
 ## 2026-05-02 — chore: remove legacy "Select a node." widget from classic editor
 **Prompt**: 2026-05-02 10:41 — chore: remove legacy "Select a node" widget from classic editor
 **File toccati**:
