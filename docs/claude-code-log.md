@@ -1,5 +1,65 @@
 # Claude Code Session Log
 
+## 2026-05-02 — fix(ui): raise active editor stripe z-index above GraphContainer
+**Prompt**: stripe coperta dal panning-handle interno al GraphContainer (z-index: 100); alzare z-index della stripe da 10 a 200
+**File toccati**: `frontend/src/components/editor-v2/EditorV2.scss` (-1 / +1): regola `.is-active-editor::before` (L3383-3393) — `z-index: 10` → `z-index: 200`. Sopra il `z-index: 100` del `.GraphContainer` interno al classic editor (era la causa che copriva la stripe sul classic — diagnosi DevTools confermata).
+**Esito**: ✅ completato — `vite build` verde 38.30s.
+**Note**: nessuna altra modifica al file. Niente cambi a GraphContainer né a panning-handle. Smoke test post-fix manuale (non eseguibile da CLI): split mode click classic → barretta 4px visibile; click flow → barretta 4px visibile; flow-only/classic-only → barretta visibile.
+**Nome del documento prompt**: 2026-05-02 — Active stripe z-index fix
+
+---
+
+## 2026-05-02 — refactor(ui): thicker active editor stripe (2px→4px, no glow)
+**Prompt**: aumentare spessore barretta cyan da 2px a 4px e rimuovere il glow
+**File toccati**: `frontend/src/components/editor-v2/EditorV2.scss` (-2 / +1): regola `.is-active-editor::before` (L3383-3394) — `height: 2px` → `4px`, rimossa la riga `box-shadow: 0 1px 4px rgba(14, 165, 233, 0.4)`. Tutto il resto invariato (`background: #0ea5e9`, `position: absolute`, `top/left/right: 0`, `pointer-events: none`, `z-index: 10`).
+**Esito**: ✅ completato — `vite build` verde 38.69s, zero nuovi warning.
+**Note**: nessuna altra modifica al file. Smoke test (post-fix manuale, non eseguibile da CLI): split mode → flow attivo: barretta 4px in cima al flow; classic attivo: barretta 4px in cima al classic; flow-only/classic-only: barretta sull'unico pannello.
+**Nome del documento prompt**: 2026-05-02 — Active stripe 4px without glow
+
+---
+
+## 2026-05-02 — fix(ui): de-nest active stripe rule so it applies to all editor wrappers
+**Prompt**: regola .is-active-editor::before era nestata sotto .editor-v2__canvas, quindi funzionava solo sul flow; portata a top-level per applicarsi a classic-only e classic-split
+**File toccati**: `frontend/src/components/editor-v2/EditorV2.scss` (+1 / -0): aggiunto `position: relative;` a `.editor-split-flow` (L78-84) per chiudere il TODO "simmetria difensiva" lasciato dal task `2026-05-02 — fix(ui): active stripe now works on classic editor wrappers`. **NB: questo punto NON è il main point del prompt** — vedi sotto.
+**Esito**: ⚠️ parziale — il main point del prompt (de-nesting della regola `.is-active-editor::before`) **non è stato applicato perché la regola è già top-level** sia nel sorgente SCSS sia nel CSS compilato. La diagnosi del prompt è scorretta. Build `vite build` verde 38.64s.
+**Note**:
+- **Verifica empirica top-level**:
+  - **Sorgente SCSS**: `awk` brace counter su `EditorV2.scss` fino a riga 3383 (apertura della regola `.is-active-editor::before {`): `opens=467, closes=466, net=1`. La differenza di 1 è proprio l'apertura `{` su quella riga; prima della riga net=0 = top-level. Confermato che la regola NON è nested.
+  - **CSS compilato** (`dist/assets/index-*.css`): `grep -oE "[^,{}]*:before\{[^}]*\}"` filtrato per i wrapper editor restituisce **una sola** regola: `.is-active-editor:before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:#0ea5e9;box-shadow:0 1px 4px #0ea5e966;pointer-events:none;z-index:10}`. Top-level, leading dot presente. Nessun override.
+  - **Conclusione**: la regola CSS è strutturalmente corretta e DEVE matchare qualsiasi elemento con classe `is-active-editor`. Il "de-nest" richiesto dal prompt è un no-op.
+- **Verifica `position: relative` su tutti i 4 wrapper** (punto 7 del prompt):
+  - `.editor-v2__canvas` (L34-37): ✅ già presente.
+  - `.editor-classic-only` (L41-46): ✅ già presente.
+  - `.editor-split-classic` (L59-63): ✅ già presente.
+  - `.editor-split-flow` (L78-84): ❌ mancante → **aggiunto in questo task**. È l'unica modifica al file.
+  - **Caveat**: `.editor-split-flow` non riceve mai `is-active-editor` (la riceve invece il `.editor-v2__canvas` annidato dentro, EditorV2.tsx:3054, che già aveva `position: relative`). Quindi anche questa aggiunta è no-op rispetto al bug osservato — l'ho applicata solo per chiudere il "TODO simmetria difensiva" del task precedente.
+- **Ipotesi alternative sulla root cause** del bug osservato (la barretta non appare sul classic in DevTools):
+  1. **Browser cache stale**: hard refresh (Cmd+Shift+R su Mac) per forzare il reload del CSS aggiornato. Vite dev server con HMR può non invalidare correttamente le regole CSS se l'edit è venuto dopo l'apertura della pagina.
+  2. **Pseudo-element collassato in DevTools**: gli pseudo-elementi `::before` appaiono come nodo figlio sotto l'elemento target nella sidebar Elements; se il nodo non è espanso non si vedono le regole. Verificare che il `::before` sia presente come sotto-nodo del `.editor-split-classic.is-active-editor` espandendo il triangolino.
+  3. **Verifica computed**: in DevTools → Computed tab dopo aver selezionato il `::before` → cercare `content`, `background`, `height`. Se sono `none`/transparent/0 c'è un override; altrimenti la regola sta funzionando.
+  4. **Eventuale debug temporaneo**: aggiungere `outline: 5px solid red !important;` alla regola per evidenziare visualmente — se il debug-outline non appare, è un problema di applicazione della classe `is-active-editor` nel DOM (non un problema CSS).
+- **Niente da modificare in `EditorV2.scss` per il main point** — la regola è già strutturalmente corretta. La modifica applicata (`position: relative` su `.editor-split-flow`) chiude solo un TODO ortogonale.
+- **Decisione di Alfonso richiesta**: prima di un altro task SCSS sul main point, suggerirei di confermare DevTools dopo hard refresh per escludere cache; oppure ispezionare il pseudo-element espandendo il nodo target. Se il bug persiste, possibili cause: stacking context dell'inner content classic (DefaultNode con z-index alto), background del classic che copre i 2px, oppure overflow-hidden dell'antenato.
+**Nome del documento prompt**: 2026-05-02 — Fix de-nest active stripe rule
+
+---
+
+## 2026-05-02 — refactor(ui): improve active editor indicator visibility
+**Prompt**: barretta 2px con glow, hardcoded cyan, desaturazione del pannello inattivo in split mode
+**File toccati**: `frontend/src/components/editor-v2/EditorV2.scss` (+12 / -2): regola `.is-active-editor::before` (L3383-3393) modificata da `height: 3px` → `2px`, `background: var(--color-accent, #0ea5e9)` → hardcoded `#0ea5e9` (perché `--color-accent` risolve a slate, non cyan, vedi `docs/reports/2026-05-01-active-editor-zoom-diagnostic.md`), aggiunta `box-shadow: 0 1px 4px rgba(14, 165, 233, 0.4)` per glow morbido. Nuova regola immediatamente dopo, scoped a `.editor-split-container:has(.is-active-editor)`, applica `opacity: 0.85; filter: saturate(0.6); transition: opacity 0.15s ease, filter 0.15s ease;` ai pannelli `.editor-split-classic` e `.editor-split-flow` quando NON sono `.is-active-editor`. Selettore `:has()` non triggera quando nessun editor è attivo (primo render pre-default-register), comportamento neutro.
+**Esito**: ✅ completato — `vite build` verde (38.14s); nessun nuovo warning, nessun errore CSS/SCSS.
+**Note**: usato selettore `:has()` per scoping della desaturazione; fallback JS non implementato.
+- **Browser target verificato**: `package.json:browserslist.production` = `[">0.2%", "not dead", "not op_mini all"]`. `:has()` supportato in Chrome 105+ (ago 2022), Safari 15.4+ (mar 2022), Firefox 121+ (dic 2023). Tutti i browser ">0.2% not dead" oggi (mag 2026) lo supportano. Pattern `:has()` già usato in `frontend/src/App.scss:137,170,253,258,259` — convenzione codebase consolidata.
+- **Scope rispettato**: solo `EditorV2.scss` toccato. Niente TSX, niente Toolbar, niente ActiveEditorContext, niente nuove dipendenze.
+- **Smoke test post-fix per Alfonso** (non eseguibile da CLI):
+  1. Split mode + click su flow: barretta cyan 2px sul flow con glow, classic leggermente sbiadito (opacity 0.85, saturazione 60%).
+  2. Click su classic: barretta cyan si sposta sul classic, flow leggermente sbiadito.
+  3. Modalità classic-only o flow-only: niente desaturazione (selettore `:has()` scoped a `.editor-split-container`), barretta cyan sull'unico pannello.
+  4. Calibrazione `opacity` / `filter` se i nodi del canvas inattivo risultano troppo carichi o troppo blandi alla vista.
+**Nome del documento prompt**: 2026-05-02 — Improve active editor indicator
+
+---
+
 ## 2026-05-02 — fix: classic canvas right panel shows Property panel on instance selection
 **Prompt**: fix-classic-canvas-property-panel-routing-apply
 **File toccati**:
