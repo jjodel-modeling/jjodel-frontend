@@ -51,6 +51,7 @@ import './ContextMenu.scss';
 import { getLastEditedViewpointId, getLastEditedViewpointName, createViewInWorkbench } from '../../utils/lastViewpoint';
 import { toast } from '../Toast/toastDispatch';
 import { JjodelEvents } from '../../events/registry';
+import { createVertexForObject, createCompositionEdgeForObjects } from '../editor-v2/sync/canvasToJjom';
 
 function ContextMenuComponent(props: AllProps) {
     return ContextMenuComponentInner(props);
@@ -332,11 +333,50 @@ function ContextMenuComponentInner(props: AllProps) {
         let type = lref.type;
         out = [type, ...type.allSubClasses].filter(e=>!!e);
         out = U.proxyDeduplicator(out);
+
+        // After LValue.addObject creates a containment child, the v2-flow graph
+        // has no DVertex/DEdge for it (LValue.addObject sets father=LValue, the
+        // child is NOT in model.objects, no graph artifacts are created). The
+        // classic editor reads from parent.$ref.values directly and is unaffected;
+        // the flow editor (useJjomSync) keys off graph.subElements and so does
+        // not see the new child without explicit help. Bridge that gap here.
+        const syncChildToFlow = (child: LObject | undefined): void => {
+            if (!child || !model?.id || !lref?.name) return;
+            const parent = (l as any).father as LObject | undefined;
+            if (!parent?.id) return;
+            const state = store.getState();
+            const graphIds: string[] = (state as any).graphs ?? [];
+            let graphId: string | null = null;
+            for (const id of graphIds) {
+                const g = state.idlookup?.[id] as any;
+                if (g?.model === model.id && g.graphStyle === 'v2-flow') { graphId = id; break; }
+            }
+            if (!graphId) return; // no v2-flow graph yet; useJjomSync will create later
+            // Best-effort layout: cascade from parent vertex if found
+            let x = 0, y = 0;
+            const dGraph = state.idlookup?.[graphId] as any;
+            const subEls: string[] = dGraph?.subElements ?? [];
+            for (const id of subEls) {
+                const ge = state.idlookup?.[id] as any;
+                if (ge?.className === 'DVertex' && ge.model === parent.id) {
+                    x = (ge.x ?? 0) + (ge.w ?? 200) + 80;
+                    y = (ge.y ?? 0);
+                    break;
+                }
+            }
+            createVertexForObject(graphId, child.id, x, y);
+            createCompositionEdgeForObjects(graphId, parent.id, child.id, lref.name);
+        };
+
         let jsxret: ReactNode;
         // console.log('contextmenu add options', {out, sc: type.allSubClasses, type});
         if (out.length === 1) {
             let name = out[0].name;
-            jsxret = <Tooltip tooltip={'add to "' + lref.name + '" reference'}><div key={'single_' + l.id} onClick={() => { close(); l.addObject({}, out[0]); }}
+            jsxret = <Tooltip tooltip={'add to "' + lref.name + '" reference'}><div key={'single_' + l.id} onClick={() => {
+                close();
+                const child = l.addObject({}, out[0]) as LObject;
+                syncChildToFlow(child);
+            }}
                          className={'col item'} tabIndex={0}>{icon['add']} Add {name}</div></Tooltip>
         } else jsxret = <div key={'multi' + l.id} onClick={() => setChildrenMenu(!childrenMenu) }
                              tabIndex={0} className={'col item submenu-holder hoverable'}>
@@ -349,6 +389,7 @@ function ContextMenuComponentInner(props: AllProps) {
                             setChildrenMenu(false);
                             const child = l.addObject({}, lc);
                             l.values = [...(l.values as LObject[]), child];
+                            syncChildToFlow(child as LObject);
                         }} className={'col item'} tabIndex={0}>
                             <Tooltip tooltip={'add to "'+ lref.name+'" reference'}><span>{lcname}</span></Tooltip>
                         </li>)}

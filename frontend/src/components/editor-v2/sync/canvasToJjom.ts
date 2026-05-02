@@ -1062,6 +1062,47 @@ export function setModelUri(modelid: string, uri: string): void {
 // ---------------------------------------------------------------------------
 
 /**
+ * Create a DVertex for an existing DObject in the given graph.
+ * Used both as a sub-step of syncCreateObject and by external callers
+ * (e.g. classic ContextMenu) that already have a DObject and only need
+ * the v2-flow graph artifact.
+ *
+ * @returns the DVertex ID on success, false on failure
+ */
+export function createVertexForObject(
+    graphId: string,
+    dObjectId: string,
+    x: number = 0,
+    y: number = 0,
+    w: number = 200,
+    h: number = 80,
+): string | false {
+    try {
+        const size = new GraphSize(x, y, w, h);
+        const dv = DVertex.new(0, dObjectId, graphId, graphId, undefined, size);
+        return dv?.id || false;
+    } catch (err) {
+        console.warn('[canvasToJjom] createVertexForObject failed:', err);
+        return false;
+    }
+}
+
+/**
+ * Look up the DVertex ID in graph.subElements that wraps the given DObject.
+ */
+function findVertexIdForObject(graphId: string, objectId: string): string | null {
+    const state = store.getState();
+    const dGraph = state.idlookup?.[graphId] as any;
+    if (!dGraph) return null;
+    const subEls: string[] = dGraph.subElements ?? [];
+    for (const id of subEls) {
+        const ge = state.idlookup?.[id] as any;
+        if (ge?.className === 'DVertex' && ge.model === objectId) return id;
+    }
+    return null;
+}
+
+/**
  * Create a new DObject instance + DVertex on the graph.
  * IMPORTANT: Do NOT wrap DObject.new in an outer TRANSACTION — nesting
  * causes x/y coordinates to be lost (see MEMORY.md).
@@ -1107,15 +1148,62 @@ export function syncCreateObject(
             return false;
         }
 
-        // Create the DVertex positioned at drop coordinates
-        const size = new GraphSize(x, y, 200, 80);
-        const dv = DVertex.new(0, dObject.id, graphId, graphId, undefined, size);
-        const vertexId = dv?.id;
-
-        return vertexId || false;
+        return createVertexForObject(graphId, dObject.id, x, y);
     } catch (err) {
         console.warn('[canvasToJjom] Failed to create object:', err);
         return false;
+    }
+}
+
+/**
+ * Create only the visual DEdge for a parent → child composition.
+ * Looks up the parent and child DVertex IDs from graph.subElements.
+ *
+ * Does NOT write to parent.$ref.values — assumes the caller (or the framework
+ * via the containment father link) has already populated the value array.
+ * This is the path used by the classic ContextMenu after `LValue.addObject`,
+ * which already auto-appends to parent.values via the containment father.
+ *
+ * @returns the DEdge ID on success, null on failure
+ */
+export function createCompositionEdgeForObjects(
+    graphId: string,
+    parentObjectId: string,
+    childObjectId: string,
+    referenceName: string,
+): string | null {
+    try {
+        const parentVertexId = findVertexIdForObject(graphId, parentObjectId);
+        const childVertexId = findVertexIdForObject(graphId, childObjectId);
+        if (!parentVertexId || !childVertexId) {
+            console.warn('[canvasToJjom] createCompositionEdgeForObjects: vertex(es) not found', {
+                graphId, parentObjectId, childObjectId, parentVertexId, childVertexId,
+            });
+            return null;
+        }
+
+        const parentObject: any = LPointerTargetable.fromPointer(parentObjectId);
+        const refDefId = resolveReferenceIdByName(parentObject, referenceName);
+
+        let edgeId: string | null = null;
+        TRANSACTION('Classic create composition edge', () => {
+            const dEdge = DVoidEdge.new2(
+                refDefId,
+                graphId,
+                graphId,
+                undefined,
+                parentVertexId,
+                childVertexId,
+                (d: DEdge) => { d.isReference = true; }
+            );
+            edgeId = dEdge?.id ?? null;
+        });
+
+        if (edgeId) markCanvasUpdated(edgeId);
+        return edgeId;
+    } catch (err) {
+        console.warn('[canvasToJjom] createCompositionEdgeForObjects failed:', err);
+        return null;
     }
 }
 
