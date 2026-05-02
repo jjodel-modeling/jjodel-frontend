@@ -1,5 +1,43 @@
 # Claude Code Session Log
 
+## 2026-05-02 — revert: Manhattan routing parked
+**Prompt**: `2026-05-02_revert-manhattan-routing.md`
+**File toccati**: `frontend/src/model/dataStructure/GraphDataElements.tsx` (revert via `git restore` a HEAD — rimosso branch Manhattan in `get_segments_impl`, log `[Manhattan-diag]`, helper `computeMultiEdgeIndex` e `makeVirtualSegmentMaker`, import di `manhattanRouting`); `frontend/src/common/DV.tsx` (revert via `git restore` — condizione label tornata a `s.label && <foreignObject ...>`); `docs/parked/manhattanRouting.ts.parked` (mosso da `frontend/src/common/manhattanRouting.ts` con `mv` plain — il file era untracked); `docs/parked/README.md` (NUOVO — documenta motivi del parking, helper riutilizzabili, possibili punti di iniezione futuri).
+**Esito**: ✅ completato — `git diff` su entrambi i file revertati è vuoto; `npm run build` verde 39.69s.
+**Note**: Manhattan routing parcheggiato. Reasons in `docs/parked/README.md`. Discovery Fase A (`docs/discovery-edge-routing-2026-05-02.md`) mantenuta come riferimento storico. Helper geometrici (`getOutgoingSide`, `computeSideAnchor`, `projectionsOverlap`, `computeManhattanPath`, self-edge loop, multi-edge distribution) corretti in isolamento ma punto di iniezione (`get_segments_impl`) errato — il rendering usa `edge.d` cached da invocazioni transienti (~4× per edge con posizioni nodi non stabili), il path computato non matcha quello renderizzato. Per il redesign: investigare wrappare `LVoidEdge.get_d(c)` a livello di stringa SVG (vedi `roundManhattanPath` in `editor-v2/utils/edgeUtils.ts:512` per pattern) o spostare le decisioni di routing nel viewpoint apply layer.
+**Nome del documento prompt**: 2026-05-02 — Revert Manhattan routing + parking
+
+---
+
+## 2026-05-02 — feat(classic): Manhattan routing for edges
+**Prompt**: implementare routing Manhattan ortogonale nel classic editor (Approccio A — midpoint virtuali). Discovery Fase A in `docs/discovery-edge-routing-2026-05-02.md`.
+**File toccati**:
+- `frontend/src/common/manhattanRouting.ts` (NUOVO, +110): helper geometriche pure — `getOutgoingSide` (8-cardinal → 4 lati), `computeSideAnchor` (distribuzione `(i+1)/(N+1)` lungo lato), `projectionsOverlap` (per L vs Z), `computeSelfEdgePath` (loop UML radius 40px), `computeManhattanPath` (entrypoint).
+- `frontend/src/model/dataStructure/GraphDataElements.tsx` (+78 / -1): import helper a riga 65; `makeVirtualSegmentMaker` come funzione locale dopo `type segmentmaker` (riga 2103); branch Manhattan in `get_segments_impl` dopo `get_points` (righe 2575-2610) — gated su `bm === EdgeBendingMode.Line && allNodes.length === 2 && all.length === 2`; metodo privato `computeMultiEdgeIndex` su `LVoidEdge` (righe 2681-2710) — usa `node.edgesOut`/`edgesIn` esistenti per enumerare peer, filtra per stesso lato, ordina per `id`, esclude self-edge dei peer; `let bm` spostato sopra il branch (era a 2 righe sotto).
+- `frontend/src/common/DV.tsx` (+1 / -1): condizione label segment a riga 900 da `s.label && <foreignObject ...>` a `s.label && s.isLongest && <foreignObject ...>` — `isLongest` già popolato da `setLabels` (`GraphDataElements.tsx:2676`), zero modifiche a `usageDeclarations`.
+**Esito**: ✅ completato — `npx tsc --noEmit` zero errori nei file toccati (errori pre-esistenti su CSS modules / casing settings / static assets non correlati); `npm run build` verde 40.47s.
+**Note**:
+- Approccio A scelto in discovery: niente nuovo `EdgeBendingMode`, niente bump VersionFixer. La modifica vive nel L-getter quindi si applica anche ai progetti con view custom (`clonedCounter > 0`) — il path è ricalcolato a ogni render.
+- Auto-disattivazione: appena l'utente fa double-click per inserire un midpoint reale, `allNodes.length > 2` e il branch è saltato — l'utente vince.
+- Multi-edge distribution su lato condiviso del nodo: anchor a `(i+1)/(N+1)` lungo il lato. Self-edge esclusi dalla group computation (offset fisso 30%/70%).
+- L vs Z: 1 elbow se le bbox NON si sovrappongono sull'asse perpendicolare alla direzione d'uscita; 2 elbow (gomito a metà) se si sovrappongono — evita il backtracking visivo.
+- Self-edge: loop laterale destro radius 40px, stile UML.
+- TODO inline e sotto: corner rounding via `roundManhattanPath` wrappato in `LVoidEdge.get_d` (vedi `frontend/src/components/editor-v2/utils/edgeUtils.ts:512-593` per la reference implementation del flow editor). Sharp corners per ora.
+- Smoke test UI manuale non eseguibile da CLI. Scenari da verificare: 2 classi side-by-side → L 1 elbow; 2 classi sovrapposte verticalmente → Z 2 elbow; source con 3 edge stesso lato → 25%/50%/75%; self-edge → loop destro; drag preview di nuovo edge → Manhattan applicato anche durante creazione; double-click per midpoint utente → Manhattan disattivato; label appare solo sul segmento più lungo.
+- Esempi `frontend/src/examples/*.ts`: nessuno ha `clonedCounter` su `Pointer_ViewEdgeAssociation`, quindi mantengono il template default e il routing si propaga automaticamente.
+**Nome del documento prompt**: 2026-05-02 — Manhattan routing classic editor (Fase B)
+
+---
+
+## 2026-05-02 — discovery: edge routing classic editor (Fase A)
+**Prompt**: read-only discovery dell'architettura di rendering edge nel classic editor. Output: `docs/discovery-edge-routing-2026-05-02.md`.
+**File toccati**: `docs/discovery-edge-routing-2026-05-02.md` (NUOVO).
+**Esito**: ✅ completato — nessuna modifica al codice.
+**Note**: TL;DR — la "IIFE attesa" nel jsxString **non esiste**. Il path edge è calcolato dal getter L-class `LVoidEdge.get_segments_impl()` in `GraphDataElements.tsx:2559`, che produce `EdgeSegment[]` con `s.d` SVG via `EdgeSegment.makeD()` (riga 1987). Il template (`DV.tsx:868-928`) consuma solo i risultati pre-calcolati via `usageDeclarations`. Approccio raccomandato per Fase B: midpoint virtuali in `get_segments_impl`, niente bump VersionFixer (la modifica vive nel codice TS, propagazione gratuita anche per progetti con view custom). 6 edge view (Association/Dependency/Inheritance/Aggregation/Composition/generic) condividono lo stesso template ⇒ un solo intervento le copre tutte. API geometriche già pronte: `GraphSize.tl/tr/bl/br/cl/cr/ct/cb/cc`, `closestIntersection`, `IPoint.getRelativeDirection`. Tutte le 7 fixture hanno `clonedCounter: absent` su `Pointer_ViewEdgeAssociation` → safe per refresh.
+**Nome del documento prompt**: 2026-05-02 — Edge routing discovery (Fase A)
+
+---
+
 ## 2026-05-02 — refactor(ui): scope active stripe to split mode only
 **Prompt**: barretta visibile solo in split, nascosta in flow-only e classic-only dove non c'è ambiguità
 **File toccati**: `frontend/src/components/editor-v2/EditorV2.scss` (-1 / +1): selettore della regola active stripe modificato da `.is-active-editor::before` a `.editor-split-container .is-active-editor::before` (L3383). Tutte le proprietà invariate (`height: 4px`, `background: #0ea5e9`, `z-index: 200`, etc.). La regola di desaturazione `.editor-split-container:has(.is-active-editor) ...` (L3399-3404) resta invariata, era già scopata al split mode.
