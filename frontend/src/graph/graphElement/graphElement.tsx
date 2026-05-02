@@ -559,7 +559,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             this.props.node?.select(forUser);
             SetRootFieldAction.new('_lastSelected', {
                 node: this.props.nodeid,
-                view: this.props.view.id,
+                view: '',
                 modelElement: this.props.data?.id
             }, (this.props.data as any).name);/*
         // ? why this?
@@ -952,7 +952,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             if (state._lastSelected?.node !== this.props.nodeid) {
                 SetRootFieldAction.new('_lastSelected', {
                     node: this.props.nodeid,
-                    view: this.props.view.id,
+                    view: '',
                     modelElement: this.props.data?.id
                 });
             }

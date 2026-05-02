@@ -1,5 +1,28 @@
 # Claude Code Session Log
 
+## 2026-05-02 — fix: classic canvas right panel shows Property panel on instance selection
+**Prompt**: fix-classic-canvas-property-panel-routing-apply
+**File toccati**:
+- `frontend/src/graph/graphElement/graphElement.tsx` (-2 / +2): in `select()` (L562) e in `onMouseDown` chain (L955) sostituito `view: this.props.view.id` → `view: ''`. Allinea il classic al flow editor (`useJjomSelection.ts:127, 164, 170, 210, 242` e `EditorV2.tsx:2839` già scrivono `view: ''`). Effetto: `Info.tsx:1129` non triggera più erroneamente il branch ViewData su selezione classic, fall-through al Property panel. **NB path corretto è `src/graph/graphElement/graphElement.tsx`, non `src/components/editors/graphElement.tsx` indicato nel prompt** (verificato — è l'unico graphElement.tsx nel repo, contiene `select()` a L556 e mouse-down handler a L950).
+- `frontend/src/components/editors/NodeEditor.tsx` (-3 / +3): in `mapStateToProps` (L803) rilassata la guard `if (node && view)` → `if (node)`; `view: L.fromPointer(view)` → `view: view ? L.fromPointer(view) : undefined` (L806); in StateProps interface (L58) `view: LViewElement` → `view?: LViewElement`. Necessario perché dopo Opzione A il classic scrive `view: ''` su selezione canvas, e la guard precedente rendeva `ret.selected = undefined` lasciando NodeEditor in empty-state nonostante un nodo fosse selezionato.
+**Esito**: ✅ completato — `vite build` verde (43.55s); `tsc --noEmit` totale errori invariato (83 pre-esistenti, **zero nuovi**).
+**Note**: Opzione A applicata. Classic ora allineato al flow per `_lastSelected.view`. View editor resta accessibile via TreeView/DockManager.openViewpoint.
+- **Step 1 — sub-discovery NodeEditor**: `grep` ha trovato NodeEditor montato in 2 punti: (a) `Dock.tsx:276` come tab "Node" del Dock (group 'editors', `closable: false`, sempre presente, attivabile via tab click), (b) `PropertiesWithTreeView.tsx:103` dentro `if (advanced)` + sezione "NODE" togglabile chiusa di default (`useState(false)` a L34). Verdetto: **montato e impattato dal fix**, ma `selected.view` è **mai letto** all'interno di NodeEditor (`grep selected.view` zero match nel file) — è solo un campo defensive nella guard `mapStateToProps`. Il fix richiesto è ≤ 5 righe e ovvio (3 righe, modifica meccanica): rilassare la guard e tipizzare `view` come optional. Applicato senza chiedere conferma per il vincolo "applica quel fix solo se la modifica è ≤ 5 righe e ovvia".
+- **Side benefit gratuito**: `PropertiesWithTreeView.tsx:42` (`viewSelected = !!state._lastSelected?.view`) auto-collassava il TreeView ANCHE su selezione classic (effetto collaterale dello stesso bug). Dopo il fix, il TreeView resta visibile su selezione classic, collassa solo quando l'utente seleziona un view/viewpoint dal dock/TreeView (semantica corretta).
+- **Path canonico del View editor preservato**: `DockManager.openViewpoint()` (DockManager.tsx:194-198) continua a scrivere `view: vp.id`. Click su viewpoint dal TreeView/dashboard → `Info.tsx:1129` triggera ViewData → View editor mostrato. Nessuna regressione.
+- **No regression sul flow**: `useJjomSelection.selectElement()` continua a scrivere `view: ''`, comportamento identico a prima.
+- **Verifica manuale post-fix NON eseguibile da CLI**. Lista per Alfonso:
+  1. Canvas classic, viewpoint Default: click su `iii : Person` → Property panel (TYPE/SLOTS/Conforms-to/breadcrumb). ✅
+  2. Canvas classic, viewpoint Default: click su `Child : Child_0` → Property panel del Child. ✅
+  3. Canvas flow, viewpoint Default: click su `Person : Person` → Property panel (regression check). ✅
+  4. TreeView/dashboard: click su viewpoint Default → View editor (Apply to/Template/Style/Events). ✅
+  5. Click sul nodo classic non auto-collassa più il TreeView (side benefit). ✅
+  6. NodeEditor tab del Dock: click su qualsiasi nodo (classic o flow) mostra anchors/sizes/position invece di "No node selected". ✅
+- **Diff totale**: 4 inserzioni, 5 cancellazioni (sostituzione 2+3 righe) su 2 file. Ben dentro il budget del prompt.
+**Nome del documento prompt**: 2026-05-02 15:10
+
+---
+
 ## 2026-05-02 — refactor: remove PropertiesPanel dead code from editor-v2
 **Prompt**: rimuovere PropertiesPanel.tsx (dead code dopo sostituzione con dock-based Info.tsx) + accessori SCSS/barrel se presenti, dopo verifica zero usages
 **File toccati**:
