@@ -3078,8 +3078,10 @@
 
         &.disabled {
             opacity: 0.45;
-            cursor: default;
-            pointer-events: none;
+            cursor: not-allowed;
+            // pointer-events kept enabled so the HTML `title` tooltip
+            // shows on hover; the `disabled` attribute already prevents
+            // click and keyboard activation.
         }
 
         &.danger {

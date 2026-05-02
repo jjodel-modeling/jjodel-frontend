@@ -2175,7 +2175,14 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 }
             }
 
+            const classicTooltip = 'Available in classic editor';
             items.push(
+                {
+                    label: 'Edit',
+                    icon: 'bi-pencil-square',
+                    disabled: true,
+                    tooltip: classicTooltip,
+                },
                 {
                     label: 'Duplicate',
                     icon: 'bi-copy',
@@ -2186,6 +2193,26 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     icon: 'bi-trash',
                     danger: true,
                     onClick: () => deleteNode(contextMenu.nodeId!),
+                },
+                { divider: true },
+                {
+                    label: 'Up',
+                    icon: 'bi-arrow-up',
+                    disabled: true,
+                    tooltip: classicTooltip,
+                },
+                {
+                    label: 'Down',
+                    icon: 'bi-arrow-down',
+                    disabled: true,
+                    tooltip: classicTooltip,
+                },
+                { divider: true },
+                {
+                    label: 'Disable auto-sizing',
+                    icon: 'bi-arrows-angle-expand',
+                    disabled: true,
+                    tooltip: classicTooltip,
                 },
                 { divider: true },
                 {
