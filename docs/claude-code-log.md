@@ -1,5 +1,14 @@
 # Claude Code Session Log
 
+## 2026-05-02 — refactor(ui): scope active stripe to split mode only
+**Prompt**: barretta visibile solo in split, nascosta in flow-only e classic-only dove non c'è ambiguità
+**File toccati**: `frontend/src/components/editor-v2/EditorV2.scss` (-1 / +1): selettore della regola active stripe modificato da `.is-active-editor::before` a `.editor-split-container .is-active-editor::before` (L3383). Tutte le proprietà invariate (`height: 4px`, `background: #0ea5e9`, `z-index: 200`, etc.). La regola di desaturazione `.editor-split-container:has(.is-active-editor) ...` (L3399-3404) resta invariata, era già scopata al split mode.
+**Esito**: ✅ completato — `vite build` verde 38.75s, zero nuovi warning.
+**Note**: smoke test post-fix manuale (non eseguibile da CLI): split mode flow attivo → barretta sul flow; split mode classic attivo → barretta sul classic; flow-only → niente barretta; classic-only → niente barretta.
+**Nome del documento prompt**: 2026-05-02 — Active stripe split-only
+
+---
+
 ## 2026-05-02 — fix(ui): raise active editor stripe z-index above GraphContainer
 **Prompt**: stripe coperta dal panning-handle interno al GraphContainer (z-index: 100); alzare z-index della stripe da 10 a 200
 **File toccati**: `frontend/src/components/editor-v2/EditorV2.scss` (-1 / +1): regola `.is-active-editor::before` (L3383-3393) — `z-index: 10` → `z-index: 200`. Sopra il `z-index: 100` del `.GraphContainer` interno al classic editor (era la causa che copriva la stripe sul classic — diagnosi DevTools confermata).

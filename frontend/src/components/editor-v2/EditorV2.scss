@@ -3381,7 +3381,7 @@ body.header-variant-c {
 // so the stripe overlays the content without displacing it. Visible across
 // flow / classic / split modes — in single-editor modes it just sits at the
 // top of the only editor without harm.
-.is-active-editor::before {
+.editor-split-container .is-active-editor::before {
     content: '';
     position: absolute;
     top: 0;
