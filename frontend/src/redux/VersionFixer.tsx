@@ -598,6 +598,14 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         return s;
     }
 
+    // 2.210 → 2.211: M1 node rendering aligned to flow editor
+    // (header order + emphasis, feature operator =, value italic, no bottom padding).
+    // No data migration; auto-refresh of default views regenerates view.css from views.ts
+    // and jsxString templates from DV.tsx.
+    private ['2.210 -> 2.211'](s: DState): DState {
+        return s;
+    }
+
 }
 
 
