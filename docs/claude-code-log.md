@@ -1,5 +1,65 @@
 # Claude Code Session Log
 
+## 2026-05-03 — docs: discovery keystroke metamodel editor
+**Prompt**: discovery read-only di tutti i keystroke attivi nel flow editor (M2/M1) e nell'app shell, output strutturato per task successivo di estensione/normalizzazione.
+**File toccati**: frontend/docs/discovery/2026-05-03_keystroke-metamodel-editor.md (nuovo), docs/claude-code-log.md
+**Esito**: ✅ completato
+**Note**: read-only, nessuna modifica al codice. Base per il prompt di estensione shortcuts.
+**Nome del documento prompt**: 2026-05-03 HH:mm — 2026-05-03_discovery_keystroke_metamodel_editor.md
+
+---
+
+## 2026-05-03 — refactor: estrazione modulo classic edge routing (Fase 1a)
+**Prompt**: estrazione conservativa di get_segments_impl, get_points_impl, snapSegmentsToNodeBorders, setLabels, headPos_impl, svgLetterSize in `frontend/src/edges/routing/classic/`. Comportamento invariato.
+**File toccati**:
+- new: `frontend/src/edges/routing/classic/{types,stride,points,snap,labels,markers,segments,index}.ts` (8 file)
+- new: `frontend/src/edges/routing/classic/__tests__/routing.test.ts`
+- mod: `frontend/src/model/dataStructure/GraphDataElements.tsx`:
+  - `export` aggiunto a `type segmentmaker` (riga 2101)
+  - 6 import aggiunti per il nuovo modulo (`stride`, `points`, `snap`, `labels`, `markers`, `segments`)
+  - `svgLetterSize` rimosso (era a riga 2407-2438) — sostituito con import + chiamata diretta
+  - `get_points_impl` corpo rimpiazzato con thin wrapper (4 righe), passa `c.data.id`, `this.get_graph(c)`, `this.get_root(c)`, anchor*, statici DVoidEdge.isFollowingCoords / LVoidEdge.startFollow/endFollow
+  - `snapSegmentsToNodeBorders` corpo rimpiazzato con thin wrapper (1 riga su `snapSegmentsToBorders(v, ret, fillSegments)`)
+  - `setLabels` rimosso interamente — call site in `get_segments_impl` usa direttamente l'import (`setLabels(ret, allNodes, this.get_longestLabel(c), this.get_labels(c), c.proxyObject as LVoidEdge, c.data.id)`)
+  - `get_label_impl` rimosso interamente (helper interno, nessun caller esterno) — sostituito da `computeLabel` privato in `labels.ts`
+  - `headPos_impl` corpo rimpiazzato con thin wrapper (4 righe) che risolve `segment0`/`view`/`zoom` e chiama `computeHeadPosition`
+  - `get_segments_impl` corpo rimpiazzato con thin wrapper su `computeRouting({...input})`
+**Esito**: ✅ completato
+- `npx tsc --noEmit`: zero errori introdotti su `GraphDataElements.tsx` o `edges/routing/`. Errori pre-esistenti (CSS modules, casing settings, static assets) restano invariati.
+- `npm run build`: verde, 41.12s.
+- `npx vitest run`: 573 test passano (tutti i test runtime), 28 nuovi test su `svgLetterSize`. 9 file-level failures pre-esistenti (`window is not defined` da `monaco-editor`/`PerformanceMetrics.ts`) non toccate da questo refactor — stesso elenco di file falliti prima e dopo.
+**Note**:
+- **Deviazione minore dal prompt**: il prompt diceva "computeRouting Non chiama computeHeadPosition (quello è chiamato da get_headPos/get_tailPos separatamente)". Tuttavia `RoutingOutput.head/tail` sono campi obbligatori nel tipo richiesto, e `get_segments_impl` originale popola entrambi via `headPos_impl(c, true/false, …)`. Per preservare il comportamento ho mantenuto le due chiamate a `computeHeadPosition` dentro `computeRouting`. Lettura interpretativa: il prompt voleva dire "computeRouting non duplica la logica di computeHeadPosition", e questo è rispettato (chiamata sì, redefinizione no).
+- **Tipo `RoutingInput.zoom` rimosso**: l'originale `get_segments_impl` hardcodava `let zoom = new GraphPoint(1, 1)` per le call a `headPos_impl`, e `headPos_impl` non usa effettivamente il valore di zoom (l'unica linea che lo userebbe è commentata). Per non veicolare un parametro che non ha effetto, il modulo usa anche lui un hardcoded `(1,1)` interno. Comportamento bit-per-bit identico.
+- **Snapshot test integration scope ridotto**: i casi del prompt (Edge dritto/midpoint/Bezier_Q/Bezier_C) richiedono mock di `LGraphElement`/`LViewElement`/`LGraph` + `EdgeSegment` per funzionare in env Vitest `node` (joiner pulla `window`/`document`/monaco-editor a load time, project non ha `jsdom`/`happy-dom`, prompt vieta deps nuove). I test hanno coperto `svgLetterSize` (28 casi parametrizzati per ogni `EdgeBendingMode` e tutte le combinazioni `addM`/`doubling`) usando `vi.mock` per isolare il joiner. Test integration end-to-end deferiti a una sessione successiva con scaffolding di mock dedicato.
+- **Side-effect `windoww.edge = l;`**: preservato per parità in `segments.ts:39` con commento `// TODO REMOVE: debug side-effect, kept for parity`.
+- **Bug headPos_impl riga 2274**: preservato in `markers.ts:60` con commento `// TODO: suspected bug — see discovery report 2026-05-03, likely should be end.x for first arg`.
+- **Dead code preservato per parità**: `printablesegment` inner func in `segments.ts:79`, `let _longestLabelData` reading (originale era `let longestLabel = c.data.longestLabel;` mai usato) in `segments.ts:86`, `let debug = true; if (debug)` block in `points.ts:46`.
+- **`get_pointsDebug` e `get_points_outer` lasciati come thin wrappers**: erano già wrapper sull'`get_points_impl` ora estratto, sono `private` e non chiamati esternamente. Lasciati nel file per non eccedere lo scope (cleanup futuro).
+- **Follow-up cleanup (Fase 1b o successive)**:
+  1. Rimuovere il side-effect `windoww.edge = l;` in `segments.ts`
+  2. Fix bug `headPos_impl:2274` (`end.y` → `end.x` come primo arg di `new GraphPoint`) in `markers.ts:62`
+  3. Rimuovere `get_segments_outer`/`_inner` se confermato dead (parametro `outer` sempre `true` nei call site)
+  4. Rimuovere `get_edgeEnd*` se duplicato di `get_endPoint_*`
+  5. Rimuovere `MidPoint` class commentata-out (GraphDataElements riga ~1875-1893)
+  6. Rimuovere `gapMode` Fill modes commentati in `snap.ts` e `EdgeFillSegment.makeD`
+  7. Rimuovere `get_pointsDebug`, `get_points_outer` se non chiamati nemmeno via L proxy magic
+  8. Caching esplicito (Fase 1b) — la doppia esecuzione getter `~4×` per edge documentata nel commit `bc8da1c01`
+  9. Reintroduzione Manhattan come router (Fase 2) — codice parcheggiato in `docs/parked/manhattanRouting.ts.parked`
+- **Snapshot test scope ampliato (futuro)**: configurare `jsdom` o equivalent per Vitest così da poter testare `computeRouting` con scenari del prompt; oppure costruire mock auto-contenuti di `EdgeSegment`/`GraphPoint`/`GraphSize` per test isolati.
+**Nome del documento prompt**: 2026-05-03 18:15 — fase 1a estrazione modulo routing classic
+
+---
+
+## 2026-05-03 — discovery: routing classic edge
+**Prompt**: discovery del calcolo geometrico edge classic in vista di refactoring
+**File toccati**: nessuno (read-only)
+**Esito**: ✅ completato
+**Note**: report consegnato come output del prompt
+**Nome del documento prompt**: 2026-05-03 17:30 — discovery routing classic edge
+
+---
+
 ## 2026-05-02 — revert: Manhattan routing parked
 **Prompt**: `2026-05-02_revert-manhattan-routing.md`
 **File toccati**: `frontend/src/model/dataStructure/GraphDataElements.tsx` (revert via `git restore` a HEAD — rimosso branch Manhattan in `get_segments_impl`, log `[Manhattan-diag]`, helper `computeMultiEdgeIndex` e `makeVirtualSegmentMaker`, import di `manhattanRouting`); `frontend/src/common/DV.tsx` (revert via `git restore` — condizione label tornata a `s.label && <foreignObject ...>`); `docs/parked/manhattanRouting.ts.parked` (mosso da `frontend/src/common/manhattanRouting.ts` con `mv` plain — il file era untracked); `docs/parked/README.md` (NUOVO — documenta motivi del parking, helper riutilizzabili, possibili punti di iniezione futuri).
