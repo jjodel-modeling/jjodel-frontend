@@ -46,7 +46,9 @@ export function EdgeOverlay({ graphid }: EdgeOverlayProps): React.ReactElement |
 
 
        if (!snapshot || !snapshot.idlookup) {
-        console.log('[EdgeOverlay] EXIT 1: no snapshot.idlookup');
+        if (typeof window !== 'undefined' && (window as any).__edgeOverlayDebug) {
+            console.log('[EdgeOverlay] EXIT 1: no snapshot.idlookup');
+        }
         return null;
     }
 
@@ -56,13 +58,17 @@ export function EdgeOverlay({ graphid }: EdgeOverlayProps): React.ReactElement |
     const LGraphElement = w.LGraphElement;
     const evalFn = w.evalEdgeExpression;
 if (!LPointerTargetable || !evalFn) {
-        console.log('[EdgeOverlay] EXIT 2: missing globals', { LPointerTargetable: !!LPointerTargetable, evalFn: !!evalFn, LGraphElement: !!LGraphElement });
+        if (typeof window !== 'undefined' && (window as any).__edgeOverlayDebug) {
+            console.log('[EdgeOverlay] EXIT 2: missing globals', { LPointerTargetable: !!LPointerTargetable, evalFn: !!evalFn, LGraphElement: !!LGraphElement });
+        }
         return null;
     }
 
 const lGraph: any = safeFromPointer(LPointerTargetable, graphid);
     if (!lGraph) {
-        console.log('[EdgeOverlay] EXIT 3: lGraph not resolvable for', graphid);
+        if (typeof window !== 'undefined' && (window as any).__edgeOverlayDebug) {
+            console.log('[EdgeOverlay] EXIT 3: lGraph not resolvable for', graphid);
+        }
         return null;
     }
 
@@ -86,7 +92,9 @@ if (edgeViews.length === 0) {
             total++;
             if (e.isEdge === true) withIsEdge++;
         }
-        console.log('[EdgeOverlay] EXIT 4: no edgeViews', { totalDV: total, withIsEdge });
+        if (typeof window !== 'undefined' && (window as any).__edgeOverlayDebug) {
+            console.log('[EdgeOverlay] EXIT 4: no edgeViews', { totalDV: total, withIsEdge });
+        }
         return null;
     }
 
@@ -111,48 +119,36 @@ if (edgeViews.length === 0) {
         const tgtRect = getNodeRect(LGraphElement, LPointerTargetable, targetL, snapshot);
         if (!srcRect || !tgtRect) continue;
 
-        const srcCenter = {
-            x: srcRect.x + srcRect.w / 2,
-            y: srcRect.y + srcRect.h / 2,
+        const srcBbox: Bbox = {
+            cx: srcRect.x + srcRect.w / 2,
+            cy: srcRect.y + srcRect.h / 2,
+            hw: srcRect.w / 2,
+            hh: srcRect.h / 2,
         };
-        const tgtCenter = {
-            x: tgtRect.x + tgtRect.w / 2,
-            y: tgtRect.y + tgtRect.h / 2,
+        const tgtBbox: Bbox = {
+            cx: tgtRect.x + tgtRect.w / 2,
+            cy: tgtRect.y + tgtRect.h / 2,
+            hw: tgtRect.w / 2,
+            hh: tgtRect.h / 2,
         };
-        const a = clipToRect(tgtCenter, srcRect);
-        const b = clipToRect(srcCenter, tgtRect);
+        const sides = chooseSides(srcBbox, tgtBbox);
+        const srcPoint = sideMidpoint(srcBbox, sides.srcSide);
+        const tgtPoint = sideMidpoint(tgtBbox, sides.tgtSide);
 
-        // Degenerate: clipped endpoints coincide (overlapping / coincident nodes).
-        if (a.x === b.x && a.y === b.y) continue;
+        // Degenerate: side midpoints coincide (overlapping / coincident nodes).
+        if (srcPoint.x === tgtPoint.x && srcPoint.y === tgtPoint.y) continue;
 
-        let rawPath: string;
-        if (a.x === b.x || a.y === b.y) {
-            // Already axis-aligned: a single straight segment, no Manhattan elbow needed.
-            rawPath = `M ${a.x} ${a.y} L ${b.x} ${b.y}`;
-        } else {
-            // Z-shape with 2 elbows. Orientation chosen by the dominant axis to
-            // minimize zig-zag visual weight.
-            const dx = b.x - a.x;
-            const dy = b.y - a.y;
-            let midX1: number, midY1: number, midX2: number, midY2: number;
-            if (Math.abs(dx) >= Math.abs(dy)) {
-                const midX = (a.x + b.x) / 2;
-                midX1 = midX; midY1 = a.y;
-                midX2 = midX; midY2 = b.y;
-            } else {
-                const midY = (a.y + b.y) / 2;
-                midX1 = a.x; midY1 = midY;
-                midX2 = b.x; midY2 = midY;
-            }
-            rawPath = `M ${a.x} ${a.y} L ${midX1} ${midY1} L ${midX2} ${midY2} L ${b.x} ${b.y}`;
-        }
+        const rawPath = buildPathFromSides(srcPoint, sides.srcSide, tgtPoint, sides.tgtSide);
+        if (!rawPath) continue; // Defensive: same-side fallback returned null.
 
         const d = roundManhattanPath(rawPath, 8);
         edges.push({ id: obj.id, d });
     }
 
 if (edges.length === 0) {
-        console.log('[EdgeOverlay] EXIT 5: no edges resolved', { edgeViewsCount: edgeViews.length });
+        if (typeof window !== 'undefined' && (window as any).__edgeOverlayDebug) {
+            console.log('[EdgeOverlay] EXIT 5: no edges resolved', { edgeViewsCount: edgeViews.length });
+        }
         return null;
     }
 
@@ -164,7 +160,9 @@ if (edges.length === 0) {
     const sx = typeof zoom.x === 'number' && zoom.x > 0 ? zoom.x : 1;
     const sy = typeof zoom.y === 'number' && zoom.y > 0 ? zoom.y : 1;
 
-console.log('[EdgeOverlay] RENDER', { edgesCount: edges.length, tx, ty, sx, sy });
+if (typeof window !== 'undefined' && (window as any).__edgeOverlayDebug) {
+        console.log('[EdgeOverlay] RENDER', { edgesCount: edges.length, tx, ty, sx, sy });
+    }
     return (
         <svg className="jjodel-edge-overlay" pointerEvents="none">
             <g transform={`translate(${tx}, ${ty}) scale(${sx}, ${sy})`}>
@@ -270,6 +268,112 @@ function getNodeRect(
     };
 }
 
+type Side = 'top' | 'right' | 'bottom' | 'left';
+
+interface Bbox {
+    cx: number;
+    cy: number;
+    hw: number;
+    hh: number;
+}
+
+/**
+ * Picks the exit side on `src` and entry side on `tgt` based on the dominant
+ * gap axis between the two bboxes. Lateral hysteresis (1.05) on the horizontal
+ * comparison damps flip-flopping when |dx| ≈ |dy| during drag/resize.
+ *
+ * The chosen sides always lie on the **same axis** (both horizontal or both
+ * vertical) — never perpendicular. Perpendicular cases are handled by the
+ * 3-segment opposite-axis path in `buildPathFromSides` and never produced
+ * directly here.
+ */
+function chooseSides(src: Bbox, tgt: Bbox): { srcSide: Side; tgtSide: Side } {
+    const dx = tgt.cx - src.cx;
+    const dy = tgt.cy - src.cy;
+    const gapX = Math.abs(dx) - (src.hw + tgt.hw);
+    const gapY = Math.abs(dy) - (src.hh + tgt.hh);
+
+    // Hysteresis 1.05 — avoids axis flip on 1px wiggle.
+    const horizontal = gapX * 1.05 >= gapY;
+
+    if (horizontal) {
+        return {
+            srcSide: dx >= 0 ? 'right' : 'left',
+            tgtSide: dx >= 0 ? 'left' : 'right',
+        };
+    }
+    return {
+        srcSide: dy >= 0 ? 'bottom' : 'top',
+        tgtSide: dy >= 0 ? 'top' : 'bottom',
+    };
+}
+
+/**
+ * Midpoint of the chosen side, in absolute (graph) coordinates. The endpoint
+ * lands on the side's center — never near the corner — which removes the
+ * "graze near the bbox edge" S-curve the previous center-projected
+ * `clipToRect` could produce.
+ */
+function sideMidpoint(b: Bbox, side: Side): { x: number; y: number } {
+    switch (side) {
+        case 'top':    return { x: b.cx, y: b.cy - b.hh };
+        case 'bottom': return { x: b.cx, y: b.cy + b.hh };
+        case 'left':   return { x: b.cx - b.hw, y: b.cy };
+        case 'right':  return { x: b.cx + b.hw, y: b.cy };
+    }
+}
+
+/**
+ * Builds the SVG path coherent with the selected exit/entry sides.
+ *
+ *   - Opposite sides on the same axis → 3 segments with a midpoint detour
+ *     (collapses to a single straight segment when both endpoints are
+ *     already aligned on the transition axis).
+ *   - Perpendicular axes → L-shape, 2 segments meeting at one corner.
+ *   - Same side / same-axis-same-side → unreachable from `chooseSides`;
+ *     defensive `null` return + opt-in warn via `window.__edgeOverlayDebug`.
+ */
+function buildPathFromSides(
+    src: { x: number; y: number },
+    srcSide: Side,
+    tgt: { x: number; y: number },
+    tgtSide: Side,
+): string | null {
+    const opposites: Record<Side, Side> = {
+        top: 'bottom', bottom: 'top', left: 'right', right: 'left',
+    };
+
+    // Case 1: opposite sides on the same axis — 3-segment Z (or straight if aligned).
+    if (opposites[srcSide] === tgtSide) {
+        const horizontalAxis = srcSide === 'left' || srcSide === 'right';
+        if (horizontalAxis) {
+            if (src.y === tgt.y) return `M ${src.x} ${src.y} L ${tgt.x} ${tgt.y}`;
+            const midX = (src.x + tgt.x) / 2;
+            return `M ${src.x} ${src.y} L ${midX} ${src.y} L ${midX} ${tgt.y} L ${tgt.x} ${tgt.y}`;
+        } else {
+            if (src.x === tgt.x) return `M ${src.x} ${src.y} L ${tgt.x} ${tgt.y}`;
+            const midY = (src.y + tgt.y) / 2;
+            return `M ${src.x} ${src.y} L ${src.x} ${midY} L ${tgt.x} ${midY} L ${tgt.x} ${tgt.y}`;
+        }
+    }
+
+    // Case 2: perpendicular axes — L-shape, single corner.
+    const srcHorizontal = srcSide === 'left' || srcSide === 'right';
+    const tgtHorizontal = tgtSide === 'left' || tgtSide === 'right';
+    if (srcHorizontal !== tgtHorizontal) {
+        const corner = srcHorizontal
+            ? { x: tgt.x, y: src.y }
+            : { x: src.x, y: tgt.y };
+        return `M ${src.x} ${src.y} L ${corner.x} ${corner.y} L ${tgt.x} ${tgt.y}`;
+    }
+
+    // Case 3: same side / same-axis-same-side — defensive (chooseSides shouldn't produce this).
+    if (typeof window !== 'undefined' && (window as any).__edgeOverlayDebug) {
+        console.warn('[EdgeOverlay] Unexpected same-side routing:', srcSide, tgtSide);
+    }
+    return null;
+}
+
 /**
  * Returns the intersection of the segment from `rect`'s center toward `point`
  * with `rect`'s axis-aligned border. Used to anchor the edge path on the node
@@ -279,6 +383,12 @@ function getNodeRect(
  * `center + t * (point - center)` lies on the rect's border. For an
  * axis-aligned rect this reduces to t = min(hw/|dx|, hh/|dy|) where hw, hh
  * are half-extents.
+ *
+ * NOTE: not currently called — side-aware routing (`chooseSides` +
+ * `sideMidpoint`) replaces center-projected clipping for static rendering.
+ * Preserved for Fase 3b drag-aware live updates, where intermediate frames
+ * may need a generic point→border projection that doesn't depend on bbox-pair
+ * geometry.
  */
 function clipToRect(
     point: { x: number; y: number },

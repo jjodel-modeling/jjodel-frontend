@@ -1,5 +1,23 @@
 # Claude Code Session Log
 
+## 2026-05-04 — chore: gate EdgeOverlay diagnostic logs on __edgeOverlayDebug
+**Prompt**: 2026-05-04_1530_L2_cleanup_diagnostic_logs.md
+**File toccati**: frontend/src/components/edgeOverlay/EdgeOverlay.tsx
+**Esito**: ✅ completato
+**Note**: pattern inline `if (typeof window !== 'undefined' && (window as any).__edgeOverlayDebug) console.log(...)`, niente helper function. 6 log gated in totale (5 EXIT 1-5 nel preparation loop + 1 RENDER). Il `console.warn` del Caso 3 di `buildPathFromSides` era già gated, lasciato invariato. Build verde 42.04s.
+**Nome del documento prompt**: 2026-05-04 15:30
+
+---
+
+## 2026-05-04 — fix: side-aware Manhattan routing (L2)
+**Prompt**: 2026-05-04_1500_L2_side_aware_routing.md
+**File toccati**: `frontend/src/components/edgeOverlay/EdgeOverlay.tsx`
+**Esito**: ✅ completato
+**Note**: Le due decisioni di routing (clip endpoint + Manhattan orientation) sono state unificate. Aggiunti tipi `Side`/`Bbox` e helper module-level `chooseSides` (axis selection con isteresi 1.05 su `gapX*1.05 ≥ gapY`), `sideMidpoint` (endpoint sul centro del lato, niente più graze sugli spigoli), `buildPathFromSides` (3 casi: opposti stesso asse → 3 segmenti con collapse a retta su allineamento; assi perpendicolari → L-shape 2 segmenti; same-side defensivo → `null` + warn opt-in via `window.__edgeOverlayDebug`). Preparation loop sostituisce `clipToRect(tgt, src) + clipToRect(src, tgt) + dx/dy Manhattan inline` con `chooseSides → sideMidpoint → buildPathFromSides → roundManhattanPath`. clipToRect preservata come dead code (JSDoc aggiornato a "preserved for Fase 3b drag-aware future use"). EdgeRender shape `{id, d}` invariata. roundManhattanPath import invariato. Build verde (41.55s). Smoke test runtime non eseguibile da CLI — verificare i 5 screenshot di riferimento e i 6 casi di test (allineato H/V, diagonali |dx|>|dy| e |dy|>|dx|, L-shape, auto-reference).
+**Nome del documento prompt**: 2026-05-04 15:00
+
+---
+
 ## 2026-05-04 — refactor: L2 overlay come primo figlio di GraphContainer
 **Prompt**: docs/2026-05-04_1330_L2_overlay_inside_graph_container.md
 **File toccati**:
