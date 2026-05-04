@@ -7,6 +7,7 @@
 import { DPointerTargetable, DViewElement, LProject, LViewPoint, SetFieldAction, SetRootFieldAction, Defaults } from '../joiner';
 import { toast } from '../components/Toast/toastDispatch';
 import { JjodelEvents } from '../events/registry';
+import { DEFAULT_VIEW_JSX_STRING } from './defaultViewTemplate';
 
 let lastEditedViewpointId: string | null = null;
 let lastEditedViewpointName: string | null = null;
@@ -150,18 +151,7 @@ export function createViewInWorkbench(elementId: string, elementName: string, cl
     try {
         // Same JSX template and pattern as DViewElement.newDefault()
         const newView = DViewElement.new2(viewName,
-`<View className={'root bg-white p-1'}>
-    <div className={'header'}>
-        {!data ? null :
-            <label className={'input-container mx-2'}>
-                <b className={'object-name'}>Name:</b>
-                <Input data={data} field={'name'} hidden={true} autosize={true} placeholder={'enter name'}/>
-            </label>
-        }
-    </div>
-    <div className={'body'}>To add information here,<br/> edit the view<br/>"{view.name}"</div>
-    {decorators}
-</View>`,
+            DEFAULT_VIEW_JSX_STRING,
             dViewpoint,
             (d) => {
                 d.oclCondition = query;

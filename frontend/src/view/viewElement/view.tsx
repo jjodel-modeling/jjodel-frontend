@@ -46,6 +46,7 @@ import DSL from "../../DSL/DSL";
 import {ReactNode} from "react";
 import type {ViewpointType} from "../viewPoint/viewpoint";
 import {labeltype} from "../../model/dataStructure/GraphDataElements";
+import {DEFAULT_VIEW_JSX_STRING} from "../../utils/defaultViewTemplate";
 
 let CSS_Units0 = {'Local-font relative':{
         'cap':     'cap - (Cap height) the nominal height of capital letters of the element\'s font.',
@@ -287,50 +288,10 @@ export class DViewElement extends DPointerTargetable {
     }
 
     static newDefault(forData?: DModelElement | DGraphElement, forSelf: boolean = false): DViewElement{
-        const jsx = `
-
-/* Jjodel Default View 2.1 */ 
-
-<View className={'root bg-white p-1'}>
-    <div className={'header'}>
-        {!data ? null :
-            <label className={'input-container mx-2'}>
-                <b className={'object-name'}>Name:</b>
-                <Input data={data} field={'name'} hidden={true} autosize={true} placeholder={'enter name'}/>
-            </label>
-        }
-    </div>
-    <div className={'body'}>To add information here,<br/> edit the view<br/>"{view.name}"</div>
-    {decorators}
-</View>`;
-        const palettes: PaletteType = {
-            "background-": {type:"color", value: [
-                { "r": 255, "g": 255, "b": 255, "a": 1 },
-                { "r": 250, "g": 250, "b": 250, "a": 1 }]},
-            "border-color-": {type:"color", value: [
-                { "r": 12, "g": 67, "b": 110, "a": 1 }]},
-            "color-": {type:"color", value: [
-                { "r": 12, "g": 67, "b": 110, "a": 1 }]},
-        }
-            const css = `&>.root {
-    border: 2px solid var(--border-color-1)!important;
-    border-radius: 4px;
-    background: linear-gradient(-45deg, var(--background-1) 0%, var(--background-2) 100%);
-    color: var(--color-1);
-    min-width: 180px;
-    
-    &>.header {
-        border-bottom: 1px solid var(--border-color-1);
-    }
-
-    &>.body {
-        text-align: center;
-        height: auto;
-        padding: 5px;
-    }
-} 
-
- `;
+        /* Jjodel Default View 2.2 - minimal clean + edge-like (sessione 2026-05-03) */
+        const jsx = DEFAULT_VIEW_JSX_STRING;
+        const palettes: PaletteType = {};
+        const css = '';
         let query = '';
         if (forData) {
             if (forSelf) {

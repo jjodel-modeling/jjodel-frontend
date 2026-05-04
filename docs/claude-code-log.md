@@ -1,5 +1,38 @@
 # Claude Code Session Log
 
+## 2026-05-04 — feat: redesign default class view (Minimal clean + edge-like compact + smart preview)
+**Prompt**: Redesign default class view + stati hover/selected + edge-like compact (heuristic: 2 reference) + smart preview "S1 → S2" runtime + migration 2.211 → 2.212. Iterazione v4 sopra discovery `2026-05-03-default-class-view-template-discovery.md` (v1/v2/v3 superate).
+**File toccati**:
+- `frontend/src/utils/defaultViewTemplate.ts` (nuovo) — costante condivisa `DEFAULT_VIEW_JSX_STRING` + `LEGACY_PLACEHOLDER_MARKER`. Template con (a) className ternary su singola riga (parens su più linee causano `Unexpected token ')'` runtime) per applicare `--edge-like` quando `data.instanceof.references.length === 2 && refs[0] && refs[1]`; (b) `<div edge-preview>` con IIFE che ritorna stringa `srcName + ' → ' + tgtName` (JSX dentro IIFE NON funziona — il `<div>` wrapper sta fuori, l'IIFE produce solo testo). Heuristic v4 rilassata: rimosso check `refs[0].type === refs[1].type` perché test su `TUTTO` con `source: Source` + `target: Target` (target classifier diversi) ha mostrato che il proxy L non garantisce `===` su classi diverse. Trade-off: falsi positivi su entity binary (es. Person con friend + parent), accettati come limite noto. Carattere `→` U+2192 UTF-8 (3 occorrenze, file marcato come UTF-8 da `file(1)`).
+- `frontend/src/styles/default-view.scss` (nuovo) — stile `.jjodel-default-view` BEM, tre stati (default/hover/selected), gestione `.selected` (flow) + `.selected-by-me` / `.selected-by-others` (classic). Modifier `&--edge-like` con `min-width: 140px`, padding/font ridotti, `&__edge-preview { display: block }` + `&__hint { display: none }`. Block `&__edge-preview` con default `display: none`, font 12px tabular-nums, color slate-700. Compila in 99 righe.
+- `frontend/src/App.tsx` — aggiunto import `./styles/default-view.scss` dopo `view.scss`.
+- `frontend/src/utils/lastViewpoint.ts` — path 1A: rimpiazzato jsxString letterale con `DEFAULT_VIEW_JSX_STRING` + import.
+- `frontend/src/view/viewElement/view.tsx` — path 1B (`LViewElement.newDefault`): jsxString → costante condivisa; `palettes` e `css` legacy svuotati (`{}` e `''`); commento "Jjodel Default View 2.2 - minimal clean + edge-like (sessione 2026-05-03)".
+- `frontend/src/redux/VersionFixer.tsx` — migration `'2.211 -> 2.212'`: itera `s.idlookup`, matcha `DViewElement` con jsxString contenente il marker legacy, sostituisce jsxString + svuota css/palette + `css_MUST_RECOMPILE=true`. Commento esteso "minimal clean + edge-like + smart preview".
+**Esito**: ✅ completato (compilazione)
+**Note**: heuristic edge-like rilassata a `length === 2` dopo test runtime su `TUTTO` (target classifier diversi, proxy `===` ritorna `false`). Falsi positivi accettati su entity con 2 ref (es. Person con friend + parent → preview "John → Mary" inappropriata estetica ma funzionalmente nulla rotta). Vincoli template engine documentati in dettaglio nel docstring: no `?.`/`??`, JSX dentro IIFE non funziona, IIFE ritorna solo stringhe, className ternary deve stare su singola riga. `npx tsc --noEmit` zero errori sui file toccati. `npx sass` compila in 99 righe senza warning. **Verifica funzionale in browser non eseguita** — i test 4-5 (edge-like + smart preview con TUTTO/Transition) e test 7 (falso positivo Person, conferma del trade-off) richiedono il metamodel reale per confermare ordine `references[0]/[1]` (potenzialmente invertito → fix one-liner) e render del char `→`. Migration idempotente (marker assente dopo replace). Nessuna modifica a `useJjomSync.ts` o rendering engine — l'istanza resta DVertex, solo estetica/info.
+**Nome del documento prompt**: 2026-05-04 — Implementazione redesign default class view (B + edge-like + smart preview, v4)
+
+---
+
+## 2026-05-03 — docs: discovery default class view template + interaction states
+**Prompt**: discovery read-only del path di generazione del jsxString placeholder per nuove view su metaclasse (es. State), del pattern VersionFixer, e degli stati di selezione (default/hover/selected) in flow editor e classic editor.
+**File toccati**: docs/reports/2026-05-03-default-class-view-template-discovery.md (nuovo), docs/claude-code-log.md
+**Esito**: ✅ completato
+**Note**: read-only, nessuna modifica al codice. Mappati 2 path paralleli (`createViewInWorkbench` in `utils/lastViewpoint.ts:152` — moderno, da context menu; `LViewElement.newDefault` in `view/viewElement/view.tsx:289` — legacy, da keystroke). VersionFixer current = 2.211; `LViewElement.updateDefaultView` aggiorna solo view registrate in `Defaults.defaultViewsMap` (match per ID), quindi le view create runtime via questi path non si propagano automaticamente con un version bump. Selezione: flow usa `selected` prop di @xyflow/react + classe `.selected`; classic usa `DGraphElement.isSelected: Dictionary<userID, bool>` + classi `.selected-by-me` / `.selected-by-others` su root del template. Naming divergente — segnalato come scelta per il SCSS del redesign. `--color-accent` resolva a slate (non cyan), come già documentato in 2026-05-01-active-editor-zoom-diagnostic.md.
+**Nome del documento prompt**: 2026-05-03 HH:mm — Discovery default class view template + interaction states
+
+---
+
+## 2026-05-03 — feat: boolean field redesign con toggle switch
+**Prompt**: Sostituito rendering full-width del field EBoolean nel property panel con toggle switch compatto (32×18px) cyan/slate
+**File toccati**: frontend/src/components/editors/Info.tsx, frontend/src/components/editors/info-improvements.scss
+**Esito**: ✅ completato
+**Note**: API esterna invariata; verificato che non ci siano collisioni di classi CSS (`.toggle-switch` esisteva già — usato `.bool-toggle`). Modifica localizzata al ramo `isAttribute && field === 'checkbox'` di `Info.value()`; gli altri callsite di `<Input type='checkbox'>` (NodeEditor, PermissionViewpointTab, ecc.) restano col rendering precedente per scelta esplicita di scope. Il flusso `changeDValue` → `value.setValueAtPosition` è preservato. `tsc --noEmit` non introduce nuovi errori sui file toccati.
+**Nome del documento prompt**: 2026-05-03 17:00 — Boolean field redesign: toggle switch
+
+---
+
 ## 2026-05-03 — docs: discovery keystroke metamodel editor
 **Prompt**: discovery read-only di tutti i keystroke attivi nel flow editor (M2/M1) e nell'app shell, output strutturato per task successivo di estensione/normalizzazione.
 **File toccati**: frontend/docs/discovery/2026-05-03_keystroke-metamodel-editor.md (nuovo), docs/claude-code-log.md

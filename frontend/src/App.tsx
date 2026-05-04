@@ -1,6 +1,7 @@
 import React, {Dispatch, JSX, useState, useEffect} from 'react';
 import './App.scss';
 import './styles/view.scss'; //
+import './styles/default-view.scss';
 import './styles/style.scss';
 import './styles/forms.scss';
 import './styles/tokens.css';

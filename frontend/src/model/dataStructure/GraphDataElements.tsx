@@ -62,6 +62,12 @@ import type {Tooltip} from "../../components/forEndUser/Tooltip";
 import {JSX} from "react";
 import type {SVGPathElementt, SVGPathSegment} from '../../common/libraries/pathdata';
 import {EdgeGapMode, InitialVertexSize, InitialVertexSizeFunc} from "../../joiner/types";
+import {svgLetterSize} from "../../edges/routing/classic/stride";
+import {computePoints} from "../../edges/routing/classic/points";
+import {snapSegmentsToBorders} from "../../edges/routing/classic/snap";
+import {setLabels} from "../../edges/routing/classic/labels";
+import {computeHeadPosition} from "../../edges/routing/classic/markers";
+import {computeRouting} from "../../edges/routing/classic/segments";
 
 
 //console.warn('ts loading graphDataElement');
@@ -2098,7 +2104,7 @@ export class EdgeFillSegment extends EdgeSegment{
 export type labelfunc = (e:LVoidEdge, segment: EdgeSegment, allNodes: LEdge["allNodes"], allSegments: EdgeSegment[]) => PrimitiveType;
 export type labeltype = orArr<labelfunc | PrimitiveType>;
 
-type segmentmaker = {size: GraphSize, view: LViewElement, ge: LGraphElement, pt: GraphPoint, uncutPt: GraphPoint};
+export type segmentmaker = {size: GraphSize, view: LViewElement, ge: LGraphElement, pt: GraphPoint, uncutPt: GraphPoint};
 @RuntimeAccessible('LVoidEdge')
 export class LVoidEdge<Context extends LogicContext<DVoidEdge> = any, D extends DEdge = DEdge> extends LGraphElement {
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -2228,72 +2234,9 @@ replaced by startPoint
 
     public headPos_impl(c: Context, isHead: boolean, headSize0?: GraphPoint, segment0?: EdgeSegment, zoom0?: GraphPoint): GraphSize & {rad: number} {
         let segment: EdgeSegment = segment0 || this.get_segments(c).segments[0];
-        // let v: LViewElement = this.get_view(c);
-        let tmp: any = headSize0 || (isHead ? this.get_view(c).edgeHeadSize : this.get_view(c).edgeTailSize);
-        if (!tmp || tmp.x === 0 || tmp.y === 0) {
-            // head or tail missing
-            tmp = new GraphSize(0, 0, 0, 0);
-            tmp.rad = 0;
-            return tmp;
-        }
-        let zoom: GraphPoint = zoom0 || this.get_graph(c).zoom;// ownZoom or cumulativeZoom?
-        let headPos: GraphSize & {rad: number} = (new GraphSize(0, 0, tmp.x, tmp.y) as any); //.multiply({w:zoom.x, h:zoom.y});
-        let useBezierPoints = true;
-        let start: GraphPoint, end: GraphPoint;
-        let m: number;
-        if (useBezierPoints) {
-            if (isHead) {
-                start = segment.end.pt;
-                end = (segment.bezier[segment.bezier.length - 1] || segment.start).pt;
-            } else {
-                start = segment.start.pt;
-                end = (segment.bezier[0] || segment.end).pt;
-            }
-            m = GraphPoint.getM(start, end);
-        } else {
-            if (isHead) { start = segment.end.pt; end = segment.start.pt; }
-            else { start = segment.start.pt; end = segment.end.pt; }
-            m = segment.m;
-        }
-        // first find the center of where it should be positioned
-        // let center: GraphPoint;
-        // let distance: number = Math.sqrt(headPos.w*headPos.w + headPos.h*headPos.h);
-        // let isVertical = m >=1 ;
-        let x4headsize = new GraphSize(start.x - headPos.w, start.y - headPos.h, headPos.w*2, headPos.h*2);
-        // first intersection is segment origin. second is found with the box containing all possible edgeHead positions that touch the startPoint
-        // (doing x4 his shape and placing 4 "rectangles" all around startPoint forming a 2x2 square) to cover all possible segment directions.
-        // or finding first direction (vertical if m >1, horizontal if m<0) and vector direction and intersecting with only the "correct" placed edgeHead rectangle.
-        // then the intersection will likely not fall on the extreme angle of EdgeHead and i can re-center edgeHead
-        // so that first and second intersections are equal spaced with the center segment
-        // later comment: i think original head is placed with .tl() equal to edge.endPoint (target anchor pos),
-        // then you build a 2x2 square around it (center of 2x2 square is edge.endPoint) to move it where the edge is coming, intersecting it.
-        let secondIntersection: GraphPoint | undefined;
-        let segmentDistance = start.distanceFromPoint(end);
-        if (segmentDistance <= Math.sqrt(headPos.w**2 + headPos.h**2)){ // todo: if pts are too close and m is infinite, this crashes?
-            let safeDistance = Math.max(headPos.w, headPos.h)*5;
-            end = new GraphPoint( end.y + safeDistance, end.y + m * safeDistance); // move the point away so it doesn't intersect anymore. i just need direction
-            // too small to fit edgeHead, i simply put it centered on the whole segment
-            // secondIntersection = end;
-        }
-        secondIntersection = GraphSize.closestIntersection(x4headsize, start, end, undefined, m, undefined);
-        if (!secondIntersection) {
-           return Log.exDevv("failed to intersect edge head", {x4headsize, segment, headPos, c, start, end, useBezierPoints, m, edge: c.data.id});
-        }
-        tmp = secondIntersection.add(start, false).divide(2); // center of edgehead
-        headPos.x = tmp.x - headPos.w / 2; // tl corner
-        headPos.y = tmp.y - headPos.h / 2; // tl corner
-        headPos.rad = Geom.mToRad(m, start, end);
-        /*
-        devo trovare la distanza tra il centro dell'egeHead e il punto di inizio in termini assoluti, così tramite M trovo distanza in x e y. o trovarla in altro modo
-        if (segment.m === Number.POSITIVE_INFINITY || segment.m === Number.NEGATIVE_INFINITY) {
-            center = segment.start.pt.add({x:0, y: distance}, true); }
-        else { center = segment.start.pt.add({x:segment.m*headPos.w/2, y:segment.m*headPos.h/2
-         this is wrong, cannot be the same for x and y, i should invert the line equation for x?}, true); }
-        headPos.x = center.x - headPos.w / 2;
-        headPos.y = center.y - headPos.h / 2;*/
-        // console.log("head intersected", {headPos, secondIntersection, x4headsize, segment, c, start, end, useBezierPoints});
-
-        return headPos;
+        let view: LViewElement = this.get_view(c);
+        let zoom: GraphPoint = zoom0 || this.get_graph(c).zoom;
+        return computeHeadPosition(isHead, view, zoom, segment, headSize0);
     }
 
     public headPos(headSize0?: GraphPoint, segment0?: EdgeSegment, zoom0?: GraphPoint): GraphSize & {rad: number} {
@@ -2335,33 +2278,8 @@ replaced by startPoint
         });
         return true;
     }
-    protected get_label_impl(c: Context, segment: EdgeSegment, nodes: this["allNodes"], segments: EdgeSegment[]): PrimitiveType | undefined {
-        let key: "longestLabel" | "labels" = segment.isLongest ? "longestLabel" : "labels"; // : keyof this
-        // if (isLongestSegment) return this.get_longestLabel_impl(d, l, nodes, index):
-        const d = c.data;
-        const l = c.proxyObject;
-        let labelmaker: any = (this as any)['get_'+key](c);
-        let labelmakerfunc: labelfunc = labelmaker as any;
-        // let lastSeg = segments[i-1];
-        switch (typeof labelmaker) {//nb{}[]<>
-            case "number":
-            case "undefined":
-            case "boolean":
-            case "string": return labelmaker;
-            // case "function": return nodes.map( (o, i) => d.labels(l, nodes, i)).slice(0, nodes.length-1);
-            // (e:LVoidEdge, segment: EdgeSegment, allNodes: LEdge["allNodes"], allSegments: EdgeSegment[]) => PrimitiveType
-            case "function": return labelmakerfunc(l, segment, nodes, segments);
-            default: break;
-            case "object":
-                if (labelmaker === null) return null;
-                if (!Array.isArray(labelmaker)) break;
-                let elem = (labelmaker as PrimitiveType[])[segment.index % labelmaker.length];
-                if (typeof elem === "function") return (elem as labelfunc)(l, segment, nodes, segments);
-                return elem;
-        }
-        Log.exx("edge labels invalid type, must be a primitive value, a function or an array of such.", {labelmaker, key, d});
-        return undefined;
-    }/*
+    // get_label_impl: extracted to edges/routing/classic/labels.ts (computeLabel — internal)
+/*
     private get_label_impl_old(d: DVoidEdge, l: LVoidEdge, nodes:this["allNodes"], index: number, longestlabelindex?: number): PrimitiveType {
         if (d.longestLabel !== undefined && index === longestlabelindex) return this.get_longestLabel_impl(d, l, nodes, index);
         switch (typeof d.labels) {//nb{}[]<>
@@ -2404,136 +2322,20 @@ replaced by startPoint
             <br/>length of this.segments array is Math.ceil(allNodes.length / svg_letter_size) specified on view.
             <br/>"head" and "tail" are the position and angle of eventual edge decorators. Refer to this.headPos documentation.</span>}
 
-    private svgLetterSize(s: string, addM: boolean = true, doublingMidPoints: boolean = true): {first:number, others: number} {
-        let ret: {first:number, others: number};
-        switch (s) {
-            default: ret = Log.exDevv("unexpected svg path letter: \"" + s + "\"", s); break;
-            case EdgeBendingMode.Line:
-            //case EdgeBendingMode.Bezier_quadratic_mirrored:
-                ret = {first:1, others:1}; break;
-            case EdgeBendingMode.Bezier_quadratic:
-            //case EdgeBendingMode.Bezier_cubic_mirrored:
-                ret = {first:2, others:2}; break;
-            case EdgeBendingMode.Bezier_cubic: ret = {first:3, others:3}; break;
-            case EdgeBendingMode.Elliptical_arc: ret = {first:4, others:4}; break;
-
-            case EdgeBendingMode.Bezier_QT: ret = {first:2, others:1}; break;
-            case EdgeBendingMode.Bezier_CS: ret = {first:3, others:2}; break;
-        }
-
-        // account for the fact that every midpoint is listed twice: at anchor start and anchor end.
-        if (doublingMidPoints) {
-            // removing last point (first is already excluded because addM didn't trigger yet)
-            // , the remaining are midpoints to double. then i add it back
-            ret.first = (ret.first - 1) * 2 + 1;
-            ret.others = (ret.others - 1) * 2 + 1;
-        }
-
-        // account for the first M letter
-        //    (if the segment is not mode.gap or first, M coord still exist in segment but are ignored)
-        if (addM) {
-            ret.first += 1;
-            ret.others += 1;
-        }
-        return ret;
-    }
-
     // outer should be a redundant param and always == true
     private get_points_impl(allNodes: LGraphElement[], outer: boolean, c:Context): segmentmaker[] {
-        function getAnchorOffset(size: GraphSize, offset: GraphPoint, isPercentage: boolean, $factor: number = 100) {
-            if (!size) size = new GraphSize(0, 0, 0, 0);
-            // else if (!size.tl) size = new GraphSize(size.x, size.y, size.w, size.h);
-            if (isPercentage) offset = new GraphPoint(offset.x/$factor*(size.w), offset.y/$factor*(size.h));
-            return size.tl().add(offset, false);
-        }
-        let innermost: LGraph = this.get_graph(c);
-        let root: LGraph = this.get_root(c);
-        const all: segmentmaker[] = allNodes.flatMap((ge, i) => {
-            let dge = ge.__raw;
-            let size = outer ? ge.outerSize : ge.innerSize;
-
-            if (outer && root && innermost && innermost.id !== root.id) {
-                size = innermost.translateSize(size, root);
-            }
-            let base: segmentmaker = {view: ge.view, size, ge, pt: null as any, uncutPt: null as any};
-
-            Log.exDev(typeof base.size !== "object", "could not get node size:", {base, c, outer})
-            let rets: segmentmaker | undefined;// = base as any;
-            let rete: segmentmaker | undefined;// = {...base} as any;
-            let debug = true;
-            if (debug) {
-                (base as any).anchor_e = typeof c.data.anchorEnd === 'object'? c.data.anchorEnd
-                    : (dge.anchors[c.data.anchorEnd || 0] || dge.anchors[Object.keys(dge.anchors)[0]]);
-                (base as any).anchor_s = typeof c.data.anchorStart === 'object'? c.data.anchorStart
-                    : (dge.anchors[c.data.anchorStart || 0] || dge.anchors[Object.keys(dge.anchors)[0]]);
-            }
-
-            // get endpoint, then startpoint (land on midnode, then depart from it)
-            if (i !== 0){
-                rete = {rete:true, ...base} as any as segmentmaker;
-                if (i === allNodes.length - 1) {
-                    // get end anchor from node
-                    let anchor: GraphPoint | undefined;
-                    if (!c.data.anchorEnd || typeof c.data.anchorEnd === 'string') {
-                        anchor = dge.anchors[c.data.anchorEnd || 0];
-                        Log.w(!anchor, 'Specified anchorEnd name does not exist on target: '+c.data.anchorEnd, {anchor: c.data.anchorEnd||0, node: dge});
-                    }
-                    else if (typeof c.data.anchorEnd === 'object') {
-                        if ('x' in c.data.anchorEnd && 'y' in c.data.anchorEnd) anchor = c.data.anchorEnd as any as GraphPoint;
-                        Log.w(!anchor, 'Specified anchorEnd object is invalid: '+c.data.anchorEnd, {anchor: c.data.anchorEnd, node: dge});
-                    }
-                    if (!anchor) anchor = dge.anchors[0] || dge.anchors[Object.keys(dge.anchors)[0]];
-                    if (anchor) rete.pt = getAnchorOffset(rete.size, anchor, true, 1);
-                }
-                // if no anchor, treat the node as a midpoint
-                if (!rete.pt) {
-                    // get ending point from midpoint
-                    //rete.pt = (LEdgePoint.singleton as LEdgePoint).get_endPoint(undefined as any, rete.size, rete.view);
-                    rete.pt = getAnchorOffset(rete.size, rete.view.edgeStartOffset, rete.view.edgeStartOffset_isPercentage);
-                }
-                rete.uncutPt = rete.pt;
-            }
-            if (i !== allNodes.length - 1){
-                rets = {rets: true, ...base} as any as segmentmaker;
-                if (i === 0) {
-                    // get start anchor from node
-                    let anchor: GraphPoint | undefined;
-                    if (!c.data.anchorStart || typeof c.data.anchorStart === 'string') {
-                        anchor = dge.anchors[c.data.anchorStart || 0];
-                        Log.w(!anchor, 'Specified anchorStart name does not exist on target: '+c.data.anchorStart, {anchor: c.data.anchorStart||0, node: dge});
-                    }
-                    else if (typeof c.data.anchorStart === 'object') {
-                        if ('x' in c.data.anchorStart && 'y' in c.data.anchorStart) anchor = c.data.anchorStart as any as GraphPoint;
-                        Log.w(!anchor, 'Specified anchorStart object is invalid: '+c.data.anchorStart, {anchor: c.data.anchorStart, node: dge});
-                    }
-                    if (!anchor) anchor = dge.anchors[Object.keys(dge.anchors)[0]];
-                    if (anchor) rets.pt = getAnchorOffset(rets.size, anchor, true, 1);
-                }
-                if (!rets.pt) {
-                    // rets starting point from midpoint
-                    // rets.pt = (LEdgePoint.singleton as LEdgePoint).get_startPoint(undefined as any, rets.size, rets.view);
-                    rets.pt = getAnchorOffset(rets.size, rets.view.edgeStartOffset, rets.view.edgeStartOffset_isPercentage);
-                }
-                rets.uncutPt = rets.pt;
-            }
-
-            // ret.pt = ge.startPoint
-            return rets && rete ? [rete, rets] : (rets ? [rets] : [rete as segmentmaker]); }
+        return computePoints(
+            allNodes,
+            outer,
+            c.data.id,
+            this.get_graph(c),
+            this.get_root(c),
+            c.data.anchorStart,
+            c.data.anchorEnd,
+            DVoidEdge.isFollowingCoords,
+            LVoidEdge.startFollow,
+            LVoidEdge.endFollow,
         );
-
-        if (DVoidEdge.isFollowingCoords){
-            if (c.data.id === LVoidEdge.endFollow) {
-                let seg = all[all.length - 1];
-                seg.pt = DVoidEdge.isFollowingCoords;
-                seg.size = new GraphSize(seg.pt.x, seg.pt.y, 0.01, 0.01);
-            }
-            if (c.data.id === LVoidEdge.startFollow) {
-                let seg = all[0];
-                seg.pt = DVoidEdge.isFollowingCoords;
-                seg.size = new GraphSize(seg.pt.x, seg.pt.y, 0.01, 0.01);
-            }
-        }
-        return all;
     }
     private get_pointsDebug(c: Context): segmentmaker[]{ return this.get_points_impl(this.get_allNodes(c), true, c); }
     private get_points(allNodes: LGraphElement[], outer: boolean = false, c: Context): segmentmaker[]{
@@ -2557,200 +2359,28 @@ replaced by startPoint
     public get_segments_outer(c:Context): this["segments"] { return this.get_segments_impl(c, true); }
     // public get_segments_inner(c: Context): this["segments"] { return this.get_segments_impl(c, false); }
     private get_segments_impl(c: Context, outer: boolean): this["segments"] {
-        let l = c.proxyObject;
-        let v = this.get_view(c);
-        let allNodes = l.allNodes;
-        windoww.edge = l;
-        let all: segmentmaker[] = this.get_points(allNodes, outer, c);
-        //const all: {size: GraphSize, view: LViewElement, ge: LGraphElement}[] = allNodes.map((ge) => { return { view: ge.view, size: ge.size, ge}});
-        let ret: EdgeSegment[] = [];
-        let bm: EdgeBendingMode = v.bendingMode;
-        let gapMode: EdgeGapMode = v.edgeGapMode;
-        let segmentSize = this.svgLetterSize(bm, false, true);
-        let increase: number = segmentSize.first;
-        let segment: EdgeSegment | undefined = undefined;
-        /// grouping points according to SvgLetter
-        for (let i = 0; i < all.length - 1; ) {
-            // let start = all[i], end = all[i+increase];
-            let start: segmentmaker = all[i];
-            let endindex = (i+increase < all.length - 1) ? i+increase : all.length - 1;
-            let mid: segmentmaker[] = all.slice(i+1, endindex).filter( (e, i)=> i % 2 === 0);
-            let end: segmentmaker = all[endindex];
-            // makes sure the edge actually reaches his target even if there is an invalid amount of midnodes fot the current EdgeBendingMode
-            if (i === endindex && segment) start = segment.end;
-            // segment = this.get_segmentv3(start, mid, end, getSvgLetter(i), i, segment, all);
-            segment = new EdgeSegment(start, mid, end, bm, gapMode, i, segment);
-            // segment = this.get_segment(start.ge, start.size, start.view, end.ge, end.size, end.view, cut, v.bendingMode, mid, ret[ret.length -1], fillMode, segment);
-            ret.push(segment);
-            i+= increase+1; // because increase index is already inserted at the end of prev segment
-            if (increase !== segmentSize.others) increase = segmentSize.others;
-            // if (longestLabel !== undefined && longest < s.length) { longest = s.length; longestindex = i; } todo: move to after snapping to borders
-        }
-        function printablesegment(s:GObject) {
-            let r: GObject = {};
-            for (let k in s) {
-                let v = s[k];
-                v = v?.__raw || v;
-                if (typeof v === "object") r[k] = JSON.parse(JSON.stringify(v));
-                else r[k] = v;
-            }
-            return r;
-        }
-
-        let fillSegments: EdgeSegment[] = [];
-        this.snapSegmentsToNodeBorders(c, v, ret, fillSegments);
-        let longestLabel = c.data.longestLabel;
-        this.setLabels(c, ret, allNodes);
-        // console.log("getSegments() labeled:", {main:ret, fillSegments});
-        let rett: this["segments"] = {all: [...ret, ...fillSegments], segments: ret, fillers: fillSegments} as any;
-        /*switch(bm){
-            default: break;
-            case EdgeBendingMode.Bezier_QT:
-            case EdgeBendingMode.Bezier_CS:
-                rett.
-        }*/
-        for (let i = 0; i < rett.all.length; i++) {
-            let s = rett.all[i];
-            s.makeD(i, gapMode);
-        }
-        let zoom = new GraphPoint(1, 1);
-        rett.head = this.headPos_impl(c, true, v.edgeHeadSize, rett.segments[rett.segments.length - 1], zoom);
-        rett.tail = this.headPos_impl(c, false, v.edgeTailSize, rett.segments[0], zoom);
-        return rett;
+        const l = c.proxyObject as LVoidEdge;
+        return computeRouting({
+            allNodes: l.allNodes,
+            edge: l,
+            edgeId: c.data.id,
+            view: this.get_view(c),
+            innermostGraph: this.get_graph(c),
+            rootGraph: this.get_root(c),
+            anchorStart: c.data.anchorStart,
+            anchorEnd: c.data.anchorEnd,
+            longestLabel: this.get_longestLabel(c),
+            labels: this.get_labels(c),
+            isFollowingCoords: DVoidEdge.isFollowingCoords,
+            startFollow: LVoidEdge.startFollow,
+            endFollow: LVoidEdge.endFollow,
+            outer,
+        }) as this["segments"];
     }
-    private setLabels(c: Context, segments: EdgeSegment[], allNodes: this["allNodes"]): void {
-        // find longest segment
-        let longestindex = -1;
-        let longest = 0;
-        for (let i = 0; i < segments.length; i++) {
-            let s = segments[i];
-            s.calcLength();
-            if (longest < s.length) { longest = s.length; longestindex = i; }
-            s.isLongest = false;
-        }
-        if (longestindex >= 0) segments[longestindex].isLongest = true;
-        // apply labels
-        for (let s of segments) s.label = this.get_label_impl(c, s, allNodes, segments);
-    }
+    // setLabels: extracted to edges/routing/classic/labels.ts
 
     private snapSegmentsToNodeBorders(c: Context, v: LViewElement, ret: EdgeSegment[], fillSegments: EdgeSegment[]){
-        // snap segment start and end to a node border
-        let canCutStart: boolean = v.edgeStartStopAtBoundaries,
-            canCutEnd: boolean = v.edgeEndStopAtBoundaries;
-        let grid: GraphPoint | undefined = undefined;
-        // let fillSegments: EdgeSegment[] = [];
-        let gapMode: EdgeGapMode = v.edgeGapMode;
-        let bm: EdgeBendingMode = v.bendingMode;
-
-
-        let ci: GraphPoint | undefined;
-        // cut i === 0 is cut regardless of gapmode.
-        if (canCutStart) {
-            ci = GraphSize.closestIntersection(ret[0].start.size, ret[0].start.pt, (ret[0].bezier[0] || ret[0].end).pt, grid);
-            if (ci) ret[0].start.pt = ci;
-            /*
-            ret[0].start.pt =
-                GraphSize.closestIntersection(ret[0].start.size, ret[0].start.pt, (ret[0].bezier[0] || ret[0].end).pt, grid) as any
-                || Geom.closestPoint(ret[0].start.size, ret[0].start.pt);*/
-        }
-
-        // cut middle segments maybe
-        let prev: EdgeSegment;
-        let curr: EdgeSegment = ret[0];
-
-        // if (gapMode === EdgeGapMode.gap) return;
-        if (canCutStart || canCutEnd) // do the for below
-            for (let i = 1; i < ret.length; i++){
-                prev = ret[i-1];
-                curr = ret[i];
-                let doStartCut: boolean, doEndCut: boolean;
-                switch(gapMode){/*
-                    case EdgeGapMode.arcFill:
-                    case EdgeGapMode.lineFill:
-                    case EdgeGapMode.autoFill:
-                        // same as gap, but will insert 1 more segment to fill the hole
-                        doStartCut = true;
-                        doEndCut = true;
-                        if (prev.end.pt.equals(curr.start.pt)) break;
-                        fillSegments.push(new EdgeFillSegment(
-                            prev.end,
-                            [
-                                {...prev.end, pt: EdgeSegment.invertLastBezierPt(prev.end.pt, (prev.bezier[prev.bezier.length-1] || prev.start).pt)},
-                                {...curr.start, pt: EdgeSegment.invertLastBezierPt(curr.start.pt, (curr.bezier[0] || curr.end).pt)}
-                            ],
-                            curr.start,
-                            bm, gapMode, 0, undefined));
-                            / *
-                            fillSegments.push(new FillEdgeSegment( // M <start_gap> C <bez1> <bez2> <end_gap>
-                               // <start_gap> = end of last seg (start of gap) <end_gap> = first of curr seg (end of gap)
-                            prev.end.pt,
-                            EdgeSegment.invertLastBezierPt(prev.end.pt, prev.bezier[prev.bezier.length-1].pt || prev.start.pt),
-                            EdgeSegment.invertLastBezierPt(curr.start.pt, curr.bezier[0].pt || curr.end.pt),
-                            curr.start.pt)* /
-
-                        break;*/
-                    case EdgeGapMode.gap:
-                        // just snap to vertex edge         prevSegment.endp and ret.startp
-                        doEndCut = true; doStartCut = true;
-                        break;
-                    // average: todo: maybe rename in join (merges start-end at closest pt to both (avg), then snap on edge)
-                    case "closest" as any: //EdgeGapMode.closest:
-                        // does not work properly, i think i need to get next.end instead of curr.end, just disabled for now
-                        let nextpt: GraphPoint = (curr.bezier[0] || curr.end).pt;
-                        let prevpt: GraphPoint = (prev.bezier[prev.bezier.length-1] || prev.start).pt;
-                        let midexternalpt = prevpt.add(nextpt, true);
-                        let midedgepoint = curr.start.size.tl().add(curr.start.size.br(), false).divide(2, false);
-                        // od average between the 2 points before and after that are not part of this edgepoint, then raw a line from there to center of ep, find that intersection.
-                        ci = GraphSize.closestIntersection(curr.start.size, midedgepoint, midexternalpt, grid);
-                        doEndCut = doStartCut = false;
-                        if (canCutEnd && ci) prev.end.pt = ci;
-                        if (canCutStart && ci) curr.start.pt = ci;
-                        break;
-                    case EdgeGapMode.average:
-                        // first move to average of the 2 points in the gap, then snap to edge
-                        doEndCut = true; doStartCut = true;
-                        // indipendent from cutStart, cutEnd.
-                        // they merge if just 1 of cutting sides are true. (and if they are both false we don't even enter the for loop)
-                        curr.start.pt = curr.start.pt.add(prev.end.pt, false).divide(2, false);
-                        prev.end.pt = curr.start.pt.duplicate(); // intentionally not the same pt because during snap to edge they can diverge again.
-                        prev.start.uncutPt = prev.start.pt;
-                        prev.end.uncutPt = prev.end.pt;
-                        break;
-                    // center: first move it to center of edgePoint/node, then snap to edge.
-                    // this mode might be as well deleted, it can be specified with anchor points
-                    case EdgeGapMode.center:
-                        doEndCut = false; doStartCut = false;
-                        curr.start.pt = curr.start.size.tl().add(curr.start.size.br(), false).divide(2, false);
-                        prev.end.pt = curr.start.pt.duplicate(); // intentionally not the same pt because during snap to edge they can diverge again.
-                        prev.start.uncutPt = prev.start.pt; // only update them when point moves without being cut (average and center)
-                        prev.end.uncutPt = prev.end.pt;
-                        break;
-                    default:
-                        return Log.exDevv("unexpected EdgeGapMode:" + gapMode);
-                }
-                if (canCutStart && doStartCut){
-                    let nextpt: GraphPoint = (curr.bezier[0] || curr.end).pt;
-                    ci = GraphSize.closestIntersection(curr.start.size, curr.start.pt, nextpt, grid);
-                    if (ci) curr.start.pt = ci;// || Geom.closestPoint(curr.start.size, curr.start.pt);
-                    //if (gapMode === EdgeGapMode.average && prev) { prev.end.pt = curr.start.pt.add(prev.end.pt, false).divide(2, false); }
-                }
-                if (canCutEnd && doEndCut && prev){
-                    let prevpt: GraphPoint = (prev.bezier[prev.bezier.length-1] || prev.start).pt;
-                    ci = GraphSize.closestIntersection(prev.end.size, prev.end.pt, prevpt, grid);
-                    if (ci) prev.end.pt = ci;// || Geom.closestPoint(prev.end.size, prev.end.pt);
-                    // if average: first do average between start anchor points non-snapped. then i snap both,
-                    // then i do average again, and since it might snap out, i get closestPoint to EdgePoint size
-                    if (gapMode === EdgeGapMode.average) prev.end.pt = curr.start.pt =
-                        Geom.closestPoint(curr.start.size, curr.start.pt.add(prev.end.pt, false).divide(2, false));
-                }
-            }
-        // cut end of last segment regardless of gapMode
-        if (canCutEnd) {
-            let prevendpt = curr.end.pt;
-            ci = GraphSize.closestIntersection(curr.end.size, curr.end.pt, (curr.bezier[curr.bezier.length-1] || curr.start).pt, grid);
-            if (ci) curr.end.pt = ci; //|| Geom.closestPoint(prev.end.size, prev.end.pt);
-        }
-
+        snapSegmentsToBorders(v, ret, fillSegments);
     }
 
 

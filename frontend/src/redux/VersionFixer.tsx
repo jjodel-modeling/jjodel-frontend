@@ -14,6 +14,7 @@ import {
     U
 } from "../joiner";
 import {Tooltip} from "../components/forEndUser/Tooltip";
+import {DEFAULT_VIEW_JSX_STRING, LEGACY_PLACEHOLDER_MARKER} from "../utils/defaultViewTemplate";
 
 /*
                                     TODO for every update: check the VersionFixer.help() function
@@ -603,6 +604,33 @@ everytime you put hands into a D-Object shape or valid values, you should docume
     // No data migration; auto-refresh of default views regenerates view.css from views.ts
     // and jsxString templates from DV.tsx.
     private ['2.210 -> 2.211'](s: DState): DState {
+        return s;
+    }
+
+    // 2.211 → 2.212: redesign default class view to "minimal clean" variant
+    // + edge-like compact modifier + smart preview for binary associative classes.
+    // String-replaces stale jsxString matching the legacy placeholder marker
+    // across all DViewElement in the project state. Also clears legacy `css`
+    // and `palette` to align with the new global SCSS-based styling
+    // (`.jjodel-default-view` in `frontend/src/styles/default-view.scss`).
+    private ['2.211 -> 2.212'](s: DState): DState {
+        let migrated = 0;
+        for (let k in s.idlookup) {
+            let e = s.idlookup[k] as any;
+            if (!e || typeof e !== 'object') continue;
+            if (e.className !== 'DViewElement') continue;
+            if (typeof e.jsxString !== 'string') continue;
+            if (!e.jsxString.includes(LEGACY_PLACEHOLDER_MARKER)) continue;
+
+            e.jsxString = DEFAULT_VIEW_JSX_STRING;
+            e.css = '';
+            e.palette = {};
+            e.css_MUST_RECOMPILE = true;
+            migrated++;
+        }
+        if (migrated > 0) {
+            console.log(`[VersionFixer 2.211 -> 2.212] Migrated ${migrated} default view(s) to minimal clean design.`);
+        }
         return s;
     }
 

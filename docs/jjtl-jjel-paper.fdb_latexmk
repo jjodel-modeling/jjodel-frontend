@@ -1,5 +1,5 @@
 # Fdb version 4
-["pdflatex"] 1776342506.79134 "jjtl-jjel-paper.tex" "jjtl-jjel-paper.pdf" "jjtl-jjel-paper" 1776342508.42944 0
+["pdflatex"] 1777841010.80457 "jjtl-jjel-paper.tex" "jjtl-jjel-paper.pdf" "jjtl-jjel-paper" 1777841012.41962 0
   "/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc" 1136849721 2971 def0b6c1f0b107b3b936def894055589 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/enc/dvips/cm-super/cm-super-ts1.enc" 1136849721 2900 1537cc8184ad1792082cd229ecc269f4 ""
   "/usr/local/texlive/2025/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
@@ -173,10 +173,10 @@
   "/usr/local/texlive/2025/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1764868659 5467155 19efa205003f9ecad95fbbaa6ff24da1 ""
   "/usr/local/texlive/2025/texmf-var/web2c/pdftex/pdflatex.fmt" 1764868528 3345739 fe5e3fc5f0b67ca563b1ace48bed6ec6 ""
   "/usr/local/texlive/2025/texmf.cnf" 1741450484 577 418a7058ec8e006d8704f60ecd22c938 ""
-  "jjtl-jjel-paper.aux" 1776342508.21188 32836 a7bb24e74ff946a46543dd6b94a01a6b "pdflatex"
-  "jjtl-jjel-paper.out" 1776342508.21452 26442 bf0f82da86c57f86af12bd96fa9c328f "pdflatex"
-  "jjtl-jjel-paper.tex" 1776342472.46572 138260 9dd2478415fe1a278468a299e7e4328b ""
-  "jjtl-jjel-paper.toc" 1776342508.21475 16210 1002b8cfa87e557c22cdedbf395591f8 "pdflatex"
+  "jjtl-jjel-paper.aux" 1777841012.2467 33625 a4c789ffbdac21f49b19fe2cd2075658 "pdflatex"
+  "jjtl-jjel-paper.out" 1777841012.24925 26785 84d68ee543329a87a659bf616897de72 "pdflatex"
+  "jjtl-jjel-paper.tex" 1777840962.5971 145276 86e8a74286a81be6b7fa74ba3229721e ""
+  "jjtl-jjel-paper.toc" 1777841012.24946 16621 6aa5daa852604e32e9d512f0dc39d19e "pdflatex"
   (generated)
   "jjtl-jjel-paper.aux"
   "jjtl-jjel-paper.log"
