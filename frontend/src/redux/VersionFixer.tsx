@@ -14,7 +14,7 @@ import {
     U
 } from "../joiner";
 import {Tooltip} from "../components/forEndUser/Tooltip";
-import {DEFAULT_VIEW_JSX_STRING, LEGACY_PLACEHOLDER_MARKER} from "../utils/defaultViewTemplate";
+import {DEFAULT_VIEW_JSX_STRING, LEGACY_PLACEHOLDER_MARKER, V2_2_TO_V2_3_DETECT_MARKER} from "../utils/defaultViewTemplate";
 
 /*
                                     TODO for every update: check the VersionFixer.help() function
@@ -630,6 +630,58 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         }
         if (migrated > 0) {
             console.log(`[VersionFixer 2.211 -> 2.212] Migrated ${migrated} default view(s) to minimal clean design.`);
+        }
+        return s;
+    }
+
+    // 2.212 → 2.213: introduce L2 edge overlay schema on DViewElement (and DViewPoint subclass).
+    // Adds three additive fields to all existing view instances:
+    //   - isEdge: false       (default disabled — view does not render as edge overlay)
+    //   - edgeSource: ''      (no source endpoint expression configured)
+    //   - edgeTarget: ''      (no target endpoint expression configured)
+    // No rendering change in this migration. Fields are consumed by L2 Fase 3+ (SVG overlay
+    // in classic editor) and Fase 5 (properties panel UI). Idempotent: re-running is a no-op
+    // because of the typeof guards. See design doc `design_2026-05-03_L2_edge_overlay.md`.
+    private ['2.212 -> 2.213'](s: DState): DState {
+        let migrated = 0;
+        for (let k in s.idlookup) {
+            let e = s.idlookup[k] as any;
+            if (!e || typeof e !== 'object') continue;
+            if (e.className !== 'DViewElement' && e.className !== 'DViewPoint') continue;
+
+            let touched = false;
+            if (typeof e.isEdge !== 'boolean') { e.isEdge = false; touched = true; }
+            if (typeof e.edgeSource !== 'string') { e.edgeSource = ''; touched = true; }
+            if (typeof e.edgeTarget !== 'string') { e.edgeTarget = ''; touched = true; }
+            if (touched) migrated++;
+        }
+        if (migrated > 0) {
+            console.log(`[VersionFixer 2.212 -> 2.213] Migrated ${migrated} view(s) with L2 edge schema defaults.`);
+        }
+        return s;
+    }
+
+    // 2.213 → 2.214: replace v2.2 default view jsxString (which doesn't handle
+    // `view.isEdge`) with v2.3 jsxString that supports L2 edge overlay rendering.
+    // Detects v2.2 by presence of marker AND absence of 'view.isEdge' usage
+    // (introduced in v2.3 only). Idempotent: re-running this migration is a no-op
+    // if all DViewElement are already on v2.3.
+    private ['2.213 -> 2.214'](s: DState): DState {
+        let migrated = 0;
+        for (let k in s.idlookup) {
+            let e = s.idlookup[k] as any;
+            if (!e || typeof e !== 'object') continue;
+            if (e.className !== 'DViewElement') continue;
+            if (typeof e.jsxString !== 'string') continue;
+            let hasV2Marker = e.jsxString.indexOf(V2_2_TO_V2_3_DETECT_MARKER) !== -1;
+            let alreadyV2_3 = e.jsxString.indexOf('view.isEdge') !== -1;
+            if (hasV2Marker && !alreadyV2_3) {
+                e.jsxString = DEFAULT_VIEW_JSX_STRING;
+                migrated++;
+            }
+        }
+        if (migrated > 0) {
+            console.log(`[VersionFixer 2.213 -> 2.214] Migrated ${migrated} default view(s) to v2.3 (L2 isEdge support).`);
         }
         return s;
     }

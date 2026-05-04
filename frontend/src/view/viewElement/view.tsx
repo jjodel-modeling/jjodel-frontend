@@ -267,6 +267,15 @@ export class DViewElement extends DPointerTargetable {
     snap!: GraphPoint;
     grid!: {x?: number, y?: number, type?: "polar" | "cartesian", "center"?: TLCoord, visible?: boolean};
     version!: number; // only meaningful for default views, required to check if view needs to be updated.
+
+    // L2 — edge overlay schema (classic editor only). When isEdge=true, instances of the metaclass represented
+    // by this view are rendered as SVG edges in the classic editor (overlay), reading endpoints via
+    // edgeSource/edgeTarget path expressions evaluated against the M1 instance. Empty string = unconfigured;
+    // overlay falls back to the standard card. No effect in flow editor. Defaults set in Constructors.DViewElement;
+    // existing instances migrated by VersionFixer 2.212 -> 2.213. UI in L2 Fase 5; SVG renderer in L2 Fase 3.
+    isEdge!: boolean;
+    edgeSource!: string;
+    edgeTarget!: string;
 /*
     public static new(name: string, jsxString: string, father?: DViewElement, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
                       preRenderFunc: string = '', appliableToClasses: string[] = [], oclCondition: string = '',

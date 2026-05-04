@@ -19,6 +19,7 @@ import {
 import {DefaultNode} from "../../../joiner";
 import ContextMenu from "../../contextMenu/ContextMenu";
 import { EditorSwitch } from "./EditorSwitch";
+import { EdgeOverlay } from "../../edgeOverlay/EdgeOverlay";
 
 
 function ModelTabComponent(props: AllProps) {
@@ -43,6 +44,7 @@ function ModelTabComponent(props: AllProps) {
             <div className={'d-flex h-100'} style={{overflow:'hidden'}} onClick={e => { if (!U.isProjectModified) U.isProjectModified = U.userHasInteracted = true; }}>
                 <Try>
                     <div className={"GraphContainer h-100 w-100"} style={{position:"relative"}}>
+                        <EdgeOverlay graphid={graphid} />
                         {graph && <DefaultNode data={model} nodeid={graphid} graphid={graphid} />}
                     </div>
                 </Try>

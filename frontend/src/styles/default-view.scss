@@ -157,4 +157,27 @@
             display: none;
         }
     }
+
+    // Modifier "edge-fallback" — DV con isEdge=true ma espressioni non
+    // risolvibili (almeno una di edgeSource/edgeTarget). Card visibile
+    // (no overlay), stile edge-like compact + bordo dashed cyan + sfondo
+    // ecfeff per segnalare lo stato "edge non collegato". L'utente può
+    // cliccare la card e fixare le espressioni dal properties panel.
+    //
+    // Aggiunto in Fase 4 di L2 (sessione 2026-05-04).
+    &--edge-fallback {
+        border-style: dashed;
+        border-color: #06b6d4;
+        background: #ecfeff;
+
+        .jjodel-default-view__edge-preview {
+            display: block;
+            color: #0e7490;
+            font-style: italic;
+        }
+
+        .jjodel-default-view__hint {
+            display: none;
+        }
+    }
 }

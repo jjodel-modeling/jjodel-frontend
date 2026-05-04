@@ -1191,6 +1191,13 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
 
         thiss.edgeHeadSize = new GraphPoint(20, 20);
         thiss.edgeTailSize = new GraphPoint(20, 20);
+
+        // L2 — edge overlay schema defaults. See DViewElement field comments and design doc
+        // `design_2026-05-03_L2_edge_overlay.md` for full context.
+        thiss.isEdge = false;
+        thiss.edgeSource = '';
+        thiss.edgeTarget = '';
+
         if (thiss.className !== 'DViewElement') return this;
         const user: LUser = LUser.getUser();;
         // const project = user?.project; if(!project) return this;

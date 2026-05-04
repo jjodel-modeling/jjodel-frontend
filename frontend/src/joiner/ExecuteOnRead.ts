@@ -14,6 +14,7 @@ import {
 } from "../joiner";
 import * as Componentss from '../joiner/components';
 import React from "react";
+import { evalEdgeExpression } from '../utils/edgeExpressionEval';
 
 
 /*
@@ -120,6 +121,12 @@ for (let k in wComponents) {
 }
 
 windoww.enumerators = {};
+
+// L2 — edge overlay endpoint expression evaluator. Exposed globally for runtime
+// inspection (browser console) and for use by the template engine / SVG overlay
+// in L2 Fase 3+. See `utils/edgeExpressionEval.ts` and design doc
+// `design_2026-05-03_L2_edge_overlay.md`.
+windoww.evalEdgeExpression = evalEdgeExpression;
 // @ts-ignore
 function handlebarsIfCond_original(v1, operator, v2, options) {
     // @ts-ignore
