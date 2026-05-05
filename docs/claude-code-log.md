@@ -1,5 +1,14 @@
 # Claude Code Session Log
 
+## 2026-05-05 — chore(discovery): forced reflow external to EdgeOverlay
+**Prompt**: 2026-05-05_2230_forced_reflow_external_discovery.md
+**File toccati**: docs/reports/2026-05-05-forced-reflow-external-discovery.md (nuovo)
+**Esito**: ✅ completato
+**Note**: Read-only discovery del forced reflow ~37ms osservato esterno a EdgeOverlay durante pan. Convergenza su `Size.of` in `frontend/src/common/Geom.ts:615-664` come choke point: ancestor walk + getComputedStyle × depth + getBoundingClientRect + offsetWidth/Height + style.display write/restore. Driver primario: `adaptSize` (single caller `graph/graphElement/graphElement.tsx:1227`, scheduled via AT_TRANSACTION) chiamato per ogni vertice per ogni commit di pan TRANSACTION → 24 × Size.of × 30Hz ≈ 720/sec. Driver secondario: `Measurable.getCoords` (`Measurable.tsx:443`) 1 chiamata/tick. Log "adaptSize mismatching clonedcounter" emesso da `GraphDataElements.tsx:605` (wrapper `Log.ts:214`); branch fa solo console.warn + return ma `Size.of` è già stato eseguito a riga 595, quindi il reflow è pagato comunque. Path discrepancies del prompt: `forEndUser/GraphDataElements.tsx` → `model/dataStructure/`, `joiner/utils/Log.ts` → `common/`. Sezioni A-F coperte. Verifica proposta: `window.__sizeOfDebug` counter gated, atteso >=100 in 5s di pan. Direzioni fix candidate (per sessioni successive): inversione ordine in adaptSize (clonedCounter check prima di Size.of); short-circuit if isPanning; memoize Size.of su clonedCounter; eliminare ancestor walk in Size.of.
+**Nome del documento prompt**: 2026-05-05 22:30
+
+---
+
 ## 2026-05-05 — docs(L2): clarify edgeSource/edgeTarget tooltips with $.value pattern
 **Prompt**: 2026-05-05_2030_edge_fields_tooltip_clarify.md
 **File toccati**: frontend/src/components/editors/views/data/InfoData.tsx
