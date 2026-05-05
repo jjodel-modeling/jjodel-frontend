@@ -8,14 +8,27 @@ import './EdgeOverlay.scss';
  * L2 — Static SVG overlay rendering edges in the classic editor.
  *
  * For each DObject whose applicable DViewElement has `isEdge === true`,
- * renders a straight SVG line from the resolved `edgeSource` to
- * `edgeTarget` endpoints. Endpoints are resolved by `evalEdgeExpression`
- * (registered on `windoww.evalEdgeExpression`).
+ * renders an SVG path from the resolved `edgeSource` to `edgeTarget`
+ * endpoints with side-aware Manhattan routing. Endpoints are resolved
+ * by `evalEdgeExpression` (registered on `windoww.evalEdgeExpression`).
  *
- * SCOPE OF FASE 3a (intentional limitations):
- *   - Lines only. No arrowhead, no bending, no offset, no head/tail size.
- *   - The original DVertex card stays visible above the canvas.
- *   - No drag-aware live update: lines update only on Redux state change.
+ * MEMOIZATION (2026-05-05):
+ *   1. The Redux subscription uses a custom equality comparator
+ *      (`selectorResultEqual`) so the component skips re-renders when
+ *      neither the four transform numbers nor any per-edge rect
+ *      changed. Irrelevant dispatches (typing in inputs, focus changes,
+ *      etc.) become no-ops at the selector layer.
+ *   2. Each edge is rendered through `EdgeRenderItem` — a `React.memo`'d
+ *      child whose only props are the two endpoint rects. During canvas
+ *      pan, the rects in canvas space don't change (only the parent
+ *      `<g transform>` shifts), so every child memo-hits and the
+ *      chooseSides/buildPathFromSides/roundManhattanPath pipeline stays
+ *      cached. During node drag, only edges whose endpoints moved
+ *      invalidate; siblings stay cached.
+ *
+ *   This keeps SVG `<g transform>` as the single point that updates
+ *   during pan — a transform handled by the browser compositor — while
+ *   the path `d` strings, computed in canvas space, are reused.
  *
  * MOUNT POINT (current):
  *   ModelTab.tsx mounts this as a sibling of `<DefaultNode>` inside
@@ -31,51 +44,99 @@ interface EdgeOverlayProps {
     graphid: string;
 }
 
-type EdgeRender = {
+type NodeRect = { x: number; y: number; w: number; h: number };
+
+type EdgeData = {
     id: string;
-    d: string;
+    srcRect: NodeRect;
+    tgtRect: NodeRect;
 };
 
+type ExitCode =
+    | 'no-snapshot'
+    | 'no-globals'
+    | 'no-graph'
+    | 'no-edge-views'
+    | 'no-edges-resolved';
+
+type SelectorResult =
+    | { kind: 'render'; tx: number; ty: number; sx: number; sy: number; edges: EdgeData[] }
+    | { kind: 'exit'; code: ExitCode; data?: any };
+
 export function EdgeOverlay({ graphid }: EdgeOverlayProps): React.ReactElement | null {
-    // Subscribe to the full state. `useSelector` re-runs the body whenever
-    // anything relevant changes (with shallow-equal default it would skip
-    // re-renders if the returned object is stable, but here we return a
-    // plain object built fresh, so re-render fires on every state change).
-    // Acceptable for MVP — Fase 3b can scope this down.
-    const snapshot = useSelector((state: any) => state);
+    // L1 — granular selector with custom equality. The selector body runs
+    // on every dispatch (cheap iteration), but `selectorResultEqual` decides
+    // whether to commit and re-render. Pattern matches `useModelStats` +
+    // `statsEqual` in StatusBar.tsx.
+    const result = useSelector(
+        (state: any) => buildSelectorResult(state, graphid),
+        selectorResultEqual,
+    );
 
-
-       if (!snapshot || !snapshot.idlookup) {
+    if (result.kind === 'exit') {
         if (typeof window !== 'undefined' && (window as any).__edgeOverlayDebug) {
-            console.log('[EdgeOverlay] EXIT 1: no snapshot.idlookup');
+            logExit(result.code, result.data, graphid);
         }
         return null;
     }
 
-    // Resolve the LGraph (for offset + zoom + node lookup).
+    const { tx, ty, sx, sy, edges } = result;
+
+    if (typeof window !== 'undefined' && (window as any).__edgeOverlayDebug) {
+        console.log('[EdgeOverlay] RENDER', { edgesCount: edges.length, tx, ty, sx, sy });
+    }
+
+    return (
+        <svg className="jjodel-edge-overlay" pointerEvents="none">
+            <g transform={`translate(${tx}, ${ty}) scale(${sx}, ${sy})`}>
+                {edges.map(e => (
+                    <EdgeRenderItem
+                        key={e.id}
+                        id={e.id}
+                        srcRect={e.srcRect}
+                        tgtRect={e.tgtRect}
+                    />
+                ))}
+            </g>
+        </svg>
+    );
+}
+
+/**
+ * Selector body — runs on every Redux dispatch. Reading via window globals
+ * (`LPointerTargetable`, `evalEdgeExpression`) matches the existing pattern
+ * used by `useModelStats` in StatusBar.tsx; these resolve through the same
+ * store the selector is subscribed to.
+ */
+function buildSelectorResult(state: any, graphid: string): SelectorResult {
+    if (!state || !state.idlookup) {
+        return { kind: 'exit', code: 'no-snapshot' };
+    }
+
     const w: any = window;
     const LPointerTargetable = w.LPointerTargetable;
     const LGraphElement = w.LGraphElement;
     const evalFn = w.evalEdgeExpression;
-if (!LPointerTargetable || !evalFn) {
-        if (typeof window !== 'undefined' && (window as any).__edgeOverlayDebug) {
-            console.log('[EdgeOverlay] EXIT 2: missing globals', { LPointerTargetable: !!LPointerTargetable, evalFn: !!evalFn, LGraphElement: !!LGraphElement });
-        }
-        return null;
+    if (!LPointerTargetable || !evalFn) {
+        return {
+            kind: 'exit',
+            code: 'no-globals',
+            data: {
+                LPointerTargetable: !!LPointerTargetable,
+                evalFn: !!evalFn,
+                LGraphElement: !!LGraphElement,
+            },
+        };
     }
 
-const lGraph: any = safeFromPointer(LPointerTargetable, graphid);
+    const lGraph: any = safeFromPointer(LPointerTargetable, graphid);
     if (!lGraph) {
-        if (typeof window !== 'undefined' && (window as any).__edgeOverlayDebug) {
-            console.log('[EdgeOverlay] EXIT 3: lGraph not resolvable for', graphid);
-        }
-        return null;
+        return { kind: 'exit', code: 'no-graph' };
     }
 
-    // Collect DViewElement with isEdge=true. Iterating idlookup once.
     const edgeViews: any[] = [];
-    for (const k in snapshot.idlookup) {
-        const e = snapshot.idlookup[k];
+    for (const k in state.idlookup) {
+        const e = state.idlookup[k];
         if (!e || typeof e !== 'object') continue;
         if (e.className !== 'DViewElement') continue;
         if (e.isEdge !== true) continue;
@@ -83,25 +144,21 @@ const lGraph: any = safeFromPointer(LPointerTargetable, graphid);
         if (typeof e.edgeTarget !== 'string' || !e.edgeTarget) continue;
         edgeViews.push(e);
     }
-if (edgeViews.length === 0) {
-        // Debug: count DViewElements seen and how many had isEdge truthy
-        let total = 0, withIsEdge = 0;
-        for (const k in snapshot.idlookup) {
-            const e = snapshot.idlookup[k];
+    if (edgeViews.length === 0) {
+        let total = 0;
+        let withIsEdge = 0;
+        for (const k in state.idlookup) {
+            const e = state.idlookup[k];
             if (!e || typeof e !== 'object' || e.className !== 'DViewElement') continue;
             total++;
             if (e.isEdge === true) withIsEdge++;
         }
-        if (typeof window !== 'undefined' && (window as any).__edgeOverlayDebug) {
-            console.log('[EdgeOverlay] EXIT 4: no edgeViews', { totalDV: total, withIsEdge });
-        }
-        return null;
+        return { kind: 'exit', code: 'no-edge-views', data: { totalDV: total, withIsEdge } };
     }
 
-    // For each DObject in the project, find matching edge view and resolve endpoints.
-    const edges: EdgeRender[] = [];
-    for (const k in snapshot.idlookup) {
-        const obj = snapshot.idlookup[k];
+    const edges: EdgeData[] = [];
+    for (const k in state.idlookup) {
+        const obj = state.idlookup[k];
         if (!obj || typeof obj !== 'object') continue;
         if (obj.className !== 'DObject') continue;
 
@@ -115,44 +172,21 @@ if (edgeViews.length === 0) {
         const targetL: any = safeEval(evalFn, lObj, view.edgeTarget);
         if (!sourceL || !targetL) continue;
 
-        const srcRect = getNodeRect(LGraphElement, LPointerTargetable, sourceL, snapshot);
-        const tgtRect = getNodeRect(LGraphElement, LPointerTargetable, targetL, snapshot);
+        const srcRect = getNodeRect(LGraphElement, LPointerTargetable, sourceL, state);
+        const tgtRect = getNodeRect(LGraphElement, LPointerTargetable, targetL, state);
         if (!srcRect || !tgtRect) continue;
 
-        const srcBbox: Bbox = {
-            cx: srcRect.x + srcRect.w / 2,
-            cy: srcRect.y + srcRect.h / 2,
-            hw: srcRect.w / 2,
-            hh: srcRect.h / 2,
-        };
-        const tgtBbox: Bbox = {
-            cx: tgtRect.x + tgtRect.w / 2,
-            cy: tgtRect.y + tgtRect.h / 2,
-            hw: tgtRect.w / 2,
-            hh: tgtRect.h / 2,
-        };
-        const sides = chooseSides(srcBbox, tgtBbox);
-        const srcPoint = sideMidpoint(srcBbox, sides.srcSide);
-        const tgtPoint = sideMidpoint(tgtBbox, sides.tgtSide);
-
-        // Degenerate: side midpoints coincide (overlapping / coincident nodes).
-        if (srcPoint.x === tgtPoint.x && srcPoint.y === tgtPoint.y) continue;
-
-        const rawPath = buildPathFromSides(srcPoint, sides.srcSide, tgtPoint, sides.tgtSide);
-        if (!rawPath) continue; // Defensive: same-side fallback returned null.
-
-        const d = roundManhattanPath(rawPath, 8);
-        edges.push({ id: obj.id, d });
+        edges.push({ id: obj.id, srcRect, tgtRect });
     }
 
-if (edges.length === 0) {
-        if (typeof window !== 'undefined' && (window as any).__edgeOverlayDebug) {
-            console.log('[EdgeOverlay] EXIT 5: no edges resolved', { edgeViewsCount: edgeViews.length });
-        }
-        return null;
+    if (edges.length === 0) {
+        return {
+            kind: 'exit',
+            code: 'no-edges-resolved',
+            data: { edgeViewsCount: edgeViews.length },
+        };
     }
 
-    // Read pan offset + zoom from the LGraph for the SVG transform.
     const offset = readPoint(lGraph, 'offset');
     const zoom = readPoint(lGraph, 'cumulativeZoom') || readPoint(lGraph, 'zoom') || { x: 1, y: 1 };
     const tx = offset ? offset.x : 0;
@@ -160,22 +194,105 @@ if (edges.length === 0) {
     const sx = typeof zoom.x === 'number' && zoom.x > 0 ? zoom.x : 1;
     const sy = typeof zoom.y === 'number' && zoom.y > 0 ? zoom.y : 1;
 
-if (typeof window !== 'undefined' && (window as any).__edgeOverlayDebug) {
-        console.log('[EdgeOverlay] RENDER', { edgesCount: edges.length, tx, ty, sx, sy });
+    return { kind: 'render', tx, ty, sx, sy, edges };
+}
+
+/**
+ * Custom equality for the selector result. Skips re-renders when neither
+ * the transform nor any per-edge rect changed. Compares positionally —
+ * the prep loop emits edges in `idlookup` iteration order, which is stable
+ * within a session unless objects are added/removed.
+ */
+function selectorResultEqual(a: SelectorResult, b: SelectorResult): boolean {
+    if (a === b) return true;
+    if (a.kind !== b.kind) return false;
+    if (a.kind === 'exit' && b.kind === 'exit') {
+        return a.code === b.code;
     }
-    return (
-        <svg className="jjodel-edge-overlay" pointerEvents="none">
-            <g transform={`translate(${tx}, ${ty}) scale(${sx}, ${sy})`}>
-                {edges.map(e => (
-                    <path
-                        key={e.id}
-                        className="jjodel-edge-overlay__path"
-                        d={e.d}
-                    />
-                ))}
-            </g>
-        </svg>
-    );
+    if (a.kind === 'render' && b.kind === 'render') {
+        if (a.tx !== b.tx || a.ty !== b.ty || a.sx !== b.sx || a.sy !== b.sy) return false;
+        if (a.edges.length !== b.edges.length) return false;
+        for (let i = 0; i < a.edges.length; i++) {
+            const e1 = a.edges[i];
+            const e2 = b.edges[i];
+            if (e1.id !== e2.id) return false;
+            if (!rectEqual(e1.srcRect, e2.srcRect)) return false;
+            if (!rectEqual(e1.tgtRect, e2.tgtRect)) return false;
+        }
+        return true;
+    }
+    return false;
+}
+
+function rectEqual(a: NodeRect, b: NodeRect): boolean {
+    return a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h;
+}
+
+function logExit(code: ExitCode, data: any, graphid: string): void {
+    switch (code) {
+        case 'no-snapshot':
+            console.log('[EdgeOverlay] EXIT 1: no snapshot.idlookup');
+            break;
+        case 'no-globals':
+            console.log('[EdgeOverlay] EXIT 2: missing globals', data);
+            break;
+        case 'no-graph':
+            console.log('[EdgeOverlay] EXIT 3: lGraph not resolvable for', graphid);
+            break;
+        case 'no-edge-views':
+            console.log('[EdgeOverlay] EXIT 4: no edgeViews', data);
+            break;
+        case 'no-edges-resolved':
+            console.log('[EdgeOverlay] EXIT 5: no edges resolved', data);
+            break;
+    }
+}
+
+interface EdgeRenderItemProps {
+    id: string;
+    srcRect: NodeRect;
+    tgtRect: NodeRect;
+}
+
+/**
+ * L2 — per-edge memoized renderer. Path is computed inline; React.memo with
+ * `edgePropsEqual` skips re-render when the rect inputs are unchanged across
+ * renders (e.g., during canvas pan, where positions in canvas space don't
+ * change — only the parent `<g transform>`).
+ */
+const EdgeRenderItem = React.memo(function EdgeRenderItem({
+    srcRect,
+    tgtRect,
+}: EdgeRenderItemProps): React.ReactElement | null {
+    const srcBbox: Bbox = {
+        cx: srcRect.x + srcRect.w / 2,
+        cy: srcRect.y + srcRect.h / 2,
+        hw: srcRect.w / 2,
+        hh: srcRect.h / 2,
+    };
+    const tgtBbox: Bbox = {
+        cx: tgtRect.x + tgtRect.w / 2,
+        cy: tgtRect.y + tgtRect.h / 2,
+        hw: tgtRect.w / 2,
+        hh: tgtRect.h / 2,
+    };
+    const sides = chooseSides(srcBbox, tgtBbox);
+    const srcPoint = sideMidpoint(srcBbox, sides.srcSide);
+    const tgtPoint = sideMidpoint(tgtBbox, sides.tgtSide);
+
+    if (srcPoint.x === tgtPoint.x && srcPoint.y === tgtPoint.y) return null;
+
+    const rawPath = buildPathFromSides(srcPoint, sides.srcSide, tgtPoint, sides.tgtSide);
+    if (!rawPath) return null;
+
+    const d = roundManhattanPath(rawPath, 8);
+    return <path className="jjodel-edge-overlay__path" d={d} />;
+}, edgePropsEqual);
+
+function edgePropsEqual(prev: EdgeRenderItemProps, next: EdgeRenderItemProps): boolean {
+    return prev.id === next.id
+        && rectEqual(prev.srcRect, next.srcRect)
+        && rectEqual(prev.tgtRect, next.tgtRect);
 }
 
 /**
@@ -184,8 +301,6 @@ if (typeof window !== 'undefined' && (window as any).__edgeOverlayDebug) {
  * then falls back to `appliableToClasses` containing the classifier id
  * or name. First-match-wins.
  */
-
-
 function findApplicableEdgeView(lObj: any, edgeViews: any[]): any | undefined {
     const cls = lObj && lObj.instanceof;
     const clsId: string | undefined = cls && cls.id;
@@ -220,7 +335,7 @@ function getNodeRect(
     LGraphElement: any,
     LPointerTargetable: any,
     lObj: any,
-    snapshot: any
+    snapshot: any,
 ): { x: number; y: number; w: number; h: number } | null {
     if (!LGraphElement || !lObj) return null;
 

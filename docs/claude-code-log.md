@@ -1,5 +1,14 @@
 # Claude Code Session Log
 
+## 2026-05-05 — chore(L2): remove EdgeOverlay diagnostic logs after memoization verification
+**Prompt**: 2026-05-05_1730_L2_overlay_cleanup_and_commit.md
+**File toccati**: frontend/src/components/edgeOverlay/EdgeOverlay.tsx
+**Esito**: ✅ completato
+**Note**: Rimossi i 4 DIAG-B (endpoint-null, rect-null, coincident-points, null-rawPath) aggiunti nel commit precedente per discovery del flicker. Verificato runtime che L1 (custom equality) e L2 (React.memo per edge) funzionano correttamente: durante pan attivo, i path non vengono ricalcolati e si sposta solo <g transform>. Lo stutter da setTimeout 74ms è scomparso. Resta un forced reflow ~37ms di origine esterna (verificato: path 2 di getNodeRect non viene esercitato durante pan), da tracciare come bug separato.
+**Nome del documento prompt**: 2026-05-05 17:30
+
+---
+
 ## 2026-05-04 — fix(pan): correct coords formula in whileDragging (oldPos + ui.position)
 **Prompt**: 2026-05-04_2100_L2_pan_coords_sum_formula.md
 **File toccati**: frontend/src/components/forEndUser/Measurable.tsx
