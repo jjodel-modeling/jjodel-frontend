@@ -19,6 +19,7 @@ import $ from "jquery";
 import {JQueryUI} from "../../common/libraries/jqui-types"
 import "./Measurable.scss";
 import { AT_TRANSACTION } from "../../redux/action/action";
+import { rafThrottle, cancelThrottle } from "../../utils/DragThrottle";
 
 type ResizableEvent = JQueryUI.ResizableEvent;
 type DraggableEvent = JQueryUI.DraggableEvent;
@@ -454,6 +455,10 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
 @RuntimeAccessible('ScrollableComponent')
 export class ScrollableComponent extends Component<ScrollOwnProps & MeasurableInjectProps, ScrollState>{
     static cname: string = "ScrollableComponent";
+    private panThrottleKey: string | undefined;
+    componentWillUnmount() {
+        if (this.panThrottleKey) cancelThrottle(this.panThrottleKey);
+    }
     render(){
         let graph = (this.props.graph || L.fromPointer(this.props.graphid)) as any as LGraph;
         if (!graph) return <div>&lt;Scrollable/&gt; requires a valid graph attribute</div>;
@@ -463,6 +468,24 @@ export class ScrollableComponent extends Component<ScrollOwnProps & MeasurableIn
             target.style.top = graph.offset.y+'px';*/
             // $(target).data({uiDraggable:{offset:{left: graph.offset.x, top: graph.offset.y}}});
         }
+        // Drag-aware Redux update for pan: same dispatch as onDragEnd, throttled
+        // at ~30fps so consumers of LGraph.offset (e.g. EdgeOverlay) follow the
+        // pan live instead of snapping at mouseup. Pattern mirrors Vertex.tsx
+        // node-drag throttle (rafThrottle, 32ms).
+        if (!this.panThrottleKey) this.panThrottleKey = `pan_${graph.id}`;
+        const panThrottleKey = this.panThrottleKey;
+        const commitOffset = (coords: GraphSize) => {
+            let offset = graph.offset;
+            if (offset.equals(coords)) return;
+            // TRANSACTION wrap is what makes the dispatch flush during an active jQuery UI drag.
+            // Without the wrap, neither `graph.offset = coords` nor a bare `SetFieldAction.new`
+            // commits until mouseup. Pattern mirrors Vertex.tsx:185 (proxy assignment inside
+            // TRANSACTION) which is verified to update Redux at ~30fps during node drag.
+            TRANSACTION('pan ' + graph.name + ' offset', () => {
+                graph.offset = coords as any;
+            });
+        };
+        const throttledCommit = rafThrottle(panThrottleKey, commitOffset, 32);
         return (
             <div {...this.props} className={(this.props.className || '' ) + " scrollable"} >
                 {/*(this.props as any).test ? works only apparently, it takes the event from root and not from handle, need to put hands on Measurable to make it work this way
@@ -483,12 +506,21 @@ export class ScrollableComponent extends Component<ScrollOwnProps & MeasurableIn
                     :*/
                     <Measurable draggable={{create}}
                                 isPanning={graph}
-                                onDragEnd={graph ? (coords, ...args: any)=>{
-                                if (!graph) return; // just for ts-lint
-                                let offset = graph.offset;
-                                if (!offset.equals(coords)) graph.offset = coords as any;
-                            } : undefined}
-                            onChildren={true}>
+                                whileDragging={(coords, evt, ui) => {
+                                    // coords from getCoords() returns oldPos (drag start position) when onChildren=true.
+                                    // ui.position is the jQuery UI delta from drag start.
+                                    // Correct current position is the sum, mirroring Measurable.tsx:220 (`newpos = oldpos + ui.position`)
+                                    // which is also what oldPos becomes at mouseup (Measurable.tsx:225), making this consistent with onDragEnd.
+                                    const fresh: GraphSize = ui?.position
+                                        ? ({ ...coords, x: coords.x + ui.position.left, y: coords.y + ui.position.top } as GraphSize)
+                                        : coords;
+                                    throttledCommit(fresh);
+                                }}
+                                onDragEnd={(coords) => {
+                                    cancelThrottle(panThrottleKey);
+                                    commitOffset(coords);
+                                }}
+                                onChildren={true}>
                         <div className="panning-handle">
                             <div className="panning-content">{this.props.children}</div>
                         </div>
@@ -517,7 +549,7 @@ interface MeasurableOwnProps {
     //drag?: Options;
     draggable?: JQueryUI.DraggableOptions | boolean;
     onDragStart?: DraggableEvent;
-    whileDragging?: DraggableEvent;
+    whileDragging?: (coords: GraphSize, ...args: Parameters<DraggableEvent>)=>void;
     onDragEnd?: (coords: GraphSize, ...args: Parameters<DraggableEvent>)=>void;
     onChildren?: boolean | ((e: HTMLElement)=>HTMLElement);
 

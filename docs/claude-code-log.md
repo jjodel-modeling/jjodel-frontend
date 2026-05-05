@@ -1,5 +1,50 @@
 # Claude Code Session Log
 
+## 2026-05-04 — fix(pan): correct coords formula in whileDragging (oldPos + ui.position)
+**Prompt**: 2026-05-04_2100_L2_pan_coords_sum_formula.md
+**File toccati**: frontend/src/components/forEndUser/Measurable.tsx
+**Esito**: ✅ completato
+**Note**: il fix precedente ignorava `coords` (= `oldPos` cachato al drag start) e usava solo `ui.position`. La formula corretta è la somma `oldPos + ui.position`, come fa `Measurable` internamente in `fixpos` (riga 220 `newpos = oldpos + ui.position`) e come `oldPos` viene aggiornato al `'e'` event (riga 225). Cambiato `x: ui.position.left` → `x: coords.x + ui.position.left` (idem y). Mantenuti spread + cast `as GraphSize` e fallback su `coords` se `ui?.position` undefined. Una sola riga effettiva di diff (più commento aggiornato). Build verde 38.13s. 6 errori TS pre-esistenti su Measurable.tsx (272/288/290/293/299/303) invariati. Smoke test runtime non eseguibile da CLI: verificare che durante pan attivo l'arco L2 segua le card live (niente scomparsa, niente scatto al rilascio); raffica di dispatch ~30/sec dovrebbe restare invariata dal fix precedente.
+**Nome del documento prompt**: 2026-05-04 21:00
+
+---
+
+## 2026-05-04 — fix(pan): bypass stale getCoords in whileDragging via ui.position
+**Prompt**: 2026-05-04_2000_L2_pan_whileDragging_uiPosition_bypass.md
+**File toccati**: frontend/src/components/forEndUser/Measurable.tsx
+**Esito**: ✅ completato
+**Note**: getCoords ritorna `this.oldPos` quando `onChildren=true` (panning). Discovery confermata: `oldPos` è settato solo a (a) `start` se undefined (riga 207-209) e (b) `evtkind === 'e'` cioè drag END (righe 126, 225) — mai durante 'ing' events. Risultato: durante drag attivo il `coords` passato a whileDragging è la posizione iniziale del pan, equals check passa sempre, dispatch saltato. Il whileDragging callback in `ScrollableComponent` ora ignora `coords` stale e calcola `fresh` overrideando `x`/`y` con `ui.position.left`/`top` (fresh per-frame da jQuery UI). Mantiene `w`/`h` da `coords` originale via spread + cast `as GraphSize` (la spread perde i metodi prototipali ma `equals` legge solo x/y/w/h e il proxy setter ha già `as any`). Fallback su `coords` se `ui?.position` undefined (difensivo). `getCoords` non toccato (è usato anche da drag nodi/resize/rotate, non rompere altri caller). `onDragEnd` invariato (funziona già al mouseup grazie a risincronizzazione di oldPos da parte del 'e' event). `commitOffset` invariato (TRANSACTION wrap del prompt precedente). Build verde 38.82s. 6 errori TS pre-esistenti su Measurable.tsx (272/288/290/293/299/303) invariati. Smoke test runtime non eseguibile da CLI: verificare che durante pan attivo l'arco L2 segua le card live, e in Redux DevTools una raffica di action `SET_ME_FIELD` (~30/sec) durante drag.
+**Nome del documento prompt**: 2026-05-04 20:00
+
+---
+
+## 2026-05-04 — fix(pan): TRANSACTION wrap for commitOffset
+**Prompt**: 2026-05-04_1900_L2_pan_commit_transaction_wrap.md
+**File toccati**: frontend/src/components/forEndUser/Measurable.tsx
+**Esito**: ✅ completato
+**Note**: SetFieldAction.new senza TRANSACTION wrap non flushava durante drag attivo (verifica runtime del prompt precedente). Pattern allineato a Vertex.tsx:185 (`TRANSACTION(name, () => { proxy.field = value })`). `commitOffset` ora wrappa proxy assignment `graph.offset = coords` in `TRANSACTION('pan ' + graph.name + ' offset', () => {...})`. Tornato al proxy assignment dentro TRANSACTION (no SetFieldAction esplicito). Cleanup: rimosso import orfano `SetFieldAction` da joiner. `onDragEnd` lasciato invariato (proxy assignment senza wrap, funziona già al mouseup). Build verde 37.36s. 6 errori TS pre-esistenti (riga 272/288/290/293/299/303) invariati. Smoke test runtime non eseguibile da CLI: verificare in Redux DevTools che durante pan attivo arrivi una raffica di action `SET_ME_FIELD` (~30/sec) e che l'arco L2 segua le card live.
+**Nome del documento prompt**: 2026-05-04 19:00
+
+---
+
+## 2026-05-04 — fix(pan): SetFieldAction explicit dispatch in commitOffset
+**Prompt**: 2026-05-04_1830_L2_pan_commit_setfieldaction_fix.md
+**File toccati**: frontend/src/components/forEndUser/Measurable.tsx
+**Esito**: ✅ completato
+**Note**: proxy assignment `graph.offset = coords` dispatchava solo a `mouseup` (non durante drag attivo) malgrado il throttle Measurable.whileDragging firasse correttamente. Sostituito il body di `commitOffset` (righe 477-484 area) con `SetFieldAction.new(graph.id, 'offset', coords)` esplicito. Bypassa il proxy L-layer (`set_offset` in `GraphDataElements.tsx:1131-1144`) e fa direttamente `.fire()` al store. Aggiunto `SetFieldAction` all'import joiner esistente (no nuovo path). Discovery ha confermato: `Vertex.tsx:185-188` wrappa in `TRANSACTION` ma usa proxy assignment (`setSize → node.size = size`); il prompt prescrive `SetFieldAction.new` diretto senza TRANSACTION wrap (single-action). Seguita pseudocode literal del prompt — niente TRANSACTION wrap; se runtime mostra che il dispatch comunque non parte, follow-up sarà aggiungere TRANSACTION wrap come fa Vertex. Lasciato `onDragEnd` invariato (proxy assignment lì funziona già, niente regressione su path verde). Build verde 40.76s. 6 errori TS pre-esistenti su Measurable.tsx (273/289/291/294/300/304) shiftati di +1 per l'import aggiunto, già presenti prima — non introdotti. Smoke test runtime non eseguibile da CLI: verificare in Redux DevTools che durante pan attivo di 2-3s arrivi una raffica di action `SET_ME_FIELD` su LGraph field 'offset' (~30/sec), e che l'overlay L2 segua le card senza scatto al mouseup.
+**Nome del documento prompt**: 2026-05-04 18:30
+
+---
+
+## 2026-05-04 — feat(pan): drag-aware Redux update via whileDragging in Measurable
+**Prompt**: 2026-05-04_1700_L2_pan_drag_aware_fix.md
+**File toccati**: frontend/src/components/forEndUser/Measurable.tsx
+**Esito**: ✅ completato
+**Note**: whileDragging registrato simmetrico a onDragEnd in `ScrollableComponent` (Measurable.tsx:484-510), rafThrottle 32ms (~30fps) come Vertex.tsx. Estratto `commitOffset` come closure locale, riusata da entrambi i callback. `cancelThrottle(panThrottleKey)` chiamato dentro onDragEnd e in nuovo `componentWillUnmount` per evitare pending rAF post-drag/post-unmount. Throttle key `pan_${graph.id}` memorizzato come instance field `panThrottleKey` per ritrovarlo in unmount. Aggiunto import `rafThrottle, cancelThrottle` da `'../../utils/DragThrottle'` (stesso path di Vertex.tsx). **Type fix latente**: `MeasurableOwnProps.whileDragging?` era tipato `DraggableEvent` ma a runtime il dispatch (Measurable.tsx:300-313) lo chiama con `(coords: GraphSize, evt, ui)` come fa già con `onDragEnd`. Aggiornato il tipo a `(coords: GraphSize, ...args: Parameters<DraggableEvent>) => void` simmetrico a `onDragEnd`. Solo 1 caller esterno-ish (`Draggable` shortcut riga 603) con `GObject<MeasurableAllProps>` lasco — nessun breaking change. Sblocca live update di tutti i consumer di LGraph.offset, incluso EdgeOverlay (L2) e potenzialmente Fase 3b drag-aware. Smoke test runtime non eseguibile da CLI: verificare manualmente che (a) durante pan attivo l'overlay segua le card senza scatto al mouseup, (b) drag di un nodo source/target di edge L2 aggiorni l'arco live (Fase 3b verifica gratis). Carry-over noti dal prompt non toccati: selettore Redux non memoizzato in EdgeOverlay (potrebbe causare lag a 30fps; scope-down separato), test save+reload migration 2.213/2.214. Build verde 39.55s. Errori TS pre-esistenti in Measurable.tsx (6 errori riga 272/288/290/293/299/303) shiftati di +1 dall'import aggiunto, già presenti prima del prompt — non introdotti.
+**Nome del documento prompt**: 2026-05-04 17:00
+
+---
+
 ## 2026-05-04 — chore: gate EdgeOverlay diagnostic logs on __edgeOverlayDebug
 **Prompt**: 2026-05-04_1530_L2_cleanup_diagnostic_logs.md
 **File toccati**: frontend/src/components/edgeOverlay/EdgeOverlay.tsx
