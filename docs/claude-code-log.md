@@ -1,5 +1,14 @@
 # Claude Code Session Log
 
+## 2026-05-05 — docs(L2): clarify edgeSource/edgeTarget tooltips with $.value pattern
+**Prompt**: 2026-05-05_2030_edge_fields_tooltip_clarify.md
+**File toccati**: frontend/src/components/editors/views/data/InfoData.tsx
+**Esito**: ✅ completato
+**Note**: Tooltip dei due input edge endpoint resi espliciti sul pattern $<refName>.value; l'esempio precedente ('src') era fuorviante perché induceva l'utente a inserire il nome della reference direttamente, ottenendo un DValue invece dell'LObject e il fallimento silenzioso del rendering.
+**Nome del documento prompt**: 2026-05-05 20:30
+
+---
+
 ## 2026-05-05 — chore(L2): remove EdgeOverlay diagnostic logs after memoization verification
 **Prompt**: 2026-05-05_1730_L2_overlay_cleanup_and_commit.md
 **File toccati**: frontend/src/components/edgeOverlay/EdgeOverlay.tsx

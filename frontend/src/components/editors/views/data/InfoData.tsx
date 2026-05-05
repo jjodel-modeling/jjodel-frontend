@@ -115,14 +115,14 @@ function InfoDataComponent(props: AllProps) {
                     <div className="jj-field">
                         <label className="jj-field-label">
                             Edge Source
-                            <InfoTooltip text="JjEL expression resolving to the LObject visualized as the source endpoint of the edge. Typically the name of an EReference of the metaclass (e.g. 'src')." />
+                            <InfoTooltip text="JjEL expression resolving to the LObject visualized as the source endpoint of the edge. For an EReference named e.g. &quot;source&quot;, use $source.value to dereference it. The reference name alone returns a DValue wrapper, not the target object." />
                         </label>
                         <Input data={view} field={'edgeSource'} readOnly={readOnly} />
                     </div>
                     <div className="jj-field">
                         <label className="jj-field-label">
                             Edge Target
-                            <InfoTooltip text="JjEL expression resolving to the LObject visualized as the target endpoint of the edge. Typically the name of an EReference of the metaclass (e.g. 'tgt')." />
+                            <InfoTooltip text="JjEL expression resolving to the LObject visualized as the target endpoint of the edge. For an EReference named e.g. &quot;target&quot;, use $target.value to dereference it. The reference name alone returns a DValue wrapper, not the target object." />
                         </label>
                         <Input data={view} field={'edgeTarget'} readOnly={readOnly} />
                     </div>
