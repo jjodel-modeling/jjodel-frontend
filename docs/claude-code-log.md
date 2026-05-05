@@ -1,5 +1,14 @@
 # Claude Code Session Log
 
+## 2026-05-05 — perf: adaptSize early-return prima di Size.of()
+**Prompt**: spostare guard clonedCounter prima di Size.of() in adaptSize per eliminare layout thrashing durante pan
+**File toccati**: frontend/src/model/dataStructure/GraphDataElements.tsx
+**Esito**: ✅ completato
+**Note**: caller verificato unico (graphElement.tsx:1227). Refactor di Size.of() parked. Path effettivo `model/dataStructure/` (prompt indicava `components/forEndUser/` come nella discovery di stamattina). Build verde 37.83s. Stop condition del prompt sul grep di Size.of (atteso un solo caller in adaptSize) attivata: presenti altri 11 caller in Vertex/Measurable/Tooltip/MyRcDock/altri metodi di GraphDataElements; segnalato e l'utente ha confermato di procedere col fix locale, lasciando il refactor di Size.of fuori scope. Il fix riordina solo le 14 righe descritte; rimosso il ternario `html ? Size.of(html) : {w:0, h:0}` (ora `html` è garantito non-null dal guard); payload del console.warn ripulito da `actualSize`/`cumulativeZoom` non più calcolati a quel punto.
+**Nome del documento prompt**: 2026-05-05 23:00
+
+---
+
 ## 2026-05-05 — chore(discovery): forced reflow external to EdgeOverlay
 **Prompt**: 2026-05-05_2230_forced_reflow_external_discovery.md
 **File toccati**: docs/reports/2026-05-05-forced-reflow-external-discovery.md (nuovo)

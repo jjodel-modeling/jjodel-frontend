@@ -592,20 +592,20 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             // let viewAdaptHeight = canTriggerSet.h; // view.adaptHeight;
 
             let html: HTMLElement | undefined | null = this.get_component(c)?.html?.current;
-            let actualSize: Partial<Size> & {w:number, h:number} = html ? Size.of(html) : {w:0, h:0};
-            let cumulativeZoom = this.get_graph(c).cumulativeZoom;
-            // console.log('size 7 ret:', {w:actualSize.w, h:actualSize.h, nw:actualSize.w/cumulativeZoom.x, nh:actualSize.h/cumulativeZoom.y, zx:cumulativeZoom.x, zy:cumulativeZoom.y})
-            actualSize.w /= cumulativeZoom.x;
-            actualSize.h /= cumulativeZoom.y;
-            let isOldElement = true; //(c.data.clonedCounter as number) > 3;
-            // console.log("getSize() cantriggerset html size", {ret: ret ? {...ret} : ret, html, actualSize, hcc:html?.dataset?.clonedcounter, ncc: context.data.clonedCounter});
-            // if w = 0 i don't auto-set it, because in first render it has w:0 because is not re-rendered and not resized.
+            // Guard moved before Size.of() to avoid layout thrashing during pan/high-frequency renders.
+            // Size.of() contains a per-ancestor read+write loop on style.display that forces multiple
+            // reflows per call; calling it only to early-return on counter mismatch was the dominant
+            // cost of [Forced reflow 37ms] during pan.
             if (!html || (c.data.clonedCounter && (c.data.clonedCounter || -1) !== +(html.dataset.clonedcounter as string))) {
-                // canTriggerSet = {w: false, h: false};
                 console.warn('adaptSize mismatching clonedcounter', {cc:c.data.clonedCounter, htmlcc:html?.dataset?.clonedcounter,
-                    cw: canTriggerSet.w, ch: canTriggerSet.h, ret:{...ret}, actualSize, cumulativeZoom, data: c.data});
+                    cw: canTriggerSet.w, ch: canTriggerSet.h, ret:{...ret}, data: c.data});
                 return;
             }
+            let actualSize: Partial<Size> & {w:number, h:number} = Size.of(html);
+            let cumulativeZoom = this.get_graph(c).cumulativeZoom;
+            actualSize.w /= cumulativeZoom.x;
+            actualSize.h /= cumulativeZoom.y;
+            let isOldElement = true;
 
             // console.log('adaptSize', {cc:c.data.clonedCounter, htmlcc:html?.dataset?.clonedcounter,
             //     cw: canTriggerSet.w, ch: canTriggerSet.h, ret:{...ret}, actualSize, cumulativeZoom});
