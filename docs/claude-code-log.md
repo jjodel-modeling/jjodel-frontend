@@ -1,5 +1,14 @@
 # Claude Code Session Log
 
+## 2026-05-05 — chore(diagnostic): render counter graphElement gated
+**Prompt**: aggiungere counter gated in render() di graphElement.tsx per misurare re-render rate durante pan
+**File toccati**: frontend/src/graph/graphElement/graphElement.tsx
+**Esito**: ✅ completato
+**Note**: temporary, da rimuovere dopo raccolta dato. Riga inserita come prima istruzione del body di `render()` (immediatamente dopo la firma a riga 1177, prima del `GraphElementComponent.map[...] = this`). Build verde 51.74s. Procedura misura: `window.__panRenderDebug = true; window.__panRenderCount = 0;` → pan 5s → leggere `window.__panRenderCount`. Atteso ~3600 se i vertex re-renderaano sempre, ~0-50 se shouldComponentUpdate filtra.
+**Nome del documento prompt**: 2026-05-05 23:50
+
+---
+
 ## 2026-05-05 — perf: gate adaptSize warn dietro __adaptSizeDebug
 **Prompt**: gate del console.warn di adaptSize per eliminare log spam durante pan
 **File toccati**: frontend/src/model/dataStructure/GraphDataElements.tsx
