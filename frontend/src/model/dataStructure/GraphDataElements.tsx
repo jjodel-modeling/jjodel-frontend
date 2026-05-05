@@ -597,8 +597,10 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
             // reflows per call; calling it only to early-return on counter mismatch was the dominant
             // cost of [Forced reflow 37ms] during pan.
             if (!html || (c.data.clonedCounter && (c.data.clonedCounter || -1) !== +(html.dataset.clonedcounter as string))) {
-                console.warn('adaptSize mismatching clonedcounter', {cc:c.data.clonedCounter, htmlcc:html?.dataset?.clonedcounter,
-                    cw: canTriggerSet.w, ch: canTriggerSet.h, ret:{...ret}, data: c.data});
+                if ((window as any).__adaptSizeDebug) {
+                    console.warn('adaptSize mismatching clonedcounter', {cc:c.data.clonedCounter, htmlcc:html?.dataset?.clonedcounter,
+                        cw: canTriggerSet.w, ch: canTriggerSet.h, ret:{...ret}, data: c.data});
+                }
                 return;
             }
             let actualSize: Partial<Size> & {w:number, h:number} = Size.of(html);

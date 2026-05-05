@@ -1,5 +1,14 @@
 # Claude Code Session Log
 
+## 2026-05-05 — perf: gate adaptSize warn dietro __adaptSizeDebug
+**Prompt**: gate del console.warn di adaptSize per eliminare log spam durante pan
+**File toccati**: frontend/src/model/dataStructure/GraphDataElements.tsx
+**Esito**: ✅ completato
+**Note**: pattern coerente con __edgeOverlayDebug / __manhattanDebug. Path effettivo `model/dataStructure/` (prompt indicava `components/forEndUser/`). Build verde 48.78s. Wrap di 3 righe attorno al console.warn esistente; payload e ramo di guard intoccati.
+**Nome del documento prompt**: 2026-05-05 23:30
+
+---
+
 ## 2026-05-05 — perf: adaptSize early-return prima di Size.of()
 **Prompt**: spostare guard clonedCounter prima di Size.of() in adaptSize per eliminare layout thrashing durante pan
 **File toccati**: frontend/src/model/dataStructure/GraphDataElements.tsx
