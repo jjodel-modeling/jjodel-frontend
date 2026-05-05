@@ -440,14 +440,30 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
     }
 
     private getCoords(evt: JQueryEventObject, ui: JQueryUI.DraggableEventUIParams, isPanning?: LGraph): GraphSize {
+        if (isPanning) {
+            // Pan path: reuse cached graph.offset.w/h instead of measuring DOM on every move.
+            // Size.of(evt.target) triggers a layout-thrashing loop in Geom.ts that was the
+            // dominant forced reflow during pan (~37ms aggregate). Viewport dimensions don't
+            // change during a single pan session, so the cached values are correct.
+            // Fallback to Size.of() only if the cache is empty (first pan ever, before any
+            // initialization path has populated offset.w/h).
+            let position = this.props.onChildren ? this.oldPos : ui.position;
+            const offset = isPanning.offset as { w?: number; h?: number; x?: number; y?: number };
+            let w: number;
+            let h: number;
+            if (offset?.w !== undefined && offset?.h !== undefined) {
+                w = offset.w;
+                h = offset.h;
+            } else {
+                const size = Size.of(evt.target);
+                w = size.w;
+                h = size.h;
+            }
+            return new GraphSize(position.left, position.top, w, h);
+        }
         let size = Size.of(evt.target);
         let graph: LGraph = DGraphElement.graphLFromHtml(evt.target) as LGraph;
         let gsize: GraphSize = graph?.translateHtmlSize(size);
-        if (isPanning) {
-            let position = this.props.onChildren ? this.oldPos : ui.position;
-            gsize.x = position.left;
-            gsize.y = position.top;
-        }
         return gsize;
     }
 }

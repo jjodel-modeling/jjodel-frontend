@@ -1,5 +1,14 @@
 # Claude Code Session Log
 
+## 2026-05-06 — perf: getCoords riusa graph.offset.w/h durante pan
+**Prompt**: skip Size.of in getCoords nel branch isPanning riusando offset.w/h cached, con fallback per cache miss
+**File toccati**: frontend/src/components/forEndUser/Measurable.tsx
+**Esito**: ✅ completato
+**Note**: chiude il filone forced-reflow durante pan. Verificato non-regression su DVoidVertex constructor e ViewportCulling. Versione precedente del prompt (00:30) bloccata in stop condition: `gsize.w/h` viene dispatched a Redux come `graph.offset.w/h` ed è consumato downstream (`joiner/classes.ts:1310-1311` per centraggio nuovi DVertex; `utils/ViewportCulling.ts:167-168` per cull region size). Variante v2 riusa i valori cached in `graph.offset` (stabili per la durata del pan, viewport non cambia) con fallback a `Size.of()` solo al primo pan se cache vuota. Branch non-pan invariato. TypeScript: cast leggero `as { w?: number; h?: number; x?: number; y?: number }` su `isPanning.offset` per accesso sicuro a w/h via optional. Sanity grep post-fix: `Size.of` 2× (pan fallback + non-pan path), `DGraphElement.graphLFromHtml` e `translateHtmlSize` solo nel non-pan branch. Build verde 1m16s.
+**Nome del documento prompt**: 2026-05-06 00:50
+
+---
+
 ## 2026-05-05 — chore(diagnostic): render counter graphElement gated
 **Prompt**: aggiungere counter gated in render() di graphElement.tsx per misurare re-render rate durante pan
 **File toccati**: frontend/src/graph/graphElement/graphElement.tsx
