@@ -63,6 +63,15 @@ function InfoDataComponent(props: AllProps) {
         if (!readOnly) view.isExclusiveView = !view.isExclusiveView;
     };
 
+    const handleEdgeToggle = (checked: boolean) => {
+        if (!readOnly) (view as any).isEdge = checked;
+    };
+
+    const handleEdgeRowClick = (e: React.MouseEvent) => {
+        if ((e.target as HTMLElement).closest('button[role="switch"]')) return;
+        if (!readOnly) (view as any).isEdge = !(view as any).isEdge;
+    };
+
     return (
         <section className={'properties-tab properties-panel'}>
             {/* Name */}
@@ -87,6 +96,38 @@ function InfoDataComponent(props: AllProps) {
                     disabled={readOnly}
                 />
             </div>
+
+            <div className="jj-toggle-row" onClick={handleEdgeRowClick}>
+                <span className="jj-toggle-row__label">
+                    Is Edge
+                    <InfoTooltip text="Marks this view as an edge in the L2 overlay. When enabled, instances of the matched metaclass are drawn as connecting paths between two endpoint nodes resolved from the JjEL expressions below." />
+                </span>
+                <Toggle
+                    checked={(view as any).isEdge}
+                    onChange={handleEdgeToggle}
+                    size="xs"
+                    disabled={readOnly}
+                />
+            </div>
+
+            {(view as any).isEdge && (
+                <>
+                    <div className="jj-field">
+                        <label className="jj-field-label">
+                            Edge Source
+                            <InfoTooltip text="JjEL expression resolving to the LObject visualized as the source endpoint of the edge. Typically the name of an EReference of the metaclass (e.g. 'src')." />
+                        </label>
+                        <Input data={view} field={'edgeSource'} readOnly={readOnly} />
+                    </div>
+                    <div className="jj-field">
+                        <label className="jj-field-label">
+                            Edge Target
+                            <InfoTooltip text="JjEL expression resolving to the LObject visualized as the target endpoint of the edge. Typically the name of an EReference of the metaclass (e.g. 'tgt')." />
+                        </label>
+                        <Input data={view} field={'edgeTarget'} readOnly={readOnly} />
+                    </div>
+                </>
+            )}
 
             {isV && <>
                 {/* Priority */}

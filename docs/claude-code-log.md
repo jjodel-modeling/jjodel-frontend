@@ -4835,3 +4835,21 @@ Dark mode overrides for `.toolbar-btn` also scoped under `.documentation-toolbar
 **Esito**: ✅ completato
 **Note**: Stile flow adottato dal classic — sfondo dark slate `#1e293b`, testo `#cbd5e1`, icone Bootstrap a sinistra (16px), Delete in `#f87171`, divider 0.5px `rgba(255,255,255,0.08)`, no header `Class: Name`, no shortcut keys (le `key_bindings` restano registrate come listener globali via `Keystrokes.register('#root', 'ctxmenu', ...)` — solo la visualizzazione è rimossa). Schema unificato a 5 gruppi: (1) Add Child M1 dinamico — invariato; (2) Edit · Duplicate · Delete; (3) Up · Down; (4) Disable/Restore auto-sizing; (5) Help · Explain this · Create View M2. Sezione classic-only sotto divider extra: dynamic entries (view-script-defined), AI Suggest M2, Extend M2, Analytics, Add view M2 — non appaiono in flow (sarebbero spam di feature M2 specifiche del classic). Voci `[classic]` (Edit/Up/Down/Disable auto-sizing) appaiono in flow disabled+tooltip "Available in classic editor"; `Duplicate` viceversa è disabled+tooltip "Coming soon" in classic (no API esistente per clonare DGraphElement, il flow's `duplicateNode` è React-Flow-specific e non riusabile — TODO futuro implementare un clone L-layer). Action handlers riusati: Edit→`setEditPanel(true)`, Up/Down→`key_bindings.up/down.function`, Delete→`key_bindings.delete.function`, Disable auto-sizing→callback inline `gn.isResized`, Help→dispatcher esistente, Add Child→`getAddChildren`. Explain this in classic replica il pattern del flow ma con payload più compatto (elementName, elementType, metamodelName, properties con isAbstract/isSingleton). Tooltip via `title` HTML nativo (no nuovi componenti). Il SCSS classic mantiene dead rules `.name`/`.name::before`/`.keystrokes` (selettori non più matchati) — diff minimale, cleanup futuro. Verifica: `npx tsc --noEmit` zero errori sui file modificati.
 **Nome del documento prompt**: 2026-05-02 — Unifica grafica del context menu classic con quella del flow
+
+---
+
+## 2026-05-05 — discovery: view properties editor for isEdge/edgeSource/edgeTarget exposure
+**Prompt**: 2026-05-05_1830_view_editor_discovery.md
+**File toccati**: nessuno (read-only)
+**Esito**: ✅ completato
+**Note**: Discovery del view properties editor in vista dell'esposizione UI di isEdge/edgeSource/edgeTarget. Findings nel chat. Implementation in prompt successivo.
+**Nome del documento prompt**: 2026-05-05 18:30
+
+---
+
+## 2026-05-05 — feat(L2): expose isEdge/edgeSource/edgeTarget in view properties editor
+**Prompt**: 2026-05-05_1900_expose_edge_fields_in_view_editor.md
+**File toccati**: frontend/src/components/editors/views/data/InfoData.tsx
+**Esito**: ✅ completato
+**Note**: Tre campi aggiunti nel tab "Apply to" del view editor seguendo il pattern component-by-component esistente. Toggle "Is Edge" come "Is Exclusive"; due Input "Edge Source"/"Edge Target" come "Name", in progressive disclosure (visibili solo se isEdge=true). Nessuna modifica al modello dati o al sistema di azioni Redux: i campi esistono già in DViewElement (view.tsx:276-278) con default puliti, e il proxy LModel li intercetta a runtime via `_defaultSetter` (view.tsx:480 → classes.ts:2285) — fallback per proprietà presenti in `this.d` ma senza esplicito `set_*` in LViewElement. Discovery iniziale aveva mancato di verificare che il tipo TypeScript di LViewElement non espone i tre campi; introdotti 5 cast `(view as any)` localizzati nei punti d'uso (handlers riga 67/72, JSX riga 106/113) per sbloccare la build TS verde senza toccare view.tsx come da vincoli del prompt. Runtime confirmato corretto per via di `_defaultSetter` (analisi proxy.ts:451-504). Verifica end-to-end runtime non eseguibile da CLI: aprire una view applicabile a una classe associativa, attivare "Is Edge", inserire i nomi delle due EReference (es. `src`/`tgt`); EdgeOverlay deve disegnare l'arco e console con `window.__edgeOverlayDebug = true` deve stampare `[EdgeOverlay] RENDER` invece di `EXIT 4: no edgeViews`.
+**Nome del documento prompt**: 2026-05-05 19:00
