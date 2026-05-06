@@ -1,5 +1,14 @@
 # Claude Code Session Log
 
+## 2026-05-06 — perf: remove dead debug call in _reducer history block
+**Prompt**: 2026-05-06_0910_reducer_history_optimization.md (Phase B)
+**File toccati**: frontend/src/redux/reducer/reducer.ts
+**Esito**: ✅ completato
+**Note**: Phase B di un prompt multi-fase. Phase C segue.
+**Nome del documento prompt**: 2026-05-06 09:10
+
+---
+
 ## 2026-05-06 — perf: getCoords riusa graph.offset.w/h durante pan
 **Prompt**: skip Size.of in getCoords nel branch isPanning riusando offset.w/h cached, con fallback per cache miss
 **File toccati**: frontend/src/components/forEndUser/Measurable.tsx
