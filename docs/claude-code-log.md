@@ -1,5 +1,14 @@
 # Claude Code Session Log
 
+## 2026-05-06 — perf: fast path for transient-only state changes in _reducer
+**Prompt**: 2026-05-06_0910_reducer_history_optimization.md (Phase C)
+**File toccati**: frontend/src/redux/reducer/reducer.ts
+**Esito**: ✅ completato
+**Note**: Helper `isOnlyTransientTopLevelChange` introdotta sotto `isRelevantChangeCheck`. TRANSIENT_TOP_KEYS = {dragging, _lastSelected, contextMenu} allineato a isRelevantChangeCheck. IGNORED_TOP_KEYS = {timestamp, timestampdiff, action_title, action_description} allineato agli assignments incondizionati di _reducer. Fast path posizionato dopo `if (!oldState) return ret;` e prima del blocco `// update state history`. Slow path invariato come fallback. Sanity check `__panTest` contatori e non-regression undo NON eseguiti (richiedono interazione browser/DevTools); le liste sono derivate dal codice tramite Phase A.3 e A.4 e quindi consistenti con il check downstream `isRelevantChangeCheck`. Tsc verde su reducer.ts.
+**Nome del documento prompt**: 2026-05-06 09:10
+
+---
+
 ## 2026-05-06 — perf: remove dead debug call in _reducer history block
 **Prompt**: 2026-05-06_0910_reducer_history_optimization.md (Phase B)
 **File toccati**: frontend/src/redux/reducer/reducer.ts
