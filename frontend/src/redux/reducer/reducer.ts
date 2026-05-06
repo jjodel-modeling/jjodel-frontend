@@ -1422,7 +1422,15 @@ function setDocumentEvents(){
             })
         , 1);
     // document.body.addEventListener("mousedown", fixResizables, false);
-    setInterval(()=>{ COMMIT(undefined, false) }, windoww.U.UpdatingTimer);
+    setInterval(()=>{
+        // Skip during graph panning: the periodic COMMIT performs reducer work
+        // (doreducer + side effects) that competes with the pan's frame budget,
+        // causing visible stutter. Buffered mutations resume being flushed on
+        // the next tick after stopPanning() (max 300ms delay, harmless because
+        // the pan does not produce buffered mutations of its own).
+        if (GraphDragManager.draggingGraph) return;
+        COMMIT(undefined, false);
+    }, windoww.U.UpdatingTimer);
 }
 function fixResizables(e: MouseEvent){
     /*let parents = U.ancestorArray(e.target as HTMLElement);

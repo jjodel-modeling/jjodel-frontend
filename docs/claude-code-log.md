@@ -1,5 +1,14 @@
 # Claude Code Session Log
 
+## 2026-05-06 — perf: skip periodic COMMIT during pan (round 3)
+**Prompt**: 2026-05-06_HHMM_skip_commit_during_pan_phaseB.md
+**File toccati**: frontend/src/redux/reducer/reducer.ts
+**Esito**: ✅ completato
+**Note**: Round 3 della serie pan performance, chiusura. Test diagnostico (commento del setInterval) ha confermato il setInterval come causa unica dello stutter percepito. Fix chirurgica: 1 riga + check skip, niente altro.
+**Nome del documento prompt**: 2026-05-06 HH:MM
+
+---
+
 ## 2026-05-06 — perf: fast path for transient-only state changes in _reducer
 **Prompt**: 2026-05-06_0910_reducer_history_optimization.md (Phase C)
 **File toccati**: frontend/src/redux/reducer/reducer.ts
@@ -15,6 +24,15 @@
 **Esito**: ✅ completato
 **Note**: Phase B di un prompt multi-fase. Phase C segue.
 **Nome del documento prompt**: 2026-05-06 09:10
+
+---
+
+## 2026-05-06 — perf: Navbar syncTabs skip setOpenTabs su lista invariata
+**Prompt**: bail-out di setOpenTabs nel syncTabs setInterval quando la lista tabs è uguale, per skippare re-render Navbar
+**File toccati**: frontend/src/pages/components/Navbar.tsx
+**Esito**: ✅ completato
+**Note**: target principale del jank residuo post-forced-reflow-fix. Atteso Total time del Function call Navbar.tsx:1524 da 489ms → ~50ms.
+**Nome del documento prompt**: 2026-05-06 01:30
 
 ---
 
