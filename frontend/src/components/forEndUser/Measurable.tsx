@@ -19,7 +19,6 @@ import $ from "jquery";
 import {JQueryUI} from "../../common/libraries/jqui-types"
 import "./Measurable.scss";
 import { AT_TRANSACTION } from "../../redux/action/action";
-import { rafThrottle, cancelThrottle } from "../../utils/DragThrottle";
 
 type ResizableEvent = JQueryUI.ResizableEvent;
 type DraggableEvent = JQueryUI.DraggableEvent;
@@ -471,10 +470,7 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
 @RuntimeAccessible('ScrollableComponent')
 export class ScrollableComponent extends Component<ScrollOwnProps & MeasurableInjectProps, ScrollState>{
     static cname: string = "ScrollableComponent";
-    private panThrottleKey: string | undefined;
-    componentWillUnmount() {
-        if (this.panThrottleKey) cancelThrottle(this.panThrottleKey);
-    }
+    private panningContentRef = React.createRef<HTMLDivElement>();
     render(){
         let graph = (this.props.graph || L.fromPointer(this.props.graphid)) as any as LGraph;
         if (!graph) return <div>&lt;Scrollable/&gt; requires a valid graph attribute</div>;
@@ -484,12 +480,10 @@ export class ScrollableComponent extends Component<ScrollOwnProps & MeasurableIn
             target.style.top = graph.offset.y+'px';*/
             // $(target).data({uiDraggable:{offset:{left: graph.offset.x, top: graph.offset.y}}});
         }
-        // Drag-aware Redux update for pan: same dispatch as onDragEnd, throttled
-        // at ~30fps so consumers of LGraph.offset (e.g. EdgeOverlay) follow the
-        // pan live instead of snapping at mouseup. Pattern mirrors Vertex.tsx
-        // node-drag throttle (rafThrottle, 32ms).
-        if (!this.panThrottleKey) this.panThrottleKey = `pan_${graph.id}`;
-        const panThrottleKey = this.panThrottleKey;
+        // R-PanArchitecture: pan applies inline DOM mutations on the three layers
+        // that visually track offset (.panning-content for nodes, EdgeOverlay <g>
+        // for edges, Grid <pattern>s for background). Redux receives a single
+        // dispatch at onDragEnd — no per-frame React re-renders during pan.
         const commitOffset = (coords: GraphSize) => {
             let offset = graph.offset;
             if (offset.equals(coords)) return;
@@ -501,7 +495,6 @@ export class ScrollableComponent extends Component<ScrollOwnProps & MeasurableIn
                 graph.offset = coords as any;
             });
         };
-        const throttledCommit = rafThrottle(panThrottleKey, commitOffset, 32);
         return (
             <div {...this.props} className={(this.props.className || '' ) + " scrollable"} >
                 {/*(this.props as any).test ? works only apparently, it takes the event from root and not from handle, need to put hands on Measurable to make it work this way
@@ -523,22 +516,62 @@ export class ScrollableComponent extends Component<ScrollOwnProps & MeasurableIn
                     <Measurable draggable={{create}}
                                 isPanning={graph}
                                 whileDragging={(coords, evt, ui) => {
-                                    // coords from getCoords() returns oldPos (drag start position) when onChildren=true.
-                                    // ui.position is the jQuery UI delta from drag start.
-                                    // Correct current position is the sum, mirroring Measurable.tsx:220 (`newpos = oldpos + ui.position`)
-                                    // which is also what oldPos becomes at mouseup (Measurable.tsx:225), making this consistent with onDragEnd.
+                                    // coords from getCoords() = oldPos (drag start position) when onChildren=true.
+                                    // ui.position is the jQuery UI delta from drag start. Correct current
+                                    // position is the sum, mirroring Measurable.tsx:220 (newpos = oldpos + ui.position).
                                     const fresh: GraphSize = ui?.position
                                         ? ({ ...coords, x: coords.x + ui.position.left, y: coords.y + ui.position.top } as GraphSize)
                                         : coords;
-                                    throttledCommit(fresh);
+
+                                    // Nodes layer: shift .panning-content via inline transform.
+                                    // Stylesheet's transform: translate(var(--offset-x), var(--offset-y)) is overridden
+                                    // by inline style for the duration of the drag.
+                                    const pcEl = this.panningContentRef.current;
+                                    if (pcEl) {
+                                        pcEl.style.transform = `translate(${fresh.x}px, ${fresh.y}px)`;
+                                    }
+
+                                    // Edges + Grid layers live outside .panning-content; locate them
+                                    // scoped to the active .GraphContainer (correct in split mode).
+                                    const containerEl = (evt?.target as Element | null)?.closest('.GraphContainer');
+
+                                    // Replicate EdgeOverlay's zoom source (cumulativeZoom, fallback zoom)
+                                    // and transform format (translate FIRST, then scale on <g>).
+                                    const zoomSrc: any = (graph as any).cumulativeZoom || (graph as any).zoom || { x: 1, y: 1 };
+                                    const sx = typeof zoomSrc.x === 'number' && zoomSrc.x > 0 ? zoomSrc.x : 1;
+                                    const sy = typeof zoomSrc.y === 'number' && zoomSrc.y > 0 ? zoomSrc.y : 1;
+
+                                    const edgeG = containerEl?.querySelector('.jjodel-edge-overlay g') as SVGGElement | null;
+                                    if (edgeG) {
+                                        edgeG.setAttribute('transform', `scale(${sx},${sy}) translate(${fresh.x},${fresh.y})`);
+                                    }
+
+                                    // Grid layer: <pattern> elements use patternTransform with scale FIRST
+                                    // (opposite to EdgeOverlay — patternTransform operates in pattern-unit space).
+                                    // Selector mirrors grid.tsx mount: SVG sibling of .scrollable inside the
+                                    // template root (.root.model for models, generic > svg as fallback).
+                                    const gridSvg = containerEl?.querySelector(':scope > .root.model > svg, :scope > svg') as SVGSVGElement | null;
+                                    const gridPatterns = gridSvg?.querySelectorAll('pattern');
+                                    if (gridPatterns && gridPatterns.length > 0) {
+                                        const gridTransform = `scale(${sx},${sy}) translate(${fresh.x},${fresh.y})`;
+                                        gridPatterns.forEach(p => p.setAttribute('patternTransform', gridTransform));
+                                    }
                                 }}
                                 onDragEnd={(coords) => {
-                                    cancelThrottle(panThrottleKey);
+                                    // Snapshot ref before dispatch — used to clear inline style after React settles.
+                                    const pcEl = this.panningContentRef.current;
+                                    // Final dispatch — triggers React re-render. EdgeOverlay <g> and Grid <pattern>s
+                                    // receive their transforms via JSX, overwriting our setAttribute. No clear needed.
                                     commitOffset(coords);
+                                    // Clear .panning-content inline override on next frame, after React +
+                                    // stylesheet have settled to the new --offset-x/y CSS vars (no flicker).
+                                    requestAnimationFrame(() => {
+                                        if (pcEl) pcEl.style.transform = '';
+                                    });
                                 }}
                                 onChildren={true}>
                         <div className="panning-handle">
-                            <div className="panning-content">{this.props.children}</div>
+                            <div className="panning-content" ref={this.panningContentRef}>{this.props.children}</div>
                         </div>
                 </Measurable>
                 }

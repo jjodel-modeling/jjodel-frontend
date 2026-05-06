@@ -1,5 +1,32 @@
 # Claude Code Session Log
 
+## 2026-05-06 — fix: EdgeOverlay transform order (pre-existing alignment bug)
+**Prompt**: 2026-05-06_1900_fix_edgeoverlay_transform_order.md
+**File toccati**: frontend/src/components/edgeOverlay/EdgeOverlay.tsx, frontend/src/components/forEndUser/Measurable.tsx
+**Esito**: ✅ completato (smoke tests manuali da eseguire da Alfonso)
+**Note**: swap order da `translate scale` a `scale translate` per allineare a convenzione di .panning-content e Grid. Risolve drift edge↔nodi a z≠1. Amend dell'ultimo commit R-PanArchitecture (2f526dfd5, non pushato).
+**Nome del documento prompt**: 2026-05-06 19:00
+
+---
+
+## 2026-05-06 — feat: R-PanArchitecture (pan stutter definitive fix)
+**Prompt**: 2026-05-06_1700_R_pan_architecture_implementation.md
+**File toccati**: frontend/src/components/forEndUser/Measurable.tsx, frontend/src/components/forEndUser/Measurable.scss, frontend/src/redux/reducer/reducer.ts
+**Esito**: ✅ completato (smoke tests manuali da eseguire da Alfonso)
+**Note**: bypass Redux dispatch durante pan via mutazioni DOM dirette su 3 layer (.panning-content + EdgeOverlay <g> + Grid <pattern>s); dispatch finale a onDragEnd. CSS .panning-content swappa left/top con transform per allineare allo stile inline e abilitare compositor-only updates. Cleanup setInterval reducer.ts: rimossi check skip round 3+4 e console.log diagnostico (resi moot dal nuovo flow). Phase 4 inclusa (Opzione α) per Grid patterns.
+**Nome del documento prompt**: 2026-05-06 17:00
+
+---
+
+## 2026-05-06 — discovery: R-PanArchitecture phase A (read-only)
+**Prompt**: 2026-05-06_1500_pan_architecture_discovery_phaseA.md
+**File toccati**: nessuno (read-only)
+**Esito**: ✅ completato
+**Note**: report consegnato in chat per planning fase B.
+**Nome del documento prompt**: 2026-05-06 15:00
+
+---
+
 ## 2026-05-06 — perf: extend pan-skip to jQuery UI Draggable (round 4)
 **Prompt**: 2026-05-06_HHMM_skip_commit_during_pan_round4.md
 **File toccati**: frontend/src/redux/reducer/reducer.ts

@@ -88,7 +88,7 @@ export function EdgeOverlay({ graphid }: EdgeOverlayProps): React.ReactElement |
 
     return (
         <svg className="jjodel-edge-overlay" pointerEvents="none">
-            <g transform={`translate(${tx}, ${ty}) scale(${sx}, ${sy})`}>
+            <g transform={`scale(${sx}, ${sy}) translate(${tx}, ${ty})`}>
                 {edges.map(e => (
                     <EdgeRenderItem
                         key={e.id}
