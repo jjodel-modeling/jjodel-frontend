@@ -1,5 +1,14 @@
 # Claude Code Session Log
 
+## 2026-05-06 — perf: extend pan-skip to jQuery UI Draggable (round 4)
+**Prompt**: 2026-05-06_HHMM_skip_commit_during_pan_round4.md
+**File toccati**: frontend/src/redux/reducer/reducer.ts
+**Esito**: ✅ completato
+**Note**: Round 4 (chiusura serie pan-performance). Round 3 copriva solo ctrl+drag-on-vertex via GraphDragManager. Il pan reale (drag su area vuota) usa jQuery UI Draggable su .panning-handle, intercettato qui via querySelector .panning-handle.ui-draggable-dragging. Verificato runtime con probe console che la classe è presente esattamente per l'intervallo del drag.
+**Nome del documento prompt**: 2026-05-06 HH:MM
+
+---
+
 ## 2026-05-06 — perf: skip periodic COMMIT during pan (round 3)
 **Prompt**: 2026-05-06_HHMM_skip_commit_during_pan_phaseB.md
 **File toccati**: frontend/src/redux/reducer/reducer.ts

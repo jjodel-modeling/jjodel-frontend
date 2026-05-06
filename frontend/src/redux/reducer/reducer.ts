@@ -1426,9 +1426,17 @@ function setDocumentEvents(){
         // Skip during graph panning: the periodic COMMIT performs reducer work
         // (doreducer + side effects) that competes with the pan's frame budget,
         // causing visible stutter. Buffered mutations resume being flushed on
-        // the next tick after stopPanning() (max 300ms delay, harmless because
+        // the next tick after the pan ends (max 300ms delay, harmless because
         // the pan does not produce buffered mutations of its own).
+        //
+        // Two pan modalities to cover:
+        //   1) ctrl+drag starting on a vertex → GraphDragManager.startPanning
+        //   2) drag on empty canvas area → jQuery UI Draggable on .panning-handle
+        //      (overlay rendered by Measurable.tsx). jQuery UI adds the
+        //      ui-draggable-dragging class to the active draggable for the
+        //      duration of the drag.
         if (GraphDragManager.draggingGraph) return;
+        if (document.querySelector('.panning-handle.ui-draggable-dragging')) return;
         COMMIT(undefined, false);
     }, windoww.U.UpdatingTimer);
 }
