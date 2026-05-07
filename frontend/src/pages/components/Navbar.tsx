@@ -1598,7 +1598,21 @@ function NavbarComponent(props: AllProps) {
                     return { id, title, type, active: id === activeId, closable };
                 }) as (TabListItem | null)[]).filter((t): t is TabListItem => t !== null);
 
-                setOpenTabs(tabList);
+                setOpenTabs(prev => {
+                    if (prev.length === tabList.length && prev.every((t, i) =>
+                        t.id === tabList[i].id &&
+                        t.title === tabList[i].title &&
+                        t.active === tabList[i].active &&
+                        t.type === tabList[i].type &&
+                        t.closable === tabList[i].closable
+                    )) {
+                        // Same content, same length: keep previous reference to skip Navbar re-render.
+                        // syncTabs runs every 1s via setInterval; during pan or any idle period
+                        // tabs don't change, and the Navbar re-render was the dominant JS cost (~85ms each).
+                        return prev;
+                    }
+                    return tabList;
+                });
             } catch (e) {
                 // Ignore errors during sync
             }
