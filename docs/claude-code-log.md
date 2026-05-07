@@ -1,5 +1,50 @@
 # Claude Code Session Log
 
+## 2026-05-07 — fix(pan): preserve inline transform across class change to avoid release flicker
+**Prompt**: 2026-05-07_HHMM_pan_preserve_transform.md
+**File toccati**: frontend/src/components/forEndUser/Measurable.tsx
+**Esito**: ✅ completato (smoke test runtime da eseguire da Alfonso — verificare assenza del salto-e-ritorno al mouseup)
+**Note**: quinto round del fix R-PanArch. Il prompt iniziale ipotizzava che il flicker residuo post-round 4 fosse causato da una CSS rule `.panning-content.dragging` con `transform: none` che si attivava nei ~21ms tra il rAF clear di `style.transform` e il class change da `dragging` a `idle` guidato da childmode `setTimeout(_, 1)`. Phase 0 ha invalidato la diagnosi: nessuna rule `.panning-content.dragging` esiste in `Measurable.scss` né altrove; l'unica rule simile è `.draggable-child-mode` in `App.scss:302` ma è applicata a `.panning-handle` (parent), non a `.panning-content`. Riformulato il meccanismo: il flicker viene da CSS variable staleness — la base rule `.panning-content { transform: translate(var(--offset-x), var(--offset-y)) }` legge `--offset-x/y` scritte da `graphElement.tsx` come parte dello style React-rendered; in React 18 concurrent mode il commit del nuovo offset post-`commitOffset` può essere posticipato oltre il (doppio) rAF callback, lasciando la rule a leggere valori stale → nodi a posizione pre-pan. Fix proposto è robusto a entrambi i meccanismi: rimossa la riga `pcEl.style.transform = ''` dal rAF clear in `onDragEnd`. L'inline `transform = translate(fresh_finale)` ora persiste fino al prossimo pan e overrida la CSS rule incondizionatamente. Mantenuti il doppio rAF wrapper (innocuo, ulteriore margine) e il clear di `left/top` (sync override già a `'0px'`, il rAF porta a stringa vuota — visivamente identico). Effetto collaterale: l'inline `style.transform` resta sul DOM tra un pan e l'altro, mitigato con commento esteso. Diff netta: -1 riga imperativa (`transform = ''`), -6 righe vecchio commento, +12 righe nuovo commento → +5 righe nette. Build verde (40s).
+**Nome del documento prompt**: 2026-05-07 HH:MM
+
+---
+
+## 2026-05-07 — fix(pan): double rAF clear to wait for React commit, eliminates release flicker
+**Prompt**: 2026-05-07_HHMM_pan_double_raf_clear.md
+**File toccati**: frontend/src/components/forEndUser/Measurable.tsx
+**Esito**: ✅ completato (smoke test runtime — verificare che il rilascio del mouse sia visivamente fluido senza salto-e-ritorno)
+**Note**: quarto round (cleanup finale) del fix R-PanArch. Post-round 3, geometria del pan corretta in tutti i frame e CSS vars correttamente aggiornate, ma al mouseup persisteva un flicker di ~1 frame in cui i nodi tornavano visivamente alla posizione pre-pan prima di stabilizzarsi a quella finale. Causa: race tra il rAF clear di `style.transform` inline su `.panning-content` e il React 18 commit del nuovo `--offset-x/y` CSS var post `commitOffset` dispatch. In concurrent mode il singolo rAF può fire prima che il commit sia completato, lasciando un frame in cui il CSS rule `transform: translate(var(--offset))` legge un `--offset` stale → nodi a posizione pre-pan per ~16ms. Fix: doppio rAF (annidato). Il primo garantisce di essere dopo il prossimo paint browser, il secondo dopo il React commit phase. Pattern noto, zero side-effect. Diff: +8 righe (closure pcEl invariata, solo wrap del callback). Build verde (44s). Cumulative diff round 1+2+3+4: +55/-4 sul solo Measurable.tsx.
+**Nome del documento prompt**: 2026-05-07 HH:MM
+
+---
+
+## 2026-05-07 — fix(pan): rollback ui.position reset, switch to sync DOM override on .panning-handle
+**Prompt**: 2026-05-07_HHMM_pan_handle_sync_override.md
+**File toccati**: frontend/src/components/forEndUser/Measurable.tsx
+**Esito**: ✅ completato (smoke tests runtime da eseguire da Alfonso — verificare in particolare che `--offset-x/y` su `.scrollable` aggiornino correttamente post-pan, e che card+edge restino allineati)
+**Note**: terzo round del fix R-PanArch. Round 1 aveva resettato `ui.position.left/top = 0` in whileDragging per neutralizzare il movimento jQuery UI sul `.panning-handle`. Verifica runtime post-round 2: mid-drag perfetto (1× delta confermato dal MutationObserver), ma post-mouseup screenshot user mostra card a posizione PRE-pan e edge a posizione POST-pan (misalignment persistente). Causa diagnosticata in Phase 0: `commitOffset` riceve `coords` da `getCoords` che ritorna `oldPos` (line 449); `oldPos` è aggiornato da childmode-e a dragend (line 224) come `oldPos += ui.position`. jQuery UI `_mouseStop` riusa l'ultima `self.position` da `_mouseDrag` invece di rigenerarla, quindi il reset di round 1.1 a 0 si propaga al dragend → `newpos = oldPos + 0 = oldPos` (no accumulo) → `commitOffset` dispatcha valore pre-drag → CSS vars `--offset-x/y` invariate → al rAF clear le card revertono via CSS rule `transform: translate(var(--offset))`. EdgeOverlay `<g>` non clearato resta a `fresh_finale`, da cui il misalignment. Fix: rollback delle 2 righe `ui.position.left/top = 0` in whileDragging; switch a sync DOM override `panningHandleRef.current.style.left/top = '0px'` in due punti (whileDragging dopo le tre mutazioni DOM, e onDragEnd prima di commitOffset). Pattern simmetrico al round 2 fix sul `.panning-content` per childmode. childmode, jQuery UI config, EdgeOverlay e reducer non toccati. Build verde (48s, no nuovi warning TS). Diff cumulativo (round 1+2+3): +47/-2 sul solo Measurable.tsx.
+**Nome del documento prompt**: 2026-05-07 HH:MM
+
+---
+
+## 2026-05-07 — fix(pan): override childmode left/top mutations on .panning-content
+**Prompt**: 2026-05-07_HHMM_pan_childmode_override.md
+**File toccati**: frontend/src/components/forEndUser/Measurable.tsx
+**Esito**: ✅ completato (smoke tests runtime da eseguire da Alfonso — incluso MutationObserver check su .panning-content per `left/top = '0px'` durante drag)
+**Note**: secondo round del fix R-PanArch double-translation. Dopo aver neutralizzato jQuery UI sul .panning-handle (fix precedente, commit pendente), il MutationObserver runtime ha rivelato che childmode (MeasurableComponent line ~222) continua a scrivere style.left/top su .panning-content durante 'ing', sommandosi al style.transform inline di R-PanArch (.panning-content è position: relative). Risultato pre-fix: 2× delta sui nodi vs 1× su edge/grid. Fix in 4 punti: (1.1) R-PanArch ora azzera style.left/top dopo aver settato style.transform nel whileDragging; childmode scrive prima nella catena ([defaultevt, jquievt, propsevent]) quindi R-PanArch sovrascrive sempre. (1.2) rAF clear in onDragEnd esteso a left/top oltre a transform. (1.3) componentDidMount esteso per resettare anche .panning-content (oltre a .panning-handle dal round 1). (1.4) Sync override di left/top a inizio onDragEnd, prima di commitOffset, per chiudere la finestra di 1-2ms tra mouseup e setTimeout di cleanup childmode (rilevato in Phase 0 — childmode-e scrive sync left/top = newpos prima di onDragEnd, e il suo cleanup setTimeout fires ~1-2ms dopo, lasciando un possibile snap visible se un paint slipsa nella finestra). childmode non è stato modificato. Build verde (44s, no nuovi warning TS).
+**Nome del documento prompt**: 2026-05-07 HH:MM
+
+---
+
+## 2026-05-07 — fix(pan): neutralize jQuery UI movement on .panning-handle to eliminate double translation
+**Prompt**: 2026-05-07_HHMM_pan_double_translation_fix.md
+**File toccati**: frontend/src/components/forEndUser/Measurable.tsx
+**Esito**: ✅ completato (smoke tests runtime da eseguire da Alfonso)
+**Note**: post R-PanArchitecture (commit 5522f37dd), il `.panning-handle` jQuery UI Draggable continuava a muoversi via style.left/top, sommandosi all'inline transform di `.panning-content` (figlio del handle) per un totale di 2× delta sui nodi durante pan. EdgeOverlay e Grid (fuori dalla gerarchia del handle) restavano 1×, da cui il misalignment visivo durante drag. Fix: reset di `ui.position.left/top = 0` dentro whileDragging dopo il calcolo di `fresh` (handle stationary, motion sul `.panning-content`), + nuovo `componentDidMount` con `panningHandleRef` per azzerare residui persistenti da pan pre-fix. Single dispatch al onDragEnd e geometria post-pan invariati. Diff: ~14 righe nette su un solo file. Build verde (50s, no nuovi warning TS).
+**Nome del documento prompt**: 2026-05-07 HH:MM
+
+---
+
 ## 2026-05-06 — fix: EdgeOverlay transform order (pre-existing alignment bug)
 **Prompt**: 2026-05-06_1900_fix_edgeoverlay_transform_order.md
 **File toccati**: frontend/src/components/edgeOverlay/EdgeOverlay.tsx, frontend/src/components/forEndUser/Measurable.tsx

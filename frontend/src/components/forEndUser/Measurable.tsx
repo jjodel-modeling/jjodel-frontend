@@ -471,6 +471,18 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
 export class ScrollableComponent extends Component<ScrollOwnProps & MeasurableInjectProps, ScrollState>{
     static cname: string = "ScrollableComponent";
     private panningContentRef = React.createRef<HTMLDivElement>();
+    private panningHandleRef = React.createRef<HTMLDivElement>();
+    componentDidMount() {
+        // Clear residual jQuery UI left/top on .panning-handle from pre-fix pans
+        // (whileDragging now resets it per-tick, but a stale offset would still snap
+        // at the first dragstart of this session).
+        const handle = this.panningHandleRef.current;
+        if (handle) { handle.style.left = '0'; handle.style.top = '0'; }
+        // Same for .panning-content: childmode (MeasurableComponent line ~222)
+        // writes left/top during pan; clear residuals from prior browser sessions.
+        const content = this.panningContentRef.current;
+        if (content) { content.style.left = '0'; content.style.top = '0'; }
+    }
     render(){
         let graph = (this.props.graph || L.fromPointer(this.props.graphid)) as any as LGraph;
         if (!graph) return <div>&lt;Scrollable/&gt; requires a valid graph attribute</div>;
@@ -529,6 +541,12 @@ export class ScrollableComponent extends Component<ScrollOwnProps & MeasurableIn
                                     const pcEl = this.panningContentRef.current;
                                     if (pcEl) {
                                         pcEl.style.transform = `translate(${fresh.x}px, ${fresh.y}px)`;
+                                        // childmode (MeasurableComponent line ~222) wrote left/top on
+                                        // .panning-content earlier in the [defaultevt, jquievt, propsevent]
+                                        // chain. Override here so pan motion rides on transform alone;
+                                        // otherwise left/top compose with transform → 2× delta on nodes.
+                                        pcEl.style.left = '0px';
+                                        pcEl.style.top = '0px';
                                     }
 
                                     // Edges + Grid layers live outside .panning-content; locate them
@@ -556,21 +574,59 @@ export class ScrollableComponent extends Component<ScrollOwnProps & MeasurableIn
                                         const gridTransform = `scale(${sx},${sy}) translate(${fresh.x},${fresh.y})`;
                                         gridPatterns.forEach(p => p.setAttribute('patternTransform', gridTransform));
                                     }
+
+                                    // Neutralize jQuery UI movement on .panning-handle via direct DOM
+                                    // override. Round 1's reset of ui.position.left/top = 0 carried over
+                                    // to dragend (jQuery UI _mouseStop reuses last self.position from
+                                    // _mouseDrag), corrupting commitOffset: childmode-e (line 220-224)
+                                    // accumulates oldPos as `oldPos += ui.position`, with ui.position=0
+                                    // oldPos stayed pre-drag and the dispatched offset was wrong → cards
+                                    // reverted at rAF clear. Sync DOM override leaves ui.position intact.
+                                    const handleEl = this.panningHandleRef.current;
+                                    if (handleEl) {
+                                        handleEl.style.left = '0px';
+                                        handleEl.style.top = '0px';
+                                    }
                                 }}
                                 onDragEnd={(coords) => {
                                     // Snapshot ref before dispatch — used to clear inline style after React settles.
                                     const pcEl = this.panningContentRef.current;
+                                    // Sync override of childmode-e's left/top write (Measurable.tsx:222) before
+                                    // paint. childmode's removeProperty cleanup fires at ~1-2ms via setTimeout,
+                                    // leaving a window where a paint would show left/top + transform = 2× snap.
+                                    if (pcEl) { pcEl.style.left = '0px'; pcEl.style.top = '0px'; }
+                                    // Symmetric sync override on .panning-handle: jQuery UI applies its
+                                    // final position at mouseup. Override before commitOffset so the
+                                    // post-dispatch paint doesn't briefly show handle offset compositing
+                                    // with .panning-content's transform.
+                                    const handleEl = this.panningHandleRef.current;
+                                    if (handleEl) { handleEl.style.left = '0px'; handleEl.style.top = '0px'; }
                                     // Final dispatch — triggers React re-render. EdgeOverlay <g> and Grid <pattern>s
                                     // receive their transforms via JSX, overwriting our setAttribute. No clear needed.
                                     commitOffset(coords);
-                                    // Clear .panning-content inline override on next frame, after React +
-                                    // stylesheet have settled to the new --offset-x/y CSS vars (no flicker).
+                                    // Do NOT clear pcEl.style.transform here. The base CSS rule
+                                    // .panning-content { transform: translate(var(--offset-x), var(--offset-y)) }
+                                    // reads CSS variables that are written by graphElement.tsx as part of the
+                                    // React-rendered style on the graph element. The commitOffset dispatch
+                                    // schedules a React re-render to update these variables, but React 18
+                                    // concurrent mode can defer the commit past our (double) rAF callback.
+                                    // Between the rAF clear and the React commit, the CSS rule reads stale
+                                    // --offset-x/y values and snaps nodes to a pre-pan-equivalent position.
+                                    // Preserving the inline transform = translate(fresh_finale) overrides the
+                                    // CSS rule unconditionally for this and any future cause (e.g. a class-based
+                                    // override, microtask scheduling changes). At the next pan, whileDragging
+                                    // overwrites the inline transform frame-by-frame.
                                     requestAnimationFrame(() => {
-                                        if (pcEl) pcEl.style.transform = '';
+                                        requestAnimationFrame(() => {
+                                            if (pcEl) {
+                                                pcEl.style.left = '';
+                                                pcEl.style.top = '';
+                                            }
+                                        });
                                     });
                                 }}
                                 onChildren={true}>
-                        <div className="panning-handle">
+                        <div className="panning-handle" ref={this.panningHandleRef}>
                             <div className="panning-content" ref={this.panningContentRef}>{this.props.children}</div>
                         </div>
                 </Measurable>
