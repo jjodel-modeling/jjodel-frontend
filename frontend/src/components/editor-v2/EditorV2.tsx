@@ -43,6 +43,7 @@ import type { ClassNodeData, EnumNodeData, PackageNodeData, ObjectNodeData, Refe
 import { EdgeTypePopup, type EdgeTypeChoice } from './components/EdgeTypePopup';
 import { M1ReferencePopup } from './components/M1ReferencePopup';
 import { useJjomSync } from './hooks/useJjomSync';
+import { useM1ReferenceEdges } from './hooks/useM1ReferenceEdges';
 import { useJjomSelection } from './hooks/useJjomSelection';
 import { useEditorMode, type MetaclassInfo, type MetaclassReference } from './hooks/useEditorMode';
 import { useClassRemoval } from './hooks/useClassRemoval';
@@ -330,6 +331,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             }
         }, 50);
     });
+    useM1ReferenceEdges(modelid, graphId);
 
     // M1/M2 mode detection — resolves metamodel classes, rootable classes, hierarchy
     const modeInfo = useEditorMode(modelid);
