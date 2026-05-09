@@ -1,5 +1,31 @@
 # Claude Code Session Log
 
+## 2026-05-09 — fix(editor-v2): render M1 reference edges for post-mount slot population (Bug B Fase B)
+**Prompt**: implement useM1ReferenceEdges hook to supplement useJjomSync Step 4 for slot values populated post-mount via Slots panel
+**File toccati**:
+- frontend/src/components/editor-v2/hooks/useM1ReferenceEdges.ts (nuovo, ~135 righe)
+- frontend/src/components/editor-v2/EditorV2.tsx (+1 import, +1 invocation; diff totale +2/-0)
+**Esito**: ✅ completato (build verde 36.44s, 0 nuovi errori tsc; smoke test runtime rinviato ad Alfonso).
+**Note**:
+- Step 0 mini-discovery: F1 — Step 4 NON wrappa `DVoidEdge.new2` in `TRANSACTION` (commento esplicito useJjomSync.ts:496-498 vieta nesting per loss x/y); il fix segue lo stesso pattern e usa anche `hasCanvasEdgePair`/`markCanvasEdgePair` (sync/syncState.ts) per idempotency cross-effect. F2 — signature `DVoidEdge.new2(model, parent, graph, nodeID, start, end, setter)` confermata identica a useJjomSync.ts:678-682. F3 — import paths confermati `'../../../joiner'` per `DState/DVoidEdge/DEdge/store`, `'../sync/syncState'` per canvas-edge-pair helpers; nessun import di `TRANSACTION`. F4 — `graphId: string | null` destructured a EditorV2.tsx:313, hook invocato subito dopo `useJjomSync` chiusura (riga 333).
+- Smoke test runtime: **rinviato ad Alfonso**. Procedura nel prompt (sezione Step 4) — verificare regressione `edge_qsl` (atteso: 2 frecce reference visibili) + scenario nuovo `Edge_0` post-mount (drop Source_0 + drop Edge_0 + slot panel `from=Source_0` + `to=target_ojt`, atteso: 2 frecce reference da Edge_0). Ispezione DOM via L1/L2 console snippet del report di discovery sezione D4.
+- Profilazione: rinviata. Cost del selettore m1RefValuesSig è O(n_objects × n_features × n_values) per dispatch — irrilevante per modelli di test (~3-5 oggetti). Profilare su progetto reale prima di chiudere il carry-over WeakMap.
+- **Carry-over orphan cleanup**: questo fix è add-only, simmetrico a Step 4 di useJjomSync. Quando un slot M1 reference value viene rimpiazzato o cleared, il vecchio DVoidEdge resta orfano in subElements. Step 4 ha lo stesso comportamento. Cleanup è workstream separato (richiede di scansionare DVoidEdges esistenti e rimuovere quelli senza tuple corrispondente in DValue.values).
+- **Carry-over WeakMap memoization**: il selettore itera tutti i DObject su ogni dispatch. Per modelli M1 grandi potrebbe diventare un hot path. Ottimizzazione differita pending profilazione su progetti reali.
+- Debug gating: `(window as any).__m1RefEdgesDebug = true` in console abilita un singolo `console.log` per dispatch quando vengono creati DVoidEdge nuovi. Off di default.
+**Nome del documento prompt**: 2026-05-09 17:30
+
+---
+
+## 2026-05-09 — docs: discovery flow editor edge pipeline (Bug B Fase A)
+**Prompt**: discovery read-only sulla pipeline Redux → ReactFlow.edges per Bug B (Edge_0 post-mount non disegnato nel flow editor)
+**File toccati**: docs/discovery/discovery_2026-05-09_flow_editor_edge_pipeline.md (nuovo); docs/claude-code-log.md (questa entry)
+**Esito**: ✅ completato
+**Note**: hard stop rispettato; nessuna modifica al codice; D1–D6 chiuse con citazioni; 4–6 righe di ispezione runtime pronte per il browser test della prossima sessione. Diagnosi: dependency list incompleta nell'auto-populate effect di useJjomSync.ts:698 — `SetFieldAction` su `DValue.values` (slot M1 reference) non cambia nessuna delle 6 dep, quindi Step 4 non si rilancia e nessun DVoidEdge viene creato per Edge_0 post-mount. Asimmetria con edge_qsl confermata coerente: edge_qsl beneficia dello snapshot pre-mount in cui Step 4 vede già le slot popolate. Candidato di fix preferito (C): nuovo hook sibling `useM1ReferenceEdges` accanto a useJjomSync in EditorV2.tsx.
+**Nome del documento prompt**: 2026-05-09 17:00
+
+---
+
 ## 2026-05-07 — fix(pan): preserve inline transform across class change to avoid release flicker
 **Prompt**: 2026-05-07_HHMM_pan_preserve_transform.md
 **File toccati**: frontend/src/components/forEndUser/Measurable.tsx
