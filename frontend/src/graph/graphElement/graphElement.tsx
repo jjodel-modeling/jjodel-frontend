@@ -1175,7 +1175,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
 
     public render(nodeType:string = '', styleoverride:GObject<React.CSSProperties>={}, classes: string[]=[]): ReactNode {
-        if ((window as any).__panRenderDebug) (window as any).__panRenderCount = ((window as any).__panRenderCount || 0) + 1;
         GraphElementComponent.map[this.props.nodeid as Pointer<DGraphElement>] = this; // props might change at runtime, setting in constructor is not enough
         if (Debug.lightMode && (!this.props.data || !(lightModeAllowedElements.includes(this.props.data.className)))){
             return this.props.data ? <div>{" " + ((this.props.data as any).name)}:{this.props.data.className}</div> : undefined;

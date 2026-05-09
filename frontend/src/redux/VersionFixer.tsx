@@ -686,6 +686,114 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         return s;
     }
 
+    // 2.214 → 2.215: introduce L2 edgeRouting field on DViewElement (and DViewPoint subclass).
+    // Adds one additive field to all existing view instances:
+    //   - edgeRouting: 'manhattan-rounded'  (default — preserves current rendering)
+    // Possible values: 'straight' | 'manhattan-rounded' | 'bezier'. Consumed by EdgeRenderItem
+    // in components/edgeOverlay/EdgeOverlay.tsx; UI in InfoData.tsx (gated by isEdge=true).
+    // Idempotent: re-running is a no-op because of the typeof guard.
+    private ['2.214 -> 2.215'](s: DState): DState {
+        let migrated = 0;
+        for (let k in s.idlookup) {
+            let e = s.idlookup[k] as any;
+            if (!e || typeof e !== 'object') continue;
+            if (e.className !== 'DViewElement' && e.className !== 'DViewPoint') continue;
+
+            if (typeof e.edgeRouting !== 'string') { e.edgeRouting = 'manhattan-rounded'; migrated++; }
+        }
+        if (migrated > 0) {
+            console.log(`[VersionFixer 2.214 -> 2.215] Migrated ${migrated} view(s) with L2 edgeRouting default.`);
+        }
+        return s;
+    }
+
+    // 2.215 → 2.216: introduce DProject.expandedTreeNodes for persistent
+    // tree-view expand/collapse state. For each existing project, seeds the
+    // array with synthetic section keys + every metamodel/package/sub-package/
+    // class/model id reachable from the project. Features (foglie) are not
+    // seeded. Idempotent: skips projects that already have an array set.
+    private ['2.215 -> 2.216'](s: DState): DState {
+        let seeded = 0;
+        for (let k in s.idlookup) {
+            let e = s.idlookup[k] as any;
+            if (!e || typeof e !== 'object') continue;
+            if (e.className !== 'DProject') continue;
+            if (Array.isArray(e.expandedTreeNodes)) continue;
+
+            const expanded: string[] = [
+                '__section:megamodel',
+                '__section:metamodels',
+                '__section:viewpoints',
+                '__section:viewpoints/syntax',
+                '__section:viewpoints/validation',
+                '__section:documentation',
+            ];
+
+            const visitPackage = (pkgId: any): void => {
+                if (typeof pkgId !== 'string') return;
+                expanded.push(pkgId);
+                const pkg = s.idlookup[pkgId] as any;
+                if (!pkg) return;
+                for (const subId of (pkg.subpackages || [])) visitPackage(subId);
+                for (const cId of (pkg.classes || [])) {
+                    if (typeof cId === 'string') expanded.push(cId);
+                }
+            };
+
+            for (const mmId of (e.metamodels || [])) {
+                if (typeof mmId !== 'string') continue;
+                expanded.push(mmId);
+                expanded.push(`__section:models:${mmId}`);
+                const mm = s.idlookup[mmId] as any;
+                if (mm && Array.isArray(mm.packages)) {
+                    for (const pkgId of mm.packages) visitPackage(pkgId);
+                }
+            }
+            for (const modelId of (e.models || [])) {
+                if (typeof modelId === 'string') expanded.push(modelId);
+            }
+
+            e.expandedTreeNodes = expanded;
+            seeded++;
+        }
+        if (seeded > 0) {
+            console.log(`[VersionFixer 2.215 -> 2.216] Seeded expandedTreeNodes for ${seeded} project(s).`);
+        }
+        return s;
+    }
+
+    // 2.216 → 2.217: introduce DProject layout fields for the 4-column shell
+    // (rail | canvas | property | tree). Seeds 5 fields with their defaults on
+    // existing projects so future shell rendering can rely on them being present.
+    // Idempotent: skips projects that already have all 5 fields set (any value).
+    private ['2.216 -> 2.217'](s: DState): DState {
+        let seeded = 0;
+        for (let k in s.idlookup) {
+            const e = s.idlookup[k] as any;
+            if (!e || typeof e !== 'object') continue;
+            if (e.className !== 'DProject') continue;
+
+            const hasAll =
+                typeof e.layoutPropertyPanelWidth === 'number' &&
+                typeof e.layoutTreeWidth === 'number' &&
+                typeof e.layoutPropertyPanelOpen === 'boolean' &&
+                typeof e.layoutTreeCollapsed === 'boolean' &&
+                typeof e.layoutFocusCanvas === 'boolean';
+            if (hasAll) continue;
+
+            if (typeof e.layoutPropertyPanelWidth !== 'number') e.layoutPropertyPanelWidth = 400;
+            if (typeof e.layoutTreeWidth !== 'number') e.layoutTreeWidth = 300;
+            if (typeof e.layoutPropertyPanelOpen !== 'boolean') e.layoutPropertyPanelOpen = true;
+            if (typeof e.layoutTreeCollapsed !== 'boolean') e.layoutTreeCollapsed = false;
+            if (typeof e.layoutFocusCanvas !== 'boolean') e.layoutFocusCanvas = false;
+            seeded++;
+        }
+        if (seeded > 0) {
+            console.log(`[VersionFixer 2.216 -> 2.217] Seeded layout fields for ${seeded} project(s).`);
+        }
+        return s;
+    }
+
 }
 
 

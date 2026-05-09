@@ -276,6 +276,7 @@ export class DViewElement extends DPointerTargetable {
     isEdge!: boolean;
     edgeSource!: string;
     edgeTarget!: string;
+    edgeRouting!: 'straight' | 'manhattan-rounded' | 'bezier'; // L2 overlay path style. Default 'manhattan-rounded' (set in Constructors; existing instances migrated by VersionFixer 2.214 -> 2.215).
 /*
     public static new(name: string, jsxString: string, father?: DViewElement, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
                       preRenderFunc: string = '', appliableToClasses: string[] = [], oclCondition: string = '',
@@ -889,6 +890,23 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             <br/>The same result can be obtained through OCL.</div>}
 
     appliableTo!: 'Any'|'Graph'|'GraphVertex'|'Vertex'|'Edge'|'EdgePoint'|'Field';
+
+    // L2 — edge overlay schema (classic editor only). Mirrors DViewElement:271-278.
+    isEdge!: boolean;
+    __info_of__isEdge: Info = {isEdge: true, type: ShortAttribETypes.EBoolean, label: "Is Edge",
+        txt: <div>Marks this view as an edge in the L2 overlay. When enabled, instances of the matched metaclass are drawn as connecting paths between two endpoint nodes resolved from the JjEL expressions below.</div>}
+
+    edgeSource!: string;
+    __info_of__edgeSource: Info = {isEdge: true, type: ShortAttribETypes.EString, label: "Edge Source",
+        txt: <div>JjEL expression resolving to the LObject visualized as the source endpoint of the edge. For an EReference named e.g. "source", use $source.value to dereference it. The reference name alone returns a DValue wrapper.</div>}
+
+    edgeTarget!: string;
+    __info_of__edgeTarget: Info = {isEdge: true, type: ShortAttribETypes.EString, label: "Edge Target",
+        txt: <div>JjEL expression resolving to the LObject visualized as the target endpoint of the edge. For an EReference named e.g. "target", use $target.value to dereference it. The reference name alone returns a DValue wrapper.</div>}
+
+    edgeRouting!: 'straight' | 'manhattan-rounded' | 'bezier';
+    __info_of__edgeRouting: Info = {isEdge: true, type: '"straight" | "manhattan-rounded" | "bezier"', label: "Edge Routing",
+        txt: <div>Path style used by the L2 overlay to draw this edge. <b>Manhattan (rounded)</b> is the default — orthogonal segments with rounded corners. <b>Straight</b> is a single line between source and target side midpoints. <b>Bezier</b> is a cubic curve with tangents normal to the chosen exit/entry sides.</div>}
 
     subViews!: LViewElement[];
     __info_of__subViews: Info = {isGlobal: true, hidden: true, type: "DViewElement[]", label:"sub-views",

@@ -46,10 +46,13 @@ interface EdgeOverlayProps {
 
 type NodeRect = { x: number; y: number; w: number; h: number };
 
+type EdgeRouting = 'straight' | 'manhattan-rounded' | 'bezier';
+
 type EdgeData = {
     id: string;
     srcRect: NodeRect;
     tgtRect: NodeRect;
+    routing: EdgeRouting;
 };
 
 type ExitCode =
@@ -95,6 +98,7 @@ export function EdgeOverlay({ graphid }: EdgeOverlayProps): React.ReactElement |
                         id={e.id}
                         srcRect={e.srcRect}
                         tgtRect={e.tgtRect}
+                        routing={e.routing}
                     />
                 ))}
             </g>
@@ -190,7 +194,12 @@ function buildSelectorResult(state: any, graphid: string): SelectorResult {
         const tgtRect = getNodeRect(LGraphElement, LPointerTargetable, targetL, state);
         if (!srcRect || !tgtRect) continue;
 
-        edges.push({ id: obj.id, srcRect, tgtRect });
+        // Defensive narrowing — pre-2.215 instances or hand-edited DV may have missing/invalid value.
+        const routing: EdgeRouting = (view.edgeRouting === 'straight' || view.edgeRouting === 'bezier')
+            ? view.edgeRouting
+            : 'manhattan-rounded';
+
+        edges.push({ id: obj.id, srcRect, tgtRect, routing });
     }
 
     if (edges.length === 0) {
@@ -230,6 +239,7 @@ function selectorResultEqual(a: SelectorResult, b: SelectorResult): boolean {
             const e1 = a.edges[i];
             const e2 = b.edges[i];
             if (e1.id !== e2.id) return false;
+            if (e1.routing !== e2.routing) return false;
             if (!rectEqual(e1.srcRect, e2.srcRect)) return false;
             if (!rectEqual(e1.tgtRect, e2.tgtRect)) return false;
         }
@@ -266,17 +276,24 @@ interface EdgeRenderItemProps {
     id: string;
     srcRect: NodeRect;
     tgtRect: NodeRect;
+    routing: EdgeRouting;
 }
 
 /**
  * L2 — per-edge memoized renderer. Path is computed inline; React.memo with
- * `edgePropsEqual` skips re-render when the rect inputs are unchanged across
- * renders (e.g., during canvas pan, where positions in canvas space don't
- * change — only the parent `<g transform>`).
+ * `edgePropsEqual` skips re-render when the rect+routing inputs are unchanged
+ * across renders (e.g., during canvas pan, where positions in canvas space
+ * don't change — only the parent `<g transform>`).
+ *
+ * Routing modes:
+ *   - 'manhattan-rounded' (default): chooseSides + buildPathFromSides + roundManhattanPath
+ *   - 'straight': single line between side midpoints
+ *   - 'bezier': cubic Bezier with tangents normal to the chosen exit/entry sides
  */
 const EdgeRenderItem = React.memo(function EdgeRenderItem({
     srcRect,
     tgtRect,
+    routing,
 }: EdgeRenderItemProps): React.ReactElement | null {
     const srcBbox: Bbox = {
         cx: srcRect.x + srcRect.w / 2,
@@ -296,24 +313,74 @@ const EdgeRenderItem = React.memo(function EdgeRenderItem({
 
     if (srcPoint.x === tgtPoint.x && srcPoint.y === tgtPoint.y) return null;
 
-    const rawPath = buildPathFromSides(srcPoint, sides.srcSide, tgtPoint, sides.tgtSide);
-    if (!rawPath) return null;
-
-    const d = roundManhattanPath(rawPath, 8);
+    let d: string;
+    if (routing === 'straight') {
+        d = `M ${srcPoint.x} ${srcPoint.y} L ${tgtPoint.x} ${tgtPoint.y}`;
+    } else if (routing === 'bezier') {
+        d = bezierPath(srcPoint, sides.srcSide, tgtPoint, sides.tgtSide);
+    } else {
+        const rawPath = buildPathFromSides(srcPoint, sides.srcSide, tgtPoint, sides.tgtSide);
+        if (!rawPath) return null;
+        d = roundManhattanPath(rawPath, 8);
+    }
     return <path className="jjodel-edge-overlay__path" d={d} />;
 }, edgePropsEqual);
 
 function edgePropsEqual(prev: EdgeRenderItemProps, next: EdgeRenderItemProps): boolean {
     return prev.id === next.id
+        && prev.routing === next.routing
         && rectEqual(prev.srcRect, next.srcRect)
         && rectEqual(prev.tgtRect, next.tgtRect);
 }
 
 /**
+ * Cubic Bezier path with tangents aligned to the chosen exit/entry sides.
+ * Tangent length scales with endpoint distance (factor 0.4) — keeps the curve
+ * proportionate to the gap regardless of zoom or node size.
+ *
+ *   srcSide='right' → cp1 sits to the right of src by `len`
+ *   tgtSide='top'   → cp2 sits above tgt by `len`
+ *
+ * Output: `M sx sy C cp1x cp1y, cp2x cp2y, tx ty` — single cubic segment.
+ */
+function bezierPath(
+    src: { x: number; y: number },
+    srcSide: Side,
+    tgt: { x: number; y: number },
+    tgtSide: Side,
+): string {
+    const dx = tgt.x - src.x;
+    const dy = tgt.y - src.y;
+    const len = Math.hypot(dx, dy) * 0.4;
+    const offset = (s: Side, p: { x: number; y: number }) => {
+        switch (s) {
+            case 'top':    return { x: p.x,       y: p.y - len };
+            case 'bottom': return { x: p.x,       y: p.y + len };
+            case 'left':   return { x: p.x - len, y: p.y       };
+            case 'right':  return { x: p.x + len, y: p.y       };
+        }
+    };
+    const cp1 = offset(srcSide, src);
+    const cp2 = offset(tgtSide, tgt);
+    return `M ${src.x} ${src.y} C ${cp1.x} ${cp1.y}, ${cp2.x} ${cp2.y}, ${tgt.x} ${tgt.y}`;
+}
+
+/**
  * Returns the first DViewElement with isEdge=true that applies to the
- * given LObject. Matches by `appliableTo === <classifier name>` first,
- * then falls back to `appliableToClasses` containing the classifier id
- * or name. First-match-wins.
+ * given LObject, using two-pass priority:
+ *
+ *   Pass 1 — classifier-specific match wins:
+ *     - `view.appliableTo === clsName` (legacy branch, kept intact)
+ *     - `appliableToClasses` contains classifier id, classifier name, or an
+ *       object-like {id, name} match. `'DObject'` is SKIPPED here.
+ *   Pass 2 — wildcard fallback:
+ *     - `appliableToClasses` contains the literal `'DObject'`.
+ *
+ * Rationale: a custom DV bound to a specific classifier (e.g. via the B.1
+ * picker UI) must win over an auto-create DV with `['DObject']` (default
+ * written by `lastViewpoint.ts`), regardless of iteration order. Single-pass
+ * first-match-wins gave priority to whichever was iterated first — a latent
+ * bug exposed once B.1 made it possible to bind specific classifiers.
  */
 function findApplicableEdgeView(lObj: any, edgeViews: any[]): any | undefined {
     const cls = lObj && lObj.instanceof;
@@ -321,13 +388,13 @@ function findApplicableEdgeView(lObj: any, edgeViews: any[]): any | undefined {
     const clsName: string | undefined = cls && cls.name;
     if (!clsId && !clsName) return undefined;
 
+    // Pass 1 — classifier-specific match (id, name, object-like). Skips wildcard.
     for (const view of edgeViews) {
         if (clsName && view.appliableTo === clsName) return view;
         if (Array.isArray(view.appliableToClasses)) {
             for (const c of view.appliableToClasses) {
                 if (typeof c === 'string') {
-                    // 'DObject' acts as wildcard (custom DV with literal pseudo-class)
-                    if (c === 'DObject') return view;
+                    if (c === 'DObject') continue; // wildcard handled in Pass 2
                     if (c === clsId || c === clsName) return view;
                 } else if (c && (c.id === clsId || c.name === clsName)) {
                     return view;
@@ -335,6 +402,15 @@ function findApplicableEdgeView(lObj: any, edgeViews: any[]): any | undefined {
             }
         }
     }
+
+    // Pass 2 — wildcard fallback ('DObject' matches any DObject instance).
+    for (const view of edgeViews) {
+        if (!Array.isArray(view.appliableToClasses)) continue;
+        for (const c of view.appliableToClasses) {
+            if (c === 'DObject') return view;
+        }
+    }
+
     return undefined;
 }
 
