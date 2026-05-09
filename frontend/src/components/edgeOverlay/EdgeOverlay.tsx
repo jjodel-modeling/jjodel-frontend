@@ -134,6 +134,15 @@ function buildSelectorResult(state: any, graphid: string): SelectorResult {
         return { kind: 'exit', code: 'no-graph' };
     }
 
+    // Active viewpoint lookup — singleton via LProject (mirror of the existing
+    // `w.LPointerTargetable` pattern). Fallback to undefined keeps the filter
+    // inert in the degenerate case of LProject not yet on window.
+    const LProject = w.LProject;
+    const activeVpId: string | undefined =
+        (LProject && typeof LProject.getProject === 'function')
+            ? LProject.getProject()?.activeViewpoint?.id
+            : undefined;
+
     const edgeViews: any[] = [];
     for (const k in state.idlookup) {
         const e = state.idlookup[k];
@@ -142,6 +151,11 @@ function buildSelectorResult(state: any, graphid: string): SelectorResult {
         if (e.isEdge !== true) continue;
         if (typeof e.edgeSource !== 'string' || !e.edgeSource) continue;
         if (typeof e.edgeTarget !== 'string' || !e.edgeTarget) continue;
+        // Viewpoint filter — only views belonging to the model's active viewpoint
+        // are eligible. Skipped silently when activeVpId is not resolvable, to avoid
+        // turning the overlay completely off in degenerate boot states.
+        if (typeof activeVpId === 'string' && activeVpId !== ''
+            && e.viewpoint !== activeVpId) continue;
         edgeViews.push(e);
     }
     if (edgeViews.length === 0) {
@@ -153,7 +167,7 @@ function buildSelectorResult(state: any, graphid: string): SelectorResult {
             total++;
             if (e.isEdge === true) withIsEdge++;
         }
-        return { kind: 'exit', code: 'no-edge-views', data: { totalDV: total, withIsEdge } };
+        return { kind: 'exit', code: 'no-edge-views', data: { totalDV: total, withIsEdge, activeVpId } };
     }
 
     const edges: EdgeData[] = [];
