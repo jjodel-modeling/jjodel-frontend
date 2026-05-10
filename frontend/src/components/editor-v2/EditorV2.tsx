@@ -456,6 +456,16 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             return next;
         });
     }, []);
+    const [showBackground, setShowBackground] = useState(() => {
+        try { return localStorage.getItem('jjodel.showBackground') !== 'false'; } catch { return true; }
+    });
+    const handleToggleBackground = useCallback(() => {
+        setShowBackground(prev => {
+            const next = !prev;
+            try { localStorage.setItem('jjodel.showBackground', String(next)); } catch {}
+            return next;
+        });
+    }, []);
 
     // Bottom drawer removed — properties editing handled by right-side dock Info panel
     // ── Singleton instance toggle ──────────────────────────────────────
@@ -3017,7 +3027,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
     return (
         <EditorContext.Provider value={editorContextValue}>
-            <div className={`editor-v2 theme-${theme} notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}`} tabIndex={0} onKeyDown={onKeyDown}>
+            <div className={`editor-v2 theme-${theme} notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}${showBackground ? '' : ' hide-background'}`} tabIndex={0} onKeyDown={onKeyDown}>
                 <UniquenessProblemSync modelid={modelid} />
                 <PalettePanel
                     editorMode={modeInfo.mode}
@@ -3033,6 +3043,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         onToggleGrid={handleToggleGrid}
                         showEdgeLabels={showEdgeLabels}
                         onToggleEdgeLabels={handleToggleEdgeLabels}
+                        showBackground={showBackground}
+                        onToggleBackground={handleToggleBackground}
                         onFitView={handleFitView}
                         onAutoLayout={handleAutoLayout}
                         onDuplicateSelected={duplicateSelected}

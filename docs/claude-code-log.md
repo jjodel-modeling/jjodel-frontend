@@ -1,10 +1,10 @@
 # Claude Code Session Log
 
-## 2026-05-10 — feat: flow editor view toggles (edge labels, background)
-**Prompt**: Aggiunti due switch testuali "Show edge labels" e "Show background" nel VIEW group della toolbar v2. Il primo è nuovo (chiave jjodel.showEdgeLabels). Il secondo riusa stato e chiave del precedente toggle icona "Show dot grid" che è stato rimosso dalla LAYOUT group.
+## 2026-05-10 — feat: flow editor view toggles (edge labels, screenshot mode)
+**Prompt**: Aggiunti due switch testuali "Show edge labels" e "Show background" nel VIEW group della toolbar v2. "Show edge labels" rende le M1 edge label sempre visibili. "Show background" attiva una modalità screenshot pulita (canvas bianco + dot-grid nascosto a prescindere dal toggle dot-grid esistente). Il toggle icona "Show dot grid" della LAYOUT group resta invariato.
 **File toccati**: EditorV2.tsx, Toolbar.tsx, EditorV2.scss
 **Esito**: ✅ completato
-**Note**: nessuna modifica al rendering di edge o dot-grid SVG. Implementazione: 1 nuovo state + 1 nuova regola SCSS + sostituzione di 1 controllo. Default scelti per zero regressione visiva.
+**Note**: 2 nuovi state (jjodel.showEdgeLabels, jjodel.showBackground) + 2 nuove regole SCSS additive. Override del dot-grid via !important per superare lo style inline dell'SVG. Default scelti per zero regressione visiva. Iterazione su prompt precedente: "Show background" è ora state separato (non riusa più jjodel.showGrid) e il toggle icona dot-grid è stato ripristinato in LAYOUT group.
 **Nome del documento prompt**: 2026-05-10 HH:MM
 
 ---

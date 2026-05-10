@@ -2025,6 +2025,18 @@
     pointer-events: all;
 }
 
+// Hide background: clean canvas mode for screenshots.
+// White background overrides --canvas-bg, dot-grid is forced invisible
+// regardless of the "Show dot grid" toggle state. The dot-grid SVG uses
+// inline style={{ opacity }}, so !important is required to override it.
+.editor-v2.hide-background {
+    --canvas-bg: #ffffff;
+
+    .editor-v2__dot-grid {
+        opacity: 0 !important;
+    }
+}
+
 .manhattan-edge__label {
     font-size: 10px;
     color: var(--text-secondary);
