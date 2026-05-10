@@ -10,6 +10,9 @@ export const JjodelEvents = {
   EDITOR_TYPE_CHANGE: 'jjodel:editor-type-change',
   TOGGLE_TREE_VIEW: 'jjodel:toggle-tree-view',
   TOGGLE_SINGLETONS: 'jjodel:toggle-singletons',
+  TOGGLE_EDGE_LABELS: 'jjodel:toggle-edge-labels',
+  TOGGLE_BACKGROUND: 'jjodel:toggle-background',
+  TOGGLE_GRID: 'jjodel:toggle-grid',
   // Canvas
   CANVAS_ELEMENT_SELECTED: 'jjodel:canvas-element-selected',
   SELECT_NODE: 'jjodel:selectNode',

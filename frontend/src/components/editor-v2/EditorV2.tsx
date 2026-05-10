@@ -436,35 +436,31 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     } = useActiveEditor();
     const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
     const [snapEnabled, setSnapEnabled] = useState(true);
+    // ─── View toggles — mirror state ────────────────────────────────
+    // Source of truth lives in Navbar.tsx (View menu). EditorV2 mirrors
+    // the values for wrapper-class application; Navbar dispatches a
+    // CustomEvent on each toggle, EditorV2 listens and updates its mirror.
     const [gridVisible, setGridVisible] = useState(() => {
         try { return localStorage.getItem('jjodel.showGrid') !== 'false'; } catch { return true; }
     });
-    const handleToggleGrid = useCallback(() => {
-        setGridVisible(prev => {
-            const next = !prev;
-            try { localStorage.setItem('jjodel.showGrid', String(next)); } catch {}
-            return next;
-        });
-    }, []);
     const [showEdgeLabels, setShowEdgeLabels] = useState(() => {
         try { return localStorage.getItem('jjodel.showEdgeLabels') === 'true'; } catch { return false; }
     });
-    const handleToggleEdgeLabels = useCallback(() => {
-        setShowEdgeLabels(prev => {
-            const next = !prev;
-            try { localStorage.setItem('jjodel.showEdgeLabels', String(next)); } catch {}
-            return next;
-        });
-    }, []);
     const [showBackground, setShowBackground] = useState(() => {
         try { return localStorage.getItem('jjodel.showBackground') !== 'false'; } catch { return true; }
     });
-    const handleToggleBackground = useCallback(() => {
-        setShowBackground(prev => {
-            const next = !prev;
-            try { localStorage.setItem('jjodel.showBackground', String(next)); } catch {}
-            return next;
-        });
+    useEffect(() => {
+        const handleGrid = (e: Event) => setGridVisible(!!(e as CustomEvent).detail?.show);
+        const handleEdgeLabels = (e: Event) => setShowEdgeLabels(!!(e as CustomEvent).detail?.show);
+        const handleBackground = (e: Event) => setShowBackground(!!(e as CustomEvent).detail?.show);
+        window.addEventListener(JjodelEvents.TOGGLE_GRID, handleGrid);
+        window.addEventListener(JjodelEvents.TOGGLE_EDGE_LABELS, handleEdgeLabels);
+        window.addEventListener(JjodelEvents.TOGGLE_BACKGROUND, handleBackground);
+        return () => {
+            window.removeEventListener(JjodelEvents.TOGGLE_GRID, handleGrid);
+            window.removeEventListener(JjodelEvents.TOGGLE_EDGE_LABELS, handleEdgeLabels);
+            window.removeEventListener(JjodelEvents.TOGGLE_BACKGROUND, handleBackground);
+        };
     }, []);
 
     // Bottom drawer removed — properties editing handled by right-side dock Info panel
@@ -3039,12 +3035,6 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     <Toolbar
                         snapEnabled={snapEnabled}
                         onToggleSnap={handleToggleSnap}
-                        gridVisible={gridVisible}
-                        onToggleGrid={handleToggleGrid}
-                        showEdgeLabels={showEdgeLabels}
-                        onToggleEdgeLabels={handleToggleEdgeLabels}
-                        showBackground={showBackground}
-                        onToggleBackground={handleToggleBackground}
                         onFitView={handleFitView}
                         onAutoLayout={handleAutoLayout}
                         onDuplicateSelected={duplicateSelected}

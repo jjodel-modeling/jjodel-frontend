@@ -45,7 +45,6 @@ import {Undoredocomponent} from "../../components/topbar/undoredocomponent";
 import {BEGIN, CollabRefreshAction, COMMIT, END} from "../../redux/action/action";
 import {Tooltip} from "../../components/forEndUser/Tooltip";
 import {VersionFixer} from "../../redux/VersionFixer";
-import {PinnableDock} from "../../components/dock/MyRcDock";
 import ActivityLogger from '../../services/ActivityLogger';
 import { ActivityType } from '../../types/activity';
 import { LayoutMode, getSavedLayoutMode, saveLayoutMode, getInitialPanelWidth } from '../../components/abstract/Dock';
@@ -61,7 +60,6 @@ import { buildProjectExportJson } from '../../model/megamodelPersistence';
 import { getRuntimeMegamodel } from '../../model/megamodelRuntime';
 import { useAvatar } from '../../hooks/useAvatar';
 import { AVATAR_COLORS, AVATAR_ICONS } from '../../constants/avatarConfig';
-import { JjScriptConsole } from '../../jjscript/components/JjScriptConsole';
 import { JjodelEvents, EnvGenEvents } from '../../events/registry';
 import { DOCUMENT_TYPES, DocumentTypeEntry } from '../../constants/documentTypes';
 
@@ -583,7 +581,6 @@ function NavbarComponent(props: AllProps) {
 
     // Keyboard Shortcuts Reference state
     const [showShortcutsReference, setShowShortcutsReference] = useState(false);
-    const [showConsole, setShowConsole] = useState(false);
 
     // Hoisted hooks from formerly-inner components (HelpMenu, UserMenu, LevelBadge, TreeViewToggle)
     // Defining function components inside render causes React to unmount/remount them on every re-render.
@@ -659,6 +656,45 @@ function NavbarComponent(props: AllProps) {
         // console.log(`[singleton] show=${newVal}, modelId=${tab.id}`);
         window.dispatchEvent(new CustomEvent(JjodelEvents.TOGGLE_SINGLETONS, { detail: { modelId: tab.id, show: newVal } }));
     }, [getActiveModelTab, showSingletons]);
+
+    // ─── View toggles (edge labels / background / dot grid) ─────────
+    // Functional setState keeps the callback identity stable so the keydown
+    // listener (registered once per useEffect run) doesn't capture stale state.
+    const [showEdgeLabels, setShowEdgeLabels] = useState<boolean>(() => {
+        try { return localStorage.getItem('jjodel.showEdgeLabels') === 'true'; } catch { return false; }
+    });
+    const toggleShowEdgeLabels = useCallback(() => {
+        setShowEdgeLabels(prev => {
+            const next = !prev;
+            try { localStorage.setItem('jjodel.showEdgeLabels', String(next)); } catch {}
+            window.dispatchEvent(new CustomEvent(JjodelEvents.TOGGLE_EDGE_LABELS, { detail: { show: next } }));
+            return next;
+        });
+    }, []);
+
+    const [showBackground, setShowBackground] = useState<boolean>(() => {
+        try { return localStorage.getItem('jjodel.showBackground') !== 'false'; } catch { return true; }
+    });
+    const toggleShowBackground = useCallback(() => {
+        setShowBackground(prev => {
+            const next = !prev;
+            try { localStorage.setItem('jjodel.showBackground', String(next)); } catch {}
+            window.dispatchEvent(new CustomEvent(JjodelEvents.TOGGLE_BACKGROUND, { detail: { show: next } }));
+            return next;
+        });
+    }, []);
+
+    const [gridVisible, setGridVisible] = useState<boolean>(() => {
+        try { return localStorage.getItem('jjodel.showGrid') !== 'false'; } catch { return true; }
+    });
+    const toggleGridVisible = useCallback(() => {
+        setGridVisible(prev => {
+            const next = !prev;
+            try { localStorage.setItem('jjodel.showGrid', String(next)); } catch {}
+            window.dispatchEvent(new CustomEvent(JjodelEvents.TOGGLE_GRID, { detail: { show: next } }));
+            return next;
+        });
+    }, []);
 
     // Function to open M2 Analytics with computed data
     const openM2Analytics = () => {
@@ -1157,6 +1193,36 @@ function NavbarComponent(props: AllProps) {
                     window.dispatchEvent(new CustomEvent(JjodelEvents.TOGGLE_TREE_VIEW));
                     return;
                 }
+
+                // ========================================
+                // Shift + CMD/Ctrl + L - SHOW EDGE LABELS
+                // ========================================
+                if (matchesShortcut(event, SHORTCUTS.SHOW_EDGE_LABELS)) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    toggleShowEdgeLabels();
+                    return;
+                }
+
+                // ========================================
+                // Shift + CMD/Ctrl + B - SHOW BACKGROUND
+                // ========================================
+                if (matchesShortcut(event, SHORTCUTS.SHOW_BACKGROUND)) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    toggleShowBackground();
+                    return;
+                }
+
+                // ========================================
+                // Shift + CMD/Ctrl + G - SHOW DOT GRID
+                // ========================================
+                if (matchesShortcut(event, SHORTCUTS.SHOW_DOT_GRID)) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    toggleGridVisible();
+                    return;
+                }
             }
         };
 
@@ -1208,16 +1274,6 @@ function NavbarComponent(props: AllProps) {
     const isProject = !!project;
     const isFavorite = project?.isFavorite;
 
-    const saveLayoutItems: MenuEntry[] = [
-    ] as any;
-    if (props.autosaveLayout) {
-        saveLayoutItems.push({name: 'Turn off auto-save', function: () => PinnableDock.toggleAutosave(false), icon: <i className="bi bi-lightning-charge-fill"/>});
-    } else {
-        saveLayoutItems.push({name: 'Turn on auto-save', function: ()=>PinnableDock.toggleAutosave(true), icon: <i className="bi bi-lightning-charge"/>});
-        saveLayoutItems.push({name: 'Save manually', function: () => PinnableDock.save(), icon: <i className="bi bi-floppy" />});
-    }
-
-    let lay = props.lay;
     const items: MenuEntry[] = [
         // Jjodel Menu
         {name: 'Jjodel',
@@ -1367,38 +1423,30 @@ function NavbarComponent(props: AllProps) {
                     disabled: isDashboard
                 },
                 {name: 'divisor', function: placeholder},
-                {name: 'Save layout', disabled: true,
-                    icon: <i className="bi bi-grid-3x3" />,
-                    subItems: saveLayoutItems
-                },
-                {name: 'Load layout', disabled: isDashboard,
-                    icon: <i className="bi bi-grid-3x3" />,
-                    subItems: [
-                        {name: 'Default', function: ()=> PinnableDock.load('Default'), icon: <i className="bi bi-arrow-clockwise" />},
-                        {name: 'Project layouts', icon: <i className="bi bi-folder" />,
-                            subItems: [
-                                {name: '1', function: ()=> PinnableDock.load('1', 'project'), icon: lay==='p1' ? <i className="bi bi-check-circle-fill" /> : <i className="bi bi-circle" />},
-                                {name: '2', function: ()=> PinnableDock.load('2', 'project'), icon: lay==='p2' ? <i className="bi bi-check-circle-fill" /> : <i className="bi bi-circle" />},
-                                {name: '3', function: ()=> PinnableDock.load('3', 'project'), icon: lay==='p3' ? <i className="bi bi-check-circle-fill" /> : <i className="bi bi-circle" />},
-                            ]
-                        },
-                        {name: 'User layouts', icon: <i className="bi bi-person" />,
-                            subItems: [
-                                {name: '1', function: ()=> PinnableDock.load('1', 'user'), icon: lay==='u1' ? <i className="bi bi-check-circle-fill" /> : <i className="bi bi-circle" />},
-                                {name: '2', function: ()=> PinnableDock.load('2', 'user'), icon: lay==='u2' ? <i className="bi bi-check-circle-fill" /> : <i className="bi bi-circle" />},
-                                {name: '3', function: ()=> PinnableDock.load('3', 'user'), icon: lay==='u3' ? <i className="bi bi-check-circle-fill" /> : <i className="bi bi-circle" />},
-                            ]
-                        }
-                    ]
-                },
-                {name: 'divisor', function: placeholder},
-                {name: 'Show/Hide Sidebar', function: placeholder, icon: <i className="bi bi-layout-sidebar" />, disabled: true},
-                {name: 'Show/Hide Toolbar', function: placeholder, icon: <i className="bi bi-menu-button" />, disabled: true},
                 {name: `${isFullscreen ? 'Exit Fullscreen Mode' : 'Fullscreen Mode [F11]'}`, function: toggleFullScreen, icon: <i className="bi bi-arrows-fullscreen" />},
+                {name: 'divisor', function: placeholder},
                 {name: showSingletons ? 'Show singleton instances  \u2713' : 'Show singleton instances',
                     function: toggleShowSingletons,
                     icon: <i className={`bi ${showSingletons ? 'bi-diamond-fill' : 'bi-diamond'}`} />,
                     disabled: isDashboard || !isActiveTabModel
+                },
+                {name: showEdgeLabels ? 'Show edge labels  \u2713' : 'Show edge labels',
+                    function: toggleShowEdgeLabels,
+                    icon: <i className={`bi ${showEdgeLabels ? 'bi-tag-fill' : 'bi-tag'}`} />,
+                    shortcutPills: formatShortcutPills(SHORTCUTS.SHOW_EDGE_LABELS),
+                    disabled: isDashboard
+                },
+                {name: showBackground ? 'Show background  \u2713' : 'Show background',
+                    function: toggleShowBackground,
+                    icon: <i className={`bi ${showBackground ? 'bi-image-fill' : 'bi-image'}`} />,
+                    shortcutPills: formatShortcutPills(SHORTCUTS.SHOW_BACKGROUND),
+                    disabled: isDashboard
+                },
+                {name: gridVisible ? 'Show dot grid  \u2713' : 'Show dot grid',
+                    function: toggleGridVisible,
+                    icon: <i className={`bi ${gridVisible ? 'bi-grid-3x3-gap-fill' : 'bi-grid-3x3-gap'}`} />,
+                    shortcutPills: formatShortcutPills(SHORTCUTS.SHOW_DOT_GRID),
+                    disabled: isDashboard
                 },
                 {name: 'divisor', function: placeholder},
                 {name: props.debug ? 'Debug Mode  \u2713' : 'Debug Mode',
@@ -1407,11 +1455,6 @@ function NavbarComponent(props: AllProps) {
                         U.debug = !props.debug;
                     },
                     icon: <i className={`bi ${props.debug ? 'bi-bug-fill' : 'bi-bug'}`} />
-                },
-                {name: 'divisor', function: placeholder},
-                {name: showConsole ? 'Show Console  \u2713' : 'Show Console',
-                    function: () => setShowConsole(prev => !prev),
-                    icon: <i className={`bi ${showConsole ? 'bi-terminal-fill' : 'bi-terminal'}`} />
                 },
             ]
         },
@@ -1908,55 +1951,6 @@ function NavbarComponent(props: AllProps) {
             isOpen={showShortcutsReference}
             onClose={() => setShowShortcutsReference(false)}
         />
-        {showConsole && (
-            <div
-                style={{
-                    position: 'fixed',
-                    bottom: 16,
-                    right: 16,
-                    width: 560,
-                    height: 420,
-                    zIndex: 9999,
-                    borderRadius: 12,
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.32)',
-                    overflow: 'hidden',
-                    display: 'flex',
-                    flexDirection: 'column',
-                }}
-            >
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '8px 12px',
-                    background: '#1e293b',
-                    color: '#e2e8f0',
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: 'default',
-                    userSelect: 'none',
-                }}>
-                    <span><i className="bi bi-terminal" style={{marginRight: 6}}/> JjScript Console</span>
-                    <button
-                        onClick={() => setShowConsole(false)}
-                        style={{
-                            background: 'none',
-                            border: 'none',
-                            color: '#94a3b8',
-                            cursor: 'pointer',
-                            fontSize: 16,
-                            lineHeight: 1,
-                            padding: '0 2px',
-                        }}
-                    >
-                        <i className="bi bi-x-lg"/>
-                    </button>
-                </div>
-                <div style={{ flex: 1, overflow: 'hidden' }}>
-                    <JjScriptConsole />
-                </div>
-            </div>
-        )}
     </>);
 }
 
@@ -1968,8 +1962,6 @@ interface StateProps {
     version: DState['version'];
     advanced: boolean;
     debug: boolean;
-    lay: string; // layout selected shortened, first char is category, second is index. like u1 = user 1, p2 = project 2
-    autosaveLayout: boolean;
     // NOTE: lastSelectedModelElement removed to prevent menu flickering
     // It's now accessed directly from store in the keyboard shortcut handler
 }
@@ -1991,8 +1983,6 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     ret.version = state.version;
     ret.advanced = state.advanced;
     ret.debug = state.debug;
-    ret.lay = PinnableDock.saveSlotCategory[0] + PinnableDock.saveSlotName[0];
-    ret.autosaveLayout = PinnableDock.isAutosave();
     // NOTE: lastSelectedModelElement is now accessed directly from store in keyboard handler
     // to prevent menu flickering caused by frequent re-renders
     return ret;

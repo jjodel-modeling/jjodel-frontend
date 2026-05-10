@@ -1,5 +1,14 @@
 # Claude Code Session Log
 
+## 2026-05-10 — refactor: move view toggles from toolbar to View menu, add shortcuts, cleanup menu
+**Prompt**: Spostati "Show edge labels", "Show background", "Show dot grid" dalla toolbar al menu View con checkmark. Aggiunti shortcut ⇧⌘L/B/G. Rimosse voci obsolete dal menu (Save/Load layout, Show/Hide Sidebar, Show/Hide Toolbar, Show Console). State e SCSS dei toggle invariati.
+**File toccati**: events/registry.ts, utils/keyboardShortcuts.ts, pages/components/Navbar.tsx, components/editor-v2/EditorV2.tsx, components/editor-v2/Toolbar.tsx, components/editor-v2/EditorV2.scss
+**Esito**: ✅ completato
+**Note**: nessuna nuova chiave localStorage, nessuna nuova regola SCSS. State sollevato a Navbar.tsx (single source of truth, pattern showSingletons-style); EditorV2 ora ha 3 mirror useState + 3 listener su nuovi CustomEvent (TOGGLE_EDGE_LABELS, TOGGLE_BACKGROUND, TOGGLE_GRID). Toggle handler in Navbar usano functional setState per stable callback identity (evita stale closure nel keydown listener). Cleanup aggressivo del menu: rimossi saveLayoutItems builder, props lay/autosaveLayout (StateProps + mapStateToProps), state showConsole + body floating panel + import JjScriptConsole + import PinnableDock (ora unused). Shortcut: 3 nuove entries SHORTCUTS (SHOW_EDGE_LABELS ⇧⌘L, SHOW_BACKGROUND ⇧⌘B, SHOW_DOT_GRID ⇧⌘G) wirati nel keydown handler dentro il blocco editor-context. Una piccola correzione rispetto alla discovery: divider 1426 e 1451 sarebbero diventati consecutivi → rimossi entrambi nel cleanup di Save/Load + Sidebar/Toolbar, aggiunto un nuovo divider tra Fullscreen e Singleton per matchare la struttura attesa (3 divider finali nel menu View). Rimossa anche regola SCSS .toolbar-btn--text (dead code dopo rimozione bottoni testuali in toolbar).
+**Nome del documento prompt**: 2026-05-10 HH:MM
+
+---
+
 ## 2026-05-10 — feat: flow editor view toggles (edge labels, screenshot mode)
 **Prompt**: Aggiunti due switch testuali "Show edge labels" e "Show background" nel VIEW group della toolbar v2. "Show edge labels" rende le M1 edge label sempre visibili. "Show background" attiva una modalità screenshot pulita (canvas bianco + dot-grid nascosto a prescindere dal toggle dot-grid esistente). Il toggle icona "Show dot grid" della LAYOUT group resta invariato.
 **File toccati**: EditorV2.tsx, Toolbar.tsx, EditorV2.scss
