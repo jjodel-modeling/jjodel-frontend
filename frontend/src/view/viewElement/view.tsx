@@ -277,6 +277,13 @@ export class DViewElement extends DPointerTargetable {
     edgeSource!: string;
     edgeTarget!: string;
     edgeRouting!: 'straight' | 'manhattan-rounded' | 'bezier'; // L2 overlay path style. Default 'manhattan-rounded' (set in Constructors; existing instances migrated by VersionFixer 2.214 -> 2.215).
+    // L2 — edge customization V1 (label + stroke). Optional fields applied at L2 overlay render-time
+    // (frontend/src/components/edgeOverlay/EdgeOverlay.tsx). Defaults set in Constructors; instances
+    // pre-V1 with `undefined` values are normalized by the selector via narrowing — no VersionFixer bump.
+    edgeLabel!: string;                                         // JjEL expression evaluated to the edge label text. '' = no label.
+    edgeStrokeColor!: string;                                   // semantic palette token: 'default' | 'accent' | 'success' | 'warning' | 'danger' | 'muted'.
+    edgeStrokeWidth!: number;                                   // stroke width in px; clamped to [0.5, 10] by the selector.
+    edgeStrokeStyle!: 'solid' | 'dashed' | 'dotted';            // line pattern.
 /*
     public static new(name: string, jsxString: string, father?: DViewElement, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
                       preRenderFunc: string = '', appliableToClasses: string[] = [], oclCondition: string = '',
@@ -907,6 +914,22 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     edgeRouting!: 'straight' | 'manhattan-rounded' | 'bezier';
     __info_of__edgeRouting: Info = {isEdge: true, type: '"straight" | "manhattan-rounded" | "bezier"', label: "Edge Routing",
         txt: <div>Path style used by the L2 overlay to draw this edge. <b>Manhattan (rounded)</b> is the default — orthogonal segments with rounded corners. <b>Straight</b> is a single line between source and target side midpoints. <b>Bezier</b> is a cubic curve with tangents normal to the chosen exit/entry sides.</div>}
+
+    edgeLabel!: string;
+    __info_of__edgeLabel: Info = {isEdge: true, hidden: true, type: ShortAttribETypes.EString, label: "Edge Label",
+        txt: <div>JjEL expression evaluated as the edge label text. Leave empty for no label. Example: <code>$instance.name</code>.</div>}
+
+    edgeStrokeColor!: string;
+    __info_of__edgeStrokeColor: Info = {isEdge: true, hidden: true, type: '"default" | "accent" | "success" | "warning" | "danger" | "muted"', label: "Edge Stroke Color",
+        txt: <div>Color of the edge stroke. Semantic palette tokens that adapt to light and dark themes.</div>}
+
+    edgeStrokeWidth!: number;
+    __info_of__edgeStrokeWidth: Info = {isEdge: true, hidden: true, type: ShortAttribETypes.EFloat, label: "Edge Stroke Width", min: 0.5, max: 10, step: 0.25,
+        txt: <div>Thickness of the edge line in pixels (0.5–10). Default 1.5.</div>}
+
+    edgeStrokeStyle!: 'solid' | 'dashed' | 'dotted';
+    __info_of__edgeStrokeStyle: Info = {isEdge: true, hidden: true, type: '"solid" | "dashed" | "dotted"', label: "Edge Stroke Style",
+        txt: <div>Pattern of the edge line: solid, dashed, or dotted.</div>}
 
     subViews!: LViewElement[];
     __info_of__subViews: Info = {isGlobal: true, hidden: true, type: "DViewElement[]", label:"sub-views",

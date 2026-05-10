@@ -24,8 +24,20 @@
 
     &__path {
         fill: none;
-        stroke: #334155;
-        stroke-width: 1.5px;
+        // stroke and stroke-width are applied inline by EdgeOverlay.tsx
+        // (driven by view.edgeStrokeColor / edgeStrokeWidth / edgeStrokeStyle).
         stroke-linecap: round;
+    }
+
+    &__label {
+        fill: var(--color-edge-label-text);
+        font-size: 11px;
+        font-weight: 500;
+        paint-order: stroke fill;
+        stroke: var(--color-edge-label-halo);
+        stroke-width: 3px;
+        stroke-linejoin: round;
+        user-select: none;
+        pointer-events: none;
     }
 }

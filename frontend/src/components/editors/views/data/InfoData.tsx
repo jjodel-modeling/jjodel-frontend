@@ -225,6 +225,13 @@ function InfoDataComponent(props: AllProps) {
                             setter={(v: string) => { view.edgeRouting = v as any; }}
                         />
                     </div>
+                    <div className="jj-field">
+                        <label className="jj-field-label">
+                            Edge Label
+                            <InfoTooltip text="JjEL expression evaluated as the edge label text. Leave empty for no label. Example: $instance.name" />
+                        </label>
+                        <Input data={view} field={'edgeLabel'} readOnly={readOnly} />
+                    </div>
                 </>
             )}
 

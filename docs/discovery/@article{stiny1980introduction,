@@ -1,0 +1,9 @@
+@article{stiny1980introduction,
+  author  = {Stiny, George},
+  title   = {Introduction to Shape and Shape Grammars},
+  journal = {Environment and Planning B: Planning and Design},
+  volume  = {7},
+  number  = {3},
+  pages   = {343--351},
+  year    = {1980}
+} % OK

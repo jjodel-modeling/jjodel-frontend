@@ -134,6 +134,8 @@
   --color-type-datatype: #818cf8;                /* Indigo-400 */
 
   /* Edges */
+  --color-edge-overlay-default: #cbd5e1;          /* L2 overlay path default stroke (slate-300, dark) */
+  --color-edge-label-halo: #0f172a;               /* L2 overlay <text> halo for readability (dark) */
   --color-edge-default: #64748b;                 /* Dark edge stroke (slate-500) */
   --color-edge-selected: var(--color-canvas-accent);
   --color-edge-marker-fill: #1e293b;             /* Dark marker fill */

@@ -1199,6 +1199,13 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.edgeTarget = '';
         thiss.edgeRouting = 'manhattan-rounded';
 
+        // L2 — edge customization V1. Defaults match pre-V1 visual baseline (slate-700 stroke at 1.5px solid, no label).
+        // Pre-V1 instances with `undefined` values are normalized at runtime by EdgeOverlay's selector (narrowing).
+        thiss.edgeLabel = '';
+        thiss.edgeStrokeColor = 'default';
+        thiss.edgeStrokeWidth = 1.5;
+        thiss.edgeStrokeStyle = 'solid';
+
         if (thiss.className !== 'DViewElement') return this;
         const user: LUser = LUser.getUser();;
         // const project = user?.project; if(!project) return this;

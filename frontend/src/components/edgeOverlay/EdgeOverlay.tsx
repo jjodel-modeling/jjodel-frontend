@@ -48,12 +48,48 @@ type NodeRect = { x: number; y: number; w: number; h: number };
 
 type EdgeRouting = 'straight' | 'manhattan-rounded' | 'bezier';
 
+type EdgeStrokeStyle = 'solid' | 'dashed' | 'dotted';
+
 type EdgeData = {
     id: string;
     srcRect: NodeRect;
     tgtRect: NodeRect;
     routing: EdgeRouting;
+    strokeColor: string;
+    strokeWidth: number;
+    strokeStyle: EdgeStrokeStyle;
+    labelText: string;
 };
+
+// L2 — V1 edge customization. Stored on DViewElement.edgeStrokeColor as a token id (string);
+// the selector resolves it to a CSS `var(--...)` reference applied inline on the <path>'s
+// `stroke` attribute. Adding/removing entries here is a contract change with the Style tab UI.
+const STROKE_COLOR_TOKEN_TO_VAR: Record<string, string> = {
+    default: 'var(--color-edge-overlay-default)',
+    accent:  'var(--color-canvas-accent)',
+    success: 'var(--color-success)',
+    warning: 'var(--color-warning)',
+    danger:  'var(--color-error)',
+    muted:   'var(--color-text-tertiary)',
+};
+
+function resolveStrokeColorVar(token: string | undefined): string {
+    if (typeof token !== 'string' || !(token in STROKE_COLOR_TOKEN_TO_VAR)) {
+        return STROKE_COLOR_TOKEN_TO_VAR.default;
+    }
+    return STROKE_COLOR_TOKEN_TO_VAR[token];
+}
+
+function resolveStrokeDasharray(style: EdgeStrokeStyle): string | undefined {
+    if (style === 'dashed') return '6 4';
+    if (style === 'dotted') return '2 3';
+    return undefined; // solid: omit the attribute entirely
+}
+
+function clampStrokeWidth(w: unknown): number {
+    if (typeof w !== 'number' || !isFinite(w)) return 1.5;
+    return Math.max(0.5, Math.min(10, w));
+}
 
 type ExitCode =
     | 'no-snapshot'
@@ -99,6 +135,10 @@ export function EdgeOverlay({ graphid }: EdgeOverlayProps): React.ReactElement |
                         srcRect={e.srcRect}
                         tgtRect={e.tgtRect}
                         routing={e.routing}
+                        strokeColor={e.strokeColor}
+                        strokeWidth={e.strokeWidth}
+                        strokeStyle={e.strokeStyle}
+                        labelText={e.labelText}
                     />
                 ))}
             </g>
@@ -199,7 +239,22 @@ function buildSelectorResult(state: any, graphid: string): SelectorResult {
             ? view.edgeRouting
             : 'manhattan-rounded';
 
-        edges.push({ id: obj.id, srcRect, tgtRect, routing });
+        // V1 edge customization — pull stroke + label fields with narrowing for pre-V1 instances.
+        const strokeColor = (typeof view.edgeStrokeColor === 'string' && view.edgeStrokeColor) || 'default';
+        const strokeWidth = clampStrokeWidth(view.edgeStrokeWidth);
+        const strokeStyle: EdgeStrokeStyle =
+            (view.edgeStrokeStyle === 'dashed' || view.edgeStrokeStyle === 'dotted')
+                ? view.edgeStrokeStyle
+                : 'solid';
+
+        let labelText = '';
+        const labelExpr = (typeof view.edgeLabel === 'string' && view.edgeLabel) || '';
+        if (labelExpr) {
+            const evalResult = safeEval(evalFn, lObj, labelExpr);
+            labelText = evalResult == null ? '' : String(evalResult);
+        }
+
+        edges.push({ id: obj.id, srcRect, tgtRect, routing, strokeColor, strokeWidth, strokeStyle, labelText });
     }
 
     if (edges.length === 0) {
@@ -240,6 +295,10 @@ function selectorResultEqual(a: SelectorResult, b: SelectorResult): boolean {
             const e2 = b.edges[i];
             if (e1.id !== e2.id) return false;
             if (e1.routing !== e2.routing) return false;
+            if (e1.strokeColor !== e2.strokeColor) return false;
+            if (e1.strokeWidth !== e2.strokeWidth) return false;
+            if (e1.strokeStyle !== e2.strokeStyle) return false;
+            if (e1.labelText !== e2.labelText) return false;
             if (!rectEqual(e1.srcRect, e2.srcRect)) return false;
             if (!rectEqual(e1.tgtRect, e2.tgtRect)) return false;
         }
@@ -277,23 +336,36 @@ interface EdgeRenderItemProps {
     srcRect: NodeRect;
     tgtRect: NodeRect;
     routing: EdgeRouting;
+    strokeColor: string;
+    strokeWidth: number;
+    strokeStyle: EdgeStrokeStyle;
+    labelText: string;
 }
 
 /**
  * L2 — per-edge memoized renderer. Path is computed inline; React.memo with
- * `edgePropsEqual` skips re-render when the rect+routing inputs are unchanged
- * across renders (e.g., during canvas pan, where positions in canvas space
- * don't change — only the parent `<g transform>`).
+ * `edgePropsEqual` skips re-render when the rect+routing+stroke+label inputs
+ * are unchanged across renders (e.g., during canvas pan, where positions in
+ * canvas space don't change — only the parent `<g transform>`).
  *
  * Routing modes:
  *   - 'manhattan-rounded' (default): chooseSides + buildPathFromSides + roundManhattanPath
  *   - 'straight': single line between side midpoints
  *   - 'bezier': cubic Bezier with tangents normal to the chosen exit/entry sides
+ *
+ * V1 stroke / label customization (added 2026-05-09):
+ *   - stroke is applied inline (`stroke=`, `stroke-width=`, `stroke-dasharray=`)
+ *     so per-view changes don't require a CSS recompile.
+ *   - label is a sibling `<text>` at the bbox midpoint with paint-order halo.
  */
 const EdgeRenderItem = React.memo(function EdgeRenderItem({
     srcRect,
     tgtRect,
     routing,
+    strokeColor,
+    strokeWidth,
+    strokeStyle,
+    labelText,
 }: EdgeRenderItemProps): React.ReactElement | null {
     const srcBbox: Bbox = {
         cx: srcRect.x + srcRect.w / 2,
@@ -323,12 +395,43 @@ const EdgeRenderItem = React.memo(function EdgeRenderItem({
         if (!rawPath) return null;
         d = roundManhattanPath(rawPath, 8);
     }
-    return <path className="jjodel-edge-overlay__path" d={d} />;
+
+    const strokeColorCss = resolveStrokeColorVar(strokeColor);
+    const dasharray = resolveStrokeDasharray(strokeStyle);
+    const midX = (srcPoint.x + tgtPoint.x) / 2;
+    const midY = (srcPoint.y + tgtPoint.y) / 2;
+
+    return (
+        <g>
+            <path
+                className="jjodel-edge-overlay__path"
+                d={d}
+                stroke={strokeColorCss}
+                strokeWidth={strokeWidth}
+                {...(dasharray ? { strokeDasharray: dasharray } : {})}
+            />
+            {labelText && (
+                <text
+                    className="jjodel-edge-overlay__label"
+                    x={midX}
+                    y={midY}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                >
+                    {labelText}
+                </text>
+            )}
+        </g>
+    );
 }, edgePropsEqual);
 
 function edgePropsEqual(prev: EdgeRenderItemProps, next: EdgeRenderItemProps): boolean {
     return prev.id === next.id
         && prev.routing === next.routing
+        && prev.strokeColor === next.strokeColor
+        && prev.strokeWidth === next.strokeWidth
+        && prev.strokeStyle === next.strokeStyle
+        && prev.labelText === next.labelText
         && rectEqual(prev.srcRect, next.srcRect)
         && rectEqual(prev.tgtRect, next.tgtRect);
 }

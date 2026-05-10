@@ -230,6 +230,8 @@ $gradient-hover: linear-gradient(180deg, $slate-100 0%, $slate-200 100%);
   --color-type-datatype: #6366f1;                 /* Indigo-500 */
 
   /* Edges */
+  --color-edge-overlay-default: #334155;          /* L2 overlay path default stroke (slate-700) */
+  --color-edge-label-halo: #ffffff;               /* L2 overlay <text> halo for readability */
   --color-edge-default: #{$slate-400};            /* Default edge stroke */
   --color-edge-selected: var(--color-canvas-accent); /* Selected edge */
   --color-edge-marker-fill: #ffffff;              /* Hollow marker fill */

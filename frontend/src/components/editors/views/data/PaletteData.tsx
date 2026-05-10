@@ -6,7 +6,7 @@ import {useStateIfMounted} from "use-state-if-mounted";
 import tinycolor, {Instance} from "tinycolor2";
 import Editor from "@monaco-editor/react";
 import type {Dictionary, GObject, Pointer,} from '../../../../joiner';
-import {DState, DViewElement, EdgeHead, Input, Keystrokes, Log, LViewElement, U,} from '../../../../joiner';
+import {DState, DViewElement, EdgeHead, Input, Keystrokes, Log, LViewElement, Select, U,} from '../../../../joiner';
 import { cssMonacoOptions, withReadOnly } from '../../monacoConfig';
 import EditorToolbar from '../../EditorToolbar';
 import EditorFullscreenModal from '../../EditorFullscreenModal';
@@ -356,6 +356,67 @@ function PaletteDataComponent(props: AllProps) {
     const lines = (Math.round(vcss.split(/\r|\r\n|\n/).length*1.8) < 5 ? 10 : Math.round(vcss.split(/\r|\r\n|\n/).length*1.8));
 
     return(<section className={'p-3 style-tab style-tab-redesign' + (readOnly ? " disabled" : "")}>
+        {/* EDGE STYLE SECTION — V1: stroke color/width/style for L2 overlay edges. Only when this view drives an edge. */}
+        {view.isEdge && (
+            <section className="edge-style-section">
+                <div className="style-section-header">
+                    <span className="section-title">Edge Style</span>
+                </div>
+                <div className="jj-field">
+                    <label className="jj-field-label">
+                        Stroke Color
+                        <Info className={'jj-field-info'}>Color of the edge stroke. Semantic palette tokens that adapt to light and dark themes.</Info>
+                    </label>
+                    <Select
+                        data={view}
+                        field={'edgeStrokeColor'}
+                        readOnly={readOnly}
+                        getter={(d: LViewElement) => d.edgeStrokeColor || 'default'}
+                        setter={(v: string) => { view.edgeStrokeColor = v; }}
+                        options={<>
+                            <option value={'default'}>Default</option>
+                            <option value={'accent'}>Accent</option>
+                            <option value={'success'}>Success</option>
+                            <option value={'warning'}>Warning</option>
+                            <option value={'danger'}>Danger</option>
+                            <option value={'muted'}>Muted</option>
+                        </>}
+                    />
+                </div>
+                <div className="jj-field">
+                    <label className="jj-field-label">
+                        Stroke Width
+                        <Info className={'jj-field-info'}>Thickness of the edge line in pixels (0.5–10). Default 1.5.</Info>
+                    </label>
+                    <Input
+                        data={view}
+                        field={'edgeStrokeWidth'}
+                        readOnly={readOnly}
+                        type={'number'}
+                        {...({min: 0.5, max: 6, step: 0.25} as any)}
+                    />
+                </div>
+                <div className="jj-field">
+                    <label className="jj-field-label">
+                        Stroke Style
+                        <Info className={'jj-field-info'}>Pattern of the edge line: solid, dashed, or dotted.</Info>
+                    </label>
+                    <Select
+                        data={view}
+                        field={'edgeStrokeStyle'}
+                        readOnly={readOnly}
+                        getter={(d: LViewElement) => d.edgeStrokeStyle || 'solid'}
+                        setter={(v: string) => { view.edgeStrokeStyle = v as any; }}
+                        options={<>
+                            <option value={'solid'}>Solid</option>
+                            <option value={'dashed'}>Dashed</option>
+                            <option value={'dotted'}>Dotted</option>
+                        </>}
+                    />
+                </div>
+            </section>
+        )}
+
         {/* STYLE VARIABLES SECTION */}
         <div className="style-variables-section">
             <div className="style-section-header">
