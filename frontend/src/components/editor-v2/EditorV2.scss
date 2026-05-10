@@ -376,6 +376,13 @@
         opacity: 0.3;
         cursor: not-allowed;
     }
+
+    &--text {
+        width: auto;
+        padding: 0 10px;
+        font-size: 11px;
+        white-space: nowrap;
+    }
 }
 
 // ── Dropdown button (notation / theme selector) ──
@@ -2010,6 +2017,12 @@
             pointer-events: all;
         }
     }
+}
+
+// Show edge labels: M1 edge labels always visible when wrapper has the toggle class.
+.editor-v2.show-edge-labels .edge-label--m1-hover .edge-label__text {
+    opacity: 1;
+    pointer-events: all;
 }
 
 .manhattan-edge__label {

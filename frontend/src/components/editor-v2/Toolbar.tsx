@@ -13,6 +13,8 @@ interface ToolbarProps {
     onToggleSnap: () => void;
     gridVisible: boolean;
     onToggleGrid: () => void;
+    showEdgeLabels: boolean;
+    onToggleEdgeLabels: () => void;
     onFitView: () => void;
     onDeleteSelected: () => void;
     onUndo: () => void;
@@ -127,6 +129,8 @@ function Toolbar({
     onToggleSnap,
     gridVisible,
     onToggleGrid,
+    showEdgeLabels,
+    onToggleEdgeLabels,
     onFitView,
     onDeleteSelected,
     onUndo,
@@ -351,6 +355,25 @@ function Toolbar({
                     colorScheme={colorScheme}
                     onColorSchemeChange={onColorSchemeChange}
                 />
+
+                <button
+                    type="button"
+                    className={`toolbar-btn toolbar-btn--text ${showEdgeLabels ? 'active' : ''}`}
+                    onClick={onToggleEdgeLabels}
+                    title="Toggle edge labels visibility"
+                    aria-pressed={showEdgeLabels}
+                >
+                    Show edge labels
+                </button>
+                <button
+                    type="button"
+                    className={`toolbar-btn toolbar-btn--text ${gridVisible ? 'active' : ''}`}
+                    onClick={onToggleGrid}
+                    title="Toggle background visibility"
+                    aria-pressed={gridVisible}
+                >
+                    Show background
+                </button>
             </div>
 
             <div className="toolbar-separator" />
@@ -358,24 +381,6 @@ function Toolbar({
             {/* ── LAYOUT group (with label) ── */}
             <div className="toolbar-group toolbar-group--labeled">
                 <span className="toolbar-group__label">LAYOUT</span>
-                <button
-                    className={`toolbar-btn ${gridVisible ? 'active' : ''}`}
-                    onClick={onToggleGrid}
-                    disabled={layoutDisabled}
-                    title={layoutDisabled ? 'Layout controls only available with the flow editor' : (gridVisible ? 'Hide dot grid' : 'Show dot grid')}
-                >
-                    <svg width="11" height="11" viewBox="0 0 11 11" fill="currentColor">
-                        <circle cx="1.5" cy="1.5" r="1.2" />
-                        <circle cx="5.5" cy="1.5" r="1.2" />
-                        <circle cx="9.5" cy="1.5" r="1.2" />
-                        <circle cx="1.5" cy="5.5" r="1.2" />
-                        <circle cx="5.5" cy="5.5" r="1.2" />
-                        <circle cx="9.5" cy="5.5" r="1.2" />
-                        <circle cx="1.5" cy="9.5" r="1.2" />
-                        <circle cx="5.5" cy="9.5" r="1.2" />
-                        <circle cx="9.5" cy="9.5" r="1.2" />
-                    </svg>
-                </button>
                 <button
                     className={`toolbar-btn ${snapEnabled ? 'active' : ''}`}
                     onClick={onToggleSnap}

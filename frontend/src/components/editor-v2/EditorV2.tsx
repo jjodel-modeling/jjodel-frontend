@@ -446,6 +446,16 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             return next;
         });
     }, []);
+    const [showEdgeLabels, setShowEdgeLabels] = useState(() => {
+        try { return localStorage.getItem('jjodel.showEdgeLabels') === 'true'; } catch { return false; }
+    });
+    const handleToggleEdgeLabels = useCallback(() => {
+        setShowEdgeLabels(prev => {
+            const next = !prev;
+            try { localStorage.setItem('jjodel.showEdgeLabels', String(next)); } catch {}
+            return next;
+        });
+    }, []);
 
     // Bottom drawer removed — properties editing handled by right-side dock Info panel
     // ── Singleton instance toggle ──────────────────────────────────────
@@ -3007,7 +3017,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
     return (
         <EditorContext.Provider value={editorContextValue}>
-            <div className={`editor-v2 theme-${theme} notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}`} tabIndex={0} onKeyDown={onKeyDown}>
+            <div className={`editor-v2 theme-${theme} notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}`} tabIndex={0} onKeyDown={onKeyDown}>
                 <UniquenessProblemSync modelid={modelid} />
                 <PalettePanel
                     editorMode={modeInfo.mode}
@@ -3021,6 +3031,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         onToggleSnap={handleToggleSnap}
                         gridVisible={gridVisible}
                         onToggleGrid={handleToggleGrid}
+                        showEdgeLabels={showEdgeLabels}
+                        onToggleEdgeLabels={handleToggleEdgeLabels}
                         onFitView={handleFitView}
                         onAutoLayout={handleAutoLayout}
                         onDuplicateSelected={duplicateSelected}
