@@ -45,13 +45,17 @@ $radius-md: 6px;
 // ============================================
 
 .properties-panel-container {
-    flex: 1 1 auto; // Grows to fill available space
+    // Rail layout finalization 2026-05-13: flex:1 1 0 + min-width:0 permettono
+    // al pannello di espandersi sullo spazio liberato dalla rail/dock shrink.
+    // Rimossi min-width 300px e max-width 450px del modello F1: con il rail
+    // model, le rail/dock-shrink coprono i casi limite — il cap 450px
+    // produceva un vuoto residuo a destra (vedi acceptance #2/#3/#4).
+    flex: 1 1 0;
     display: flex;
     flex-direction: column;
     height: 100%;
     overflow: hidden;
-    min-width: 300px; // Don't let it get too narrow
-    max-width: 450px;
+    min-width: 0;
     background: #f8fafc; // slate-50, visually distinct from white canvas
     border-left: 1px solid #e2e8f0; // slate-200, separates from canvas
 
@@ -84,19 +88,179 @@ $radius-md: 6px;
 }
 
 // ============================================
+// PROPERTIES PANEL HEADER (2026-05-13)
+// Header simmetrico al tree header. Toggle button speculare.
+// ============================================
+
+.properties-panel-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    background-color: $color-bg-primary;
+    font-size: 12px;
+    font-weight: 600;
+    color: $color-text-secondary;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+    height: 41px;
+    transition: background $transition-fast;
+
+    > i {
+        font-size: 14px;
+        color: $color-accent;
+    }
+
+    > span:first-of-type {
+        flex: 1;
+    }
+}
+
+.properties-panel-toggle-btn {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    color: $color-text-tertiary;
+    transition: all $transition-fast;
+
+    &:hover {
+        background-color: $color-bg-tertiary;
+        color: $color-text-primary;
+    }
+
+    i {
+        font-size: 12px;
+    }
+}
+
+.properties-panel-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+}
+
+// Collapsed indicator: speculare a .tree-view-collapsed ma sul lato
+// sinistro dello split. Click-to-expand. Border-RIGHT (verso il tree).
+.properties-panel-collapsed {
+    flex: 0 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: $color-bg-primary;
+    border-right: 1px solid $color-border;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:hover {
+        background-color: $color-bg-secondary;
+
+        i {
+            color: $color-text-primary;
+            transform: translateX(2px);
+        }
+    }
+
+    i {
+        font-size: 14px;
+        color: $color-text-tertiary;
+        transition: color $transition-fast, transform 200ms ease;
+    }
+}
+
+// ============================================
+// COLLAPSED PANEL TOGGLE (2026-05-13)
+// Button compatto 24×24 in alto, sostituisce la rail full-height del
+// rail-fix. Allineato verticalmente con gli header dei pannelli espansi
+// adiacenti via `align-self: flex-start` + margin-top 8px.
+// Modifier --tree usa `margin-left: auto` come safety net visiva quando
+// entrambi sono iconified prima che il body attribute venga settato.
+// ============================================
+
+.collapsed-panel-toggle {
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
+    align-self: flex-start;
+    margin-top: 8px;
+    margin-left: 4px;
+    margin-right: 4px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 120ms ease;
+
+    i.bi {
+        color: #0ea5e9;
+        font-size: 14px;
+        line-height: 1;
+    }
+
+    &:hover {
+        background-color: rgba(14, 165, 233, 0.10);
+    }
+
+    &:focus-visible {
+        outline: 1px solid #0ea5e9;
+        outline-offset: -1px;
+    }
+}
+
+.collapsed-panel-toggle--properties {
+    margin-left: 8px;
+}
+
+.collapsed-panel-toggle--tree {
+    margin-right: 8px;
+    margin-left: auto;
+}
+
+// Modifier: quando Properties è in rail e Tree è espanso, il Tree deve
+// espandersi a riempire lo spazio (default flex:0 0 auto + width inline).
+// Il JSX salta lo style inline width/minWidth/maxWidth quando il modifier
+// è attivo (vedi PropertiesWithTreeView.tsx, condizione onlyTreeExpanded).
+.properties-with-tree-view.tree-only-expanded .tree-view-panel-container {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+}
+
+// ============================================
 // TREE VIEW PANEL (RIGHT) - FIXED WIDTH
 // ============================================
 
 .tree-view-panel-container {
-    flex: 0 0 auto; // Fixed width (controlled by JS inline style)
+    flex: 0 0 auto; // Width controlled by JS inline style (resizable via drag handle)
+    min-width: 0;   // permette al flex di shrinkare quando il modifier tree-only-expanded attiva flex:1
     display: flex;
     flex-direction: column;
     height: 100%;
     overflow: hidden;
     background-color: $color-bg-primary;
     border-left: 1px solid $color-border;
-    // Smooth transitions when toggling visibility
-    transition: flex-basis $transition-smooth, width $transition-smooth, border-color $transition-fast;
+    // Anchor for the absolute-positioned resize handle (vedi .tree-view-panel-resize-handle)
+    position: relative;
+    // Smooth transitions when toggling visibility. `width` rimossa dalla lista
+    // perché lo state width è ora drag-driven (interpolation transition causerebbe
+    // lag visibile durante il trascinamento); il toggle expand/collapse usa swap
+    // di elementi DOM diversi, non animazione di width.
+    transition: flex-basis $transition-smooth, border-color $transition-fast;
 
     // Slide in animation when panel opens
     animation: slideInFromRight $transition-smooth;
@@ -118,6 +282,43 @@ $radius-md: 6px;
                 rgba($color-executing, 0.04) 100%
             );
         }
+    }
+}
+
+// Resize handle: lato sinistro del tree panel (verso le properties).
+// 1px linea visibile + 6px hit zone, hover cyan, hidden on touch.
+// Token: usa SCSS local vars del file ($color-border, $color-highlight) per
+// consistency con il resto del file; #0ea5e9 (cyan) è il $color-highlight già
+// in uso per --highlighted / treeViewHighlight.
+.tree-view-panel-resize-handle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -3px;   // 3px sporgenti verso le properties per facilitare il grab
+    width: 6px;   // hit zone
+    cursor: col-resize;
+    z-index: 10;
+    background: transparent;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 3px;   // linea 1px centrata nella hit zone, sovrapposta al border-left esistente
+        width: 1px;
+        background-color: $color-border;
+        transition: background-color $transition-fast;
+        pointer-events: none;
+    }
+
+    &:hover::before,
+    &:active::before {
+        background-color: $color-highlight;
+    }
+
+    @media (hover: none) {
+        display: none;
     }
 }
 

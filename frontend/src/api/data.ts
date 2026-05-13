@@ -133,7 +133,7 @@ export class LocalStorage extends IStorage{
 @RuntimeAccessible('ECoreParser')
 export class EcoreParser{
     static supportedEcoreVersions = ["http://www.eclipse.org/emf/2002/Ecore"];
-    static prefix:string = '@';
+    static prefix:string = '-'; // aligned with EcoreService.xmlToJson output (was '@')
     static cname = 'ECoreParser';
 
     static parse(ecorejson: GObject | string | null, isMetamodel: boolean, filename: string | undefined, persist: boolean = true): DModelElement[]{
@@ -886,7 +886,7 @@ export class EcoreParser{
 
 
     /////////////////////////////////// generic
-    static XMLinlineMarker: string = '@';
+    static XMLinlineMarker: string = '-'; // aligned with EcoreService.xmlToJson output (was '@')
     static classTypePrefix: string = '#//'
     private static getSubPackages(thiss: Json): Json[] {
         const ret: any = thiss[ECoreSubPackage.eSubpackages];

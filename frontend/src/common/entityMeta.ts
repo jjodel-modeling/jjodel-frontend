@@ -7,6 +7,10 @@
  * Icons are Bootstrap Icons (bi-*).
  */
 
+// SYNC: i valori bg/text di questo file sono replicati come CSS variables
+// in frontend/src/styles/tokens/_colors-light.scss e _colors-dark.scss
+// (token --color-entity-<type>-{bg,fg}). Mantenere in sync.
+
 // ─── Entity type union ──────────────────────────────────────────────────────
 
 export type EntityType =

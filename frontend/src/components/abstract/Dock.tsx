@@ -259,6 +259,27 @@ function DockComponent(props: AllProps) {
         };
     }, []);
 
+    // PropertiesWithTreeView rail-only mode (2026-05-13): quando entrambi i
+    // sub-panel sono in rail, settiamo body[data-properties-tree-rail-only='true']
+    // per shrinkare il dock tab a 56px (vedi style.scss). Semantica diversa dal
+    // pattern rimosso in F1.5: shrink invece di hide, tab resta visibile mostrando
+    // le due rail.
+    useEffect(() => {
+        const onEnter = () => {
+            document.body.dataset.propertiesTreeRailOnly = 'true';
+        };
+        const onExit = () => {
+            delete document.body.dataset.propertiesTreeRailOnly;
+        };
+        window.addEventListener(JjodelEvents.PROPERTIES_TREE_RAIL_ONLY_ENTER, onEnter);
+        window.addEventListener(JjodelEvents.PROPERTIES_TREE_RAIL_ONLY_EXIT, onExit);
+        return () => {
+            window.removeEventListener(JjodelEvents.PROPERTIES_TREE_RAIL_ONLY_ENTER, onEnter);
+            window.removeEventListener(JjodelEvents.PROPERTIES_TREE_RAIL_ONLY_EXIT, onExit);
+            delete document.body.dataset.propertiesTreeRailOnly;
+        };
+    }, []);
+
     const groups = {
         'models': {floatable: true, maximizable: false},
         // editors group: tabLocked=true disables drag-and-drop reordering

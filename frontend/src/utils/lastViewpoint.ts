@@ -4,7 +4,7 @@
  * to create new views.
  */
 
-import { DPointerTargetable, DViewElement, LProject, LViewPoint, SetFieldAction, SetRootFieldAction, Defaults } from '../joiner';
+import { DPointerTargetable, DViewElement, LPointerTargetable, LProject, LViewElement, LViewPoint, SetFieldAction, SetRootFieldAction, Defaults } from '../joiner';
 import { toast } from '../components/Toast/toastDispatch';
 import { JjodelEvents } from '../events/registry';
 import { DEFAULT_VIEW_JSX_STRING } from './defaultViewTemplate';
@@ -92,6 +92,44 @@ export function resolveParentViewpoint(): { dViewpoint: DViewElement; vpName: st
     } catch { /* default not available */ }
 
     return null;
+}
+
+/**
+ * Crea una View "vuota" come sub-view di un Viewpoint specifico.
+ * Usata dal pulsante "+" inline sulle righe Viewpoint del Tree View.
+ * Ritorna la DViewElement appena creata in modo da poter attivare
+ * il rename inline immediatamente.
+ *
+ * @param dVp - DViewElement del Viewpoint padre
+ * @param nameSeed - prefisso nome (default "New view")
+ * @returns DViewElement della view creata
+ */
+export function createBlankViewInViewpoint(
+    dVp: DViewElement,
+    nameSeed: string = 'New view'
+): DViewElement {
+    const lVp = LPointerTargetable.fromD(dVp) as LViewElement;
+    const existingNames = new Set(
+        lVp.subViews.map(v => v?.name).filter(Boolean) as string[]
+    );
+
+    // Trova nome unico: "New view", "New view2", "New view3", ...
+    // Usa la convention di U.increaseEndingNumber (senza parentesi).
+    let candidate = nameSeed;
+    let i = 1;
+    while (existingNames.has(candidate)) {
+        i += 1;
+        candidate = `${nameSeed}${i}`;
+    }
+
+    const newView = DViewElement.new2(
+        candidate,
+        '', // jsxString vuoto, l'utente personalizzerà dopo
+        dVp,
+        undefined,
+        true
+    );
+    return newView;
 }
 
 /**

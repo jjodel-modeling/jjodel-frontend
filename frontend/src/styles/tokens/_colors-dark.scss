@@ -228,4 +228,28 @@
   --color-badge-obj-bg: rgba(16, 185, 129, 0.15);
   --color-badge-obj-text: #34d399;
 
+  /* ============================================
+     ENTITY CATEGORICAL PALETTE — dark variant
+     bg rgba 0.18 di entityMeta.ts fg, fg shade-300
+     ============================================ */
+  --color-entity-metamodel-bg: rgba(83, 74, 183, 0.18);
+  --color-entity-metamodel-fg: #A99DFD;
+  --color-entity-package-bg: rgba(37, 99, 235, 0.18);
+  --color-entity-package-fg: #93C5FD;
+  --color-entity-class-bg: rgba(220, 38, 38, 0.18);
+  --color-entity-class-fg: #FCA5A5;
+  --color-entity-model-bg: rgba(133, 79, 11, 0.18);
+  --color-entity-model-fg: #FCD34D;
+  --color-entity-viewpoint-bg: rgba(219, 39, 119, 0.18);
+  --color-entity-viewpoint-fg: #F472B6;
+
+  /* Saturated variants (dark mode) — leggermente più chiari del light per
+     mantenere contrasto su background scuro. */
+  --color-entity-viewpoint-saturated: #f472b6;
+  --color-entity-model-saturated: #facc15;
+
+  /* Selection (cyan dark variant) */
+  --color-selection-bg: rgba(8, 145, 178, 0.18);
+  --color-selection-bar: #22D3EE;
+
 }

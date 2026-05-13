@@ -4,9 +4,12 @@ import type { FakeStateProps } from '../../joiner';
 import {
     DState,
     DGraph,
+    DPointerTargetable,
+    DViewElement,
     LModel,
     LObject,
     LPointerTargetable,
+    LViewElement,
     SetFieldAction,
     SetRootFieldAction,
     DProject,
@@ -18,7 +21,7 @@ import {
 import type { Pointer } from '../../joiner';
 import type { ViewpointType } from '../../view/viewPoint/viewpoint';
 import { useTreeViewPanel, ElementAction } from '../../contexts/TreeViewPanelContext';
-import { getLastEditedViewpointId, createViewInWorkbench } from '../../utils/lastViewpoint';
+import { getLastEditedViewpointId, createViewInWorkbench, createBlankViewInViewpoint } from '../../utils/lastViewpoint';
 import { JjodelEvents, SystemEvents } from '../../events/registry';
 import { Tooltip } from '../forEndUser/Tooltip';
 import { useNodeProblems } from '../editor-v2/problems/useNodeProblems';
@@ -33,10 +36,13 @@ import type { NodeProblem } from '../editor-v2/problems/registry';
  * section keys use the `__section:` prefix.
  *
  * Conventions:
- * - 16px padding-left per nesting level (no exceptions).
- * - Vertical guides drawn by .tree-children::before from chevron parent.
+ * - TREE_INDENT_STEP px padding-left per nesting level (no exceptions).
  * - Leaves render an invisible chevron slot to keep alignment.
  */
+
+// Indentazione per livello di nesting (polish 2026-05-12: ridotta da 16 a 12,
+// circa -25%, per migliorare la leggibilità dei nomi in tree profondi).
+const TREE_INDENT_STEP = 12;
 
 // ─── Synthetic section keys ──────────────────────────────────────────────────
 
@@ -280,7 +286,7 @@ const SectionNode = memo(function SectionNode({
         <div className="tree-section" data-section-key={sectionKey}>
             <div
                 className="tree-section__header"
-                style={{ paddingLeft: `${depth * 16}px` }}
+                style={{ paddingLeft: `${depth * TREE_INDENT_STEP}px` }}
                 onClick={onToggle}
             >
                 <button className="tree-node__toggle" onClick={(e) => { e.stopPropagation(); onToggle(); }}>
@@ -302,7 +308,7 @@ const SectionNode = memo(function SectionNode({
 
 // ─── EntityRow — single row for a real entity (M, P, m, C, VP) ──────────────
 
-type EntityBadge = 'M' | 'P' | 'm' | 'C' | 'VP';
+type EntityBadge = 'M' | 'P' | 'm' | 'C' | 'VP' | 'v';
 
 interface EntityRowProps {
     badge: EntityBadge;
@@ -325,6 +331,9 @@ interface EntityRowProps {
     highlightAction?: ElementAction | null;
     isHighlighted?: boolean;
     showNewBadge?: boolean;
+    actions?: ReactNode;           // hover-reveal slot (e.g. add/duplicate/delete buttons)
+    nameOverride?: ReactNode;      // custom name renderer (e.g. inline rename input)
+    activeIndicator?: 'viewpoint' | 'model' | null; // pulsing dot — entity-typed
 }
 
 const EntityRow = memo(function EntityRow(props: EntityRowProps): ReactElement {
@@ -332,6 +341,7 @@ const EntityRow = memo(function EntityRow(props: EntityRowProps): ReactElement {
         badge, badgeClassName, name, nameClassName, pillText, expandKey, isLeaf,
         expanded, onToggle, extraIcon, extraIconTitle, tooltip, selected,
         onClick, onContextMenu, depth, dataElementId, highlightAction, isHighlighted, showNewBadge,
+        actions, nameOverride, activeIndicator,
     } = props;
 
     const hasChevron = !!expandKey && !isLeaf;
@@ -363,7 +373,7 @@ const EntityRow = memo(function EntityRow(props: EntityRowProps): ReactElement {
     const rowContent = (
         <div
             className={`tree-row ${selected ? 'tree-row--selected' : ''} ${highlightClass}`.trim()}
-            style={{ paddingLeft: `${depth * 16}px` }}
+            style={{ paddingLeft: `${depth * TREE_INDENT_STEP}px` }}
             data-element-id={dataElementId}
             onContextMenu={onContextMenu}
         >
@@ -380,7 +390,9 @@ const EntityRow = memo(function EntityRow(props: EntityRowProps): ReactElement {
 
             <div className="tree-row__content" onClick={onClick}>
                 <span className={`tree-node__icon ${badgeClassName || ''}`}>{badge}</span>
-                <span className={`tree-row__name ${nameClassName || ''}`.trim()}>{name || 'unnamed'}</span>
+                {nameOverride !== undefined ? nameOverride : (
+                    <span className={`tree-row__name ${nameClassName || ''}`.trim()}>{name || 'unnamed'}</span>
+                )}
                 {pillText && <span className="tree-pill">{pillText}</span>}
                 {extraIcon === 'bezier2' && (
                     <i
@@ -408,6 +420,13 @@ const EntityRow = memo(function EntityRow(props: EntityRowProps): ReactElement {
                     <span className="tree-node__badge tree-node__badge--new">NEW</span>
                 )}
             </div>
+            {actions && <span className="tree-row__actions">{actions}</span>}
+            {activeIndicator && (
+                <span
+                    className={`tree-row__active-dot tree-row__active-dot--${activeIndicator}`}
+                    aria-label="active in editor"
+                />
+            )}
         </div>
     );
 
@@ -445,7 +464,7 @@ const FeatureRow = memo(function FeatureRow({
     }, [instance.id, instance.modelId, onSelect]);
 
     return (
-        <div className="tree-row tree-row--feature" data-element-id={instance.id} style={{ paddingLeft: `${depth * 16}px` }}>
+        <div className="tree-row tree-row--feature" data-element-id={instance.id} style={{ paddingLeft: `${depth * TREE_INDENT_STEP}px` }}>
             <span className="tree-node__toggle is-leaf" aria-hidden />
             <div className={`tree-row__content ${selected ? 'tree-row__content--selected' : ''}`} onClick={handleClick}>
                 <span className="tree-feature__name">{instance.name}</span>
@@ -657,13 +676,13 @@ const ModelNode = memo(function ModelNode({
                 badge="m"
                 badgeClassName="tree-nested-model"
                 name={model.name}
-                pillText="M1"
                 expandKey={model.id}
                 isLeaf={!canExpand}
                 expanded={isExpanded && canExpand}
                 onToggle={onToggle}
                 tooltip={tooltip}
                 selected={isSelected}
+                activeIndicator={model.isActive ? 'model' : null}
                 onClick={handleClick}
                 depth={depth}
                 dataElementId={model.id}
@@ -798,21 +817,42 @@ const MetamodelNode = memo(function MetamodelNode({
 
 // ─── Viewpoint nodes ─────────────────────────────────────────────────────────
 
+interface SubViewItemRenameProps {
+    renamingViewId: string | null;
+    renameValue: string;
+    setRenameValue: (v: string) => void;
+    submitRenameView: (lView: LViewElement) => void;
+    handleRenameKeyDown: (e: React.KeyboardEvent, lView: LViewElement) => void;
+    renameInputRef: React.RefObject<HTMLInputElement>;
+}
+
 const SubViewItem = memo(function SubViewItem({
     view,
     depth,
     isExpandedFn,
     onToggleFn,
     onSelect,
+    renamingViewId,
+    renameValue,
+    setRenameValue,
+    submitRenameView,
+    handleRenameKeyDown,
+    renameInputRef,
 }: {
     view: TreeSubViewData;
     depth: number;
     isExpandedFn: (key: string) => boolean;
     onToggleFn: (key: string) => void;
     onSelect?: () => void;
-}): ReactElement {
+} & SubViewItemRenameProps): ReactElement {
     const hasChildren = view.children.length > 0;
     const expanded = isExpandedFn(view.id);
+    const isRenaming = renamingViewId === view.id;
+
+    const lView = useMemo(
+        () => LPointerTargetable.fromPointer(view.id) as LViewElement,
+        [view.id]
+    );
 
     const handleClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
@@ -828,12 +868,58 @@ const SubViewItem = memo(function SubViewItem({
         onSelect?.();
     }, [view.id, onSelect]);
 
+    const handleDuplicate = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        // LViewElement.duplicate(deep: boolean = true): wraps in TRANSACTION,
+        // undo-tracked. Deep copies nested subViews recursively.
+        lView.duplicate(true);
+    }, [lView]);
+
+    const handleDelete = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        lView.delete();
+    }, [lView]);
+
+    const nameOverride = isRenaming ? (
+        <input
+            ref={renameInputRef}
+            className="tree-row__rename-input"
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            onBlur={() => submitRenameView(lView)}
+            onKeyDown={(e) => handleRenameKeyDown(e, lView)}
+            onClick={(e) => e.stopPropagation()}
+        />
+    ) : undefined;
+
+    const actions = (
+        <>
+            <button
+                className="tree-row__action"
+                onClick={handleDuplicate}
+                title="Duplicate"
+                aria-label="Duplicate"
+            >
+                <i className="bi bi-copy" />
+            </button>
+            <button
+                className="tree-row__action tree-row__action--danger"
+                onClick={handleDelete}
+                title="Delete"
+                aria-label="Delete"
+            >
+                <i className="bi bi-trash" />
+            </button>
+        </>
+    );
+
     return (
         <div className="tree-node" data-element-id={view.id}>
             <EntityRow
-                badge="VP"
-                badgeClassName="tree-subview"
+                badge="v"
+                badgeClassName="tree-leaf-view"
                 name={view.name}
+                nameOverride={nameOverride}
                 expandKey={view.id}
                 isLeaf={!hasChildren}
                 expanded={expanded}
@@ -841,6 +927,7 @@ const SubViewItem = memo(function SubViewItem({
                 onClick={handleClick}
                 depth={depth}
                 dataElementId={view.id}
+                actions={actions}
             />
             {expanded && hasChildren && (
                 <div className="tree-children">
@@ -852,6 +939,12 @@ const SubViewItem = memo(function SubViewItem({
                             isExpandedFn={isExpandedFn}
                             onToggleFn={onToggleFn}
                             onSelect={onSelect}
+                            renamingViewId={renamingViewId}
+                            renameValue={renameValue}
+                            setRenameValue={setRenameValue}
+                            submitRenameView={submitRenameView}
+                            handleRenameKeyDown={handleRenameKeyDown}
+                            renameInputRef={renameInputRef}
                         />
                     ))}
                 </div>
@@ -860,21 +953,35 @@ const SubViewItem = memo(function SubViewItem({
     );
 });
 
+interface ViewpointRenameProps extends SubViewItemRenameProps {
+    startRenameView: (viewId: string, currentName: string, isFirst?: boolean) => void;
+}
+
 const ViewpointNode = memo(function ViewpointNode({
     vp,
     depth,
     isExpandedFn,
     onToggleFn,
     onSelect,
+    activeViewpointId,
+    startRenameView,
+    renamingViewId,
+    renameValue,
+    setRenameValue,
+    submitRenameView,
+    handleRenameKeyDown,
+    renameInputRef,
 }: {
     vp: TreeViewpointData;
     depth: number;
     isExpandedFn: (key: string) => boolean;
     onToggleFn: (key: string) => void;
     onSelect?: () => void;
-}): ReactElement {
+    activeViewpointId?: string;
+} & ViewpointRenameProps): ReactElement {
     const hasSubViews = vp.subViews.length > 0;
     const expanded = isExpandedFn(vp.id);
+    const isActive = !!activeViewpointId && vp.id === activeViewpointId;
 
     const handleClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
@@ -890,12 +997,29 @@ const ViewpointNode = memo(function ViewpointNode({
         onSelect?.();
     }, [vp.id, onSelect]);
 
-    const tooltip = useMemo(() => (
-        <div>
-            <div><strong>{vp.fqn}</strong></div>
-            <div>{hasSubViews ? `${vp.viewCount} views` : `Type: ${vp.vpType}`}</div>
-        </div>
-    ), [vp.fqn, vp.viewCount, vp.vpType, hasSubViews]);
+    const handleAddView = useCallback(() => {
+        const dVp = DPointerTargetable.from(vp.id) as DViewElement | undefined;
+        if (!dVp) {
+            console.warn('[TreeView] handleAddView: viewpoint D-element not found:', vp.id);
+            return;
+        }
+        const newView = createBlankViewInViewpoint(dVp, 'New view');
+        // React 18 automatic batching: il dispatch Redux di new2 e la
+        // setState di startRenameView sono applicati nello stesso commit.
+        // Quando il nuovo <SubViewItem> monta, vede già renamingViewId === newView.id.
+        startRenameView(newView.id, newView.name, true);
+    }, [vp.id, startRenameView]);
+
+    const actions = (
+        <button
+            className="tree-row__action"
+            onClick={(e) => { e.stopPropagation(); handleAddView(); }}
+            title="Add view"
+            aria-label="Add view"
+        >
+            <i className="bi bi-plus-lg" />
+        </button>
+    );
 
     return (
         <div className="tree-node" data-element-id={vp.id}>
@@ -909,10 +1033,11 @@ const ViewpointNode = memo(function ViewpointNode({
                 onToggle={() => onToggleFn(vp.id)}
                 extraIcon={!vp.isExclusive ? 'stack' : null}
                 extraIconTitle={!vp.isExclusive ? 'Overlay viewpoint' : undefined}
-                tooltip={tooltip}
                 onClick={handleClick}
                 depth={depth}
                 dataElementId={vp.id}
+                activeIndicator={isActive ? 'viewpoint' : null}
+                actions={actions}
             />
             {expanded && hasSubViews && (
                 <div className="tree-children">
@@ -924,6 +1049,12 @@ const ViewpointNode = memo(function ViewpointNode({
                             isExpandedFn={isExpandedFn}
                             onToggleFn={onToggleFn}
                             onSelect={onSelect}
+                            renamingViewId={renamingViewId}
+                            renameValue={renameValue}
+                            setRenameValue={setRenameValue}
+                            submitRenameView={submitRenameView}
+                            handleRenameKeyDown={handleRenameKeyDown}
+                            renameInputRef={renameInputRef}
                         />
                     ))}
                 </div>
@@ -986,7 +1117,7 @@ const TransformationItem = memo(function TransformationItem({
             {expanded && hasChildren && (
                 <div className="tree-children">
                     {transformation.rules?.map((rule, i) => (
-                        <div key={`r-${i}`} className="tree-row tree-row--feature" style={{ paddingLeft: `${(depth + 1) * 16}px` }}>
+                        <div key={`r-${i}`} className="tree-row tree-row--feature" style={{ paddingLeft: `${(depth + 1) * TREE_INDENT_STEP}px` }}>
                             <span className="tree-node__toggle is-leaf" aria-hidden />
                             <div className="tree-row__content">
                                 <span className="tree-node__icon tree-rule">R</span>
@@ -995,7 +1126,7 @@ const TransformationItem = memo(function TransformationItem({
                         </div>
                     ))}
                     {transformation.helpers?.map((helper, i) => (
-                        <div key={`h-${i}`} className="tree-row tree-row--feature" style={{ paddingLeft: `${(depth + 1) * 16}px` }}>
+                        <div key={`h-${i}`} className="tree-row tree-row--feature" style={{ paddingLeft: `${(depth + 1) * TREE_INDENT_STEP}px` }}>
                             <span className="tree-node__toggle is-leaf" aria-hidden />
                             <div className="tree-row__content">
                                 <span className="tree-node__icon tree-helper">H</span>
@@ -1023,7 +1154,7 @@ const DocumentationEmptyState = memo(function DocumentationEmptyState({
     }, []);
 
     return (
-        <div className="tree-empty-doc" style={{ paddingLeft: `${depth * 16}px` }}>
+        <div className="tree-empty-doc" style={{ paddingLeft: `${depth * TREE_INDENT_STEP}px` }}>
             <span className="tree-empty-doc-label">No documentation yet</span>
             <button className="tree-generate-btn" type="button" onClick={handleGenerate}>
                 <i className="bi bi-stars" aria-hidden />
@@ -1046,6 +1177,7 @@ interface StateProps {
     standaloneModels: TreeModelData[];
     viewpoints: TreeViewpointData[];
     selectedElementId?: string;
+    activeViewpointId?: string;
     projectId?: Pointer<DProject>;
     expandedTreeNodes: string[];
 }
@@ -1057,11 +1189,73 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 function TreeViewContentComponent(props: AllProps) {
     const {
         metamodels, standaloneModels, viewpoints, selectedElementId,
-        projectId, expandedTreeNodes, onSelect,
+        activeViewpointId, projectId, expandedTreeNodes, onSelect,
     } = props;
 
     const containerRef = useRef<HTMLDivElement>(null);
     const { highlightedElementId, highlightedAction } = useTreeViewPanel();
+
+    // ─── Inline rename state for View nodes ─────────────────────────────────
+    // `isFirstRename` distingue il primo rename post-creazione (Esc/blur-empty
+    // elimina la view) dal rename di una view esistente (Esc annulla senza cancellare).
+    const [renamingViewId, setRenamingViewId] = useState<string | null>(null);
+    const [renameValue, setRenameValue] = useState('');
+    const [isFirstRename, setIsFirstRename] = useState(false);
+    const renameInputRef = useRef<HTMLInputElement>(null);
+
+    const startRenameView = useCallback(
+        (viewId: string, currentName: string, isFirst: boolean = false) => {
+            setRenamingViewId(viewId);
+            setRenameValue(currentName);
+            setIsFirstRename(isFirst);
+        },
+        []
+    );
+
+    const submitRenameView = useCallback((lView: LViewElement) => {
+        const newName = renameValue.trim();
+        if (newName && newName !== lView.name) {
+            lView.name = newName; // L-proxy setter, undo-tracked
+        }
+        // Blur con campo vuoto durante il primo rename → elimina la view.
+        if (!newName && isFirstRename) {
+            lView.delete();
+        }
+        setRenamingViewId(null);
+        setRenameValue('');
+        setIsFirstRename(false);
+    }, [renameValue, isFirstRename]);
+
+    const cancelRenameView = useCallback((lView: LViewElement) => {
+        // Esc durante il primo rename post-creazione → elimina la view.
+        // Esc durante un rename di view esistente → solo annulla, non cancella.
+        if (isFirstRename) {
+            lView.delete();
+        }
+        setRenamingViewId(null);
+        setRenameValue('');
+        setIsFirstRename(false);
+    }, [isFirstRename]);
+
+    const handleRenameKeyDown = useCallback(
+        (e: React.KeyboardEvent, lView: LViewElement) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                submitRenameView(lView);
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                cancelRenameView(lView);
+            }
+        },
+        [submitRenameView, cancelRenameView]
+    );
+
+    useEffect(() => {
+        if (renamingViewId && renameInputRef.current) {
+            renameInputRef.current.focus();
+            renameInputRef.current.select();
+        }
+    }, [renamingViewId]);
 
     // Transformations received via CustomEvent from ProjectEditor
     const [transformations, setTransformations] = useState<TreeTransformationData[]>([]);
@@ -1256,6 +1450,14 @@ function TreeViewContentComponent(props: AllProps) {
                                     isExpandedFn={isExpandedFn}
                                     onToggleFn={onToggleFn}
                                     onSelect={onSelect}
+                                    activeViewpointId={activeViewpointId}
+                                    startRenameView={startRenameView}
+                                    renamingViewId={renamingViewId}
+                                    renameValue={renameValue}
+                                    setRenameValue={setRenameValue}
+                                    submitRenameView={submitRenameView}
+                                    handleRenameKeyDown={handleRenameKeyDown}
+                                    renameInputRef={renameInputRef}
                                 />
                             ))}
                         </SectionNode>
@@ -1277,6 +1479,14 @@ function TreeViewContentComponent(props: AllProps) {
                                     isExpandedFn={isExpandedFn}
                                     onToggleFn={onToggleFn}
                                     onSelect={onSelect}
+                                    activeViewpointId={activeViewpointId}
+                                    startRenameView={startRenameView}
+                                    renamingViewId={renamingViewId}
+                                    renameValue={renameValue}
+                                    setRenameValue={setRenameValue}
+                                    submitRenameView={submitRenameView}
+                                    handleRenameKeyDown={handleRenameKeyDown}
+                                    renameInputRef={renameInputRef}
                                 />
                             ))}
                         </SectionNode>
@@ -1289,6 +1499,14 @@ function TreeViewContentComponent(props: AllProps) {
                             isExpandedFn={isExpandedFn}
                             onToggleFn={onToggleFn}
                             onSelect={onSelect}
+                            activeViewpointId={activeViewpointId}
+                            startRenameView={startRenameView}
+                            renamingViewId={renamingViewId}
+                            renameValue={renameValue}
+                            setRenameValue={setRenameValue}
+                            submitRenameView={submitRenameView}
+                            handleRenameKeyDown={handleRenameKeyDown}
+                            renameInputRef={renameInputRef}
                         />
                     ))}
                 </SectionNode>
@@ -1559,6 +1777,13 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     ret.viewpoints = vpList;
 
     ret.selectedElementId = state._lastSelected?.modelElement || undefined;
+
+    // Active viewpoint id (DProject.activeViewpoint). Used to highlight the
+    // currently-open VP in the tree with the cyan selection pattern.
+    try {
+        const project = LProject.getProject();
+        ret.activeViewpointId = project?.activeViewpoint?.id || undefined;
+    } catch { /* ignore */ }
 
     return ret;
 }

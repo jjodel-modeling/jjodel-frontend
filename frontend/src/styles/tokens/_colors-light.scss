@@ -324,4 +324,32 @@ $gradient-hover: linear-gradient(180deg, $slate-100 0%, $slate-200 100%);
   --color-badge-obj-bg: rgba(16, 185, 129, 0.1);
   --color-badge-obj-text: #10b981;
 
+  /* ============================================
+     ENTITY CATEGORICAL PALETTE
+     Allineata a frontend/src/common/entityMeta.ts
+     NON modificare senza aggiornare anche entityMeta.ts
+     ============================================ */
+  --color-entity-metamodel-bg: #EEEDFE;
+  --color-entity-metamodel-fg: #534AB7;
+  --color-entity-package-bg: #DBEAFE;
+  --color-entity-package-fg: #2563EB;
+  --color-entity-class-bg: #FEE2E2;
+  --color-entity-class-fg: #DC2626;
+  --color-entity-model-bg: #FAEEDA;
+  --color-entity-model-fg: #854F0B;
+  --color-entity-viewpoint-bg: #FCE7F3;
+  --color-entity-viewpoint-fg: #DB2777;
+
+  /* Saturated variants — used for "alive" signaling (pulsing dot indicator
+     dell'entity attiva in editor). Più saturi dei bg pastello, meno scuri
+     dei fg, sit "in the middle" del visual register. */
+  --color-entity-viewpoint-saturated: #ec4899;
+  --color-entity-model-saturated: #eab308;
+
+  /* Selection (cyan family — distinto da --color-info che è blu informazionale)
+     TODO: questi token sono attualmente usati solo da .tree-row--selected;
+     estendere alle altre selezioni del progetto in un task futuro. */
+  --color-selection-bg: #e0f7fa;
+  --color-selection-bar: #0891b2;
+
 }
