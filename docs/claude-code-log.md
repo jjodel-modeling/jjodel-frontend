@@ -1,5 +1,9 @@
 # Claude Code Session Log
 
+## 2026-05-13 — nota retroattiva su commit ad24c4a
+
+Il commit `fix(ecore-importer): align both prefix constants in EcoreParser with xmlToJson output` (ad24c4a) ha scope reale più ampio del message. Oltre al fix Ecore (`frontend/src/api/data.ts` 2 righe + `docs/claude-code-log.md` + `docs/discovery/discovery_2026-05-13_ecore_importer.md`) include WIP del workstream TreeView refresh: `TreeViewContent.tsx`, `TreeViewSidebar.tsx`, `tree-view-sidebar.scss`, `properties-with-tree-view.scss`, `PropertiesWithTreeView.tsx`, `Dock.tsx`, `events/registry.ts`, `entityMeta.ts`, `_colors-dark.scss`, e `docs/discovery/2026-05-12_treeview_refresh.md`. Bundling involontario via `git commit -am`. Decisione (sessione 13/05): non riscrivere la storia, tracciare qui per riferimento futuro (paper L1, blame archeologica).
+
 ## 2026-05-13 — fix: align both attribute prefix constants in EcoreParser (Bug A)
 
 **Prompt**: hotfix ECore importer Bug A: allineare i constants di prefix dentro `EcoreParser` all'output di `EcoreService.xmlToJson` (che hardcoda `-`). Micro-verify ha mostrato che il fix una-riga del prompt originale era insufficiente: il parser ha due costanti distinte (`prefix` e `XMLinlineMarker`), entrambe a `@`, e solo cambiarle entrambe allinea sia il validator (via `prefix`) sia tutti gli attribute reads del parser (via i constants `ECoreNamed.namee`/`ECorePackage.nsURI`/ecc. costruiti con `XMLinlineMarker`).
