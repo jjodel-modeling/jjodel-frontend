@@ -665,7 +665,9 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         setOpenMenu(null);
     };
 
-    // Export metamodel as .jmm file
+    // TODO: dead code. Handler kept for reference. Slated for removal in pre-3.0.0 cleanup session
+    // (along with handleJmmFileChange stub at line ~742 and duplicate in LeftBar.tsx:249).
+    // Decision: .jmm format dropped — use .ecore for M2 interop, .jodel for full project.
     const handleExportMetamodel = (mm: LModel) => {
         try {
             const jmmData = {
@@ -733,12 +735,15 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         closeMenu();
     };
 
-    // Import metamodel from .jmm file
+    // TODO: dead code. Trigger for hidden .jmm file input; menu entry removed.
+    // Slated for removal in pre-3.0.0 cleanup session.
     const handleImportJmm = () => {
         importJmmRef.current?.click();
         setShowImportMenu(false);
     };
 
+    // TODO: dead code. Import stub never implemented; menu entry removed.
+    // Slated for removal in pre-3.0.0 cleanup session.
     const handleJmmFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -2050,13 +2055,6 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                         <div className="import-select-menu" ref={importMenuRef}>
                             <button
                                 className="import-select-menu__item"
-                                onClick={handleImportJmm}
-                            >
-                                <i className="bi bi-file-earmark" />
-                                Import .jmm
-                            </button>
-                            <button
-                                className="import-select-menu__item"
                                 onClick={handleImportEcore}
                             >
                                 <i className="bi bi-file-earmark-code" />
@@ -2135,13 +2133,6 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                             >
                                                 <i className="bi bi-box-arrow-up-right" />
                                                 Open
-                                            </button>
-                                            <button
-                                                className="context-menu__item"
-                                                onClick={() => handleExportMetamodel(mm)}
-                                            >
-                                                <i className="bi bi-download" />
-                                                Export (.jmm)
                                             </button>
                                             <button
                                                 className="context-menu__item"
