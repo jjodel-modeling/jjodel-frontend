@@ -159,6 +159,12 @@ export class EcoreParser{
         'ELong':    'ELong',
         'EShort':   'EShort',
         'EByte':    'EByte',
+        // Bug H: cross-document UML2 Types.ecore primitive (int with -1 sentinel for "*")
+        'UnlimitedNatural': 'EInt',
+        // Bug H: cross-document Ecore.ecore reflection types — opaque semantic-preserving fallback
+        'EDiagnosticChain': 'EString',
+        'EJavaObject':      'EString',
+        'EClass':           'EClass',
     };
 
     static parse(ecorejson: GObject | string | null, isMetamodel: boolean, filename: string | undefined, persist: boolean = true): DModelElement[]{
@@ -311,6 +317,11 @@ export class EcoreParser{
                     // console.log("fixalltypes", {replacekey, dobj, value, values});
                     let target: DModelElement = replacePrimitiveMap[value];
                     if (!target) target = nameMap[value];
+                    // Defensive fallback for unrecognized EDataType patterns.
+                    // After Bug H fix, this branch should be unreachable for known patterns
+                    // (UML2 Types.ecore, Ecore.ecore reflection types) since rewriteXPathPointers
+                    // catches them upstream and rewrites to canonical short names. Kept as
+                    // last-resort for cross-doc EDataType from metamodels not yet seen in fixtures.
                     if (!target && value.indexOf("ecore:EDataType") === 0) {
                         Log.ww('found unknown EDataType "' + value + '", remapping it to string');
                         target = replacePrimitiveMap[AttribETypes.EString];
@@ -450,6 +461,10 @@ export class EcoreParser{
         } else {
             // Single-package path: root JSON IS the <ecore:EPackage>. parseRootPackage validates internally.
             EcoreParser.parseRootPackage(dObject, json, generated);
+            // Bug H: also normalize cross-document EDataType/EClass references in single-package
+            // imports (no separate primitive packages exist locally; the root is conceptually
+            // package index 0). Pass empty primitiveIndices so the XPath primitive branch is no-op.
+            EcoreParser.rewriteXPathPointers(generated, new Set(), new Set([0]), [json]);
         }
         return generated;
     }
@@ -1033,8 +1048,24 @@ export class EcoreParser{
         epkgChildren: Json[]
     ): void {
         const xpathRe = /^\/(\d+)\/([^/]+)$/;
+        // Bug H: matches cross-document EDataType/EClass multi-value form, e.g.
+        //   "ecore:EDataType platform:/plugin/org.eclipse.uml2.types/model/Types.ecore#//Boolean"
+        //   "ecore:EClass http://www.eclipse.org/emf/2002/Ecore#//EClass"
+        // The captured group is the final type-name segment after "#//".
+        // Idempotent: requires "ecore:E\w+\s+..." prefix, never matches rewritten short names.
+        const crossDocRe = /^ecore:E\w+\s+\S+#\/\/(\w+)$/;
         const rewriteOne = (value: string): string => {
-            if (typeof value !== 'string' || !value.startsWith('/')) return value;
+            if (typeof value !== 'string') return value;
+            // Bug H: cross-document multi-value form takes precedence over XPath form.
+            const cdm = crossDocRe.exec(value);
+            if (cdm) {
+                const typeName = cdm[1];
+                const canonical = EcoreParser.EDATATYPE_CANONICAL_ALIASES[typeName];
+                if (canonical) return canonical;
+                // Unknown cross-doc type: leave raw, defensive fallback at data.ts:314 catches it.
+                return value;
+            }
+            if (!value.startsWith('/')) return value;
             const m = xpathRe.exec(value);
             if (!m) return value; // "/N/X/Y" or other shapes: scope Fase B.2
             const idx = parseInt(m[1], 10);
