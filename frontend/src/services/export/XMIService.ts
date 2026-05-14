@@ -14,12 +14,28 @@ import {
     LClass,
     LAttribute,
     LReference,
+    DPackage,
+    LPackage,
     LPointerTargetable,
     Pointer,
     store,
     Selectors
 } from '../../joiner';
 import { EcoreService } from './EcoreService';
+
+// Module-private helper: resolve a loaded metamodel by its default namespace URI.
+// Matches against DPackage.__raw.uri (the literal value parsed from EPackage.nsURI),
+// not LPackage.uri — the L-getter concatenates uri + "." + name and would break exact match.
+function getMetamodelByNsURI(nsURI: string): { model: LModel | null; ambiguous?: string[] } {
+    const allpkgs: LPackage[] = Selectors.getAll(DPackage, undefined, undefined, true, true);
+    const matchpkg: LPackage[] = allpkgs.filter(p => p.__raw?.uri === nsURI);
+    if (matchpkg.length === 0) return { model: null };
+    if (matchpkg.length > 1) {
+        const names = matchpkg.map(p => p.model?.name ?? '(unnamed)');
+        return { model: null, ambiguous: names };
+    }
+    return { model: matchpkg[0].model ?? null };
+}
 
 // ============================================
 // TYPES
@@ -432,6 +448,238 @@ export class XMIService {
 
             reader.readAsText(file);
         });
+    }
+
+    // ============================================
+    // M1 IMPORT (Phase B.1: flat instances + primitive attributes only)
+    // ============================================
+
+    /**
+     * Import an M1 model from an XMI file. Resolves the metamodel automatically by
+     * matching the document's default xmlns against the URI of any loaded EPackage.
+     * Scope (B.1): root-level elements + primitive attributes. Containment, multi-valued
+     * features, xsi:type polymorphism, and non-containment refs are out of scope.
+     */
+    static async importM1FromFile(file: File): Promise<XMIImportResult> {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const content = e.target?.result as string;
+                const filename = file.name.replace(/\.[^/.]+$/, '');
+                resolve(XMIService.importM1FromXML(content, filename));
+            };
+            reader.onerror = () => {
+                resolve({
+                    success: false,
+                    errors: ['Failed to read file'],
+                    warnings: [],
+                });
+            };
+            reader.readAsText(file);
+        });
+    }
+
+    private static importM1FromXML(xmlString: string, filename: string): XMIImportResult {
+        const errors: string[] = [];
+        const warnings: string[] = [];
+
+        try {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(xmlString, 'application/xml');
+            const parseError = doc.querySelector('parsererror');
+            if (parseError) {
+                return { success: false, errors: [`Invalid XML: ${parseError.textContent}`], warnings };
+            }
+
+            const xmiRoot = doc.documentElement;
+            // XMI 2.0 admits two root patterns:
+            //   (a) wrapper: <xmi:XMI> with N root instances as children
+            //   (b) single-root: the document root tag IS the unique root instance
+            const isWrapper = (xmiRoot.tagName === 'xmi:XMI' || xmiRoot.tagName === 'XMI');
+
+            const rootContent: any = this.xmlToJson(xmiRoot);
+
+            const xmlnsDefault: string | undefined = rootContent['-xmlns'];
+            if (xmlnsDefault === undefined) {
+                return {
+                    success: false,
+                    errors: ['XMI file missing default xmlns attribute (cannot resolve metamodel)'],
+                    warnings,
+                };
+            }
+            if (xmlnsDefault === '') {
+                return {
+                    success: false,
+                    errors: ['XMI file has empty xmlns attribute'],
+                    warnings,
+                };
+            }
+
+            XMIService.checkForXsiType(rootContent, warnings, 5, '');
+
+            const mmLookup = getMetamodelByNsURI(xmlnsDefault);
+            if (mmLookup.ambiguous) {
+                return {
+                    success: false,
+                    errors: [`Multiple metamodels with namespace '${xmlnsDefault}' loaded: [${mmLookup.ambiguous.join(', ')}]. Please remove duplicates before importing.`],
+                    warnings,
+                };
+            }
+            if (!mmLookup.model) {
+                return {
+                    success: false,
+                    errors: [`No metamodel with namespace '${xmlnsDefault}' is loaded. Import the corresponding Ecore first.`],
+                    warnings,
+                };
+            }
+            const metamodel: LModel = mmLookup.model;
+
+            const modelName = filename || 'imported_xmi_model';
+            const dModel: DModel = DModel.new(modelName, metamodel.id, false, true);
+
+            type Pending = { dObject: DObject; itemJson: any; metaClass: LClass };
+            const pending: Pending[] = [];
+
+            if (isWrapper) {
+                // Wrapper path: each non-dash key under <xmi:XMI> is a root instance (or array thereof).
+                for (const key of Object.keys(rootContent)) {
+                    if (key.startsWith('-')) continue;
+                    const val = rootContent[key];
+                    const tag = key.indexOf(':') > 0 ? key.substring(key.indexOf(':') + 1) : key;
+
+                    const metaClass = XMIService.findMetaclassByName(metamodel, tag);
+                    if (!metaClass) {
+                        errors.push(`Unknown class '${tag}' in metamodel '${metamodel.name}'`);
+                        return { success: false, errors, warnings };
+                    }
+
+                    const items = Array.isArray(val) ? val : [val];
+                    for (const item of items) {
+                        const dObject: DObject = DObject.new(metaClass.id, dModel.id, DModel, undefined, true);
+                        (dModel.objects as Pointer<DObject>[]).push(dObject.id);
+                        pending.push({ dObject, itemJson: item, metaClass });
+                    }
+                }
+            } else {
+                // Single-root path: the document root tag itself is the unique root instance.
+                // Its attributes (e.g. -xmi:version, -xmlns, -xmlns:xmi) and nested children
+                // are processed by the common attribute-population pass below, which already
+                // skips system attributes and warns on nested elements (containment is B.2).
+                const rootTag = xmiRoot.tagName;
+                const tag = rootTag.indexOf(':') > 0 ? rootTag.substring(rootTag.indexOf(':') + 1) : rootTag;
+
+                const metaClass = XMIService.findMetaclassByName(metamodel, tag);
+                if (!metaClass) {
+                    return {
+                        success: false,
+                        errors: [`Root element <${rootTag}> does not correspond to a class in metamodel '${metamodel.name}'. Expected either <xmi:XMI> wrapper or a class name from the metamodel.`],
+                        warnings,
+                    };
+                }
+
+                const dObject: DObject = DObject.new(metaClass.id, dModel.id, DModel, undefined, true);
+                (dModel.objects as Pointer<DObject>[]).push(dObject.id);
+                pending.push({ dObject, itemJson: rootContent, metaClass });
+            }
+
+            // DValue creation: each DValue.new opens its own TRANSACTION via Constructors.persist,
+            // so no outer wrapper here (nesting is forbidden).
+            for (const { dObject, itemJson, metaClass } of pending) {
+                if (!itemJson || typeof itemJson !== 'object') continue;
+
+                for (const attrKey of Object.keys(itemJson)) {
+                    if (!attrKey.startsWith('-')) {
+                        warnings.push(`Nested element '${attrKey}' under '${metaClass.name}' skipped (containment is B.2 scope)`);
+                        continue;
+                    }
+                    const featName = attrKey.substring(1);
+                    // Skip XML/XMI system attributes (not M1 features):
+                    // -xmi:version, -xmi:id, -xmi:type, -xsi:type (warned earlier), -xmlns, -xmlns:*
+                    if (featName === 'xsi:type' || featName === 'xmi:id') continue;
+                    if (featName === 'xmi:version' || featName === 'xmi:type') continue;
+                    if (featName.startsWith('xmlns')) continue;
+
+                    const metaFeature = XMIService.findMetafeatureByName(metaClass, featName);
+                    if (!metaFeature) {
+                        const msg = `Unknown attribute "${featName}" on class "${metaClass.name}", skipped`;
+                        console.warn('[XMI import]', msg);
+                        warnings.push(msg);
+                        continue;
+                    }
+
+                    if ((metaFeature as any).className === 'DReference') {
+                        const msg = `Reference "${featName}" in flat XMI is B.2 scope, skipped`;
+                        console.warn('[XMI import]', msg);
+                        warnings.push(msg);
+                        continue;
+                    }
+
+                    const rawValue: string = String(itemJson[attrKey]);
+
+                    const dValue: DValue = DValue.new(undefined, metaFeature.id as any, [rawValue], dObject.id, true, false);
+                    (dObject.features as Pointer<DValue>[]).push(dValue.id);
+                }
+            }
+
+            const lModel: LModel = LPointerTargetable.fromD(dModel) as LModel;
+            return { success: true, model: lModel, errors, warnings };
+
+        } catch (error) {
+            return {
+                success: false,
+                errors: [`Import failed: ${(error as Error).message}`],
+                warnings,
+            };
+        }
+    }
+
+    // Walk metamodel to find a class by name (M2 level), mirrors instance.ts:findMetaclassByName.
+    private static findMetaclassByName(metamodel: LModel, className: string): LClass | null {
+        const visited = new Set<string>();
+        const stack: any[] = [metamodel];
+        while (stack.length > 0) {
+            const container = stack.pop();
+            if (!container || visited.has(container.id)) continue;
+            visited.add(container.id);
+            const classes = container.classes ?? [];
+            for (const c of classes) if (c?.name === className) return c as LClass;
+            const subpackages = container.subpackages ?? container.subPackages ?? [];
+            for (const sp of subpackages) stack.push(sp);
+            const packages = container.packages ?? [];
+            for (const p of packages) stack.push(p);
+        }
+        return null;
+    }
+
+    // Lookup attribute/reference by name including inherited ones via LClass.allAttributes/allReferences.
+    private static findMetafeatureByName(metaClass: LClass, name: string): LAttribute | LReference | null {
+        const attrs = (metaClass as any).allAttributes ?? [];
+        for (const a of attrs) if (a?.name === name) return a as LAttribute;
+        const refs = (metaClass as any).allReferences ?? [];
+        for (const r of refs) if (r?.name === name) return r as LReference;
+        return null;
+    }
+
+    // Surface up to maxWarnings occurrences of xsi:type for B.3 follow-up.
+    private static checkForXsiType(json: any, warnings: string[], maxWarnings: number, path: string): void {
+        if (warnings.length >= maxWarnings) return;
+        if (!json || typeof json !== 'object') return;
+        if (Array.isArray(json)) {
+            for (let i = 0; i < json.length; i++) {
+                this.checkForXsiType(json[i], warnings, maxWarnings, `${path}[${i}]`);
+                if (warnings.length >= maxWarnings) return;
+            }
+            return;
+        }
+        for (const key of Object.keys(json)) {
+            if (key === '-xsi:type') {
+                warnings.push(`xsi:type "${json[key]}" at ${path || '<root>'} ignored (B.3 scope; using tag-derived type)`);
+                if (warnings.length >= maxWarnings) return;
+            } else if (typeof json[key] === 'object') {
+                this.checkForXsiType(json[key], warnings, maxWarnings, path ? `${path}.${key}` : key);
+                if (warnings.length >= maxWarnings) return;
+            }
+        }
     }
 
     // ============================================

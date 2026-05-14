@@ -216,9 +216,14 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     const [showImportMenu, setShowImportMenu] = useState(false);
     const importMenuRef = useRef<HTMLDivElement>(null);
 
+    // Import menu for models (XMI M1 importer, Phase B.1)
+    const [showImportModelMenu, setShowImportModelMenu] = useState(false);
+    const importModelMenuRef = useRef<HTMLDivElement>(null);
+
     // Hidden file inputs for import
     const importJmmRef = useRef<HTMLInputElement>(null);
     const importEcoreRef = useRef<HTMLInputElement>(null);
+    const importXmiRef = useRef<HTMLInputElement>(null);
 
     // Environment Generation state
     const [showEnvGenWizard, setShowEnvGenWizard] = useState(false);
@@ -303,6 +308,20 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             return () => document.removeEventListener('mousedown', handleClickOutside);
         }
     }, [showImportMenu]);
+
+    // Click-outside handler for model import menu
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (importModelMenuRef.current && !importModelMenuRef.current.contains(event.target as Node)) {
+                setShowImportModelMenu(false);
+            }
+        };
+
+        if (showImportModelMenu) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }
+    }, [showImportModelMenu]);
 
     // Click-outside handler for project menu (⋮)
     useEffect(() => {
@@ -802,6 +821,52 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         // Reset input
         if (importEcoreRef.current) {
             importEcoreRef.current.value = '';
+        }
+    };
+
+    // Import M1 model from .xmi file (Phase B.1: flat instances + primitive attributes)
+    const handleImportXmi = () => {
+        importXmiRef.current?.click();
+        setShowImportModelMenu(false);
+    };
+
+    const handleXmiFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            const result = await XMIService.importM1FromFile(file);
+
+            if (result.success && result.model) {
+                // Link imported M1 model to current project (mirrors Bug F fix for Ecore metamodels):
+                // XMIService.importM1FromFile creates the DModel but does not register it under
+                // project.models / project.graphs, so the Dashboard count and the persistence
+                // payload would miss it otherwise.
+                try {
+                    project.models = [...project.models, result.model];
+                    if (result.model.node) {
+                        project.graphs = [...project.graphs, result.model.node as any];
+                    }
+                } catch (linkErr) {
+                    console.warn('[XMI import] Failed to link imported model to project:', linkErr);
+                }
+                U.alert('i', 'Imported', `Model "${result.model.name}" imported from XMI`);
+                markDirty();
+
+                if (result.warnings.length > 0) {
+                    console.warn('XMI import warnings:', result.warnings);
+                }
+            } else {
+                throw new Error(result.errors.join(', '));
+            }
+
+        } catch (error) {
+            console.error('Import XMI error:', error);
+            U.alert('e', 'Import Failed', `Could not import XMI: ${(error as Error).message}`);
+        }
+
+        if (importXmiRef.current) {
+            importXmiRef.current.value = '';
         }
     };
 
@@ -2122,6 +2187,29 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                     </h2>
                     <div className="project-section-header__actions">
                         <button
+                            className="btn btn--ghost btn--xs"
+                            onClick={() => setShowImportModelMenu(!showImportModelMenu)}
+                            title="Import model from file"
+                        >
+                            <i className="bi bi-upload" />
+                            Import
+                            <i className={`bi bi-chevron-${showImportModelMenu ? 'up' : 'down'} btn-chevron`} />
+                        </button>
+
+                        {/* Import dropdown menu */}
+                        {showImportModelMenu && (
+                            <div className="import-select-menu" ref={importModelMenuRef}>
+                                <button
+                                    className="import-select-menu__item"
+                                    onClick={handleImportXmi}
+                                >
+                                    <i className="bi bi-file-earmark-code" />
+                                    Import Model (.xmi)
+                                </button>
+                            </div>
+                        )}
+
+                        <button
                             className="btn btn--ghost btn--sm"
                             disabled={metamodels.length === 0}
                             title={metamodels.length === 0 ? 'Create a metamodel first' : 'Create new model'}
@@ -2586,6 +2674,13 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 accept=".ecore"
                 style={{ display: 'none' }}
                 onChange={handleEcoreFileChange}
+            />
+            <input
+                ref={importXmiRef}
+                type="file"
+                accept=".xmi,.xml"
+                style={{ display: 'none' }}
+                onChange={handleXmiFileChange}
             />
         </div>
     );
