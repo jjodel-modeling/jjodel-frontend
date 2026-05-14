@@ -55,6 +55,26 @@ export interface EcoreImportResult {
 export class EcoreService {
 
     // ============================================
+    // CONSTANTS
+    // ============================================
+
+    private static readonly ECORE_NSURI = 'http://www.eclipse.org/emf/2002/Ecore';
+
+    /** Ecore.ecore reflection EClass names — emitted as cross-doc `ecore:EClass <ECORE_NSURI>#//<Name>`. */
+    private static readonly ECORE_REFLECTION_CLASSES = new Set<string>([
+        'EObject', 'EClass', 'EClassifier', 'EPackage', 'ENamedElement',
+        'EAnnotation', 'ETypedElement', 'EModelElement', 'EStructuralFeature',
+        'EReference', 'EAttribute', 'EOperation', 'EParameter',
+        'EEnum', 'EEnumLiteral',
+    ]);
+
+    /** Ecore.ecore reflection EDataType names — emitted as cross-doc `ecore:EDataType <ECORE_NSURI>#//<Name>`. */
+    private static readonly ECORE_REFLECTION_DATATYPES = new Set<string>([
+        'EDiagnosticChain', 'EJavaObject', 'EJavaClass',
+        'EFeatureMapEntry', 'EFeatureMap', 'EInvocationTargetException',
+    ]);
+
+    // ============================================
     // EXPORT
     // ============================================
 
@@ -79,7 +99,7 @@ export class EcoreService {
             // Single-package: <ecore:EPackage> as document root.
             const pkg = packages[0];
             const name = pkg.name || metamodel.name;
-            const nsURI = options.nsURI || pkg.uri || `http://jjodel.org/${metamodel.name}`;
+            const nsURI = options.nsURI || pkg.__raw.uri || `http://jjodel.org/${metamodel.name}`;
             const nsPrefix = options.nsPrefix || pkg.prefix || metamodel.name.toLowerCase();
             xmlParts.push(this.renderEPackageBody(pkg, name, nsURI, nsPrefix, indent, newline, '', true));
         } else {
@@ -92,7 +112,7 @@ export class EcoreService {
             xmlParts.push(`${indent}xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore">`);
             for (const pkg of packages) {
                 const name = pkg.name || metamodel.name;
-                const nsURI = pkg.uri || `http://jjodel.org/${metamodel.name}/${name}`;
+                const nsURI = pkg.__raw.uri || `http://jjodel.org/${metamodel.name}/${name}`;
                 const nsPrefix = pkg.prefix || (pkg.name || metamodel.name).toLowerCase();
                 xmlParts.push(this.renderEPackageBody(pkg, name, nsURI, nsPrefix, indent, newline, indent, false));
             }
@@ -223,7 +243,7 @@ export class EcoreService {
 
             // Export operations
             for (const op of operations) {
-                parts.push(this.exportOperation(op, i + indent, newline));
+                parts.push(this.exportOperation(op, i + indent, newline, currentPackage));
             }
 
             parts.push(`${i}</eClassifiers>`);
@@ -255,6 +275,10 @@ export class EcoreService {
             parts.push(`upperBound="${attr.upperBound}"`);
         }
 
+        // ordered/unique — opt-only emission (EMF default true)
+        if (attr.ordered === false) parts.push(`ordered="false"`);
+        if (attr.unique === false) parts.push(`unique="false"`);
+
         // Default value
         /*if (attr.defaultValueLiteral) {
             parts.push(`defaultValueLiteral="${this.escapeXml(attr.defaultValueLiteral)}"`);
@@ -279,10 +303,10 @@ export class EcoreService {
             `name="${this.escapeXml(ref.name)}"`,
         ];
 
-        // Target type — emitted with cross-package-aware pointer.
+        // Target type — emitted with reflection-aware, cross-package-aware pointer.
         const targetType = ref.type;
         if (targetType) {
-            parts.push(`eType="${this.crossPackagePointer(targetType, currentPackage)}"`);
+            parts.push(`eType="${this.targetTypePointer(targetType, currentPackage)}"`);
         }
 
         // Multiplicity
@@ -292,6 +316,15 @@ export class EcoreService {
         if (ref.upperBound !== undefined && ref.upperBound !== 1) {
             parts.push(`upperBound="${ref.upperBound}"`);
         }
+
+        // Feature flags — opt-only emission, strict === comparison (false-positive guard on undefined/missing).
+        if (ref.ordered === false) parts.push(`ordered="false"`);
+        if (ref.unique === false) parts.push(`unique="false"`);
+        if (ref.changeable === false) parts.push(`changeable="false"`);
+        if (ref.derived === true) parts.push(`derived="true"`);
+        if (ref.transient === true) parts.push(`transient="true"`);
+        if (ref.volatile === true) parts.push(`volatile="true"`);
+        if (ref.unsettable === true) parts.push(`unsettable="true"`);
 
         // Containment (composition)
         if (ref.composition || ref.containment) {
@@ -311,7 +344,7 @@ export class EcoreService {
     /**
      * Export EOperation
      */
-    private static exportOperation(op: LOperation, indent: string, newline: string): string {
+    private static exportOperation(op: LOperation, indent: string, newline: string, currentPackage: LPackage): string {
         const parts: string[] = [];
 
         const opAttrs: string[] = [
@@ -319,10 +352,10 @@ export class EcoreService {
             `name="${this.escapeXml(op.name)}"`,
         ];
 
-        // Return type
+        // Return type — reflection-aware, cross-package-aware, primitive-aware pointer.
         const returnType = op.type;
         if (returnType) {
-            const ecoreType = this.mapToEcoreType(returnType);
+            const ecoreType = this.targetTypePointer(returnType, currentPackage);
             opAttrs.push(`eType="${ecoreType}"`);
         }
 
@@ -332,7 +365,7 @@ export class EcoreService {
             parts.push(`${indent}<eOperations ${opAttrs.join(' ')}>`);
 
             for (const param of parameters) {
-                parts.push(this.exportParameter(param, indent + '  '));
+                parts.push(this.exportParameter(param, indent + '  ', currentPackage));
             }
 
             parts.push(`${indent}</eOperations>`);
@@ -346,7 +379,7 @@ export class EcoreService {
     /**
      * Export EParameter
      */
-    private static exportParameter(param: LParameter, indent: string): string {
+    private static exportParameter(param: LParameter, indent: string, currentPackage: LPackage): string {
         const parts: string[] = [
             `xsi:type="ecore:EParameter"`,
             `name="${this.escapeXml(param.name)}"`,
@@ -354,7 +387,7 @@ export class EcoreService {
 
         const paramType = param.type;
         if (paramType) {
-            const ecoreType = this.mapToEcoreType(paramType);
+            const ecoreType = this.targetTypePointer(paramType, currentPackage);
             parts.push(`eType="${ecoreType}"`);
         }
 
@@ -387,7 +420,7 @@ export class EcoreService {
         const i = indent.repeat(level);
         const parts: string[] = [];
 
-        parts.push(`${i}<eSubpackages name="${this.escapeXml(pkg.name)}"${pkg.uri ? ` nsURI="${this.escapeXml(pkg.uri)}"` : ''}${pkg.prefix ? ` nsPrefix="${this.escapeXml(pkg.prefix)}"` : ''}>`);
+        parts.push(`${i}<eSubpackages name="${this.escapeXml(pkg.name)}"${pkg.__raw.uri ? ` nsURI="${this.escapeXml(pkg.__raw.uri)}"` : ''}${pkg.prefix ? ` nsPrefix="${this.escapeXml(pkg.prefix)}"` : ''}>`);
 
         // Classes
         for (const cls of pkg.classes || []) {
@@ -587,6 +620,45 @@ export class EcoreService {
 
         // Otherwise it's a reference to a class in the model
         return `#//${typeName}`;
+    }
+
+    /**
+     * Build an Ecore pointer for an eType reference.
+     *
+     * Resolution order:
+     *  1. Ecore.ecore reflection classes (EObject, EClass, ENamedElement, ...): emit
+     *     cross-doc `ecore:EClass <ECORE_NSURI>#//<Name>` form.
+     *  2. Ecore.ecore reflection datatypes (EDiagnosticChain, EJavaObject, ...): emit
+     *     cross-doc `ecore:EDataType <ECORE_NSURI>#//<Name>` form.
+     *  3. Primitive datatypes (EString, EInt, EBoolean, ...): delegate to
+     *     mapToEcoreType, which returns the canonical cross-doc EDataType form.
+     *  4. Anything else (user-defined class in the model): delegate to
+     *     crossPackagePointer for intra/cross-package XPath.
+     *
+     * Use this for the eType attribute of EReference, EOperation, and eParameters.
+     * Do NOT use this for the prefix of eOpposite (which is always intra-document).
+     */
+    private static targetTypePointer(target: any, fromPackage: LPackage | undefined | null): string {
+        if (!target) {
+            console.warn('[EcoreService] targetTypePointer: target is null/undefined');
+            return '';
+        }
+        const name = target.name || '';
+        if (this.ECORE_REFLECTION_CLASSES.has(name)) {
+            return `ecore:EClass ${this.ECORE_NSURI}#//${name}`;
+        }
+        if (this.ECORE_REFLECTION_DATATYPES.has(name)) {
+            return `ecore:EDataType ${this.ECORE_NSURI}#//${name}`;
+        }
+        // Primitive datatypes: mapToEcoreType returns the canonical cross-doc form
+        // ('ecore:EDataType http://.../#//EString'); only treat as primitive when the
+        // returned string carries the cross-doc prefix (otherwise it's the '#//X'
+        // fallback for non-primitive type names, which we handle below).
+        const primitiveAttempt = this.mapToEcoreType(target);
+        if (primitiveAttempt.startsWith('ecore:EDataType http://')) {
+            return primitiveAttempt;
+        }
+        return this.crossPackagePointer(target, fromPackage);
     }
 
     /**

@@ -862,6 +862,13 @@ export class EcoreParser{
         dObject.lowerBound = +this.read(json, ECoreAttribute.lowerbound, 0);
         dObject.upperBound = +this.read(json, ECoreAttribute.upperbound, 1);
         dObject.type = this.read(json, ECoreAttribute.eType, AttribETypes.EString);
+        dObject.ordered = U.fromBoolString(this.read(json, ECoreAttribute.ordered, true), true);
+        dObject.unique = U.fromBoolString(this.read(json, ECoreAttribute.unique, true), true);
+        dObject.changeable = U.fromBoolString(this.read(json, ECoreAttribute.changeable, true), true);
+        dObject.derived = U.fromBoolString(this.read(json, ECoreAttribute.derived, false), false);
+        dObject.transient = U.fromBoolString(this.read(json, ECoreAttribute.transient, false), false);
+        dObject.volatile = U.fromBoolString(this.read(json, ECoreAttribute.volatile, false), false);
+        dObject.unsettable = U.fromBoolString(this.read(json, ECoreAttribute.unsettable, false), false);
         /// *** specific end *** ///
         return generated; }
 
@@ -882,6 +889,13 @@ export class EcoreParser{
         dObject.lowerBound = +this.read(json, ECoreAttribute.lowerbound, 0);
         dObject.upperBound = +this.read(json, ECoreAttribute.upperbound, 1);
         dObject.type = this.read(json, ECoreReference.eType, this.getEcoreTypeName(parent));
+        dObject.ordered = U.fromBoolString(this.read(json, ECoreReference.ordered, true), true);
+        dObject.unique = U.fromBoolString(this.read(json, ECoreReference.unique, true), true);
+        dObject.changeable = U.fromBoolString(this.read(json, ECoreReference.changeable, true), true);
+        dObject.derived = U.fromBoolString(this.read(json, ECoreReference.derived, false), false);
+        dObject.transient = U.fromBoolString(this.read(json, ECoreReference.transient, false), false);
+        dObject.volatile = U.fromBoolString(this.read(json, ECoreReference.volatile, false), false);
+        dObject.unsettable = U.fromBoolString(this.read(json, ECoreReference.unsettable, false), false);
         /// *** specific end *** ///
         return generated; }
 
@@ -1212,6 +1226,11 @@ export class ECoreReference {
     static lowerbound: string;
     static containment: string;
     static container: string;
+    static derived: string;
+    static transient: string;
+    static volatile: string;
+    static changeable: string;
+    static unsettable: string;
 }
 
 @RuntimeAccessible('ECoreAttribute')
@@ -1225,6 +1244,11 @@ export class ECoreAttribute {
     static ordered: string;
     static lowerbound: string;
     static upperbound: string;
+    static derived: string;
+    static transient: string;
+    static volatile: string;
+    static changeable: string;
+    static unsettable: string;
 }
 
 @RuntimeAccessible('ECoreOperation')
@@ -1330,7 +1354,12 @@ ECoreReference.upperbound = EcoreParser.XMLinlineMarker + 'upperBound'; // "@1"
 ECoreReference.lowerbound = EcoreParser.XMLinlineMarker + 'lowerBound'; // does even exists?
 ECoreReference.namee = EcoreParser.XMLinlineMarker + 'name';
 ECoreReference.unique = EcoreParser.XMLinlineMarker + 'unique'; // "false",
-ECoreReference.ordered = EcoreParser.XMLinlineMarker + 'unique'; // "false",
+ECoreReference.ordered = EcoreParser.XMLinlineMarker + 'ordered'; // "false",
+ECoreReference.derived = EcoreParser.XMLinlineMarker + 'derived'; // "true"
+ECoreReference.transient = EcoreParser.XMLinlineMarker + 'transient'; // "true"
+ECoreReference.volatile = EcoreParser.XMLinlineMarker + 'volatile'; // "true"
+ECoreReference.changeable = EcoreParser.XMLinlineMarker + 'changeable'; // "false"
+ECoreReference.unsettable = EcoreParser.XMLinlineMarker + 'unsettable'; // "true"
 
 
 ECoreAttribute.xsitype = EcoreParser.XMLinlineMarker + 'xsi:type'; // "ecore:EAttribute",
@@ -1339,7 +1368,12 @@ ECoreAttribute.namee = EcoreParser.XMLinlineMarker + 'name';
 ECoreAttribute.lowerbound = EcoreParser.XMLinlineMarker + 'lowerBound';
 ECoreAttribute.upperbound = EcoreParser.XMLinlineMarker + 'upperBound';
 ECoreAttribute.unique = EcoreParser.XMLinlineMarker + 'unique'; // "false",
-ECoreAttribute.ordered = EcoreParser.XMLinlineMarker + 'unique'; // "false",
+ECoreAttribute.ordered = EcoreParser.XMLinlineMarker + 'ordered'; // "false",
+ECoreAttribute.derived = EcoreParser.XMLinlineMarker + 'derived'; // "true"
+ECoreAttribute.transient = EcoreParser.XMLinlineMarker + 'transient'; // "true"
+ECoreAttribute.volatile = EcoreParser.XMLinlineMarker + 'volatile'; // "true"
+ECoreAttribute.changeable = EcoreParser.XMLinlineMarker + 'changeable'; // "false"
+ECoreAttribute.unsettable = EcoreParser.XMLinlineMarker + 'unsettable'; // "true"
 
 
 ECoreOperation.eParameters = 'eParameters';

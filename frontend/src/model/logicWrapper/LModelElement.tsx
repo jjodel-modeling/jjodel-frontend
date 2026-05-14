@@ -3758,7 +3758,7 @@ export class DReference extends DModelElement { // DStructuralFeature
     instances: Pointer<DValue, 0, 'N', LValue> = [];
     defaultValue!: Pointer<DObject, 1, 1, LObject>[];
     allowCrossReference!:boolean;
-    public derived!: boolean;
+    public derived: boolean = false;
     /*protected */derived_read?: string;
     /*protected */derived_write?: string;
 
@@ -4112,7 +4112,7 @@ export class DAttribute extends DModelElement { // DStructuralFeature
     unsettable: boolean = false;
     defaultValueLiteral: string = '';
     allowCrossReference!:boolean;
-    public derived!: boolean;
+    public derived: boolean = false;
     /*protected */derived_read?: string;
     /*protected */derived_write?: string;
 
