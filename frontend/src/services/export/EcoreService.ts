@@ -59,55 +59,100 @@ export class EcoreService {
     // ============================================
 
     /**
-     * Export metamodel to Ecore XML string
+     * Export metamodel to Ecore XML string.
+     * - 1 package: root <ecore:EPackage> (single-package mode).
+     * - N>1 packages: <xmi:XMI> wrapper with N <ecore:EPackage> children (multi-package mode).
      */
     static exportToXML(metamodel: LModel, options: EcoreExportOptions = {}): string {
-        const pkg = metamodel.packages[0]; // Root package
-        if (!pkg) {
+        const packages = metamodel.packages || [];
+        if (packages.length === 0) {
             throw new Error('Metamodel has no packages to export');
         }
 
-        const nsURI = options.nsURI || pkg.uri || `http://jjodel.org/${metamodel.name}`;
-        const nsPrefix = options.nsPrefix || pkg.prefix || metamodel.name.toLowerCase();
         const indent = options.prettyPrint !== false ? '  ' : '';
         const newline = options.prettyPrint !== false ? '\n' : '';
 
         const xmlParts: string[] = [];
-
-        // XML Declaration
         xmlParts.push('<?xml version="1.0" encoding="UTF-8"?>');
 
-        // Root EPackage
-        xmlParts.push(`<ecore:EPackage xmi:version="2.0"`);
-        xmlParts.push(`${indent}xmlns:xmi="http://www.omg.org/XMI"`);
-        xmlParts.push(`${indent}xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"`);
-        xmlParts.push(`${indent}xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"`);
-        xmlParts.push(`${indent}name="${this.escapeXml(pkg.name || metamodel.name)}"`);
-        xmlParts.push(`${indent}nsURI="${this.escapeXml(nsURI)}"`);
-        xmlParts.push(`${indent}nsPrefix="${this.escapeXml(nsPrefix)}">`);
-
-        // Export classes
-        const classes = pkg.classes || [];
-        for (const cls of classes) {
-            xmlParts.push(this.exportClass(cls, classes, indent, newline));
+        if (packages.length === 1) {
+            // Single-package: <ecore:EPackage> as document root.
+            const pkg = packages[0];
+            const name = pkg.name || metamodel.name;
+            const nsURI = options.nsURI || pkg.uri || `http://jjodel.org/${metamodel.name}`;
+            const nsPrefix = options.nsPrefix || pkg.prefix || metamodel.name.toLowerCase();
+            xmlParts.push(this.renderEPackageBody(pkg, name, nsURI, nsPrefix, indent, newline, '', true));
+        } else {
+            // Multi-package: <xmi:XMI> root with N <ecore:EPackage> children.
+            // options.nsURI / options.nsPrefix are intentionally not applied here —
+            // they would be ambiguous across N packages; each package keeps its own metadata.
+            xmlParts.push(`<xmi:XMI xmi:version="2.0"`);
+            xmlParts.push(`${indent}xmlns:xmi="http://www.omg.org/XMI"`);
+            xmlParts.push(`${indent}xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"`);
+            xmlParts.push(`${indent}xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore">`);
+            for (const pkg of packages) {
+                const name = pkg.name || metamodel.name;
+                const nsURI = pkg.uri || `http://jjodel.org/${metamodel.name}/${name}`;
+                const nsPrefix = pkg.prefix || (pkg.name || metamodel.name).toLowerCase();
+                xmlParts.push(this.renderEPackageBody(pkg, name, nsURI, nsPrefix, indent, newline, indent, false));
+            }
+            xmlParts.push('</xmi:XMI>');
         }
-
-        // Export enumerators
-        const enums = pkg.enumerators || [];
-        for (const enumType of enums) {
-            xmlParts.push(this.exportEnumerator(enumType, indent, newline));
-        }
-
-        // Export sub-packages (recursive)
-        const subpackages = pkg.subpackages || [];
-        for (const subpkg of subpackages) {
-            xmlParts.push(this.exportSubPackage(subpkg, indent, newline, 1));
-        }
-
-        // Close EPackage
-        xmlParts.push('</ecore:EPackage>');
 
         return xmlParts.join(newline);
+    }
+
+    /**
+     * Render the <ecore:EPackage>...</ecore:EPackage> body for a single package.
+     * @param pkgIndent indentation prefix of the <ecore:EPackage> tag itself
+     *                  (empty for single-package root, one `indent` for multi-package children).
+     * @param isRoot when true, emits xmlns:* + xmi:version on the EPackage tag (single-package mode).
+     *               When false, emits a bare EPackage tag (child of <xmi:XMI> in multi-package mode).
+     */
+    private static renderEPackageBody(
+        pkg: LPackage,
+        name: string,
+        nsURI: string,
+        nsPrefix: string,
+        indent: string,
+        newline: string,
+        pkgIndent: string,
+        isRoot: boolean
+    ): string {
+        const parts: string[] = [];
+        const innerIndent = pkgIndent + indent;
+
+        if (isRoot) {
+            parts.push(`${pkgIndent}<ecore:EPackage xmi:version="2.0"`);
+            parts.push(`${pkgIndent}${indent}xmlns:xmi="http://www.omg.org/XMI"`);
+            parts.push(`${pkgIndent}${indent}xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"`);
+            parts.push(`${pkgIndent}${indent}xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"`);
+            parts.push(`${pkgIndent}${indent}name="${this.escapeXml(name)}"`);
+            parts.push(`${pkgIndent}${indent}nsURI="${this.escapeXml(nsURI)}"`);
+            parts.push(`${pkgIndent}${indent}nsPrefix="${this.escapeXml(nsPrefix)}">`);
+        } else {
+            parts.push(`${pkgIndent}<ecore:EPackage name="${this.escapeXml(name)}" nsURI="${this.escapeXml(nsURI)}" nsPrefix="${this.escapeXml(nsPrefix)}">`);
+        }
+
+        const classes = pkg.classes || [];
+        for (const cls of classes) {
+            parts.push(this.exportClass(cls, classes, innerIndent, newline, pkg));
+        }
+
+        const enums = pkg.enumerators || [];
+        for (const enumType of enums) {
+            parts.push(this.exportEnumerator(enumType, innerIndent, newline));
+        }
+
+        // Sub-package nesting level: 1 under a root EPackage, 2 under <xmi:XMI> children.
+        const subpackages = pkg.subpackages || [];
+        const subPkgLevel = isRoot ? 1 : 2;
+        for (const subpkg of subpackages) {
+            parts.push(this.exportSubPackage(subpkg, indent, newline, subPkgLevel));
+        }
+
+        parts.push(`${pkgIndent}</ecore:EPackage>`);
+        return parts.join(newline);
     }
 
     /**
@@ -130,7 +175,7 @@ export class EcoreService {
     /**
      * Export EClass
      */
-    private static exportClass(cls: LClass, allClasses: LClass[], indent: string, newline: string): string {
+    private static exportClass(cls: LClass, allClasses: LClass[], indent: string, newline: string, currentPackage: LPackage): string {
         const parts: string[] = [];
         const i = indent;
 
@@ -150,10 +195,10 @@ export class EcoreService {
             classAttrs.push(`interface="true"`);
         }
 
-        // Superclasses (extends)
+        // Superclasses (extends) — emitted with cross-package-aware pointer.
         const superTypes = cls.extends || [];
         if (superTypes.length > 0) {
-            const superRefs = superTypes.map(st => `#//${st.name}`).join(' ');
+            const superRefs = superTypes.map(st => this.crossPackagePointer(st, currentPackage)).join(' ');
             classAttrs.push(`eSuperTypes="${superRefs}"`);
         }
 
@@ -173,7 +218,7 @@ export class EcoreService {
 
             // Export references
             for (const ref of references) {
-                parts.push(this.exportReference(ref, allClasses, i + indent));
+                parts.push(this.exportReference(ref, allClasses, i + indent, currentPackage));
             }
 
             // Export operations
@@ -228,16 +273,16 @@ export class EcoreService {
     /**
      * Export EReference
      */
-    private static exportReference(ref: LReference, allClasses: LClass[], indent: string): string {
+    private static exportReference(ref: LReference, allClasses: LClass[], indent: string, currentPackage: LPackage): string {
         const parts: string[] = [
             `xsi:type="ecore:EReference"`,
             `name="${this.escapeXml(ref.name)}"`,
         ];
 
-        // Target type
+        // Target type — emitted with cross-package-aware pointer.
         const targetType = ref.type;
         if (targetType) {
-            parts.push(`eType="#//${this.escapeXml(targetType.name)}"`);
+            parts.push(`eType="${this.crossPackagePointer(targetType, currentPackage)}"`);
         }
 
         // Multiplicity
@@ -253,10 +298,11 @@ export class EcoreService {
             parts.push(`containment="true"`);
         }
 
-        // Opposite reference
+        // Opposite reference — class-level pointer is cross-package-aware,
+        // then we append /featureName for the opposite's own name.
         const opposite = ref.opposite;
         if (opposite && targetType) {
-            parts.push(`eOpposite="#//${targetType.name}/${opposite.name}"`);
+            parts.push(`eOpposite="${this.crossPackagePointer(targetType, currentPackage)}/${this.escapeXml(opposite.name)}"`);
         }
 
         return `${indent}<eStructuralFeatures ${parts.join(' ')}/>`;
@@ -345,7 +391,7 @@ export class EcoreService {
 
         // Classes
         for (const cls of pkg.classes || []) {
-            parts.push(this.exportClass(cls, pkg.classes || [], i + indent, newline));
+            parts.push(this.exportClass(cls, pkg.classes || [], i + indent, newline, pkg));
         }
 
         // Enums
@@ -541,6 +587,26 @@ export class EcoreService {
 
         // Otherwise it's a reference to a class in the model
         return `#//${typeName}`;
+    }
+
+    /**
+     * Build an Ecore XPath-style pointer to a classifier within the same document.
+     * Returns '#//ClassName' when the target is in the same package as the referrer,
+     * or '#//PackageName/ClassName' when the target lives in a sibling package
+     * within the same metamodel. Cross-document refs to Ecore-native primitives
+     * are handled separately by mapToEcoreType().
+     */
+    private static crossPackagePointer(target: any, fromPackage: LPackage | undefined | null): string {
+        if (!target) {
+            console.warn('[EcoreService] crossPackagePointer: target is null/undefined');
+            return '';
+        }
+        const targetName = this.escapeXml(target.name || '');
+        const targetPkg: LPackage | undefined | null = target.package;
+        if (!targetPkg || !fromPackage || targetPkg.id === fromPackage.id) {
+            return `#//${targetName}`;
+        }
+        return `#//${this.escapeXml(targetPkg.name || '')}/${targetName}`;
     }
 
     /**
