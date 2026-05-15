@@ -147,7 +147,7 @@ const WelcomeModal: React.FC = () => {
                   { tag: 'JjTL', mod: 'blue', desc: 'Model-to-model transformations' },
                   { tag: 'JjEL', mod: 'cyan', desc: 'Expressions, guards & bindings' },
                   { tag: 'JjScript', mod: 'violet', desc: 'Slash-driven metamodel scripting' },
-                  { tag: 'JjModal', mod: 'indigo', desc: 'Modal logic on models' },
+                  { tag: 'JjModal', mod: 'indigo', desc: 'Inline dialogs for JjTL & JjScript' },
                 ].map(({ tag, mod, desc }) => (
                   <div key={tag} className="wm-lang-row">
                     <span className={`wm-lang-tag wm-lang-tag--${mod}`}>{tag}</span>

@@ -1,5 +1,13 @@
 # Claude Code Session Log
 
+## 2026-05-15 — fix: correct JjModal description in What's new overlay
+**Prompt**: Replace "Modal logic on models" with "Inline dialogs for JjTL & JjScript" in the Jjodel 3.0 what's new modal
+**File toccati**: frontend/src/components/WelcomeModal/WelcomeModal.tsx
+**Esito**: ✅ completato
+**Nome del documento prompt**: 2026-05-15 15:35
+
+---
+
 ## 2026-05-15 — refactor: remove .jmm import/export menu entries (Project Dashboard)
 **Prompt**: rimozione voce "Export (.jmm)" dal context menu per-metamodello del Project Dashboard; handler `handleExportMetamodel` e `handleJmmFileChange` marcati come dead code con TODO comment per cleanup pre-3.0.0. Hard-stop & ask attivato a Step 0: scoperta voce UI **"Import .jmm"** (line 2056, dropdown del section header, accanto a "Import Ecore (.ecore)") wired a stub. Alfonso ha confermato scope esteso: rimuovere anche Import .jmm + marcare anche `handleImportJmm`.
 **File toccati**: frontend/src/components/project/ProjectEditor.tsx
