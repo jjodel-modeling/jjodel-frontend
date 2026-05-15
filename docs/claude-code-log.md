@@ -1,5 +1,14 @@
 # Claude Code Session Log
 
+## 2026-05-15 — fix: Jjodel menu Logout duplicate + File menu New Project + Recent cap 7
+**Prompt**: B1 — Remove duplicated Logout from Jjodel menu, add top-level New Project in File menu (⌥⌘N), reduce Recent Projects cap from 20 to 7
+**File toccati**: frontend/src/pages/components/Navbar.tsx
+**Esito**: ✅ completato
+**Note**: parte 1/3 del refactor menu hide-not-grey. B2 (Edit/Tools/Analyze) e B3 (View) seguiranno. **Cambi mecanici applicati**: (1) Jjodel menu — rimossa voce "Logout" (line ex-1293-1301), tenuta "Sign-out" con shortcut ⌥⌘Q. Sanity check confermato: `icon['logout']` usato SOLO nella voce rimossa (1 sola occorrenza nel codebase via grep), quindi cleanup completo per scope di questo task; l'import `icon` resta perché probabilmente usato da altre voci (non verificato — fuori scope). (2) File menu — applicato **Caso B** della spec: il submenu `New` aveva 3 voci (Project stub disabled + Metamodel funzionale + newModel dinamico), quindi tenuto il submenu rimuovendo solo lo stub "Project"; aggiunta voce **top-level** "New Project" all'inizio del File menu (prima del submenu New e prima di Recent Projects) con `function: () => window.dispatchEvent(new CustomEvent(JjodelEvents.NEW_PROJECT))`, icona `bi-file-earmark-plus`, shortcutPills `SHORTCUTS.NEW` (⌥⌘N). Voce **sempre visibile** (no guard isDashboard/isProject) come da spec — il listener globale ⌥⌘N esiste solo in dashboard context (Navbar.tsx:944-953), ma il design accetta che da editor il click sia no-op (cross-context fix separato). Import `JjodelEvents` già presente (line 63), `SHORTCUTS.NEW` già usato (line 944), nessun nuovo import necessario. (3) Recent Projects — cap `.slice(0,20)` → `.slice(0,7)` a line 1241, una sola cifra. Non toccato LeftBar.tsx (cap 5) né RightPanel.tsx, intenzionalmente come da spec. **Diff finale**: ~17 righe in 1 file (entro l'atteso 15-20). **Verifica TS**: `npx tsc --noEmit` non riporta nuovi errori introdotti dal cambio (unico errore in Navbar.tsx è preesistente: line 3 import logo PNG senza type declarations, non correlato). **Test manuali delegati**: aprire Jjodel menu (deve mostrare solo About/Roadmap/divisor/Sign-out, niente Logout), aprire File menu (New Project in cima con pill ⌥⌘N, click → CreateProjectDialog in dashboard), hover File > Recent Projects (max 7 progetti), regression ⌥⌘N da tastiera. **Hard-stop rispettato**: nessun cambio fuori scope, nessuna costante estratta, nessun touch a renderer/listener/constants/shortcuts.ts.
+**Nome del documento prompt**: 2026-05-15 17:30
+
+---
+
 ## 2026-05-15 — discovery: MenuBar structure (6 top-level menus)
 **Prompt**: Read-only analysis of MenuBar to plan hide-not-grey refactor + Jjodel/File menu changes
 **File toccati**: nessuno (read-only). Report in `docs/discovery/discovery_2026-05-15_menubar_structure.md`.

@@ -1238,7 +1238,7 @@ function NavbarComponent(props: AllProps) {
     if (user?.projects) {
         user.projects
             .sort((a, b) => (b.lastModified > a.lastModified) ?  1 : -1)
-            .slice(0,20)
+            .slice(0,7)
             .forEach(p => {
                     let pid = Pointers.from(p);
                     recentProjects.push({
@@ -1289,26 +1289,21 @@ function NavbarComponent(props: AllProps) {
                     } else {
                         await AuthApi.logout();
                     }
-                }, icon: <i className="bi bi-box-arrow-right" />, shortcutPills: formatShortcutPills(SHORTCUTS.SIGN_OUT)},
-                {name: 'Logout', function: async() => {
-                        if (isProjectModified()) {
-                            U.dialog('You are about to log out without saving your project. Do you want to proceed?', 'logout', async ()=>{
-                                await AuthApi.logout();
-                            });
-                        } else {
-                            await AuthApi.logout();
-                        }},
-                    icon: icon['logout']}
+                }, icon: <i className="bi bi-box-arrow-right" />, shortcutPills: formatShortcutPills(SHORTCUTS.SIGN_OUT)}
             ]},
 
         /* File */
 
         {name: 'File',
             subItems: [
+                {name: 'New Project',
+                    function: () => window.dispatchEvent(new CustomEvent(JjodelEvents.NEW_PROJECT)),
+                    icon: <i className="bi bi-file-earmark-plus" />,
+                    shortcutPills: formatShortcutPills(SHORTCUTS.NEW),
+                },
                 isDashboard ? null :
                 {name: 'New', icon: <i className="bi bi-plus-circle" />,
                     subItems: [
-                        {name: 'Project', function: placeholder, icon: <i className="bi bi-folder" />, disabled: true},
                         {name: 'Metamodel', icon: <i className="bi bi-diagram-3" />, function: ()=> { project && createM2(project); }, shortcutPills: formatShortcutPills(SHORTCUTS.NEW_METAMODEL)},
                         newModel
                     ]
