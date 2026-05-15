@@ -1,5 +1,14 @@
 # Claude Code Session Log
 
+## 2026-05-15 — fix: Help > Support submenu opens left to stay in viewport
+**Prompt**: Invert direction of Support submenu inside Help dropdown (open left, not right)
+**File toccati**: frontend/src/pages/components/navbar.scss
+**Esito**: ✅ completato (SCSS compila pulito; verifica visiva in browser delegata ad Alfonso)
+**Note**: Il submenu del Support (Report bug / Request feature / Contact) usciva dal viewport perché ereditava la regola globale `App.scss:109-124` `.hoverable:hover > .content.right { left: calc(100% - 20px); padding-left: 30px; }`, valida per i menu File/Edit/etc. ancorati a sinistra. Il dropdown del Help è invece ancorato al bordo destro (`.help-menu .content.context-menu { right:0; left:auto }`, navbar.scss:1557-1563), quindi un flyout rightward del secondo livello traboccava. **Strategia**: override CSS scoped a `.help-menu` (zero modifiche JSX, zero modifiche al `makeEntry` condiviso da tutta la navbar). Aggiunte due regole nel blocco `.help-menu` esistente (navbar.scss:1554): (1) override del posizionamento `.hoverable > .content.right` per i 5 pseudo-stati che la regola App.scss usa (`:hover`, `:focus`, `:focus-within`, `:active`, `.pinned`) — invertito `left: calc(100% - 20px); padding-left: 30px` → `left: auto; right: calc(100% - 20px); padding-left: 0; padding-right: 30px`. La specificità (0,5,0 vs 0,4,0 dell'originale) garantisce override deterministico. (2) Mirror del chevron via `transform: scaleX(-1)` sull'`.icon-expand-submenu` — la classe `bi-chevron-right` resta inalterata in JSX (sarebbe stata applicata a tutti i submenu da `makeEntry`, non solo a Support), il mirror visivo è scoped al solo `.help-menu`. Soluzione preferita rispetto a swap unicode `::before { content: '\F284' }` perché non lega il fix a una specifica versione di bootstrap-icons. **Diff**: +20 righe, 1 file (`navbar.scss`). Range atteso 5-15 leggermente superato per coprire tutti gli pseudo-stati della regola App.scss originaria — necessario per la specificity, no alternative più compatte senza usare `!important` (sconsigliato). **Verifica**: `npx sass src/pages/components/navbar.scss /tmp/check.css` compila senza errori. **Test manuale delegato**: click su icona Help (?) → hover su Support → submenu deve aprirsi a sinistra del parent dentro il viewport, chevron sulla voce Support deve puntare a sinistra (visivamente mirrorato). Regression check: aprire File/Edit/Project menu → submenu di secondo livello deve continuare ad aprirsi a destra (regola globale invariata fuori da `.help-menu`).
+**Nome del documento prompt**: 2026-05-15 16:30
+
+---
+
 ## 2026-05-15 — fix: sidebar FILTERS no longer reload Dashboard
 **Prompt**: Wire LeftBar Private/Public/Collaborative to the same filter mechanism as the in-page tabs (no reload, persistent active state)
 **File toccati**: frontend/src/pages/components/LeftBar.tsx, frontend/src/pages/AllProjects.tsx

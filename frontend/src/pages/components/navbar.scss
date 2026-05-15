@@ -1561,6 +1561,26 @@ $transition-menu: 150ms ease;
     // Ensure menu is above tree view sidebar (z-index: 100)
     z-index: 200;
   }
+
+  // Second-level submenus (e.g., Support → Report/Request/Contact) must open
+  // leftward: the help dropdown is anchored to the screen's right edge, so
+  // the global rightward flyout (App.scss .hoverable > .content.right) would
+  // overflow the viewport.
+  .hoverable:hover > .content.right,
+  .hoverable:focus > .content.right,
+  .hoverable:focus-within > .content.right,
+  .hoverable:active > .content.right,
+  .hoverable.pinned > .content.right {
+    left: auto;
+    right: calc(100% - 20px);
+    padding-left: 0;
+    padding-right: 30px;
+  }
+
+  // Mirror the chevron indicator so it points toward the flyout direction.
+  .icon-expand-submenu {
+    transform: scaleX(-1);
+  }
 }
 
 // ============================================
