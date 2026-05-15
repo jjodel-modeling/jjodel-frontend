@@ -1596,3 +1596,74 @@ section .property-panel {
   font-style: italic;
   padding: 2px 0;
 }
+
+.bool-toggle-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.bool-toggle {
+  position: relative;
+  width: 32px;
+  height: 18px;
+  border-radius: 999px;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  background-color: #cbd5e1;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+  flex-shrink: 0;
+
+  &--on {
+    background-color: #0ea5e9;
+  }
+
+  &:hover:not(:disabled) {
+    background-color: #94a3b8;
+  }
+
+  &--on:hover:not(:disabled) {
+    background-color: #0284c7;
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.25);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &__knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+    transition: left 0.15s ease;
+    pointer-events: none;
+  }
+
+  &--on &__knob {
+    left: 16px;
+  }
+
+  &__label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #64748b;
+    transition: color 0.15s ease;
+    user-select: none;
+
+    &--on {
+      color: #0ea5e9;
+    }
+  }
+}

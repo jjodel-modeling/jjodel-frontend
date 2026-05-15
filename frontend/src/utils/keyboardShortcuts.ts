@@ -141,6 +141,11 @@ export const SHORTCUTS = {
 
     // Tree View toggle (⌘B / Ctrl+B)
     TOGGLE_TREE_VIEW: { key: 'B', modifiers: ['cmd'] as ModifierKey[] },
+
+    // View toggles (editor context only)
+    SHOW_EDGE_LABELS: { key: 'L', modifiers: ['shift', 'cmd'] as ModifierKey[] },
+    SHOW_BACKGROUND: { key: 'B', modifiers: ['shift', 'cmd'] as ModifierKey[] },
+    SHOW_DOT_GRID: { key: 'G', modifiers: ['shift', 'cmd'] as ModifierKey[] },
 } as const;
 
 /**

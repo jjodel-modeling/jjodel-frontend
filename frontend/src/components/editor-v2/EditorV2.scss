@@ -59,6 +59,7 @@
     .editor-split-classic {
         min-width: 0;
         overflow: auto;
+        position: relative;
     }
 
     .editor-split-divider {
@@ -79,6 +80,7 @@
         min-width: 0;
         display: flex;
         flex-direction: column;
+        position: relative;
     }
 }
 
@@ -2010,6 +2012,24 @@
     }
 }
 
+// Show edge labels: M1 edge labels always visible when wrapper has the toggle class.
+.editor-v2.show-edge-labels .edge-label--m1-hover .edge-label__text {
+    opacity: 1;
+    pointer-events: all;
+}
+
+// Hide background: clean canvas mode for screenshots.
+// White background overrides --canvas-bg, dot-grid is forced invisible
+// regardless of the "Show dot grid" toggle state. The dot-grid SVG uses
+// inline style={{ opacity }}, so !important is required to override it.
+.editor-v2.hide-background {
+    --canvas-bg: #ffffff;
+
+    .editor-v2__dot-grid {
+        opacity: 0 !important;
+    }
+}
+
 .manhattan-edge__label {
     font-size: 10px;
     color: var(--text-secondary);
@@ -3076,8 +3096,10 @@
 
         &.disabled {
             opacity: 0.45;
-            cursor: default;
-            pointer-events: none;
+            cursor: not-allowed;
+            // pointer-events kept enabled so the HTML `title` tooltip
+            // shows on hover; the `disabled` attribute already prevents
+            // click and keyboard activation.
         }
 
         &.danger {
@@ -3372,5 +3394,32 @@ body.header-variant-c {
 .inline-type-select__option--stale {
     color: #f59e0b;
     font-style: italic;
+}
+
+// Active editor indicator: 3px cyan stripe at the top of the focused editor
+// pane (set via conditional className from EditorV2.tsx). position: absolute
+// so the stripe overlays the content without displacing it. Visible across
+// flow / classic / split modes — in single-editor modes it just sits at the
+// top of the only editor without harm.
+.editor-split-container .is-active-editor::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: #0ea5e9;
+    pointer-events: none;
+    z-index: 200;
+}
+
+/* In split mode, fade the non-active editor pane to direct visual focus
+ * to the active one. Combined with the cyan stripe, this gives a clear
+ * primary + peripheral signal. Applied only when ANOTHER pane is active. */
+.editor-split-container:has(.is-active-editor) .editor-split-classic:not(.is-active-editor),
+.editor-split-container:has(.is-active-editor) .editor-split-flow:not(.is-active-editor) {
+    opacity: 0.85;
+    filter: saturate(0.6);
+    transition: opacity 0.15s ease, filter 0.15s ease;
 }
 

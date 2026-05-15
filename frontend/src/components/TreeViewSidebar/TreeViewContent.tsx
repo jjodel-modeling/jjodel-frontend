@@ -1,867 +1,130 @@
-import React, { Dispatch, ReactElement, memo, useCallback, useMemo, useEffect, useRef, useState } from 'react';
+import React, { Dispatch, ReactElement, ReactNode, memo, useCallback, useMemo, useEffect, useRef, useState } from 'react';
 import { connect } from 'react-redux';
 import type { FakeStateProps } from '../../joiner';
 import {
     DState,
     DGraph,
+    DPointerTargetable,
+    DViewElement,
     LModel,
     LObject,
-    LNamedElement,
     LPointerTargetable,
+    LViewElement,
+    SetFieldAction,
     SetRootFieldAction,
-    D,
+    DProject,
     LProject,
     LViewPoint,
-    DViewPoint,
+    U,
     getViewpointType,
 } from '../../joiner';
+import type { Pointer } from '../../joiner';
 import type { ViewpointType } from '../../view/viewPoint/viewpoint';
-import { resolveEntityType, entityLetter, entityIcon } from '../../common/entityMeta';
-import { useStateIfMounted } from 'use-state-if-mounted';
 import { useTreeViewPanel, ElementAction } from '../../contexts/TreeViewPanelContext';
-import { getLastEditedViewpointId, getLastEditedViewpointName, createViewInWorkbench } from '../../utils/lastViewpoint';
-import DockManager from '../abstract/DockManager';
+import { getLastEditedViewpointId, createViewInWorkbench, createBlankViewInViewpoint } from '../../utils/lastViewpoint';
 import { JjodelEvents, SystemEvents } from '../../events/registry';
+import { Tooltip } from '../forEndUser/Tooltip';
+import { useNodeProblems } from '../editor-v2/problems/useNodeProblems';
+import type { NodeProblem } from '../editor-v2/problems/registry';
 
 /**
- * TreeViewContent Component (Optimized)
+ * TreeViewContent — redesign 2026-05-08.
  *
- * Performance optimizations:
- * - Memoized TreeNode and MetamodelTree components
- * - Data passed directly instead of repeated fromPointer calls
- * - Shallow comparison in mapStateToProps
- * - Virtualization-ready structure
+ * Sections (synthetic): MEGAMODEL > METAMODELS / VIEWPOINTS / DOCUMENTATION.
+ * Per-metamodel sub-section MODELS lists conforming M1 models.
+ * Expand/collapse persisted on DProject.expandedTreeNodes (string[]) — synthetic
+ * section keys use the `__section:` prefix.
+ *
+ * Conventions:
+ * - TREE_INDENT_STEP px padding-left per nesting level (no exceptions).
+ * - Leaves render an invisible chevron slot to keep alignment.
  */
 
-interface TreeViewContentProps {
-    onSelect?: () => void;
+// Indentazione per livello di nesting (polish 2026-05-12: ridotta da 16 a 12,
+// circa -25%, per migliorare la leggibilità dei nomi in tree profondi).
+const TREE_INDENT_STEP = 12;
+
+// ─── Synthetic section keys ──────────────────────────────────────────────────
+
+const SECTION_KEYS = {
+    MEGAMODEL: '__section:megamodel',
+    METAMODELS: '__section:metamodels',
+    VIEWPOINTS: '__section:viewpoints',
+    VIEWPOINTS_SYNTAX: '__section:viewpoints/syntax',
+    VIEWPOINTS_VALIDATION: '__section:viewpoints/validation',
+    DOCUMENTATION: '__section:documentation',
+} as const;
+
+const STATIC_SECTION_KEYS: ReadonlySet<string> = new Set<string>([
+    SECTION_KEYS.MEGAMODEL,
+    SECTION_KEYS.METAMODELS,
+    SECTION_KEYS.VIEWPOINTS,
+    SECTION_KEYS.VIEWPOINTS_SYNTAX,
+    SECTION_KEYS.VIEWPOINTS_VALIDATION,
+    SECTION_KEYS.DOCUMENTATION,
+]);
+
+const SECTION_KEY_PREFIX = '__section:';
+const MODELS_SECTION_PREFIX = '__section:models:';
+
+function modelsSectionKey(metamodelId: string): string {
+    return MODELS_SECTION_PREFIX + metamodelId;
 }
 
-// Simplified node data structure to avoid repeated L-object lookups
-interface TreeNodeData {
+function isSectionKey(key: string): boolean {
+    return key.startsWith(SECTION_KEY_PREFIX);
+}
+
+// ─── Tree data structures ────────────────────────────────────────────────────
+
+interface TreeFeatureData {
     id: string;
-    name: string;
-    className: string;
-    isAbstract?: boolean;
-    extendsNames?: string[];
-    children?: TreeNodeData[];
-    nodeId?: string;
-    viewId?: string;
-}
-
-interface TreeNodeProps {
-    data: TreeNodeData;
-    depth: number;
-    selectedId?: string;
-    onSelect?: () => void;
-    // Highlighting props
-    highlightedElementId?: string | null;
-    highlightedAction?: ElementAction | null;
-    expandedNodeIds?: Set<string>;
-    isScriptExecuting?: boolean;
-}
-
-/**
- * Creates a view in the last workbench viewpoint for a given classifier element.
- */
-function addViewToWorkbenchFromTree(elementId: string, elementName: string, className: string): void {
-    createViewInWorkbench(elementId, elementName, className);
-}
-
-/** Classifiers that support "Add View to Workbench" */
-const CLASSIFIER_TYPES = new Set(['DClass', 'DEnumerator', 'DModel', 'DPackage']);
-
-/**
- * Memoized TreeNode - only re-renders when props change
- */
-const TreeNode = memo(function TreeNode({
-    data,
-    depth,
-    selectedId,
-    onSelect,
-    highlightedElementId,
-    highlightedAction,
-    expandedNodeIds,
-    isScriptExecuting
-}: TreeNodeProps): ReactElement {
-    const nodeRef = useRef<HTMLDivElement>(null);
-    const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
-
-    // Check if this node or any child is highlighted
-    const isHighlighted = highlightedElementId === data.id;
-    const shouldForceExpand = expandedNodeIds?.has(data.id);
-
-    // Check if any descendant is highlighted (for auto-expand)
-    const hasHighlightedDescendant = useMemo(() => {
-        if (!highlightedElementId || !data.children) return false;
-        const checkDescendants = (children: TreeNodeData[]): boolean => {
-            for (const child of children) {
-                if (child.id === highlightedElementId) return true;
-                if (child.children && checkDescendants(child.children)) return true;
-            }
-            return false;
-        };
-        return checkDescendants(data.children);
-    }, [highlightedElementId, data.children]);
-
-    const [isExpanded, setIsExpanded] = useStateIfMounted(
-        depth < 2 || shouldForceExpand || hasHighlightedDescendant
-    );
-
-    // Auto-expand when forced or has highlighted descendant
-    useEffect(() => {
-        if (shouldForceExpand || hasHighlightedDescendant) {
-            setIsExpanded(true);
-        }
-    }, [shouldForceExpand, hasHighlightedDescendant, setIsExpanded]);
-
-    // Close context menu on outside click or Escape
-    useEffect(() => {
-        if (!ctxMenu) return;
-        const handleClick = () => setCtxMenu(null);
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') setCtxMenu(null);
-        };
-        const handleScroll = () => setCtxMenu(null);
-        document.addEventListener('click', handleClick);
-        document.addEventListener('keydown', handleKeyDown);
-        // Close on scroll within the tree view body
-        const scrollContainer = nodeRef.current?.closest('.tree-view-sidebar__body, .tree-view-overlay__body');
-        scrollContainer?.addEventListener('scroll', handleScroll);
-        return () => {
-            document.removeEventListener('click', handleClick);
-            document.removeEventListener('keydown', handleKeyDown);
-            scrollContainer?.removeEventListener('scroll', handleScroll);
-        };
-    }, [ctxMenu]);
-
-    const hasChildren = data.children && data.children.length > 0;
-    const isSelected = selectedId === data.id;
-    const isClassifier = CLASSIFIER_TYPES.has(data.className);
-
-    const handleClick = useCallback((e: React.MouseEvent) => {
-        e.stopPropagation();
-        SetRootFieldAction.new('_lastSelected', {
-            node: data.nodeId,
-            view: data.viewId,
-            modelElement: data.id
-        }, '', false);
-        onSelect?.();
-    }, [data.id, data.nodeId, data.viewId, onSelect]);
-
-    const handleContextMenu = useCallback((e: React.MouseEvent) => {
-        if (!isClassifier) return;
-        e.preventDefault();
-        e.stopPropagation();
-        const menuWidth = 200;
-        const menuHeight = 40;
-        let x = e.clientX;
-        let y = e.clientY;
-        if (x + menuWidth > window.innerWidth) x = window.innerWidth - menuWidth - 8;
-        if (y + menuHeight > window.innerHeight) y = window.innerHeight - menuHeight - 8;
-        setCtxMenu({ x, y });
-    }, [isClassifier]);
-
-    const handleAddView = useCallback(() => {
-        addViewToWorkbenchFromTree(data.id, data.name, data.className);
-        setCtxMenu(null);
-    }, [data.id, data.name, data.className]);
-
-    const toggleExpand = useCallback((e: React.MouseEvent) => {
-        e.stopPropagation();
-        setIsExpanded(prev => !prev);
-    }, [setIsExpanded]);
-
-    // Get icon letter from centralized entityMeta
-    const iconLetter = useMemo(() => {
-        const resolved = resolveEntityType(data.className);
-        return resolved ? entityLetter(resolved) : data.className.slice(1, 2);
-    }, [data.className]);
-
-    // Build highlight class name
-    const highlightClass = isHighlighted
-        ? `tree-node__header--highlighted tree-node__header--action-${highlightedAction || 'unknown'}`
-        : '';
-
-    const vpName = getLastEditedViewpointName();
-    const hasWorkbenchVP = !!getLastEditedViewpointId();
-
-    return (
-        <div
-            ref={nodeRef}
-            className="tree-node"
-            data-element-id={data.id}
-        >
-            <div
-                className={`tree-node__header ${isSelected ? 'tree-node__header--selected' : ''} ${highlightClass}`}
-                style={{ paddingLeft: `${depth * 16}px` }}
-                onContextMenu={handleContextMenu}
-            >
-                <button
-                    className="tree-node__toggle"
-                    onClick={toggleExpand}
-                    disabled={!hasChildren}
-                >
-                    {hasChildren ? (
-                        <i className={`bi bi-chevron-${isExpanded ? 'down' : 'right'}`} />
-                    ) : (
-                        <span className="tree-node__spacer" />
-                    )}
-                </button>
-
-                <div className="tree-node__content" onClick={handleClick}>
-                    <span className={`tree-node__icon tree-${data.className} ${data.isAbstract ? 'abstract-class' : ''}`}>
-                        {iconLetter}
-                    </span>
-                    <span className="tree-node__name">
-                        {data.name || 'unnamed'}
-                    </span>
-                    {data.extendsNames && data.extendsNames.length > 0 && (
-                        <span className="tree-node__extends">
-                            → [{data.extendsNames.join(', ')}]
-                        </span>
-                    )}
-                    {/* NEW badge for created elements */}
-                    {isHighlighted && highlightedAction === 'create' && (
-                        <span className="tree-node__badge tree-node__badge--new">NEW</span>
-                    )}
-                </div>
-            </div>
-
-            {/* Context menu for classifiers: Add View to Workbench */}
-            {ctxMenu && isClassifier && (
-                <div
-                    className="tree-node__context-menu"
-                    style={{ position: 'fixed', top: ctxMenu.y, left: ctxMenu.x, zIndex: 9999 }}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <div
-                        className={`tree-node__context-item ${!hasWorkbenchVP ? 'tree-node__context-item--disabled' : ''}`}
-                        onClick={hasWorkbenchVP ? handleAddView : undefined}
-                    >
-                        <i className="bi bi-eye" />
-                        <span>{hasWorkbenchVP ? 'Create View' : 'Create View — open a viewpoint first'}</span>
-                    </div>
-                </div>
-            )}
-
-            {isExpanded && hasChildren && (
-                <div className="tree-node__children">
-                    {data.children!.map((child) => (
-                        <TreeNode
-                            key={child.id}
-                            data={child}
-                            depth={depth + 1}
-                            selectedId={selectedId}
-                            onSelect={onSelect}
-                            highlightedElementId={highlightedElementId}
-                            highlightedAction={highlightedAction}
-                            expandedNodeIds={expandedNodeIds}
-                            isScriptExecuting={isScriptExecuting}
-                        />
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-});
-
-interface MetamodelTreeProps {
-    metamodel: TreeNodeData;
-    packages: TreeNodeData[];
-    selectedId?: string;
-    onSelect?: () => void;
-    defaultExpanded?: boolean;
-    // Highlighting props
-    highlightedElementId?: string | null;
-    highlightedAction?: ElementAction | null;
-    expandedNodeIds?: Set<string>;
-    isScriptExecuting?: boolean;
-}
-
-/**
- * Memoized MetamodelTree
- */
-const MetamodelTree = memo(function MetamodelTree({
-    metamodel,
-    packages,
-    selectedId,
-    onSelect,
-    defaultExpanded = true,
-    highlightedElementId,
-    highlightedAction,
-    expandedNodeIds,
-    isScriptExecuting
-}: MetamodelTreeProps): ReactElement {
-    const [isExpanded, setIsExpanded] = useStateIfMounted(defaultExpanded);
-
-    // Check if this metamodel is highlighted
-    const isHighlighted = highlightedElementId === metamodel.id;
-
-    // Auto-expand when any descendant is highlighted
-    const hasHighlightedDescendant = useMemo(() => {
-        if (!highlightedElementId) return false;
-        const checkPackages = (pkgs: TreeNodeData[]): boolean => {
-            for (const pkg of pkgs) {
-                if (pkg.id === highlightedElementId) return true;
-                if (pkg.children) {
-                    const checkChildren = (children: TreeNodeData[]): boolean => {
-                        for (const child of children) {
-                            if (child.id === highlightedElementId) return true;
-                            if (child.children && checkChildren(child.children)) return true;
-                        }
-                        return false;
-                    };
-                    if (checkChildren(pkg.children)) return true;
-                }
-            }
-            return false;
-        };
-        return checkPackages(packages);
-    }, [highlightedElementId, packages]);
-
-    // Auto-expand when highlighted descendant found
-    useEffect(() => {
-        if (hasHighlightedDescendant) {
-            setIsExpanded(true);
-        }
-    }, [hasHighlightedDescendant, setIsExpanded]);
-
-    const handleToggle = useCallback((e: React.MouseEvent) => {
-        e.stopPropagation();
-        setIsExpanded(prev => !prev);
-    }, [setIsExpanded]);
-
-    const handleMetamodelClick = useCallback(() => {
-        SetRootFieldAction.new('_lastSelected', {
-            node: metamodel.nodeId,
-            view: metamodel.viewId,
-            modelElement: metamodel.id
-        }, '', false);
-        onSelect?.();
-    }, [metamodel.id, metamodel.nodeId, metamodel.viewId, onSelect]);
-
-    // Build highlight class name for metamodel
-    const highlightClass = isHighlighted
-        ? `metamodel-tree__header--highlighted metamodel-tree__header--action-${highlightedAction || 'unknown'}`
-        : '';
-
-    return (
-        <div className="metamodel-tree" data-element-id={metamodel.id}>
-            <div className={`metamodel-tree__header ${highlightClass}`}>
-                <button className="tree-node__toggle" onClick={handleToggle}>
-                    <i className={`bi bi-chevron-${isExpanded ? 'down' : 'right'}`} />
-                </button>
-                <div className="metamodel-tree__title" onClick={handleMetamodelClick}>
-                    <span className="tree-node__icon tree-DModel">M</span>
-                    <span>{metamodel.name || 'Unnamed Metamodel'}</span>
-                    {/* NEW badge for created metamodels */}
-                    {isHighlighted && highlightedAction === 'create' && (
-                        <span className="tree-node__badge tree-node__badge--new">NEW</span>
-                    )}
-                </div>
-            </div>
-
-            {isExpanded && (
-                <div className="metamodel-tree__content">
-                    {packages.length > 0 ? (
-                        packages.map((pkg) => (
-                            <TreeNode
-                                key={pkg.id}
-                                data={pkg}
-                                depth={2}
-                                selectedId={selectedId}
-                                onSelect={onSelect}
-                                highlightedElementId={highlightedElementId}
-                                highlightedAction={highlightedAction}
-                                expandedNodeIds={expandedNodeIds}
-                                isScriptExecuting={isScriptExecuting}
-                            />
-                        ))
-                    ) : (
-                        <div className="tree-empty-package">
-                            <span>No packages</span>
-                        </div>
-                    )}
-                </div>
-            )}
-        </div>
-    );
-});
-
-interface ModelTreeProps {
-    model: TreeNodeData;
-    objects: TreeNodeData[];
-    selectedId?: string;
-    onSelect?: () => void;
-    defaultExpanded?: boolean;
-    highlightedElementId?: string | null;
-    highlightedAction?: ElementAction | null;
-    expandedNodeIds?: Set<string>;
-    isScriptExecuting?: boolean;
-}
-
-/**
- * Memoized ModelTree — renders an M1 model with its objects
- */
-const ModelTree = memo(function ModelTree({
-    model,
-    objects,
-    selectedId,
-    onSelect,
-    defaultExpanded = true,
-    highlightedElementId,
-    highlightedAction,
-    expandedNodeIds,
-    isScriptExecuting
-}: ModelTreeProps): ReactElement {
-    const [isExpanded, setIsExpanded] = useStateIfMounted(defaultExpanded);
-
-    const isHighlighted = highlightedElementId === model.id;
-
-    const hasHighlightedDescendant = useMemo(() => {
-        if (!highlightedElementId) return false;
-        const checkObjects = (objs: TreeNodeData[]): boolean => {
-            for (const obj of objs) {
-                if (obj.id === highlightedElementId) return true;
-                if (obj.children) {
-                    const checkChildren = (children: TreeNodeData[]): boolean => {
-                        for (const child of children) {
-                            if (child.id === highlightedElementId) return true;
-                            if (child.children && checkChildren(child.children)) return true;
-                        }
-                        return false;
-                    };
-                    if (checkChildren(obj.children)) return true;
-                }
-            }
-            return false;
-        };
-        return checkObjects(objects);
-    }, [highlightedElementId, objects]);
-
-    useEffect(() => {
-        if (hasHighlightedDescendant) {
-            setIsExpanded(true);
-        }
-    }, [hasHighlightedDescendant, setIsExpanded]);
-
-    const handleToggle = useCallback((e: React.MouseEvent) => {
-        e.stopPropagation();
-        setIsExpanded(prev => !prev);
-    }, [setIsExpanded]);
-
-    const handleModelClick = useCallback(() => {
-        SetRootFieldAction.new('_lastSelected', {
-            node: model.nodeId,
-            view: model.viewId,
-            modelElement: model.id
-        }, '', false);
-        onSelect?.();
-    }, [model.id, model.nodeId, model.viewId, onSelect]);
-
-    const highlightClass = isHighlighted
-        ? `metamodel-tree__header--highlighted metamodel-tree__header--action-${highlightedAction || 'unknown'}`
-        : '';
-
-    return (
-        <div className="metamodel-tree" data-element-id={model.id}>
-            <div className={`metamodel-tree__header ${highlightClass}`}>
-                <button className="tree-node__toggle" onClick={handleToggle}>
-                    <i className={`bi bi-chevron-${isExpanded ? 'down' : 'right'}`} />
-                </button>
-                <div className="metamodel-tree__title" onClick={handleModelClick}>
-                    <span className="tree-node__icon tree-nested-model">m</span>
-                    <span>{model.name || 'Unnamed Model'}</span>
-                    {isHighlighted && highlightedAction === 'create' && (
-                        <span className="tree-node__badge tree-node__badge--new">NEW</span>
-                    )}
-                </div>
-            </div>
-
-            {isExpanded && (
-                <div className="metamodel-tree__content">
-                    {objects.length > 0 ? (
-                        objects.map((obj) => (
-                            <TreeNode
-                                key={obj.id}
-                                data={obj}
-                                depth={2}
-                                selectedId={selectedId}
-                                onSelect={onSelect}
-                                highlightedElementId={highlightedElementId}
-                                highlightedAction={highlightedAction}
-                                expandedNodeIds={expandedNodeIds}
-                                isScriptExecuting={isScriptExecuting}
-                            />
-                        ))
-                    ) : (
-                        <div className="tree-empty-package">
-                            <span>No instances</span>
-                        </div>
-                    )}
-                </div>
-            )}
-        </div>
-    );
-});
-
-/**
- * Convert LModel element to simplified TreeNodeData (recursive)
- * Uses LNamedElement.fromPointer to ensure children getter works correctly
- */
-function convertToTreeData(element: any): TreeNodeData {
-    // Use LNamedElement to properly access the children getter
-    const namedElement = LNamedElement.fromPointer(element.id);
-
-    const data: TreeNodeData = {
-        id: element.id,
-        name: element.name || 'unnamed',
-        className: element.className || 'DModelElement',
-        isAbstract: element.abstract,
-        nodeId: element.node?.id,
-        viewId: element.node?.view?.id,
-    };
-
-    // Get extends names for classes
-    if (element.extends && element.extends.length > 0) {
-        data.extendsNames = element.extends.map((s: any) => s?.name).filter(Boolean);
-    }
-
-    // Convert children recursively - use namedElement.children for proper getter access
-    const children = (namedElement as any)?.children;
-    if (children && Array.isArray(children) && children.length > 0) {
-        data.children = children.map((child: any) => convertToTreeData(child));
-    }
-
-    return data;
-}
-
-/** Instance data for M1 objects displayed under a model in the tree */
-interface TreeInstanceData {
-    id: string;
-    objectId: string;
     name: string;
     metaclassName: string;
     modelId: string;
 }
 
-/** M1 model displayed nested under its parent metamodel */
 interface TreeModelData {
     id: string;
     name: string;
+    fqn: string;
     metamodelId: string | null;
     isActive: boolean;
-    instances: TreeInstanceData[];
+    objectCount: number;
+    instances: TreeFeatureData[];
 }
 
-interface ProcessedMetamodel {
-    data: TreeNodeData;
-    packages: TreeNodeData[];
-    /** M1 models that conform to this metamodel */
+interface TreeClassData {
+    id: string;
+    name: string;
+    fqn: string;
+    isAbstract: boolean;
+    isEdgeView: boolean;
+    instanceCount: number;
+}
+
+interface TreePackageData {
+    id: string;
+    name: string;
+    fqn: string;
+    classCount: number;
+    subPackageCount: number;
+    subPackages: TreePackageData[];
+    classes: TreeClassData[];
+}
+
+interface TreeMetamodelData {
+    id: string;
+    name: string;
+    fqn: string;
+    nodeId?: string;
+    viewId?: string;
+    classCount: number;
+    modelCount: number;
+    rootPackages: TreePackageData[];
     childModels: TreeModelData[];
 }
 
-interface ProcessedModel {
-    data: TreeNodeData;
-    objects: TreeNodeData[];
-}
-
-/**
- * InstanceItem — renders a single M1 object instance in the tree.
- * Click dispatches jjodel:selectNode to select it on the canvas.
- */
-const InstanceItem = memo(function InstanceItem({
-    instance,
-    depth,
-    selectedId,
-    onSelect,
-}: {
-    instance: TreeInstanceData;
-    depth: number;
-    selectedId?: string;
-    onSelect?: () => void;
-}): ReactElement {
-    const isSelected = selectedId === instance.objectId;
-
-    const handleClick = useCallback((e: React.MouseEvent) => {
-        e.stopPropagation();
-        // Update Redux _lastSelected so the Properties panel (Info.tsx) re-renders
-        // with this instance's data. Without this, clicking an instance in the
-        // tree view would only highlight it on the canvas but leave the Properties
-        // panel showing the previously selected element.
-        SetRootFieldAction.new('_lastSelected' as any, {
-            node: '',
-            view: '',
-            modelElement: instance.objectId,
-        }, '', false);
-        // Dispatch custom event for EditorV2 to select the node on the canvas
-        window.dispatchEvent(new CustomEvent(JjodelEvents.SELECT_NODE, {
-            detail: { nodeId: instance.id, modelId: instance.modelId }
-        }));
-        onSelect?.();
-    }, [instance.id, instance.objectId, instance.modelId, onSelect]);
-
-    return (
-        <div className="tree-node" data-element-id={instance.objectId}>
-            <div
-                className={`tree-node__header ${isSelected ? 'tree-node__header--selected' : ''}`}
-                style={{ paddingLeft: `${depth * 16}px` }}
-            >
-                <span className="tree-node__spacer" style={{ width: 16 }} />
-                <div className="tree-node__content" onClick={handleClick}>
-                    <i className="bi bi-app-fill tree-instance__icon" />
-                    <span className="tree-node__name tree-instance__name">
-                        {instance.name}
-                    </span>
-                    <span className="tree-instance__metaclass">
-                        : {instance.metaclassName}
-                    </span>
-                </div>
-            </div>
-        </div>
-    );
-});
-
-/**
- * NestedModelTree — renders an M1 model nested under its metamodel.
- * Shows instances only when isActive.
- */
-const NestedModelTree = memo(function NestedModelTree({
-    model,
-    depth,
-    selectedId,
-    onSelect,
-}: {
-    model: TreeModelData;
-    depth: number;
-    selectedId?: string;
-    onSelect?: () => void;
-}): ReactElement {
-    const [isExpanded, setIsExpanded] = useStateIfMounted(model.isActive);
-
-    // Auto-expand/collapse when active state changes
-    useEffect(() => {
-        if (model.isActive) setIsExpanded(true);
-    }, [model.isActive, setIsExpanded]);
-
-    const handleToggle = useCallback((e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (model.isActive && model.instances.length > 0) {
-            setIsExpanded(prev => !prev);
-        }
-    }, [model.isActive, model.instances.length, setIsExpanded]);
-
-    const handleModelClick = useCallback(() => {
-        SetRootFieldAction.new('_lastSelected', {
-            node: '',
-            view: '',
-            modelElement: model.id
-        }, '', false);
-        onSelect?.();
-    }, [model.id, onSelect]);
-
-    // Show chevron if instances exist (even when not active — just not expandable)
-    const hasChildren = model.instances.length > 0;
-    const canExpand = model.isActive && hasChildren;
-
-    return (
-        <div className="tree-node nested-model-tree" data-element-id={model.id}>
-            <div
-                className="tree-node__header"
-                style={{ paddingLeft: `${depth * 16}px` }}
-            >
-                <button
-                    className="tree-node__toggle"
-                    onClick={handleToggle}
-                    disabled={!canExpand}
-                >
-                    {hasChildren ? (
-                        <i className={`bi bi-chevron-${isExpanded && canExpand ? 'down' : 'right'}`} />
-                    ) : (
-                        <span className="tree-node__spacer" />
-                    )}
-                </button>
-
-                <div className="tree-node__content" onClick={handleModelClick}>
-                    <span className="tree-node__icon tree-nested-model">m</span>
-                    <span className="tree-node__name">{model.name || 'Unnamed Model'}</span>
-                    <span className="tree-nested-model__badge">M1</span>
-                </div>
-            </div>
-
-            {isExpanded && canExpand && (
-                <div className="tree-node__children">
-                    {model.instances.map((inst) => (
-                        <InstanceItem
-                            key={inst.id}
-                            instance={inst}
-                            depth={depth + 1}
-                            selectedId={selectedId}
-                            onSelect={onSelect}
-                        />
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-});
-
-// ─── Transformation data received via CustomEvent from ProjectEditor ────────
-
-interface TreeTransformationData {
-    id: string;
-    name: string;
-    sourceMMName?: string;
-    targetMMName?: string;
-    /** Class mapping rule names (from AST) */
-    rules?: string[];
-    /** Helper function names (from AST) */
-    helpers?: string[];
-}
-
-/**
- * MegamodelEntry — top-level entry that opens the Megamodel view on click
- */
-const MegamodelEntry = memo(function MegamodelEntry(): ReactElement {
-    const handleClick = useCallback(() => {
-        window.dispatchEvent(new CustomEvent(JjodelEvents.OPEN_MEGAMODEL));
-    }, []);
-
-    return (
-        <div className="megamodel-entry" onClick={handleClick}>
-            <div className="megamodel-entry__header">
-                <span className="megamodel-entry__label">Megamodel</span>
-            </div>
-        </div>
-    );
-});
-
-/**
- * TransformationItem — a single transformation entry in the tree (expandable with rules/helpers)
- */
-const TransformationItem = memo(function TransformationItem({
-    transformation,
-    selectedId,
-    onSelect,
-}: {
-    transformation: TreeTransformationData;
-    selectedId?: string;
-    onSelect?: () => void;
-}): ReactElement {
-    const [isExpanded, setIsExpanded] = useStateIfMounted(false);
-    const isSelected = selectedId === transformation.id;
-
-    const hasRules = (transformation.rules?.length || 0) > 0;
-    const hasHelpers = (transformation.helpers?.length || 0) > 0;
-    const hasChildren = hasRules || hasHelpers;
-
-    const handleClick = useCallback((e: React.MouseEvent) => {
-        e.stopPropagation();
-        // Dispatch event to open transformation tab (ProjectEditor listens)
-        window.dispatchEvent(new CustomEvent(JjodelEvents.OPEN_TRANSFORMATION, {
-            detail: { id: transformation.id }
-        }));
-        SetRootFieldAction.new('_lastSelected', {
-            node: '',
-            view: '',
-            modelElement: transformation.id
-        }, '', false);
-        onSelect?.();
-    }, [transformation.id, onSelect]);
-
-    const toggleExpand = useCallback((e: React.MouseEvent) => {
-        e.stopPropagation();
-        setIsExpanded(prev => !prev);
-    }, [setIsExpanded]);
-
-    return (
-        <div className="tree-node" data-element-id={transformation.id}>
-            <div
-                className={`tree-node__header ${isSelected ? 'tree-node__header--selected' : ''}`}
-                style={{ paddingLeft: '16px' }}
-            >
-                <button className="tree-node__toggle" onClick={toggleExpand} disabled={!hasChildren}>
-                    {hasChildren ? (
-                        <i className={`bi bi-chevron-${isExpanded ? 'down' : 'right'}`} />
-                    ) : (
-                        <span className="tree-node__spacer" />
-                    )}
-                </button>
-                <div className="tree-node__content" onClick={handleClick}>
-                    <span className="tree-node__icon tree-transformation">
-                        <i className={`bi ${entityIcon('transformation')}`} />
-                    </span>
-                    <span className="tree-node__name">{transformation.name}</span>
-                </div>
-            </div>
-
-            {isExpanded && hasChildren && (
-                <div className="tree-node__children">
-                    {transformation.rules?.map((rule, i) => (
-                        <div key={`r-${i}`} className="tree-node">
-                            <div className="tree-node__header" style={{ paddingLeft: '32px' }}>
-                                <span className="tree-node__spacer" />
-                                <div className="tree-node__content">
-                                    <span className="tree-node__icon tree-rule">R</span>
-                                    <span className="tree-node__name">{rule}</span>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                    {transformation.helpers?.map((helper, i) => (
-                        <div key={`h-${i}`} className="tree-node">
-                            <div className="tree-node__header" style={{ paddingLeft: '32px' }}>
-                                <span className="tree-node__spacer" />
-                                <div className="tree-node__content">
-                                    <span className="tree-node__icon tree-helper">H</span>
-                                    <span className="tree-node__name">{helper}</span>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-});
-
-/**
- * TransformationSection — collapsable section listing all JjTL transformations
- */
-const TransformationSection = memo(function TransformationSection({
-    transformations,
-    selectedId,
-    onSelect,
-}: {
-    transformations: TreeTransformationData[];
-    selectedId?: string;
-    onSelect?: () => void;
-}): ReactElement {
-    return (
-        <div className="transformation-section">
-            <div className="transformation-section__header">
-                <span className="transformation-section__label">Transformations</span>
-                <span className="transformation-section__count">{transformations.length}</span>
-            </div>
-
-            <div className="transformation-section__content">
-                {transformations.map((t) => (
-                    <TransformationItem
-                        key={t.id}
-                        transformation={t}
-                        selectedId={selectedId}
-                        onSelect={onSelect}
-                    />
-                ))}
-            </div>
-        </div>
-    );
-});
-
-// ─── Viewpoint data structures ─────────────────────────────────────────────
-
-/** Sub-view data for tree display */
 interface TreeSubViewData {
     id: string;
     name: string;
@@ -871,51 +134,729 @@ interface TreeSubViewData {
 interface TreeViewpointData {
     id: string;
     name: string;
+    fqn: string;
     vpType: ViewpointType;
     isExclusive: boolean;
     viewCount: number;
-    /** Raw LViewPoint for DockManager.openViewpoint() */
     raw: LViewPoint;
-    /** Sub-views for expandable tree display */
     subViews: TreeSubViewData[];
 }
 
-/** Colors per viewpoint type — matching dashboard badge colors */
-const VP_TYPE_COLORS: Record<ViewpointType, { bg: string; color: string }> = {
-    syntax:          { bg: '#E6F1FB', color: '#185FA5' },
-    decoration:      { bg: '#EEEDFE', color: '#534AB7' },
-    validation:      { bg: '#FAEEDA', color: '#854F0B' },
-    semantics:       { bg: '#E1F5EE', color: '#0F6E56' },
-    editor_behavior: { bg: '#F1EFE8', color: '#5F5E5A' },
-};
+interface TreeTransformationData {
+    id: string;
+    name: string;
+    sourceMMName?: string;
+    targetMMName?: string;
+    rules?: string[];
+    helpers?: string[];
+}
 
-/** Viewpoint badge color — matches viewpoint tree (purple) */
-const VP_ICON_COLOR = { color: '#8b5cf6', bg: 'rgba(139,92,246,0.15)' };
-
-/** View badge color — matches viewpoint tree (blue) */
-const VIEW_ICON_COLOR = { color: '#3b82f6', bg: 'rgba(59,130,246,0.15)' };
+// ─── Hook: persistent expand/collapse via DProject.expandedTreeNodes ─────────
 
 /**
- * SubViewItem — a single view entry inside an expanded viewpoint
+ * Persistent expansion state derived from DProject.expandedTreeNodes.
+ *
+ * Default behaviour: a key not present in the array is treated as **expanded**.
+ * Toggling a node:
+ *   - if currently expanded (absent or present) → collapse means we add the key to the
+ *     collapsed-set ... but our convention is the opposite: the array stores
+ *     EXPANDED keys. So "absent → expanded" requires inversion.
+ *
+ * To honour the prompt ("Default load progetto esistente: tutto aperto, migration
+ * popola con tutti gli ID rilevanti") and the fallback for new entities ("ID assente
+ * → trattato come aperto al primo render"), we implement:
+ *   - If key is in expandedSet → expanded.
+ *   - If key is absent and the user has never interacted with it → expanded (fallback).
+ *   - User explicit collapse → we record by adding the key to a collapsed-set.
+ *
+ * Rather than introducing a second array, we use a single sentinel marker:
+ *   collapsed keys are represented by `${COLLAPSED_PREFIX}${key}` entries.
+ * This keeps the schema as a single string[] while distinguishing "collapsed" from
+ * "never seen". Migration seeds expanded keys (no markers), preserving the all-open
+ * default for legacy projects.
  */
-const SubViewItem = memo(function SubViewItem({
-    view,
-    viewpointRaw,
+const COLLAPSED_PREFIX = '!';
+
+function isExpandedFromArray(arr: ReadonlyArray<string>, key: string): boolean {
+    // explicit collapsed marker wins
+    if (arr.indexOf(COLLAPSED_PREFIX + key) !== -1) return false;
+    // present without marker → expanded
+    if (arr.indexOf(key) !== -1) return true;
+    // not present at all → fallback expanded (covers legacy + freshly created entities)
+    return true;
+}
+
+function toggleInArray(arr: ReadonlyArray<string>, key: string, expand: boolean): string[] {
+    const collapsedMarker = COLLAPSED_PREFIX + key;
+    const next = arr.filter(s => s !== key && s !== collapsedMarker);
+    if (expand) next.push(key);
+    else next.push(collapsedMarker);
+    return next;
+}
+
+// ─── Classifier context menu (Add View to Workbench) ────────────────────────
+
+/**
+ * Hook that returns context-menu state + handlers for a classifier (DClass,
+ * DEnumerator, DModel, DPackage). Right-click on the row opens the popup;
+ * "Create View" calls createViewInWorkbench on the last-edited viewpoint.
+ */
+function useClassifierContextMenu(elementId: string, name: string, className: string) {
+    const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
+    const nodeRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!ctxMenu) return;
+        const handleClick = () => setCtxMenu(null);
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setCtxMenu(null);
+        };
+        const handleScroll = () => setCtxMenu(null);
+        document.addEventListener('click', handleClick);
+        document.addEventListener('keydown', handleKeyDown);
+        const scrollContainer = nodeRef.current?.closest('.tree-view-sidebar__body, .tree-view-overlay__body');
+        scrollContainer?.addEventListener('scroll', handleScroll);
+        return () => {
+            document.removeEventListener('click', handleClick);
+            document.removeEventListener('keydown', handleKeyDown);
+            scrollContainer?.removeEventListener('scroll', handleScroll);
+        };
+    }, [ctxMenu]);
+
+    const handleContextMenu = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const menuWidth = 200;
+        const menuHeight = 40;
+        let x = e.clientX;
+        let y = e.clientY;
+        if (x + menuWidth > window.innerWidth) x = window.innerWidth - menuWidth - 8;
+        if (y + menuHeight > window.innerHeight) y = window.innerHeight - menuHeight - 8;
+        setCtxMenu({ x, y });
+    }, []);
+
+    const handleAddView = useCallback(() => {
+        createViewInWorkbench(elementId, name, className);
+        setCtxMenu(null);
+    }, [elementId, name, className]);
+
+    const hasWorkbenchVP = !!getLastEditedViewpointId();
+
+    const popup = ctxMenu ? (
+        <div
+            className="tree-node__context-menu"
+            style={{ position: 'fixed', top: ctxMenu.y, left: ctxMenu.x, zIndex: 9999 }}
+            onClick={(e) => e.stopPropagation()}
+        >
+            <div
+                className={`tree-node__context-item ${!hasWorkbenchVP ? 'tree-node__context-item--disabled' : ''}`}
+                onClick={hasWorkbenchVP ? handleAddView : undefined}
+            >
+                <i className="bi bi-eye" />
+                <span>{hasWorkbenchVP ? 'Create View' : 'Create View — open a viewpoint first'}</span>
+            </div>
+        </div>
+    ) : null;
+
+    return { handleContextMenu, popup, nodeRef };
+}
+
+// ─── Section node (synthetic, collapsible) ──────────────────────────────────
+
+interface SectionNodeProps {
+    sectionKey: string;
+    label: string;
+    counter?: number;
+    expanded: boolean;
+    onToggle: () => void;
+    children?: ReactNode;
+    depth: number;
+}
+
+const SectionNode = memo(function SectionNode({
+    sectionKey,
+    label,
+    counter,
+    expanded,
+    onToggle,
+    children,
     depth,
+}: SectionNodeProps): ReactElement {
+    return (
+        <div className="tree-section" data-section-key={sectionKey}>
+            <div
+                className="tree-section__header"
+                style={{ paddingLeft: `${depth * TREE_INDENT_STEP}px` }}
+                onClick={onToggle}
+            >
+                <button className="tree-node__toggle" onClick={(e) => { e.stopPropagation(); onToggle(); }}>
+                    <i className={`bi bi-chevron-${expanded ? 'down' : 'right'}`} />
+                </button>
+                <span className="tree-section__label">{label}</span>
+                {typeof counter === 'number' && (
+                    <span className="tree-counter">{counter}</span>
+                )}
+            </div>
+            {expanded && (
+                <div className="tree-children" data-section-content={sectionKey}>
+                    {children}
+                </div>
+            )}
+        </div>
+    );
+});
+
+// ─── EntityRow — single row for a real entity (M, P, m, C, VP) ──────────────
+
+type EntityBadge = 'M' | 'P' | 'm' | 'C' | 'VP' | 'v';
+
+interface EntityRowProps {
+    badge: EntityBadge;
+    badgeClassName?: string;       // CSS class for badge color (e.g. 'tree-DModel')
+    name: string;
+    nameClassName?: string;        // 'is-abstract' for italic
+    pillText?: string;             // e.g. 'M1'
+    expandKey?: string;            // synthetic or real id; absent → leaf
+    isLeaf?: boolean;
+    expanded?: boolean;
+    onToggle?: () => void;
+    extraIcon?: 'bezier2' | 'stack' | null;
+    extraIconTitle?: string;
+    tooltip?: ReactNode;
+    selected?: boolean;
+    onClick?: (e: React.MouseEvent) => void;
+    onContextMenu?: (e: React.MouseEvent) => void;
+    depth: number;
+    dataElementId?: string;
+    highlightAction?: ElementAction | null;
+    isHighlighted?: boolean;
+    showNewBadge?: boolean;
+    actions?: ReactNode;           // hover-reveal slot (e.g. add/duplicate/delete buttons)
+    nameOverride?: ReactNode;      // custom name renderer (e.g. inline rename input)
+    activeIndicator?: 'viewpoint' | 'model' | null; // pulsing dot — entity-typed
+}
+
+const EntityRow = memo(function EntityRow(props: EntityRowProps): ReactElement {
+    const {
+        badge, badgeClassName, name, nameClassName, pillText, expandKey, isLeaf,
+        expanded, onToggle, extraIcon, extraIconTitle, tooltip, selected,
+        onClick, onContextMenu, depth, dataElementId, highlightAction, isHighlighted, showNewBadge,
+        actions, nameOverride, activeIndicator,
+    } = props;
+
+    const hasChevron = !!expandKey && !isLeaf;
+
+    // Problem indicator — only for real entity ids (not synthetic section keys)
+    const problemKey = (expandKey && !isSectionKey(expandKey)) ? expandKey : '';
+    const problems = useNodeProblems(problemKey);
+    const topProblem = useMemo<NodeProblem | null>(() => {
+        if (!problems || problems.length === 0) return null;
+        // pick highest severity (error > warning); first if tie
+        let best: NodeProblem | null = null;
+        for (const p of problems) {
+            if (!best) { best = p; continue; }
+            if (best.severity !== 'error' && p.severity === 'error') best = p;
+        }
+        return best;
+    }, [problems]);
+
+    const problemTooltip = useMemo(() => {
+        if (!topProblem) return null;
+        const extra = problems.length > 1 ? ` (+${problems.length - 1} more)` : '';
+        return (topProblem.description || topProblem.title) + extra;
+    }, [topProblem, problems.length]);
+
+    const highlightClass = isHighlighted
+        ? `tree-row--highlighted tree-row--action-${highlightAction || 'unknown'}`
+        : '';
+
+    const rowContent = (
+        <div
+            className={`tree-row ${selected ? 'tree-row--selected' : ''} ${highlightClass}`.trim()}
+            style={{ paddingLeft: `${depth * TREE_INDENT_STEP}px` }}
+            data-element-id={dataElementId}
+            onContextMenu={onContextMenu}
+        >
+            {hasChevron ? (
+                <button
+                    className="tree-node__toggle"
+                    onClick={(e) => { e.stopPropagation(); onToggle?.(); }}
+                >
+                    <i className={`bi bi-chevron-${expanded ? 'down' : 'right'}`} />
+                </button>
+            ) : (
+                <span className="tree-node__toggle is-leaf" aria-hidden />
+            )}
+
+            <div className="tree-row__content" onClick={onClick}>
+                <span className={`tree-node__icon ${badgeClassName || ''}`}>{badge}</span>
+                {nameOverride !== undefined ? nameOverride : (
+                    <span className={`tree-row__name ${nameClassName || ''}`.trim()}>{name || 'unnamed'}</span>
+                )}
+                {pillText && <span className="tree-pill">{pillText}</span>}
+                {extraIcon === 'bezier2' && (
+                    <i
+                        className="bi bi-bezier2 tree-edge-marker"
+                        aria-hidden
+                        title={extraIconTitle || 'View as edge'}
+                    />
+                )}
+                {extraIcon === 'stack' && (
+                    <i
+                        className="bi bi-stack tree-stack-marker"
+                        aria-hidden
+                        title={extraIconTitle || 'Stack'}
+                    />
+                )}
+                {topProblem && (
+                    <i
+                        className="bi bi-exclamation-triangle-fill tree-problem-icon"
+                        data-severity={topProblem.severity}
+                        aria-hidden
+                        title={problemTooltip || ''}
+                    />
+                )}
+                {showNewBadge && (
+                    <span className="tree-node__badge tree-node__badge--new">NEW</span>
+                )}
+            </div>
+            {actions && <span className="tree-row__actions">{actions}</span>}
+            {activeIndicator && (
+                <span
+                    className={`tree-row__active-dot tree-row__active-dot--${activeIndicator}`}
+                    aria-label="active in editor"
+                />
+            )}
+        </div>
+    );
+
+    return (
+        <Tooltip tooltip={tooltip} inline position="r" offsetY={0}>
+            {rowContent}
+        </Tooltip>
+    );
+});
+
+// ─── Feature (leaf) row — M1 instance, no chevron, no tooltip ────────────────
+
+const FeatureRow = memo(function FeatureRow({
+    instance,
+    selected,
+    onSelect,
+    depth,
+}: {
+    instance: TreeFeatureData;
+    selected: boolean;
+    onSelect?: () => void;
+    depth: number;
+}): ReactElement {
+    const handleClick = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        SetRootFieldAction.new('_lastSelected' as any, {
+            node: '',
+            view: '',
+            modelElement: instance.id,
+        }, '', false);
+        window.dispatchEvent(new CustomEvent(JjodelEvents.SELECT_NODE, {
+            detail: { nodeId: instance.id, modelId: instance.modelId },
+        }));
+        onSelect?.();
+    }, [instance.id, instance.modelId, onSelect]);
+
+    return (
+        <div className="tree-row tree-row--feature" data-element-id={instance.id} style={{ paddingLeft: `${depth * TREE_INDENT_STEP}px` }}>
+            <span className="tree-node__toggle is-leaf" aria-hidden />
+            <div className={`tree-row__content ${selected ? 'tree-row__content--selected' : ''}`} onClick={handleClick}>
+                <span className="tree-feature__name">{instance.name}</span>
+                <span className="tree-feature__type">: {instance.metaclassName}</span>
+            </div>
+        </div>
+    );
+});
+
+// ─── Class node ──────────────────────────────────────────────────────────────
+
+const ClassNode = memo(function ClassNode({
+    cls,
+    selectedId,
+    depth,
+    highlightedElementId,
+    highlightedAction,
+}: {
+    cls: TreeClassData;
+    selectedId?: string;
+    depth: number;
+    highlightedElementId?: string | null;
+    highlightedAction?: ElementAction | null;
+}): ReactElement {
+    const isSelected = selectedId === cls.id;
+    const isHighlighted = highlightedElementId === cls.id;
+    const { handleContextMenu, popup, nodeRef } = useClassifierContextMenu(cls.id, cls.name, 'DClass');
+
+    const handleClick = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        SetRootFieldAction.new('_lastSelected', {
+            node: undefined,
+            view: undefined,
+            modelElement: cls.id,
+        }, '', false);
+    }, [cls.id]);
+
+    const tooltip = useMemo(() => (
+        <div>
+            <div><strong>{cls.fqn}</strong></div>
+            <div>{cls.instanceCount} instances across all models</div>
+        </div>
+    ), [cls.fqn, cls.instanceCount]);
+
+    return (
+        <div ref={nodeRef} className="tree-node" data-element-id={cls.id}>
+            <EntityRow
+                badge="C"
+                badgeClassName="tree-DClass"
+                name={cls.name}
+                nameClassName={cls.isAbstract ? 'is-abstract' : undefined}
+                isLeaf
+                extraIcon={cls.isEdgeView ? 'bezier2' : null}
+                extraIconTitle={cls.isEdgeView ? 'View as edge' : undefined}
+                tooltip={tooltip}
+                selected={isSelected}
+                onClick={handleClick}
+                onContextMenu={handleContextMenu}
+                depth={depth}
+                dataElementId={cls.id}
+                isHighlighted={isHighlighted}
+                highlightAction={highlightedAction}
+                showNewBadge={isHighlighted && highlightedAction === 'create'}
+                expandKey={cls.id}
+            />
+            {popup}
+        </div>
+    );
+});
+
+// ─── Package node (recursive) ────────────────────────────────────────────────
+
+const PackageNode = memo(function PackageNode({
+    pkg,
+    selectedId,
+    depth,
+    isExpanded,
+    onToggle,
+    isExpandedFn,
+    onToggleFn,
+    highlightedElementId,
+    highlightedAction,
+}: {
+    pkg: TreePackageData;
+    selectedId?: string;
+    depth: number;
+    isExpanded: boolean;
+    onToggle: () => void;
+    /** lookup to compute expanded state for descendants */
+    isExpandedFn: (key: string) => boolean;
+    onToggleFn: (key: string) => void;
+    highlightedElementId?: string | null;
+    highlightedAction?: ElementAction | null;
+}): ReactElement {
+    const isSelected = selectedId === pkg.id;
+    const isHighlighted = highlightedElementId === pkg.id;
+    const { handleContextMenu, popup, nodeRef } = useClassifierContextMenu(pkg.id, pkg.name, 'DPackage');
+
+    const handleClick = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        SetRootFieldAction.new('_lastSelected', {
+            node: undefined,
+            view: undefined,
+            modelElement: pkg.id,
+        }, '', false);
+    }, [pkg.id]);
+
+    const tooltip = useMemo(() => (
+        <div>
+            <div><strong>{pkg.fqn}</strong></div>
+            <div>{pkg.classCount} classes, {pkg.subPackageCount} sub-packages</div>
+        </div>
+    ), [pkg.fqn, pkg.classCount, pkg.subPackageCount]);
+
+    return (
+        <div ref={nodeRef} className="tree-node" data-element-id={pkg.id}>
+            <EntityRow
+                badge="P"
+                badgeClassName="tree-DPackage"
+                name={pkg.name}
+                expandKey={pkg.id}
+                expanded={isExpanded}
+                onToggle={onToggle}
+                tooltip={tooltip}
+                selected={isSelected}
+                onClick={handleClick}
+                onContextMenu={handleContextMenu}
+                depth={depth}
+                dataElementId={pkg.id}
+                isHighlighted={isHighlighted}
+                highlightAction={highlightedAction}
+                showNewBadge={isHighlighted && highlightedAction === 'create'}
+            />
+            {popup}
+            {isExpanded && (
+                <div className="tree-children">
+                    {pkg.subPackages.map(sub => (
+                        <PackageNode
+                            key={sub.id}
+                            pkg={sub}
+                            selectedId={selectedId}
+                            depth={depth + 1}
+                            isExpanded={isExpandedFn(sub.id)}
+                            onToggle={() => onToggleFn(sub.id)}
+                            isExpandedFn={isExpandedFn}
+                            onToggleFn={onToggleFn}
+                            highlightedElementId={highlightedElementId}
+                            highlightedAction={highlightedAction}
+                        />
+                    ))}
+                    {pkg.classes.map(c => (
+                        <ClassNode
+                            key={c.id}
+                            cls={c}
+                            selectedId={selectedId}
+                            depth={depth + 1}
+                            highlightedElementId={highlightedElementId}
+                            highlightedAction={highlightedAction}
+                        />
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+});
+
+// ─── Model node (M1) ─────────────────────────────────────────────────────────
+
+const ModelNode = memo(function ModelNode({
+    model,
+    selectedId,
+    depth,
+    isExpanded,
+    onToggle,
     onSelect,
 }: {
-    view: TreeSubViewData;
-    viewpointRaw: LViewPoint;
+    model: TreeModelData;
+    selectedId?: string;
     depth: number;
+    isExpanded: boolean;
+    onToggle: () => void;
     onSelect?: () => void;
 }): ReactElement {
-    const [isExpanded, setIsExpanded] = useStateIfMounted(false);
+    const isSelected = selectedId === model.id;
+
+    const handleClick = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        SetRootFieldAction.new('_lastSelected', {
+            node: undefined,
+            view: undefined,
+            modelElement: model.id,
+        }, '', false);
+        onSelect?.();
+    }, [model.id, onSelect]);
+
+    const tooltip = useMemo(() => (
+        <div>
+            <div><strong>{model.fqn}</strong></div>
+            <div>{model.objectCount} objects</div>
+        </div>
+    ), [model.fqn, model.objectCount]);
+
+    const hasInstances = model.instances.length > 0;
+    const canExpand = model.isActive && hasInstances;
+
+    return (
+        <div className="tree-node" data-element-id={model.id}>
+            <EntityRow
+                badge="m"
+                badgeClassName="tree-nested-model"
+                name={model.name}
+                expandKey={model.id}
+                isLeaf={!canExpand}
+                expanded={isExpanded && canExpand}
+                onToggle={onToggle}
+                tooltip={tooltip}
+                selected={isSelected}
+                activeIndicator={model.isActive ? 'model' : null}
+                onClick={handleClick}
+                depth={depth}
+                dataElementId={model.id}
+            />
+            {isExpanded && canExpand && (
+                <div className="tree-children">
+                    {model.instances.map(inst => (
+                        <FeatureRow
+                            key={inst.id}
+                            instance={inst}
+                            selected={selectedId === inst.id}
+                            onSelect={onSelect}
+                            depth={depth + 1}
+                        />
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+});
+
+// ─── Metamodel node ──────────────────────────────────────────────────────────
+
+const MetamodelNode = memo(function MetamodelNode({
+    mm,
+    selectedId,
+    depth,
+    isExpanded,
+    onToggle,
+    isExpandedFn,
+    onToggleFn,
+    onSelect,
+    highlightedElementId,
+    highlightedAction,
+}: {
+    mm: TreeMetamodelData;
+    selectedId?: string;
+    depth: number;
+    isExpanded: boolean;
+    onToggle: () => void;
+    isExpandedFn: (key: string) => boolean;
+    onToggleFn: (key: string) => void;
+    onSelect?: () => void;
+    highlightedElementId?: string | null;
+    highlightedAction?: ElementAction | null;
+}): ReactElement {
+    const isSelected = selectedId === mm.id;
+    const isHighlighted = highlightedElementId === mm.id;
+    const { handleContextMenu, popup, nodeRef } = useClassifierContextMenu(mm.id, mm.name, 'DModel');
+
+    const handleClick = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        SetRootFieldAction.new('_lastSelected', {
+            node: mm.nodeId,
+            view: mm.viewId,
+            modelElement: mm.id,
+        }, '', false);
+        onSelect?.();
+    }, [mm.id, mm.nodeId, mm.viewId, onSelect]);
+
+    const tooltip = useMemo(() => (
+        <div>
+            <div><strong>{mm.fqn}</strong></div>
+            <div>{mm.modelCount} models, {mm.classCount} classes</div>
+        </div>
+    ), [mm.fqn, mm.modelCount, mm.classCount]);
+
+    const modelsKey = modelsSectionKey(mm.id);
+    const modelsSectionExpanded = isExpandedFn(modelsKey);
+
+    return (
+        <div ref={nodeRef} className="tree-node" data-element-id={mm.id}>
+            <EntityRow
+                badge="M"
+                badgeClassName="tree-DModel"
+                name={mm.name}
+                expandKey={mm.id}
+                expanded={isExpanded}
+                onToggle={onToggle}
+                tooltip={tooltip}
+                selected={isSelected}
+                onClick={handleClick}
+                onContextMenu={handleContextMenu}
+                depth={depth}
+                dataElementId={mm.id}
+                isHighlighted={isHighlighted}
+                highlightAction={highlightedAction}
+                showNewBadge={isHighlighted && highlightedAction === 'create'}
+            />
+            {popup}
+            {isExpanded && (
+                <div className="tree-children">
+                    {mm.rootPackages.map(pkg => (
+                        <PackageNode
+                            key={pkg.id}
+                            pkg={pkg}
+                            selectedId={selectedId}
+                            depth={depth + 1}
+                            isExpanded={isExpandedFn(pkg.id)}
+                            onToggle={() => onToggleFn(pkg.id)}
+                            isExpandedFn={isExpandedFn}
+                            onToggleFn={onToggleFn}
+                            highlightedElementId={highlightedElementId}
+                            highlightedAction={highlightedAction}
+                        />
+                    ))}
+                    <SectionNode
+                        sectionKey={modelsKey}
+                        label="Models"
+                        counter={mm.childModels.length}
+                        expanded={modelsSectionExpanded}
+                        onToggle={() => onToggleFn(modelsKey)}
+                        depth={depth + 1}
+                    >
+                        {mm.childModels.map(model => (
+                            <ModelNode
+                                key={model.id}
+                                model={model}
+                                selectedId={selectedId}
+                                depth={depth + 2}
+                                isExpanded={isExpandedFn(model.id)}
+                                onToggle={() => onToggleFn(model.id)}
+                                onSelect={onSelect}
+                            />
+                        ))}
+                    </SectionNode>
+                </div>
+            )}
+        </div>
+    );
+});
+
+// ─── Viewpoint nodes ─────────────────────────────────────────────────────────
+
+interface SubViewItemRenameProps {
+    renamingViewId: string | null;
+    renameValue: string;
+    setRenameValue: (v: string) => void;
+    submitRenameView: (lView: LViewElement) => void;
+    handleRenameKeyDown: (e: React.KeyboardEvent, lView: LViewElement) => void;
+    renameInputRef: React.RefObject<HTMLInputElement>;
+}
+
+const SubViewItem = memo(function SubViewItem({
+    view,
+    depth,
+    isExpandedFn,
+    onToggleFn,
+    onSelect,
+    renamingViewId,
+    renameValue,
+    setRenameValue,
+    submitRenameView,
+    handleRenameKeyDown,
+    renameInputRef,
+}: {
+    view: TreeSubViewData;
+    depth: number;
+    isExpandedFn: (key: string) => boolean;
+    onToggleFn: (key: string) => void;
+    onSelect?: () => void;
+} & SubViewItemRenameProps): ReactElement {
     const hasChildren = view.children.length > 0;
+    const expanded = isExpandedFn(view.id);
+    const isRenaming = renamingViewId === view.id;
+
+    const lView = useMemo(
+        () => LPointerTargetable.fromPointer(view.id) as LViewElement,
+        [view.id]
+    );
 
     const handleClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
         try {
-            // Select this view in _lastSelected so the Properties panel renders ViewData
             SetRootFieldAction.new('_lastSelected' as any, {
                 node: '',
                 view: view.id,
@@ -927,44 +868,83 @@ const SubViewItem = memo(function SubViewItem({
         onSelect?.();
     }, [view.id, onSelect]);
 
-    const toggleExpand = useCallback((e: React.MouseEvent) => {
+    const handleDuplicate = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
-        setIsExpanded(prev => !prev);
-    }, [setIsExpanded]);
+        // LViewElement.duplicate(deep: boolean = true): wraps in TRANSACTION,
+        // undo-tracked. Deep copies nested subViews recursively.
+        lView.duplicate(true);
+    }, [lView]);
+
+    const handleDelete = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        lView.delete();
+    }, [lView]);
+
+    const nameOverride = isRenaming ? (
+        <input
+            ref={renameInputRef}
+            className="tree-row__rename-input"
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            onBlur={() => submitRenameView(lView)}
+            onKeyDown={(e) => handleRenameKeyDown(e, lView)}
+            onClick={(e) => e.stopPropagation()}
+        />
+    ) : undefined;
+
+    const actions = (
+        <>
+            <button
+                className="tree-row__action"
+                onClick={handleDuplicate}
+                title="Duplicate"
+                aria-label="Duplicate"
+            >
+                <i className="bi bi-copy" />
+            </button>
+            <button
+                className="tree-row__action tree-row__action--danger"
+                onClick={handleDelete}
+                title="Delete"
+                aria-label="Delete"
+            >
+                <i className="bi bi-trash" />
+            </button>
+        </>
+    );
 
     return (
         <div className="tree-node" data-element-id={view.id}>
-            <div
-                className="tree-node__header"
-                style={{ paddingLeft: `${depth * 16}px` }}
-            >
-                <button className="tree-node__toggle" onClick={toggleExpand} disabled={!hasChildren}>
-                    {hasChildren ? (
-                        <i className={`bi bi-chevron-${isExpanded ? 'down' : 'right'}`} />
-                    ) : (
-                        <span className="tree-node__spacer" />
-                    )}
-                </button>
-                <div className="tree-node__content" onClick={handleClick}>
-                    <span
-                        className="tree-node__icon tree-subview"
-                        style={{ color: VIEW_ICON_COLOR.color, background: VIEW_ICON_COLOR.bg }}
-                    >
-                        V
-                    </span>
-                    <span className="tree-node__name">{view.name}</span>
-                </div>
-            </div>
-
-            {isExpanded && hasChildren && (
-                <div className="tree-node__children">
-                    {view.children.map((child) => (
+            <EntityRow
+                badge="v"
+                badgeClassName="tree-leaf-view"
+                name={view.name}
+                nameOverride={nameOverride}
+                expandKey={view.id}
+                isLeaf={!hasChildren}
+                expanded={expanded}
+                onToggle={() => onToggleFn(view.id)}
+                onClick={handleClick}
+                depth={depth}
+                dataElementId={view.id}
+                actions={actions}
+            />
+            {expanded && hasChildren && (
+                <div className="tree-children">
+                    {view.children.map(child => (
                         <SubViewItem
                             key={child.id}
                             view={child}
-                            viewpointRaw={viewpointRaw}
                             depth={depth + 1}
+                            isExpandedFn={isExpandedFn}
+                            onToggleFn={onToggleFn}
                             onSelect={onSelect}
+                            renamingViewId={renamingViewId}
+                            renameValue={renameValue}
+                            setRenameValue={setRenameValue}
+                            submitRenameView={submitRenameView}
+                            handleRenameKeyDown={handleRenameKeyDown}
+                            renameInputRef={renameInputRef}
                         />
                     ))}
                 </div>
@@ -973,74 +953,108 @@ const SubViewItem = memo(function SubViewItem({
     );
 });
 
-/**
- * ViewpointItem — a single viewpoint entry in the tree (expandable with sub-views)
- */
-const ViewpointItem = memo(function ViewpointItem({
-    viewpoint,
+interface ViewpointRenameProps extends SubViewItemRenameProps {
+    startRenameView: (viewId: string, currentName: string, isFirst?: boolean) => void;
+}
+
+const ViewpointNode = memo(function ViewpointNode({
+    vp,
+    depth,
+    isExpandedFn,
+    onToggleFn,
     onSelect,
+    activeViewpointId,
+    startRenameView,
+    renamingViewId,
+    renameValue,
+    setRenameValue,
+    submitRenameView,
+    handleRenameKeyDown,
+    renameInputRef,
 }: {
-    viewpoint: TreeViewpointData;
+    vp: TreeViewpointData;
+    depth: number;
+    isExpandedFn: (key: string) => boolean;
+    onToggleFn: (key: string) => void;
     onSelect?: () => void;
-}): ReactElement {
-    const [isExpanded, setIsExpanded] = useStateIfMounted(false);
-    const hasSubViews = viewpoint.subViews.length > 0;
+    activeViewpointId?: string;
+} & ViewpointRenameProps): ReactElement {
+    const hasSubViews = vp.subViews.length > 0;
+    const expanded = isExpandedFn(vp.id);
+    const isActive = !!activeViewpointId && vp.id === activeViewpointId;
 
     const handleClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
         try {
-            // Select this viewpoint in _lastSelected so the Properties panel renders ViewpointProperties
             SetRootFieldAction.new('_lastSelected' as any, {
                 node: '',
-                view: viewpoint.id,
+                view: vp.id,
                 modelElement: '',
             });
         } catch (err) {
             console.warn('[TreeView] Failed to select viewpoint:', err);
         }
         onSelect?.();
-    }, [viewpoint.id, onSelect]);
+    }, [vp.id, onSelect]);
 
-    const toggleExpand = useCallback((e: React.MouseEvent) => {
-        e.stopPropagation();
-        setIsExpanded(prev => !prev);
-    }, [setIsExpanded]);
+    const handleAddView = useCallback(() => {
+        const dVp = DPointerTargetable.from(vp.id) as DViewElement | undefined;
+        if (!dVp) {
+            console.warn('[TreeView] handleAddView: viewpoint D-element not found:', vp.id);
+            return;
+        }
+        const newView = createBlankViewInViewpoint(dVp, 'New view');
+        // React 18 automatic batching: il dispatch Redux di new2 e la
+        // setState di startRenameView sono applicati nello stesso commit.
+        // Quando il nuovo <SubViewItem> monta, vede già renamingViewId === newView.id.
+        startRenameView(newView.id, newView.name, true);
+    }, [vp.id, startRenameView]);
 
-    const iconStyle = VP_ICON_COLOR;
-    const badgeStyle = VP_TYPE_COLORS[viewpoint.vpType] || VP_TYPE_COLORS.decoration;
+    const actions = (
+        <button
+            className="tree-row__action"
+            onClick={(e) => { e.stopPropagation(); handleAddView(); }}
+            title="Add view"
+            aria-label="Add view"
+        >
+            <i className="bi bi-plus-lg" />
+        </button>
+    );
 
     return (
-        <div className="tree-node" data-element-id={viewpoint.id}>
-            <div className="tree-node__header" style={{ paddingLeft: '16px' }}>
-                <button className="tree-node__toggle" onClick={toggleExpand} disabled={!hasSubViews}>
-                    {hasSubViews ? (
-                        <i className={`bi bi-chevron-${isExpanded ? 'down' : 'right'}`} />
-                    ) : (
-                        <span className="tree-node__spacer" />
-                    )}
-                </button>
-                <div className="tree-node__content" onClick={handleClick}>
-                    <span
-                        className="tree-node__icon tree-viewpoint"
-                        style={{ color: iconStyle.color, background: iconStyle.bg }}
-                    >
-                        VP
-                    </span>
-                    <span className="tree-node__name">{viewpoint.name}</span>
-
-                    {!viewpoint.isExclusive && <i className={'bi bi-layers'} title={'Overkay viewpoint'} style={{ fontSize: '11px', opacity: 0.5 }}></i>}
-                </div>
-            </div>
-
-            {isExpanded && hasSubViews && (
-                <div className="tree-node__children">
-                    {viewpoint.subViews.map((sv) => (
+        <div className="tree-node" data-element-id={vp.id}>
+            <EntityRow
+                badge="VP"
+                badgeClassName="tree-viewpoint"
+                name={vp.name}
+                expandKey={vp.id}
+                isLeaf={!hasSubViews}
+                expanded={expanded}
+                onToggle={() => onToggleFn(vp.id)}
+                extraIcon={!vp.isExclusive ? 'stack' : null}
+                extraIconTitle={!vp.isExclusive ? 'Overlay viewpoint' : undefined}
+                onClick={handleClick}
+                depth={depth}
+                dataElementId={vp.id}
+                activeIndicator={isActive ? 'viewpoint' : null}
+                actions={actions}
+            />
+            {expanded && hasSubViews && (
+                <div className="tree-children">
+                    {vp.subViews.map(sv => (
                         <SubViewItem
                             key={sv.id}
                             view={sv}
-                            viewpointRaw={viewpoint.raw}
-                            depth={2}
+                            depth={depth + 1}
+                            isExpandedFn={isExpandedFn}
+                            onToggleFn={onToggleFn}
                             onSelect={onSelect}
+                            renamingViewId={renamingViewId}
+                            renameValue={renameValue}
+                            setRenameValue={setRenameValue}
+                            submitRenameView={submitRenameView}
+                            handleRenameKeyDown={handleRenameKeyDown}
+                            renameInputRef={renameInputRef}
                         />
                     ))}
                 </div>
@@ -1049,205 +1063,202 @@ const ViewpointItem = memo(function ViewpointItem({
     );
 });
 
-/** Order and labels for viewpoint type groups */
-const VP_TYPE_ORDER: ViewpointType[] = ['syntax', 'decoration', 'validation', 'semantics', 'editor_behavior'];
+// ─── Transformation entries (kept from previous design, lightly adapted) ─────
 
-const VP_TYPE_LABELS: Record<ViewpointType, string> = {
-    syntax: 'Syntax',
-    decoration: 'Decoration',
-    validation: 'Validation',
-    semantics: 'Semantics',
-    editor_behavior: 'Editor behavior',
-};
-
-/**
- * ViewpointSection — collapsible section listing all viewpoints grouped by type
- */
-/**
- * ViewpointTypeGroup — collapsible sub-group for a single viewpoint type (Syntax, Validation, etc.)
- */
-const ViewpointTypeGroup = memo(function ViewpointTypeGroup({
-    type,
-    viewpoints,
-    onSelect,
-}: {
-    type: ViewpointType;
-    viewpoints: TreeViewpointData[];
-    onSelect?: () => void;
-}): ReactElement {
-    const [isExpanded, setIsExpanded] = useStateIfMounted(true);
-
-    const handleToggle = useCallback((e: React.MouseEvent) => {
-        e.stopPropagation();
-        setIsExpanded(prev => !prev);
-    }, [setIsExpanded]);
-
-    return (
-        <div className="tree-type-group">
-            <div className="tree-type-group__header" data-type={type} onClick={handleToggle}>
-                <button className="tree-node__toggle">
-                    <i className={`bi bi-chevron-${isExpanded ? 'down' : 'right'}`} />
-                </button>
-                <span className="tree-type-group__label" data-type={type}>
-                    {VP_TYPE_LABELS[type]}
-                </span>
-                <span className="tree-type-group__count">{viewpoints.length}</span>
-            </div>
-            {isExpanded && (
-                <div className="tree-type-group__content">
-                    {viewpoints.map((vp) => (
-                        <ViewpointItem
-                            key={vp.id}
-                            viewpoint={vp}
-                            onSelect={onSelect}
-                        />
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-});
-
-const ViewpointSection = memo(function ViewpointSection({
-    viewpoints,
-    onSelect,
-}: {
-    viewpoints: TreeViewpointData[];
-    onSelect?: () => void;
-}): ReactElement {
-    // Group viewpoints by type
-    const groupedViewpoints = useMemo(() => {
-        const groups = new Map<ViewpointType, TreeViewpointData[]>();
-        for (const vp of viewpoints) {
-            if (!groups.has(vp.vpType)) groups.set(vp.vpType, []);
-            groups.get(vp.vpType)!.push(vp);
-        }
-        return groups;
-    }, [viewpoints]);
-
-    // Only render groups that have viewpoints
-    const activeGroups = useMemo(() =>
-        VP_TYPE_ORDER.filter(type => groupedViewpoints.has(type)),
-    [groupedViewpoints]);
-
-    return (
-        <div className="viewpoint-section">
-            <div className="viewpoint-section__header">
-                <span className="viewpoint-section__label">Viewpoints</span>
-                <span className="viewpoint-section__count">{viewpoints.length}</span>
-            </div>
-
-            <div className="viewpoint-section__content">
-                {activeGroups.map((type) => (
-                    <ViewpointTypeGroup
-                        key={type}
-                        type={type}
-                        viewpoints={groupedViewpoints.get(type)!}
-                        onSelect={onSelect}
-                    />
-                ))}
-            </div>
-        </div>
-    );
-});
-
-/**
- * MetamodelsSection — collapsible section grouping all metamodels and their child models
- */
-const MetamodelsSection = memo(function MetamodelsSection({
-    metamodels,
+const TransformationItem = memo(function TransformationItem({
+    transformation,
     selectedId,
+    depth,
+    isExpandedFn,
+    onToggleFn,
     onSelect,
-    highlightedElementId,
-    highlightedAction,
-    expandedNodeIds,
-    isScriptExecuting,
 }: {
-    metamodels: ProcessedMetamodel[];
+    transformation: TreeTransformationData;
     selectedId?: string;
-    onSelect?: () => void;
-    highlightedElementId?: string | null;
-    highlightedAction?: ElementAction | null;
-    expandedNodeIds?: Set<string>;
-    isScriptExecuting?: boolean;
-}): ReactElement {
-    const totalCount = metamodels.length;
-
-    return (
-        <div className="metamodels-section">
-            <div className="metamodels-section__header">
-                <span className="metamodels-section__label">Metamodels</span>
-                <span className="metamodels-section__count">{totalCount}</span>
-            </div>
-
-            <div className="metamodels-section__content">
-                {metamodels.map((mm, index) => (
-                    <React.Fragment key={mm.data.id}>
-                        <MetamodelTree
-                            metamodel={mm.data}
-                            packages={mm.packages}
-                            selectedId={selectedId}
-                            onSelect={onSelect}
-                            defaultExpanded={index === 0}
-                            highlightedElementId={highlightedElementId}
-                            highlightedAction={highlightedAction}
-                            expandedNodeIds={expandedNodeIds}
-                            isScriptExecuting={isScriptExecuting}
-                        />
-                        {mm.childModels.map((model) => (
-                            <NestedModelTree
-                                key={model.id}
-                                model={model}
-                                depth={1}
-                                selectedId={selectedId}
-                                onSelect={onSelect}
-                            />
-                        ))}
-                    </React.Fragment>
-                ))}
-            </div>
-        </div>
-    );
-});
-
-/**
- * DocumentationEntry — simple entry for the documentation section
- */
-const DocumentationEntry = memo(function DocumentationEntry({
-    onSelect,
-}: {
+    depth: number;
+    isExpandedFn: (key: string) => boolean;
+    onToggleFn: (key: string) => void;
     onSelect?: () => void;
 }): ReactElement {
-    const handleClick = useCallback(() => {
-        // Open the dashboard scrolled to documentation section
-        window.dispatchEvent(new CustomEvent(JjodelEvents.OPEN_MEGAMODEL));
+    const expanded = isExpandedFn(transformation.id);
+    const hasRules = (transformation.rules?.length || 0) > 0;
+    const hasHelpers = (transformation.helpers?.length || 0) > 0;
+    const hasChildren = hasRules || hasHelpers;
+    const isSelected = selectedId === transformation.id;
+
+    const handleClick = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        window.dispatchEvent(new CustomEvent(JjodelEvents.OPEN_TRANSFORMATION, {
+            detail: { id: transformation.id },
+        }));
+        SetRootFieldAction.new('_lastSelected', {
+            node: '',
+            view: '',
+            modelElement: transformation.id,
+        }, '', false);
         onSelect?.();
-    }, [onSelect]);
+    }, [transformation.id, onSelect]);
 
     return (
-        <div className="documentation-entry">
-            <div className="documentation-entry__header" onClick={handleClick}>
-                <span className="documentation-entry__label">Documentation</span>
-            </div>
+        <div className="tree-node" data-element-id={transformation.id}>
+            <EntityRow
+                badge="C"
+                badgeClassName="tree-transformation"
+                name={transformation.name}
+                expandKey={transformation.id}
+                isLeaf={!hasChildren}
+                expanded={expanded}
+                onToggle={() => onToggleFn(transformation.id)}
+                selected={isSelected}
+                onClick={handleClick}
+                depth={depth}
+                dataElementId={transformation.id}
+            />
+            {expanded && hasChildren && (
+                <div className="tree-children">
+                    {transformation.rules?.map((rule, i) => (
+                        <div key={`r-${i}`} className="tree-row tree-row--feature" style={{ paddingLeft: `${(depth + 1) * TREE_INDENT_STEP}px` }}>
+                            <span className="tree-node__toggle is-leaf" aria-hidden />
+                            <div className="tree-row__content">
+                                <span className="tree-node__icon tree-rule">R</span>
+                                <span className="tree-row__name">{rule}</span>
+                            </div>
+                        </div>
+                    ))}
+                    {transformation.helpers?.map((helper, i) => (
+                        <div key={`h-${i}`} className="tree-row tree-row--feature" style={{ paddingLeft: `${(depth + 1) * TREE_INDENT_STEP}px` }}>
+                            <span className="tree-node__toggle is-leaf" aria-hidden />
+                            <div className="tree-row__content">
+                                <span className="tree-node__icon tree-helper">H</span>
+                                <span className="tree-row__name">{helper}</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 });
 
-function TreeViewContentComponent(props: AllProps & TreeViewContentProps) {
-    const { processedMetamodels, selectedElementId, onSelect } = props;
-    const containerRef = useRef<HTMLDivElement>(null);
+// ─── Documentation empty state ───────────────────────────────────────────────
 
-    // Get highlighting state from context
+const DocumentationEmptyState = memo(function DocumentationEmptyState({
+    depth,
+}: {
+    depth: number;
+}): ReactElement {
+    const handleGenerate = useCallback(() => {
+        // TODO: wire to AI doc generation when an action is exposed
+        // (jjodie-integration/JjodieAPIImpl currently has createMetamodel but no generate-doc).
+        console.warn('[TreeView] Generate documentation: not yet implemented');
+    }, []);
+
+    return (
+        <div className="tree-empty-doc" style={{ paddingLeft: `${depth * TREE_INDENT_STEP}px` }}>
+            <span className="tree-empty-doc-label">No documentation yet</span>
+            <button className="tree-generate-btn" type="button" onClick={handleGenerate}>
+                <i className="bi bi-stars" aria-hidden />
+                Generate
+            </button>
+        </div>
+    );
+});
+
+// ─── Main component ─────────────────────────────────────────────────────────
+
+interface TreeViewContentProps {
+    onSelect?: () => void;
+}
+
+interface OwnProps extends TreeViewContentProps {}
+
+interface StateProps {
+    metamodels: TreeMetamodelData[];
+    standaloneModels: TreeModelData[];
+    viewpoints: TreeViewpointData[];
+    selectedElementId?: string;
+    activeViewpointId?: string;
+    projectId?: Pointer<DProject>;
+    expandedTreeNodes: string[];
+}
+
+interface DispatchProps {}
+
+type AllProps = OwnProps & StateProps & DispatchProps;
+
+function TreeViewContentComponent(props: AllProps) {
     const {
-        highlightedElementId,
-        highlightedAction,
-        expandedNodeIds,
-        isScriptExecuting
-    } = useTreeViewPanel();
+        metamodels, standaloneModels, viewpoints, selectedElementId,
+        activeViewpointId, projectId, expandedTreeNodes, onSelect,
+    } = props;
+
+    const containerRef = useRef<HTMLDivElement>(null);
+    const { highlightedElementId, highlightedAction } = useTreeViewPanel();
+
+    // ─── Inline rename state for View nodes ─────────────────────────────────
+    // `isFirstRename` distingue il primo rename post-creazione (Esc/blur-empty
+    // elimina la view) dal rename di una view esistente (Esc annulla senza cancellare).
+    const [renamingViewId, setRenamingViewId] = useState<string | null>(null);
+    const [renameValue, setRenameValue] = useState('');
+    const [isFirstRename, setIsFirstRename] = useState(false);
+    const renameInputRef = useRef<HTMLInputElement>(null);
+
+    const startRenameView = useCallback(
+        (viewId: string, currentName: string, isFirst: boolean = false) => {
+            setRenamingViewId(viewId);
+            setRenameValue(currentName);
+            setIsFirstRename(isFirst);
+        },
+        []
+    );
+
+    const submitRenameView = useCallback((lView: LViewElement) => {
+        const newName = renameValue.trim();
+        if (newName && newName !== lView.name) {
+            lView.name = newName; // L-proxy setter, undo-tracked
+        }
+        // Blur con campo vuoto durante il primo rename → elimina la view.
+        if (!newName && isFirstRename) {
+            lView.delete();
+        }
+        setRenamingViewId(null);
+        setRenameValue('');
+        setIsFirstRename(false);
+    }, [renameValue, isFirstRename]);
+
+    const cancelRenameView = useCallback((lView: LViewElement) => {
+        // Esc durante il primo rename post-creazione → elimina la view.
+        // Esc durante un rename di view esistente → solo annulla, non cancella.
+        if (isFirstRename) {
+            lView.delete();
+        }
+        setRenamingViewId(null);
+        setRenameValue('');
+        setIsFirstRename(false);
+    }, [isFirstRename]);
+
+    const handleRenameKeyDown = useCallback(
+        (e: React.KeyboardEvent, lView: LViewElement) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                submitRenameView(lView);
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                cancelRenameView(lView);
+            }
+        },
+        [submitRenameView, cancelRenameView]
+    );
+
+    useEffect(() => {
+        if (renamingViewId && renameInputRef.current) {
+            renameInputRef.current.focus();
+            renameInputRef.current.select();
+        }
+    }, [renamingViewId]);
 
     // Transformations received via CustomEvent from ProjectEditor
     const [transformations, setTransformations] = useState<TreeTransformationData[]>([]);
-
     useEffect(() => {
         const handler = (e: Event) => {
             const detail = (e as CustomEvent).detail as TreeTransformationData[] | undefined;
@@ -1262,37 +1273,102 @@ function TreeViewContentComponent(props: AllProps & TreeViewContentProps) {
         const handleScrollToElement = (event: Event) => {
             const customEvent = event as CustomEvent;
             const { elementId } = customEvent.detail || {};
-
             if (!elementId || !containerRef.current) return;
-
-            // Find the element by data-element-id
             const targetElement = containerRef.current.querySelector(`[data-element-id="${elementId}"]`);
-
             if (targetElement) {
-                // Scroll element into view with smooth animation
-                targetElement.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'center',
-                    inline: 'nearest'
-                });
+                targetElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
             }
         };
-
         window.addEventListener(SystemEvents.TREEVIEW_SCROLL, handleScrollToElement);
-
-        return () => {
-            window.removeEventListener(SystemEvents.TREEVIEW_SCROLL, handleScrollToElement);
-        };
+        return () => window.removeEventListener(SystemEvents.TREEVIEW_SCROLL, handleScrollToElement);
     }, []);
 
-    const { standaloneModels, viewpoints: vpData } = props as AllProps;
+    // Expand/collapse helpers — derived from expandedTreeNodes prop
+    const isExpandedFn = useCallback(
+        (key: string) => isExpandedFromArray(expandedTreeNodes, key),
+        [expandedTreeNodes]
+    );
 
-    const hasContent = (processedMetamodels && processedMetamodels.length > 0) || standaloneModels.length > 0;
+    const onToggleFn = useCallback((key: string) => {
+        if (!projectId) return;
+        const currentlyExpanded = isExpandedFromArray(expandedTreeNodes, key);
+        const next = toggleInArray(expandedTreeNodes, key, !currentlyExpanded);
+        SetFieldAction.new(projectId, 'expandedTreeNodes', next, '', false);
+    }, [projectId, expandedTreeNodes]);
 
-    if (!hasContent && transformations.length === 0 && vpData.length === 0) {
+    // Cleanup orphaned ids — runs whenever live ids change. Dispatch is gated on
+    // length-difference, which prevents the SetFieldAction → re-render loop:
+    // after one cleanup pass, expandedTreeNodes is filtered, the next effect
+    // run finds no diff and skips dispatch.
+    useEffect(() => {
+        if (!projectId) return;
+
+        const validIds = new Set<string>();
+        for (const mm of metamodels) {
+            validIds.add(mm.id);
+            const visit = (pkg: TreePackageData) => {
+                validIds.add(pkg.id);
+                for (const sub of pkg.subPackages) visit(sub);
+                for (const c of pkg.classes) validIds.add(c.id);
+            };
+            for (const pkg of mm.rootPackages) visit(pkg);
+            for (const m of mm.childModels) validIds.add(m.id);
+        }
+        for (const m of standaloneModels) validIds.add(m.id);
+        for (const vp of viewpoints) {
+            validIds.add(vp.id);
+            const visit = (sv: TreeSubViewData) => {
+                validIds.add(sv.id);
+                for (const c of sv.children) visit(c);
+            };
+            for (const sv of vp.subViews) visit(sv);
+        }
+        const liveMetamodelIds = new Set(metamodels.map(m => m.id));
+
+        const filtered = expandedTreeNodes.filter(entry => {
+            const stripped = entry.startsWith(COLLAPSED_PREFIX) ? entry.slice(COLLAPSED_PREFIX.length) : entry;
+            if (STATIC_SECTION_KEYS.has(stripped)) return true;
+            if (stripped.startsWith(MODELS_SECTION_PREFIX)) {
+                const mmId = stripped.slice(MODELS_SECTION_PREFIX.length);
+                return liveMetamodelIds.has(mmId);
+            }
+            return validIds.has(stripped);
+        });
+
+        if (filtered.length !== expandedTreeNodes.length) {
+            SetFieldAction.new(projectId, 'expandedTreeNodes', filtered, '', false);
+        }
+    }, [projectId, expandedTreeNodes, metamodels, standaloneModels, viewpoints]);
+
+    // Group viewpoints by type
+    const { syntaxVps, validationVps, otherVps } = useMemo(() => {
+        const syntax: TreeViewpointData[] = [];
+        const validation: TreeViewpointData[] = [];
+        const other: TreeViewpointData[] = [];
+        for (const vp of viewpoints) {
+            if (vp.vpType === 'syntax') syntax.push(vp);
+            else if (vp.vpType === 'validation') validation.push(vp);
+            else other.push(vp);
+        }
+        return { syntaxVps: syntax, validationVps: validation, otherVps: other };
+    }, [viewpoints]);
+
+    const hasContent =
+        metamodels.length > 0 ||
+        standaloneModels.length > 0 ||
+        viewpoints.length > 0 ||
+        transformations.length > 0;
+
+    const megamodelExpanded = isExpandedFn(SECTION_KEYS.MEGAMODEL);
+    const metamodelsExpanded = isExpandedFn(SECTION_KEYS.METAMODELS);
+    const viewpointsExpanded = isExpandedFn(SECTION_KEYS.VIEWPOINTS);
+    const syntaxExpanded = isExpandedFn(SECTION_KEYS.VIEWPOINTS_SYNTAX);
+    const validationExpanded = isExpandedFn(SECTION_KEYS.VIEWPOINTS_VALIDATION);
+    const docsExpanded = isExpandedFn(SECTION_KEYS.DOCUMENTATION);
+
+    if (!hasContent) {
         return (
             <div ref={containerRef} className="tree-view-content">
-                <MegamodelEntry />
                 <div className="tree-view-empty">
                     <i className="bi bi-diagram-3" />
                     <p>No metamodels</p>
@@ -1304,78 +1380,174 @@ function TreeViewContentComponent(props: AllProps & TreeViewContentProps) {
 
     return (
         <div ref={containerRef} className="tree-view-content">
-            <MegamodelEntry />
+            <SectionNode
+                sectionKey={SECTION_KEYS.MEGAMODEL}
+                label="Megamodel"
+                expanded={megamodelExpanded}
+                onToggle={() => onToggleFn(SECTION_KEYS.MEGAMODEL)}
+                depth={0}
+            >
+                {/* METAMODELS */}
+                <SectionNode
+                    sectionKey={SECTION_KEYS.METAMODELS}
+                    label="Metamodels"
+                    counter={metamodels.length}
+                    expanded={metamodelsExpanded}
+                    onToggle={() => onToggleFn(SECTION_KEYS.METAMODELS)}
+                    depth={1}
+                >
+                    {metamodels.map(mm => (
+                        <MetamodelNode
+                            key={mm.id}
+                            mm={mm}
+                            selectedId={selectedElementId}
+                            depth={2}
+                            isExpanded={isExpandedFn(mm.id)}
+                            onToggle={() => onToggleFn(mm.id)}
+                            isExpandedFn={isExpandedFn}
+                            onToggleFn={onToggleFn}
+                            onSelect={onSelect}
+                            highlightedElementId={highlightedElementId}
+                            highlightedAction={highlightedAction}
+                        />
+                    ))}
+                    {standaloneModels.map(model => (
+                        <ModelNode
+                            key={model.id}
+                            model={model}
+                            selectedId={selectedElementId}
+                            depth={2}
+                            isExpanded={isExpandedFn(model.id)}
+                            onToggle={() => onToggleFn(model.id)}
+                            onSelect={onSelect}
+                        />
+                    ))}
+                </SectionNode>
 
-            {(processedMetamodels.length > 0 || standaloneModels.length > 0) && (
-                <MetamodelsSection
-                    metamodels={processedMetamodels}
-                    selectedId={selectedElementId}
-                    onSelect={onSelect}
-                    highlightedElementId={highlightedElementId}
-                    highlightedAction={highlightedAction}
-                    expandedNodeIds={expandedNodeIds}
-                    isScriptExecuting={isScriptExecuting}
-                />
-            )}
+                {/* VIEWPOINTS */}
+                <SectionNode
+                    sectionKey={SECTION_KEYS.VIEWPOINTS}
+                    label="Viewpoints"
+                    counter={viewpoints.length}
+                    expanded={viewpointsExpanded}
+                    onToggle={() => onToggleFn(SECTION_KEYS.VIEWPOINTS)}
+                    depth={1}
+                >
+                    {syntaxVps.length > 0 && (
+                        <SectionNode
+                            sectionKey={SECTION_KEYS.VIEWPOINTS_SYNTAX}
+                            label="Syntax"
+                            counter={syntaxVps.length}
+                            expanded={syntaxExpanded}
+                            onToggle={() => onToggleFn(SECTION_KEYS.VIEWPOINTS_SYNTAX)}
+                            depth={2}
+                        >
+                            {syntaxVps.map(vp => (
+                                <ViewpointNode
+                                    key={vp.id}
+                                    vp={vp}
+                                    depth={3}
+                                    isExpandedFn={isExpandedFn}
+                                    onToggleFn={onToggleFn}
+                                    onSelect={onSelect}
+                                    activeViewpointId={activeViewpointId}
+                                    startRenameView={startRenameView}
+                                    renamingViewId={renamingViewId}
+                                    renameValue={renameValue}
+                                    setRenameValue={setRenameValue}
+                                    submitRenameView={submitRenameView}
+                                    handleRenameKeyDown={handleRenameKeyDown}
+                                    renameInputRef={renameInputRef}
+                                />
+                            ))}
+                        </SectionNode>
+                    )}
+                    {validationVps.length > 0 && (
+                        <SectionNode
+                            sectionKey={SECTION_KEYS.VIEWPOINTS_VALIDATION}
+                            label="Validation"
+                            counter={validationVps.length}
+                            expanded={validationExpanded}
+                            onToggle={() => onToggleFn(SECTION_KEYS.VIEWPOINTS_VALIDATION)}
+                            depth={2}
+                        >
+                            {validationVps.map(vp => (
+                                <ViewpointNode
+                                    key={vp.id}
+                                    vp={vp}
+                                    depth={3}
+                                    isExpandedFn={isExpandedFn}
+                                    onToggleFn={onToggleFn}
+                                    onSelect={onSelect}
+                                    activeViewpointId={activeViewpointId}
+                                    startRenameView={startRenameView}
+                                    renamingViewId={renamingViewId}
+                                    renameValue={renameValue}
+                                    setRenameValue={setRenameValue}
+                                    submitRenameView={submitRenameView}
+                                    handleRenameKeyDown={handleRenameKeyDown}
+                                    renameInputRef={renameInputRef}
+                                />
+                            ))}
+                        </SectionNode>
+                    )}
+                    {otherVps.map(vp => (
+                        <ViewpointNode
+                            key={vp.id}
+                            vp={vp}
+                            depth={2}
+                            isExpandedFn={isExpandedFn}
+                            onToggleFn={onToggleFn}
+                            onSelect={onSelect}
+                            activeViewpointId={activeViewpointId}
+                            startRenameView={startRenameView}
+                            renamingViewId={renamingViewId}
+                            renameValue={renameValue}
+                            setRenameValue={setRenameValue}
+                            submitRenameView={submitRenameView}
+                            handleRenameKeyDown={handleRenameKeyDown}
+                            renameInputRef={renameInputRef}
+                        />
+                    ))}
+                </SectionNode>
 
-            {/* Standalone M1 models (no metamodel parent open) */}
-            {standaloneModels.map((model) => (
-                <NestedModelTree
-                    key={model.id}
-                    model={model}
-                    depth={0}
-                    selectedId={selectedElementId}
-                    onSelect={onSelect}
-                />
-            ))}
+                {/* DOCUMENTATION */}
+                <SectionNode
+                    sectionKey={SECTION_KEYS.DOCUMENTATION}
+                    label="Documentation"
+                    expanded={docsExpanded}
+                    onToggle={() => onToggleFn(SECTION_KEYS.DOCUMENTATION)}
+                    depth={1}
+                >
+                    <DocumentationEmptyState depth={2} />
+                </SectionNode>
 
-            {transformations.length > 0 && (
-                <TransformationSection
-                    transformations={transformations}
-                    selectedId={selectedElementId}
-                    onSelect={onSelect}
-                />
-            )}
-
-            {vpData.length > 0 && (
-                <ViewpointSection
-                    viewpoints={vpData}
-                    onSelect={onSelect}
-                />
-            )}
-
-            <DocumentationEntry onSelect={onSelect} />
+                {/* TRANSFORMATIONS — kept under megamodel for visibility */}
+                {transformations.length > 0 && transformations.map(t => (
+                    <TransformationItem
+                        key={t.id}
+                        transformation={t}
+                        selectedId={selectedElementId}
+                        depth={1}
+                        isExpandedFn={isExpandedFn}
+                        onToggleFn={onToggleFn}
+                        onSelect={onSelect}
+                    />
+                ))}
+            </SectionNode>
         </div>
     );
 }
 
-interface OwnProps extends TreeViewContentProps {}
+// ─── Selectors ──────────────────────────────────────────────────────────────
 
-interface StateProps {
-    processedMetamodels: ProcessedMetamodel[];
-    standaloneModels: TreeModelData[];
-    viewpoints: TreeViewpointData[];
-    selectedElementId?: string;
-}
-
-interface DispatchProps {}
-
-type AllProps = OwnProps & StateProps & DispatchProps;
-
-/**
- * Determine the "active" model ID from _lastSelected.
- * Resolves the selected element's parent model.
- */
 function resolveActiveModelId(state: DState): string | null {
     const selectedPtr = state._lastSelected?.modelElement;
     if (!selectedPtr) return null;
     try {
         const element = state.idlookup?.[selectedPtr] as any;
         if (!element) return null;
-        // If the element IS a model, return its id
         if (element.className === 'DModel') return element.id;
-        // Otherwise, traverse up to find the parent model
-        // For DObject, .father chain eventually reaches DModel
         let current = element;
         let depth = 0;
         while (current && depth < 10) {
@@ -1389,22 +1561,91 @@ function resolveActiveModelId(state: DState): string | null {
     return null;
 }
 
+function buildPackageData(lPkg: any, parentFqn: string): TreePackageData {
+    const fqn = parentFqn ? `${parentFqn}.${lPkg.name || 'unnamed'}` : (lPkg.name || 'unnamed');
+    const subPackages: TreePackageData[] = [];
+    const classes: TreeClassData[] = [];
+
+    try {
+        const subs = lPkg.subpackages || [];
+        for (const sub of subs) {
+            if (!sub) continue;
+            subPackages.push(buildPackageData(sub, fqn));
+        }
+    } catch { /* ignore */ }
+
+    try {
+        const cls = lPkg.classes || [];
+        for (const c of cls) {
+            if (!c) continue;
+            const view = c.node?.view;
+            const isEdgeView = !!(view && (view as any).isEdge);
+            // Approximate instance count: sum across all m1 models that conform to a metamodel
+            // referencing this class. For now use c.instances if exposed, fallback to 0.
+            let instanceCount = 0;
+            try {
+                const instances = (c as any).instances;
+                if (Array.isArray(instances)) instanceCount = instances.length;
+            } catch { /* ignore */ }
+            classes.push({
+                id: c.id,
+                name: c.name || 'unnamed',
+                fqn: `${fqn}.${c.name || 'unnamed'}`,
+                isAbstract: !!(c as any).abstract,
+                isEdgeView,
+                instanceCount,
+            });
+        }
+    } catch { /* ignore */ }
+
+    let totalClassCount = classes.length;
+    let totalSubPackageCount = subPackages.length;
+    for (const sub of subPackages) {
+        totalClassCount += sub.classCount;
+        totalSubPackageCount += sub.subPackageCount;
+    }
+
+    return {
+        id: lPkg.id,
+        name: lPkg.name || 'unnamed',
+        fqn,
+        classCount: totalClassCount,
+        subPackageCount: totalSubPackageCount,
+        subPackages,
+        classes,
+    };
+}
+
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
 
-    // Determine which model is currently active (focused tab)
+    // Determine project id and expandedTreeNodes
+    const pid = U.getProjectID_URL() as Pointer<DProject> | undefined;
+    let projectId: Pointer<DProject> | undefined = undefined;
+    let expandedTreeNodes: string[] = [];
+    if (pid) {
+        const projData = state.idlookup?.[pid] as DProject | undefined;
+        if (projData && projData.className === 'DProject') {
+            projectId = pid;
+            expandedTreeNodes = Array.isArray(projData.expandedTreeNodes) ? projData.expandedTreeNodes : [];
+        }
+    }
+    ret.projectId = projectId;
+    ret.expandedTreeNodes = expandedTreeNodes;
+
+    // Active model id (focused tab)
     const activeModelId = resolveActiveModelId(state);
 
-    // Get metamodels
+    // Metamodels
     const metamodelPointers = state.m2models || [];
     const metamodels: LModel[] = (LPointerTargetable.fromPointer(metamodelPointers) || []).filter(Boolean);
     const metamodelIdSet = new Set(metamodels.map(mm => mm.id));
 
-    // Get M1 models
+    // M1 models
     const modelPointers = state.m1models || [];
     const m1Models: LModel[] = (LPointerTargetable.fromPointer(modelPointers) || []).filter(Boolean);
 
-    // Check which M1 models have a graph (tab has been opened)
+    // Models with graph (tab opened at least once)
     const graphs: DGraph[] = DGraph.fromPointer(state.graphs || []);
     const modelsWithGraph = new Set<string>();
     for (const g of graphs) {
@@ -1416,36 +1657,39 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const standaloneModels: TreeModelData[] = [];
 
     for (const m1 of m1Models) {
-        // Only show models that have a graph (tab was opened at some point)
         if (!modelsWithGraph.has(m1.id)) continue;
-
         const metamodelId = (m1.instanceof as any)?.id || null;
         const isActive = m1.id === activeModelId;
 
-        // Build instance list
-        const instances: TreeInstanceData[] = [];
-        if (isActive) {
-            try {
-                const objects: LObject[] = m1.objects || [];
+        const mmName = metamodelId ? (state.idlookup?.[metamodelId] as any)?.name || '' : '';
+        const fqn = mmName ? `${mmName} / ${m1.name || 'Unnamed Model'}` : (m1.name || 'Unnamed Model');
+
+        const instances: TreeFeatureData[] = [];
+        let objectCount = 0;
+        try {
+            const objects: LObject[] = m1.objects || [];
+            objectCount = objects.length;
+            if (isActive) {
                 for (const obj of objects) {
                     const metaclass = (obj as any).instanceof;
                     const metaclassName = metaclass?.name || 'Orphan';
                     instances.push({
                         id: obj.id,
-                        objectId: obj.id,
                         name: obj.name || obj.id?.slice(0, 8) || 'unnamed',
                         metaclassName,
                         modelId: m1.id,
                     });
                 }
-            } catch { /* ignore errors reading objects */ }
-        }
+            }
+        } catch { /* ignore */ }
 
         const modelData: TreeModelData = {
             id: m1.id,
             name: m1.name || 'Unnamed Model',
+            fqn,
             metamodelId,
             isActive,
+            objectCount,
             instances,
         };
 
@@ -1457,24 +1701,40 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
         }
     }
 
-    ret.processedMetamodels = metamodels.map((mm) => ({
-        data: {
+    // Build metamodel tree data
+    ret.metamodels = metamodels.map((mm) => {
+        const mmName = mm.name || 'Unnamed Metamodel';
+        const rootPackages: TreePackageData[] = [];
+        try {
+            const pkgs = (mm as any).packages || [];
+            for (const pkg of pkgs) {
+                if (!pkg) continue;
+                rootPackages.push(buildPackageData(pkg, mmName));
+            }
+        } catch { /* ignore */ }
+
+        let totalClassCount = 0;
+        for (const pkg of rootPackages) totalClassCount += pkg.classCount;
+
+        const childModels = modelsByMetamodel.get(mm.id) || [];
+
+        return {
             id: mm.id,
-            name: mm.name || 'Unnamed Metamodel',
-            className: 'DModel',
+            name: mmName,
+            fqn: mmName,
             nodeId: mm.node?.id,
             viewId: mm.node?.view?.id,
-        },
-        packages: (mm.packages || []).map((pkg: any) => convertToTreeData(pkg)),
-        childModels: modelsByMetamodel.get(mm.id) || [],
-    }));
+            classCount: totalClassCount,
+            modelCount: childModels.length,
+            rootPackages,
+            childModels,
+        };
+    });
 
     ret.standaloneModels = standaloneModels;
 
-    // Build viewpoint data from LProject (including sub-view hierarchy)
+    // Viewpoints
     const vpList: TreeViewpointData[] = [];
-
-    /** Recursively build sub-view tree data */
     function buildSubViewTree(lView: any): TreeSubViewData[] {
         const children: TreeSubViewData[] = [];
         try {
@@ -1494,8 +1754,9 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     try {
         const project = LProject.getProject();
         if (project) {
-            const viewpoints: LViewPoint[] = project.viewpoints || [];
-            for (const vp of viewpoints) {
+            const projectName = project.name || 'Project';
+            const lvps: LViewPoint[] = project.viewpoints || [];
+            for (const vp of lvps) {
                 if (!vp) continue;
                 const vpType = getViewpointType(vp as any);
                 const isExclusive = vpType === 'syntax';
@@ -1503,6 +1764,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
                 vpList.push({
                     id: vp.id,
                     name: vp.name || 'Unnamed Viewpoint',
+                    fqn: `${projectName} / ${vp.name || 'Unnamed Viewpoint'}`,
                     vpType,
                     isExclusive,
                     viewCount: subViews.length,
@@ -1511,10 +1773,17 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
                 });
             }
         }
-    } catch { /* ignore errors reading viewpoints */ }
+    } catch { /* ignore */ }
     ret.viewpoints = vpList;
 
     ret.selectedElementId = state._lastSelected?.modelElement || undefined;
+
+    // Active viewpoint id (DProject.activeViewpoint). Used to highlight the
+    // currently-open VP in the tree with the cyan selection pattern.
+    try {
+        const project = LProject.getProject();
+        ret.activeViewpointId = project?.activeViewpoint?.id || undefined;
+    } catch { /* ignore */ }
 
     return ret;
 }

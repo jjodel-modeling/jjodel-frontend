@@ -55,7 +55,7 @@ interface OwnProps {}
 interface StateProps {
     selected?: {
         node: LGraphElement;
-        view: LViewElement;
+        view?: LViewElement;
         modelElement?: LModelElement;
     };
 }
@@ -800,10 +800,10 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
         const node = state._lastSelected?.node;
         const view = state._lastSelected?.view;
 
-        if (node && view) {
+        if (node) {
             ret.selected = {
                 node: L.fromPointer(node),
-                view: L.fromPointer(view),
+                view: view ? L.fromPointer(view) : undefined,
                 modelElement: modelElement ? L.fromPointer(modelElement) : undefined
             };
         }

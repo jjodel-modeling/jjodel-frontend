@@ -24,8 +24,7 @@
 
 .panning-content{
   position: relative;
-  left: var(--offset-x);
-  top: var(--offset-y);
+  transform: translate(var(--offset-x), var(--offset-y));
 }
 
 .localized-panning-root{ // unused for now

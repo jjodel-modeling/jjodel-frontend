@@ -1191,6 +1191,21 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
 
         thiss.edgeHeadSize = new GraphPoint(20, 20);
         thiss.edgeTailSize = new GraphPoint(20, 20);
+
+        // L2 — edge overlay schema defaults. See DViewElement field comments and design doc
+        // `design_2026-05-03_L2_edge_overlay.md` for full context.
+        thiss.isEdge = false;
+        thiss.edgeSource = '';
+        thiss.edgeTarget = '';
+        thiss.edgeRouting = 'manhattan-rounded';
+
+        // L2 — edge customization V1. Defaults match pre-V1 visual baseline (slate-700 stroke at 1.5px solid, no label).
+        // Pre-V1 instances with `undefined` values are normalized at runtime by EdgeOverlay's selector (narrowing).
+        thiss.edgeLabel = '';
+        thiss.edgeStrokeColor = 'default';
+        thiss.edgeStrokeWidth = 1.5;
+        thiss.edgeStrokeStyle = 'solid';
+
         if (thiss.className !== 'DViewElement') return this;
         const user: LUser = LUser.getUser();;
         // const project = user?.project; if(!project) return this;
@@ -1239,6 +1254,12 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         _this.name = name;
         _this.state = state || '';
         _this.tagNames = [];
+        _this.expandedTreeNodes = [];
+        _this.layoutPropertyPanelWidth = 400;
+        _this.layoutTreeWidth = 300;
+        _this.layoutPropertyPanelOpen = true;
+        _this.layoutTreeCollapsed = false;
+        _this.layoutFocusCanvas = false;
         // Content version: new projects start at 1.0, loaded projects use -1 (to be extracted from state)
         _this.version = state ? -1 : 1.0;
         if(id) _this.id = id;
@@ -2949,6 +2970,24 @@ export class DProject extends DPointerTargetable {
     version!: number;
     tagNames!: string[];
     transformations: any[] = [];
+    expandedTreeNodes: string[] = [];
+
+    /** Width in px of the property panel column. Range [320, 640]. */
+    layoutPropertyPanelWidth: number = 400;
+
+    /** Width in px of the tree view column. Range [240, 500]. */
+    layoutTreeWidth: number = 300;
+
+    /** True if the property panel is allowed to render when a node is selected.
+     *  False after the user explicitly closes the panel (X button). Resets to
+     *  true automatically on the next selection event. */
+    layoutPropertyPanelOpen: boolean = true;
+
+    /** True if the tree view is collapsed to a thin handle (~22px). */
+    layoutTreeCollapsed: boolean = false;
+
+    /** True if focus-canvas mode is active (tree collapsed AND property closed). */
+    layoutFocusCanvas: boolean = false;
 
     public static new(type: DProject['type'], name?: string, state?: DProject['state'],
                       m2?: DProject['metamodels'], m1?: DProject['models'], id?: DProject['id'], otherProjects?:LProject[]): DProject {
@@ -3022,6 +3061,12 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     version!: number;
     tagNames!: string[];
     transformations!: any[];
+    expandedTreeNodes!: string[];
+    layoutPropertyPanelWidth!: number;
+    layoutTreeWidth!: number;
+    layoutPropertyPanelOpen!: boolean;
+    layoutTreeCollapsed!: boolean;
+    layoutFocusCanvas!: boolean;
 
     /* DATA */
     readonly packages!: LPackage[];

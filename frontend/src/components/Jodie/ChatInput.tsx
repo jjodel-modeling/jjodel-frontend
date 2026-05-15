@@ -4,9 +4,13 @@
  */
 
 import React, { useState, useRef, useEffect, KeyboardEvent, ClipboardEvent, useCallback, useMemo } from 'react';
-import { ChatImage, ChatDocument, JodieConfig, ConsoleMode, CodeFlavor } from '../../types/jodie';
-import { JjScriptService } from '../../jjscript';
+import {
+    ChatImage, ChatDocument, JodieConfig, ConsoleMode, CodeFlavor,
+    ConsoleEntry, ChatMessage, CodeEntry,
+} from '../../types/jodie';
 import { AIEvents } from '../../events/registry';
+import { getJjelSuggestions, applyJjelSuggestion } from '../../jjel/autocomplete';
+import type { Suggestion } from '../../jjscript/autocomplete/types';
 import './ChatInput.scss';
 
 interface ChatInputProps {
@@ -29,6 +33,10 @@ interface ChatInputProps {
     codeFlavor: CodeFlavor;
     /** Submit handler for Code mode: parent evaluates and appends a CodeEntry. */
     onSubmitCode: (input: string) => void;
+    /** Unified history; ChatInput filters by mode (and flavor in code) for the up/down nav. */
+    entries: ConsoleEntry[];
+    /** Clear the entries of the active mode. Triggered by the `/clear` slash command. */
+    onClearRequested?: () => void;
 }
 
 type SendBtnState = 'empty' | 'ready' | 'sending' | 'no-provider';
@@ -78,6 +86,16 @@ async function fileToDocument(file: File): Promise<ChatDocument> {
     });
 }
 
+// Cursor row helpers for textarea history navigation: "first/last visual line".
+// Using newline scan rather than caret coordinates keeps behavior consistent across
+// fonts and zoom levels.
+function isCursorOnFirstLine(el: HTMLTextAreaElement): boolean {
+    return !el.value.substring(0, el.selectionStart).includes('\n');
+}
+function isCursorOnLastLine(el: HTMLTextAreaElement): boolean {
+    return !el.value.substring(el.selectionEnd).includes('\n');
+}
+
 // Format file size for display
 function formatFileSize(bytes: number): string {
     if (bytes < 1024) return `${bytes} B`;
@@ -98,6 +116,8 @@ export function ChatInput({
     onConsoleModeChange,
     codeFlavor,
     onSubmitCode,
+    entries,
+    onClearRequested,
 }: ChatInputProps): JSX.Element {
     const isCode = consoleMode === 'code';
     const [message, setMessage] = useState('');
@@ -106,8 +126,37 @@ export function ChatInput({
     const [historyIndex, setHistoryIndex] = useState(-1);
     const [savedMessage, setSavedMessage] = useState(''); // Save current input when navigating history
     const [hasProvider, setHasProvider] = useState<boolean>(() => JodieConfig.hasEnabledProviders());
+    // Autocomplete dropdown state. Active only in Code mode + JjEL flavor.
+    const [completions, setCompletions] = useState<Suggestion[]>([]);
+    const [completionIndex, setCompletionIndex] = useState(0);
+    const [isCompletionVisible, setIsCompletionVisible] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const completionDebounceRef = useRef<number | null>(null);
+    // Cursor position last seen by the autocompletion effect — kept in a ref so
+    // ↑/↓ don't trigger re-runs (only the textarea selectionStart matters at fire time).
+    const cursorRef = useRef<number>(0);
+    // Suppress the JjEL dropdown after a submit until the user types a printable
+    // character (or Backspace). Prevents the dropdown from re-opening over the
+    // freshly-printed result entry when setMessage('') triggers the suggestion
+    // effect with an empty/typo prefix that some providers still return matches for.
+    const suppressUntilNextCharRef = useRef<boolean>(false);
+
+    // Filtered, in-session history for ↑/↓ navigation.
+    // Chat: user messages only (assistant replies excluded). Code: same flavor only.
+    // Newest first so historyIndex 0 is the most recent submission.
+    const userHistory = useMemo<string[]>(() => {
+        if (isCode) {
+            return entries
+                .filter((e): e is CodeEntry => e.kind === 'code' && e.flavor === codeFlavor)
+                .map(e => e.input)
+                .reverse();
+        }
+        return entries
+            .filter((e): e is ChatMessage => e.kind !== 'code' && e.role === 'user')
+            .map(e => e.content)
+            .reverse();
+    }, [entries, isCode, codeFlavor]);
 
     // Check if any attachments are supported
     const supportsAttachments = supportsVision || supportsPDF;
@@ -119,6 +168,85 @@ export function ChatInput({
         window.addEventListener(AIEvents.SETTINGS_CHANGED, refresh);
         return () => window.removeEventListener(AIEvents.SETTINGS_CHANGED, refresh);
     }, []);
+
+    // Switching console mode or code flavor invalidates the in-flight history
+    // navigation: the underlying list changes, so caret position and draft are no
+    // longer meaningful. Also drop the autocomplete dropdown — its state is tied
+    // to a specific flavor.
+    useEffect(() => {
+        setHistoryIndex(-1);
+        setSavedMessage('');
+        setCompletions([]);
+        setCompletionIndex(0);
+        setIsCompletionVisible(false);
+    }, [consoleMode, codeFlavor]);
+
+    // Recompute JjEL autocomplete suggestions when the user types or the cursor moves.
+    // Active only in Code+JjEL. Debounced ~50ms to avoid recomputing on every keystroke
+    // when typing fast.
+    const jjelAutocompleteEnabled = isCode && codeFlavor === 'jjel';
+    useEffect(() => {
+        if (!jjelAutocompleteEnabled) {
+            setCompletions([]);
+            setIsCompletionVisible(false);
+            return;
+        }
+        if (completionDebounceRef.current !== null) {
+            window.clearTimeout(completionDebounceRef.current);
+        }
+        // Regola B: don't open the dropdown when the input is empty or contains
+        // only whitespace. Skip the suggestion computation entirely.
+        if (message.trim().length === 0) {
+            setCompletions([]);
+            setCompletionIndex(0);
+            setIsCompletionVisible(false);
+            return;
+        }
+        // Regola C: while the suppression flag is armed (post-submit), keep the
+        // dropdown closed even if `message` would otherwise produce suggestions.
+        // The flag is cleared by handleKeyDown when the user types a printable
+        // character or Backspace.
+        if (suppressUntilNextCharRef.current) {
+            setCompletions([]);
+            setCompletionIndex(0);
+            setIsCompletionVisible(false);
+            return;
+        }
+        completionDebounceRef.current = window.setTimeout(() => {
+            const ta = textareaRef.current;
+            const caret = ta ? ta.selectionStart : message.length;
+            cursorRef.current = caret;
+            const sugs = getJjelSuggestions(message, caret);
+            setCompletions(sugs);
+            setCompletionIndex(0);
+            setIsCompletionVisible(sugs.length > 0);
+        }, 50);
+        return () => {
+            if (completionDebounceRef.current !== null) {
+                window.clearTimeout(completionDebounceRef.current);
+                completionDebounceRef.current = null;
+            }
+        };
+    }, [message, jjelAutocompleteEnabled]);
+
+    /** Insert the selected suggestion into the textarea. */
+    const acceptCompletion = useCallback((suggestion: Suggestion) => {
+        const ta = textareaRef.current;
+        const caret = ta ? ta.selectionStart : message.length;
+        const { text, cursorPosition } = applyJjelSuggestion(message, suggestion, caret);
+        setMessage(text);
+        setIsCompletionVisible(false);
+        setCompletions([]);
+        setCompletionIndex(0);
+        // Restore caret after React re-renders the controlled textarea.
+        requestAnimationFrame(() => {
+            const el = textareaRef.current;
+            if (el) {
+                try { el.setSelectionRange(cursorPosition, cursorPosition); } catch { /* ignore */ }
+                el.focus();
+            }
+        });
+    }, [message]);
 
     // External prefill: set the textarea content and focus it. Nonce ensures
     // re-trigger when the same prompt is requested twice in a row.
@@ -147,6 +275,18 @@ export function ChatInput({
     const handleSubmit = useCallback(() => {
         const trimmed = message.trim();
 
+        // Slash commands: intercepted before mode-specific submit so they
+        // don't reach onSend/onSubmitCode and aren't appended to the unified
+        // history (= invisible to the up/down nav). Case-sensitive by design.
+        if (trimmed === '/clear') {
+            onClearRequested?.();
+            setMessage('');
+            setHistoryIndex(-1);
+            setSavedMessage('');
+            if (textareaRef.current) textareaRef.current.style.height = 'auto';
+            return;
+        }
+
         if (isCode) {
             if (!trimmed) return;
             onSubmitCode(trimmed);
@@ -154,6 +294,16 @@ export function ChatInput({
             setHistoryIndex(-1);
             setSavedMessage('');
             if (textareaRef.current) textareaRef.current.style.height = 'auto';
+            // Regola A: close the autocomplete dropdown explicitly on submit and
+            // reset its tracked state. Same reset shape as the mode/flavor effect
+            // and acceptCompletion, so callers see a consistent post-submit state.
+            setCompletions([]);
+            setCompletionIndex(0);
+            setIsCompletionVisible(false);
+            // Regola C: arm the suppression flag so the next message-driven effect
+            // run (caused by setMessage('') above) does not re-open the dropdown.
+            // The flag is cleared by handleKeyDown on the next printable keypress.
+            suppressUntilNextCharRef.current = true;
             return;
         }
 
@@ -175,9 +325,17 @@ export function ChatInput({
                 textareaRef.current.style.height = 'auto';
             }
         }
-    }, [message, images, documents, disabled, onSend, isCode, onSubmitCode]);
+    }, [message, images, documents, disabled, onSend, isCode, onSubmitCode, onClearRequested]);
 
     const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+        // Regola C: any printable character or Backspace counts as the user
+        // resuming typing after a submit, so disarm the suppression flag here.
+        // Non-printable keys (arrows, modifiers, Tab, Esc, ...) leave the flag
+        // intact, keeping the dropdown closed during caret moves and history nav.
+        if (suppressUntilNextCharRef.current && (e.key.length === 1 || e.key === 'Backspace')) {
+            suppressUntilNextCharRef.current = false;
+        }
+
         // Backtick on an empty Chat input switches to Code mode (and swallows the char).
         if (!isCode && e.key === '`' && message === '') {
             e.preventDefault();
@@ -185,9 +343,46 @@ export function ChatInput({
             return;
         }
 
+        // Autocomplete dropdown takes priority over history nav and Enter/Tab/Esc
+        // when it is open. This is the JjEL Code-mode-only path.
+        if (isCompletionVisible && completions.length > 0) {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setCompletionIndex(prev => (prev + 1) % completions.length);
+                return;
+            }
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setCompletionIndex(prev => (prev - 1 + completions.length) % completions.length);
+                return;
+            }
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                acceptCompletion(completions[completionIndex]);
+                return;
+            }
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                acceptCompletion(completions[completionIndex]);
+                return;
+            }
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                setIsCompletionVisible(false);
+                return;
+            }
+        }
+
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             const trimmed = message.trim();
+            // Slash commands bypass the mode/provider/disabled gates so the
+            // user can always clear history via the keyboard, even when the
+            // chat send button would otherwise refuse Enter.
+            if (trimmed === '/clear') {
+                handleSubmit();
+                return;
+            }
             if (isCode) {
                 if (trimmed) handleSubmit();
                 return;
@@ -201,47 +396,55 @@ export function ChatInput({
             return;
         }
 
-        // History navigation with ArrowUp/ArrowDown
-        const history = JjScriptService.getHistory();
-        if (history.length === 0) return;
+        // Esc: leave history navigation, restore the draft. If not navigating,
+        // do not intercept (let any future Esc handler take it).
+        if (e.key === 'Escape') {
+            if (historyIndex !== -1) {
+                e.preventDefault();
+                setMessage(savedMessage);
+                setHistoryIndex(-1);
+            }
+            return;
+        }
+
+        // History navigation with ArrowUp/ArrowDown.
+        // Source: per-mode/per-flavor user history derived from `entries`.
+        if (userHistory.length === 0) return;
+        const textarea = textareaRef.current;
 
         if (e.key === 'ArrowUp') {
-            // Only navigate if cursor is at the start of the input
-            const textarea = textareaRef.current;
-            if (textarea && textarea.selectionStart === 0 && textarea.selectionEnd === 0) {
-                e.preventDefault();
+            // First-line check: in a textarea, only steal ↑ when the caret is on
+            // the first visual line. Otherwise let the browser move the caret up.
+            if (textarea && !isCursorOnFirstLine(textarea)) return;
 
-                if (historyIndex === -1) {
-                    // Save current message before navigating
-                    setSavedMessage(message);
-                }
+            e.preventDefault();
 
-                const newIndex = historyIndex + 1;
-                if (newIndex < history.length) {
-                    setHistoryIndex(newIndex);
-                    // History is stored oldest to newest, so we read from the end
-                    const historyMessage = history[history.length - 1 - newIndex];
-                    setMessage(historyMessage);
-                }
-            }
+            // Already at the oldest entry: nothing to do.
+            if (historyIndex >= userHistory.length - 1) return;
+
+            // Entering navigation: save the current draft.
+            if (historyIndex === -1) setSavedMessage(message);
+
+            const newIndex = historyIndex + 1;
+            setHistoryIndex(newIndex);
+            setMessage(userHistory[newIndex]);
         } else if (e.key === 'ArrowDown') {
-            // Only navigate if we're in history mode
-            if (historyIndex > -1) {
-                const textarea = textareaRef.current;
-                if (textarea) {
-                    e.preventDefault();
+            // Not navigating: pass through.
+            if (historyIndex === -1) return;
 
-                    const newIndex = historyIndex - 1;
-                    if (newIndex === -1) {
-                        // Return to saved message
-                        setHistoryIndex(-1);
-                        setMessage(savedMessage);
-                    } else if (newIndex >= 0) {
-                        setHistoryIndex(newIndex);
-                        const historyMessage = history[history.length - 1 - newIndex];
-                        setMessage(historyMessage);
-                    }
-                }
+            // Last-line check.
+            if (textarea && !isCursorOnLastLine(textarea)) return;
+
+            e.preventDefault();
+
+            if (historyIndex === 0) {
+                // Step back out to the draft.
+                setHistoryIndex(-1);
+                setMessage(savedMessage);
+            } else {
+                const newIndex = historyIndex - 1;
+                setHistoryIndex(newIndex);
+                setMessage(userHistory[newIndex]);
             }
         }
     };
@@ -502,7 +705,12 @@ export function ChatInput({
                         ref={textareaRef}
                         className={`jodie-input${isCode ? ' jodie-input--code' : ''}`}
                         value={message}
-                        onChange={(e) => setMessage(e.target.value)}
+                        onChange={(e) => {
+                            setMessage(e.target.value);
+                            // User-driven typing while navigating: drop out of history
+                            // and treat the recovered text as the new draft.
+                            if (historyIndex !== -1) setHistoryIndex(-1);
+                        }}
                         onKeyDown={handleKeyDown}
                         onPaste={handlePaste}
                         placeholder={getPlaceholder()}
@@ -519,6 +727,48 @@ export function ChatInput({
                     >
                         <i className={`bi ${sendBtnConfig.icon}`} />
                     </button>
+
+                    {/* JjEL autocomplete dropdown — anchored above the composer (bottom of the Jodie window).
+                        Visible only in Code+JjEL when there are matching suggestions. */}
+                    {jjelAutocompleteEnabled && isCompletionVisible && completions.length > 0 && (
+                        <div
+                            className="jodie-completion-dropdown"
+                            role="listbox"
+                            // Keep focus on the textarea: if the click lands on the dropdown chrome
+                            // (between rows), the textarea would lose focus and the dropdown would
+                            // close before the row's onClick fires.
+                            onMouseDown={(e) => e.preventDefault()}
+                        >
+                            {completions.map((sug, i) => {
+                                const kind = (sug.metadata as any)?.jjelKind ?? sug.type;
+                                return (
+                                    <div
+                                        key={`${sug.type}:${sug.text}:${i}`}
+                                        className={`jodie-completion-row${i === completionIndex ? ' jodie-completion-row--active' : ''}`}
+                                        role="option"
+                                        aria-selected={i === completionIndex}
+                                        onMouseEnter={() => setCompletionIndex(i)}
+                                        onClick={() => acceptCompletion(sug)}
+                                    >
+                                        <span className={`jodie-completion-badge jodie-completion-badge--${kind}`}>
+                                            {kind === 'method' ? 'fn'
+                                                : kind === 'collection' ? 'coll'
+                                                : kind === 'class' ? 'class'
+                                                : kind === 'class-property' ? 'cls'
+                                                : kind === 'meta-property' ? 'meta'
+                                                : kind === 'context' ? 'var'
+                                                : kind === 'keyword' ? 'kw'
+                                                : sug.type}
+                                        </span>
+                                        <span className="jodie-completion-text">{sug.displayText}</span>
+                                        {sug.description && (
+                                            <span className="jodie-completion-desc">{sug.description}</span>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             </div>
 

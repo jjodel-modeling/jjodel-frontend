@@ -12,7 +12,7 @@ export {
     toJjelValue,
     fromJjelValue
 } from './context';
-export type { JjelValue, JjelObject, JjelFunction } from './context';
+export type { JjelValue, JjelObject, JjelFunction, JjelWarning } from './context';
 
 // Re-export builtins for advanced usage
 export {

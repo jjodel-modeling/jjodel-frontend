@@ -133,8 +133,39 @@ export class LocalStorage extends IStorage{
 @RuntimeAccessible('ECoreParser')
 export class EcoreParser{
     static supportedEcoreVersions = ["http://www.eclipse.org/emf/2002/Ecore"];
-    static prefix:string = '@';
+    static prefix:string = '-'; // aligned with EcoreService.xmlToJson output (was '@')
     static cname = 'ECoreParser';
+
+    // Canonical EDataType aliases used to resolve user-declared primitive packages in
+    // multi-package XMI-wrapped imports (Fase B.1). When an EPackage contains only
+    // <EDataType name="X"/> entries, those names are remapped to JjOM canonical primitives
+    // here so downstream LinkAllNamesToIDs can resolve them via replacePrimitiveMap.
+    private static EDATATYPE_CANONICAL_ALIASES: Dictionary<string, string> = {
+        'String':   'EString',
+        'Integer':  'EInt',
+        'Int':      'EInt',
+        'Boolean':  'EBoolean',
+        'Bool':     'EBoolean',
+        'Double':   'EDouble',
+        'Real':     'EDouble',
+        'Float':    'EFloat',
+        'EString':  'EString',
+        'EInt':     'EInt',
+        'EBoolean': 'EBoolean',
+        'EDouble':  'EDouble',
+        'EFloat':   'EFloat',
+        'EChar':    'EChar',
+        'EDate':    'EDate',
+        'ELong':    'ELong',
+        'EShort':   'EShort',
+        'EByte':    'EByte',
+        // Bug H: cross-document UML2 Types.ecore primitive (int with -1 sentinel for "*")
+        'UnlimitedNatural': 'EInt',
+        // Bug H: cross-document Ecore.ecore reflection types — opaque semantic-preserving fallback
+        'EDiagnosticChain': 'EString',
+        'EJavaObject':      'EString',
+        'EClass':           'EClass',
+    };
 
     static parse(ecorejson: GObject | string | null, isMetamodel: boolean, filename: string | undefined, persist: boolean = true): DModelElement[]{
         if (!ecorejson) return [];
@@ -188,7 +219,13 @@ export class EcoreParser{
         // replaces current model with parsed model. this needs to be removed to open a new tab later on.
         let model: DModel = null as any;
         for (let elem of parsedElements) { if (elem.className === DModel.cname) { model = elem as any; break; } }
-        SetRootFieldAction.new(isMetamodel ? "m2models" : "m1models", model.id, '+=', false); // it is pointer but no need to update pointedby's this time
+        // RIMOSSO 2026-05-13 (Bug E, Strategy A): il push qui duplica state.m2models perché il
+        // Constructor di DModel (classes.ts:937 via _persistCallbacks) ha già dispatchato la stessa
+        // azione durante Constructors.persist(). Causava React "duplicate key" warning in TreeView
+        // (TreeViewContent.tsx:1640) e Navbar (Navbar.tsx:1979). Riferimento:
+        // docs/discovery/2026-05-13_microdiscovery_bug_ef_render_duplicate.md sezione 6.1.
+        // SetRootFieldAction.new(isMetamodel ? "m2models" : "m1models", model.id, '+=', false);
+        void model;
     }
 
     // resolve eCore pointers to Jodel pointers and set the PointedBy
@@ -280,6 +317,11 @@ export class EcoreParser{
                     // console.log("fixalltypes", {replacekey, dobj, value, values});
                     let target: DModelElement = replacePrimitiveMap[value];
                     if (!target) target = nameMap[value];
+                    // Defensive fallback for unrecognized EDataType patterns.
+                    // After Bug H fix, this branch should be unreachable for known patterns
+                    // (UML2 Types.ecore, Ecore.ecore reflection types) since rewriteXPathPointers
+                    // catches them upstream and rewrites to canonical short names. Kept as
+                    // last-resort for cross-doc EDataType from metamodels not yet seen in fixtures.
                     if (!target && value.indexOf("ecore:EDataType") === 0) {
                         Log.ww('found unknown EDataType "' + value + '", remapping it to string');
                         target = replacePrimitiveMap[AttribETypes.EString];
@@ -373,39 +415,57 @@ export class EcoreParser{
             let pos = filename.indexOf(".");
             modelname = pos === -1 ? filename : filename.substring(0, pos); }
         let dObject: DModel = DModel.new( modelname || "imported_metamodel_1", undefined, true, true);
-        // console.log("made model", json);
-        generated.push(dObject); // dObject.father = 'modeltmp' as any;
-        // const annotations: Json[] = this.getAnnotations(json); i set them on root package
-        // for (let child of annotations) EcoreParser.parseDAnnotation(dObject, child, generated, (dObject as GObject).__fullname + "/");
-        /// *** specific  *** ///
-        // let defPackage: DPackage = DPackage.new(json)
-        EcoreParser.parseRootPackage(dObject, json, generated);
-        return generated;
-    }
+        generated.push(dObject);
 
-    static parseM2Model_old(json: Json, filename: string | undefined): DModelElement[] {
-        let generated: DModelElement[] = [];
-        if (!json) { json = {}; }
-        let modelname = json[ECoreNamed.namee] as string;
-        if (!modelname && filename) {
-            let pos = filename.indexOf(".");
-            modelname = pos === -1 ? filename : filename.substring(0, pos); }
-        let dObject: DModel = DModel.new( modelname || "imported_metamodel_1", undefined, true, true);
-        // console.log("made model", json);
-        generated.push(dObject); // dObject.father = 'modeltmp' as any;
-        /// *** specific  *** ///
-        const children = EcoreParser.getChildren(json);
-        const annotations = EcoreParser.getAnnotations(json);
-        // dObject.name = json[ECoreNamed.namee] as string || "imported_metamodel_1";
-        // console.log("made model 2", children, annotations);
-        for (let child of annotations) {
-            EcoreParser.parseDAnnotation(dObject, child, generated, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+        // Detect XMI-wrapped multi-package input. xmlToJson represents children sharing a
+        // tag name as either an object (1 child) or an array (N children) under that tag key.
+        // For wrapped files the root <xmi:XMI> contains one or more <ecore:EPackage> children;
+        // for unwrapped files the root itself is <ecore:EPackage>.
+        const epkgChildren = EcoreParser.getMultiPackageChildren(json);
+
+        if (epkgChildren) {
+            // Multi-package wrapped XMI path.
+            // The xmlns:ecore attribute is on the XMI wrapper, not on individual EPackage
+            // children, so we validate here instead of inside parsePackageBody.
+            let version = (json[EcoreParser.prefix+"xmlns:ecore"] || '') as string;
+            Log.ex(!EcoreParser.supportedEcoreVersions.includes(version), "unsupported ecore version, must be one of:" + EcoreParser.supportedEcoreVersions + " found instead: "+version);
+
+            // Classify packages: a "primitive-only" package contains exclusively EDataType
+            // classifiers; it gets consumed (its names become primitive aliases via XPath
+            // rewrite) rather than producing a DPackage in the model.
+            const primitiveIndices = new Set<number>();
+            const normalIndices = new Set<number>();
+            for (let i = 0; i < epkgChildren.length; i++) {
+                if (EcoreParser.isPrimitivePackage(epkgChildren[i])) primitiveIndices.add(i);
+                else normalIndices.add(i);
+            }
+
+            // Use the first normal package's name as the DModel name (per Fase B.1 spec).
+            const firstNormalIdx = Array.from(normalIndices).sort((a, b) => a - b)[0];
+            if (firstNormalIdx !== undefined) {
+                const firstNormalName = epkgChildren[firstNormalIdx][ECoreNamed.namee] as string;
+                if (firstNormalName) dObject.name = firstNormalName;
+            }
+
+            // Parse normal packages. Primitive ones are skipped here and contribute only
+            // through the XPath rewrite pass below.
+            for (let i = 0; i < epkgChildren.length; i++) {
+                if (primitiveIndices.has(i)) continue;
+                EcoreParser.parsePackageBody(dObject, epkgChildren[i], generated);
+            }
+
+            // Rewrite XPath-style pointers ("/N/X" form only) on `type` and `extends` fields
+            // before LinkAllNamesToIDs runs. Three-segment "/N/X/Y" pointers (used by
+            // eOpposite for feature references) are left untouched; they are scope Fase B.2.
+            EcoreParser.rewriteXPathPointers(generated, primitiveIndices, normalIndices, epkgChildren);
+        } else {
+            // Single-package path: root JSON IS the <ecore:EPackage>. parseRootPackage validates internally.
+            EcoreParser.parseRootPackage(dObject, json, generated);
+            // Bug H: also normalize cross-document EDataType/EClass references in single-package
+            // imports (no separate primitive packages exist locally; the root is conceptually
+            // package index 0). Pass empty primitiveIndices so the XPath primitive branch is no-op.
+            EcoreParser.rewriteXPathPointers(generated, new Set(), new Set([0]), [json]);
         }
-        // console.log("made annotations");
-        for (let child of children) {
-            EcoreParser.parseRootPackage(dObject, child, generated);
-        }
-        // console.log("made packages");
         return generated;
     }
 
@@ -612,6 +672,15 @@ export class EcoreParser{
         return generated; }
 
     static parseRootPackage(parent: DModel, json: Json, generated: DModelElement[]): DModelElement[] {
+        if (!json) { json = {}; }
+        // Single-package path validates the ecore namespace here. For multi-package XMI-wrapped
+        // imports the validation is hoisted to the wrapper level in parseM2Model.
+        let version = (json[EcoreParser.prefix+"xmlns:ecore"] || '') as string;
+        Log.ex(!EcoreParser.supportedEcoreVersions.includes(version), "unsupported ecore version, must be one of:" + EcoreParser.supportedEcoreVersions + " found instead: "+version);
+        return EcoreParser.parsePackageBody(parent, json, generated);
+    }
+
+    private static parsePackageBody(parent: DModel, json: Json, generated: DModelElement[]): DModelElement[] {
         if (!generated) generated = [];
         if (!json) { json = {}; }
         const childs = this.getChildren(json);
@@ -620,10 +689,6 @@ export class EcoreParser{
         generated.push(dObject); dObject.father = parent.id;
         if (parent) parent.packages.push(dObject.id);
 
-        let version = (json[EcoreParser.prefix+"xmlns:ecore"] || '') as string;
-        // model.xmi = json[EcoreParser.prefix+"xmlns:xmi"]; // http://www.omg.org/XMI
-        // model.xsi = json[EcoreParser.prefix+"xmlns:xsi"]; // http://www.w3.org/2001/XMLSchema-instance
-        Log.ex(!EcoreParser.supportedEcoreVersions.includes(version), "unsupported ecore version, must be one of:" + EcoreParser.supportedEcoreVersions + " found instead: "+version);
         dObject.name = this.read(json, ECoreNamed.namee, 'default');
         // root package name is "transparent" and not applied in "#//reference/paths/...", if referenced i guess his name is "#//"
         (dObject as GObject).__fullname = ''; // fullnamePrefix + "/" + dObject.name;
@@ -633,7 +698,7 @@ export class EcoreParser{
         const subPackages: Json[] = this.getSubPackages(json);
         dObject.uri = this.read(json, ECorePackage.nsURI, null);
         dObject.prefix = this.read(json, ECorePackage.nsPrefix, null);
-        console.warn("parseRootPackage.children", {childs, annotations, subPackages, dObject, generated});
+        console.warn("parsePackageBody.children", {childs, annotations, subPackages, dObject, generated});
         // if (!parent.uri) parent.uri = dObject.uri;
         // if (!parent.prefix) parent.prefix = dObject.prefix; // namespace
         for (let child of childs) {
@@ -705,7 +770,12 @@ export class EcoreParser{
         dObject.interface = this.read(json, ECoreClass.interface, 'false') === 'true';
         dObject.abstract = this.read(json, ECoreClass.abstract, 'false') === 'true';
         let tmps: string = this.read(json, ECoreClass.eSuperTypes, '');
-        dObject.extends = tmps.split(' ');
+        // Guard 2026-05-13 (Bug G root cause): se tmps è vuoto, split(' ') ritorna [''] invece di [].
+        // L'array [''] propaga downstream a get_superclasses (LModelElement.tsx:3596) come queue
+        // iniziale [undefined], causando TypeError mascherato dal proxy swallow di proxy.ts:276-293
+        // come "childrenNames.indexOf is not a function". Riferimento:
+        // docs/discovery/2026-05-13_microdiscovery_bug_g_childrennames.md.
+        dObject.extends = tmps ? tmps.split(' ') : [];
         const features: Json[] = this.getChildren(json);
         const functions: Json[] = this.getChildren(json, false, true);
 
@@ -779,7 +849,7 @@ export class EcoreParser{
         // done: old approach does not set pointedBy, i should set father and all pointers in .new() parameters
         let dObject: DAttribute = DAttribute.new(
             this.read(json, ECoreNamed.namee, 'attr_1'),
-            this.read(json, ECoreAttribute.eType, AttribETypes.EString),
+            undefined,
             parent.id,
         );
         generated.push(dObject);// dObject.father = parent.id;
@@ -791,7 +861,14 @@ export class EcoreParser{
         /// *** specific start *** ///
         dObject.lowerBound = +this.read(json, ECoreAttribute.lowerbound, 0);
         dObject.upperBound = +this.read(json, ECoreAttribute.upperbound, 1);
-        //dObject.type = this.read(json, ECoreAttribute.eType, AttribETypes.EString);
+        dObject.type = this.read(json, ECoreAttribute.eType, AttribETypes.EString);
+        dObject.ordered = U.fromBoolString(this.read(json, ECoreAttribute.ordered, true), true);
+        dObject.unique = U.fromBoolString(this.read(json, ECoreAttribute.unique, true), true);
+        dObject.changeable = U.fromBoolString(this.read(json, ECoreAttribute.changeable, true), true);
+        dObject.derived = U.fromBoolString(this.read(json, ECoreAttribute.derived, false), false);
+        dObject.transient = U.fromBoolString(this.read(json, ECoreAttribute.transient, false), false);
+        dObject.volatile = U.fromBoolString(this.read(json, ECoreAttribute.volatile, false), false);
+        dObject.unsettable = U.fromBoolString(this.read(json, ECoreAttribute.unsettable, false), false);
         /// *** specific end *** ///
         return generated; }
 
@@ -799,9 +876,9 @@ export class EcoreParser{
         if (!generated) generated = [];
         if (!json) { json = {}; }
         const childs = this.getChildren(json);
-        let dObject: DReference = DReference.new();
-        generated.push(dObject); dObject.father = parent.id;
-        if (parent) parent.references.push(dObject.id);
+        let dObject: DReference = DReference.new(undefined, undefined, parent.id);
+        generated.push(dObject);// dObject.father = parent.id;
+        // if (parent) parent.references.push(dObject.id);
         dObject.name = this.read(json, ECorePackage.namee, 'Ref_1');
         (dObject as GObject).__fullname = fullnamePrefix + dObject.name;
         const annotations: Json[] = this.getAnnotations(json);
@@ -812,6 +889,13 @@ export class EcoreParser{
         dObject.lowerBound = +this.read(json, ECoreAttribute.lowerbound, 0);
         dObject.upperBound = +this.read(json, ECoreAttribute.upperbound, 1);
         dObject.type = this.read(json, ECoreReference.eType, this.getEcoreTypeName(parent));
+        dObject.ordered = U.fromBoolString(this.read(json, ECoreReference.ordered, true), true);
+        dObject.unique = U.fromBoolString(this.read(json, ECoreReference.unique, true), true);
+        dObject.changeable = U.fromBoolString(this.read(json, ECoreReference.changeable, true), true);
+        dObject.derived = U.fromBoolString(this.read(json, ECoreReference.derived, false), false);
+        dObject.transient = U.fromBoolString(this.read(json, ECoreReference.transient, false), false);
+        dObject.volatile = U.fromBoolString(this.read(json, ECoreReference.volatile, false), false);
+        dObject.unsettable = U.fromBoolString(this.read(json, ECoreReference.unsettable, false), false);
         /// *** specific end *** ///
         return generated; }
 
@@ -886,7 +970,7 @@ export class EcoreParser{
 
 
     /////////////////////////////////// generic
-    static XMLinlineMarker: string = '@';
+    static XMLinlineMarker: string = '-'; // aligned with EcoreService.xmlToJson output (was '@')
     static classTypePrefix: string = '#//'
     private static getSubPackages(thiss: Json): Json[] {
         const ret: any = thiss[ECoreSubPackage.eSubpackages];
@@ -945,6 +1029,86 @@ export class EcoreParser{
         if (parent.className === DEnumerator.cname || parent.className === DClass.cname) return this.classTypePrefix + this.name;
         // return Type.classTypePrefix + parent.parent.name; problem: need L-object to navigate
         return Log.exx("getEcoreTypeName failed", parent);
+    }
+
+    // Returns the array of <ecore:EPackage> children under an <xmi:XMI> wrapper, or null
+    // if the root JSON is itself a single <ecore:EPackage> (no wrapper).
+    private static getMultiPackageChildren(json: Json): Json[] | null {
+        const val = json[ECoreRoot.ecoreEPackage]; // "ecore:EPackage"
+        if (val === undefined || val === null) return null;
+        return Array.isArray(val) ? val : [val];
+    }
+
+    // A package is "primitive-only" when every classifier inside is an ecore:EDataType.
+    // The package name is irrelevant — the user may call it PrimitiveTypes, Types, etc.
+    private static isPrimitivePackage(pkg: Json): boolean {
+        const classifiers = this.getChildren(pkg);
+        if (classifiers.length === 0) return false;
+        for (const c of classifiers) {
+            if (c[ECoreClass.xsitype] !== 'ecore:EDataType') return false;
+        }
+        return true;
+    }
+
+    // Pre-pass run before LinkAllNamesToIDs. Rewrites XPath-style pointers in `type` and
+    // `extends` fields into forms the resolver already handles: primitive package references
+    // become canonical EDataType names (e.g. "EString"), normal package references become
+    // "#//ClassName". Three-segment pointers ("/N/X/Y") used by eOpposite are out of scope
+    // for Fase B.1 and left untouched (they will error downstream as expected).
+    private static rewriteXPathPointers(
+        parsedElements: DModelElement[],
+        primitiveIndices: Set<number>,
+        normalIndices: Set<number>,
+        epkgChildren: Json[]
+    ): void {
+        const xpathRe = /^\/(\d+)\/([^/]+)$/;
+        // Bug H: matches cross-document EDataType/EClass multi-value form, e.g.
+        //   "ecore:EDataType platform:/plugin/org.eclipse.uml2.types/model/Types.ecore#//Boolean"
+        //   "ecore:EClass http://www.eclipse.org/emf/2002/Ecore#//EClass"
+        // The captured group is the final type-name segment after "#//".
+        // Idempotent: requires "ecore:E\w+\s+..." prefix, never matches rewritten short names.
+        const crossDocRe = /^ecore:E\w+\s+\S+#\/\/(\w+)$/;
+        const rewriteOne = (value: string): string => {
+            if (typeof value !== 'string') return value;
+            // Bug H: cross-document multi-value form takes precedence over XPath form.
+            const cdm = crossDocRe.exec(value);
+            if (cdm) {
+                const typeName = cdm[1];
+                const canonical = EcoreParser.EDATATYPE_CANONICAL_ALIASES[typeName];
+                if (canonical) return canonical;
+                // Unknown cross-doc type: leave raw, defensive fallback at data.ts:314 catches it.
+                return value;
+            }
+            if (!value.startsWith('/')) return value;
+            const m = xpathRe.exec(value);
+            if (!m) return value; // "/N/X/Y" or other shapes: scope Fase B.2
+            const idx = parseInt(m[1], 10);
+            const name = m[2];
+            if (primitiveIndices.has(idx)) {
+                const canonical = EcoreParser.EDATATYPE_CANONICAL_ALIASES[name];
+                if (canonical) return canonical;
+                const pkgName = (epkgChildren[idx]?.[ECoreNamed.namee] as string) || '?';
+                console.warn(`[EcoreImporter] Unknown EDataType "${name}" in primitive package "${pkgName}" (index ${idx}), falling back to EString`);
+                return 'EString';
+            }
+            if (normalIndices.has(idx)) return EcoreParser.classTypePrefix + name; // "#//Name"
+            return value;
+        };
+
+        for (const elem of parsedElements) {
+            const e = elem as GObject;
+            if (typeof e.type === 'string') {
+                const newVal = rewriteOne(e.type);
+                e.type = newVal;
+            }
+            if (Array.isArray(e.extends)) {
+                e.extends = e.extends.map((v: string) => {
+                    if (typeof v !== 'string') return v;
+                    const newVal = rewriteOne(v);
+                    return newVal;
+                });
+            }
+        }
     }
 
 }
@@ -1062,6 +1226,11 @@ export class ECoreReference {
     static lowerbound: string;
     static containment: string;
     static container: string;
+    static derived: string;
+    static transient: string;
+    static volatile: string;
+    static changeable: string;
+    static unsettable: string;
 }
 
 @RuntimeAccessible('ECoreAttribute')
@@ -1075,6 +1244,11 @@ export class ECoreAttribute {
     static ordered: string;
     static lowerbound: string;
     static upperbound: string;
+    static derived: string;
+    static transient: string;
+    static volatile: string;
+    static changeable: string;
+    static unsettable: string;
 }
 
 @RuntimeAccessible('ECoreOperation')
@@ -1180,7 +1354,12 @@ ECoreReference.upperbound = EcoreParser.XMLinlineMarker + 'upperBound'; // "@1"
 ECoreReference.lowerbound = EcoreParser.XMLinlineMarker + 'lowerBound'; // does even exists?
 ECoreReference.namee = EcoreParser.XMLinlineMarker + 'name';
 ECoreReference.unique = EcoreParser.XMLinlineMarker + 'unique'; // "false",
-ECoreReference.ordered = EcoreParser.XMLinlineMarker + 'unique'; // "false",
+ECoreReference.ordered = EcoreParser.XMLinlineMarker + 'ordered'; // "false",
+ECoreReference.derived = EcoreParser.XMLinlineMarker + 'derived'; // "true"
+ECoreReference.transient = EcoreParser.XMLinlineMarker + 'transient'; // "true"
+ECoreReference.volatile = EcoreParser.XMLinlineMarker + 'volatile'; // "true"
+ECoreReference.changeable = EcoreParser.XMLinlineMarker + 'changeable'; // "false"
+ECoreReference.unsettable = EcoreParser.XMLinlineMarker + 'unsettable'; // "true"
 
 
 ECoreAttribute.xsitype = EcoreParser.XMLinlineMarker + 'xsi:type'; // "ecore:EAttribute",
@@ -1189,7 +1368,12 @@ ECoreAttribute.namee = EcoreParser.XMLinlineMarker + 'name';
 ECoreAttribute.lowerbound = EcoreParser.XMLinlineMarker + 'lowerBound';
 ECoreAttribute.upperbound = EcoreParser.XMLinlineMarker + 'upperBound';
 ECoreAttribute.unique = EcoreParser.XMLinlineMarker + 'unique'; // "false",
-ECoreAttribute.ordered = EcoreParser.XMLinlineMarker + 'unique'; // "false",
+ECoreAttribute.ordered = EcoreParser.XMLinlineMarker + 'ordered'; // "false",
+ECoreAttribute.derived = EcoreParser.XMLinlineMarker + 'derived'; // "true"
+ECoreAttribute.transient = EcoreParser.XMLinlineMarker + 'transient'; // "true"
+ECoreAttribute.volatile = EcoreParser.XMLinlineMarker + 'volatile'; // "true"
+ECoreAttribute.changeable = EcoreParser.XMLinlineMarker + 'changeable'; // "false"
+ECoreAttribute.unsettable = EcoreParser.XMLinlineMarker + 'unsettable'; // "true"
 
 
 ECoreOperation.eParameters = 'eParameters';

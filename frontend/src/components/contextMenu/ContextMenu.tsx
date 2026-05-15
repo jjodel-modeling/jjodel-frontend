@@ -51,6 +51,7 @@ import './ContextMenu.scss';
 import { getLastEditedViewpointId, getLastEditedViewpointName, createViewInWorkbench } from '../../utils/lastViewpoint';
 import { toast } from '../Toast/toastDispatch';
 import { JjodelEvents } from '../../events/registry';
+import { createVertexForObject, createCompositionEdgeForObjects } from '../editor-v2/sync/canvasToJjom';
 
 function ContextMenuComponent(props: AllProps) {
     return ContextMenuComponentInner(props);
@@ -183,16 +184,22 @@ function SubEntry(key:string, icon: ReactNode, label: ReactNode, action: null|un
     return ContextEntry(key, icon, label, action, keycodes, disabled, subelements, true);
 }
 
-function getKeycode(letter: string | ReactNode): ReactNode{ return Keystrokes.getKeystrokeJsx(letter as any); }
-
-
 function ContextEntry(key: string, icon: ReactNode, label: ReactNode, action: null|undefined|(()=>any),
-                        keycodes: Key[], disabled: boolean = false, subelements: ReactNode[] = [], isSubElement: boolean = false) {
+                        keycodes: Key[], disabled: boolean = false, subelements: ReactNode[] = [], isSubElement: boolean = false,
+                        opts: { tooltip?: string; danger?: boolean } = {}) {
     subelements = subelements?.filter(e=>!!e) || [];
     if (!keycodes) keycodes = [];
+    const { tooltip, danger } = opts;
+
+    let className = 'col item';
+    if (subelements.length) className += ' hoverable';
+    if (disabled) className += ' disabled';
+    if (danger) className += ' danger';
 
     // @ts-ignore
-    let ret = <div key={key} disabled={disabled} className={'col item'+ (subelements.length ? ' hoverable' : '')} tabIndex={0} onClick={(e) => {
+    let ret = <div key={key} disabled={disabled} className={className} tabIndex={disabled ? -1 : 0}
+                   aria-disabled={disabled || undefined} title={tooltip}
+                   onClick={(e) => {
         e.stopPropagation();
         if (disabled) return false;
 
@@ -210,9 +217,6 @@ function ContextEntry(key: string, icon: ReactNode, label: ReactNode, action: nu
         {typeof icon === "string" ? <span className={'my-auto'} style={{alignContent: 'center'}}>{icon}</span> : icon}
         <span className={'my-auto ms-2'}>{label}</span>
         <div className={'mx-auto'}/>
-        {keycodes.length>0 && <div className={'my-auto keystrokes ms-2'} style={{textAlign: 'center'}}>
-            {(keycodes.map(e=>getKeycode(e)) as any)/*.separator(<span className='ms-1'/>)*/}
-        </div>}
         {subelements.length>0&& <div className={'my-auto ms-2'}><i className={'bi bi-chevron-right'}
                                      style={{fontSize: '0.75em', float: 'right', paddingTop: '2px', fontWeight: '800'}}/></div>}
         {subelements.length>0 && <section className={'round content right'} onContextMenu={(e) => e.preventDefault()}>
@@ -332,11 +336,50 @@ function ContextMenuComponentInner(props: AllProps) {
         let type = lref.type;
         out = [type, ...type.allSubClasses].filter(e=>!!e);
         out = U.proxyDeduplicator(out);
+
+        // After LValue.addObject creates a containment child, the v2-flow graph
+        // has no DVertex/DEdge for it (LValue.addObject sets father=LValue, the
+        // child is NOT in model.objects, no graph artifacts are created). The
+        // classic editor reads from parent.$ref.values directly and is unaffected;
+        // the flow editor (useJjomSync) keys off graph.subElements and so does
+        // not see the new child without explicit help. Bridge that gap here.
+        const syncChildToFlow = (child: LObject | undefined): void => {
+            if (!child || !model?.id || !lref?.name) return;
+            const parent = (l as any).father as LObject | undefined;
+            if (!parent?.id) return;
+            const state = store.getState();
+            const graphIds: string[] = (state as any).graphs ?? [];
+            let graphId: string | null = null;
+            for (const id of graphIds) {
+                const g = state.idlookup?.[id] as any;
+                if (g?.model === model.id && g.graphStyle === 'v2-flow') { graphId = id; break; }
+            }
+            if (!graphId) return; // no v2-flow graph yet; useJjomSync will create later
+            // Best-effort layout: cascade from parent vertex if found
+            let x = 0, y = 0;
+            const dGraph = state.idlookup?.[graphId] as any;
+            const subEls: string[] = dGraph?.subElements ?? [];
+            for (const id of subEls) {
+                const ge = state.idlookup?.[id] as any;
+                if (ge?.className === 'DVertex' && ge.model === parent.id) {
+                    x = (ge.x ?? 0) + (ge.w ?? 200) + 80;
+                    y = (ge.y ?? 0);
+                    break;
+                }
+            }
+            createVertexForObject(graphId, child.id, x, y);
+            createCompositionEdgeForObjects(graphId, parent.id, child.id, lref.name);
+        };
+
         let jsxret: ReactNode;
         // console.log('contextmenu add options', {out, sc: type.allSubClasses, type});
         if (out.length === 1) {
             let name = out[0].name;
-            jsxret = <Tooltip tooltip={'add to "' + lref.name + '" reference'}><div key={'single_' + l.id} onClick={() => { close(); l.addObject({}, out[0]); }}
+            jsxret = <Tooltip tooltip={'add to "' + lref.name + '" reference'}><div key={'single_' + l.id} onClick={() => {
+                close();
+                const child = l.addObject({}, out[0]) as LObject;
+                syncChildToFlow(child);
+            }}
                          className={'col item'} tabIndex={0}>{icon['add']} Add {name}</div></Tooltip>
         } else jsxret = <div key={'multi' + l.id} onClick={() => setChildrenMenu(!childrenMenu) }
                              tabIndex={0} className={'col item submenu-holder hoverable'}>
@@ -349,6 +392,7 @@ function ContextMenuComponentInner(props: AllProps) {
                             setChildrenMenu(false);
                             const child = l.addObject({}, lc);
                             l.values = [...(l.values as LObject[]), child];
+                            syncChildToFlow(child as LObject);
                         }} className={'col item'} tabIndex={0}>
                             <Tooltip tooltip={'add to "'+ lref.name+'" reference'}><span>{lcname}</span></Tooltip>
                         </li>)}
@@ -361,59 +405,15 @@ function ContextMenuComponentInner(props: AllProps) {
 
 
     if (display) {
-        if (ddata?.name) {
-            let lname = (ldata as LNamedElement).name;
-            {/* if (ldata && model?.isMetamodel) {
-                jsxList.push(<div key={lname} className={'col name'} style={{fontSize: '0.9rem', paddingLeft: '12px', fontWeight: '300'}}>
-                    {ddata.className.substring(1)}: <i>{lname}</i></div>);
-            } else {
-                jsxList.push(<div key={lname} className={'col name'} style={{fontSize: '0.9rem', paddingLeft: '12px', fontWeight: '300'}}>
-                    <i>{[ldata?.father?.name, lname].join('.')}</i></div>);
-            }*/}
-
-            if (ldata) {
-                let meta = (ldata as LObject|LValue).instanceof;
-                jsxList.push(<div key={lname} className={'col name '+(isM2 ? 'meta' : '')+'model'}>
-                    {((isM2 ? cname.substring(1) : (meta?.name || 'Shapeless')) + ': ') + lname}</div>);
-            }
-            separator();
-        }
-        addDynamicEntries(jsxList, nodeid, data, node);
-
-        /* Edit button: only on models */
-
-        if (true as any || !isM2 && cname !== 'DModel') {
-            ContextEntry('edit', icon['edit'], 'Edit', () => setEditPanel(true) as undefined, [])
-
-            ContextEntry("help", <i className='bi bi-question-circle' />, "Help", () => {
-                let cn = ddata?.className;
-                let helpKey: string = '';
-                if (!cn) helpKey = 'properties-panel';
-                if (cn) {
-                    cn = cn.toLowerCase();
-                    if (cn.includes("enum")) helpKey = 'element-enum'; // both literal and enumerator shares the same help section?
-                    else helpKey =  'element-' + cn.substring(1);
-                }
-                window.dispatchEvent(new CustomEvent(JjodelEvents.HELP_OPEN, { detail: { helpKey } }));
-                close();
-                }, []);
-            separator();
-        }
-
-        /* Add children for Object */
-
+        // ─── (1) Add Child (M1: DObject/DValue) ───
         if (cname === 'DObject') {
             let out: any[] = [];
             let children = (ldata as LObject).features.map(feat=>getAddChildren(feat, model as any, out)).filter(e => !(Array.isArray(e) && e.length === 0));
-
             if (!Array.isArray(children) || children.length > 0) {
                 jsxList.push(...children);
                 separator();
             }
-            /* @ts-ignore */
-            // if (children[1]['$$typeof'] !== undefined) jsxList.push(<hr key={hri++} className={'my-1'}/>);
         }
-
         if (cname === 'DValue') {
             let out: any[] = [];
             let children = getAddChildren(ldata as any as LValue, model as any, out);
@@ -423,12 +423,82 @@ function ContextMenuComponentInner(props: AllProps) {
             }
         }
 
-        /* Memorec */
+        // ─── (2) Edit · Duplicate · Delete ───
+        ContextEntry('edit', icon['edit'], 'Edit', () => setEditPanel(true) as undefined, []);
+        ContextEntry('duplicate', <i className="bi bi-copy" />, 'Duplicate', null, [], true,
+            [], false, { tooltip: 'Coming soon' });
+        let cannotDelete = !!(ddata?.className === 'DValue' && (ddata as any as DValue).instanceof);
+        ContextEntry('delete', <i className="bi bi-trash" />, 'Delete', key_bindings.delete.function,
+            [], cannotDelete, [], false, { danger: true });
+        separator();
+
+        // ─── (3) Up · Down ───
+        ContextEntry('up', icon['up'], 'Up', key_bindings.up.function, []);
+        ContextEntry('down', icon['down'], 'Down', key_bindings.down.function, []);
+        separator();
+
+        // ─── (4) Disable / Restore auto-sizing ───
+        let gn = node as GObject;
+        // keep function {wrapped}, cannot return false or it disables triggering close event.
+        if (gn.isResized) ContextEntry('asize', icon['contract'], 'Restore auto-sizing', () => {gn.isResized = false; /*read above*/}, []);
+        else ContextEntry('nasize', icon['expand'], 'Disable auto-sizing', () => {gn.isResized = true}, []);
+        separator();
+
+        // ─── (5) Help · Explain this · Create View ───
+        ContextEntry('help', <i className='bi bi-question-circle' />, 'Help', () => {
+            let cn = ddata?.className;
+            let helpKey: string = '';
+            if (!cn) helpKey = 'properties-panel';
+            if (cn) {
+                cn = cn.toLowerCase();
+                if (cn.includes('enum')) helpKey = 'element-enum';
+                else helpKey = 'element-' + cn.substring(1);
+            }
+            window.dispatchEvent(new CustomEvent(JjodelEvents.HELP_OPEN, { detail: { helpKey } }));
+            close();
+        }, []);
+
+        ContextEntry('explain', <i className='bi bi-stars' />, 'Explain this', () => {
+            const elementName = (ldata as any)?.name ?? 'Unknown';
+            const cn = ddata?.className;
+            const elementType =
+                cn === 'DClass'       ? 'Class'
+              : cn === 'DEnumerator'  ? 'Enum'
+              : cn === 'DPackage'     ? 'Package'
+              : cn === 'DObject'      ? 'Object'
+              : cn === 'DAttribute'   ? 'Attribute'
+              : cn === 'DReference'   ? 'Reference'
+              : cn === 'DOperation'   ? 'Operation'
+              : 'Element';
+            const metamodelName = (model as any)?.name ?? 'Unknown';
+            const properties: Record<string, any> = {};
+            const dany = ddata as any;
+            if (dany?.isAbstract) properties.isAbstract = true;
+            if (dany?.isSingleton) properties.isSingleton = true;
+            window.dispatchEvent(new CustomEvent(JjodelEvents.EXPLAIN_OPEN, {
+                detail: { elementName, elementType, metamodelName, properties },
+            }));
+            close();
+        }, []);
+
+        // Create View — only for M2 classifiers (classNode/enumNode equivalents)
+        if (isM2 && (cname === 'DModel' || cname === 'DClass' || cname === 'DPackage')) {
+            const hasWorkbenchVP = !!getLastEditedViewpointId();
+            ContextEntry('createview', <i className="bi bi-eye" />,
+                hasWorkbenchVP ? 'Create View' : 'Create View — open a viewpoint first',
+                hasWorkbenchVP ? addViewToWorkbench : null,
+                [], !hasWorkbenchVP);
+        }
+
+        // ─── Classic-only section ───
+        // Features specific to the classic editor: dynamic entries (view-script-defined),
+        // AI Suggest (M2 ML recommendations), Extend (M2 inheritance drag), Analytics
+        // (metamodel metrics), Add view (M2 view creation).
+        let preClassicOnlyLen = jsxList.length;
+        addDynamicEntries(jsxList, nodeid, data, node);
 
         if (ddata && !U.isOffline()) {
             if (ddata.className === 'DClass') {
-                // ContextEntry('ai-c', icon['ai'], 'AI suggest', structuralFeature)
-                // NB: did not put this in the usual ContextEntry because this element has children loaded lazily, but must have the caret icon anyway.
                 jsxList.push(<div key='ai-c' onClick={structuralFeature} className={'col item'} tabIndex={0}>
                     {icon['ai']}
                     <span className={'my-auto ms-2'}>AI Suggest</span>
@@ -436,7 +506,6 @@ function ContextMenuComponentInner(props: AllProps) {
                         <i className='ms-1 bi bi-chevron-right my-auto' style={{fontSize: '0.75em', float: 'right', paddingTop: '2px', fontWeight: '800'}} />
                     </div>
                 </div>);
-                separator();
             }
             if (ddata.className === 'DPackage') {
                 jsxList.push(<div key='ai-p' onClick={classifier} className={'col item'} tabIndex={0}>
@@ -446,103 +515,31 @@ function ContextMenuComponentInner(props: AllProps) {
                         <i className='ms-1 bi bi-chevron-right my-auto' style={{fontSize: '0.75em', float: 'right', paddingTop: '2px', fontWeight: '800'}} />
                     </div>
                 </div>);
-                separator();
             }
         }
 
-            /* Extend */
+        if (ddata?.className === 'DClass') {
+            ContextEntry('ext', icon['extend'], 'Extend', key_bindings.extend.function, []);
+        }
 
-            switch (ddata?.className) {
-                default:
-                case undefined:
-                    break;
-                // case 'DValue': if ((ldata as any as LValue).instanceof) jsxList.pop(); ???? break;
-                case 'DClass':
-                    ContextEntry('ext', icon['extend'], 'Extend', key_bindings.extend.function, key_bindings.extend.keystroke);
-                    separator();
-                    break;
-            }
-
-
-        /* View-specific menu entry (old) */
-        /*
-        if (node.view.state.contextualEntries) {
-            for (const key in node.view.state.contextualEntries) {
-                ContextEntry(key,
-                    node.view.state.contextualEntries[key].icon ? <i className={'bi '+node.view.state.contextualEntries[key].icon} /> : <span className={'empty'}/>,
-                    key, () => node.view.state.contextualEntries[key].action(data, node), [])
-            }
-            separator();
-        }*/
-
-
-        /* Deselect */
-        /*
-        jsxList.push(<div key='-select' onClick={() => {
-            close();
-            SetRootFieldAction.new(`selected.${DUser.current}`, '', '', false);
-        }} className={'col item'} tabIndex={0}>{icon['deselect']} Deselect</div>);*/
-        //jsxList.push(<hr key={hri++} className={'my-1'} />);
-
-
-
-
-        /* Delete */
-        let cannotDelete = !!(ddata?.className === 'DValue' && (ddata as any as DValue).instanceof);
-
-        ContextEntry('delete', icon['delete'], 'Delete', key_bindings.delete.function, key_bindings.delete.keystroke, cannotDelete);
-        separator();
-        
-        /* Refresh */
-
-        // jsxList.push(<div onClick={() => {alert('refresh')}} className={'col item'} tabIndex={0}>{icon['refresh']} Refresh</div>);
-        // jsxList.push(<hr key={hri++} className={'my-1'} />);
-
-        /* Up / Down */
-        ContextEntry('up', icon['up'], 'Up', key_bindings.up.function, key_bindings.up.keystroke);
-        ContextEntry('down', icon['down'], 'Down', key_bindings.down.function, key_bindings.down.keystroke);
-        separator();
-
-        /* AUTO-SIZING */
-        let gn = node as GObject;
-        // keep function {wrapped}, cannot return false or it disables triggering close event.
-        if (gn.isResized) ContextEntry('asize', icon['contract'], 'Restore auto-sizing', () => {gn.isResized = false; /*read above*/}, key_bindings.asize.keystroke)
-        else ContextEntry('nasize', icon['expand'], 'Disable auto-sizing', () => {gn.isResized = true}, key_bindings.asize.keystroke)
-
-        // /* LOCK-UNLOCK */
-        // jsxList.push(<div onClick={() => {close(); ldata.delete(); /*node.delete();*/}} className={'col item'} tabIndex={0}>{icon['lock']} Lock/Unlock<div> <i
-        //     className='bi bi-command'></i> L</div></div>);
-        // /* UNLOCK ALL ELEMENTS */
-        // jsxList.push(<div onClick={() => {close(); ldata.delete(); /* node.delete();*/}} className={'col item'} tabIndex={0}>
-        //     {icon['unlock']} Unlock all<div><i className="bi bi-alt"></i> <i className='bi bi-command'></i> L</div>
-        // </div>);
-
-        separator();
-
-        /* Analytics */
         if (ldata && model?.isMetamodel) {
-            ContextEntry('analytic', icon['metrics'], 'Analytics', key_bindings.metrics.function, key_bindings.metrics.keystroke);
-            separator();
+            ContextEntry('analytic', icon['metrics'], 'Analytics', key_bindings.metrics.function, []);
         }
 
-
-        /* ADD VIEW */
         if (isM2 && (cname === 'DModel' || cname === 'DClass' || cname === 'DPackage' || cname === 'DAttribute' || cname === 'DReference')) {
             const hasWorkbenchVP = !!getLastEditedViewpointId();
             ContextEntry('view+m2', icon['add'],
                 hasWorkbenchVP ? 'Add view' : 'Add view — open a viewpoint first',
                 hasWorkbenchVP ? addViewInstances : null,
-                key_bindings.addView.keystroke, !hasWorkbenchVP, []);
+                [], !hasWorkbenchVP);
+        } else if (!isM2) {
+            ContextEntry('view+', icon['add'], 'Add view', addViewSelf, []);
+        }
 
-            /* CREATE VIEW IN WORKBENCH — classifiers only */
-            if (cname === 'DModel' || cname === 'DClass' || cname === 'DPackage') {
-                ContextEntry('createview', <i className="bi bi-eye" />,
-                    hasWorkbenchVP ? 'Create View' : 'Create View — open a viewpoint first',
-                    hasWorkbenchVP ? addViewToWorkbench : null,
-                    [], !hasWorkbenchVP, []);
-            }
-        } else {
-            ContextEntry('view+', icon['add'], 'Add view', addViewSelf, key_bindings.addView.keystroke, false, []);
+        // Insert a divider before the classic-only section if any item was added,
+        // separating it from the unified group above.
+        if (jsxList.length > preClassicOnlyLen) {
+            jsxList.splice(preClassicOnlyLen, 0, <hr key={'sep' + hri++} className={'my-1'}/>);
         }
     }
 

@@ -1203,6 +1203,22 @@ body[data-editor-type="viewpoint"] {
   }
 }
 
+/* Properties+Tree both in rail mode (2026-05-13) — shrink dock tab to 56px.
+   Distinto da `data-editor-type="summary"` (hide pattern): qui il tab resta
+   visibile mostrando le due rail 28+28=56px, lo spazio liberato va agli
+   altri pannelli del Dock. Settato/rimosso da Dock.tsx in risposta agli
+   eventi PROPERTIES_TREE_RAIL_ONLY_ENTER/EXIT. */
+body[data-properties-tree-rail-only="true"] {
+  .dock-hbox > .dock-panel:last-child,
+  .dock-hbox > .dock-box:last-child {
+    flex: 0 0 56px !important;
+    width: 56px !important;
+    min-width: 56px !important;
+    max-width: 56px !important;
+    transition: width 200ms ease, flex-basis 200ms ease;
+  }
+}
+
 /* Canvas-Only Mode - hide properties panel completely */
 body[data-layout-mode="canvas-only"] {
   .dock-hbox > .dock-panel:last-child,

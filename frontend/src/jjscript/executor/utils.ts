@@ -7,16 +7,64 @@ import { ExecutionContext } from '../types';
 import { DUser, L, LUser, LProject, LModel, store, LPointerTargetable, LModelElement, DState, GObject } from '../../joiner';
 import DockManager from '../../components/abstract/DockManager';
 
+// ============================================
+// ACTIVE ARTIFACT CACHE
+// ============================================
+
+/**
+ * Module-level cache of the active artefact, populated by Jodie's listener on
+ * `JjodelEvents.EDITOR_TYPE_CHANGE`. The DockManager dispatches that event with
+ * `{ editorType, modelId }` whenever a tab is opened/activated.
+ *
+ * The cache exists because non-React contexts (JjScript service, executor) have
+ * no reliable way to read the DockManager's active tab synchronously. The
+ * fallback to `DockManager.dock.getLayout()` works only when the dock instance
+ * is reachable via the singleton — in many flows it is not.
+ */
+type ActiveArtifactCache = { modelId: string; editorType: string };
+let _activeArtifactCache: ActiveArtifactCache | null = null;
+
+/**
+ * Update the active artefact cache. Called by Jodie's EDITOR_TYPE_CHANGE
+ * listener (and at mount-time to seed the cache from the existing fallback).
+ */
+export function setActiveArtifactCache(modelId: string, editorType: string): void {
+    if (!modelId) return;
+    _activeArtifactCache = { modelId, editorType };
+}
+
+/**
+ * Resolve a cached LModel by id and isMetamodel flag. Returns null if the cache
+ * is empty, the editorType doesn't match, or the model can't be resolved.
+ */
+function getCachedModel(expectMetamodel: boolean): LModel | null {
+    if (!_activeArtifactCache) return null;
+    const { editorType, modelId } = _activeArtifactCache;
+    const expectedType = expectMetamodel ? 'metamodel' : 'model';
+    if (editorType !== expectedType) return null;
+    try {
+        const m = LPointerTargetable.fromPointer(modelId) as LModel | null;
+        console.log('[cache] modelId:', modelId, 'resolved:', m?.name, 'isMetamodel:', m?.isMetamodel, 'expectMetamodel:', expectMetamodel);
+        if (m && (!!m.isMetamodel) === expectMetamodel) return m;
+    } catch (e) { console.warn('[cache] error:', e); }
+    return null;
+}
+
 /**
  * Get the active/selected metamodel from UI state.
  *
  * Resolution order:
- * 1. DockManager active tab — the metamodel/model tab the user is currently viewing
- * 2. _lastSelected.modelElement — the last clicked element's metamodel
- * 3. null (caller decides fallback)
+ * 1. _activeArtifactCache — last EDITOR_TYPE_CHANGE event payload (most reliable)
+ * 2. DockManager active tab — the metamodel/model tab the user is currently viewing
+ * 3. _lastSelected.modelElement — the last clicked element's metamodel
+ * 4. null (caller decides fallback)
  */
 export function getActiveMetamodel(): LModel | null {
     try {
+        // 0. Check the cache first — populated by EDITOR_TYPE_CHANGE listener.
+        const cached = getCachedModel(/* expectMetamodel */ true);
+        if (cached) return cached;
+
         // 1. Use DockManager active tab ID (most reliable indicator of which metamodel is "active")
         const activeTabModel = getActiveTabMetamodel();
         if (activeTabModel) return activeTabModel;
@@ -66,6 +114,69 @@ function getActiveTabMetamodel(): LModel | null {
 }
 
 /**
+ * Returns the active M1 model (DModel with isMetamodel === false) from the
+ * currently focused dock tab. Returns null if the active tab is a metamodel
+ * or no model tab is active.
+ *
+ * Resolution order (mirrors getActiveMetamodel):
+ * 0. _activeArtifactCache — last EDITOR_TYPE_CHANGE event payload
+ * 1. DockManager active tab — if it's a non-metamodel DModel
+ * 2. _lastSelected.modelElement — walk to its owning DModel if non-metamodel
+ * 3. null
+ */
+export function getActiveModel(): LModel | null {
+    try {
+        // 0. Check the cache first — populated by EDITOR_TYPE_CHANGE listener.
+        const cached = getCachedModel(/* expectMetamodel */ false);
+        if (cached) return cached;
+
+        // 1. DockManager active tab
+        if (DockManager.dock) {
+            const layout = DockManager.dock.getLayout();
+            const modelsPanel = layout?.dockbox?.children?.[0];
+            const tabs = (modelsPanel as any)?.tabs || [];
+            const activeId: string = (modelsPanel as any)?.activeId || tabs[0]?.id;
+            if (activeId) {
+                const model = LPointerTargetable.fromPointer(activeId) as LModel | null;
+                if (model && !model.isMetamodel) {
+                    return model;
+                }
+            }
+        }
+
+        // 2. Fall back to _lastSelected.modelElement
+        const state: DState & GObject = store.getState();
+        const selected = state._lastSelected?.modelElement;
+        if (selected) {
+            const me = LPointerTargetable.fromPointer(selected) as LModelElement;
+            if (me) {
+                const model = me.model;
+                if (model && !model.isMetamodel) {
+                    return model;
+                }
+            }
+        }
+        return null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Returns 'M1' if the active editor tab contains a model (instance level),
+ * 'M2' if it contains a metamodel. Defaults to 'M2' on ambiguity.
+ *
+ * Cache-aware: reads `_activeArtifactCache.editorType` first to avoid the
+ * round-trip through DockManager / _lastSelected when the cache is fresh.
+ */
+export function getActiveLevel(): 'M1' | 'M2' {
+    if (_activeArtifactCache?.editorType === 'model') return 'M1';
+    if (_activeArtifactCache?.editorType === 'metamodel') return 'M2';
+    // Fallback for cold cache (e.g., before any EDITOR_TYPE_CHANGE has fired)
+    return getActiveModel() !== null ? 'M1' : 'M2';
+}
+
+/**
  * Get the current project
  * Uses the same pattern as Jodie.tsx to access the user's project
  */
@@ -108,8 +219,24 @@ export function getCurrentUser(): LUser | null {
 /**
  * Get the default parent for a new element based on type
  * Prioritizes the currently selected metamodel in the UI
+ *
+ * @param context — optional execution context. When level === 'M1', the parent
+ *   is resolved as the active instance DModel (not a metamodel package).
  */
-export function getDefaultParent(project: LProject, elementType: string): any {
+export function getDefaultParent(project: LProject, elementType: string, context?: ExecutionContext): any {
+    // M1: default parent is the active instance model (DModel where isMetamodel === false)
+    if (context?.level === 'M1') {
+        if (context.modelId) {
+            const models = (project as any).models || [];
+            const model = models.find(
+                (m: LModel) => m.id === context.modelId && !m.isMetamodel
+            );
+            if (model) return model;
+        }
+        return getActiveModel();
+    }
+
+    // M2: existing logic unchanged
     // For classes, enums, packages: use selected metamodel or first available
     if (['class', 'abstract class', 'interface', 'enum', 'enumeration', 'package'].includes(elementType)) {
         const metamodels = (project as any).metamodels || [];

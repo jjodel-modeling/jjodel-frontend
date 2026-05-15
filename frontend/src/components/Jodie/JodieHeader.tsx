@@ -8,6 +8,8 @@ import { ProviderModelSelector } from '../common/ProviderModelSelector';
 import { TAIProvider, AIProvider, ConsoleMode, CodeFlavor } from '../../types/jodie';
 import { DUser, L, LUser, LProject, LModel, store } from '../../joiner';
 import { Selectors } from '../../redux/selectors/selectors';
+import { JjodelEvents } from '../../events/registry';
+import { getActiveModel } from '../../jjscript/executor/utils';
 
 
 interface JodieHeaderProps {
@@ -31,6 +33,10 @@ interface JodieHeaderProps {
     /** Active code flavor (JjEL / JS). JS is disabled in stage 1. */
     codeFlavor: CodeFlavor;
     onCodeFlavorChange: (f: CodeFlavor) => void;
+    /** Clear all entries of the active console mode (Chat or Code). Optional for backward compat. */
+    onClearCurrentMode?: () => void;
+    /** True iff the active console mode has at least one entry. Used to switch the aria-label. */
+    canClearCurrentMode?: boolean;
 }
 
 interface MetamodelContext {
@@ -38,6 +44,7 @@ interface MetamodelContext {
     projectName: string | null;
     metamodelName: string | null;
     metamodelCount: number;
+    level: 'M1' | 'M2';
 }
 
 /**
@@ -47,7 +54,7 @@ function getMetamodelContext(): MetamodelContext {
     try {
         const user: LUser = L.fromPointer(DUser.current);
         if (!user?.project) {
-            return { hasProject: false, projectName: null, metamodelName: null, metamodelCount: 0 };
+            return { hasProject: false, projectName: null, metamodelName: null, metamodelCount: 0, level: 'M2' };
         }
 
         const project = user.project as LProject;
@@ -55,19 +62,23 @@ function getMetamodelContext(): MetamodelContext {
         const metamodels = (project as any).metamodels || [];
 
         if (metamodels.length === 0) {
-            return { hasProject: true, projectName, metamodelName: null, metamodelCount: 0 };
+            return { hasProject: true, projectName, metamodelName: null, metamodelCount: 0, level: 'M2' };
         }
 
-        // Try to get the active/selected metamodel
-        const activeModel = Selectors.getActiveModel();
+        // Try to get the active/selected metamodel — prefer the cache populated
+        // by EDITOR_TYPE_CHANGE listener, fall back to the legacy selector.
+        const activeModel = getActiveModel() ?? Selectors.getActiveModel();
         let targetMetamodel: LModel | null = null;
 
         if (activeModel && activeModel.isMetamodel) {
-            // Verify it belongs to this project
+            // M2: verify it belongs to this project
             const isInProject = metamodels.some((mm: any) => mm.id === activeModel.id);
             if (isInProject) {
                 targetMetamodel = activeModel;
             }
+        } else if (activeModel && !activeModel.isMetamodel) {
+            // M1: active artefact is a model instance — show the model itself
+            targetMetamodel = activeModel;
         }
 
         // Fallback to first metamodel
@@ -76,15 +87,17 @@ function getMetamodelContext(): MetamodelContext {
         }
 
         const metamodelName = targetMetamodel?.name || 'Unnamed';
+        const level: 'M1' | 'M2' = targetMetamodel?.isMetamodel ? 'M2' : 'M1';
 
         return {
             hasProject: true,
             projectName,
             metamodelName,
             metamodelCount: metamodels.length,
+            level,
         };
     } catch {
-        return { hasProject: false, projectName: null, metamodelName: null, metamodelCount: 0 };
+        return { hasProject: false, projectName: null, metamodelName: null, metamodelCount: 0, level: 'M2' };
     }
 }
 
@@ -112,7 +125,16 @@ function useMetamodelContext(): MetamodelContext {
             });
         });
 
-        return () => unsubscribe();
+        // Refresh the badge on tab switches (rc-dock layout change), independent
+        // of redux churn. The EDITOR_TYPE_CHANGE event fires on tab open/switch
+        // and carries the active modelId in its detail.
+        const handleEditorChange = () => setContext(getMetamodelContext());
+        window.addEventListener(JjodelEvents.EDITOR_TYPE_CHANGE, handleEditorChange);
+
+        return () => {
+            unsubscribe();
+            window.removeEventListener(JjodelEvents.EDITOR_TYPE_CHANGE, handleEditorChange);
+        };
     }, []);
 
     return context;
@@ -133,6 +155,8 @@ export function JodieHeader({
     onConsoleModeChange,
     codeFlavor,
     onCodeFlavorChange,
+    onClearCurrentMode,
+    canClearCurrentMode,
 }: JodieHeaderProps): JSX.Element {
     const context = useMetamodelContext();
     const aliveTitle = isAlive
@@ -182,7 +206,7 @@ export function JodieHeader({
                         onClick={() => onConsoleModeChange('code')}
                         title="Evaluate code against the model (Cmd+J)"
                     >
-                        Code
+                        Console
                     </button>
                 </div>
             </div>
@@ -193,7 +217,10 @@ export function JodieHeader({
                     context.metamodelName ? (
                         <div className="jodie-metamodel-indicator" title={`Target: ${context.metamodelName}${context.metamodelCount > 1 ? ` (${context.metamodelCount} metamodels)` : ''}`}>
                             <i className="bi bi-diagram-3" />
-                            <span className="jodie-metamodel-name">{context.metamodelName}</span>
+                            <span className="jodie-metamodel-name">
+                                <span className="jodie-metamodel-level">{context.level} · </span>
+                                {context.metamodelName}
+                            </span>
                             {context.metamodelCount > 1 && (
                                 <span className="jodie-metamodel-count">+{context.metamodelCount - 1}</span>
                             )}
@@ -213,6 +240,16 @@ export function JodieHeader({
             </div>
 
             <div className="jodie-header-right">
+                {onClearCurrentMode && (
+                    <button
+                        className="jodie-header-btn"
+                        onClick={onClearCurrentMode}
+                        title={consoleMode === 'code' ? 'Clear console history' : 'Clear chat history'}
+                        aria-label={consoleMode === 'code' ? 'Clear console history' : 'Clear chat history'}
+                    >
+                        <i className="bi bi-eraser" />
+                    </button>
+                )}
                 {onResetPosition && (
                     <button
                         className="jodie-header-btn jodie-reset-btn"

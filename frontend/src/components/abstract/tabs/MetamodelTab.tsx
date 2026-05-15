@@ -114,8 +114,6 @@ function MetamodelTabComponent(props: AllProps) {
                 dropY = graphCoords.y;
             }
 
-            // Create the element using model.addChild() - same API as ToolBar
-            // The feature.id is lowercase (package, class, enumerator)
             let createdElement = model.addChild(feature.id);
 
             // Execute the returned function if it exists (some addChild returns a function)

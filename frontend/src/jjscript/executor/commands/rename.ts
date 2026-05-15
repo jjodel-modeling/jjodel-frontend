@@ -11,6 +11,7 @@ import {
 import { resolveElement } from '../resolvers';
 import { qualifiedNameToString, isValidIdentifier } from '../../parser/grammar';
 import { getProject } from '../utils';
+import { executeRenameInstance } from './instance';
 
 import {
     SetFieldAction,
@@ -52,6 +53,11 @@ export async function executeRename(
                 message: 'No active project',
                 errors: [{ code: 'NO_PROJECT', message: 'Cannot rename element without an active project' }]
             };
+        }
+
+        // M1 routing: 'rename instance X' or any 'rename X' in M1 context targets an instance.
+        if (args.elementType === 'instance' || context.level === 'M1') {
+            return executeRenameInstance(args, context, project);
         }
 
         // Resolve the target element

@@ -79,7 +79,8 @@ export type ElementType =
     | 'model'
     | 'metamodel'
     | 'project'
-    | 'annotation';
+    | 'annotation'
+    | 'instance';      // M1: instance of a metaclass (DObject)
 
 // ============================================
 // AST NODE TYPES
@@ -494,6 +495,13 @@ export interface ExecutionContext {
      * the same class name exists in multiple metamodels.
      */
     targetMetamodelId?: string;
+    /**
+     * The execution level. 'M2' = metamodel editor (default); 'M1' = model/instance editor.
+     * Convention: level 'M1' implies both modelId and targetMetamodelId are set.
+     * Command handlers must check this field and throw ContextError if the command
+     * targets the wrong level.
+     */
+    level?: 'M1' | 'M2';
     selectedElement?: string;
     history: CommandHistoryEntry[];
     variables: Map<string, any>;
@@ -570,11 +578,12 @@ export const ELEMENT_TYPES: ElementType[] = [
     'class', 'abstract class', 'interface', 'attribute', 'reference',
     'containment', 'composition',  // Shortcuts for "reference ... containment"
     'operation', 'parameter', 'package', 'enum', 'enumeration',
-    'literal', 'model', 'metamodel', 'project', 'annotation'
+    'literal', 'model', 'metamodel', 'project', 'annotation',
+    'instance'   // M1: DObject instance
 ];
 
 export const KEYWORDS = [
-    'to', 'from', 'in', 'as', 'with', 'type', 'extends', 'implements',
+    'to', 'from', 'in', 'of', 'as', 'with', 'type', 'extends', 'implements',
     'abstract', 'readonly', 'derived', 'transient', 'volatile',
     'containment', 'opposite', 'default', 'ordered', 'unique',
     'cascade', 'force', 'deep', 'brief', 'full', 'tree'

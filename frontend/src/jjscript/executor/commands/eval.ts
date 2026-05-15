@@ -98,23 +98,68 @@ export function buildEvalContext(context: ExecutionContext): Record<string, Jjel
     const metamodel = getTargetMetamodel(context, project);
     if (!metamodel) return variables;
 
-    // Collect raw M1 L-proxy objects first so per-class `instances` / `allInstances`
-    // can be derived by filtering on `obj.instanceof.name`. The DClass.instances
-    // pointer list is unreliable here — it often doesn't reflect newly-created
-    // model objects — so we compute from the M1 model side instead.
+    // Collect raw M1 L-proxy objects first so per-class `instances` /
+    // `allInstances` can be derived by filtering on `obj.instanceof.name`. The
+    // DClass.instances pointer list is unreliable here (often doesn't reflect
+    // newly-created model objects), so we compute from the M1 model side instead.
     const m1models: any[] = (metamodel as any).instances || [];
     const rawM1Objects: any[] = [];
     for (const m of m1models) {
         const objs = (m as any).allSubObjects || (m as any).objects || [];
         for (const obj of objs) rawM1Objects.push(obj);
     }
-    const allInstancesJjel: JjelValue[] = rawM1Objects.map((o) => shallowObjectToJjelValue(o));
+
+    // Two-pass build for reference identity (so `obj.instanceOf == Person` works):
+    //   Pass 1: build class shells (no instances yet).
+    //   Pass 2: build classByName map.
+    //   Pass 3: build instance plain objects, looking up shared class shell via classByName.
+    //   Pass 4: mutate class shells to populate instances/allInstances from the shared pool.
+    const classes = (metamodel as any).classes || [];
+    const classJjelValues: JjelValue[] = classes.map((cls: any) => shallowClassToJjelValue(cls));
+    variables['classes'] = classJjelValues;
+
+    const classByName: Map<string, JjelValue> = new Map();
+    for (let i = 0; i < classes.length; i++) {
+        const cName = classes[i]?.name;
+        if (typeof cName === 'string' && cName) classByName.set(cName, classJjelValues[i]);
+    }
+
+    const allInstancesJjel: JjelValue[] = rawM1Objects.map((o) => shallowObjectToJjelValue(o, classByName));
     variables['instances'] = allInstancesJjel;
 
-    // Convert classes to plain JjEL-compatible objects (with per-class instances)
-    const classes = (metamodel as any).classes || [];
-    const classJjelValues = classes.map((cls: any) => shallowClassToJjelValue(cls, rawM1Objects));
-    variables['classes'] = classJjelValues;
+    // Pass 4: populate per-class instances/allInstances by sharing references
+    // with the global pool, so identity holds across both surfaces.
+    for (let i = 0; i < classes.length; i++) {
+        const cls = classes[i];
+        const classObj = classJjelValues[i] as any;
+        const cName = cls?.name ?? '';
+        if (!cName) continue;
+
+        // Subclass set including the class itself, for allInstances.
+        const subclassNames = new Set<string>([cName]);
+        try {
+            const subs = cls.allSubclasses || cls.allSubClasses || [];
+            for (const s of subs) if (s?.name) subclassNames.add(s.name);
+        } catch { /* skip */ }
+
+        const instances: JjelValue[] = [];
+        const allInstances: JjelValue[] = [];
+        for (let j = 0; j < rawM1Objects.length; j++) {
+            let instType: string | null = null;
+            try { instType = rawM1Objects[j]?.instanceof?.name ?? null; } catch { /* skip */ }
+            if (!instType) continue;
+            const sharedJjel = allInstancesJjel[j];
+            if (instType === cName) {
+                instances.push(sharedJjel);
+                allInstances.push(sharedJjel);
+            } else if (subclassNames.has(instType)) {
+                allInstances.push(sharedJjel);
+            }
+        }
+        classObj.instances = instances;
+        classObj.allInstances = allInstances;
+        classObj.instanceCount = instances.length;
+    }
 
     // Flat list of all attributes across all classes
     const allAttributes: JjelValue[] = [];
@@ -173,18 +218,19 @@ export function buildEvalContext(context: ExecutionContext): Record<string, Jjel
     }
 
     // Selected element: `data` (model element) and `node` (graph vertex).
-    // Read from Redux `_lastSelected`.
+    // Read from Redux `_lastSelected`. classByName is threaded through so that
+    // `self.instanceOf == RoadNetwork` resolves by reference identity.
     try {
         const state: any = store.getState();
         const selectedMeId = state?._lastSelected?.modelElement;
         const selectedNodeId = state?._lastSelected?.node;
         if (selectedMeId) {
             const me = LPointerTargetable.fromPointer(selectedMeId) as any;
-            if (me) variables['data'] = wrapSelectedElement(me);
+            if (me) variables['data'] = wrapSelectedElement(me, classByName);
         }
         if (selectedNodeId) {
             const n = LPointerTargetable.fromPointer(selectedNodeId) as any;
-            if (n) variables['node'] = wrapSelectedElement(n);
+            if (n) variables['node'] = wrapSelectedElement(n, classByName);
         }
     } catch {
         // selected element not available — skip
@@ -197,12 +243,12 @@ export function buildEvalContext(context: ExecutionContext): Record<string, Jjel
  * Convert an L-layer class proxy to a plain JjEL object.
  * Uses shallow conversion to avoid circular proxy loops.
  *
- * `allM1Objects` is the pool of M1 L-proxy objects (typed by this metamodel).
- * `instances` / `allInstances` are derived by filtering that pool on
- * `obj.instanceof.name` — more reliable than `LClass.instances` which reads a
- * pointer list that doesn't always reflect current model state.
+ * Builds the class shell only (no instances/allInstances). Those arrays are
+ * populated by the buildEvalContext post-pass once the shared pool of M1
+ * instance plain objects exists, so identity comparisons such as
+ * `instances.first().instanceOf == Person` resolve correctly.
  */
-function shallowClassToJjelValue(cls: any, allM1Objects: any[] = []): JjelValue {
+function shallowClassToJjelValue(cls: any): JjelValue {
     const className = cls.name ?? '';
 
     const attributes = (cls.attributes || []).map((attr: any) =>
@@ -227,46 +273,33 @@ function shallowClassToJjelValue(cls: any, allM1Objects: any[] = []): JjelValue 
         }
     } catch { /* proxy access can fail */ }
 
-    // Collect subclass names (including indirect) so allInstances covers the hierarchy.
-    const subclassNames = new Set<string>();
-    if (className) subclassNames.add(className);
-    try {
-        const subs = cls.allSubclasses || cls.allSubClasses || [];
-        for (const s of subs) {
-            if (s?.name) subclassNames.add(s.name);
-        }
-    } catch { /* proxy access can fail */ }
-
-    // Filter the M1 pool by instanceof.
-    const instances: JjelValue[] = [];
-    const allInstances: JjelValue[] = [];
-    for (const obj of allM1Objects) {
-        let instType: string | null = null;
-        try { instType = obj?.instanceof?.name ?? null; } catch { /* skip */ }
-        if (!instType) continue;
-        if (instType === className) {
-            const shallow = shallowObjectToJjelValue(obj);
-            instances.push(shallow);
-            allInstances.push(shallow);
-        } else if (subclassNames.has(instType)) {
-            allInstances.push(shallowObjectToJjelValue(obj));
-        }
-    }
-
     return {
         name: className,
+        // M3 type name (meta-metaclass), e.g. "DClass". Source: D-layer runtime
+        // class name auto-set by the joiner at construction (classes.ts:458).
+        className: cls.className ?? 'DClass',
         isAbstract: cls.isAbstract ?? cls.abstract ?? false,
         isInterface: cls.isInterface ?? cls.interface ?? false,
+        // Mapped to D-layer field allowCrossReference for historical reasons;
+        // UI and JjEL both use the more accurate name allowCrossExtend.
+        allowCrossExtend: cls.allowCrossReference ?? false,
+        isFinal: cls.isFinal ?? cls.final ?? false,
+        isSingleton: cls.isSingleton ?? false,
+        isRootable: cls.isRootable ?? cls.rootable ?? false,
+        isPartial: cls.isPartial ?? cls.partial ?? false,
         attributes,
         references,
         operations,
         superTypes,
-        instances,
-        allInstances,
+        // Populated by buildEvalContext post-pass. Empty here so that nested
+        // contexts (e.g. project.metamodels[*].classes) that build classes in
+        // isolation get a consistent shape without paying for instance enumeration.
+        instances: [] as JjelValue[],
+        allInstances: [] as JjelValue[],
         attributeCount: attributes.length,
         referenceCount: references.length,
         operationCount: operations.length,
-        instanceCount: instances.length,
+        instanceCount: 0,
         __type: 'Class'
     } as JjelValue;
 }
@@ -343,15 +376,33 @@ function shallowEnumToJjelValue(e: any): JjelValue {
 /**
  * Convert an L-layer M1 object proxy to a plain JjEL object.
  * Surfaces user-defined attribute values as top-level properties.
+ *
+ * When `classByName` is provided, `instanceOf` (canonical) and `instanceof`
+ * (deprecated alias, same reference) point to the shared plain class object,
+ * enabling identity comparisons like `obj.instanceOf == Person`. When the map
+ * is absent the properties remain null — callers that need identity must
+ * thread the map through (buildEvalContext does).
  */
-function shallowObjectToJjelValue(obj: any): JjelValue {
+function shallowObjectToJjelValue(obj: any, classByName?: Map<string, JjelValue> | null): JjelValue {
+    // `className` is intentionally omitted on instances: it is strict-on-classes
+    // (M2->M3) per the v2 design (2026-04-28). Accessing `obj.className` on an
+    // instance produces a pedagogical JjEL error (see evaluator.ts) redirecting
+    // the user to `obj.instanceOf.name` for the metaclass name.
     const result: any = {
         id: obj.id ?? '',
-        className: obj.className ?? 'DObject',
         __type: 'Object'
     };
     try { result.name = obj.name ?? null; } catch { result.name = null; }
-    try { result.instanceof = obj.instanceof?.name ?? null; } catch { result.instanceof = null; }
+
+    // Resolve instanceOf to the shared plain class object (not a string, not
+    // an L-proxy). Both `instanceOf` (canonical, camelCase) and `instanceof`
+    // (deprecated alias) hold the same reference.
+    let instType: string | null = null;
+    try { instType = obj.instanceof?.name ?? null; } catch { /* skip */ }
+    const classObj: JjelValue | null = (classByName && instType) ? (classByName.get(instType) ?? null) : null;
+    result.instanceOf = classObj;
+    result.instanceof = classObj;
+
     // Expose metamodel feature values (from $name.value etc.) directly.
     extractAttributeValues(obj, result);
     return result as JjelValue;
@@ -361,9 +412,17 @@ function shallowObjectToJjelValue(obj: any): JjelValue {
  * Wrap the currently-selected model element or graph node for use in the JjEL
  * context. Attribute values are surfaced as top-level properties so users can
  * write `data.age` instead of `data.$age.value`.
+ *
+ * When `classByName` is provided, `instanceOf` (canonical) and `instanceof`
+ * (deprecated alias) are overridden to the shared plain class object so that
+ * `self.instanceOf == Person` resolves by reference identity, consistent with
+ * `instances[i].instanceOf` exposed by shallowObjectToJjelValue.
  */
-function wrapSelectedElement(me: any): JjelValue {
-    const result: any = { __isProxy: true };
+function wrapSelectedElement(me: any, classByName?: Map<string, JjelValue> | null): JjelValue {
+    // `__type: 'Object'` aligns the discriminator used elsewhere
+    // (shallowObjectToJjelValue) so the evaluator's pedagogical error for
+    // `obj.className` on instances triggers symmetrically on `data`/`self`.
+    const result: any = { __isProxy: true, __type: 'Object' };
 
     let keys: (string | symbol)[];
     try {
@@ -385,6 +444,48 @@ function wrapSelectedElement(me: any): JjelValue {
     // Metamodel-defined attribute values override built-in keys
     // (aligns with Console/JjTL behavior).
     extractAttributeValues(me, result);
+
+    // Strip className inherited from the L-proxy: per v2 design (2026-04-28),
+    // `className` is strict-on-classes. The evaluator's pedagogical error
+    // requires the property to be absent on instances so the lookup fails into
+    // the error path rather than silently returning the M3 type name.
+    delete result.className;
+
+    // Override instanceOf/instanceof with the shared plain class object so
+    // that identity comparisons against top-level class bindings work
+    // (e.g. `self.instanceOf == RoadNetwork`). The Reflect.ownKeys copy above
+    // would otherwise leave an L-proxy reference, breaking identity.
+    if (classByName) {
+        let instType: string | null = null;
+        try { instType = me?.instanceof?.name ?? null; } catch { /* skip */ }
+        const classObj = (typeof instType === 'string' && instType) ? (classByName.get(instType) ?? null) : null;
+        result.instanceOf = classObj;
+        result.instanceof = classObj;
+    }
+
+    // If the selected element is a metaclass (M2), hydrate `result` with the
+    // structural properties exposed by shallowClassToJjelValue at Level 1, so
+    // `self.isAbstract` / `self.instances` resolve identically to
+    // `Attribute.isAbstract` / `Attribute.instances` (reference identity for
+    // arrays). Reading from the shared plain class object avoids L-proxy
+    // getters and the D-layer naming mismatch (`abstract` vs `isAbstract`).
+    if (classByName && typeof result.name === 'string') {
+        const classPlainObj: any = classByName.get(result.name);
+        if (classPlainObj && typeof classPlainObj === 'object') {
+            result.isAbstract       = classPlainObj.isAbstract       ?? null;
+            result.isInterface      = classPlainObj.isInterface      ?? null;
+            result.isFinal          = classPlainObj.isFinal          ?? null;
+            result.isSingleton      = classPlainObj.isSingleton      ?? null;
+            result.isRootable       = classPlainObj.isRootable       ?? null;
+            result.isPartial        = classPlainObj.isPartial        ?? null;
+            result.allowCrossExtend = classPlainObj.allowCrossExtend ?? null;
+            result.instances        = classPlainObj.instances        ?? [];
+            result.allInstances     = classPlainObj.allInstances     ?? [];
+            result.attributes       = classPlainObj.attributes       ?? [];
+            result.references       = classPlainObj.references       ?? [];
+            result.className        = classPlainObj.className        ?? null;
+        }
+    }
 
     return result as JjelValue;
 }

@@ -251,6 +251,17 @@ export class Parser {
         // Parse element type (e.g., "class", "abstract class", "attribute")
         const elementType = this.parseElementType();
 
+        // M1: 'create instance of <ClassName>' requires the 'of' keyword.
+        // The class name follows; the optional instance name is parsed in parseCreateOptions.
+        if (elementType === 'instance') {
+            if (!this.matchKeyword('of')) {
+                throw new Error(
+                    "Expected 'of' after 'create instance'. " +
+                    "Syntax: create instance of <ClassName> [\"<instanceName>\"]"
+                );
+            }
+        }
+
         // Parse name
         const name = this.expectIdentifierOrQualified('element name');
 
@@ -293,7 +304,8 @@ export class Parser {
                 'class', 'interface', 'attribute', 'reference',
                 'containment', 'composition',  // Shortcuts for containment references
                 'operation', 'parameter', 'package', 'enum', 'enumeration', 'literal',
-                'model', 'metamodel', 'project', 'annotation'
+                'model', 'metamodel', 'project', 'annotation',
+                'instance'   // M1: DObject instance
             ];
 
             if (elementTypes.includes(value as ElementType)) {
@@ -315,6 +327,15 @@ export class Parser {
 
         // Parse options based on element type
         while (!this.isAtEnd() && !this.check('NEWLINE') && !this.check('EOF')) {
+            // M1: instance name as positional STRING after class name
+            // e.g., "create instance Customer \"Alice\"" — Alice is the instance name.
+            // Reuses options.defaultValue as the carrier (read by executeCreateInstance).
+            if (elementType === 'instance' && this.check('STRING') && !options.defaultValue) {
+                options.defaultValue = { kind: 'string', value: this.advance().value };
+                hasOptions = true;
+                continue;
+            }
+
             // type: TypeName
             if (this.matchKeyword('type') || this.matchOperator(':')) {
                 options.type = parseTypeReference(this.expectIdentifierOrQualified('type name') as string);
@@ -427,7 +448,8 @@ export class Parser {
             const value = token.value.toLowerCase();
             const elementTypes: ElementType[] = [
                 'class', 'interface', 'attribute', 'reference',
-                'operation', 'parameter', 'package', 'enum', 'enumeration', 'literal'
+                'operation', 'parameter', 'package', 'enum', 'enumeration', 'literal',
+                'instance'   // M1: DObject instance
             ];
 
             if (elementTypes.includes(value as ElementType)) {
@@ -464,7 +486,8 @@ export class Parser {
             const value = token.value.toLowerCase();
             const elementTypes: ElementType[] = [
                 'class', 'interface', 'attribute', 'reference',
-                'operation', 'parameter', 'package', 'enum', 'enumeration', 'literal'
+                'operation', 'parameter', 'package', 'enum', 'enumeration', 'literal',
+                'instance'   // M1: DObject instance
             ];
 
             if (elementTypes.includes(value as ElementType)) {

@@ -1294,7 +1294,7 @@ export class DefaultView {
 
 {/* editor zoom controls */}
 
-<Zoom node={node}/>
+<ClassicZoomBridge node={node}/>
 </View>`
 );}
 
@@ -1682,12 +1682,14 @@ public static object(): string { return (
 
 <View className={'root object'}>
     <div className={'header'}>
-        <div>
-            <b className={'object-name'}>{data.instanceof ? data.instanceof.name : 'Object'}:</b>
-            {data.$name ?
-                <Input data={data.$name} field={'value'} hidden={true} autosize={true} placeholder={'name'} /> :
-                <Input data={data} field={'name'} hidden={true} autosize={true} placeholder={'name'} />
-            }
+        <div style={{textDecoration: 'underline'}}>
+            <span style={{fontWeight: 500, textDecoration: 'underline'}}>
+                {data.$name ?
+                    <Input data={data.$name} field={'value'} hidden={true} autosize={true} placeholder={'name'} /> :
+                    <Input data={data} field={'name'} hidden={true} autosize={true} placeholder={'name'} />
+                }:&nbsp;
+                {data.instanceof ? data.instanceof.name : 'Object'}
+            </span>
         </div>
     </div>
     <hr/>
@@ -1708,8 +1710,8 @@ public static object(): string { return (
 <View className={'root value d-flex'}>
     {instanceofname && <label className={'d-block ms-1 name'}>{instanceofname}</label>}
     {!instanceofname && <Input className='name' data={data} field={'name'} hidden={true} autosize={true} />}
-    <label className={'d-block m-auto values_str'} style={{color: constants[typeString] || 'gray'}}>
-        : {valuesString}
+    <label className={'d-block ms-1 values_str'} style={{color: constants[typeString] || 'gray', fontStyle: 'italic'}}>
+        = {valuesString}
     </label>
     {decorators}
 </View>`

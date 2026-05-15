@@ -679,10 +679,36 @@ class builder {
             val.hidden ? null :
                 <div className="jj-slot-value-row" key={index}>
                     {/* Attribute */}
-                    {isAttribute && <Input key={'a'+index} setter={(val: any) => { changeDValue({target:{value:val, checked:!!val}} as any, index, false) }}
+                    {isAttribute && (field === 'checkbox' ? (() => {
+                        const raw = val.value;
+                        const checked = typeof raw === 'boolean' ? raw
+                            : typeof raw === 'string' ? U.fromBoolString(raw, false, false, false)
+                            : !!raw;
+                        const onToggle = () => {
+                            const next = !checked;
+                            changeDValue({target:{value: next, checked: next}} as any, index, false);
+                        };
+                        return (
+                            <span className="bool-toggle-wrap" key={'a'+index}>
+                                <button
+                                    type="button"
+                                    role="switch"
+                                    aria-checked={checked}
+                                    aria-label={data?.name || 'boolean'}
+                                    onClick={onToggle}
+                                    className={`bool-toggle ${checked ? 'bool-toggle--on' : 'bool-toggle--off'}`}
+                                >
+                                    <span className="bool-toggle__knob" aria-hidden="true" />
+                                </button>
+                                <span className={`bool-toggle__label ${checked ? 'bool-toggle__label--on' : ''}`}>
+                                    {checked ? 'true' : 'false'}
+                                </span>
+                            </span>
+                        );
+                    })() : <Input key={'a'+index} setter={(val: any) => { changeDValue({target:{value:val, checked:!!val}} as any, index, false) }}
                                            className={'jj-slot-value-input' /*@ts-ignore*/}
                                            getter={()=>val.value as any} min={min} max={max} type={field as any} step={stepSize}
-                                           maxLength={maxLength} placeholder={'empty'}/> }
+                                           maxLength={maxLength} placeholder={'empty'}/>)}
 
                     {/* Enumerator */}
                     {isEnumerator && <select key={'e'+index} onChange={(evt) => {changeDValue(evt, index, true)}} className="jj-slot-value-select" value={val.rawValue+''} data-valuedebug={val.rawValue}>

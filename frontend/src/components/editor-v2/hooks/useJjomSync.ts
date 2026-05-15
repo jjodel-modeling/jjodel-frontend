@@ -476,8 +476,20 @@ export function useJjomSync(
             }
         }
 
+        // Count missing M1 object vertices.
+        // (Mirror of the missingClassifiers calc, but for DObject in rawModel.objects)
+        let missingObjectsCount = 0;
+        for (const objId of (rawModel.objects ?? [])) {
+            if (typeof objId !== 'string') continue;
+            if (!idlookup[objId]) continue;
+            if (vertexIdByModelId.has(objId)) continue;
+            if (isSingletonSuppressed(objId)) continue;
+            missingObjectsCount++;
+        }
+
         // Nothing to do? Early exit.
         if (!needsNewGraph && missingClassifiers.length === 0
+            && missingObjectsCount === 0
             && missingEdgeCount === 0 && missingM1EdgeCount === 0) return;
 
         // ── Create missing elements ─────────────────────────────────────
@@ -517,6 +529,39 @@ export function useJjomSync(
                     const dv = DVertex.new(0, entry.id, graphId, graphId, undefined, size);
                     if (dv?.id) {
                         vertexIdByModelId.set(entry.id, dv.id);
+                    }
+                }
+            }
+
+            // Step 2bis: Create missing M1 object vertices.
+            // JjScript and JjTL transformations create DObject instances directly,
+            // without creating their corresponding DVertex in the flow graph. This
+            // step ensures every DObject in the model is represented in the graph.
+            if (missingObjectsCount > 0) {
+                const existingCount = vertexIdByModelId.size;
+                const COLS = layout.cols;
+                const COL_W = layout.colWidth;
+                const ROW_H = layout.rowHeight;
+                let createdSoFar = 0;
+
+                for (const objId of (rawModel.objects ?? [])) {
+                    if (typeof objId !== 'string') continue;
+                    const dObj = idlookup[objId] as any;
+                    if (!dObj) continue;
+                    if (vertexIdByModelId.has(objId)) continue;
+                    if (isSingletonSuppressed(objId)) continue;
+
+                    const globalIdx = existingCount + createdSoFar;
+                    const col = globalIdx % COLS;
+                    const row = Math.floor(globalIdx / COLS);
+                    const x = 50 + col * COL_W;
+                    const y = 50 + row * ROW_H;
+
+                    const size = new GraphSize(x, y, 200, 120);
+                    const dv = DVertex.new(0, objId, graphId, graphId, undefined, size);
+                    if (dv?.id) {
+                        vertexIdByModelId.set(objId, dv.id);
+                        createdSoFar++;
                     }
                 }
             }

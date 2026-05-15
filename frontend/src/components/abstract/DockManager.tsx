@@ -108,7 +108,7 @@ class DockManager {
         const editorType = me.isMetamodel ? 'metamodel' : 'model';
         // console.log('[OPEN2] about to dispatch', { editorType });
         window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
-            detail: { editorType }
+            detail: { editorType, modelId: me.id }
         }));
     }
 
@@ -138,7 +138,7 @@ class DockManager {
                 // console.log('[DockManager] Activating existing documentation tab');
                 DockManager.dock.updateTab(tabId, null as any, true);
                 window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
-                    detail: { editorType: 'summary' }
+                    detail: { editorType: 'summary', modelId: project.id }
                 }));
                 return;
             }
@@ -160,7 +160,7 @@ class DockManager {
                 // console.log('[DockManager] Creating new documentation tab');
                 DockManager.dock.dockMove(tab, layout.dockbox.children[0], 'middle');
                 window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
-                    detail: { editorType: 'summary' }
+                    detail: { editorType: 'summary', modelId: project.id }
                 }));
             } else {
                 console.warn('[DockManager] Dock layout not ready');
@@ -324,7 +324,7 @@ class DockManager {
                 // CRITICAL: Update tab content with fresh callbacks to avoid stale closures
                 DockManager.dock.updateTab(tabId, { content: tabContent } as any, true);
                 window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
-                    detail: { editorType: 'transformation' }
+                    detail: { editorType: 'transformation', modelId: transformation.id }
                 }));
                 return;
             }
@@ -349,7 +349,7 @@ class DockManager {
                 // console.log('[DockManager] Creating new transformation tab');
                 DockManager.dock.dockMove(tab, layout.dockbox.children[0], 'middle');
                 window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
-                    detail: { editorType: 'transformation' }
+                    detail: { editorType: 'transformation', modelId: transformation.id }
                 }));
             } else {
                 console.warn('[DockManager] Dock layout not ready');

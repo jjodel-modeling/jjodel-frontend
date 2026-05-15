@@ -20,7 +20,8 @@ import { evaluateJjelInJodie } from './jodieJjelContext';
 import { AIProviderService } from '../../services/AIProviderService';
 import { useSettingsModalSafe } from '../../contexts/SettingsModalContext';
 import { JjodieEvents, AIEvents, JjScriptEvents, JjodelEvents } from '../../events/registry';
-import { JjodieContextService } from '../../services/JjodieContext';
+import { JjodieContextService, ActiveArtifact } from '../../services/JjodieContext';
+import { getActiveModel, getActiveMetamodel, setActiveArtifactCache } from '../../jjscript/executor/utils';
 import { JjodieRagService } from '../../services/JjodieRagService';
 import {DUser, L, LUser, LProject, store} from '../../joiner';
 import DockManager from '../abstract/DockManager';
@@ -95,12 +96,42 @@ export function Jodie(): JSX.Element {
     const activeVersion = useMemo(() => AI.getActiveVersion(activeProvider), [activeProvider]);
     const state = store.getState();
 
-    // Get current project context for AI
+    // Counter bumped on EDITOR_TYPE_CHANGE — drives projectContext re-evaluation
+    // when the active editor tab changes (independent of redux state churn).
+    const [editorChangeCounter, setEditorChangeCounter] = useState(0);
+
+    // Tracks the last artefact for which a context-switch notice was injected,
+    // so we don't emit duplicates on tab events that don't actually change focus.
+    const lastArtifactRef = useRef<string | undefined>(undefined);
+
+    // Get current project context for AI — reactive to redux state AND active editor changes.
+    // Scoped to the metamodel relevant to the active artefact (M1 model or M2 metamodel).
     const projectContext = useMemo((): string | undefined => {
         if (!project) return undefined;
-        try { return JjodieContextService.getContextString(project); }
+        try {
+            const activeModel = getActiveModel();
+            const activeMetamodel = getActiveMetamodel();
+            let activeArtifact: ActiveArtifact | undefined;
+            if (activeModel) {
+                const inst = (activeModel as any).instanceof ?? (activeModel as any).metamodel;
+                const mmId = typeof inst === 'string' ? inst : inst?.id;
+                activeArtifact = {
+                    id: activeModel.id,
+                    name: activeModel.name ?? 'Unnamed',
+                    level: 'M1',
+                    metamodelId: mmId,
+                };
+            } else if (activeMetamodel) {
+                activeArtifact = {
+                    id: activeMetamodel.id,
+                    name: activeMetamodel.name ?? 'Unnamed',
+                    level: 'M2',
+                };
+            }
+            return JjodieContextService.getContextString(project as LProject, activeArtifact);
+        }
         catch (err) { console.warn('Could not get project context:', err); }
-    }, [state.idlookup.clonedCounter]);
+    }, [state.idlookup.clonedCounter, editorChangeCounter]);
 
     // Listen for open event
     useEffect(() => {
@@ -112,6 +143,69 @@ export function Jodie(): JSX.Element {
         return () => {
             window.removeEventListener(JjodieEvents.OPEN, handleOpenJodie);
         };
+    }, []);
+
+    // Seed the active artefact cache at mount, in case Jodie is opened without
+    // the user ever switching tabs (cold start). Uses the existing fallback
+    // resolution (DockManager + _lastSelected) to find what's currently active.
+    useEffect(() => {
+        const m = getActiveModel();
+        if (m) {
+            setActiveArtifactCache(m.id, 'model');
+            return;
+        }
+        const mm = getActiveMetamodel();
+        if (mm) {
+            setActiveArtifactCache(mm.id, 'metamodel');
+        }
+    }, []);
+
+    // Listen for editor tab changes — refresh projectContext and inject a chat
+    // notice if the focused artefact changed mid-conversation.
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const detail = (e as CustomEvent).detail;
+
+            // Update the global cache used by getActiveModel/getActiveMetamodel
+            // so non-React contexts (JjScript service) read the fresh artefact.
+            if (detail?.modelId && detail?.editorType) {
+                setActiveArtifactCache(detail.modelId, detail.editorType);
+            }
+
+            setEditorChangeCounter(c => c + 1);
+
+            const newModel = getActiveModel();
+            const newMeta = getActiveMetamodel();
+            const newName = newModel?.name ?? newMeta?.name;
+            const newLevel = newModel ? 'M1 model' : 'M2 metamodel';
+
+            if (!newName || newName === lastArtifactRef.current) return;
+            const wasInitialized = lastArtifactRef.current !== undefined;
+            lastArtifactRef.current = newName;
+
+            // Skip the very first resolution (mount/initial tab opening).
+            // Only inject the notice when we already had a previous artefact.
+            if (!wasInitialized) return;
+
+            setChatState(prev => {
+                if (!prev.messages || prev.messages.length === 0) return prev;
+                return {
+                    ...prev,
+                    messages: [
+                        ...prev.messages,
+                        {
+                            id: generateMessageId(),
+                            kind: 'chat',
+                            role: 'assistant',
+                            content: `_Context switched to: **${newName}** (${newLevel})_`,
+                            timestamp: Date.now(),
+                        }
+                    ]
+                };
+            });
+        };
+        window.addEventListener(JjodelEvents.EDITOR_TYPE_CHANGE, handler);
+        return () => window.removeEventListener(JjodelEvents.EDITOR_TYPE_CHANGE, handler);
     }, []);
 
     // Listen for notifications popover toggle (hide Jodie while open)
@@ -211,7 +305,7 @@ export function Jodie(): JSX.Element {
         if (!input) return;
         const outcome = codeFlavor === 'jjel'
             ? evaluateJjelInJodie(input)
-            : { ok: false, text: 'JS flavor is not yet available.' };
+            : { ok: false as const, text: 'JS flavor is not yet available.', warnings: [] };
         const entry: CodeEntry = {
             id: generateMessageId(),
             kind: 'code',
@@ -221,9 +315,32 @@ export function Jodie(): JSX.Element {
                 ? { ok: true, value: outcome.text }
                 : { ok: false, error: outcome.text },
             timestamp: Date.now(),
+            warnings: outcome.warnings.length > 0 ? outcome.warnings : undefined,
+            rawValue: outcome.ok ? outcome.value : undefined,
         };
         setChatState(prev => ({ ...prev, messages: [...prev.messages, entry] }));
     }, [codeFlavor]);
+
+    // Promotion: from a Jjodie chat reply with a code block, switch to Code mode
+    // and prefill the input with the extracted snippet (no auto-run).
+    const handleTestInCode = useCallback((code: string, _language: string | null) => {
+        // TODO stadio 3: when JS flavor is enabled, route 'js'/'javascript' tags to flavor 'js'.
+        // For now everything goes to JjEL; JS-tagged snippets may show JjEL syntax errors,
+        // which the user can refine in place.
+        setConsoleMode('code');
+        setCodeFlavor('jjel');
+        setPendingPrefill({ prompt: code, nonce: Date.now() });
+    }, [setConsoleMode, setCodeFlavor]);
+
+    // Promotion: from a failed Code-mode result, switch to Chat mode and prefill the input
+    // with a template that describes the failed expression (no auto-send).
+    const handleAskJjodie = useCallback((entry: CodeEntry) => {
+        if (entry.output.ok) return;
+        const langLabel = entry.flavor === 'jjel' ? 'JjEL' : 'JS';
+        const template = `This ${langLabel} expression failed:\n\n\`${entry.input}\`\n\nError: ${entry.output.error}\n\n`;
+        setConsoleMode('chat');
+        setPendingPrefill({ prompt: template, nonce: Date.now() });
+    }, [setConsoleMode]);
 
     // Open the chat window
     const handleOpen = useCallback(() => {
@@ -465,6 +582,27 @@ export function Jodie(): JSX.Element {
         setChatState(prev => ({ ...prev, isWaiting: false }));
     }, []);
 
+    // Clear the entries belonging to the current console mode (Chat or Code).
+    // History is non-persisted, so we just filter the in-memory unified array.
+    // Returns prev unchanged when nothing matches, so the button click is a true
+    // no-op when the active mode is already empty (no spurious re-render).
+    const handleClearCurrentMode = useCallback(() => {
+        setChatState(prev => {
+            const next = prev.messages.filter(e =>
+                consoleMode === 'code' ? e.kind !== 'code' : e.kind === 'code'
+            );
+            if (next.length === prev.messages.length) return prev;
+            return { ...prev, messages: next };
+        });
+    }, [consoleMode]);
+
+    const canClearCurrentMode = useMemo(
+        () => chatState.messages.some(e =>
+            consoleMode === 'code' ? e.kind === 'code' : e.kind !== 'code'
+        ),
+        [chatState.messages, consoleMode]
+    );
+
     // Open/close transition: keep JodieWindow mounted during the exit fade-out.
     // - `windowRendered`: controls whether <JodieWindow> is in the React tree
     // - `windowVisible`: drives the --visible/--hidden CSS modifier (opacity/transform)
@@ -522,6 +660,10 @@ export function Jodie(): JSX.Element {
                     codeFlavor={codeFlavor}
                     onCodeFlavorChange={setCodeFlavor}
                     onSubmitCode={handleSubmitCode}
+                    onTestInCode={handleTestInCode}
+                    onAskJjodie={handleAskJjodie}
+                    onClearCurrentMode={handleClearCurrentMode}
+                    canClearCurrentMode={canClearCurrentMode}
                 />
             ) : (
                 <JodieMinimized

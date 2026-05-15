@@ -148,6 +148,30 @@ describe('Parser: create', () => {
             expect(classType.name.raw).toBe(name);
         });
     });
+
+    // M1 instance creation — canonical grammar requires the 'of' keyword.
+    describe('create instance — M1 grammar', () => {
+        it("rejects 'create instance' without 'of' keyword", () => {
+            const r = parse('create instance Person');
+            expect(r.success).toBe(false);
+            expect(r.errors).toBeDefined();
+            expect(r.errors![0].message).toMatch(/Expected 'of' after 'create instance'/);
+        });
+
+        it("parses 'create instance of Person' as elementType='instance' name='Person'", () => {
+            const a = args<CreateArgs>('create instance of Person');
+            expect(a.command).toBe('create');
+            expect(a.elementType).toBe('instance');
+            expect(a.name).toBe('Person');
+        });
+
+        it("parses 'create instance of Person \"alice\"' with optional instance name", () => {
+            const a = args<CreateArgs>('create instance of Person "alice"');
+            expect(a.elementType).toBe('instance');
+            expect(a.name).toBe('Person');
+            expect(a.options?.defaultValue).toEqual({ kind: 'string', value: 'alice' });
+        });
+    });
 });
 
 // ─── DELETE ──────────────────────────────────────────────────

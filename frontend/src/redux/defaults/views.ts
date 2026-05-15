@@ -20,6 +20,7 @@ import {
     Defaults
 } from '../../joiner';
 import DSL from "../../DSL/DSL";
+import { vi } from 'vitest';
 
 var nosize: GraphSize = {x:0, y:0, w:0, h:0, nosize:true} as any;
 var defaultEdgePointSize: GraphSize = {x:0, y:0, w:15, h:5} as any;
@@ -548,19 +549,39 @@ border-radius: 6px;
             view.css += '   border-radius: 3px; \n';
             view.css += '   min-width: 160px;\n';
             view.css += '   & .header {\n';
+            view.css += '        padding: 3px 4px;\n';
             view.css += '        text-align: center;  \n';
             view.css += '        &> div {\n';
             view.css += '            & input:placeholder-shown {\n';
             view.css += '                display: inline-block!important;\n';
             view.css += '                margin-left: 30px!important;\n';
             view.css += '            }\n';
+            view.css += '            & input {\n';
+            view.css += '                padding: 0;\n';
+            view.css += '                border: none;\n';
+            view.css += '                outline: none;\n';
+            view.css += '            }\n';
+            view.css += '            & input:focus {\n';
+            view.css += '                display: inline-block!important;\n';
+            view.css += '                background-color: #ededed;\n';
+            view.css += '                border: none!important;\n';
+            view.css += '                outline: none!important;\n';
+            view.css += '                padding: 0!important;\n';
+            view.css += '            }\n';
             view.css += '        }\n';
             view.css += '   }\n';
             view.css += '   background: transparent; \n';
-            view.css += '   color: var(--accent);\n';
+            view.css += '   font-family: "Inter Variabile", Inter, sans-serif;\n';
+            view.css += '   font-size: 13px;\n';
+            view.css += '   font-weight: 500;\n';
+            view.css += '   color: #1E293B;\n';
             view.css += '}\n';
-            view.css += '.object-name {padding: 10px; font-weight: 600; color: var(--accent);}';
-            view.css += '\n.object-children {padding: 10px;background-color: white; height: fit-content; width: -webkit-fill-available;}';
+            view.css += '.object-children {\n';
+            view.css += '    padding: 10px 10px 2px 10px;\n';
+            view.css += '    background-color: white;\n';
+            view.css += '    height: fit-content;\n';
+            view.css += '    width: -webkit-fill-available;\n';
+            view.css += '}\n';
             view.defaultVSize = defaultVertexSize;
             view.appliableTo = 'Vertex';
             view.usageDeclarations = '(ret) => {\n' +
@@ -669,13 +690,12 @@ border-radius: 6px;
             view.palette = {};
             view.css = `.value{
     padding-right: 6px;
+    padding-bottom: 5px;
     max-width: 300px;
     min-width: 100%;
     overflow:hidden;
+    font-family: "Inter Variabile", Inter, sans-serif;
     &:hover, &:focus-within{ overflow: visible; }
-    /*.values_str{
-        maxWidth: 100px;
-    }*/
 }`;
             view.appliableTo = 'Field';
             view.usageDeclarations = '(ret) =>  {\n' +
@@ -697,7 +717,7 @@ border-radius: 6px;
         let css = `.edgePoint{
     border: 2px solid var(--border-1);
     background: var(--background-1);
-    color: var(--color-1);
+    color: #1E293B;
     width: 15px;
     height: 15px;
     border-radius: 100%;

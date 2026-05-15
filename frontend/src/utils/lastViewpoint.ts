@@ -4,9 +4,10 @@
  * to create new views.
  */
 
-import { DPointerTargetable, DViewElement, LProject, LViewPoint, SetFieldAction, SetRootFieldAction, Defaults } from '../joiner';
+import { DPointerTargetable, DViewElement, LPointerTargetable, LProject, LViewElement, LViewPoint, SetFieldAction, SetRootFieldAction, Defaults } from '../joiner';
 import { toast } from '../components/Toast/toastDispatch';
 import { JjodelEvents } from '../events/registry';
+import { DEFAULT_VIEW_JSX_STRING } from './defaultViewTemplate';
 
 let lastEditedViewpointId: string | null = null;
 let lastEditedViewpointName: string | null = null;
@@ -94,6 +95,44 @@ export function resolveParentViewpoint(): { dViewpoint: DViewElement; vpName: st
 }
 
 /**
+ * Crea una View "vuota" come sub-view di un Viewpoint specifico.
+ * Usata dal pulsante "+" inline sulle righe Viewpoint del Tree View.
+ * Ritorna la DViewElement appena creata in modo da poter attivare
+ * il rename inline immediatamente.
+ *
+ * @param dVp - DViewElement del Viewpoint padre
+ * @param nameSeed - prefisso nome (default "New view")
+ * @returns DViewElement della view creata
+ */
+export function createBlankViewInViewpoint(
+    dVp: DViewElement,
+    nameSeed: string = 'New view'
+): DViewElement {
+    const lVp = LPointerTargetable.fromD(dVp) as LViewElement;
+    const existingNames = new Set(
+        lVp.subViews.map(v => v?.name).filter(Boolean) as string[]
+    );
+
+    // Trova nome unico: "New view", "New view2", "New view3", ...
+    // Usa la convention di U.increaseEndingNumber (senza parentesi).
+    let candidate = nameSeed;
+    let i = 1;
+    while (existingNames.has(candidate)) {
+        i += 1;
+        candidate = `${nameSeed}${i}`;
+    }
+
+    const newView = DViewElement.new2(
+        candidate,
+        '', // jsxString vuoto, l'utente personalizzerà dopo
+        dVp,
+        undefined,
+        true
+    );
+    return newView;
+}
+
+/**
  * Creates a view in the last edited workbench viewpoint for a given classifier.
  * Shared by canvas context menu and tree view context menu.
  *
@@ -150,18 +189,7 @@ export function createViewInWorkbench(elementId: string, elementName: string, cl
     try {
         // Same JSX template and pattern as DViewElement.newDefault()
         const newView = DViewElement.new2(viewName,
-`<View className={'root bg-white p-1'}>
-    <div className={'header'}>
-        {!data ? null :
-            <label className={'input-container mx-2'}>
-                <b className={'object-name'}>Name:</b>
-                <Input data={data} field={'name'} hidden={true} autosize={true} placeholder={'enter name'}/>
-            </label>
-        }
-    </div>
-    <div className={'body'}>To add information here,<br/> edit the view<br/>"{view.name}"</div>
-    {decorators}
-</View>`,
+            DEFAULT_VIEW_JSX_STRING,
             dViewpoint,
             (d) => {
                 d.oclCondition = query;

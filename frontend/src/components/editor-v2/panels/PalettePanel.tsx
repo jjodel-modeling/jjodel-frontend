@@ -1,8 +1,7 @@
 import { useCallback, useMemo } from 'react';
-import type { Node } from '@xyflow/react';
 import type { MetaclassInfo, MetaclassReference } from '../hooks/useEditorMode';
-import type { ObjectNodeData } from '../types';
 import { setDraggedMetaclassId } from '../utils/dragState';
+import { LPointerTargetable } from '../../../joiner';
 
 // ---------------------------------------------------------------------------
 // M2 (Metamodel) Palette
@@ -63,17 +62,24 @@ interface PalettePanelProps {
     editorMode?: 'metamodel' | 'model';
     /** Rootable classes for M1 palette (concrete classes not targeted by compositions). */
     rootableClasses?: MetaclassInfo[];
-    /** All metaclasses — used to resolve the selected node's metaclass in M1 mode. */
+    /** All metaclasses — used to resolve the selected DObject's metaclass in M1 mode. */
     allClasses?: MetaclassInfo[];
-    /** Currently selected nodes on the canvas (M1 mode). */
-    selectedNodes?: Node[];
+    /** ID of the currently selected DObject (M1 mode). Read from `_lastSelected.modelElement`
+     *  in Redux — populated by both flow (`useJjomSelection`) and classic (`graphElement`).
+     *  Null when nothing M1 is selected (or `_lastSelected` points to a DClass/DPackage/DModel
+     *  in deselect-default state — filtered out via the `className === 'DObject'` check). */
+    selectedDObjectId?: string | null;
 }
 
-function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClasses = [], selectedNodes = [] }: PalettePanelProps) {
+function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClasses = [], selectedDObjectId = null }: PalettePanelProps) {
     const onDragStart = useCallback((event: React.DragEvent, type: string, metaclassId?: string) => {
         event.dataTransfer.setData('application/reactflow', type);
         if (metaclassId) {
             event.dataTransfer.setData('metaclassId', metaclassId);
+            // Payload for the classic editor drop handler.
+            // Both flow and classic read from the same dataTransfer; flow uses
+            // 'application/reactflow', classic uses 'application/jjodel-classic'.
+            event.dataTransfer.setData('application/jjodel-classic', metaclassId);
             setDraggedMetaclassId(metaclassId);
         }
         event.dataTransfer.effectAllowed = 'move';
@@ -83,18 +89,20 @@ function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClass
         setDraggedMetaclassId(null);
     }, []);
 
-    // Resolve the metaclass of the currently selected element (M1 only).
-    // Only shows info when exactly one ObjectNode is selected and it has a metaclass.
+    // Resolve the metaclass of the currently selected DObject (M1 only).
+    // Reads from the canonical `_lastSelected.modelElement` channel (via prop) so the
+    // panel reacts to selection from BOTH flow and classic editors. Filters out
+    // non-DObject targets (DClass/DPackage/DModel) that `_lastSelected` may carry
+    // in deselect-default state.
     const selectedMetaclass: MetaclassInfo | null = useMemo(() => {
         if (editorMode !== 'model') return null;
-        if (selectedNodes.length !== 1) return null;
-        const sel = selectedNodes[0];
-        if (sel.type !== 'objectNode') return null;
-        const data = sel.data as ObjectNodeData | undefined;
-        const classId = data?.instanceOfClassId;
+        if (!selectedDObjectId) return null;
+        const lme: any = LPointerTargetable.fromPointer(selectedDObjectId);
+        if (!lme || lme.className !== 'DObject') return null;
+        const classId = lme.instanceof?.id;
         if (!classId) return null;
         return allClasses.find(c => c.id === classId) ?? null;
-    }, [editorMode, selectedNodes, allClasses]);
+    }, [editorMode, selectedDObjectId, allClasses]);
 
     const containmentRefs: MetaclassReference[] = useMemo(
         () => (selectedMetaclass ? selectedMetaclass.references.filter(r => r.containment) : []),

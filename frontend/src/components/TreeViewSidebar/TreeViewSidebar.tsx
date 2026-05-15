@@ -21,10 +21,11 @@ interface TreeViewSidebarProps {
 const STORAGE_KEY_OPEN = 'jjodel_tree_view_open';
 const STORAGE_KEY_WIDTH = 'jjodel_tree_view_width';
 
-// Width constraints
-const MIN_WIDTH = 200;
-const MAX_WIDTH = 400;
-const DEFAULT_WIDTH = 280;
+// Width constraints (polish 2026-05-12: default bumped +60 per dare respiro
+// orizzontale ai nomi nidificati; bounds estesi per consentire drag più ampio).
+const MIN_WIDTH = 240;
+const MAX_WIDTH = 600;
+const DEFAULT_WIDTH = 340;
 
 export const TreeViewSidebar: React.FC<TreeViewSidebarProps> = ({ className }) => {
     const resolution = useResolution();
@@ -37,10 +38,15 @@ export const TreeViewSidebar: React.FC<TreeViewSidebarProps> = ({ className }) =
         return typeof window !== 'undefined' && window.innerWidth >= 2560;
     });
 
-    // Initialize width from localStorage
+    // Initialize width from localStorage. Clamp protegge da valori salvati
+    // fuori bound se MIN/MAX cambiano in versioni future; NaN guard per
+    // localStorage corrotto o parsing fallito.
     const [width, setWidth] = useState(() => {
         const saved = localStorage.getItem(STORAGE_KEY_WIDTH);
-        return saved ? Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, parseInt(saved, 10))) : DEFAULT_WIDTH;
+        if (!saved) return DEFAULT_WIDTH;
+        const parsed = parseInt(saved, 10);
+        if (Number.isNaN(parsed)) return DEFAULT_WIDTH;
+        return Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, parsed));
     });
 
     // Dragging state for resize handle
@@ -101,12 +107,19 @@ export const TreeViewSidebar: React.FC<TreeViewSidebarProps> = ({ className }) =
             localStorage.setItem(STORAGE_KEY_WIDTH, width.toString());
         };
 
+        // body-level cursor + user-select guard: mantiene il cursore col-resize
+        // anche se il puntatore esce dalla hit zone durante il drag, e previene
+        // selezioni di testo accidentali sul resto della pagina.
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
 
         return () => {
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
         };
     }, [isDragging, width]);
 

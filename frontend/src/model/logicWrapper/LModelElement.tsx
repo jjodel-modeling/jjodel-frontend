@@ -3593,7 +3593,12 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     }
     private get_superclasses(c: Context, plusThis: boolean = false, initialExtends?: Pointer<DClass>[]): LClass[] {
         const visited: Dictionary<Pointer, LClass> = {};
-        let queue: LClass[] = (initialExtends ? (L.fromArr(initialExtends) as LClass[]).filter((e)=>!!e) : this.get_extends(c));
+        // Defensive filter 2026-05-13 (Bug G Opzione B): rimuove entry undefined dalla queue iniziale
+        // per simmetria con il filtering già applicato a initialExtends sopra. Difende da regressioni
+        // future che potrebbero rigenerare extends=[''] (cf. data.ts:758 Opzione A che risolve la
+        // root cause attuale). Riferimento:
+        // docs/discovery/2026-05-13_microdiscovery_bug_g_childrennames.md.
+        let queue: LClass[] = (initialExtends ? (L.fromArr(initialExtends) as LClass[]).filter((e)=>!!e) : this.get_extends(c).filter((e)=>!!e));
         if (plusThis) queue.push(c.proxyObject);
 
         const ret: LClass[] = [];
@@ -3753,7 +3758,7 @@ export class DReference extends DModelElement { // DStructuralFeature
     instances: Pointer<DValue, 0, 'N', LValue> = [];
     defaultValue!: Pointer<DObject, 1, 1, LObject>[];
     allowCrossReference!:boolean;
-    public derived!: boolean;
+    public derived: boolean = false;
     /*protected */derived_read?: string;
     /*protected */derived_write?: string;
 
@@ -4107,7 +4112,7 @@ export class DAttribute extends DModelElement { // DStructuralFeature
     unsettable: boolean = false;
     defaultValueLiteral: string = '';
     allowCrossReference!:boolean;
-    public derived!: boolean;
+    public derived: boolean = false;
     /*protected */derived_read?: string;
     /*protected */derived_write?: string;
 

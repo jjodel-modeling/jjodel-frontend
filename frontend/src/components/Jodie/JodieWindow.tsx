@@ -7,7 +7,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { JodieHeader } from './JodieHeader';
 import { ChatMessages } from './ChatMessages';
 import { ChatInput } from './ChatInput';
-import {TAIProvider, ChatImage, ChatDocument, JodieConfig, ConsoleEntry, ConsoleMode, CodeFlavor} from '../../types/jodie';
+import {TAIProvider, ChatImage, ChatDocument, JodieConfig, ConsoleEntry, ConsoleMode, CodeFlavor, CodeEntry} from '../../types/jodie';
 import { AIDisclaimer } from '../common/AIDisclaimer';
 import { AIEvents, JjScriptEvents } from '../../events/registry';
 
@@ -38,6 +38,14 @@ interface JodieWindowProps {
     onCodeFlavorChange: (f: CodeFlavor) => void;
     /** Submit handler for Code mode: parent evaluates and appends a CodeEntry. */
     onSubmitCode: (input: string) => void;
+    /** Promotion: switch to Code mode and prefill the input with an extracted snippet. */
+    onTestInCode: (code: string, language: string | null) => void;
+    /** Promotion: switch to Chat mode and prefill the input with a template describing a failed code entry. */
+    onAskJjodie: (entry: CodeEntry) => void;
+    /** Clear all entries of the active console mode (Chat or Code). Optional for backward compat. */
+    onClearCurrentMode?: () => void;
+    /** True iff the active console mode has at least one entry. Drives the Clear button hint state. */
+    canClearCurrentMode?: boolean;
 }
 
 interface Position {
@@ -102,6 +110,10 @@ export function JodieWindow({
     codeFlavor,
     onCodeFlavorChange,
     onSubmitCode,
+    onTestInCode,
+    onAskJjodie,
+    onClearCurrentMode,
+    canClearCurrentMode,
 }: JodieWindowProps): JSX.Element {
     // Load initial position/size from config
     const config = JodieConfig.current;
@@ -401,6 +413,8 @@ export function JodieWindow({
                 onConsoleModeChange={onConsoleModeChange}
                 codeFlavor={codeFlavor}
                 onCodeFlavorChange={onCodeFlavorChange}
+                onClearCurrentMode={onClearCurrentMode}
+                canClearCurrentMode={canClearCurrentMode}
             />
 
             {/* Executing Command Toolbar */}
@@ -418,7 +432,13 @@ export function JodieWindow({
                 </div>
             )}
 
-            <ChatMessages messages={messages} isWaiting={isWaiting} onJjScriptExecuted={onJjScriptExecuted} />
+            <ChatMessages
+                messages={messages}
+                isWaiting={isWaiting}
+                onJjScriptExecuted={onJjScriptExecuted}
+                onTestInCode={onTestInCode}
+                onAskJjodie={onAskJjodie}
+            />
 
             <ChatInput
                 onSend={onSendMessage}
@@ -432,6 +452,8 @@ export function JodieWindow({
                 onConsoleModeChange={onConsoleModeChange}
                 codeFlavor={codeFlavor}
                 onSubmitCode={onSubmitCode}
+                entries={messages}
+                onClearRequested={onClearCurrentMode}
             />
 
             <AIDisclaimer feature="chat" />

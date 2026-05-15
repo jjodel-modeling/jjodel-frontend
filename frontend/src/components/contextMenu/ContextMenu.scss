@@ -326,6 +326,19 @@
       color: #cbd5e1;
     }
 
+    &.disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      // pointer-events kept enabled so the HTML `title` tooltip
+      // shows on hover; aria-disabled prevents activation logic.
+      &:hover { background-color: transparent; }
+    }
+
+    &.danger {
+      color: #f87171;
+      &:hover { background-color: rgba(239, 68, 68, 0.12); color: #f87171; }
+    }
+
     i.bi, span.empty {
       font-size: 13px;
       width: 1.5em;

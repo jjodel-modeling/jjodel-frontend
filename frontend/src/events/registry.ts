@@ -9,13 +9,24 @@ export const JjodelEvents = {
   ACTIVE_TAB: 'jjodel:active-tab',
   EDITOR_TYPE_CHANGE: 'jjodel:editor-type-change',
   TOGGLE_TREE_VIEW: 'jjodel:toggle-tree-view',
+  // PropertiesWithTreeView rail-only mode (2026-05-13): emessi quando entrambi
+  // i sub-panel sono in rail (entra) / quando almeno uno torna espanso (esce).
+  // Distinti dal vecchio pattern PROPERTIES_TREE_PANEL_COLLAPSED/EXPANDED
+  // (rimosso): qui la semantica è "shrink dock tab a 56px", non "hide".
+  PROPERTIES_TREE_RAIL_ONLY_ENTER: 'jjodel:properties-tree-rail-only-enter',
+  PROPERTIES_TREE_RAIL_ONLY_EXIT: 'jjodel:properties-tree-rail-only-exit',
   TOGGLE_SINGLETONS: 'jjodel:toggle-singletons',
+  TOGGLE_EDGE_LABELS: 'jjodel:toggle-edge-labels',
+  TOGGLE_BACKGROUND: 'jjodel:toggle-background',
+  TOGGLE_GRID: 'jjodel:toggle-grid',
   // Canvas
   CANVAS_ELEMENT_SELECTED: 'jjodel:canvas-element-selected',
   SELECT_NODE: 'jjodel:selectNode',
   SELECT_VIEW_IN_WORKBENCH: 'jjodel:selectViewInWorkbench',
   POLYMETRIC_NODE_SELECTED: 'jjodel:polymetric-node-selected',
   CHILD_CONTEXT_MENU: 'jjodel:child-context-menu',
+  CLASSIC_NODE_MOUNTED: 'jjodel:classic-node-mounted',
+  CLASSIC_NODE_UNMOUNTED: 'jjodel:classic-node-unmounted',
   // Viewpoint
   OPEN_VIEWPOINT_EDITOR: 'jjodel:openViewpointEditor',
   CLOSE_VIEWPOINT_EDITOR: 'jjodel:closeViewpointEditor',

@@ -31,8 +31,8 @@ import ObjectNode from './nodes/ObjectNode';
 import UnifiedEdge from './edges/UnifiedEdge';
 import PalettePanel from './panels/PalettePanel';
 // PropertiesPanel removed — properties editing is handled by the dock-based Info panel
-// import PropertiesPanel from './panels/PropertiesPanel';
 import Toolbar from './Toolbar';
+import { useActiveEditor, CLASSIC_ZOOM_MIN, CLASSIC_ZOOM_MAX, type ZoomController } from './ActiveEditorContext';
 import ContextMenu, { type ContextMenuItem } from './ContextMenu';
 import { useHistory } from './hooks/useHistory';
 import { useAlignment } from './hooks/useAlignment';
@@ -43,6 +43,7 @@ import type { ClassNodeData, EnumNodeData, PackageNodeData, ObjectNodeData, Refe
 import { EdgeTypePopup, type EdgeTypeChoice } from './components/EdgeTypePopup';
 import { M1ReferencePopup } from './components/M1ReferencePopup';
 import { useJjomSync } from './hooks/useJjomSync';
+import { useM1ReferenceEdges } from './hooks/useM1ReferenceEdges';
 import { useJjomSelection } from './hooks/useJjomSelection';
 import { useEditorMode, type MetaclassInfo, type MetaclassReference } from './hooks/useEditorMode';
 import { useClassRemoval } from './hooks/useClassRemoval';
@@ -76,7 +77,7 @@ import {
 import { computeElkLayout } from './utils/elkLayout';
 import { rafThrottle, cancelThrottle } from '../../utils/DragThrottle';
 import { getCompositionChildOptions, getCompatibleReferences, type CompatibleReference } from './utils/compositionCompat';
-import { LPointerTargetable, store, DState, SetRootFieldAction, DVertex, GraphSize } from '../../joiner';
+import { LPointerTargetable, store, DState, SetRootFieldAction, DVertex, GraphSize, GraphPoint, SetFieldAction, TRANSACTION } from '../../joiner';
 import { jjomVertexToRFNode } from './utils/jjomTransformers';
 import { useTheme } from '../../services/ThemeService';
 import { getDraggedMetaclassId } from './utils/dragState';
@@ -330,6 +331,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             }
         }, 50);
     });
+    useM1ReferenceEdges(modelid, graphId);
 
     // M1/M2 mode detection — resolves metamodel classes, rootable classes, hierarchy
     const modeInfo = useEditorMode(modelid);
@@ -424,17 +426,41 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const { screenToFlowPosition, getNodes, getEdges, zoomIn, zoomOut, fitView, getViewport, setViewport } = useReactFlow();
     const storeApi = useStoreApi();
     fitViewRef.current = () => fitView({ padding: 0.2, maxZoom: 1 });
+
+    const {
+        activeEditorId,
+        setActive,
+        registerZoomController,
+        unregisterZoomController,
+        getActiveZoomController,
+    } = useActiveEditor();
     const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
     const [snapEnabled, setSnapEnabled] = useState(true);
+    // ─── View toggles — mirror state ────────────────────────────────
+    // Source of truth lives in Navbar.tsx (View menu). EditorV2 mirrors
+    // the values for wrapper-class application; Navbar dispatches a
+    // CustomEvent on each toggle, EditorV2 listens and updates its mirror.
     const [gridVisible, setGridVisible] = useState(() => {
         try { return localStorage.getItem('jjodel.showGrid') !== 'false'; } catch { return true; }
     });
-    const handleToggleGrid = useCallback(() => {
-        setGridVisible(prev => {
-            const next = !prev;
-            try { localStorage.setItem('jjodel.showGrid', String(next)); } catch {}
-            return next;
-        });
+    const [showEdgeLabels, setShowEdgeLabels] = useState(() => {
+        try { return localStorage.getItem('jjodel.showEdgeLabels') === 'true'; } catch { return false; }
+    });
+    const [showBackground, setShowBackground] = useState(() => {
+        try { return localStorage.getItem('jjodel.showBackground') !== 'false'; } catch { return true; }
+    });
+    useEffect(() => {
+        const handleGrid = (e: Event) => setGridVisible(!!(e as CustomEvent).detail?.show);
+        const handleEdgeLabels = (e: Event) => setShowEdgeLabels(!!(e as CustomEvent).detail?.show);
+        const handleBackground = (e: Event) => setShowBackground(!!(e as CustomEvent).detail?.show);
+        window.addEventListener(JjodelEvents.TOGGLE_GRID, handleGrid);
+        window.addEventListener(JjodelEvents.TOGGLE_EDGE_LABELS, handleEdgeLabels);
+        window.addEventListener(JjodelEvents.TOGGLE_BACKGROUND, handleBackground);
+        return () => {
+            window.removeEventListener(JjodelEvents.TOGGLE_GRID, handleGrid);
+            window.removeEventListener(JjodelEvents.TOGGLE_EDGE_LABELS, handleEdgeLabels);
+            window.removeEventListener(JjodelEvents.TOGGLE_BACKGROUND, handleBackground);
+        };
     }, []);
 
     // Bottom drawer removed — properties editing handled by right-side dock Info panel
@@ -903,6 +929,15 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // Get selected nodes and edges for properties panel
     const selectedNodes = useMemo(() => nodes.filter((n) => n.selected), [nodes]);
     const selectedEdges = useMemo(() => edges.filter((e) => e.selected), [edges]);
+
+    // Canonical selection channel — `_lastSelected.modelElement` is written by both
+    // flow (`useJjomSelection.selectElement`) and classic (`graphElement.select` /
+    // `onMouseDown`). Used to drive PalettePanel's context-aware sections so the
+    // palette reacts to selection from either editor. React Flow's `n.selected`
+    // (above) only tracks flow-initiated selection and is unsuitable for this.
+    const lastSelectedModelElement = useSelector((s: DState) =>
+        (s as any)._lastSelected?.modelElement as string | undefined
+    );
 
     // ── Reference stabilizer for ReactFlow props ─────────────────────
     // StoreUpdater compares nodes/edges by REFERENCE. If the reference
@@ -1573,6 +1608,38 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         event.dataTransfer.dropEffect = 'move';
     }, []);
 
+    // Drop handler for the classic editor wrapper (used in 'classic' and 'split' modes).
+    // Reads the metaclassId from dataTransfer (set by PalettePanel under
+    // 'application/jjodel-classic'), resolves the LModel, and creates a DObject.
+    // The classic view engine handles positioning automatically; drop coordinates
+    // are intentionally ignored here.
+    const onClassicDrop = useCallback((event: React.DragEvent) => {
+        event.preventDefault();
+        const metaclassId = event.dataTransfer.getData('application/jjodel-classic');
+        if (!metaclassId || !modelid) return;
+
+        try {
+            const lModel: any = LPointerTargetable.fromPointer(modelid);
+            const lClass: any = LPointerTargetable.fromPointer(metaclassId);
+            if (!lModel || !lClass) {
+                console.warn('[EditorV2] Classic drop: cannot resolve LModel/LClass', { modelid, metaclassId });
+                return;
+            }
+            lModel.addObject({}, lClass);
+        } catch (err) {
+            console.warn('[EditorV2] Classic drop failed:', err);
+        }
+    }, [modelid]);
+
+    // Allow drop only when the dataTransfer carries the classic payload.
+    // dataTransfer.types is readable during dragOver (unlike getData), so we
+    // can filter out unrelated drags (e.g. files from the desktop) early.
+    const onClassicDragOver = useCallback((event: React.DragEvent) => {
+        if (!event.dataTransfer.types.includes('application/jjodel-classic')) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+    }, []);
+
     // Delete selected nodes and edges
     const deleteSelected = useCallback(() => {
         const selectedNodes = getNodes().filter((n) => n.selected);
@@ -2126,7 +2193,14 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 }
             }
 
+            const classicTooltip = 'Available in classic editor';
             items.push(
+                {
+                    label: 'Edit',
+                    icon: 'bi-pencil-square',
+                    disabled: true,
+                    tooltip: classicTooltip,
+                },
                 {
                     label: 'Duplicate',
                     icon: 'bi-copy',
@@ -2137,6 +2211,26 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     icon: 'bi-trash',
                     danger: true,
                     onClick: () => deleteNode(contextMenu.nodeId!),
+                },
+                { divider: true },
+                {
+                    label: 'Up',
+                    icon: 'bi-arrow-up',
+                    disabled: true,
+                    tooltip: classicTooltip,
+                },
+                {
+                    label: 'Down',
+                    icon: 'bi-arrow-down',
+                    disabled: true,
+                    tooltip: classicTooltip,
+                },
+                { divider: true },
+                {
+                    label: 'Disable auto-sizing',
+                    icon: 'bi-arrows-angle-expand',
+                    disabled: true,
+                    tooltip: classicTooltip,
                 },
                 { divider: true },
                 {
@@ -2276,8 +2370,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         return [];
     };
 
-    // Zoom level (reactive via useStore, snapped to 10% for display)
-    const zoomLevel = useStore((s) => Math.round(s.transform[2] * 100 / 10) * 10);
+    // Flow zoom level (reactive via useStore, snapped to 10% for display)
+    const flowZoomFromStore = useStore((s) => Math.round(s.transform[2] * 100 / 10) * 10);
 
     // Zoom handlers — step by 10%
     const handleZoomIn = useCallback(() => {
@@ -2294,6 +2388,105 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         fitView({ padding: 0.2, maxZoom: 1, duration: 200 });
     }, [fitView]);
     const handleFitView = useCallback(() => fitView({ padding: 0.2, maxZoom: 1, duration: 200 }), [fitView]);
+
+    // Register the flow editor as a ZoomController with the active-editor context.
+    useEffect(() => {
+        const controller: ZoomController = {
+            getZoom: () => getViewport().zoom,
+            zoomIn: handleZoomIn,
+            zoomOut: handleZoomOut,
+            resetZoom: handleResetZoom,
+        };
+        registerZoomController('flow', controller);
+        return () => unregisterZoomController('flow');
+    }, [getViewport, handleZoomIn, handleZoomOut, handleResetZoom, registerZoomController, unregisterZoomController]);
+
+    // Classic editor zoom controller registration via CustomEvent.
+    // The bridge in DV.tsx jsxString cannot use hooks, so it dispatches
+    // JjodelEvents.CLASSIC_NODE_MOUNTED with the graph node payload, and
+    // we register the controller from here (real React tree).
+    const classicNodeRef = useRef<any>(null);
+    useEffect(() => {
+        const handleNodeMounted = (e: Event) => {
+            const { node } = (e as CustomEvent).detail || {};
+            if (!node) return;
+            if (classicNodeRef.current === node) return;
+            classicNodeRef.current = node;
+
+            const clamp = (v: number) => Math.max(CLASSIC_ZOOM_MIN, Math.min(CLASSIC_ZOOM_MAX, v));
+
+            const controller: ZoomController = {
+                getZoom: () => node?.zoom?.x ?? 1,
+                zoomIn: () => {
+                    const next = clamp((node?.zoom?.x ?? 1) * 1.1);
+                    TRANSACTION('Zoom in', () => {
+                        SetFieldAction.new(node, 'zoom.x' as any, next, '');
+                        SetFieldAction.new(node, 'zoom.y' as any, next, '');
+                    });
+                },
+                zoomOut: () => {
+                    const next = clamp((node?.zoom?.x ?? 1) / 1.1);
+                    TRANSACTION('Zoom out', () => {
+                        SetFieldAction.new(node, 'zoom.x' as any, next, '');
+                        SetFieldAction.new(node, 'zoom.y' as any, next, '');
+                    });
+                },
+                resetZoom: () => {
+                    TRANSACTION('Zoom reset', () => {
+                        node.zoom = new GraphPoint(1, 1);
+                    });
+                },
+            };
+            registerZoomController('classic', controller);
+        };
+
+        window.addEventListener(JjodelEvents.CLASSIC_NODE_MOUNTED, handleNodeMounted);
+        return () => {
+            window.removeEventListener(JjodelEvents.CLASSIC_NODE_MOUNTED, handleNodeMounted);
+        };
+    }, [registerZoomController]);
+
+    // Unregister classic controller when the classic editor is no longer mounted.
+    useEffect(() => {
+        const classicMounted = (editorMode === 'classic' || editorMode === 'split') && hasViewpoint;
+        if (!classicMounted && classicNodeRef.current) {
+            unregisterZoomController('classic');
+            classicNodeRef.current = null;
+        }
+    }, [editorMode, hasViewpoint, unregisterZoomController]);
+
+    // Reset on modelid change (defensive — covers viewpoint switches that
+    // don't go through the editorMode/hasViewpoint guard above).
+    useEffect(() => {
+        return () => {
+            if (classicNodeRef.current) {
+                unregisterZoomController('classic');
+                classicNodeRef.current = null;
+            }
+        };
+    }, [modelid, unregisterZoomController]);
+
+    // Bridge active controller -> Toolbar zoom props. zoomTick forces re-read
+    // when the classic editor mutates its zoom (no reactive subscription).
+    const [zoomTick, setZoomTick] = useState(0);
+    const activeController = getActiveZoomController();
+    const activeZoomLevel = useMemo(() => {
+        if (!activeController) return 100;
+        if (activeEditorId === 'flow') return flowZoomFromStore;
+        return Math.round(activeController.getZoom() * 100);
+    }, [activeController, activeEditorId, flowZoomFromStore, zoomTick]);
+    const handleActiveZoomIn = useCallback(() => {
+        activeController?.zoomIn();
+        setZoomTick((t) => t + 1);
+    }, [activeController]);
+    const handleActiveZoomOut = useCallback(() => {
+        activeController?.zoomOut();
+        setZoomTick((t) => t + 1);
+    }, [activeController]);
+    const handleActiveResetZoom = useCallback(() => {
+        activeController?.resetZoom?.();
+        setZoomTick((t) => t + 1);
+    }, [activeController]);
     const handleToggleSnap = useCallback(() => setSnapEnabled((prev) => !prev), []);
 
     // Auto-layout handler: compute ELK layout, apply to RF, sync to JjOM
@@ -2830,20 +3023,18 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
     return (
         <EditorContext.Provider value={editorContextValue}>
-            <div className={`editor-v2 theme-${theme} notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}`} tabIndex={0} onKeyDown={onKeyDown}>
+            <div className={`editor-v2 theme-${theme} notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}${showBackground ? '' : ' hide-background'}`} tabIndex={0} onKeyDown={onKeyDown}>
                 <UniquenessProblemSync modelid={modelid} />
                 <PalettePanel
                     editorMode={modeInfo.mode}
                     rootableClasses={modeInfo.rootableClasses}
                     allClasses={modeInfo.allClasses}
-                    selectedNodes={selectedNodes}
+                    selectedDObjectId={lastSelectedModelElement ?? null}
                 />
                 <div className="editor-v2__main">
                     <Toolbar
                         snapEnabled={snapEnabled}
                         onToggleSnap={handleToggleSnap}
-                        gridVisible={gridVisible}
-                        onToggleGrid={handleToggleGrid}
                         onFitView={handleFitView}
                         onAutoLayout={handleAutoLayout}
                         onDuplicateSelected={duplicateSelected}
@@ -2856,10 +3047,10 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         onNotationChange={setNotation}
                         colorScheme={colorScheme}
                         onColorSchemeChange={setColorScheme}
-                        zoomLevel={zoomLevel}
-                        onZoomIn={handleZoomIn}
-                        onZoomOut={handleZoomOut}
-                        onResetZoom={handleResetZoom}
+                        zoomLevel={activeController ? activeZoomLevel : undefined}
+                        onZoomIn={activeController ? handleActiveZoomIn : undefined}
+                        onZoomOut={activeController ? handleActiveZoomOut : undefined}
+                        onResetZoom={activeController ? handleActiveResetZoom : undefined}
                         selectedCount={selectedNodes.length}
                         onAlignLeft={() => withSnapshot(alignLeft)}
                         onAlignCenterV={() => withSnapshot(alignCenterVertical)}
@@ -2875,12 +3066,22 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         onEditorModeChange={onEditorModeChange}
                     />
                     {(editorMode === 'classic' && classicSlot) ? (
-                        <div className="editor-classic-only">{classicSlot}</div>
+                        <div
+                            className={`editor-classic-only${activeEditorId === 'classic' ? ' is-active-editor' : ''}`}
+                            onMouseDownCapture={() => setActive('classic')}
+                            onDrop={onClassicDrop}
+                            onDragOver={onClassicDragOver}
+                        >
+                            {classicSlot}
+                        </div>
                     ) : (editorMode === 'split' && classicSlot) ? (
                         <div className="editor-split-container">
                             <div
-                                className="editor-split-classic"
+                                className={`editor-split-classic${activeEditorId === 'classic' ? ' is-active-editor' : ''}`}
                                 style={{ flex: `0 0 ${splitPercent}%` }}
+                                onMouseDownCapture={() => setActive('classic')}
+                                onDrop={onClassicDrop}
+                                onDragOver={onClassicDragOver}
                             >
                                 {classicSlot}
                             </div>
@@ -2892,13 +3093,23 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                                 title="Drag to resize"
                             />
                             <div className="editor-split-flow">
-                                <div className="editor-v2__canvas" ref={editorContainerRef} style={{ position: 'relative' }}>
+                                <div
+                                    className={`editor-v2__canvas${activeEditorId === 'flow' ? ' is-active-editor' : ''}`}
+                                    ref={editorContainerRef}
+                                    style={{ position: 'relative' }}
+                                    onMouseDownCapture={() => setActive('flow')}
+                                >
                                     {flowCanvas}
                                 </div>
                             </div>
                         </div>
                     ) : (
-                        <div className="editor-v2__canvas" ref={editorContainerRef} style={{ position: 'relative' }}>
+                        <div
+                            className={`editor-v2__canvas${activeEditorId === 'flow' ? ' is-active-editor' : ''}`}
+                            ref={editorContainerRef}
+                            style={{ position: 'relative' }}
+                            onMouseDownCapture={() => setActive('flow')}
+                        >
                             {flowCanvas}
                         </div>
                     )}

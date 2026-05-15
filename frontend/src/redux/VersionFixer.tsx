@@ -14,6 +14,7 @@ import {
     U
 } from "../joiner";
 import {Tooltip} from "../components/forEndUser/Tooltip";
+import {DEFAULT_VIEW_JSX_STRING, LEGACY_PLACEHOLDER_MARKER, V2_2_TO_V2_3_DETECT_MARKER} from "../utils/defaultViewTemplate";
 
 /*
                                     TODO for every update: check the VersionFixer.help() function
@@ -594,6 +595,201 @@ everytime you put hands into a D-Object shape or valid values, you should docume
             let e = s.idlookup[k] as GObject;
             if (!e?.className) continue;
             if (e.className === 'DProject' && !e.tagNames) { e.tagNames = e.tags || [] }
+        }
+        return s;
+    }
+
+    // 2.210 → 2.211: M1 node rendering aligned to flow editor
+    // (header order + emphasis, feature operator =, value italic, no bottom padding).
+    // No data migration; auto-refresh of default views regenerates view.css from views.ts
+    // and jsxString templates from DV.tsx.
+    private ['2.210 -> 2.211'](s: DState): DState {
+        return s;
+    }
+
+    // 2.211 → 2.212: redesign default class view to "minimal clean" variant
+    // + edge-like compact modifier + smart preview for binary associative classes.
+    // String-replaces stale jsxString matching the legacy placeholder marker
+    // across all DViewElement in the project state. Also clears legacy `css`
+    // and `palette` to align with the new global SCSS-based styling
+    // (`.jjodel-default-view` in `frontend/src/styles/default-view.scss`).
+    private ['2.211 -> 2.212'](s: DState): DState {
+        let migrated = 0;
+        for (let k in s.idlookup) {
+            let e = s.idlookup[k] as any;
+            if (!e || typeof e !== 'object') continue;
+            if (e.className !== 'DViewElement') continue;
+            if (typeof e.jsxString !== 'string') continue;
+            if (!e.jsxString.includes(LEGACY_PLACEHOLDER_MARKER)) continue;
+
+            e.jsxString = DEFAULT_VIEW_JSX_STRING;
+            e.css = '';
+            e.palette = {};
+            e.css_MUST_RECOMPILE = true;
+            migrated++;
+        }
+        if (migrated > 0) {
+            console.log(`[VersionFixer 2.211 -> 2.212] Migrated ${migrated} default view(s) to minimal clean design.`);
+        }
+        return s;
+    }
+
+    // 2.212 → 2.213: introduce L2 edge overlay schema on DViewElement (and DViewPoint subclass).
+    // Adds three additive fields to all existing view instances:
+    //   - isEdge: false       (default disabled — view does not render as edge overlay)
+    //   - edgeSource: ''      (no source endpoint expression configured)
+    //   - edgeTarget: ''      (no target endpoint expression configured)
+    // No rendering change in this migration. Fields are consumed by L2 Fase 3+ (SVG overlay
+    // in classic editor) and Fase 5 (properties panel UI). Idempotent: re-running is a no-op
+    // because of the typeof guards. See design doc `design_2026-05-03_L2_edge_overlay.md`.
+    private ['2.212 -> 2.213'](s: DState): DState {
+        let migrated = 0;
+        for (let k in s.idlookup) {
+            let e = s.idlookup[k] as any;
+            if (!e || typeof e !== 'object') continue;
+            if (e.className !== 'DViewElement' && e.className !== 'DViewPoint') continue;
+
+            let touched = false;
+            if (typeof e.isEdge !== 'boolean') { e.isEdge = false; touched = true; }
+            if (typeof e.edgeSource !== 'string') { e.edgeSource = ''; touched = true; }
+            if (typeof e.edgeTarget !== 'string') { e.edgeTarget = ''; touched = true; }
+            if (touched) migrated++;
+        }
+        if (migrated > 0) {
+            console.log(`[VersionFixer 2.212 -> 2.213] Migrated ${migrated} view(s) with L2 edge schema defaults.`);
+        }
+        return s;
+    }
+
+    // 2.213 → 2.214: replace v2.2 default view jsxString (which doesn't handle
+    // `view.isEdge`) with v2.3 jsxString that supports L2 edge overlay rendering.
+    // Detects v2.2 by presence of marker AND absence of 'view.isEdge' usage
+    // (introduced in v2.3 only). Idempotent: re-running this migration is a no-op
+    // if all DViewElement are already on v2.3.
+    private ['2.213 -> 2.214'](s: DState): DState {
+        let migrated = 0;
+        for (let k in s.idlookup) {
+            let e = s.idlookup[k] as any;
+            if (!e || typeof e !== 'object') continue;
+            if (e.className !== 'DViewElement') continue;
+            if (typeof e.jsxString !== 'string') continue;
+            let hasV2Marker = e.jsxString.indexOf(V2_2_TO_V2_3_DETECT_MARKER) !== -1;
+            let alreadyV2_3 = e.jsxString.indexOf('view.isEdge') !== -1;
+            if (hasV2Marker && !alreadyV2_3) {
+                e.jsxString = DEFAULT_VIEW_JSX_STRING;
+                migrated++;
+            }
+        }
+        if (migrated > 0) {
+            console.log(`[VersionFixer 2.213 -> 2.214] Migrated ${migrated} default view(s) to v2.3 (L2 isEdge support).`);
+        }
+        return s;
+    }
+
+    // 2.214 → 2.215: introduce L2 edgeRouting field on DViewElement (and DViewPoint subclass).
+    // Adds one additive field to all existing view instances:
+    //   - edgeRouting: 'manhattan-rounded'  (default — preserves current rendering)
+    // Possible values: 'straight' | 'manhattan-rounded' | 'bezier'. Consumed by EdgeRenderItem
+    // in components/edgeOverlay/EdgeOverlay.tsx; UI in InfoData.tsx (gated by isEdge=true).
+    // Idempotent: re-running is a no-op because of the typeof guard.
+    private ['2.214 -> 2.215'](s: DState): DState {
+        let migrated = 0;
+        for (let k in s.idlookup) {
+            let e = s.idlookup[k] as any;
+            if (!e || typeof e !== 'object') continue;
+            if (e.className !== 'DViewElement' && e.className !== 'DViewPoint') continue;
+
+            if (typeof e.edgeRouting !== 'string') { e.edgeRouting = 'manhattan-rounded'; migrated++; }
+        }
+        if (migrated > 0) {
+            console.log(`[VersionFixer 2.214 -> 2.215] Migrated ${migrated} view(s) with L2 edgeRouting default.`);
+        }
+        return s;
+    }
+
+    // 2.215 → 2.216: introduce DProject.expandedTreeNodes for persistent
+    // tree-view expand/collapse state. For each existing project, seeds the
+    // array with synthetic section keys + every metamodel/package/sub-package/
+    // class/model id reachable from the project. Features (foglie) are not
+    // seeded. Idempotent: skips projects that already have an array set.
+    private ['2.215 -> 2.216'](s: DState): DState {
+        let seeded = 0;
+        for (let k in s.idlookup) {
+            let e = s.idlookup[k] as any;
+            if (!e || typeof e !== 'object') continue;
+            if (e.className !== 'DProject') continue;
+            if (Array.isArray(e.expandedTreeNodes)) continue;
+
+            const expanded: string[] = [
+                '__section:megamodel',
+                '__section:metamodels',
+                '__section:viewpoints',
+                '__section:viewpoints/syntax',
+                '__section:viewpoints/validation',
+                '__section:documentation',
+            ];
+
+            const visitPackage = (pkgId: any): void => {
+                if (typeof pkgId !== 'string') return;
+                expanded.push(pkgId);
+                const pkg = s.idlookup[pkgId] as any;
+                if (!pkg) return;
+                for (const subId of (pkg.subpackages || [])) visitPackage(subId);
+                for (const cId of (pkg.classes || [])) {
+                    if (typeof cId === 'string') expanded.push(cId);
+                }
+            };
+
+            for (const mmId of (e.metamodels || [])) {
+                if (typeof mmId !== 'string') continue;
+                expanded.push(mmId);
+                expanded.push(`__section:models:${mmId}`);
+                const mm = s.idlookup[mmId] as any;
+                if (mm && Array.isArray(mm.packages)) {
+                    for (const pkgId of mm.packages) visitPackage(pkgId);
+                }
+            }
+            for (const modelId of (e.models || [])) {
+                if (typeof modelId === 'string') expanded.push(modelId);
+            }
+
+            e.expandedTreeNodes = expanded;
+            seeded++;
+        }
+        if (seeded > 0) {
+            console.log(`[VersionFixer 2.215 -> 2.216] Seeded expandedTreeNodes for ${seeded} project(s).`);
+        }
+        return s;
+    }
+
+    // 2.216 → 2.217: introduce DProject layout fields for the 4-column shell
+    // (rail | canvas | property | tree). Seeds 5 fields with their defaults on
+    // existing projects so future shell rendering can rely on them being present.
+    // Idempotent: skips projects that already have all 5 fields set (any value).
+    private ['2.216 -> 2.217'](s: DState): DState {
+        let seeded = 0;
+        for (let k in s.idlookup) {
+            const e = s.idlookup[k] as any;
+            if (!e || typeof e !== 'object') continue;
+            if (e.className !== 'DProject') continue;
+
+            const hasAll =
+                typeof e.layoutPropertyPanelWidth === 'number' &&
+                typeof e.layoutTreeWidth === 'number' &&
+                typeof e.layoutPropertyPanelOpen === 'boolean' &&
+                typeof e.layoutTreeCollapsed === 'boolean' &&
+                typeof e.layoutFocusCanvas === 'boolean';
+            if (hasAll) continue;
+
+            if (typeof e.layoutPropertyPanelWidth !== 'number') e.layoutPropertyPanelWidth = 400;
+            if (typeof e.layoutTreeWidth !== 'number') e.layoutTreeWidth = 300;
+            if (typeof e.layoutPropertyPanelOpen !== 'boolean') e.layoutPropertyPanelOpen = true;
+            if (typeof e.layoutTreeCollapsed !== 'boolean') e.layoutTreeCollapsed = false;
+            if (typeof e.layoutFocusCanvas !== 'boolean') e.layoutFocusCanvas = false;
+            seeded++;
+        }
+        if (seeded > 0) {
+            console.log(`[VersionFixer 2.216 -> 2.217] Seeded layout fields for ${seeded} project(s).`);
         }
         return s;
     }

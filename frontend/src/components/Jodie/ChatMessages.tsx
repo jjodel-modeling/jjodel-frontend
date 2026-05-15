@@ -6,6 +6,7 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import {AI, ChatMessage, ConsoleEntry, CodeEntry, isCodeEntry} from '../../types/jodie';
 import { MarkdownMessage } from './MarkdownMessage';
+import { JjelValueInspector, detectKind } from './JjelValueInspector';
 import { executeCommand, ScriptLineResult } from '../../jjscript';
 import { DUser, L, LUser, LProject, LModel, store } from '../../joiner';
 import { Selectors } from '../../redux/selectors/selectors';
@@ -18,6 +19,24 @@ interface ChatMessagesProps {
     isWaiting?: boolean;
     /** Optional callback when JjScript execution completes (for refresh/update) */
     onJjScriptExecuted?: () => void;
+    /** Promotion: switch to Code mode and prefill the input with an extracted snippet. */
+    onTestInCode?: (code: string, language: string | null) => void;
+    /** Promotion: switch to Chat mode and prefill the input with a template describing a failed code entry. */
+    onAskJjodie?: (entry: CodeEntry) => void;
+}
+
+type ExtractedCodeBlock = { language: string | null; content: string };
+
+// Extracts the first markdown fenced code block (```lang? ... ```) from text.
+// Powers the "Test in code mode" promotion shown under assistant messages.
+// Captures group 1 (language tag) is optional and may be undefined.
+function extractFirstCodeBlock(text: string): ExtractedCodeBlock | null {
+    const match = text.match(/```(\w+)?\n([\s\S]*?)```/);
+    if (!match) return null;
+    return {
+        language: match[1] ?? null,
+        content: match[2].trim(),
+    };
 }
 
 function formatTimestamp(timestamp: number): string {
@@ -29,7 +48,7 @@ function getInitials(name: string): string {
     return name.split(' ').map(n => n[0] || '').join('').toUpperCase().slice(0, 2) || 'U';
 }
 
-function MessageBubble({ message, onJjScriptExecute }: { message: ChatMessage; onJjScriptExecute?: (commands: string[]) => Promise<ScriptLineResult[]> }): JSX.Element {
+function MessageBubble({ message, onJjScriptExecute, onTestInCode }: { message: ChatMessage; onJjScriptExecute?: (commands: string[]) => Promise<ScriptLineResult[]>; onTestInCode?: (code: string, language: string | null) => void }): JSX.Element {
     const isUser = message.role === 'user';
     const providerInfo = message.provider ? AI[message.provider] : null;
     const displayName = message.userName || 'You';
@@ -38,6 +57,10 @@ function MessageBubble({ message, onJjScriptExecute }: { message: ChatMessage; o
     const [avatarConfig] = useAvatar();
     const avatarColor = AVATAR_COLORS[avatarConfig.colorIndex];
     const avatarIcon = AVATAR_ICONS[avatarConfig.iconIndex];
+
+    // Promotion is shown only on real assistant replies (not user messages, not
+    // JjScript success/error feedback) and only when the reply contains a fenced code block.
+    const promoteCodeBlock = !isUser && !isJjScript ? extractFirstCodeBlock(message.content) : null;
 
     return (
         <div className={`jodie-message ${isUser ? 'jodie-message-user' : 'jodie-message-assistant'}`}>
@@ -100,6 +123,16 @@ function MessageBubble({ message, onJjScriptExecute }: { message: ChatMessage; o
                         />
                     </div>
                 </div>
+                {promoteCodeBlock && onTestInCode && (
+                    <button
+                        className="jodie-promote-btn"
+                        onClick={() => onTestInCode(promoteCodeBlock.content, promoteCodeBlock.language)}
+                        title="Switch to console mode and prefill this snippet"
+                    >
+                        <i className="bi bi-arrow-right-square" />
+                        <span>Test in console mode</span>
+                    </button>
+                )}
                 <div className="jodie-message-meta">
                     {isUser && (
                         <span className="jodie-message-author">{displayName}</span>
@@ -124,11 +157,14 @@ function MessageBubble({ message, onJjScriptExecute }: { message: ChatMessage; o
     );
 }
 
-function CodeReplEntry({ entry }: { entry: CodeEntry }): JSX.Element {
+function CodeReplEntry({ entry, onAskJjodie }: { entry: CodeEntry; onAskJjodie?: (entry: CodeEntry) => void }): JSX.Element {
     const isError = !entry.output.ok;
     const outputText = entry.output.ok
         ? String(entry.output.value)
         : entry.output.error;
+    const warnings = entry.warnings ?? [];
+    const inspectorKind = !isError ? detectKind(entry.rawValue) : null;
+    const [inspectorOpen, setInspectorOpen] = useState(false);
     return (
         <div className={`jodie-code-entry${isError ? ' jodie-code-entry--error' : ''}`}>
             <div className="jodie-code-entry__row jodie-code-entry__input-row">
@@ -138,7 +174,50 @@ function CodeReplEntry({ entry }: { entry: CodeEntry }): JSX.Element {
             </div>
             <div className={`jodie-code-entry__row jodie-code-entry__output-row${isError ? ' jodie-code-entry__output-row--error' : ''}`}>
                 <code className="jodie-code-entry__output">{outputText}</code>
+                {inspectorKind && (
+                    <button
+                        type="button"
+                        className="jodie-inspect-toggle"
+                        onClick={() => setInspectorOpen(prev => !prev)}
+                        title={inspectorOpen ? 'Collapse properties' : 'Inspect properties'}
+                        aria-expanded={inspectorOpen}
+                        aria-label={inspectorOpen ? 'Collapse object inspector' : 'Inspect object properties'}
+                    >
+                        <i className={`bi bi-chevron-${inspectorOpen ? 'down' : 'right'}`} aria-hidden="true" />
+                    </button>
+                )}
             </div>
+            {inspectorKind && inspectorOpen && entry.rawValue && (
+                <JjelValueInspector
+                    value={entry.rawValue as Record<string, unknown>}
+                    kind={inspectorKind}
+                />
+            )}
+            {warnings.length > 0 && (
+                <div className="jodie-code-entry__warnings">
+                    {warnings.map((w, i) => (
+                        <div key={`${w.kind}:${w.identifier}:${i}`} className="jodie-code-entry__warning">
+                            <i className="bi bi-exclamation-triangle-fill" aria-hidden="true" />
+                            <span>
+                                {w.kind === 'property-not-found'
+                                    ? <>Property <code>{w.identifier}</code> not found on object.</>
+                                    : <>Unknown identifier <code>{w.identifier}</code>.</>}
+                                {w.suggestion && <> Did you mean <code>{w.suggestion}</code>?</>}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            )}
+            {isError && onAskJjodie && (
+                <button
+                    className="jodie-promote-btn jodie-code-entry__promote"
+                    onClick={() => onAskJjodie(entry)}
+                    title="Switch to chat mode and ask Jjodie about this error"
+                >
+                    <i className="bi bi-question-circle" />
+                    <span>Ask Jjodie about this</span>
+                </button>
+            )}
             <div className="jodie-message-meta jodie-code-entry__meta">
                 <span className="jodie-message-time">{formatTimestamp(entry.timestamp)}</span>
             </div>
@@ -165,7 +244,7 @@ function TypingIndicator(): JSX.Element {
     );
 }
 
-export function ChatMessages({ messages, isWaiting, onJjScriptExecuted }: ChatMessagesProps): JSX.Element {
+export function ChatMessages({ messages, isWaiting, onJjScriptExecuted, onTestInCode, onAskJjodie }: ChatMessagesProps): JSX.Element {
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // Auto-scroll to bottom when new messages arrive
@@ -299,12 +378,13 @@ export function ChatMessages({ messages, isWaiting, onJjScriptExecuted }: ChatMe
                 <>
                     {messages.map(entry => (
                         isCodeEntry(entry) ? (
-                            <CodeReplEntry key={entry.id} entry={entry} />
+                            <CodeReplEntry key={entry.id} entry={entry} onAskJjodie={onAskJjodie} />
                         ) : (
                             <MessageBubble
                                 key={entry.id}
                                 message={entry as ChatMessage}
                                 onJjScriptExecute={handleJjScriptExecute}
+                                onTestInCode={onTestInCode}
                             />
                         )
                     ))}

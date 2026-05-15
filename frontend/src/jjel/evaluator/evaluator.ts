@@ -34,11 +34,13 @@ import {
     JjelValue,
     JjelFunction,
     JjelObject,
+    JjelWarning,
     EvaluationContext,
     createFunction,
     isJjelFunction,
     isJjelObject
 } from './context';
+import { closestName } from '../util/levenshtein';
 
 import {
     getCollectionMethod,
@@ -111,6 +113,33 @@ export class JjelEvaluator {
         this.context.registerBuiltin('Array', createFunction(['...values'], (args) => {
             return args;
         }));
+    }
+
+    /**
+     * Evaluate an expression and collect diagnostic warnings (e.g. references
+     * to undefined identifiers). The base value semantics are unchanged: if the
+     * underlying expression resolves to null silently, this method also returns
+     * null — but populated `warnings` lets the caller surface the cause.
+     *
+     * Diagnostics are scoped to a single call: a fresh array is allocated and
+     * threaded through child contexts via `EvaluationContext.diagnostics`.
+     * `try/finally` clears the sink even if the evaluator throws, so the
+     * context is never left in a "dirty" state.
+     */
+    evaluateWithDiagnostics(
+        expr: JjelExpression,
+        ctx?: EvaluationContext,
+    ): { value: JjelValue; warnings: JjelWarning[] } {
+        const evalCtx = ctx || this.context;
+        const warnings: JjelWarning[] = [];
+        const previous = evalCtx.diagnostics;
+        evalCtx.diagnostics = warnings;
+        try {
+            const value = this.evaluate(expr, evalCtx);
+            return { value, warnings };
+        } finally {
+            evalCtx.diagnostics = previous;
+        }
     }
 
     /**
@@ -190,7 +219,25 @@ export class JjelEvaluator {
             return ctx.get(expr.name)!;
         }
 
-        // Undefined variable
+        // Undefined variable: silent-null (existing behavior, unchanged for
+        // template/viewpoint/JjScript consumers). When the caller has opted in
+        // to diagnostics, push a deduplicated warning with a Levenshtein-based
+        // suggestion. The evaluation result remains null either way.
+        if (ctx.diagnostics) {
+            const sink = ctx.diagnostics;
+            const already = sink.some(
+                w => w.kind === 'undefined-identifier' && w.identifier === expr.name,
+            );
+            if (!already) {
+                const suggestion = closestName(expr.name, ctx.allNames(), 3);
+                const warning: JjelWarning = {
+                    kind: 'undefined-identifier',
+                    identifier: expr.name,
+                    suggestion,
+                };
+                sink.push(warning);
+            }
+        }
         return null;
     }
 
@@ -316,7 +363,7 @@ export class JjelEvaluator {
             );
         }
 
-        return this.getProperty(obj, expr.property);
+        return this.getProperty(obj, expr.property, ctx);
     }
 
     private evaluateNullSafeMemberAccess(expr: NullSafeMemberAccessExpr, ctx: EvaluationContext): JjelValue {
@@ -326,10 +373,26 @@ export class JjelEvaluator {
             return null;
         }
 
-        return this.getProperty(obj, expr.property);
+        return this.getProperty(obj, expr.property, ctx);
     }
 
-    private getProperty(obj: JjelValue, property: string): JjelValue {
+    private getProperty(obj: JjelValue, property: string, ctx: EvaluationContext): JjelValue {
+        // Pedagogical error: `className` is strict-on-classes (M2->M3) per the
+        // v2 design (2026-04-28). On instances it must redirect users to
+        // `instanceOf.name` rather than silently returning a constant string.
+        // Check runs before the array/string branches because objects that
+        // carry `__type === 'Object'` are never arrays/strings.
+        if (
+            property === 'className' &&
+            isJjelObject(obj) &&
+            (obj as any).__type === 'Object'
+        ) {
+            throw new JjelEvaluationError(
+                "'className' applies to classes (M2→M3), not to instances.\n" +
+                "For the metaclass name of an instance, use 'obj.instanceOf.name'."
+            );
+        }
+
         // Array properties
         if (Array.isArray(obj)) {
             switch (property) {
@@ -427,16 +490,27 @@ export class JjelEvaluator {
                 return obj[property] ?? null;
             }
 
-            // Property doesn't exist - warn about potential typo
-            const availableKeys = Object.keys(obj).filter(k => !k.startsWith('__'));
-            const similar = this.findSimilarProperty(property, availableKeys);
-
-            if (similar) {
-                console.warn(`[JjEL] Property '${property}' not found. Did you mean '${similar}'?`);
-            } else if (availableKeys.length > 0 && availableKeys.length <= 20) {
-                console.warn(`[JjEL] Property '${property}' not found. Available: ${availableKeys.slice(0, 10).join(', ')}${availableKeys.length > 10 ? '...' : ''}`);
-            } else {
-                console.warn(`[JjEL] Property '${property}' not found on object`);
+            // Property doesn't exist on the host. When the caller has opted
+            // in to diagnostics (via `jjelEvalWithDiagnostics`), push a
+            // deduplicated warning with a Levenshtein suggestion computed
+            // over the user-visible keys (internal `__`-prefixed markers
+            // such as `__type`, `__jjelFunction`, `__isProxy` are excluded).
+            // When no channel is active, stay silent — consistent with the
+            // spec's "silent null" semantics for undefined identifiers.
+            if (ctx.diagnostics) {
+                const sink = ctx.diagnostics;
+                const already = sink.some(
+                    w => w.kind === 'property-not-found' && w.identifier === property,
+                );
+                if (!already) {
+                    const availableKeys = Object.keys(obj).filter(k => !k.startsWith('__'));
+                    const suggestion = closestName(property, availableKeys, 3);
+                    sink.push({
+                        kind: 'property-not-found',
+                        identifier: property,
+                        suggestion,
+                    });
+                }
             }
 
             return null;
@@ -615,6 +689,20 @@ export class JjelEvaluator {
     }
 
     private callMethod(obj: JjelValue, method: string, args: JjelValue[], ctx: EvaluationContext): JjelValue {
+        // Pedagogical error mirror of getProperty: catches the paren form
+        // `obj.className()` on instances. Same redirection to `instanceOf.name`.
+        if (
+            method === 'className' &&
+            args.length === 0 &&
+            isJjelObject(obj) &&
+            (obj as any).__type === 'Object'
+        ) {
+            throw new JjelEvaluationError(
+                "'className' applies to classes (M2→M3), not to instances.\n" +
+                "For the metaclass name of an instance, use 'obj.instanceOf.name'."
+            );
+        }
+
         // Array methods
         if (Array.isArray(obj)) {
             const collectionMethod = getCollectionMethod(method);
@@ -655,6 +743,13 @@ export class JjelEvaluator {
             const methodValue = obj[method];
             if (isJjelFunction(methodValue)) {
                 return methodValue.call(args, ctx);
+            }
+            // Dual form for zero-arg builtins (spec 2.11): if the property
+            // resolves to a non-function value and no arguments were passed,
+            // return the value directly. Mirrors the existing behavior for
+            // zero-arg string/collection methods.
+            if (args.length === 0 && methodValue !== undefined) {
+                return methodValue;
             }
         }
 

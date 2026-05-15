@@ -2,7 +2,7 @@ import './style.scss';
 import React, {Dispatch, ReactElement, ReactNode, useEffect, useState} from 'react';
 import { JjodelEvents } from '../../events/registry';
 import {connect} from 'react-redux';
-import {DProject, DState, DUser, LProject, LUser} from '../../joiner';
+import {DProject, DState, DUser, LProject, LUser, store} from '../../joiner';
 import {FakeStateProps, windoww} from '../../joiner/types';
 import {LayoutData} from 'rc-dock';
 import {Collaborative, Console, Logger, MetaData} from "../editors";
@@ -260,6 +260,27 @@ function DockComponent(props: AllProps) {
         };
     }, []);
 
+    // PropertiesWithTreeView rail-only mode (2026-05-13): quando entrambi i
+    // sub-panel sono in rail, settiamo body[data-properties-tree-rail-only='true']
+    // per shrinkare il dock tab a 56px (vedi style.scss). Semantica diversa dal
+    // pattern rimosso in F1.5: shrink invece di hide, tab resta visibile mostrando
+    // le due rail.
+    useEffect(() => {
+        const onEnter = () => {
+            document.body.dataset.propertiesTreeRailOnly = 'true';
+        };
+        const onExit = () => {
+            delete document.body.dataset.propertiesTreeRailOnly;
+        };
+        window.addEventListener(JjodelEvents.PROPERTIES_TREE_RAIL_ONLY_ENTER, onEnter);
+        window.addEventListener(JjodelEvents.PROPERTIES_TREE_RAIL_ONLY_EXIT, onExit);
+        return () => {
+            window.removeEventListener(JjodelEvents.PROPERTIES_TREE_RAIL_ONLY_ENTER, onEnter);
+            window.removeEventListener(JjodelEvents.PROPERTIES_TREE_RAIL_ONLY_EXIT, onExit);
+            delete document.body.dataset.propertiesTreeRailOnly;
+        };
+    }, []);
+
     const groups = {
         'models': {floatable: true, maximizable: false},
         // editors group: tabLocked=true disables drag-and-drop reordering
@@ -353,6 +374,28 @@ function DockComponent(props: AllProps) {
         const tabType: string | null = (activeTab?.title as any)?.props?.['data-type'] ?? null;
 
         window.dispatchEvent(new CustomEvent(JjodelEvents.ACTIVE_TAB, { detail: { activeId, tabType } }));
+
+        // tabType is null when rc-dock switches between already-open tabs
+        // (it doesn't preserve React props on title elements). Fall back to
+        // the JjOM lookup to determine the editor type from the model itself.
+        let resolvedEditorType: string | null = tabType;
+        if (!resolvedEditorType && activeId) {
+            try {
+                const state = store.getState();
+                const model = (state as any).idlookup?.[activeId];
+                if (model) {
+                    resolvedEditorType = model.isMetamodel ? 'metamodel' : 'model';
+                }
+            } catch {
+                // silent fallback
+            }
+        }
+
+        if (resolvedEditorType === 'metamodel' || resolvedEditorType === 'model') {
+            window.dispatchEvent(new CustomEvent(JjodelEvents.EDITOR_TYPE_CHANGE, {
+                detail: { editorType: resolvedEditorType, modelId: activeId }
+            }));
+        }
 
         // Hide properties panel when Documentation tab is active
         const isDocTab = activeId === 'documentation' || activeId.startsWith('doc_');

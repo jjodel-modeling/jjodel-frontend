@@ -1175,10 +1175,17 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
             }
             if (!oldState/* || !Object.keys(delta).length*/) return ret;
 
+            // Fast path: skip history bookkeeping when the only meaningful change
+            // is a single transient top-level key (dragging / _lastSelected /
+            // contextMenu). isRelevantChangeCheck would discard the delta in this
+            // case anyway; computing it is pure waste during pan/drag operations.
+            if (isOnlyTransientTopLevelChange(ret, oldState)) {
+                return ret;
+            }
+
             // update state history
             let delta = Uobj.objectDelta(ret, oldState, true, false);
             // if (U.debug) console.log('reducer delta', {start:oldState, end: ret, delta});
-            let debug = Uobj.applyObjectDelta(ret, delta, false, oldState);
             delta.timestamp = ret.timestamp;
             delta.timestampdiff = ret.timestampdiff = ret.timestamp - (oldState?.timestamp || 0);
             if (!statehistory[action.sender]) statehistory[action.sender] = new UserHistory();
@@ -1262,6 +1269,38 @@ function isRelevantChangeCheck(delta: GObject<DState>, pastDelta?: GObject<DStat
         if ("contextMenu" in delta) return false;
     }
     return true;
+}
+
+/**
+ * Fast path check for _reducer: returns true if the only semantic change
+ * between ret and oldState is a single transient top-level key (dragging,
+ * _lastSelected, contextMenu). When true, the caller can skip the
+ * expensive Uobj.objectDelta + history bookkeeping, since
+ * isRelevantChangeCheck would discard the delta anyway.
+ *
+ * Keep TRANSIENT_TOP_KEYS in sync with isRelevantChangeCheck.
+ * Keep IGNORED_TOP_KEYS in sync with the unconditional assignments
+ * performed by _reducer right after doreducer() (timestamp,
+ * action_title, action_description) plus timestampdiff which is
+ * written further down in the slow path.
+ */
+function isOnlyTransientTopLevelChange(ret: DState, oldState: DState): boolean {
+    const TRANSIENT_TOP_KEYS = new Set<string>(['dragging', '_lastSelected', 'contextMenu']);
+    const IGNORED_TOP_KEYS = new Set<string>(['timestamp', 'timestampdiff', 'action_title', 'action_description']);
+    let semanticChange: string | null = null;
+    for (const k in ret) {
+        if (ret[k as keyof DState] === oldState[k as keyof DState]) continue;
+        if (IGNORED_TOP_KEYS.has(k)) continue;
+        if (semanticChange !== null) return false;
+        semanticChange = k;
+    }
+    for (const k in oldState) {
+        if (k in ret) continue;
+        if (IGNORED_TOP_KEYS.has(k)) continue;
+        if (semanticChange !== null) return false;
+        semanticChange = k;
+    }
+    return semanticChange !== null && TRANSIENT_TOP_KEYS.has(semanticChange);
 }
 function undo(state: DState, action: UndoAction | RedoAction, delta: GObject | undefined, isundo = true): DState {
     if (!delta) return state;

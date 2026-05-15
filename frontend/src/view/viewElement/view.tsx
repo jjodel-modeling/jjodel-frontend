@@ -46,6 +46,7 @@ import DSL from "../../DSL/DSL";
 import {ReactNode} from "react";
 import type {ViewpointType} from "../viewPoint/viewpoint";
 import {labeltype} from "../../model/dataStructure/GraphDataElements";
+import {DEFAULT_VIEW_JSX_STRING} from "../../utils/defaultViewTemplate";
 
 let CSS_Units0 = {'Local-font relative':{
         'cap':     'cap - (Cap height) the nominal height of capital letters of the element\'s font.',
@@ -266,6 +267,23 @@ export class DViewElement extends DPointerTargetable {
     snap!: GraphPoint;
     grid!: {x?: number, y?: number, type?: "polar" | "cartesian", "center"?: TLCoord, visible?: boolean};
     version!: number; // only meaningful for default views, required to check if view needs to be updated.
+
+    // L2 — edge overlay schema (classic editor only). When isEdge=true, instances of the metaclass represented
+    // by this view are rendered as SVG edges in the classic editor (overlay), reading endpoints via
+    // edgeSource/edgeTarget path expressions evaluated against the M1 instance. Empty string = unconfigured;
+    // overlay falls back to the standard card. No effect in flow editor. Defaults set in Constructors.DViewElement;
+    // existing instances migrated by VersionFixer 2.212 -> 2.213. UI in L2 Fase 5; SVG renderer in L2 Fase 3.
+    isEdge!: boolean;
+    edgeSource!: string;
+    edgeTarget!: string;
+    edgeRouting!: 'straight' | 'manhattan-rounded' | 'bezier'; // L2 overlay path style. Default 'manhattan-rounded' (set in Constructors; existing instances migrated by VersionFixer 2.214 -> 2.215).
+    // L2 — edge customization V1 (label + stroke). Optional fields applied at L2 overlay render-time
+    // (frontend/src/components/edgeOverlay/EdgeOverlay.tsx). Defaults set in Constructors; instances
+    // pre-V1 with `undefined` values are normalized by the selector via narrowing — no VersionFixer bump.
+    edgeLabel!: string;                                         // JjEL expression evaluated to the edge label text. '' = no label.
+    edgeStrokeColor!: string;                                   // semantic palette token: 'default' | 'accent' | 'success' | 'warning' | 'danger' | 'muted'.
+    edgeStrokeWidth!: number;                                   // stroke width in px; clamped to [0.5, 10] by the selector.
+    edgeStrokeStyle!: 'solid' | 'dashed' | 'dotted';            // line pattern.
 /*
     public static new(name: string, jsxString: string, father?: DViewElement, defaultVSize?: GraphSize, usageDeclarations: string = '', constants: string = '',
                       preRenderFunc: string = '', appliableToClasses: string[] = [], oclCondition: string = '',
@@ -287,50 +305,10 @@ export class DViewElement extends DPointerTargetable {
     }
 
     static newDefault(forData?: DModelElement | DGraphElement, forSelf: boolean = false): DViewElement{
-        const jsx = `
-
-/* Jjodel Default View 2.1 */ 
-
-<View className={'root bg-white p-1'}>
-    <div className={'header'}>
-        {!data ? null :
-            <label className={'input-container mx-2'}>
-                <b className={'object-name'}>Name:</b>
-                <Input data={data} field={'name'} hidden={true} autosize={true} placeholder={'enter name'}/>
-            </label>
-        }
-    </div>
-    <div className={'body'}>To add information here,<br/> edit the view<br/>"{view.name}"</div>
-    {decorators}
-</View>`;
-        const palettes: PaletteType = {
-            "background-": {type:"color", value: [
-                { "r": 255, "g": 255, "b": 255, "a": 1 },
-                { "r": 250, "g": 250, "b": 250, "a": 1 }]},
-            "border-color-": {type:"color", value: [
-                { "r": 12, "g": 67, "b": 110, "a": 1 }]},
-            "color-": {type:"color", value: [
-                { "r": 12, "g": 67, "b": 110, "a": 1 }]},
-        }
-            const css = `&>.root {
-    border: 2px solid var(--border-color-1)!important;
-    border-radius: 4px;
-    background: linear-gradient(-45deg, var(--background-1) 0%, var(--background-2) 100%);
-    color: var(--color-1);
-    min-width: 180px;
-    
-    &>.header {
-        border-bottom: 1px solid var(--border-color-1);
-    }
-
-    &>.body {
-        text-align: center;
-        height: auto;
-        padding: 5px;
-    }
-} 
-
- `;
+        /* Jjodel Default View 2.2 - minimal clean + edge-like (sessione 2026-05-03) */
+        const jsx = DEFAULT_VIEW_JSX_STRING;
+        const palettes: PaletteType = {};
+        const css = '';
         let query = '';
         if (forData) {
             if (forSelf) {
@@ -919,6 +897,39 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
             <br/>The same result can be obtained through OCL.</div>}
 
     appliableTo!: 'Any'|'Graph'|'GraphVertex'|'Vertex'|'Edge'|'EdgePoint'|'Field';
+
+    // L2 — edge overlay schema (classic editor only). Mirrors DViewElement:271-278.
+    isEdge!: boolean;
+    __info_of__isEdge: Info = {isEdge: true, type: ShortAttribETypes.EBoolean, label: "Is Edge",
+        txt: <div>Marks this view as an edge in the L2 overlay. When enabled, instances of the matched metaclass are drawn as connecting paths between two endpoint nodes resolved from the JjEL expressions below.</div>}
+
+    edgeSource!: string;
+    __info_of__edgeSource: Info = {isEdge: true, type: ShortAttribETypes.EString, label: "Edge Source",
+        txt: <div>JjEL expression resolving to the LObject visualized as the source endpoint of the edge. For an EReference named e.g. "source", use $source.value to dereference it. The reference name alone returns a DValue wrapper.</div>}
+
+    edgeTarget!: string;
+    __info_of__edgeTarget: Info = {isEdge: true, type: ShortAttribETypes.EString, label: "Edge Target",
+        txt: <div>JjEL expression resolving to the LObject visualized as the target endpoint of the edge. For an EReference named e.g. "target", use $target.value to dereference it. The reference name alone returns a DValue wrapper.</div>}
+
+    edgeRouting!: 'straight' | 'manhattan-rounded' | 'bezier';
+    __info_of__edgeRouting: Info = {isEdge: true, type: '"straight" | "manhattan-rounded" | "bezier"', label: "Edge Routing",
+        txt: <div>Path style used by the L2 overlay to draw this edge. <b>Manhattan (rounded)</b> is the default — orthogonal segments with rounded corners. <b>Straight</b> is a single line between source and target side midpoints. <b>Bezier</b> is a cubic curve with tangents normal to the chosen exit/entry sides.</div>}
+
+    edgeLabel!: string;
+    __info_of__edgeLabel: Info = {isEdge: true, hidden: true, type: ShortAttribETypes.EString, label: "Edge Label",
+        txt: <div>JjEL expression evaluated as the edge label text. Leave empty for no label. Example: <code>$instance.name</code>.</div>}
+
+    edgeStrokeColor!: string;
+    __info_of__edgeStrokeColor: Info = {isEdge: true, hidden: true, type: '"default" | "accent" | "success" | "warning" | "danger" | "muted"', label: "Edge Stroke Color",
+        txt: <div>Color of the edge stroke. Semantic palette tokens that adapt to light and dark themes.</div>}
+
+    edgeStrokeWidth!: number;
+    __info_of__edgeStrokeWidth: Info = {isEdge: true, hidden: true, type: ShortAttribETypes.EFloat, label: "Edge Stroke Width", min: 0.5, max: 10, step: 0.25,
+        txt: <div>Thickness of the edge line in pixels (0.5–10). Default 1.5.</div>}
+
+    edgeStrokeStyle!: 'solid' | 'dashed' | 'dotted';
+    __info_of__edgeStrokeStyle: Info = {isEdge: true, hidden: true, type: '"solid" | "dashed" | "dotted"', label: "Edge Stroke Style",
+        txt: <div>Pattern of the edge line: solid, dashed, or dotted.</div>}
 
     subViews!: LViewElement[];
     __info_of__subViews: Info = {isGlobal: true, hidden: true, type: "DViewElement[]", label:"sub-views",

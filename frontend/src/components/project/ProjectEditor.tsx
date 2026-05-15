@@ -24,6 +24,7 @@ import {
 import DockManager from '../abstract/DockManager';
 import { createM2, createM1 } from '../../pages/components/Navbar';
 import { formatVersionNumber } from '../../utils/versionUtils';
+import { getPublicProjectUrl, copyToClipboard } from '../../utils/shareUtils';
 import ShareProjectModal from './ShareProjectModal';
 import UnsavedChangesDialog from './UnsavedChangesDialog';
 import DocumentationSection from './DocumentationSection';
@@ -185,6 +186,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
 
     // Project menu (⋮) state
     const [showProjectMenu, setShowProjectMenu] = useState(false);
+    const [linkCopied, setLinkCopied] = useState(false);
     const projectMenuRef = useRef<HTMLDivElement>(null);
 
     // Section from URL search params (driven by LeftBar sidebar)
@@ -214,9 +216,14 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     const [showImportMenu, setShowImportMenu] = useState(false);
     const importMenuRef = useRef<HTMLDivElement>(null);
 
+    // Import menu for models (XMI M1 importer, Phase B.1)
+    const [showImportModelMenu, setShowImportModelMenu] = useState(false);
+    const importModelMenuRef = useRef<HTMLDivElement>(null);
+
     // Hidden file inputs for import
     const importJmmRef = useRef<HTMLInputElement>(null);
     const importEcoreRef = useRef<HTMLInputElement>(null);
+    const importXmiRef = useRef<HTMLInputElement>(null);
 
     // Environment Generation state
     const [showEnvGenWizard, setShowEnvGenWizard] = useState(false);
@@ -301,6 +308,20 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             return () => document.removeEventListener('mousedown', handleClickOutside);
         }
     }, [showImportMenu]);
+
+    // Click-outside handler for model import menu
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (importModelMenuRef.current && !importModelMenuRef.current.contains(event.target as Node)) {
+                setShowImportModelMenu(false);
+            }
+        };
+
+        if (showImportModelMenu) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }
+    }, [showImportModelMenu]);
 
     // Click-outside handler for project menu (⋮)
     useEffect(() => {
@@ -601,6 +622,19 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         markDirty();
     };
 
+    const handleSetVisibility = (target: 'private' | 'public' | 'collaborative') => {
+        project.type = target;
+        markDirty();
+        setShowProjectMenu(false);
+    };
+
+    const handleCopyLink = async () => {
+        const url = getPublicProjectUrl(project.id);
+        await copyToClipboard(url);
+        setLinkCopied(true);
+        setTimeout(() => setLinkCopied(false), 2000);
+    };
+
     // Contextual menu handlers with smart positioning
     const toggleMenu = (type: MenuType, id: string, e: React.MouseEvent<HTMLButtonElement>) => {
         e.stopPropagation(); // Prevent card click
@@ -631,7 +665,9 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         setOpenMenu(null);
     };
 
-    // Export metamodel as .jmm file
+    // TODO: dead code. Handler kept for reference. Slated for removal in pre-3.0.0 cleanup session
+    // (along with handleJmmFileChange stub at line ~742 and duplicate in LeftBar.tsx:249).
+    // Decision: .jmm format dropped — use .ecore for M2 interop, .jodel for full project.
     const handleExportMetamodel = (mm: LModel) => {
         try {
             const jmmData = {
@@ -699,12 +735,15 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         closeMenu();
     };
 
-    // Import metamodel from .jmm file
+    // TODO: dead code. Trigger for hidden .jmm file input; menu entry removed.
+    // Slated for removal in pre-3.0.0 cleanup session.
     const handleImportJmm = () => {
         importJmmRef.current?.click();
         setShowImportMenu(false);
     };
 
+    // TODO: dead code. Import stub never implemented; menu entry removed.
+    // Slated for removal in pre-3.0.0 cleanup session.
     const handleJmmFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -754,6 +793,20 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             const result = await EcoreService.importFromFile(file);
 
             if (result.success && result.model) {
+                // Link imported metamodel to current project (Bug F fix 2026-05-13):
+                // EcoreParser.parse() pushes the DModel to state.m2models but does NOT update
+                // project.metamodels. Without this, Dashboard shows metamodelsNumber=0 because
+                // metamodelsNumber is computed from project.metamodels.length at save time.
+                // Pattern mirrors createM2() in Navbar.tsx:75. Reference:
+                // docs/discovery/2026-05-13_microdiscovery_bug_ef_render_duplicate.md sec 6.2.
+                try {
+                    project.metamodels = [...project.metamodels, result.model];
+                    if (result.model.node) {
+                        project.graphs = [...project.graphs, result.model.node as any];
+                    }
+                } catch (linkErr) {
+                    console.warn('[Bug F fix] Failed to link imported metamodel to project:', linkErr);
+                }
                 U.alert('i', 'Imported', `Metamodel "${result.model.name}" imported from Ecore`);
                 markDirty();
 
@@ -773,6 +826,52 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         // Reset input
         if (importEcoreRef.current) {
             importEcoreRef.current.value = '';
+        }
+    };
+
+    // Import M1 model from .xmi file (Phase B.1: flat instances + primitive attributes)
+    const handleImportXmi = () => {
+        importXmiRef.current?.click();
+        setShowImportModelMenu(false);
+    };
+
+    const handleXmiFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            const result = await XMIService.importM1FromFile(file);
+
+            if (result.success && result.model) {
+                // Link imported M1 model to current project (mirrors Bug F fix for Ecore metamodels):
+                // XMIService.importM1FromFile creates the DModel but does not register it under
+                // project.models / project.graphs, so the Dashboard count and the persistence
+                // payload would miss it otherwise.
+                try {
+                    project.models = [...project.models, result.model];
+                    if (result.model.node) {
+                        project.graphs = [...project.graphs, result.model.node as any];
+                    }
+                } catch (linkErr) {
+                    console.warn('[XMI import] Failed to link imported model to project:', linkErr);
+                }
+                U.alert('i', 'Imported', `Model "${result.model.name}" imported from XMI`);
+                markDirty();
+
+                if (result.warnings.length > 0) {
+                    console.warn('XMI import warnings:', result.warnings);
+                }
+            } else {
+                throw new Error(result.errors.join(', '));
+            }
+
+        } catch (error) {
+            console.error('Import XMI error:', error);
+            U.alert('e', 'Import Failed', `Could not import XMI: ${(error as Error).message}`);
+        }
+
+        if (importXmiRef.current) {
+            importXmiRef.current.value = '';
         }
     };
 
@@ -1826,20 +1925,46 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             </button>
                             {showProjectMenu && (
                                 <div className="project-menu-dropdown">
+                                    {project.type !== 'private' && (
+                                        <>
+                                            <button onClick={handleCopyLink}>
+                                                <i className="bi bi-link-45deg" />
+                                                {linkCopied ? 'Link copied!' : 'Copy link'}
+                                            </button>
+                                            <div className="project-menu-dropdown__divider" />
+                                        </>
+                                    )}
                                     <button onClick={handleDownloadProject}>
                                         <i className="bi bi-download" />
                                         Download project
                                     </button>
-                                    <button onClick={() => { handleVisibilityBadgeClick(); setShowProjectMenu(false); }}>
-                                        <i className={`bi bi-${project.type === 'public' ? 'lock' : 'globe'}`} />
-                                        {project.type === 'public' ? 'Make private' : 'Make public'}
-                                    </button>
                                     <div className="project-menu-dropdown__divider" />
-                                    {onNavigateBack && (
-                                        <button onClick={() => { handleBackNavigation(); setShowProjectMenu(false); }}>
-                                            <i className="bi bi-x-lg" />
-                                            Close project
+                                    {project.type !== 'public' && (
+                                        <button onClick={() => handleSetVisibility('public')}>
+                                            <i className="bi bi-globe" />
+                                            Make public
                                         </button>
+                                    )}
+                                    {project.type !== 'collaborative' && (
+                                        <button onClick={() => handleSetVisibility('collaborative')}>
+                                            <i className="bi bi-people" />
+                                            Make collaborative
+                                        </button>
+                                    )}
+                                    {project.type !== 'private' && (
+                                        <button onClick={() => handleSetVisibility('private')}>
+                                            <i className="bi bi-lock" />
+                                            Make private
+                                        </button>
+                                    )}
+                                    {onNavigateBack && (
+                                        <>
+                                            <div className="project-menu-dropdown__divider" />
+                                            <button onClick={() => { handleBackNavigation(); setShowProjectMenu(false); }}>
+                                                <i className="bi bi-x-lg" />
+                                                Close project
+                                            </button>
+                                        </>
                                     )}
                                 </div>
                             )}
@@ -1930,13 +2055,6 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                         <div className="import-select-menu" ref={importMenuRef}>
                             <button
                                 className="import-select-menu__item"
-                                onClick={handleImportJmm}
-                            >
-                                <i className="bi bi-file-earmark" />
-                                Import .jmm
-                            </button>
-                            <button
-                                className="import-select-menu__item"
                                 onClick={handleImportEcore}
                             >
                                 <i className="bi bi-file-earmark-code" />
@@ -2018,13 +2136,6 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                             </button>
                                             <button
                                                 className="context-menu__item"
-                                                onClick={() => handleExportMetamodel(mm)}
-                                            >
-                                                <i className="bi bi-download" />
-                                                Export (.jmm)
-                                            </button>
-                                            <button
-                                                className="context-menu__item"
                                                 onClick={() => handleExportEcore(mm)}
                                             >
                                                 <i className="bi bi-file-earmark-code" />
@@ -2066,6 +2177,29 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                         <span className="project-section-header__count">({models.length})</span>
                     </h2>
                     <div className="project-section-header__actions">
+                        <button
+                            className="btn btn--ghost btn--xs"
+                            onClick={() => setShowImportModelMenu(!showImportModelMenu)}
+                            title="Import model from file"
+                        >
+                            <i className="bi bi-upload" />
+                            Import
+                            <i className={`bi bi-chevron-${showImportModelMenu ? 'up' : 'down'} btn-chevron`} />
+                        </button>
+
+                        {/* Import dropdown menu */}
+                        {showImportModelMenu && (
+                            <div className="import-select-menu" ref={importModelMenuRef}>
+                                <button
+                                    className="import-select-menu__item"
+                                    onClick={handleImportXmi}
+                                >
+                                    <i className="bi bi-file-earmark-code" />
+                                    Import Model (.xmi)
+                                </button>
+                            </div>
+                        )}
+
                         <button
                             className="btn btn--ghost btn--sm"
                             disabled={metamodels.length === 0}
@@ -2531,6 +2665,13 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 accept=".ecore"
                 style={{ display: 'none' }}
                 onChange={handleEcoreFileChange}
+            />
+            <input
+                ref={importXmiRef}
+                type="file"
+                accept=".xmi,.xml"
+                style={{ display: 'none' }}
+                onChange={handleXmiFileChange}
             />
         </div>
     );

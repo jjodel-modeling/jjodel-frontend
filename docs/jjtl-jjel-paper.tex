@@ -561,6 +561,8 @@ Naming convention methods (\texttt{camelCase}, \texttt{pascalCase}, \texttt{snak
 
 Note: while \texttt{filter()} and \texttt{map()} remain available for backward compatibility and for use with lambda-based patterns, the idiomatic \jjel{} approach is to use \kw{forall}, which subsumes both operations in a single construct. The remaining collection methods are those that \kw{forall} does not subsume: aggregation (\texttt{sum}, \texttt{avg}), ordering (\texttt{sortBy}), structure (\texttt{groupBy}, \texttt{flatten}), and boolean checks (\texttt{all}, \texttt{any}, \texttt{none}).
 
+Zero-argument methods and properties (\texttt{size}, \texttt{first}, \texttt{toUpper}, \texttt{abs}, \texttt{now}, \dots) follow the dual calling convention introduced in \Cref{sec:calling-conv}: both \texttt{x.size} and \texttt{x.size()} are accepted; the form without parentheses is idiomatic. The tabular listings throughout this section retain the parenthesised form for typographic uniformity, but readers should expect the parenthesis-free form in idiomatic code.
+
 
 \subsection{Evaluation Rules}
 
@@ -583,6 +585,50 @@ parent != null and parent?.name.isNotEmpty   -- null-safe via ?. operator
     \item \textbf{Silent null}: undefined variables, property not found on object (with console warning and typo suggestions via Levenshtein distance), division by zero, type mismatches in arithmetic.
     \item \textbf{Thrown error}: \texttt{.property} on \texttt{null} (forces use of \texttt{?.}), unknown method call (with suggestions).
 \end{itemize}
+
+The Console exposes silent failures through warnings rather than swallowing them entirely. The evaluator surfaces typo suggestions through an adaptive Levenshtein matcher: the maximum edit distance accepted scales with the identifier length (length divided by three, with a minimum of one), and identifiers shorter than three characters receive no suggestion. This avoids spurious matches such as \texttt{dd} \mbox{$\to$} \texttt{now} that early implementations produced.
+
+\paragraph{Pedagogical errors for OCL-isms.} Although \jjel{} is not OCL, OCL syntax is sufficiently widespread in MDE that users frequently type OCL constructs by reflex. Rather than producing a generic \texttt{Expected expression} message, the lexer recognises the most common OCL-isms and emits a specific, instructive message:
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Input pattern} & \textbf{Message} \\
+\midrule
+\texttt{coll->op()} & \texttt{->} is OCL syntax; use \texttt{.} for navigation \\
+\texttt{Set\{1,2,3\}} & Set literals are OCL syntax; use \texttt{[1, 2, 3]} \\
+\texttt{x.oclIsTypeOf(T)} & Use \texttt{x.instanceOf == T} \\
+\texttt{x.oclIsKindOf(T)} & Use \texttt{x is T} \\
+\texttt{x.oclAsType(T)} & Casts are not needed in \jjel{} \\
+\texttt{x.oclIsUndefined} & Use \texttt{x == null} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The principle is to educate without tolerating: \texttt{->} is not silently treated as a synonym of \texttt{.}, but the user is told why the expression failed and how to write it idiomatically.
+
+\subsubsection{Calling Conventions}\label{sec:calling-conv}
+
+\jjel{} supports two equivalent forms for invoking zero-argument methods and accessing zero-argument properties: with empty parentheses (\texttt{x.size()}) and without (\texttt{x.size}). Both are valid; the form without parentheses is idiomatic and recommended.
+
+\begin{lstlisting}[style=jjel,numbers=none]
+classes.size               -- idiomatic, returns 4
+classes.size()             -- equivalent
+State.isAbstract           -- idiomatic, returns false
+State.isAbstract()         -- equivalent
+classes.first              -- idiomatic
+classes.first()            -- equivalent
+\end{lstlisting}
+
+The dual form applies to zero-argument built-ins of all categories (collection accessors, structural class properties, string and number queries) and serves a coherent purpose: \jjel{} expressions read as mathematical descriptions, not as method invocations on objects. Writing \texttt{classes.size} reads ``the size of \emph{classes}'', which is closer to the intent than ``invoke \texttt{size} on \emph{classes}''. The parenthesised form remains available for users coming from JavaScript or Kotlin who expect call syntax.
+
+This applies only to zero-argument cases. Methods that take arguments (\texttt{x.replace("a", "b")}, \texttt{coll.sortBy(c => c.name)}) require parentheses by grammar.
+
+\subsubsection{Diagnostic Reporting}
+
+The Console-facing entry point of the evaluator returns warnings as a separate channel from the value. The canonical API \texttt{jjelEval(source, variables)} returns the value alone, preserving backward compatibility with existing call sites (templates, viewpoints, JjScript). The diagnostic-aware variant \texttt{jjelEvalWithDiagnostics(source, variables)} returns a record \texttt{\{value, warnings\}} where \texttt{warnings} is a list of structured diagnostics raised during evaluation.
+
+The Code mode of the Jodie REPL uses the diagnostic-aware variant to surface typo suggestions, OCL-ism notices, and silent-null reports as visible feedback alongside the result. Programmatic call sites that prefer the original behaviour use the canonical API and remain unchanged.
 
 
 \subsection{JjEL and the JjOM: Three-Level Abstraction}\label{sec:jjel-jjom}
@@ -615,9 +661,45 @@ The primary interface for \jjel{} users. These collections are pre-populated in 
 
 Class names are registered as first-level variables in the evaluation context. Writing \texttt{State} resolves to the class object, enabling natural navigation: \texttt{State.attributes}, \texttt{State.isAbstract}, \texttt{State.extends}.
 
+\paragraph{Structural class properties.} Class objects expose seven structural properties that reflect the metamodel-level configuration of the class:
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Property} & \textbf{Meaning} \\
+\midrule
+\texttt{isAbstract} & The class cannot be directly instantiated \\
+\texttt{isInterface} & The class declares behaviour, not state \\
+\texttt{isFinal} & The class cannot be extended \\
+\texttt{isSingleton} & At most one instance is allowed \\
+\texttt{isRootable} & The class can serve as a model root \\
+\texttt{isPartial} & The class is a partial declaration to be merged \\
+\texttt{allowCrossExtend} & Cross-package extension is permitted \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+These properties are accessible as plain identifiers on a class object: \texttt{State.isAbstract}, \texttt{namedElement.isAbstract}, \texttt{Person.isFinal}. They follow the dual calling convention described in \Cref{sec:calling-conv}: both \texttt{State.isAbstract} and \texttt{State.isAbstract()} are valid; the form without parentheses is idiomatic.
+
+\paragraph{Meta-properties.} Two meta-properties provide reflective access from instances and classes:
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Property} & \textbf{Defined on} & \textbf{Returns} \\
+\midrule
+\texttt{instanceOf} & instance & The class object the instance is an instance of (M1$\to$M2) \\
+\texttt{instanceof} & instance & Lowercase alias of \texttt{instanceOf} (backward compatibility) \\
+\texttt{className} & instance & The string \texttt{"DObject"} (M2$\to$M3, internal class name) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The naming distinguishes two reflection axes: \texttt{instanceOf} crosses the M1$\to$M2 boundary and returns a navigable class object (typical use: \texttt{p.instanceOf.name}); \texttt{className} crosses the M2$\to$M3 boundary and returns the internal type name as a string (typical use: filtering instances by their JjOM kind). The camelCase form \texttt{instanceOf} is canonical; \texttt{instanceof} is preserved as an alias for legacy expressions.
+
 \subsubsection{Level 2: Context Variables}
 
-Two context variables provide access to the currently selected element:
+Three context variables provide access to the currently selected element:
 
 \begin{center}
 \begin{tabular}{@{}lll@{}}
@@ -625,14 +707,17 @@ Two context variables provide access to the currently selected element:
 \textbf{Variable} & \textbf{Submodel} & \textbf{Access} \\
 \midrule
 \texttt{data} & Data & Abstract syntax of the selected element \\
+\texttt{self} & Data & Alias of \texttt{data} (idiomatic in JjTL and Console Code mode) \\
 \texttt{node} & Node & Layout information of the selected element \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-\texttt{data} provides access to user-defined features (attributes and references defined in the metamodel) and built-in JjOM properties (\texttt{className}, \texttt{id}, \texttt{instanceof}). \texttt{node} provides access to spatial properties (\texttt{x}, \texttt{y}, \texttt{width}, \texttt{height}).
+\texttt{data} provides access to user-defined features (attributes and references defined in the metamodel) and built-in JjOM properties. \texttt{self} is a synonym of \texttt{data} introduced for ergonomic reasons in two contexts: JjTL transformation rules, where \texttt{self} reads more naturally than \texttt{data} when binding to the matched source element; and the Console Code mode of the Jodie REPL, where \texttt{self} matches the user's mental model from object-oriented languages. The two are interchangeable: \texttt{data == self} always holds when both are bound, and both are simultaneously absent from the context when no element is selected.
 
-In the Console, \texttt{data} acts as an escape hatch for explicit navigation; most queries use Level~1 collections instead.
+\texttt{node} provides access to spatial properties (\texttt{x}, \texttt{y}, \texttt{width}, \texttt{height}). It is independent of \texttt{data}/\texttt{self}: \texttt{node} refers to the layout, the others to the abstract syntax.
+
+In the Console, \texttt{data}/\texttt{self} act as escape hatches for explicit navigation; most queries use Level~1 collections instead.
 
 \subsubsection{Level 3: Raw JjOM API}
 
@@ -654,7 +739,8 @@ In \jjel{} expressions, user-defined features are accessed directly by name, wit
 p.name                   -- user-defined attribute, returns "Alice"
 p.age                    -- user-defined attribute, returns 25
 p.sex                    -- enumeration, returns "Male" (not DEnumLiteral)
-p.instanceof             -- built-in JjOM property, returns Person
+p.instanceOf             -- built-in JjOM property, returns Person
+p.instanceOf.name        -- "Person" (M1 -> M2 navigation)
 \end{lstlisting}
 
 The evaluator applies a \emph{user-feature-first} resolution strategy: when a property name is accessed on a model instance, the evaluator first searches user-defined features (attributes and references from the metamodel), then falls back to built-in JjOM properties. This eliminates the \texttt{\$} prefix for the vast majority of expressions.

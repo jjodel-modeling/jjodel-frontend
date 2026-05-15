@@ -154,7 +154,32 @@ export class SaveManager {
         }
     }
     public static importEcore(jsonstr: GObject | string | null, isMetamodel: boolean, filename: string | undefined, persist: boolean = true): DModelElement[] {
-        return EcoreParser.parse(jsonstr, isMetamodel, filename, persist);
+        const parsedElements = EcoreParser.parse(jsonstr, isMetamodel, filename, persist);
+        // Link imported metamodel to current project (Bug F fix 2026-05-13):
+        // EcoreParser.parse() pushes the DModel to state.m2models but does NOT update
+        // project.metamodels. Without this, Dashboard shows metamodelsNumber=0 because
+        // metamodelsNumber is computed from project.metamodels.length at save time.
+        // Pattern mirrors createM2() in Navbar.tsx:75. Reference:
+        // docs/discovery/2026-05-13_microdiscovery_bug_ef_render_duplicate.md sec 6.2.
+        try {
+            const project = LProject.getProject();
+            if (project && isMetamodel) {
+                let dmodel: DModelElement | undefined;
+                for (const elem of parsedElements) { if (elem.className === 'DModel') { dmodel = elem; break; } }
+                if (dmodel) {
+                    const lmodel = LPointerTargetable.fromD(dmodel) as LModel;
+                    if (lmodel) {
+                        project.metamodels = [...project.metamodels, lmodel];
+                        if (lmodel.node) {
+                            project.graphs = [...project.graphs, lmodel.node as any];
+                        }
+                    }
+                }
+            }
+        } catch (linkErr) {
+            console.warn('[Bug F fix] Failed to link imported metamodel to project:', linkErr);
+        }
+        return parsedElements;
     }
 
     static exportLayout_click(toFile: boolean) {
