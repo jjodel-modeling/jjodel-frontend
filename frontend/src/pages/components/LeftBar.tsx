@@ -519,7 +519,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                         icon={<i className="bi bi-code-square" />}
                     >API Reference</Item>
                     <Item
-                        action={() => window.open('https://github.com/jjodel', '_blank')}
+                        action={() => window.open('https://github.com/jjodel-modeling/repositories', '_blank')}
                         icon={<i className="bi bi-github" />}
                     >GitHub</Item>
                 </Menu>
