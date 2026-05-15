@@ -1,5 +1,14 @@
 # Claude Code Session Log
 
+## 2026-05-15 — fix: sidebar FILTERS no longer reload Dashboard
+**Prompt**: Wire LeftBar Private/Public/Collaborative to the same filter mechanism as the in-page tabs (no reload, persistent active state)
+**File toccati**: frontend/src/pages/components/LeftBar.tsx, frontend/src/pages/AllProjects.tsx
+**Esito**: ✅ completato (TS check passa sui file toccati; test manuali in browser delegati ad Alfonso)
+**Note**: bug compound a due cause. **Causa 1 (primaria, in LeftBar.tsx:163)**: `handleFilterChange` controllava `window.location.pathname.includes('allProjects')` per decidere se evitare il reload — in HashRouter la route è in `window.location.hash` non in `pathname` (sempre `/`), quindi il controllo era sempre falso e si finiva nel ramo `R.navigate(...)`. `R.navigate` (`common/U.tsx:118-146`) ha hardcoded `if (true as any || refresh === true)` a riga 129 → sempre `window.location.reload()` a riga 140, ignorando il `NavigateFunction` passato come secondo argomento. Risultato: ogni click sidebar = full page reload. **Causa 2 (secondaria, in AllProjects.tsx:31-38)**: `useEffect([])` cancellava `?filter=` al mount con commento "Force All projects as the default", pensato contro filtri "stantii" da deep-link/sessione, ma cancellava anche quelli appena impostati post-reload. **Fix**: `LeftBar.tsx` aggiunto `useLocation` (import + hook), `handleFilterChange` ora specchia esattamente `Catalog.tsx:179-187` (i tab che funzionavano già): se `location.pathname === '/allProjects'` → solo `setSearchParams` (no reload, no remount), altrimenti `navigate('/allProjects?filter=...')` di React Router (no reload anche quando si naviga da altra pagina, a differenza di `R.navigate` che reloadava sempre). Rimossa `R.navigate` da questa funzione. `AllProjects.tsx` rimosso integralmente il `useEffect` di wipe-on-mount + dichiarazioni orfane (`useSearchParams` import e `[searchParams, setSearchParams]` destructuring, non più referenziate altrove nel file). **Highlight stato attivo**: già esisteva (`active={currentFilter === 'private'}` su LeftBar.tsx:458,463,468), nessun CSS toccato — la stessa sorgente di verità URL (`?filter=`) sincronizza automaticamente sidebar e tab. **Diff**: +13/-29 righe, 2 file. **Test manuali delegati**: (1) click tab Public → filtro+highlight; (2) click sidebar Public → filtro+highlight su entrambi (sidebar+tab), nessun reload; (3) click sidebar Private → switch filtro no reload; (4) refresh con `?filter=public` in URL → filtro persiste (era questo a saltare pre-fix per via dell'effect rimosso).
+**Nome del documento prompt**: 2026-05-15 16:00
+
+---
+
 ## 2026-05-15 — fix: correct JjModal description in What's new overlay
 **Prompt**: Replace "Modal logic on models" with "Inline dialogs for JjTL & JjScript" in the Jjodel 3.0 what's new modal
 **File toccati**: frontend/src/components/WelcomeModal/WelcomeModal.tsx
