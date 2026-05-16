@@ -1378,14 +1378,14 @@ function NavbarComponent(props: AllProps) {
             ]},
 
 
-        /* Edit - always visible, items disabled on dashboard */
+        /* Edit - editor-only items hidden on dashboard; Copy Public Link is a permanent stub */
         {name: 'Edit',
             subItems: [
-                {name: 'Undo', icon: <i className="bi bi-arrow-counterclockwise" />, shortcutPills: formatShortcutPills(SHORTCUTS.UNDO), disabled: isDashboard},
-                {name: 'Redo', icon: <i className="bi bi-arrow-clockwise" />, shortcutPills: getRedoShortcutPills(), subItems:[{name:"i"}], disabled: isDashboard},
-                {name: 'divisor', function: placeholder},
-                {name: (isFavorite ? 'Remove from' : 'Add to') +' Favorites', function: ()=> ProjectsApi.favorite(project?.__raw as DProject),
-                    icon: <i className={`bi ${isFavorite ? 'bi-star-fill' : 'bi-star'}`} />, disabled: isDashboard},
+                isDashboard ? null : {name: 'Undo', icon: <i className="bi bi-arrow-counterclockwise" />, shortcutPills: formatShortcutPills(SHORTCUTS.UNDO)},
+                isDashboard ? null : {name: 'Redo', icon: <i className="bi bi-arrow-clockwise" />, shortcutPills: getRedoShortcutPills(), subItems:[{name:"i"}]},
+                isDashboard ? null : {name: 'divisor', function: placeholder},
+                isDashboard ? null : {name: (isFavorite ? 'Remove from' : 'Add to') +' Favorites', function: ()=> ProjectsApi.favorite(project?.__raw as DProject),
+                    icon: <i className={`bi ${isFavorite ? 'bi-star-fill' : 'bi-star'}`} />},
                 {name: 'Copy Public Link', function: placeholder, icon: <i className="bi bi-link-45deg" />, shortcutPills: formatShortcutPills(SHORTCUTS.COPY_LINK), disabled: true}
             ]
         },
@@ -1454,10 +1454,10 @@ function NavbarComponent(props: AllProps) {
             ]
         },
 
-        /* Tools - always visible */
-        {name: 'Tools',
+        /* Tools - hidden entirely on dashboard; in editor with no metamodels shows only empty-state hint */
+        isDashboard ? null : {name: 'Tools',
             subItems: [
-                ...(isDashboard || metamodels.length === 0 ? [
+                ...(metamodels.length === 0 ? [
                     {name: 'No metamodel tools', disabled: true, icon: <i className="bi bi-tools" />}
                 ] : [
                     {name: 'Metamodel Tools', icon: <i className="bi bi-tools" />, disabled: true,
@@ -1469,38 +1469,38 @@ function NavbarComponent(props: AllProps) {
                     },
                     {name: 'Custom Tools', icon: <i className="bi bi-gear" />, disabled: true}
                 ]),
-                // Environment Generation
-                {name: 'divisor'},
-                {name: 'Generate Environment...',
-                    function: () => {
-                        window.dispatchEvent(new CustomEvent(EnvGenEvents.OPEN_WIZARD));
+                // Environment Generation - hidden when no metamodels
+                ...(metamodels.length === 0 ? [] : [
+                    {name: 'divisor'},
+                    {name: 'Generate Environment...',
+                        function: () => {
+                            window.dispatchEvent(new CustomEvent(EnvGenEvents.OPEN_WIZARD));
+                        },
+                        icon: <i className="bi bi-box-seam" />
                     },
-                    icon: <i className="bi bi-box-seam" />,
-                    disabled: isDashboard || metamodels.length === 0
-                },
-                {name: 'divisor'},
-                {name: 'Polymetric View',
-                    jsx: <span>Polymetric View <span style={{ fontSize: '10px', color: '#94a3b8', marginLeft: '4px', fontWeight: 400 }}>(beta)</span></span>,
-                    function: () => {
-                        window.dispatchEvent(new CustomEvent(JjodelEvents.OPEN_POLYMETRIC));
+                    {name: 'divisor'},
+                    {name: 'Polymetric View',
+                        jsx: <span>Polymetric View <span style={{ fontSize: '10px', color: '#94a3b8', marginLeft: '4px', fontWeight: 400 }}>(beta)</span></span>,
+                        function: () => {
+                            window.dispatchEvent(new CustomEvent(JjodelEvents.OPEN_POLYMETRIC));
+                        },
+                        icon: <i className="bi bi-grid-3x3-gap" />
                     },
-                    icon: <i className="bi bi-grid-3x3-gap" />,
-                    disabled: isDashboard || metamodels.length === 0
-                },
+                ])
             ]
         },
 
-        /* Analyze - always visible, some items only in advanced mode */
+        /* Analyze - Live Validation/Validate are permanent stubs; advanced items hidden on dashboard */
         {name: 'Analyze',
             subItems: [
                 {name: 'Live Validation', function: placeholder, icon: <i className="bi bi-check-circle" />, disabled: true},
                 {name: 'Validate', function: placeholder, icon: <i className="bi bi-clipboard-check" />, disabled: true},
-                // Advanced-only items below
+                // Advanced-only items below (additionally hidden on dashboard)
                 ...(props.advanced ? [
-                    {name: 'divisor', function: placeholder},
-                    {name: 'M2 Analytics', function: openM2Analytics, icon: <i className="bi bi-graph-up" />, disabled: isDashboard || metamodels.length === 0},
-                    {name: debuggerr ? 'Hide debugger' : 'Debug loops', function: ()=> setDebugger(!debuggerr), icon: <i className={`bi ${debuggerr ? 'bi-eye-slash' : 'bi-eye'}`} />, disabled: isDashboard},
-                    {name: 'Check integrity', function: ()=> VersionFixer.autocorrect(undefined, true, true), icon: <i className="bi bi-tools" />, disabled: isDashboard},
+                    isDashboard ? null : {name: 'divisor', function: placeholder},
+                    (isDashboard || metamodels.length === 0) ? null : {name: 'M2 Analytics', function: openM2Analytics, icon: <i className="bi bi-graph-up" />},
+                    isDashboard ? null : {name: debuggerr ? 'Hide debugger' : 'Debug loops', function: ()=> setDebugger(!debuggerr), icon: <i className={`bi ${debuggerr ? 'bi-eye-slash' : 'bi-eye'}`} />},
+                    isDashboard ? null : {name: 'Check integrity', function: ()=> VersionFixer.autocorrect(undefined, true, true), icon: <i className="bi bi-tools" />},
                 ] : []),
             ]
         },
