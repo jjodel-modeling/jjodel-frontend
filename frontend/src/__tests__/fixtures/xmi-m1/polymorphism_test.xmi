@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xmi:XMI xmi:version="2.0"
+         xmlns:xmi="http://www.omg.org/XMI"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="Shapes">
+  <Canvas name="main">
+    <shapes xsi:type="Circle" label="small" radius="5"/>
+    <shapes xsi:type="Square" label="box" side="3"/>
+    <shapes xsi:type="Circle" label="large" radius="10"/>
+  </Canvas>
+</xmi:XMI>

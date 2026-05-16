@@ -4645,6 +4645,9 @@ export class DModel extends DNamedElement { // DNamedElement
     instanceof?: Pointer<DModel>;
     instances!: Pointer<DModelElement>[];
     dependencies!: Pointer<DModel>[];
+    // Optional side-table populated by importers for round-trip preservation.
+    // Currently used by XMI M1 importer (B.3) to record `xmi:id` originals keyed by DObject.id.
+    metadata?: { xmiIdMap?: Record<string, string> };
 
     public static new(name?: DNamedElement["name"], instanceoff?: DModel["instanceof"], isMetamodel?: DModel["isMetamodel"], persist: boolean = true): DModel {
         let dmodels: DModel[] = Selectors.getAll(DModel, undefined, undefined, true, false);

@@ -18,6 +18,7 @@ import {
     LPackage,
     LPointerTargetable,
     Pointer,
+    SetFieldAction,
     store,
     Selectors
 } from '../../joiner';
@@ -75,14 +76,30 @@ export interface XMIImportResult {
     warnings: string[];
 }
 
-// Context shared across the recursive walker for B.2 nested containment.
-// `xmiIdMap` is populated in B.2 but not yet consulted — setup for B.3 references.
+// Context shared across the recursive walker (B.2 + B.3).
+// • xmiIdMap     — xmi:id → DObject pointer, populated during pass 1, consumed in pass 2 for reference resolution.
+// • nsPrefixMap  — XML prefix → namespace URI, built once from root xmlns:* attrs and used to resolve xsi:type targets.
+// • pendingRefs  — accumulated in pass 1, drained in pass 2 by resolveReferences.
+// • knownMetamodelURIs — set of nsURIs that map to a loaded metamodel; used to classify unknown prefixes as xmi:Extension/profile.
 type XMIImportContext = {
     dModel: DModel;
     metamodel: LModel;
     xmiIdMap: Map<string, Pointer<DObject>>;
-    summary: { dobjects: number; attrs: number; warnings: number };
+    nsPrefixMap: Map<string, string>;
+    pendingRefs: PendingRef[];
+    knownMetamodelURIs: Set<string>;
+    summary: { dobjects: number; attrs: number; warnings: number; refsResolved: number; refsFailed: number };
     warnings: string[];
+};
+
+// A non-containment reference seen in pass 1 whose target xmi:id(s) we will look up in pass 2.
+// `rawValue` is the unsplit attribute value (whitespace-separated tokens for multi-valued)
+// or a single xmi:idref / element text content.
+type PendingRef = {
+    sourceDObject: DObject;
+    feature: LReference;
+    rawValue: string;
+    sourceTagPath: string;
 };
 
 // ============================================
@@ -546,8 +563,6 @@ export class XMIService {
                 };
             }
 
-            XMIService.checkForXsiType(rootContent, warnings, 5, '');
-
             const mmLookup = getMetamodelByNsURI(xmlnsDefault);
             if (mmLookup.ambiguous) {
                 return {
@@ -568,11 +583,27 @@ export class XMIService {
             const modelName = filename || 'imported_xmi_model';
             const dModel: DModel = DModel.new(modelName, metamodel.id, false, true);
 
+            // Build the prefix → URI map ONCE from the root element's xmlns:* attrs.
+            // XMI files declare all namespace prefixes at the root (nested redeclaration is
+            // legal but extremely rare in EMF output and we don't support shadowing here).
+            const nsPrefixMap = XMIService.buildNamespaceMap(rootContent);
+            // Snapshot of every nsURI that resolves to a loaded metamodel — used by the
+            // xmi:Extension / UML profile detector (any prefix mapping to an unknown URI is
+            // treated as a foreign extension and skipped with a warning).
+            const knownMetamodelURIs = new Set<string>();
+            for (const uri of nsPrefixMap.values()) {
+                if (getMetamodelByNsURI(uri).model) knownMetamodelURIs.add(uri);
+            }
+            if (xmlnsDefault) knownMetamodelURIs.add(xmlnsDefault);
+
             const ctx: XMIImportContext = {
                 dModel,
                 metamodel,
                 xmiIdMap: new Map<string, Pointer<DObject>>(),
-                summary: { dobjects: 0, attrs: 0, warnings: 0 },
+                nsPrefixMap,
+                pendingRefs: [],
+                knownMetamodelURIs,
+                summary: { dobjects: 0, attrs: 0, warnings: 0, refsResolved: 0, refsFailed: 0 },
                 warnings,
             };
 
@@ -621,16 +652,26 @@ export class XMIService {
                 pending.push({ dObject, itemJson: rootContent, metaClass });
             }
 
-            // Recursive walker: each DObject.new / DValue.new opens its own TRANSACTION via
+            // Pass 1 — recursive walker: each DObject.new / DValue.new opens its own TRANSACTION via
             // Constructors.persist (classes.ts:643). The sync layer (useJjomSync.ts:496-498)
             // forbids outer TRANSACTION wrapping, so processInstance runs as a bare loop.
+            // During this pass non-containment references are deferred into ctx.pendingRefs
+            // (their target DObjects may not yet exist when first seen).
             for (const { dObject, itemJson, metaClass } of pending) {
                 XMIService.processInstance(itemJson, dObject, metaClass, ctx);
             }
 
+            // Pass 2 — every DObject is now in the store; resolve queued non-containment refs.
+            XMIService.resolveReferences(ctx);
+
+            // Side-table — persist DObject.id → original xmi:id mapping for round-trip export.
+            XMIService.persistMetadata(dModel, ctx.xmiIdMap);
+
             console.info('[XMI M1 Import] Completato:', {
                 dobjects: ctx.summary.dobjects,
                 attrs: ctx.summary.attrs,
+                refsResolved: ctx.summary.refsResolved,
+                refsFailed: ctx.summary.refsFailed,
                 warnings: ctx.summary.warnings,
             });
 
@@ -736,12 +777,17 @@ export class XMIService {
         }
 
         if ((metaFeature as any).className === 'DReference') {
-            // Containment refs are expressed as nested elements, not XML attributes.
-            // A reference-as-attribute value here is a non-containment cross-instance ref → B.3 scope.
-            const msg = `Reference attribute "${featName}" on "${metaClass.name}" skipped (non-containment cross-instance ref is B.3 scope)`;
-            console.warn('[XMI import]', msg);
-            ctx.warnings.push(msg);
-            ctx.summary.warnings++;
+            // Reference expressed as XML attribute → non-containment cross-instance ref.
+            // Defer to pass 2; the target DObject(s) may not yet exist at this point in pass 1.
+            // The unsplit value is preserved verbatim — tokenisation (whitespace for multi-valued)
+            // happens at resolution time inside resolveReferences().
+            const rawRef = String(itemJson[attrKey] ?? '');
+            ctx.pendingRefs.push({
+                sourceDObject: dObject,
+                feature: metaFeature as LReference,
+                rawValue: rawRef,
+                sourceTagPath: `${metaClass.name}.${featName}`,
+            });
             return;
         }
 
@@ -768,10 +814,16 @@ export class XMIService {
         ctx.summary.attrs++;
     }
 
-    // Handle a nested element under the current DObject. Identifies the corresponding
-    // containment feature on the parent metaclass, creates the containment DValue once,
-    // then for each child item creates a child DObject (father = containmentDValue, pattern
-    // EcoreParser.parseDObject data.ts:588-593) and recurses.
+    // Handle a nested element under the current DObject. Three classes of child are recognised:
+    //   1. xmi:Extension / foreign profile elements        → warn + skip (out of scope in Jjodel 3.0)
+    //   2. non-containment reference expressed as element  → defer to pass 2 (Format B refs)
+    //   3. containment reference                            → instantiate child (B.2 path + xsi:type resolution)
+    //
+    // Father wiring for containment is unchanged from B.2 (EcoreParser.parseDObject data.ts:588-593):
+    //   • child.father = containmentDValue.id (fatherType=DValue)
+    //   • containmentDValue.values.push(child.id)
+    //   • dModel.objects.push(child.id) — for canvas materialisation via useJjomSync Step 2bis
+    // The EMF eContainer (= parent DObject) remains recoverable via 2-hop: child.father.father.
     private static processContainment(
         childVal: any,
         childKey: string,
@@ -779,6 +831,16 @@ export class XMIService {
         parentMetaClass: LClass,
         ctx: XMIImportContext,
     ): void {
+        // (1) Extension / unknown-profile detection runs first: anything not in a loaded
+        // metamodel is silently dropped after a single warning (no recursion into the subtree).
+        if (XMIService.isExtensionElement(childKey, ctx)) {
+            const msg = `Element <${childKey}> on '${parentMetaClass.name}' detected as xmi:Extension or unrecognised profile; skipped (out of scope in Jjodel 3.0)`;
+            console.warn('[XMI import]', msg);
+            ctx.warnings.push(msg);
+            ctx.summary.warnings++;
+            return;
+        }
+
         const featName = childKey.indexOf(':') > 0 ? childKey.substring(childKey.indexOf(':') + 1) : childKey;
 
         const containmentMeta = XMIService.findMetafeatureByName(parentMetaClass, featName);
@@ -803,16 +865,39 @@ export class XMIService {
         // L-layer LReference.containment is `composition || aggregation` (composition is the
         // D-layer storage canonical, per discovery_2026-05-14_a5_discovery_ecore_exporter).
         const isContainment = refMeta.containment === true || refMeta.composition === true;
+
+        // (2) Non-containment reference via nested elements — XMI 2.0 "Format B".
+        // Each item supplies a single target via -xmi:idref attribute or text content; both shapes are accepted.
+        // The reference is deferred verbatim; tokenisation and lookup happen in resolveReferences().
         if (!isContainment) {
-            const msg = `Reference "${featName}" on "${parentMetaClass.name}" is non-containment — nested element ignored (B.3 scope)`;
-            console.warn('[XMI import]', msg);
-            ctx.warnings.push(msg);
-            ctx.summary.warnings++;
+            const items = Array.isArray(childVal) ? childVal : [childVal];
+            for (const item of items) {
+                let token = '';
+                if (typeof item === 'string') {
+                    token = item.trim();
+                } else if (item && typeof item === 'object') {
+                    token = String(item['-xmi:idref'] ?? item['#text'] ?? '').trim();
+                }
+                if (!token) {
+                    const msg = `Reference element <${featName}> on '${parentMetaClass.name}' has no xmi:idref or text content; skipped`;
+                    console.warn('[XMI import]', msg);
+                    ctx.warnings.push(msg);
+                    ctx.summary.warnings++;
+                    continue;
+                }
+                ctx.pendingRefs.push({
+                    sourceDObject: parentDObject,
+                    feature: containmentMeta as LReference,
+                    rawValue: token,
+                    sourceTagPath: `${parentMetaClass.name}.${featName}`,
+                });
+            }
             return;
         }
 
-        const childClass = refMeta.type as LClass | undefined;
-        if (!childClass || typeof childClass !== 'object') {
+        // (3) Containment — original B.2 path, with xsi:type polymorphism plugged in.
+        const fallbackClass = refMeta.type as LClass | undefined;
+        if (!fallbackClass || typeof fallbackClass !== 'object') {
             const msg = `Containment feature "${featName}" on "${parentMetaClass.name}" has no declared type — cannot create children`;
             console.warn('[XMI import]', msg);
             ctx.warnings.push(msg);
@@ -828,47 +913,204 @@ export class XMIService {
         for (const childItem of items) {
             if (!childItem || typeof childItem !== 'object') continue;
 
-            // xsi:type polymorphism is B.3 scope — use feature-declared type as fallback.
-            const xsiType = childItem['-xsi:type'];
-            if (xsiType) {
-                const msg = `xsi:type "${xsiType}" on child "${featName}" of "${parentMetaClass.name}" ignored (B.3 scope; using feature-declared type "${childClass.name}")`;
+            // xsi:type polymorphism: resolve the concrete subclass when present; otherwise use
+            // the feature-declared type. resolveDClass logs its own warnings on prefix misses.
+            const xsiTypeRaw: string | undefined = childItem['-xsi:type'];
+            let childClass: LClass | null = XMIService.resolveDClass(xsiTypeRaw, ctx.metamodel, fallbackClass, ctx);
+            if (!childClass) {
+                // Resolution failed (unknown prefix or unknown classname). Fall back to the
+                // declared feature type rather than dropping the child silently.
+                childClass = fallbackClass;
+            }
+
+            // Type-safety guard: a non-null xsi:type must resolve to a (transitive) subclass of
+            // the feature.type. Otherwise the XMI is malformed and we drop the child rather than
+            // creating an instance of an incompatible class in the wrong slot.
+            if (xsiTypeRaw && childClass !== fallbackClass && !XMIService.isSubclassOf(childClass, fallbackClass)) {
+                const msg = `xsi:type '${xsiTypeRaw}' on '<${featName}>' resolves to '${childClass.name}', not a subclass of feature type '${fallbackClass.name}'; child skipped`;
+                console.warn('[XMI import]', msg);
+                ctx.warnings.push(msg);
+                ctx.summary.warnings++;
+                continue;
+            }
+
+            const child: DObject = DObject.new(childClass.id, containmentDValue.id, DValue, undefined, true);
+            (containmentDValue.values as Pointer<DObject>[]).push(child.id);
+            (ctx.dModel.objects as Pointer<DObject>[]).push(child.id);
+            ctx.summary.dobjects++;
+
+            XMIService.processInstance(childItem, child, childClass, ctx);
+        }
+    }
+
+    // ============================================
+    // B.3 HELPERS
+    // ============================================
+
+    // Collect every `-xmlns:prefix` declaration on the document root into a prefix→URI map.
+    // XMI documents virtually always declare all prefixes at the root (nested redeclaration is
+    // legal under XML but extremely rare in EMF-generated output); supporting it would require
+    // walking with an XML Element node rather than the post-`xmlToJson` plain object. Reject
+    // gracefully if it ever shows up in practice.
+    private static buildNamespaceMap(rootContent: any): Map<string, string> {
+        const map = new Map<string, string>();
+        if (!rootContent || typeof rootContent !== 'object') return map;
+        for (const key of Object.keys(rootContent)) {
+            if (!key.startsWith('-xmlns:')) continue;
+            const prefix = key.substring('-xmlns:'.length);
+            const uri = rootContent[key];
+            if (typeof uri === 'string' && uri.length > 0) map.set(prefix, uri);
+        }
+        return map;
+    }
+
+    // Resolve the concrete LClass that should instantiate a containment child.
+    // Algorithm:
+    //   • no xsi:type           → return fallback (feature-declared type, the B.2 default)
+    //   • `prefix:ClassName`    → look up prefix in nsPrefixMap → metamodel via nsURI → class by name
+    //   • bare `ClassName`      → class lookup in the feature's parent metamodel
+    // Any miss (unknown prefix, prefix not pointing at a loaded metamodel, class not in the
+    // resolved metamodel) emits a warning and returns null so the caller can fall back to the
+    // declared feature type. The subclass-of guard is enforced by the caller after this returns.
+    private static resolveDClass(
+        xsiTypeRaw: string | undefined,
+        parentMetamodel: LModel,
+        fallback: LClass | null | undefined,
+        ctx: XMIImportContext,
+    ): LClass | null {
+        if (!xsiTypeRaw) return fallback ?? null;
+
+        const colonIdx = xsiTypeRaw.indexOf(':');
+        const prefix = colonIdx > 0 ? xsiTypeRaw.substring(0, colonIdx) : '';
+        const className = colonIdx > 0 ? xsiTypeRaw.substring(colonIdx + 1) : xsiTypeRaw;
+
+        let targetMetamodel: LModel = parentMetamodel;
+        if (prefix) {
+            const nsURI = ctx.nsPrefixMap.get(prefix);
+            if (!nsURI) {
+                const msg = `xsi:type prefix '${prefix}' is not declared as xmlns at the document root; falling back to default metamodel`;
+                console.warn('[XMI import]', msg);
+                ctx.warnings.push(msg);
+                ctx.summary.warnings++;
+            } else {
+                const lookup = getMetamodelByNsURI(nsURI);
+                if (lookup.model) {
+                    targetMetamodel = lookup.model;
+                } else {
+                    const msg = `xsi:type prefix '${prefix}' (URI=${nsURI}) does not match any loaded metamodel`;
+                    console.warn('[XMI import]', msg);
+                    ctx.warnings.push(msg);
+                    ctx.summary.warnings++;
+                    return null;
+                }
+            }
+        }
+
+        const cls = XMIService.findMetaclassByName(targetMetamodel, className);
+        if (!cls) {
+            const msg = `xsi:type '${xsiTypeRaw}' resolves no class in metamodel '${targetMetamodel.name}'`;
+            console.warn('[XMI import]', msg);
+            ctx.warnings.push(msg);
+            ctx.summary.warnings++;
+            return null;
+        }
+        return cls;
+    }
+
+    // Transitive subclass test: `child` is a subclass of `parent` iff parent appears anywhere
+    // in child.superclasses (the L-layer transitive closure of `extends`), or they are the same.
+    private static isSubclassOf(child: LClass | null, parent: LClass | null | undefined): boolean {
+        if (!child || !parent) return false;
+        if (child.id === parent.id) return true;
+        const supers: LClass[] = (child as any).superclasses ?? [];
+        for (const sc of supers) if (sc && sc.id === parent.id) return true;
+        return false;
+    }
+
+    // Element classifier used by processContainment to drop xmi:Extension, UML profile content
+    // and anything else namespaced into a non-loaded metamodel before recursing into its subtree.
+    // A bare-prefix element (`uml:Class`) is an extension iff its prefix is either undeclared, a
+    // system prefix (xmi:, xsi:, ecore:) other than the document default, or points to a URI no
+    // imported metamodel claims.
+    private static isExtensionElement(key: string, ctx: XMIImportContext): boolean {
+        if (key === 'xmi:Extension') return true;
+        const colonIdx = key.indexOf(':');
+        if (colonIdx <= 0) return false;
+        const prefix = key.substring(0, colonIdx);
+        if (prefix === 'xmi' || prefix === 'xsi') return true;
+        const nsURI = ctx.nsPrefixMap.get(prefix);
+        if (!nsURI) return true;
+        return !ctx.knownMetamodelURIs.has(nsURI);
+    }
+
+    // Pass 2 — drain ctx.pendingRefs by tokenising each rawValue on whitespace, resolving every
+    // token against ctx.xmiIdMap, and populating a DValue with the resolved pointers. Unresolved
+    // tokens accumulate as warnings (refsFailed) but never abort the import. EMF path syntax
+    // (`//@feature.idx`, `#//path`) is flagged as unsupported; literal xmi:id matching is still
+    // attempted as a fallback per Hard rule 11.
+    private static resolveReferences(ctx: XMIImportContext): void {
+        for (const pending of ctx.pendingRefs) {
+            const { sourceDObject, feature, rawValue, sourceTagPath } = pending;
+            const tokens = rawValue.split(/\s+/).filter(t => t.length > 0);
+            if (tokens.length === 0) continue;
+
+            const upperBound = Number((feature as any).upperBound ?? 1);
+            if (tokens.length > 1 && upperBound === 1) {
+                const msg = `Multi-valued reference value '${rawValue}' assigned to single-valued feature ${sourceTagPath}`;
                 console.warn('[XMI import]', msg);
                 ctx.warnings.push(msg);
                 ctx.summary.warnings++;
             }
 
-            // Father wiring per D1 decision (2-hop EMF-aligned, same as EcoreParser.parseDObject).
-            const child: DObject = DObject.new(childClass.id, containmentDValue.id, DValue, undefined, true);
-            (containmentDValue.values as Pointer<DObject>[]).push(child.id);
-            // Also push to dModel.objects so useJjomSync Step 2bis materializes a DVertex.
-            (ctx.dModel.objects as Pointer<DObject>[]).push(child.id);
-            ctx.summary.dobjects++;
+            const resolved: Pointer<DObject>[] = [];
+            for (const token of tokens) {
+                if (token.startsWith('//@') || token.startsWith('#//')) {
+                    const msg = `EMF path reference '${token}' on ${sourceTagPath} not supported in Jjodel; falling back to literal xmi:id matching`;
+                    console.warn('[XMI import]', msg);
+                    ctx.warnings.push(msg);
+                    ctx.summary.warnings++;
+                }
+                const target = ctx.xmiIdMap.get(token);
+                if (target) {
+                    resolved.push(target);
+                    ctx.summary.refsResolved++;
+                } else {
+                    const msg = `Reference target xmi:id='${token}' not found for ${sourceTagPath}; value left unresolved`;
+                    console.warn('[XMI import]', msg);
+                    ctx.warnings.push(msg);
+                    ctx.summary.refsFailed++;
+                    ctx.summary.warnings++;
+                }
+            }
 
-            // Recurse into this child.
-            XMIService.processInstance(childItem, child, childClass, ctx);
+            if (resolved.length > 0) {
+                XMIService.populateReferenceValue(sourceDObject, feature, resolved);
+            }
         }
     }
 
-    // Surface up to maxWarnings occurrences of xsi:type for B.3 follow-up.
-    private static checkForXsiType(json: any, warnings: string[], maxWarnings: number, path: string): void {
-        if (warnings.length >= maxWarnings) return;
-        if (!json || typeof json !== 'object') return;
-        if (Array.isArray(json)) {
-            for (let i = 0; i < json.length; i++) {
-                this.checkForXsiType(json[i], warnings, maxWarnings, `${path}[${i}]`);
-                if (warnings.length >= maxWarnings) return;
-            }
-            return;
-        }
-        for (const key of Object.keys(json)) {
-            if (key === '-xsi:type') {
-                warnings.push(`xsi:type "${json[key]}" at ${path || '<root>'} ignored (B.3 scope; using tag-derived type)`);
-                if (warnings.length >= maxWarnings) return;
-            } else if (typeof json[key] === 'object') {
-                this.checkForXsiType(json[key], warnings, maxWarnings, path ? `${path}.${key}` : key);
-                if (warnings.length >= maxWarnings) return;
-            }
-        }
+    // Materialise a reference slot as a DValue whose `values` are DObject pointers.
+    // Mirror of the primitive-attribute population in processAttribute(); the only difference is
+    // that the payload is an array of Pointer<DObject> rather than primitive strings. DValue.values
+    // is typed `PrimitiveType[] | Pointer<DObject|DEnumLiteral>[]` (LModelElement.tsx:6277), so
+    // both shapes share one canonical pattern.
+    private static populateReferenceValue(
+        sourceDObject: DObject,
+        feature: LReference,
+        targets: Pointer<DObject>[],
+    ): void {
+        const dValue: DValue = DValue.new(undefined, feature.id as any, targets as any, sourceDObject.id, true, false);
+        (sourceDObject.features as Pointer<DValue>[]).push(dValue.id);
+    }
+
+    // Side-table writer — invert ctx.xmiIdMap (xmi:id → DObject pointer) to the export-friendly
+    // shape (DObject.id → original xmi:id) and persist it on DModel.metadata via SetFieldAction
+    // so it survives Redux serialisation and is available for round-trip exporters (Phase B.7).
+    private static persistMetadata(dModel: DModel, xmiIdMap: Map<string, Pointer<DObject>>): void {
+        if (xmiIdMap.size === 0) return;
+        const inverted: Record<string, string> = {};
+        xmiIdMap.forEach((pointer, xmiId) => { inverted[pointer] = xmiId; });
+        SetFieldAction.new(dModel.id, 'metadata', { xmiIdMap: inverted }, '', false);
     }
 
     // ============================================

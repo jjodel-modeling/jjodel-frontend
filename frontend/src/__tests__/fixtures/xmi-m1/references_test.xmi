@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Graph xmi:version="2.0"
+       xmlns:xmi="http://www.omg.org/XMI"
+       xmlns="Graph">
+  <nodes xmi:id="n1" name="A"/>
+  <nodes xmi:id="n2" name="B"/>
+  <nodes xmi:id="n3" name="C"/>
+  <edges source="//@nodes.0" target="//@nodes.1"/>
+  <edges source="n1" target="n2 n3"/>
+  <edges>
+    <source xmi:idref="n2"/>
+    <target xmi:idref="n3"/>
+  </edges>
+</Graph>
