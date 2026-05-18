@@ -205,6 +205,11 @@ export class EcoreService {
             `name="${this.escapeXml(cls.name)}"`,
         ];
 
+        // SI7: instanceClassName (truthy emit), posizionato fra name e abstract per allineamento canonico EMF.
+        if (cls.instanceClassName) {
+            classAttrs.push(`instanceClassName="${this.escapeXml(cls.instanceClassName)}"`);
+        }
+
         // Abstract?
         if (cls.abstract) {
             classAttrs.push(`abstract="true"`);
@@ -309,8 +314,8 @@ export class EcoreService {
             parts.push(`eType="${this.targetTypePointer(targetType, currentPackage)}"`);
         }
 
-        // Multiplicity
-        if (ref.lowerBound !== undefined) {
+        // Multiplicity — SI10: skip default 0 per allineamento EMF idiomatic.
+        if (ref.lowerBound !== undefined && ref.lowerBound !== 0) {
             parts.push(`lowerBound="${ref.lowerBound}"`);
         }
         if (ref.upperBound !== undefined && ref.upperBound !== 1) {
@@ -347,16 +352,34 @@ export class EcoreService {
     private static exportOperation(op: LOperation, indent: string, newline: string, currentPackage: LPackage): string {
         const parts: string[] = [];
 
+        // Ordine canonico EMF: name → lowerBound → upperBound → ordered → unique → eType → eExceptions.
         const opAttrs: string[] = [
             `xsi:type="ecore:EOperation"`,
             `name="${this.escapeXml(op.name)}"`,
         ];
+
+        // BL6: bounds (skip default 0 / 1), flags (strict === false / true), return type, eExceptions.
+        if (op.lowerBound !== undefined && op.lowerBound !== 0) {
+            opAttrs.push(`lowerBound="${op.lowerBound}"`);
+        }
+        if (op.upperBound !== undefined && op.upperBound !== 1) {
+            opAttrs.push(`upperBound="${op.upperBound}"`);
+        }
+        if (op.ordered === false) opAttrs.push(`ordered="false"`);
+        if (op.unique === false) opAttrs.push(`unique="false"`);
 
         // Return type — reflection-aware, cross-package-aware, primitive-aware pointer.
         const returnType = op.type;
         if (returnType) {
             const ecoreType = this.targetTypePointer(returnType, currentPackage);
             opAttrs.push(`eType="${ecoreType}"`);
+        }
+
+        // eExceptions: space-join di pointer ecore-formattati, emesso solo se non vuoto.
+        const exceptions = op.exceptions || [];
+        if (exceptions.length > 0) {
+            const excRefs = exceptions.map(e => this.targetTypePointer(e, currentPackage)).join(' ');
+            opAttrs.push(`eExceptions="${excRefs}"`);
         }
 
         const parameters = op.parameters || [];
@@ -380,10 +403,21 @@ export class EcoreService {
      * Export EParameter
      */
     private static exportParameter(param: LParameter, indent: string, currentPackage: LPackage): string {
+        // Ordine canonico EMF: name → lowerBound → upperBound → ordered → unique → eType.
         const parts: string[] = [
             `xsi:type="ecore:EParameter"`,
             `name="${this.escapeXml(param.name)}"`,
         ];
+
+        // BL7: bounds (skip default 0 / 1) e flags (strict === false), parallelo a exportOperation.
+        if (param.lowerBound !== undefined && param.lowerBound !== 0) {
+            parts.push(`lowerBound="${param.lowerBound}"`);
+        }
+        if (param.upperBound !== undefined && param.upperBound !== 1) {
+            parts.push(`upperBound="${param.upperBound}"`);
+        }
+        if (param.ordered === false) parts.push(`ordered="false"`);
+        if (param.unique === false) parts.push(`unique="false"`);
 
         const paramType = param.type;
         if (paramType) {
@@ -400,12 +434,29 @@ export class EcoreService {
     private static exportEnumerator(enumType: LEnumerator, indent: string, newline: string): string {
         const parts: string[] = [];
 
-        parts.push(`${indent}<eClassifiers xsi:type="ecore:EEnum" name="${this.escapeXml(enumType.name)}">`);
+        // SI6: aggiunge instanceClassName (truthy) + serializable (strict === false, default EMF true).
+        const enumAttrs: string[] = [
+            `xsi:type="ecore:EEnum"`,
+            `name="${this.escapeXml(enumType.name)}"`,
+        ];
+        if (enumType.instanceClassName) {
+            enumAttrs.push(`instanceClassName="${this.escapeXml(enumType.instanceClassName)}"`);
+        }
+        if (enumType.serializable === false) {
+            enumAttrs.push(`serializable="false"`);
+        }
+        parts.push(`${indent}<eClassifiers ${enumAttrs.join(' ')}>`);
 
         const literals = enumType.literals || [];
         literals.forEach((literal, index) => {
             const ordinal = literal.ordinal !== undefined ? literal.ordinal : index;
-            parts.push(`${indent}${indent}<eLiterals name="${this.escapeXml(literal.literal)}" value="${ordinal}"/>`);
+            // BL4: name = identifier (Java); literal = display label opzionale. EMF non emette
+            // literal quando coincide col name. Usa __raw.literal per evitare la derivazione
+            // del getter L (che ritorna name.replace('_',' ') quando literal è vuoto).
+            const litName = literal.name;
+            const litRaw = literal.__raw?.literal;
+            const litAttr = litRaw && litRaw !== litName ? ` literal="${this.escapeXml(litRaw)}"` : '';
+            parts.push(`${indent}${indent}<eLiterals name="${this.escapeXml(litName)}" value="${ordinal}"${litAttr}/>`);
         });
 
         parts.push(`${indent}</eClassifiers>`);

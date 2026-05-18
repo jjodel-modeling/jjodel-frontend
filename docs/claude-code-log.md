@@ -1,5 +1,62 @@
 # Claude Code Session Log
 
+## 2026-05-17 — feat(ecore-io): W1 quick wins Ecore importer/exporter (10 fix + XPath 3-segment)
+
+**Prompt**: W1 quick wins importer/exporter Ecore senza D-layer impact (10 fix additive) + hot-fix XPath 3-segment normalization scoperto in smoke test Families.
+
+**File toccati**:
+- frontend/src/api/data.ts (+ normalizzazione XPath 3-segment in parseDReference, ECoreReference.eOpposite decl, BL5 split eExceptions, SI4 default lowerBound/ordered/unique, SI5 default ordered/unique, replaceRules esteso con "opposite")
+- frontend/src/services/export/EcoreService.ts (BL4 EEnumLiteral name/literal, SI6 EEnum instanceClassName+serializable, SI7 EClass instanceClassName, SI10 EReference lowerBound skip 0, BL6 EOperation completo, BL7 EParameter completo)
+
+**Esito**: ✅ completato
+
+**Note**:
+- BL1 smoke test Families.ecore: 8 eOpposite round-trip preservati (era 0 pre-W1).
+- Scoperto durante smoke: rewriteXPathPointers esplicitamente skippa pointer 3-segment (data.ts:1064 commento "out of scope"); l'aggiunta di "opposite" a replaceRules ha esposto il gap. Fix supplementare: normalizzazione `/N/X/Y` → `#//X/Y` in parseDReference (single-root assumption N=0, warning per N>0).
+- Altri 9 fix: build verde + diff statico atteso; verifica empirica positive di BL4/SI6/SI7/BL6/BL7/SI4/SI5 differita a W2 (EDataType) e W4 (EAnnotation+EEnum) dove arriveranno fixture naturalmente.
+- Gap UI emersi durante smoke (Properties panel non espone `opposite` e `instanceClassName` su DReference/DClass): annotati per backlog UI post-W6.
+
+**Nome del documento prompt**: 2026-05-17 14:45 (W1 implementation) + 2026-05-17 17:30 (commit)
+
+---
+
+## 2026-05-17 — feat(ecore-io): W1 quick wins (10 fix)
+**Prompt**: W1 quick wins importer/exporter Ecore senza D-layer impact
+**File toccati**: frontend/src/api/data.ts (+24/-11), frontend/src/services/export/EcoreService.ts (+59/-11) = ~83 righe nette
+**Esito**: ✅ completato 10/10 — build verde (✓ built in 38.55s), tsc errors invariati (174 pre/post, allineato a baseline pre-W1, lo shift di linea sul singolo error 1039→1047 è dovuto a +8 righe sopra in data.ts)
+**Note**: Tutti i 10 fix applicati. **Hard stop #1 attivato e risolto in chat**: BL1 (eOpposite) richiedeva decisione architetturale perché né `rewriteXPathPointers` (regex 2-segment, commento esplicito "scope Fase B.2" su 3-seg) né `LinkAllNamesToIDs` (`replaceRules = [extends, exceptions, type, values]` senza opposite) risolvevano il pointer `#//Cls/feat`. User scelto opzione 2 "BL1 completo: costante + read + estendere replaceRules". Verificato pre-implementazione che `nameMap['#//' + __fullname]` indicizza i DReference per nome 3-seg (`Cls/feat`), quindi l'aggiunta di 'opposite' a replaceRules è sufficiente — nessuna modifica al nameMap. **Dettaglio fix**:
+- **BL1** (data.ts:1216-1234, 1349-1363, 875-900, 283): aggiunto `ECoreReference.eOpposite: string`, assegnato `XMLinlineMarker + 'eOpposite'`, read raw in parseDReference (`const oppositeRaw = this.read(json, ECoreReference.eOpposite, ''); if (oppositeRaw) dObject.opposite = oppositeRaw as any;`), aggiunto `"opposite"` a `replaceRules` in LinkAllNamesToIDs. ~10 righe nette.
+- **BL5** (data.ts:938): sostituito `[this.read(json, ECoreOperation.eexceptions, '')]` con read raw + split(' ').filter(s => s.length > 0). Risolve multi-exception perse e [''] su empty. ~2 righe.
+- **SI4** (data.ts:935, 939, 940): default `lowerBound 1→0`, `ordered/unique 'false'→'true'`, aggiunto secondo arg `true` a `U.fromBoolString` per coerenza fallback. 3 righe modificate.
+- **SI5** (data.ts:917, 918): stesso pattern SI4 per parseDParameter, `ordered/unique 'false'→'true'`. 2 righe modificate.
+- **BL4** (EcoreService.ts:400-414): cambio `name="${literal.literal}"` → `name="${literal.name}"` (era inversione semantica). Aggiunto emit condizionato `literal="..."` solo se `__raw.literal && __raw.literal !== name` — uso `.__raw.literal` invece di `.literal` per evitare derivazione `get_literal` (che ritorna `name.replace('_', ' ')` quando literal vuoto). ~8 righe.
+- **SI6** (EcoreService.ts:400-414, stesso edit di BL4): exportEnumerator rifattorizzato per usare array `enumAttrs`. Emit `instanceClassName` truthy + `serializable="false"` strict `=== false` (default EMF true). ~10 righe.
+- **SI7** (EcoreService.ts:205-217): exportClass aggiunto emit `instanceClassName` truthy, posizionato fra `name` e `abstract` per ordine canonico EMF. ~3 righe.
+- **SI10** (EcoreService.ts:313-315): cambio condizione lowerBound da `!== undefined` a `!== undefined && !== 0` per skip default. 1 riga.
+- **BL6** (EcoreService.ts:347-394): exportOperation esteso con lowerBound (skip 0), upperBound (skip 1), ordered/unique (strict === false), eExceptions (space-join via `targetTypePointer`, emit solo se non vuoto). Ordine attributi: name → lowerBound → upperBound → ordered → unique → eType → eExceptions. ~20 righe.
+- **BL7** (EcoreService.ts:382-410): exportParameter esteso con stessi campi di BL6 meno eExceptions. Ordine: name → lowerBound → upperBound → ordered → unique → eType. ~12 righe.
+
+**Scoperte inattese (3)**:
+1. **SI4 fallback U.fromBoolString**: il codice originale chiamava `U.fromBoolString(this.read(json, ..., 'false'))` con un solo arg. La firma supporta un secondo arg di default; ho aggiunto `true` esplicito per coerenza con il read default. Comportamento equivalente quando il valore è 'false'/'true' string, ma se il parser ricevesse un truthy non-string il fallback ora è esplicito.
+2. **BL5 cast `as any`**: `DOperation.exceptions: Pointer<DClassifier, 0, 'N', LClassifier>[]` non accetta direttamente `string[]` da split. Cast `as any` allinea al pattern esistente di `parseDClass` (riga 778: `dObject.extends = tmps ? tmps.split(' ') : [];` senza cast). TS error pre-esistente in stash baseline al posizionamento equivalente.
+3. **BL4 emit del literal condizionato**: in EMF `literal` attribute è opzionale e quando assente coincide col `name`. Il LEnumLiteral getter `literal.literal` deriva una stringa anche quando il raw è vuoto (`name.replace('_',' ')`), quindi confrontare `literal !== name` su `.__raw.literal` previene falsi positivi che emetterebbero attributi `literal=` inutili per literal stored as undefined. Test mentale: enum `RED` no literal field → `__raw.literal = undefined` → no emit. Enum `RED` con `literal = "red"` → emit `literal="red"`.
+
+**Pre-verifica obbligatoria BL1 completa**: rewriteXPathPointers e LinkAllNamesToIDs analizzate; nameMap di __fullname conferma indicizzazione 3-seg; opposite aggiunto a replaceRules → LinkAllNamesToIDs loop processa `dobj.opposite` come single string → cerca in `nameMap['#//Cls/feat']` → trova DReference → `dobj.opposite = target.id`. Comportamento standard del replaceRules engine (caso isArray=false). **Nessun guard per target unresolved**: se `opposite` punta a un riferimento cross-doc o stale, scatta `Log.ex(!target, ...)` (data.ts:342). Allineato semantica esistente di "exceptions" che ha stesso pattern.
+
+**Hard rule rispettate**: zero touch a LModelElement.tsx, zero touch a path legacy `generateEcoreJson_impl`, zero refactoring opportunistico, zero rinominazioni, zero modifiche a fixture/VersionFixer/D-layer. Niente commit, working tree dirty. Smoke runtime delegato all'utente (4 scenari nel prompt: round-trip Families per BL1, round-trip metamodel con Operation+Parameter per BL6+BL7+SI4+SI5, enum round-trip per BL4+SI6, Ecore.ecore self-import per SI7).
+**Nome del documento prompt**: 2026-05-17 14:45
+
+---
+
+## 2026-05-17 — discovery: Ecore I/O completeness matrix
+**Prompt**: discovery sistematica gap importer + exporter vs standard Ecore.ecore
+**File toccati**: docs/discovery/discovery_2026-05-17_ecore_io_completeness.md (created)
+**Esito**: ✅ completato
+**Note**: Matrix completa di 12 metaclassi Ecore × 3 dimensioni (D-layer / importer / exporter) basata su lettura read-only di `data.ts` (1406), `EcoreService.ts` (698), `LModelElement.tsx` (7722). **Trovati 26 gap distinti** = 7 blocker + 10 significativi + 9 minori. **Scoperte inattese non nel backlog (15)**: tra le più impattanti — (1) EDataType user-defined in pacchetto misto fa throw `Log.exx` (parsePackageBody default case); (2) EEnumLiteral exporter usa erroneamente `literal.literal` come XML `name` attribute (round-trip cambia identificatori enum); (3) EOperation exporter emette solo `name`+`eType`, perde lowerBound/upperBound/ordered/unique/eExceptions; (4) EParameter exporter idem; (5) `parseDAnnotation` ha `return [];` come prima istruzione — tutto il corpo è dead code, `getAnnotations()` chiamato in 9 funzioni ma sempre droppato; (6) costante `ECoreReference.eOpposite` non esiste in importer (gap più profondo del noto B.2); (7) default importer `ordered/unique='false'` su EOperation/EParameter (corretto EMF: true); (8) path legacy `generateEcoreJson_impl` sulle classi L è più completo del path attivo `EcoreService.exportToXML` per Operation/Parameter/Enumerator/EnumLiteral. **10 Open Questions** generate (scope ETypeParameter/EGenericType, instanceClassName vs instanceTypeName split, defaultValueLiteral storage, DAnnotationDetail ridisegno, path legacy vs attivo, eExceptions back-compat, eFactoryInstance, container derived). **Stima volumetrica**: Blocker ~159 righe, Significativi ~98 righe, Minori ~365 righe; "tool definitivo senza generics" = ~455 righe in 4-6 PR; 100% completo = ~620 righe + 5 VersionFixer + 2 nuove D-classi (DGenericType, DTypeParameter). **Sequenza raccomandata** W1-W8: (W1) quick wins importer/exporter additive ~80 righe; (W2) EDataType end-to-end ~45 righe; (W3) defaultValueLiteral+iD wire ~22 righe; (W4) EAnnotation end-to-end ~95 righe + VF; (W5) instanceTypeName split opzionale; (W6) eKeys+resolveProxies ~43 righe; (W7) generics blocco grande ~270 righe; (W8) EAnnotation contents/references ~50 righe. **Fixture annotation volume**: zero occorrenze di eAnnotation/iD/defaultValueLiteral/eOpposite/eExceptions/instanceClassName/serializable/eKeys/eGenericType/eTypeParameter/resolveProxies su tutti i 10 file in `frontend/src/__tests__/fixtures/xmi-m1/` (Graph.ecore, Library.ecore, Shapes.ecore + 7 .xmi). Fixture troppo semplici per misurare criticità real-world. **Build verde**: zero modifiche al codice source.
+**Nome del documento prompt**: 2026-05-17 14:30
+
+---
+
 ## 2026-05-16 — feat(xmi): M1 importer B.3 — polymorphism + intra-document refs + metadata side-table
 **Prompt**: estensione two-pass dell'importer M1 per `xsi:type` polimorfico in containment, references intra-document via `xmi:id`/`xmi:idref` (multi-valued whitespace + Format B nested elements), side-table `DModel.metadata.xmiIdMap` per round-trip. Housekeeping warning su `xmi:Extension` / UML profile (OUT scope Jjodel 3).
 **File toccati**: `frontend/src/services/export/XMIService.ts` (+~250 righe net), `frontend/src/model/logicWrapper/LModelElement.tsx` (+3 righe: campo `metadata?` su DModel), 6 fixture nuovi in `src/__tests__/fixtures/xmi-m1/` (Shapes.ecore + polymorphism_test.xmi, Graph.ecore + references_test.xmi, Library.ecore + combo_test.xmi), `docs/claude-code-log.md`.

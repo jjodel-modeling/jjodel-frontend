@@ -280,7 +280,7 @@ export class EcoreParser{
         }
 
         // let prereplace = (name: string) => name.replaceAll("#//", "");
-        let replaceRules = ["extends", /*"extendedBy",*/ "exceptions", "type", "values"];
+        let replaceRules = ["extends", /*"extendedBy",*/ "exceptions", "type", "values", "opposite"];
         let dobj: GObject & DModelElement;
 
         for (dobj of parsedElements) {
@@ -896,6 +896,23 @@ export class EcoreParser{
         dObject.transient = U.fromBoolString(this.read(json, ECoreReference.transient, false), false);
         dObject.volatile = U.fromBoolString(this.read(json, ECoreReference.volatile, false), false);
         dObject.unsettable = U.fromBoolString(this.read(json, ECoreReference.unsettable, false), false);
+        // BL1: legge eOpposite come pointer raw "#//Cls/feat"; risolto a Pointer<DReference>
+        // in LinkAllNamesToIDs grazie all'inclusione di "opposite" in replaceRules.
+        const oppositeRaw = this.read(json, ECoreReference.eOpposite, '');
+        if (oppositeRaw) {
+            // Normalize EMF 3-segment XPath "/N/Class/Feature" to canonical "#//Class/Feature"
+            // (rewriteXPathPointers explicitly skips 3-segment pointers, see line 1064).
+            // We assume single-root document (N=0); multi-root would need package-index resolution.
+            let normalized = oppositeRaw as string;
+            const xpathMatch = /^\/(\d+)\//.exec(normalized);
+            if (xpathMatch) {
+                if (xpathMatch[1] !== '0') {
+                    Log.ww('eOpposite with multi-root XPath /' + xpathMatch[1] + '/... not fully supported, treating as N=0', { raw: oppositeRaw });
+                }
+                normalized = normalized.replace(/^\/\d+\//, '#//');
+            }
+            dObject.opposite = normalized as any;
+        }
         /// *** specific end *** ///
         return generated; }
 
@@ -914,8 +931,9 @@ export class EcoreParser{
         dObject.lowerBound = +this.read(json, ECoreAttribute.lowerbound, 0);
         dObject.upperBound = +this.read(json, ECoreAttribute.upperbound, 1);
         dObject.type = this.read(json, ECoreAttribute.eType, AttribETypes.EString);
-        dObject.ordered = U.fromBoolString(this.read(json, ECoreOperation.ordered, 'false'), false);
-        dObject.unique = U.fromBoolString(this.read(json, ECoreOperation.unique, 'false'), false);
+        // SI5: default EMF-compliant — ordered/unique true.
+        dObject.ordered = U.fromBoolString(this.read(json, ECoreOperation.ordered, 'true'), true);
+        dObject.unique = U.fromBoolString(this.read(json, ECoreOperation.unique, 'true'), true);
         /// *** specific end *** ///
         return generated; }
 
@@ -932,12 +950,15 @@ export class EcoreParser{
         const annotations: Json[] = this.getAnnotations(json);
         for (let child of annotations) EcoreParser.parseDAnnotation(dObject, child, generated, (dObject as GObject).__fullname + "/");
         /// *** specific start *** ///
-        dObject.lowerBound = +this.read(json, ECoreAttribute.lowerbound, 1);
+        // SI4: default EMF-compliant — lowerBound 0, ordered/unique true.
+        dObject.lowerBound = +this.read(json, ECoreAttribute.lowerbound, 0);
         dObject.upperBound = +this.read(json, ECoreAttribute.upperbound, 1);
         dObject.type = this.read(json, ECoreAttribute.eType, AttribETypes.EString);
-        dObject.exceptions = [this.read(json, ECoreOperation.eexceptions, '')];
-        dObject.ordered = U.fromBoolString(this.read(json, ECoreOperation.ordered, 'false'));
-        dObject.unique = U.fromBoolString(this.read(json, ECoreOperation.unique, 'false'));
+        // BL5: eExceptions è space-separato in XMI; split + filter per evitare [''] su empty.
+        const excRaw = this.read(json, ECoreOperation.eexceptions, '');
+        dObject.exceptions = excRaw ? (excRaw as string).split(' ').filter(s => s.length > 0) as any : [];
+        dObject.ordered = U.fromBoolString(this.read(json, ECoreOperation.ordered, 'true'), true);
+        dObject.unique = U.fromBoolString(this.read(json, ECoreOperation.unique, 'true'), true);
         dObject.visibility = AccessModifier.package;
         for (let child of childs) {
             this.parseDParameter(dObject, child, generated, (dObject as GObject).__fullname + "/");
@@ -1231,6 +1252,7 @@ export class ECoreReference {
     static volatile: string;
     static changeable: string;
     static unsettable: string;
+    static eOpposite: string;
 }
 
 @RuntimeAccessible('ECoreAttribute')
@@ -1360,6 +1382,7 @@ ECoreReference.transient = EcoreParser.XMLinlineMarker + 'transient'; // "true"
 ECoreReference.volatile = EcoreParser.XMLinlineMarker + 'volatile'; // "true"
 ECoreReference.changeable = EcoreParser.XMLinlineMarker + 'changeable'; // "false"
 ECoreReference.unsettable = EcoreParser.XMLinlineMarker + 'unsettable'; // "true"
+ECoreReference.eOpposite = EcoreParser.XMLinlineMarker + 'eOpposite'; // "#//Cls/feat" (3-segment intra-doc pointer)
 
 
 ECoreAttribute.xsitype = EcoreParser.XMLinlineMarker + 'xsi:type'; // "ecore:EAttribute",
