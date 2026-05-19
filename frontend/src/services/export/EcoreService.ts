@@ -18,6 +18,8 @@ import {
     LReference,
     DEnumerator,
     LEnumerator,
+    DDataType,
+    LDataType,
     DEnumLiteral,
     LEnumLiteral,
     DOperation,
@@ -162,6 +164,13 @@ export class EcoreService {
         const enums = pkg.enumerators || [];
         for (const enumType of enums) {
             parts.push(this.exportEnumerator(enumType, innerIndent, newline));
+        }
+
+        // W2: user-defined EDataType — emessi dopo Class+Enum (append-non-interleave) per
+        // preservare byte-identità delle fixture W1 esistenti.
+        const dataTypes = pkg.datatypes || [];
+        for (const dt of dataTypes) {
+            parts.push(this.exportDataType(dt, innerIndent, newline));
         }
 
         // Sub-package nesting level: 1 under a root EPackage, 2 under <xmi:XMI> children.
@@ -465,6 +474,25 @@ export class EcoreService {
     }
 
     /**
+     * Export EDataType (user-defined, self-closing).
+     * W2: emette name + instanceClassName (truthy) + serializable (skip se default true).
+     * Coverage parziale; split instanceTypeName (EMF 2.x) e eAnnotations rimandati a W5/W4.
+     */
+    private static exportDataType(dt: LDataType, indent: string, newline: string): string {
+        const attrs: string[] = [
+            `xsi:type="ecore:EDataType"`,
+            `name="${this.escapeXml(dt.name)}"`,
+        ];
+        if (dt.instanceClassName) {
+            attrs.push(`instanceClassName="${this.escapeXml(dt.instanceClassName)}"`);
+        }
+        if (dt.serializable === false) {
+            attrs.push(`serializable="false"`);
+        }
+        return `${indent}<eClassifiers ${attrs.join(' ')}/>`;
+    }
+
+    /**
      * Export sub-package (recursive)
      */
     private static exportSubPackage(pkg: LPackage, indent: string, newline: string, level: number): string {
@@ -481,6 +509,11 @@ export class EcoreService {
         // Enums
         for (const enumType of pkg.enumerators || []) {
             parts.push(this.exportEnumerator(enumType, i + indent, newline));
+        }
+
+        // W2: user-defined EDataType
+        for (const dt of pkg.datatypes || []) {
+            parts.push(this.exportDataType(dt, i + indent, newline));
         }
 
         // Recursive sub-packages
@@ -628,13 +661,24 @@ export class EcoreService {
     }
 
     /**
-     * Map Jjodel/generic type to Ecore type
+     * Resolve a type reference to its Ecore XML attribute value.
+     *
+     * Canonical primitives (Pointer_E* convention, e.g. Pointer_ESTRING, Pointer_EDATE)
+     * are emitted as full Ecore URIs. User-defined EDataType/EClass with names that
+     * collide with canonical short aliases (e.g. 'Date', 'String') are emitted as
+     * local references (`#//Name`) to preserve their identity. The `Pointer_E` id
+     * prefix is the discriminator: only canonical primitives have it (see
+     * selectors.ts:149 for the lookup convention).
+     *
+     * Plain string inputs (e.g. from JjScript executor) are always treated as
+     * canonical, since user-defined references arrive as classifier objects.
      */
     private static mapToEcoreType(type: any): string {
         if (!type) return 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString';
 
-        // If type is a class/classifier reference
-        const typeName = typeof type === 'string' ? type : (type.name || 'EString');
+        const isString = typeof type === 'string';
+        const typeName = isString ? type : (type.name || 'EString');
+        const isCanonical = isString || (typeof type.id === 'string' && type.id.startsWith('Pointer_E'));
 
         const typeMap: Record<string, string> = {
             'String': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString',
@@ -664,12 +708,7 @@ export class EcoreService {
             'EChar': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EChar',
         };
 
-        // Check if it's a primitive type
-        if (typeMap[typeName]) {
-            return typeMap[typeName];
-        }
-
-        // Otherwise it's a reference to a class in the model
+        if (isCanonical && typeMap[typeName]) return typeMap[typeName];
         return `#//${typeName}`;
     }
 

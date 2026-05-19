@@ -706,6 +706,7 @@ export class EcoreParser{
                 default: Log.exx('unexpected xsitype:', child[ECoreClass.xsitype], ' found in jsonfragment:', child, ', in json:', json, ' package:', dObject); break;
                 case 'ecore:EClass': this.parseDClass(dObject, child, generated, ''); break;
                 case 'ecore:EEnum': this.parseDEnum(dObject, child, generated, ''); break;
+                case 'ecore:EDataType': this.parseDDataType(dObject, child, generated, ''); break;
             }
         }
         for (let child of subPackages) EcoreParser.parseSubPackage(dObject, child, generated, '');
@@ -735,6 +736,7 @@ export class EcoreParser{
                 default: Log.exx('unexpected xsitype:', child[ECoreClass.xsitype], ' found in jsonfragment:', child, ', in json:', json, ' package:', dObject); break;
                 case 'ecore:EClass': this.parseDClass(dObject, child, generated, (dObject as GObject).__fullname + "/"); break;
                 case 'ecore:EEnum': this.parseDEnum(dObject, child, generated, (dObject as GObject).__fullname + "/"); break;
+                case 'ecore:EDataType': this.parseDDataType(dObject, child, generated, (dObject as GObject).__fullname + "/"); break;
             }
         }
         for (let child of subPackages) EcoreParser.parseSubPackage(dObject, child, generated, (dObject as GObject).__fullname + "/");
@@ -823,6 +825,33 @@ export class EcoreParser{
         /// *** specific end *** ///
         return generated; }
 
+    static parseDDataType(parent: DPackage, json: Json, generated: DModelElement[], fullnamePrefix: string): DModelElement[] {
+        if (!generated) generated = [];
+        if (!json) { json = {}; }
+        let dObject: DDataType = DDataType.new(
+            this.read(json, ECoreNamed.namee, 'DataType_1'),
+            parent.id,
+            true
+        );
+        generated.push(dObject);
+        (dObject as GObject).__fullname = fullnamePrefix + dObject.name;
+        const annotations: Json[] = this.getAnnotations(json);
+        for (let child of annotations) EcoreParser.parseDAnnotation(dObject, child, generated, (dObject as GObject).__fullname + "/");
+        /// *** specific start *** ///
+        for (let key in json) {
+            switch (key) {
+                default: Log.exx('unexpected field in parseDDataType() |' + key + '|', json); break;
+                case ECoreDataType.eAnnotations:
+                case ECoreDataType.xsitype:
+                case ECoreDataType.instanceClassName:
+                case ECoreDataType.serializable:
+                case ECoreDataType.namee: break;
+            }
+        }
+        dObject.instanceClassName = this.read(json, ECoreDataType.instanceClassName, '');
+        dObject.serializable = this.read(json, ECoreDataType.serializable, 'true') === 'true';
+        /// *** specific end *** ///
+        return generated; }
 
 
     static parseDEnumLiteral(parent: DEnumerator, json: Json, generated: DModelElement[], fullnamePrefix: string): DModelElement[] {
@@ -1224,6 +1253,16 @@ export class ECoreEnum {
     static eLiterals: string;
 }
 
+@RuntimeAccessible('ECoreDataType')
+export class ECoreDataType {
+    static cname = 'ECoreDataType';
+    static eAnnotations: string;
+    static xsitype: string;
+    static namee: string;
+    static instanceClassName: string;
+    static serializable: string;
+}
+
 @RuntimeAccessible('ECoreLiteral')
 export class ECoreLiteral {
     static cname = 'ECoreLiteral';
@@ -1322,7 +1361,8 @@ ECoreNamed.namee = EcoreParser.XMLinlineMarker + 'name';
 
 ECorePackage.eAnnotations = ECoreSubPackage.eAnnotations = ECoreClass.eAnnotations =
     ECoreEnum.eAnnotations = ECoreLiteral.eAnnotations =  ECoreReference.eAnnotations =
-        ECoreAttribute.eAnnotations = ECoreOperation.eAnnotations = ECoreParameter.eAnnotations = 'eAnnotations';
+        ECoreAttribute.eAnnotations = ECoreOperation.eAnnotations = ECoreParameter.eAnnotations =
+        ECoreDataType.eAnnotations = 'eAnnotations';
 
 ECoreAnnotation.source = EcoreParser.XMLinlineMarker + 'source';
 ECoreAnnotation.references = EcoreParser.XMLinlineMarker + 'references'; // "#/" for target = package.
@@ -1363,6 +1403,13 @@ ECoreEnum.serializable = 'serializable'; // "false", "true"
 ECoreEnum.xsitype = ECoreClass.xsitype; // "ecore:EEnum"
 ECoreEnum.eLiterals = 'eLiterals';
 ECoreEnum.namee = ECorePackage.namee;
+
+// W2: EDataType user-defined (es. <eClassifiers xsi:type="ecore:EDataType" name="Date" instanceClassName="java.util.Date"/>).
+// Coverage parziale: name + instanceClassName + serializable. Split instanceTypeName (EMF 2.x) rimandato a W5.
+ECoreDataType.xsitype = ECoreClass.xsitype; // "ecore:EDataType"
+ECoreDataType.namee = ECorePackage.namee;
+ECoreDataType.instanceClassName = EcoreParser.XMLinlineMarker + 'instanceClassName';
+ECoreDataType.serializable = EcoreParser.XMLinlineMarker + 'serializable';
 
 ECoreLiteral.literal = 'literal';
 ECoreLiteral.namee = ECorePackage.namee;
