@@ -1,5 +1,93 @@
 # Claude Code Session Log
 
+## 2026-05-18 — fix(ecore-io): W2 exporter eType name-collision (pre-commit completion)
+
+**Prompt**: `docs/2026-05-18_W2_export_etype_fix.md` (follow-up alla discovery `2026-05-18_W2_discovery_export_etype.md`).
+
+**Contesto**: smoke manuale W2 di Alfonso ha rivelato bug nell'exporter: user-defined `DDataType Date` re-esportato come canonical `EDate` URI invece di local ref `#//Date`. Collisione name-based in `mapToEcoreType:701` (typeMap matchato per `type.name` senza discriminator di identità).
+
+**File toccati**:
+- `frontend/src/services/export/EcoreService.ts` (`mapToEcoreType` only): nuova JSDoc + guard `isCanonical = isString || type.id.startsWith('Pointer_E')` + condizione `if (isCanonical && typeMap[typeName])`. `typeMap` invariata (zero touch). 2 righe logiche aggiunte + JSDoc ~12 righe.
+- `frontend/src/__tests__/fixtures/xmi-m1/DataType_collision_test.ecore` (NEW, 17 righe): 2 user-defined EDataType `String`+`Date` con collisione + EClass `UserDefined` (2 EAttribute local-ref) + EClass `CanonicalRegression` (2 EAttribute canonical URI per regression).
+- `frontend/src/services/export/__tests__/ecore-io.test.ts` (+9 test): describe `DataType_collision_test.ecore` (7 test fixture/strutturali) + describe `mapToEcoreType canonical guard` (2 test grep su source).
+
+**Esito**:
+- ✅ Build verde (`npm run build` in 38.96s).
+- ✅ Test ecore-io.test.ts: **32/32 pass** (23 pre-esistenti + 9 nuovi).
+- ✅ Comportamento atteso post-fix: user-defined `Date`/`String` → `#//Name` (preserva identity); canonical `EInt`/`EString` con id `Pointer_E*` → cross-doc URI invariato.
+
+**Discriminator chiave**: convention `Selectors.getPrimitiveType` (selectors.ts:149) costruisce id `Pointer_<SHORT_TYPE_UPPER>` per i canonical. User-defined hanno id `USER_<n>` o altri. Quindi `type.id.startsWith('Pointer_E')` distingue identità senza dipendere dal nome.
+
+**Risk surface**: UML2 `Types.ecore` con primitive remappati (data.ts:1127, 1138 via `EDATATYPE_CANONICAL_ALIASES`) sopravvive — l'importer rimpiazza l'EDataType locale con il canonical (id `Pointer_E*`), quindi all'export il branch `isCanonical=true` scatta correttamente. Stesso comportamento di prima.
+
+**Hard rule rispettate**: zero touch a typeMap, zero rename, zero refactoring opportunistico. Singola Edit chirurgica su `mapToEcoreType`. Nessun commit eseguito — smoke manuale Alfonso pending prima del commit W2 unificato.
+
+**Smoke manuale atteso (post-questo-prompt)**:
+1. Re-import `DataType_test.ecore` → re-export → diff vuoto su `eType="#//Date"` e `eType="#//URL"`.
+2. Import `DataType_collision_test.ecore` → 4 check console: `customString.type` (user-defined String) + `customDate.type` (user-defined Date) + `age.type` (canonical EInt) + `canonicalLabel.type` (canonical EString) → re-export → diff vuoto.
+
+**Nome del documento prompt**: `2026-05-18_W2_export_etype_fix`
+
+---
+
+## 2026-05-18 — feat(ecore-io): W2 EDataType end-to-end (BL2 + SI9)
+
+**Prompt**: `docs/2026-05-18_W2_edatatype.md` — implementazione W2 con gate G1/G2/G3 prima dell'edit.
+
+**File toccati**:
+- `frontend/src/api/data.ts` (+49): `ECoreDataType` class + constants, `parseDDataType` helper, case `'ecore:EDataType'` nei 2 switch di `parsePackageBody` root+sub.
+- `frontend/src/services/export/EcoreService.ts` (+33): import `DDataType/LDataType`, `exportDataType` helper self-closing, wire in `renderEPackageBody` + `exportSubPackage` (ordine Class→Enum→DataType).
+- `frontend/src/model/logicWrapper/LModelElement.tsx` (+14): D-layer extension — `DPackage.datatypes` field, `LPackage.datatypes` field, `set_datatypes` accessor, `_set_classifiers` kind union estesa con `'datatypes'`, `get_classifiers` include datatypes con guard `|| []`, uncomment `DDataType.new()` factory.
+- `frontend/src/joiner/classes.ts` (+5): `Constructors.DDataType()` da stub a wired (`setExternalPtr(thiss.father, "datatypes", "+=")`).
+- `frontend/src/__tests__/fixtures/xmi-m1/DataType_test.ecore` (NEW, 19 lines): fixture con 2 EClass + 2 user-defined EDataType (`Date` instanceClassName + `URL` instanceClassName+serializable=false) + 2 EAttribute eType pointer.
+- `frontend/src/services/export/__tests__/ecore-io.test.ts` (NEW, 124 lines, 23 test): structural+fixture tests (no Redux/DOMParser integration possible in vitest node env).
+- `docs/2026-05-18_W2_edatatype.md` (NEW): prompt archiviato.
+
+**Esito**: ⚠️ completato con deviazioni notevoli — build verde ✓, 23/23 test W2 pass, ma smoke round-trip funzionale **non testabile** in vitest (Redux + DOMParser non disponibili senza jsdom non installato).
+
+**Gate G1/G2/G3 (pre-implementation)**:
+- **G1 ✅**: `DDataType.instanceClassName` (LModelElement.tsx:3665) e `DDataType.serializable: boolean = true` (3672) già presenti. Mirror L-layer (3699/3710) con accessor `set_serializable` (3713-3721) che usa `U.fromBoolString`. Nessun touch D-layer richiesto per i campi.
+- **G2 ❌ → escalation**: `DDataType.new()` era guard `Log.exx("DDataType is abstract")` (3677-3681). Factory chain commentato sotto. Inoltre `Constructors.DDataType()` era stub no-op (joiner/classes.ts:759). **Scoperta inattesa**: anche `DPackage` non aveva `datatypes` field (solo `classes` + `enumerators`), e `_set_classifiers` accettava solo `'classes' | 'enumerators'`. User confirm: "Estensione D-layer completa".
+- **G3** confermato iterazioni separate (linee 159+164 root, 478+483 sub-package). Ordine default Class→Enum→DataType (append-non-interleave) preservato per byte-identità delle fixture W1.
+
+**Scoperte inattese / deviazioni**:
+1. **Scope D-layer triplicato**: stima iniziale 3 righe (uncomment factory) → reale 14 righe (campo DPackage + campo LPackage + accessor + estensione _set_classifiers + estensione get_classifiers + factory + Constructors wire). User informato e ha approvato l'estensione completa prima di procedere.
+2. **Test infrastructure gap**: vitest config `environment: 'node'` + EcoreService importa Monaco transitivamente → "window is not defined" al load. Senza jsdom (non in deps) impossibile testare round-trip funzionale. Fallback: 23 test statici/strutturali (fixture validation + grep su source per presence dei nuovi simboli). **Round-trip funzionale: TODO smoke manuale via dev server**.
+3. **ECoreEnum.serializable bug pre-existing**: `ECoreEnum.serializable = 'serializable'` senza `XMLinlineMarker` prefix (line 1362) — case `parseDEnum` non matcherebbe key `-serializable` proveniente da xml2js. ECoreDataType ha usato il pattern CORRETTO (`XMLinlineMarker + 'serializable'`) per garantire round-trip funzionante. Bug pre-existing in EEnum non toccato (out-of-scope, "niente refactoring opportunistico").
+4. **tsc error count delta sospetto**: baseline W1 log dichiarava 174 errori; post-W2 = 86. Variazione -88 non spiegabile dal mio diff additivo. Probabile artefatto di config/inclusione diversa nelle due misurazioni. Da verificare separatamente.
+5. **Famiglies.ecore non in fixture**: lo smoke W1 lo cita ma non è in `__tests__/fixtures/`. Probabile file user locale.
+
+**Smoke status**:
+- ✅ Build verde (`npm run build` ✓ in 56.29s).
+- ✅ 23/23 nuovi test pass (fixture + structural).
+- ✅ Full vitest suite: 596 test bodies pass; 9 file fail al load per "window is not defined" — **pre-existing**, non regression W2 (le file non importano nulla che ho aggiunto).
+- ⚠️ Round-trip funzionale `DataType_test.ecore` → **richiede smoke manuale via dev server** (parse via UI import → re-export via UI export → verifica Date.instanceClassName + URL.serializable=false + eType pointer preservati).
+- ⚠️ Regression Library.ecore round-trip → idem (manual smoke).
+
+**Hard rule rispettate**: zero touch a path legacy `generateEcoreJson_impl`, zero touch a `replacePrimitiveMap` / `isPrimitiveOnlyPackage`, zero refactoring opportunistico (es. bug `ECoreEnum.serializable` lasciato pre-existing), zero `console.log` debug residui. D-layer toccato con consenso esplicito del user (Q post-G2). Niente commit; working tree dirty.
+
+**Nome del documento prompt**: `2026-05-18_W2_edatatype`
+
+---
+
+## 2026-05-18 — docs(ecore-io): commit isolato del discovery report Ecore I/O completeness
+
+**Prompt**: commit chirurgico del file `docs/discovery/discovery_2026-05-17_ecore_io_completeness.md` (untracked dopo il commit W1) prima di iniziare W2 (EDataType end-to-end), per separare discovery e implementazione.
+
+**File toccati**: `docs/discovery/discovery_2026-05-17_ecore_io_completeness.md` (untracked → tracked, +572 righe, nessuna modifica al contenuto).
+
+**Esito**: ✅ completato — commit `95496929d` (`docs(ecore-io): add discovery report on Ecore I/O completeness`).
+
+**Note**:
+- Commit a singolo file rispettato (constraint `NON committare altri file`). Build non rieseguito (commit doc-only).
+- Branch: `alfonso-frontend-jjtl`, ora 3 commit avanti su origin.
+- Body del commit ridotto a "W1-W4" (per scelta utente); il report enumera W1-W8. Discrepanza voluta, non un errore di trascrizione.
+- Questa entry resta uncommitted finché non viene bundlata con un commit futuro (presumibilmente W2 implementation).
+
+**Nome del documento prompt**: 2026-05-18 10:30 (commit discovery report)
+
+---
+
 ## 2026-05-17 — feat(ecore-io): W1 quick wins Ecore importer/exporter (10 fix + XPath 3-segment)
 
 **Prompt**: W1 quick wins importer/exporter Ecore senza D-layer impact (10 fix additive) + hot-fix XPath 3-segment normalization scoperto in smoke test Families.
