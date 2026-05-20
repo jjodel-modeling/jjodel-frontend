@@ -111,8 +111,8 @@ textarea.autosize{ not possible in pure css, need to add a :after element mimick
       font-style: italic;
     }
     &.autosize-input {
-      background-color: transparent;
-      color: transparent;
+      background-color: transparent !important;
+      color: transparent !important;
     }
   }
 
@@ -159,13 +159,13 @@ input.autosize-input{
     font-family: inherit;
     line-height: inherit;
     font-style: inherit !important;
+    font-weight: inherit !important;
 
     // border: 1px solid transparent;
     border: none !important;
     margin: 0 !important;
     padding: 0 0.5em !important;
     // padding-bottom: 1px !important; // no idea why, or it doesnt' align vertically
-    font-weight: var(--font-light);
     height: 1lh;
     max-height: 1lh !important;
     min-height: 1lh !important;

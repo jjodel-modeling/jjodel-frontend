@@ -993,6 +993,18 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         return true;
         //return this.cannotSet("graphElement.isSelected(): use this.select() or this.deselect() instead.");
     }
+
+    selectionMap!: DGraphElement["isSelected"];
+    __info_of__selectionMap: Info = {type:"Dictionary<Pointer<User>, true>", txt:"Checks which users have selected this element."};
+    get_selectionMap(c: Context): this["selectionMap"] { return c.data.isSelected; }
+    set_selectionMap(v:never, c: Context): true { return this.cannotSet("selectionMap"); }
+
+    selection!: LUser[];
+    __info_of__selection: Info = {type:"LUser[]", txt:"Checks which users have selected this element."};
+    get_selection(c: Context): this["selection"] { return L.fromArr(Object.keys(c.data.isSelected).filter(ptr => c.data.isSelected[ptr])); }
+    set_selection(v:never, c: Context): true { return this.cannotSet("selection"); }
+
+
     /*
     get_isSelected(context: LogicContext<DVoidVertex>): GObject {
         return DPointerTargetable.mapWrap(context.data.isSelected, context.data, 'idlookup.' + context.data.id + '.isSelected', []);

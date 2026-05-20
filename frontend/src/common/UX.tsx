@@ -306,6 +306,135 @@ export class UX{
         });
     }
 
+    // just to avoid changing extension to jsx in classes.ts
+    static img(url:string){ return <img src={url} />; }
+
+    /**
+     * Generates a circular avatar with 1–3 centered letters.
+     * Returns an SVG string (inline-safe) or a Base64 data URI.
+     *
+     * @param letters      Up to 3 characters to display
+     * @param fontFamily   CSS font-family string (e.g. "sans-serif", "Georgia")
+     * @param fontColor    Hex color for the text (e.g. "#ffffff")
+     * @param backgroundColor  Hex fill color for the circle (e.g. "#3a86ff")
+     * @param borderColor  Hex color for the border ring (e.g. "#ff006e")
+     * @param borderWidth  Border thickness as a fraction of radius (e.g. 0.05 = 5%)
+     * @param asDataUri    If true, returns a Base64 SVG data URI; otherwise raw SVG
+     */
+    static makeAvatar<T extends boolean = false>(
+        letters: string,
+        fontFamily: string = '"Inter Variable", -apple-system, sans-serif',
+        fontColor: string = "#000000",
+        borderColor: string = "#000000",
+        backgroundColor: string = "#ffffff",
+        borderWidth: number = 0.1, // as a % of border radius [0, 1]
+        asDataUri: T = false as T
+    ): T extends true ? string : ReactNode {
+        let radius: number = 64;
+        // Clamp to 3 characters
+        const text = letters.slice(0, 3).toUpperCase();
+        const len = text.length;
+
+        const size = radius * 2; // SVG viewport side length
+        const cx = radius;        // circle centre x
+        const cy = radius;        // circle centre y
+
+        // Border stroke width in px (borderWidth is a fraction of radius)
+        const strokePx = borderWidth * radius;
+
+        // Inner radius shrunk so the stroke doesn't bleed outside the viewport
+        const innerRadius = radius - strokePx / 2;
+
+        // Font size heuristic: fewer letters → bigger text
+        // Fits comfortably inside the circle for 1–3 chars
+        const fontSizeMap: Record<number, number> = { 1: 0.55, 2: 0.38, 3: 0.30 };
+        const fontSizeRatio = fontSizeMap[len] ?? 0.30;
+        const fontSize = Math.round(radius * 2 * fontSizeRatio);
+
+        // Letter-spacing nudge: tighten slightly for 3 chars
+        const letterSpacing = len === 3 ? -1 : len === 2 ? 0.5 : 0;
+
+        // Escape XML special chars in user-supplied strings
+        const escapeXml = (s: string) =>
+            s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+        const safeFontFamily = escapeXml(fontFamily);
+        const safeText = escapeXml(text);
+
+        const svgtxt = `<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="${size}"
+  height="${size}"
+  viewBox="0 0 ${size} ${size}"
+  role="img"
+  aria-label="${safeText}"
+>
+  <!-- Background fill circle -->
+  <circle
+    cx="${cx}"
+    cy="${cy}"
+    r="${innerRadius}"
+    fill="${backgroundColor}"
+    stroke="${borderColor}"
+    stroke-width="${strokePx}"
+  />
+  <!-- Centered initials -->
+  <text
+    x="${cx}"
+    y="${cy}"
+    text-anchor="middle"
+    dominant-baseline="central"
+    font-family="${safeFontFamily}"
+    font-size="${fontSize}"
+    font-weight="600"
+    fill="${fontColor}"
+    letter-spacing="${letterSpacing}"
+  >${safeText}</text>
+</svg>`;
+        let svg = <svg
+            className={"avatar"}
+            xmlns="http://www.w3.org/2000/svg"
+            width={size}
+            height={size}
+            viewBox={`0 0 ${size} ${size}`}
+        >
+            <circle
+                cx={cx}
+                cy={cy}
+                r={innerRadius}
+                style={{fill: backgroundColor, stroke: borderColor, strokeWidth: strokePx}}
+            />
+            <text
+                x={cx}
+                y={cy}
+                textAnchor="middle"
+                dominantBaseline="central"
+                style={{fontFamily: safeFontFamily, fontSize, fontWeight: "600", fill: fontColor, letterSpacing}}
+            >${safeText}</text>
+        </svg>;
+
+        if (asDataUri) {
+            const b64 = Buffer.from(svgtxt).toString("base64");
+            return `data:image/svg+xml;base64,${b64}`;
+        }
+        return svg as any;
+    }
+
+    static svgToElement(svg: string): SVGSVGElement {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(svg, "image/svg+xml");
+
+        const parserError = doc.querySelector("parsererror");
+        if (parserError) {
+            throw new Error(`Invalid SVG: ${parserError.textContent}`);
+        }
+
+        const el = doc.documentElement as unknown as SVGSVGElement;
+
+        // Adopt the node into the current document so it behaves like a native element
+        return document.adoptNode(el);
+    }
+
 
 
 
@@ -365,6 +494,7 @@ export class UX{
         }
         return s;
     }
+
     private static viewRootProps: string;
     private static decorativeViewRootProps: string;
     private static mainViewRootProps: string;

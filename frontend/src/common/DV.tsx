@@ -1,7 +1,7 @@
-import type {
+import {
     Pointer,
     GObject,
-    Dictionary,
+    Dictionary, Defaults,
 } from '../joiner';
 
 import {
@@ -43,6 +43,13 @@ export class DV {
         let s = store.getState();
         let newLanguages = DV.defaultLanguages();
         s.languages = newLanguages;
+
+
+        for (let id in Defaults.defaultViewsMap) s.idlookup[id] = Defaults.defaultViewsMap[id];
+        for (let id in Defaults.defaultViewPointsMap) s.idlookup[id] = Defaults.defaultViewPointsMap[id];
+
+
+        SetRootFieldAction.new('VIEWS_RECOMPILE_all', [...Object.keys(Defaults.defaultViewsMap), ...Object.keys(Defaults.defaultViewPointsMap)], '+=', false);
         SetRootFieldAction.new('clonedCounter', ((s as any).clonedCounter || 0) + 1);
         return newLanguages;
     }
@@ -569,6 +576,7 @@ end:`
     public static valueView(): string { return beautify(DefaultView.value()); }
     public static singletonView(): string { return beautify(DefaultView.singleton()); }
     public static defaultPackage(): string { return beautify(DefaultView.defaultPackage()); }
+    public static collaborative(): string { return beautify(DefaultView.collaborative()); }
 
     public static errorView(publicmsg: ReactNode, debughiddenmsg:any, errortype: string, data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: LViewElement|DViewElement): React.ReactNode {
         let visibleMessage = publicmsg && typeof publicmsg === "string" ? U.replaceAll(publicmsg, "Parse Error:", "").trim() : publicmsg;
@@ -1551,12 +1559,28 @@ export class DefaultView {
 </View>`
     );}
 
-    /* FEATURE (Attribute / Reference) */
+    static collaborative(): string {
+        return `<section className={"overlap"}>
+            <div className={"naming-list"}>{selection.map( u => (
+                <div className={"hoverable color-"+(u.index % maxColors)}>
+                    <span className={"content top collab-name"}>{u.name}</span>
+                    {u.avatar}
+                </div>
+                )}
+            </div>
+            <svg className={"borders"}>
+                {selection.map( u => (
+                    <rect className={"color-"+(u.index % maxColors)}
+                        style={{"--gaps": project.onlineUsers, "--offset": i, "--border-color": u.color}}
+                    />))}
+            </svg>
+        </section>`;
+    }
 
+    /* FEATURE (Attribute / Reference) */
     public static feature(): string { return (
         `
-/* -- Jjodel Abstract Syntax Specification v2.3 -- */
-
+/* -- Jjodel Abstract Syntax Specification v2.3b -- */
 <View className={'root feature ' + (data.className === 'DReference' ? 'reference-row' : 'attribute-row')} style={{
     display: 'flex',
     alignItems: 'center',
@@ -1567,22 +1591,26 @@ export class DefaultView {
     transition: 'background 0.15s ease'
 }}>
     {/* Left side: Name with colon */}
-    <div className={"me-1"}>
+    <div className={"me-1 hoverable"} style={{fontWeight: 500, color: '#334155'}}>
         {/* External indicator */}
         {(data.type && data.type.model && data.type.model.id !== data.model.id) &&
             <i className="bi bi-box-arrow-up-right" style={{
                 fontSize: '9px',
                 color: data.className === 'DReference' ? '#f59e0b' : '#3b82f6'
-            }}></i>
+            }}/>
         }
-        <span style={{
-            fontWeight: 500,
-            color: '#334155'
-        }}>{data.name}:</span>
+        <span>{data.name}:</span>
+        <div className={"content center no-shadow"}>
+            <Input field={'name'} autosize={true} />
+        </div>
     </div>
 
     {/* Right side: Type Select (smaller) */}
-    <Select data={data} field={'type'} />
+    
+    <div className={"d-flex me-1 hoverable type"}>
+        <Select className={"content  center no-shadow"} field={'type'} />
+        <span className={"my-auto ms-auto"}>{data.type.name}</span>
+    </div>
     {decorators}
 </View>`
     );}
@@ -1780,6 +1808,8 @@ export class DefaultView {
         }
     }
 
+
+
     public static error_string(msg: undefined | ReactNode, errortype: string | "SYNTAX" | "RUNTIME", data?: DModelElement | undefined,
                                node?: DGraphElement | undefined, v?: LViewElement|DViewElement) {
         let dname: string | undefined = data && ((data as any).name || data.className.substring(1));
@@ -1811,4 +1841,5 @@ export class DefaultView {
             <div className={'error-details'}>${msg}</div>
         </div></Measurable>)`;
     }
+
 }

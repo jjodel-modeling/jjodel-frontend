@@ -513,6 +513,10 @@ function CompositeActionReducer(oldState: DState, actionBatch: CompositeAction):
 
             case CollabClearHistoryAction.type: break;
             case LoadAction.type:
+                if (oldState.viewelements.length) {
+                    for (let id of oldState.viewelements) Defaults.defaultViewsMap[id] = oldState.idlookup[id] as DViewElement;
+                    for (let id of oldState.viewpoints) Defaults.defaultViewPointsMap[id] = oldState.idlookup[id] as DViewPoint;
+                }
                 newState = action.value;
                 let u = DUser.getUser(newState);
                 let p = DProject.getProject(newState);

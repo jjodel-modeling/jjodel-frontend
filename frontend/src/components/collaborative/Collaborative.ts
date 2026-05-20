@@ -8,7 +8,7 @@ import {
     type GObject,
     Log,
     Pointer,
-    RuntimeAccessible, SetRootFieldAction, U
+    RuntimeAccessible, SetFieldAction, SetRootFieldAction, store, U
 } from "../../joiner";
 import {COMMIT} from "../../redux/action/action";
 (window as any).io = io;
@@ -101,11 +101,20 @@ export class Collaborative {
         return true;
     }
 
+    static firstReceive: boolean = false;
     static receive(action: GObject<Action & CompositeAction>) {
         let session: number = new Date().getUTCMilliseconds();
         const receivedAction: Action | CompositeAction = action;
         let ca = receivedAction as CompositeAction;
         if (!Collaborative.filterSender(action)) return;
+
+        // the server sent a request to the client to identify himself replying with userid
+        if (ca.field.includes("SET_SOCKET_ID")) {
+            let project= U.getProjectID_URL() as Pointer<DProject>;
+            let socketid = action.value as string;
+            SetFieldAction.new(project, "collaboratorsMap."+socketid as any, DUser.current, '', true, false)
+            return;
+        }
         ca.fromCollaborative = true;
         if (!ca.actions) {
             firedActionsNCA.push(ca);
@@ -125,6 +134,15 @@ export class Collaborative {
         }
 
         fire(ca, session);
+        if (this.firstReceive) {
+            let s = store.getState();
+            // this one is only sent to collaborators.
+            this.send(SetRootFieldAction.create("idlookup."+DUser.current, DUser.getUser(), "", true));
+            // this one is executed both locally and sent to collaborators.
+            if (!s.collaborators.includes(DUser.current)) SetRootFieldAction.new("collaborators", DUser.current, "+=", true);
+            // todo: make an action on collab server on user connect/disconnect which sets onlineCollaborators action (instead of the "static" list)
+            // current online user is only available as number in project.onlineUsers
+        }
         /*
         for (let a of ca.actions) {
             firedActions.push(a);

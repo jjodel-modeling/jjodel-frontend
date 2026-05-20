@@ -91,7 +91,8 @@ import type {
 } from "../model/logicWrapper";
 import type {
     CClass,
-    Constructor, Dependency,
+    Constructor,
+    Dependency,
     Dictionary,
     DocString,
     GObject,
@@ -99,18 +100,13 @@ import type {
     InitialVertexSizeFunc,
     InitialVertexSizeObj,
     orArr,
-    Proxyfied, TLCoord,
+    Proxyfied,
     unArr
 } from "./types";
-import type {
-    DViewElement,
-    LViewElement,
-    WViewElement,
-} from "../view/viewElement/view";
-import {EdgeBendingMode, EdgeGapMode, NodeTypes, PrimitiveType} from "./types";
+import {EdgeBendingMode, EdgeGapMode, NodeTypes} from "./types";
+import type {DViewElement, LViewElement, WViewElement,} from "../view/viewElement/view";
 import {LogicContext, LogicContext2, type TargetableProxyHandler as TypeTargetableProxyHandler} from "./proxy";
 import {
-    Info,
     Action,
     CreateElementAction,
     Defaults,
@@ -119,23 +115,27 @@ import {
     DState,
     DViewPoint,
     EdgeSegment,
+    GraphElementComponent,
     GraphPoint,
-    GraphSize, IPoint, ISize,
+    GraphSize,
+    Info,
+    IPoint,
+    ISize,
     LGraph,
     LLog,
     LModel,
     Log,
-    LViewPoint, ModelPointers,
-    ParsedAction, Selectors,
+    LViewPoint,
+    ParsedAction,
+    Selectors,
     SetFieldAction,
     SetRootFieldAction,
     ShortAttribETypes,
-    statehistory,
     store,
     TRANSACTION,
-    U, GraphElementComponent
+    U,
+    UX
 } from "./index";
-import type {Grammar, ParserOptions, Parser} from "nearley";
 import type nearley from "nearley";
 import type {CtxMenuAllProps} from "../components/forEndUser/ContextMenu";
 import {LayoutData} from "rc-dock";
@@ -144,11 +144,10 @@ import React, {ReactNode} from "react";
 import {labelfunc} from "../model/dataStructure/GraphDataElements";
 import {Dummy} from "../common/Dummy";
 import Storage from "../data/storage";
-import {PinnableDock} from "../components/dock/MyRcDock";
 import type {VersionFixer as TypeVersionFixer} from "../redux/VersionFixer";
 import type {ProjectsApi as TypeProjectsAPI, UsersApi} from "../api/persistance";
 import type {Collaborative as CollaborativeT} from "../components/collaborative/Collaborative";
-import {names} from "tinycolor2";
+
 var windoww = window as any;
 
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
@@ -2653,6 +2652,7 @@ export class DUser extends DPointerTargetable {
     layout!: Dictionary<string, LayoutData>;
     autosaveLayout!: boolean;
     activeLayout!: string;
+    avatar?: string;
     __isDUser: true = true; // necessary to trick duck typing to think this is NOT the superclass of anything that extends PointerTargetable.
 
 
@@ -2757,6 +2757,14 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
     project!: LProject|null;
     autoReport!: boolean;
     __isLUser!: true;
+    avatar!: ReactNode;
+    index!: number;
+    __info_of__index: Info = {type: ShortAttribETypes.EInt, txt: "Index of the order of joining the collaborative session."}
+    get_index(c: Context): this["index"] {
+        const project = LProject.getProject();
+        let dproject = project.__raw;
+        return dproject.onlineUsersID.findIndex((socket) => dproject.collaboratorsMap[socket] === c.data.id);
+    }
 
     // public static fromPointer(ptr: Pointer<any>): LUser { return L.fromPointer(ptr) as LUser; }
     layout!: Dictionary<string, LayoutData>;
@@ -2809,6 +2817,15 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
             (windoww.UsersApi as typeof UsersApi).setUserAutosaveLayout(val);
         })
         return true;
+    }
+
+    protected get_avatar(c: Context): this["avatar"] {
+        if (c.data.avatar) { return UX.img(c.data.avatar); }
+        // generate image from initials
+        let letters = (c.data.name + " " +c.data.surname).split(" ").slice(0, 3).map(e=>e[0]).join("");
+        return UX.makeAvatar(letters);
+        /*, '"Inter Variable", -apple-system, sans-serif',
+            "#000000", "#fffff", "#000000", 0.1, false);*/
     }
 
     protected get_name(context: Context): this['name'] {
@@ -2955,7 +2972,9 @@ export class DProject extends DPointerTargetable {
     type: 'public'|'private'|'collaborative' = 'public';
     name!: string;
     author: Pointer<DUser> = DUser.current;
-    collaborators: Pointer<DUser, 0, 'N'> = [];
+    collaborators: DocString<"SocketID">[] = [];
+    collaboratorsMap: Dictionary<DocString<"SocketID">, Pointer<DUser>> = {};
+    onlineUsersID: DocString<"SocketID">[] = [];
     onlineUsers : number = 0;
     metamodels: Pointer<DModel, 0, 'N'> = [];
     models: Pointer<DModel, 0, 'N'> = [];
@@ -3023,11 +3042,14 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     }
 
     readonly id!: Pointer<DProject>;
+    __raw!: DProject;
     _Id?: string // db GUID
     father!: LUser;
     type!: 'public'|'private'|'collaborative';
     author!: LUser;
     collaborators!: LUser[];
+    onlineUsersID!: LUser[];
+    collaboratorsMap!: Dictionary<DocString<"socket id">, Pointer<DUser>>;
     onlineUsers!: number;
     name!: string;
     metamodels!: LModel[];
@@ -3235,12 +3257,15 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
         return true;
     }
 
-    protected get_collaborators(context: Context): this['collaborators'] {
-        return LUser.fromPointer(context.data.collaborators) || [];
+    get_onlineUsersID(c: Context): this["onlineUsersID"] {
+        return LUser.fromArr(c.data.onlineUsersID.map(socket=> c.data.collaboratorsMap[socket])).filter((e: LUser)=>!!e) || [];
+    }
+    protected get_collaborators(c: Context): this['collaborators'] {
+        return LUser.fromArr(c.data.collaborators.map(socket=> c.data.collaboratorsMap[socket])).filter((e: LUser)=>!!e) || [];
     }
     protected set_collaborators(val0: PackArr<this['collaborators']>, c: Context): boolean {
         let val: Pointer<LUser> = Pointers.from(val0) as any;
-        TRANSACTION(this.get_name(c)+'.collaborators', ()=>{
+        TRANSACTION(this.get_name(c)+'.collaborators', ()=> {
             SetFieldAction.new(c.data.id, 'collaborators', val, '', true);
         })
         return true;

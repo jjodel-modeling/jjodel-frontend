@@ -93,7 +93,7 @@ import {ValuePointers} from "./PointerDefinitions";
 import {Alias, transientProperties} from "../../joiner/classes";
 import React, {JSX} from "react";
 import {Dummy} from "../../common/Dummy";
-import {AFTER_TRANSACTION, TRANSACTION_MERGE} from "../../redux/action/action";
+import {TRANSACTION_MERGE} from "../../redux/action/action";
 
 type outactions = {clear:(()=>void)[], set:(()=>void)[], immediatefire?: boolean};
 export type SchemaMatchingScore = {
@@ -226,7 +226,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
             if (TargetableProxyHandler.childKeys[k[0]]) { pk = k.substring(1); }
             else pk = k;
             if (Array.isArray(lchildren)) for (lc of lchildren) {
-                let n = lc?.name;
+                let n = lc?.eid;
                 if (n && n.toLowerCase() === pk.toLowerCase()) return lc;
             }
         }
@@ -2870,10 +2870,9 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     @Alias protected get_idFeature(c: Context): LAttribute | null { return this.get_eidFeature(c); }
     @Alias protected set_idFeature(v: Pack1<LAttribute>, c: Context): true { return this.set_eidFeature(v, c); }
 
-    static inheritanceDistance(lclass: LClass<DClass, any, any>, la: LAttribute<any, any, DAttribute>, direction:  "up" | "down" | "both" = "both"): number | undefined {
-        let current = la.father;
-        let cid = lclass.id;
-        if (current.id === cid) return 0;
+    static inheritanceDistance(lclass: LClass, target: LClass, direction:  "up" | "down" | "both" = "both"): number | undefined {
+        let tid = target.id;
+        if (lclass.id === tid) return 0;
 
         if (direction !== "down") {
             let arr = lclass.extends;
@@ -2884,7 +2883,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
                 for (let lc of arr) {
                     let id = lc.id;
                     if (duplicates[id]) continue;
-                    if (id === cid) return level;
+                    if (id === tid) return level;
                     duplicates[id] = lc;
                     U.arrayMergeInPlace(nextLevel, lc.extends);
                 }
@@ -2901,7 +2900,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
                 for (let lc of arr) {
                     let id = lc.id;
                     if (duplicates[id]) continue;
-                    if (id === cid) return level;
+                    if (id === tid) return level;
                     duplicates[id] = lc;
                     U.arrayMergeInPlace(nextLevel, lc.extendedBy);
                 }
@@ -2918,13 +2917,15 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         if (eid !== "__recalculating__") return L.fromPointer(eid) || null;
         // recompute
         let allDistances: {dist: number, l: LAttribute, c?: LClass}[] = [];
-        for (let la of this.get_allAttributes(c)) {
+        let allAttrs = this.get_allAttributes(c);
+        for (let la of allAttrs) {
             if (!la.isID) continue;
-            let dist = LClass.inheritanceDistance(c.proxyObject, la);
+            let dist = LClass.inheritanceDistance(c.proxyObject, la.father);
             if (dist === undefined) { Log.ee("found invalid subattribute", {class:c, attr:la}); continue; }
             allDistances.push({dist, l:la, c: undefined});
         }
         allDistances.sort((e1, e2) => e1.dist - e2.dist);
+        console.log("allDistances", {allDistances, allAttrs});
         eid = allDistances[0]?.l?.id;
         // todo: trigger the same setting eidFeature = __recalculating__ after setting a feature to isID = true or false. for class and all his subclasses.
         TRANSACTION_MERGE("cache update: eidFeature", ()=> {
@@ -2939,8 +2940,8 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
 
         let old = this.get_eidFeature(c);
         let newFeature: LAttribute = L.from(v);
-        TRANSACTION("change eidFeature", ()=> {
-            let toupdate: LClass[] = [];
+        TRANSACTION("cache update: eidFeature", ()=> {
+            /*let toupdate: LClass[] = [];
             let delay: boolean = false;
             let updateSubClasses = ()=> {
                 if (old) {
@@ -2954,12 +2955,16 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
                     newFeature.isID = true;
                 }
                 let dict = U.objectFromArray(toupdate, "id");
-                for (let sc_id in toupdate) { dict[sc_id].eidFeature = "__recalculating__" as any; }
+                delete dict[c.data.id];
+                // console.log("update subclasses", {dict, toupdate, c});
+                for (let sc_id in dict) {
+                    dict[sc_id].eidFeature = "__recalculating__" as any;
+                }
             }
             if (old) old.isID = false;
+            if (!delay) updateSubClasses();*/
             if (newFeature) SetFieldAction.new(c.data.id, "eidFeature", ptr, '', true);
-            if (!delay) updateSubClasses();
-            else AFTER_TRANSACTION(()=>{ TRANSACTION_MERGE("invalidating cache for eidFeatures change", updateSubClasses); });
+            // else AFTER_TRANSACTION(()=>{ TRANSACTION_MERGE("invalidating cache for eidFeatures change", updateSubClasses); });
         });
         return true;
     }
@@ -4522,7 +4527,7 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
             // remove isID from other attributes within this class (not sub or superclasses!)
             if (val) {
                 if (oldID === c.data.id) return true; // no-op
-                if (oldID) SetFieldAction.new(oldID, "isID", false, "", false);
+                if (oldID && oldAttrID?.father?.id === c.data.father) SetFieldAction.new(oldID, "isID", false, "", false);
                 lclass.eidFeature = c.data.id as any;
             }
             else {
@@ -5206,6 +5211,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
         if (!c.data.isMetamodel) return this._defaultGetterM1(c, key);
         return this._defaultGetterM2(c, key);
     }
+
     _defaultGetterM2(c: Context, key: string): any{
         if ((TargetableProxyHandler.childKeys[key[0]])){
             // look for m1 matches
@@ -5243,7 +5249,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
 
             const directSubObjects: Dictionary<Pointer, boolean> = U.objectFromArrayValues(c.data.objects);
             for (let subobject of this.get_allSubObjects(c)){
-                let n = subobject.name;
+                let n = subobject.eid;
                 if (!caseSensitive) n = n.toLowerCase();
                 if (!n || n !== k) continue;
                 // A0) perfect match with direct child object
@@ -6032,7 +6038,16 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         }
         return null;
     }
-    protected get_eid(c: Context): string { return this.get_eidFeature(c)?.value + ""; }
+    protected get_eid(c: Context): string {
+        let eidFeature = this.get_eidFeature(c);
+        let defaultRet = () => this.get_name(c) as any;
+        // let defaultRet = () => null as any;
+        let rawVals = eidFeature?.__raw?.values;
+        if (!rawVals?.length || rawVals[0] === '' || rawVals[0] === null || rawVals[0] === undefined) return defaultRet();
+        let eid = eidFeature?.value;
+        return eid === null || eid === undefined ? defaultRet() : "" + eid;
+    }
+
     protected get_idFeature(c: Context): LValue | null { return this.get_idFeature(c); }
     protected eidFeature!: LValue | null;
     __info_of__eidFeature: Info = {type: "LValue | null", txt: "if present, gets the structural feature with isID == true"}
@@ -6123,7 +6138,6 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         let bymetaparent: Dictionary<DocString<"metaparent pointer">, LValue[]> = {};
         for (let v of childs) {
             let vmeta = v.instanceof;
-            // console.log("get features filtering:", {context, meta, vmeta, v, childs, conformchildren});
 
             if (conformchildren && (!vmeta || !conformchildren.includes(vmeta.id))) continue;
             let vmetaid: string = vmeta?.id as string; // undef as key is fine even if compiler complains, so i cast it
@@ -6707,7 +6721,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     // IoT Section
     topic!: string;
     isID!: boolean; // inherited from m2
-    EKeys!: Pointer<DAttribute>[]; // inherited from m2
+    EKeys!: LAttribute[]; // inherited from m2
 
 
     // personal
@@ -6721,21 +6735,75 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
 
     length!: number;
     __info_of__length: Info = {type: 'number', txt: "shortcut for data.values.length."};
-    set_length(v: never, c: Context): string[] { return this.cannotSet("LValue.length"); }
-    get_length(c: Context): number{
+    protected set_length(v: never, c: Context): string[] { return this.cannotSet("LValue.length"); }
+    protected get_length(c: Context): number{
         return this.get_values(c).length;
     }
 
-    get_isID(c: Context): boolean {
+    protected get_isID(c: Context): boolean {
         return (this.get_instanceof(c) as LAttribute)?.isID || false;
     }
-    get_EKeys(c: Context): LAttribute[] { return (this.get_instanceof(c) as LReference)?.EKeys || []; }
-    get_Ekeys(c: Context): LAttribute[] { return this.get_EKeys(c); }
-    get_ekeys(c: Context): LAttribute[] { return this.get_EKeys(c); }
-    set_isID(v: never, c: Context): boolean { return this.cannotSet("LValue.isID"); }
-    set_EKeys(v: never, c: Context): string[] { return this.cannotSet("LValue.Ekeys"); }
-    set_Ekeys(v: never, c: Context): string[] { return this.set_EKeys(v, c); }
-    set_ekeys(v: never, c: Context): string[] { return this.set_EKeys(v, c); }
+    protected get_EKeys(c: Context): LAttribute[] { return (this.get_instanceof(c) as LReference)?.EKeys || []; }
+    protected get_Ekeys(c: Context): LAttribute[] { return this.get_EKeys(c); }
+    protected get_eKeys(c: Context): LAttribute[] { return this.get_EKeys(c); }
+    protected get_ekeys(c: Context): LAttribute[] { return this.get_EKeys(c); }
+    protected set_isID(v: never, c: Context): boolean { return this.cannotSet("LValue.isID"); }
+    protected set_EKeys(v: never, c: Context): string[] { return this.cannotSet("LValue.Ekeys"); }
+    protected set_Ekeys(v: never, c: Context): string[] { return this.set_EKeys(v, c); }
+    protected set_eKeys(v: never, c: Context): string[] { return this.set_EKeys(v, c); }
+    protected set_ekeys(v: never, c: Context): string[] { return this.set_EKeys(v, c); }
+
+
+
+    __info_of__eid: Info = {type: ShortAttribETypes.EString, txt: "Value.eid is just a fallback for the name. a feature cannot have sub-features, so it is identified by m2 name."}
+    protected get_eid(c: Context): string { return this.get_name(c); }
+
+    private static resolveEkeyReference(str: string, lfeature: LValue, ekeys0?: LAttribute[], validObjects0?: LObject[], allowMultiMatch: boolean = false): (LObject | null)[] {
+        let ekeys = (ekeys0 ? ekeys0 : lfeature.EKeys).filter(e=>!!e);
+        let validObjects: LObject[] = (validObjects0 ? validObjects0 : lfeature.validTargets as LObject[]).filter(e=>!!e);
+        let arr = str.split(" ").map(e=>e.trim()).filter(e=>!!e);
+
+        let ekeysID = ekeys.map(e=>e?.id);
+
+        // preparation fase, find m1 feature that can be used to match an ekey. (if they match, target is container object)
+        let targetedFeatures: LValue[/*ekeys.length*/][/*validObjects.length*/] = [];
+        for (let j = 0; j < ekeys.length; j++) {
+            targetedFeatures.push(validObjects.map(o=> o.features.find(f=> f?.instanceof?.id === ekeysID[j]) as LValue));
+            if (targetedFeatures.some(e=> !e || typeof e !== "object")) {
+                Log.ee("found invalid EKeys pointing to non-existent attributes", {lfeature, ekeys, targetedFeatures, validObjects, ekeysID});
+                return [];
+            }
+        }
+
+        let finalTargets: (LObject | null)[] = [];
+        for (let i = 0; i + ekeys.length <= arr.length; i+=ekeys.length) {
+            let entry = arr.slice(i, i+ekeys.length);
+
+            // for every entry candidate, i take the full list of possible targets
+            // and filter it by matching all ekeys individually, what's left are valid targets.
+            // next iteration is a separate entry/target, so the candidate list returns to full and gets filtered again.
+            let validTargets: (LObject|null)[] = [...validObjects] as LObject[];
+            console.log("loop ekeys "+i, {ekeys, ekeysID, entry, targetedFeatures, validTargets, vtn: validTargets.map(v=>v?.node?.html)});
+            for (let j = 0; j < targetedFeatures.length; j++) {
+                let v = entry[j];
+                // if there are N ekeys, and 1 value of the block is invalid/unmatching,
+                // i discard the whole block (they act as a composite key for a single target value)
+                validTargets = validTargets.map((o, vi) => {
+                    if (!o) return null;
+                    let tval = targetedFeatures[j][vi].value;
+                    console.log("loop ekeys targets " + i+"."+j, {v, tval, target:targetedFeatures[j][vi], ekeys, ekeysID, entry, targetedFeatures, j, vi});
+                    // NB: do not filter but map because i don't want indexes to change (vi must point to the same index at every j iteration)
+                    return tval === v ? o : null;
+                })
+                console.log("valid targets post "+ i+"."+j, {validTargets, vtn: validTargets.map(v=>v?.node?.html)});
+            }
+            validTargets = validTargets.filter(e=>!!e);
+            if (allowMultiMatch) finalTargets.push(...(validTargets.length ? validTargets : [null]));
+            else finalTargets.push(validTargets[0] || null);
+        }
+        console.log("loop ekeys end", {str, arr, ekeys, ekeysID, targetedFeatures, finalTargets});
+        return finalTargets;
+    }
 
     /**
      * Resolves a composed XMI M1 reference string to an LObject.
@@ -7075,39 +7143,16 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             let i: number = -1;
             let oldValues: any[] = c.data.values; //this.get_values(c);
             let ekeys = metaCname === "DReference" ? (meta as LReference).EKeys || [] : [];
-            let ekeysID = ekeys.map(e=>e.id);
             TRANSACTION(this.get_name(c) + '.t2m()', ()=> {
                 // handling ekeys-based ref
                 if (ekeys?.length) {
                     outer: for (let i = 0; i < json_4val.length; i+= ekeys.length) {
-                        let entry = json_4val.slice(i, ekeys.length);
-                        let validObjects = [...validTargets.filter(e=>!!e)] as LObject[];
-                        let targetedFeatures: LValue[][] = [];
-                        for (let j = 0; j < ekeys.length; j++) {
-                            targetedFeatures.push(validObjects.map(o=> o.features.find(f=> f?.id === ekeysID[j]) as LValue));
-                            if (targetedFeatures.findIndex(e=> !e) >= 0) {
-                                Log.ee("found invalid EKeys pointing to non-existent attributes", {d: c.data, ekeys, targetedFeatures});
-                                break outer;
-                            }
-                        }
-                        console.log("loop ekeys 0", {ekeys, ekeysID, entry, targetedFeatures});
-
-                        for (let j = 0; j < ekeys.length; j++) {
-                            let v = entry[j];
-                            // if there are N ekeys, and 1 value of the block is invalid/unmatching,
-                            // i discard the whole block (they act as a composite key for a single target value)
-                            if (typeof v !== "string") break;
-                            let targetAttr = ekeys[j];
-                            validObjects = validObjects.filter((o, vi) => {
-                                console.log("loop ekeys targets", {v, target:targetedFeatures[j][vi], ekeys, ekeysID, entry, targetedFeatures, j, vi});
-                                return targetedFeatures[j][vi].value === v
-                            })
-
-                        }
-                        let target = validObjects[0]?.id;
-                        console.log("loop ekeys end", {target, ekeys, ekeysID, entry, targetedFeatures});
-                        if (!target) break;
-                        uniformedValues.push(target);
+                        if (!U.isPrimitive(json_4val[i], false, false, false)) continue;
+                        let v = json_4val[i] + '';
+                        let targets = LValue.resolveEkeyReference(v, c.proxyObject, ekeys);
+                        if (!targets.length) break;
+                        let t_ids = targets.map(t=>t?.id).filter(t=>!!t);
+                        uniformedValues.push(...(new Set(t_ids)));
                     }
                 }
                 // handling all other kinds of ref
@@ -8272,6 +8317,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         }, c.data.topic, val)
         return true;
     }
+
 }
 RuntimeAccessibleClass.set_extend(DNamedElement, DValue);
 RuntimeAccessibleClass.set_extend(LNamedElement, LValue);

@@ -423,14 +423,34 @@ border-radius: 6px;
 .feature{
     display: flex;
     padding: 2px 5px;
-    
-    input,
-    select {
-        margin-left: auto;
-        width: 125px;
-        max-width: 55%;
-        flex-basis: 0;
+    .autosize-input-container{
+       margin: 0;
+       background-color: var(--bg-1);
     }
+    select {
+        width: 100%;
+        min-height: 30px;
+        background-color: var(--bg-1);
+        margin-left: 1.5em;
+        border: none;
+        outline: 1px solid black;
+    }
+    .type {
+        position: relative;
+        flex-grow: 1;
+        text-align: end;
+        font-weight: 500;
+        color: #CE9178;
+    }
+}
+/* change hoverable to display on focus only 
+.hoverable>.content { display: none !important; }
+&:focus, &:focus-within {
+    .hoverable>.content {
+        display: block !important;
+    }
+    .hoverable.preview { display: none !important; }
+*/ 
 }`;
         }, false, Defaults.Pointer_ViewAttribute);
         return view;

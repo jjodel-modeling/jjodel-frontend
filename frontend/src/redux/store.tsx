@@ -120,7 +120,7 @@ export class DState extends DPointerTargetable{
     viewelements: Pointer<DViewElement, 0, 'N'> = [];
 
     // users: Dictionary<DocString<Pointer<DUser>>, UserState> = {};
-    // collaborators: UserState[];
+    collaborators: Pointer<DUser>[] = [];
     idlookup: Record<Pointer<DPointerTargetable>, DPointerTargetable> = {};
 
     //// DClass section to fill
@@ -367,17 +367,17 @@ function makeDefaultGraphViews(vp: DViewPoint, validationVP: DViewPoint): DViewE
     let errorOverlayView: DViewElement = DViewElement.new2('Generic error view', DV.semanticErrorOverlay(), validationVP, (v) => {
         v.jsCondition = 'let nstate = node?.state || {};\nObject.keys(nstate).filter(k => k.indexOf("error_")===0 && nstate[k]).length>0';
         v.usageDeclarations = "(ret)=>{\n" +
-        "// ** preparations and default behaviour here ** //\n" +
-        "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
-        "// ** declarations here ** //\n" +
-        "// console.log('overlayView ud inner ' + data.name, {errs:node.state, node, noder:node.r, data});\n" +
-        "ret.nstate = node.state\n" +
-        // "ret.errors = Object.keys(ret.nstate).filter(k => k.indexOf(\"error_\")===0).map(k=>ret.nstate[k])\n" +
-        "ret.errors = Object.keys(ret.nstate).map(k => k.indexOf(\"error_\")===0 ? ret.nstate[k] : '').filter(e=>e)\n" +
-        "\n}";
+            "// ** preparations and default behaviour here ** //\n" +
+            "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
+            "// ** declarations here ** //\n" +
+            "// console.log('overlayView ud inner ' + data.name, {errs:node.state, node, noder:node.r, data});\n" +
+            "ret.nstate = node.state\n" +
+            // "ret.errors = Object.keys(ret.nstate).filter(k => k.indexOf(\"error_\")===0).map(k=>ret.nstate[k])\n" +
+            "ret.errors = Object.keys(ret.nstate).map(k => k.indexOf(\"error_\")===0 ? ret.nstate[k] : '').filter(e=>e)\n" +
+            "\n}";
         v.isExclusiveView = false;
         v.css =
-`/* -- v2.0 - */
+            `/* -- v2.0 - */
 &.mainView { text-decoration-line: spelling-error; }
 &.decorativeView {
     text-decoration-line: spelling-error;
@@ -448,6 +448,90 @@ node.state = {error_lowerbound: err};\n
 `.trim();
     }, false, Defaults.Pointer_ViewLowerbound );
     // errorOverlayView.oclCondition = 'context DValue inv: self.value < 0';
+    /*
+        let makeCollabBorder = (gaps: number, index: number) => {
+            if (gaps === 0) return "";
+            if (gaps === 1)turn `
+    `
+    /*        return`
+    [users="${gaps}"], [users="${gaps}"]::before{
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Crect width='100%25' height='100%25' rx='5' fill='none' stroke='currentColor' stroke-width='2' stroke-dasharray='12 ${gaps*12}' stroke-dashoffset='-${index*12}'/%3E%3C/svg%3E");
+    }
+    }
+    for (let i = 0; i <=10; i++){
+        collabcss += makeCollabBorder(i);
+    }
+`*/
+    let collabcss = `
+.borders rect{
+    --size: 12px;
+    stroke-dasharray: var(--size) calc((var(--gaps) - 1) * var(--size));
+    stroke-dashoffset: calc(-1 * (var(--offset) - 1) * var(--size));
+}
+.avatar{
+    text {
+        font: var(--main-color);
+    }
+    circle {
+        stroke: var(--main-color);
+    }
+}
+
+.color-1{
+    --main-color: var(--color-1);
+    --bg-color: var(--bg-color-1);
+}
+.color-2{
+    --main-color: var(--color-2);
+    --bg-color: var(--bg-color-2);
+}
+.color-3{
+    --main-color: var(--color-3);
+    --bg-color: var(--bg-color-3);
+}
+.color-4{
+    --main-color: var(--color-4);
+    --bg-color: var(--bg-color-4);
+}
+.color-5{
+    --main-color: var(--color-5);
+    --bg-color: var(--bg-color-5);
+}
+.color-6{
+    --main-color: var(--color-6);
+    --bg-color: var(--bg-color-6);
+}
+.color-7{
+    --main-color: var(--color-7);
+    --bg-color: var(--bg-color-7);
+}
+.color-8{
+    --main-color: var(--color-8);
+    --bg-color: var(--bg-color-8);
+}
+.color-9{
+    --main-color: var(--color-9);
+    --bg-color: var(--bg-color-9);
+}
+.color-0, .overlap{
+    /* fallback value */
+    --main-color: var(--color-10);
+    --bg-color: var(--bg-color-10);
+}
+`;
+    let collaborativeView: DViewElement = DViewElement.new2('Display collaborators', DV.collaborative(), validationVP, (v) => {
+        v.jsCondition = 'LProject.getProject().onlineUsers > 1 && node.selection.length > 0';
+        v.usageDeclarations = "(ret)=>{\n" +
+            "// ** preparations and default behaviour here ** //\n" +
+            "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
+            "// ** declarations here ** //\n" +
+            "maxColors = view?.palette[\"color\"]?.value.length;"
+            "project = LProject.getProject();"
+            "selection = node.selection;"
+            "\n}";
+        v.isExclusiveView = false;
+        v.css = collabcss;
+    }, false, Defaults.Pointer_ViewOverlay );
 
     let valuecolormap: GObject = {};
     valuecolormap[ShortAttribETypes.EBoolean] = "orange";

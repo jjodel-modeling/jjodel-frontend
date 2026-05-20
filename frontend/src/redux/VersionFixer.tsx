@@ -646,6 +646,15 @@ everytime you put hands into a D-Object shape or valid values, you should docume
 
     private ['2.210 -> 2.211'](s: DState): DState {
         this.getByClassName(s, "DReference").forEach(r=> r.EKeys = r.EKeys || []);
+        for (let k in s.idlookup) {
+            let e = s.idlookup[k] as GObject;
+            if (!e?.className) continue;
+            if (e.className === 'DProject' && !e.tagNames) {
+                if (!e.collaboratorsMap) e.collaboratorsMap = {};
+                if (!e.collaborators) e.collaborators = [];
+                if (!e.onlineUsersID) e.onlineUsersID = [];
+            }
+        }
         return s;
     }
 }

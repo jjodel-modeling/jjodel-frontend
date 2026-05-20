@@ -280,8 +280,9 @@ export class DViewElement extends DPointerTargetable {
         // let id = isDefaultView ? 'Pointer_View' + name : undefined;
         let father: DViewElement = father0 || DPointerTargetable.from(Defaults.viewpoints[0]);
         let vp = father.viewpoint || Defaults.viewpoints[0];
-        return new Constructors(new DViewElement('dwc'), father.id, persist, undefined, id)
+        let d = new Constructors(new DViewElement('dwc'), father.id, persist, undefined, id)
             .DPointerTargetable().DViewElement(name, jsxString, vp).end(callback);
+        return d;
     }
 
     static newDefault(forData?: DModelElement | DGraphElement, forSelf: boolean = false): DViewElement{

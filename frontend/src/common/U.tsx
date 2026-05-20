@@ -2783,6 +2783,21 @@ export class U {
         if (m === Number.NEGATIVE_INFINITY) return negative;
         return false;
     }
+    public static numericHash(str: string, min: number = 0, max: number = Number.NEGATIVE_INFINITY): number {
+        if (max === Number.NEGATIVE_INFINITY) { max = min; min = 0; }
+        if (isNaN(min)) min = 0;
+        if (isNaN(max)) return min;
+        if (max === min) return min;
+        if (typeof str !== "string") return min;
+        if (min > max) { let tmp = min; min = max; max = tmp; }
+
+        let hash = 2166136261; // FNV offset basis
+        for (let i = 0; i < str.length; i++) {
+            hash ^= str.charCodeAt(i);
+            hash = (hash * 16777619) >>> 0; // FNV prime, keep unsigned 32-bit
+        }
+        return min + (hash % (max - min + 1));
+    }
 
     public static getHashParams(value: string): Dictionary<string, string>{
         let search = window.location.hash;
@@ -2792,7 +2807,7 @@ export class U {
         for (let [key, entry] of new URLSearchParams(search).entries()) ret[key] = entry;
         return ret;
     }
-    public static getProjectID_URL(): string | null { return U.getHashParam('id'); }
+    public static getProjectID_URL(): Pointer<DProject> | null { return U.getHashParam('id') as any; }
     public static getHashParam(arg_name: string): string | null {
         let search = window.location.hash;
         let _index = search.indexOf('?');

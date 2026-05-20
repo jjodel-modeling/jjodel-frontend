@@ -65,6 +65,7 @@ export class Defaults { /// TODO: this really needs to become dynamically genera
     static Pointer_ViewAnchors: Pointer<DViewElement> = 'Pointer_ViewAnchors';
     static Pointer_ViewSingleton: Pointer<DViewElement> = 'Pointer_ViewSingleton';
     static Pointer_ViewFallback: Pointer<DViewElement> = 'Pointer_ViewFallback';
+    static Pointer_ViewCollaborative: Pointer<DViewElement> = 'Pointer_ViewCollaborative';
     // static Pointer_fallback = 'Pointer_fallback'; // legacy
     // validation vp
     static Pointer_ViewPointValidation: Pointer<DViewPoint> = 'Pointer_ViewPointValidation';
@@ -96,26 +97,9 @@ export class Defaults { /// TODO: this really needs to become dynamically genera
     // This is used by updateDefaultView to ensure old project views get updated with fresh code
     static freshViewsMap: Dictionary<Pointer, DViewElement> = {};
     static freshViewPointsMap: Dictionary<Pointer, DViewPoint> = {};
-    static freshViewsInitialized: boolean = false;
 
     static check(id: Pointer): boolean {
         return !!(Defaults.defaultViewsMap[id] || Defaults.defaultViewPointsMap[id] || Defaults.defaultTypesMap[id]); // id.indexOf('Pointer_View') !== -1
     }
 
-    // Store fresh views - should only be called once during init with newly created views
-    static storeFreshViews(views: DViewElement[], viewpoints: DViewPoint[]): void {
-        if (Defaults.freshViewsInitialized) return; // Only store once
-        for (const v of views) {
-            Defaults.freshViewsMap[v.id] = v;
-        }
-        for (const vp of viewpoints) {
-            Defaults.freshViewPointsMap[vp.id] = vp;
-        }
-        Defaults.freshViewsInitialized = true;
-    }
-
-    // Get fresh view for updating old views
-    static getFreshView(id: Pointer): DViewElement | DViewPoint | undefined {
-        return Defaults.freshViewsMap[id] || Defaults.freshViewPointsMap[id];
-    }
 }
