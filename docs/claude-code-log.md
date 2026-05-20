@@ -1,5 +1,13 @@
 # Claude Code Session Log
 
+## 2026-05-19 — fix(v2-flow): dedup edges by refId, not by src→tgt pair
+**Prompt**: Multiple EReference between same src/tgt pair were collapsed to single edge due to dedup key being `${srcVertex}→${tgtVertex}` in `useJjomSync.ts` (M2 main loop, pre-count, M1 main loop). Fix: dedup by composite `${refId}:${srcVertex}→${tgtVertex}` (opzione B), no `syncState.ts` changes. `hasCanvasEdgePair` removed from reference paths (pair-based, blocks siblings); replaced by an idlookup safety-net scan for race-window protection. Inheritance path unchanged (pair-based is correct: 1 extend per pair).
+**File toccati**: frontend/src/components/editor-v2/hooks/useJjomSync.ts
+**Esito**: ✅ build verde (40.65s)
+**Nome del documento prompt**: 2026-05-19_HHMM_fix_v2flow_multi_ref_edges.md
+
+---
+
 ## 2026-05-19 — fix(import): Accurate counters via __raw + Dashboard refresh trigger
 **Prompt**: Bug 1 (conteggi a 0): counter bypass via __raw invece di L-getter post-parse non sincronizzato. Bug 2 (Dashboard vuota): tick state per triggerare re-render dopo project.metamodels = [...]. Cleanup 10 diag logs.
 **File toccati**: frontend/src/components/import/buildImportSummary.ts, frontend/src/components/project/ProjectEditor.tsx
