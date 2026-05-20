@@ -33,6 +33,7 @@ import {
 } from "./pages";
 import { TestLayout } from "./components/TestLayout";
 import EditorV2 from "./components/editor-v2/EditorV2";
+import ReproHarness from "./components/editor-v2/repro/ReproHarness";
 
 import {ExternalLibraries} from "./components/forEndUser/ExternalLibraries";
 import {TooltipVisualizer} from "./components/forEndUser/Tooltip";
@@ -140,6 +141,8 @@ function App(props: AllProps): JSX.Element {
                             <Route path={'test-resize'} element={<TestLayout/>}/>
                             {/* Editor V2 - React Flow PoC */}
                             <Route path={'editor-v2'} element={<EditorV2/>}/>
+                            {/* Standalone repro harness for RF 4/8 edge bug */}
+                            <Route path={'repro-v2flow'} element={<ReproHarness/>}/>
                             {/* non functioning stuff */}
                             <Route path={'settings'} element={<SettingsPage/>}/>
                             <Route path={'projectsInfo'} element={<ProjectsInfoPage_Obsolete/>}/>
