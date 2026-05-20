@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ReactFlow, ReactFlowProvider, Background, Controls, type Node, type Edge } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -86,3 +86,37 @@ function ReproHarness() {
 }
 
 export default ReproHarness;
+
+export function ReproHarnessReactive() {
+    const [stateNodes] = useState<Node[]>(initialNodes);
+    const [stateEdges, setStateEdges] = useState<Edge[]>([]);
+
+    useEffect(() => {
+        // Simulates useJjomSync init effect: edges arrive after node mount.
+        setStateEdges(initialEdges);
+    }, []);
+
+    return (
+        <div style={{ width: '100vw', height: '100vh' }}>
+            <div style={{ padding: 8, background: '#fef3c7', fontFamily: 'monospace', fontSize: 11 }}>
+                REACTIVE Repro: 2 nodes (mount), 8 edges (useEffect setEdges).
+                Expected if T1: 4 edges in DOM (race). If T1 wrong: 8 edges.
+                Inspect: document.querySelectorAll('.react-flow__edge').length
+            </div>
+            <div style={{ width: '100%', height: 'calc(100vh - 40px)' }}>
+                <ReactFlowProvider>
+                    <ReactFlow
+                        nodes={stateNodes}
+                        edges={stateEdges}
+                        nodeTypes={nodeTypes}
+                        edgeTypes={edgeTypes}
+                        fitView
+                    >
+                        <Background />
+                        <Controls />
+                    </ReactFlow>
+                </ReactFlowProvider>
+            </div>
+        </div>
+    );
+}
