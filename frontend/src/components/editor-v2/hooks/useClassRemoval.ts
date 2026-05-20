@@ -246,6 +246,8 @@ export function useClassRemoval(
         // Step 3: Remove all edges involving B from RF
         if (analysis.connectedEdgeIds.length > 0) {
             const edgeIdSet = new Set(analysis.connectedEdgeIds);
+            // [DIAG9] TEMP — map all setEdges callers (T2/T4 discovery)
+            console.log('[diag9] setEdges (updater)', { location: 'useClassRemoval-removeClass', timestamp: performance.now().toFixed(2), note: 'updater function — cannot inspect input count' });
             setEdges(eds => applyDistribution(eds.filter(e => !edgeIdSet.has(e.id))));
         }
 

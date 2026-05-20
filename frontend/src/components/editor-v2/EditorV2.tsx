@@ -327,6 +327,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             // Initial sync assigns all edges handle index 0; distribution
             // assigns correct indices based on spatial ordering.
             if (applyDistributionRef.current) {
+                // [DIAG9] TEMP — map all setEdges callers (T2/T4 discovery)
+                // eslint-disable-next-line no-console
+                console.log('[diag9] setEdges (updater)', { location: 'EditorV2-onInit-distribution', timestamp: performance.now().toFixed(2), note: 'updater function — cannot inspect input count' });
                 setEdges(eds => applyDistributionRef.current!(eds));
             }
         }, 50);
@@ -380,6 +383,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
     useEffect(() => {
         if (liveRefNameMap.size === 0) return;
+        // [DIAG9] TEMP — map all setEdges callers (T2/T4 discovery)
+        // eslint-disable-next-line no-console
+        console.log('[diag9] setEdges (updater)', { location: 'EditorV2-liveRefNameSync', timestamp: performance.now().toFixed(2), note: 'updater function — cannot inspect input count', liveRefNameMapSize: liveRefNameMap.size });
         setEdges(currentEdges => {
             let changed = false;
             const result = currentEdges.map(e => {
@@ -704,6 +710,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             const { nodeId, modelId } = (event as CustomEvent).detail || {};
             if (!nodeId || modelId !== modelid) return;
             setNodes(nds => nds.map(n => ({ ...n, selected: n.id === nodeId })));
+            // [DIAG9] TEMP — map all setEdges callers (T2/T4 discovery)
+            // eslint-disable-next-line no-console
+            console.log('[diag9] setEdges (updater)', { location: 'EditorV2-selectNode-event', timestamp: performance.now().toFixed(2), note: 'updater function — cannot inspect input count' });
             setEdges(eds => eds.map(e => ({ ...e, selected: false })));
             // Center the view on the selected node
             const targetNode = getNodes().find(n => n.id === nodeId);
@@ -1265,6 +1274,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 }),
             };
 
+            // [DIAG9] TEMP — map all setEdges callers (T2/T4 discovery)
+            // eslint-disable-next-line no-console
+            console.log('[diag9] setEdges (updater)', { location: 'EditorV2-pendingConnection-addEdge', timestamp: performance.now().toFixed(2), note: 'updater function — cannot inspect input count' });
             setEdges((eds) => {
                 return applyDistribution([...eds, newEdge]);
             });
@@ -1379,6 +1391,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 } as CompositionEdgeData | InstanceReferenceEdgeData,
             };
 
+            // [DIAG9] TEMP — map all setEdges callers (T2/T4 discovery)
+            // eslint-disable-next-line no-console
+            console.log('[diag9] setEdges (updater)', { location: 'EditorV2-m1ReferenceSelected-addEdge', timestamp: performance.now().toFixed(2), note: 'updater function — cannot inspect input count' });
             setEdges(eds => applyDistribution([...eds, newEdge]));
 
             // Temporal guard (same as M2 flow)
@@ -1409,6 +1424,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // Handle edge reconnection (drag endpoint to a new target/source)
     const handleReconnect = useCallback(
         (oldEdge: Edge, newConnection: Connection) => {
+            // [DIAG9] TEMP — map all setEdges callers (T2/T4 discovery)
+            // eslint-disable-next-line no-console
+            console.log('[diag9] setEdges (updater)', { location: 'EditorV2-handleReconnect', timestamp: performance.now().toFixed(2), note: 'updater function — cannot inspect input count' });
             setEdges((eds) => {
                 const updated = reconnectEdge(oldEdge, newConnection, eds);
                 return applyDistribution(updated);
@@ -1665,6 +1683,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 if (otherNodes.length > 0) {
                     setNodes(nds => nds.filter(n => !otherIds.has(n.id)));
                 }
+                // [DIAG9] TEMP — map all setEdges callers (T2/T4 discovery)
+                // eslint-disable-next-line no-console
+                console.log('[diag9] setEdges (updater)', { location: 'EditorV2-deleteSelected-jjom-otherNodes', timestamp: performance.now().toFixed(2), note: 'updater function — cannot inspect input count' });
                 setEdges(eds => applyDistribution(
                     eds.filter(e =>
                         !selectedEdges.some(se => se.id === e.id) &&
@@ -1685,6 +1706,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             takeSnapshot();
             const nodeIds = new Set(selectedNodes.map(n => n.id));
             setNodes(nds => nds.filter(n => !nodeIds.has(n.id)));
+            // [DIAG9] TEMP — map all setEdges callers (T2/T4 discovery)
+            // eslint-disable-next-line no-console
+            console.log('[diag9] setEdges (updater)', { location: 'EditorV2-deleteSelected-nonjjom', timestamp: performance.now().toFixed(2), note: 'updater function — cannot inspect input count' });
             setEdges(eds => applyDistribution(
                 eds.filter(e =>
                     !selectedEdges.some(se => se.id === e.id) &&
@@ -1708,6 +1732,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             }
             takeSnapshot();
             setNodes((nds) => nds.filter((n) => n.id !== nodeId));
+            // [DIAG9] TEMP — map all setEdges callers (T2/T4 discovery)
+            // eslint-disable-next-line no-console
+            console.log('[diag9] setEdges (updater)', { location: 'EditorV2-deleteNode', timestamp: performance.now().toFixed(2), note: 'updater function — cannot inspect input count', nodeId });
             setEdges((eds) => applyDistribution(
                 eds.filter((e) => e.source !== nodeId && e.target !== nodeId)
             ));
@@ -1722,6 +1749,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         (edgeId: string) => {
             takeSnapshot();
             const edge = getEdges().find(e => e.id === edgeId);
+            // [DIAG9] TEMP — map all setEdges callers (T2/T4 discovery)
+            // eslint-disable-next-line no-console
+            console.log('[diag9] setEdges (updater)', { location: 'EditorV2-deleteEdge', timestamp: performance.now().toFixed(2), note: 'updater function — cannot inspect input count', edgeId });
             setEdges((eds) => applyDistribution(
                 eds.filter((e) => e.id !== edgeId)
             ));
@@ -1767,6 +1797,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         const state = undo();
         if (state) {
             setNodes(state.nodes);
+            // [DIAG9] TEMP — map all setEdges callers (T2/T4 discovery)
+            // eslint-disable-next-line no-console
+            console.log('[diag9] setEdges', { location: 'EditorV2-handleUndo', timestamp: performance.now().toFixed(2), edgeCount: state.edges.length, firstIds: state.edges.slice(0, 4).map((e: any) => e.id) });
             setEdges(state.edges);
             forceUpdate({});
 
@@ -1803,6 +1836,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         const state = redo();
         if (state) {
             setNodes(state.nodes);
+            // [DIAG9] TEMP — map all setEdges callers (T2/T4 discovery)
+            // eslint-disable-next-line no-console
+            console.log('[diag9] setEdges', { location: 'EditorV2-handleRedo', timestamp: performance.now().toFixed(2), edgeCount: state.edges.length, firstIds: state.edges.slice(0, 4).map((e: any) => e.id) });
             setEdges(state.edges);
             forceUpdate({});
 
@@ -1890,6 +1926,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             ...nds.map((n) => ({ ...n, selected: false })),
             ...newNodes,
         ]);
+        // [DIAG9] TEMP — map all setEdges callers (T2/T4 discovery)
+        // eslint-disable-next-line no-console
+        console.log('[diag9] setEdges (updater)', { location: 'EditorV2-duplicateSelected', timestamp: performance.now().toFixed(2), note: 'updater function — cannot inspect input count' });
         setEdges((eds) => [
             ...eds.map((e) => ({ ...e, selected: false })),
             ...newEdges,
@@ -1899,6 +1938,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // Select all nodes
     const selectAll = useCallback(() => {
         setNodes((nds) => nds.map((n) => ({ ...n, selected: true })));
+        // [DIAG9] TEMP — map all setEdges callers (T2/T4 discovery)
+        // eslint-disable-next-line no-console
+        console.log('[diag9] setEdges (updater)', { location: 'EditorV2-selectAll', timestamp: performance.now().toFixed(2), note: 'updater function — cannot inspect input count' });
         setEdges((eds) => eds.map((e) => ({ ...e, selected: true })));
     }, [setNodes, setEdges]);
 
@@ -2053,6 +2095,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 const tgtSide = 'left';
                 const srcIdx = getNextFreeHandleIndex(parentNode.id, srcSide, 'source', currentEdges);
                 const tgtIdx = getNextFreeHandleIndex(vertexId, tgtSide, 'target', currentEdges);
+                // [DIAG9] TEMP — map all setEdges callers (T2/T4 discovery)
+                // eslint-disable-next-line no-console
+                console.log('[diag9] setEdges (updater)', { location: 'EditorV2-dropCreateCompositionEdge', timestamp: performance.now().toFixed(2), note: 'updater function — cannot inspect input count' });
                 setEdges(eds => [...eds, {
                     id: edgeId,
                     source: parentNode.id,
@@ -2350,6 +2395,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     icon: 'bi-arrow-counterclockwise',
                     onClick: () => {
                         takeSnapshot();
+                        // [DIAG9] TEMP — map all setEdges callers (T2/T4 discovery)
+                        // eslint-disable-next-line no-console
+                        console.log('[diag9] setEdges (updater)', { location: 'EditorV2-resetRoutingMenu', timestamp: performance.now().toFixed(2), note: 'updater function — cannot inspect input count' });
                         setEdges((eds) =>
                             eds.map((ed) =>
                                 ed.id === contextMenu.edgeId
@@ -2506,6 +2554,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         if (updates.length > 0) syncPositionBatchToJjom(updates);
 
         // Re-distribute port handles and fit the view
+        // [DIAG9] TEMP — map all setEdges callers (T2/T4 discovery)
+        // eslint-disable-next-line no-console
+        console.log('[diag9] setEdges (updater)', { location: 'EditorV2-handleAutoLayout', timestamp: performance.now().toFixed(2), note: 'updater function — cannot inspect input count' });
         setEdges(eds => applyDistribution(eds));
         requestAnimationFrame(() => fitView({ padding: 0.2, maxZoom: 1, duration: 300 }));
     }, [getNodes, getEdges, setNodes, setEdges, fitView, applyDistribution]);
@@ -2543,6 +2594,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const handleEdgeChange = useCallback(
         (edgeId: string, data: Partial<Edge>) => {
             takeSnapshot();
+            // [DIAG9] TEMP — map all setEdges callers (T2/T4 discovery)
+            // eslint-disable-next-line no-console
+            console.log('[diag9] setEdges (updater)', { location: 'EditorV2-handleEdgeChange', timestamp: performance.now().toFixed(2), note: 'updater function — cannot inspect input count', edgeId });
             setEdges((eds) => {
                 const updated = eds.map((e) => (e.id === edgeId ? { ...e, ...data } : e));
                 return applyDistribution(updated);
@@ -2555,6 +2609,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const convertToInheritance = useCallback(
         (edgeId: string) => {
             takeSnapshot();
+            // [DIAG9] TEMP — map all setEdges callers (T2/T4 discovery)
+            // eslint-disable-next-line no-console
+            console.log('[diag9] setEdges (updater)', { location: 'EditorV2-convertToInheritance', timestamp: performance.now().toFixed(2), note: 'updater function — cannot inspect input count', edgeId });
             setEdges((eds) =>
                 eds.map((e) =>
                     e.id === edgeId
@@ -2570,6 +2627,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const convertToReference = useCallback(
         (edgeId: string) => {
             takeSnapshot();
+            // [DIAG9] TEMP — map all setEdges callers (T2/T4 discovery)
+            // eslint-disable-next-line no-console
+            console.log('[diag9] setEdges (updater)', { location: 'EditorV2-convertToReference', timestamp: performance.now().toFixed(2), note: 'updater function — cannot inspect input count', edgeId });
             setEdges((eds) =>
                 eds.map((e) =>
                     e.id === edgeId
@@ -2653,6 +2713,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     }
                 }
 
+                // [DIAG9] TEMP — map all setEdges callers (T2/T4 discovery)
+                // eslint-disable-next-line no-console
+                console.log('[diag9] setEdges (updater)', { location: 'EditorV2-onNodesChange-hysteresis', timestamp: performance.now().toFixed(2), note: 'updater function — cannot inspect input count' });
                 setEdges((currentEdges) => {
                     const now = Date.now();
                     const edgesToRecalculate = currentEdges.filter(
@@ -2826,6 +2889,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const recalculateAnchors = useCallback(
         (edgeId: string) => {
             const nodeRectsMap = new Map(nodes.map((n) => [n.id, getNodeRect(n)]));
+            // [DIAG9] TEMP — map all setEdges callers (T2/T4 discovery)
+            // eslint-disable-next-line no-console
+            console.log('[diag9] setEdges (updater)', { location: 'EditorV2-recalculateAnchors', timestamp: performance.now().toFixed(2), note: 'updater function — cannot inspect input count', edgeId });
             setEdges((currentEdges) => {
                 const edge = currentEdges.find(e => e.id === edgeId);
                 if (!edge) return currentEdges;
@@ -2934,6 +3000,15 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // Canvas inner JSX — extracted so the same React Flow tree can be embedded
     // either in the standalone `.editor-v2__canvas` (flow / no-viewpoint) or
     // inside the `.editor-split-flow` pane (split mode).
+
+    // Subito sopra il <ReactFlow ... edgeTypes={edgeTypes} ...>
+console.log('[diag9] ReactFlow props:', {
+    nodeCount: nodes.length,
+    edgeCount: edges.length,
+    edgeIds: edges.map(e => e.id),
+    sampleEdge: edges[0],
+});
+
     const flowCanvas = (
         <>
             <ReactFlow

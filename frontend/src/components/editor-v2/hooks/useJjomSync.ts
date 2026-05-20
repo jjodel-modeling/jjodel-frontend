@@ -246,6 +246,9 @@ export function useJjomSync(
                 setNodes(prev => nodeFns.reduce((acc, fn) => fn(acc), prev));
             }
             if (edgeFns.length > 0) {
+                // [DIAG9] TEMP — map all setEdges callers (T2/T4 discovery)
+                // eslint-disable-next-line no-console
+                console.log('[diag9] setEdges (updater)', { location: 'useJjomSync-scheduleFlush-rAF', timestamp: performance.now().toFixed(2), note: 'updater function — cannot inspect input count', pendingFnCount: edgeFns.length });
                 setEdges(prev => edgeFns.reduce((acc, fn) => fn(acc), prev));
             }
         });
@@ -908,6 +911,20 @@ export function useJjomSync(
             });
             // [DIAG6] TEMP — track setEdges call (extended)
             // eslint-disable-next-line no-console
+
+         console.log('[diag8] rfEdges JSON:', JSON.stringify(
+  rfEdgesToSet.map((e: any) => ({ 
+    id: e.id, 
+    source: e.source, 
+    target: e.target, 
+    sourceHandle: e.sourceHandle,
+    targetHandle: e.targetHandle,
+    type: e.type 
+  })),
+  null, 2
+));
+
+
             console.log('[diag6] setEdges call', {
                 graphId: graphInfo?.graphId,
                 rfEdgeCount: rfEdgesToSet.length,
@@ -920,6 +937,9 @@ export function useJjomSync(
                     data: e?.data ? Object.keys(e.data) : null,
                 })),
             });
+            // [DIAG9] TEMP — map all setEdges callers (T2/T4 discovery)
+            // eslint-disable-next-line no-console
+            console.log('[diag9] setEdges', { location: 'useJjomSync-init-effect', timestamp: performance.now().toFixed(2), edgeCount: rfEdgesToSet.length, firstIds: rfEdgesToSet.slice(0, 4).map((e: any) => e.id) });
             setEdges(rfEdgesToSet);
 
             initializedRef.current = true;

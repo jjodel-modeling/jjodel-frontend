@@ -93,6 +93,8 @@ function UnifiedEdge(props: EdgeProps) {
     useEffect(() => {
         if (autoEdit) {
             setEditing(true);
+            // [DIAG9] TEMP — map all setEdges callers (T2/T4 discovery)
+            console.log('[diag9] setEdges (updater)', { location: 'UnifiedEdge-clear-autoEdit', timestamp: performance.now().toFixed(2), note: 'updater function — cannot inspect input count', edgeId: id });
             setEdges(edges => edges.map(e =>
                 e.id === id ? { ...e, data: { ...e.data, autoEdit: undefined } } : e
             ));
@@ -232,6 +234,8 @@ function UnifiedEdge(props: EdgeProps) {
         setEditing(false);
 
         // 1. Update RF edge: both label and data.reference.name
+        // [DIAG9] TEMP — map all setEdges callers (T2/T4 discovery)
+        console.log('[diag9] setEdges (updater)', { location: 'UnifiedEdge-commitLabel', timestamp: performance.now().toFixed(2), note: 'updater function — cannot inspect input count', edgeId: id });
         setEdges((edges) =>
             edges.map((e) => {
                 if (e.id !== id) return e;
