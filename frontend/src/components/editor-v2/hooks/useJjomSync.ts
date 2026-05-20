@@ -895,15 +895,30 @@ export function useJjomSync(
             prevSubElementsRef.current = subElementIds;
 
             // Push to React Flow state
-            setNodes(Array.from(nodeCache.values()));
+            const rfNodesToSet = Array.from(nodeCache.values());
+            setNodes(rfNodesToSet);
 
             const rfEdgesToSet = deduplicateInheritanceEdges(Array.from(edgeCache.values()));
-            // [DIAG6] TEMP — track setEdges call
+            // [DIAG7] TEMP — registered RF node ids (for comparison with [diag6] edge source/target)
+            // eslint-disable-next-line no-console
+            console.log('[diag7] RF nodes registered', {
+                graphId: graphInfo?.graphId,
+                nodeCount: rfNodesToSet.length,
+                nodeIds: rfNodesToSet.map((n: any) => n?.id),
+            });
+            // [DIAG6] TEMP — track setEdges call (extended)
             // eslint-disable-next-line no-console
             console.log('[diag6] setEdges call', {
                 graphId: graphInfo?.graphId,
                 rfEdgeCount: rfEdgesToSet.length,
-                rfEdgeIdsTail: rfEdgesToSet.map((e: any) => e?.id?.slice(-15)),
+                rfEdges: rfEdgesToSet.map((e: any) => ({
+                    id: e?.id?.slice(-20),
+                    source: e?.source,
+                    target: e?.target,
+                    type: e?.type,
+                    label: typeof e?.label === 'string' ? e.label : '<non-string>',
+                    data: e?.data ? Object.keys(e.data) : null,
+                })),
             });
             setEdges(rfEdgesToSet);
 
