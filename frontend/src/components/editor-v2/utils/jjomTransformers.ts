@@ -377,11 +377,45 @@ function computeOptimalHandles(
  * Returns null if the edge cannot be mapped.
  */
 export function jjomEdgeToRFEdge(edge: any): Edge | null {
-    if (!edge) return null;
+    // [DIAG5] TEMP — discriminare ipotesi NULL-return per inverse Member→Family.
+    // Field names adattati alla shape reale dell'edge JjOM (start/end/isReference/isExtend/model.name).
+    // eslint-disable-next-line no-console
+    console.log('[diag5] jjomEdgeToRFEdge IN', {
+        edgeId: edge?.id?.slice(-20),
+        startId: edge?.start?.id?.slice(-15),
+        endId: edge?.end?.id?.slice(-15),
+        isReference: edge?.isReference,
+        isExtend: edge?.isExtend,
+        refName: edge?.model?.name ?? '<no-name>',
+        refId: edge?.model?.id?.slice(-15),
+        hasModel: !!edge?.model,
+    });
+
+    if (!edge) {
+        // [DIAG5] TEMP — track exit point
+        // eslint-disable-next-line no-console
+        console.log('[diag5] jjomEdgeToRFEdge OUT', {
+            edgeId: edge?.id?.slice(-20),
+            exitPoint: 'guard-no-edge',
+            result: 'NULL',
+        });
+        return null;
+    }
 
     const startVertex = edge.start;
     const endVertex = edge.end;
-    if (!startVertex?.id || !endVertex?.id) return null;
+    if (!startVertex?.id || !endVertex?.id) {
+        // [DIAG5] TEMP — track exit point
+        // eslint-disable-next-line no-console
+        console.log('[diag5] jjomEdgeToRFEdge OUT', {
+            edgeId: edge?.id?.slice(-20),
+            exitPoint: 'guard-no-endpoints',
+            result: 'NULL',
+            hasStartId: !!startVertex?.id,
+            hasEndId: !!endVertex?.id,
+        });
+        return null;
+    }
 
     // Compute optimal handle sides from vertex positions
     const isInheritance = !!edge.isExtend;
@@ -414,6 +448,13 @@ export function jjomEdgeToRFEdge(edge: any): Edge | null {
         });
 
         if (isComposition) {
+            // [DIAG5] TEMP — track exit point
+            // eslint-disable-next-line no-console
+            console.log('[diag5] jjomEdgeToRFEdge OUT', {
+                edgeId: edge?.id?.slice(-20),
+                exitPoint: 'm1-composition',
+                result: 'OK',
+            });
             return {
                 id: edge.id,
                 source: startVertex.id,
@@ -429,6 +470,13 @@ export function jjomEdgeToRFEdge(edge: any): Edge | null {
             };
         }
 
+        // [DIAG5] TEMP — track exit point
+        // eslint-disable-next-line no-console
+        console.log('[diag5] jjomEdgeToRFEdge OUT', {
+            edgeId: edge?.id?.slice(-20),
+            exitPoint: 'm1-instance-ref',
+            result: 'OK',
+        });
         return {
             id: edge.id,
             source: startVertex.id,
@@ -473,6 +521,14 @@ export function jjomEdgeToRFEdge(edge: any): Edge | null {
             setEdgeRefId(edge.id, refModel.id);
         }
 
+        // [DIAG5] TEMP — track exit point
+        // eslint-disable-next-line no-console
+        console.log('[diag5] jjomEdgeToRFEdge OUT', {
+            edgeId: edge?.id?.slice(-20),
+            exitPoint: 'm2-reference',
+            result: 'OK',
+            refName: refModel?.name,
+        });
         return {
             id: edge.id,
             source: startVertex.id,
@@ -486,6 +542,13 @@ export function jjomEdgeToRFEdge(edge: any): Edge | null {
     }
 
     if (edge.isExtend) {
+        // [DIAG5] TEMP — track exit point
+        // eslint-disable-next-line no-console
+        console.log('[diag5] jjomEdgeToRFEdge OUT', {
+            edgeId: edge?.id?.slice(-20),
+            exitPoint: 'inheritance',
+            result: 'OK',
+        });
         // Inheritance edge: source extends target
         return {
             id: edge.id,
@@ -498,6 +561,13 @@ export function jjomEdgeToRFEdge(edge: any): Edge | null {
         };
     }
 
+    // [DIAG5] TEMP — track exit point
+    // eslint-disable-next-line no-console
+    console.log('[diag5] jjomEdgeToRFEdge OUT', {
+        edgeId: edge?.id?.slice(-20),
+        exitPoint: 'fallback-reference',
+        result: 'OK',
+    });
     // Fallback: treat as a generic reference edge
     return {
         id: edge.id,

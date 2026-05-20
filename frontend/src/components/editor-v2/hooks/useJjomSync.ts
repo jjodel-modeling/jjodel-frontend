@@ -860,7 +860,14 @@ export function useJjomSync(
             const vertices: any[] = lGraph.nodes ?? [];
             const edges: any[] = lGraph.edges ?? [];
 
-
+            // [DIAG6] TEMP — discriminare ipotesi double-run init effect.
+            // eslint-disable-next-line no-console
+            console.log('[diag6] init effect run', {
+                graphId: graphInfo?.graphId,
+                edgesFromLGetter: edges?.length ?? -1,
+                edgeIdsTail: edges?.map((e: any) => e?.id?.slice(-15)) ?? [],
+                timestamp: (typeof performance !== 'undefined' ? performance.now() : Date.now()).toFixed(2),
+            });
 
             const nodeCache = new Map<string, Node>();
             const edgeCache = new Map<string, Edge>();
@@ -890,7 +897,15 @@ export function useJjomSync(
             // Push to React Flow state
             setNodes(Array.from(nodeCache.values()));
 
-            setEdges(deduplicateInheritanceEdges(Array.from(edgeCache.values())));
+            const rfEdgesToSet = deduplicateInheritanceEdges(Array.from(edgeCache.values()));
+            // [DIAG6] TEMP — track setEdges call
+            // eslint-disable-next-line no-console
+            console.log('[diag6] setEdges call', {
+                graphId: graphInfo?.graphId,
+                rfEdgeCount: rfEdgesToSet.length,
+                rfEdgeIdsTail: rfEdgesToSet.map((e: any) => e?.id?.slice(-15)),
+            });
+            setEdges(rfEdgesToSet);
 
             initializedRef.current = true;
 
