@@ -74,6 +74,7 @@ export interface XMIImportResult {
     metamodel?: LModel;  // Extracted embedded metamodel if present
     errors: string[];
     warnings: string[];
+    pattern?: 'wrapper' | 'single-root';  // Discriminated XMI root pattern (populated by importM1FromXML)
 }
 
 // Context shared across the recursive walker (B.2 + B.3).
@@ -676,7 +677,7 @@ export class XMIService {
             });
 
             const lModel: LModel = LPointerTargetable.fromD(dModel) as LModel;
-            return { success: true, model: lModel, errors, warnings };
+            return { success: true, model: lModel, errors, warnings, pattern: isWrapper ? 'wrapper' : 'single-root' };
 
         } catch (error) {
             return {

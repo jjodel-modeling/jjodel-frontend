@@ -52,6 +52,7 @@ import { DonationBanner } from './components/DonationBanner/DonationBanner';
 import HelpDrawer from './components/HelpDrawer';
 import ExplainModal from './components/ExplainModal';
 import WelcomeModal from './components/WelcomeModal';
+import ImportSummaryModal from './components/import/ImportSummaryModal';
 
 let firstLoading = true;
 let browserData = U.getOSBrowserData();
@@ -168,6 +169,7 @@ function App(props: AllProps): JSX.Element {
                 {user && <Try><ExplainModal/></Try>}
                 {user && <Try><DonationBanner/></Try>}
                 {user && <Try><WelcomeModal/></Try>}
+                <Try><ImportSummaryModal/></Try>
 
             </div>
         </TreeViewPanelProvider>
