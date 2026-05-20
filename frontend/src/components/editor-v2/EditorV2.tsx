@@ -3009,6 +3009,80 @@ console.log('[diag9] ReactFlow props:', {
     sampleEdge: edges[0],
 });
 
+    // [diag10] one-shot: discriminate T4 (mutated edge data) vs T5 (DOM handle mismatch).
+    // Fires once when nodeCount=2 and edgeCount=8 — compares edge endpoints in the RF store
+    // against the [data-handleid] DOM nodes inside the RF wrapper, after one rAF tick so
+    // RF has had a chance to render its handles.
+    if (
+        edges.length === 8 &&
+        nodes.length === 2 &&
+        !(window as any).__diag10Fired
+    ) {
+        (window as any).__diag10Fired = true;
+        const edgesAtFire = edges;
+        requestAnimationFrame(() => {
+            const containerEl = document.querySelector('.editor-v2__canvas') as HTMLElement | null;
+            const wrapper = containerEl ?? (document.querySelector('.react-flow') as HTMLElement | null);
+
+            const handleEls = wrapper ? Array.from(wrapper.querySelectorAll('[data-handleid]')) as HTMLElement[] : [];
+            const handles = handleEls.map(el => ({
+                dataNodeId: el.getAttribute('data-nodeid') ?? null,
+                dataHandleId: el.getAttribute('data-handleid') ?? null,
+                dataHandlePos: el.getAttribute('data-handlepos') ?? null,
+                dataIdRaw: el.getAttribute('data-id') ?? null,
+            }));
+
+            const edgesSnapshot = edgesAtFire.map(e => ({
+                id: e.id,
+                source: e.source,
+                target: e.target,
+                sourceHandle: e.sourceHandle ?? null,
+                targetHandle: e.targetHandle ?? null,
+                kind: (e.data as any)?.kind ?? null,
+                refId: (e.data as any)?.refId ?? null,
+            }));
+
+            const diff = edgesSnapshot.map(e => {
+                const srcOk = handles.some(h =>
+                    h.dataNodeId === e.source && h.dataHandleId === (e.sourceHandle ?? '')
+                );
+                const tgtOk = handles.some(h =>
+                    h.dataNodeId === e.target && h.dataHandleId === (e.targetHandle ?? '')
+                );
+                return {
+                    id: e.id,
+                    source: e.source,
+                    target: e.target,
+                    sourceHandle: e.sourceHandle,
+                    targetHandle: e.targetHandle,
+                    sourceHandleFound: srcOk,
+                    targetHandleFound: tgtOk,
+                };
+            });
+
+            // eslint-disable-next-line no-console
+            console.log('[diag10] handle DOM inventory', {
+                wrapperFound: !!wrapper,
+                wrapperClass: wrapper?.className,
+                handleCount: handles.length,
+                handles,
+            });
+            // eslint-disable-next-line no-console
+            console.log('[diag10] edge endpoints snapshot', edgesSnapshot);
+            // eslint-disable-next-line no-console
+            console.log('[diag10] diff edge -> handle presence', diff);
+
+            const missing = diff.filter(d => !d.sourceHandleFound || !d.targetHandleFound);
+            // eslint-disable-next-line no-console
+            console.log('[diag10] SUMMARY', {
+                totalEdges: edgesSnapshot.length,
+                domHandles: handles.length,
+                edgesWithMissingEndpoints: missing.length,
+                missing,
+            });
+        });
+    }
+
     const flowCanvas = (
         <>
             <ReactFlow

@@ -1,5 +1,15 @@
 # Claude Code Session Log
 
+## 2026-05-20 — diag: diag10 handle DOM vs edge endpoints
+
+**Prompt**: diag10 — discriminante T4 vs T5 sul bug v2-flow 4/8 edge. Inserito blocco one-shot in EditorV2.tsx (~r3005) che alla prima volta in cui edges.length===8 e nodes.length===2 fa un confronto DOM handles (`[data-handleid]` dentro `.editor-v2__canvas` con fallback `.react-flow`) vs edge endpoints, dentro un `requestAnimationFrame` per dare a RF un tick per renderizzare. Logga 4 console.log: handle DOM inventory, edge endpoints snapshot, diff edge→handle presence, SUMMARY con count edge senza handle. Guard `window.__diag10Fired` per one-shot.
+**File toccati**: frontend/src/components/editor-v2/EditorV2.tsx
+**Esito**: ✅ build verde (38.39s), da eseguire smoke import Families.ecore.
+**Note**: solo additivo, non rimossi `[diag9]` né altri diag precedenti. Variabili in scope sono `nodes`/`edges` (non `rfNodes`/`rfEdges` come nel template del prompt).
+**Nome del documento prompt**: 2026-05-20_diag10_handle_dom_vs_edge_endpoints.md
+
+---
+
 ## 2026-05-19 — fix(v2-flow): dedup edges by refId, not by src→tgt pair
 **Prompt**: Multiple EReference between same src/tgt pair were collapsed to single edge due to dedup key being `${srcVertex}→${tgtVertex}` in `useJjomSync.ts` (M2 main loop, pre-count, M1 main loop). Fix: dedup by composite `${refId}:${srcVertex}→${tgtVertex}` (opzione B), no `syncState.ts` changes. `hasCanvasEdgePair` removed from reference paths (pair-based, blocks siblings); replaced by an idlookup safety-net scan for race-window protection. Inheritance path unchanged (pair-based is correct: 1 extend per pair).
 **File toccati**: frontend/src/components/editor-v2/hooks/useJjomSync.ts
