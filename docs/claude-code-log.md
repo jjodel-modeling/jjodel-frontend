@@ -1,5 +1,48 @@
 # Claude Code Session Log
 
+## 2026-05-19 — fix(import): Accurate counters via __raw + Dashboard refresh trigger
+**Prompt**: Bug 1 (conteggi a 0): counter bypass via __raw invece di L-getter post-parse non sincronizzato. Bug 2 (Dashboard vuota): tick state per triggerare re-render dopo project.metamodels = [...]. Cleanup 10 diag logs.
+**File toccati**: frontend/src/components/import/buildImportSummary.ts, frontend/src/components/project/ProjectEditor.tsx
+**Esito**: ✅ completato (primo round) — counter ancora a 0 in browser, diag3/diag4 hanno rivelato che anche `DPackage.classes` forward-link è vuoto al momento di buildEcoreImportSummary (SetFieldAction batched non ancora applicato dal reducer).
+**Nome del documento prompt**: 2026-05-19_HHMM_fix_counters_and_dashboard_refresh.md
+
+---
+
+## 2026-05-19 — fix(import): Counter via idlookup filter on (className + father)
+**Prompt**: Bug 1 fix definitivo. Diag3/diag4 hanno chiuso la diagnosi: `lookupRaw(pkgId)` funziona ma il DPackage ha `classes: []`. Backward link `father` invece è eagerly popolato dal parser. Sostituita la navigazione forward (`pkg.classes → DClass[]`) con filtro su `state.idlookup` per `(className === 'DClass' && father in allPackageIds)`. Stesso pattern per attributes/references (father in allClassIds), enums/datatypes (father in allPackageIds). XMI: DObject/DValue counter su modelId. Rimossi i 15 diag log (6 diag3 + 9 diag4) e gli helper `countAllInPackagesFromRaw`, `countAllPackagesFromRaw`, `countAllAttributesFromRaw`, `countAllReferencesFromRaw` ora obsoleti.
+**File toccati**: frontend/src/components/import/buildImportSummary.ts
+**Esito**: ✅ build verde (36.51s), 0 console.log, 0 diag
+**Nome del documento prompt**: 2026-05-19_HHMM_fix_counter_via_idlookup_filter.md
+
+---
+
+## 2026-05-19 — feat(import): Import summary modal for .ecore and .xmi
+
+**Prompt**: Modale unico riassuntivo post-import. Sostituisce 4 `U.alert` nei `catch` handler con dispatch di summary tipizzato. Warning channel: delta `Log.messageMapping['w']` per Ecore, `result.warnings` per XMI. Pattern XMI esposto via micro-modifica a `XMIImportResult`.
+
+**File toccati**:
+- `frontend/src/components/import/ImportSummary.types.ts` (NEW, 41 righe): tipi `ImportStatus`, `EcoreImportSummary`, `XmiImportSummary`, union `ImportSummary`. Discriminato da `kind: 'metamodel' | 'model'`.
+- `frontend/src/components/import/buildImportSummary.ts` (NEW, 160 righe): 3 pure functions `buildEcoreImportSummary`, `buildXmiImportSummary`, `buildErrorImportSummary`. BFS dedup-safe su `LPackage.subpackages` per `packageCount`. Conteggi `own` (non `allAttributes`). `dataTypeCount: 0` placeholder per gap discovery 17/05. nsURI da `pkg.__raw.uri` con fallback `(name: <pkg.name>)`.
+- `frontend/src/components/import/dispatchImportSummary.ts` (NEW, 8 righe): helper `dispatchImportSummary(summary)` → `CustomEvent(JjodelEvents.IMPORT_SUMMARY_SHOW)`.
+- `frontend/src/components/import/ImportSummaryModal.tsx` (NEW, 308 righe): componente React. Listener globale CustomEvent + `useState` locale. Header (icona+title+close), body sezionato (File/Identity/Statistics/Warnings/Error), footer (Copy details + Close). ESC + click backdrop chiudono. Focus iniziale su Close. `formatSummaryForClipboard()` interno per il Copy.
+- `frontend/src/components/import/ImportSummaryModal.scss` (NEW, 230 righe): BEM scoped. Side-stripe `::before` 4px con colori `--color-success/warning/error`. Width fissa 560px, `--z-modal` (9999). Token-only — zero hex hardcoded oltre `rgba(0,0,0,0.45)` del backdrop.
+- `frontend/src/events/registry.ts` (+2 righe): aggiunta `IMPORT_SUMMARY_SHOW: 'jjodel:import-summary-show'` in `JjodelEvents`.
+- `frontend/src/services/export/XMIService.ts` (+3 righe): aggiunto `pattern?: 'wrapper' | 'single-root'` a `XMIImportResult` + popolato nel return success di `importM1FromXML` via `isWrapper ? 'wrapper' : 'single-root'`.
+- `frontend/src/App.tsx` (+2 righe): import `ImportSummaryModal` + mount come ultimo figlio di `.router-wrapper` sotto `<WelcomeModal/>`.
+- `frontend/src/components/project/ProjectEditor.tsx` (+~50 / -8 righe): aggiunto `Log` agli import joiner + helper modale. `handleEcoreFileChange`: snapshot `messageMapping['w'].length` prima dell'import + delta dopo per raccogliere warning (`short_string`), poi `dispatchImportSummary(buildEcoreImportSummary(...))`. `handleXmiFileChange`: stessa pipeline con `result.warnings` + `result.pattern`. Ramo `catch` di entrambi: `dispatchImportSummary(buildErrorImportSummary(...))`. Rimossi i 4 `U.alert` import-related (success+error per ognuno dei due handler). Project linking (Bug F fix), `markDirty()`, `console.warn` ridondante e reset input preservati intatti.
+
+**Esito**:
+- ✅ Build verde (`npm run build` in 1m 17s, zero TS errors).
+- ✅ 5 file nuovi + 4 file edit. Totale ~800 righe aggiunte, ~8 rimosse.
+- ✅ `grep "U\.alert" ProjectEditor.tsx` post-edit: 20 occorrenze rimanenti, tutte fuori dai due handler import (save, export, transformation flow). I 4 import-related (linee 810, 823, 858, 870 pre-edit) rimossi.
+- ✅ `grep "Imported.*from Ecore|Could not import Ecore|Imported.*from XMI|Could not import XMI"` post-edit: zero match.
+
+**Hard rule rispettate**: zero touch a `data.ts`, `LModelElement.tsx`, `Log.ts`. Solo lettura. Zero refactoring opportunistico. Zero `--no-verify` o skip-hooks. Token-only SCSS (eccetto `rgba(0,0,0,0.45)` backdrop). Nessuna nuova dipendenza npm. Niente em dashes nelle stringhe user-facing. Niente Redux: state via `useState` + CustomEvent globale (pattern Toast).
+
+**Nome del documento prompt**: 2026-05-19_implement_import_summary_modal_b.md
+
+---
+
 ## 2026-05-18 — fix(ecore-io): W2 exporter eType name-collision (pre-commit completion)
 
 **Prompt**: `docs/2026-05-18_W2_export_etype_fix.md` (follow-up alla discovery `2026-05-18_W2_discovery_export_etype.md`).
