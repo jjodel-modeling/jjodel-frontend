@@ -1,5 +1,14 @@
 # Claude Code Session Log
 
+## 2026-05-21 — fix: role-aware physical positioning of handles in DynamicHandles
+**Prompt**: 8 anchor distinti sul lato dei nodi v2-flow per evitare sovrapposizione source/target sullo stesso (side, index); source nella metà superiore/sinistra, target nella metà inferiore/destra.
+**File toccati**: frontend/src/components/editor-v2/components/DynamicHandles.tsx
+**Esito**: ✅ completato, build verde (45.29s). Smoke test manuale richiesto su Families.ecore (verifica 8 anchor su Member.left) + un modello mono-direzionale (regression check).
+**Note**: completa il filone "8/8 edge rendering" su Families.ecore. La formula attuale era rank-based `(rank+1)/(count+1)` (NON index-based come ipotizzato dal prompt); è stata sostituita con index-based segregata per ruolo: `(index+0.5)/(2*MAX_HANDLES_PER_SIDE)` per source, `0.5 + same` per target. `activeHandles` da `Map<string,number>` a `Set<string>` (la posizione non viene più memorizzata, è calcolata direttamente nel loop di rendering per ruolo). Pool DOM invariato a `MAX_HANDLES_PER_SIDE = 4`. Contratto handleId invariato. `handleRoles` invariato. Nessun cambio in `portDistribution.ts`, `jjomTransformers.ts`, `useJjomSync.ts`.
+**Nome del documento prompt**: 2026-05-21 HH:mm fix_DynamicHandles_role_aware_positioning
+
+---
+
 ## 2026-05-21 — chore: clean up [cache] logging in jjscript executor
 **Prompt**: cleanup unificato `[diagN]` numerati residui + `[cache]` logging in jjscript executor (un solo commit, chiusura filone edge rendering). Fase 1+2 `[diagN]` era già stata completata in 82d590376 e 6701983b6; resta solo doc-comment storico in buildImportSummary.ts:10 (intenzionalmente preservato per documentare counter access strategy). Eseguita solo Fase 3.
 **File toccati**: frontend/src/jjscript/executor/utils.ts, docs/claude-code-log.md
