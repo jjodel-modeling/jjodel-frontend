@@ -1,5 +1,14 @@
 # Claude Code Session Log
 
+## 2026-05-21 — fix: union node handles across source/target buckets in STEP 4
+**Prompt**: completamento Modifica 3 del prompt role-aware bucketing. Le Modifiche 1+2 erano state committate in 89e67dc65 (chiave `:source`/`:target` in STEP 1), ma STEP 4 sovrascriveva ancora `config[side]` invece di unire i due bucket per stesso `(nodeId, side)`. Funzionava per caso solo su distribuzioni simmetriche (es. Families 4+4); rotto su asimmetriche (4+2 → mancavano indici).
+**File toccati**: frontend/src/components/editor-v2/utils/portDistribution.ts
+**Esito**: ✅ completato, build verde (1m 51s)
+**Note**: union append-only con dedup per handleId + ricalcolo position uniforme sul totale post-merge (necessario perché bucket di lunghezza diversa generano position non monotone se mantenute originali). Nessun cambio di firma. STEP 1/2/3 invariati. Smoke test manuale su Families.ecore ancora richiesto.
+**Nome del documento prompt**: 2026-05-21 HH:mm fix_portDistribution_role_aware_bucketing (replay parziale)
+
+---
+
 ## 2026-05-21 — chore: remove all residual diagN instrumentation
 **Prompt**: discovery + cleanup unificato di tutti i `[diagN]` numerati residui nel frontend. Filone edge rendering v2-flow chiuso.
 **File toccati**: frontend/src/components/editor-v2/utils/jjomTransformers.ts (diag5 ×8), frontend/src/components/editor-v2/hooks/useJjomSync.ts (diag6 ×2 + diag7 + diag8), frontend/src/components/editor-v2/edges/UnifiedEdge.tsx (diag9 ×2), frontend/src/components/editor-v2/edges/SegmentHandles.tsx (diag9 ×1), frontend/src/components/editor-v2/hooks/useClassRemoval.ts (diag9 ×1)
