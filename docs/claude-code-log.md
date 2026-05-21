@@ -1,5 +1,13 @@
 # Claude Code Session Log
 
+## 2026-05-21 — chore: clean up [cache] logging in jjscript executor
+**Prompt**: cleanup unificato `[diagN]` numerati residui + `[cache]` logging in jjscript executor (un solo commit, chiusura filone edge rendering). Fase 1+2 `[diagN]` era già stata completata in 82d590376 e 6701983b6; resta solo doc-comment storico in buildImportSummary.ts:10 (intenzionalmente preservato per documentare counter access strategy). Eseguita solo Fase 3.
+**File toccati**: frontend/src/jjscript/executor/utils.ts, docs/claude-code-log.md
+**Esito**: ✅ completato, build verde (52.22s). Censimento `[cache]`: 0 hit. Censimento `[diagN]`: 1 hit storico (doc-comment, esplicitamente preservato per scelta utente).
+**Nome del documento prompt**: 2026-05-21 13:40
+
+---
+
 ## 2026-05-21 — fix: union node handles across source/target buckets in STEP 4
 **Prompt**: completamento Modifica 3 del prompt role-aware bucketing. Le Modifiche 1+2 erano state committate in 89e67dc65 (chiave `:source`/`:target` in STEP 1), ma STEP 4 sovrascriveva ancora `config[side]` invece di unire i due bucket per stesso `(nodeId, side)`. Funzionava per caso solo su distribuzioni simmetriche (es. Families 4+4); rotto su asimmetriche (4+2 → mancavano indici).
 **File toccati**: frontend/src/components/editor-v2/utils/portDistribution.ts
