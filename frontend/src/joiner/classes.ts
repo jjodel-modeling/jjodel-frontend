@@ -3277,7 +3277,15 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     }
 
     protected get_metamodels(context: Context): this['metamodels'] {
-        return LModel.fromPointer(context.data.metamodels) || [];
+        let ret = context.data.metamodels || [];
+
+
+        let state = store.getState();
+        let ptrs: Pointer<any>[] = ret.map(r=> Pointers.from(r));
+        // add models saved in state but not in project.
+        ptrs.push(...(state.m2models || []));
+        // remove duplicates that were both in state and project.
+        return L.fromArr([...new Set(ptrs)]);
     }
     protected set_metamodels(val0: PackArr<this['metamodels']>, c: Context): boolean {
         let val = Pointers.from(val0);
@@ -3290,8 +3298,15 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     protected get_models(c: Context): this['models'] {
         let ret = (L.fromPointer(c.data.models) || []).filter(e=>!!e) as LModel[];
         if (ret.length !== c.data.models.length) this.set_models(ret.map(e=>e.id) as any, c); // fix for older projects
-        return ret;
+
+        let state = store.getState();
+        let ptrs: Pointer<any>[] = ret.map(r=> Pointers.from(r));
+        // add models saved in state but not in project.
+        ptrs.push(...(state.m1models || []));
+        // remove duplicates that were both in state and project.
+        return L.fromArr([...new Set(ptrs)]);
     }
+
     protected set_models(val0: PackArr<this['models']>, c: Context): boolean {
         let val = Pointers.from(val0);
         TRANSACTION(this.get_name(c)+'.models', () => {
