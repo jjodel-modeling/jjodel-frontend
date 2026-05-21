@@ -24,10 +24,69 @@ import {
     getEdgeCrossings,
     buildFinalPath,
 } from '../utils/edgeUtils';
+import { MAX_HANDLES_PER_SIDE } from '../utils/portDistribution';
 import { useEditorContextSafe } from '../contexts/EditorContext';
 import { useTreeLayout } from '../hooks/useTreeLayout';
 import { SegmentHandles } from './SegmentHandles';
 import { EndpointHandles } from './EndpointHandles';
+
+// Bundle spread: when multiple edges connect the same node pair, shift the
+// middle corridor of each path perpendicular to its longitudinal direction,
+// and stack the labels along the same axis, to avoid path/label collapse.
+// Spread offset is derived from the handle index extracted from
+// sourceHandleId/targetHandleId (format: "${side}-${index}").
+const BUNDLE_SPREAD_PX = 12;
+const LABEL_SPREAD_PX = 18;
+
+function getHandleIndex(handleId: string | null | undefined): number {
+    if (!handleId) return 0;
+    const m = handleId.match(/-(\d+)$/);
+    return m ? parseInt(m[1], 10) : 0;
+}
+
+/**
+ * Shift the middle corridor of a 4-point Manhattan Z-shape path perpendicular
+ * to its longitudinal axis, by an amount derived from the bundle handle indices.
+ * Returns the points unchanged when the path is not a Z-shape (L-shape with 3
+ * points, U-detour with 6 points, self-loop, etc.) — those cases keep the
+ * original routing.
+ */
+function applyBundleSpread(
+    points: { x: number; y: number }[],
+    sourceHandleId: string | null | undefined,
+    targetHandleId: string | null | undefined,
+): { x: number; y: number }[] {
+    if (points.length !== 4) return points;
+
+    const sourceIndex = getHandleIndex(sourceHandleId);
+    const targetIndex = getHandleIndex(targetHandleId);
+    const sourceSpread = (sourceIndex - (MAX_HANDLES_PER_SIDE - 1) / 2) * BUNDLE_SPREAD_PX;
+    const targetSpread = (targetIndex - (MAX_HANDLES_PER_SIDE - 1) / 2) * BUNDLE_SPREAD_PX;
+    const bundleSpread = (sourceSpread + targetSpread) / 2;
+
+    const p1 = points[1];
+    const p2 = points[2];
+    const isMiddleVertical = Math.abs(p1.x - p2.x) < 1;
+    const isMiddleHorizontal = Math.abs(p1.y - p2.y) < 1;
+
+    if (isMiddleVertical) {
+        return [
+            points[0],
+            { x: p1.x + bundleSpread, y: p1.y },
+            { x: p2.x + bundleSpread, y: p2.y },
+            points[3],
+        ];
+    }
+    if (isMiddleHorizontal) {
+        return [
+            points[0],
+            { x: p1.x, y: p1.y + bundleSpread },
+            { x: p2.x, y: p2.y + bundleSpread },
+            points[3],
+        ];
+    }
+    return points;
+}
 
 // ═══════════════════════════════════════════════════════════════
 // UnifiedEdge — single component for all edge types
@@ -128,13 +187,22 @@ function UnifiedEdge(props: EdgeProps) {
         [sourceX, sourceY, sourceSide, targetX, targetY, targetSide]
     );
 
-    // ─── Pipeline: parse → apply waypoints → round corners ───
+    // ─── Pipeline: parse → apply waypoints → bundle spread → round corners ───
     const rawPoints = useMemo(() => parsePathPoints(rawPath), [rawPath]);
     const adjustedPoints = useMemo(
         () => (waypoints.length > 0 ? applyWaypoints(rawPoints, waypoints) : rawPoints),
         [rawPoints, waypoints]
     );
     const adjustedPath = useMemo(() => pointsToPath(adjustedPoints), [adjustedPoints]);
+
+    // Bundle spread: only applied when the user hasn't customized the routing
+    // (waypoints empty) and the edge is not inheritance (which uses tree layout).
+    // For self-loop / L-shape / U-detour, applyBundleSpread returns input unchanged.
+    const spreadPoints = useMemo(() => {
+        if (isInheritance || isSelfLoop || waypoints.length > 0) return adjustedPoints;
+        return applyBundleSpread(adjustedPoints, sourceHandleId, targetHandleId);
+    }, [adjustedPoints, sourceHandleId, targetHandleId, isInheritance, isSelfLoop, waypoints]);
+    const spreadPath = useMemo(() => pointsToPath(spreadPoints), [spreadPoints]);
 
     // ─── Register path for crossing detection ───
     // Grouped inheritance edges skip individual registration: their Manhattan
@@ -143,9 +211,9 @@ function UnifiedEdge(props: EdgeProps) {
     // by useTreeLayout, so crossing detection remains accurate.
     useEffect(() => {
         if (isInheritance && isGrouped) return;
-        registerEdgePath(id, adjustedPoints, source, target, treeGroupId);
+        registerEdgePath(id, spreadPoints, source, target, treeGroupId);
         return () => unregisterEdgePath(id);
-    }, [id, adjustedPoints, source, target, treeGroupId, isInheritance, isGrouped]);
+    }, [id, spreadPoints, source, target, treeGroupId, isInheritance, isGrouped]);
 
     // ─── Detect crossings with other edges ───
     // Scope detection to the current React Flow canvas by passing the active node IDs.
@@ -153,9 +221,9 @@ function UnifiedEdge(props: EdgeProps) {
     // implicitly tab-local — no need to inspect global Redux state.
     const activeNodeIds = useMemo(() => new Set(allNodes.map(n => n.id)), [allNodes]);
     const crossings = useMemo(
-        () => getEdgeCrossings(id, adjustedPoints, activeNodeIds),
+        () => getEdgeCrossings(id, spreadPoints, activeNodeIds),
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [id, adjustedPoints, activeNodeIds, allEdges]
+        [id, spreadPoints, activeNodeIds, allEdges]
     );
 
     // ─── Final path with rounding and bridge arcs ───
@@ -164,18 +232,18 @@ function UnifiedEdge(props: EdgeProps) {
             return computeSelfLoopPath(sourceX, sourceY, targetX, targetY);
         }
         if (crossings.length > 0) {
-            return buildFinalPath(adjustedPoints, crossings, 4, 6);
+            return buildFinalPath(spreadPoints, crossings, 4, 6);
         }
-        return roundManhattanPath(adjustedPath, 4);
-    }, [adjustedPath, adjustedPoints, crossings, isSelfLoop, sourceX, sourceY, targetX, targetY]);
+        return roundManhattanPath(spreadPath, 4);
+    }, [spreadPath, spreadPoints, crossings, isSelfLoop, sourceX, sourceY, targetX, targetY]);
 
     // ─── Label positioning (reference edges) ───
-    const labelPos = useMemo(() => computeLabelPosition(adjustedPath), [adjustedPath]);
+    const labelPos = useMemo(() => computeLabelPosition(spreadPath), [spreadPath]);
 
     const labelOffset = useMemo(() => {
         if (isSelfLoop) return { x: 0, y: -16 };
 
-        const points = parsePathPoints(adjustedPath);
+        const points = parsePathPoints(spreadPath);
         let longestLen = 0;
         let longestIsHorizontal = true;
 
@@ -189,40 +257,47 @@ function UnifiedEdge(props: EdgeProps) {
             }
         }
 
-        const handleIndex = sourceHandleId ? parseInt(sourceHandleId.split('-')[1] || '0', 10) : 0;
-        const sign = handleIndex % 2 === 0 ? -1 : 1;
+        // Stack labels along the longest segment based on combined handle index,
+        // so multiple bundled edges have separated label positions.
+        const sourceIndex = getHandleIndex(sourceHandleId);
+        const targetIndex = getHandleIndex(targetHandleId);
+        const labelIndex = (sourceIndex + targetIndex) / 2;
+        const offset = (labelIndex - (MAX_HANDLES_PER_SIDE - 1) / 2) * LABEL_SPREAD_PX;
 
         return longestIsHorizontal
-            ? { x: 0, y: sign * 16 }
-            : { x: sign * 16, y: 0 };
-    }, [adjustedPath, isSelfLoop, sourceHandleId]);
+            ? { x: 0, y: offset }
+            : { x: offset, y: 0 };
+    }, [spreadPath, isSelfLoop, sourceHandleId, targetHandleId]);
 
     // ─── Cardinality positioning (reference edges) ───
-    const cardinalityPos = useMemo(() => computeCardinalityPosition(adjustedPath), [adjustedPath]);
+    const cardinalityPos = useMemo(() => computeCardinalityPosition(spreadPath), [spreadPath]);
     const cardinalityOffset = useMemo(() => {
-        const points = parsePathPoints(adjustedPath);
+        const points = parsePathPoints(spreadPath);
         if (points.length < 2) return { x: 0, y: -16 };
         const last = points[points.length - 1];
         const prev = points[points.length - 2];
         const isLastHorizontal = Math.abs(last.y - prev.y) < Math.abs(last.x - prev.x);
 
-        const handleIndex = targetHandleId ? parseInt(targetHandleId.split('-')[1] || '0', 10) : 0;
-        const sign = handleIndex % 2 === 0 ? -1 : 1;
+        // Use targetHandleId-driven spread, mirroring the label rule.
+        const sourceIndex = getHandleIndex(sourceHandleId);
+        const targetIndex = getHandleIndex(targetHandleId);
+        const labelIndex = (sourceIndex + targetIndex) / 2;
+        const offset = (labelIndex - (MAX_HANDLES_PER_SIDE - 1) / 2) * LABEL_SPREAD_PX;
 
         return isLastHorizontal
-            ? { x: 0, y: sign * 16 }
-            : { x: sign * 16, y: 0 };
-    }, [adjustedPath, targetHandleId]);
+            ? { x: 0, y: offset }
+            : { x: offset, y: 0 };
+    }, [spreadPath, sourceHandleId, targetHandleId]);
 
     // ─── ISA label midpoint (inheritance ER notation) ───
     const midPoint = useMemo(() => {
-        const pts = parsePathPoints(adjustedPath);
+        const pts = parsePathPoints(spreadPath);
         if (pts.length < 2) return { x: (sourceX + targetX) / 2, y: (sourceY + targetY) / 2 };
         const mid = Math.floor(pts.length / 2);
         const p1 = pts[mid - 1];
         const p2 = pts[mid];
         return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
-    }, [adjustedPath, sourceX, sourceY, targetX, targetY]);
+    }, [spreadPath, sourceX, sourceY, targetX, targetY]);
 
     // ─── Label commit (reference edges) ───
     // Same pattern as ClassNode's commitFieldEdit for attributes:

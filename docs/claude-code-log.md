@@ -1,5 +1,14 @@
 # Claude Code Session Log
 
+## 2026-05-21 — fix: spread paths and labels for bundled edges between same node pair
+**Prompt**: Spread orizzontale dei path e verticale delle label per edge in bundle tra stessa coppia di nodi nel flow editor v2, usando handle index estratto dal handleId come proxy del bundle index (approccio C, local-only a UnifiedEdge).
+**File toccati**: frontend/src/components/editor-v2/edges/UnifiedEdge.tsx
+**Esito**: ✅ completato, build verde (45.91s). Smoke test manuale richiesto su Families.ecore + State Machine sparso + un modello con inheritance.
+**Note**: chiude il filone "rendering denso bidirezionale Families.ecore". Nessuna nuova propagazione di dati attraverso la pipeline JjOM→RF: lo spread è puramente geometrico, calcolato in `UnifiedEdge` come step `applyBundleSpread` post-`applyWaypoints`. `BUNDLE_SPREAD_PX = 12` per i path (corridoio centrale di Z-shape a 4 punti); `LABEL_SPREAD_PX = 18` per le label (sostituisce il vecchio mini-offset binario `handleIndex % 2`). Spread escluso per `isInheritance`, `isSelfLoop` e `waypoints.length > 0` (rispetta custom routing). L-shape (3 punti) e U-detour (6 punti) non vengono spreadati (fall-through accettabile). Limitazione consapevole: in casi patologici dove coppie distinte di nodi condividono lo stesso bundle (sourceIndex, targetIndex), lo spread è approssimato; documentato in commit message. SegmentHandles riceve ancora `adjustedPath` (non spreadato) per minimizzare il rischio di rompere il drag waypoint flow.
+**Nome del documento prompt**: 2026-05-21 HH:mm fix_UnifiedEdge_bundle_spread
+
+---
+
 ## 2026-05-21 — fix: role-aware physical positioning of handles in DynamicHandles
 **Prompt**: 8 anchor distinti sul lato dei nodi v2-flow per evitare sovrapposizione source/target sullo stesso (side, index); source nella metà superiore/sinistra, target nella metà inferiore/destra.
 **File toccati**: frontend/src/components/editor-v2/components/DynamicHandles.tsx
