@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0"
+                xmlns:xmi="http://www.omg.org/XMI"
+                xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"
+                name="Library">
+  <eClassifiers xsi:type="ecore:EClass" name="Library">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="items" upperBound="-1" containment="true" eType="#//LibraryItem"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="members" upperBound="-1" containment="true" eType="#//Member"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="LibraryItem" abstract="true">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="title" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="borrowedBy" eType="#//Member"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Book" eSuperTypes="#//LibraryItem">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="isbn" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Magazine" eSuperTypes="#//LibraryItem">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="issue" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Member">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+</ecore:EPackage>

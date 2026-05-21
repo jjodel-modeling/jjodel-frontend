@@ -1,5 +1,237 @@
 # Claude Code Session Log
 
+## 2026-05-19 — fix(v2-flow): dedup edges by refId, not by src→tgt pair
+**Prompt**: Multiple EReference between same src/tgt pair were collapsed to single edge due to dedup key being `${srcVertex}→${tgtVertex}` in `useJjomSync.ts` (M2 main loop, pre-count, M1 main loop). Fix: dedup by composite `${refId}:${srcVertex}→${tgtVertex}` (opzione B), no `syncState.ts` changes. `hasCanvasEdgePair` removed from reference paths (pair-based, blocks siblings); replaced by an idlookup safety-net scan for race-window protection. Inheritance path unchanged (pair-based is correct: 1 extend per pair).
+**File toccati**: frontend/src/components/editor-v2/hooks/useJjomSync.ts
+**Esito**: ✅ build verde (40.65s)
+**Nome del documento prompt**: 2026-05-19_HHMM_fix_v2flow_multi_ref_edges.md
+
+---
+
+## 2026-05-19 — fix(import): Accurate counters via __raw + Dashboard refresh trigger
+**Prompt**: Bug 1 (conteggi a 0): counter bypass via __raw invece di L-getter post-parse non sincronizzato. Bug 2 (Dashboard vuota): tick state per triggerare re-render dopo project.metamodels = [...]. Cleanup 10 diag logs.
+**File toccati**: frontend/src/components/import/buildImportSummary.ts, frontend/src/components/project/ProjectEditor.tsx
+**Esito**: ✅ completato (primo round) — counter ancora a 0 in browser, diag3/diag4 hanno rivelato che anche `DPackage.classes` forward-link è vuoto al momento di buildEcoreImportSummary (SetFieldAction batched non ancora applicato dal reducer).
+**Nome del documento prompt**: 2026-05-19_HHMM_fix_counters_and_dashboard_refresh.md
+
+---
+
+## 2026-05-19 — fix(import): Counter via idlookup filter on (className + father)
+**Prompt**: Bug 1 fix definitivo. Diag3/diag4 hanno chiuso la diagnosi: `lookupRaw(pkgId)` funziona ma il DPackage ha `classes: []`. Backward link `father` invece è eagerly popolato dal parser. Sostituita la navigazione forward (`pkg.classes → DClass[]`) con filtro su `state.idlookup` per `(className === 'DClass' && father in allPackageIds)`. Stesso pattern per attributes/references (father in allClassIds), enums/datatypes (father in allPackageIds). XMI: DObject/DValue counter su modelId. Rimossi i 15 diag log (6 diag3 + 9 diag4) e gli helper `countAllInPackagesFromRaw`, `countAllPackagesFromRaw`, `countAllAttributesFromRaw`, `countAllReferencesFromRaw` ora obsoleti.
+**File toccati**: frontend/src/components/import/buildImportSummary.ts
+**Esito**: ✅ build verde (36.51s), 0 console.log, 0 diag
+**Nome del documento prompt**: 2026-05-19_HHMM_fix_counter_via_idlookup_filter.md
+
+---
+
+## 2026-05-19 — feat(import): Import summary modal for .ecore and .xmi
+
+**Prompt**: Modale unico riassuntivo post-import. Sostituisce 4 `U.alert` nei `catch` handler con dispatch di summary tipizzato. Warning channel: delta `Log.messageMapping['w']` per Ecore, `result.warnings` per XMI. Pattern XMI esposto via micro-modifica a `XMIImportResult`.
+
+**File toccati**:
+- `frontend/src/components/import/ImportSummary.types.ts` (NEW, 41 righe): tipi `ImportStatus`, `EcoreImportSummary`, `XmiImportSummary`, union `ImportSummary`. Discriminato da `kind: 'metamodel' | 'model'`.
+- `frontend/src/components/import/buildImportSummary.ts` (NEW, 160 righe): 3 pure functions `buildEcoreImportSummary`, `buildXmiImportSummary`, `buildErrorImportSummary`. BFS dedup-safe su `LPackage.subpackages` per `packageCount`. Conteggi `own` (non `allAttributes`). `dataTypeCount: 0` placeholder per gap discovery 17/05. nsURI da `pkg.__raw.uri` con fallback `(name: <pkg.name>)`.
+- `frontend/src/components/import/dispatchImportSummary.ts` (NEW, 8 righe): helper `dispatchImportSummary(summary)` → `CustomEvent(JjodelEvents.IMPORT_SUMMARY_SHOW)`.
+- `frontend/src/components/import/ImportSummaryModal.tsx` (NEW, 308 righe): componente React. Listener globale CustomEvent + `useState` locale. Header (icona+title+close), body sezionato (File/Identity/Statistics/Warnings/Error), footer (Copy details + Close). ESC + click backdrop chiudono. Focus iniziale su Close. `formatSummaryForClipboard()` interno per il Copy.
+- `frontend/src/components/import/ImportSummaryModal.scss` (NEW, 230 righe): BEM scoped. Side-stripe `::before` 4px con colori `--color-success/warning/error`. Width fissa 560px, `--z-modal` (9999). Token-only — zero hex hardcoded oltre `rgba(0,0,0,0.45)` del backdrop.
+- `frontend/src/events/registry.ts` (+2 righe): aggiunta `IMPORT_SUMMARY_SHOW: 'jjodel:import-summary-show'` in `JjodelEvents`.
+- `frontend/src/services/export/XMIService.ts` (+3 righe): aggiunto `pattern?: 'wrapper' | 'single-root'` a `XMIImportResult` + popolato nel return success di `importM1FromXML` via `isWrapper ? 'wrapper' : 'single-root'`.
+- `frontend/src/App.tsx` (+2 righe): import `ImportSummaryModal` + mount come ultimo figlio di `.router-wrapper` sotto `<WelcomeModal/>`.
+- `frontend/src/components/project/ProjectEditor.tsx` (+~50 / -8 righe): aggiunto `Log` agli import joiner + helper modale. `handleEcoreFileChange`: snapshot `messageMapping['w'].length` prima dell'import + delta dopo per raccogliere warning (`short_string`), poi `dispatchImportSummary(buildEcoreImportSummary(...))`. `handleXmiFileChange`: stessa pipeline con `result.warnings` + `result.pattern`. Ramo `catch` di entrambi: `dispatchImportSummary(buildErrorImportSummary(...))`. Rimossi i 4 `U.alert` import-related (success+error per ognuno dei due handler). Project linking (Bug F fix), `markDirty()`, `console.warn` ridondante e reset input preservati intatti.
+
+**Esito**:
+- ✅ Build verde (`npm run build` in 1m 17s, zero TS errors).
+- ✅ 5 file nuovi + 4 file edit. Totale ~800 righe aggiunte, ~8 rimosse.
+- ✅ `grep "U\.alert" ProjectEditor.tsx` post-edit: 20 occorrenze rimanenti, tutte fuori dai due handler import (save, export, transformation flow). I 4 import-related (linee 810, 823, 858, 870 pre-edit) rimossi.
+- ✅ `grep "Imported.*from Ecore|Could not import Ecore|Imported.*from XMI|Could not import XMI"` post-edit: zero match.
+
+**Hard rule rispettate**: zero touch a `data.ts`, `LModelElement.tsx`, `Log.ts`. Solo lettura. Zero refactoring opportunistico. Zero `--no-verify` o skip-hooks. Token-only SCSS (eccetto `rgba(0,0,0,0.45)` backdrop). Nessuna nuova dipendenza npm. Niente em dashes nelle stringhe user-facing. Niente Redux: state via `useState` + CustomEvent globale (pattern Toast).
+
+**Nome del documento prompt**: 2026-05-19_implement_import_summary_modal_b.md
+
+---
+
+## 2026-05-18 — fix(ecore-io): W2 exporter eType name-collision (pre-commit completion)
+
+**Prompt**: `docs/2026-05-18_W2_export_etype_fix.md` (follow-up alla discovery `2026-05-18_W2_discovery_export_etype.md`).
+
+**Contesto**: smoke manuale W2 di Alfonso ha rivelato bug nell'exporter: user-defined `DDataType Date` re-esportato come canonical `EDate` URI invece di local ref `#//Date`. Collisione name-based in `mapToEcoreType:701` (typeMap matchato per `type.name` senza discriminator di identità).
+
+**File toccati**:
+- `frontend/src/services/export/EcoreService.ts` (`mapToEcoreType` only): nuova JSDoc + guard `isCanonical = isString || type.id.startsWith('Pointer_E')` + condizione `if (isCanonical && typeMap[typeName])`. `typeMap` invariata (zero touch). 2 righe logiche aggiunte + JSDoc ~12 righe.
+- `frontend/src/__tests__/fixtures/xmi-m1/DataType_collision_test.ecore` (NEW, 17 righe): 2 user-defined EDataType `String`+`Date` con collisione + EClass `UserDefined` (2 EAttribute local-ref) + EClass `CanonicalRegression` (2 EAttribute canonical URI per regression).
+- `frontend/src/services/export/__tests__/ecore-io.test.ts` (+9 test): describe `DataType_collision_test.ecore` (7 test fixture/strutturali) + describe `mapToEcoreType canonical guard` (2 test grep su source).
+
+**Esito**:
+- ✅ Build verde (`npm run build` in 38.96s).
+- ✅ Test ecore-io.test.ts: **32/32 pass** (23 pre-esistenti + 9 nuovi).
+- ✅ Comportamento atteso post-fix: user-defined `Date`/`String` → `#//Name` (preserva identity); canonical `EInt`/`EString` con id `Pointer_E*` → cross-doc URI invariato.
+
+**Discriminator chiave**: convention `Selectors.getPrimitiveType` (selectors.ts:149) costruisce id `Pointer_<SHORT_TYPE_UPPER>` per i canonical. User-defined hanno id `USER_<n>` o altri. Quindi `type.id.startsWith('Pointer_E')` distingue identità senza dipendere dal nome.
+
+**Risk surface**: UML2 `Types.ecore` con primitive remappati (data.ts:1127, 1138 via `EDATATYPE_CANONICAL_ALIASES`) sopravvive — l'importer rimpiazza l'EDataType locale con il canonical (id `Pointer_E*`), quindi all'export il branch `isCanonical=true` scatta correttamente. Stesso comportamento di prima.
+
+**Hard rule rispettate**: zero touch a typeMap, zero rename, zero refactoring opportunistico. Singola Edit chirurgica su `mapToEcoreType`. Nessun commit eseguito — smoke manuale Alfonso pending prima del commit W2 unificato.
+
+**Smoke manuale atteso (post-questo-prompt)**:
+1. Re-import `DataType_test.ecore` → re-export → diff vuoto su `eType="#//Date"` e `eType="#//URL"`.
+2. Import `DataType_collision_test.ecore` → 4 check console: `customString.type` (user-defined String) + `customDate.type` (user-defined Date) + `age.type` (canonical EInt) + `canonicalLabel.type` (canonical EString) → re-export → diff vuoto.
+
+**Nome del documento prompt**: `2026-05-18_W2_export_etype_fix`
+
+---
+
+## 2026-05-18 — feat(ecore-io): W2 EDataType end-to-end (BL2 + SI9)
+
+**Prompt**: `docs/2026-05-18_W2_edatatype.md` — implementazione W2 con gate G1/G2/G3 prima dell'edit.
+
+**File toccati**:
+- `frontend/src/api/data.ts` (+49): `ECoreDataType` class + constants, `parseDDataType` helper, case `'ecore:EDataType'` nei 2 switch di `parsePackageBody` root+sub.
+- `frontend/src/services/export/EcoreService.ts` (+33): import `DDataType/LDataType`, `exportDataType` helper self-closing, wire in `renderEPackageBody` + `exportSubPackage` (ordine Class→Enum→DataType).
+- `frontend/src/model/logicWrapper/LModelElement.tsx` (+14): D-layer extension — `DPackage.datatypes` field, `LPackage.datatypes` field, `set_datatypes` accessor, `_set_classifiers` kind union estesa con `'datatypes'`, `get_classifiers` include datatypes con guard `|| []`, uncomment `DDataType.new()` factory.
+- `frontend/src/joiner/classes.ts` (+5): `Constructors.DDataType()` da stub a wired (`setExternalPtr(thiss.father, "datatypes", "+=")`).
+- `frontend/src/__tests__/fixtures/xmi-m1/DataType_test.ecore` (NEW, 19 lines): fixture con 2 EClass + 2 user-defined EDataType (`Date` instanceClassName + `URL` instanceClassName+serializable=false) + 2 EAttribute eType pointer.
+- `frontend/src/services/export/__tests__/ecore-io.test.ts` (NEW, 124 lines, 23 test): structural+fixture tests (no Redux/DOMParser integration possible in vitest node env).
+- `docs/2026-05-18_W2_edatatype.md` (NEW): prompt archiviato.
+
+**Esito**: ⚠️ completato con deviazioni notevoli — build verde ✓, 23/23 test W2 pass, ma smoke round-trip funzionale **non testabile** in vitest (Redux + DOMParser non disponibili senza jsdom non installato).
+
+**Gate G1/G2/G3 (pre-implementation)**:
+- **G1 ✅**: `DDataType.instanceClassName` (LModelElement.tsx:3665) e `DDataType.serializable: boolean = true` (3672) già presenti. Mirror L-layer (3699/3710) con accessor `set_serializable` (3713-3721) che usa `U.fromBoolString`. Nessun touch D-layer richiesto per i campi.
+- **G2 ❌ → escalation**: `DDataType.new()` era guard `Log.exx("DDataType is abstract")` (3677-3681). Factory chain commentato sotto. Inoltre `Constructors.DDataType()` era stub no-op (joiner/classes.ts:759). **Scoperta inattesa**: anche `DPackage` non aveva `datatypes` field (solo `classes` + `enumerators`), e `_set_classifiers` accettava solo `'classes' | 'enumerators'`. User confirm: "Estensione D-layer completa".
+- **G3** confermato iterazioni separate (linee 159+164 root, 478+483 sub-package). Ordine default Class→Enum→DataType (append-non-interleave) preservato per byte-identità delle fixture W1.
+
+**Scoperte inattese / deviazioni**:
+1. **Scope D-layer triplicato**: stima iniziale 3 righe (uncomment factory) → reale 14 righe (campo DPackage + campo LPackage + accessor + estensione _set_classifiers + estensione get_classifiers + factory + Constructors wire). User informato e ha approvato l'estensione completa prima di procedere.
+2. **Test infrastructure gap**: vitest config `environment: 'node'` + EcoreService importa Monaco transitivamente → "window is not defined" al load. Senza jsdom (non in deps) impossibile testare round-trip funzionale. Fallback: 23 test statici/strutturali (fixture validation + grep su source per presence dei nuovi simboli). **Round-trip funzionale: TODO smoke manuale via dev server**.
+3. **ECoreEnum.serializable bug pre-existing**: `ECoreEnum.serializable = 'serializable'` senza `XMLinlineMarker` prefix (line 1362) — case `parseDEnum` non matcherebbe key `-serializable` proveniente da xml2js. ECoreDataType ha usato il pattern CORRETTO (`XMLinlineMarker + 'serializable'`) per garantire round-trip funzionante. Bug pre-existing in EEnum non toccato (out-of-scope, "niente refactoring opportunistico").
+4. **tsc error count delta sospetto**: baseline W1 log dichiarava 174 errori; post-W2 = 86. Variazione -88 non spiegabile dal mio diff additivo. Probabile artefatto di config/inclusione diversa nelle due misurazioni. Da verificare separatamente.
+5. **Famiglies.ecore non in fixture**: lo smoke W1 lo cita ma non è in `__tests__/fixtures/`. Probabile file user locale.
+
+**Smoke status**:
+- ✅ Build verde (`npm run build` ✓ in 56.29s).
+- ✅ 23/23 nuovi test pass (fixture + structural).
+- ✅ Full vitest suite: 596 test bodies pass; 9 file fail al load per "window is not defined" — **pre-existing**, non regression W2 (le file non importano nulla che ho aggiunto).
+- ⚠️ Round-trip funzionale `DataType_test.ecore` → **richiede smoke manuale via dev server** (parse via UI import → re-export via UI export → verifica Date.instanceClassName + URL.serializable=false + eType pointer preservati).
+- ⚠️ Regression Library.ecore round-trip → idem (manual smoke).
+
+**Hard rule rispettate**: zero touch a path legacy `generateEcoreJson_impl`, zero touch a `replacePrimitiveMap` / `isPrimitiveOnlyPackage`, zero refactoring opportunistico (es. bug `ECoreEnum.serializable` lasciato pre-existing), zero `console.log` debug residui. D-layer toccato con consenso esplicito del user (Q post-G2). Niente commit; working tree dirty.
+
+**Nome del documento prompt**: `2026-05-18_W2_edatatype`
+
+---
+
+## 2026-05-18 — docs(ecore-io): commit isolato del discovery report Ecore I/O completeness
+
+**Prompt**: commit chirurgico del file `docs/discovery/discovery_2026-05-17_ecore_io_completeness.md` (untracked dopo il commit W1) prima di iniziare W2 (EDataType end-to-end), per separare discovery e implementazione.
+
+**File toccati**: `docs/discovery/discovery_2026-05-17_ecore_io_completeness.md` (untracked → tracked, +572 righe, nessuna modifica al contenuto).
+
+**Esito**: ✅ completato — commit `95496929d` (`docs(ecore-io): add discovery report on Ecore I/O completeness`).
+
+**Note**:
+- Commit a singolo file rispettato (constraint `NON committare altri file`). Build non rieseguito (commit doc-only).
+- Branch: `alfonso-frontend-jjtl`, ora 3 commit avanti su origin.
+- Body del commit ridotto a "W1-W4" (per scelta utente); il report enumera W1-W8. Discrepanza voluta, non un errore di trascrizione.
+- Questa entry resta uncommitted finché non viene bundlata con un commit futuro (presumibilmente W2 implementation).
+
+**Nome del documento prompt**: 2026-05-18 10:30 (commit discovery report)
+
+---
+
+## 2026-05-17 — feat(ecore-io): W1 quick wins Ecore importer/exporter (10 fix + XPath 3-segment)
+
+**Prompt**: W1 quick wins importer/exporter Ecore senza D-layer impact (10 fix additive) + hot-fix XPath 3-segment normalization scoperto in smoke test Families.
+
+**File toccati**:
+- frontend/src/api/data.ts (+ normalizzazione XPath 3-segment in parseDReference, ECoreReference.eOpposite decl, BL5 split eExceptions, SI4 default lowerBound/ordered/unique, SI5 default ordered/unique, replaceRules esteso con "opposite")
+- frontend/src/services/export/EcoreService.ts (BL4 EEnumLiteral name/literal, SI6 EEnum instanceClassName+serializable, SI7 EClass instanceClassName, SI10 EReference lowerBound skip 0, BL6 EOperation completo, BL7 EParameter completo)
+
+**Esito**: ✅ completato
+
+**Note**:
+- BL1 smoke test Families.ecore: 8 eOpposite round-trip preservati (era 0 pre-W1).
+- Scoperto durante smoke: rewriteXPathPointers esplicitamente skippa pointer 3-segment (data.ts:1064 commento "out of scope"); l'aggiunta di "opposite" a replaceRules ha esposto il gap. Fix supplementare: normalizzazione `/N/X/Y` → `#//X/Y` in parseDReference (single-root assumption N=0, warning per N>0).
+- Altri 9 fix: build verde + diff statico atteso; verifica empirica positive di BL4/SI6/SI7/BL6/BL7/SI4/SI5 differita a W2 (EDataType) e W4 (EAnnotation+EEnum) dove arriveranno fixture naturalmente.
+- Gap UI emersi durante smoke (Properties panel non espone `opposite` e `instanceClassName` su DReference/DClass): annotati per backlog UI post-W6.
+
+**Nome del documento prompt**: 2026-05-17 14:45 (W1 implementation) + 2026-05-17 17:30 (commit)
+
+---
+
+## 2026-05-17 — feat(ecore-io): W1 quick wins (10 fix)
+**Prompt**: W1 quick wins importer/exporter Ecore senza D-layer impact
+**File toccati**: frontend/src/api/data.ts (+24/-11), frontend/src/services/export/EcoreService.ts (+59/-11) = ~83 righe nette
+**Esito**: ✅ completato 10/10 — build verde (✓ built in 38.55s), tsc errors invariati (174 pre/post, allineato a baseline pre-W1, lo shift di linea sul singolo error 1039→1047 è dovuto a +8 righe sopra in data.ts)
+**Note**: Tutti i 10 fix applicati. **Hard stop #1 attivato e risolto in chat**: BL1 (eOpposite) richiedeva decisione architetturale perché né `rewriteXPathPointers` (regex 2-segment, commento esplicito "scope Fase B.2" su 3-seg) né `LinkAllNamesToIDs` (`replaceRules = [extends, exceptions, type, values]` senza opposite) risolvevano il pointer `#//Cls/feat`. User scelto opzione 2 "BL1 completo: costante + read + estendere replaceRules". Verificato pre-implementazione che `nameMap['#//' + __fullname]` indicizza i DReference per nome 3-seg (`Cls/feat`), quindi l'aggiunta di 'opposite' a replaceRules è sufficiente — nessuna modifica al nameMap. **Dettaglio fix**:
+- **BL1** (data.ts:1216-1234, 1349-1363, 875-900, 283): aggiunto `ECoreReference.eOpposite: string`, assegnato `XMLinlineMarker + 'eOpposite'`, read raw in parseDReference (`const oppositeRaw = this.read(json, ECoreReference.eOpposite, ''); if (oppositeRaw) dObject.opposite = oppositeRaw as any;`), aggiunto `"opposite"` a `replaceRules` in LinkAllNamesToIDs. ~10 righe nette.
+- **BL5** (data.ts:938): sostituito `[this.read(json, ECoreOperation.eexceptions, '')]` con read raw + split(' ').filter(s => s.length > 0). Risolve multi-exception perse e [''] su empty. ~2 righe.
+- **SI4** (data.ts:935, 939, 940): default `lowerBound 1→0`, `ordered/unique 'false'→'true'`, aggiunto secondo arg `true` a `U.fromBoolString` per coerenza fallback. 3 righe modificate.
+- **SI5** (data.ts:917, 918): stesso pattern SI4 per parseDParameter, `ordered/unique 'false'→'true'`. 2 righe modificate.
+- **BL4** (EcoreService.ts:400-414): cambio `name="${literal.literal}"` → `name="${literal.name}"` (era inversione semantica). Aggiunto emit condizionato `literal="..."` solo se `__raw.literal && __raw.literal !== name` — uso `.__raw.literal` invece di `.literal` per evitare derivazione `get_literal` (che ritorna `name.replace('_', ' ')` quando literal vuoto). ~8 righe.
+- **SI6** (EcoreService.ts:400-414, stesso edit di BL4): exportEnumerator rifattorizzato per usare array `enumAttrs`. Emit `instanceClassName` truthy + `serializable="false"` strict `=== false` (default EMF true). ~10 righe.
+- **SI7** (EcoreService.ts:205-217): exportClass aggiunto emit `instanceClassName` truthy, posizionato fra `name` e `abstract` per ordine canonico EMF. ~3 righe.
+- **SI10** (EcoreService.ts:313-315): cambio condizione lowerBound da `!== undefined` a `!== undefined && !== 0` per skip default. 1 riga.
+- **BL6** (EcoreService.ts:347-394): exportOperation esteso con lowerBound (skip 0), upperBound (skip 1), ordered/unique (strict === false), eExceptions (space-join via `targetTypePointer`, emit solo se non vuoto). Ordine attributi: name → lowerBound → upperBound → ordered → unique → eType → eExceptions. ~20 righe.
+- **BL7** (EcoreService.ts:382-410): exportParameter esteso con stessi campi di BL6 meno eExceptions. Ordine: name → lowerBound → upperBound → ordered → unique → eType. ~12 righe.
+
+**Scoperte inattese (3)**:
+1. **SI4 fallback U.fromBoolString**: il codice originale chiamava `U.fromBoolString(this.read(json, ..., 'false'))` con un solo arg. La firma supporta un secondo arg di default; ho aggiunto `true` esplicito per coerenza con il read default. Comportamento equivalente quando il valore è 'false'/'true' string, ma se il parser ricevesse un truthy non-string il fallback ora è esplicito.
+2. **BL5 cast `as any`**: `DOperation.exceptions: Pointer<DClassifier, 0, 'N', LClassifier>[]` non accetta direttamente `string[]` da split. Cast `as any` allinea al pattern esistente di `parseDClass` (riga 778: `dObject.extends = tmps ? tmps.split(' ') : [];` senza cast). TS error pre-esistente in stash baseline al posizionamento equivalente.
+3. **BL4 emit del literal condizionato**: in EMF `literal` attribute è opzionale e quando assente coincide col `name`. Il LEnumLiteral getter `literal.literal` deriva una stringa anche quando il raw è vuoto (`name.replace('_',' ')`), quindi confrontare `literal !== name` su `.__raw.literal` previene falsi positivi che emetterebbero attributi `literal=` inutili per literal stored as undefined. Test mentale: enum `RED` no literal field → `__raw.literal = undefined` → no emit. Enum `RED` con `literal = "red"` → emit `literal="red"`.
+
+**Pre-verifica obbligatoria BL1 completa**: rewriteXPathPointers e LinkAllNamesToIDs analizzate; nameMap di __fullname conferma indicizzazione 3-seg; opposite aggiunto a replaceRules → LinkAllNamesToIDs loop processa `dobj.opposite` come single string → cerca in `nameMap['#//Cls/feat']` → trova DReference → `dobj.opposite = target.id`. Comportamento standard del replaceRules engine (caso isArray=false). **Nessun guard per target unresolved**: se `opposite` punta a un riferimento cross-doc o stale, scatta `Log.ex(!target, ...)` (data.ts:342). Allineato semantica esistente di "exceptions" che ha stesso pattern.
+
+**Hard rule rispettate**: zero touch a LModelElement.tsx, zero touch a path legacy `generateEcoreJson_impl`, zero refactoring opportunistico, zero rinominazioni, zero modifiche a fixture/VersionFixer/D-layer. Niente commit, working tree dirty. Smoke runtime delegato all'utente (4 scenari nel prompt: round-trip Families per BL1, round-trip metamodel con Operation+Parameter per BL6+BL7+SI4+SI5, enum round-trip per BL4+SI6, Ecore.ecore self-import per SI7).
+**Nome del documento prompt**: 2026-05-17 14:45
+
+---
+
+## 2026-05-17 — discovery: Ecore I/O completeness matrix
+**Prompt**: discovery sistematica gap importer + exporter vs standard Ecore.ecore
+**File toccati**: docs/discovery/discovery_2026-05-17_ecore_io_completeness.md (created)
+**Esito**: ✅ completato
+**Note**: Matrix completa di 12 metaclassi Ecore × 3 dimensioni (D-layer / importer / exporter) basata su lettura read-only di `data.ts` (1406), `EcoreService.ts` (698), `LModelElement.tsx` (7722). **Trovati 26 gap distinti** = 7 blocker + 10 significativi + 9 minori. **Scoperte inattese non nel backlog (15)**: tra le più impattanti — (1) EDataType user-defined in pacchetto misto fa throw `Log.exx` (parsePackageBody default case); (2) EEnumLiteral exporter usa erroneamente `literal.literal` come XML `name` attribute (round-trip cambia identificatori enum); (3) EOperation exporter emette solo `name`+`eType`, perde lowerBound/upperBound/ordered/unique/eExceptions; (4) EParameter exporter idem; (5) `parseDAnnotation` ha `return [];` come prima istruzione — tutto il corpo è dead code, `getAnnotations()` chiamato in 9 funzioni ma sempre droppato; (6) costante `ECoreReference.eOpposite` non esiste in importer (gap più profondo del noto B.2); (7) default importer `ordered/unique='false'` su EOperation/EParameter (corretto EMF: true); (8) path legacy `generateEcoreJson_impl` sulle classi L è più completo del path attivo `EcoreService.exportToXML` per Operation/Parameter/Enumerator/EnumLiteral. **10 Open Questions** generate (scope ETypeParameter/EGenericType, instanceClassName vs instanceTypeName split, defaultValueLiteral storage, DAnnotationDetail ridisegno, path legacy vs attivo, eExceptions back-compat, eFactoryInstance, container derived). **Stima volumetrica**: Blocker ~159 righe, Significativi ~98 righe, Minori ~365 righe; "tool definitivo senza generics" = ~455 righe in 4-6 PR; 100% completo = ~620 righe + 5 VersionFixer + 2 nuove D-classi (DGenericType, DTypeParameter). **Sequenza raccomandata** W1-W8: (W1) quick wins importer/exporter additive ~80 righe; (W2) EDataType end-to-end ~45 righe; (W3) defaultValueLiteral+iD wire ~22 righe; (W4) EAnnotation end-to-end ~95 righe + VF; (W5) instanceTypeName split opzionale; (W6) eKeys+resolveProxies ~43 righe; (W7) generics blocco grande ~270 righe; (W8) EAnnotation contents/references ~50 righe. **Fixture annotation volume**: zero occorrenze di eAnnotation/iD/defaultValueLiteral/eOpposite/eExceptions/instanceClassName/serializable/eKeys/eGenericType/eTypeParameter/resolveProxies su tutti i 10 file in `frontend/src/__tests__/fixtures/xmi-m1/` (Graph.ecore, Library.ecore, Shapes.ecore + 7 .xmi). Fixture troppo semplici per misurare criticità real-world. **Build verde**: zero modifiche al codice source.
+**Nome del documento prompt**: 2026-05-17 14:30
+
+---
+
+## 2026-05-16 — feat(xmi): M1 importer B.3 — polymorphism + intra-document refs + metadata side-table
+**Prompt**: estensione two-pass dell'importer M1 per `xsi:type` polimorfico in containment, references intra-document via `xmi:id`/`xmi:idref` (multi-valued whitespace + Format B nested elements), side-table `DModel.metadata.xmiIdMap` per round-trip. Housekeeping warning su `xmi:Extension` / UML profile (OUT scope Jjodel 3).
+**File toccati**: `frontend/src/services/export/XMIService.ts` (+~250 righe net), `frontend/src/model/logicWrapper/LModelElement.tsx` (+3 righe: campo `metadata?` su DModel), 6 fixture nuovi in `src/__tests__/fixtures/xmi-m1/` (Shapes.ecore + polymorphism_test.xmi, Graph.ecore + references_test.xmi, Library.ecore + combo_test.xmi), `docs/claude-code-log.md`.
+**Esito**: ✅ build verde — zero nuovi errori TS rispetto al baseline (171 errori pre-esistenti uguali a 171 post-B.3, verifica via stash + tsc). Smoke runtime browser delegato all'utente sulle 4 fixture B.2 (Persons/Families/modelBook/table-example, regression) + 3 fixture nuove B.3.
+**Note**: **Fase A interna** (verifica precondizioni): A.5.a triggered in forma debole — `DModel.metadata` non esiste, ma aggiungerlo richiede 1 sola riga nella class declaration di `LModelElement.tsx:4647`. Constructors chain `.DModel(instanceoff, isMetamodel)` (classes.ts:918) **non richiede modifica** perché `metadata` non è un Pointer e non scatena side-effect di `setPtr`/`setExternalPtr`. A.5.b/c/d/e tutti CHIARI — `DValue.values: PrimitiveType[] | Pointer<DObject|DEnumLiteral>[]` (LModelElement.tsx:6277) accetta direttamente pointers come values payload (stesso pattern di B.2 containment, riga 842 nell'originale); `lookupNamespaceURI` ES2020 native ok ma non serve grazie alla strategy nsPrefixMap (sotto); il push in `dModel.objects` di B.2 non interferisce con pass 2. **Refactor scelto**: funzione separata `resolveReferences(ctx, dModel)` post-pass-1 invece di parametrizzare `processInstance/processContainment` con `pass: 1|2` — minor invasività, B.2 signature inalterata. **Algoritmo two-pass**: Pass 1 (processInstance + processContainment, ricorsivo) crea tutti i DObject con primitive attrs e accumula in `ctx.pendingRefs` ogni reference non-containment (sia da XML attribute che da nested element Format B). Pass 2 (resolveReferences) tokenizza ogni rawValue su whitespace, risolve i token via `ctx.xmiIdMap` (Map<xmi:id, Pointer<DObject>> popolata durante pass 1) e crea DValue con i pointers risolti. Side-table: `persistMetadata(dModel, xmiIdMap)` inverte la mappa (DObject.id → xmi:id) e la persiste via `SetFieldAction.new(dModel.id, 'metadata', {xmiIdMap}, '', false)` per round-trip in Phase B.7. **nsPrefixMap strategy**: il walker B.2 opera su `xmlToJson` output (plain object, non Element node), quindi `Element.lookupNamespaceURI` non è disponibile mid-walk. Soluzione: builddato ONCE da `-xmlns:*` keys di rootContent in `buildNamespaceMap`. XMI documenti EMF dichiarano sempre tutti i prefissi al root, quindi questa semplificazione copre il 100% dei casi pratici (limitazione documentata). **xsi:type polymorphism** (`resolveDClass`): split su `:`, prefix lookup in nsPrefixMap → URI → `getMetamodelByNsURI` (helper esistente già con fallback su EPackage.name dal fix 2026-05-14) → `findMetaclassByName`. Subclass guard (`isSubclassOf`) via `LClass.superclasses` (transitive closure pre-computata dal core, LModelElement.tsx:2756). Se prefix non risolto o classname inesistente: warning + return null + caller fa fallback su feature-declared type. Se class risolta ma non subclass di feature.type: warning + skip child. **Extension/profile detection** (`isExtensionElement`): `xmi:Extension`, prefix `xmi:`/`xsi:`, oppure prefix che mappa a URI non in `knownMetamodelURIs` → warning + skip (no recursione nel subtree). Limitazione: il check è in `processContainment` (nested) ma NON nella wrapper loop di `importM1FromXML:613-633` (B.1 code, Hard rule #1 vieta refactor opportunistico) — extension elements **al root del wrapper** producono errore "Unknown class 'X'" come B.1, non warning. Edge case raro in pratica. **Multi-valued reference handling**: Formato A (whitespace nel value, `target="n2 n3"`) gestito dal tokenize in `resolveReferences`. Formato B (multipli `<target xmi:idref="..."/>` elements) gestito in `processContainment` non-containment branch — ogni nested element produce un pendingRef separato, raccolti come array nel JSON walker. Warning quando tokens > 1 ma feature `upperBound == 1` (data semantica preservata, populated comunque per best-effort). **EMF path syntax** (`//@feature.idx`, `#//path`): warning + fallback su literal xmi:id matching (Hard rule #11), che inevitabilmente fallisce e produce refsFailed + un secondo warning "target not found". I path EMF richiedono parsing semantico (out of scope B.3). **Helpers nuovi**: 7 metodi static private (`buildNamespaceMap`, `resolveDClass`, `isSubclassOf`, `isExtensionElement`, `resolveReferences`, `populateReferenceValue`, `persistMetadata`). **Cleanup**: rimosso `checkForXsiType` (diagnostico orfano post-B.3 — la sua warning "B.3 scope" è ora errata visto che xsi:type viene effettivamente processato; chiamata era a riga 549 prima della rimozione). **Context type** (`XMIImportContext`) esteso con 4 campi: `nsPrefixMap`, `pendingRefs`, `knownMetamodelURIs`, `summary.refsResolved`/`refsFailed`. Tipo nuovo `PendingRef = { sourceDObject, feature, rawValue, sourceTagPath }`. **Import nuovo**: `SetFieldAction` aggiunto agli imports da `'../../joiner'`. **Atteso smoke runtime** (per riferimento utente): polymorphism_test → 4 dobjects (1 Canvas + 2 Circle + 1 Square con DClass concreti), 7 attrs, 0 refs, 0 warnings; references_test → 7 dobjects (1 Graph + 3 Node + 3 Edge), 3 attrs, **5 refsResolved + 2 refsFailed** (edge con path syntax → 2 path warnings + 2 not-found warnings = 4 warnings totali), xmiIdMap di 3 entry persistita; combo_test → 6 dobjects (1 Library + 2 Member + 2 Book + 1 Magazine), 9 attrs, 2 refsResolved (b1→m1, mg1→m2), 0 failed, xmiIdMap di 5 entry persistita. **Hard rules rispettate**: zero touch a EcoreService.ts, ProjectEditor.tsx, data.ts, useJjomSync.ts, UI; signature `importM1FromFile` invariata; DOMParser only (no streaming); no dipendenze esterne. **Smoke runtime B.2 regression**: traccia mentale su tutti i 4 fixture conferma path 100% identico al pre-B.3 perché nessuno usa xmi:id o non-containment refs → ctx.pendingRefs e ctx.xmiIdMap restano vuoti → resolveReferences e persistMetadata sono no-op. Verifica browser delegata.
+**Nome del documento prompt**: 2026-05-15 10:00 (XMI M1 Importer B.3)
+
+---
+
+## 2026-05-15 — refactor: hide-not-grey on Edit/Tools/Analyze menus
+**Prompt**: B2 — Convert `disabled: isDashboard` patterns to `isDashboard ? null` hide pattern across Edit/Tools/Analyze menus. Permanent stubs (Live Validation, Validate, Copy Public Link, Delete Project) retained as visible+disabled.
+**File toccati**: frontend/src/pages/components/Navbar.tsx
+**Esito**: ✅ completato
+**Note**: Parte 2/3 del refactor menu. **Edit menu** (`Navbar.tsx:1381-1391`) — per-item conversion `isDashboard ? null : {...}` su 4 voci (Undo, Redo, divisor intermedio, Add/Remove Favorites). Copy Public Link mantenuto `disabled: true` (stub roadmap permanente). In dashboard ora resta solo Copy Public Link. **Tools menu** (`Navbar.tsx:1457-1491`) — necessaria deviazione strutturale dalla matrice "per-item null" perché un array di soli null ha `length > 0` e `MainMenu` (line 451) skippa top-level solo con `!subItems?.length` (0 o undefined). Soluzione: wrap dell'intero entry come `isDashboard ? null : {Tools entry}` — questo soddisfa verification step 2 (Tools sparisce completamente in dashboard). Dentro il menu, restructure dello spread iniziale (era `cond ? [stub] : [real]`) in `metamodels.length === 0 ? [stub] : [real]` per preservare l'empty state "No metamodel tools" in editor+no-metamodels (verification step 5). Generate Environment + Polymetric View + 2 divisori wrappati in spread `...(metamodels.length === 0 ? [] : [...])` — appaiono solo in editor+metamodels. **Analyze menu** (`Navbar.tsx:1493-1506`) — Live Validation + Validate mantenuti `disabled: true` (stub roadmap permanenti, sempre visibili). 4 voci dentro `props.advanced ? [...] : []` spread convertite individualmente a `isDashboard ? null`, incluso il divisor (altrimenti dangling in dashboard+advanced). M2 Analytics aggiunge anche check `metamodels.length === 0` (operava solo su metamodelli). **Diff finale**: 3 sezioni, ~20 righe modificate, zero touch a renderer/types/state Redux/keystrokes. **Verifica TS**: `npx tsc --noEmit` → unico errore in Navbar.tsx è preesistente (line 3 import logo PNG senza type declarations), zero nuovi errori introdotti. **Test manuali delegati**: (dashboard) Edit menu mostra solo Copy Public Link; Tools menu assente dal menu bar; Analyze menu mostra Live Validation + Validate (entrambi disabled), niente voci advanced anche con toggle Advanced attivo. (Editor + metamodels) Edit con tutte le voci attive, Tools con Metamodel Tools + Custom Tools + Generate Env + Polymetric View, Analyze con permanent stubs + advanced items se Advanced. (Editor + no metamodels) Tools mostra solo "No metamodel tools" empty state. Regression: shortcuts ⌥⌘Q, ⌥⌘N, ⌥⌘M, F11 invariati. B3 (View menu) seguirà.
+**Nome del documento prompt**: 2026-05-15 18:30
+
+---
+
+## 2026-05-15 — fix: Jjodel menu Logout duplicate + File menu New Project + Recent cap 7
+**Prompt**: B1 — Remove duplicated Logout from Jjodel menu, add top-level New Project in File menu (⌥⌘N), reduce Recent Projects cap from 20 to 7
+**File toccati**: frontend/src/pages/components/Navbar.tsx
+**Esito**: ✅ completato
+**Note**: parte 1/3 del refactor menu hide-not-grey. B2 (Edit/Tools/Analyze) e B3 (View) seguiranno. **Cambi mecanici applicati**: (1) Jjodel menu — rimossa voce "Logout" (line ex-1293-1301), tenuta "Sign-out" con shortcut ⌥⌘Q. Sanity check confermato: `icon['logout']` usato SOLO nella voce rimossa (1 sola occorrenza nel codebase via grep), quindi cleanup completo per scope di questo task; l'import `icon` resta perché probabilmente usato da altre voci (non verificato — fuori scope). (2) File menu — applicato **Caso B** della spec: il submenu `New` aveva 3 voci (Project stub disabled + Metamodel funzionale + newModel dinamico), quindi tenuto il submenu rimuovendo solo lo stub "Project"; aggiunta voce **top-level** "New Project" all'inizio del File menu (prima del submenu New e prima di Recent Projects) con `function: () => window.dispatchEvent(new CustomEvent(JjodelEvents.NEW_PROJECT))`, icona `bi-file-earmark-plus`, shortcutPills `SHORTCUTS.NEW` (⌥⌘N). Voce **sempre visibile** (no guard isDashboard/isProject) come da spec — il listener globale ⌥⌘N esiste solo in dashboard context (Navbar.tsx:944-953), ma il design accetta che da editor il click sia no-op (cross-context fix separato). Import `JjodelEvents` già presente (line 63), `SHORTCUTS.NEW` già usato (line 944), nessun nuovo import necessario. (3) Recent Projects — cap `.slice(0,20)` → `.slice(0,7)` a line 1241, una sola cifra. Non toccato LeftBar.tsx (cap 5) né RightPanel.tsx, intenzionalmente come da spec. **Diff finale**: ~17 righe in 1 file (entro l'atteso 15-20). **Verifica TS**: `npx tsc --noEmit` non riporta nuovi errori introdotti dal cambio (unico errore in Navbar.tsx è preesistente: line 3 import logo PNG senza type declarations, non correlato). **Test manuali delegati**: aprire Jjodel menu (deve mostrare solo About/Roadmap/divisor/Sign-out, niente Logout), aprire File menu (New Project in cima con pill ⌥⌘N, click → CreateProjectDialog in dashboard), hover File > Recent Projects (max 7 progetti), regression ⌥⌘N da tastiera. **Hard-stop rispettato**: nessun cambio fuori scope, nessuna costante estratta, nessun touch a renderer/listener/constants/shortcuts.ts.
+**Nome del documento prompt**: 2026-05-15 17:30
+
+---
+
+## 2026-05-15 — discovery: MenuBar structure (6 top-level menus)
+**Prompt**: Read-only analysis of MenuBar to plan hide-not-grey refactor + Jjodel/File menu changes
+**File toccati**: nessuno (read-only). Report in `docs/discovery/discovery_2026-05-15_menubar_structure.md`.
+**Esito**: ✅ report prodotto, in attesa di decisioni per Fase B
+**Note**: **Q1 (architettura)**: config-driven, singolo array `items: MenuEntry[]` in `Navbar.tsx:1277-1515`, renderer `makeEntry`/`Submenu`/`MainMenu` (line 355-453). Top-level con `subItems` vuoto già nascosto nativamente da `MainMenu` (line 451), `makeEntry` salta voci `null` (line 356) e voci con `subItems.length === 0` (line 378) — **cascading hide funziona già senza touch del renderer**. **Q2 (visibility/disabled)**: 3 pattern compresenti — (a) hide via `cond ? null : {...}` usato in File menu (line 1308,1319,1320,1323,1344,1352,1362,1364,1381), (b) `disabled: bool` dominante in Edit/View/Tools/Analyze (esempi: `disabled: isDashboard`, `disabled: isDashboard || metamodels.length === 0`, `disabled: !isActiveTabModel`, `disabled: true` per placeholder permanenti), (c) hide condizionale via spread `...(cond ? [...] : [...])` su array di sub-items (Tools line 1465-1476, Analyze line 1504-1509). Niente `visible:bool` o `enabled: () => boolean` su MenuEntry. **Q3 (context)**: già implementato — `const isDashboard = !project; const isProject = !!project` (line 1273-1274) dove `project` arriva da `user?.project` (line 560) sincronizzato con URL via `U.getProjectID_URL()`. Esiste anche `detectCurrentContext()` per i keydown listener ma non usato dai menu. **Q4 (Roadmap)**: **già a posto** — `function: () => open('https://github.com/jjodel-modeling/jjodel-frontend/milestones')` (line 1282), URL identico al richiesto. **Q5 (Sign-out vs Logout)**: handler **funzionalmente identici** (line 1284-1292 vs 1293-1301), entrambi check `isProjectModified()` + dialog + `AuthApi.logout()`. Differenze cosmetiche: icona (bi-box-arrow-right vs `icon['logout']`), Sign-out ha `shortcutPills: SHORTCUTS.SIGN_OUT` (⌥⌘Q), Logout nessuna shortcut. Logout è una duplicazione legacy, safe rimuovere. **Q6 (Recent Projects)**: source `user.projects` (Redux via props), ordering `sort((a,b)=>b.lastModified>a.lastModified?1:-1)`, cap **hardcoded 20** in `.slice(0,20)` (line 1241). Click handler `()=> R.navigate('/project?id='+pid)` — full reload via R.navigate (U.tsx:140, intenzionalmente per reset di stato). Lista duplicata in 3 punti con cap diversi: Navbar 20, LeftBar 491-505 cap 5, RightPanel quick links. Cambio cap a 7 = 1 cifra in 1 riga. **Q7 (New Project)**: action `ProjectsApi.create(type,name,...,projects)` esiste, usata da `AllProjects.tsx:38` (con `CreateProjectDialog`) e `RightPanel.tsx:51` (quick create). Apertura inter-componente via custom event `JjodelEvents.NEW_PROJECT` (listener in `AllProjects.tsx:50-55`, già firato da Navbar keydown ⌥⌘N per context DASHBOARD line 949-953). **Limite noto**: il listener esiste solo se AllProjectsPage è montata — da editor il dispatch puro non basta, serve navigate-prima. La voce stub "Project" attualmente in `File > New > Project` (line 1311) è `function: placeholder, disabled: true`, va sostituita o promossa a top-level del File menu. **Q8 (shortcuts)**: due sistemi coesistenti — (a) listener globale inline in Navbar `useEffect` con `document.addEventListener('keydown',...)` + `matchesShortcut(event, SHORTCUTS.X)` + branching su context (autoritativo, gestisce ⌥⌘N/⌘S/⌥⌘W/⌥⌘Q/⌥⌘M/⌘+/⌘-/⌘0/⇧⌘L/⌘B/ecc.); (b) `Keystrokes.register('#root', 'navbar', keybindings)` (line 1521) con `keybindings = flattenObjectByKey(items,'subItems').filter(e=>e?.keystroke?.length && !e.disabled)` — **essenzialmente dormiente** perché le voci menu usano `shortcutPills` (display-only) e non `keystroke` (registry-binding). SHORTCUTS source of truth: `frontend/src/utils/keyboardShortcuts.ts:117`. **NB conflitto ⌘N**: il design doc richiede ⌘N puro per New Project ma `SHORTCUTS.NEW` è `⌥⌘N` per evitare intercept Chrome (commento line 119). **Decisione da chiedere ad Alfonso prima di Fase B**. **Stima refactoring hide-not-grey**: PICCOLO (~20-40 righe in Navbar.tsx). Niente touch del renderer. **Effetto collaterale di design**: con hide aggressivo, in dashboard scomparirebbero verosimilmente i menu top-level Edit/Tools/Analyze (resterebbero solo Jjodel/File/View). Decisione implicita da confermare. **Proposta scomposizione**: 3 prompt operativi separati invece di uno solo — (B1) Jjodel cleanup + File New Project + cap=7 (sano da fare prima, ~15 righe); (B2) hide-not-grey su Edit/Tools/Analyze (richiede decisione sull'effetto top-level scompare, ~20 righe); (B3) hide-not-grey su View (delicato, voci miste editor/dashboard, ~10 righe). **Note collaterali rilevanti** (segnalate, no action): (1) `frontend/src/constants/shortcuts.ts` definisce un secondo SHORTCUTS orphan (keys `'file.new.project'`) non importato da Navbar — candidato dead code; (2) Recent Projects triplicato in 3 punti, no shared selector; (3) `R.navigate` per Recent Projects fa full reload (desiderabile qui, ma coerentemente diverso dal pattern post-fix FILTERS sidebar); (4) `Keystrokes.register` chiamato a ogni render (line 1521, body component) con guard interno `avoidDuplicateRegisters` — smell, dovrebbe essere in useEffect; (5) "Export Canvas" usa sia hide via `?:null` su parent sia `disabled:` su child — ridondante. **Hard stop rispettato**: zero edit, zero commit, solo report file + log entry.
+**Nome del documento prompt**: 2026-05-15 17:00
+
+---
+
 ## 2026-05-15 — fix: Help > Support submenu opens left to stay in viewport
 **Prompt**: Invert direction of Support submenu inside Help dropdown (open left, not right)
 **File toccati**: frontend/src/pages/components/navbar.scss

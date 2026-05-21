@@ -17,6 +17,7 @@ import type {
     PathControl,
     StringControl
 } from '../../../../view/viewElement/view';
+
 import {CSS_Units} from '../../../../view/viewElement/view';
 import {Color} from '../../../forEndUser/Color';
 

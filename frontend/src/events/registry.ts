@@ -60,6 +60,8 @@ export const JjodelEvents = {
   JJTL_STATUSBAR: 'jjodel:jjtl-statusbar',
   // Activity
   ACTIVITY_LOGGED: 'jjodel:activity-logged',
+  // Import summary modal (post-import feedback for .ecore / .xmi)
+  IMPORT_SUMMARY_SHOW: 'jjodel:import-summary-show',
 } as const;
 
 // ─── JjScript ───────────────────────────────────────────────────

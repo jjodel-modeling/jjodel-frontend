@@ -756,7 +756,10 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         this.setExternalPtr(thiss.father, "attributes", "+=");
         return this; }
 
-    DDataType(): this { return this; }
+    DDataType(): this {
+        const thiss: DDataType = this.thiss as any;
+        this.setExternalPtr(thiss.father, "datatypes", "+=");
+        return this; }
 
     DObject(instanceoff?: DObject["instanceof"]): this {
         let thiss: DObject = this.thiss as any;

@@ -1738,6 +1738,7 @@ export class DPackage extends DModelElement { // extends DNamedElement
     // classifiers: Pointer<DClassifier, 0, 'N', LClassifier> = [];
     classes: Pointer<DClass>[] = [];
     enumerators: Pointer<DEnumerator>[] = [];
+    datatypes: Pointer<DDataType>[] = [];
 
     subpackages: Pointer<DPackage, 0, 'N', LPackage> = [];
     uri!: string;
@@ -1793,6 +1794,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
     classes!: LClass[] & Dictionary<DocString<"$name">, LClass>;
     enumerators!: LEnumerator[] & Dictionary<DocString<"$name">, LEnumerator>;
     enums!: LEnumerator[] & Dictionary<DocString<"$name">, LEnumerator>;
+    datatypes!: LDataType[] & Dictionary<DocString<"$name">, LDataType>;
     subpackages!: LPackage[];
     packages!: LPackage[];
     uri!: string;
@@ -1961,15 +1963,17 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
     protected get_classifiers(context: Context): this["classifiers"] {
         return U.arrayMergeInPlace(
             context.data.classes.map(pointer => LPointerTargetable.from(pointer)).filter(e=>!!e),
-            context.data.enumerators.map(pointer => LPointerTargetable.from(pointer)).filter(e=>!!e)
+            context.data.enumerators.map(pointer => LPointerTargetable.from(pointer)).filter(e=>!!e),
+            (context.data.datatypes || []).map(pointer => LPointerTargetable.from(pointer)).filter(e=>!!e)
         ) as any[];
     }
     protected set_enumerators(val: PackArr<this["enumerators"]>, c: Context): boolean { return this._set_classifiers(val, c, 'enumerators'); }
     protected set_classes(val: PackArr<this["classes"]>, c: Context): boolean { return this._set_classifiers(val, c, 'classes'); }
+    protected set_datatypes(val: PackArr<this["datatypes"]>, c: Context): boolean { return this._set_classifiers(val, c, 'datatypes'); }
     protected set_classifiers(val: PackArr<this["classifiers"]>, c: Context): boolean { return this.cannotSet('classifiers'); }
-    protected _set_classifiers(val: PackArr<this["classifiers"]>, c: Context, kind: 'classes' | 'enumerators'): boolean {
+    protected _set_classifiers(val: PackArr<this["classifiers"]>, c: Context, kind: 'classes' | 'enumerators' | 'datatypes'): boolean {
         const list = Pointers.fromArr(val, true);
-        const oldList = c.data[kind];
+        const oldList = c.data[kind] || [];
         const diff = U.arrayDifference(oldList, list, true);
         if (diff.added.length + diff.removed.length === 0) return true;
         TRANSACTION(''+this.get_name(c)+'.'+kind, ()=>{
@@ -3674,10 +3678,8 @@ export class DDataType extends DModelElement { // extends DClassifier
 
 
     public static new(name?: DNamedElement["name"], father?: Pointer, persist: boolean = true): DDataType {
-        Log.exx("DDataType is abstract, cannot instantiate");
-        return null as any;
-        // if (!name) name = this.defaultname("datatype_", father);
-        // return new Constructors(new DDataType('dwc'), father, persist, undefined).DPointerTargetable().DModelElement().DNamedElement(name).DClassifier().DDataType().end();
+        if (!name) name = this.defaultname("datatype_", father);
+        return new Constructors(new DDataType('dwc'), father, persist, undefined).DPointerTargetable().DModelElement().DNamedElement(name).DClassifier().DDataType().end();
     }
 }
 
@@ -4645,6 +4647,9 @@ export class DModel extends DNamedElement { // DNamedElement
     instanceof?: Pointer<DModel>;
     instances!: Pointer<DModelElement>[];
     dependencies!: Pointer<DModel>[];
+    // Optional side-table populated by importers for round-trip preservation.
+    // Currently used by XMI M1 importer (B.3) to record `xmi:id` originals keyed by DObject.id.
+    metadata?: { xmiIdMap?: Record<string, string> };
 
     public static new(name?: DNamedElement["name"], instanceoff?: DModel["instanceof"], isMetamodel?: DModel["isMetamodel"], persist: boolean = true): DModel {
         let dmodels: DModel[] = Selectors.getAll(DModel, undefined, undefined, true, false);

@@ -1,0 +1,230 @@
+.import-summary-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: var(--z-modal, 9999);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-4, 16px);
+}
+
+.import-summary-modal {
+    background: var(--color-bg-secondary, #fff);
+    border-radius: var(--radius-md, 8px);
+    box-shadow: var(--shadow-md);
+    width: 560px;
+    max-width: 100%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+    color: var(--color-text-primary);
+
+    &::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+    }
+
+    &--success::before { background: var(--color-success); }
+    &--success-with-warnings::before { background: var(--color-warning); }
+    &--error::before { background: var(--color-error); }
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2, 8px);
+        padding: var(--space-4, 16px) var(--space-4, 16px) var(--space-3, 12px) var(--space-5, 20px);
+        border-bottom: 1px solid var(--color-border-secondary);
+    }
+
+    &__header-icon {
+        font-size: 20px;
+        line-height: 1;
+        flex-shrink: 0;
+
+        .import-summary-modal--success & { color: var(--color-success); }
+        .import-summary-modal--success-with-warnings & { color: var(--color-warning); }
+        .import-summary-modal--error & { color: var(--color-error); }
+    }
+
+    &__title {
+        flex: 1;
+        font-size: var(--text-base, 15px);
+        font-weight: var(--font-semibold, 600);
+        color: var(--color-text-primary);
+        margin: 0;
+    }
+
+    &__close-btn {
+        background: transparent;
+        border: none;
+        padding: 4px 8px;
+        cursor: pointer;
+        font-size: 14px;
+        line-height: 1;
+        color: var(--color-text-tertiary);
+        border-radius: var(--radius-sm, 4px);
+
+        &:hover {
+            background: var(--color-bg-primary);
+            color: var(--color-text-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 1px;
+        }
+    }
+
+    &__body {
+        padding: var(--space-4, 16px) var(--space-5, 20px);
+        overflow-y: auto;
+        flex: 1;
+        min-height: 0;
+    }
+
+    &__section {
+        margin-bottom: var(--space-4, 16px);
+
+        &:last-child {
+            margin-bottom: 0;
+        }
+    }
+
+    &__section-title {
+        font-size: var(--text-xs, 11px);
+        font-weight: var(--font-semibold, 600);
+        text-transform: uppercase;
+        letter-spacing: var(--tracking-wide, 0.05em);
+        color: var(--color-text-tertiary);
+        margin: 0 0 var(--space-2, 8px) 0;
+    }
+
+    &__kv-row {
+        display: flex;
+        align-items: baseline;
+        gap: var(--space-3, 12px);
+        padding: 2px 0;
+        font-size: var(--text-sm, 13px);
+    }
+
+    &__kv-label {
+        color: var(--color-text-tertiary);
+        flex-shrink: 0;
+        min-width: 110px;
+    }
+
+    &__kv-value {
+        color: var(--color-text-primary);
+        word-break: break-all;
+    }
+
+    &__stat-table {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 2px var(--space-4, 16px);
+        font-size: var(--text-sm, 13px);
+    }
+
+    &__stat-label {
+        color: var(--color-text-secondary);
+    }
+
+    &__stat-value {
+        color: var(--color-text-primary);
+        font-variant-numeric: tabular-nums;
+        font-weight: var(--font-medium, 500);
+        text-align: right;
+    }
+
+    &__warnings {
+        max-height: 200px;
+        overflow-y: auto;
+        font-family: var(--font-mono, monospace);
+        font-size: var(--text-xs, 11px);
+        background: var(--color-bg-primary);
+        border: 1px solid var(--color-border-secondary);
+        border-radius: var(--radius-sm, 4px);
+        padding: var(--space-2, 8px) var(--space-3, 12px);
+        margin: 0;
+        list-style: disc inside;
+        color: var(--color-text-secondary);
+
+        li {
+            padding: 2px 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+    }
+
+    &__error-pre {
+        max-height: 300px;
+        overflow-y: auto;
+        font-family: var(--font-mono, monospace);
+        font-size: var(--text-xs, 11px);
+        background: var(--color-bg-primary);
+        border: 1px solid var(--color-border-secondary);
+        border-radius: var(--radius-sm, 4px);
+        padding: var(--space-3, 12px);
+        white-space: pre-wrap;
+        word-break: break-word;
+        color: var(--color-text-primary);
+        margin: 0;
+    }
+
+    &__footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-2, 8px);
+        padding: var(--space-3, 12px) var(--space-5, 20px);
+        border-top: 1px solid var(--color-border-secondary);
+        background: var(--color-bg-primary);
+    }
+
+    &__btn {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1, 4px);
+        padding: 6px 14px;
+        font-size: var(--text-sm, 13px);
+        font-weight: var(--font-medium, 500);
+        border-radius: var(--radius-md, 8px);
+        border: 1px solid transparent;
+        cursor: pointer;
+        line-height: 1.4;
+        font-family: inherit;
+
+        &:focus-visible {
+            outline: 2px solid var(--color-border-focus);
+            outline-offset: 1px;
+        }
+    }
+
+    &__btn--secondary {
+        background: var(--color-bg-secondary);
+        color: var(--color-text-secondary);
+        border-color: var(--color-border-secondary);
+
+        &:hover {
+            background: var(--color-bg-primary);
+            color: var(--color-text-primary);
+        }
+    }
+
+    &__btn--primary {
+        background: linear-gradient(135deg, #334155, #1e293b);
+        color: #ffffff;
+        border-color: #1e293b;
+
+        &:hover {
+            filter: brightness(1.05);
+        }
+    }
+}

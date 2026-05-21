@@ -397,6 +397,17 @@ export function useJjomSync(
         const vertexIdByModelId = new Map<string, string>();
         const existingEdgeKeys = new Set<string>();
 
+        // Reference edges use a composite key (refId:src→tgt) so multiple
+        // refs between the same src/tgt pair (e.g. Family→Member: father,
+        // mother, sons, daughters) each get their own edge. Inheritance
+        // edges keep the pair-only key (a class extends another at most once).
+        const edgeKeyForD = (se: any): string => {
+            const refIdPtr = typeof se?.model === 'string' ? se.model : null;
+            return refIdPtr
+                ? `${refIdPtr}:${se.start}→${se.end}`
+                : `${se.start}→${se.end}`;
+        };
+
         if (graphId) {
             const rawGraph = idlookup[graphId] as any;
             for (const seId of (rawGraph?.subElements ?? [])) {
@@ -406,7 +417,7 @@ export function useJjomSync(
                     vertexIdByModelId.set(se.model, seId);
                 }
                 if (se.className?.includes('Edge') && se.start && se.end) {
-                    existingEdgeKeys.add(`${se.start}→${se.end}`);
+                    existingEdgeKeys.add(edgeKeyForD(se));
                 }
             }
         }
@@ -415,9 +426,24 @@ export function useJjomSync(
         // where canvas-created DVoidEdges aren't yet in the graph's subElements
         // (e.g. due to TRANSACTION nesting timing).
         for (const [, rfEdge] of rfEdgeCache.current) {
-            if (rfEdge.source && rfEdge.target) {
-                existingEdgeKeys.add(`${rfEdge.source}→${rfEdge.target}`);
-            }
+            if (!rfEdge.source || !rfEdge.target) continue;
+            const refId = (rfEdge.data as any)?.jjomRefId ?? (rfEdge.data as any)?.referenceId;
+            existingEdgeKeys.add(refId && rfEdge.type !== 'inheritance'
+                ? `${refId}:${rfEdge.source}→${rfEdge.target}`
+                : `${rfEdge.source}→${rfEdge.target}`);
+        }
+
+        // Race-window safety net: scan idlookup for DEdges whose endpoints are
+        // this graph's vertices but that may not yet be linked into subElements
+        // (canvasToJjom flows mark pair-based hasCanvasEdgePair, but composite
+        // keys make that guard incompatible — the scan replaces it for refs).
+        const ourVertexIds = new Set(vertexIdByModelId.values());
+        for (const eid in idlookup) {
+            const se = idlookup[eid] as any;
+            if (!se?.className?.includes('Edge')) continue;
+            if (!se.start || !se.end) continue;
+            if (!ourVertexIds.has(se.start) || !ourVertexIds.has(se.end)) continue;
+            existingEdgeKeys.add(edgeKeyForD(se));
         }
 
         // Which classifiers still need vertices?
@@ -442,8 +468,11 @@ export function useJjomSync(
                 if (!targetId) continue;
                 const s = vertexIdByModelId.get(entry.id);
                 const t = vertexIdByModelId.get(targetId);
-                const ek = s && t ? `${s}→${t}` : '';
-                if (s && t && !existingEdgeKeys.has(ek) && !hasCanvasEdgePair(ek)) missingEdgeCount++;
+                if (!s || !t) continue;
+                // Composite key allows sibling references; pair-based
+                // hasCanvasEdgePair would block them, so it's omitted here.
+                const ek = `${refId}:${s}→${t}`;
+                if (!existingEdgeKeys.has(ek)) missingEdgeCount++;
             }
         }
 
@@ -470,8 +499,11 @@ export function useJjomSync(
                     if (typeof tgtObjId !== 'string') continue;
                     const tgtV = vertexIdByModelId.get(tgtObjId);
                     if (!tgtV) continue;
-                    const ek = `${srcV}→${tgtV}`;
-                    if (!existingEdgeKeys.has(ek) && !hasCanvasEdgePair(ek)) missingM1EdgeCount++;
+                    // Composite key (metaId:src→tgt): same metaref can be
+                    // instantiated across many object pairs (Family1.father
+                    // → Member1, Family2.father → Member3, ...).
+                    const ek = `${metaId}:${srcV}→${tgtV}`;
+                    if (!existingEdgeKeys.has(ek)) missingM1EdgeCount++;
                 }
             }
         }
@@ -579,7 +611,7 @@ export function useJjomSync(
                             vertexIdByModelId.set(se.model, seId);
                         }
                         if (se.className?.includes('Edge') && se.start && se.end) {
-                            existingEdgeKeys.add(`${se.start}→${se.end}`);
+                            existingEdgeKeys.add(edgeKeyForD(se));
                         }
                     }
                 }
@@ -619,8 +651,13 @@ export function useJjomSync(
                     const srcVertex = vertexIdByModelId.get(entry.id);
                     const tgtVertex = vertexIdByModelId.get(targetId);
                     if (srcVertex && tgtVertex) {
-                        const ek = `${srcVertex}→${tgtVertex}`;
-                        if (!existingEdgeKeys.has(ek) && !hasCanvasEdgePair(ek)) {
+                        // Composite key allows multiple references between the
+                        // same pair (Family→Member: father, mother, sons, ...).
+                        // hasCanvasEdgePair is pair-based and would block siblings,
+                        // so it's not consulted here — race-window protection is
+                        // provided by the idlookup scan above.
+                        const ek = `${refId}:${srcVertex}→${tgtVertex}`;
+                        if (!existingEdgeKeys.has(ek)) {
                             DVoidEdge.new2(
                                 refId, graphId, graphId, undefined,
                                 srcVertex, tgtVertex,
@@ -651,7 +688,7 @@ export function useJjomSync(
                             vertexIdByModelId.set(se.model, seId);
                         }
                         if (se.className?.includes('Edge') && se.start && se.end) {
-                            existingEdgeKeys.add(`${se.start}→${se.end}`);
+                            existingEdgeKeys.add(edgeKeyForD(se));
                         }
                     }
                 }
@@ -673,8 +710,11 @@ export function useJjomSync(
                             if (typeof tgtObjId !== 'string') continue;
                             const tgtVertex = vertexIdByModelId.get(tgtObjId);
                             if (!tgtVertex) continue;
-                            const ek = `${srcVertex}→${tgtVertex}`;
-                            if (!existingEdgeKeys.has(ek) && !hasCanvasEdgePair(ek)) {
+                            // Composite key (metaId:src→tgt): same metaref can
+                            // appear in multiple object pairs; each pair gets
+                            // its own edge.
+                            const ek = `${metaId}:${srcVertex}→${tgtVertex}`;
+                            if (!existingEdgeKeys.has(ek)) {
                                 DVoidEdge.new2(
                                     metaId, graphId, graphId, undefined,
                                     srcVertex, tgtVertex,
@@ -975,7 +1015,10 @@ export function useJjomSync(
             const dElement = elementSnapshots.get(id);
             const prevD = prevElements.get(id);
             const currModel = elementSnapshots.get(`model:${id}`);
-            const prevModel = prevElements.get(`model:${id}`);
+            // damiano: this is wrong. it is sometimes taking newElement instead. source of isSingleton bug
+            let prevModel = prevElements.get(`model:${id}`);
+            // forcing to update by giving it a different object, until it gets a better fix.
+            prevModel = {} as any;
             const currHash = elementSnapshots.get(`ch:${id}`);
             const prevHash = prevElements.get(`ch:${id}`);
 

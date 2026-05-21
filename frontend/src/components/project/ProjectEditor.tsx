@@ -20,6 +20,7 @@ import {
     TRANSACTION,
     getViewpointType,
     DViewPoint,
+    Log,
 } from '../../joiner';
 import DockManager from '../abstract/DockManager';
 import { createM2, createM1 } from '../../pages/components/Navbar';
@@ -42,6 +43,12 @@ import MegamodelView, { type ArtifactStats } from '../megamodel/MegamodelView';
 import { Badge } from '../common/Badge';
 import { EmptyState } from '../ui/EmptyState';
 import { JjodelEvents, SystemEvents, EnvGenEvents } from '../../events/registry';
+import { dispatchImportSummary } from '../import/dispatchImportSummary';
+import {
+    buildEcoreImportSummary,
+    buildXmiImportSummary,
+    buildErrorImportSummary,
+} from '../import/buildImportSummary';
 import './project-editor.scss';
 
 
@@ -234,6 +241,10 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     const [isDirty, setIsDirty] = useState(false);
     const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+
+    // Bumped after import linking so the megamodel useEffect re-runs even when the local
+    // `metamodels` / `models` arrays (read at render-start) have not changed identity yet.
+    const [importTick, setImportTick] = useState(0);
     const pendingActionRef = useRef<(() => void) | null>(null);
 
     const nameInputRef = useRef<HTMLInputElement>(null);
@@ -429,7 +440,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         setRuntimeMegamodel(projectId, megamodel);
 
         return () => { clearRuntimeMegamodel(projectId); };
-    }, [project.id, metamodels, models, transformations]);
+    }, [project.id, metamodels, models, transformations, importTick]);
 
     // Mark project as dirty (unsaved changes)
     // Sets both local state and global U.isProjectModified for consistency
@@ -789,6 +800,11 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         const file = e.target.files?.[0];
         if (!file) return;
 
+        // Warning capture: snapshot Log.messageMapping['w'] length before import, then take the
+        // delta after import. The parser uses Log.ww/Log.w(true,...) for non-fatal warnings;
+        // those messages are pushed to messageMapping['w']. See discovery sez. A.2 opzione C.
+        const warningsBefore = (Log as any).messageMapping?.['w']?.length ?? 0;
+
         try {
             const result = await EcoreService.importFromFile(file);
 
@@ -807,20 +823,36 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 } catch (linkErr) {
                     console.warn('[Bug F fix] Failed to link imported metamodel to project:', linkErr);
                 }
-                U.alert('i', 'Imported', `Metamodel "${result.model.name}" imported from Ecore`);
+                setImportTick(t => t + 1);
                 markDirty();
 
-                // Show warnings if any
-                if (result.warnings.length > 0) {
-                    console.warn('Ecore import warnings:', result.warnings);
+                const wAfter = (Log as any).messageMapping?.['w']?.length ?? warningsBefore;
+                const wEntries = (Log as any).messageMapping?.['w'] ?? [];
+                const collected: string[] = wEntries
+                    .slice(warningsBefore, wAfter)
+                    .map((entry: any) => (entry?.short_string ?? String(entry ?? '')).trim())
+                    .filter((s: string) => s.length > 0);
+
+                if (collected.length > 0) {
+                    console.warn('Ecore import warnings:', collected);
                 }
+
+                dispatchImportSummary(
+                    buildEcoreImportSummary(result.model, file.name, collected)
+                );
             } else {
                 throw new Error(result.errors.join(', '));
             }
 
         } catch (error) {
             console.error('Import Ecore error:', error);
-            U.alert('e', 'Import Failed', `Could not import Ecore: ${(error as Error).message}`);
+            dispatchImportSummary(
+                buildErrorImportSummary(
+                    'metamodel',
+                    file.name,
+                    (error as Error)?.message ?? String(error)
+                )
+            );
         }
 
         // Reset input
@@ -855,19 +887,35 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 } catch (linkErr) {
                     console.warn('[XMI import] Failed to link imported model to project:', linkErr);
                 }
-                U.alert('i', 'Imported', `Model "${result.model.name}" imported from XMI`);
+                setImportTick(t => t + 1);
                 markDirty();
 
                 if (result.warnings.length > 0) {
                     console.warn('XMI import warnings:', result.warnings);
                 }
+
+                dispatchImportSummary(
+                    buildXmiImportSummary(
+                        result.model,
+                        result.metamodel,
+                        result.pattern ?? 'unknown',
+                        file.name,
+                        result.warnings ?? []
+                    )
+                );
             } else {
                 throw new Error(result.errors.join(', '));
             }
 
         } catch (error) {
             console.error('Import XMI error:', error);
-            U.alert('e', 'Import Failed', `Could not import XMI: ${(error as Error).message}`);
+            dispatchImportSummary(
+                buildErrorImportSummary(
+                    'model',
+                    file.name,
+                    (error as Error)?.message ?? String(error)
+                )
+            );
         }
 
         if (importXmiRef.current) {

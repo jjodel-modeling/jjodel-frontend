@@ -18,6 +18,8 @@ import {
     LReference,
     DEnumerator,
     LEnumerator,
+    DDataType,
+    LDataType,
     DEnumLiteral,
     LEnumLiteral,
     DOperation,
@@ -164,6 +166,13 @@ export class EcoreService {
             parts.push(this.exportEnumerator(enumType, innerIndent, newline));
         }
 
+        // W2: user-defined EDataType — emessi dopo Class+Enum (append-non-interleave) per
+        // preservare byte-identità delle fixture W1 esistenti.
+        const dataTypes = pkg.datatypes || [];
+        for (const dt of dataTypes) {
+            parts.push(this.exportDataType(dt, innerIndent, newline));
+        }
+
         // Sub-package nesting level: 1 under a root EPackage, 2 under <xmi:XMI> children.
         const subpackages = pkg.subpackages || [];
         const subPkgLevel = isRoot ? 1 : 2;
@@ -204,6 +213,11 @@ export class EcoreService {
             `xsi:type="ecore:EClass"`,
             `name="${this.escapeXml(cls.name)}"`,
         ];
+
+        // SI7: instanceClassName (truthy emit), posizionato fra name e abstract per allineamento canonico EMF.
+        if (cls.instanceClassName) {
+            classAttrs.push(`instanceClassName="${this.escapeXml(cls.instanceClassName)}"`);
+        }
 
         // Abstract?
         if (cls.abstract) {
@@ -309,8 +323,8 @@ export class EcoreService {
             parts.push(`eType="${this.targetTypePointer(targetType, currentPackage)}"`);
         }
 
-        // Multiplicity
-        if (ref.lowerBound !== undefined) {
+        // Multiplicity — SI10: skip default 0 per allineamento EMF idiomatic.
+        if (ref.lowerBound !== undefined && ref.lowerBound !== 0) {
             parts.push(`lowerBound="${ref.lowerBound}"`);
         }
         if (ref.upperBound !== undefined && ref.upperBound !== 1) {
@@ -347,16 +361,34 @@ export class EcoreService {
     private static exportOperation(op: LOperation, indent: string, newline: string, currentPackage: LPackage): string {
         const parts: string[] = [];
 
+        // Ordine canonico EMF: name → lowerBound → upperBound → ordered → unique → eType → eExceptions.
         const opAttrs: string[] = [
             `xsi:type="ecore:EOperation"`,
             `name="${this.escapeXml(op.name)}"`,
         ];
+
+        // BL6: bounds (skip default 0 / 1), flags (strict === false / true), return type, eExceptions.
+        if (op.lowerBound !== undefined && op.lowerBound !== 0) {
+            opAttrs.push(`lowerBound="${op.lowerBound}"`);
+        }
+        if (op.upperBound !== undefined && op.upperBound !== 1) {
+            opAttrs.push(`upperBound="${op.upperBound}"`);
+        }
+        if (op.ordered === false) opAttrs.push(`ordered="false"`);
+        if (op.unique === false) opAttrs.push(`unique="false"`);
 
         // Return type — reflection-aware, cross-package-aware, primitive-aware pointer.
         const returnType = op.type;
         if (returnType) {
             const ecoreType = this.targetTypePointer(returnType, currentPackage);
             opAttrs.push(`eType="${ecoreType}"`);
+        }
+
+        // eExceptions: space-join di pointer ecore-formattati, emesso solo se non vuoto.
+        const exceptions = op.exceptions || [];
+        if (exceptions.length > 0) {
+            const excRefs = exceptions.map(e => this.targetTypePointer(e, currentPackage)).join(' ');
+            opAttrs.push(`eExceptions="${excRefs}"`);
         }
 
         const parameters = op.parameters || [];
@@ -380,10 +412,21 @@ export class EcoreService {
      * Export EParameter
      */
     private static exportParameter(param: LParameter, indent: string, currentPackage: LPackage): string {
+        // Ordine canonico EMF: name → lowerBound → upperBound → ordered → unique → eType.
         const parts: string[] = [
             `xsi:type="ecore:EParameter"`,
             `name="${this.escapeXml(param.name)}"`,
         ];
+
+        // BL7: bounds (skip default 0 / 1) e flags (strict === false), parallelo a exportOperation.
+        if (param.lowerBound !== undefined && param.lowerBound !== 0) {
+            parts.push(`lowerBound="${param.lowerBound}"`);
+        }
+        if (param.upperBound !== undefined && param.upperBound !== 1) {
+            parts.push(`upperBound="${param.upperBound}"`);
+        }
+        if (param.ordered === false) parts.push(`ordered="false"`);
+        if (param.unique === false) parts.push(`unique="false"`);
 
         const paramType = param.type;
         if (paramType) {
@@ -400,17 +443,53 @@ export class EcoreService {
     private static exportEnumerator(enumType: LEnumerator, indent: string, newline: string): string {
         const parts: string[] = [];
 
-        parts.push(`${indent}<eClassifiers xsi:type="ecore:EEnum" name="${this.escapeXml(enumType.name)}">`);
+        // SI6: aggiunge instanceClassName (truthy) + serializable (strict === false, default EMF true).
+        const enumAttrs: string[] = [
+            `xsi:type="ecore:EEnum"`,
+            `name="${this.escapeXml(enumType.name)}"`,
+        ];
+        if (enumType.instanceClassName) {
+            enumAttrs.push(`instanceClassName="${this.escapeXml(enumType.instanceClassName)}"`);
+        }
+        if (enumType.serializable === false) {
+            enumAttrs.push(`serializable="false"`);
+        }
+        parts.push(`${indent}<eClassifiers ${enumAttrs.join(' ')}>`);
 
         const literals = enumType.literals || [];
         literals.forEach((literal, index) => {
             const ordinal = literal.ordinal !== undefined ? literal.ordinal : index;
-            parts.push(`${indent}${indent}<eLiterals name="${this.escapeXml(literal.literal)}" value="${ordinal}"/>`);
+            // BL4: name = identifier (Java); literal = display label opzionale. EMF non emette
+            // literal quando coincide col name. Usa __raw.literal per evitare la derivazione
+            // del getter L (che ritorna name.replace('_',' ') quando literal è vuoto).
+            const litName = literal.name;
+            const litRaw = literal.__raw?.literal;
+            const litAttr = litRaw && litRaw !== litName ? ` literal="${this.escapeXml(litRaw)}"` : '';
+            parts.push(`${indent}${indent}<eLiterals name="${this.escapeXml(litName)}" value="${ordinal}"${litAttr}/>`);
         });
 
         parts.push(`${indent}</eClassifiers>`);
 
         return parts.join(newline);
+    }
+
+    /**
+     * Export EDataType (user-defined, self-closing).
+     * W2: emette name + instanceClassName (truthy) + serializable (skip se default true).
+     * Coverage parziale; split instanceTypeName (EMF 2.x) e eAnnotations rimandati a W5/W4.
+     */
+    private static exportDataType(dt: LDataType, indent: string, newline: string): string {
+        const attrs: string[] = [
+            `xsi:type="ecore:EDataType"`,
+            `name="${this.escapeXml(dt.name)}"`,
+        ];
+        if (dt.instanceClassName) {
+            attrs.push(`instanceClassName="${this.escapeXml(dt.instanceClassName)}"`);
+        }
+        if (dt.serializable === false) {
+            attrs.push(`serializable="false"`);
+        }
+        return `${indent}<eClassifiers ${attrs.join(' ')}/>`;
     }
 
     /**
@@ -430,6 +509,11 @@ export class EcoreService {
         // Enums
         for (const enumType of pkg.enumerators || []) {
             parts.push(this.exportEnumerator(enumType, i + indent, newline));
+        }
+
+        // W2: user-defined EDataType
+        for (const dt of pkg.datatypes || []) {
+            parts.push(this.exportDataType(dt, i + indent, newline));
         }
 
         // Recursive sub-packages
@@ -577,13 +661,24 @@ export class EcoreService {
     }
 
     /**
-     * Map Jjodel/generic type to Ecore type
+     * Resolve a type reference to its Ecore XML attribute value.
+     *
+     * Canonical primitives (Pointer_E* convention, e.g. Pointer_ESTRING, Pointer_EDATE)
+     * are emitted as full Ecore URIs. User-defined EDataType/EClass with names that
+     * collide with canonical short aliases (e.g. 'Date', 'String') are emitted as
+     * local references (`#//Name`) to preserve their identity. The `Pointer_E` id
+     * prefix is the discriminator: only canonical primitives have it (see
+     * selectors.ts:149 for the lookup convention).
+     *
+     * Plain string inputs (e.g. from JjScript executor) are always treated as
+     * canonical, since user-defined references arrive as classifier objects.
      */
     private static mapToEcoreType(type: any): string {
         if (!type) return 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString';
 
-        // If type is a class/classifier reference
-        const typeName = typeof type === 'string' ? type : (type.name || 'EString');
+        const isString = typeof type === 'string';
+        const typeName = isString ? type : (type.name || 'EString');
+        const isCanonical = isString || (typeof type.id === 'string' && type.id.startsWith('Pointer_E'));
 
         const typeMap: Record<string, string> = {
             'String': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString',
@@ -613,12 +708,7 @@ export class EcoreService {
             'EChar': 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EChar',
         };
 
-        // Check if it's a primitive type
-        if (typeMap[typeName]) {
-            return typeMap[typeName];
-        }
-
-        // Otherwise it's a reference to a class in the model
+        if (isCanonical && typeMap[typeName]) return typeMap[typeName];
         return `#//${typeName}`;
     }
 
