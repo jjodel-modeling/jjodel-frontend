@@ -3070,6 +3070,10 @@ console.log('[diag9] ReactFlow props:', {
             // eslint-disable-next-line no-console
             console.log('[diag10] edge endpoints snapshot', edgesSnapshot);
             // eslint-disable-next-line no-console
+            console.log('[diag11] endpoints as JSON', JSON.stringify(edgesSnapshot, null, 2));
+            // eslint-disable-next-line no-console
+            console.table(edgesSnapshot);
+            // eslint-disable-next-line no-console
             console.log('[diag10] diff edge -> handle presence', diff);
 
             const missing = diff.filter(d => !d.sourceHandleFound || !d.targetHandleFound);
@@ -3080,6 +3084,31 @@ console.log('[diag9] ReactFlow props:', {
                 edgesWithMissingEndpoints: missing.length,
                 missing,
             });
+            // eslint-disable-next-line no-console
+            console.log(
+                '[diag11] duplicate analysis',
+                {
+                    bySourceTargetPair: edgesSnapshot.reduce((acc: Record<string, number>, e) => {
+                        const k = `${e.source}->${e.target}`;
+                        acc[k] = (acc[k] ?? 0) + 1;
+                        return acc;
+                    }, {}),
+                    byHandlePair: edgesSnapshot.reduce((acc: Record<string, number>, e) => {
+                        const k = `${e.sourceHandle ?? '-'}|${e.targetHandle ?? '-'}`;
+                        acc[k] = (acc[k] ?? 0) + 1;
+                        return acc;
+                    }, {}),
+                    byEdgeId: edgesSnapshot.reduce((acc: Record<string, number>, e) => {
+                        acc[e.id] = (acc[e.id] ?? 0) + 1;
+                        return acc;
+                    }, {}),
+                    byFullKey: edgesSnapshot.reduce((acc: Record<string, number>, e) => {
+                        const k = `${e.source}|${e.sourceHandle ?? '-'}|${e.target}|${e.targetHandle ?? '-'}`;
+                        acc[k] = (acc[k] ?? 0) + 1;
+                        return acc;
+                    }, {}),
+                }
+            );
         });
     }
 
