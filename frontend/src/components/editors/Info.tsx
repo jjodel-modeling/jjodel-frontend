@@ -742,7 +742,7 @@ class builder {
                             </select>}
                             {popup &&
                                 <div className={'inline'}>
-                                    <Info mode={'inline'} localData={element} />
+                                    <Info mode={'inline'} localData={element as any} />
                                 </div>}
                         </div>;
                     }
