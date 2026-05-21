@@ -774,7 +774,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
         const { edgeHandles } = computePortDistribution(edgeList, nodeIds, positions);
 
-        const output = edgeList.map(edge => {
+        return edgeList.map(edge => {
             const distributed = edgeHandles.get(edge.id);
             if (distributed &&
                 (edge.sourceHandle !== distributed.sourceHandle ||
@@ -787,55 +787,6 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             }
             return edge;
         });
-
-        // ============ [diag14] one-shot input/output snapshot ============
-        if (!(window as any).__diag14Fired && edgeList.length >= 4) {
-            (window as any).__diag14Fired = true;
-
-            const inputSnapshot = edgeList.map(e => ({
-                id: e.id,
-                source: e.source,
-                target: e.target,
-                sourceHandle: e.sourceHandle ?? null,
-                targetHandle: e.targetHandle ?? null,
-            }));
-
-            const outputSnapshot = output.map(e => ({
-                id: e.id,
-                source: e.source,
-                target: e.target,
-                sourceHandle: e.sourceHandle ?? null,
-                targetHandle: e.targetHandle ?? null,
-            }));
-
-            const diff = inputSnapshot.map((inEdge, i) => {
-                const outEdge = outputSnapshot[i];
-                const srcChanged = inEdge.sourceHandle !== outEdge.sourceHandle;
-                const tgtChanged = inEdge.targetHandle !== outEdge.targetHandle;
-                return {
-                    id: inEdge.id,
-                    source: inEdge.source,
-                    target: inEdge.target,
-                    in: `${inEdge.sourceHandle} → ${inEdge.targetHandle}`,
-                    out: `${outEdge.sourceHandle} → ${outEdge.targetHandle}`,
-                    changed: srcChanged || tgtChanged ? 'YES' : 'unchanged',
-                };
-            });
-
-            // eslint-disable-next-line no-console
-            console.log('[diag14] applyDistribution INPUT', JSON.stringify(inputSnapshot, null, 2));
-            // eslint-disable-next-line no-console
-            console.log('[diag14] applyDistribution OUTPUT', JSON.stringify(outputSnapshot, null, 2));
-            // eslint-disable-next-line no-console
-            console.table(diff);
-            // eslint-disable-next-line no-console
-            console.log('[diag14] edgeHandles map size', edgeHandles.size);
-            // eslint-disable-next-line no-console
-            console.log('[diag14] edgeHandles entries', Array.from(edgeHandles.entries()));
-        }
-        // ============ end [diag14] ============
-
-        return output;
     }, [getNodes, buildNodePositions]);
     applyDistributionRef.current = applyDistribution;
 

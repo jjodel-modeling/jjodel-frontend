@@ -1,5 +1,13 @@
 # Claude Code Session Log
 
+## 2026-05-21 — chore: remove diag14 from EditorV2.tsx
+**Prompt**: cleanup blocco diagnostico [diag14] (~50 righe) introdotto in c64c3f812. Filone edge rendering v2-flow chiuso.
+**File toccati**: frontend/src/components/editor-v2/EditorV2.tsx
+**Esito**: ✅ completato, build verde
+**Nome del documento prompt**: 2026-05-21 13:20
+
+---
+
 ## 2026-05-21 — fix: role-aware bucketing in computePortDistribution
 **Prompt**: fix P0 filone edge rendering v2-flow Families.ecore. Cambio chiave bucketing in STEP 1 di computePortDistribution da `${node}:${side}` a `${node}:${side}:${role}`. Closes filone aperto in sessione_2026-05-20_3.
 **File toccati**: frontend/src/components/editor-v2/utils/portDistribution.ts
