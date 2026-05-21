@@ -829,6 +829,7 @@ function PaletteDataComponent(props: AllProps) {
             value={vcss}
             onChange={change}
             onSave={(newValue) => {
+                console.log("fullscreen save", {newValue});
                 setCss(newValue);
                 view.css = newValue;
                 setFullscreen(false);
