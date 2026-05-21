@@ -1015,7 +1015,10 @@ export function useJjomSync(
             const dElement = elementSnapshots.get(id);
             const prevD = prevElements.get(id);
             const currModel = elementSnapshots.get(`model:${id}`);
-            const prevModel = prevElements.get(`model:${id}`);
+            // damiano: this is wrong. it is sometimes taking newElement instead. source of isSingleton bug
+            let prevModel = prevElements.get(`model:${id}`);
+            // forcing to update by giving it a different object, until it gets a better fix.
+            prevModel = {} as any;
             const currHash = elementSnapshots.get(`ch:${id}`);
             const prevHash = prevElements.get(`ch:${id}`);
 
