@@ -1,5 +1,14 @@
 # Claude Code Session Log
 
+## 2026-05-21 — fix: directional spread to separate paths and labels of mirrored edges
+**Prompt**: La formula bundleSpread precedente era invariante per swap di source/target, causando il collasso degli edge speculari sullo stesso path. Stesso bug sulle label. Introduce directionSign basato sul confronto lessicografico dei node ID per spezzare la simmetria.
+**File toccati**: frontend/src/components/editor-v2/edges/UnifiedEdge.tsx
+**Esito**: ✅ completato, build verde (1m 11s). Smoke test manuale richiesto su Families.ecore (verifica 8 path distinti + label separate per direzione) + State Machine (regression edge singolo) + modello con inheritance (regression frecce centrate).
+**Note**: chiude il filone "rendering denso bidirezionale Families.ecore" (3 fix in sequenza: portDistribution role-aware bucketing → DynamicHandles role-aware positioning → UnifiedEdge directional spread); direzione lessicografica deterministica ma non semantica, per simmetria UML servirebbe propagazione bundleIndex (backlog); formula `bundleSpread = directionSign * (sourceIndex + targetIndex + 1) * BUNDLE_SPREAD_PX / 2` produce 8 valori equispaziati simmetrici attorno a 0 per coppia Family↔Member; stesso pattern su labelOffset/cardinalityOffset con `+ directionSign * 0.5`; `BUNDLE_SPREAD_PX`/`LABEL_SPREAD_PX` invariati a 12/18.
+**Nome del documento prompt**: 2026-05-21 HH:mm fix_UnifiedEdge_bundle_spread_directional
+
+---
+
 ## 2026-05-21 — fix: spread paths and labels for bundled edges between same node pair
 **Prompt**: Spread orizzontale dei path e verticale delle label per edge in bundle tra stessa coppia di nodi nel flow editor v2, usando handle index estratto dal handleId come proxy del bundle index (approccio C, local-only a UnifiedEdge).
 **File toccati**: frontend/src/components/editor-v2/edges/UnifiedEdge.tsx

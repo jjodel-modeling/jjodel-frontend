@@ -55,14 +55,18 @@ function applyBundleSpread(
     points: { x: number; y: number }[],
     sourceHandleId: string | null | undefined,
     targetHandleId: string | null | undefined,
+    source: string,
+    target: string,
 ): { x: number; y: number }[] {
     if (points.length !== 4) return points;
 
     const sourceIndex = getHandleIndex(sourceHandleId);
     const targetIndex = getHandleIndex(targetHandleId);
-    const sourceSpread = (sourceIndex - (MAX_HANDLES_PER_SIDE - 1) / 2) * BUNDLE_SPREAD_PX;
-    const targetSpread = (targetIndex - (MAX_HANDLES_PER_SIDE - 1) / 2) * BUNDLE_SPREAD_PX;
-    const bundleSpread = (sourceSpread + targetSpread) / 2;
+    const directionSign = source < target ? 1 : -1;
+    // Sum of indices is invariant under (source, target) swap; multiplying
+    // by directionSign breaks the symmetry so mirrored edges land on
+    // opposite sides of the central corridor.
+    const bundleSpread = directionSign * (sourceIndex + targetIndex + 1) * BUNDLE_SPREAD_PX / 2;
 
     const p1 = points[1];
     const p2 = points[2];
@@ -200,8 +204,8 @@ function UnifiedEdge(props: EdgeProps) {
     // For self-loop / L-shape / U-detour, applyBundleSpread returns input unchanged.
     const spreadPoints = useMemo(() => {
         if (isInheritance || isSelfLoop || waypoints.length > 0) return adjustedPoints;
-        return applyBundleSpread(adjustedPoints, sourceHandleId, targetHandleId);
-    }, [adjustedPoints, sourceHandleId, targetHandleId, isInheritance, isSelfLoop, waypoints]);
+        return applyBundleSpread(adjustedPoints, sourceHandleId, targetHandleId, source, target);
+    }, [adjustedPoints, sourceHandleId, targetHandleId, source, target, isInheritance, isSelfLoop, waypoints]);
     const spreadPath = useMemo(() => pointsToPath(spreadPoints), [spreadPoints]);
 
     // ─── Register path for crossing detection ───
@@ -261,13 +265,14 @@ function UnifiedEdge(props: EdgeProps) {
         // so multiple bundled edges have separated label positions.
         const sourceIndex = getHandleIndex(sourceHandleId);
         const targetIndex = getHandleIndex(targetHandleId);
-        const labelIndex = (sourceIndex + targetIndex) / 2;
+        const directionSign = source < target ? 1 : -1;
+        const labelIndex = (sourceIndex + targetIndex) / 2 + directionSign * 0.5;
         const offset = (labelIndex - (MAX_HANDLES_PER_SIDE - 1) / 2) * LABEL_SPREAD_PX;
 
         return longestIsHorizontal
             ? { x: 0, y: offset }
             : { x: offset, y: 0 };
-    }, [spreadPath, isSelfLoop, sourceHandleId, targetHandleId]);
+    }, [spreadPath, isSelfLoop, sourceHandleId, targetHandleId, source, target]);
 
     // ─── Cardinality positioning (reference edges) ───
     const cardinalityPos = useMemo(() => computeCardinalityPosition(spreadPath), [spreadPath]);
@@ -281,13 +286,14 @@ function UnifiedEdge(props: EdgeProps) {
         // Use targetHandleId-driven spread, mirroring the label rule.
         const sourceIndex = getHandleIndex(sourceHandleId);
         const targetIndex = getHandleIndex(targetHandleId);
-        const labelIndex = (sourceIndex + targetIndex) / 2;
+        const directionSign = source < target ? 1 : -1;
+        const labelIndex = (sourceIndex + targetIndex) / 2 + directionSign * 0.5;
         const offset = (labelIndex - (MAX_HANDLES_PER_SIDE - 1) / 2) * LABEL_SPREAD_PX;
 
         return isLastHorizontal
             ? { x: 0, y: offset }
             : { x: offset, y: 0 };
-    }, [spreadPath, sourceHandleId, targetHandleId]);
+    }, [spreadPath, sourceHandleId, targetHandleId, source, target]);
 
     // ─── ISA label midpoint (inheritance ER notation) ───
     const midPoint = useMemo(() => {
