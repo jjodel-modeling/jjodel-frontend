@@ -344,6 +344,9 @@ export function useJjomSync(
     const justCreatedGraphRef = useRef(false);
 
     useEffect(() => {
+        // [DIAG12] TEMP — count every auto-create effect closure invocation (before guards)
+        // eslint-disable-next-line no-console
+        console.count('[diag12] auto-create-effect FIRED');
         if (!modelid || creatingGraphRef.current) return;
 
         // If no v2-flow graph exists yet, create one (even for empty metamodels).
@@ -661,6 +664,11 @@ export function useJjomSync(
                         // provided by the idlookup scan above.
                         const ek = `${refId}:${srcVertex}→${tgtVertex}`;
                         if (!existingEdgeKeys.has(ek)) {
+                            // [DIAG12] TEMP — count and log every DVoidEdge.new2 emitted on M2 refs path
+                            // eslint-disable-next-line no-console
+                            console.count('[diag12] DVoidEdge.new2 EMITTED');
+                            // eslint-disable-next-line no-console
+                            console.log('[diag12] DVoidEdge.new2 args', { refId, srcVertex, tgtVertex });
                             DVoidEdge.new2(
                                 refId, graphId, graphId, undefined,
                                 srcVertex, tgtVertex,
