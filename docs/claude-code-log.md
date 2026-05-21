@@ -1,5 +1,13 @@
 # Claude Code Session Log
 
+## 2026-05-21 — fix: role-aware bucketing in computePortDistribution
+**Prompt**: fix P0 filone edge rendering v2-flow Families.ecore. Cambio chiave bucketing in STEP 1 di computePortDistribution da `${node}:${side}` a `${node}:${side}:${role}`. Closes filone aperto in sessione_2026-05-20_3.
+**File toccati**: frontend/src/components/editor-v2/utils/portDistribution.ts
+**Esito**: ✅ completato, build verde, smoke test da fare
+**Nome del documento prompt**: 2026-05-21 13:20
+
+---
+
 ## 2026-05-20 — diag chiuso: edge quadruplication su import Ecore (NON era un bug)
 
 **Prompt**: filone di 5 diagnostici (diag9, 10, 11, 12, 13) per indagare il sintomo "Families.ecore mostra 4 edge invece di 8" nel flow v2. Rimossi tutti in cleanup unico.

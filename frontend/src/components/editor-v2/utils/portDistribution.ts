@@ -75,7 +75,7 @@ function computePortDistribution(
         const targetSide = getBaseSide(edge.targetHandle);
 
         // --- Source side ---
-        const sourceKey = `${edge.source}:${sourceSide}`;
+        const sourceKey = `${edge.source}:${sourceSide}:source`;
         if (!sideGroups.has(sourceKey)) sideGroups.set(sourceKey, []);
 
         if (edgeType === 'inheritance') {
@@ -108,7 +108,7 @@ function computePortDistribution(
         }
 
         // --- Target side ---
-        const targetKey = `${edge.target}:${targetSide}`;
+        const targetKey = `${edge.target}:${targetSide}:target`;
         if (!sideGroups.has(targetKey)) sideGroups.set(targetKey, []);
         const targetGroups = sideGroups.get(targetKey)!;
 
