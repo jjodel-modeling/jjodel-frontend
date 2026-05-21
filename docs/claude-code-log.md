@@ -1,12 +1,12 @@
 # Claude Code Session Log
 
-## 2026-05-20 — diag: diag10 handle DOM vs edge endpoints
+## 2026-05-20 — diag chiuso: edge quadruplication su import Ecore (NON era un bug)
 
-**Prompt**: diag10 — discriminante T4 vs T5 sul bug v2-flow 4/8 edge. Inserito blocco one-shot in EditorV2.tsx (~r3005) che alla prima volta in cui edges.length===8 e nodes.length===2 fa un confronto DOM handles (`[data-handleid]` dentro `.editor-v2__canvas` con fallback `.react-flow`) vs edge endpoints, dentro un `requestAnimationFrame` per dare a RF un tick per renderizzare. Logga 4 console.log: handle DOM inventory, edge endpoints snapshot, diff edge→handle presence, SUMMARY con count edge senza handle. Guard `window.__diag10Fired` per one-shot.
-**File toccati**: frontend/src/components/editor-v2/EditorV2.tsx
-**Esito**: ✅ build verde (38.39s), da eseguire smoke import Families.ecore.
-**Note**: solo additivo, non rimossi `[diag9]` né altri diag precedenti. Variabili in scope sono `nodes`/`edges` (non `rfNodes`/`rfEdges` come nel template del prompt).
-**Nome del documento prompt**: 2026-05-20_diag10_handle_dom_vs_edge_endpoints.md
+**Prompt**: filone di 5 diagnostici (diag9, 10, 11, 12, 13) per indagare il sintomo "Families.ecore mostra 4 edge invece di 8" nel flow v2. Rimossi tutti in cleanup unico.
+**Conclusione**: il modello Families.ecore caricato è la variante "ricca" (Bezivin/AtlanMod) con 4 EReference per ciascuna delle 2 EClass, per un totale legittimo di 8 reference. Verifica via JjEL: `references.size` → 8, `Family.references` → ["father","mother","sons","daughters"], `Member.references` → ["familyFather","familyMother","familySon","familyDaughter"]. Il rendering nel flow v2 funziona correttamente con handle distinti. Il sintomo iniziale "4 invece di 8" era un'illusione ottica pre-auto-layout dovuta a nodi sovrapposti.
+**File toccati**: frontend/src/components/editor-v2/EditorV2.tsx (177 righe rimosse), frontend/src/components/editor-v2/hooks/useJjomSync.ts (22 righe rimosse).
+**Esito**: ✅ cleanup completo, working tree allineato allo stato pre-diag9.
+**Nome del documento prompt**: 2026-05-20 HH:mm (cleanup diag9-13)
 
 ---
 
@@ -5983,9 +5983,3 @@ Dark mode overrides for `.toolbar-btn` also scoped under `.documentation-toolbar
 
 ---
 
-## 2026-05-20 — chore: diag9 — instrument all setEdges callers
-**Prompt**: 2026-05-20_HHMM_diag9_setedges_map.md
-**File toccati**: frontend/src/components/editor-v2/hooks/useJjomSync.ts (2 instr), frontend/src/components/editor-v2/EditorV2.tsx (22 instr), frontend/src/components/editor-v2/hooks/useClassRemoval.ts (1 instr), frontend/src/components/editor-v2/edges/UnifiedEdge.tsx (2 instr), frontend/src/components/editor-v2/edges/SegmentHandles.tsx (1 instr)
-**Esito**: ✅ completato (log temporanei, no fix)
-**Note**: **Totale 28 `[diag9]` instrumentati** prima di ogni `setEdges` nei 5 file che lo chiamano nell'editor-v2. Discovery T2 (multiple setEdges) vs T4 (downstream mutation). **Skipped come da prompt**: `useM1ReferenceEdges.ts` ha 0 chiamate setEdges (solo `TRANSACTION` su JjOM, lascia che `useJjomSync` propaghi a RF via incremental sync); `useAutoAnchor.ts` ha 0 chiamate setEdges (modulo utility pure: `computeAnchorsWithHysteresis`, `getNodeRect`, ecc., usato da EditorV2 stessa). **Dead file escluso**: `ManhattanEdge-toDelete.tsx` (filename `-toDelete` indica rimozione pianificata). **Breakdown EditorV2 (22)**: post-init layout (`onInit-distribution`), live ref name sync (`liveRefNameSync`), tree-view selection (`selectNode-event`), M2 connection (`pendingConnection-addEdge`), M1 connection (`m1ReferenceSelected-addEdge`), reconnect drag (`handleReconnect`), delete bulk in JjOM (`deleteSelected-jjom-otherNodes`), delete bulk non-JjOM (`deleteSelected-nonjjom`), delete node (`deleteNode`), delete edge (`deleteEdge`), undo (`handleUndo`), redo (`handleRedo`), duplicate (`duplicateSelected`), select-all (`selectAll`), drop-create composition (`dropCreateCompositionEdge`), reset routing menu (`resetRoutingMenu`), auto-layout (`handleAutoLayout`), edge data change (`handleEdgeChange`), edge type toggle (`convertToInheritance`, `convertToReference`), hysteresis recalc on node move (`onNodesChange-hysteresis`), single-edge anchor recalc (`recalculateAnchors`). **Formato log**: per chiamate con array literal (handleUndo, handleRedo) uso shape `'[diag9] setEdges'` con `edgeCount` + `firstIds`; per updater function (24/28 sites) uso `'[diag9] setEdges (updater)'` con `note: 'updater function — cannot inspect input count'` come da prompt. Tutti con `location: 'FileName-callsite'` distintivo + `timestamp: performance.now().toFixed(2)`. **Vincoli rispettati**: zero modifiche a logica, zero refactor, zero rimozioni; logs solo additivi; preservati `[diag5]`/`[diag6]`/`[diag7]`/`[diag8]`/pre-existing diag9 ReactFlow-props render log (line 3005 EditorV2, scritto in sessione precedente). Pattern `eslint-disable-next-line no-console` applicato dove il file già lo usa (useJjomSync, EditorV2); omesso altrove (useClassRemoval ha già 3 console.log senza disable; UnifiedEdge/SegmentHandles zero console pre-esistenti — ESLint non strict). **Verifica build**: `npm run build` ✓ built in 38.43s, zero nuovi errori TS o warning. **Smoke runtime delegato** (NON eseguibile da CLI): import `Families.ecore`, filtrare console per `[diag9]`, esaminare sequenza temporale per discriminare T2/T4 secondo decision tree del prompt: (a) >1 `[diag9]` con edgeCount diverso/crescente → T2 confermata; (b) 1 `[diag9]` da location ≠ `useJjomSync-init-effect` → altro hook colpevole; (c) solo `useJjomSync-init-effect` con 8 edge → T2 esclusa, indagare `updateNodeInternals` / `useEdges()` consumers (DynamicHandles).
-**Nome del documento prompt**: 2026-05-20 HH:mm (diag9)

@@ -246,9 +246,6 @@ export function useJjomSync(
                 setNodes(prev => nodeFns.reduce((acc, fn) => fn(acc), prev));
             }
             if (edgeFns.length > 0) {
-                // [DIAG9] TEMP — map all setEdges callers (T2/T4 discovery)
-                // eslint-disable-next-line no-console
-                console.log('[diag9] setEdges (updater)', { location: 'useJjomSync-scheduleFlush-rAF', timestamp: performance.now().toFixed(2), note: 'updater function — cannot inspect input count', pendingFnCount: edgeFns.length });
                 setEdges(prev => edgeFns.reduce((acc, fn) => fn(acc), prev));
             }
         });
@@ -344,9 +341,6 @@ export function useJjomSync(
     const justCreatedGraphRef = useRef(false);
 
     useEffect(() => {
-        // [DIAG12] TEMP — count every auto-create effect closure invocation (before guards)
-        // eslint-disable-next-line no-console
-        console.count('[diag12] auto-create-effect FIRED');
         if (!modelid || creatingGraphRef.current) return;
 
         // If no v2-flow graph exists yet, create one (even for empty metamodels).
@@ -649,14 +643,6 @@ export function useJjomSync(
                 }
 
                 // References
-                // [DIAG13] TEMP — log entry.raw.references collection before iteration
-                // eslint-disable-next-line no-console
-                console.log('[diag13] entry refs count', {
-                    entryId: entry.id ?? '<no-id>',
-                    entryName: entry.raw?.name ?? '<no-name>',
-                    refCount: entry.raw.references?.length ?? 0,
-                    refs: entry.raw.references ?? [],
-                });
                 for (const refId of (entry.raw.references ?? [])) {
                     const refObj = typeof refId === 'string' ? idlookup[refId] as any : null;
                     if (!refObj) continue;
@@ -672,11 +658,6 @@ export function useJjomSync(
                         // provided by the idlookup scan above.
                         const ek = `${refId}:${srcVertex}→${tgtVertex}`;
                         if (!existingEdgeKeys.has(ek)) {
-                            // [DIAG12] TEMP — count and log every DVoidEdge.new2 emitted on M2 refs path
-                            // eslint-disable-next-line no-console
-                            console.count('[diag12] DVoidEdge.new2 EMITTED');
-                            // eslint-disable-next-line no-console
-                            console.log('[diag12] DVoidEdge.new2 args', { refId, srcVertex, tgtVertex });
                             DVoidEdge.new2(
                                 refId, graphId, graphId, undefined,
                                 srcVertex, tgtVertex,
@@ -953,9 +934,6 @@ export function useJjomSync(
                     data: e?.data ? Object.keys(e.data) : null,
                 })),
             });
-            // [DIAG9] TEMP — map all setEdges callers (T2/T4 discovery)
-            // eslint-disable-next-line no-console
-            console.log('[diag9] setEdges', { location: 'useJjomSync-init-effect', timestamp: performance.now().toFixed(2), edgeCount: rfEdgesToSet.length, firstIds: rfEdgesToSet.slice(0, 4).map((e: any) => e.id) });
             setEdges(rfEdgesToSet);
 
             initializedRef.current = true;
