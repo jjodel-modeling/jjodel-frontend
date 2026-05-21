@@ -1,5 +1,13 @@
 # Claude Code Session Log
 
+## 2026-05-21 — chore: remove all residual diagN instrumentation
+**Prompt**: discovery + cleanup unificato di tutti i `[diagN]` numerati residui nel frontend. Filone edge rendering v2-flow chiuso.
+**File toccati**: frontend/src/components/editor-v2/utils/jjomTransformers.ts (diag5 ×8), frontend/src/components/editor-v2/hooks/useJjomSync.ts (diag6 ×2 + diag7 + diag8), frontend/src/components/editor-v2/edges/UnifiedEdge.tsx (diag9 ×2), frontend/src/components/editor-v2/edges/SegmentHandles.tsx (diag9 ×1), frontend/src/components/editor-v2/hooks/useClassRemoval.ts (diag9 ×1)
+**Esito**: ✅ completato, build verde (53.89s), censimento finale 0 hit attivi (resta solo doc-comment storico in buildImportSummary.ts)
+**Nome del documento prompt**: 2026-05-21 13:20
+
+---
+
 ## 2026-05-21 — chore: remove diag14 from EditorV2.tsx
 **Prompt**: cleanup blocco diagnostico [diag14] (~50 righe) introdotto in c64c3f812. Filone edge rendering v2-flow chiuso.
 **File toccati**: frontend/src/components/editor-v2/EditorV2.tsx

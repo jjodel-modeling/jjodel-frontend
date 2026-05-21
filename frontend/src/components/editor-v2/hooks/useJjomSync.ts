@@ -860,15 +860,6 @@ export function useJjomSync(
             const vertices: any[] = lGraph.nodes ?? [];
             const edges: any[] = lGraph.edges ?? [];
 
-            // [DIAG6] TEMP — discriminare ipotesi double-run init effect.
-            // eslint-disable-next-line no-console
-            console.log('[diag6] init effect run', {
-                graphId: graphInfo?.graphId,
-                edgesFromLGetter: edges?.length ?? -1,
-                edgeIdsTail: edges?.map((e: any) => e?.id?.slice(-15)) ?? [],
-                timestamp: (typeof performance !== 'undefined' ? performance.now() : Date.now()).toFixed(2),
-            });
-
             const nodeCache = new Map<string, Node>();
             const edgeCache = new Map<string, Edge>();
 
@@ -899,41 +890,6 @@ export function useJjomSync(
             setNodes(rfNodesToSet);
 
             const rfEdgesToSet = deduplicateInheritanceEdges(Array.from(edgeCache.values()));
-            // [DIAG7] TEMP — registered RF node ids (for comparison with [diag6] edge source/target)
-            // eslint-disable-next-line no-console
-            console.log('[diag7] RF nodes registered', {
-                graphId: graphInfo?.graphId,
-                nodeCount: rfNodesToSet.length,
-                nodeIds: rfNodesToSet.map((n: any) => n?.id),
-            });
-            // [DIAG6] TEMP — track setEdges call (extended)
-            // eslint-disable-next-line no-console
-
-         console.log('[diag8] rfEdges JSON:', JSON.stringify(
-  rfEdgesToSet.map((e: any) => ({ 
-    id: e.id, 
-    source: e.source, 
-    target: e.target, 
-    sourceHandle: e.sourceHandle,
-    targetHandle: e.targetHandle,
-    type: e.type 
-  })),
-  null, 2
-));
-
-
-            console.log('[diag6] setEdges call', {
-                graphId: graphInfo?.graphId,
-                rfEdgeCount: rfEdgesToSet.length,
-                rfEdges: rfEdgesToSet.map((e: any) => ({
-                    id: e?.id?.slice(-20),
-                    source: e?.source,
-                    target: e?.target,
-                    type: e?.type,
-                    label: typeof e?.label === 'string' ? e.label : '<non-string>',
-                    data: e?.data ? Object.keys(e.data) : null,
-                })),
-            });
             setEdges(rfEdgesToSet);
 
             initializedRef.current = true;

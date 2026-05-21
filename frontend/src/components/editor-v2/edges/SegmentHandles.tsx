@@ -133,8 +133,6 @@ function DraggableHandle({ edgeId, segment, waypoints }: {
                 editorCtx.recalculateAnchors?.(edgeId);
             } else {
                 // Fallback: direct setEdges (no snapshot, no distribution)
-                // [DIAG9] TEMP — map all setEdges callers (T2/T4 discovery)
-                console.log('[diag9] setEdges (updater)', { location: 'SegmentHandles-drag-fallback', timestamp: performance.now().toFixed(2), note: 'updater function — cannot inspect input count', edgeId });
                 setEdges((edges) => edges.map((e) => {
                     if (e.id !== edgeId) return e;
                     return { ...e, data: { ...e.data, waypoints: newWaypoints } };
