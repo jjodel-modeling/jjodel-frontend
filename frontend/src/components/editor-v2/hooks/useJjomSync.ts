@@ -649,6 +649,14 @@ export function useJjomSync(
                 }
 
                 // References
+                // [DIAG13] TEMP — log entry.raw.references collection before iteration
+                // eslint-disable-next-line no-console
+                console.log('[diag13] entry refs count', {
+                    entryId: entry.id ?? '<no-id>',
+                    entryName: entry.raw?.name ?? '<no-name>',
+                    refCount: entry.raw.references?.length ?? 0,
+                    refs: entry.raw.references ?? [],
+                });
                 for (const refId of (entry.raw.references ?? [])) {
                     const refObj = typeof refId === 'string' ? idlookup[refId] as any : null;
                     if (!refObj) continue;
