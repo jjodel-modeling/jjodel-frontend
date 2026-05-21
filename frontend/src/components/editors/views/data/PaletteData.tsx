@@ -1,5 +1,4 @@
 /* Viewpoints > Style */
-
 import React, {Dispatch, ReactElement, ReactNode, Ref, RefObject, SyntheticEvent, useState, useRef, useEffect} from 'react';
 import {connect} from "react-redux";
 import {useStateIfMounted} from "use-state-if-mounted";
@@ -830,6 +829,7 @@ function PaletteDataComponent(props: AllProps) {
             value={vcss}
             onChange={change}
             onSave={(newValue) => {
+                console.log("fullscreen save", {newValue});
                 setCss(newValue);
                 view.css = newValue;
                 setFullscreen(false);
