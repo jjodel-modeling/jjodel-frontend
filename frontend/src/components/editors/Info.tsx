@@ -675,21 +675,22 @@ class builder {
         const isMultiValued = upperBound > 1 || upperBound >= 999;
         const isSingleRequired = upperBound === 1 && lowerBound >= 1;
 
-        const valueslist = (filteredValues).map((val, index) =>
-            val.hidden ? null :
-                <div className="jj-slot-value-row" key={index}>
-                    {/* Attribute */}
-                    {isAttribute && (field === 'checkbox' ? (() => {
-                        const raw = val.value;
-                        const checked = typeof raw === 'boolean' ? raw
-                            : typeof raw === 'string' ? U.fromBoolString(raw, false, false, false)
+        const valueslist = (filteredValues).map((val, index) =>{
+            if (val.hidden) return null;
+            const rawValue = (val.value as any)?.id || val.value;
+            return (<div className="jj-slot-value-row" key={index}>
+                {/* Attribute */}
+                {isAttribute && (field === 'checkbox' ? (() => {
+                    const raw = val.value;
+                    const checked = typeof raw === 'boolean' ? raw
+                        : typeof raw === 'string' ? U.fromBoolString(raw, false, false, false)
                             : !!raw;
-                        const onToggle = () => {
-                            const next = !checked;
-                            changeDValue({target:{value: next, checked: next}} as any, index, false);
-                        };
-                        return (
-                            <span className="bool-toggle-wrap" key={'a'+index}>
+                    const onToggle = () => {
+                        const next = !checked;
+                        changeDValue({target:{value: next, checked: next}} as any, index, false);
+                    };
+                    return (
+                        <span className="bool-toggle-wrap" key={'a'+index}>
                                 <button
                                     type="button"
                                     role="switch"
@@ -704,59 +705,65 @@ class builder {
                                     {checked ? 'true' : 'false'}
                                 </span>
                             </span>
-                        );
-                    })() : <Input key={'a'+index} setter={(val: any) => { changeDValue({target:{value:val, checked:!!val}} as any, index, false) }}
-                                           className={'jj-slot-value-input' /*@ts-ignore*/}
-                                           getter={()=>val.value as any} min={min} max={max} type={field as any} step={stepSize}
-                                           maxLength={maxLength} placeholder={'empty'}/>)}
+                    );
+                })() : <Input key={'a'+index} setter={(val: any) => { changeDValue({target:{value:val, checked:!!val}} as any, index, false) }}
+                              className={'jj-slot-value-input' /*@ts-ignore*/}
+                              getter={()=>val.value as any} min={min} max={max} type={field as any} step={stepSize}
+                              maxLength={maxLength} placeholder={'empty'}/>)}
 
-                    {/* Enumerator */}
-                    {isEnumerator && <select key={'e'+index} onChange={(evt) => {changeDValue(evt, index, true)}} className="jj-slot-value-select" value={val.rawValue+''} data-valuedebug={val.rawValue}>
-                            <option key='undefined' value={'undefined'}>-----</option>
-                            {selectOptions}
-                    </select>}
+                {/* Enumerator */}
 
-                    {/* Reference */}
-                    {isReference && <select key={'r'+index} onChange={(evt) => {changeDValue(evt, index, true)}} className="jj-slot-value-select" value={val.rawValue+''} data-valuedebug={val.rawValue}>
-                            <option value={'undefined'}>-----</option>
-                            {selectOptions}
-                        </select>
+                {
+                    /*(()=> { console.log("rawValue check", {filteredValues, index, val, rawValue}); return null })()*/
+
+                }
+                {isEnumerator && <select key={'e'+index} onChange={(evt) => {changeDValue(evt, index, true)}} className="jj-slot-value-select" value={rawValue} data-valuedebug={rawValue}>
+                    <option key='undefined' value={'undefined'}>-----EEnum</option>
+                    {selectOptions}
+                </select>}
+
+                {/* Reference */}
+                {isReference && <select key={'r'+index} onChange={(evt) => {changeDValue(evt, index, true)}} className="jj-slot-value-select" value={rawValue} data-valuedebug={rawValue}>
+                    <option value={'undefined'}>-----</option>
+                    {selectOptions}
+                </select>
+                }
+
+                {/* Composition */}
+                {isComposition && (() => {
+                    const element = LModelElement.fromPointer(rawValue);
+                    if (!inline) {
+                        return <div className={`item ${inline && 'inline'}`}>
+                            {/*@ts-ignore*/}
+                            {popup && element && <b>{element.instanceof.name}</b>}
+                            {!popup && <select key={'r'+index} onChange={(evt) => {changeDValue(evt, index, true)}} className="jj-slot-value-select" value={rawValue} data-valuedebug={rawValue}>
+                                <option value={'undefined'}>-----</option>
+                                {selectOptions}
+                            </select>}
+                            {popup &&
+                                <div className={'inline'}>
+                                    <Info mode={'inline'} localData={element} />
+                                </div>}
+                        </div>;
                     }
+                })()}
 
-                    {/* Composition */}
-                    {isComposition && (() => {
-                        const element = LModelElement.fromPointer(val.rawValue+'');
-                        if (!inline) {
-                            return <div className={`item ${inline && 'inline'}`}>
-                                {/*@ts-ignore*/}
-                                {popup && element && <b>{element.instanceof.name}</b>}
-                                {!popup && <select key={'r'+index} onChange={(evt) => {changeDValue(evt, index, true)}} className="jj-slot-value-select" value={val.rawValue+''} data-valuedebug={val.rawValue}>
-                                    <option value={'undefined'}>-----</option>
-                                    {selectOptions}
-                                </select>}
-                                {popup &&
-                                    <div className={'inline'}>
-                                        <Info mode={'inline'} localData={element} />
-                                    </div>}
-                            </div>;
-                        }
-                    })()}
+                {/* Shapeless */}
+                {isShapeless && <>
+                    <Input key={'raw' + index} setter={(val: any) => {changeDValue({target:{value:val, checked:!!val}} as any, index, false)}}
+                           className={'jj-slot-value-input' /*@ts-ignore*/}
+                           getter={()=>rawValue} list={'objectdatalist'} type={'text'} placeholder={'empty'}/>
+                    <span style={{color: '#94a3b8', fontSize: '12px', margin: '0 2px'}}>→</span>
+                    <select key={index} onChange={(evt) => {changeDValue(evt, index, undefined)}} className="jj-slot-value-select" value={rawValue} data-valuedebug={rawValue}>
+                        {selectOptions}
+                    </select>
+                </>}
 
-                    {/* Shapeless */}
-                    {isShapeless && <>
-                        <Input key={'raw' + index} setter={(val: any) => {changeDValue({target:{value:val, checked:!!val}} as any, index, false)}}
-                                className={'jj-slot-value-input' /*@ts-ignore*/}
-                                getter={()=>val.rawValue} list={'objectdatalist'} type={'text'} placeholder={'empty'}/>
-                        <span style={{color: '#94a3b8', fontSize: '12px', margin: '0 2px'}}>→</span>
-                        <select key={index} onChange={(evt) => {changeDValue(evt, index, undefined)}} className="jj-slot-value-select" value={val.rawValue+''}>
-                            {selectOptions}
-                        </select>
-                    </>}
-
-                    {!isSingleRequired && (
-                        <button className="jj-slot-value-delete" onClick={() => {remove(index, isPtr)}} title="Remove value">×</button>
-                    )}
-                </div>);
+                {!isSingleRequired && (
+                    <button className="jj-slot-value-delete" onClick={() => {remove(index, isPtr)}} title="Remove value">×</button>
+                )}
+            </div>)
+        });
 
         // Slot type name
         const typeName = feature?.type?.name || '';
