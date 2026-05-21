@@ -7132,8 +7132,15 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                         if (withmetainfo) ret.forEach((struct: ValueDetail) => { struct.value = mapperfunc(struct.value); });
                         else ret = ret.map(mapperfunc);
                     }*/
-                    let filterfunc = (l: LEnumLiteral) => { if (!l) return keepempties; return l.father?.id === (meta as LAttribute).type.id; };
-                    if (withmetainfo) for(let struct of ret as ValueDetail[]) { struct.hidden = !filterfunc(struct.value as LEnumLiteral); } // && 'literal target is not of the correct type requested by metamodel'; }
+                    let filterfunc = (l: LEnumLiteral) => {
+                        if (!l) return keepempties; return l.father?.id === (meta as LAttribute).type.id;
+                    };
+                    if (withmetainfo) ret.forEach(struct=> struct.hidden = !filterfunc(struct.value as LEnumLiteral));
+                    /*
+                    if (withmetainfo) for (let struct of ret as ValueDetail[]) { bug with empty elements, arr.forEach skips them but for loop doesn't
+                        console.log("with metainfo", {v: struct?.value, struct, ret});
+                        struct.hidden = !filterfunc(struct.value as LEnumLiteral);
+                    } // && 'literal target is not of the correct type requested by metamodel'; }*/
                     else ret = ret.filter(filterfunc);
                     // todo: questo comportamento implica che quando importo un literal come testo da .ecore, devo assegnargli
                     //  il puntatore al suo literal se trovato, altrimenti resta val[i] di tipo string/shapeless
