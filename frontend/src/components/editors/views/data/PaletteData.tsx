@@ -1,5 +1,4 @@
 /* Viewpoints > Style */
-
 import React, {Dispatch, ReactElement, ReactNode, Ref, RefObject, SyntheticEvent, useState, useRef, useEffect} from 'react';
 import {connect} from "react-redux";
 import {useStateIfMounted} from "use-state-if-mounted";
