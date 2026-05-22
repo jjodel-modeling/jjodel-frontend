@@ -20,11 +20,19 @@
  *  • Class REMOVED from the metamodel: every OrphanStore entry bound to
  *    that classId is purged to avoid cross-session leaks.
  *
- *  • RENAME of an attribute is transparent: DAttribute.id is stable, so
- *    the signature (ID-based) doesn't change — no spurious capture or
- *    rehydrate fires. This is the chirurgical difference versus the
- *    original name-based implementation that was disabled for the
- *    undo/attr_0 bug.
+ *  • RENAME of an attribute: the primary signature is ID-based (stable
+ *    across rename), so ordinary edits don't trigger spurious capture
+ *    or rehydrate. A secondary name-based signature, scoped to classes
+ *    with pending orphan entries only, watches for rename events that
+ *    complete a pending match (e.g. user removes `foo`, re-adds default
+ *    `attr_0`, then renames `attr_0 → foo`: the secondary signature
+ *    triggers tryRehydrate, the entry is consumed on match).
+ *
+ *    The id-based undo/attr_0 bug avoidance is preserved because the
+ *    secondary signature only feeds a consume-on-match rehydrate path,
+ *    never a capture path. Entries persist on miss (lazy match): an
+ *    orphan stays until a matching rename completes it or the owning
+ *    class is removed.
  *
  * The OrphanStore is a module-level Map, NOT Redux: session-local, lost
  * on reload/unmount, immune to undo/redo state oscillation.
@@ -305,6 +313,32 @@ export function useOrphanFeatures(
         return computeSignature(state?.idlookup, modelid);
     });
 
+    // Secondary name-based signature, scoped to classes that currently have
+    // a pending orphan entry. Watches rename events that complete a pending
+    // match (e.g. user removes `foo`, re-adds default `attr_0`, then renames
+    // `attr_0 → foo`). Returns '' when no orphans are pending, so the effect
+    // below short-circuits on the common case.
+    const renameSig = useSelector((state: any) => {
+        const lookup = state?.idlookup;
+        if (!lookup || orphanStore.size === 0) return '';
+
+        const pendingClassIds = new Set<string>();
+        for (const entry of orphanStore.values()) pendingClassIds.add(entry.classId);
+
+        const tuples: string[] = [];
+        for (const id in lookup) {
+            const elem = lookup[id];
+            if (!elem || elem.className !== 'DAttribute') continue;
+            const father = typeof elem.father === 'string' ? elem.father : '';
+            if (!pendingClassIds.has(father)) continue;
+            const attrName = typeof elem.name === 'string' ? elem.name : '';
+            const attrType = typeof elem.type === 'string' ? elem.type : '';
+            tuples.push(`${father}${SIG_FIELD_SEP}${id}${SIG_FIELD_SEP}${attrName}${SIG_FIELD_SEP}${attrType}`);
+        }
+        tuples.sort();
+        return tuples.join(SIG_TUPLE_SEP);
+    });
+
     useEffect(() => {
         if (currentSig === lastSigRef.current) return;
 
@@ -329,6 +363,32 @@ export function useOrphanFeatures(
             }
         });
     }, [currentSig]);
+
+    // Rename watcher: on any change in renameSig (rename, add, or remove of
+    // an attribute in a class with pending orphans), retry the rehydrate
+    // match for every attribute of every pending class. tryRehydrate is
+    // idempotent: misses leave the entry untouched (lazy match), matches
+    // consume the entry (single restore per orphan). No TRANSACTION wrapper
+    // here on purpose — diff-minimal vs the existing co-evolution effect.
+    useEffect(() => {
+        if (!renameSig) return;
+        if (orphanStore.size === 0) return;
+
+        const lookup = store.getState()?.idlookup as any;
+        if (!lookup) return;
+
+        const pendingClassIds = new Set<string>();
+        for (const entry of orphanStore.values()) pendingClassIds.add(entry.classId);
+
+        for (const classId of pendingClassIds) {
+            const dClass = lookup[classId];
+            if (!Array.isArray(dClass?.attributes)) continue;
+            for (const attrId of dClass.attributes) {
+                if (typeof attrId !== 'string') continue;
+                tryRehydrate(lookup, classId, attrId);
+            }
+        }
+    }, [renameSig]);
 
     useEffect(() => {
         lastSigRef.current = '';
