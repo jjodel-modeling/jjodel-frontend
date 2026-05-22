@@ -49,8 +49,13 @@ export function EditorFullscreenModal({
   const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [viewMode, setViewMode] = useState<EditorViewMode>('source');
+  const [currValue, setCurrValue] = useState<string>(value);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
 
+  const onChangeFix = (val?: string)=>{
+    setCurrValue(val||'');
+    if (onChange) onChange(val);
+  }
   // Handle ESC key
   useEffect(() => {
     if (!isOpen) return;
@@ -300,7 +305,7 @@ export function EditorFullscreenModal({
                 width="100%"
                 height="100%"
                 value={value}
-                onChange={onChange}
+                onChange={onChangeFix}
                 language={language}
                 theme={theme}
                 options={editorOptions}
@@ -329,7 +334,7 @@ export function EditorFullscreenModal({
               <button
                 type="button"
                 className="editor-fullscreen-save-btn"
-                onClick={() => onSave(value)}
+                onClick={() => onSave(currValue)}
               >
                 <i className="bi bi-check2" />
                 Save

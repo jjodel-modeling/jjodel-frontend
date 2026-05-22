@@ -1,5 +1,4 @@
 /* Viewpoints > Style */
-
 import React, {Dispatch, ReactElement, ReactNode, Ref, RefObject, SyntheticEvent, useState, useRef, useEffect} from 'react';
 import {connect} from "react-redux";
 import {useStateIfMounted} from "use-state-if-mounted";
@@ -17,6 +16,7 @@ import type {
     PathControl,
     StringControl
 } from '../../../../view/viewElement/view';
+
 import {CSS_Units} from '../../../../view/viewElement/view';
 import {Color} from '../../../forEndUser/Color';
 
@@ -829,6 +829,7 @@ function PaletteDataComponent(props: AllProps) {
             value={vcss}
             onChange={change}
             onSave={(newValue) => {
+                console.log("fullscreen save", {newValue});
                 setCss(newValue);
                 view.css = newValue;
                 setFullscreen(false);

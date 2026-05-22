@@ -31,6 +31,7 @@ import {icon} from '../components/icons/Icons';
 import {useNavigate} from 'react-router-dom';
 
 import React, {Component, Dispatch, ReactElement, ReactNode, useState, useEffect, useMemo, useCallback, useRef} from 'react';
+import ReactDOM from 'react-dom';
 import {FakeStateProps} from '../../joiner/types';
 import {connect} from 'react-redux';
 import {AuthApi, ProjectsApi} from '../../api/persistance';
@@ -1737,6 +1738,23 @@ function NavbarComponent(props: AllProps) {
     }
 
     const [showOverflow, setShowOverflow] = useState(false);
+    const overflowBtnRef = useRef<HTMLButtonElement>(null);
+    const overflowDropdownRef = useRef<HTMLDivElement>(null);
+    const [overflowMenuPos, setOverflowMenuPos] = useState({ top: 0, left: 0 });
+
+    useEffect(() => {
+        if (!showOverflow) return;
+        const handleMouseDown = (e: MouseEvent) => {
+            if (
+                overflowBtnRef.current && !overflowBtnRef.current.contains(e.target as Node) &&
+                overflowDropdownRef.current && !overflowDropdownRef.current.contains(e.target as Node)
+            ) {
+                setShowOverflow(false);
+            }
+        };
+        document.addEventListener('mousedown', handleMouseDown);
+        return () => document.removeEventListener('mousedown', handleMouseDown);
+    }, [showOverflow]);
 
     // Level badge component
     // LevelBadge — inlined below. useSettingsModal() hoisted above.
@@ -1817,15 +1835,24 @@ function NavbarComponent(props: AllProps) {
                         );
                     })}
                     {overflowTabs.length > 0 && (
-                        <div className="appbar-tabs__overflow" style={{ position: 'relative' }}>
+                        <div className="appbar-tabs__overflow">
                             <button
+                                ref={overflowBtnRef}
                                 className="appbar-tabs__overflow-btn"
-                                onClick={() => setShowOverflow(!showOverflow)}
+                                onClick={() => {
+                                    if (!showOverflow && overflowBtnRef.current) {
+                                        const rect = overflowBtnRef.current.getBoundingClientRect();
+                                        setOverflowMenuPos({ top: rect.bottom + 4, left: rect.right - 180 });
+                                    }
+                                    setShowOverflow(!showOverflow);
+                                }}
                             >
                                 +{overflowTabs.length} &#x25BE;
                             </button>
-                            {showOverflow && (
-                                <div className="appbar-tabs__overflow-dropdown">
+                            {showOverflow && ReactDOM.createPortal(
+                                <div ref={overflowDropdownRef}
+                                    className="appbar-tabs__overflow-dropdown"
+                                    style={{ top: overflowMenuPos.top, left: overflowMenuPos.left }}>
                                     {overflowTabs.map(tab => {
                                         const badge = getTabBadge(tab.type);
                                         return (
@@ -1843,7 +1870,8 @@ function NavbarComponent(props: AllProps) {
                                             </button>
                                         );
                                     })}
-                                </div>
+                                </div>,
+                                document.body
                             )}
                         </div>
                     )}

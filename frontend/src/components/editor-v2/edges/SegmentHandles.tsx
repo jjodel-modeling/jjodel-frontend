@@ -128,9 +128,9 @@ function DraggableHandle({ edgeId, segment, waypoints }: {
                 editorCtx.onEdgeDataChange(edgeId, {
                     data: { ...currentEdge?.data, waypoints: newWaypoints },
                 });
-                // Recalculate auto-anchors: if the drag makes a different side significantly
-                // better, the anchor switches and waypoints are cleared (new path shape).
-                editorCtx.recalculateAnchors?.(edgeId);
+                // Note: recalculateAnchors is NOT called here. Segment drag only changes
+                // internal waypoints, not the connection side/anchor. Calling recalculateAnchors
+                // would unnecessarily recalculate anchors and clear waypoints.
             } else {
                 // Fallback: direct setEdges (no snapshot, no distribution)
                 setEdges((edges) => edges.map((e) => {
@@ -153,8 +153,17 @@ function DraggableHandle({ edgeId, segment, waypoints }: {
                 transform: `translate(-50%, -50%) translate(${segment.midX}px, ${segment.midY}px)`,
                 cursor: segment.isHorizontal ? 'ns-resize' : 'ew-resize',
                 pointerEvents: 'all',
+                width: '10px',
+                height: '10px',
+                borderRadius: '50%',
+                backgroundColor: '#0ea5e9',
+                border: '2px solid #ffffff',
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+                transition: 'background-color 0.15s',
             }}
             onMouseDown={handleMouseDown}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#06b6d4')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#0ea5e9')}
         />
     );
 }

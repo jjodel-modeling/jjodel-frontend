@@ -263,6 +263,10 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [edges, setEdgesRaw, _onEdgesChangeRaw] = useEdgesState(modelid ? [] : initialEdges);
 
+    // Track manually-selected edges to preserve selection through Redux patches.
+    // This is a workaround for useJjomSync's edge updates destroying React Flow's selected state.
+    const selectedEdgeIdRef = useRef<string | null>(null);
+
     // Deduplicate an edge array, keeping the FIRST occurrence of each ID.
     const deduplicateEdges = useCallback((edgeArray: Edge[]): Edge[] => {
         const seen = new Set<string>();
@@ -280,11 +284,22 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     }, []);
 
     // Dedup wrapper: shadows the raw setter so every imperative call automatically deduplicates.
+    // Also preserves the selected edge ID through patches.
     const setEdges = useCallback(
         (updater: Edge[] | ((eds: Edge[]) => Edge[])) => {
             setEdgesRaw((currentEdges) => {
                 const next = typeof updater === 'function' ? updater(currentEdges) : updater;
-                return deduplicateEdges(next);
+                const deduped = deduplicateEdges(next);
+                
+                // Re-apply selection to the preserved edge ID
+                // This ensures selection survives Redux patches from useJjomSync
+                if (selectedEdgeIdRef.current) {
+                    return deduped.map(e => ({
+                        ...e,
+                        selected: e.id === selectedEdgeIdRef.current,
+                    }));
+                }
+                return deduped;
             });
         },
         [setEdgesRaw, deduplicateEdges],
@@ -1989,9 +2004,22 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     );
 
     const onPaneClick = useCallback(() => {
+        selectedEdgeIdRef.current = null;  // Clear edge selection
+        setNodes(nds => nds.map(n => (n.selected ? { ...n, selected: false } : n)));
+        setEdges(eds => eds.map(e => (e.selected ? { ...e, selected: false } : e)));
         setContextMenu(null);
         jjomSelection.onPaneClick();
-    }, [jjomSelection]);
+    }, [setNodes, setEdges, jjomSelection]);
+
+    // Keep React Flow edge selection explicit so custom manipulation handles
+    // (SegmentHandles/EndpointHandles) are always available after click.
+    const onEdgeClick = useCallback((event: React.MouseEvent, edge: Edge) => {
+        event.stopPropagation();
+        selectedEdgeIdRef.current = edge.id;  // Preserve selection through Redux patches
+        setNodes(nds => nds.map(n => (n.selected ? { ...n, selected: false } : n)));
+        setEdges(eds => eds.map(e => ({ ...e, selected: e.id === edge.id })));
+        jjomSelection.onEdgeClick(event, edge);
+    }, [setNodes, setEdges, jjomSelection]);
 
     const closeContextMenu = useCallback(() => {
         setContextMenu(null);
@@ -2863,7 +2891,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                             ...e.data,
                             sourceAnchor: result.sourceAnchor,
                             targetAnchor: result.targetAnchor,
-                            waypoints: [],
+                            // Preserve existing waypoints — only clear if anchor sides changed significantly
+                            waypoints: e.data?.waypoints || [],
                         },
                     };
                 });
@@ -2952,7 +2981,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 onNodeContextMenu={onNodeContextMenu}
                 onEdgeContextMenu={onEdgeContextMenu}
                 onNodeClick={jjomSelection.onNodeClick}
-                onEdgeClick={jjomSelection.onEdgeClick}
+                onEdgeClick={onEdgeClick}
                 onPaneClick={onPaneClick}
                 nodeTypes={nodeTypes}
                 edgeTypes={edgeTypes}

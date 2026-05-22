@@ -222,7 +222,7 @@ export function useJjomSelection(
 
 const onEdgeClick = useCallback(
     (_event: React.MouseEvent, edge: Edge) => {
-        _event.stopPropagation();  // ← aggiungi questo
+        _event.stopPropagation();  // prevent pane click deselect race
         if (isJjomMode && modelid) selectElement(edge.id, modelid);
     },
     [isJjomMode, modelid],

@@ -1015,10 +1015,13 @@ export function useJjomSync(
             const dElement = elementSnapshots.get(id);
             const prevD = prevElements.get(id);
             const currModel = elementSnapshots.get(`model:${id}`);
-            const prevModel = prevElements.get(`model:${id}`);
+            // damiano: this is wrong. it is sometimes taking newElement instead. source of isSingleton bug
+            let prevModel = prevElements.get(`model:${id}`);
+            // forcing to update by giving it a different object, until it gets a better fix.
+            prevModel = {} as any;
             const currHash = elementSnapshots.get(`ch:${id}`);
             const prevHash = prevElements.get(`ch:${id}`);
-
+            
             if (prevD === dElement && prevModel === currModel && currHash === prevHash) continue;
 
             try {
@@ -1158,6 +1161,21 @@ export function useJjomSync(
                         const merged = { ...newEdge };
                         if (e.sourceHandle) merged.sourceHandle = e.sourceHandle;
                         if (e.targetHandle) merged.targetHandle = e.targetHandle;
+                        const existingData = (e.data as any) ?? {};
+                        const mergedData = (merged.data as any) ?? {};
+                        // Preserve local routing customizations that are not
+                        // persisted in JjOM and would otherwise be lost after
+                        // incremental sync patches.
+                        if (existingData.waypoints !== undefined && mergedData.waypoints === undefined) {
+                            mergedData.waypoints = existingData.waypoints;
+                        }
+                        if (existingData.sourceAnchor && !mergedData.sourceAnchor) {
+                            mergedData.sourceAnchor = existingData.sourceAnchor;
+                        }
+                        if (existingData.targetAnchor && !mergedData.targetAnchor) {
+                            mergedData.targetAnchor = existingData.targetAnchor;
+                        }
+                        merged.data = mergedData;
                         const existingJjomRefId = (e.data as any)?.jjomRefId;
                         if (existingJjomRefId && !(merged.data as any)?.jjomRefId) {
                             (merged.data as any).jjomRefId = existingJjomRefId;
@@ -1184,7 +1202,8 @@ export function useJjomSync(
             });
             scheduleFlush();
         }
-    }, [isJjomMode, elementSnapshots, subElementIds, scheduleFlush]);
+    }, [isJjomMode, elementSnapshots, subElementIds, scheduleFlush, Date.now()]);
+    // todo: remove Date.now() from dependencies, it forces update to fix singleton issue but it's sub-optimal
 
     // ── Cleanup on unmount ─────────────────────────────────────────────
     useEffect(() => {

@@ -171,14 +171,36 @@ function DraggableEndpoint({ edgeId, endpoint, x, y, nodeId }: {
                     position: 'absolute',
                     transform: `translate(-50%, -50%) translate(${x}px, ${y}px)`,
                     pointerEvents: 'all',
+                    width: '12px',
+                    height: '12px',
+                    borderRadius: '50%',
+                    backgroundColor: '#0ea5e9',
+                    border: '2px solid #ffffff',
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+                    cursor: 'grab',
+                    transition: 'background-color 0.15s, box-shadow 0.15s',
                 }}
                 onMouseDown={handleMouseDown}
+                onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#06b6d4';
+                    e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.3)';
+                }}
+                onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#0ea5e9';
+                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.2)';
+                }}
             />
             {/* Side indicator — hidden by default, shown during drag */}
             <div
                 ref={indicatorRef}
                 className="endpoint-side-indicator"
-                style={{ position: 'absolute', display: 'none', pointerEvents: 'none' }}
+                style={{
+                    position: 'absolute',
+                    display: 'none',
+                    pointerEvents: 'none',
+                    backgroundColor: 'rgba(6, 182, 212, 0.3)',
+                    border: '2px solid #06b6d4',
+                }}
             />
         </>
     );
