@@ -1,5 +1,92 @@
 # Claude Code Session Log
 
+## 2026-05-22 — docs: audit per ricalibrazione CLAUDE.md
+**Prompt**: discovery read-only per ricalibrare CLAUDE.md sulla base del codice reale
+**File toccati**: docs/discovery/2026-05-22_claude_md_audit.md (nuovo), docs/claude-code-log.md
+**Esito**: ✅ completato — 12 sezioni compilate, nessun fix applicato, working tree clean
+**Note**: 11 pattern user-memory ✅ confermati, 2 ⚠️ divergenze (TRANSACTION comment shiftato 496→527, `window.store`→`windoww.store`), 1 ❌ non trovato (`.panning-handle` z-index 100). Divergenze maggiori CLAUDE.md: registry custom events ALREADY EXISTS (committed 2026-05-20, dichiarato "prossimo step"), JjScript test suite ESISTE (5 file vs "0 dichiarati"), JjTL test files 11 (vs 4 dichiarati), 1 sito legacy `var(--accent)` in EditorV2.scss:857 vs "zero legacy". Report di sole 12 sezioni, no commit, lascia decidere chat di progetto.
+**Nome del documento prompt**: 2026-05-22 HH:mm
+
+---
+
+## 2026-05-21 — fix: directional spread to separate paths and labels of mirrored edges
+**Prompt**: La formula bundleSpread precedente era invariante per swap di source/target, causando il collasso degli edge speculari sullo stesso path. Stesso bug sulle label. Introduce directionSign basato sul confronto lessicografico dei node ID per spezzare la simmetria.
+**File toccati**: frontend/src/components/editor-v2/edges/UnifiedEdge.tsx
+**Esito**: ✅ completato, build verde (1m 11s). Smoke test manuale richiesto su Families.ecore (verifica 8 path distinti + label separate per direzione) + State Machine (regression edge singolo) + modello con inheritance (regression frecce centrate).
+**Note**: chiude il filone "rendering denso bidirezionale Families.ecore" (3 fix in sequenza: portDistribution role-aware bucketing → DynamicHandles role-aware positioning → UnifiedEdge directional spread); direzione lessicografica deterministica ma non semantica, per simmetria UML servirebbe propagazione bundleIndex (backlog); formula `bundleSpread = directionSign * (sourceIndex + targetIndex + 1) * BUNDLE_SPREAD_PX / 2` produce 8 valori equispaziati simmetrici attorno a 0 per coppia Family↔Member; stesso pattern su labelOffset/cardinalityOffset con `+ directionSign * 0.5`; `BUNDLE_SPREAD_PX`/`LABEL_SPREAD_PX` invariati a 12/18.
+**Nome del documento prompt**: 2026-05-21 HH:mm fix_UnifiedEdge_bundle_spread_directional
+
+---
+
+## 2026-05-21 — fix: spread paths and labels for bundled edges between same node pair
+**Prompt**: Spread orizzontale dei path e verticale delle label per edge in bundle tra stessa coppia di nodi nel flow editor v2, usando handle index estratto dal handleId come proxy del bundle index (approccio C, local-only a UnifiedEdge).
+**File toccati**: frontend/src/components/editor-v2/edges/UnifiedEdge.tsx
+**Esito**: ✅ completato, build verde (45.91s). Smoke test manuale richiesto su Families.ecore + State Machine sparso + un modello con inheritance.
+**Note**: chiude il filone "rendering denso bidirezionale Families.ecore". Nessuna nuova propagazione di dati attraverso la pipeline JjOM→RF: lo spread è puramente geometrico, calcolato in `UnifiedEdge` come step `applyBundleSpread` post-`applyWaypoints`. `BUNDLE_SPREAD_PX = 12` per i path (corridoio centrale di Z-shape a 4 punti); `LABEL_SPREAD_PX = 18` per le label (sostituisce il vecchio mini-offset binario `handleIndex % 2`). Spread escluso per `isInheritance`, `isSelfLoop` e `waypoints.length > 0` (rispetta custom routing). L-shape (3 punti) e U-detour (6 punti) non vengono spreadati (fall-through accettabile). Limitazione consapevole: in casi patologici dove coppie distinte di nodi condividono lo stesso bundle (sourceIndex, targetIndex), lo spread è approssimato; documentato in commit message. SegmentHandles riceve ancora `adjustedPath` (non spreadato) per minimizzare il rischio di rompere il drag waypoint flow.
+**Nome del documento prompt**: 2026-05-21 HH:mm fix_UnifiedEdge_bundle_spread
+
+---
+
+## 2026-05-21 — fix: role-aware physical positioning of handles in DynamicHandles
+**Prompt**: 8 anchor distinti sul lato dei nodi v2-flow per evitare sovrapposizione source/target sullo stesso (side, index); source nella metà superiore/sinistra, target nella metà inferiore/destra.
+**File toccati**: frontend/src/components/editor-v2/components/DynamicHandles.tsx
+**Esito**: ✅ completato, build verde (45.29s). Smoke test manuale richiesto su Families.ecore (verifica 8 anchor su Member.left) + un modello mono-direzionale (regression check).
+**Note**: completa il filone "8/8 edge rendering" su Families.ecore. La formula attuale era rank-based `(rank+1)/(count+1)` (NON index-based come ipotizzato dal prompt); è stata sostituita con index-based segregata per ruolo: `(index+0.5)/(2*MAX_HANDLES_PER_SIDE)` per source, `0.5 + same` per target. `activeHandles` da `Map<string,number>` a `Set<string>` (la posizione non viene più memorizzata, è calcolata direttamente nel loop di rendering per ruolo). Pool DOM invariato a `MAX_HANDLES_PER_SIDE = 4`. Contratto handleId invariato. `handleRoles` invariato. Nessun cambio in `portDistribution.ts`, `jjomTransformers.ts`, `useJjomSync.ts`.
+**Nome del documento prompt**: 2026-05-21 HH:mm fix_DynamicHandles_role_aware_positioning
+
+---
+
+## 2026-05-21 — chore: clean up [cache] logging in jjscript executor
+**Prompt**: cleanup unificato `[diagN]` numerati residui + `[cache]` logging in jjscript executor (un solo commit, chiusura filone edge rendering). Fase 1+2 `[diagN]` era già stata completata in 82d590376 e 6701983b6; resta solo doc-comment storico in buildImportSummary.ts:10 (intenzionalmente preservato per documentare counter access strategy). Eseguita solo Fase 3.
+**File toccati**: frontend/src/jjscript/executor/utils.ts, docs/claude-code-log.md
+**Esito**: ✅ completato, build verde (52.22s). Censimento `[cache]`: 0 hit. Censimento `[diagN]`: 1 hit storico (doc-comment, esplicitamente preservato per scelta utente).
+**Nome del documento prompt**: 2026-05-21 13:40
+
+---
+
+## 2026-05-21 — fix: union node handles across source/target buckets in STEP 4
+**Prompt**: completamento Modifica 3 del prompt role-aware bucketing. Le Modifiche 1+2 erano state committate in 89e67dc65 (chiave `:source`/`:target` in STEP 1), ma STEP 4 sovrascriveva ancora `config[side]` invece di unire i due bucket per stesso `(nodeId, side)`. Funzionava per caso solo su distribuzioni simmetriche (es. Families 4+4); rotto su asimmetriche (4+2 → mancavano indici).
+**File toccati**: frontend/src/components/editor-v2/utils/portDistribution.ts
+**Esito**: ✅ completato, build verde (1m 51s)
+**Note**: union append-only con dedup per handleId + ricalcolo position uniforme sul totale post-merge (necessario perché bucket di lunghezza diversa generano position non monotone se mantenute originali). Nessun cambio di firma. STEP 1/2/3 invariati. Smoke test manuale su Families.ecore ancora richiesto.
+**Nome del documento prompt**: 2026-05-21 HH:mm fix_portDistribution_role_aware_bucketing (replay parziale)
+
+---
+
+## 2026-05-21 — chore: remove all residual diagN instrumentation
+**Prompt**: discovery + cleanup unificato di tutti i `[diagN]` numerati residui nel frontend. Filone edge rendering v2-flow chiuso.
+**File toccati**: frontend/src/components/editor-v2/utils/jjomTransformers.ts (diag5 ×8), frontend/src/components/editor-v2/hooks/useJjomSync.ts (diag6 ×2 + diag7 + diag8), frontend/src/components/editor-v2/edges/UnifiedEdge.tsx (diag9 ×2), frontend/src/components/editor-v2/edges/SegmentHandles.tsx (diag9 ×1), frontend/src/components/editor-v2/hooks/useClassRemoval.ts (diag9 ×1)
+**Esito**: ✅ completato, build verde (53.89s), censimento finale 0 hit attivi (resta solo doc-comment storico in buildImportSummary.ts)
+**Nome del documento prompt**: 2026-05-21 13:20
+
+---
+
+## 2026-05-21 — chore: remove diag14 from EditorV2.tsx
+**Prompt**: cleanup blocco diagnostico [diag14] (~50 righe) introdotto in c64c3f812. Filone edge rendering v2-flow chiuso.
+**File toccati**: frontend/src/components/editor-v2/EditorV2.tsx
+**Esito**: ✅ completato, build verde
+**Nome del documento prompt**: 2026-05-21 13:20
+
+---
+
+## 2026-05-21 — fix: role-aware bucketing in computePortDistribution
+**Prompt**: fix P0 filone edge rendering v2-flow Families.ecore. Cambio chiave bucketing in STEP 1 di computePortDistribution da `${node}:${side}` a `${node}:${side}:${role}`. Closes filone aperto in sessione_2026-05-20_3.
+**File toccati**: frontend/src/components/editor-v2/utils/portDistribution.ts
+**Esito**: ✅ completato, build verde, smoke test da fare
+**Nome del documento prompt**: 2026-05-21 13:20
+
+---
+
+## 2026-05-20 — diag chiuso: edge quadruplication su import Ecore (NON era un bug)
+
+**Prompt**: filone di 5 diagnostici (diag9, 10, 11, 12, 13) per indagare il sintomo "Families.ecore mostra 4 edge invece di 8" nel flow v2. Rimossi tutti in cleanup unico.
+**Conclusione**: il modello Families.ecore caricato è la variante "ricca" (Bezivin/AtlanMod) con 4 EReference per ciascuna delle 2 EClass, per un totale legittimo di 8 reference. Verifica via JjEL: `references.size` → 8, `Family.references` → ["father","mother","sons","daughters"], `Member.references` → ["familyFather","familyMother","familySon","familyDaughter"]. Il rendering nel flow v2 funziona correttamente con handle distinti. Il sintomo iniziale "4 invece di 8" era un'illusione ottica pre-auto-layout dovuta a nodi sovrapposti.
+**File toccati**: frontend/src/components/editor-v2/EditorV2.tsx (177 righe rimosse), frontend/src/components/editor-v2/hooks/useJjomSync.ts (22 righe rimosse).
+**Esito**: ✅ cleanup completo, working tree allineato allo stato pre-diag9.
+**Nome del documento prompt**: 2026-05-20 HH:mm (cleanup diag9-13)
+
+---
+
 ## 2026-05-19 — fix(v2-flow): dedup edges by refId, not by src→tgt pair
 **Prompt**: Multiple EReference between same src/tgt pair were collapsed to single edge due to dedup key being `${srcVertex}→${tgtVertex}` in `useJjomSync.ts` (M2 main loop, pre-count, M1 main loop). Fix: dedup by composite `${refId}:${srcVertex}→${tgtVertex}` (opzione B), no `syncState.ts` changes. `hasCanvasEdgePair` removed from reference paths (pair-based, blocks siblings); replaced by an idlookup safety-net scan for race-window protection. Inheritance path unchanged (pair-based is correct: 1 extend per pair).
 **File toccati**: frontend/src/components/editor-v2/hooks/useJjomSync.ts
@@ -5934,3 +6021,51 @@ Dark mode overrides for `.toolbar-btn` also scoped under `.documentation-toolbar
 **Esito**: ✅ completato — tutte e 4 le D risolte conclusivamente.
 **Note**: **D1 (schema viewpoint)**: `viewpoint!: Pointer<DViewPoint>` su DViewElement (`view.tsx:232`), single string Pointer (mai array, mai oggetto, mai name). Sempre popolato dal costruttore (`classes.ts:1205` cascata `provided → activeViewpoint.id → Defaults.viewpoints[0]`). Sentinel `vp === 'skip'` non da UI. Per DViewPoint: `viewpoint = self.id` self-reference (`viewpoint.ts:43`). **Caveat critico**: getter L-layer `get_viewpoint` (`view.tsx:1392`) NON legge `c.data.viewpoint` ma walka father chain — `set_father` (`view.tsx:1421`) tiene D-field e L-computed in sync. EdgeOverlay legge D-layer (`state.idlookup`), quindi il valore corretto è `e.viewpoint` direct. **D2 (graphid → activeVp)**: `graphid` non serve, progetto è singleton URL-derivato. Path raccomandato `(window as any).LProject.getProject()?.activeViewpoint?.id` mirror del pattern esistente. Getter `get_activeViewpoint` (`classes.ts:3343-3345`) ha fallback a `Defaults.viewpoints[0]`. Path alternativo `state.viewpoint` root field (set da `activateViewpoint()` in `lastViewpoint.ts:56` via `SetRootFieldAction`) **sconsigliato**: può essere stringa vuota all'init, no fallback. **D3 (view globali)**: NESSUNA DV con `isEdge=true` esiste senza viewpoint. Tutti i path di creazione (`new2`, `newDefault`, Constructor, workbench, InfoData dropdown) settano viewpoint. Default views in `redux/defaults/views.ts` usano legacy `appliableTo='Edge'` schema, NON il nuovo `isEdge=true` (verificato grep zero hit). Migration 2.212→2.213 setta solo `isEdge: false`. Schema L2 `isEdge=true` è 100% user-opt-in via InfoData.tsx. **D4 (viewpoint inheritance)**: NO viewpoint-to-viewpoint inheritance. DViewPoint extends DViewElement è subclass TS, non semantica di dominio. Viewpoints hanno `father=undefined` (root) e `viewpoint=self.id`. Getter `get_viewpoint` walka SOLO father chain UPWARDS; "Parent view" UI (InfoData.tsx:316-329) filtra per `viewpoint?.id === vpid` (intra-viewpoint only). Implicazione: filtro semplice `view.viewpoint === activeVpId` sufficiente, niente chain traversal. **Findings collaterali**: (a) il filtro risolve come side-effect il nondeterminismo di `findApplicableEdgeView` quando due viewpoint hanno DV per la stessa metaclass; (b) view auto-create di `createViewInWorkbench` (lastViewpoint.ts:124) con `appliableToClasses=['DObject']` wildcard sono comunque legate a un viewpoint (line 153-163), quindi il filtro le include/esclude correttamente; (c) DViewPoint stessi hanno `className='DViewPoint'` non `'DViewElement'`, quindi non entrano nel loop esistente che filtra `className === 'DViewElement'`. **Bozza filtro consegnata** (NON applicata): inserimento in `EdgeOverlay.tsx` dopo riga 138 (post `lGraph` guard, pre loop `edgeViews`); risoluzione `activeVpId` via globals; filtro `if (typeof activeVpId === 'string' && activeVpId !== '' && e.viewpoint !== activeVpId) continue;` dentro il loop esistente (defensiva: no-op se activeVpId non risolvibile). Nessun nuovo exit code richiesto (`'no-edge-views'` esistente cattura già il caso). Memoization preservata. Non toccare `findApplicableEdgeView` né `useJjomSync.ts`. **Hard stop rispettato**: niente fix proposto in chat, niente edit codice, niente branch.
 **Nome del documento prompt**: 2026-05-09 13:00
+
+---
+
+## 2026-05-20 — chore: log diagnostici v2-flow 4/8 edge
+**Prompt**: aggiunti log [diag5] in jjomEdgeToRFEdge e [diag6] in useJjomSync init effect per discriminare ipotesi 1/2/3 sul bug RF rendering 4 di 8 archi.
+**File toccati**: frontend/src/components/editor-v2/utils/jjomTransformers.ts, frontend/src/components/editor-v2/hooks/useJjomSync.ts
+**Esito**: ✅ completato (log temporanei, no fix)
+**Note**: log da rimuovere dopo identificazione root cause. Path-corretti rispetto al prompt (`utils/` non `sync/` per jjomTransformers, `hooks/` non `sync/` per useJjomSync) — la dir `sync/` esiste ma contiene solo `canvasToJjom.ts` e `syncState.ts`. Diag5: IN log all'inizio della funzione (campi adattati alla shape reale dell'edge JjOM: `start.id`/`end.id`/`isReference`/`isExtend`/`model.name` anziché `source`/`target`/`type`/`refName` del template) + 6 OUT log con `exitPoint` descrittivo (`guard-no-edge`, `guard-no-endpoints`, `m1-composition`, `m1-instance-ref`, `m2-reference`, `inheritance`, `fallback-reference`); non rimosso il `[BUG-DIAG]` esistente al branch M1 (riga 406). Diag6: log effect-run posizionato dentro il try block subito dopo `const edges = lGraph.edges ?? []` (necessario per loggare il count); log setEdges-call estrae `deduplicateInheritanceEdges(...)` in `rfEdgesToSet` per logging senza ricomputo (refactor minimo, semantica invariata). `performance.now()` con guard a `Date.now()` per safety. Build verificato pulito: `npm run build` ✓ built in 39.08s.
+**Nome del documento prompt**: 2026-05-20 09:00
+
+---
+
+## 2026-05-20 — chore: estensione log diagnostici v2-flow 4/8 edge (round 2)
+**Prompt**: dopo che `[diag5]`+`[diag6]` v1 hanno escluso jjomEdgeToRFEdge / useJjomSync / double-run come cause (8 edge passano correttamente a `setEdges` ma RF ne renderizza 4), estendere log per discriminare A (source/target invalido), B (dedup interno RF), C (CSS/SVG invisibili) — sempre no fix.
+**File toccati**: frontend/src/components/editor-v2/hooks/useJjomSync.ts
+**Esito**: ✅ completato (log temporanei, no fix)
+**Note**: 2 modifiche nello stesso effect (`useJjomSync.ts` riga ~897-925). **Mod 1**: estratto `Array.from(nodeCache.values())` (precedentemente inline in `setNodes(...)`) in variabile locale `rfNodesToSet` — mirror del pattern già usato per `rfEdgesToSet` introdotto nel round 1, refactor minimo necessario per loggare senza ricomputo. **Mod 2**: nuovo log `[diag7] RF nodes registered` prima del `[diag6]` setEdges call (cronologicamente in console: nodes prima, edges dopo), con `graphId`, `nodeCount`, `nodeIds` (full id, non slice — servono per matching esatto con source/target degli edge). **Mod 3**: esteso `[diag6] setEdges call` esistente: rimosso `rfEdgeIdsTail` (solo suffix), aggiunto `rfEdges` con full dump `{id (slice -20), source, target, type, label, data: Object.keys}`. Lo scopo è confrontare source/target di ciascun edge con `nodeIds` da `[diag7]` per discriminare causa A. **Posizione decisione**: la spec consente di referenziare `nodeCache.values()` direttamente, ho scelto extract-to-variable per simmetria con `rfEdgesToSet`. **Hard stop non innescato**: nodes e edges sono calcolati nello stesso effect (lines 875-886 nello stesso try block), quindi log sincrono OK. **Verifica build**: `npm run build` ✓ built in 39.22s, zero nuovi warning. **Smoke test runtime delegato** (NON eseguibile da CLI): importare `Families.ecore`, filtrare console per `[diag6]`+`[diag7]`, eseguire snippet DOM `document.querySelectorAll('.react-flow__edge')` come da prompt per contare edge nel DOM e ispezionarne attributi. Decision tree post-osservazione: (a) 4 inverse hanno source/target non in nodeIds → causa A (mapping JjOM→RF asimmetrico); (b) tutti i source/target validi MA `.react-flow__edge` count = 4 → causa B (dedup RF); (c) `.react-flow__edge` count = 8 → causa C (CSS/SVG invisibili, ispezionare `<path>` per stroke/opacity/d duplicato/display:none).
+**Nome del documento prompt**: 2026-05-20 10:30
+
+---
+
+## 2026-05-20 — chore: minimal repro harness for RF 4/8 edge bug
+**Prompt**: 2026-05-20_1730_repro_harness_rf_4of8_edges.md
+**File toccati**: frontend/src/components/editor-v2/repro/ReproHarness.tsx (nuovo), frontend/src/App.tsx (route)
+**Esito**: ✅ completato (build pulito; smoke runtime delegato a sessione browser)
+**Note**: Componente standalone su route `/#/repro-v2flow` che monta 2 `ClassNode` (id `204` Family, `206` Member) + 8 edge tipo `reference` (4 diretti `(204,right-0)→(206,left-0)`, 4 inversi `(206,left-0)→(204,right-0)`) — replica esatta del pattern speculare osservato su `Families.ecore`. **Stop condition non innescata**: verifica deps via grep ha confermato che `ClassNode` e `UnifiedEdge` (e i loro children `DynamicHandles`, `SegmentHandles`, `EndpointHandles`) usano solo `useEditorContextSafe()` (null-safe — degrada a `notation = 'uml'`) e hook nativi RF (`useReactFlow`, `useEdges`, `useStoreApi`). Nessuna dep Redux/LModel/joiner run-time. SCSS file non creato (prompt diceva "se necessario"); inline styles sufficienti. **Implementazione**: helper `makeRefEdge(id, source, target, sourceHandle, targetHandle)` per evitare 8 ripetizioni verbose dello stesso `data.reference` shape; `data.reference` popolato con `kind: 'association'` + bounds default conformi a `ReferenceEdgeData` di `types.ts`. Wrappato con `<ReactFlowProvider>` per mirror del pattern `EditorV2.tsx` (line 10) — sicuro anche se `<ReactFlow>` provides un Provider implicito. `nodeTypes` e `edgeTypes` definiti come costanti module-level per stabilità di reference (no warning RF). `useState` chiamato senza setter perché lo state è read-only nel repro (mai mutato). Banner monospace 11px in cima al viewport con istruzioni `document.querySelectorAll('.react-flow__edge').length`. **App.tsx**: 1 import `ReproHarness` + 1 `<Route path={'repro-v2flow'} element={<ReproHarness/>}/>` inserito dentro il blocco `user ?` subito dopo `editor-v2` (prima del `'*'` catch-all). Route invisibile a utenti non loggati (auth required). Default route invariato. **Verifica build**: `npm run build` ✓ built in 43.12s, zero nuovi errori TS o warning attribuibili al diff (solo pre-esistente chunk-size warning del bundle index). **Smoke test runtime (NON eseguibile da CLI)**: navigare a `http://localhost:5173/#/repro-v2flow` post `npm run dev`, contare `document.querySelectorAll('.react-flow__edge').length` da devtools. **Decision tree**: (a) count = 8 → bug NON in RF, indagare integrazione (DynamicHandles timing, useJjomSync, applyDistribution); (b) count = 4 → bug confermato in `@xyflow/react`, workaround necessario (perturbare sourceHandle duplicati o usare overlay SVG manuale come EdgeOverlay).
+**Nome del documento prompt**: 2026-05-20 17:30
+
+---
+
+## 2026-05-20 — chore: reactive variant of v2-flow repro harness
+**Prompt**: 2026-05-20_HHMM_repro_reactive_setEdges.md
+**File toccati**: frontend/src/components/editor-v2/repro/ReproHarness.tsx (aggiunto ReproHarnessReactive), frontend/src/App.tsx (route)
+**Esito**: ✅ completato (build pulito; smoke runtime delegato a sessione browser)
+**Note**: Variante reattiva per discriminare ipotesi T1 (race timing `setEdges` vs `updateNodeInternals`). **Implementazione**: aggiunta named export `ReproHarnessReactive` accanto al `default export ReproHarness` esistente (mantenute entrambe coabitanti nello stesso file). Riusa direttamente i symbol module-level `nodeTypes`, `edgeTypes`, `initialNodes`, `initialEdges` già esportati di fatto (non `export`ati esplicitamente ma accessibili nello scope del file) — nessuno spostamento necessario, prompt STOP condition non innescata. Differenza chiave rispetto al `ReproHarness`: `useState<Edge[]>([])` (parte vuoto) + `useEffect(() => setStateEdges(initialEdges), [])` (deps vuoto → fire once dopo primo commit), simulando il pattern di `useJjomSync` init effect. Banner amber `#fef3c7` per distinguerlo visivamente dal blu slate dell'originale. `setStateNodes` non destrutturato per evitare unused-var warning TS. **App.tsx**: aggiornato import a `import ReproHarness, { ReproHarnessReactive } from ...` (default + named mix, scelta più minimale rispetto a convertire tutto a named). Aggiunto `<Route path={'repro-v2flow-reactive'}>` subito dopo `<Route path={'repro-v2flow'}>`, prima del commento `non functioning stuff`. Default route invariato. **Verifica build**: `npm run build` ✓ built in 35.95s, zero nuovi errori o warning attribuibili al diff. **Smoke test runtime (NON eseguibile da CLI)**: Test A `http://localhost:5173/#/repro-v2flow` → `document.querySelectorAll('.react-flow__edge').length` atteso = 8 (regression, già verificato nel prompt precedente). Test B `http://localhost:5173/#/repro-v2flow-reactive` → stesso query, valore da raccogliere. **Decision tree**: (a) B = 4 → T1 confermata (race `setEdges` vs misurazione handle); fix via double-rAF wrap o `useUpdateNodeInternals` esplicito. (b) B = 8 → T1 esclusa; serve variante T2/T3 (interazione con `useNodesState`/`useEdgesState` hook, downstream hook `useM1ReferenceEdges`, o altra peculiarità integrazione). (c) B = altro valore (1, 2, 6) → dato nuovo, richiede ridiscussione. Test A e Test B da riportare nel log dopo la sessione browser.
+**Nome del documento prompt**: 2026-05-20 HH:mm
+
+---
+
+## 2026-05-22 — docs(coevolution): sanity check M2→M1 — discovery commit
+**Prompt**: salvare e committare la discovery di co-evolution incollata in chat (sanity check su editor v2, copertura attributi/reference/classi/enum/name sync/edge cases).
+**File toccati**: docs/discovery/2026-05-22_coevolution_sanity.md (new, 380 righe)
+**Esito**: ✅ completato — commit `5e9a8902d`
+**Note**: discovery solo (no codice). Contenuto: 11 cluster causali, 2 critici → **Cluster 1** regressione su rehydrate `OrphanStore` per attributi (A.4/A.9/G.1 FAIL; A.3 capture PASS — match a 3 chiavi `{classId, attrName, attrType}` rotto in `useOrphanFeatures.ts`, sospetto commit B.3.2 13/05); **Cluster 2** gap strutturale preesistente: propagazione M2→M1 per reference assente su delete/cardinality/type/containment (B.2/B.3/B.4/B.8/B.9/B.12 FAIL; B.5 rename PASS via id-identity). 9 cluster minori: 3 (containment instantiability), 4 (canvas multi-value), 5 (change-type coerce), 6 (multi→mono warning), 7 (enum literal-add overzelous), 8 (eOpposite UX), 9 (Ctrl+Z keystroke binding — handler OK, listener no), 10 (derived/iD flag M2-only), 11 (intenzionali: orphan instances, abstract con istanze, remove literal isolato). Backlog P0/P1/P2/P3 prioritizzato. 5 spec decisions ancora aperte (B.6, B.12, C.3, D.5, derived/iD). Implicazioni per paper SoSyM 2025: rivendicazione "live co-evolution" regge per attributi+classi dopo fix Cluster 1; per reference solo rename — wording da qualificare. **Filename mismatch chiarito durante setup**: il file `2026-05-22_claude_md_audit.md` untracked (anche 22/05) contiene un audit di CLAUDE.md, non co-evolution — è una doc separata, lasciata untracked. **Hard stop pre-commit rispettato**: stage isolato (`git add docs/discovery/2026-05-22_coevolution_sanity.md`), diff mostrata via `--stat`, approvazione utente prima del commit; CLAUDE.md (M) e claude-code-log.md (M, pre-sessione) e il claude_md_audit untracked NON inclusi nel commit. **Convenzione naming**: scelto `2026-05-22_coevolution_sanity.md` matching il pattern del claude_md_audit (stesso giorno, no prefisso `discovery_`).
+**Nome del documento prompt**: 2026-05-22 (incollato in chat)
+
+---
+

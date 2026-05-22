@@ -860,8 +860,6 @@ export function useJjomSync(
             const vertices: any[] = lGraph.nodes ?? [];
             const edges: any[] = lGraph.edges ?? [];
 
-
-
             const nodeCache = new Map<string, Node>();
             const edgeCache = new Map<string, Edge>();
 
@@ -888,9 +886,11 @@ export function useJjomSync(
             prevSubElementsRef.current = subElementIds;
 
             // Push to React Flow state
-            setNodes(Array.from(nodeCache.values()));
+            const rfNodesToSet = Array.from(nodeCache.values());
+            setNodes(rfNodesToSet);
 
-            setEdges(deduplicateInheritanceEdges(Array.from(edgeCache.values())));
+            const rfEdgesToSet = deduplicateInheritanceEdges(Array.from(edgeCache.values()));
+            setEdges(rfEdgesToSet);
 
             initializedRef.current = true;
 

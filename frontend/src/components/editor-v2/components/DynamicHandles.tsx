@@ -53,34 +53,18 @@ function DynamicHandles({ nodeId }: DynamicHandlesProps) {
 
     // --- Derive active handles directly from edge handle assignments ---
     // Reads sourceHandle/targetHandle from edges (assigned by applyDistribution).
-    // No computePortDistribution call needed — avoids node position dependency
-    // which was causing updateNodeInternals → dimension changes → re-render loops.
+    // The physical position is computed per-role in the render loop below
+    // (source handles in first half of the side, target handles in second half).
     const activeHandles = useMemo(() => {
-        const active = new Map<string, number>();
-        const sidePorts = new Map<string, Set<string>>();
-
+        const active = new Set<string>();
         for (const edge of edges) {
             if (edge.source === nodeId && edge.sourceHandle) {
-                const side = edge.sourceHandle.split('-')[0];
-                if (!sidePorts.has(side)) sidePorts.set(side, new Set());
-                sidePorts.get(side)!.add(edge.sourceHandle);
+                active.add(edge.sourceHandle);
             }
             if (edge.target === nodeId && edge.targetHandle) {
-                const side = edge.targetHandle.split('-')[0];
-                if (!sidePorts.has(side)) sidePorts.set(side, new Set());
-                sidePorts.get(side)!.add(edge.targetHandle);
+                active.add(edge.targetHandle);
             }
         }
-
-        for (const [, handleIds] of sidePorts) {
-            const sorted = Array.from(handleIds).sort();
-            const count = sorted.length;
-            sorted.forEach((handleId, index) => {
-                const position = count === 1 ? 0.5 : (index + 1) / (count + 1);
-                active.set(handleId, position);
-            });
-        }
-
         return active;
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [edgeTopologyKey, nodeId]);
@@ -152,8 +136,7 @@ function DynamicHandles({ nodeId }: DynamicHandlesProps) {
 
     // --- updateNodeInternals when handle positions change ---
     const activeHandlesKey = useMemo(() => {
-        const entries = Array.from(activeHandles.entries()).sort(([a], [b]) => a.localeCompare(b));
-        return entries.map(([id, pos]) => `${id}:${pos}`).join(',');
+        return Array.from(activeHandles).sort().join(',');
     }, [activeHandles]);
 
     const lastCommittedKeyRef = useRef<string>('');
@@ -202,8 +185,7 @@ function DynamicHandles({ nodeId }: DynamicHandlesProps) {
 
                 for (let index = 0; index < MAX_HANDLES_PER_SIDE; index++) {
                     const handleId = `${side}-${index}`;
-                    const activePosition = activeHandles.get(handleId);
-                    const isActive = activePosition !== undefined;
+                    const isActive = activeHandles.has(handleId);
 
                     // Ghost behavior: show the first inactive handle on hover
                     // (the next available slot for creating a new connection).
@@ -220,9 +202,12 @@ function DynamicHandles({ nodeId }: DynamicHandlesProps) {
                     }
                     const isGhostVisible = isFirstInactive && hoveredSide === side;
 
-                    // Position: active handles at distribution-computed position,
-                    // inactive at 50% (center of side)
-                    const position = isActive ? activePosition : 0.5;
+                    // Role-aware physical positioning: source handles occupy the first
+                    // half of each side, target handles the second half. Prevents
+                    // source+target on the same (side, index) from collapsing onto a
+                    // single visual anchor when both inbound and outbound edges exist.
+                    const sourcePercent = (index + 0.5) / (2 * MAX_HANDLES_PER_SIDE);
+                    const targetPercent = 0.5 + (index + 0.5) / (2 * MAX_HANDLES_PER_SIDE);
 
                     // Determine active role(s) for this handleId.
                     // Only the Handle matching its edge role gets --connected;
@@ -246,7 +231,8 @@ function DynamicHandles({ nodeId }: DynamicHandlesProps) {
                     const ghostClassName = 'mm-anchor mm-anchor--ghost mm-anchor--ghost-visible';
                     const ghostStyle: React.CSSProperties = { [positionProp]: '50%' };
                     const connectedClassName = 'mm-anchor mm-anchor--connected';
-                    const connectedStyle: React.CSSProperties = { [positionProp]: `${position * 100}%` };
+                    const sourceConnectedStyle: React.CSSProperties = { [positionProp]: `${sourcePercent * 100}%` };
+                    const targetConnectedStyle: React.CSSProperties = { [positionProp]: `${targetPercent * 100}%` };
                     const poolClassName = 'mm-anchor mm-anchor--pool-inactive';
 
                     // --- Target Handle ---
@@ -254,7 +240,7 @@ function DynamicHandles({ nodeId }: DynamicHandlesProps) {
                         ? connectedClassName
                         : isGhostVisible ? ghostClassName : poolClassName;
                     const targetStyle = isTargetRole
-                        ? connectedStyle
+                        ? targetConnectedStyle
                         : isGhostVisible ? ghostStyle : inactiveStyle;
 
                     // --- Source Handle ---
@@ -262,7 +248,7 @@ function DynamicHandles({ nodeId }: DynamicHandlesProps) {
                         ? connectedClassName
                         : isGhostVisible ? ghostClassName : poolClassName;
                     const sourceStyle = isSourceRole
-                        ? connectedStyle
+                        ? sourceConnectedStyle
                         : isGhostVisible ? ghostStyle : inactiveStyle;
 
                     handles.push(

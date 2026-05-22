@@ -2963,6 +2963,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // Canvas inner JSX — extracted so the same React Flow tree can be embedded
     // either in the standalone `.editor-v2__canvas` (flow / no-viewpoint) or
     // inside the `.editor-split-flow` pane (split mode).
+
     const flowCanvas = (
         <>
             <ReactFlow

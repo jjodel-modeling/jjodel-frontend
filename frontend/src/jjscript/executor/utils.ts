@@ -44,9 +44,8 @@ function getCachedModel(expectMetamodel: boolean): LModel | null {
     if (editorType !== expectedType) return null;
     try {
         const m = LPointerTargetable.fromPointer(modelId) as LModel | null;
-        console.log('[cache] modelId:', modelId, 'resolved:', m?.name, 'isMetamodel:', m?.isMetamodel, 'expectMetamodel:', expectMetamodel);
         if (m && (!!m.isMetamodel) === expectMetamodel) return m;
-    } catch (e) { console.warn('[cache] error:', e); }
+    } catch (e) { console.error(e); }
     return null;
 }
 

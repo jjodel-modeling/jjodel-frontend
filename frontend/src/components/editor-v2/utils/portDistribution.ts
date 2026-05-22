@@ -75,7 +75,7 @@ function computePortDistribution(
         const targetSide = getBaseSide(edge.targetHandle);
 
         // --- Source side ---
-        const sourceKey = `${edge.source}:${sourceSide}`;
+        const sourceKey = `${edge.source}:${sourceSide}:source`;
         if (!sideGroups.has(sourceKey)) sideGroups.set(sourceKey, []);
 
         if (edgeType === 'inheritance') {
@@ -108,7 +108,7 @@ function computePortDistribution(
         }
 
         // --- Target side ---
-        const targetKey = `${edge.target}:${targetSide}`;
+        const targetKey = `${edge.target}:${targetSide}:target`;
         if (!sideGroups.has(targetKey)) sideGroups.set(targetKey, []);
         const targetGroups = sideGroups.get(targetKey)!;
 
@@ -204,23 +204,34 @@ function computePortDistribution(
         });
     }
 
-    // Override with actual distribution from groups
+    // Override with actual distribution from groups.
+    // Bucket keys now include role (`:source` / `:target`); a single (nodeId, side)
+    // can have two buckets — union their indices into a single PortInfo[] without
+    // duplicates (DynamicHandles materializes source+target DOM elements per index).
     for (const [key, groups] of sideGroups) {
         const [nodeId, sideStr] = key.split(':');
         const side = sideStr as Side;
         const config = nodeHandles.get(nodeId);
         if (!config) continue;
 
-        const ports: PortInfo[] = [];
-        groups.forEach((group, index) => {
+        const present = new Set(config[side].map(p => p.handleId));
+        groups.forEach((_group, index) => {
             const handleId = `${side}-${index}`;
-            const position = groups.length === 1
-                ? 0.5
-                : (index + 1) / (groups.length + 1);
-            ports.push({ handleId, position });
+            if (present.has(handleId)) return;
+            config[side].push({ handleId, position: 0 });
         });
+    }
 
-        config[side] = ports;
+    // Recompute positions per side uniformly on the merged count.
+    // Bucket-local positions (computed from groups.length) would be inconsistent
+    // when source and target buckets contribute different numbers of indices.
+    for (const config of nodeHandles.values()) {
+        for (const side of ['top', 'right', 'bottom', 'left'] as Side[]) {
+            const n = config[side].length;
+            config[side].forEach((port, i) => {
+                port.position = n === 1 ? 0.5 : (i + 1) / (n + 1);
+            });
+        }
     }
 
     return { edgeHandles, nodeHandles };

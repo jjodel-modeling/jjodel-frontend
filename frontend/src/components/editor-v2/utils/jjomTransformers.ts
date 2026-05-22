@@ -377,11 +377,15 @@ function computeOptimalHandles(
  * Returns null if the edge cannot be mapped.
  */
 export function jjomEdgeToRFEdge(edge: any): Edge | null {
-    if (!edge) return null;
+    if (!edge) {
+        return null;
+    }
 
     const startVertex = edge.start;
     const endVertex = edge.end;
-    if (!startVertex?.id || !endVertex?.id) return null;
+    if (!startVertex?.id || !endVertex?.id) {
+        return null;
+    }
 
     // Compute optimal handle sides from vertex positions
     const isInheritance = !!edge.isExtend;
