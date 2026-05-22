@@ -554,8 +554,8 @@ const ClassNode = memo(function ClassNode({
     const handleClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
         SetRootFieldAction.new('_lastSelected', {
-            node: undefined,
-            view: undefined,
+            node: '',
+            view: '',
             modelElement: cls.id,
         }, '', false);
     }, [cls.id]);
@@ -650,8 +650,8 @@ const PackageNode = memo(function PackageNode({
     const handleClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
         SetRootFieldAction.new('_lastSelected', {
-            node: undefined,
-            view: undefined,
+            node: '',
+            view: '',
             modelElement: pkg.id,
         }, '', false);
     }, [pkg.id]);
@@ -739,8 +739,8 @@ const ModelNode = memo(function ModelNode({
     const handleClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
         SetRootFieldAction.new('_lastSelected', {
-            node: undefined,
-            view: undefined,
+            node: '',
+            view: '',
             modelElement: model.id,
         }, '', false);
         onSelect?.();
@@ -822,12 +822,12 @@ const MetamodelNode = memo(function MetamodelNode({
     const handleClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
         SetRootFieldAction.new('_lastSelected', {
-            node: mm.nodeId,
-            view: mm.viewId,
+            node: '',
+            view: '',
             modelElement: mm.id,
         }, '', false);
         onSelect?.();
-    }, [mm.id, mm.nodeId, mm.viewId, onSelect]);
+    }, [mm.id, onSelect]);
 
     const tooltip = useMemo(() => (
         <div>
