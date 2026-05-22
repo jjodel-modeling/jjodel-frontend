@@ -1,5 +1,14 @@
 # Claude Code Session Log
 
+## 2026-05-22 — docs: audit per ricalibrazione CLAUDE.md
+**Prompt**: discovery read-only per ricalibrare CLAUDE.md sulla base del codice reale
+**File toccati**: docs/discovery/2026-05-22_claude_md_audit.md (nuovo), docs/claude-code-log.md
+**Esito**: ✅ completato — 12 sezioni compilate, nessun fix applicato, working tree clean
+**Note**: 11 pattern user-memory ✅ confermati, 2 ⚠️ divergenze (TRANSACTION comment shiftato 496→527, `window.store`→`windoww.store`), 1 ❌ non trovato (`.panning-handle` z-index 100). Divergenze maggiori CLAUDE.md: registry custom events ALREADY EXISTS (committed 2026-05-20, dichiarato "prossimo step"), JjScript test suite ESISTE (5 file vs "0 dichiarati"), JjTL test files 11 (vs 4 dichiarati), 1 sito legacy `var(--accent)` in EditorV2.scss:857 vs "zero legacy". Report di sole 12 sezioni, no commit, lascia decidere chat di progetto.
+**Nome del documento prompt**: 2026-05-22 HH:mm
+
+---
+
 ## 2026-05-21 — fix: directional spread to separate paths and labels of mirrored edges
 **Prompt**: La formula bundleSpread precedente era invariante per swap di source/target, causando il collasso degli edge speculari sullo stesso path. Stesso bug sulle label. Introduce directionSign basato sul confronto lessicografico dei node ID per spezzare la simmetria.
 **File toccati**: frontend/src/components/editor-v2/edges/UnifiedEdge.tsx
@@ -6048,6 +6057,15 @@ Dark mode overrides for `.toolbar-btn` also scoped under `.documentation-toolbar
 **Esito**: ✅ completato (build pulito; smoke runtime delegato a sessione browser)
 **Note**: Variante reattiva per discriminare ipotesi T1 (race timing `setEdges` vs `updateNodeInternals`). **Implementazione**: aggiunta named export `ReproHarnessReactive` accanto al `default export ReproHarness` esistente (mantenute entrambe coabitanti nello stesso file). Riusa direttamente i symbol module-level `nodeTypes`, `edgeTypes`, `initialNodes`, `initialEdges` già esportati di fatto (non `export`ati esplicitamente ma accessibili nello scope del file) — nessuno spostamento necessario, prompt STOP condition non innescata. Differenza chiave rispetto al `ReproHarness`: `useState<Edge[]>([])` (parte vuoto) + `useEffect(() => setStateEdges(initialEdges), [])` (deps vuoto → fire once dopo primo commit), simulando il pattern di `useJjomSync` init effect. Banner amber `#fef3c7` per distinguerlo visivamente dal blu slate dell'originale. `setStateNodes` non destrutturato per evitare unused-var warning TS. **App.tsx**: aggiornato import a `import ReproHarness, { ReproHarnessReactive } from ...` (default + named mix, scelta più minimale rispetto a convertire tutto a named). Aggiunto `<Route path={'repro-v2flow-reactive'}>` subito dopo `<Route path={'repro-v2flow'}>`, prima del commento `non functioning stuff`. Default route invariato. **Verifica build**: `npm run build` ✓ built in 35.95s, zero nuovi errori o warning attribuibili al diff. **Smoke test runtime (NON eseguibile da CLI)**: Test A `http://localhost:5173/#/repro-v2flow` → `document.querySelectorAll('.react-flow__edge').length` atteso = 8 (regression, già verificato nel prompt precedente). Test B `http://localhost:5173/#/repro-v2flow-reactive` → stesso query, valore da raccogliere. **Decision tree**: (a) B = 4 → T1 confermata (race `setEdges` vs misurazione handle); fix via double-rAF wrap o `useUpdateNodeInternals` esplicito. (b) B = 8 → T1 esclusa; serve variante T2/T3 (interazione con `useNodesState`/`useEdgesState` hook, downstream hook `useM1ReferenceEdges`, o altra peculiarità integrazione). (c) B = altro valore (1, 2, 6) → dato nuovo, richiede ridiscussione. Test A e Test B da riportare nel log dopo la sessione browser.
 **Nome del documento prompt**: 2026-05-20 HH:mm
+
+---
+
+## 2026-05-22 — docs(coevolution): sanity check M2→M1 — discovery commit
+**Prompt**: salvare e committare la discovery di co-evolution incollata in chat (sanity check su editor v2, copertura attributi/reference/classi/enum/name sync/edge cases).
+**File toccati**: docs/discovery/2026-05-22_coevolution_sanity.md (new, 380 righe)
+**Esito**: ✅ completato — commit `5e9a8902d`
+**Note**: discovery solo (no codice). Contenuto: 11 cluster causali, 2 critici → **Cluster 1** regressione su rehydrate `OrphanStore` per attributi (A.4/A.9/G.1 FAIL; A.3 capture PASS — match a 3 chiavi `{classId, attrName, attrType}` rotto in `useOrphanFeatures.ts`, sospetto commit B.3.2 13/05); **Cluster 2** gap strutturale preesistente: propagazione M2→M1 per reference assente su delete/cardinality/type/containment (B.2/B.3/B.4/B.8/B.9/B.12 FAIL; B.5 rename PASS via id-identity). 9 cluster minori: 3 (containment instantiability), 4 (canvas multi-value), 5 (change-type coerce), 6 (multi→mono warning), 7 (enum literal-add overzelous), 8 (eOpposite UX), 9 (Ctrl+Z keystroke binding — handler OK, listener no), 10 (derived/iD flag M2-only), 11 (intenzionali: orphan instances, abstract con istanze, remove literal isolato). Backlog P0/P1/P2/P3 prioritizzato. 5 spec decisions ancora aperte (B.6, B.12, C.3, D.5, derived/iD). Implicazioni per paper SoSyM 2025: rivendicazione "live co-evolution" regge per attributi+classi dopo fix Cluster 1; per reference solo rename — wording da qualificare. **Filename mismatch chiarito durante setup**: il file `2026-05-22_claude_md_audit.md` untracked (anche 22/05) contiene un audit di CLAUDE.md, non co-evolution — è una doc separata, lasciata untracked. **Hard stop pre-commit rispettato**: stage isolato (`git add docs/discovery/2026-05-22_coevolution_sanity.md`), diff mostrata via `--stat`, approvazione utente prima del commit; CLAUDE.md (M) e claude-code-log.md (M, pre-sessione) e il claude_md_audit untracked NON inclusi nel commit. **Convenzione naming**: scelto `2026-05-22_coevolution_sanity.md` matching il pattern del claude_md_audit (stesso giorno, no prefisso `discovery_`).
+**Nome del documento prompt**: 2026-05-22 (incollato in chat)
 
 ---
 
