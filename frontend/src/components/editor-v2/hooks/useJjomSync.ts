@@ -1021,7 +1021,7 @@ export function useJjomSync(
             prevModel = {} as any;
             const currHash = elementSnapshots.get(`ch:${id}`);
             const prevHash = prevElements.get(`ch:${id}`);
-
+            
             if (prevD === dElement && prevModel === currModel && currHash === prevHash) continue;
 
             try {
@@ -1187,7 +1187,8 @@ export function useJjomSync(
             });
             scheduleFlush();
         }
-    }, [isJjomMode, elementSnapshots, subElementIds, scheduleFlush]);
+    }, [isJjomMode, elementSnapshots, subElementIds, scheduleFlush, Date.now()]);
+    // todo: remove Date.now() from dependencies, it forces update to fix singleton issue but it's sub-optimal
 
     // ── Cleanup on unmount ─────────────────────────────────────────────
     useEffect(() => {
