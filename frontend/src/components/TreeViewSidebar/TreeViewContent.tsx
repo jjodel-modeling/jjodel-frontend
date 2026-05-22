@@ -101,6 +101,15 @@ interface TreeClassData {
     isAbstract: boolean;
     isEdgeView: boolean;
     instanceCount: number;
+    attributes: TreeStructuralFeatureData[];
+    references: TreeStructuralFeatureData[];
+}
+
+interface TreeStructuralFeatureData {
+    id: string;
+    name: string;
+    typeName: string;
+    multiplicity: string;
 }
 
 interface TreePackageData {
@@ -474,18 +483,67 @@ const FeatureRow = memo(function FeatureRow({
     );
 });
 
+const StructuralFeatureRow = memo(function StructuralFeatureRow({
+    feature,
+    kind,
+    selected,
+    depth,
+}: {
+    feature: TreeStructuralFeatureData;
+    kind: 'attribute' | 'reference';
+    selected: boolean;
+    depth: number;
+}): ReactElement {
+    const handleClick = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        SetRootFieldAction.new('_lastSelected' as any, {
+            node: '',
+            view: '',
+            modelElement: feature.id,
+        }, '', false);
+    }, [feature.id]);
+
+    const badge = kind === 'attribute' ? 'A' : 'R';
+    const badgeClassName = kind === 'attribute' ? 'tree-DAttribute' : 'tree-DReference';
+
+    return (
+        <div className="tree-node" data-element-id={feature.id}>
+            <EntityRow
+                badge={badge}
+                badgeClassName={badgeClassName}
+                name={feature.name}
+                isLeaf
+                selected={selected}
+                onClick={handleClick}
+                depth={depth}
+                dataElementId={feature.id}
+                nameOverride={(
+                    <>
+                        <span className="tree-feature__name">{feature.name}</span>
+                        <span className="tree-feature__type">: {feature.typeName} [{feature.multiplicity}]</span>
+                    </>
+                )}
+            />
+        </div>
+    );
+});
+
 // ─── Class node ──────────────────────────────────────────────────────────────
 
 const ClassNode = memo(function ClassNode({
     cls,
     selectedId,
     depth,
+    isExpanded,
+    onToggle,
     highlightedElementId,
     highlightedAction,
 }: {
     cls: TreeClassData;
     selectedId?: string;
     depth: number;
+    isExpanded: boolean;
+    onToggle: () => void;
     highlightedElementId?: string | null;
     highlightedAction?: ElementAction | null;
 }): ReactElement {
@@ -502,6 +560,8 @@ const ClassNode = memo(function ClassNode({
         }, '', false);
     }, [cls.id]);
 
+    const hasStructuralFeatures = cls.attributes.length > 0 || cls.references.length > 0;
+
     const tooltip = useMemo(() => (
         <div>
             <div><strong>{cls.fqn}</strong></div>
@@ -516,7 +576,9 @@ const ClassNode = memo(function ClassNode({
                 badgeClassName="tree-DClass"
                 name={cls.name}
                 nameClassName={cls.isAbstract ? 'is-abstract' : undefined}
-                isLeaf
+                isLeaf={!hasStructuralFeatures}
+                expanded={isExpanded && hasStructuralFeatures}
+                onToggle={onToggle}
                 extraIcon={cls.isEdgeView ? 'bezier2' : null}
                 extraIconTitle={cls.isEdgeView ? 'View as edge' : undefined}
                 tooltip={tooltip}
@@ -531,6 +593,28 @@ const ClassNode = memo(function ClassNode({
                 expandKey={cls.id}
             />
             {popup}
+            {isExpanded && hasStructuralFeatures && (
+                <div className="tree-children">
+                    {cls.attributes.map(attr => (
+                        <StructuralFeatureRow
+                            key={attr.id}
+                            feature={attr}
+                            kind="attribute"
+                            selected={selectedId === attr.id}
+                            depth={depth + 1}
+                        />
+                    ))}
+                    {cls.references.map(ref => (
+                        <StructuralFeatureRow
+                            key={ref.id}
+                            feature={ref}
+                            kind="reference"
+                            selected={selectedId === ref.id}
+                            depth={depth + 1}
+                        />
+                    ))}
+                </div>
+            )}
         </div>
     );
 });
@@ -621,6 +705,8 @@ const PackageNode = memo(function PackageNode({
                             cls={c}
                             selectedId={selectedId}
                             depth={depth + 1}
+                            isExpanded={isExpandedFn(c.id)}
+                            onToggle={() => onToggleFn(c.id)}
                             highlightedElementId={highlightedElementId}
                             highlightedAction={highlightedAction}
                         />
@@ -1580,6 +1666,49 @@ function buildPackageData(lPkg: any, parentFqn: string): TreePackageData {
             if (!c) continue;
             const view = c.node?.view;
             const isEdgeView = !!(view && (view as any).isEdge);
+            const attributes: TreeStructuralFeatureData[] = [];
+            const references: TreeStructuralFeatureData[] = [];
+
+            const getTypeName = (feature: any): string => {
+                const rawType = feature?.type;
+                if (typeof rawType === 'string') return rawType;
+                if (rawType?.name) return rawType.name;
+                return 'any';
+            };
+
+            const getMultiplicity = (feature: any): string => {
+                const lower = typeof feature?.lowerBound === 'number' ? feature.lowerBound : 0;
+                const upperRaw = feature?.upperBound;
+                const upper = upperRaw === -1 ? '*' : (typeof upperRaw === 'number' ? String(upperRaw) : '1');
+                return `${lower}..${upper}`;
+            };
+
+            try {
+                const attrs = c.attributes || [];
+                for (const attr of attrs) {
+                    if (!attr) continue;
+                    attributes.push({
+                        id: attr.id,
+                        name: attr.name || 'unnamed',
+                        typeName: getTypeName(attr),
+                        multiplicity: getMultiplicity(attr),
+                    });
+                }
+            } catch { /* ignore */ }
+
+            try {
+                const refs = c.references || [];
+                for (const ref of refs) {
+                    if (!ref) continue;
+                    references.push({
+                        id: ref.id,
+                        name: ref.name || 'unnamed',
+                        typeName: getTypeName(ref),
+                        multiplicity: getMultiplicity(ref),
+                    });
+                }
+            } catch { /* ignore */ }
+
             // Approximate instance count: sum across all m1 models that conform to a metamodel
             // referencing this class. For now use c.instances if exposed, fallback to 0.
             let instanceCount = 0;
@@ -1594,6 +1723,8 @@ function buildPackageData(lPkg: any, parentFqn: string): TreePackageData {
                 isAbstract: !!(c as any).abstract,
                 isEdgeView,
                 instanceCount,
+                attributes,
+                references,
             });
         }
     } catch { /* ignore */ }
