@@ -1161,6 +1161,21 @@ export function useJjomSync(
                         const merged = { ...newEdge };
                         if (e.sourceHandle) merged.sourceHandle = e.sourceHandle;
                         if (e.targetHandle) merged.targetHandle = e.targetHandle;
+                        const existingData = (e.data as any) ?? {};
+                        const mergedData = (merged.data as any) ?? {};
+                        // Preserve local routing customizations that are not
+                        // persisted in JjOM and would otherwise be lost after
+                        // incremental sync patches.
+                        if (existingData.waypoints !== undefined && mergedData.waypoints === undefined) {
+                            mergedData.waypoints = existingData.waypoints;
+                        }
+                        if (existingData.sourceAnchor && !mergedData.sourceAnchor) {
+                            mergedData.sourceAnchor = existingData.sourceAnchor;
+                        }
+                        if (existingData.targetAnchor && !mergedData.targetAnchor) {
+                            mergedData.targetAnchor = existingData.targetAnchor;
+                        }
+                        merged.data = mergedData;
                         const existingJjomRefId = (e.data as any)?.jjomRefId;
                         if (existingJjomRefId && !(merged.data as any)?.jjomRefId) {
                             (merged.data as any).jjomRefId = existingJjomRefId;
