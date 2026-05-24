@@ -183,6 +183,23 @@ function DynamicHandles({ nodeId }: DynamicHandlesProps) {
                 const positionProp = side === 'left' || side === 'right' ? 'top' : 'left';
                 const handles: React.ReactNode[] = [];
 
+                // Per-side role occupancy: when only one role is active on a side,
+                // a single edge would otherwise anchor at 6.25% (corner) under the
+                // segregated formula. Track active source/target handleIds on this
+                // side so the loop below can pick the right positioning strategy.
+                const sourceHandlesOnSide: string[] = [];
+                const targetHandlesOnSide: string[] = [];
+                for (let i = 0; i < MAX_HANDLES_PER_SIDE; i++) {
+                    const hid = `${side}-${i}`;
+                    if (!activeHandles.has(hid)) continue;
+                    const roles = handleRoles.get(hid);
+                    if (roles?.has('source')) sourceHandlesOnSide.push(hid);
+                    if (roles?.has('target')) targetHandlesOnSide.push(hid);
+                }
+                const sourceCount = sourceHandlesOnSide.length;
+                const targetCount = targetHandlesOnSide.length;
+                const hasBothRoles = sourceCount > 0 && targetCount > 0;
+
                 for (let index = 0; index < MAX_HANDLES_PER_SIDE; index++) {
                     const handleId = `${side}-${index}`;
                     const isActive = activeHandles.has(handleId);
@@ -202,12 +219,27 @@ function DynamicHandles({ nodeId }: DynamicHandlesProps) {
                     }
                     const isGhostVisible = isFirstInactive && hoveredSide === side;
 
-                    // Role-aware physical positioning: source handles occupy the first
-                    // half of each side, target handles the second half. Prevents
-                    // source+target on the same (side, index) from collapsing onto a
-                    // single visual anchor when both inbound and outbound edges exist.
-                    const sourcePercent = (index + 0.5) / (2 * MAX_HANDLES_PER_SIDE);
-                    const targetPercent = 0.5 + (index + 0.5) / (2 * MAX_HANDLES_PER_SIDE);
+                    // Contextual role-aware positioning. Keep the segregated layout
+                    // (source first half, target second half) only when both roles
+                    // are active on this side — needed for dense bidirectional nodes
+                    // (e.g. Families.ecore Member.left, 4 source + 4 target). When
+                    // only one role is active, distribute uniformly with (i+1)/(n+1)
+                    // over the role-specific count so a single edge anchors at 50%.
+                    let sourcePercent: number;
+                    let targetPercent: number;
+                    if (hasBothRoles) {
+                        sourcePercent = (index + 0.5) / (2 * MAX_HANDLES_PER_SIDE);
+                        targetPercent = 0.5 + (index + 0.5) / (2 * MAX_HANDLES_PER_SIDE);
+                    } else {
+                        const srcRoleIdx = sourceHandlesOnSide.indexOf(handleId);
+                        const tgtRoleIdx = targetHandlesOnSide.indexOf(handleId);
+                        sourcePercent = sourceCount > 0 && srcRoleIdx >= 0
+                            ? (srcRoleIdx + 1) / (sourceCount + 1)
+                            : 0.5;
+                        targetPercent = targetCount > 0 && tgtRoleIdx >= 0
+                            ? (tgtRoleIdx + 1) / (targetCount + 1)
+                            : 0.5;
+                    }
 
                     // Determine active role(s) for this handleId.
                     // Only the Handle matching its edge role gets --connected;

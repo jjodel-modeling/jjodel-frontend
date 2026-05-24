@@ -1,5 +1,29 @@
 # Claude Code Session Log
 
+## 2026-05-25 — fix(editor-v2): contextual handle positioning when only one role is on the side
+**Prompt**: fix chirurgico in `DynamicHandles.tsx` sopra `db7be7a25`. Mantiene la segregazione first-half/second-half quando entrambi i ruoli (source+target) sono attivi su uno stesso lato (caso Families.ecore 4+4); distribuisce uniformemente `(i+1)/(n+1)` con `i` ed `n` role-specific quando solo source o solo target è presente, in modo che un singolo edge ancori al 50% (centro lato).
+**File toccati**: `frontend/src/components/editor-v2/components/DynamicHandles.tsx` (+22/-5 righe), `docs/claude-code-log.md`
+**Esito**: ⚠️ parziale — build verde (40.58s, zero TS errors, warning chunk-size preesistente). In attesa dei tre test manuali (caso minimale 1-edge → centro, Families.ecore → 8 edge OK, caso intermedio 3-4 edge stesso ruolo → distribuzione uniforme) prima del commit.
+**Regressions**: unknown (non verificabile senza i test manuali su browser)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (modifica isolata al solo componente di rendering UI, nessun touch a sync/D-L)
+**Note**: il fix è additivo sopra `db7be7a25`, nessun revert. Sono state aggiunte 8 variabili locali (`sourceHandlesOnSide`, `targetHandlesOnSide`, `sourceCount`, `targetCount`, `hasBothRoles`, `srcRoleIdx`, `tgtRoleIdx`, `hid`/`roles` di scope interno al for) tutte block-scoped, nessuna nuova prop al componente. La formula `(roleIdx + 1) / (count + 1)` usa l'indice role-specific (posizione nella lista degli handleId attivi di quel ruolo sul lato), non l'indice del pool — questo rende il calcolo robusto rispetto a gap di indici (se ci sono delete che lasciano buchi prima di una nuova allocazione). `nodeHandles` di `computePortDistribution.ts` resta dato morto (TODO cleanup separato come da prompt). Commit NON ancora eseguito — diff mostrato all'utente per verifica manuale.
+**Prompt document name**: 2026-05-25 — fix DynamicHandles contextual positioning
+
+---
+
+## 2026-05-25 — docs: discovery read-only on v2-flow edge anchoring regression
+**Prompt**: discovery read-only sulla regression di anchoring edge nel v2-flow dopo i fix recenti di `portDistribution.ts` (bucket-key `:source`/`:target`). Sintomo: con 1-2 edge in scena il source endpoint esce da un lato non coerente con la geometria (es. `left` invece che `top`), il target è solo leggermente sfalsato.
+**File toccati**: `docs/discovery/2026-05-25_edge_anchoring_regression.md` (nuovo), `docs/claude-code-log.md`. Nessuna modifica al codice.
+**Esito**: ⚠️ parziale — solo discovery, nessun fix applicato come da prompt
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (read-only, no code edit)
+**Note**: ipotesi favorita **C** (root cause diversa). I due fix `89e67dc65` (bucket key role-aware) e `cdcef4456` (STEP 4 union) **non** sono il punto da modificare. La vera root cause è il commit fratello **`db7be7a25`** ("role-aware physical positioning of handles in DynamicHandles", 2026-05-21 17:25), che ha sostituito il posizionamento `position = 0.5` (centro lato per `n=1`) con la formula role-aware `sourcePercent = (index + 0.5) / (2*MAX_HANDLES_PER_SIDE)` / `targetPercent = 0.5 + ...`. Per `index = 0` ciò produce 6.25% (source) e 56.25% (target) anche quando sul lato c'è una sola edge — generando il sintomo descritto. Inoltre, `nodeHandles` ritornato da `computePortDistribution` **non ha consumer**: STEP 4 produce dato morto. Direzione di fix proposta: rendere il positioning in `DynamicHandles.tsx:209-210` contestuale all'occupancy per ruolo del lato (segregazione solo quando entrambi i ruoli attivi, distribuzione uniforme altrimenti).
+**Prompt document name**: 2026-05-25 — discovery edge anchoring regression v2-flow
+
+---
+
 ## 2026-05-24 — chore: cleanup [diag1] instrumentation post-fix v2-flow reference delete
 **Prompt**: rimozione [diag1] dopo fix bug delete reference v2-flow.
 **File toccati**: `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/editor-v2/sync/canvasToJjom.ts`, `docs/claude-code-log.md`
