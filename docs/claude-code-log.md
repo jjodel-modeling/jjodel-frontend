@@ -1,5 +1,14 @@
 # Claude Code Session Log
 
+## 2026-05-24 — chore: cleanup [diag1] instrumentation post-fix v2-flow reference delete
+**Prompt**: rimozione [diag1] dopo fix bug delete reference v2-flow.
+**File toccati**: `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/editor-v2/sync/canvasToJjom.ts`, `docs/claude-code-log.md`
+**Esito**: ✅ completato, build verde 40.40s
+**Note**: full revert delle modifiche non-doc del discovery commit `1ed51d2e3`: rimossi i 6 blocchi `console.log('[diag1] ...')` (2 in EditorV2.tsx, 4 in canvasToJjom.ts), rimosse le 3 variabili di supporto introdotte solo per il log (`refModelId`, `graphProxy`, `graphId`), ripristinato `if (!edgeProxy) return;` single-line, ripristinato l'ordine `takeSnapshot()` → `const edge = ...` in `deleteEdge`. Discovery doc resta come traccia.
+**Nome del documento prompt**: 2026-05-24 18:00
+
+---
+
 ## 2026-05-24 — fix: v2-flow reference/inheritance delete cleans graph-side DEdge
 **Prompt**: fix bug strutturale per cui delete reference (e inheritance) da canvas v2-flow lasciava DEdge orfani in DGraph.subElements / DVertex.edgesOut/edgesIn. Riapparivano al reload del metamodello.
 **File toccati**: `frontend/src/components/editor-v2/sync/canvasToJjom.ts`, `docs/claude-code-log.md`
