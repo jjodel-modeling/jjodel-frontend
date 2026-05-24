@@ -1660,6 +1660,14 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         const selectedNodes = getNodes().filter((n) => n.selected);
         const selectedEdges = getEdges().filter((e) => e.selected);
 
+        console.log('[diag1] entry/deleteSelected', {
+            t: performance.now(),
+            selectedNodesCount: selectedNodes.length,
+            selectedEdgesCount: selectedEdges.length,
+            selectedEdges: selectedEdges.map(e => ({ id: e.id, type: e.type, source: e.source, target: e.target })),
+            isJjomMode,
+        });
+
         if (selectedNodes.length === 0 && selectedEdges.length === 0) return;
 
         // In JjOM mode, route classNode deletions through co-evolution
@@ -1735,8 +1743,17 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // Delete specific edge by ID
     const deleteEdge = useCallback(
         (edgeId: string) => {
-            takeSnapshot();
             const edge = getEdges().find(e => e.id === edgeId);
+            console.log('[diag1] entry/deleteEdge', {
+                t: performance.now(),
+                edgeId,
+                edgeFoundInRF: !!edge,
+                edgeType: edge?.type,
+                edgeSource: edge?.source,
+                edgeTarget: edge?.target,
+                isJjomMode,
+            });
+            takeSnapshot();
             setEdges((eds) => applyDistribution(
                 eds.filter((e) => e.id !== edgeId)
             ));

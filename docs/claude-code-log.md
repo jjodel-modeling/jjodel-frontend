@@ -1,5 +1,14 @@
 # Claude Code Session Log
 
+## 2026-05-24 — docs: [diag1] discovery v2-flow reference delete pipeline
+**Prompt**: discovery runtime-first pipeline delete reference v2-flow, identifica perché DEdge orfani sopravvivono al delete (riappaiono al reload).
+**File toccati**: `docs/discovery/discovery_2026-05-24_v2flow_reference_delete.md` (nuovo), `frontend/src/components/editor-v2/sync/canvasToJjom.ts` ([diag1] x 3 in `syncDeleteEdge`), `frontend/src/components/editor-v2/EditorV2.tsx` ([diag1] x 2 in `deleteEdge`/`deleteSelected`).
+**Esito**: ✅ completato (discovery, nessun fix). Build verde 58.71s.
+**Note**: `[diag1]` instrumentation rimane in code per sessione fix successiva. Pulizia in cleanup dedicato. Mappa statica pipeline ricostruita: tre entry point UI (Del key / context menu / batch) convergono su `canvasToJjom.syncDeleteEdge:312`. Omissione identificata staticamente nel branch `isInheritance:false` (linee 330-338): cancella `refModel.__raw` ma **mai** `edgeProxy.__raw`. Per simmetria con `syncDeleteVertex:259-305` (che cancella connectedEdges prima del modelElement). Raccomandazione fix: Opzione A (1 riga add `DeleteElementAction.new(edgeProxy.__raw)` nella TRANSACTION esistente). Runtime [diag1] da raccogliere da Alfonso (sezione 2.2 del discovery doc). Sospetto parallelo branch inheritance (rimuove solo da extends, non cancella edgeProxy.__raw): da verificare nello stesso run.
+**Nome del documento prompt**: 2026-05-24 17:30
+
+---
+
 ## 2026-05-24 — chore: revert Phase B Cluster 1 + freeze cluster
 **Prompt**: chiusura code Cluster 1 — commit revert Phase B (`4758456dd`), append sezione 10 al discovery doc con correzione diagnosi sezione 9, freeze cluster con condizioni di rientro.
 **File toccati**: `frontend/src/components/editor-v2/hooks/useOrphanFeatures.ts`, `docs/claude-code-log.md`, `docs/discovery/discovery_2026-05-22_cluster1_attrtype_format.md`

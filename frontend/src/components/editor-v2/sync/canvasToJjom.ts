@@ -311,9 +311,21 @@ export function syncDeleteVertex(vertexId: string): void {
  */
 export function syncDeleteEdge(edgeId: string, isInheritance: boolean): void {
     try {
+        console.log('[diag1] sync/syncDeleteEdge entry', {
+            t: performance.now(),
+            edgeId,
+            isInheritance,
+            edgePresentInStore: !!(store.getState() as any)?.idlookup?.[edgeId],
+        });
 
         const edgeProxy: any = LPointerTargetable.fromPointer(edgeId);
-        if (!edgeProxy) return;
+        if (!edgeProxy) {
+            console.log('[diag1] sync/syncDeleteEdge bail-out (no edgeProxy)', {
+                t: performance.now(),
+                edgeId,
+            });
+            return;
+        }
 
         if (isInheritance) {
             // Remove from extends array
@@ -330,11 +342,31 @@ export function syncDeleteEdge(edgeId: string, isInheritance: boolean): void {
         } else {
             // Delete the reference model element
             const refModel = edgeProxy.model;
+            const refModelId: string | undefined = refModel?.id ?? refModel?.__raw?.id;
+            const graphProxy: any = edgeProxy.graph;
+            const graphId: string | undefined = graphProxy?.id ?? graphProxy?.__raw?.id;
+            console.log('[diag1] sync/syncDeleteEdge about-to-mutate-store', {
+                t: performance.now(),
+                edgeId,
+                refModelId,
+                graphId,
+                refModelPresentInStore: refModelId ? !!(store.getState() as any)?.idlookup?.[refModelId] : null,
+                edgePresentInStore: !!(store.getState() as any)?.idlookup?.[edgeId],
+                graphSubElementsCount: graphId ? (store.getState() as any)?.idlookup?.[graphId]?.subElements?.length : null,
+            });
             if (refModel) {
                 TRANSACTION('EditorV2 delete edge', () => {
                     DeleteElementAction.new(refModel.__raw ?? refModel);
                 });
             }
+            console.log('[diag1] sync/syncDeleteEdge after-mutate-store', {
+                t: performance.now(),
+                edgeId,
+                refModelId,
+                refStillInStore: refModelId ? !!(store.getState() as any)?.idlookup?.[refModelId] : null,
+                edgeStillInStore: !!(store.getState() as any)?.idlookup?.[edgeId],
+                graphSubElementsCount: graphId ? (store.getState() as any)?.idlookup?.[graphId]?.subElements?.length : null,
+            });
         }
     } catch (err) {
         console.warn('[canvasToJjom] Failed to delete edge:', err);
