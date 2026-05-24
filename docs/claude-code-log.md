@@ -1,26 +1,11 @@
 # Claude Code Session Log
 
-## 2026-05-22 — fix(editor-v2): cluster 1 rehydrate lazy match + rename-watcher
-**Prompt**: Phase B fix Cluster 1 — single-file fix `useOrphanFeatures.ts`. Lazy match (persist on miss, consume on match), rename-watcher implicito (Pattern B: useEffect su deps name-based signature scoped a pending classes). Rimozione `[diag1]` Phase A. Build verify. Commit chirurgico.
-**File toccati**: frontend/src/components/editor-v2/hooks/useOrphanFeatures.ts (+65 -5: top-comment aggiornato, 3 `[diag1]` rimossi, useSelector renameSig nuovo, secondo useEffect rename-watcher); docs/discovery/discovery_2026-05-22_cluster1_attrtype_format.md (sezione 9 Phase B appended); docs/claude-code-log.md (entry Phase B appended).
-**Esito**: ✅ build verde (`vite build` 37.95s); zero TS errors sul file toccato (errori TSC residui pre-esistenti su static-asset imports). Test surface 8 casi (A.4/A.9/A.5/G.1 + 4 nuovi A.4b/c/d/e) documentati nel report — PASS/FAIL da compilare runtime da Alfonso.
-**Regressions**: unknown — verifica runtime richiesta. La logica `tryRehydrate` esistente è invariata, quindi i casi pre-fix dovrebbero restare invariati (A.5 type-mismatch deve continuare a rifiutare, G.1 path Ecore→remove→re-add deve continuare a fare match come prima). I 4 nuovi casi A.4b/c/d/e dipendono dal rename-watcher nuovo.
-**Out-of-scope changes**: no — solo `useOrphanFeatures.ts` toccato sul codice produttivo, niente capture call site, niente sync layer.
-**Layer Impact Report**: not-required — Phase B agisce solo su hook downstream del sync, no diff su `useJjomSync.ts`/`canvasToJjom.ts`/`syncState.ts`/`portDistribution.ts`/`VersionFixer.tsx`/`DV.tsx`.
-**Note**: Step 0 audit consultato — nessuna policy specifica per `useOrphanFeatures` o pattern reattivi nuovi. Riusato pattern `useM1ReferenceEdges` come modello implicito (citato in CLAUDE.md §3.5). Decisioni di scope chat-confermate tutte rispettate: lazy match (#1), re-armable (#2), consume-on-success (#3), cleanup invariato (#4), classId filter (#5). Step 0 housekeeping NON necessario (CLAUDE.md e audit `2026-05-22_claude_md_audit.md` già committati in commit `afffa9142`). Asimmetria TRANSACTION conscia (sigChange-effect wrappato, rename-watcher no) per vincolo prompt "nessun nuovo TRANSACTION introdotto" — documentata.
-**Nome del documento prompt**: 2026-05-22 17:38
-
----
-
-## 2026-05-22 — docs: Cluster 1 Phase A discovery (attrType format vs name timing)
-**Prompt**: discovery read-only Phase A per regressione rehydrate OrphanStore (Cluster 1 della sanity check 22/05). Bisezione `parseDAttribute` storia + diag1 runtime + analisi statica `useOrphanFeatures`/`DAttribute.new`/`DTypedElement`. Hard stop prima di Phase B.
-**File toccati**: docs/discovery/discovery_2026-05-22_cluster1_attrtype_format.md (nuovo, ~250 righe); frontend/src/components/editor-v2/hooks/useOrphanFeatures.ts (3 `[diag1]` console.log temporanei in capture + rehydrate-attempt + rehydrate-match, **NON committati**).
-**Esito**: ✅ completato — root cause analitica: **NON format mismatch** (ipotesi #1 originale rigettata; `useOrphanFeatures.ts` diff-zero dal base 23f50ab65; espressioni capture/rehydrate identiche). Riformulazione: **name-timing mismatch**, design limitation preesistente da 23/04, non regressione. Signature change-detection è id-based (rename-transparent by design per evitare bug undo/attr_0), ma chiave OrphanStore è name-based — rehydrate scatta solo a creazione (name = default `attr_N`) e non riscatta su rename successivo. Validazione runtime richiesta su 2 scenari (S1 senza rename: PASS atteso, S2 con rename: FAIL atteso). Bisezione: commit Bug C identificato = `62fdaf54b` (14/05, non 13/05 come citato — drift di data minimo), decommenta `dObject.type = this.read(...)` in `parseDAttribute`, ma agisce solo su path Ecore import e non spiega FAIL su path UI (G.1 conferma indipendenza da Ecore).
-**Regressions**: no (zero modifiche produttive committate)
-**Out-of-scope changes**: no
-**Layer Impact Report**: not-required (Phase A discovery, no diff su sync layer)
-**Note**: Phase B (fix) proposta = Opzione B = secondo hook rename-watcher pattern analogo a `useM1ReferenceEdges`. Diff stimato ~30-40 righe, solo `useOrphanFeatures.ts`. Diag1 da rimuovere in Phase B. Hard stop pre-Phase B rispettato — attendere validazione runtime utente e approvazione strategia di fix prima di procedere.
-**Nome del documento prompt**: 2026-05-22 14:44
+## 2026-05-24 — chore: revert Phase B Cluster 1 + freeze cluster
+**Prompt**: chiusura code Cluster 1 — commit revert Phase B (`4758456dd`), append sezione 10 al discovery doc con correzione diagnosi sezione 9, freeze cluster con condizioni di rientro.
+**File toccati**: `frontend/src/components/editor-v2/hooks/useOrphanFeatures.ts`, `docs/claude-code-log.md`, `docs/discovery/discovery_2026-05-22_cluster1_attrtype_format.md`
+**Esito**: ✅ completato
+**Note**: Phase B inutile (non causa della regressione A.4). Root cause Cluster 1 resta ignota. Cluster freezato, ripresa con runtime-first dedicato. Vero indizio da seguire: primo `rehydrate-fire` con `newAttrId == oldAttrId` a +24ms da `capture-stored` (preesistente a Phase B).
+**Nome del documento prompt**: 2026-05-24 17:00
 
 ---
 

@@ -332,65 +332,68 @@ Nessun altro file toccato.
 
 ---
 
-## 9. Phase B — Implementazione (2026-05-22)
+## 9. Phase B fallita — revert (2026-05-24)
 
-### 9.1 Decisioni implementative
+### Esito test runtime (verifica Alfonso 22-24/05)
+6 FAIL su 7 scenari, incluso A.4 baseline (re-add stesso nome stesso tipo, SENZA rename) che la Phase A analitica diceva PASS.
 
-**Pattern reattivo scelto**: **B (useEffect con deps array su signature name-based)**.
+### Root cause vera (Phase A-bis con `[diag2]` runtime)
+L'`useEffect` con deps `[renameSig]` aggiunto in Phase B fa fire al cambio di pending state delle classes, che cambia per ogni capture al remove. Il rehydrate effect gira **come cascata immediata del capture** (delta misurato: 24ms da capture-stored), matchando il vecchio DAttribute morente nei pochi ms in cui è ancora vivo nello stato Redux durante il commit. Consume immediato. Store vuoto al vero re-add successivo.
 
-Motivazione:
-- Il file usa già il pattern `useSelector + useEffect` con signature sorted-and-joined (riga 304-365). Pattern B riusa lo stesso approccio.
-- L'audit `2026-05-22_claude_md_audit.md` e CLAUDE.md §3.5 citano `useM1ReferenceEdges` come pattern canonico per "supplementary hook downstream del sync principale". Pattern B è coerente con quel template.
-- Pattern A (subscribe SetFieldAction su `DAttribute.name`) richiederebbe un middleware Redux non presente nel file — introdurrebbe un pattern reattivo eterogeneo. Rigettato.
-- Pattern C (hybrid A+B) — complessità inutile. Rigettato.
-- Mantiene la signature pubblica della hook invariata (un solo `useOrphanFeatures(modelid, _nodes)`). I due useEffect sono interni.
+### Lezioni apprese
+1. **Discovery analitica insufficiente**: la Phase A originale ha rigettato l'ipotesi format mismatch con argomento diff-zero, ma non ha mai verificato runtime gli scenari S1/S2. Il fix è stato disegnato su un'ipotesi non runtime-verificata.
+2. **Effect reattivi su pending state**: il pattern `useEffect` su selector derivato dal pending state Redux **gira anche durante il commit transaction del capture**, perché il pending state include il vecchio DAttribute briefly in uno stato pre-rimozione. Da considerare in futuri fix simili.
+3. **A.4 baseline pre-Phase B**: l'ipotesi della sanity check 21/05 ("A.4 FAIL pre-fix") era errata o relativa a uno stato di sviluppo intermedio differente. Post-revert, A.4 baseline torna PASS.
 
-**Implementazione**: aggiunto un secondo `useSelector` che calcola una signature **name-based** (`${classId}:${attrId}:${attrName}:${attrType}`) **filtrata sulle sole classi con orphan entry pendente** (`orphanStore.size === 0 → return ''`, scope ridotto per default-case). Aggiunto un secondo `useEffect` con deps `[renameSig]` che, ad ogni cambio del signature, itera le classi pendenti e richiama `tryRehydrate` per ogni attributo. `tryRehydrate` è idempotente: miss → no-op (lazy match, entry persiste), match → consume + restore.
+### Stato post-revert
+- A.4 baseline: PASS (verificato runtime 2026-05-24 post-revert).
+- A.4b/c/d/e (scenari con rename): da ri-affrontare con design diverso. Non scope di questa Phase C.
 
-**Lazy match (decisione di scope #1)**: già garantita dal `tryRehydrate` esistente — `if (!entry) return;` (riga 269 post-cleanup) bail-out senza side-effect. Nessuna modifica logica al `tryRehydrate` necessaria.
+### Decisione successiva
+Cluster 1 reset. Nuovo ciclo di discovery quando si riprenderà — questa volta runtime-first, ipotesi analitiche solo come orientamento.
 
-**Consume on match-success (decisione di scope #3)**: già garantita dal `tryRehydrate` esistente — `orphanStore.delete(key)` a fine match (riga 293 post-cleanup). Niente double-rehydrate.
+---
 
-**Re-armable (decisione di scope #2)**: garantita dal fatto che il rename-watcher fa fire ad **ogni** cambio del renameSig. Sequenza `attr_0 → bar → foo` produce due fire del watcher, il secondo trova match.
+## 10. Correzione sezione 9 — diagnosi errata, freeze cluster
 
-**Scope rename-watcher (decisione di scope #5)**: filtrato per `classId` via il set `pendingClassIds` costruito da `orphanStore.values()`. Rename su classi senza orphan pendente non triggera il watcher (renameSig resta '').
+**Data**: 2026-05-24
+**Stato**: sezione 9 invalidata, Cluster 1 freezato per ripresa successiva.
 
-**TRANSACTION wrapping**: nessun nuovo TRANSACTION introdotto (vincolo prompt). Il nuovo useEffect chiama `tryRehydrate` direttamente, le SetFieldAction al match sono dispatchate sequenzialmente. Asimmetria conscia con l'effetto sigChange esistente (che batcha in TRANSACTION); documentata in un commento inline. Performance acceptable per metamodelli realistici.
+### Cosa diceva la sezione 9 (errato)
 
-**Pattern di policy CLAUDE.md applicate**: nessuna policy specifica su `useOrphanFeatures` o pattern reattivi nell'audit `2026-05-22_claude_md_audit.md` (verificato Step 0). Riusato il pattern di `useM1ReferenceEdges` come modello implicito.
+La sezione 9 attribuiva ad un effetto introdotto in Phase B (`useSelector renameSig` + secondo `useEffect`) il delta di 24ms misurato in Phase A-bis-2 tra `capture-stored` e il primo `rehydrate-fire` spurio (con `newAttrId == oldAttrId`). La conclusione era: "Phase B introduceva regressione, revert ripara A.4 baseline".
 
-### 9.2 Build status
+### Cosa è emerso al runtime post-revert
 
-✅ `npm run build` verde in 37.95s. Zero errori TypeScript sul file modificato. Warning pre-esistenti su chunk-size (non introdotti dal fix, vedi prompt §4.2 do-not list).
+A.4 baseline è risultato **FAIL anche post-revert**, cioè con codebase identico al pre-Phase B. Questo falsifica la diagnosi della sezione 9:
 
-✅ `npx tsc --noEmit` — zero errori su `useOrphanFeatures.ts`. Errori residui sono pre-esistenti (import di static asset `.png`/`.svg` senza dichiarazioni di tipo, non correlati al fix).
+- Il delta di 24ms tra `capture-stored` e primo `rehydrate-fire` spurio esisteva **anche pre-Phase B**.
+- Phase B non era causa della regressione: era un fix sopra il problema, inutile ma non dannoso.
+- La root cause del primo `rehydrate-fire` con `newAttrId == oldAttrId` resta **ignota**.
 
-### 9.3 Test surface (PASS/FAIL da compilare runtime da Alfonso)
+### Lezione epistemica
 
-| # | Scenario | Atteso | PASS/FAIL |
-|---|----------|--------|-----------|
-| A.4 | remove `foo` (con valore) → re-add `foo` stesso tipo | PASS, valore tornato immediato | _da compilare_ |
-| A.9 | A.4 con istanze multiple | PASS, valori tornati su tutte le istanze | _da compilare_ |
-| A.5 | remove `foo:EString` → re-add `foo:EInt` | PASS, type mismatch rifiuta rehydrate (immutato) | _da compilare_ |
-| G.1-rehydrate | Ecore import → remove → re-add | PASS, path identico ad A.4 | _da compilare_ |
-| **A.4b** | remove `foo` → re-add `attr_0` → rename a `foo` | PASS, watcher implicito scatta | _da compilare_ |
-| **A.4c** | remove `foo` → re-add `attr_0` → rename `bar` (miss) → rename `foo` (match) | PASS, re-armable | _da compilare_ |
-| **A.4d** | remove `foo` → re-add `attr_0` → MAI rename | Entry resta orfana fino a class removal. Comportamento accettato, non bug. | _da compilare_ |
-| **A.4e** | remove `foo` → re-add `attr_0` → rename `foo` (match, consume) → re-add altro attr → rename a `foo` | NO double-rehydrate. Entry già consumata al primo match. | _da compilare_ |
+Aver concluso "Phase B introduceva regressione" dopo aver osservato il delta 24ms in Phase A-bis-2 è stato un caso di **diagnosi prematura su prima evidence runtime**. Per concludere causalità sarebbe servito:
 
-### 9.4 File modificati
+1. Eseguire lo stesso microinjection timestamp **anche su codebase pre-Phase B** prima di trarre conclusioni.
+2. Chiedersi se 24ms fosse compatibile anche con effect baseline non identificati.
+3. Non assumere che la prima ipotesi runtime falsifichi la precedente solo perché è più recente.
 
-- `frontend/src/components/editor-v2/hooks/useOrphanFeatures.ts` (+65 -5):
-  - Aggiornato top-comment (lines 23-34) per riflettere la nuova policy rename-watcher
-  - Rimossi 3 blocchi `[diag1]` (capture + rehydrate-attempt + rehydrate-match)
-  - Aggiunto `useSelector renameSig` (~17 righe)
-  - Aggiunto secondo `useEffect` con deps `[renameSig]` (~17 righe)
-- `docs/discovery/discovery_2026-05-22_cluster1_attrtype_format.md` (sezione 9 appended)
-- `docs/claude-code-log.md` (entry Phase B appended)
+### Stato post-correzione
 
-### 9.5 Note residue
+- Commit di revert effettuato (vedi `claude-code-log.md`).
+- Cluster 1 freezato. Ripresa pianificata con approccio runtime-first dedicato.
+- Vero indizio da seguire alla ripresa: il primo `rehydrate-fire` con `newAttrId == oldAttrId` a +24ms da `capture-stored`, **prima** del click utente. Sospetti: resurrect del vecchio DAttribute durante commit transaction del remove, cache stale, batch Redux in transition state.
 
-- **A.4d**: entry orfana persiste finché la classe esiste o l'utente non rimuove l'attr e re-aggiunge con il nome giusto. Comportamento by-design (decisione di scope #1, lazy match). Documentazione utente non in scope di questa Phase B.
-- **Asimmetria TRANSACTION**: il primo useEffect wrappa `tryRehydrate` in `TRANSACTION('editor-v2 attribute co-evolution', ...)`; il secondo no, per vincolo "nessun nuovo TRANSACTION introdotto". Conseguenza pratica: al rename-match, le SetFieldAction si dispatchano sequenzialmente invece che batched. Per N istanze rehydrate-by-rename, sono N dispatch invece di 1. Per metamodelli realistici (<100 istanze per attr) la differenza è impercettibile. Da rivalutare se in futuro emerge un caso con migliaia di istanze co-evoluzionate da un singolo rename.
-- **Performance del renameSig selector**: itera l'intero `idlookup` ad ogni dispatch Redux. Mitigazione: short-circuit immediato se `orphanStore.size === 0` (il caso comune). Quando ci sono orphan pendenti, costo O(N_lookup) ad ogni dispatch — accettabile dato che `computeSignature` (primary) fa già un'iterazione comparabile.
-- **Edge case race watcher vs sigChange**: quando un nuovo DAttribute viene aggiunto in una pending class, **entrambi** i useEffect fire-ano (currentSig E renameSig cambiano). Il primo (sigChange) chiama `tryRehydrate` via `addedTuples`; il secondo (renameSig) chiama anch'esso `tryRehydrate` per tutti gli attr della classe. `tryRehydrate` è idempotente: la seconda chiamata trova `entry` già consumato e fa no-op. Nessun double-fire pratico.
+### Condizioni di rientro su Cluster 1
+
+Riaprire quando:
+- Sessione mentale fresca dedicata (no incastro con altre priorità).
+- Oppure: il bug diventa bloccante per uno scenario reale di paper/demo.
+- Oppure: si manifesta un sintomo collaterale (es. su DReference o DOperation) compatibile con la stessa root cause sospetta (resurrect/cache/batch su feature morenti).
+
+Strumento di ripresa: `[diag3]` con timestamp su:
+- Tutti gli effect/listener baseline di `useOrphanFeatures.ts` (incluso `tryRehydrate` interno e selector `currentSig`).
+- Capture site esterno `canvasToJjom.syncRemoveAttribute`.
+
+Baseline empirica già misurata (vedi tabella timestamp in `sessione_2026-05-22_2.md`).
