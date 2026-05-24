@@ -1,5 +1,14 @@
 # Claude Code Session Log
 
+## 2026-05-24 — fix: v2-flow reference/inheritance delete cleans graph-side DEdge
+**Prompt**: fix bug strutturale per cui delete reference (e inheritance) da canvas v2-flow lasciava DEdge orfani in DGraph.subElements / DVertex.edgesOut/edgesIn. Riapparivano al reload del metamodello.
+**File toccati**: `frontend/src/components/editor-v2/sync/canvasToJjom.ts`, `docs/claude-code-log.md`
+**Esito**: ✅ completato, runtime verificato
+**Note**: aggiunto `DeleteElementAction.new(edgeProxy.__raw ?? edgeProxy)` dentro TRANSACTION di `syncDeleteEdge`, simmetrico al pattern già documentato in `syncDeleteVertex:259-305`. Scope esteso al branch `isInheritance:true`: sì — wrap di extends mutation + nuova DeleteElementAction in nuova TRANSACTION (`'EditorV2 delete inheritance edge'`), mirror della struttura usata in syncDeleteVertex. Runtime verificato da Alfonso: reference POST-DELETE dReferenceCount=0, dEdgeCount=0 (pre-fix era dEdgeCount=1); inheritance POST-DELETE dEdgeIsExtendCount torna a baseline, child class extends=[]; entrambi gli edge non riappaiono al close+reopen tab. Build verde 37.91s.
+**Nome del documento prompt**: 2026-05-24 18:00
+
+---
+
 ## 2026-05-24 — docs: [diag1] discovery v2-flow reference delete pipeline
 **Prompt**: discovery runtime-first pipeline delete reference v2-flow, identifica perché DEdge orfani sopravvivono al delete (riappaiono al reload).
 **File toccati**: `docs/discovery/discovery_2026-05-24_v2flow_reference_delete.md` (nuovo), `frontend/src/components/editor-v2/sync/canvasToJjom.ts` ([diag1] x 3 in `syncDeleteEdge`), `frontend/src/components/editor-v2/EditorV2.tsx` ([diag1] x 2 in `deleteEdge`/`deleteSelected`).
