@@ -3058,6 +3058,24 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         return true;
     }
 
+    identityAttribute!: LAttribute | undefined;
+    // The identity slot of instances of this class: the first attribute named "name"
+    // (case-insensitive) of type EString, searching own AND transitively inherited
+    // attributes (allAttributes = ownAttributes ++ inheritedAttributes over the
+    // extendsChain) so subclasses inherit the identity slot from a superclass such as
+    // namedElement. Cardinality is ignored here — the "as-declared" cardinality decision
+    // applies downstream, not at detection. Own attributes come first, so a subclass's own
+    // "name:EString" wins over an inherited one; if several still match (pathological), the
+    // first in iteration order wins. Returns undefined when none match; the caller decides
+    // the fallback (typically initialName).
+    protected get_identityAttribute(context: Context): LAttribute | undefined {
+        const attrs = this.get_allAttributes(context) || [];
+        for (const attr of attrs) {
+            if (attr && attr.name?.toLowerCase() === 'name' && attr.type?.name === 'EString') return attr;
+        }
+        return undefined;
+    }
+
     partial!: boolean;
     __info_of__partial: Info = {type: 'boolean', txt:'A partial object have can add unlisted features as a shapeless (schemaless) object does,' +
             ' on top of a set of fixed listed features.'}
