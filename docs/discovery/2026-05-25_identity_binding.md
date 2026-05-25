@@ -1220,3 +1220,62 @@ l'obiettivo dati resta raggiunto.
 
 *Sezione 12 aggiunta in sotto-sessione 2026-05-25 (Prompt 2/3 Step 0). Nessuna modifica al
 codice.*
+
+---
+
+## 13. Step 2 — Cambio di contratto dell'export XMI (side-effect del read-fallback)
+
+### 13.1 Scope
+
+Lo Step 2 modifica il read-fallback identity in `LValue.get_values`
+(`LModelElement.tsx:7236-7240`): per uno slot `name:EString` vuoto, il fallback passa
+da `owner.name` a `owner.initialName || owner.name`. Poiché alcuni consumer leggono i
+valori degli slot **tramite il proxy** (`LValue.get_values`) anziché dal D-layer grezzo,
+il cambio si propaga a quei consumer. Questa sezione documenta l'unico consumer di export
+interessato — **l'export XMI** — e mette agli atti l'accettazione del cambio di contratto.
+
+### 13.2 Export Ecore — NON affetto
+
+`frontend/src/services/export/EcoreService.ts` è **M2-only** (serializza il metamodello:
+package/classi/attributi/reference). Un grep per `DObject`, `DValue`, `.features`,
+`feature.values`, `get_values`, `LObject`, e letture di valori d'istanza M1 dà **zero
+occorrenze**: l'export Ecore non legge mai i valori degli slot M1, quindi non tocca il
+fallback. **Nessun impatto.**
+
+### 13.3 Export XMI — passa per `get_values`
+
+`frontend/src/services/export/XMIService.ts` è il serializzatore d'istanze M1. Il metodo di
+serializzazione riceve `obj: LObject` (proxy), itera `obj.features`
+(`XMIService.ts:222` → `LObject.get_features` → `get_children`, cioè proxy `LValue`) e legge
+`feature.values` (`:228`). `LValue.values` risolve attraverso **`get_values`**, quindi
+l'export XMI **eredita il read-fallback** modificato dallo Step 2.
+
+### 13.4 Effetto pratico
+
+- **Istanze post-Step-0.5**: `data.name === initialName` (lo Step 0.5 fa sì che
+  `DObject.new` possieda il nome). Il fallback restituisce lo stesso valore di prima →
+  **export byte-identical**. Nessuna regressione sul caso normale.
+- **Istanze legacy con `data.name` random** (create prima dello Step 0.5, slot identity
+  vuoto): l'export passa dal vecchio `data.name` "sporco" (es. `newClass2_uls`) al
+  `initialName` pulito (es. `NewClass2_0`). **Upgrade** del contratto, non regressione.
+
+### 13.5 Casi limite documentati
+
+| Stato | Export XMI dell'attributo `name` |
+|-------|----------------------------------|
+| slot **populated** | invariato — ritorna il valore dello slot (fallback non innescato) |
+| slot empty + `initialName` populated | **nuovo** — export = `initialName` |
+| slot empty + `initialName` empty + `data.name` populated | emergency fallback su `data.name` (improbabile post-migration, documentato) |
+| **fully empty** (slot + `initialName` + `data.name` tutti vuoti) | `get_values` non setta `ret[0]` → `values.length === 0` → **attributo omesso** dall'export, identico a oggi |
+
+### 13.6 Decisione
+
+**Contratto accettato.** Motivo: l'export risultante è **strettamente più informativo** e
+**allineato a ciò che l'utente vede a video** (lo stesso `get_values` alimenta il display
+del canvas e del Properties panel). Nessuna regressione sulle istanze normali
+(post-Step-0.5, dove `data.name === initialName`); per le istanze legacy il cambio è un
+miglioramento (nome auto-generato pulito invece del random storico). L'export Ecore resta
+inalterato (§13.2).
+
+*Sezione 13 aggiunta nel workstream Prompt 2/3 (Step 2, discovery export-path). Nessuna
+modifica al codice in questa sezione.*
