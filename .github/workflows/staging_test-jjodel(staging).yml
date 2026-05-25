@@ -62,12 +62,17 @@ jobs:
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_C217793CBAB54B559F73395552D25844 }}
 
       - name: 'Deploy to Azure Web App'
-        id: deploy-to-webapp
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: 'test-jjodel'
-          slot-name: 'staging'
-          package: frontend/dist/
+        run: |
+          RG=$(az webapp list --query "[?name=='test-jjodel'].resourceGroup" -o tsv)
+          cd frontend/dist
+          zip -r /tmp/deploy.zip .
+          az webapp deploy \
+            --resource-group "$RG" \
+            --name test-jjodel \
+            --slot staging \
+            --src-path /tmp/deploy.zip \
+            --type zip \
+            --async false
 
           
 
