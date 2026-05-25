@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Handle, Position, useEdges, useStoreApi } from '@xyflow/react';
 import { MAX_HANDLES_PER_SIDE, type Side } from '../utils/portDistribution';
+import { computeHandlePercent } from '../utils/handlePosition';
 
 const SIDES: readonly Side[] = ['top', 'right', 'bottom', 'left'];
 
@@ -225,21 +226,17 @@ function DynamicHandles({ nodeId }: DynamicHandlesProps) {
                     // (e.g. Families.ecore Member.left, 4 source + 4 target). When
                     // only one role is active, distribute uniformly with (i+1)/(n+1)
                     // over the role-specific count so a single edge anchors at 50%.
-                    let sourcePercent: number;
-                    let targetPercent: number;
-                    if (hasBothRoles) {
-                        sourcePercent = (index + 0.5) / (2 * MAX_HANDLES_PER_SIDE);
-                        targetPercent = 0.5 + (index + 0.5) / (2 * MAX_HANDLES_PER_SIDE);
-                    } else {
-                        const srcRoleIdx = sourceHandlesOnSide.indexOf(handleId);
-                        const tgtRoleIdx = targetHandlesOnSide.indexOf(handleId);
-                        sourcePercent = sourceCount > 0 && srcRoleIdx >= 0
-                            ? (srcRoleIdx + 1) / (sourceCount + 1)
-                            : 0.5;
-                        targetPercent = targetCount > 0 && tgtRoleIdx >= 0
-                            ? (tgtRoleIdx + 1) / (targetCount + 1)
-                            : 0.5;
-                    }
+                    // Formula lives in computeHandlePercent (shared with useTreeLayout).
+                    const srcRoleIdx = sourceHandlesOnSide.indexOf(handleId);
+                    const tgtRoleIdx = targetHandlesOnSide.indexOf(handleId);
+                    const sourcePercent = computeHandlePercent({
+                        handleId, role: 'source', hasBothRoles,
+                        roleRank: srcRoleIdx, roleCount: sourceCount,
+                    });
+                    const targetPercent = computeHandlePercent({
+                        handleId, role: 'target', hasBothRoles,
+                        roleRank: tgtRoleIdx, roleCount: targetCount,
+                    });
 
                     // Determine active role(s) for this handleId.
                     // Only the Handle matching its edge role gets --connected;
