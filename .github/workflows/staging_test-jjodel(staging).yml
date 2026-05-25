@@ -24,16 +24,20 @@ jobs:
           node-version: '22.x'
 
       - name: npm install, build, and test
+        working-directory: ./frontend
         run: |
-          npm install
-          npm run build --if-present
-          npm run test --if-present
+          npm i
+          npm i react-json-view --force
+          CI='' ./node_modules/.bin/vite build --mode staging
+
+      - name: Zip artifact for deployment
+        run: zip release.zip ./* -r
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: .
+          path: release.zip
 
   deploy:
     runs-on: ubuntu-latest
@@ -47,6 +51,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: node-app
+
+      - name: Unzip artifact for deployment
+        run: unzip release.zip
+
       
       - name: Login to Azure
         uses: azure/login@v2
@@ -61,5 +69,5 @@ jobs:
         with:
           app-name: 'test-jjodel'
           slot-name: 'staging'
-          package: .
+          package: frontend/dist/
           
