@@ -205,6 +205,10 @@ export class Log{
         let warn = console.warn;
         console.warn = (...e): void => {
             let e0 = e[0];
+            if (typeof e0 === 'string' &&
+                e0.startsWith('[React Flow]: Couldn\'t create edge for source handle id:')) {
+                return;
+            }
             if (e0 && (e0[0] === 's' && e0[14] === 's' && e0.substring(0,15) === 'src\\api\\data.ts')) {
                 console.info(...e);
                 return;

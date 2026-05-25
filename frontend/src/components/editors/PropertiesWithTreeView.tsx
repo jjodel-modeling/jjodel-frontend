@@ -203,7 +203,6 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                         <button
                             className="properties-panel-toggle-btn"
                             onClick={toggleProperties}
-                            title="Hide properties"
                             aria-label="Hide properties panel"
                         >
                             <i className="bi bi-chevron-right" />
@@ -254,7 +253,6 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                             role="separator"
                             aria-orientation="vertical"
                             aria-label="Resize tree view"
-                            title="Drag to resize"
                         />
                     )}
                     <div className="tree-view-panel-header">
@@ -269,7 +267,7 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                         <button
                             className="tree-view-toggle-btn"
                             onClick={toggleTreeView}
-                            title="Hide tree"
+                            aria-label="Hide tree"
                         >
                             <i className="bi bi-chevron-left" />
                         </button>
@@ -298,14 +296,13 @@ interface CollapsedPanelToggleProps {
 
 const CollapsedPanelToggle: React.FC<CollapsedPanelToggleProps> = ({ side, onClick }) => {
     const iconClass = side === 'properties' ? 'bi-chevron-left' : 'bi-chevron-right';
-    const tooltip = side === 'properties' ? 'Show properties' : 'Show tree';
+    const label = side === 'properties' ? 'Show properties' : 'Show tree';
     return (
         <button
             type="button"
             className={`collapsed-panel-toggle collapsed-panel-toggle--${side}`}
             onClick={onClick}
-            title={tooltip}
-            aria-label={tooltip}
+            aria-label={label}
         >
             <i className={`bi ${iconClass}`} aria-hidden="true" />
         </button>
