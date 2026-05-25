@@ -311,7 +311,6 @@ export function syncDeleteVertex(vertexId: string): void {
  */
 export function syncDeleteEdge(edgeId: string, isInheritance: boolean): void {
     try {
-
         const edgeProxy: any = LPointerTargetable.fromPointer(edgeId);
         if (!edgeProxy) return;
 
@@ -321,18 +320,23 @@ export function syncDeleteEdge(edgeId: string, isInheritance: boolean): void {
             const endVertex: any = edgeProxy.end;
             const sourceClass = startVertex?.model;
             const targetClass = endVertex?.model;
-            if (sourceClass && targetClass) {
-                const currentExtends = (sourceClass.extends ?? [])
-                    .map((c: any) => c.id ?? c)
-                    .filter((id: string) => id !== targetClass.id);
-                sourceClass.extends = currentExtends;
-            }
+            // Without this, orphan DEdges remain in graph.subElements and reappear at reload.
+            TRANSACTION('EditorV2 delete inheritance edge', () => {
+                if (sourceClass && targetClass) {
+                    const currentExtends = (sourceClass.extends ?? [])
+                        .map((c: any) => c.id ?? c)
+                        .filter((id: string) => id !== targetClass.id);
+                    sourceClass.extends = currentExtends;
+                }
+                DeleteElementAction.new(edgeProxy.__raw ?? edgeProxy);
+            });
         } else {
             // Delete the reference model element
             const refModel = edgeProxy.model;
             if (refModel) {
                 TRANSACTION('EditorV2 delete edge', () => {
                     DeleteElementAction.new(refModel.__raw ?? refModel);
+                    DeleteElementAction.new(edgeProxy.__raw ?? edgeProxy);
                 });
             }
         }

@@ -1013,14 +1013,18 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
 
     const handleDeleteMetamodel = (mm: LModel) => {
         // Close any open tabs for this metamodel before deleting
+        const name = mm.name;
         DockManager.closeTabsForEntity(mm.id, 'metamodel');
         mm.delete();
+        U.alert('s', '', name ? `Metamodel "${name}" deleted` : 'Metamodel deleted');
     };
 
     const handleDeleteModel = (model: LModel) => {
         // Close any open tabs for this model before deleting
+        const name = model.name;
         DockManager.closeTabsForEntity(model.id, 'model');
         model.delete();
+        U.alert('s', '', name ? `Model "${name}" deleted` : 'Model deleted');
     };
 
     const handleOpenViewpoint = async (vp: LViewPoint) => {
@@ -2171,6 +2175,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                             ref={menuRef}
                                             data-align={menuPosition.align}
                                             data-direction={menuPosition.direction}
+                                            onClick={(e) => e.stopPropagation()}
                                         >
                                             <button
                                                 className="context-menu__item"
@@ -2347,6 +2352,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                             ref={menuRef}
                                             data-align={menuPosition.align}
                                             data-direction={menuPosition.direction}
+                                            onClick={(e) => e.stopPropagation()}
                                         >
                                             <button
                                                 className="context-menu__item"

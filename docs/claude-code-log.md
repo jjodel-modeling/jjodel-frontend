@@ -1,5 +1,65 @@
 # Claude Code Session Log
 
+## 2026-05-25 — fix(editor-v2): contextual handle positioning when only one role is on the side
+**Prompt**: fix chirurgico in `DynamicHandles.tsx` sopra `db7be7a25`. Mantiene la segregazione first-half/second-half quando entrambi i ruoli (source+target) sono attivi su uno stesso lato (caso Families.ecore 4+4); distribuisce uniformemente `(i+1)/(n+1)` con `i` ed `n` role-specific quando solo source o solo target è presente, in modo che un singolo edge ancori al 50% (centro lato).
+**File toccati**: `frontend/src/components/editor-v2/components/DynamicHandles.tsx` (+22/-5 righe), `docs/claude-code-log.md`
+**Esito**: ⚠️ parziale — build verde (40.58s, zero TS errors, warning chunk-size preesistente). In attesa dei tre test manuali (caso minimale 1-edge → centro, Families.ecore → 8 edge OK, caso intermedio 3-4 edge stesso ruolo → distribuzione uniforme) prima del commit.
+**Regressions**: unknown (non verificabile senza i test manuali su browser)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (modifica isolata al solo componente di rendering UI, nessun touch a sync/D-L)
+**Note**: il fix è additivo sopra `db7be7a25`, nessun revert. Sono state aggiunte 8 variabili locali (`sourceHandlesOnSide`, `targetHandlesOnSide`, `sourceCount`, `targetCount`, `hasBothRoles`, `srcRoleIdx`, `tgtRoleIdx`, `hid`/`roles` di scope interno al for) tutte block-scoped, nessuna nuova prop al componente. La formula `(roleIdx + 1) / (count + 1)` usa l'indice role-specific (posizione nella lista degli handleId attivi di quel ruolo sul lato), non l'indice del pool — questo rende il calcolo robusto rispetto a gap di indici (se ci sono delete che lasciano buchi prima di una nuova allocazione). `nodeHandles` di `computePortDistribution.ts` resta dato morto (TODO cleanup separato come da prompt). Commit NON ancora eseguito — diff mostrato all'utente per verifica manuale.
+**Prompt document name**: 2026-05-25 — fix DynamicHandles contextual positioning
+
+---
+
+## 2026-05-25 — docs: discovery read-only on v2-flow edge anchoring regression
+**Prompt**: discovery read-only sulla regression di anchoring edge nel v2-flow dopo i fix recenti di `portDistribution.ts` (bucket-key `:source`/`:target`). Sintomo: con 1-2 edge in scena il source endpoint esce da un lato non coerente con la geometria (es. `left` invece che `top`), il target è solo leggermente sfalsato.
+**File toccati**: `docs/discovery/2026-05-25_edge_anchoring_regression.md` (nuovo), `docs/claude-code-log.md`. Nessuna modifica al codice.
+**Esito**: ⚠️ parziale — solo discovery, nessun fix applicato come da prompt
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (read-only, no code edit)
+**Note**: ipotesi favorita **C** (root cause diversa). I due fix `89e67dc65` (bucket key role-aware) e `cdcef4456` (STEP 4 union) **non** sono il punto da modificare. La vera root cause è il commit fratello **`db7be7a25`** ("role-aware physical positioning of handles in DynamicHandles", 2026-05-21 17:25), che ha sostituito il posizionamento `position = 0.5` (centro lato per `n=1`) con la formula role-aware `sourcePercent = (index + 0.5) / (2*MAX_HANDLES_PER_SIDE)` / `targetPercent = 0.5 + ...`. Per `index = 0` ciò produce 6.25% (source) e 56.25% (target) anche quando sul lato c'è una sola edge — generando il sintomo descritto. Inoltre, `nodeHandles` ritornato da `computePortDistribution` **non ha consumer**: STEP 4 produce dato morto. Direzione di fix proposta: rendere il positioning in `DynamicHandles.tsx:209-210` contestuale all'occupancy per ruolo del lato (segregazione solo quando entrambi i ruoli attivi, distribuzione uniforme altrimenti).
+**Prompt document name**: 2026-05-25 — discovery edge anchoring regression v2-flow
+
+---
+
+## 2026-05-24 — chore: cleanup [diag1] instrumentation post-fix v2-flow reference delete
+**Prompt**: rimozione [diag1] dopo fix bug delete reference v2-flow.
+**File toccati**: `frontend/src/components/editor-v2/EditorV2.tsx`, `frontend/src/components/editor-v2/sync/canvasToJjom.ts`, `docs/claude-code-log.md`
+**Esito**: ✅ completato, build verde 40.40s
+**Note**: full revert delle modifiche non-doc del discovery commit `1ed51d2e3`: rimossi i 6 blocchi `console.log('[diag1] ...')` (2 in EditorV2.tsx, 4 in canvasToJjom.ts), rimosse le 3 variabili di supporto introdotte solo per il log (`refModelId`, `graphProxy`, `graphId`), ripristinato `if (!edgeProxy) return;` single-line, ripristinato l'ordine `takeSnapshot()` → `const edge = ...` in `deleteEdge`. Discovery doc resta come traccia.
+**Nome del documento prompt**: 2026-05-24 18:00
+
+---
+
+## 2026-05-24 — fix: v2-flow reference/inheritance delete cleans graph-side DEdge
+**Prompt**: fix bug strutturale per cui delete reference (e inheritance) da canvas v2-flow lasciava DEdge orfani in DGraph.subElements / DVertex.edgesOut/edgesIn. Riapparivano al reload del metamodello.
+**File toccati**: `frontend/src/components/editor-v2/sync/canvasToJjom.ts`, `docs/claude-code-log.md`
+**Esito**: ✅ completato, runtime verificato
+**Note**: aggiunto `DeleteElementAction.new(edgeProxy.__raw ?? edgeProxy)` dentro TRANSACTION di `syncDeleteEdge`, simmetrico al pattern già documentato in `syncDeleteVertex:259-305`. Scope esteso al branch `isInheritance:true`: sì — wrap di extends mutation + nuova DeleteElementAction in nuova TRANSACTION (`'EditorV2 delete inheritance edge'`), mirror della struttura usata in syncDeleteVertex. Runtime verificato da Alfonso: reference POST-DELETE dReferenceCount=0, dEdgeCount=0 (pre-fix era dEdgeCount=1); inheritance POST-DELETE dEdgeIsExtendCount torna a baseline, child class extends=[]; entrambi gli edge non riappaiono al close+reopen tab. Build verde 37.91s.
+**Nome del documento prompt**: 2026-05-24 18:00
+
+---
+
+## 2026-05-24 — docs: [diag1] discovery v2-flow reference delete pipeline
+**Prompt**: discovery runtime-first pipeline delete reference v2-flow, identifica perché DEdge orfani sopravvivono al delete (riappaiono al reload).
+**File toccati**: `docs/discovery/discovery_2026-05-24_v2flow_reference_delete.md` (nuovo), `frontend/src/components/editor-v2/sync/canvasToJjom.ts` ([diag1] x 3 in `syncDeleteEdge`), `frontend/src/components/editor-v2/EditorV2.tsx` ([diag1] x 2 in `deleteEdge`/`deleteSelected`).
+**Esito**: ✅ completato (discovery, nessun fix). Build verde 58.71s.
+**Note**: `[diag1]` instrumentation rimane in code per sessione fix successiva. Pulizia in cleanup dedicato. Mappa statica pipeline ricostruita: tre entry point UI (Del key / context menu / batch) convergono su `canvasToJjom.syncDeleteEdge:312`. Omissione identificata staticamente nel branch `isInheritance:false` (linee 330-338): cancella `refModel.__raw` ma **mai** `edgeProxy.__raw`. Per simmetria con `syncDeleteVertex:259-305` (che cancella connectedEdges prima del modelElement). Raccomandazione fix: Opzione A (1 riga add `DeleteElementAction.new(edgeProxy.__raw)` nella TRANSACTION esistente). Runtime [diag1] da raccogliere da Alfonso (sezione 2.2 del discovery doc). Sospetto parallelo branch inheritance (rimuove solo da extends, non cancella edgeProxy.__raw): da verificare nello stesso run.
+**Nome del documento prompt**: 2026-05-24 17:30
+
+---
+
+## 2026-05-24 — chore: revert Phase B Cluster 1 + freeze cluster
+**Prompt**: chiusura code Cluster 1 — commit revert Phase B (`4758456dd`), append sezione 10 al discovery doc con correzione diagnosi sezione 9, freeze cluster con condizioni di rientro.
+**File toccati**: `frontend/src/components/editor-v2/hooks/useOrphanFeatures.ts`, `docs/claude-code-log.md`, `docs/discovery/discovery_2026-05-22_cluster1_attrtype_format.md`
+**Esito**: ✅ completato
+**Note**: Phase B inutile (non causa della regressione A.4). Root cause Cluster 1 resta ignota. Cluster freezato, ripresa con runtime-first dedicato. Vero indizio da seguire: primo `rehydrate-fire` con `newAttrId == oldAttrId` a +24ms da `capture-stored` (preesistente a Phase B).
+**Nome del documento prompt**: 2026-05-24 17:00
+
+---
+
 ## 2026-05-22 — docs: audit per ricalibrazione CLAUDE.md
 **Prompt**: discovery read-only per ricalibrare CLAUDE.md sulla base del codice reale
 **File toccati**: docs/discovery/2026-05-22_claude_md_audit.md (nuovo), docs/claude-code-log.md
@@ -6078,6 +6138,18 @@ Dark mode overrides for `.toolbar-btn` also scoped under `.documentation-toolbar
 **Esito**: ✅ completato — commit `5e9a8902d`
 **Note**: discovery solo (no codice). Contenuto: 11 cluster causali, 2 critici → **Cluster 1** regressione su rehydrate `OrphanStore` per attributi (A.4/A.9/G.1 FAIL; A.3 capture PASS — match a 3 chiavi `{classId, attrName, attrType}` rotto in `useOrphanFeatures.ts`, sospetto commit B.3.2 13/05); **Cluster 2** gap strutturale preesistente: propagazione M2→M1 per reference assente su delete/cardinality/type/containment (B.2/B.3/B.4/B.8/B.9/B.12 FAIL; B.5 rename PASS via id-identity). 9 cluster minori: 3 (containment instantiability), 4 (canvas multi-value), 5 (change-type coerce), 6 (multi→mono warning), 7 (enum literal-add overzelous), 8 (eOpposite UX), 9 (Ctrl+Z keystroke binding — handler OK, listener no), 10 (derived/iD flag M2-only), 11 (intenzionali: orphan instances, abstract con istanze, remove literal isolato). Backlog P0/P1/P2/P3 prioritizzato. 5 spec decisions ancora aperte (B.6, B.12, C.3, D.5, derived/iD). Implicazioni per paper SoSyM 2025: rivendicazione "live co-evolution" regge per attributi+classi dopo fix Cluster 1; per reference solo rename — wording da qualificare. **Filename mismatch chiarito durante setup**: il file `2026-05-22_claude_md_audit.md` untracked (anche 22/05) contiene un audit di CLAUDE.md, non co-evolution — è una doc separata, lasciata untracked. **Hard stop pre-commit rispettato**: stage isolato (`git add docs/discovery/2026-05-22_coevolution_sanity.md`), diff mostrata via `--stat`, approvazione utente prima del commit; CLAUDE.md (M) e claude-code-log.md (M, pre-sessione) e il claude_md_audit untracked NON inclusi nel commit. **Convenzione naming**: scelto `2026-05-22_coevolution_sanity.md` matching il pattern del claude_md_audit (stesso giorno, no prefisso `discovery_`).
 **Nome del documento prompt**: 2026-05-22 (incollato in chat)
+
+---
+
+## 2026-05-25 — fix(dashboard): close orphan tabs and show toast on metamodel/model delete
+**Prompt**: fix delete METAMODEL/MODEL dalla Project Dashboard: niente nuovo tab "closed tab" aperto post-delete, chiudere tab esistenti sull'entità cancellata, toast di conferma. Due fasi (discovery → fix) con hard stop. Vincoli extra fase 2: Step 0 di verifica chiusura menu via click esterno, toast con fallback condizionale (no 'Unnamed'), diff atteso ~8 righe.
+**File toccati**: frontend/src/components/project/ProjectEditor.tsx
+**Esito**: ✅ completato
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (nessun file sync/D-L coinvolto)
+**Notes**: Discovery fase 1 ha rilevato che gli handler `handleDeleteMetamodel`/`handleDeleteModel` (linee 1014, 1020) **già** chiamavano `DockManager.closeTabsForEntity` + delete. Il bug era **event-bubbling**: l'onClick del bottone "Delete" nel context menu bollava al `<div className="list-card__item">` parent (`onClick={() => handleOpenMetamodel(mm)}` linea 2128 metamodel, 2302 model), che apriva un nuovo tab via `DockManager.open2(mm)` **dopo** il delete → MetamodelTab/ModelTab in render con `model=null` → fallback `<>closed tab</>` (`MetamodelTab.tsx:159`, `ModelTab.tsx:29`). L'icona "Jjodel" descritta dall'utente è il badge `M` lavanda iniettato via CSS `::before` da `tab-title.scss:26-30` quando `model.name` è vuoto (proxy verso entità cancellata). Solo il caso Delete è dannoso; Open/Rename/Export bollavano anch'essi (Open idempotente, Rename invisibile, Export riapre il metamodel — minore UX glitch non in scope). **Step 0 fase 2**: verificata chiusura via click esterno tramite `useEffect([openMenu])` + listener `mousedown` su `document` (linee 282-293) → `stopPropagation` su `click` React (evento React synthetic distinto dal `mousedown` nativo) non interferisce. **Fix chirurgico in 6 righe nette**: (1) `onClick={(e) => e.stopPropagation()}` sul wrapper `<div className="context-menu">` di entrambe le sezioni (linee 2179 metamodel, 2356 model) — blocca il bubbling del click React senza toccare i singoli button, fix anche del side effect simmetrico silente di Export; (2) capture del `name` prima del delete + `U.alert('s', '', name ? \`X "${name}" deleted\` : 'X deleted')` post-delete nei due handler. Pattern toast coerente col file (16+ usi di `U.alert` in `ProjectEditor.tsx`, es. linee 741, 779). Fallback condizionale invece di placeholder 'Unnamed' (vincolo prompt). `U` già nell'import block (linea 11), nessun nuovo import. **Diff stat**: 6 inserzioni nette, sotto soglia ~8 righe del prompt. **TypeScript**: errore pre-esistente a `ProjectEditor.tsx:177` (verificato con `git stash` baseline, non introdotto dal fix). `npm run typecheck` script assente nel package.json (CLAUDE.md §17 menziona ma non implementato), verificato direttamente con `npx tsc --noEmit`. **Smoke test runtime delegato all'utente**: aprire un metamodel via card → torna a dashboard → ⋮ → Delete → verifica niente tab `closed tab`, toast `Metamodel "<name>" deleted` visibile; stesso per model; verifica delete di entità con tab non aperto. **Hard stop tra fase 1 (report discovery in chat) e fase 2 (codice) rispettato**. Nessun rename, nessuna nuova dependency, niente refactoring opportunistico, nessun file out-of-scope toccato.
+**Nome del documento prompt**: 2026-05-25 (incollato in chat)
 
 ---
 
