@@ -23,6 +23,10 @@ function parseHandleId(handleId: string): { side: Side; index: number } {
 /**
  * Active same-role handle IDs on one side of a node, in ascending index order.
  *
+ * @deprecated Superseded by computeSideEndpoints + computeSidePositions (cross-role
+ * global ordering). No longer referenced; kept to avoid removing verified code —
+ * delete in a follow-up cleanup.
+ *
  * Mirrors how DynamicHandles derives `sourceHandlesOnSide`/`targetHandlesOnSide`:
  * a handle counts for a role when some edge uses it in that role on this side.
  * The returned arrays are the canonical input for the single-role rank used by
@@ -52,6 +56,10 @@ export function computeSideRoleHandles(
 /**
  * Fraction (0..1) along a side at which a handle physically sits.
  *
+ * @deprecated Superseded by computeSidePositions (cross-role global ordering with
+ * inheritance pinned at center). No longer referenced; kept to avoid removing
+ * verified code — delete in a follow-up cleanup.
+ *
  * Ported 1:1 from DynamicHandles.tsx:228-242:
  * - both roles active on the side → segregated layout: source in the first half,
  *   target in the second half, indexed by the handle's own numeric index;
@@ -76,31 +84,157 @@ export function computeHandlePercent(params: {
         : 0.5;
 }
 
+/** Minimal edge shape consumed by the cross-role positioning functions. */
+interface EndpointEdge {
+    source: string;
+    target: string;
+    sourceHandle?: string | null;
+    targetHandle?: string | null;
+    type?: string | null;
+}
+
+/**
+ * A single active endpoint on one side of a node: the (handleId, role) pair an
+ * edge attaches to, tagged with the kind of edge using it. `edgeType` drives the
+ * a2-strict layout — inheritance is pinned to the center, references fill the rest.
+ */
+export interface SideEndpoint {
+    handleId: string;            // e.g. 'top-0'
+    role: 'source' | 'target';
+    edgeType: 'reference' | 'inheritance';
+}
+
+/**
+ * Collect every active endpoint on one side of a node from the current edge set.
+ *
+ * Shared builder so DynamicHandles (rendering) and useTreeLayout (inheritance
+ * branch landing) feed computeSidePositions with the exact same input — otherwise
+ * the tree branch would land at a different point than where the handle is drawn.
+ *
+ * An endpoint is keyed by `${handleId}:${role}`; its edgeType is read from the
+ * edges using it. Per portDistribution bucketing a given (handleId, role) maps to
+ * one homogeneous PortGroup, so the type is unambiguous; should a mix ever be seen,
+ * inheritance wins (it is the endpoint that must stay centered).
+ */
+export function computeSideEndpoints(
+    edges: EndpointEdge[],
+    nodeId: string,
+    side: Side,
+): SideEndpoint[] {
+    const byKey = new Map<string, SideEndpoint>();
+    const note = (handleId: string, role: 'source' | 'target', type: string | null | undefined) => {
+        const edgeType: SideEndpoint['edgeType'] = type === 'inheritance' ? 'inheritance' : 'reference';
+        const key = `${handleId}:${role}`;
+        const existing = byKey.get(key);
+        if (!existing) byKey.set(key, { handleId, role, edgeType });
+        else if (edgeType === 'inheritance') existing.edgeType = 'inheritance';
+    };
+    for (const e of edges) {
+        if (e.source === nodeId && e.sourceHandle && getBaseSide(e.sourceHandle) === side) {
+            note(e.sourceHandle, 'source', e.type);
+        }
+        if (e.target === nodeId && e.targetHandle && getBaseSide(e.targetHandle) === side) {
+            note(e.targetHandle, 'target', e.type);
+        }
+    }
+    return Array.from(byKey.values());
+}
+
+/**
+ * Cross-role global ordering for one side (strategy a2-strict).
+ *
+ * All endpoints on a side — source and target, reference and inheritance — are
+ * placed in a single pass so the side reads as one balanced strip instead of two
+ * role-segregated halves:
+ *
+ * - inheritance is pinned to the center: a single edge sits at 50%; several form a
+ *   symmetric cluster around 50% with step 1/(N+1);
+ * - references take the remaining space, the outermost grid slots first, symmetric
+ *   about the center.
+ *
+ * With no inheritance the side degrades to a plain uniform distribution
+ * (k+1)/(N+1) — the dense bidirectional case (e.g. Families.ecore Member.left,
+ * 4 source + 4 target = 8 collision-free endpoints).
+ *
+ * Collision-freedom holds in every case: when the reference count is even the
+ * cluster lands on the central grid slots and references on the outer ones (disjoint);
+ * when it is odd the pinned cluster sits at half-step offsets that never coincide
+ * with the integer grid the references use.
+ *
+ * Determinism: within each kind, endpoints are ordered by (role, handle index) —
+ * source before target, then ascending index — preserving the anti-crossing spatial
+ * sort that portDistribution already encoded in the handle indices.
+ *
+ * Returns a map keyed by `${handleId}:${role}` (top-0/source and top-0/target are
+ * distinct ReactFlow entities and may sit at different positions). Inactive handles
+ * are absent from the map; callers fall back to 0.5.
+ */
+export function computeSidePositions(endpoints: SideEndpoint[]): Map<string, number> {
+    const result = new Map<string, number>();
+    const N = endpoints.length;
+    if (N === 0) return result;
+
+    const bySortKey = (a: SideEndpoint, b: SideEndpoint) => {
+        const ra = a.role === 'source' ? 0 : 1;
+        const rb = b.role === 'source' ? 0 : 1;
+        if (ra !== rb) return ra - rb;
+        return parseHandleId(a.handleId).index - parseHandleId(b.handleId).index;
+    };
+    const inh = endpoints.filter(e => e.edgeType === 'inheritance').sort(bySortKey);
+    const ref = endpoints.filter(e => e.edgeType !== 'inheritance').sort(bySortKey);
+    const M = inh.length;
+    const R = ref.length;
+    const step = 1 / (N + 1);
+    const key = (e: SideEndpoint) => `${e.handleId}:${e.role}`;
+
+    // References.
+    let refPositions: number[];
+    if (M === 0) {
+        // No inheritance: plain uniform distribution across the whole side.
+        refPositions = ref.map((_, k) => (k + 1) / (N + 1));
+    } else {
+        // Inheritance owns the center: references take the R outermost grid slots
+        // (farthest from 0.5 first; lower position wins ties), then read ascending.
+        const grid = Array.from({ length: N }, (_, k) => (k + 1) / (N + 1));
+        const outerFirst = [...grid].sort((a, b) => {
+            const da = Math.abs(a - 0.5);
+            const db = Math.abs(b - 0.5);
+            return da !== db ? db - da : a - b;
+        });
+        refPositions = outerFirst.slice(0, R).sort((a, b) => a - b);
+    }
+    ref.forEach((e, k) => result.set(key(e), refPositions[k]));
+
+    // Inheritance: centered cluster pinned at 50%.
+    inh.forEach((e, i) => {
+        result.set(key(e), 0.5 + (i - (M - 1) / 2) * step);
+    });
+
+    return result;
+}
+
 /**
  * Physical position (canvas coordinates) of `handleId` on a node.
  *
  * Single source of truth shared by DynamicHandles (rendering) and useTreeLayout
- * (inheritance branch landing point). `hasBothRoles` is derived from the two side
- * counts; the single-role rank must be supplied by the caller (indexOf within the
- * same-role active handles on the side) so the result matches DynamicHandles
- * exactly even when handles are not contiguous from index 0.
+ * (inheritance branch landing point): both build the side's endpoints with
+ * computeSideEndpoints and position them with computeSidePositions, so a branch
+ * lands exactly where the handle is drawn.
  */
 export function computeHandlePositionForNode(params: {
+    edges: EndpointEdge[];
+    nodeId: string;
     nodeX: number;
     nodeY: number;
     nodeWidth: number;
     nodeHeight: number;
     handleId: string;
     role: 'source' | 'target';
-    sourceCountOnSide: number;
-    targetCountOnSide: number;
-    roleRank: number;
 }): { x: number; y: number } {
-    const { nodeX, nodeY, nodeWidth, nodeHeight, handleId, role, sourceCountOnSide, targetCountOnSide, roleRank } = params;
+    const { edges, nodeId, nodeX, nodeY, nodeWidth, nodeHeight, handleId, role } = params;
     const { side } = parseHandleId(handleId);
-    const hasBothRoles = sourceCountOnSide > 0 && targetCountOnSide > 0;
-    const roleCount = role === 'source' ? sourceCountOnSide : targetCountOnSide;
-    const percent = computeHandlePercent({ handleId, role, hasBothRoles, roleRank, roleCount });
+    const positions = computeSidePositions(computeSideEndpoints(edges, nodeId, side));
+    const percent = positions.get(`${handleId}:${role}`) ?? 0.5;
 
     // top/bottom: percent maps to X; left/right: percent maps to Y
     // (mirrors DynamicHandles' positionProp).

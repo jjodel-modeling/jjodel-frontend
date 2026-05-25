@@ -1,5 +1,49 @@
 # Claude Code Session Log
 
+## 2026-05-25 — chore: bonifica log [BUG-DIAG] residui da sessioni v2-flow debug
+**Prompt**: rimozione log diagnostici `[BUG-DIAG]` da sessioni maggio 2026 (5 `console.log` puri da rimuovere su 3 file, 2 `console.warn` operativi da rinominare su `canvasToJjom.ts` mantenendo la logica).
+**File toccati**:
+- frontend/src/components/editor-v2/EditorV2.tsx (-11)
+- frontend/src/components/editor-v2/utils/jjomTransformers.ts (-13)
+- frontend/src/components/editor-v2/hooks/useJjomSync.ts (-13)
+- frontend/src/components/editor-v2/sync/canvasToJjom.ts (rename 2 warning, +4/-8)
+**Esito**: ✅ completato — commit `2ded85849`
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: produced (in chat prima del diff — `useJjomSync.ts` e `canvasToJjom.ts` toccati ma solo logging, zero impatto runtime: nessun cambio a guard/dedup/TRANSACTION/deps di effect/SetFieldAction)
+**Note**: 5 siti BUG-DIAG ripuliti: (1) `EditorV2.tsx:1358-1377` due `console.log` su M1 ref drop entry/exit; (2) `jjomTransformers.ts:406-418` `console.log` su trasformazione M1 edge; (3) `useJjomSync.ts:955-957` e `:961-971` due `console.log` su edge addition (inCache skip + candidate trace); (4)(5) `canvasToJjom.ts:1282-1286` e `:1355-1359` due `console.warn` **mantenuti** (segnalano vera condizione di errore "cannot resolve DReference id"), rimosso prefisso `[BUG-DIAG]` dal messaggio e riformulato commento a `Defensive: log when the metaclass reference id can't be resolved`. **Stage selettivo critico**: `canvasToJjom.ts` aveva un terzo hunk preesistente alla linea 1134 (identity binding Prompt 1/3 work-in-progress su `syncCreateObject` naming, sessione precedente di Alfonso) — escluso dal commit via `printf 'n\ny\ny\n' | git add -p`. Verificato post-stage che `git diff --staged canvasToJjom.ts` mostri solo i 2 hunk miei (1279, 1352). **Verifiche**: `grep -rn "\[BUG-DIAG\]" frontend/src/` zero hit; `npm run build` ✓ in 2m 24s, zero errori; `npx tsc --noEmit` mostra solo errori pre-esistenti (asset PNG/SVG, CSS modules, casing `Settings/settings/UnifiedSettingsModal`) tutti su file non toccati dal diff. **Diff netto staged**: 4 file, 4 inserzioni / 45 cancellazioni. Hard stop pre-commit rispettato (diff completo mostrato + approvazione esplicita Alfonso prima di `git commit`). Working tree post-commit conserva le modifiche pre-esistenti (canvasToJjom.ts hunk identity-binding + LModelElement.tsx + VersionFixer.tsx + 2 discovery doc untracked + log), tutte fuori scope rispetto a questa sessione.
+**Nome del documento prompt**: 2026-05-25 (incollato in chat)
+
+---
+
+## 2026-05-25 — feat: identity binding foundation (Prompt 1/3)
+**Prompt**: aggiunta DObject.initialName, uniformazione defaultname v2-flow, migration 2.217 -> 2.218
+**File toccati**:
+- frontend/src/model/logicWrapper/LModelElement.tsx
+- frontend/src/components/editor-v2/sync/canvasToJjom.ts
+- frontend/src/redux/VersionFixer.tsx
+- docs/claude-code-log.md
+**Esito**: ✅ completato (build verde 1m 48s, zero errori TS sui file toccati)
+**Regressions**: unknown (richiede test manuale: creare nuova istanza in v2-flow → atteso `<ClassName>_1`; aprire progetto vecchio → atteso `initialName` popolato via migration)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (sync layer NOT toccato: nessun touch a useJjomSync/syncState/canvasToJjom._sync paths critici; canvasToJjom.ts:1137 modificato solo nel naming pre-DObject.new, non in TRANSACTION/sync logic)
+**Note**: foundation per identity binding. Comportamento utente atteso invariato per progetti esistenti (migration preserva data.name come initialName). Naming v2-flow ora coerente con classic editor (defaultname → `<ClassName>_N`). `initialName` è campo persistente di DObject, immutabile via API normale, scritto solo da `DObject.new`/`new3` (sempre con il defaultname autogenerato, indipendentemente dal `name` esplicito) e dalla migration. Aggiunto `get_initialName` su LObject senza setter (no scrittura via proxy). Prompt 2/3 da eseguire dopo verifica manuale di Alfonso. Errori TS preesistenti (175 righe in /tmp/tsc-out.txt) tutti su file non toccati (api/data.ts, common/Dummy.ts, components/Settings casing, asset imports, etc.) — non introdotti da questa sessione.
+**Prompt document name**: 2026-05-25 14:02
+
+---
+
+## 2026-05-25 — docs: discovery identity binding nome istanza ↔ slot `name`
+**Prompt**: discovery di sola lettura per feature identity binding nome istanza ↔ slot name (case-sensitive, EString, [0..1], initialName separato, DObject.name derivato, migrazione silenziosa)
+**File toccati**: `docs/discovery/2026-05-25_identity_binding.md` (nuovo), `docs/claude-code-log.md` (entry)
+**Esito**: ✅ completato (sola lettura, nessuna modifica al codice)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (read-only)
+**Note**: il binding bidirezionale slot `name` ↔ `DObject.name` **esiste già nel codice oggi**, ma case-INsensitive, senza check di tipo EString, senza check di cardinalità [0..1]. 5 punti di matching identificati (LValue.get_values 7205-7209, LValue.setValueAtPosition 7399-7401, LObject.get_name/set_name 5730/5987, LPointerTargetable.set_name classes.ts 2136, Selectors.getName selectors.ts 299-310, VersionFixer 514). Esiste già `DAttribute.isID` ma è dato morto rispetto a import/export Ecore. v2-flow `syncCreateObject` bypassa `defaultname` con `obj_<timestamp>` (potenzialmente da uniformare). Ultima migration VersionFixer è 2.216→2.217. Reference migration per la feature: 2.205→2.206 (logica vicina). 9 ambiguità documentate in sezione finale. Input per prossimo prompt implementativo.
+**Prompt document name**: 2026-05-25 12:57
+
+---
+
 ## 2026-05-25 — fix(editor-v2): contextual handle positioning when only one role is on the side
 **Prompt**: fix chirurgico in `DynamicHandles.tsx` sopra `db7be7a25`. Mantiene la segregazione first-half/second-half quando entrambi i ruoli (source+target) sono attivi su uno stesso lato (caso Families.ecore 4+4); distribuisce uniformemente `(i+1)/(n+1)` con `i` ed `n` role-specific quando solo source o solo target è presente, in modo che un singolo edge ancori al 50% (centro lato).
 **File toccati**: `frontend/src/components/editor-v2/components/DynamicHandles.tsx` (+22/-5 righe), `docs/claude-code-log.md`
@@ -6141,6 +6185,18 @@ Dark mode overrides for `.toolbar-btn` also scoped under `.documentation-toolbar
 
 ---
 
+## 2026-05-25 — docs: discovery inheritance anchor distribution
+**Prompt**: discovery read-only su come le generalization edge interagiscono con `computePortDistribution` nel v2-flow (4 obiettivi: generazione edge inheritance, mapping di computePortDistribution, presenza nel bucket, caso speciale N→1 stesso target).
+**File toccati**: docs/discovery/2026-05-25_inheritance_anchor_distribution.md (new), docs/claude-code-log.md
+**Esito**: ✅ completato (con deviazione dall'ipotesi del prompt, documentata)
+**Regressions**: no (read-only, nessun codice modificato)
+**Out-of-scope changes**: no (solo i due file previsti)
+**Layer Impact Report**: not-required (discovery read-only; nessun diff su file sync/D-L — solo letti per analisi)
+**Note**: **Ipotesi del prompt SMENTITA** (sezione `## Deviazioni dalle ipotesi del prompt` nel doc). Le generalization NON sono ignorate da `computePortDistribution`: passano per `DVoidEdge.new2` con `isExtend=true` (useJjomSync.ts:631-635, stesso Step 3 delle reference), diventano RF edge `type:'inheritance'` (jjomTransformers.ts:492-503) ed entrano nel bucket (EditorV2.tsx:790, nessun filtro per tipo) dove sono gestite con collasso fan-in/fan-out (portDistribution.ts:81-99, 115-130). La causa reale del sintomo (ref+gen sullo stesso punto su Full Professor) è il **doppio sistema di anchoring non coordinato** quando la generalization è raggruppata: il tree connector di `useTreeLayout` ancora il ramo lato-figlio al **centro orizzontale del figlio** (useTreeLayout.ts:108-115, `childCenterX`), bypassando l'handle assegnato, mentre la reference è collocata dal sistema handle (DynamicHandles.tsx:186-242). Caso N→1 stesso target = anchor sharing (portDistribution fan-in → `bottom-0` condiviso) + routing (tree connector). Chiave gruppo: `e.type==='inheritance' && e.target===target` (useTreeLayout.ts:66). Nessun hook dedicato tipo `useM1ReferenceEdges` per inheritance. `nodeHandles` di portDistribution resta dato morto. Conforme all'hard stop del prompt: findings descrittivi, nessun fix proposto. Path reale `editor-v2` (non `editorV2` del prompt). Nessuna modifica al codice; lo working-tree `ProjectEditor.tsx` (M) pre-sessione non toccato.
+**Nome del documento prompt**: 2026-05-25 15:30
+
+---
+
 ## 2026-05-25 — docs: discovery razionale c8910167a (role segregation)
 **Prompt**: discovery read-only su perché esiste la role segregation e se la regola "inheritance al centro + reference equidistanti" la sostituisce senza perdita
 **File toccati**: docs/discovery/2026-05-25_role_segregation_rationale.md (new), docs/claude-code-log.md
@@ -6150,4 +6206,16 @@ Dark mode overrides for `.toolbar-btn` also scoped under `.documentation-toolbar
 **Layer Impact Report**: not-required (discovery read-only; file sync/D-L solo letti, nessun diff)
 **Note**: raccomandazione finale **C**. c8910167a ha reso *contestuale* (`hasBothRoles`) una segregazione per-ruolo già introdotta da `db7be7a25`: tiene "source 1ª metà / target 2ª metà" quando entrambi i ruoli sono attivi su un lato, altrimenti uniforme (1 edge → 50%). Messaggio laconico (1 riga, no body, no test, no link); razionale completo nella discovery coeva `2026-05-25_edge_anchoring_regression.md` (è il doc che ha proposto c8910167a). **Punto strutturale**: source e target condividono gli handleId su un lato (bucket separati ma entrambi indicizzati da 0, `portDistribution.ts:78,111`; max 4 handleId, `:258`); la segregazione mappa lo stesso handleId su 2 posizioni fisiche per ruolo → è la *collision-freedom* che permette 4+4=8 endpoint senza overlap (Families.ecore Member.left). La regola proposta è formulata sull'asse semantico (inh/ref) + estetico ma **tace sull'asse ruolo**. Stress test: S1/S2(lettura A)/S5-trunk **coperti e migliorati**; **S3/S4 degenerano** (rimozione segregazione → formula uniforme per-ruolo → source/target collidono, 4 collisioni su Member.left 4+4). Per il criterio esplicito del prompt (S3/S4 rompono in modo non banale → C), scelta **C**: la segregazione va preservata nella sua *funzione* (ordinamento collision-free cross-ruolo); l'estetica proposta è ortogonale e sovrapponibile, ma non sostituibile per semplice rimozione. **Stato working tree**: il "fix tree connector" citato dal prompt è non-committato (M su DynamicHandles.tsx + useTreeLayout.ts, new untracked handlePosition.ts); estrae la formula 1:1 in `computeHandlePercent`, semantica invariata. Hard stop rispettato: nessun fix proposto, solo dati; raccomandazione classificatoria (A/B/C). Nessun codice modificato.
 **Nome del documento prompt**: 2026-05-25 18:00
+
+---
+
+## 2026-05-25 — docs: discovery feasibility cross-role global ordering
+**Prompt**: discovery read-only su patch vs refactor per ordinamento globale endpoint cross-ruolo
+**File toccati**: docs/discovery/2026-05-25_cross_role_ordering_feasibility.md, docs/claude-code-log.md
+**Esito**: ✅ completato
+**Regressions**: no (read-only, nessun codice modificato)
+**Out-of-scope changes**: no (solo i due file previsti)
+**Layer Impact Report**: not-required (discovery read-only; file sync/D-L/handle solo letti)
+**Note**: raccomandazione finale **A** (patch praticabile, effort S/M). **Dato chiave ReactFlow** (letto da `@xyflow/system@0.0.76/dist/esm/index.mjs`, non doc esterna): gli handle sono indicizzati per **(id, type)** — `getEdgePosition:1365` cerca `sourceHandle` solo tra `.source` (`:1372`) e `targetHandle` tra `.target` (`:1376`), `toHandleBounds:1399` partiziona per `handle.type` (`:1408-1413`), e la posizione fisica (`getHandlePosition:1420`) è indipendente dal matching. Quindi `top-0`/source e `top-0`/target sono distinti (è ciò che fa `DynamicHandles.tsx:283-302`, doppio `<Handle>` stesso id) e spostare la posizione di un handle NON rompe l'aggancio dell'edge → **nessun vincolo RF osta a (a)**. **Patch (a)**: 3 file editor-v2 (`handlePosition.ts` formula+regola ordinamento globale; `DynamicHandles.tsx:230-239`; `useTreeLayout.ts:121-136` via `computeHandlePositionForNode`), **nessun** cambio a `portDistribution` (capienza 8=4+4 invariata, RF matcha per (id,type)), effort S/M. **Refactor (b)**: LARGE — riscrittura `portDistribution` bucketing (reverte cluster `89e67dc65`/`cdcef4456`/`db7be7a25`/`c8910167a`), bump `MAX_HANDLES_PER_SIDE` 4→8 (altrimenti Member.left 4+4 overflow; ripple su `UnifiedEdge.tsx:270,291` label spread), gestione pool/ghost type, rischio Inv3. **VersionFixer: NON serve** per nessuna delle due — handleId effimeri (`applyDistribution` li ricalcola ogni `setEdges`, `EditorV2.tsx:785-805`; `canvasToJjom` non scrive handle; `useJjomSync` Step 3 crea edge senza handle `:631-635`,`:661-665`), e `AnchorConfig={mode,side}` (`types.ts:107-112`) non porta handleId. **Ipotesi prompt smentita**: `useJjomSync` Step 3 NON alloca handleId, quindi (b) non lo tocca. **Decisione di design aperta** (da chiudere con Alfonso): inheritance-al-centro è regola *esplicita*, NON emergente da `(i+1)/(N+1)` — a1 (equidistante puro, S1→33/67) vs a2 (inh pinned 50%, ref 25/75, richiede a DynamicHandles di tracciare il tipo edge). Invarianti: Inv1 (a)✅/(b)✅-solo-se-MAX-8; Inv2 (a)✅/(b)✅; Inv3 (a)✅/(b)⚠️-condizionato. Hard stop non innescato (nessun vincolo RF bloccante, (b) ~4-5 file core ma (a) è la via leggera). Read-only: solo i 2 file previsti scritti; i 3 file di codice estranei (canvasToJjom/LModelElement/VersionFixer, identity-binding) NON toccati.
+**Nome del documento prompt**: 2026-05-25 19:00
 

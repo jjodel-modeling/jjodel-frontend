@@ -1134,17 +1134,17 @@ export function syncCreateObject(
             return false;
         }
 
-        const name = objectName || `obj_${Date.now().toString(36).slice(-4)}`;
-
         // DObject.new(instanceof, father, fatherType, name, persist)
         // Do NOT wrap in TRANSACTION — .new() creates its own internally
+        // When objectName is not provided, pass undefined so DObject.new computes defaultname
+        // ("<ClassName>_<N>") internally, matching the classic editor naming convention.
 
         const dObject = (DObject as any).new(
-            metaclassId,   // which class to instantiate
-            modelId,       // parent model
-            DModel,        // fatherType — MUST be DModel
-            name,          // instance name
-            true           // persist
+            metaclassId,            // which class to instantiate
+            modelId,                // parent model
+            DModel,                 // fatherType — MUST be DModel
+            objectName || undefined, // undefined → defaultname kicks in
+            true                    // persist
         );
 
         if (!dObject?.id) {

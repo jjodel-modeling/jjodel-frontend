@@ -12,8 +12,7 @@ import {
     pointsToPath,
     type TreeBranch,
 } from '../utils/edgeUtils';
-import { getBaseSide } from '../utils/portDistribution';
-import { computeHandlePositionForNode, computeSideRoleHandles } from '../utils/handlePosition';
+import { computeHandlePositionForNode } from '../utils/handlePosition';
 
 export interface TreeGeometry {
     trunkPath: string;
@@ -116,21 +115,18 @@ export function useTreeLayout(
             // Land the branch on the handle assigned to this inheritance edge
             // (child side = source), not the node center — so it no longer
             // overlaps references sharing the same side. Single source of truth
-            // with DynamicHandles via computeHandlePositionForNode; per-side
-            // role counts/rank are derived from the current edge set (allEdges).
+            // with DynamicHandles: computeHandlePositionForNode rebuilds the side's
+            // endpoints from the current edge set (allEdges) and positions them.
             const childHandleId = edge.sourceHandle ?? `${sourceSide}-0`;
-            const childSide = getBaseSide(childHandleId);
-            const { sourceHandles, targetHandles } = computeSideRoleHandles(allEdges, edge.source, childSide);
             const handlePos = computeHandlePositionForNode({
+                edges: allEdges,
+                nodeId: edge.source,
                 nodeX: childNode.position?.x ?? 0,
                 nodeY: childNode.position?.y ?? 0,
                 nodeWidth: w,
                 nodeHeight: h,
                 handleId: childHandleId,
                 role: 'source',
-                sourceCountOnSide: sourceHandles.length,
-                targetCountOnSide: targetHandles.length,
-                roleRank: sourceHandles.indexOf(childHandleId),
             });
 
             branches.push({ childX: handlePos.x, childY, edgeId: edge.id });

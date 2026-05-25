@@ -794,6 +794,40 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         return s;
     }
 
+    // 2.217 → 2.218: identity binding foundation — populate DObject.initialName for existing instances.
+    // Strategy 3a: preserve the current display name as initialName.
+    //   - If data.name is non-empty, use it as initialName (preserves what the user sees today).
+    //   - If data.name is empty/null, synthesise "<MetaclassName>_<idSuffix>" based on instanceof
+    //     and last 4 chars of the DObject id (stable across reloads).
+    // Idempotent: skips DObjects that already have initialName populated.
+    // Does NOT touch data.name nor any slot value — that remains scope of Prompt 2.
+    private ['2.217 -> 2.218'](s: DState): DState {
+        let migrated = 0;
+        for (let e of Object.values(s.idlookup) as any[]) {
+            if (!e || typeof e !== 'object' || !e.className || !e.id) continue;
+            if (e.className !== 'DObject') continue;
+            if (e.initialName) continue;  // already populated, skip
+
+            if (e.name && typeof e.name === 'string' && e.name.length > 0) {
+                // Preserve current name as the fallback identifier
+                e.initialName = e.name;
+            } else {
+                // Compute a synthetic defaultname based on the meta class name.
+                // We cannot call DPointerTargetable.defaultname here (operates on L-layer with
+                // proxy wrapping); replicate the prefix logic in a D-only way and use the id
+                // suffix for stability across reloads instead of computing sibling uniqueness.
+                const meta = e.instanceof ? s.idlookup[e.instanceof] : null;
+                const prefix = (meta && (meta as any).name) ? (meta as any).name + '_' : 'obj_';
+                e.initialName = prefix + (e.id || '').slice(-4);
+            }
+            migrated++;
+        }
+        if (migrated > 0) {
+            console.log(`[VersionFixer 2.217 -> 2.218] Populated initialName for ${migrated} DObject(s).`);
+        }
+        return s;
+    }
+
 }
 
 

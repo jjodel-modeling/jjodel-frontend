@@ -5659,6 +5659,7 @@ export class DObject extends DModelElement { // extends DNamedElement, m1 class 
     father!: Pointer<DModel, 1, 1, LModel> |  Pointer<DValue, 1, 1, LValue>;
     // annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
     name!: string;
+    initialName!: string;  // auto-generated at creation, immutable through normal API. Used as fallback display name when identity slot is empty.
 
     // personal
     instanceof?: Pointer<DClass>; // actually nullable now, but takes too much type refactoring. be careful to check if it's present
@@ -5666,18 +5667,25 @@ export class DObject extends DModelElement { // extends DNamedElement, m1 class 
 
     partial!: boolean | undefined;
     public static new(instanceoff?: DObject["instanceof"], father?: DObject["father"], fatherType?: typeof DModel | typeof DValue, name?: DNamedElement["name"], persist: boolean = true): DObject {
-        // if (!name) name = this.defaultname(((meta: LNamedElement) => meta.name + " "), father);
-        if (!name) name = this.defaultname(((meta: LNamedElement) => (meta?.name || "obj") + "_"), father, instanceoff);
+        // Compute the default name (auto-generated, per-father unique within sibling scope)
+        const computedDefaultName = this.defaultname(((meta: LNamedElement) => (meta?.name || "obj") + "_"), father, instanceoff);
+        if (!name) name = computedDefaultName;
         let ret = new Constructors(new DObject('dwc'), father, persist, fatherType).DPointerTargetable().DModelElement()
             .DNamedElement(name).DObject(instanceoff).end();
+        // initialName: always the auto-generated default, regardless of the explicit `name` parameter.
+        // This is the immutable "auto-name" that acts as fallback when the identity slot is empty.
+        ret.initialName = computedDefaultName;
         return ret;
     }
 
     public static new3(ptrs:Partial<ObjectPointers>, then:(d:DObject, c: Constructors)=>void, fatherType?: typeof DModel | typeof DValue, persist: boolean = true): DObject{
-        if (!ptrs.name) ptrs.name = this.defaultname(((meta: LNamedElement) => (meta?.name || "obj") + "_"), ptrs.father, ptrs.instanceof);
-        return new Constructors(new DObject('dwc'), ptrs.father, persist, fatherType, ptrs.id)
+        const computedDefaultName = this.defaultname(((meta: LNamedElement) => (meta?.name || "obj") + "_"), ptrs.father, ptrs.instanceof);
+        if (!ptrs.name) ptrs.name = computedDefaultName;
+        let ret = new Constructors(new DObject('dwc'), ptrs.father, persist, fatherType, ptrs.id)
             .DPointerTargetable().DModelElement()
             .DNamedElement(ptrs.name).DObject(ptrs.instanceof).end(then);
+        ret.initialName = computedDefaultName;
+        return ret;
     }
 
 
@@ -5702,6 +5710,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     // from LClass
 
     name!: string;
+    initialName!: string;
     ecoreRootName!: string;
     namespace!: string;
     defaultValue!: LClass["defaultValue"];
@@ -5729,6 +5738,10 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
 
     protected get_name(context: Context): this['name'] {
         return (context.proxyObject as GObject)['$name']?.value || context.data.name || context.proxyObject.instanceof?.name;
+    }
+
+    protected get_initialName(context: Context): this['initialName'] {
+        return context.data.initialName;
     }
 
     composed!:boolean;
