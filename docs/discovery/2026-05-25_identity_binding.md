@@ -969,3 +969,175 @@ grep -rn "\.name === 'name'\|\.name === \"name\"\|featName === 'name'\|name === 
 # VersionFixer
 grep -n "private \[.*->\|highestVersion" frontend/src/redux/VersionFixer.tsx
 ```
+
+---
+
+## 11. Follow-up: Divergenza `data.name` vs `initialName` alla creazione
+
+> **Sotto-sessione**: 2026-05-25 (successiva a Prompt 1/3 identity binding).
+> **Modalità**: sola lettura. Stato letto = **working tree corrente** (`canvasToJjom.ts` e
+> `LModelElement.tsx` risultano `M`, ovvero contengono già le modifiche di Prompt 1).
+> **Attenzione**: le sezioni 1–10 di questo documento descrivono lo stato **pre-Prompt-1**
+> (es. §2 riga 154 e §6 riga 481 citano `obj_<timestamp>` dentro `syncCreateObject`, che
+> oggi **non esiste più**). Questa sezione descrive lo stato **post-Prompt-1**.
+
+**Osservazione runtime** (istanza creata via drag-drop dalla palette in v2-flow):
+```
+id=Pointer..._USER_256  name="newClass2_uls"  initialName="NewClass2_0"
+id=Pointer..._USER_259  name="newClass3_x8m"  initialName="NewClass3_0"
+```
+`initialName` segue il pattern `<ClassName>_<N>` (corretto, capitalizzato).
+`data.name` segue il pattern `<classNameLowerFirst>_<3-char-random>`. Divergenza
+`data.name !== initialName` ad **ogni** creazione (e anche divergenza di **casing**:
+`NewClass2` vs `newClass2`).
+
+### 11.1 — Q1: code path che scrive `data.name` (drag-drop), ordine cronologico
+
+Catena dal drop handler fino al write effettivo su `data.name`:
+
+1. **`EditorV2.tsx:1466`** — `const className = metaclass.name;` (nome della classe M2 da
+   istanziare, da `mi.allClasses.find(...)` a `:1464`).
+2. **`EditorV2.tsx:1472`** — costruzione del nome lato chiamante:
+   ```typescript
+   const objName = `${className.charAt(0).toLowerCase()}${className.slice(1)}_${Date.now().toString(36).slice(-3)}`;
+   ```
+   Per `className="NewClass2"` → `"newClass2_" + Date.now().toString(36).slice(-3)` →
+   `"newClass2_uls"`. (Casing: `charAt(0).toLowerCase()` abbassa l'iniziale.)
+3. **`EditorV2.tsx:1473`** — `vertexId = syncCreateObject(graphId, metaclassId, position.x, position.y, objName);`
+   → `objName` passato come 5° argomento (`objectName`).
+4. **`canvasToJjom.ts:1142-1148`** — `DObject.new(metaclassId, modelId, DModel, objectName || undefined, true)`.
+   Poiché `objectName="newClass2_uls"` è **truthy**, `objectName || undefined` vale
+   `"newClass2_uls"` → arriva come `name` a `DObject.new`.
+5. **`LModelElement.tsx:5671`** — `const computedDefaultName = this.defaultname(((meta) => (meta?.name || "obj") + "_"), father, instanceoff);`
+   → prefix `"NewClass2_"` (usa `meta.name` **senza** abbassare l'iniziale) →
+   `computedDefaultName = "NewClass2_0"`.
+6. **`LModelElement.tsx:5672`** — `if (!name) name = computedDefaultName;` → `name` è
+   truthy (`"newClass2_uls"`) → **branch SALTATO**.
+7. **`LModelElement.tsx:5673-5674`** — `new Constructors(new DObject('dwc'), ...).DPointerTargetable().DModelElement().DNamedElement(name).DObject(instanceoff).end();`
+   → `.DNamedElement(name)` con `name="newClass2_uls"` è l'**unico** write su `DObject.name`.
+8. **`LModelElement.tsx:5677`** — `ret.initialName = computedDefaultName;` →
+   `initialName = "NewClass2_0"`.
+
+**Esito**: `data.name = "newClass2_uls"` (step 7), `initialName = "NewClass2_0"` (step 8).
+Un solo write su `data.name`, allo step 7, col valore fornito dal chiamante.
+
+### 11.2 — Q2: dove si genera il suffix random a 3 lettere
+
+Il suffix **non** è prodotto da `defaultname`: è prodotto **lato chiamante in `EditorV2.tsx`**,
+in tre call-site di creazione istanza M1:
+
+- **`EditorV2.tsx:1472`** (drag-drop palette) — `..._${Date.now().toString(36).slice(-3)}`
+  → 3 caratteri base36. **È la sorgente esatta di `newClass2_uls` / `newClass3_x8m`**.
+- **`EditorV2.tsx:2036`** (`createCompositionChild`) — pattern identico:
+  `${childClass.name.charAt(0).toLowerCase()}${childClass.name.slice(1)}_${Date.now().toString(36).slice(-3)}` → poi `syncCreateObject(..., childName)` a `:2048`.
+- **`EditorV2.tsx:556`** (singleton auto-create) — variante con suffix **statico** `_s`
+  (`...${className.slice(1)}_s`), non random; poi `syncCreateObject(..., objName)` a `:558`.
+
+`Date.now().toString(36).slice(-3)` = ultimi 3 char del timestamp in base36 (es. `uls`,
+`x8m`). Tutti e tre i path producono lo stesso tipo di divergenza (data.name lato
+chiamante ≠ initialName autogenerato).
+
+### 11.3 — Q3: perché `syncCreateObject` diverge dal dichiarato
+
+Il doc di sessione afferma "`syncCreateObject` ora delega a defaultname passando
+`objectName || undefined`". **Verifica**:
+
+- **Il `defaultname` invocato è quello giusto** (`<ClassName>_<N>`): sì. `DObject.new`
+  chiama `this.defaultname(...)` a `LModelElement.tsx:5671`, ovvero
+  `DPointerTargetable.defaultname` (classes.ts:1424, vedi §2). **Non esiste un secondo
+  defaultname "legacy"**: il vecchio `obj_<timestamp>` di §2/§6 era inline in
+  `syncCreateObject` ed è stato **rimosso** da Prompt 1.
+- **`syncCreateObject` delega davvero**: sì. `canvasToJjom.ts:1146` passa
+  `objectName || undefined`; il commento `:1139-1140` lo dichiara esplicitamente
+  ("When objectName is not provided, pass undefined so DObject.new computes defaultname").
+- **Allora perché diverge?** La delega è **reale ma inerte**, perché **tutti i chiamanti
+  v2-flow passano un `objectName` non-undefined** (`objName`/`childName` generati a
+  `EditorV2.tsx:556/1472/2036`). Quindi `objectName || undefined` vale il valore del
+  chiamante (truthy), il ramo `if (!name)` di `DObject.new` (`:5672`) è **saltato**, e
+  `defaultname` viene comunque eseguito (`:5671`) ma il suo risultato finisce **solo** su
+  `initialName` (`:5677`), **mai** su `data.name`.
+
+**Conclusione Q3**: l'affermazione del doc è vera per `syncCreateObject` *in isolamento*,
+ma fuorviante in pratica. La causa della divergenza è **a monte** di `syncCreateObject`
+(nei chiamanti `EditorV2`), non un secondo defaultname e non un bug di `syncCreateObject`.
+
+### 11.4 — Q4: secondo write path che sovrascrive `data.name`?
+
+**No.** `data.name` è scritto **una sola volta**, alla costruzione
+(`.DNamedElement(name)`, `LModelElement.tsx:5673-5674`), col valore `objName` del
+chiamante. Dopo `syncCreateObject` i tre handler costruiscono **solo** il nodo ReactFlow
+(`data.label = objName`, es. `EditorV2.tsx:1476-1482`, `:561-569`, `:2051-2055`):
+`data.label` è stato locale del nodo RF, **non** `DObject.name`. Non c'è alcun
+`setValueAtPosition` / `set_name` / assegnazione diretta `data.name = ...` tra la
+creazione e la fine del flusso di drop.
+
+- **Caveat** (non è la causa dell'osservazione): un **rename successivo dell'utente**
+  (il flag `autoEdit: true` a `:1481`, o il double-click su titolo) passa per
+  `syncNodeLabel → set_name` (vedi §3.1, §8.4) e scriverebbe **slot + `data.name`**, ma
+  **non** `initialName`. È azione utente, non automatica, e non spiega la divergenza
+  osservata *alla creazione*.
+
+### 11.5 — Q5: dove intervenire per `data.name === initialName` alla creazione
+
+Il lato `DObject.new` è **già corretto**: quando `name` è falsy, setta
+`name = initialName = computedDefaultName` (`:5672`, `:5677`). Forzare l'uguaglianza
+*anche quando un name è fornito* **romperebbe** la creazione legittimamente nominata
+(JjTL `ProjectEditor.tsx:1585`, JjScript `instance.ts:225`, classic editor via
+`DObject.new3`). Quindi **non** è il punto di intervento.
+
+Il punto preciso è il **chiamante v2-flow**: smettere di pre-generare `objName` e passare
+`undefined`, lasciando che `DObject.new` sia l'unico proprietario del nome; poi **derivare
+il `label` del nodo RF dal nome dell'oggetto creato** (rilettura via il vertex restituito)
+invece che dalla stringa pre-generata.
+
+- **Sito primario** (caso osservato): `EditorV2.tsx:1472-1482` (drag-drop).
+- **Per uniformità**: `EditorV2.tsx:556-558` (singleton, `_s`) e `:2036-2048` (child).
+
+**Diff atteso (a parole)**, sito primario:
+1. Rimuovere la costruzione `const objName = ...` a `:1472`.
+2. Chiamare `syncCreateObject(graphId, metaclassId, position.x, position.y)` **senza** il
+   5° argomento (→ `objectName` undefined → `DObject.new` calcola `defaultname` e setta
+   `name = initialName = "NewClass2_0"`).
+3. Dopo che `syncCreateObject` ritorna `vertexId`, rileggere il nome reale
+   (es. `(LPointerTargetable.fromPointer(vertexId) as any)?.model?.name`) e usarlo per
+   `defaultLabel` / `nodeData.label`, così il label canvas combacia con `data.name`.
+
+Risultato: `data.name === initialName === "NewClass2_0"`.
+
+**Caveat di implementazione** (da validare, non risolti qui):
+- **(a) Cambio visibile all'utente**: le nuove istanze mostrerebbero `NewClass2_0` invece
+  di `newClass2_uls`. Decisione di prodotto, non solo tecnica.
+- **(b) Rilettura del nome vs deferred-proxy** (§9.1/§9.2): `DObject.new` ritorna id
+  temporanei e il lookup per id può fallire subito; qui però la rilettura è via il
+  **vertex** restituito (`vertex.model.name`) e `name` è un campo top-level scritto
+  sincronicamente — **probabilmente** risolve, ma va confermato a impl-time.
+- **(c) Uniformità**: per coprire tutti i path d'istanza servono fino a **3 siti**, tutti
+  in `EditorV2.tsx`, stesso pattern.
+
+### 11.bis — Raccomandazione
+
+**(β) Mini-fix da includere come Step 0 di Prompt 2.**
+
+Evidenza a sostegno:
+- **Scope contenuto**: l'intervento sta interamente nei chiamanti `EditorV2.tsx`
+  (1 sito primario, fino a 3 per uniformità — entro il limite "2-3 punti"). **Non** tocca
+  `DObject.new`, `defaultname`, né il layer sync/D-L.
+- **Precondizione naturale di Prompt 2**: Prompt 2 userà `initialName` come fallback
+  quando lo slot identity è vuoto; se `data.name` diverge da `initialName` già alla
+  creazione, il fallback risulterebbe incoerente (mostrerebbe `newClass2_uls` mentre il
+  fallback "ufficiale" è `NewClass2_0`). Allineare i due alla creazione è il presupposto
+  pulito per il fallback di Prompt 2.
+- **Interazioni entro la stessa area**: le uniche interazioni sono con la naming v2-flow e
+  con Prompt 2 (stessa feature), **non** con feature estranee — quindi non scatta il
+  criterio δ "interazioni con altre feature".
+
+**Condizione di downgrade a (δ)**: l'unico elemento che potrebbe far lievitare il costo è
+la **rilettura del label** (caveat b): se a impl-time emerge che `vertex.model.name` non
+risolve sincronicamente dopo `syncCreateObject` (deferred-proxy §9.2), la derivazione del
+label cresce (setTimeout/defer) e il fix tende a δ. **Da verificare per primo** quando si
+implementa lo Step 0. Se la rilettura è pulita, resta **β**.
+
+---
+
+*Follow-up aggiunto in sotto-sessione 2026-05-25. Nessuna modifica al codice; solo questa
+sezione 11 di questo documento.*
