@@ -1,5 +1,14 @@
 # Claude Code Session Log
 
+## 2026-05-25 — fix: cross-role global ordering with inheritance pinned at center
+**Prompt**: rework handlePosition per ordinamento globale cross-role + inheritance al centro (a2-strict). NOTA: implementazione effettiva è confluita nel commit bundled 729c5ce07 ("anchorpoint fixes") insieme al Prompt 1/3 di identity binding. Vedi entry sopra per il razionale identity-binding.
+**File toccati (anchorpoint scope only)**: frontend/src/components/editor-v2/utils/handlePosition.ts (new), frontend/src/components/editor-v2/components/DynamicHandles.tsx, frontend/src/components/editor-v2/hooks/useTreeLayout.ts
+**Esito**: ✅ verificato visualmente da Alfonso su S1/S3/S4 (Università Full Professor + Docenti parent + Families Member.left)
+**Note**: il commit 729c5ce07 ha un message inadeguato ("anchorpoint fixes" one-liner) che NON menziona né l'identity binding bundled né il rationale a2-strict per l'anchor distribution. Il razionale completo è nei due documenti di discovery 2026-05-25_role_segregation_rationale.md e 2026-05-25_cross_role_ordering_feasibility.md, già nel commit. NON eseguire rewrite della history pushata: coordinare con Damiano è preferibile a force-push su branch condiviso.
+**Nome del documento prompt**: 2026-05-25 19:30
+
+---
+
 ## 2026-05-25 — chore: bonifica log [BUG-DIAG] residui da sessioni v2-flow debug
 **Prompt**: rimozione log diagnostici `[BUG-DIAG]` da sessioni maggio 2026 (5 `console.log` puri da rimuovere su 3 file, 2 `console.warn` operativi da rinominare su `canvasToJjom.ts` mantenendo la logica).
 **File toccati**:
