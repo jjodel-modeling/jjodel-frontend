@@ -108,20 +108,13 @@ const TreeNode: React.FC<TreeNodeProps> = ({
                     {element.name}
                 </span>
                 {element.isAbstract && (
-                    <Badge category="context" title="Abstract class">
+                    <Badge category="context">
                         abstract
                     </Badge>
                 )}
 
-                {/* Data type or multiplicity */}
-                {element.dataType && (
-                    <span className="jjtl-tree-type">{element.dataType}</span>
-                )}
-                {element.multiplicity && (
-                    <span className="jjtl-tree-multiplicity">[{element.multiplicity}]</span>
-                )}
                 {element.inherited && (
-                    <Badge category="context" title={`from ${element.inherited.fromClassName}`}>
+                    <Badge category="context">
                         inherited
                     </Badge>
                 )}

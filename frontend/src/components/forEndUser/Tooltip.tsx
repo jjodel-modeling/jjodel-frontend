@@ -161,7 +161,15 @@ export class TooltipClass extends React.Component<AllProps, State> {
         this.onMouseLeave = this.onMouseLeave.bind(this);
     }
 
+    private static isTreeEditorElement(el?: Element | null): boolean {
+        if (!el) return false;
+        return !!el.closest(
+            '.tree-view-sidebar, .tree-view-overlay, .tree-view-panel-container, .tree-view-panel-body, .tree-view-sidebar__body, .tree-view-overlay__body, .tree-row, .tree-node, .tree-children'
+        );
+    }
+
     public static show(tooltip: ReactNode, pos?: PositionStrTypes, baseElement?: Element, seconds: number = -1, offset?: IPoint, theme?: ThemeType): void{
+        if (TooltipClass.isTreeEditorElement(baseElement ?? null)) return;
         tooltip = Tooltip.fixTooltip(tooltip);
         const statepatch: Partial<TooltipVisualizerState> = {tooltip, baseElement, offsetX: offset?.x ?? 0, offsetY: offset?.y ?? 0, theme};
         statepatch.position = pos ?? 'b';
@@ -177,7 +185,20 @@ export class TooltipClass extends React.Component<AllProps, State> {
         TooltipVisualizer.component.setState({tooltip: undefined});
     }
 
-    onMouseEnter(e?: MouseEvent): void{
+    private getEventElement(e?: any): Element | null {
+        const current = e?.currentTarget;
+        if (current && current instanceof Element) return current;
+        const target = e?.target;
+        if (target && target instanceof Element) return target;
+        return null;
+    }
+
+    onMouseEnter(e?: any): void{
+        const eventEl = this.getEventElement(e);
+        if (TooltipClass.isTreeEditorElement(eventEl) || TooltipClass.isTreeEditorElement(this.childhtml)) {
+            Tooltip.hide();
+            return;
+        }
         let inline = this.props.inline;
         let x = this.props.offsetX;
         let y = this.props.offsetY;
