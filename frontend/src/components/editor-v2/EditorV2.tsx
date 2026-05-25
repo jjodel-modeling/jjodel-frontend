@@ -1355,15 +1355,6 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             const targetIndex = getNextFreeHandleIndex(edgeTarget, targetSide, 'target', currentEdges);
 
             // Create in JjOM
-            // [BUG-DIAG] trace M1 reference creation entry point.
-            // eslint-disable-next-line no-console
-            console.log('[BUG-DIAG] M1 ref drop', {
-                refName: metaRef.name,
-                refId: metaRef.id,
-                containment: metaRef.containment,
-                source: edgeSource,
-                target: edgeTarget,
-            });
             const edgeId = metaRef.containment
                 ? syncCreateCompositionLink(edgeSource, edgeTarget, metaRef.name)
                 : syncCreateReferenceLink(edgeSource, edgeTarget, metaRef.name);
@@ -1373,8 +1364,6 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 setPendingM1Connection(null);
                 return;
             }
-            // eslint-disable-next-line no-console
-            console.log('[BUG-DIAG] M1 ref drop → edgeId', edgeId);
 
             markDropCreated(edgeId);
 

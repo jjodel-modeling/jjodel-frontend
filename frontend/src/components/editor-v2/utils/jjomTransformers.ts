@@ -403,19 +403,6 @@ export function jjomEdgeToRFEdge(edge: any): Edge | null {
         const isComposition = !!refModel?.composition;
         const refName = refModel?.name ?? '';
         const refId = refModel?.id ?? edge.id;
-        // [BUG-DIAG] trace M1 edge transformation. `edge.model === undefined`
-        // was the smoking gun for the canvas-drag bug — log when we see it.
-        // Remove once the secondary "doesn't render" issue is also resolved.
-        // eslint-disable-next-line no-console
-        console.log('[BUG-DIAG] jjomEdgeToRFEdge M1', {
-            edgeId: edge.id,
-            sourceVertex: startVertex?.id,
-            targetVertex: endVertex?.id,
-            hasRefModel: !!refModel,
-            refName,
-            refId,
-            isComposition,
-        });
 
         if (isComposition) {
             return {

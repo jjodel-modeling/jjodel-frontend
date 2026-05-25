@@ -952,23 +952,10 @@ export function useJjomSync(
                         // consumeDropCreated or ID replacement in setEdges).
                         const inCache = rfEdgeCache.current.has(id);
                         if (inCache) {
-                            // eslint-disable-next-line no-console
-                            console.log('[BUG-DIAG] useJjomSync skip edge already in cache', { edgeId: id });
                             continue;
                         }
 
                         const rfEdge = jjomEdgeToRFEdge(lProxy);
-                        // [BUG-DIAG] trace edge addition decisions.
-                        // eslint-disable-next-line no-console
-                        console.log('[BUG-DIAG] useJjomSync edge addition candidate', {
-                            edgeId: id,
-                            isDropCreated,
-                            rfEdgeProduced: !!rfEdge,
-                            sourceInGraph: rfEdge ? currentIds.has(rfEdge.source) : null,
-                            targetInGraph: rfEdge ? currentIds.has(rfEdge.target) : null,
-                            type: rfEdge?.type,
-                            label: rfEdge?.label,
-                        });
                         // Guard: skip orphan edges (source/target vertex deleted)
                         if (rfEdge && currentIds.has(rfEdge.source) && currentIds.has(rfEdge.target)) {
                             // Deduplicate: skip if an RF edge with the same
