@@ -6141,3 +6141,13 @@ Dark mode overrides for `.toolbar-btn` also scoped under `.documentation-toolbar
 
 ---
 
+## 2026-05-25 — docs: discovery razionale c8910167a (role segregation)
+**Prompt**: discovery read-only su perché esiste la role segregation e se la regola "inheritance al centro + reference equidistanti" la sostituisce senza perdita
+**File toccati**: docs/discovery/2026-05-25_role_segregation_rationale.md (new), docs/claude-code-log.md
+**Esito**: ✅ completato
+**Regressions**: no (read-only, nessun codice modificato)
+**Out-of-scope changes**: no (solo i due file previsti)
+**Layer Impact Report**: not-required (discovery read-only; file sync/D-L solo letti, nessun diff)
+**Note**: raccomandazione finale **C**. c8910167a ha reso *contestuale* (`hasBothRoles`) una segregazione per-ruolo già introdotta da `db7be7a25`: tiene "source 1ª metà / target 2ª metà" quando entrambi i ruoli sono attivi su un lato, altrimenti uniforme (1 edge → 50%). Messaggio laconico (1 riga, no body, no test, no link); razionale completo nella discovery coeva `2026-05-25_edge_anchoring_regression.md` (è il doc che ha proposto c8910167a). **Punto strutturale**: source e target condividono gli handleId su un lato (bucket separati ma entrambi indicizzati da 0, `portDistribution.ts:78,111`; max 4 handleId, `:258`); la segregazione mappa lo stesso handleId su 2 posizioni fisiche per ruolo → è la *collision-freedom* che permette 4+4=8 endpoint senza overlap (Families.ecore Member.left). La regola proposta è formulata sull'asse semantico (inh/ref) + estetico ma **tace sull'asse ruolo**. Stress test: S1/S2(lettura A)/S5-trunk **coperti e migliorati**; **S3/S4 degenerano** (rimozione segregazione → formula uniforme per-ruolo → source/target collidono, 4 collisioni su Member.left 4+4). Per il criterio esplicito del prompt (S3/S4 rompono in modo non banale → C), scelta **C**: la segregazione va preservata nella sua *funzione* (ordinamento collision-free cross-ruolo); l'estetica proposta è ortogonale e sovrapponibile, ma non sostituibile per semplice rimozione. **Stato working tree**: il "fix tree connector" citato dal prompt è non-committato (M su DynamicHandles.tsx + useTreeLayout.ts, new untracked handlePosition.ts); estrae la formula 1:1 in `computeHandlePercent`, semantica invariata. Hard stop rispettato: nessun fix proposto, solo dati; raccomandazione classificatoria (A/B/C). Nessun codice modificato.
+**Nome del documento prompt**: 2026-05-25 18:00
+
