@@ -19,24 +19,21 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Node.js version
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
           node-version: '22.x'
 
       - name: npm install, build, and test
-        working-directory: ./frontend
         run: |
-          npm i
-          CI='' npm run build
-
-      - name: Zip artifact for deployment
-        run: zip release.zip ./* -r
+          npm install
+          npm run build --if-present
+          npm run test --if-present
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: release.zip
+          path: .
 
   deploy:
     runs-on: ubuntu-latest
@@ -50,30 +47,19 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: node-app
-          
-      - name: Unzip artifact for deployment
-        run: unzip release.zip
-        
+      
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_94B3E216175A495E9F4BE5FD03613411 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_77D1C3F7F89D4252865DAD5E21E3AFCD }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_C217793CBAB54B559F73395552D25844 }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_4A5D804649614E4BB0F7F17A17E4D580 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_C81F4607D6104B5FACB0B6A104D45BE5 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_FDCD5B1CE3274C9CBC702322AA7866B1 }}
 
       - name: 'Deploy to Azure Web App'
-        run: |
-          RG=$(az webapp list --query "[?name=='test-jjodel'].resourceGroup" -o tsv)
-          cd frontend/dist
-          zip -r /tmp/deploy.zip .
-          az webapp deploy \
-            --resource-group "$RG" \
-            --name test-jjodel \
-            --slot staging \
-            --src-path /tmp/deploy.zip \
-            --type zip \
-            --async false
-
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'test-jjodel'
+          slot-name: 'staging'
+          package: .
           
-
-
