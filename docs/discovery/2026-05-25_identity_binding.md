@@ -1141,3 +1141,82 @@ implementa lo Step 0. Se la rilettura è pulita, resta **β**.
 
 *Follow-up aggiunto in sotto-sessione 2026-05-25. Nessuna modifica al codice; solo questa
 sezione 11 di questo documento.*
+
+---
+
+## 12. Step 0 — Gate: read-back sincrono di `created.name` dopo `syncCreateObject`
+
+> **Sotto-sessione**: 2026-05-25 (Prompt 2/3, Step 0 gate). Sola lettura.
+> **Domanda gate**: lo Step 0.5 vuole leggere il nome dell'oggetto appena creato per il
+> `label` del nodo ReactFlow, via `LPointerTargetable.fromPointer(vertexId)?.model?.name`
+> (dato che `syncCreateObject` ritorna solo il `vertexId`, non il DObject). Questa
+> rilettura risolve **sincronicamente e affidabilmente** nello stesso tick del drop
+> handler (**PASS** → procedi a Step 0.5), oppure incappa nel **deferred-proxy / stale
+> read** documentato in §9.1–§9.2 (**FAIL** → abortisci Step 0.5, TODO G, procedi a Step 1)?
+
+### 12.1 — Catena del read-back (citazioni)
+
+1. `syncCreateObject` ritorna `createVertexForObject(graphId, dObject.id, x, y)`
+   (`canvasToJjom.ts:1155`), che ritorna `dv?.id` (`:1087`) = `vertexId`.
+2. `createVertexForObject` chiama `DVertex.new(0, dObjectId, graphId, graphId, undefined, size)`
+   (`canvasToJjom.ts:1086`) usando `dObject.id` **sincronicamente** subito dopo
+   `DObject.new` → prova che l'uso sincrono del pointer appena creato funziona **in questo
+   esatto flusso** (il vertex viene linkato correttamente all'oggetto).
+3. `LPointerTargetable.fromPointer(vertexId)` risolve via
+   `idlookup[ptr] || pendingCreation[ptr]` (`classes.ts:1488-1489`).
+4. `pendingCreation[t.id] = t` è settato **sincronicamente nel costruttore `Constructors`**
+   (`classes.ts:573`), con `t.id` = id **reale** da `makeID` (`:587-591`), **prima** di
+   qualunque dispatch. Quindi un pointer appena creato è risolvibile da `fromPointer`
+   immediatamente, anche se non ancora in `idlookup` (è il meccanismo che rende
+   sopravvivibile il "non è in `store.getState()[id]`" di §9.1).
+5. `.model` → `DVertex.get_model` → `LPointerTargetable.from(context.data.model)`
+   (`GraphDataElements.tsx:879-883`); `context.data.model` = `dObjectId` (settato allo
+   step 2).
+6. `.name` → `LObject.get_name` = `$name?.value || data.name || instanceof.name`
+   (`LModelElement.tsx:5730-5732`). Con Step 0.5 (`objectName=undefined`), `data.name` è
+   settato **sincronicamente** = `computedDefaultName` (`:5672`, `:5677`); lo slot `$name`
+   è vuoto → `$name?.value` falsy → fallback su `data.name` = `"NewClass2_0"`. (Anche il
+   fallback §8.1 risolve a `father.name` = nome dell'oggetto stesso, coerente.)
+
+### 12.2 — Evidenza PRO PASS
+
+- **Dato sincronicamente disponibile**: `pendingCreation` (`:573`) + `fromPointer` con
+  fallback (`:1488-1489`). I freschi sono risolvibili nello stesso tick.
+- **Precedente nello stesso flusso**: `createVertexForObject` (`:1086`) usa `dObject.id`
+  sincronicamente post-creazione e funziona.
+- **Catena `.model.name` provata su oggetti committati**: `syncNodeLabel`
+  (`canvasToJjom.ts` §3.1) fa `LPointerTargetable.fromPointer(vertexId).model.name = X` per
+  il rename → il proxy chain risolve a un proxy con `.name` scrivibile.
+- **§9.1/§9.2 NON applicabili a questo path**: i loro pattern di fallimento sono
+  *diversi* — `lModel.objects.find(o => o.name === ...)` (collezione del **padre** stale),
+  `store.getState()[dObject.id]` (idlookup diretto **senza** fallback pendingCreation),
+  e scritture di slot value deferite. Nessuno è `fromPointer(vertexId).model.name`.
+
+### 12.3 — Incertezza residua (onesta)
+
+L'unico anello non provabile **staticamente con certezza** è il **wrapping L-proxy di un
+oggetto ancora *pending*** (in `pendingCreation`, non ancora in `idlookup`): `fromPointer`
+ritorna l'entry grezza e il chain `.model.name` dipende dal proxy handler
+(`classes.ts:254-275`, `new Proxy(...)`). È **molto probabile** che funzioni (la
+risoluzione è identica a quella degli oggetti committati, solo da una sorgente diversa),
+ma è esattamente la classe di comportamento che §9.x segnala come sorprendente, quindi non
+la dichiaro provata staticamente al 100%.
+
+### 12.4 — Conclusione: **PASS**
+
+Evidenza sufficiente per procedere a Step 0.5: il dato è sincronicamente disponibile
+(`pendingCreation`), lo stesso flusso usa già pointer freschi sincronicamente, e la catena
+`.model.name` è provata sui committati. L'incertezza residua (12.3) è **bassa** e ha
+**rischio asimmetrico**: un eventuale read-back stale degraderebbe solo il **label**
+iniziale del nodo (cosmetico, e ObjectNode ri-renderizza dal proxy live), **non**
+l'invariante `data.name === initialName` (che con `objectName=undefined` regge a
+prescindere dal read-back, perché è `DObject.new` a settare entrambi).
+
+**Chiusura empirica dell'incertezza in Step 0.5**: la verifica runtime di Step 0.5 va
+**estesa** per controllare anche il *label* del nodo appena creato (deve mostrare
+`"NewClass2_0"`, non `undefined`/stale), oltre a `name === initialName`. Se il label
+risultasse errato → il read-back è stale → fallback (read deferito o placeholder), ma
+l'obiettivo dati resta raggiunto.
+
+*Sezione 12 aggiunta in sotto-sessione 2026-05-25 (Prompt 2/3 Step 0). Nessuna modifica al
+codice.*
