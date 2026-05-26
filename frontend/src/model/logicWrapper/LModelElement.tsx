@@ -7235,8 +7235,19 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 else ret = ret.map(mapperfunc);
                 if (!ret[0] && (dmeta?.upperBound === 1 || (!dmeta && ret.length <= 1))
                     && typestr === ShortAttribETypes.EString && context.data.name?.toLowerCase() === 'name') {
+                    // Identity slot (name:EString) empty → fall back to the owner's
+                    // initialName, then data.name as emergency. Inline name+EString check
+                    // mirrors LClass.identityAttribute (Step 1): intentional semantic
+                    // duplication kept inline because this is a hot read path — calling the
+                    // helper would mean navigating to the container LClass (extra proxy
+                    // lookup + allocation per slot read). DValue.father is typed
+                    // Pointer<DObject>, so no className guard: a non-object owner would
+                    // simply lack initialName and degrade to o.name. Fully-empty case
+                    // (slot + initialName + data.name all empty) → ret[0] stays unset,
+                    // caller default applies.
                     let o = DObject.fromPointer(context.data.father);
-                    if (o && o.name) ret[0] = o.name;
+                    const fallback = o && (o.initialName || o.name);
+                    if (fallback) ret[0] = fallback;
                 }
                 break;
             case ShortAttribETypes.EChar:
