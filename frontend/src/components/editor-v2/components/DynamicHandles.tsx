@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Handle, Position, useEdges, useStoreApi } from '@xyflow/react';
 import { MAX_HANDLES_PER_SIDE, type Side } from '../utils/portDistribution';
+import { computeSideEndpoints, computeSidePositions } from '../utils/handlePosition';
 
 const SIDES: readonly Side[] = ['top', 'right', 'bottom', 'left'];
 
@@ -85,6 +86,21 @@ function DynamicHandles({ nodeId }: DynamicHandlesProps) {
         }
         return roles;
     }, [edges, nodeId]);
+
+    // --- Cross-role global ordering of endpoint positions, per side ---
+    // One pass over each side's active endpoints (computeSidePositions): inheritance
+    // pinned at center, references symmetric in the remaining space. Shared with
+    // useTreeLayout via the same handlePosition helpers so the inheritance tree
+    // branch lands exactly where the handle is drawn. Memoized on the edge topology
+    // so hover re-renders don't recompute.
+    const sidePositionsBySide = useMemo(() => {
+        const map = new Map<Side, Map<string, number>>();
+        for (const side of SIDES) {
+            map.set(side, computeSidePositions(computeSideEndpoints(edges, nodeId, side)));
+        }
+        return map;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [edgeTopologyKey, nodeId]);
 
     // --- Hover detection on parent .mm-node element ---
     useEffect(() => {
@@ -183,22 +199,10 @@ function DynamicHandles({ nodeId }: DynamicHandlesProps) {
                 const positionProp = side === 'left' || side === 'right' ? 'top' : 'left';
                 const handles: React.ReactNode[] = [];
 
-                // Per-side role occupancy: when only one role is active on a side,
-                // a single edge would otherwise anchor at 6.25% (corner) under the
-                // segregated formula. Track active source/target handleIds on this
-                // side so the loop below can pick the right positioning strategy.
-                const sourceHandlesOnSide: string[] = [];
-                const targetHandlesOnSide: string[] = [];
-                for (let i = 0; i < MAX_HANDLES_PER_SIDE; i++) {
-                    const hid = `${side}-${i}`;
-                    if (!activeHandles.has(hid)) continue;
-                    const roles = handleRoles.get(hid);
-                    if (roles?.has('source')) sourceHandlesOnSide.push(hid);
-                    if (roles?.has('target')) targetHandlesOnSide.push(hid);
-                }
-                const sourceCount = sourceHandlesOnSide.length;
-                const targetCount = targetHandlesOnSide.length;
-                const hasBothRoles = sourceCount > 0 && targetCount > 0;
+                // Cross-role global ordering for this side: inheritance pinned at
+                // center, references symmetric in the remaining space. Computed once
+                // per side (memoized above); inactive handles fall back to 50%.
+                const sidePositions = sidePositionsBySide.get(side)!;
 
                 for (let index = 0; index < MAX_HANDLES_PER_SIDE; index++) {
                     const handleId = `${side}-${index}`;
@@ -219,27 +223,10 @@ function DynamicHandles({ nodeId }: DynamicHandlesProps) {
                     }
                     const isGhostVisible = isFirstInactive && hoveredSide === side;
 
-                    // Contextual role-aware positioning. Keep the segregated layout
-                    // (source first half, target second half) only when both roles
-                    // are active on this side — needed for dense bidirectional nodes
-                    // (e.g. Families.ecore Member.left, 4 source + 4 target). When
-                    // only one role is active, distribute uniformly with (i+1)/(n+1)
-                    // over the role-specific count so a single edge anchors at 50%.
-                    let sourcePercent: number;
-                    let targetPercent: number;
-                    if (hasBothRoles) {
-                        sourcePercent = (index + 0.5) / (2 * MAX_HANDLES_PER_SIDE);
-                        targetPercent = 0.5 + (index + 0.5) / (2 * MAX_HANDLES_PER_SIDE);
-                    } else {
-                        const srcRoleIdx = sourceHandlesOnSide.indexOf(handleId);
-                        const tgtRoleIdx = targetHandlesOnSide.indexOf(handleId);
-                        sourcePercent = sourceCount > 0 && srcRoleIdx >= 0
-                            ? (srcRoleIdx + 1) / (sourceCount + 1)
-                            : 0.5;
-                        targetPercent = targetCount > 0 && tgtRoleIdx >= 0
-                            ? (tgtRoleIdx + 1) / (targetCount + 1)
-                            : 0.5;
-                    }
+                    // Physical position from the cross-role ordering. top-0/source
+                    // and top-0/target are distinct entities and may differ.
+                    const sourcePercent = sidePositions.get(`${handleId}:source`) ?? 0.5;
+                    const targetPercent = sidePositions.get(`${handleId}:target`) ?? 0.5;
 
                     // Determine active role(s) for this handleId.
                     // Only the Handle matching its edge role gets --connected;

@@ -1134,17 +1134,17 @@ export function syncCreateObject(
             return false;
         }
 
-        const name = objectName || `obj_${Date.now().toString(36).slice(-4)}`;
-
         // DObject.new(instanceof, father, fatherType, name, persist)
         // Do NOT wrap in TRANSACTION — .new() creates its own internally
+        // When objectName is not provided, pass undefined so DObject.new computes defaultname
+        // ("<ClassName>_<N>") internally, matching the classic editor naming convention.
 
         const dObject = (DObject as any).new(
-            metaclassId,   // which class to instantiate
-            modelId,       // parent model
-            DModel,        // fatherType — MUST be DModel
-            name,          // instance name
-            true           // persist
+            metaclassId,            // which class to instantiate
+            modelId,                // parent model
+            DModel,                 // fatherType — MUST be DModel
+            objectName || undefined, // undefined → defaultname kicks in
+            true                    // persist
         );
 
         if (!dObject?.id) {
@@ -1279,11 +1279,9 @@ export function syncCreateCompositionLink(
         let edgeId: string | null = null;
 
         const refDefId = resolveReferenceIdByName(parentObject, referenceName);
-        // [BUG-DIAG] log when the metaclass reference id can't be resolved —
-        // this is the path that left edge.model = undefined and caused the
-        // M1 reference edge to render with empty label / wrong type.
+        // Defensive: log when the metaclass reference id can't be resolved
         if (!refDefId) {
-            console.warn('[BUG-DIAG] syncCreateCompositionLink: cannot resolve DReference id', { referenceName, parentObjectId: parentObject?.id });
+            console.warn('syncCreateCompositionLink: cannot resolve DReference id', { referenceName, parentObjectId: parentObject?.id });
         }
 
         TRANSACTION('EditorV2 create composition link', () => {
@@ -1352,11 +1350,9 @@ export function syncCreateReferenceLink(
         let edgeId: string | null = null;
 
         const refDefId = resolveReferenceIdByName(sourceObject, referenceName);
-        // [BUG-DIAG] log when the metaclass reference id can't be resolved —
-        // this is the path that left edge.model = undefined and caused the
-        // M1 reference edge to render with empty label / wrong type.
+        // Defensive: log when the metaclass reference id can't be resolved
         if (!refDefId) {
-            console.warn('[BUG-DIAG] syncCreateReferenceLink: cannot resolve DReference id', { referenceName, sourceObjectId: sourceObject?.id });
+            console.warn('syncCreateReferenceLink: cannot resolve DReference id', { referenceName, sourceObjectId: sourceObject?.id });
         }
 
         TRANSACTION('EditorV2 create reference link', () => {

@@ -12,6 +12,7 @@ import {
     pointsToPath,
     type TreeBranch,
 } from '../utils/edgeUtils';
+import { computeHandlePositionForNode } from '../utils/handlePosition';
 
 export interface TreeGeometry {
     trunkPath: string;
@@ -107,16 +108,32 @@ export function useTreeLayout(
 
             const w = (childNode.measured?.width ?? (childNode as any).width ?? 180) as number;
             const h = (childNode.measured?.height ?? (childNode as any).height ?? 80) as number;
-            const childCenterX = (childNode.position?.x ?? 0) + w / 2;
             const childY = sourceSide === 'top'
                 ? (childNode.position?.y ?? 0)
                 : (childNode.position?.y ?? 0) + h;
 
-            branches.push({ childX: childCenterX, childY, edgeId: edge.id });
+            // Land the branch on the handle assigned to this inheritance edge
+            // (child side = source), not the node center — so it no longer
+            // overlaps references sharing the same side. Single source of truth
+            // with DynamicHandles: computeHandlePositionForNode rebuilds the side's
+            // endpoints from the current edge set (allEdges) and positions them.
+            const childHandleId = edge.sourceHandle ?? `${sourceSide}-0`;
+            const handlePos = computeHandlePositionForNode({
+                edges: allEdges,
+                nodeId: edge.source,
+                nodeX: childNode.position?.x ?? 0,
+                nodeY: childNode.position?.y ?? 0,
+                nodeWidth: w,
+                nodeHeight: h,
+                handleId: childHandleId,
+                role: 'source',
+            });
+
+            branches.push({ childX: handlePos.x, childY, edgeId: edge.id });
         }
 
         return computeTreeConnectorPath(targetX, targetY, branches, [], treeExcludeIds);
-    }, [isGrouped, group, allNodes, targetX, targetY, sourceSide, treeExcludeIds]);
+    }, [isGrouped, group, allNodes, allEdges, targetX, targetY, sourceSide, treeExcludeIds]);
 
     // Register tree geometry paths for crossing detection.
     // All segments use treeGroupId = target (parent node ID) so that

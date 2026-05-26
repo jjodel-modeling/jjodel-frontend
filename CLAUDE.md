@@ -350,6 +350,10 @@ The prompt may cite paths that are wrong, outdated, or refer to a different bran
 - Never use `--no-verify` or skip pre-commit hooks.
 - After commit: update `docs/claude-code-log.md`.
 
+### 6.4 Incident log
+
+- **Scope violation 2026-05-25**: bundled identity-binding files into anchorpoint fix commit `729c5ce07` despite explicit 3-file scope. Mitigated via opzione 1 (post-hoc log entry) since branch was already pushed. **Lesson**: when prompt says "stage solo N file", verify with `git status` + `git diff --cached` before commit.
+
 ---
 
 ## 7. Design system

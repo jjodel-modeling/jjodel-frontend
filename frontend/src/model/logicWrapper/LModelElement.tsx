@@ -3058,6 +3058,24 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         return true;
     }
 
+    identityAttribute!: LAttribute | undefined;
+    // The identity slot of instances of this class: the first attribute named "name"
+    // (case-insensitive) of type EString, searching own AND transitively inherited
+    // attributes (allAttributes = ownAttributes ++ inheritedAttributes over the
+    // extendsChain) so subclasses inherit the identity slot from a superclass such as
+    // namedElement. Cardinality is ignored here — the "as-declared" cardinality decision
+    // applies downstream, not at detection. Own attributes come first, so a subclass's own
+    // "name:EString" wins over an inherited one; if several still match (pathological), the
+    // first in iteration order wins. Returns undefined when none match; the caller decides
+    // the fallback (typically initialName).
+    protected get_identityAttribute(context: Context): LAttribute | undefined {
+        const attrs = this.get_allAttributes(context) || [];
+        for (const attr of attrs) {
+            if (attr && attr.name?.toLowerCase() === 'name' && attr.type?.name === 'EString') return attr;
+        }
+        return undefined;
+    }
+
     partial!: boolean;
     __info_of__partial: Info = {type: 'boolean', txt:'A partial object have can add unlisted features as a shapeless (schemaless) object does,' +
             ' on top of a set of fixed listed features.'}
@@ -5659,6 +5677,7 @@ export class DObject extends DModelElement { // extends DNamedElement, m1 class 
     father!: Pointer<DModel, 1, 1, LModel> |  Pointer<DValue, 1, 1, LValue>;
     // annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
     name!: string;
+    initialName!: string;  // auto-generated at creation, immutable through normal API. Used as fallback display name when identity slot is empty.
 
     // personal
     instanceof?: Pointer<DClass>; // actually nullable now, but takes too much type refactoring. be careful to check if it's present
@@ -5666,18 +5685,25 @@ export class DObject extends DModelElement { // extends DNamedElement, m1 class 
 
     partial!: boolean | undefined;
     public static new(instanceoff?: DObject["instanceof"], father?: DObject["father"], fatherType?: typeof DModel | typeof DValue, name?: DNamedElement["name"], persist: boolean = true): DObject {
-        // if (!name) name = this.defaultname(((meta: LNamedElement) => meta.name + " "), father);
-        if (!name) name = this.defaultname(((meta: LNamedElement) => (meta?.name || "obj") + "_"), father, instanceoff);
+        // Compute the default name (auto-generated, per-father unique within sibling scope)
+        const computedDefaultName = this.defaultname(((meta: LNamedElement) => (meta?.name || "obj") + "_"), father, instanceoff);
+        if (!name) name = computedDefaultName;
         let ret = new Constructors(new DObject('dwc'), father, persist, fatherType).DPointerTargetable().DModelElement()
             .DNamedElement(name).DObject(instanceoff).end();
+        // initialName: always the auto-generated default, regardless of the explicit `name` parameter.
+        // This is the immutable "auto-name" that acts as fallback when the identity slot is empty.
+        ret.initialName = computedDefaultName;
         return ret;
     }
 
     public static new3(ptrs:Partial<ObjectPointers>, then:(d:DObject, c: Constructors)=>void, fatherType?: typeof DModel | typeof DValue, persist: boolean = true): DObject{
-        if (!ptrs.name) ptrs.name = this.defaultname(((meta: LNamedElement) => (meta?.name || "obj") + "_"), ptrs.father, ptrs.instanceof);
-        return new Constructors(new DObject('dwc'), ptrs.father, persist, fatherType, ptrs.id)
+        const computedDefaultName = this.defaultname(((meta: LNamedElement) => (meta?.name || "obj") + "_"), ptrs.father, ptrs.instanceof);
+        if (!ptrs.name) ptrs.name = computedDefaultName;
+        let ret = new Constructors(new DObject('dwc'), ptrs.father, persist, fatherType, ptrs.id)
             .DPointerTargetable().DModelElement()
             .DNamedElement(ptrs.name).DObject(ptrs.instanceof).end(then);
+        ret.initialName = computedDefaultName;
+        return ret;
     }
 
 
@@ -5702,6 +5728,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     // from LClass
 
     name!: string;
+    initialName!: string;
     ecoreRootName!: string;
     namespace!: string;
     defaultValue!: LClass["defaultValue"];
@@ -5729,6 +5756,10 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
 
     protected get_name(context: Context): this['name'] {
         return (context.proxyObject as GObject)['$name']?.value || context.data.name || context.proxyObject.instanceof?.name;
+    }
+
+    protected get_initialName(context: Context): this['initialName'] {
+        return context.data.initialName;
     }
 
     composed!:boolean;
@@ -7204,8 +7235,19 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 else ret = ret.map(mapperfunc);
                 if (!ret[0] && (dmeta?.upperBound === 1 || (!dmeta && ret.length <= 1))
                     && typestr === ShortAttribETypes.EString && context.data.name?.toLowerCase() === 'name') {
+                    // Identity slot (name:EString) empty → fall back to the owner's
+                    // initialName, then data.name as emergency. Inline name+EString check
+                    // mirrors LClass.identityAttribute (Step 1): intentional semantic
+                    // duplication kept inline because this is a hot read path — calling the
+                    // helper would mean navigating to the container LClass (extra proxy
+                    // lookup + allocation per slot read). DValue.father is typed
+                    // Pointer<DObject>, so no className guard: a non-object owner would
+                    // simply lack initialName and degrade to o.name. Fully-empty case
+                    // (slot + initialName + data.name all empty) → ret[0] stays unset,
+                    // caller default applies.
                     let o = DObject.fromPointer(context.data.father);
-                    if (o && o.name) ret[0] = o.name;
+                    const fallback = o && (o.initialName || o.name);
+                    if (fallback) ret[0] = fallback;
                 }
                 break;
             case ShortAttribETypes.EChar:

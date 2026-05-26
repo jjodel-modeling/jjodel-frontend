@@ -553,17 +553,19 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     if (existingVertexIds.has(metaclassId)) continue;
                     const dClass = lookup[metaclassId] as any;
                     const className = dClass?.name ?? 'Singleton';
-                    const objName = `${className.charAt(0).toLowerCase()}${className.slice(1)}_s`;
-
-                    const vertexId = syncCreateObject(graphId, metaclassId, nextX, startY, objName);
+                    // Pass undefined so DObject.new owns the name (defaultname
+                    // "<ClassName>_<N>") → data.name === initialName. Read it back for
+                    // the node label (see discovery §11/§12).
+                    const vertexId = syncCreateObject(graphId, metaclassId, nextX, startY);
                     if (vertexId) {
                         markDropCreated(vertexId);
+                        const createdName = (LPointerTargetable.fromPointer(vertexId) as any)?.model?.name ?? className;
                         const newNode: Node = {
                             id: vertexId,
                             type: 'objectNode',
                             position: { x: nextX, y: startY },
                             data: {
-                                label: objName,
+                                label: createdName,
                                 instanceOfClassName: className,
                                 instanceOfClassId: metaclassId,
                                 features: [],
@@ -1355,15 +1357,6 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             const targetIndex = getNextFreeHandleIndex(edgeTarget, targetSide, 'target', currentEdges);
 
             // Create in JjOM
-            // [BUG-DIAG] trace M1 reference creation entry point.
-            // eslint-disable-next-line no-console
-            console.log('[BUG-DIAG] M1 ref drop', {
-                refName: metaRef.name,
-                refId: metaRef.id,
-                containment: metaRef.containment,
-                source: edgeSource,
-                target: edgeTarget,
-            });
             const edgeId = metaRef.containment
                 ? syncCreateCompositionLink(edgeSource, edgeTarget, metaRef.name)
                 : syncCreateReferenceLink(edgeSource, edgeTarget, metaRef.name);
@@ -1373,8 +1366,6 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 setPendingM1Connection(null);
                 return;
             }
-            // eslint-disable-next-line no-console
-            console.log('[BUG-DIAG] M1 ref drop → edgeId', edgeId);
 
             markDropCreated(edgeId);
 
@@ -1480,12 +1471,15 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     const isRootable = mi.rootableClasses.some(c => c.id === metaclassId);
                     if (!isRootable) return; // non-rootable → use context menu instead
 
-                    const objName = `${className.charAt(0).toLowerCase()}${className.slice(1)}_${Date.now().toString(36).slice(-3)}`;
-                    vertexId = syncCreateObject(graphId, metaclassId, position.x, position.y, objName);
+                    // Pass undefined so DObject.new owns the name (defaultname
+                    // "<ClassName>_<N>") → data.name === initialName. Read it back for
+                    // the node label (see discovery §11/§12).
+                    vertexId = syncCreateObject(graphId, metaclassId, position.x, position.y);
+                    const createdName = (LPointerTargetable.fromPointer(vertexId as any) as any)?.model?.name ?? className;
                     nodeType = 'objectNode';
-                    defaultLabel = objName;
+                    defaultLabel = createdName;
                     nodeData = {
-                        label: objName,
+                        label: createdName,
                         instanceOfClassName: className,
                         instanceOfClassId: metaclassId,
                         features: [],
@@ -2044,8 +2038,6 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // Shared helper: create a composition child on a parent node
     const createCompositionChild = (parentNode: Node, childClass: MetaclassInfo, refName: string) => {
         if (!graphId) return;
-        const childName = `${childClass.name.charAt(0).toLowerCase()}${childClass.name.slice(1)}_${Date.now().toString(36).slice(-3)}`;
-
         // Count existing composition children to stack vertically
         const currentEdges = getEdges();
         const existingChildCount = currentEdges.filter(
@@ -2056,15 +2048,18 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         const childX = parentNode.position.x + parentW + 80;
         const childY = parentNode.position.y + existingChildCount * 80;
 
-        const vertexId = syncCreateObject(graphId, childClass.id, childX, childY, childName);
+        // Pass undefined so DObject.new owns the name → data.name === initialName.
+        // Read it back for the node label (see discovery §11/§12).
+        const vertexId = syncCreateObject(graphId, childClass.id, childX, childY);
         if (vertexId) {
             markDropCreated(vertexId);
+            const createdName = (LPointerTargetable.fromPointer(vertexId) as any)?.model?.name ?? childClass.name;
             const childNode: Node = {
                 id: vertexId,
                 type: 'objectNode',
                 position: { x: childX, y: childY },
                 data: {
-                    label: childName,
+                    label: createdName,
                     instanceOfClassName: childClass.name,
                     instanceOfClassId: childClass.id,
                     features: [],
