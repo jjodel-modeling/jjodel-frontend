@@ -29,7 +29,7 @@ import {
     TRANSACTION,
     store,
 } from '../../../joiner';
-import { jjomVertexToRFNode, jjomEdgeToRFEdge, selectOptimalSidesForEdges } from '../utils/jjomTransformers';
+import { jjomVertexToRFNode, jjomEdgeToRFEdge } from '../utils/jjomTransformers';
 import {
     isCanvasUpdated,
     purgeExpired,
@@ -889,7 +889,7 @@ export function useJjomSync(
             const rfNodesToSet = Array.from(nodeCache.values());
             setNodes(rfNodesToSet);
 
-            const rfEdgesToSet = selectOptimalSidesForEdges(deduplicateInheritanceEdges(Array.from(edgeCache.values())), rfNodesToSet);
+            const rfEdgesToSet = deduplicateInheritanceEdges(Array.from(edgeCache.values()));
             setEdges(rfEdgesToSet);
 
             initializedRef.current = true;

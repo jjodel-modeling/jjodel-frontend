@@ -9,8 +9,6 @@
  */
 
 import type { Node, Edge } from '@xyflow/react';
-import { getBaseSide } from './portDistribution';
-import { computeBestAnchorsWithContext, getNodeRect, type EdgeContext, type NodeRect } from '../hooks/useAutoAnchor';
 import type {
     ClassNodeData,
     EnumNodeData,
@@ -372,80 +370,6 @@ function computeOptimalHandles(
             return { sourceHandle: 'left-0', targetHandle: 'right-0' };
         }
     }
-}
-
-/**
- * Convert a base side ('right') from the anchor selector into an indexed handle id
- * ('right-0'): keep the provisional index when the side is unchanged, otherwise restart
- * at index 0 on the new side (portDistribution re-indexes within a side downstream).
- */
-function remapSideToHandle(currentHandle: string | null | undefined, newSide: string): string {
-    return getBaseSide(currentHandle) === newSide && currentHandle ? currentHandle : `${newSide}-0`;
-}
-
-/**
- * Occupancy-aware side selection for a batch of freshly-built RF edges (load/import).
- *
- * computeOptimalHandles picks each edge's side from the dominant axis between the two node
- * centers alone, with no awareness of other edges on the same node — so two references from
- * the same source toward opposite targets can both land on the same side and cross. This
- * pass re-runs the occupancy-aware selector (computeBestAnchorsWithContext — the same
- * primitive used by onConnect and the drag hysteresis) over the whole set, feeding each
- * edge the edges already processed as occupancy context.
- *
- * Pure and deterministic: no side-effects / window / DOM / Redux; edges are processed in a
- * fixed (source, target, id) order. Explicit user pins (data.sourceAnchor/targetAnchor with
- * mode 'pinned') are skipped. Only the base side is decided here; an unchanged side keeps
- * its provisional index, a changed side restarts at 0 (portDistribution re-indexes later).
- */
-export function selectOptimalSidesForEdges(edges: Edge[], nodes: Node[]): Edge[] {
-    const nodeRects = new Map<string, NodeRect>();
-    for (const n of nodes) nodeRects.set(n.id, getNodeRect(n));
-
-    // Deterministic processing order so the incremental occupancy is reproducible.
-    const ordered = [...edges].sort((a, b) =>
-        a.source.localeCompare(b.source) ||
-        a.target.localeCompare(b.target) ||
-        a.id.localeCompare(b.id)
-    );
-
-    const existing: EdgeContext[] = [];
-    const remapped = new Map<string, { sourceHandle: string; targetHandle: string }>();
-
-    for (const edge of ordered) {
-        const sourceRect = nodeRects.get(edge.source);
-        const targetRect = nodeRects.get(edge.target);
-        const data = edge.data as { sourceAnchor?: { mode?: string }; targetAnchor?: { mode?: string } } | undefined;
-        const pinned = data?.sourceAnchor?.mode === 'pinned' || data?.targetAnchor?.mode === 'pinned';
-
-        let sourceHandle: string | undefined = edge.sourceHandle ?? undefined;
-        let targetHandle: string | undefined = edge.targetHandle ?? undefined;
-
-        if (sourceRect && targetRect && !pinned) {
-            const edgeType = edge.type === 'inheritance' ? 'inheritance' : 'reference';
-            const best = computeBestAnchorsWithContext(sourceRect, targetRect, edge.source, edge.target, edgeType, existing);
-            if (best && best.sourceHandle && best.targetHandle) {
-                sourceHandle = remapSideToHandle(edge.sourceHandle, best.sourceHandle);
-                targetHandle = remapSideToHandle(edge.targetHandle, best.targetHandle);
-                if (sourceHandle !== (edge.sourceHandle ?? undefined) || targetHandle !== (edge.targetHandle ?? undefined)) {
-                    remapped.set(edge.id, { sourceHandle, targetHandle });
-                }
-            } else {
-                // Graceful fallback: keep the provisional side for this edge.
-                console.warn('[selectOptimalSidesForEdges] no anchor result; keeping provisional side for edge', edge.id);
-            }
-        }
-
-        // Occupancy context for subsequent edges uses this edge's resulting handles
-        // (skipped / pinned edges still occupy their side).
-        existing.push({ source: edge.source, target: edge.target, sourceHandle, targetHandle, type: edge.type });
-    }
-
-    if (remapped.size === 0) return edges;
-    return edges.map(e => {
-        const h = remapped.get(e.id);
-        return h ? { ...e, sourceHandle: h.sourceHandle, targetHandle: h.targetHandle } : e;
-    });
 }
 
 /**
