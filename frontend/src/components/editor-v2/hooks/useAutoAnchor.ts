@@ -257,9 +257,12 @@ function getAnchorConfig(
 ): AnchorConfig {
     const config = endpoint === 'source' ? edgeData?.sourceAnchor : edgeData?.targetAnchor;
     if (config) return config;
-    // Default: treat as pinned — edges stay at their anchor point after
-    // initial placement. Only manual endpoint drag changes them.
-    return { mode: 'pinned', side: getBaseSide(handleId) as AnchorSide };
+    // Default: treat as auto — a pin must be EXPLICIT (the edge carries a
+    // data.sourceAnchor/targetAnchor with mode === 'pinned', written only by a manual
+    // endpoint drag). Edges without any anchor config (e.g. from load/import) stay
+    // re-routable by the hysteresis when nodes are dragged, instead of being frozen at
+    // their initial placement.
+    return { mode: 'auto', side: getBaseSide(handleId) as AnchorSide };
 }
 
 /**
