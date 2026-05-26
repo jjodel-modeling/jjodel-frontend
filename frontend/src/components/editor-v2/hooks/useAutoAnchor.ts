@@ -706,5 +706,6 @@ export function useAutoAnchor() {
     return { getOptimalAnchors, getOptimalAnchorsForAllEdges };
 }
 
-export { computeBestAnchors, getNodeRect, computeAnchorsWithHysteresis, getAnchorConfig };
+export { computeBestAnchors, getNodeRect, computeAnchorsWithHysteresis, getAnchorConfig, computeBestAnchorsWithContext };
+export type { EdgeContext };
 export type { NodeRect, Side, MinimalEdgeWithData, AnchorResult };
