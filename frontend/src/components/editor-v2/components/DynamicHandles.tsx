@@ -94,9 +94,22 @@ function DynamicHandles({ nodeId }: DynamicHandlesProps) {
     // branch lands exactly where the handle is drawn. Memoized on the edge topology
     // so hover re-renders don't recompute.
     const sidePositionsBySide = useMemo(() => {
+        // Centroid map for the geometry-aware ordering in computeSidePositions.
+        // Read imperatively from the RF store at recompute time — NO live-position
+        // subscription, so the no-cascade contract above (line 45) holds. Recompute
+        // is gated by edgeTopologyKey, which is sufficient for the static scene; a
+        // live drag that swaps cross-role nodes without a handle reassignment is the
+        // documented "Known limitation" of this fix.
+        const nodePositions = new Map<string, { centerX: number; centerY: number }>();
+        for (const [id, n] of storeApi.getState().nodeLookup) {
+            const pos = n.internals?.positionAbsolute ?? n.position;
+            const w = n.measured?.width ?? 180;
+            const h = n.measured?.height ?? 80;
+            nodePositions.set(id, { centerX: pos.x + w / 2, centerY: pos.y + h / 2 });
+        }
         const map = new Map<Side, Map<string, number>>();
         for (const side of SIDES) {
-            map.set(side, computeSidePositions(computeSideEndpoints(edges, nodeId, side)));
+            map.set(side, computeSidePositions(computeSideEndpoints(edges, nodeId, side), nodePositions));
         }
         return map;
         // eslint-disable-next-line react-hooks/exhaustive-deps
