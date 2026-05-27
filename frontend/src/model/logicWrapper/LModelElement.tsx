@@ -355,9 +355,10 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
     // used in Dummy.t2m()
     protected _convertEcoreToJom_m2(ecore: GObject): GObject{
         let ogKeys = Object.keys(ecore || {});
-        console.log('pre convert ecore', JSON.parse(JSON.stringify(ecore||{})));
+        // console.log('pre convert ecore', JSON.parse(JSON.stringify(ecore||{})));
         // remove xmi inline prefixs (@)
         function todo(key: string) { Log.exDevv('ecoreParser found unsupported key, this is dev\'s fault.', {key, val:ecore[key]}); }
+        function ignore(key: string) { Log.ww('ecoreParser found unsupported key, ignoring it.', {key, val:ecore[key]}); }
         function del(k: string) { delete ecore[k] }
         for (let k of ogKeys) {
             let v = ecore[k];
@@ -370,25 +371,35 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                 case ECoreClass.xsitype: case 'xsitype': case 'xsi:type':
                     if (v.indexOf('ecore:E') !== 0) Log.exDevv('unexpected XSI type: ' + v, {ecore});
                     delete ecore[k];
-                    ecore.className = 'D' + v.substring('ecore:E'.length);
+                    v =  v.substring('ecore:E'.length);
+                    if (v === "DataType") {
+                        v = "Class";
+                        ecore.isPrimitive = true;
+                        // console.warn("found datatype", {ecore0: {...ecore}, ecore});
+                    }
+                    ecore.className = 'D' +v;
                     break;
-                case ECorePackage.eAnnotations: todo(k); break;
+                case ECorePackage.eAnnotations: ignore(k); break;
                 // common to all features
-                case ECoreAttribute.eType: case 'eType':      delete ecore[k]; if (v) ecore.type = U.solveEcoreType(v);   break;
+                case ECoreAttribute.eType:      delete ecore[k]; if (v) ecore.type = U.solveEcoreType(v);   break;
                 case ECorePackage.namee:        delete ecore[k]; if (v) ecore.name = v;                     break;
                 case ECoreAttribute.lowerbound: delete ecore[k]; if (v !== '') ecore.lowerBound = v;        break;
                 case ECoreAttribute.upperbound: delete ecore[k]; if (v !== '') ecore.upperBound = v;        break;
+                case ECoreAttribute.changeable: delete ecore[k]; if (v !== '') ecore.changeable = v;        break;
+                case ECoreAttribute.derived:    delete ecore[k]; if (v !== '') ecore.derived = v;           break;
+                case ECoreAttribute.transient:  delete ecore[k]; if (v !== '') ecore.transient = v;         break;
+                case ECoreAttribute.volatile:   delete ecore[k]; if (v !== '') ecore.volatile = v;          break;
+
                 case ECoreOperation.unique:     delete ecore[k]; if (v || v === false) ecore.unique = v;    break;
                 case ECoreOperation.ordered:    delete ecore[k]; if (v || v === false) ecore.ordered = v;   break;
                 // individual properties
-                case ECorePackage.xmlnsecore:        todo(k); break;
+                case ECorePackage.xmlnsecore:        Log.eDev(v !== "http://www.eclipse.org/emf/2002/Ecore", "Found unsupported ecore xmlns schema version", {v}); break;
                 case ECorePackage.nsURI:             delete ecore[k]; ecore.uri = v;    ecore.className = 'DPackage'; break;
                 case ECorePackage.nsPrefix:          delete ecore[k]; ecore.prefix = v; ecore.className = 'DPackage'; break;
                 case ECoreClass.abstract:            delete ecore[k]; ecore.abstract = v; break;
                 case ECoreClass.interface:           delete ecore[k]; ecore.interface = v; break;
-                case ECoreClass.instanceTypeName:    todo(k); break;
-                case ECoreEnum.instanceTypeName:     todo(k); break;
                 case ECoreEnum.serializable:         delete ecore[k]; ecore.serializable = v; break;
+                case ECoreEnum.defaultValueLiteral:  delete ecore[k]; ecore.defaultValueLiteral = v; break;
                 case ECoreLiteral.value:             delete ecore[k]; ecore.value = v; break;
                 case ECorePackage.eClassifiers: case 'classifiers':
                 case ECoreClass.eStructuralFeatures: case 'features': case 'structuralFeatures':
@@ -398,6 +409,8 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                                                      delete ecore[k]; if (v && v.length) ecore.subpackages = v; break;
                 case ECoreRoot.ecoreEPackage:        delete ecore[k]; if (v && v.length) ecore.packages = v; break;
                 case ECoreClass.eSuperTypes:         delete ecore[k]; if (v && v.length) ecore.extends = v; break;
+                case ECoreClass.instanceClassName:   delete ecore[k]; if (v && v.length) ecore.instanceClassName = v; break;
+                case ECoreClass.instanceTypeName:    delete ecore[k]; if (v && v.length) ecore.instanceTypeName = v; break;
                 case ECoreEnum.eLiterals:            delete ecore[k]; if (v && v.length) ecore.literals = v; break;
                 case ECoreClass.eOperations:         delete ecore[k]; if (v && v.length) ecore.operations = v; break;
                 case ECoreLiteral.literal:           delete ecore[k]; ecore.literal = v; break;
@@ -405,10 +418,13 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                 case ECoreOperation.eParameters:     delete ecore[k]; if (v && v.length) ecore.parameters = v; break;
                 case ECoreReference.containment:     delete ecore[k]; if (v && v.length) ecore.containment = v; break;
                 case ECoreReference.container:       delete ecore[k]; if (v && v.length) ecore.container = v; break;
+                case ECoreReference.eopposite:       delete ecore[k]; if (v && v.length) ecore.eopposite = v; break;
+                case ECoreReference.unsettable:      delete ecore[k]; if (v && v.length) ecore.unsettable = v; break;
+                case ECoreReference.resolveProxies:  delete ecore[k]; if (v && v.length) ecore.resolveProxies = v; break;
                 case ECorePackage.xmlnsxmi:
                 case ECoreObject.xmlns_xmi:          delete ecore[k]; break;
                 case ECorePackage.xmlnsxsi:          delete ecore[k]; break;
-                case ECoreObject.xmlns_uri:          todo(k); break;
+                case ECoreObject.xmlns_uri:          todo(k); break; // not existing? missing in ecore.ecore
                 case ECorePackage.xmiversion:
                 case ECoreObject.xmi_version:        delete ecore[k]; if (v !== '2.0') Log.exDevv('unsupported xmi version: ' + v, {v}); break;
             }
@@ -416,7 +432,11 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
             // ecore[k.substring(1)] = ecore[k];
             // delete ecore[k];
         }
-        console.log('post convert ecore', JSON.parse(JSON.stringify(ecore||{})));
+
+        // both are valid, as a refinement of each other (instanceTypeName is more detailed and allows generic typings) but i won't set both.
+        // if (ecore.instanceClassName && ecore.instanceTypeName) delete ecore.instanceClassName;
+
+        // console.log('post convert ecore', JSON.parse(JSON.stringify(ecore||{})));
         return ecore || {};
     }
 
@@ -1013,6 +1033,8 @@ export class DAnnotation extends DModelElement { // extends Mixin(DAnnotation0, 
     // personal
     source!: string;
     details!: DAnnotationDetail[];//Dictionary<string, string>;
+    contents!: Pointer<LModelElement>;
+    references!: Pointer<LModelElement>;
 
     public static new(source?: DAnnotation["source"], details?: DAnnotation["details"], father?: Pointer, persist: boolean = true): DAnnotation {
         // if (!name) name = this.defaultname("annotation ", father);
@@ -1041,6 +1063,71 @@ export class LAnnotation<Context extends LogicContext<DAnnotation> = any, D exte
     // personal
     source!: string;
     details!: LAnnotationDetail[];// Dictionary<string, string> = {};
+
+
+
+    __info_of__references: Info = {type:"LModelElement", txt: "Same as this.contents, but targets are only referenced and not contained."};
+    references!: LModelElement[];
+    get_references(c: Context): this["references"] { return c.data.references.map(r => L.fromPointer(r) || LValue.resolveReferenceTODO(r, c.proxyObject)); }
+    set_references(v: Pack<LModelElement>, c: Context): boolean {
+        if (!Array.isArray(v)) { v = [v]; }
+        let ptrs = Pointers.fromArr(v).filter(e=>!!e);
+        let old = c.data.references;
+        let diff = Uarr.arrayDifference(old, ptrs);
+        if (diff.added.length + diff.removed.length === 0) return true;
+        TRANSACTION("set Annotation refs", ()=> {
+            for (let ptr of diff.added) this.get_addReference(c)(ptr);
+            for (let ptr of diff.removed) this.get_removeReference(c)(ptr);
+        });
+        return true;
+    }
+    get_addReference(c: Context): ((ptr_or_ecoreRef: string | LModelElement) => void) {
+        return (ptr_or_ecoreRef => {
+            let ptr = Pointers.from(ptr_or_ecoreRef);
+            TRANSACTION("Annotation.ref +=", ()=> {SetFieldAction.new(c.data, "references", ptr, "+=", true)}, ptr);
+        };
+    }
+    get_removeReference(c: Context): ((ptr_or_ecoreRef: string | LModelElement) => void) {
+        return (ptr_or_ecoreRef => {
+            let ptr = Pointers.from(ptr_or_ecoreRef);
+            TRANSACTION("Annotation.ref -=", ()=> {SetFieldAction.new(c.data, "references", ptr, "-=", true)}, ptr);
+        };
+    }
+
+    __info_of__contents: Info = {type:"LModelElement", txt: "Objects (in a wide sense) contained inside the annotation for additional context which cannot be easily expressed with strings in \"details\"."};
+    contents!: LModelElement[];
+    get_contents(c: Context): this["contents"] { return c.data.contents.map(r => L.fromPointer(r) || LValue.resolveReferenceTODO(r, c.proxyObject)); }
+    set_contents(v: Pack<LModelElement>, c: Context): boolean {
+        if (!Array.isArray(v)) { v = [v]; }
+        let ptrs = Pointers.fromArr(v).filter(e=>!!e);
+        let old = c.data.contents;
+        let diff = Uarr.arrayDifference(old, ptrs);
+        if (diff.added.length + diff.removed.length === 0) return true;
+        TRANSACTION("set Annotation refs", ()=> {
+            for (let ptr of diff.added) this.get_addContent(c)(ptr);
+            for (let ptr of diff.removed) this.get_removeContent(c)(ptr);
+        })
+        return true;
+    }
+    get_addContents(c: Context): ((ptr_or_ecoreRef: string | LModelElement) => void) {
+        return (ptr_or_ecoreRef => {
+            let ptr = Pointers.from(ptr_or_ecoreRef);
+            TRANSACTION("Annotation.ref +=", ()=> {SetFieldAction.new(c.data, "contents", ptr, "+=", true)}, ptr);
+            tood set father and verify if it have sideeffects like collection change, in case change both the line above here and in lvalue.setvalueatindex
+        };
+    }
+    get_removeContents(c: Context): ((ptr_or_ecoreRef: string | LModelElement) => void) {
+        return (ptr_or_ecoreRef => {
+            let ptr = Pointers.from(ptr_or_ecoreRef);
+            TRANSACTION("Annotation.ref -=", ()=> {SetFieldAction.new(c.data, "contents", ptr, "-=", true)}, ptr);
+            tood set father and verify if it have sideeffects like collection change, in case change both the line above here and in lvalue.setvalueatindex
+        };
+    }
+
+    __info_of__rawContents: Info = {type:"LModelElement", txt: "same as contents for now"};
+    rawContents!: LModelElement[];
+    get_rawContents(c: Context): this["rawContents"] { return this.get_contents(c); }
+    set_rawContents(v: Pack<LModelElement>, c: Context): boolean { return this.set_contents(v, c); }
 
     protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}, deep: boolean = true, crossRef: boolean = true): Json {
         if (loopDetectionObj[c.data.id]) return Log.exx('Cannot serialize in ecore, found loop', {loopDetectionObj, c});
@@ -1416,7 +1503,7 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
             }
             let ptr: Pointer<DClassifier> | undefined = type?.id;
             if (ptr) {
-                console.error('autocorrected type get: ', {rawType, tn:type?.name, ptr, type, });
+                // console.warn('autocorrected type get: ', {rawType, tn:type?.name, ptr, type, });
                 this.set_type(ptr as any, c);
                 return type;
             }
@@ -1435,7 +1522,8 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
             if (c.data.className !== 'DReference') {
                 // if Operation, Parameter or Attribute (anything but Reference), allow setting primitive types by name.
                 let Defaults: typeof TDefaults = windoww.Defaults;
-                let lc = ptr?.trim().toLowerCase();
+                let lc = (ptr||'').trim().toLowerCase();
+                // if (!lc) { Log.ee("Tried to set invalid type", {lc, d:c.data, val}); return true; }
                 let prefixes = ["http://www.eclipse.org/emf/2002/Ecore#//", "#//", "ecore:", "ecore:#//", "ecore#//"]; // not sure which are actually valid, some are.
                 for (let p of prefixes) {
                     if (lc.indexOf(p) === 0) lc = lc.substring(p.length);
@@ -1459,8 +1547,10 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
                     // if not primitive, check enumerators
                     if (!model) this.get_model(c);
                     // NB: in newly created elements, model is still null
-                    if (model) ptr = (model.getEnumByName(ptr)?.id || ptr);
-                    else ptr = Selectors.getByName(DEnumerator, ptr, false, false)?.id as Pointer<DEnumerator>;
+                    let attempt: string | undefined;
+                    if (model) attempt = (model.getEnumByName(ptr)?.id || ptr);
+                    else attempt = Selectors.getByName(DEnumerator, ptr, false, false)?.id as Pointer<DEnumerator>;
+                    if (attempt) ptr = Pointers.from(attempt);
                     break;
                 }
             }
@@ -1469,8 +1559,10 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
                 if (!model) this.get_model(c);
                 // NB: in newly created elements, model is still null
                 console.log('getClassByName', {ptr});
-                if (model) ptr = (model.getClassByName(ptr)?.id || ptr);
-                else ptr = Selectors.getByName(DClass, ptr, false, false)?.id as Pointer<DClass>;
+                let attempt: string | undefined;
+                if (model) attempt = (model.getClassByName(ptr)?.id || ptr);
+                else attempt = Selectors.getByName(DClass, ptr, false, false)?.id as Pointer<DClass>;
+                if (attempt) ptr = Pointers.from(attempt);
                 // if (!ptr) { for( DPointerTargetable.pendingCreation no point, they are not named yet, need to wait action to finish in t2m}
             }
             if (!ptr) ptr = old;
@@ -1647,6 +1739,7 @@ export class DClassifier extends DModelElement { // extends DNamedElement
     name!: string;
     // personal
     instanceClassName!: string;
+    instanceTypeName!: string;
     // instanceClass: EJavaClass // ?
     defaultValue!: Pointer<DObject, 1, 1, LObject>[] | string[];
     // isInstance(object: EJavaObject): boolean; ?
@@ -1678,6 +1771,7 @@ export class LClassifier<Context extends LogicContext<DClassifier> = any> extend
     namespace!: string;
     // personal
     instanceClassName!: string;
+    instanceTypeName!: string;
     // instanceClass: EJavaClass // ?
     defaultValue!: LObject[] | string[];
     isPrimitive!: boolean;
@@ -2654,6 +2748,7 @@ export class DClass extends DModelElement { // extends DClassifier
     // getClassifierID(): number;
     id!: Pointer<DClass, 1, 1, LClass>;
     instanceClassName!: string;
+    instanceTypeName!: string;
     parent: Pointer<DPackage, 0, 'N', LPackage> = [];
     father!: Pointer<DPackage, 1, 1, LPackage>;
     annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
@@ -2732,7 +2827,6 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     // instanceClass: EJavaClass // ?
     // isInstance(object: EJavaObject): boolean; ?
     // getClassifierID(): number;
-    instanceClassName!: string;
     parent!: LPackage[];
     father!: LPackage;
     annotations!: LAnnotation[];
@@ -2758,6 +2852,35 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     extendedBy!: LClass[];
     nodes!: LGraphElement[]; // ipotesi, non so se tenerlo
     allowCrossReference!: boolean;
+
+
+    instanceClassName!: string;
+    __info_of__instanceClassName: Info = {type: ShortAttribETypes.EString, txt: "The name of a java class mapped to this eClassifier. Unlike instanceTypeName generic typings are not allowed."};
+// JJodel does not fully support it, and treats it as an alias for instanceTypeName."}
+    // get_instanceClassName(c: Context): this["instanceClassName"] { return this.get_instanceTypeName(c); }
+    //set_instanceClassName(v: string, c: Context): boolean { return this.set_instanceTypeName(v, c); }
+    get_instanceClassName(c: Context): this["instanceClassName"] { return c.data.instanceClassName; }
+    set_instanceClassName(v: string, c: Context): boolean {
+        v = v?.trim?.();
+        if (v === c.data.instanceClassName) return true;
+        TRANSACTION("set java\'s instanceClassName",
+            ()=> SetFieldAction.new(c.data, "instanceClassName", v, '', false),
+            c.data.instanceClassName, v)
+        return true;
+    }
+
+    instanceTypeName!: string;
+    __info_of__instanceTypeName: Info = {type: ShortAttribETypes.EString, txt: "The name of a java class mapped to this eClassifier. Unlike instanceClassName this allows for generic typings."}
+    get_instanceTypeName(c: Context): this["instanceTypeName"] { return c.data.instanceTypeName; }
+    set_instanceTypeName(v: string, c: Context): boolean {
+        v = v?.trim?.();
+        if (v === c.data.instanceTypeName) return true;
+        TRANSACTION("set java\'s instanceTypeName",
+            ()=> SetFieldAction.new(c.data, "instanceTypeName", v, '', false),
+            c.data.instanceTypeName, v)
+        return true;
+    }
+
     sealed!: LClass[];
     __info_of__sealed: Info = {type: 'LClass[]', txt:'A sealed class can specify a list of other classes that are allowed to extend it.' +
             '\n A sealed class that does not allow any class to extend it is a "final" class.'}
@@ -3157,11 +3280,12 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         json[ECoreClass.namee] = d.name;
         json[ECoreClass.interface] = U.toBoolString(d.interface, false);
         json[ECoreClass.abstract] = U.toBoolString(d.abstract, false);
-        if (d.instanceClassName) json[ECoreClass.instanceTypeName] = d.instanceClassName;
         if (superClasses.length) json[ECoreClass.eSuperTypes] = superClasses.join(" ");
         // keep sub-elements last
         if (features.length) json[ECoreClass.eStructuralFeatures] = features;
         if (operations.length) json[ECoreClass.eOperations] = operations;
+        if (d.instanceClassName) EcoreParser.write(json, ECoreClass.instanceClassName, '' + d.instanceClassName, "null");
+        if (d.instanceTypeName) EcoreParser.write(json, ECoreClass.instanceTypeName, '' + d.instanceTypeName, "null");
         return json;
     }
 
@@ -3903,6 +4027,7 @@ export class DDataType extends DModelElement { // extends DClassifier
     // getClassifierID(): number;
     id!: Pointer<DDataType, 1, 1, LDataType>;
     instanceClassName!: string;
+    instanceTypeName!: string;
     parent: Pointer<DPackage, 0, 'N', LPackage> = [];
     father!: Pointer<DPackage, 1, 1, LPackage>;
     annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
@@ -3937,6 +4062,7 @@ export class LDataType<Context extends LogicContext<DDataType> = any, C extends 
     // isInstance(object: EJavaObject): boolean; ?
     // getClassifierID(): number;
     instanceClassName!: string;
+    instanceTypeName!: string;
     parent!: LPackage[];
     father!: LPackage;
     annotations!: LAnnotation[];
@@ -4011,6 +4137,7 @@ export class DReference extends DModelElement { // DStructuralFeature
     target: Pointer<DClass, 0, 'N', LClass> = [];
     edges: Pointer<DEdge, 0, 'N', LEdge> = [];
     EKeys!: Pointer<DAttribute>[]; // instructions for xmi pointers resolution
+    resolveProxies!: boolean;
 
     public static new(name?: DReference["name"], type?: DReference["type"], father?: DReference["father"], persist: boolean = true): DReference {
         if (!type) type = father // default type is self-reference
@@ -4078,6 +4205,8 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
     __info_of__unsettable: Info = {type: "boolean", txt: "Not supported yet by jjodel, it is kept for compatibility with ecore. This is ecore's description."+
             "An unsettable feature explicitly models the state of being set verses being unset and so provides a direct implementation for the reflective eIsSet." +
             " It is only applicable single-valued features. One effect of this setting is that, in addition to generating the methods getXyz and setXyz (if the feature is changeable), a reflective generator will generate the methods isSetXyz and unsetXyz."}
+
+    resolveProxies!: boolean; // ecore property, not jodel instructions.
 
     allowCrossReference!:boolean;
     public derived!: boolean;
@@ -4161,8 +4290,17 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
         model[ECoreReference.xsitype] = 'ecore:EReference';
         model[ECoreReference.eType] = l.type.typeEcoreString;
         model[ECoreReference.namee] = d.name;
-        if (d.lowerBound != null && !isNaN(+d.lowerBound)) { model[ECoreReference.lowerbound] = +d.lowerBound; }
-        if (d.upperBound != null && !isNaN(+d.upperBound)) { model[ECoreReference.upperbound] = +d.upperBound; }
+
+        if (U.isNumber(d.lowerBound)) EcoreParser.write(model, ECoreReference.lowerbound, '' + d.lowerBound, "0");
+        if (U.isNumber(d.upperBound)) EcoreParser.write(model, ECoreReference.upperbound, '' + d.upperBound, "1");
+        if (U.isBool(d.changeable)) EcoreParser.write(model, ECoreReference.changeable, '' + d.changeable, "true");
+        if (U.isBool(d.derived)) EcoreParser.write(model, ECoreReference.derived, '' + d.derived, "false");
+        if (U.isBool(d.transient)) EcoreParser.write(model, ECoreReference.transient, '' + d.transient, "false");
+        if (U.isBool(d.volatile)) EcoreParser.write(model, ECoreReference.volatile, '' + d.volatile, "false");
+        if (U.isBool(d.unsettable)) EcoreParser.write(model, ECoreReference.unsettable, '' + d.unsettable, "false");
+        if (U.isBool(d.resolveProxies)) EcoreParser.write(model, ECoreReference.resolveProxies, '' + d.resolveProxies, "true");
+        if (d.opposite) EcoreParser.write(model, ECoreReference.eopposite, '' + d.opposite, "null");
+
         let cont = d.aggregation || d.composition;
         if (cont != null) { model[ECoreReference.containment] = cont; }
         if (d.container != null) { model[ECoreReference.container] = d.container; }
@@ -4186,6 +4324,7 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
                 de.container = context.data.container;
                 de.composition = context.data.composition;
                 de.aggregation = context.data.aggregation;
+                de.resolveProxies = context.data.resolveProxies;
                 de.defaultValueLiteral = context.data.defaultValueLiteral;
                 de.derived = context.data.derived;
                 de.transient = context.data.transient;
@@ -4460,9 +4599,14 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
         EcoreParser.write(model, ECoreAttribute.xsitype, 'ecore:EAttribute');
         EcoreParser.write(model, ECoreAttribute.eType, l.type.typeEcoreString);
         EcoreParser.write(model, ECoreAttribute.namee, d.name);
-        EcoreParser.write(model, ECoreAttribute.lowerbound, '' + d.lowerBound);
-        EcoreParser.write(model, ECoreAttribute.upperbound, '' + d.upperBound);
-        return model; }
+        if (U.isNumber(d.lowerBound)) EcoreParser.write(model, ECoreAttribute.lowerbound, '' + d.lowerBound, "0");
+        if (U.isNumber(d.upperBound)) EcoreParser.write(model, ECoreAttribute.upperbound, '' + d.upperBound, "1");
+        if (U.isBool(d.changeable)) EcoreParser.write(model, ECoreAttribute.changeable, '' + d.changeable, "true");
+        if (U.isBool(d.derived)) EcoreParser.write(model, ECoreAttribute.derived, '' + d.derived, "false");
+        if (U.isBool(d.transient)) EcoreParser.write(model, ECoreAttribute.transient, '' + d.transient, "false");
+        if (U.isBool(d.volatile)) EcoreParser.write(model, ECoreAttribute.volatile, '' + d.volatile, "false");
+        return model;
+    }
 
 
     public duplicate(deep: boolean = true): this {
@@ -4735,6 +4879,7 @@ export class DEnumerator extends DModelElement { // DDataType
     // getClassifierID(): number;
     id!: Pointer<DEnumerator, 1, 1, LEnumerator>;
     instanceClassName!: string;
+    instanceTypeName!: string;
     parent: Pointer<DPackage, 0, 'N', LPackage> = [];
     father!: Pointer<DPackage, 1, 1, LPackage>;
     annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
@@ -4781,6 +4926,7 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
     // isInstance(object: EJavaObject): boolean; ?
     // getClassifierID(): number;
     instanceClassName!: string;
+    instanceTypeName!: string;
     parent!: LPackage [];
     father!: LPackage;
     annotations!: LAnnotation[];
@@ -5950,8 +6096,8 @@ export class DObject extends DModelElement { // extends DNamedElement, m1 class 
     // inherit redefine
     annotations!: never[];
     id!: Pointer<DObject, 1, 1, LObject>;
-    parent: Pointer<DModel | DValue, 0, 'N', LModel | LValue> = [];
-    father!: Pointer<DModel, 1, 1, LModel> |  Pointer<DValue, 1, 1, LValue>;
+    parent: (Pointer<DModel, 1, 1, LModel> |  Pointer<DValue, 1, 1, LValue> |  Pointer<DAnnotation, 1, 1, LAnnotation>)[] = [];
+    father!: Pointer<DModel, 1, 1, LModel> |  Pointer<DValue, 1, 1, LValue> |  Pointer<DAnnotation, 1, 1, LAnnotation>;
     // annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
     name!: string;
 
@@ -5990,8 +6136,8 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     children!: LValue[];
     allChildren!: LValue[]; // including hidden values
     truechildren!: LValue[]; // real shape without "mirage" values
-    parent!: (LModel | LValue)[];
-    father!: LModel | LValue;
+    parent!: (LModel | LValue | LAnnotation)[];
+    father!: LModel | LValue | LAnnotation;
     model!: LModel;
     // annotations!: LAnnotation[];
     // from LClass
@@ -6307,7 +6453,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
 
     // protected get_fromlclass<T extends keyof (LClass)>(meta: LClass, key: T): LClass[T] { return meta[key]; }
     protected get_model(context: Context): LModelElement["model"] {
-        let l: LValue | LObject | LModel = context.proxyObject;
+        let l: LValue | LObject | LModel | LAnnotation | LModelElement = context.proxyObject;
         while (l && l.className !== DModel.cname) l = l.father;
         return l as LModel; }
     // protected set_name(val: string, context: Context): boolean { return this.cannotSet("name"); }
@@ -6757,6 +6903,14 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
 
     __info_of__eid: Info = {type: ShortAttribETypes.EString, txt: "Value.eid is just a fallback for the name. a feature cannot have sub-features, so it is identified by m2 name."}
     protected get_eid(c: Context): string { return this.get_name(c); }
+
+    // this should resolve all ecore-style references without base object and including m2 navigation (objects in annotation)
+    // problem: i could repeat it for every m1 and m2, but it's not just terribly inefficient, but also might have ambiguity resolved in the wrong model.
+    // so i think the only way out is to transform ecore pointers in jodel pointers persistently.
+    public static resolveReferenceTODO(data: string, optionalStartingPoint: LModelElement | Pointer<any>): LModelElement | null {
+       // Log.eDevv("resolveReference todo");
+       return null;
+    }
 
     private static resolveEkeyReference(str: string, lfeature: LValue, ekeys0?: LAttribute[], validObjects0?: LObject[], allowMultiMatch: boolean = false): (LObject | null)[] {
         let ekeys = (ekeys0 ? ekeys0 : lfeature.EKeys).filter(e=>!!e);
@@ -8022,18 +8176,33 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                         if (info.isContainment) {
                             if ((info.fatherList as LPointerTargetable[]).map(father => father.id).includes(val))
                                 return {success: false, reason: "cannot create a containment loop"}; // todo: in LReference.set_containment need to forbid setting to true if there is a loop
-                            let oldContainer: LValue | LModel = lvalo.father;
-                            let oldContainerValue: LValue = (oldContainer.className === DModel.cname) ? undefined as any : (oldContainer as LValue);
+                            let oldContainer: LValue | LModel | LAnnotation = lvalo.father;
+                            let cname = oldContainer?.className;
+
                             // detach contaied object from old parent
-                            if (oldContainerValue && oldContainerValue.id !== c.data.id) outactions.clear.push(()=>{
-                                let valarr: any[] = oldContainerValue.__raw.values;
+                            switch (cname){
+                                case LValue.cname:
+                                    let oldContainerValue: LValue = (oldContainer as LValue);
+                                    // detach contaied object from old parent
+                                    if (oldContainerValue.id === c.data.id) break;
+                                    outactions.clear.push(()=> {
+                                        let valarr: any[] = oldContainerValue.rawValues; // because it must handle ecore-based references too, so i can't check ptr === raw[someindex]
+                                        for (let i = 0; i < valarr.length; i++) {
+                                            let v = Pointers.from(valarr[i]);
+                                            if (v === tmpval_id) oldContainerValue.setValueAtPosition(i, undefined as any, undefined);
+                                        }
 
-                                for (let i = 0; i < valarr.length; i++) {
-                                    let v = valarr[i];
-                                    if (v === val) oldContainerValue.setValueAtPosition(i, undefined as any, undefined);
-                                }
-
-                            });
+                                    });
+                                    break;
+                                case LAnnotation.cname:
+                                    let oldContainerA: LAnnotation = (oldContainer as LAnnotation);
+                                    let rawContents = oldContainerA.rawContents;
+                                    let i = rawContents.findIndex(o=>Pointers.from(o) === tmpval_id);
+                                    let valToDelete = oldContainerA.__raw.contents[i];
+                                    SetFieldAction.new(oldContainerA.id, "contents", valToDelete, '-=', true);
+                                    break;
+                                default: break;
+                            }
                             outactions.set.push(()=> {
                                 SetFieldAction.new(val as Pointer<DObject>, "father", c.data.id, undefined, true)
                             });
@@ -8129,45 +8298,6 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
             for (let a of outactions.set) a();
             if (modified) c.data.isMirage && SetFieldAction.new(c.data, 'isMirage', false, '', false);
         });
-        return true;
-
-        // old implementation
-        let list: any = val;
-        let context = c;
-        let l = context.proxyObject;
-        let instanceoff: LReference | LAttribute | undefined = l.instanceof;
-        let isRef: boolean | undefined = (!instanceoff ? undefined : instanceoff?.className === DReference.cname);
-        SetFieldAction.new(context.data, 'values', list as any, '', false);
-        // console.log("pre set_values actions", l, list, val, context);
-
-        if (!l.instanceof || isRef && (instanceoff as LReference).containment) {
-            let i = 0;
-
-            for (let v0 of list) {
-                // console.log("loop set_value actions", v, context.data, isRef, instanceoff, Pointers.isPointer(v));
-                i++;
-                if ((isRef || instanceoff === undefined) && Pointers.isPointer(v0)) { // if shapeless obj need to check val by val
-                    let v = v0 as Pointer<DModelElement> //Pointer<DObject> | Pointer<DEnumLiteral>;
-                    // console.log("loop set_value actions SET", {v, data:context.data, isRef, instanceoff, isPtr:Pointers.isPointer(v)});
-                    let lval: LObject = LPointerTargetable.fromPointer(v);
-                    let oldContainer: LValue | LModel = lval.father;
-                    SetFieldAction.new(v, "pointedBy", PointedBy.fromID(context.data.id, "values." + i as any), "+=");
-                    SetFieldAction.new(v, "father", context.data.id, undefined, true);
-                    if (oldContainer.className === DModel.cname) continue;
-                    let containerValue = (oldContainer as LValue);
-                    // let oldContainerValues = [...containerValue.__raw.value]; U.arrayRemoveAll(oldContainerValues, v);
-                    let oldContainerValues: Pointer[] = containerValue.__raw.values.map( va => va===v ? undefined as any : va);
-                    SetFieldAction.new(containerValue.id, "values", oldContainerValues, "", true);
-
-                    // todo: verify if works: remove val from old container
-                    let oldv = context.data.values[i];
-                    // if (Pointers.isPointer(oldv)) SetFieldAction.new(context.data.id, "contains", U.arrayRemoveAll([...context.data.contains], oldv), '', true);
-                    // SetFieldAction.new(context.data.id, "contains", oldv as DObject["id"], undefined, true);
-
-                }
-            }
-        }
-        context.data.isMirage && SetFieldAction.new(context.data, 'isMirage', false, '', false);
         return true;
     }
 
@@ -8302,7 +8432,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         }
     }
 
-    public rawValues(): void { super.cannotCall('rawValues'); }
+    public rawValues(): this["values"] { return super.cannotCall('rawValues'); }
     public get_rawValues(context: Context): this["values"]{
         return (this.get_getValues(context))(false, false, false, true, true, false, undefined);
     }

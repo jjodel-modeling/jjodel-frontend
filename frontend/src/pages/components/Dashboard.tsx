@@ -534,10 +534,10 @@ function ProjectDashboard(props: DashProps): any {
     return (<>
         <Try>
             <>
-                <style id={"views-css-injector-d"}>
-                    {Object.values(viewsDeDuplicator).map(v => v.compiled_css).join('\n\n')}
-                </style>
                 {CSS_Units.jsx}
+                <div id={"views-css-injector-d"}>
+                    {Object.values(viewsDeDuplicator).map(v => <style id={"css_"+v.id}>v.compiled_css</style>)}
+                </div>
             </>
         </Try>
         <Try><Navbar /></Try>

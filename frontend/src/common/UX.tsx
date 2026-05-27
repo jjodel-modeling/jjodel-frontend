@@ -348,7 +348,7 @@ export class UX{
         // Font size heuristic: fewer letters → bigger text
         // Fits comfortably inside the circle for 1–3 chars
         const fontSizeMap: Record<number, number> = { 1: 0.55, 2: 0.38, 3: 0.30 };
-        const fontSizeRatio = fontSizeMap[len] ?? 0.30;
+        const fontSizeRatio = (fontSizeMap[len] ?? 0.30) * 1.2;
         const fontSize = Math.round(radius * 2 * fontSizeRatio);
 
         // Letter-spacing nudge: tighten slightly for 3 chars
@@ -360,6 +360,8 @@ export class UX{
 
         const safeFontFamily = escapeXml(fontFamily);
         const safeText = escapeXml(text);
+        console.log("make avatar 2", {text, safeText})
+
 
         const svgtxt = `<svg
   xmlns="http://www.w3.org/2000/svg"
@@ -402,15 +404,14 @@ export class UX{
                 cx={cx}
                 cy={cy}
                 r={innerRadius}
-                style={{fill: backgroundColor, stroke: borderColor, strokeWidth: strokePx}}
             />
             <text
                 x={cx}
                 y={cy}
                 textAnchor="middle"
                 dominantBaseline="central"
-                style={{fontFamily: safeFontFamily, fontSize, fontWeight: "600", fill: fontColor, letterSpacing}}
-            >${safeText}</text>
+                style={{fontFamily: safeFontFamily, fontSize, fontWeight: "600"}}
+            >{safeText}</text>
         </svg>;
 
         if (asDataUri) {

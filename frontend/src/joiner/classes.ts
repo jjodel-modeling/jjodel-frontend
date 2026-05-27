@@ -1685,7 +1685,11 @@ export class Pointers{
     public static from<T extends LClass, PTR extends Pointer<DPointerTargetable, 1, 1, LPointerTargetable>>(data:unknown | unknown[]): null | PTR | PTR[]{
         if (!data) return null;
         if (Array.isArray(data)) return data.filter(d => !!d).map(d => (typeof d === "string" ? d : (d as any)?.id)) as any;
-        return typeof data === "string" ? data as PTR : (data as any)?.id;
+        if (typeof data === "string") {
+            if (data.indexOf("Pointer_") === 0) return data as PTR;
+            else return LValue.resolveReferenceTODO(data)?.id as PTR;
+        }
+        return (data as any)?.id;
     }
 
     static isPointer(val: any, state?: DState, doArrayCheck: boolean = false): val is Pointer {
@@ -2763,6 +2767,7 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
     get_index(c: Context): this["index"] {
         const project = LProject.getProject();
         let dproject = project.__raw;
+        return Math.floor(Math.random()*10);
         return dproject.onlineUsersID.findIndex((socket) => dproject.collaboratorsMap[socket] === c.data.id);
     }
 
@@ -2823,6 +2828,7 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
         if (c.data.avatar) { return UX.img(c.data.avatar); }
         // generate image from initials
         let letters = (c.data.name + " " +c.data.surname).split(" ").slice(0, 3).map(e=>e[0]).join("");
+        console.log("make avatar", {letters, n: c.data.name, sn:c.data.surname, tmp:(c.data.name + " " +c.data.surname).split(" ").slice(0, 3)})
         return UX.makeAvatar(letters);
         /*, '"Inter Variable", -apple-system, sans-serif',
             "#000000", "#fffff", "#000000", 0.1, false);*/

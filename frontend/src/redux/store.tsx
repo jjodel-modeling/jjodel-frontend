@@ -463,75 +463,108 @@ node.state = {error_lowerbound: err};\n
     }
 `*/
     let collabcss = `
+.naming-list{
+    position: absolute;
+    bottom: 110%;
+    left: 5%;
+    display: flex;
+    justify-content: end;
+    width: 100%;
+    gap: 5px;
+    font-weight: 900;
+    
+    .collab-name{
+        color: var(--main-color);
+        top: -20%;
+    }
+}
+svg.avatar{
+    width: 30px;
+    height: 30px;
+}
 .borders rect{
-    --size: 12px;
-    stroke-dasharray: var(--size) calc((var(--gaps) - 1) * var(--size));
-    stroke-dashoffset: calc(-1 * (var(--offset) - 1) * var(--size));
+    --size: 40px; /*NB: 40 px is sized to have 1 segment for each user when there are 10 users. use 20 to have 2 segments each or fractions of 40*/
+    stroke-dasharray: var(--size) calc(var(--gaps) * var(--size));
+    stroke-dashoffset: calc(-1 * var(--offset) * var(--size));
+    stroke: var(--main-color);
+    stroke-width: 10;
+    fill: transparent;
 }
 .avatar{
+    overflow: visible;
     text {
-        font: var(--main-color);
+        stroke: var(--main-color);
     }
     circle {
         stroke: var(--main-color);
+        fill: var(--bg-color);
+        stroke-width: 17.5;
     }
+}
+.overlap >* {
+    pointer-events: all;
 }
 
 .color-1{
     --main-color: var(--color-1);
-    --bg-color: var(--bg-color-1);
+    --bg-color: var(--background-1);
 }
 .color-2{
     --main-color: var(--color-2);
-    --bg-color: var(--bg-color-2);
+    --bg-color: var(--background-2);
+    --offset: 2;
 }
 .color-3{
     --main-color: var(--color-3);
-    --bg-color: var(--bg-color-3);
+    --bg-color: var(--background-3);
 }
 .color-4{
     --main-color: var(--color-4);
-    --bg-color: var(--bg-color-4);
+    --bg-color: var(--background-4);
 }
 .color-5{
     --main-color: var(--color-5);
-    --bg-color: var(--bg-color-5);
+    --bg-color: var(--background-5);
 }
 .color-6{
     --main-color: var(--color-6);
-    --bg-color: var(--bg-color-6);
+    --bg-color: var(--background-6);
 }
 .color-7{
     --main-color: var(--color-7);
-    --bg-color: var(--bg-color-7);
+    --bg-color: var(--background-7);
 }
 .color-8{
     --main-color: var(--color-8);
-    --bg-color: var(--bg-color-8);
+    --bg-color: var(--background-8);
 }
 .color-9{
     --main-color: var(--color-9);
-    --bg-color: var(--bg-color-9);
+    --bg-color: var(--background-9);
 }
 .color-0, .overlap{
     /* fallback value */
     --main-color: var(--color-10);
-    --bg-color: var(--bg-color-10);
+    --bg-color: var(--background-10);
 }
 `;
-    let collaborativeView: DViewElement = DViewElement.new2('Display collaborators', DV.collaborative(), validationVP, (v) => {
-        v.jsCondition = 'LProject.getProject().onlineUsers > 1 && node.selection.length > 0';
+    let collaborativeView: DViewElement = DViewElement.new2('Display collaborators', DV.collaborative(), vp, (v) => {
+        v.jsCondition = 'LProject.getProject().onlineUsers > 0 && node?.selection.length > 0';
         v.usageDeclarations = "(ret)=>{\n" +
             "// ** preparations and default behaviour here ** //\n" +
             "// add preparation code here (like for loops to count something), then list the dependencies below.\n" +
             "// ** declarations here ** //\n" +
-            "maxColors = view?.palette[\"color\"]?.value.length;"
-            "project = LProject.getProject();"
-            "selection = node.selection;"
+            "maxColors = view?.palette[\"color-\"]?.value.length;"+
+            "project = LProject.getProject();"+
+            "selection = [...node.selection, ...node.selection, ...node.selection].filter(e => !!e);"+
             "\n}";
         v.isExclusiveView = false;
+        v.palette = {
+            'color-': U.hexToPalette("#212121", "#FBC02D", "#673AB7", "#FF9800", "#4CAF50", "#E91E63", "#009688", "#795548", "#9C27B0", "#FF5722"),
+            "background-":  U.hexToPalette("#FFFFFF", "#FFFDE7", "#E1BEE7", "#FFF3E0", "#C8E6C9", "#F8BBD0", "#B2DFDB", "#E7DBCB", "#E1BEE7", "#FFCCBC")
+        }
         v.css = collabcss;
-    }, false, Defaults.Pointer_ViewOverlay );
+    }, false, Defaults.Pointer_ViewCollaborative );
 
     let valuecolormap: GObject = {};
     valuecolormap[ShortAttribETypes.EBoolean] = "orange";
@@ -616,7 +649,7 @@ ret.parentView = L.from(component?.props?.parentviewid);
         lit, obj, val, single, voidView,
         ...edgeViews,
         DefaultViews.edgepoint(model),
-        anchorView];
+        anchorView, collaborativeView];
 
     let validation_subviews = [errorOverlayView, errorCheckLowerbound, errorCheckName];
     // SetFieldAction.new(vp, 'subViews', U.objectFromArrayValues(dv_subviews.map(dv=>dv.id), 1.5));

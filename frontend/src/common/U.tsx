@@ -1591,6 +1591,7 @@ export class U {
 
     // returns true only if parameter is already a number by type. UU.isNumber('3') will return false
     static isNumber(o: any): o is number { return typeof o === "number" && !isNaN(o); }
+    static isBool(o: any): o is boolean { return typeof o === "boolean"; }
     static isPrimitive(o: any, returnIfNull=true, returnIfUndefined=true, returnIfSymbol = false): o is PrimitiveType {
         switch (typeof o) {
             case 'symbol': return returnIfSymbol; // it is primitive by definition, but behaves too much differently
@@ -2955,6 +2956,7 @@ export class U {
         return window['process'].env[varr] || '';
     }
 
+    // for m1 ecore references check LValue.resolveReference
     public static ecoreSerializeValue(value: any, type: string): string {
         switch (type.toLowerCase()) {
 

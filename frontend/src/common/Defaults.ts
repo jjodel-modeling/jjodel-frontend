@@ -23,6 +23,7 @@ export class Defaults { /// TODO: this really needs to become dynamically genera
         "Pointer_ViewAnchors",
         "Pointer_ViewSingleton",
         "Pointer_ViewFallback",
+        "Pointer_ViewCollaborative",
         // validation
         "Pointer_ViewCheckName",
         "Pointer_ViewOverlay",

@@ -1,7 +1,7 @@
 import {
     Pointer,
     GObject,
-    Dictionary, Defaults,
+    Dictionary, Defaults, transientProperties,
 } from '../joiner';
 
 import {
@@ -52,6 +52,28 @@ export class DV {
         SetRootFieldAction.new('VIEWS_RECOMPILE_all', [...Object.keys(Defaults.defaultViewsMap), ...Object.keys(Defaults.defaultViewPointsMap)], '+=', false);
         SetRootFieldAction.new('clonedCounter', ((s as any).clonedCounter || 0) + 1);
         return newLanguages;
+    }
+
+    public static refreshViews(){
+        let s = store.getState();
+
+        for (let ptr in Defaults.defaultViewsMap) {
+            let v = Defaults.defaultViewsMap[ptr];
+            s.idlookup[ptr] = v;
+            transientProperties.updateView(ptr);
+
+            /*delete transientProperties.view[ptr];
+            for (let nid in transientProperties.node) {
+                let tn = transientProperties.node[nid];
+                for (let )
+            }*/
+        }
+        for (let ptr in Defaults.defaultViewPointsMap) {
+            let v = Defaults.defaultViewPointsMap[ptr];
+            s.idlookup[ptr] = v;
+            transientProperties.updateView(ptr);
+        }
+        SetRootFieldAction.new("VIEWS_RECOMPILE_all", true);
     }
 
     static defaultLanguages(): Dictionary<string, Language> & {_selected: string}{
@@ -1562,16 +1584,17 @@ export class DefaultView {
     static collaborative(): string {
         return `<section className={"overlap"}>
             <div className={"naming-list"}>{selection.map( u => (
-                <div className={"hoverable color-"+(u.index % maxColors)}>
-                    <span className={"content top collab-name"}>{u.name}</span>
+                <div className={"hoverable color-"+(u.index % maxColors)} data-index={u.index} data-maxColors={maxColors}>
+                    <span className={"content top collab-name no-shadow"}>{u.name} {u.surname} ({u.nickname})</span>
                     {u.avatar}
                 </div>
-                )}
+                ))}
             </div>
-            <svg className={"borders"}>
-                {selection.map( u => (
-                    <rect className={"color-"+(u.index % maxColors)}
-                        style={{"--gaps": project.onlineUsers, "--offset": i, "--border-color": u.color}}
+            <svg className={"borders w-100 h-100"} viewBox="0 0 100 100" preserveAspectRatio="none" style={{scale:"1.1", transformOrigin: "center", "--gaps": selection.length - 1}}>
+                {selection.map( (u, i) => (
+                    <rect x={0} y={0} width={100} height={100}
+                        className={"color-"+(u.index % maxColors)}
+                        style={{"--border-color": u.color, "--offset": i}}
                     />))}
             </svg>
         </section>`;
@@ -1777,6 +1800,7 @@ export class DefaultView {
             e.target.classList.add('opened');
         }
 
+        console.error("view error:", {msg, errortype, data, node, v});
         switch (notificationType) {
             case 'classic':
                 // Use ErrorDisplay which manages both badge and modal with state
@@ -1819,6 +1843,7 @@ export class DefaultView {
 
         let lv: LViewElement | undefined = v ? ((v as any).__isProxy ? v as LViewElement : LPointerTargetable.wrap(v)) : undefined;
         let viewpointname = lv?.viewpoint?.name ||'';
+        console.error("view error jsx:", {msg, errortype, data, node, v});
         // <div className={'w-100 h-100 round bg-white border border-danger'} style={{minHeight:"50px", overflow:"scroll"}}>
         //     <div className={'text-center text-danger'} tabIndex={-1} style={{background:"#fff", overflow: 'visible', zIndex:100, minWidth:"min-content"}}>
         //         <b>{errortype}_ERROR` + on + `</b>

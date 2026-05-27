@@ -72,15 +72,17 @@ export class Collaborative {
         if (!Collaborative.canSend(action)) return false;
         const parsedAction: GObject<Action> = {...action} as any;
         if (Array.isArray(parsedAction.actions)) {
+            if ((parsedAction as any).debugua) console.error("collab receive sending identification user treated as transaction", {parsedAction});
             parsedAction.actions = parsedAction.actions.filter(a => Collaborative.canSend(a));
             if (parsedAction.actions.length === 0) return false;
         }
-        console.log('Collaborative.send pre throttle', {parsedAction});
+        // console.error('Collaborative.send pre throttle', {parsedAction});
         // todo: need to batch emissions for > 300ms? so that model and node creation are paired?
         // or start with batchtimer 300*safety(1.2?), then each time it gets delayed,
         // batchtimer lowers by x% to prevent eternal retention in case of loop/frequent changes but still reduce spam
         U.throttle('collab_send', ()=> {
-            console.log('Collaborative.send POST throttle', {parsedAction});
+            // console.error('Collaborative.send POST throttle', {parsedAction});
+            if ((parsedAction as any).debugua) console.error("collab receive sending identification user", {parsedAction});
             Collaborative.client.emit('pushAction', parsedAction)
         }, true, 300*1.1, 1/1.1);
 
@@ -91,28 +93,33 @@ export class Collaborative {
         if (action.actions) {
             let old = action.actions;
             action.actions = action.actions.filter(a => a.sender !== DUser.current);
-            console.log('collaborative received composite', {actions:action.actions, old, diff: U.arrayDifference(action.actions, old)});
+            console.log('collaborative received composite', {skip:!action.actions.length, actions:action.actions, old, diff: U.arrayDifference(action.actions, old)});
             if (!action.actions.length) return false;
         }
         else {
-            console.log('collaborative received single', {action});
+            console.log('collaborative received single', {skip: action.sender === DUser.current, f:action.field, v:action.value, action});
             if (action.sender === DUser.current) return false;
         }
         return true;
     }
 
-    static firstReceive: boolean = false;
+    //static firstReceive: boolean = true;
     static receive(action: GObject<Action & CompositeAction>) {
         let session: number = new Date().getUTCMilliseconds();
         const receivedAction: Action | CompositeAction = action;
         let ca = receivedAction as CompositeAction;
         if (!Collaborative.filterSender(action)) return;
+        console.log("collaborative receive root", {f:action.field, action});
 
         // the server sent a request to the client to identify himself replying with userid
         if (ca.field.includes("SET_SOCKET_ID")) {
             let project= U.getProjectID_URL() as Pointer<DProject>;
             let socketid = action.value as string;
-            SetFieldAction.new(project, "collaboratorsMap."+socketid as any, DUser.current, '', true, false)
+            SetFieldAction.new(project, "collaboratorsMap."+socketid as any, DUser.current, '', true, false);
+            // send on remote but don't execute locally
+            let setuseraction = SetRootFieldAction.create("idlookup."+DUser.current, DUser.getUser(), "", true);
+            (setuseraction as any).debugua = true;
+            Collaborative.send(setuseraction);
             return;
         }
         ca.fromCollaborative = true;
@@ -133,16 +140,19 @@ export class Collaborative {
             Constructors.pending[a.value.id] = a.value;
         }
 
-        fire(ca, session);
+        fire(ca, session);/*
         if (this.firstReceive) {
+            this.firstReceive = false;
             let s = store.getState();
             // this one is only sent to collaborators.
-            this.send(SetRootFieldAction.create("idlookup."+DUser.current, DUser.getUser(), "", true));
+            let action = SetRootFieldAction.create("idlookup."+DUser.current, DUser.getUser(), "", true);
+            this.send(action);
+            console.log("send action createuser", {action, canSend: this.canSend(action)} );
             // this one is executed both locally and sent to collaborators.
-            if (!s.collaborators.includes(DUser.current)) SetRootFieldAction.new("collaborators", DUser.current, "+=", true);
+            // if (!s.collaborators.includes(DUser.current)) SetRootFieldAction.new("collaborators", DUser.current, "+=", true);
             // todo: make an action on collab server on user connect/disconnect which sets onlineCollaborators action (instead of the "static" list)
             // current online user is only available as number in project.onlineUsers
-        }
+        }*/
         /*
         for (let a of ca.actions) {
             firedActions.push(a);

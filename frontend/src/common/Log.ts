@@ -114,7 +114,7 @@ export class Log{
 
         Log.updateLoggerComponent(category, restArgs, str, category, exception);
         // merged loggers if (Log.loggerMapping[category]) for (const logger of Log.loggerMapping[category]) { logger.log(category, key, restArgs, str); }
-        console.log('log original func', {originalFunc, key, restArgs}, ...restArgs);
+        // console.log('log original func', {originalFunc, key, restArgs}, ...restArgs);
         originalFunc(key, ...restArgs);
         if (exception) throw exception;
         return prefixedstr;

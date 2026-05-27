@@ -932,14 +932,17 @@ export class EcoreParser{
             return valueIfNotFound; }
         return ret; }
 
-    static write(json: Json, field: string, val: string | any[]): string | any[] {
+    static write(json: Json, field: string, val: string | any[], defaultValue?: string | any[]): string | any[] {
+        if (defaultValue !== undefined && defaultValue === val) return val;
+
         if (val !== null && field.indexOf(EcoreParser.XMLinlineMarker) !== -1) {
             Log.ex(val !== '' + val, 'inline value |' + field + '| must be a string.', val);
             val = U.multiReplaceAll(val as string, ['&', '\'', '"'], ['&amp;', '&#38;', '&quot;']);
         }
         else Log.ex(val !== '' + val || !U.isObject(val, true), 'primitive values should be inserted only inline in the xml:', field, val);
         json[field] = val;
-        return val; }
+        return val;
+    }
 
     private static getEcoreTypeName(parent: DClassifier): string {
         if (parent.className === DEnumerator.cname || parent.className === DClass.cname) return this.classTypePrefix + this.name;
@@ -1023,6 +1026,7 @@ export class ECoreClass {
     static eSuperTypes: string;
     static abstract: string;
     static interface: string;
+    static instanceClassName: string;
 
     // static defaultValue = EcoreParser.XMLinlineMarker + 'defaultValue';  // visualizzato in ecore ma mai salvato dentro il file. inutilizzato
     // nelle classi, assume il valore di "[name] = [NumericValue]" senza le [] negli enum.
@@ -1037,6 +1041,7 @@ export class ECoreEnum {
     static instanceTypeName: string;
     static serializable: string;
     static eLiterals: string;
+    static defaultValueLiteral: string;
 }
 
 @RuntimeAccessible('ECoreLiteral')
@@ -1062,6 +1067,14 @@ export class ECoreReference {
     static lowerbound: string;
     static containment: string;
     static container: string;
+    static changeable: string;
+    static derived: string;
+    static transient: string;
+    static volatile: string;
+    static unsettable: string;
+    // ref only
+    static eopposite: string;
+    static resolveProxies: string;
 }
 
 @RuntimeAccessible('ECoreAttribute')
@@ -1075,6 +1088,11 @@ export class ECoreAttribute {
     static ordered: string;
     static lowerbound: string;
     static upperbound: string;
+    static changeable: string;
+    static derived: string;
+    static transient: string;
+    static volatile: string;
+    static unsettable: string;
 }
 
 @RuntimeAccessible('ECoreOperation')
@@ -1161,12 +1179,15 @@ ECoreClass.instanceTypeName = EcoreParser.XMLinlineMarker + 'instanceTypeName'; 
 ECoreClass.instanceTypeName = EcoreParser.XMLinlineMarker + 'instanceTypeName';
 ECoreClass.abstract = EcoreParser.XMLinlineMarker + 'abstract'; // bool
 ECoreClass.interface = EcoreParser.XMLinlineMarker + 'interface'; // bool
+ECoreClass.instanceClassName = EcoreParser.XMLinlineMarker + 'instanceClassName'; // null, maps to java classes
 
 ECoreEnum.instanceTypeName = ECoreClass.instanceTypeName;
 ECoreEnum.serializable = 'serializable'; // "false", "true"
 ECoreEnum.xsitype = ECoreClass.xsitype; // "ecore:EEnum"
 ECoreEnum.eLiterals = 'eLiterals';
 ECoreEnum.namee = ECorePackage.namee;
+
+ECoreEnum.defaultValueLiteral = EcoreParser.XMLinlineMarker + "defaultValueLiteral";
 
 ECoreLiteral.literal = 'literal';
 ECoreLiteral.namee = ECorePackage.namee;
@@ -1176,11 +1197,20 @@ ECoreReference.xsitype = EcoreParser.XMLinlineMarker + 'xsi:type'; // "ecore:ERe
 ECoreReference.eType = EcoreParser.XMLinlineMarker + 'eType'; // "#//Player"
 ECoreReference.containment = EcoreParser.XMLinlineMarker + 'containment'; // "true"
 ECoreReference.container = EcoreParser.XMLinlineMarker + 'container'; // "true" todo: not sure if it's really like this.
+
 ECoreReference.upperbound = EcoreParser.XMLinlineMarker + 'upperBound'; // "@1"
 ECoreReference.lowerbound = EcoreParser.XMLinlineMarker + 'lowerBound'; // does even exists?
 ECoreReference.namee = EcoreParser.XMLinlineMarker + 'name';
 ECoreReference.unique = EcoreParser.XMLinlineMarker + 'unique'; // "false",
 ECoreReference.ordered = EcoreParser.XMLinlineMarker + 'unique'; // "false",
+ECoreReference.changeable = EcoreParser.XMLinlineMarker + 'changeable'; // "true"
+ECoreReference.derived = EcoreParser.XMLinlineMarker + 'derived'; // "true"
+ECoreReference.transient = EcoreParser.XMLinlineMarker + 'transient'; // "true"
+ECoreReference.volatile = EcoreParser.XMLinlineMarker + 'volatile'; // "true"
+ECoreReference.unsettable = EcoreParser.XMLinlineMarker + 'unsettable'; // "false"
+// ref-specific stuff
+ECoreReference.eopposite = EcoreParser.XMLinlineMarker + 'eOpposite'; // "null"
+ECoreReference.resolveProxies = EcoreParser.XMLinlineMarker + 'resolveProxies'; // "true"
 
 
 ECoreAttribute.xsitype = EcoreParser.XMLinlineMarker + 'xsi:type'; // "ecore:EAttribute",
@@ -1190,6 +1220,11 @@ ECoreAttribute.lowerbound = EcoreParser.XMLinlineMarker + 'lowerBound';
 ECoreAttribute.upperbound = EcoreParser.XMLinlineMarker + 'upperBound';
 ECoreAttribute.unique = EcoreParser.XMLinlineMarker + 'unique'; // "false",
 ECoreAttribute.ordered = EcoreParser.XMLinlineMarker + 'unique'; // "false",
+ECoreAttribute.changeable = EcoreParser.XMLinlineMarker + 'changeable'; // "true"
+ECoreAttribute.derived = EcoreParser.XMLinlineMarker + 'derived'; // "true"
+ECoreAttribute.transient = EcoreParser.XMLinlineMarker + 'transient'; // "true"
+ECoreAttribute.volatile = EcoreParser.XMLinlineMarker + 'volatile'; // "true"
+ECoreAttribute.unsettable = EcoreParser.XMLinlineMarker + 'unsettable'; // "false"
 
 
 ECoreOperation.eParameters = 'eParameters';

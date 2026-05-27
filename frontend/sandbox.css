@@ -1,0 +1,1652 @@
+.Pointer_ViewModel {
+    --background: rgba(255,255,255,1);
+    --background-0: rgba(255,255,255,1);
+    --background-1: rgba(255,255,255,1);
+    --color: rgba(18,60,208,1);
+    --color-0: rgba(18,60,208,1);
+    --color-1: rgba(18,60,208,1);
+    --color-2: rgba(75,0,130,1);
+    --color-3: rgba(255,0,0,1);
+    --color-4: rgba(49,145,187,1);
+    --color-5: rgba(49,145,187,1);
+
+
+    &, .Graph{
+        background-color: var(--background-1);
+        height: 100%;
+        width: -webkit-fill-available;
+    }
+    .detail-level {
+        position: absolute;
+        right: -50px;
+        top: 50px;
+        display: flex;
+        transform: rotate(270deg);
+        &>div{
+            transform: rotate(90deg) translate(0, 100%);
+        }
+    }
+}
+
+.Pointer_ViewFallback {
+
+    &.mainView > .void{
+        flex-wrap: wrap;
+        display: flex;
+        border: none;
+    }
+}
+
+.Pointer_ViewCollaborative {
+    --color: rgba(33,33,33,1);
+    --color-0: rgba(33,33,33,1);
+    --color-1: rgba(33,33,33,1);
+    --color-2: rgba(251,192,45,1);
+    --color-3: rgba(103,58,183,1);
+    --color-4: rgba(255,152,0,1);
+    --color-5: rgba(76,175,80,1);
+    --color-6: rgba(233,30,99,1);
+    --color-7: rgba(0,150,136,1);
+    --color-8: rgba(121,85,72,1);
+    --color-9: rgba(156,39,176,1);
+    --color-10: rgba(255,87,34,1);
+    --background: rgba(255,255,255,1);
+    --background-0: rgba(255,255,255,1);
+    --background-1: rgba(255,255,255,1);
+    --background-2: rgba(255,253,231,1);
+    --background-3: rgba(225,190,231,1);
+    --background-4: rgba(255,243,224,1);
+    --background-5: rgba(200,230,201,1);
+    --background-6: rgba(248,187,208,1);
+    --background-7: rgba(178,223,219,1);
+    --background-8: rgba(231,219,203,1);
+    --background-9: rgba(225,190,231,1);
+    --background-10: rgba(255,204,188,1);
+
+
+    .naming-list{
+        position: absolute;
+        bottom: 110%;
+        left: 5%;
+        display: flex;
+        justify-content: end;
+        width: 100%;
+        gap: 5px;
+        font-weight: 900;
+
+        .collab-name{
+            color: var(--main-color);
+            top: -20%;
+        }
+    }
+    svg.avatar{
+        width: 30px;
+        height: 30px;
+    }
+    .borders rect{
+        --size: 40px; /*NB: 40 px is sized to have 1 segment for each user when there are 10 users. use 20 to have 2 segments each or fractions of 40*/
+        stroke-dasharray: var(--size) calc(var(--gaps) * var(--size));
+        stroke-dashoffset: calc(-1 * var(--offset) * var(--size));
+        stroke: var(--main-color);
+        stroke-width: 10;
+        fill: transparent;
+    }
+    .avatar{
+        overflow: visible;
+        text {
+            stroke: var(--main-color);
+        }
+        circle {
+            stroke: var(--main-color);
+            fill: var(--bg-color);
+            stroke-width: 17.5;
+        }
+    }
+    .overlap >* {
+        pointer-events: all;
+    }
+
+    .color-1{
+        --main-color: var(--color-1);
+        --bg-color: var(--background-1);
+    }
+    .color-2{
+        --main-color: var(--color-2);
+        --bg-color: var(--background-2);
+        --offset: 2;
+    }
+    .color-3{
+        --main-color: var(--color-3);
+        --bg-color: var(--background-3);
+    }
+    .color-4{
+        --main-color: var(--color-4);
+        --bg-color: var(--background-4);
+    }
+    .color-5{
+        --main-color: var(--color-5);
+        --bg-color: var(--background-5);
+    }
+    .color-6{
+        --main-color: var(--color-6);
+        --bg-color: var(--background-6);
+    }
+    .color-7{
+        --main-color: var(--color-7);
+        --bg-color: var(--background-7);
+    }
+    .color-8{
+        --main-color: var(--color-8);
+        --bg-color: var(--background-8);
+    }
+    .color-9{
+        --main-color: var(--color-9);
+        --bg-color: var(--background-9);
+    }
+    .color-0, .overlap{
+        /* fallback value */
+        --main-color: var(--color-10);
+        --bg-color: var(--background-10);
+    }
+
+}
+
+.Pointer_ViewPackage {
+    --color: rgba(2,128,18,1);
+    --color-0: rgba(2,128,18,1);
+    --color-1: rgba(2,128,18,1);
+    --background: rgba(255,255,255,1);
+    --background-0: rgba(255,255,255,1);
+    --background-1: rgba(255,255,255,1);
+
+
+    border-radius: var(--radius);
+    .package { background-color: var(--background-0); border-left: 0.25em solid var(--color-1); }
+    .package-children { height: -webkit-fill-available; width: -webkit-fill-available; }
+    .summary { padding: 0.25rem; text-align: center; }
+    .drag-handle {
+        position: absolute;
+        cursor: grab;
+        z-index: 1;
+        width: 25px;
+        height: 18px;
+    }
+    .detail-level {
+        position: absolute;
+        z-index: 1;
+        right: -50px;
+        top: 50px;
+        display: flex;
+        transform: rotate(270deg);
+        &>div {
+            transform: rotate(90deg) translate(0, 100%);
+        }
+    }
+}
+
+.Pointer_ViewObject {
+    --color: rgba(255,0,0,1);
+    --color-0: rgba(255,0,0,1);
+    --color-1: rgba(255,0,0,1);
+    --color-2: rgba(0,0,0,1);
+    --color-3: rgba(255,255,255,1);
+    --background: rgba(255,255,255,1);
+    --background-0: rgba(255,255,255,1);
+    --background-1: rgba(255,255,255,1);
+    --background-2: rgba(238,238,238,1);
+    --background-3: rgba(255,0,0,1);
+
+    border-radius: 3px;
+    .object {
+        border-radius: 3px;
+        min-width: 160px;
+        & .header {
+            text-align: center;
+            &> div {
+                & input:placeholder-shown {
+                    display: inline-block!important;
+                    margin-left: 30px!important;
+                }
+            }
+        }
+        background: transparent;
+        color: var(--accent);
+    }
+    .object-name {padding: 10px; font-weight: 600; color: var(--accent);}
+    .object-children {padding: 10px;background-color: white; height: fit-content; width: -webkit-fill-available;}
+}
+
+.Pointer_ViewSingleton {
+
+
+    /* placeholder justification, add .center, .left, .start, .right, or .end in the <Input /> container */
+
+    input:placeholder-shown {
+        width: 120px !important;
+        font-style: italic !important;
+        text-align: right;
+        left: -120px !important;
+    }
+
+    .center {
+        & input:placeholder-shown {
+            width: 120px !important;
+            font-style: italic !important;
+            text-align: center;
+            left: -60px !important;
+        }
+    }
+
+    .left, .start {
+        & input:placeholder-shown {
+            width: 120px !important;
+            font-style: italic !important;
+            text-align: left;
+            left: 0 !important;
+        }
+    }
+
+    .right, .end {
+        & input:placeholder-shown {
+            width: 120px !important;
+            font-style: italic !important;
+            text-align: right;
+            left: -120px !important;
+        }
+    }
+
+    .input-container {
+        & select {
+            border: none;
+            text-align: right;
+        }
+    }
+
+    &,[data-nodetype], [data-nodetype]>.visible{ /* corresponds to "overflow: visible" */
+        overflow: visible;
+    }
+
+    border-radius: var(--radius);
+    .singleton {
+        border: none!important;
+        text-align: center;
+        background-color: var(--accent);
+        color: white;
+        padding: 4px 30px;
+        width: fit-content;
+        & .header {
+            white-space: pre;
+        }
+    }
+    .singleton::before {position: absolute; left: 10px; font-family: bootstrap-icons; content: "\F799";}
+
+}
+
+.Pointer_ViewEdgeAssociation {
+    --anchorSize: 15px;
+    --dashing: '';
+    --stroke-color: rgba(119,119,119,1);
+    --stroke-color0: rgba(119,119,119,1);
+    --stroke-color1: rgba(119,119,119,1);
+    --stroke-width: 1px;
+    --stroke-color-hover: rgba(0,0,0,1);
+    --stroke-color-hover0: rgba(0,0,0,1);
+    --stroke-color-hover1: rgba(0,0,0,1);
+    --stroke-width-hover: 3px;
+    --head: 'M11.354 5.646a.5.5 90 010 .708l-6.035 6.089a.5.5 90 01-.156-.116L11.375 5.999l-6.406-6.211a.5.5 90 01.208-.115z';
+    --tail: '';
+    --fill: rgba(255,255,255,0);
+    --fill0: rgba(255,255,255,0);
+    --fill1: rgba(255,255,255,0);
+
+
+    .edge-anchor {
+        cursor: crosshair;
+        stroke: transparent;
+        fill: none;
+        r:var(--anchorSize);
+        outline: var(--stroke-width) solid var(--stroke-color);
+        outline-offset: calc(var(--stroke-width) * -1);
+        border-radius: 100%;
+    }
+    .clickthrough, .unclickable{
+        pointer-events: none;
+    }
+    .clickable{
+        pointer-events: all;
+    }
+    .fullscreen{
+        overflow: visible !important;
+        width: calc(100vw / var(--total-zoom-x));
+        height: calc(100vh / var(--total-zoom-y));
+    }
+    path{
+        fill: none;
+        stroke-dasharray: var(--dashing);
+        &.head{
+            d: path(var(--head));
+        }
+        &.tail{
+            d: path(var(--tail));
+        }
+    }
+    path.edge.full, path.tail, path.head{
+        stroke: var(--stroke-color);
+        stroke-width: var(--stroke-width);
+    }
+    path.tail, path.head{
+        fill:var(--fill);
+    }
+    path.edge.full.outline{
+        stroke-width: var(--edge-outline-width);
+        stroke: white;
+    }
+    path.edge.full.hover-activator{
+        stroke-width: var(--stroke-width-hover);
+        stroke: none;
+    }
+    path.content{
+        stroke: var(--stroke-color-hover);
+        stroke-width: var(--stroke-width-hover);
+    }
+    .label-text{
+        color: var(--stroke-color);
+        background-color: white;
+        padding: 0 10px!important;
+        border-radius: 3px;
+    }
+
+    .label-end > foreignObject.label{
+        overflow: visible;
+        color: var(--stroke-color);
+        width: 0;
+        height: 0;
+        white-space: pre;
+        > div{
+            width: fit-content;
+        }
+    }
+    foreignObject.label{
+        overflow: visible;
+        color: var(--stroke-color);
+        width: 0;
+        height: 0;
+        white-space: pre;
+        > div{
+            width: fit-content;
+        }
+    }
+
+    foreignObject.label-end, foreignObject.label-start {
+        overflow: visible;
+        color: var(--stroke-color);
+        white-space: pre;
+
+        > div{
+            width: fit-content;
+            background-color: transparent;
+            padding: 0!important;
+
+        }
+        & .left {
+            display: flex;
+            justify-content: flex-start!important;
+        }
+        & .right {
+            display: flex;
+            justify-content: flex-end!important;
+        }
+    }
+
+
+}
+
+.Pointer_ViewEdgeDependency {
+    --anchorSize: 15px;
+    --dashing: 10.5,9,0,0;
+    --stroke-color: rgba(119,119,119,1);
+    --stroke-color0: rgba(119,119,119,1);
+    --stroke-color1: rgba(119,119,119,1);
+    --stroke-width: 1px;
+    --stroke-color-hover: rgba(0,0,0,1);
+    --stroke-color-hover0: rgba(0,0,0,1);
+    --stroke-color-hover1: rgba(0,0,0,1);
+    --stroke-width-hover: 3px;
+    --head: 'M11.354 5.646a.5.5 90 010 .708l-6.035 6.089a.5.5 90 01-.156-.116L11.375 5.999l-6.406-6.211a.5.5 90 01.208-.115z';
+    --tail: '';
+    --fill: rgba(255,255,255,0);
+    --fill0: rgba(255,255,255,0);
+    --fill1: rgba(255,255,255,0);
+
+
+    .edge-anchor {
+        cursor: crosshair;
+        stroke: transparent;
+        fill: none;
+        r:var(--anchorSize);
+        outline: var(--stroke-width) solid var(--stroke-color);
+        outline-offset: calc(var(--stroke-width) * -1);
+        border-radius: 100%;
+    }
+    .clickthrough, .unclickable{
+        pointer-events: none;
+    }
+    .clickable{
+        pointer-events: all;
+    }
+    .fullscreen{
+        overflow: visible !important;
+        width: calc(100vw / var(--total-zoom-x));
+        height: calc(100vh / var(--total-zoom-y));
+    }
+    path{
+        fill: none;
+        stroke-dasharray: var(--dashing);
+        &.head{
+            d: path(var(--head));
+        }
+        &.tail{
+            d: path(var(--tail));
+        }
+    }
+    path.edge.full, path.tail, path.head{
+        stroke: var(--stroke-color);
+        stroke-width: var(--stroke-width);
+    }
+    path.tail, path.head{
+        fill:var(--fill);
+    }
+    path.edge.full.outline{
+        stroke-width: var(--edge-outline-width);
+        stroke: white;
+    }
+    path.edge.full.hover-activator{
+        stroke-width: var(--stroke-width-hover);
+        stroke: none;
+    }
+    path.content{
+        stroke: var(--stroke-color-hover);
+        stroke-width: var(--stroke-width-hover);
+    }
+    .label-text{
+        color: var(--stroke-color);
+        background-color: white;
+        padding: 0 10px!important;
+        border-radius: 3px;
+    }
+
+    .label-end > foreignObject.label{
+        overflow: visible;
+        color: var(--stroke-color);
+        width: 0;
+        height: 0;
+        white-space: pre;
+        > div{
+            width: fit-content;
+        }
+    }
+    foreignObject.label{
+        overflow: visible;
+        color: var(--stroke-color);
+        width: 0;
+        height: 0;
+        white-space: pre;
+        > div{
+            width: fit-content;
+        }
+    }
+
+    foreignObject.label-end, foreignObject.label-start {
+        overflow: visible;
+        color: var(--stroke-color);
+        white-space: pre;
+
+        > div{
+            width: fit-content;
+            background-color: transparent;
+            padding: 0!important;
+
+        }
+        & .left {
+            display: flex;
+            justify-content: flex-start!important;
+        }
+        & .right {
+            display: flex;
+            justify-content: flex-end!important;
+        }
+    }
+
+
+}
+
+.Pointer_ViewEdgeInheritance {
+    --anchorSize: 15px;
+    --dashing: '';
+    --stroke-color: rgba(119,119,119,1);
+    --stroke-color0: rgba(119,119,119,1);
+    --stroke-color1: rgba(119,119,119,1);
+    --stroke-width: 1px;
+    --stroke-color-hover: rgba(0,0,0,1);
+    --stroke-color-hover0: rgba(0,0,0,1);
+    --stroke-color-hover1: rgba(0,0,0,1);
+    --stroke-width-hover: 3px;
+    --head: 'M 0 0   L 12 12/2   L 0 12   Z';
+    --tail: '';
+    --fill: rgba(255,255,255,1);
+    --fill0: rgba(255,255,255,1);
+    --fill1: rgba(255,255,255,1);
+
+
+    .edge-anchor {
+        cursor: crosshair;
+        stroke: transparent;
+        fill: none;
+        r:var(--anchorSize);
+        outline: var(--stroke-width) solid var(--stroke-color);
+        outline-offset: calc(var(--stroke-width) * -1);
+        border-radius: 100%;
+    }
+    .clickthrough, .unclickable{
+        pointer-events: none;
+    }
+    .clickable{
+        pointer-events: all;
+    }
+    .fullscreen{
+        overflow: visible !important;
+        width: calc(100vw / var(--total-zoom-x));
+        height: calc(100vh / var(--total-zoom-y));
+    }
+    path{
+        fill: none;
+        stroke-dasharray: var(--dashing);
+        &.head{
+            d: path(var(--head));
+        }
+        &.tail{
+            d: path(var(--tail));
+        }
+    }
+    path.edge.full, path.tail, path.head{
+        stroke: var(--stroke-color);
+        stroke-width: var(--stroke-width);
+    }
+    path.tail, path.head{
+        fill:var(--fill);
+    }
+    path.edge.full.outline{
+        stroke-width: var(--edge-outline-width);
+        stroke: white;
+    }
+    path.edge.full.hover-activator{
+        stroke-width: var(--stroke-width-hover);
+        stroke: none;
+    }
+    path.content{
+        stroke: var(--stroke-color-hover);
+        stroke-width: var(--stroke-width-hover);
+    }
+    .label-text{
+        color: var(--stroke-color);
+        background-color: white;
+        padding: 0 10px!important;
+        border-radius: 3px;
+    }
+
+    .label-end > foreignObject.label{
+        overflow: visible;
+        color: var(--stroke-color);
+        width: 0;
+        height: 0;
+        white-space: pre;
+        > div{
+            width: fit-content;
+        }
+    }
+    foreignObject.label{
+        overflow: visible;
+        color: var(--stroke-color);
+        width: 0;
+        height: 0;
+        white-space: pre;
+        > div{
+            width: fit-content;
+        }
+    }
+
+    foreignObject.label-end, foreignObject.label-start {
+        overflow: visible;
+        color: var(--stroke-color);
+        white-space: pre;
+
+        > div{
+            width: fit-content;
+            background-color: transparent;
+            padding: 0!important;
+
+        }
+        & .left {
+            display: flex;
+            justify-content: flex-start!important;
+        }
+        & .right {
+            display: flex;
+            justify-content: flex-end!important;
+        }
+    }
+
+
+}
+
+.Pointer_ViewEdgeAggregation {
+    --anchorSize: 15px;
+    --dashing: '';
+    --stroke-color: rgba(119,119,119,1);
+    --stroke-color0: rgba(119,119,119,1);
+    --stroke-color1: rgba(119,119,119,1);
+    --stroke-width: 1px;
+    --stroke-color-hover: rgba(0,0,0,1);
+    --stroke-color-hover0: rgba(0,0,0,1);
+    --stroke-color-hover1: rgba(0,0,0,1);
+    --stroke-width-hover: 3px;
+    --head: '';
+    --tail: 'M8.5776-.9085c.6316-.522 1.6553-.522 2.2869 0l7.0948 5.8644c.6316.522.6316 1.3671 0 1.8882L10.8645 12.7085c-.6316.522-1.6542.522-2.2847 0L1.4827 6.845a1.6117 1.332 0 010-1.8882z';
+    --fill: rgba(255,255,255,1);
+    --fill0: rgba(255,255,255,1);
+    --fill1: rgba(255,255,255,1);
+
+
+    .edge-anchor {
+        cursor: crosshair;
+        stroke: transparent;
+        fill: none;
+        r:var(--anchorSize);
+        outline: var(--stroke-width) solid var(--stroke-color);
+        outline-offset: calc(var(--stroke-width) * -1);
+        border-radius: 100%;
+    }
+    .clickthrough, .unclickable{
+        pointer-events: none;
+    }
+    .clickable{
+        pointer-events: all;
+    }
+    .fullscreen{
+        overflow: visible !important;
+        width: calc(100vw / var(--total-zoom-x));
+        height: calc(100vh / var(--total-zoom-y));
+    }
+    path{
+        fill: none;
+        stroke-dasharray: var(--dashing);
+        &.head{
+            d: path(var(--head));
+        }
+        &.tail{
+            d: path(var(--tail));
+        }
+    }
+    path.edge.full, path.tail, path.head{
+        stroke: var(--stroke-color);
+        stroke-width: var(--stroke-width);
+    }
+    path.tail, path.head{
+        fill:var(--fill);
+    }
+    path.edge.full.outline{
+        stroke-width: var(--edge-outline-width);
+        stroke: white;
+    }
+    path.edge.full.hover-activator{
+        stroke-width: var(--stroke-width-hover);
+        stroke: none;
+    }
+    path.content{
+        stroke: var(--stroke-color-hover);
+        stroke-width: var(--stroke-width-hover);
+    }
+    .label-text{
+        color: var(--stroke-color);
+        background-color: white;
+        padding: 0 10px!important;
+        border-radius: 3px;
+    }
+
+    .label-end > foreignObject.label{
+        overflow: visible;
+        color: var(--stroke-color);
+        width: 0;
+        height: 0;
+        white-space: pre;
+        > div{
+            width: fit-content;
+        }
+    }
+    foreignObject.label{
+        overflow: visible;
+        color: var(--stroke-color);
+        width: 0;
+        height: 0;
+        white-space: pre;
+        > div{
+            width: fit-content;
+        }
+    }
+
+    foreignObject.label-end, foreignObject.label-start {
+        overflow: visible;
+        color: var(--stroke-color);
+        white-space: pre;
+
+        > div{
+            width: fit-content;
+            background-color: transparent;
+            padding: 0!important;
+
+        }
+        & .left {
+            display: flex;
+            justify-content: flex-start!important;
+        }
+        & .right {
+            display: flex;
+            justify-content: flex-end!important;
+        }
+    }
+
+
+}
+
+.Pointer_ViewEdgeComposition {
+    --anchorSize: 15px;
+    --dashing: '';
+    --stroke-color: rgba(119,119,119,1);
+    --stroke-color0: rgba(119,119,119,1);
+    --stroke-color1: rgba(119,119,119,1);
+    --stroke-width: 1px;
+    --stroke-color-hover: rgba(0,0,0,1);
+    --stroke-color-hover0: rgba(0,0,0,1);
+    --stroke-color-hover1: rgba(0,0,0,1);
+    --stroke-width-hover: 3px;
+    --head: '';
+    --tail: 'M8.5776-.9085c.6316-.522 1.6553-.522 2.2869 0l7.0948 5.8644c.6316.522.6316 1.3671 0 1.8882L10.8645 12.7085c-.6316.522-1.6542.522-2.2847 0L1.4827 6.845a1.6117 1.332 0 010-1.8882z';
+    --fill: rgba(106,106,106,1);
+    --fill0: rgba(106,106,106,1);
+    --fill1: rgba(106,106,106,1);
+
+
+    .edge-anchor {
+        cursor: crosshair;
+        stroke: transparent;
+        fill: none;
+        r:var(--anchorSize);
+        outline: var(--stroke-width) solid var(--stroke-color);
+        outline-offset: calc(var(--stroke-width) * -1);
+        border-radius: 100%;
+    }
+    .clickthrough, .unclickable{
+        pointer-events: none;
+    }
+    .clickable{
+        pointer-events: all;
+    }
+    .fullscreen{
+        overflow: visible !important;
+        width: calc(100vw / var(--total-zoom-x));
+        height: calc(100vh / var(--total-zoom-y));
+    }
+    path{
+        fill: none;
+        stroke-dasharray: var(--dashing);
+        &.head{
+            d: path(var(--head));
+        }
+        &.tail{
+            d: path(var(--tail));
+        }
+    }
+    path.edge.full, path.tail, path.head{
+        stroke: var(--stroke-color);
+        stroke-width: var(--stroke-width);
+    }
+    path.tail, path.head{
+        fill:var(--fill);
+    }
+    path.edge.full.outline{
+        stroke-width: var(--edge-outline-width);
+        stroke: white;
+    }
+    path.edge.full.hover-activator{
+        stroke-width: var(--stroke-width-hover);
+        stroke: none;
+    }
+    path.content{
+        stroke: var(--stroke-color-hover);
+        stroke-width: var(--stroke-width-hover);
+    }
+    .label-text{
+        color: var(--stroke-color);
+        background-color: white;
+        padding: 0 10px!important;
+        border-radius: 3px;
+    }
+
+    .label-end > foreignObject.label{
+        overflow: visible;
+        color: var(--stroke-color);
+        width: 0;
+        height: 0;
+        white-space: pre;
+        > div{
+            width: fit-content;
+        }
+    }
+    foreignObject.label{
+        overflow: visible;
+        color: var(--stroke-color);
+        width: 0;
+        height: 0;
+        white-space: pre;
+        > div{
+            width: fit-content;
+        }
+    }
+
+    foreignObject.label-end, foreignObject.label-start {
+        overflow: visible;
+        color: var(--stroke-color);
+        white-space: pre;
+
+        > div{
+            width: fit-content;
+            background-color: transparent;
+            padding: 0!important;
+
+        }
+        & .left {
+            display: flex;
+            justify-content: flex-start!important;
+        }
+        & .right {
+            display: flex;
+            justify-content: flex-end!important;
+        }
+    }
+
+
+}
+
+.Pointer_ViewEdge {
+    --anchorSize: 15px;
+    --dashing: '';
+    --stroke-color: rgba(119,119,119,1);
+    --stroke-color0: rgba(119,119,119,1);
+    --stroke-color1: rgba(119,119,119,1);
+    --stroke-width: 1px;
+    --stroke-color-hover: rgba(0,0,0,1);
+    --stroke-color-hover0: rgba(0,0,0,1);
+    --stroke-color-hover1: rgba(0,0,0,1);
+    --stroke-width-hover: 3px;
+    --head: 'M11.354 5.646a.5.5 90 010 .708l-6.035 6.089a.5.5 90 01-.156-.116L11.375 5.999l-6.406-6.211a.5.5 90 01.208-.115z';
+    --tail: '';
+    --fill: rgba(255,255,255,0);
+    --fill0: rgba(255,255,255,0);
+    --fill1: rgba(255,255,255,0);
+
+
+    .edge-anchor {
+        cursor: crosshair;
+        stroke: transparent;
+        fill: none;
+        r:var(--anchorSize);
+        outline: var(--stroke-width) solid var(--stroke-color);
+        outline-offset: calc(var(--stroke-width) * -1);
+        border-radius: 100%;
+    }
+    .clickthrough, .unclickable{
+        pointer-events: none;
+    }
+    .clickable{
+        pointer-events: all;
+    }
+    .fullscreen{
+        overflow: visible !important;
+        width: calc(100vw / var(--total-zoom-x));
+        height: calc(100vh / var(--total-zoom-y));
+    }
+    path{
+        fill: none;
+        stroke-dasharray: var(--dashing);
+        &.head{
+            d: path(var(--head));
+        }
+        &.tail{
+            d: path(var(--tail));
+        }
+    }
+    path.edge.full, path.tail, path.head{
+        stroke: var(--stroke-color);
+        stroke-width: var(--stroke-width);
+    }
+    path.tail, path.head{
+        fill:var(--fill);
+    }
+    path.edge.full.outline{
+        stroke-width: var(--edge-outline-width);
+        stroke: white;
+    }
+    path.edge.full.hover-activator{
+        stroke-width: var(--stroke-width-hover);
+        stroke: none;
+    }
+    path.content{
+        stroke: var(--stroke-color-hover);
+        stroke-width: var(--stroke-width-hover);
+    }
+    .label-text{
+        color: var(--stroke-color);
+        background-color: white;
+        padding: 0 10px!important;
+        border-radius: 3px;
+    }
+
+    .label-end > foreignObject.label{
+        overflow: visible;
+        color: var(--stroke-color);
+        width: 0;
+        height: 0;
+        white-space: pre;
+        > div{
+            width: fit-content;
+        }
+    }
+    foreignObject.label{
+        overflow: visible;
+        color: var(--stroke-color);
+        width: 0;
+        height: 0;
+        white-space: pre;
+        > div{
+            width: fit-content;
+        }
+    }
+
+    foreignObject.label-end, foreignObject.label-start {
+        overflow: visible;
+        color: var(--stroke-color);
+        white-space: pre;
+
+        > div{
+            width: fit-content;
+            background-color: transparent;
+            padding: 0!important;
+
+        }
+        & .left {
+            display: flex;
+            justify-content: flex-start!important;
+        }
+        & .right {
+            display: flex;
+            justify-content: flex-end!important;
+        }
+    }
+
+
+}
+
+.Pointer_ViewEdgePoint {
+    --color: rgba(0,0,0,1);
+    --color-0: rgba(0,0,0,1);
+    --color-1: rgba(0,0,0,1);
+    --background: rgba(255,255,255,1);
+    --background-0: rgba(255,255,255,1);
+    --background-1: rgba(255,255,255,1);
+    --border: rgba(0,0,0,1);
+    --border-0: rgba(0,0,0,1);
+    --border-1: rgba(0,0,0,1);
+    --hover-scale: 1.3;
+
+    .edgePoint{
+        border: 2px solid var(--border-1);
+        background: var(--background-1);
+        color: var(--color-1);
+        width: 15px;
+        height: 15px;
+        border-radius: 100%;
+
+        &:hover, &:focus-within, &:focus{
+            transform-origin: center;
+            transform: scale(1.3);
+        }
+    }
+    [hoverscale]:hover, [hoverscale]:focus-within, [hoverscale]:focus{
+        transform-origin: center;
+        transform: scale(var(--hover-scale));
+        &>[hoverscale]:hover, &>[hoverscale]:focus-within, &>[hoverscale]:focus{ transform: scale(1); }
+    }
+
+
+}
+
+.Pointer_ViewAnchors {
+    --anchor: rgba(156,196,202,1);
+    --anchor-0: rgba(156,196,202,1);
+    --anchor-1: rgba(156,196,202,1);
+    --anchor-2: rgba(202,148,142,1);
+    --anchor-3: rgba(126,126,184,1);
+    --anchor-hover: rgba(10,126,139,1);
+    --anchor-hover-0: rgba(10,126,139,1);
+    --anchor-hover-1: rgba(10,126,139,1);
+    --anchor-hover-2: rgba(137,19,7,1);
+    --anchor-hover-3: rgba(0,119,0,1);
+
+
+    .anchor.valid-anchor{
+        display:block;
+    }
+
+    .anchor{
+        display:none;
+        position: absolute;
+        background-color: var(--anchor-1);
+        outline: 0px solid var(--anchor-3);
+        transform: translate(-50%, -50%);
+        pointer-events: all;
+        cursor: crosshair;
+        border-radius: 100%;
+
+        &:hover{
+            background-color: var(--anchor-hover-1);
+            outline: 0px solid var(--anchor-hover-3);
+        }
+        &.active-anchor{
+            background-color: var(--anchor-2);
+            &:hover{
+                background-color: var(--anchor-hover-2);
+            }
+        }
+        &>div{ pointer-events: none; }
+    }
+
+}
+
+.Pointer_ViewClass {
+    --color: rgba(255,0,0,1);
+    --color-0: rgba(255,0,0,1);
+    --color-1: rgba(255,0,0,1);
+    --color-2: rgba(0,0,0,1);
+    --color-3: rgba(255,255,255,1);
+    --background: rgba(255,255,255,1);
+    --background-0: rgba(255,255,255,1);
+    --background-1: rgba(255,255,255,1);
+    --background-2: rgba(238,238,238,1);
+    --background-3: rgba(255,0,0,1);
+    --outline: rgba(38,61,145,1);
+    --outline-0: rgba(38,61,145,1);
+    --outline-1: rgba(38,61,145,1);
+    --outline-2: rgba(131,144,250,1);
+    --outline-3: rgba(250,199,72,1);
+    --outline-4: rgba(6,188,193,1);
+    --outline-5: rgba(73,160,120,1);
+    --outline-6: rgba(29,211,176,1);
+    --outline-7: rgba(83,221,108,1);
+    --outline-8: rgba(216,17,89,1);
+    --outline-9: rgba(151,152,170,1);
+
+
+    /* class */
+
+    border-radius: 6px;
+    .class {
+        border-radius: inherit;
+        background: var(--model-background);
+        color:var(--model-color);
+        min-width: 160px;
+        border: 1px solid var(--borderColor)!important;
+        >*{
+            border-radius: inherit;
+        }
+
+        &>.header{
+            padding: 3px 6px;
+            white-space: pre;
+            text-align: center;
+            border: none;
+
+        }
+        .class-name{
+            font-weight: bold;
+            color: var(--model-accent);
+        }
+        .bi {
+            color: var(--model-accent);
+            padding-right: 3px;
+        }
+        .class-children {
+            background-color: var(--model-background);
+            height: fit-content;
+            min-height: 6px;
+            width: -webkit-fill-available;
+            &>*:last-child { padding-bottom: 0.125em; }
+        }
+        .abstract {
+            font-style: italic;
+            border: none!important;
+        }
+        .summary {
+            padding: 0.25rem;
+            text-align: center;
+        }
+    }
+
+    .abstract {
+        border-style: dotted!important;
+        border-color: silver!important;
+    }
+
+    .class:hover {
+        box-shadow: var(--model-shadow);
+    }
+
+
+    .help {
+        display: none;
+        z-index: 10000;
+        position: absolute;
+        top: 0px;
+        left: 0px;
+        border: 1px solid var(--accent);
+        margin-top: -40px;
+        min-height: 30px;
+        min-width: 120px;
+        border-radius: 4px;
+        background-color: var(--bg-2);
+    }
+
+    .highlight {
+        outline: 2px solid var(--outlineColor)!important;
+    }
+
+
+    .level-2, .level-1 {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 40px;
+        width: fit-content;
+        padding: 10px 5px;
+        height: fit-content;
+        outline-width: 1px!important;
+    }
+
+
+
+
+}
+
+.Pointer_ViewEnum {
+    --color: rgba(255,165,0,1);
+    --color-0: rgba(255,165,0,1);
+    --color-1: rgba(255,165,0,1);
+    --color-2: rgba(0,0,0,1);
+    --color-3: rgba(255,255,255,1);
+    --background: rgba(255,255,255,1);
+    --background-0: rgba(255,255,255,1);
+    --background-1: rgba(255,255,255,1);
+    --background-2: rgba(238,238,238,1);
+    --background-3: rgba(255,0,0,1);
+
+
+    border-radius: 6px;
+    .enumerator {
+        border-radius: inherit;
+        background: white;
+        color:var(--model-color);
+        min-width: 140px;
+        &>*{ border-radius: inherit; }
+
+        &>.header{
+            padding: 3px 6px;
+            white-space: pre;
+            text-align: center;
+        }
+        .enumerator-name { font-weight: bold; color: var(--accent-secondary); }
+        .bi {
+            color: var(--accent-secondary);
+        }
+        .enumerator-children {
+            background-color: white;
+            min-height: 6px;
+            height: fit-content;
+            width: -webkit-fill-available;
+            &>*:last-child { padding-bottom: 0.125em; }
+        }
+        .summary { padding: 0.25rem; text-align: center; }
+    }
+
+    .enumerator:hover {
+        box-shadow: 0 0 5px silver;
+    }
+
+}
+
+.Pointer_ViewValue {
+
+    .value{
+        padding-right: 6px;
+        max-width: 300px;
+        min-width: 100%;
+        overflow:hidden;
+        &:hover, &:focus-within{ overflow: visible; }
+        /*.values_str{
+            maxWidth: 100px;
+        }*/
+    }
+}
+
+.Pointer_ViewAttribute {
+    --color: rgba(0,0,0,1);
+    --color-0: rgba(0,0,0,1);
+    --color-1: rgba(0,0,0,1);
+    --color-2: rgba(206,145,120,1);
+    --bg: rgba(255,255,255,1);
+    --bg-0: rgba(255,255,255,1);
+    --bg-1: rgba(255,255,255,1);
+
+
+    .feature{
+        display: flex;
+        padding: 2px 5px;
+        .autosize-input-container{
+            margin: 0;
+            background-color: var(--bg-1);
+        }
+        select {
+            width: 100%;
+            min-height: 30px;
+            background-color: var(--bg-1);
+            margin-left: 1.5em;
+            border: none;
+            outline: 1px solid var(--color-1);
+        }
+        .type {
+            position: relative;
+            flex-grow: 1;
+            text-align: end;
+            font-weight: 500;
+            color: var(--color-2);
+        }
+    }
+    /* change hoverable to display on focus only
+    .hoverable>.content { display: none !important; }
+    &:focus, &:focus-within {
+        .hoverable>.content {
+            display: block !important;
+        }
+        .hoverable.preview { display: none !important; }
+    */
+}
+
+
+.Pointer_ViewReference {
+    --color: rgba(0,0,0,1);
+    --color-0: rgba(0,0,0,1);
+    --color-1: rgba(0,0,0,1);
+    --color-2: rgba(206,145,120,1);
+    --bg: rgba(255,255,255,1);
+    --bg-0: rgba(255,255,255,1);
+    --bg-1: rgba(255,255,255,1);
+
+
+    .feature{
+        display: flex;
+        padding: 2px 5px;
+        .autosize-input-container{
+            margin: 0;
+            background-color: var(--bg-1);
+        }
+        select {
+            width: 100%;
+            min-height: 30px;
+            background-color: var(--bg-1);
+            margin-left: 1.5em;
+            border: none;
+            outline: 1px solid var(--color-1);
+        }
+        .type {
+            position: relative;
+            flex-grow: 1;
+            text-align: end;
+            font-weight: 500;
+            color: var(--color-2);
+        }
+    }
+    /* change hoverable to display on focus only
+    .hoverable>.content { display: none !important; }
+    &:focus, &:focus-within {
+        .hoverable>.content {
+            display: block !important;
+        }
+        .hoverable.preview { display: none !important; }
+    */
+}
+}
+
+.Pointer_ViewOperation {
+
+
+    .operation{
+        display: flex;
+        padding: 2px 5px;
+
+        input,
+        select {
+            margin-left: auto;
+            width: 125px;
+            max-width: 55%;
+            flex-basis: 0;
+        }
+        .parameters{
+            background-color: var(--background-2);
+            left: 0;
+            top: 100%;
+            width: 100%;
+        }
+    }
+}
+
+.Pointer_ViewLiteral {
+
+    display: block;
+}
+
+.Pointer_ViewParameter {
+
+
+    .parameter{
+        display: flex;
+        padding-left: 1em;
+        width: calc(100% - 1em);
+        .modifier{
+            width: 1ic;
+            text-align: center;
+        }
+    }
+}
+
+.Pointer_ViewOverlay {
+
+    /* -- v2.0 - */
+    &.mainView { text-decoration-line: spelling-error; }
+    &.decorativeView {
+        text-decoration-line: spelling-error;
+
+        .overlap{
+            outline: 1px dotted var(--failure);
+            display: flex;
+        }
+
+        .error-message{
+            color: var(--accent);
+            background: var(--bg-2-5);
+            border-radius: var(--radius);
+            margin: auto;
+            padding: 8px 14px 16px 10px;
+            position:absolute;
+            top:50%; right:0;
+            transform: translate(calc(100% + 20px), calc(-50%));
+
+        }
+        .error-message::before {
+            position: relative;
+            top: 4px;
+            font-family: bootstrap-icons;
+            font-size: 1.2rem;
+            content: '\F333';
+            margin-right: 10px;
+            padding-top: 10px!important;
+        }
+    }
+
+}
+
+.Pointer_ViewLowerbound {
+
+
+    /* placeholder justification, add .center, .left, .start, .right, or .end in the <Input /> container */
+
+    input:placeholder-shown {
+        width: 120px !important;
+        font-style: italic !important;
+        text-align: right;
+        left: -120px !important;
+    }
+
+    .center {
+        & input:placeholder-shown {
+            width: 120px !important;
+            font-style: italic !important;
+            text-align: center;
+            left: -60px !important;
+        }
+    }
+
+    .left, .start {
+        & input:placeholder-shown {
+            width: 120px !important;
+            font-style: italic !important;
+            text-align: left;
+            left: 0 !important;
+        }
+    }
+
+    .right, .end {
+        & input:placeholder-shown {
+            width: 120px !important;
+            font-style: italic !important;
+            text-align: right;
+            left: -120px !important;
+        }
+    }
+
+    .input-container {
+        & select {
+            border: none;
+            text-align: right;
+        }
+    }
+
+    &,[data-nodetype], [data-nodetype]>.visible{ /* corresponds to "overflow: visible" */
+        overflow: visible;
+    }
+
+
+}
+
+.Pointer_ViewCheckName {
+
+
+    /* placeholder justification, add .center, .left, .start, .right, or .end in the <Input /> container */
+
+    input:placeholder-shown {
+        width: 120px !important;
+        font-style: italic !important;
+        text-align: right;
+        left: -120px !important;
+    }
+
+    .center {
+        & input:placeholder-shown {
+            width: 120px !important;
+            font-style: italic !important;
+            text-align: center;
+            left: -60px !important;
+        }
+    }
+
+    .left, .start {
+        & input:placeholder-shown {
+            width: 120px !important;
+            font-style: italic !important;
+            text-align: left;
+            left: 0 !important;
+        }
+    }
+
+    .right, .end {
+        & input:placeholder-shown {
+            width: 120px !important;
+            font-style: italic !important;
+            text-align: right;
+            left: -120px !important;
+        }
+    }
+
+    .input-container {
+        & select {
+            border: none;
+            text-align: right;
+        }
+    }
+
+    &,[data-nodetype], [data-nodetype]>.visible{ /* corresponds to "overflow: visible" */
+        overflow: visible;
+    }
+
+
+}
+
+.GraphContainer {
+    --border: rgba(163,163,163,1);
+    --border-0: rgba(163,163,163,1);
+    --border-1: rgba(163,163,163,1);
+
+
+    /* -- Jjodel Abstract Syntax Specification v2.0 -- */
+
+
+
+    /* stuff for subelements */
+    [data-nodetype="GraphVertex"] {
+        width: 50%;
+        height: 50%;
+    }
+
+
+    [data-nodetype="Field"] { white-space: nowrap; }
+    [data-nodetype="VoidVertex"],
+    [data-nodetype="Vertex"],
+    [data-nodetype="GraphVertex"] {
+        left: var(--left) !important;
+        top: var(--top) !important;
+        >*{ border: 0.1em solid var(--border-1); }
+        &>.ui-resizable-handle{ border: none; }
+        & hr {color: var(--border-1); }
+
+    }
+
+    [data-nodetype]{
+        /* setup zoom */
+        transform-origin: top left;
+
+        /* for graph, transform only dynamic elements that can be panned */
+        &.Graph.mainView{ transform: none !important; }
+        /* for nested nodes, apply zoom only on roots that don't have a panning (otherwise is applied to pan instead) */
+        .mainView.not-scrollable, .scrollable{
+            transform: scale(var(--zoom-x), var(--zoom-y));
+            transform-origin: top left;
+        }
+
+
+    }
+
+    /* normally hide overflow on all nodes */
+    &,[data-nodetype], [data-nodetype]>*{
+        overflow: hidden;
+        /* but allow it on selected nodes or nodes containing edges */
+        &.selected-by-me, &:has(.selected-by-me, .Edge, .edge, .edges), &:hover, &:active, &:focus-within, &:focus{
+            overflow: visible;
+            z-index: 100 !important;
+            outline-width: 0px!important;
+            outline-style: solid;
+            outline-color: var(--selected)!important;
+        }
+        .Vertex, .Field {
+            &.selected-by-me, &:hover, &:active, &:focus-within, &:focus {
+                outline-width: 4px!important;
+                outline-style: solid!important;
+                outline-color: var(--selected)!important;
+            }
+        }
+    }
+
+    &,[data-nodetype] {
+        &.selected-by-me, &:hover, &:active, &:focus-within, &:focus{
+            outline-width: 4px;
+            outline-style: solid;
+            outline-color: var(--selected)!important;
+        }
+    }
+
+    /* edge overflow is always visible (or lines would be cropped)*/
+    .Edge{ overflow: visible; }
+    /* this class is for edge container, must be positioned at top-left with no size but in overflow.
+    otherwise you would click the edge container instead of the graph-elements beneath it. */
+    .edges { z-index: 101; position: absolute; top: 0; left: 0; height: 0; width: 0; overflow: visible; }
+
+}
+
+.GraphContainer {
+
+
+    /* placeholder justification, add .center, .left, .start, .right, or .end in the <Input /> container */
+
+    input:placeholder-shown {
+        width: 120px !important;
+        font-style: italic !important;
+        text-align: right;
+        left: -120px !important;
+    }
+
+    .center {
+        & input:placeholder-shown {
+            width: 120px !important;
+            font-style: italic !important;
+            text-align: center;
+            left: -60px !important;
+        }
+    }
+
+    .left, .start {
+        & input:placeholder-shown {
+            width: 120px !important;
+            font-style: italic !important;
+            text-align: left;
+            left: 0 !important;
+        }
+    }
+
+    .right, .end {
+        & input:placeholder-shown {
+            width: 120px !important;
+            font-style: italic !important;
+            text-align: right;
+            left: -120px !important;
+        }
+    }
+
+    .input-container {
+        & select {
+            border: none;
+            text-align: right;
+        }
+    }
+
+    &,[data-nodetype], [data-nodetype]>.visible{ /* corresponds to "overflow: visible" */
+        overflow: visible;
+    }
+
+
+}

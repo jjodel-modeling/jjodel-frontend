@@ -231,14 +231,6 @@ border-radius: 6px;
     box-shadow: var(--model-shadow);
 }
 
-div.header:has(.open:hover) {
-
-
-    &>div.help {
-        display: visible!important;
-    }
-}
-
 .help {
     display: none;
     z-index: 10000;
@@ -419,6 +411,7 @@ border-radius: 6px;
             view.appliableToClasses = [DAttribute.cname];
             view.oclCondition = 'context DAttribute inv: true';
             view.appliableTo = 'Field';
+            view.palette = {'color-':  U.hexToPalette('#000000', '#CE9178'), 'bg-':  U.hexToPalette('#fff')};
             view.css = `
 .feature{
     display: flex;
@@ -433,14 +426,14 @@ border-radius: 6px;
         background-color: var(--bg-1);
         margin-left: 1.5em;
         border: none;
-        outline: 1px solid black;
+        outline: 1px solid var(--color-1);
     }
     .type {
         position: relative;
         flex-grow: 1;
         text-align: end;
         font-weight: 500;
-        color: #CE9178;
+        color: var(--color-2);
     }
 }
 /* change hoverable to display on focus only 
@@ -450,8 +443,7 @@ border-radius: 6px;
         display: block !important;
     }
     .hoverable.preview { display: none !important; }
-*/ 
-}`;
+}*/`;
         }, false, Defaults.Pointer_ViewAttribute);
         return view;
     }
@@ -463,18 +455,39 @@ border-radius: 6px;
             view.appliableToClasses = [DReference.cname];
             view.oclCondition = 'context DReference inv: true';
             view.appliableTo = 'Field';
+            view.palette = {'color-':  U.hexToPalette('#000000', '#CE9178'), 'bg-':  U.hexToPalette('#fff')};
             view.css = `
 .feature{
     display: flex;
     padding: 2px 5px;
-    input,
-    select {
-        margin-left: auto;
-        width: 125px;
-        max-width: 55%;
-        flex-basis: 0;
+    .autosize-input-container{
+       margin: 0;
+       background-color: var(--bg-1);
     }
-}`;
+    select {
+        width: 100%;
+        min-height: 30px;
+        background-color: var(--bg-1);
+        margin-left: 1.5em;
+        border: none;
+        outline: 1px solid var(--color-1);
+    }
+    .type {
+        position: relative;
+        flex-grow: 1;
+        text-align: end;
+        font-weight: 500;
+        color: var(--color-2);
+    }
+}
+/* change hoverable to display on focus only 
+.hoverable>.content { display: none !important; }
+&:focus, &:focus-within {
+    .hoverable>.content {
+        display: block !important;
+    }
+    .hoverable.preview { display: none !important; }
+}*/`;
         }, false, Defaults.Pointer_ViewReference);
         return view;
     }

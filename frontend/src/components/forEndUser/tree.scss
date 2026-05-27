@@ -110,208 +110,210 @@ $color-feature: #6b7280;    // Gray - Values
 // ============================================
 // TYPE ICON
 // ============================================
-.type {
-  height: 1.5rem;
-  margin-bottom: 20px;
-  width: 1.5rem;
-  display: block;
-  margin: auto;
-  padding: 0 3px;
-  color: white;
-  text-align: center;
-  font-weight: $font-weight-normal;
-}
-
-.type .icon {
-  border-radius: $radius-md !important;
-  height: 1.5rem;
-  width: 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: $font-size-xs;
-  font-weight: $font-weight-semibold;
-  transition: all $transition-fast;
-}
-
-.type .icon.abstract-class {
-  opacity: 0.6 !important;
-}
-
-section.datatree-entry-root,
-div.d-flex.tree {
-  padding: 2px;
-}
-
-.tree-item .parent-class {
-  // Placeholder for parent class styling
-}
-
-// ============================================
-// TYPE-SPECIFIC COLORS (Muted with backgrounds)
-// Each type has DISTINCT colors for easy identification
-// ============================================
-.tree-DModel,
-.tree-Model {
-  // Slate - Metamodels
-  background-color: rgba(100, 116, 139, 0.15);
-  color: $color-model;
-}
-
-.tree-DPackage,
-.tree-Package {
-  // Amber - Packages
-  background-color: rgba(245, 158, 11, 0.15);
-  color: $color-package;
-}
-
-.tree-DClass,
-.tree-Class {
-  // Cyan - Classes
-  background-color: rgba(14, 165, 233, 0.15);
-  color: $color-class;
-}
-
-.tree-DAttribute,
-.tree-Attribute {
-  // Green - Attributes
-  background-color: rgba(16, 185, 129, 0.15);
-  color: $color-attribute;
-}
-
-.tree-DReference,
-.tree-Reference {
-  // Purple - References
-  background-color: rgba(139, 92, 246, 0.15);
-  color: $color-reference;
-}
-
-.tree-DOperation,
-.tree-Operation {
-  // Cyan (darker) - Operations
-  background-color: rgba(6, 182, 212, 0.15);
-  color: $color-operation;
-}
-
-.tree-DParameter,
-.tree-Parameter {
-  // Gray - Parameters
-  background-color: rgba(156, 163, 175, 0.15);
-  color: $color-parameter;
-}
-
-.tree-DEnumerator,
-.tree-Enumerator {
-  // Pink - Enums
-  background-color: rgba(236, 72, 153, 0.15);
-  color: $color-enum;
-}
-
-.tree-DEnumLiteral,
-.tree-EnumLiteral {
-  // Light Pink - Enum Literals
-  background-color: rgba(244, 114, 182, 0.15);
-  color: $color-literal;
-}
-
-.tree-DObject,
-.tree-Object {
-  background-color: rgba(107, 114, 128, 0.15);
-  color: $color-object;
-}
-
-.tree-Singleton {
-  background-color: rgba(71, 85, 105, 0.15);
-  color: $color-accent;
-}
-
-.tree-DValue,
-.tree-Value {
-  background-color: rgba(107, 114, 128, 0.1);
-  color: $color-feature;
-}
-
-// ============================================
-// DARK MODE SUPPORT
-// ============================================
-html[data-theme="dark"] {
-  .tree-item .name {
-    color: #f1f5f9;
+.tree{
+  .type {
+    height: 1.5rem;
+    margin-bottom: 20px;
+    width: 1.5rem;
+    display: block;
+    margin: auto;
+    padding: 0 3px;
+    color: white;
+    text-align: center;
+    font-weight: $font-weight-normal;
   }
 
+  .type .icon {
+    border-radius: $radius-md !important;
+    height: 1.5rem;
+    width: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    transition: all $transition-fast;
+  }
+
+  .type .icon.abstract-class {
+    opacity: 0.6 !important;
+  }
+
+  section.datatree-entry-root,
+  div.d-flex.tree {
+    padding: 2px;
+  }
+
+  .tree-item .parent-class {
+    // Placeholder for parent class styling
+  }
+
+  // ============================================
+  // TYPE-SPECIFIC COLORS (Muted with backgrounds)
+  // Each type has DISTINCT colors for easy identification
+  // ============================================
   .tree-DModel,
   .tree-Model {
     // Slate - Metamodels
-    background-color: rgba(100, 116, 139, 0.2);
-    color: #94a3b8;
+    background-color: rgba(100, 116, 139, 0.15);
+    color: $color-model;
   }
 
   .tree-DPackage,
   .tree-Package {
     // Amber - Packages
-    background-color: rgba(245, 158, 11, 0.2);
-    color: #fbbf24;
+    background-color: rgba(245, 158, 11, 0.15);
+    color: $color-package;
   }
 
   .tree-DClass,
   .tree-Class {
     // Cyan - Classes
-    background-color: rgba(14, 165, 233, 0.2);
-    color: #38bdf8;
+    background-color: rgba(14, 165, 233, 0.15);
+    color: $color-class;
   }
 
   .tree-DAttribute,
   .tree-Attribute {
     // Green - Attributes
-    background-color: rgba(16, 185, 129, 0.2);
-    color: #34d399;
+    background-color: rgba(16, 185, 129, 0.15);
+    color: $color-attribute;
   }
 
   .tree-DReference,
   .tree-Reference {
     // Purple - References
-    background-color: rgba(139, 92, 246, 0.2);
-    color: #a78bfa;
+    background-color: rgba(139, 92, 246, 0.15);
+    color: $color-reference;
   }
 
   .tree-DOperation,
   .tree-Operation {
     // Cyan (darker) - Operations
-    background-color: rgba(6, 182, 212, 0.2);
-    color: #22d3ee;
+    background-color: rgba(6, 182, 212, 0.15);
+    color: $color-operation;
   }
 
   .tree-DParameter,
   .tree-Parameter {
     // Gray - Parameters
-    background-color: rgba(156, 163, 175, 0.2);
-    color: #d1d5db;
+    background-color: rgba(156, 163, 175, 0.15);
+    color: $color-parameter;
   }
 
   .tree-DEnumerator,
   .tree-Enumerator {
     // Pink - Enums
-    background-color: rgba(236, 72, 153, 0.2);
-    color: #f472b6;
+    background-color: rgba(236, 72, 153, 0.15);
+    color: $color-enum;
   }
 
   .tree-DEnumLiteral,
   .tree-EnumLiteral {
     // Light Pink - Enum Literals
-    background-color: rgba(244, 114, 182, 0.2);
-    color: #f9a8d4;
+    background-color: rgba(244, 114, 182, 0.15);
+    color: $color-literal;
   }
 
   .tree-DObject,
-  .tree-Object,
-  .tree-DValue,
-  .tree-Value {
-    background-color: rgba(107, 114, 128, 0.2);
-    color: #9ca3af;
+  .tree-Object {
+    background-color: rgba(107, 114, 128, 0.15);
+    color: $color-object;
   }
 
   .tree-Singleton {
-    background-color: rgba(71, 85, 105, 0.2);
-    color: #94a3b8;
+    background-color: rgba(71, 85, 105, 0.15);
+    color: $color-accent;
+  }
+
+  .tree-DValue,
+  .tree-Value {
+    background-color: rgba(107, 114, 128, 0.1);
+    color: $color-feature;
+  }
+
+  // ============================================
+  // DARK MODE SUPPORT
+  // ============================================
+  html[data-theme="dark"] {
+    .tree-item .name {
+      color: #f1f5f9;
+    }
+
+    .tree-DModel,
+    .tree-Model {
+      // Slate - Metamodels
+      background-color: rgba(100, 116, 139, 0.2);
+      color: #94a3b8;
+    }
+
+    .tree-DPackage,
+    .tree-Package {
+      // Amber - Packages
+      background-color: rgba(245, 158, 11, 0.2);
+      color: #fbbf24;
+    }
+
+    .tree-DClass,
+    .tree-Class {
+      // Cyan - Classes
+      background-color: rgba(14, 165, 233, 0.2);
+      color: #38bdf8;
+    }
+
+    .tree-DAttribute,
+    .tree-Attribute {
+      // Green - Attributes
+      background-color: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+    }
+
+    .tree-DReference,
+    .tree-Reference {
+      // Purple - References
+      background-color: rgba(139, 92, 246, 0.2);
+      color: #a78bfa;
+    }
+
+    .tree-DOperation,
+    .tree-Operation {
+      // Cyan (darker) - Operations
+      background-color: rgba(6, 182, 212, 0.2);
+      color: #22d3ee;
+    }
+
+    .tree-DParameter,
+    .tree-Parameter {
+      // Gray - Parameters
+      background-color: rgba(156, 163, 175, 0.2);
+      color: #d1d5db;
+    }
+
+    .tree-DEnumerator,
+    .tree-Enumerator {
+      // Pink - Enums
+      background-color: rgba(236, 72, 153, 0.2);
+      color: #f472b6;
+    }
+
+    .tree-DEnumLiteral,
+    .tree-EnumLiteral {
+      // Light Pink - Enum Literals
+      background-color: rgba(244, 114, 182, 0.2);
+      color: #f9a8d4;
+    }
+
+    .tree-DObject,
+    .tree-Object,
+    .tree-DValue,
+    .tree-Value {
+      background-color: rgba(107, 114, 128, 0.2);
+      color: #9ca3af;
+    }
+
+    .tree-Singleton {
+      background-color: rgba(71, 85, 105, 0.2);
+      color: #94a3b8;
+    }
   }
 }
