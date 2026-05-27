@@ -6240,3 +6240,36 @@ Dark mode overrides for `.toolbar-btn` also scoped under `.documentation-toolbar
 **Note**: cambiato solo il default config-less di getAnchorConfig (`useAutoAnchor.ts:262`) da `{mode:'pinned'}` a `{mode:'auto'}`. L'early return `if (config) return config` è invariato → i pin espliciti (`data.*Anchor.mode==='pinned'`, scritti dal drag endpoint) restano congelati dalla hysteresis (`computeAnchorsWithHysteresis:315`). Call site live confermate solo `:297-298` (hysteresis). `useTreeLayout` legge anchor raw, non chiama `getAnchorConfig` → non affetto. Build pulita.
 **Nome del documento prompt**: 2026-05-26_2010_implement_edge_side_selection_v2.md
 
+---
+
+## 2026-05-27 — chore: drop local fix on portDistribution.ts (ordering inverted)
+**Prompt**: drop del fix locale STEP 1.5 cross-role merge, mai committato; visual ordering invertito su scena has/labs
+**Files touched**: frontend/src/components/editor-v2/utils/portDistribution.ts (reverted to HEAD), frontend/src/components/editor-v2/utils/__tests__/portDistribution.test.ts (removed)
+**Outcome**: ✅ working tree clean su quei path; build OK
+**Notes**: il fix funzionava (merge produce index distinti) ma esponeva un'inversione di ordering preesistente in step 2/3/5. Drop deciso da Alfonso per evitare "fix sopra fix". Discovery dedicata segue.
+**Nome del documento prompt**: 2026-05-27 2000
+
+---
+
+## 2026-05-27 — discovery: anchor ordering inversion (post-merge step 2/3/5)
+**Prompt**: discovery osservazionale per identificare dove sta l'inversione di ordering esposta dal merge cross-role (Parte B, read-only, D1-D6 + sub-domanda D1-bis sulla fonte del centroide)
+**Files touched**: docs/discovery/2026-05-27_anchor_ordering_inversion.md (new), docs/claude-code-log.md
+**Outcome**: ✅ documento prodotto. Ipotesi confermata: **nessuna tra α/β/γ/δ/ε come formulate** (tutte assumono il posizionamento in portDistribution). Causa reale = **ζ fuori lista**: ordinamento role-primary geometria-cieco in `computeSidePositions` (handlePosition.ts:177-206), modulo a valle. Sovrapposizione parziale con ε (masking) ma corretta.
+**Regressions**: no (read-only, nessun codice modificato)
+**Out-of-scope changes**: no (solo doc discovery + log)
+**Layer Impact Report**: not-required (discovery read-only; portDistribution.ts/handlePosition.ts/EditorV2.tsx/DynamicHandles.tsx solo LETTI per analisi, nessun diff)
+**Notes**: **HARD STOP HS-D2 (classe) attivato**: il bug NON è in portDistribution.ts (step 2/3/5 corretti) né in EditorV2:applyDistribution; è in `handlePosition.ts::computeSidePositions`, consumato da DynamicHandles.tsx:99 e useTreeLayout — cambia la natura del fix. **Correzione alla premessa del prompt**: sotto il codice attuale (HEAD post-729c5ce07) il merge STEP 1.5 è **posizionalmente inerte** per has/labs (con/senza merge → source@0.333 alto, target@0.667 basso; cambia solo l'handleId di labs left-0→left-1). Il merge non ha né causato né smascherato l'inversione. Il "collasso a (662,437)" pre-fix non è riproducibile dal codice attuale (computeSidePositions separa sempre source/target) → verosimilmente stato pre-role-segregation, flaggato per Alfonso, non-blocking. **D6**: same-role same-side è CORRETTO (STEP 2 incide l'ordine spaziale nell'indice, computeSidePositions lo preserva intra-ruolo); l'inversione è specifica del cross-role. **D1-bis**: il centroide viene da nodePositions live (buildNodePositions(getNodes()), EditorV2:788-790), non cached; rileva solo per il same-role. **Falla diagnostica 26 maggio** (D5): step 2 validato in isolamento (necessario non sufficiente) senza tracciare il posizionatore reale; il file 2026-05-26_2120 NON è nel repo (KB esterna), conclusione basata su architettura + descrizione prompt. **portDistribution.ts:nodeHandles/position (step 4)** è dato morto (EditorV2:792 destruttura solo edgeHandles). Proposta fix (NON implementata): Opzione A = rendere computeSidePositions spaziale (no merge, no touch portDistribution); Opzione B = merge + indice cross-role globale (combinazione necessaria). Hard stop discovery rispettato: nessuna modifica al codice, nessun test eseguito, solo il markdown + log. HS-D1/HS-D3 non attivati.
+**Nome del documento prompt**: 2026-05-27 2000
+
+---
+
+## 2026-05-27 — docs: CLAUDE.md visual bugs methodology + §3.10 staleness note
+**Prompt**: aggiunte tre sezioni a CLAUDE.md (Visual bugs methodology, sub-rules consumer/sort/fixture, §3.10 note, critical-zone cross-ref)
+**Files touched**: CLAUDE.md, docs/claude-code-log.md
+**Outcome**: ✅ docs-only, no code touched
+**Regressions**: no (solo documentazione)
+**Out-of-scope changes**: no (solo CLAUDE.md + log; discovery doc NON committata in questa sessione per vincolo del prompt)
+**Layer Impact Report**: not-required (docs-only; nessun file sync/D-L modificato, CLAUDE.md è documentazione)
+**Notes**: deriva dalla discovery 2026-05-27_anchor_ordering_inversion.md. Modifica 1 → §5.1 "Visual bugs: specify before diagnosing" sotto §5 (Discovery before action), sub-header in grassetto per coerenza con lo stile di §5 (no nuovo livello ####). Modifica 2 → blockquote dopo il titolo §3.10. Modifica 3 → paragrafo cross-reference in coda alla tabella §3.1. HS1/HS2/HS3 non attivati (§3.10 esiste a riga 251, critical-zone §3.1 esiste, nessuna sezione "Visual bugs" preesistente). Line ref EditorV2.tsx:792 e handlePosition.ts:computeSidePositions verificati in sessione. Due em-dash nel testo fornito (Modifica 1 e 3) sostituiti con `;`/`.` per il vincolo "niente em dashes". Prepara il terreno per il fix definitivo (Option A su computeSidePositions) oggetto di un prompt separato.
+**Nome del documento prompt**: 2026-05-27 2029
+
