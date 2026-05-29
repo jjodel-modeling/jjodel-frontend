@@ -22,6 +22,7 @@ import {
     LPointerTargetable,
     SetFieldAction,
     SetRootFieldAction,
+    DeleteElementAction,
     DVertex,
     DEdge,
     DVoidEdge,
@@ -43,6 +44,11 @@ import {
     clearCanvasEdgePairs,
     isSingletonSuppressed,
 } from '../sync/syncState';
+import {
+    classifyRefEdgeReconcile,
+    isM2ReferenceEdge,
+    type RefEdgeSnapshot,
+} from '../utils/refEdgeReconcile';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -336,6 +342,50 @@ export function useJjomSync(
         return count;
     });
 
+    // ── Selector: hash of (refId, type) pairs across all M2 references.
+    //    Makes the auto-populate effect re-fire on a DReference.type change
+    //    (e.g. from the Property Panel), which `modelRefCount` above does NOT
+    //    detect because the reference count is unchanged. Without this dep
+    //    the effect would miss the LIVE half of the orphan-edges bug — see
+    //    docs/discovery/2026-05-28_reference_type_change_orphan_edges.md §3.3.
+    //
+    //    Traversal mirrors `modelRefCount` (top-level packages → classes →
+    //    references; no subpackages) for consistency; the hash formula
+    //    mirrors `elementSnapshots` (`:773-776` below) and operates on string
+    //    pointers (`type` is read as a string at the Step 3 reference loop),
+    //    so identical (refId, type) sets produce identical numbers and the
+    //    selector is idempotent across runs (HS-IDEMPOT).
+    const modelRefTypeSig = useSelector((state: DState) => {
+        if (!modelid) return 0;
+        const rawModel = state.idlookup?.[modelid] as any;
+        if (!rawModel) return 0;
+        let h = 0;
+        const mix = (s: string) => {
+            for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+        };
+        for (const pkgId of (rawModel.packages ?? [])) {
+            const pkg = state.idlookup?.[pkgId] as any;
+            if (!pkg) continue;
+            for (const clsId of (pkg.classes ?? [])) {
+                const cls = state.idlookup?.[clsId] as any;
+                if (!cls) continue;
+                for (const refId of (cls.references ?? [])) {
+                    if (typeof refId !== 'string') continue;
+                    const ref = state.idlookup?.[refId] as any;
+                    if (!ref) continue;
+                    const t = typeof ref.type === 'string'
+                        ? ref.type
+                        : (ref.type?.id ?? '');
+                    mix(refId);
+                    mix('→');
+                    mix(t);
+                    h = (h * 31 + 7) | 0;
+                }
+            }
+        }
+        return h;
+    });
+
     // ── Auto-create / populate v2-flow graph ─────────────────────────
     const creatingGraphRef = useRef(false);
     const justCreatedGraphRef = useRef(false);
@@ -396,6 +446,14 @@ export function useJjomSync(
         // Build maps of what already exists so we only create missing items.
         const vertexIdByModelId = new Map<string, string>();
         const existingEdgeKeys = new Set<string>();
+        // Reconcile pool for M2 reference edges only, keyed by the DReference id
+        // they back. Populated from the persisted DGraph.subElements (NOT from
+        // the RF-cache / idlookup-scan safety nets) so we operate on actual
+        // graph state. Consumed by Step 3 to retarget stale `edge.end` or to
+        // collapse historical duplicates accumulated by prior sessions.
+        // M1 instance edges (Step 4 / useM1ReferenceEdges territory) and
+        // inheritance edges are excluded by `isM2ReferenceEdge` (HS-M1-CONTAMINATION).
+        const existingRefEdgesByRefId = new Map<string, RefEdgeSnapshot[]>();
 
         // Reference edges use a composite key (refId:src→tgt) so multiple
         // refs between the same src/tgt pair (e.g. Family→Member: father,
@@ -418,6 +476,25 @@ export function useJjomSync(
                 }
                 if (se.className?.includes('Edge') && se.start && se.end) {
                     existingEdgeKeys.add(edgeKeyForD(se));
+                    // Build the M2 reference-edge reconcile pool. The filter
+                    // excludes M1 instance edges (vertex.model → DObject) and
+                    // inheritance edges (model === undefined) so this map only
+                    // ever drives Step 3's M2 branch — Step 4 stays untouched.
+                    if (isM2ReferenceEdge(se, idlookup as Record<string, unknown>)) {
+                        const endVertex = idlookup[se.end] as any;
+                        const endClassId = typeof endVertex?.model === 'string'
+                            ? endVertex.model as string
+                            : undefined;
+                        const refId = se.model as string;
+                        const entry: RefEdgeSnapshot = {
+                            edgeId: seId,
+                            endVertexId: se.end as string,
+                            endClassId,
+                        };
+                        const list = existingRefEdgesByRefId.get(refId);
+                        if (list) list.push(entry);
+                        else existingRefEdgesByRefId.set(refId, [entry]);
+                    }
                 }
             }
         }
@@ -642,21 +719,34 @@ export function useJjomSync(
                     }
                 }
 
-                // References
+                // References — reconcile-or-create (β').
+                // For each (srcClass, refId), classify the persisted M2 edges
+                // sharing this refId against the *current* DReference.type and
+                // either: create (none persisted yet — the original Branch 0
+                // path), do nothing (already coherent, T8 idempotence), or
+                // retarget the kept edge + collapse historical duplicates.
+                // See docs/discovery/2026-05-28_reference_type_change_orphan_edges.md.
                 for (const refId of (entry.raw.references ?? [])) {
-                    const refObj = typeof refId === 'string' ? idlookup[refId] as any : null;
+                    if (typeof refId !== 'string') continue;
+                    const refObj = idlookup[refId] as any;
                     if (!refObj) continue;
                     const targetId = typeof refObj.type === 'string' ? refObj.type : null;
                     if (!targetId) continue;
                     const srcVertex = vertexIdByModelId.get(entry.id);
                     const tgtVertex = vertexIdByModelId.get(targetId);
-                    if (srcVertex && tgtVertex) {
-                        // Composite key allows multiple references between the
+                    if (!srcVertex || !tgtVertex) continue;
+
+                    const existingForRef = existingRefEdgesByRefId.get(refId) ?? [];
+                    const decision = classifyRefEdgeReconcile(existingForRef, targetId);
+                    const ek = `${refId}:${srcVertex}→${tgtVertex}`;
+
+                    if (decision.action === 'create') {
+                        // Branch 0 — original create path preserved verbatim.
+                        // Composite key allows sibling references between the
                         // same pair (Family→Member: father, mother, sons, ...).
                         // hasCanvasEdgePair is pair-based and would block siblings,
                         // so it's not consulted here — race-window protection is
                         // provided by the idlookup scan above.
-                        const ek = `${refId}:${srcVertex}→${tgtVertex}`;
                         if (!existingEdgeKeys.has(ek)) {
                             DVoidEdge.new2(
                                 refId, graphId, graphId, undefined,
@@ -666,7 +756,58 @@ export function useJjomSync(
                             existingEdgeKeys.add(ek);
                             markCanvasEdgePair(srcVertex, tgtVertex);
                         }
+                    } else if (decision.action === 'reconcile') {
+                        // Branch 1 / ≥2 — atomic retarget + duplicate cleanup.
+                        //
+                        // The retarget is 3 writes: `edge.end` ← new target,
+                        // `oldEndVertex.edgesIn -= edge`, `newTargetVertex.edgesIn += edge`.
+                        // The reciprocals MUST be maintained manually because the
+                        // L-proxy `set_end` setter (GraphDataElements.tsx:2193-2202)
+                        // only fires SetFieldAction on `end` — it does NOT touch
+                        // the named edgesIn/edgesOut arrays, which are stored
+                        // (not derived) and were originally populated by the
+                        // builder's explicit `setExternalPtr` (classes.ts:1017-1018).
+                        // The reducer's generic pointer path maintains only
+                        // `pointedBy` (reducer.ts:410-411), which does not include
+                        // edgesIn/edgesOut (PointedBy.list, classes.ts:1827-1830).
+                        // See discovery doc §3.1.2 / §4 and the HS-RECIP analysis.
+                        //
+                        // Grouping the 3 writes + N deletes in a single TRANSACTION
+                        // is safe in this sync-adjacent file because the body
+                        // contains no `.new()` creator — §3.3's coordinate-loss
+                        // hazard targets nested DVertex.new / DVoidEdge.new2
+                        // specifically. This mirrors the standalone
+                        // TRANSACTION('Tag v2-flow graph') above at the graph-tag
+                        // step and syncDeleteEdge's pattern (canvasToJjom.ts:333-341).
+                        // The grouping prevents the classic editor's relationships
+                        // panel (NodeEditor.tsx) and the default-view onDataUpdate
+                        // (views.ts) from observing a transient (end, edgesIn)
+                        // mismatch between the writes.
+                        //
+                        // Atomicity is verified by the §4.6 smoke test, not by
+                        // unit tests (no mock-store harness exists for this layer).
+                        TRANSACTION('Reconcile DReference edge endpoint', () => {
+                            if (decision.retargetNeeded) {
+                                // `as any` casts match the existing convention in
+                                // this file (e.g. `graphId: any` at the
+                                // SetFieldAction call in the graph-tag step):
+                                // SetFieldAction.new's overloads narrow the
+                                // `field` check to `keyof DPointerTargetable`
+                                // when the first arg is a plain `string`, which
+                                // would reject 'end' / 'edgesIn' (those belong
+                                // to DVoidEdge / DVertex specifically).
+                                SetFieldAction.new(decision.keepEdgeId as any, 'end', tgtVertex, '', true);
+                                SetFieldAction.new(decision.oldEndVertexId as any, 'edgesIn', decision.keepEdgeId, '-=', true);
+                                SetFieldAction.new(tgtVertex as any, 'edgesIn', decision.keepEdgeId, '+=', true);
+                            }
+                            for (const extraId of decision.deleteEdgeIds) {
+                                const extraRaw = idlookup[extraId];
+                                if (extraRaw) DeleteElementAction.new(extraRaw);
+                            }
+                        });
+                        existingEdgeKeys.add(ek);
                     }
+                    // decision.action === 'nothing' → pure short-circuit, 0 dispatch.
                 }
             }
 
@@ -735,7 +876,7 @@ export function useJjomSync(
             // before the effect can run again (avoids stale snapshots).
             setTimeout(() => { creatingGraphRef.current = false; }, 150);
         }
-    }, [modelid, hasGraph, subElementIds.length, modelClassCount, modelRefCount, modelObjectCount]);
+    }, [modelid, hasGraph, subElementIds.length, modelClassCount, modelRefCount, modelRefTypeSig, modelObjectCount]);
 
     // ── Selector 2: Per-element D-object references ────────────────────
     // For each ID in subElements, select state.idlookup[id].
