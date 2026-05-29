@@ -10,7 +10,7 @@
  *
  * Pure: no DOM, no React, no ReactFlow internals — testable in isolation.
  */
-import { getBaseSide, MAX_HANDLES_PER_SIDE, type Side } from './portDistribution';
+import { getBaseSide, MAX_HANDLES_PER_SIDE, type Side, type NodePosition } from './portDistribution';
 
 /** Parse a handle id ("top-0", "left-2") into its side and numeric index. */
 function parseHandleId(handleId: string): { side: Side; index: number } {
@@ -102,6 +102,11 @@ export interface SideEndpoint {
     handleId: string;            // e.g. 'top-0'
     role: 'source' | 'target';
     edgeType: 'reference' | 'inheritance';
+    /** Node at the other end of the edge using this endpoint; drives the
+     *  geometry-aware ordering in computeSidePositions. Optional only for
+     *  backward-compat of the exported interface — always set by
+     *  computeSideEndpoints in practice. */
+    oppositeNodeId?: string;
 }
 
 /**
@@ -122,19 +127,19 @@ export function computeSideEndpoints(
     side: Side,
 ): SideEndpoint[] {
     const byKey = new Map<string, SideEndpoint>();
-    const note = (handleId: string, role: 'source' | 'target', type: string | null | undefined) => {
+    const note = (handleId: string, role: 'source' | 'target', type: string | null | undefined, oppositeNodeId: string) => {
         const edgeType: SideEndpoint['edgeType'] = type === 'inheritance' ? 'inheritance' : 'reference';
         const key = `${handleId}:${role}`;
         const existing = byKey.get(key);
-        if (!existing) byKey.set(key, { handleId, role, edgeType });
+        if (!existing) byKey.set(key, { handleId, role, edgeType, oppositeNodeId });
         else if (edgeType === 'inheritance') existing.edgeType = 'inheritance';
     };
     for (const e of edges) {
         if (e.source === nodeId && e.sourceHandle && getBaseSide(e.sourceHandle) === side) {
-            note(e.sourceHandle, 'source', e.type);
+            note(e.sourceHandle, 'source', e.type, e.target);
         }
         if (e.target === nodeId && e.targetHandle && getBaseSide(e.targetHandle) === side) {
-            note(e.targetHandle, 'target', e.type);
+            note(e.targetHandle, 'target', e.type, e.source);
         }
     }
     return Array.from(byKey.values());
@@ -169,19 +174,51 @@ export function computeSideEndpoints(
  * distinct ReactFlow entities and may sit at different positions). Inactive handles
  * are absent from the map; callers fall back to 0.5.
  */
-export function computeSidePositions(endpoints: SideEndpoint[]): Map<string, number> {
+export function computeSidePositions(
+    endpoints: SideEndpoint[],
+    nodePositions?: Map<string, NodePosition>,
+): Map<string, number> {
     const result = new Map<string, number>();
     const N = endpoints.length;
     if (N === 0) return result;
 
+    // Side axis: left/right order references by the opposite centroid's Y,
+    // top/bottom by X. The side is read from the handle ids (every endpoint on
+    // one call shares a side).
+    const side = parseHandleId(endpoints[0].handleId).side;
+    const useY = side === 'left' || side === 'right';
+    const oppositeCoord = (e: SideEndpoint): number | undefined => {
+        if (!nodePositions || !e.oppositeNodeId) return undefined;
+        const p = nodePositions.get(e.oppositeNodeId);
+        if (!p) return undefined;
+        return useY ? p.centerY : p.centerX;
+    };
+
+    // Role-primary order: the deterministic fallback used when no geometry is
+    // supplied (computeHandlePositionForNode -> useTreeLayout passes none and
+    // must stay byte-identical to the previous behavior).
     const bySortKey = (a: SideEndpoint, b: SideEndpoint) => {
         const ra = a.role === 'source' ? 0 : 1;
         const rb = b.role === 'source' ? 0 : 1;
         if (ra !== rb) return ra - rb;
         return parseHandleId(a.handleId).index - parseHandleId(b.handleId).index;
     };
+
+    // Geometry-aware order for references: opposite-centroid first, then the
+    // role/index fallback as tiebreakers. A missing or equal centroid reproduces
+    // bySortKey exactly, so absent nodePositions == previous behavior.
+    const byGeometry = (a: SideEndpoint, b: SideEndpoint) => {
+        const ca = oppositeCoord(a);
+        const cb = oppositeCoord(b);
+        if (ca !== undefined && cb !== undefined && ca !== cb) return ca - cb;
+        return bySortKey(a, b);
+    };
+
+    // Inheritance stays on bySortKey (centered, geometry-independent) so the
+    // tree-branch path and the rendered handle agree without threading positions
+    // through useTreeLayout.
     const inh = endpoints.filter(e => e.edgeType === 'inheritance').sort(bySortKey);
-    const ref = endpoints.filter(e => e.edgeType !== 'inheritance').sort(bySortKey);
+    const ref = endpoints.filter(e => e.edgeType !== 'inheritance').sort(byGeometry);
     const M = inh.length;
     const R = ref.length;
     const step = 1 / (N + 1);
