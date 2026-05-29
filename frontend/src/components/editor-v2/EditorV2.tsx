@@ -13,7 +13,6 @@ import {
     SelectionMode,
     ConnectionMode,
     PanOnScrollMode,
-    reconnectEdge,
     applyEdgeChanges,
     type Node,
     type Edge,
@@ -50,7 +49,7 @@ import { useClassRemoval } from './hooks/useClassRemoval';
 import { useConformanceGuard } from '../../model/conformance/useConformanceGuard';
 import { useOrphanFeatures } from './hooks/useOrphanFeatures';
 import { UniquenessProblemSync } from './problems/UniquenessProblemSync';
-import { getSyncMode, markDropCreated, suppressSingleton, unsuppressSingleton, clearSuppressedSingletons, getSuppressedSingletonIds } from './sync/syncState';
+import { getSyncMode, markDropCreated, suppressSingleton, unsuppressSingleton, clearSuppressedSingletons, getSuppressedSingletonIds, getEdgeRefId } from './sync/syncState';
 import {
     syncPositionToJjom,
     syncPositionBatchToJjom,
@@ -1415,12 +1414,38 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // Handle edge reconnection (drag endpoint to a new target/source)
     const handleReconnect = useCallback(
         (oldEdge: Edge, newConnection: Connection) => {
-            setEdges((eds) => {
-                const updated = reconnectEdge(oldEdge, newConnection, eds);
-                return applyDistribution(updated);
-            });
+            // Re-target di una reference M2: cambia DReference.type alla nuova classe.
+            // Stessa mutazione del property panel (lRef.type = classId); il sync re-instrada.
+            // Non muta gli edge ReactFlow.
+
+            if (oldEdge.type !== 'reference') return;            // solo reference M2
+            if (!newConnection.target) return;                   // serve un target
+            if (newConnection.source !== oldEdge.source) return; // solo il capo target si muove
+            if (newConnection.target === oldEdge.target) return; // no-op se invariato
+
+            try {
+                // DReference dall'edge: canale primario jjomRefId, fallback registry
+                const refId = (oldEdge.data as any)?.jjomRefId ?? getEdgeRefId(oldEdge.id);
+                if (!refId) return;
+                const lRef: any = LPointerTargetable.fromPointer(refId);
+                if (!lRef) return;
+
+                // Nuova classe dal vertice droppato (newConnection.target è un VERTEX id)
+                const targetVertex: any = LPointerTargetable.fromPointer(newConnection.target);
+                const newClassId: string | undefined = targetVertex?.model?.id;
+                if (!newClassId) return;
+
+                // Spec C — solo EClass: rifiuta enum/package/object
+                const rawClass = (store.getState() as any).idlookup[newClassId];
+                if (!rawClass || rawClass.className !== 'DClass') return;
+
+                // Mutazione: identica a canvasToJjom.ts:212 e al property panel
+                lRef.type = newClassId;
+            } catch (err) {
+                console.warn('[reference re-target] reconnect aborted', err);
+            }
         },
-        [setEdges, applyDistribution]
+        []
     );
 
     const handleReconnectStart = useCallback(() => {
@@ -2970,7 +2995,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 onConnectEnd={onConnectEnd}
                 onReconnect={handleReconnect}
                 onReconnectStart={handleReconnectStart}
-                reconnectRadius={15}
+                edgesReconnectable={true}
+                reconnectRadius={20}
                 onDrop={onDrop}
                 onDragOver={onDragOver}
                 onNodeContextMenu={onNodeContextMenu}

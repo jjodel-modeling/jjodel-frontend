@@ -471,6 +471,7 @@ export function jjomEdgeToRFEdge(edge: any): Edge | null {
             sourceHandle: handles.sourceHandle,
             targetHandle: handles.targetHandle,
             type: 'reference',
+            reconnectable: 'target',   // only the target endpoint is grabbable (re-target via drag)
             label: refModel?.name ?? '',
             data: refData,
         };
