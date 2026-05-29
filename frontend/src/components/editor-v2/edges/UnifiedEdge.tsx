@@ -26,6 +26,7 @@ import {
 } from '../utils/edgeUtils';
 import { MAX_HANDLES_PER_SIDE } from '../utils/portDistribution';
 import { useEditorContextSafe } from '../contexts/EditorContext';
+import { useEdgeHighlightClass } from '../contexts/HighlightContext';
 import { useTreeLayout } from '../hooks/useTreeLayout';
 import { SegmentHandles } from './SegmentHandles';
 import { EndpointHandles } from './EndpointHandles';
@@ -123,6 +124,8 @@ function UnifiedEdge(props: EdgeProps) {
         label,
         type: edgeType,
     } = props;
+
+    const hlClass = useEdgeHighlightClass(id);
 
     // ─── Determine edge type ───
     // M1 edges (composition, instanceRef) use different data shapes than M2 edges
@@ -408,7 +411,7 @@ function UnifiedEdge(props: EdgeProps) {
                 <path
                     d={trunkPathFinal}
                     fill="none"
-                    className={`inheritance-edge ${selectedClass}`}
+                    className={`inheritance-edge ${selectedClass} ${hlClass}`}
                     markerEnd={isERNotation ? undefined : `url(#${treeMarkerId})`}
                 />
 
@@ -417,7 +420,7 @@ function UnifiedEdge(props: EdgeProps) {
                     <path
                         d={barBranchesPathFinal}
                         fill="none"
-                        className={`inheritance-edge ${selectedClass}`}
+                        className={`inheritance-edge ${selectedClass} ${hlClass}`}
                     />
                 )}
 
@@ -439,7 +442,7 @@ function UnifiedEdge(props: EdgeProps) {
                 {isERNotation && (
                     <EdgeLabelRenderer>
                         <div
-                            className={`edge-label ${selectedClass}`}
+                            className={`edge-label ${selectedClass} ${hlClass}`}
                             style={{
                                 position: 'absolute',
                                 transform: `translate(-50%, -50%) translate(${targetX}px, ${targetY + 16}px)`,
@@ -502,8 +505,8 @@ function UnifiedEdge(props: EdgeProps) {
         : `url(#${markerArrowId})`;
 
     const edgeClassName = isInheritance
-        ? `inheritance-edge ${selected ? 'selected' : ''}`
-        : `reference-edge ${kind} ${selected ? 'selected' : ''}`;
+        ? `inheritance-edge ${selected ? 'selected' : ''} ${hlClass}`
+        : `reference-edge ${kind} ${selected ? 'selected' : ''} ${hlClass}`;
 
     return (
         <>
@@ -620,7 +623,7 @@ function UnifiedEdge(props: EdgeProps) {
                 {/* M1 edges: label hidden by default, shown on hover via CSS */}
                 {!isInheritance && (
                     <div
-                        className={`edge-label ${selected ? 'selected' : ''} ${isM1Edge ? `edge-label--m1-hover${hovered || selected ? ' edge-label--m1-visible' : ''}` : ''}`}
+                        className={`edge-label ${selected ? 'selected' : ''} ${isM1Edge ? `edge-label--m1-hover${hovered || selected ? ' edge-label--m1-visible' : ''}` : ''} ${hlClass}`}
                         style={{
                             position: 'absolute',
                             transform: `translate(-50%, -50%) translate(${labelPos.x + labelOffset.x}px, ${labelPos.y + labelOffset.y}px)`,
@@ -648,7 +651,7 @@ function UnifiedEdge(props: EdgeProps) {
                 {/* Cardinality badge — positioned near target */}
                 {showCardinality && cardinality && (
                     <div
-                        className="edge-cardinality"
+                        className={`edge-cardinality ${hlClass}`}
                         style={{
                             position: 'absolute',
                             transform: `translate(-50%, -50%) translate(${cardinalityPos.x + cardinalityOffset.x}px, ${cardinalityPos.y + cardinalityOffset.y}px)`,
@@ -662,7 +665,7 @@ function UnifiedEdge(props: EdgeProps) {
                 {/* ISA label for ER notation (inheritance only) */}
                 {isInheritance && isERNotation && (
                     <div
-                        className={`edge-label ${selected ? 'selected' : ''}`}
+                        className={`edge-label ${selected ? 'selected' : ''} ${hlClass}`}
                         style={{
                             position: 'absolute',
                             transform: `translate(-50%, -50%) translate(${midPoint.x}px, ${midPoint.y}px)`,

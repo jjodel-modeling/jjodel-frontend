@@ -3423,3 +3423,96 @@ body.header-variant-c {
     transition: opacity 0.15s ease, filter 0.15s ease;
 }
 
+// ============================================
+// HIGHLIGHT MODE (figure authoring)
+// Tagging multi-colore manuale: classi `hl-c1`..`hl-c5` (id->colore) iniettate a
+// render-time da HighlightContext su nodi/edge; `hl-dimmed` su tutto il resto.
+// Flag root del mode: `.editor-v2.highlight-mode`. Colori tema-adattivi via var
+// `--hl-1`..`--hl-5` (+ override High Contrast / Print; gli altri temi ereditano
+// il set base). Nomi `hl-` verificati non collidenti (grep). L'opacity sul
+// <path> sfuma anche i suoi marker. Limite noto: i marker (frecce/diamanti) usano
+// def SVG condivise, quindi NON assumono il colore del gruppo (incoerenza minore).
+// Sorgenti: contexts/HighlightContext.tsx + components/HighlightPalette.tsx.
+// ============================================
+
+// Color set (base — ereditato da Default, Monochrome e dai temi pastello).
+.editor-v2 {
+    --hl-1: #E03E3E;
+    --hl-2: #D9730D;
+    --hl-3: #2F9E44;
+    --hl-4: #1C7ED6;
+    --hl-5: #7048E8;
+    --hl-text: #ffffff;
+    --hl-dim-opacity: 0.45;
+    --hl-dim-grayscale: 0.2;
+}
+.editor-v2.scheme-high-contrast {
+    --hl-1: #FF4D4D; --hl-2: #FF9A1F; --hl-3: #2FD05A; --hl-4: #2F9BFF; --hl-5: #9A6BFF;
+}
+.editor-v2.scheme-print {
+    --hl-1: #C0504D; --hl-2: #C2853F; --hl-3: #5F9E6B; --hl-4: #5580A8; --hl-5: #836FA8;
+}
+
+// Dimming di tutto ciò che non è taggato.
+.hl-dimmed {
+    opacity: var(--hl-dim-opacity);
+    filter: grayscale(var(--hl-dim-grayscale));
+    transition: opacity .15s ease, filter .15s ease;
+}
+
+// Transizione morbida su tag/dim.
+.mm-node[class*="hl-c"],
+.mm-node.hl-dimmed,
+path[class*="hl-c"],
+path.hl-dimmed,
+.edge-label[class*="hl-c"],
+.edge-label.hl-dimmed {
+    transition: opacity 0.15s ease, filter 0.15s ease;
+}
+
+// Nodi taggati: header + bordo nel colore del gruppo, corpo invariato (chiaro).
+@for $i from 1 through 5 {
+    .mm-node.hl-c#{$i} {
+        border-color: var(--hl-#{$i}) !important;
+    }
+    .mm-node.hl-c#{$i} .mm-node__header,
+    .mm-node.hl-c#{$i} .mm-node__tab {
+        background: var(--hl-#{$i}) !important;
+        color: var(--hl-text) !important;
+    }
+}
+
+// Edge taggati: stroke + label nel colore del gruppo.
+@for $i from 1 through 5 {
+    path.hl-c#{$i},
+    .hl-c#{$i}.react-flow__edge-path {
+        stroke: var(--hl-#{$i}) !important;
+    }
+    .edge-label.hl-c#{$i},
+    .edge-label.hl-c#{$i} .edge-label__text {
+        color: var(--hl-#{$i});
+    }
+}
+
+// ── Palette in toolbar (presentazione) ──
+.hl-palette {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.hl-palette__swatch {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    padding: 0;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+
+    &:hover { transform: scale(1.1); }
+    &.active {
+        outline: 2px solid var(--color-accent);
+        outline-offset: 1px;
+    }
+}
+

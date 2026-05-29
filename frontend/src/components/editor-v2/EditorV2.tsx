@@ -37,6 +37,7 @@ import { useHistory } from './hooks/useHistory';
 import { useAlignment } from './hooks/useAlignment';
 import { useAutoAnchor, computeAnchorsWithHysteresis, getNodeRect } from './hooks/useAutoAnchor';
 import { EditorContext } from './contexts/EditorContext';
+import { HighlightProvider, type HighlightState } from './contexts/HighlightContext';
 import { getNextFreeHandleIndex, computePortDistribution } from './utils/portDistribution';
 import type { ClassNodeData, EnumNodeData, PackageNodeData, ObjectNodeData, ReferenceEdgeData, InheritanceEdgeData, CompositionEdgeData, InstanceReferenceEdgeData, AnchorConfig, ReferenceKind, NotationMode, ColorScheme } from './types';
 import { EdgeTypePopup, type EdgeTypeChoice } from './components/EdgeTypePopup';
@@ -434,8 +435,47 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const modeInfoRef = useRef(modeInfo);
     modeInfoRef.current = modeInfo;
 
+    // ─── Highlight mode (figure authoring) ──────────────────────────
+    // Mode on/off: effimero+globale, mirror del toggle in Navbar (View menu).
+    // Tagging multi-colore manuale: mappa id->colore (1..5) persistita in
+    // localStorage keyed per modello; NON viaggia col file di progetto. Click su
+    // nodo o edge assegna il colore attivo (stesso colore = rimuove). La
+    // colorazione è render-time via HighlightContext (no patch node.data/edge.data,
+    // no modifiche al transform). Il colore attivo si sceglie dalla palette in toolbar.
+    const [highlightModeActive, setHighlightModeActive] = useState<boolean>(() => {
+        try { return localStorage.getItem('jjodel.highlightMode') === 'true'; } catch { return false; }
+    });
+    const [highlightColors, setHighlightColors] = useState<Record<string, number>>(() => {
+        try { return JSON.parse(localStorage.getItem(`jjodel.highlight.${modelid}`) || '{}'); }
+        catch { return {}; }
+    });
+    const [activeHighlightColor, setActiveHighlightColor] = useState<number>(1);
+    const activeColorRef = useRef(activeHighlightColor);
+    useEffect(() => { activeColorRef.current = activeHighlightColor; }, [activeHighlightColor]);
+    useEffect(() => {
+        try { localStorage.setItem(`jjodel.highlight.${modelid}`, JSON.stringify(highlightColors)); } catch {}
+    }, [highlightColors, modelid]);
+    useEffect(() => {
+        const onToggleHL = (e: Event) => setHighlightModeActive(!!(e as CustomEvent).detail?.active);
+        window.addEventListener(JjodelEvents.TOGGLE_HIGHLIGHT_MODE, onToggleHL);
+        return () => window.removeEventListener(JjodelEvents.TOGGLE_HIGHLIGHT_MODE, onToggleHL);
+    }, []);
+    const assignHighlight = useCallback((id: string) => {
+        setHighlightColors(prev => {
+            const next = { ...prev };
+            if (next[id] === activeColorRef.current) delete next[id];
+            else next[id] = activeColorRef.current;
+            return next;
+        });
+    }, []);
+    const clearHighlights = useCallback(() => setHighlightColors({}), []);
+    const highlightState = useMemo<HighlightState>(
+        () => ({ active: highlightModeActive, colorById: highlightColors }),
+        [highlightModeActive, highlightColors],
+    );
+
     // Selection sync: standalone hook — updates Properties panel via _lastSelected
-    const jjomSelection = useJjomSelection(modelid, isJjomMode);
+    const jjomSelection = useJjomSelection(modelid, isJjomMode, highlightModeActive, assignHighlight);
 
     const { screenToFlowPosition, getNodes, getEdges, zoomIn, zoomOut, fitView, getViewport, setViewport } = useReactFlow();
     const storeApi = useStoreApi();
@@ -2985,7 +3025,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // inside the `.editor-split-flow` pane (split mode).
 
     const flowCanvas = (
-        <>
+        <HighlightProvider value={highlightState}>
             <ReactFlow
                 nodes={stableNodes}
                 edges={stableEdges}
@@ -3069,12 +3109,12 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     onCancel={() => setPendingM1Connection(null)}
                 />
             )}
-        </>
+        </HighlightProvider>
     );
 
     return (
         <EditorContext.Provider value={editorContextValue}>
-            <div className={`editor-v2 theme-${theme} notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}${showBackground ? '' : ' hide-background'}`} tabIndex={0} onKeyDown={onKeyDown}>
+            <div className={`editor-v2 theme-${theme} notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}${showBackground ? '' : ' hide-background'}${highlightModeActive ? ' highlight-mode' : ''}`} tabIndex={0} onKeyDown={onKeyDown}>
                 <UniquenessProblemSync modelid={modelid} />
                 <PalettePanel
                     editorMode={modeInfo.mode}
@@ -3115,6 +3155,10 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         editorMode={editorMode}
                         hasViewpoint={hasViewpoint}
                         onEditorModeChange={onEditorModeChange}
+                        highlightModeActive={highlightModeActive}
+                        activeHighlightColor={activeHighlightColor}
+                        onSelectHighlightColor={setActiveHighlightColor}
+                        onClearHighlights={clearHighlights}
                     />
                     {(editorMode === 'classic' && classicSlot) ? (
                         <div

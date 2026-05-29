@@ -697,6 +697,22 @@ function NavbarComponent(props: AllProps) {
         });
     }, []);
 
+    // ─── Highlight mode (figure authoring) ──────────────────────────
+    // Effimero e globale (come gli altri toggle): localStorage + CustomEvent.
+    // La selezione/colorazione e la clear sono gestite in-editor (palette in
+    // toolbar); qui si governa solo on/off del mode.
+    const [highlightMode, setHighlightMode] = useState<boolean>(() => {
+        try { return localStorage.getItem('jjodel.highlightMode') === 'true'; } catch { return false; }
+    });
+    const toggleHighlightMode = useCallback(() => {
+        setHighlightMode(prev => {
+            const next = !prev;
+            try { localStorage.setItem('jjodel.highlightMode', String(next)); } catch {}
+            window.dispatchEvent(new CustomEvent(JjodelEvents.TOGGLE_HIGHLIGHT_MODE, { detail: { active: next } }));
+            return next;
+        });
+    }, []);
+
     // Function to open M2 Analytics with computed data
     const openM2Analytics = () => {
         if (!project || metamodels.length === 0) return;
@@ -1442,6 +1458,11 @@ function NavbarComponent(props: AllProps) {
                     function: toggleGridVisible,
                     icon: <i className={`bi ${gridVisible ? 'bi-grid-3x3-gap-fill' : 'bi-grid-3x3-gap'}`} />,
                     shortcutPills: formatShortcutPills(SHORTCUTS.SHOW_DOT_GRID),
+                    disabled: isDashboard
+                },
+                {name: highlightMode ? 'Highlight mode  \u2713' : 'Highlight mode',
+                    function: toggleHighlightMode,
+                    icon: <i className="bi bi-highlighter" />,
                     disabled: isDashboard
                 },
                 {name: 'divisor', function: placeholder},

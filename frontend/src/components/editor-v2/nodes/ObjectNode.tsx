@@ -23,6 +23,7 @@ import { NodeResizer, useReactFlow, type NodeProps, type Node } from '@xyflow/re
 import DynamicHandles from '../components/DynamicHandles';
 import InlineEnumSelect from '../components/InlineEnumSelect';
 import { useEditorContextSafe } from '../contexts/EditorContext';
+import { useNodeHighlightClass } from '../contexts/HighlightContext';
 import { syncNodeLabel, syncUpdateFeatureValue } from '../sync/canvasToJjom';
 import type { ObjectNodeData } from '../types';
 import { NodeProblemIndicator } from '../problems/NodeProblemIndicator';
@@ -33,6 +34,7 @@ export type ObjectNodeType = Node<ObjectNodeData, 'objectNode'>;
 function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
     const { setNodes } = useReactFlow();
     const editorContext = useEditorContextSafe();
+    const hlClass = useNodeHighlightClass(id);
 
     // Live metaclass name + singleton flag from Redux (reacts to metamodel changes)
     const liveMetaclassInfo = useSelector((state: any) => {
@@ -337,7 +339,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
     const isOrphan = !data.instanceOfClassId;
 
     return (
-        <div className={`mm-node mm-object ${selected ? 'selected' : ''} ${isOrphan ? 'mm-object--orphan' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''}`}>
+        <div className={`mm-node mm-object ${selected ? 'selected' : ''} ${isOrphan ? 'mm-object--orphan' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass}`}>
             <NodeResizer
                 isVisible={selected}
                 minWidth={140}

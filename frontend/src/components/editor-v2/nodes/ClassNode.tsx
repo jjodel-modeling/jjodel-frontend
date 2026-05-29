@@ -4,6 +4,7 @@ import ViewpointRenderer from '../viewpoint/ViewpointRenderer';
 import DynamicHandles from '../components/DynamicHandles';
 import InlineTypeSelect from '../components/InlineTypeSelect';
 import { useEditorContextSafe } from '../contexts/EditorContext';
+import { useNodeHighlightClass } from '../contexts/HighlightContext';
 import {
     syncNodeLabel,
     syncAddAttribute,
@@ -23,6 +24,7 @@ export type { ClassNodeData } from '../types';
 function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
     const { setNodes } = useReactFlow();
     const editorContext = useEditorContextSafe();
+    const hlClass = useNodeHighlightClass(id);
 
     const attributes = data.attributes ?? [];
     const operations = data.operations ?? [];
@@ -212,7 +214,7 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
     // Viewpoint rendering
     if (data.jsxString) {
         return (
-            <div className={`mm-node mm-class viewpoint-wrapper ${selected ? 'selected' : ''}`}>
+            <div className={`mm-node mm-class viewpoint-wrapper ${selected ? 'selected' : ''} ${hlClass}`}>
                 <NodeResizer
                     isVisible={selected}
                     minWidth={120}
@@ -243,7 +245,7 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
 
     return (
         <div
-            className={`mm-node mm-class ${selected ? 'selected' : ''} ${isAbstract ? 'abstract' : ''} ${isSingleton ? 'singleton' : ''} ${dragOver ? 'drop-target' : ''}`}
+            className={`mm-node mm-class ${selected ? 'selected' : ''} ${isAbstract ? 'abstract' : ''} ${isSingleton ? 'singleton' : ''} ${dragOver ? 'drop-target' : ''} ${hlClass}`}
             onDragOver={(e) => { handleDragOver(e); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
