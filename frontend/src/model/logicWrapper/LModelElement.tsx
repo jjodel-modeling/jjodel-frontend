@@ -9,7 +9,7 @@ import {
     DataTransientProperties,
     Debug,
     DEdge,
-    Defaults as TDefaults,
+    Defaults as TDefaults, DeleteElementAction,
     Dictionary,
     DocString,
     DPointerTargetable,
@@ -89,7 +89,7 @@ import {
     ECoreReference,
     ECoreRoot
 } from "../../api/data";
-import {ValuePointers} from "./PointerDefinitions";
+import type {AnnotationPointers, ValuePointers} from "./PointerDefinitions";
 import {Alias, transientProperties} from "../../joiner/classes";
 import React, {JSX} from "react";
 import {Dummy} from "../../common/Dummy";
@@ -1032,13 +1032,26 @@ export class DAnnotation extends DModelElement { // extends Mixin(DAnnotation0, 
     annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
     // personal
     source!: string;
-    details!: DAnnotationDetail[];//Dictionary<string, string>;
-    contents!: Pointer<LModelElement>;
-    references!: Pointer<LModelElement>;
+    details!: Dictionary<string, string>; // DAnnotationDetail[];
+    contents!: Pointer<LModelElement>[];
+    references!: Pointer<LModelElement>[];
 
     public static new(source?: DAnnotation["source"], details?: DAnnotation["details"], father?: Pointer, persist: boolean = true): DAnnotation {
         // if (!name) name = this.defaultname("annotation ", father);
-        return new Constructors(new DAnnotation('dwc'), father, persist, undefined).DPointerTargetable().DModelElement().DAnnotation(source, details).end();
+        return new Constructors(new DAnnotation('dwc'), father, persist, undefined).DPointerTargetable().DModelElement().DAnnotation(source, '', details).end();
+    }
+
+    public static new3(a:Partial<AnnotationPointers>, then?:((d:DAnnotation, c: Constructors)=>void), persist: boolean = true): DAnnotation{
+        let name: string = a.name as any;
+        let source: string = a.source as any || "https://app.jjodel.io/2006/";
+        if (!name) {
+            name = this.defaultname("annotation_", a.father, undefined, true);
+        }
+
+        return new Constructors(new DAnnotation('dwc'), a.father, persist, undefined, a.id)
+            .DPointerTargetable().DModelElement()
+            .DAnnotation(source, name)
+            .end(then);
     }
 }
 
@@ -1062,9 +1075,12 @@ export class LAnnotation<Context extends LogicContext<DAnnotation> = any, D exte
     annotations!: LAnnotation[];
     // personal
     source!: string;
-    details!: LAnnotationDetail[];// Dictionary<string, string> = {};
+    details!: Dictionary<string, string>; //  LAnnotationDetail[];//
 
 
+    __info_of__name: Info = {type: "string", txt: <div>Name is not an actual property of ecore's EAnnotation, we kept it as an <b>optional</b> utility.
+You can set a fixed uri and change the name which gets appended to the "source" uri.
+Exports to .ecore will append the name (if present) to the "source" uri.</div>}
 
     __info_of__references: Info = {type:"LModelElement", txt: "Same as this.contents, but targets are only referenced and not contained."};
     references!: LModelElement[];
@@ -1082,16 +1098,16 @@ export class LAnnotation<Context extends LogicContext<DAnnotation> = any, D exte
         return true;
     }
     get_addReference(c: Context): ((ptr_or_ecoreRef: string | LModelElement) => void) {
-        return (ptr_or_ecoreRef => {
+        return (ptr_or_ecoreRef) => {
             let ptr = Pointers.from(ptr_or_ecoreRef);
             TRANSACTION("Annotation.ref +=", ()=> {SetFieldAction.new(c.data, "references", ptr, "+=", true)}, ptr);
-        };
+        }
     }
     get_removeReference(c: Context): ((ptr_or_ecoreRef: string | LModelElement) => void) {
-        return (ptr_or_ecoreRef => {
+        return (ptr_or_ecoreRef) => {
             let ptr = Pointers.from(ptr_or_ecoreRef);
             TRANSACTION("Annotation.ref -=", ()=> {SetFieldAction.new(c.data, "references", ptr, "-=", true)}, ptr);
-        };
+        }
     }
 
     __info_of__contents: Info = {type:"LModelElement", txt: "Objects (in a wide sense) contained inside the annotation for additional context which cannot be easily expressed with strings in \"details\"."};
@@ -1109,19 +1125,32 @@ export class LAnnotation<Context extends LogicContext<DAnnotation> = any, D exte
         })
         return true;
     }
-    get_addContents(c: Context): ((ptr_or_ecoreRef: string | LModelElement) => void) {
-        return (ptr_or_ecoreRef => {
-            let ptr = Pointers.from(ptr_or_ecoreRef);
-            TRANSACTION("Annotation.ref +=", ()=> {SetFieldAction.new(c.data, "contents", ptr, "+=", true)}, ptr);
-            tood set father and verify if it have sideeffects like collection change, in case change both the line above here and in lvalue.setvalueatindex
-        };
+    get_addContent(c: Context): ((ptr_or_ecoreRef: string | LModelElement) => void) {
+        return (ptr_or_ecoreRef) => {
+            let ptrs = Pointers.from(ptr_or_ecoreRef);
+            if (!Array.isArray(ptrs)) ptrs = [ptrs];
+
+            TRANSACTION("Annotation.ref +=", ()=> {
+                for (let ptr of ptrs) {
+                    let l = L.fromPointer(ptr) as LModelElement;
+                    if (l) l.father = c.data.id as any;
+                    // SetFieldAction.new(c.data, "contents", ptr, "+=", true) triggered by set_father
+                }
+             }, ptrs);
+        }
     }
-    get_removeContents(c: Context): ((ptr_or_ecoreRef: string | LModelElement) => void) {
-        return (ptr_or_ecoreRef => {
-            let ptr = Pointers.from(ptr_or_ecoreRef);
-            TRANSACTION("Annotation.ref -=", ()=> {SetFieldAction.new(c.data, "contents", ptr, "-=", true)}, ptr);
-            tood set father and verify if it have sideeffects like collection change, in case change both the line above here and in lvalue.setvalueatindex
-        };
+    get_removeContent(c: Context): ((ptr_or_ecoreRef: string | LModelElement) => void) {
+        return (ptr_or_ecoreRef) => {
+            let ptrs = Pointers.from(ptr_or_ecoreRef);
+            if (!Array.isArray(ptrs)) ptrs = [ptrs];
+            TRANSACTION("Annotation.ref -=", ()=> {
+                for (let ptr of ptrs) {
+                    if (!ptr) continue;
+                    DeleteElementAction.new(ptr);
+                    SetFieldAction.new(c.data, "contents", ptr, "-=", true);
+                }
+            }, ptrs);
+        }
     }
 
     __info_of__rawContents: Info = {type:"LModelElement", txt: "same as contents for now"};
@@ -1136,7 +1165,7 @@ export class LAnnotation<Context extends LogicContext<DAnnotation> = any, D exte
         EcoreParser.write(json, ECoreAnnotation.source, c.data.source);
         // EcoreParser.write(json, ECoreAnnotation.references, context.proxyObject.referencesStr);
         // keep sub-elements last
-        EcoreParser.write(json, ECoreAnnotation.details, c.proxyObject.details.map(d => d.generateEcoreJson(loopDetectionObj, deep , crossRef)));
+        if (c.data.details) EcoreParser.write(json, ECoreAnnotation.details, c.data.details);
         return json;
     }
 
@@ -1145,13 +1174,17 @@ export class LAnnotation<Context extends LogicContext<DAnnotation> = any, D exte
     }
 
     protected get_duplicate(c: Context): ((deep?: boolean) => LAnnotation) {
-        return (deep: boolean = false) => {
+        return (deep: boolean = true) => {
             let ret: LAnnotation = null as any;
             TRANSACTION('duplicate ' + this.get_name(c), ()=>{
-                let de = c.proxyObject.father.addAnnotation(c.data.source, (deep ? c.proxyObject.details.map(ldet => ldet.duplicate().__raw) : c.data.details));
+                let de = c.proxyObject.father.addAnnotation(c.data.source, {...c.data.details});
                 let le: LAnnotation = LPointerTargetable.fromD(de);
                 let we: WAnnotation = le as any;
-                we.annotations = deep ? c.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : c.data.annotations;
+                we.references = [...(c.data.references || [])] as any;
+                if (deep) {
+                    we.annotations = c.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id);
+                    we.contents = c.proxyObject.contents.map(lchild => lchild.duplicate(deep).id);
+                }
                 ret = le; // set ret = le only if the transaction is complete.
             })
             return ret;
@@ -1170,10 +1203,7 @@ export class LAnnotation<Context extends LogicContext<DAnnotation> = any, D exte
         return true;
     }
 
-    protected get_details(context: Context): this["details"] {
-        return TargetableProxyHandler.wrapAll(context.data.details);
-    }
-
+    /*
     protected set_details(val0: this["details"], c: Context): boolean {
         if (val0 as any === c.data.details) return true;
         if (!val0) val0 = [];
@@ -1183,7 +1213,14 @@ export class LAnnotation<Context extends LogicContext<DAnnotation> = any, D exte
             SetFieldAction.new(c.data, 'details', val);
         }, c.data.details, val)
         return true;
+    }*/
+    __info_of__details: Info = {type:"Dictionary<strng, string>", txt: "A key-value map containing additional data for the annotation.\nIt follows the same updating rules as this.state (patch-based)."};
+    protected set_details(val: this["details"], c: Context): boolean {
+        if (val as any === c.data.details) return true;
+        return LPointerTargetable.set_patching(val, c, "details", "details", this);
     }
+    protected get_details(c: Context): this["details"] { return LPointerTargetable.get_patching(c, "details"); }
+    protected get_clearDetails(c: Context){ return LPointerTargetable.clearPatching(c, "details", "details", this); }
 }
 
 RuntimeAccessibleClass.set_extend(DModelElement, DAnnotation);
@@ -1513,6 +1550,7 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
     }
 
     protected set_type(val: Pack1<this["type"]>, c: Context): boolean {
+        not working?
         // let instances: LValue[] = this.get_instances(c);
         let ptr: Pointer<any> = Pointers.from(val);
         if (ptr === c.data.type) return true;
@@ -1973,16 +2011,19 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
     public duplicate(deep: boolean = true): this {
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
     protected get_duplicate(c: Context): ((deep?: boolean) => LPackage) {
-        return (deep: boolean = false) => {
+        return (deep: boolean = true) => {
             let ret: LPackage = null as any;
             TRANSACTION('duplicate ' + this.get_name(c), ()=>{
                 let le: LPackage = c.proxyObject.father.addPackage(c.data.name, c.data.uri, c.data.prefix);
                 let de: D = le.__raw as D;
                 let we: WPackage = le as any;
-                we.subpackages = deep ? c.proxyObject.subpackages.map( lchild => lchild.duplicate(deep).id) : c.data.subpackages;
-                we.classes = deep ? c.proxyObject.classes.map( lchild => lchild.duplicate(deep).id) : c.data.classes;
-                we.enumerators = deep ? c.proxyObject.enumerators.map( lchild => lchild.duplicate(deep).id) : c.data.enumerators;
-                we.annotations = deep ? c.proxyObject.annotations.map( lchild => lchild.duplicate(deep).id) : c.data.annotations;
+
+                if (deep) {
+                    we.annotations = c.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id);
+                    we.subpackages = c.proxyObject.subpackages.map(lchild => lchild.duplicate(deep).id);
+                    we.classes     = c.proxyObject.classes    .map(lchild => lchild.duplicate(deep).id);
+                    we.enumerators = c.proxyObject.enumerators.map(lchild => lchild.duplicate(deep).id);
+                }
                 ret = le;
             })
             return ret;
@@ -2488,7 +2529,7 @@ export class LOperation<Context extends LogicContext<DOperation, LOperation> = a
     public duplicate(deep: boolean = true): this {
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
     protected get_duplicate(context: Context): ((deep?: boolean) => LOperation) {
-        return (deep: boolean = false) => {
+        return (deep: boolean = true) => {
             let ret: LOperation = null as any;
             TRANSACTION('duplicate ' + this.get_name(context), ()=>{
                 let le: LOperation = context.proxyObject.father.addOperation(context.data.name, context.data.type);
@@ -2502,8 +2543,11 @@ export class LOperation<Context extends LogicContext<DOperation, LOperation> = a
                 de.visibility = context.data.visibility;
                 de.exceptions = context.data.exceptions;
                 let we: WOperation = le as any;
-                we.annotations = deep ? context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : context.data.annotations;
-                we.parameters = deep ? context.proxyObject.parameters.map(lchild => lchild.duplicate(deep).id) : context.data.parameters;
+
+                if (deep) {
+                    we.annotations = context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id);
+                    we.parameters = context.proxyObject.parameters.map(lchild => lchild.duplicate(deep).id);
+                }
                 we.exceptions = context.data.exceptions;
                 ret = le;
             })
@@ -2697,7 +2741,7 @@ export class LParameter<Context extends LogicContext<DParameter> = any, C extend
     public duplicate(deep: boolean = true): this {
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
     protected get_duplicate(context: Context): ((deep?: boolean) => LParameter) {
-        return (deep: boolean = false) => {
+        return (deep: boolean = true) => {
             let ret: LParameter = null as any;
             TRANSACTION('duplicate ' + this.get_name(context), ()=>{
                 let le: LParameter = context.proxyObject.father.addParameter(context.data.name, context.data.type);
@@ -2709,7 +2753,8 @@ export class LParameter<Context extends LogicContext<DParameter> = any, C extend
                 de.required = context.data.required;
                 de.unique = context.data.unique;
                 let we: WParameter = le as any;
-                we.annotations = deep ? context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : context.data.annotations;
+
+                if (deep) we.annotations = context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id);
                 ret = le;
             })
             return ret; }
@@ -3293,7 +3338,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     public duplicate(deep: boolean = true): this {
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
     protected get_duplicate(context: Context): ((deep?: boolean) => LClass) {
-        return (deep: boolean = false) => {
+        return (deep: boolean = true) => {
             let ret: LClass = null as any;
             TRANSACTION('duplicate '+this.get_name(context), () => {
                 let le: LClass = context.proxyObject.father.addClass(context.data.name, context.data.interface, context.data.abstract, context.data.isPrimitive);
@@ -3302,9 +3347,13 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
                 let we: WClass = le as any;
                 we.defaultValue = context.data.defaultValue;
                 we.extends = context.data.extends;
-                we.attributes = deep ? context.proxyObject.attributes.map(lchild => lchild.duplicate(deep).id) : context.data.attributes;
-                we.references = deep ? context.proxyObject.references.map(lchild => lchild.duplicate(deep).id) : context.data.references;
-                we.operations = deep ? context.proxyObject.operations.map(lchild => lchild.duplicate(deep).id) : context.data.operations;
+
+                if (deep) {
+                    we.annotations = context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id);
+                    we.attributes = context.proxyObject.attributes.map(lchild => lchild.duplicate(deep).id);
+                    we.references = context.proxyObject.references.map(lchild => lchild.duplicate(deep).id);
+                    we.operations = context.proxyObject.operations.map(lchild => lchild.duplicate(deep).id);
+                }
                 ret = le; // set ret = le only if the transaction is complete.
             });
             return ret; }
@@ -4309,7 +4358,7 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
     public duplicate(deep: boolean = true): this {
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
     protected get_duplicate(context: Context): ((deep?: boolean) => LReference) {
-        return (deep: boolean = false) => {
+        return (deep: boolean = true) => {
             let ret: LReference = undefined as any;
             TRANSACTION('duplicate ' + this.get_name(context), ()=>{
                 let le: LReference = context.proxyObject.father.addReference(context.data.name, context.data.type);
@@ -4334,7 +4383,7 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
                 we.opposite = context.data.opposite || undefined;
                 we.defaultValue = context.data.defaultValue;
                 we.type = context.data.type;
-                we.annotations = deep ? context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : context.data.annotations;
+                if (deep) we.annotations = context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id);
                 // we.target = deep ? context.proxyObject.target.map(lchild => lchild.duplicate(deep).id) : context.data.target;
                 ret = le;
             })
@@ -4612,7 +4661,7 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
     public duplicate(deep: boolean = true): this {
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
     protected get_duplicate(context: Context): ((deep?: boolean) => LAttribute) {
-        return (deep: boolean = false) => {
+        return (deep: boolean = true) => {
             let ret: LAttribute = null as any;
             TRANSACTION('duplicate ' + this.get_name(context), ()=>{
                 let le: LAttribute = context.proxyObject.father.addAttribute(context.data.name, context.data.type);
@@ -4634,7 +4683,7 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
                 de.isIoT = context.data.isIoT;
                 let we: WAttribute = le as any;
                 we.type = context.data.type;
-                we.annotations = deep ? context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : context.data.annotations;
+                if (deep) we.annotations = context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id);
                 ret = le;
             })
             return ret; }
@@ -4803,7 +4852,7 @@ export class LEnumLiteral<Context extends LogicContext<DEnumLiteral> = any, C ex
     public duplicate(deep: boolean = true): this {
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
     protected get_duplicate(c: Context): ((deep?: boolean) => LEnumLiteral) {
-        return (deep: boolean = false) => {
+        return (deep: boolean = true) => {
             let ret: LEnumLiteral = null as any;
             TRANSACTION(this.get_name(c)+'.duplicate()', ()=>{
                 let le: LEnumLiteral = c.proxyObject.father.addLiteral(c.data.name, c.data.value);
@@ -4811,7 +4860,7 @@ export class LEnumLiteral<Context extends LogicContext<DEnumLiteral> = any, C ex
                 de.literal = c.data.literal;
                 de.value = c.data.value;
                 let we: WEnumLiteral = le as any;
-                we.annotations = deep ? c.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : c.data.annotations;
+                if (deep) we.annotations = c.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id);
                 ret = le;
             })
             return ret; }
@@ -4959,7 +5008,7 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
     public duplicate(deep: boolean = true): this {
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
     protected get_duplicate(c: Context): ((deep?: boolean) => LEnumerator) {
-        return (deep: boolean = false) => {
+        return (deep: boolean = true) => {
             let ret: LEnumerator = null as any;
             TRANSACTION(this.get_name(c)+'.duplicate()', ()=>{
                 let le: LEnumerator = c.proxyObject.father.addEnumerator(c.data.name);
@@ -4967,8 +5016,10 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
                 de.defaultValue = c.data.defaultValue;
                 de.serializable = c.data.serializable;
                 let we: WEnumerator = le as any;
-                we.annotations = deep ? c.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id) : c.data.annotations;
-                we.literals = deep ? c.proxyObject.literals.map(lchild => lchild.duplicate(deep).id) : c.data.literals;
+                if (deep) {
+                    we.annotations = c.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id);
+                    we.literals = c.proxyObject.literals.map(lchild => lchild.duplicate(deep).id);
+                }
                 ret = le;
             })
             return ret; }
@@ -6907,7 +6958,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     // this should resolve all ecore-style references without base object and including m2 navigation (objects in annotation)
     // problem: i could repeat it for every m1 and m2, but it's not just terribly inefficient, but also might have ambiguity resolved in the wrong model.
     // so i think the only way out is to transform ecore pointers in jodel pointers persistently.
-    public static resolveReferenceTODO(data: string, optionalStartingPoint: LModelElement | Pointer<any>): LModelElement | null {
+    public static resolveReferenceTODO(data: string, optionalStartingPoint?: LModelElement | Pointer<any>): LModelElement | null {
        // Log.eDevv("resolveReference todo");
        return null;
     }
@@ -8432,7 +8483,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         }
     }
 
-    public rawValues(): this["values"] { return super.cannotCall('rawValues'); }
+    public rawValues!: this["values"];
     public get_rawValues(context: Context): this["values"]{
         return (this.get_getValues(context))(false, false, false, true, true, false, undefined);
     }

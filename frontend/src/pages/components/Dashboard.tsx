@@ -536,7 +536,7 @@ function ProjectDashboard(props: DashProps): any {
             <>
                 {CSS_Units.jsx}
                 <div id={"views-css-injector-d"}>
-                    {Object.values(viewsDeDuplicator).map(v => <style id={"css_"+v.id}>v.compiled_css</style>)}
+                    {Object.values(viewsDeDuplicator).map(v => <style id={"css_"+v.id}>{v.compiled_css}</style>)}
                 </div>
             </>
         </Try>

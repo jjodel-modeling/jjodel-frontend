@@ -29,6 +29,9 @@ export class AnnotationPointers extends CommonStuff{
     parent?: this["father"][];
     father?: Pointer<DModelElement>;
     annotations?: Pointer<DAnnotation>[];
+    contents!: Pointer<DModelElement>[];
+    references!: Pointer<DModelElement>[];
+    source!: string; // not a name but validated in constructor
 }
 
 @RuntimeAccessible('PackagePointers')

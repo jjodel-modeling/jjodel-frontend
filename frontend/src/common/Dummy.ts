@@ -13,7 +13,7 @@ import {
     DClassifier,
     LModel,
     LValue,
-    Dependency, DValue,
+    Dependency, DValue, DAnnotation,
 } from '../joiner';
 
 import {
@@ -252,6 +252,7 @@ export class Dummy {
                 console.log('L'+c.data.className.substring(1)+'.t2m() called.', {d:c.data, j: JSON.parse(JSON.stringify(json)), jj: json, old});
                 let childrenToUpdateByID: Dictionary<Pointer,  {json:GObject, l: LModelElement, id: Pointer, k: string}> = {};
                 let childrenToUpdateByName: Dictionary<string, {json:GObject, l: LModelElement, id: Pointer, k: string, i: number}> = {};
+                let childrenToUpdateBySource: Dictionary<string, {json:GObject, l: LModelElement, id: Pointer, k: string, i: number}> = {};
                 let childrenToUpdateByIndex: {json:GObject, l: LModelElement, id: Pointer, k: string, i: number}[] = [];
                 let childrenToUpdateByNew: {json:GObject, k:string, i:number}[] = []; // valid unmatch (because by name or id or index it doesn't exist)   -> new
                 let childrenToUpdateInvalidMismatches: {json:GObject, k:string, i:number, reason: string}[] = []; // invalid unmatch (2 obj with same name or id conflict) -> skip and warn (debug)
@@ -407,6 +408,7 @@ export class Dummy {
                 }
 
                 (window as any).__debugt2m_getChildrenCollection = getChildrenCollection;
+
                 // populates all 3 collections "childrenToUpdateBy"
                 const registerChildren = (k: string) => {
                     let type = !json ? 'null' : typeof json;
@@ -495,6 +497,21 @@ export class Dummy {
                             }
                             // if name not matching, don't create it yet, it might be renamed -> attempt match by index.
                         }
+
+                        if (gv.source) {
+                            let name = gv.source;
+                            if (U.uniqueNames && (gv.source && childrenToUpdateBySource[gv.source])) {
+                                Log.ww('M2T found 2 annotations with the same name within the same container. The second one will be ignored.',
+                                    {first: childrenToUpdateBySource[name], second:gv, container: c.proxyObject, containerM2T:json});
+                                childrenToUpdateInvalidMismatches.push({k, i, json:v, reason: 'duplicate source'});
+                                continue;
+                            }
+                            child = (c.proxyObject as GObject<LValue>).annotations[gv.source];
+                            if (child) {
+                                childrenToUpdateBySource[name] = {json: gv, l: child, id: child.id, k, i};
+                                continue; // valid, completed registration
+                            }
+                        }
                         // console.log("register children not match", {child, k, i})
                         unregisteredChildren.push({k, i});
                     }
@@ -539,7 +556,7 @@ export class Dummy {
                 // todo2: first match by id, then by name (unmatch if it matched id too and go by 3rd criteria) then by index
 
                 // calls [getparent]
-                const doChildrenUpdate = (child: LModelElement | null, k: string, v: GObject, matchedBy: 'id' | 'name' | 'index' | 'new') => {
+                const doChildrenUpdate = (child: LModelElement | null, k: string, v: GObject, matchedBy: 'id' | 'name' | 'source' | 'index' | 'new') => {
                     let lparent: LModelElement, dparent: DModelElement;
                     // console.log('doChildrenUpdate ' + v.name, {cn: child?.name, child, k, v, matchedBy, json});
                     // should never happen, v should only be pointer or object.
@@ -566,7 +583,11 @@ export class Dummy {
                             Log.eDevv('Element incorrectly matched, assumed to be matched by ' + matchedBy+ ' but no value found.', {matchedBy, child, k, v});
                             return;
                         }
-                        let ptrs = {id: Pointers.from(v) as any as Pointer<any>, father: dparent.id as (Pointer<any> | undefined), 'instanceof': undefined};
+                        let ptrs = {
+                            id: Pointers.from(v) as any as Pointer<any>,
+                            father: dparent.id as (Pointer<any> | undefined),
+                            'instanceof': undefined
+                        };
                         let callback: (d: any) => void = (d: DModelElement) => {};
                         let d: DModelElement = null as any;
                         console.log('m2t create subelement', {ptrs, v, thisData:c.data, dparent});
@@ -585,6 +606,7 @@ export class Dummy {
                             case 'attributes': d = DAttribute.new3(ptrs, callback, true); break;
                             case 'operations': d = DOperation.new3(ptrs, callback, true); break;
                             case 'parameters': d = DParameter.new3(ptrs, callback, true); break;
+                            case 'annotations': d = DAnnotation.new3(ptrs, callback, true); break;
                         }
                         // console.log('M2 L'+c.data.className.substring(1)+'.t2m()', {d, v: JSON.parse(JSON.stringify(v))});
                         child = L.from(d); // (this as LValue).get_addObject(c)({});
@@ -665,6 +687,19 @@ export class Dummy {
                         delete childrenToUpdateByName[name];
                         unregisteredChildren.push({k, i});
                     }
+                    for (let name in childrenToUpdateBySource) {
+                        let l = childrenToUpdateBySource[name].l;
+                        if (!childrenToUpdateByID[l.id]) {
+                            let l = childrenToUpdateBySource[name].l;
+                            registeredMap.set(l, true);
+                            continue; // ok, no conflict
+                        }
+                        // conflict: adds it to list childrenToUpdateByIndex
+                        let k = childrenToUpdateBySource[name].k;
+                        let i = childrenToUpdateBySource[name].i;
+                        delete childrenToUpdateBySource[name];
+                        unregisteredChildren.push({k, i});
+                    }
                     for (let e of unregisteredChildren) {
                         registerByCollection(e.k, e.i); // todo: remove all delete from json's subelement collections or get by index fails.
                     }/*
@@ -688,6 +723,12 @@ export class Dummy {
                     let l = childrenToUpdateByName[name].l;
                     let k = childrenToUpdateByName[name].k;
                     doChildrenUpdate(l, k, json, 'name');
+                }
+                for (let name in childrenToUpdateBySource) {
+                    let json = childrenToUpdateBySource[name].json;
+                    let l = childrenToUpdateBySource[name].l;
+                    let k = childrenToUpdateBySource[name].k;
+                    doChildrenUpdate(l, k, json, 'source');
                 }
                 for (let elem of childrenToUpdateByIndex) {
                     let json = elem.json;

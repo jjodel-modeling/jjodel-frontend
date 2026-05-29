@@ -831,13 +831,15 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     stopPendingEdge(){
         SetRootFieldAction.new('isEdgePending', { user: '',  source: '' });
     }
-    onMouseUp(e: React.MouseEvent, frommousemove: boolean = false): void {
+    onMouseUp(e: React.MouseEvent, frommousemove: boolean = false): boolean {
         e.stopPropagation();
+        let ret = true;
         TRANSACTION('Vertex click-events', ()=>{
             //GraphDragManager.stopPanning(e);
-            if (GraphElementComponent.mousedownComponent !== this) { return; }
-            if (!frommousemove) this.doOnClick(e);
+            if (GraphElementComponent.mousedownComponent !== this) { ret = false; }
+            if (!frommousemove) ret = this.doOnClick(e);
         })
+        return ret;
     }
     onKeyDown(e: React.KeyboardEvent){
         //NB: triggers only if element has :focus-within, otherwuse use U->register->keydown
@@ -917,17 +919,33 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }
     }
 
-    private doOnClick(e: React.MouseEvent): void {
+    private doOnClick(e: React.MouseEvent): boolean {
         // (e.target as any).focus();
         e.stopPropagation();
         let state: DState = store.getState();
+        const target = (e.target as HTMLElement);
+        console.log("click vertex", {target, e})
+        switch (target.tagName.toLowerCase()) {
+            case "select":
+            case "input":
+            case "textarea":
+                e.stopPropagation();
+                return false;
+            default:
+                if (target.isContentEditable) {
+                    e.stopPropagation();
+                    return false;
+                }
+                break;
+
+        }
         const edgePendingSource: LClass | undefined = this.props.isEdgePending?.source;
         //console.log('mousedown select() check PRE:', {e, name: this.props.data?.name, isSelected: this.props.node.isSelected(), 'nodeIsSelectedMapProxy': this.props.node?.isSelected, nodeIsSelectedRaw:this.props.node?.__raw.isSelected});
 
         if (edgePendingSource) {
             let lclass: LClass = (this.props.data) as LClass;
             let dclass = lclass.__raw;
-            if (dclass?.className !== "DClass") return;
+            if (dclass?.className !== "DClass") return false;
             if (this.props.isEdgePending.source && this.html.current) this.html.current.classList.remove(ext_on, ext_off);
             // const user = this.props.isEdgePending.user;
             const extendError: {reason: string, allTargetSuperClasses: LClass[]} = {reason: '', allTargetSuperClasses: []}
@@ -942,7 +960,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
             }
             this.stopPendingEdge();
-            return;
+            return true;
         }
         //console.log('mousedown select() check:', {e, isSelected: this.props.node.isSelected(), 'nodeIsSelectedMapProxy': this.props.node?.isSelected, nodeIsSelectedRaw:this.props.node?.__raw.isSelected});
         windoww.node = this.props.node;
@@ -970,6 +988,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 }
             }
         })
+        return true;
     }
 
     onClick(e: React.MouseEvent): void {
@@ -1151,11 +1170,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }
         if (props.start && props.isEdge) {
             ptr = Pointers.from(props.start);
+            console.log("edge props start debug", {id:dedge.id, ps:props.start, props, ptr});
             if (dedge.id !== ptr) edge.start = ptr as any;
         }
         // console.log("changing endpt", props, props.end, props.end?.model?.name);
         if (props.end && props.isEdge) {
             ptr = Pointers.from(props.end);
+            console.log("edge props end debug", {id:dedge.id, ps:props.start, props, ptr});
             if (dedge.id !== ptr) edge.end = ptr as any;
         }
         if (props.labels) { tn.labels = props.labels; }

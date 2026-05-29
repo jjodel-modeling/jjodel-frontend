@@ -924,7 +924,7 @@ export class EcoreParser{
     private static read(json: Json, field: string, valueIfNotFound: any = 'read<T>()CanThrowError'): string {
         let ret: any = json ? json[field] : null;
         if (ret !== null && ret !== undefined && field.indexOf(this.XMLinlineMarker) !== -1) {
-            Log.ex(U.isObject(ret, false, false, true), 'inline value |' + field + '| must be primitive.', ret);
+            Log.ex(!U.isPrimitive(ret, false, false, false), 'inline value |' + field + '| must be primitive.', ret);
             ret = U.multiReplaceAll('' + ret, ['&amp;', '&#38;', '&quot;'], ['&', '\'', '"']);
         }
         if ((ret === null || ret === undefined)) {
@@ -932,14 +932,15 @@ export class EcoreParser{
             return valueIfNotFound; }
         return ret; }
 
-    static write(json: Json, field: string, val: string | any[], defaultValue?: string | any[]): string | any[] {
+    static write<T extends string | any[] | GObject>(json: Json, field: string, val: T, defaultValue?: string | any[]): T {
         if (defaultValue !== undefined && defaultValue === val) return val;
+        let type = typeof val;
 
         if (val !== null && field.indexOf(EcoreParser.XMLinlineMarker) !== -1) {
-            Log.ex(val !== '' + val, 'inline value |' + field + '| must be a string.', val);
-            val = U.multiReplaceAll(val as string, ['&', '\'', '"'], ['&amp;', '&#38;', '&quot;']);
+            Log.ex(type !== "string", 'inline value |' + field + '| must be a string.', val);
+            val = U.multiReplaceAll(val as string, ['&', '\'', '"'], ['&amp;', '&#38;', '&quot;']) as T;
         }
-        else Log.ex(val !== '' + val || !U.isObject(val, true), 'primitive values should be inserted only inline in the xml:', field, val);
+        else Log.ex(type === "string" || !U.isObject(val, true), 'primitive values should be inserted only inline in the xml:', field, val);
         json[field] = val;
         return val;
     }

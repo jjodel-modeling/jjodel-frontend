@@ -604,7 +604,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     }
 
     // cannot use Lobjects as they will set PointedBy in persistent state, also might access an incomplete version of the object crashing
-    private setPtr(property: string, value: any, checkPointerValidity?: DState) {
+    private setPtr(property: string, value: any | any[], checkPointerValidity?: DState) {
         (this.thiss as GObject)[property] = value;
         if (!value) return;
         if (Array.isArray(value)) for (let v of value) {
@@ -804,14 +804,25 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         this.setExternalPtr(thiss.father, "features", "+=");
         return this; }
 
-    DAnnotation(source?: DAnnotation["source"], details?: DAnnotation["details"]): this {
+    DAnnotation(source?: DAnnotation["source"], name?: string, details?: DAnnotation["details"], references?: DAnnotation["references"], contents?: DAnnotation["contents"]): this {
         const thiss: DAnnotation = this.thiss as any;
         thiss.source = source || '';
-        thiss.details = details || [];
-        this.setExternalPtr(thiss.father, "annotations", "+=");
+        thiss.details = details || {};
+        thiss.name = name;
 
-        if (details) for (let det of details)
-            thiss._persistCallbacks.push(SetFieldAction.create(det, "pointedBy", PointedBy.fromID(thiss.id, "details"), '+='));
+        let s = store.getState();
+        this.setPtr("references", references || [], s);
+        this.setPtr("contents", contents || [], s);
+        for (let r of (contents || [])) {
+            this.setExternalPtr(r, "father", "", thiss.id);
+        }
+
+        this.setExternalPtr(thiss.father, "annotations", "+=");
+        /*
+        if (details) for (let det of details) {
+            let a = SetFieldAction.create(det, "pointedBy", PointedBy.fromID(thiss.id, "details"), '+=');
+            thiss._persistCallbacks.push(a);
+        }*/
 
         return this; }
 
@@ -1401,7 +1412,7 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
     parent?: any;
     zoom!: GraphPoint;
 
-    static defaultname<L extends LModelElement = LModelElement>(startingPrefix: string | ((meta:L)=>string), father?: Pointer | DPointerTargetable | ((a:string)=>boolean), metaptr?: Pointer | null): string {
+    static defaultname<L extends LModelElement = LModelElement>(startingPrefix: string | ((meta:L)=>string), father?: Pointer | DPointerTargetable | ((a:string)=>boolean), metaptr?: Pointer | null, isAnnotation: boolean = false): string {
         let lfather: LModelElement;
         // startingPrefix = "model_", father = ((name: string) => !dmodelnames.includes(name))
         if (father) {
@@ -1412,7 +1423,7 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
                     let meta = LPointerTargetable.from(metaptr as Pointer);
                     startingPrefix = startingPrefix(meta as L);
                 }
-                const childrenNames: (string)[] = lfather.childNames; // lfather.children.map(c => (c as LNamedElement)?.name);
+                const childrenNames: (string)[] = isAnnotation ? lfather.annotations.map(a=>a.name) : lfather.childNames; // lfather.children.map(c => (c as LNamedElement)?.name);
                 return U.increaseEndingNumber(startingPrefix + '0', false, false, (newname) => childrenNames.indexOf(newname) >= 0);
             }
             else if (typeof father === 'function') {
@@ -1684,10 +1695,10 @@ export class Pointers{
     // function from<PTR extends Pointer<DPointerTargetable, 1, 1, LPointerTargetable>>(data:unknown | unknown[]): PTR | PTR[] | GObject {
     public static from<T extends LClass, PTR extends Pointer<DPointerTargetable, 1, 1, LPointerTargetable>>(data:unknown | unknown[]): null | PTR | PTR[]{
         if (!data) return null;
-        if (Array.isArray(data)) return data.filter(d => !!d).map(d => (typeof d === "string" ? d : (d as any)?.id)) as any;
+        if (Array.isArray(data)) return data.filter(d => !!d).map(d => Pointers.from(d)) as any;
         if (typeof data === "string") {
             if (data.indexOf("Pointer_") === 0) return data as PTR;
-            else return LValue.resolveReferenceTODO(data)?.id as PTR;
+            else return (RuntimeAccessibleClass.get("LValue") as typeof LValue).resolveReferenceTODO(data)?.id as PTR;
         }
         return (data as any)?.id;
     }
@@ -2191,13 +2202,16 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
 
     __info_of___clearState = {type:"()=>void", txt: `<div>Clears the whole content of this.state</div>`}
     clearState(): void { return this.wrongAccessMessage('clearState'); }
-    get_clearState(c: Context): ()=>void {
+    static clearPatching(c: LogicContext<any>, key: string, displayKey: string, thiss: LPointerTargetable) {
         return () => {
-            TRANSACTION(this.get_name(c) + '.clearState()', ()=>{
-                SetFieldAction.new(c.data, "_state", {}, undefined, false);
-            }, Object.keys(c.data._state)+ 'keys removed');
+            if (!thiss) thiss = LPointerTargetable.singleton;
+            TRANSACTION(thiss.get_name(c) + '.clear'+U.camelCase(displayKey)+'()', ()=>{
+                SetFieldAction.new(c.data, key, {}, undefined, false);
+            }, Object.keys(c.data[key])+ 'keys removed');
         }
     }
+
+    get_clearState(c: Context): ()=>void { return LPointerTargetable.clearPatching(c, "_state", "State", this); }
 
     _state!: GObject;
     __info_of___state = {type:"GObject", txt: `<div>A space where the user can store informations for their operations/views.<br/>
@@ -2212,12 +2226,13 @@ WARNING! do not set proxies in the state, set pointers instead.<br/>
 
     // get__state(c: Context): any { return this.wrongAccessMessage('_state',', use obj.state instead.'); }
     // set__state(val: this["_state"], c: Context): boolean { return this.cannotSet('_state', 'use obj.state instead.'); }
-    get_state(context: any): any /*this['_state']*/ {
-        if (!context.data._state) return {};
-        return this.__shallowSolver(context.data._state, true, true); // to solve pointers in state
-        // return LPointerTargetable.wrap(context.data._state); // this should work, because data._state have id = this.id+"._state"
+    static get_patching(c: LogicContext<any>, key: string) {
+        if (!c.data[key]) return {};
+        return LPointerTargetable.singleton.__shallowSolver(c.data[key], true, true); // to solve pointers in state
+        // return LPointerTargetable.wrap(context.data._state); // this should work, because data._state have id = this.id+"[key]"
     }
-    set_state(val: any, c: Context): boolean {
+
+    static set_patching(val: any, c: LogicContext<any>, key: string, displayKey: string, thiss: LPointerTargetable): boolean {
         // todo: put those lobjects -> pointer checks into defaultsetter to improve it
 
         // 3 options:
@@ -2228,8 +2243,9 @@ WARNING! do not set proxies in the state, set pointers instead.<br/>
         // i choose 3)
         let newState: GObject;
         let removedState: GObject = {};
-        let oldState = c.data._state ? {...c.data._state} : {};
+        let oldState = c.data[key] ? {...c.data[key]} : {};
         let changed: boolean = false;
+        if (!thiss) thiss = LPointerTargetable.singleton;
         if (val === undefined) {
             if (!oldState || !Object.keys(oldState).length) return true;
             newState = {};
@@ -2237,7 +2253,7 @@ WARNING! do not set proxies in the state, set pointers instead.<br/>
         }
         else if (typeof val !== "object") { Log.ee("state can only be assigned with an object or undefined"); return true; }
         else {
-            val = this.__sanitizeValue(val || {}); // ||{} to handle null which is typed as object in js
+            val = thiss.__sanitizeValue(val || {}); // ||{} to handle null which is typed as object in js
             newState = {}; // {...oldState};
             for (let k in val) {
                 if (val[k] === undefined) {
@@ -2259,12 +2275,16 @@ WARNING! do not set proxies in the state, set pointers instead.<br/>
 
         if (!changed) return true;
 
-        TRANSACTION(this.get_name(c)+'.state', ()=>{
-            if (Object.keys(newState)) SetFieldAction.new(c.data, "_state", newState, '+=', false);
-            if (Object.keys(removedState)) SetFieldAction.new(c.data, "_state", removedState as any, '-=', false);
+        TRANSACTION(thiss.get_name(c)+'.'+displayKey, ()=>{
+            if (Object.keys(newState)) SetFieldAction.new(c.data, key, newState, '+=', false);
+            if (Object.keys(removedState)) SetFieldAction.new(c.data, key, removedState as any, '-=', false);
         })
         return true;
     }
+
+    get_state(c: any): any /*this['_state']*/ { return LPointerTargetable.get_patching(c, "_state"); }
+    set_state(val: any, c: Context): boolean { return LPointerTargetable.set_patching(val, c, "_state", "state", this); }
+
     protected __sanitizeValue(val: any, canEditVal: boolean = true, canEditValDeep:boolean = false): any{
         if (!val) { return val; }
         let className = val.className;
@@ -2528,6 +2548,7 @@ WARNING! do not set proxies in the state, set pointers instead.<br/>
         if (typeof parent === 'string') parentCname = (Pointers.isPointer(parent) ? (d = D.fromPointer(parent))?.className : '') || '';
         else parentCname = (typeof parent === 'object' && (parent as GObject)?.className) || '';
 
+        if (parentCname === "DAnnotation") return "contents";
         switch (cname) {
             case '': return '';
             default: Log.ee('unexpected element in getCollection(): ' + cname, {data, parent, cname, parentCname}); return '';
@@ -3257,6 +3278,10 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
         return context.data.state;
     }
     public set_state(val: this['state'], c: Context): boolean {
+        if (val && typeof val !== "string") {
+            Log.ww("LProject elements don't have a state for storing custom information. Use the models or graphical elements for that.")
+            return false;
+        }
         TRANSACTION(this.get_name(c)+'.state', ()=>{
             SetFieldAction.new(c.data.id, 'state', val, '', false);
         })
