@@ -1,5 +1,34 @@
 # Claude Code Session Log
 
+## 2026-05-29 — feat(editor-v2): ghost-parent stub for cross-metamodel extends (iter. 1)
+**Prompt**: implementazione prima iterazione dello "stub genitore fantasma" — overlay in-node (chip tratteggiata + arco con triangolo vuoto UML) che rende visibile un `extends` cross-metamodello su `B`. Solo rendering + tooltip nativo. Niente click-to-navigate, niente multiplo. Vincolo: overlay HTML/SVG dentro `ClassNode`, NESSUN nodo/edge ReactFlow reale, NON toccare `useJjomSync.ts`/`portDistribution.ts`/anchor-handle.
+**File toccati**:
+- frontend/src/components/editor-v2/types.ts (+ `GhostParentInfo`, + campo opzionale `ghostParents?` su `ClassNodeData`)
+- frontend/src/components/editor-v2/utils/jjomTransformers.ts (import tipo + calcolo `ghostParents` in `classVertexToRFNode`, filtro `p.model.id !== lClass.model.id`, in try/catch; iniezione in `data`)
+- frontend/src/components/editor-v2/nodes/ClassNode.tsx (`const ghost = data.ghostParents?.[0]` + overlay JSX fratello di `<DynamicHandles>`, render solo se `ghost`)
+- frontend/src/components/editor-v2/EditorV2.scss (blocco `.ghost-parent-stub` + BEM `__chip/__name/__mm/__connector`)
+- docs/claude-code-log.md (entry)
+**Esito**: ✅ completato — build verde (2m 7s, solo warning chunk-size preesistente), `tsc --noEmit` zero errori sui file toccati, **risultato visivo confermato da Alfonso** ("ottimo").
+**Regressions**: no (modifica puramente additiva; overlay renderizzato solo quando `ghostParents` presente; nessun touch a sync/handle). NB: la **reattività al cambio di `extends`** (stub appare/sparisce senza reload) è UNVERIFIED — vedi Notes.
+**Out-of-scope changes**: no (solo i 4 file previsti + log)
+**Layer Impact Report**: not-required (`jjomTransformers.ts` NON è in critical-zone §3.1; nessun touch a `useJjomSync`/`syncState`/`canvasToJjom`/`portDistribution`/`VersionFixer`; nessun D-layer write — solo lettura proxy `lClass.extends`/`p.model`/`p.fullname` e scrittura di un campo `data` additivo)
+**Notes**: bridge dati via opzione A della discovery (calcolo a transform-time, `lClass = vertex.model` già in scope) — `ClassNode` resta dumb, nessun accesso proxy in render. Token usati: `--color-canvas-accent` (#06b6d4, NON `#0ea5e9`), `--color-canvas-bg`, `--color-accent`, `--color-text-secondary` — nessun literal. Triangolo `fill="none"` apex-up sotto il chip = freccia di generalizzazione al genitore (semantica UML). SVG attrs in camelCase React (`strokeWidth`/`strokeLinejoin`). z-index stub = 4 (sopra `.node-problem-dot` z:3). **Hard stop reattività rispettato**: NON ho aperto `useJjomSync.ts`; sulla base di §3.5 (deps Step 4 = class/ref/object count) una mutazione di solo `extends` probabilmente NON re-innesca il rebuild dei nodi ⇒ lo stub potrebbe richiedere reload del tab. Da discutere in chat se il test manuale #4 lo conferma. **Limiti noti (iter. 1, non risolti)**: solo `ghostParents[0]` (multiplo + "+N" rimandati); no click-to-navigate (pattern pronto: `DockManager.open2(parentMM)` + `SetRootFieldAction _lastSelected`); z-index rispetto a un nodo posizionato sopra `B` da verificare a runtime (D2).
+**Prompt document name**: 2026-05-29 — impl_v3_ghost_parent_stub
+
+---
+
+## 2026-05-29 — docs: discovery v3 ghost-parent stub (cross-metamodel extends, READ-ONLY)
+**Prompt**: discovery di sola lettura per la feature "stub genitore fantasma" — overlay in-node che rende visibile un `extends` cross-metamodello su `B` (stub tratteggiato cyan + arco con triangolo vuoto). Rispondere a D1..D7 e produrre report; nessuna modifica al codice sorgente.
+**File toccati**: `docs/discovery/2026-05-29_v3_ghost_parent_stub_discovery.md` (nuovo), `docs/claude-code-log.md` (entry). Nessun file sorgente modificato.
+**Esito**: ✅ completato (sola lettura)
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required (read-only; il task NON dipende da sync/portDistribution — confermato come finding: overlay in-node fuori critical-zone)
+**Notes**: Componente nodo classe = `ClassNode` (`editor-v2/nodes/ClassNode.tsx`, nodeType `classNode` reg. `EditorV2.tsx:93-98`); riceve solo `{id,data,selected}`, `data` NON porta id-modello né `extends`. Node `id` = id del `DVertex`; `vertex.model` = LClass (transform `jjomTransformers.ts:116-127`). `.mm-node` ha `overflow:hidden` commentato (`EditorV2.scss:1186`) → overflow visibile; precedente di contenuto sporgente `.node-problem-dot` (NodeProblemIndicator.scss:1-13). Z-index sopra nodi adiacenti = DA VERIFICARE A RUNTIME (@xyflow assegna z-order in JS). Parent: `lclass.extends` (`LModelElement.tsx:3323`); cross-MM check `parent.model.id !== B.model.id` (`get_model` :6013); filtro dipendenti già nel pannello Extends via `allowCrossReference ? allCrossSubPackages : allSubPackages` (`:2819`, `Info.tsx:121-137`). Navigazione: riuso `DockManager.open2(parentMM)` + `SetRootFieldAction _lastSelected {modelElement}` (pattern `DockManager.openViewpoint:186-230`, `Info.tsx:1253-1260`). D5: NESSUNA convenzione visiva "external" esistente (finding negativo) → nuova convenzione. D6: cyan reale = `--color-canvas-accent #06b6d4` (NON `#0ea5e9`, che è solo toolbar); slate = `--color-accent #334155`. D7: tutti i nomi candidati liberi (`.ghost-parent-stub` ecc.). 7 punti aperti elencati nel report (bridge dati transform-time vs render-time, z-index runtime, reattività su cambio extends, token cyan, single-parent, UX click, marker triangolo).
+**Prompt document name**: 2026-05-29 — discovery_v3_ghost_parent_stub
+
+---
+
 ## 2026-05-25 — fix: cross-role global ordering with inheritance pinned at center
 **Prompt**: rework handlePosition per ordinamento globale cross-role + inheritance al centro (a2-strict). NOTA: implementazione effettiva è confluita nel commit bundled 729c5ce07 ("anchorpoint fixes") insieme al Prompt 1/3 di identity binding. Vedi entry sopra per il razionale identity-binding.
 **File toccati (anchorpoint scope only)**: frontend/src/components/editor-v2/utils/handlePosition.ts (new), frontend/src/components/editor-v2/components/DynamicHandles.tsx, frontend/src/components/editor-v2/hooks/useTreeLayout.ts

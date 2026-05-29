@@ -11,6 +11,7 @@
 import type { Node, Edge } from '@xyflow/react';
 import type {
     ClassNodeData,
+    GhostParentInfo,
     EnumNodeData,
     PackageNodeData,
     ObjectNodeData,
@@ -102,6 +103,22 @@ function classVertexToRFNode(vertex: any): Node<ClassNodeData> {
         }
     } catch { /* proxy access can throw */ }
 
+    // Cross-metamodel parents (extends pointing to a class in another metamodel).
+    // Rendered as an in-node "ghost parent" overlay by ClassNode — no real edge/node.
+    const ghostParents: GhostParentInfo[] = [];
+    try {
+        for (const p of (lClass?.extends ?? [])) {
+            if (p?.model && p.model.id !== lClass.model.id) {
+                ghostParents.push({
+                    id: p.id,
+                    name: p.name,
+                    metamodelName: p.model.name,
+                    fullname: p.fullname,
+                });
+            }
+        }
+    } catch { /* proxy access can throw if data is stale */ }
+
     // Use __raw for reliable numeric coordinates (LProxy gotcha:
     // proxy getters return {} instead of numbers when stale)
     const raw = vertex.__raw ?? vertex;
@@ -123,6 +140,7 @@ function classVertexToRFNode(vertex: any): Node<ClassNodeData> {
             attributes: attrs,
             references: refs.length > 0 ? refs : undefined,
             operations: ops.length > 0 ? ops : undefined,
+            ghostParents: ghostParents.length > 0 ? ghostParents : undefined,
         },
     };
 }

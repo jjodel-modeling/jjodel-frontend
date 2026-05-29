@@ -28,6 +28,8 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
 
     const attributes = data.attributes ?? [];
     const operations = data.operations ?? [];
+    // First iteration: render only a single external (cross-metamodel) parent.
+    const ghost = data.ghostParents?.[0];
 
     const [editing, setEditing] = useState(false);
     const [name, setName] = useState(data.label);
@@ -259,6 +261,25 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
             />
 
             <DynamicHandles nodeId={id} />
+
+            {/* Ghost parent: cross-metamodel extends drawn as an in-node overlay
+                (dashed chip + UML generalization arc), not a real ReactFlow edge. */}
+            {ghost && (
+                <div
+                    className="ghost-parent-stub"
+                    data-ghost-parent-id={ghost.id}
+                    title={ghost.fullname}
+                >
+                    <div className="ghost-parent-stub__chip">
+                        <span className="ghost-parent-stub__name">{ghost.name}</span>
+                        <span className="ghost-parent-stub__mm">{ghost.metamodelName}</span>
+                    </div>
+                    <svg className="ghost-parent-stub__connector" viewBox="0 0 12 18" aria-hidden="true">
+                        <polygon points="6,1 2,8 10,8" fill="none" stroke="var(--color-canvas-accent)" strokeWidth="1.2" strokeLinejoin="round" />
+                        <line x1="6" y1="8" x2="6" y2="18" stroke="var(--color-canvas-accent)" strokeWidth="1.2" />
+                    </svg>
+                </div>
+            )}
 
             {/* Header — abstract classes get italic name via CSS (.abstract .mm-node__name) */}
             <div

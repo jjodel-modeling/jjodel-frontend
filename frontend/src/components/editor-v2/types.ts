@@ -60,6 +60,14 @@ export interface MetaReference {
     type?: { id: string; name: string };  // resolved type info from JjOM
 }
 
+// === Ghost parent (cross-metamodel extends, rendered as in-node overlay) ===
+export interface GhostParentInfo {
+    id: string;
+    name: string;
+    metamodelName: string;
+    fullname: string;
+}
+
 // === Node Data ===
 export interface ClassNodeData {
     label: string;
@@ -69,6 +77,7 @@ export interface ClassNodeData {
     references?: MetaReference[];
     operations?: MetaOperation[];
     jsxString?: string;
+    ghostParents?: GhostParentInfo[];
     [key: string]: unknown;
 }
 

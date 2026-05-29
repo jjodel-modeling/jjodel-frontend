@@ -1351,6 +1351,49 @@
 }
 
 // ============================================
+// GHOST PARENT STUB (cross-metamodel extends overlay)
+// ============================================
+
+.ghost-parent-stub {
+    position: absolute;
+    bottom: 100%;            // anchored to the node top, grows upward
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 4;              // above node body (cf. .node-problem-dot z-index: 3)
+    pointer-events: auto;
+
+    &__chip {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 2px 8px;
+        border: 1px dashed var(--color-canvas-accent);
+        border-radius: 6px;
+        background: var(--color-canvas-bg, transparent);
+        white-space: nowrap;
+    }
+
+    &__name {
+        font-size: 11px;
+        color: var(--color-accent);
+    }
+
+    &__mm {
+        font-size: 11px;
+        color: var(--color-text-secondary);
+    }
+
+    &__connector {
+        width: 12px;
+        height: 18px;
+        display: block;
+    }
+}
+
+// ============================================
 // MM-CLASS (Class Node)
 // ============================================
 
