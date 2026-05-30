@@ -3541,7 +3541,7 @@ path.hl-dimmed,
 .hl-palette {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 4px;
 }
 .hl-palette__swatch {
     // Fixed-size slot: the circle scales inside, neighbours never reflow.
