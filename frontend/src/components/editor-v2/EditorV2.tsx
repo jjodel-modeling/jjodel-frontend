@@ -2281,6 +2281,48 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 }
             }
 
+            // Add a reference to a class node. Creates the model feature only
+            // (no edge): a self-loop, if rendered, is drawn by the sync layer.
+            // Mirrors the composition-children block above for gating/structure.
+            if (node?.type === 'classNode') {
+                items.push({
+                    label: 'Add reference',
+                    icon: 'bi-link-45deg',
+                    onClick: () => {
+                        const lClass: any = LPointerTargetable.fromPointer(node.id)?.model;
+                        if (!lClass || typeof lClass.addReference !== 'function') return;
+                        // Unique name among the class's existing references
+                        // (mirror canvasToJjom.ts uniqueName via raw store lookup).
+                        const baseName = 'newReference';
+                        let uniqueName = baseName;
+                        try {
+                            const state = store.getState();
+                            const rawVertex = state.idlookup?.[node.id] as any;
+                            const classId = rawVertex?.model;
+                            const dClass = classId ? state.idlookup?.[classId] as any : null;
+                            if (dClass) {
+                                const refNames = new Set<string>();
+                                for (const rid of (dClass.references ?? [])) {
+                                    const r = state.idlookup?.[rid] as any;
+                                    if (r?.name) refNames.add(r.name);
+                                }
+                                if (refNames.has(uniqueName)) {
+                                    let i = 1;
+                                    while (refNames.has(`${baseName}${i}`)) i++;
+                                    uniqueName = `${baseName}${i}`;
+                                }
+                            }
+                        } catch { /* fall back to base name */ }
+                        const lRef: any = lClass.addReference(uniqueName);
+                        const refId = lRef?.id ?? lRef;
+                        if (refId) {
+                            SetRootFieldAction.new('_lastSelected' as any, { node: '', view: '', modelElement: refId });
+                        }
+                    },
+                });
+                items.push({ divider: true });
+            }
+
             const classicTooltip = 'Available in classic editor';
             items.push(
                 {

@@ -13,6 +13,8 @@ import {
     computeManhattanPath,
     roundManhattanPath,
     computeSelfLoopPath,
+    computeSelfLoopCornerPath,
+    getNodeRect,
     computeLabelPosition,
     computeCardinalityPosition,
     parsePathPoints,
@@ -233,22 +235,55 @@ function UnifiedEdge(props: EdgeProps) {
         [id, spreadPoints, activeNodeIds, allEdges]
     );
 
+    // ─── Self-loop corner geometry (source === target) ───
+    // Computed once and shared by the path and the label/cardinality positioning.
+    // Falls back to the legacy curl for the frame before the node is in allNodes.
+    const selfLoopGeom = useMemo((): {
+        path: string;
+        labelPoint: { x: number; y: number } | null;
+        cardinalityPoint: { x: number; y: number } | null;
+    } | null => {
+        if (!isSelfLoop) return null;
+        const node = allNodes.find(n => n.id === source);
+        if (!node) {
+            return {
+                path: computeSelfLoopPath(sourceX, sourceY, targetX, targetY),
+                labelPoint: null,
+                cardinalityPoint: null,
+            };
+        }
+        const rect = getNodeRect(node);
+        const siblings = allEdges
+            .filter(e => e.source === e.target && e.source === source)
+            .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+        const ordinal = Math.max(0, siblings.findIndex(e => e.id === id));
+        const loop = computeSelfLoopCornerPath(rect, ordinal);
+        return {
+            path: loop.path,
+            labelPoint: loop.labelPoint,
+            cardinalityPoint: loop.cardinalityPoint,
+        };
+    }, [isSelfLoop, allNodes, allEdges, source, id, sourceX, sourceY, targetX, targetY]);
+
     // ─── Final path with rounding and bridge arcs ───
     const path = useMemo(() => {
         if (isSelfLoop) {
-            return computeSelfLoopPath(sourceX, sourceY, targetX, targetY);
+            return selfLoopGeom ? selfLoopGeom.path : computeSelfLoopPath(sourceX, sourceY, targetX, targetY);
         }
         if (crossings.length > 0) {
             return buildFinalPath(spreadPoints, crossings, 4, 6);
         }
         return roundManhattanPath(spreadPath, 4);
-    }, [spreadPath, spreadPoints, crossings, isSelfLoop, sourceX, sourceY, targetX, targetY]);
+    }, [spreadPath, spreadPoints, crossings, isSelfLoop, selfLoopGeom, sourceX, sourceY, targetX, targetY]);
 
     // ─── Label positioning (reference edges) ───
-    const labelPos = useMemo(() => computeLabelPosition(spreadPath), [spreadPath]);
+    const labelPos = useMemo(() => {
+        if (isSelfLoop && selfLoopGeom?.labelPoint) return selfLoopGeom.labelPoint;
+        return computeLabelPosition(spreadPath);
+    }, [spreadPath, isSelfLoop, selfLoopGeom]);
 
     const labelOffset = useMemo(() => {
-        if (isSelfLoop) return { x: 0, y: -16 };
+        if (isSelfLoop) return { x: 0, y: 0 };
 
         const points = parsePathPoints(spreadPath);
         let longestLen = 0;
@@ -278,8 +313,16 @@ function UnifiedEdge(props: EdgeProps) {
     }, [spreadPath, isSelfLoop, sourceHandleId, targetHandleId, source, target]);
 
     // ─── Cardinality positioning (reference edges) ───
-    const cardinalityPos = useMemo(() => computeCardinalityPosition(spreadPath), [spreadPath]);
+    const cardinalityPos = useMemo(() => {
+        // Self-loop: cardinality sits near the arrow tip on the inner side of the
+        // entry segment, opposite the label (computed in computeSelfLoopCornerPath).
+        if (isSelfLoop && selfLoopGeom?.cardinalityPoint) {
+            return selfLoopGeom.cardinalityPoint;
+        }
+        return computeCardinalityPosition(spreadPath);
+    }, [spreadPath, isSelfLoop, selfLoopGeom]);
     const cardinalityOffset = useMemo(() => {
+        if (isSelfLoop) return { x: 0, y: 0 };
         const points = parsePathPoints(spreadPath);
         if (points.length < 2) return { x: 0, y: -16 };
         const last = points[points.length - 1];
@@ -296,7 +339,7 @@ function UnifiedEdge(props: EdgeProps) {
         return isLastHorizontal
             ? { x: 0, y: offset }
             : { x: offset, y: 0 };
-    }, [spreadPath, sourceHandleId, targetHandleId, source, target]);
+    }, [spreadPath, isSelfLoop, sourceHandleId, targetHandleId, source, target]);
 
     // ─── ISA label midpoint (inheritance ER notation) ───
     const midPoint = useMemo(() => {

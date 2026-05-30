@@ -68,6 +68,15 @@ export interface GhostParentInfo {
     fullname: string;
 }
 
+// === Ghost target (cross-metamodel reference, rendered as in-node overlay) ===
+export interface GhostTargetInfo {
+    refName: string;
+    targetName: string;
+    targetMetamodel: string;
+    cardinality: string;
+    targetFullname: string;
+}
+
 // === Node Data ===
 export interface ClassNodeData {
     label: string;
@@ -78,6 +87,7 @@ export interface ClassNodeData {
     operations?: MetaOperation[];
     jsxString?: string;
     ghostParents?: GhostParentInfo[];
+    ghostTargets?: GhostTargetInfo[];
     [key: string]: unknown;
 }
 

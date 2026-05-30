@@ -30,6 +30,8 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
     const operations = data.operations ?? [];
     // First iteration: render only a single external (cross-metamodel) parent.
     const ghost = data.ghostParents?.[0];
+    // Cross-metamodel reference targets, rendered as in-node stubs on the right.
+    const ghostTargets = data.ghostTargets ?? [];
 
     const [editing, setEditing] = useState(false);
     const [name, setName] = useState(data.label);
@@ -278,6 +280,30 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
                         <polygon points="6,1 2,8 10,8" fill="none" stroke="var(--color-canvas-accent)" strokeWidth="1.2" strokeLinejoin="round" />
                         <line x1="6" y1="8" x2="6" y2="18" stroke="var(--color-canvas-accent)" strokeWidth="1.2" />
                     </svg>
+                </div>
+            )}
+
+            {/* Ghost targets: cross-metamodel references drawn as in-node
+                overlays (association arc + dashed chip on the right), not real
+                ReactFlow edges. The leftover self-loop edge is suppressed in
+                jjomEdgeToRFEdge. */}
+            {ghostTargets.length > 0 && (
+                <div className="ghost-target-stub">
+                    {ghostTargets.map((gt, i) => (
+                        <div key={`${gt.refName}-${i}`} className="ghost-target-stub__item">
+                            <span className="ghost-target-stub__label">{gt.refName} {gt.cardinality}</span>
+                            <div className="ghost-target-stub__arc">
+                                <svg className="ghost-target-stub__connector" viewBox="0 0 24 12" aria-hidden="true">
+                                    <line x1="0" y1="6" x2="23" y2="6" stroke="var(--color-canvas-accent)" strokeWidth="1.2" />
+                                    <polyline points="17,2 23,6 17,10" fill="none" stroke="var(--color-canvas-accent)" strokeWidth="1.2" strokeLinejoin="round" strokeLinecap="round" />
+                                </svg>
+                            </div>
+                            <div className="ghost-target-stub__chip" title={gt.targetFullname}>
+                                <span className="ghost-target-stub__name">{gt.targetName}</span>
+                                <span className="ghost-target-stub__mm">{gt.targetMetamodel}</span>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             )}
 

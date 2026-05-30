@@ -622,6 +622,113 @@ export function computeSelfLoopPath(
     return `M ${sourceX} ${sourceY} C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${targetX} ${targetY}`;
 }
 
+// Corner-loop geometry for self-references (source === target).
+const SELF_LOOP_INSET = 16;        // endpoint distance from the corner, along each side
+const SELF_LOOP_SIZE = 24;         // loop protrusion beyond the node border
+const SELF_LOOP_RING_STEP = 14;    // inset/size increment for concentric (nested) loops
+const SELF_LOOP_LABEL_OFFSET = 10; // diagonal offset of the label from the outer corner
+const SELF_LOOP_CARD_OFFSET = 14;  // perpendicular offset of cardinality from the entry segment
+const SELF_LOOP_CARD_T = 0.28;     // fraction along the entry segment (p4→p3), near the arrow tip
+
+type SelfLoopCorner = 'TR' | 'BR' | 'BL' | 'TL';
+
+// Corner assignment order, driven by the self-loop ordinal among its siblings.
+const SELF_LOOP_CORNER_ORDER: SelfLoopCorner[] = ['TR', 'BR', 'BL', 'TL'];
+
+/**
+ * Builds an orthogonal self-loop ("corner loop") that hugs a node corner,
+ * rounded with the same rounding as the Manhattan routing.
+ *
+ * @param rect    node bounding box (from getNodeRect)
+ * @param ordinal index of this self-loop among the siblings of the same source
+ *                node (deterministic, ordered by edge id)
+ * @returns rounded SVG path, a label point at the loop's outer corner, and a
+ *          cardinality point near the arrow tip on the inner side of the entry
+ */
+export function computeSelfLoopCornerPath(
+    rect: Rect,
+    ordinal: number,
+): { path: string; labelPoint: { x: number; y: number }; cardinalityPoint: { x: number; y: number } } {
+    const corner = SELF_LOOP_CORNER_ORDER[ordinal % 4];
+    const ring = Math.floor(ordinal / 4);
+
+    let inset = SELF_LOOP_INSET + ring * SELF_LOOP_RING_STEP;
+    const size = SELF_LOOP_SIZE + ring * SELF_LOOP_RING_STEP;
+
+    // Defensive guard (high rings / small nodes): the endpoint must stay on the side.
+    const maxInset = Math.min(rect.width, rect.height) / 2 - 4;
+    if (inset > maxInset) inset = Math.max(4, maxInset);
+
+    const left = rect.x;
+    const right = rect.x + rect.width;
+    const top = rect.y;
+    const bottom = rect.y + rect.height;
+
+    // 5 points: P0 = exit (on the first side), P4 = entry with arrow (on the second
+    // side). P2 = outer corner of the loop (used for the label).
+    let p0: { x: number; y: number };
+    let p1: { x: number; y: number };
+    let p2: { x: number; y: number };
+    let p3: { x: number; y: number };
+    let p4: { x: number; y: number };
+    let sign: { x: number; y: number };
+    switch (corner) {
+        case 'TR': // top + right sides
+            p0 = { x: right - inset, y: top };
+            p1 = { x: right - inset, y: top - size };
+            p2 = { x: right + size,  y: top - size };
+            p3 = { x: right + size,  y: top + inset };
+            p4 = { x: right,         y: top + inset };
+            sign = { x: 1, y: -1 };
+            break;
+        case 'BR': // bottom + right sides
+            p0 = { x: right - inset, y: bottom };
+            p1 = { x: right - inset, y: bottom + size };
+            p2 = { x: right + size,  y: bottom + size };
+            p3 = { x: right + size,  y: bottom - inset };
+            p4 = { x: right,         y: bottom - inset };
+            sign = { x: 1, y: 1 };
+            break;
+        case 'BL': // bottom + left sides
+            p0 = { x: left + inset, y: bottom };
+            p1 = { x: left + inset, y: bottom + size };
+            p2 = { x: left - size,  y: bottom + size };
+            p3 = { x: left - size,  y: bottom - inset };
+            p4 = { x: left,         y: bottom - inset };
+            sign = { x: -1, y: 1 };
+            break;
+        case 'TL': // top + left sides
+        default:
+            p0 = { x: left + inset, y: top };
+            p1 = { x: left + inset, y: top - size };
+            p2 = { x: left - size,  y: top - size };
+            p3 = { x: left - size,  y: top + inset };
+            p4 = { x: left,         y: top + inset };
+            sign = { x: -1, y: -1 };
+            break;
+    }
+
+    // Raw orthogonal polyline, then the same rounding as the other edges.
+    const raw = `M ${p0.x} ${p0.y} L ${p1.x} ${p1.y} L ${p2.x} ${p2.y} L ${p3.x} ${p3.y} L ${p4.x} ${p4.y}`;
+    const path = roundManhattanPath(raw, 4);
+
+    const labelPoint = {
+        x: p2.x + sign.x * SELF_LOOP_LABEL_OFFSET,
+        y: p2.y + sign.y * SELF_LOOP_LABEL_OFFSET,
+    };
+
+    // Cardinality sits near the arrow tip (p4), on the INNER side of the entry
+    // segment — opposite the label, which lives at the outer corner. Top corners
+    // push it down, bottom corners push it up, always away from the label.
+    const isTopCorner = corner === 'TR' || corner === 'TL';
+    const cardinalityPoint = {
+        x: p4.x + (p3.x - p4.x) * SELF_LOOP_CARD_T,
+        y: p4.y + (isTopCorner ? SELF_LOOP_CARD_OFFSET : -SELF_LOOP_CARD_OFFSET),
+    };
+
+    return { path, labelPoint, cardinalityPoint };
+}
+
 /**
  * Parses points from an SVG path string.
  */
