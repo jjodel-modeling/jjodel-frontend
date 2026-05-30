@@ -101,6 +101,16 @@ export type ReconcileDecision =
     | { action: 'create' }
     | { action: 'nothing' }
     | {
+          /** Target is in another metamodel: it is rendered as an in-node
+           *  `ghostTargets` overlay, never as an edge. Every persisted edge for
+           *  this refId is therefore stale and must be deleted (no create, no
+           *  retarget). See discovery 2026-05-30_self_loop_crossmm_retarget.md. */
+          action: 'delete-all';
+          /** Ids of all persisted edges for this refId — caller deletes each via
+           *  `DeleteElementAction.new` (same idiom as the reconcile extras). */
+          deleteEdgeIds: string[];
+      }
+    | {
           action: 'reconcile';
           /** Edge to keep (and possibly retarget). Preserves its `edge.id`,
            *  which keeps anchors/waypoints intact (`useJjomSync.ts:1156-1164`). */
@@ -159,6 +169,10 @@ export function isM2ReferenceEdge(
  * `DReference.type` (= `targetClassId`).
  *
  * Branch logic:
+ *  - `options.targetCrossMM === true`     → `'delete-all'` (every existing edge
+ *        is stale because a cross-metamodel target is an overlay, not an edge;
+ *        `'nothing'` when there is nothing to delete). Takes precedence over the
+ *        keep-selection and ignores `targetClassId` (which is `null` here).
  *  - `existing.length === 0`             → `'create'`
  *  - `existing.length ≥ 1`:
  *      - `keep` = first entry whose `endClassId === targetClassId` (preserves
@@ -172,8 +186,16 @@ export function isM2ReferenceEdge(
  */
 export function classifyRefEdgeReconcile(
     existing: ReadonlyArray<RefEdgeSnapshot>,
-    targetClassId: string,
+    targetClassId: string | null,
+    options?: { targetCrossMM?: boolean },
 ): ReconcileDecision {
+    // Cross-metamodel target: rendered as an in-node `ghostTargets` overlay, never
+    // as an edge → every persisted edge for this refId is stale. Precedes the
+    // keep-selection and ignores `targetClassId`. Empty pool → no-op (idempotence).
+    if (options?.targetCrossMM) {
+        if (existing.length === 0) return { action: 'nothing' };
+        return { action: 'delete-all', deleteEdgeIds: existing.map(e => e.edgeId) };
+    }
     if (existing.length === 0) return { action: 'create' };
     // Prefer the already-coherent edge so its anchors/waypoints are preserved
     // when an accumulated stale duplicate happens to sit at subElements[0].

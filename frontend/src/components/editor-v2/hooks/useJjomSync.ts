@@ -529,6 +529,11 @@ export function useJjomSync(
         // Which edges are missing? (check BEFORE creating vertices — we need
         // vertex IDs for edges, and some may not exist yet)
         let missingEdgeCount = 0;
+        // Stale edges to delete on a cross-MM retarget. A cross-metamodel target
+        // produces no edge (it's an in-node ghostTargets overlay), so it never
+        // increments missingEdgeCount — without this counter the early-exit below
+        // would skip Step 3 and the stale self-loop would never be deleted.
+        let staleCrossMMEdgeCount = 0;
         for (const entry of classifierEntries) {
             if (entry.raw.className !== 'DClass') continue;
             for (const supId of (entry.raw.extends ?? [])) {
@@ -541,6 +546,14 @@ export function useJjomSync(
             for (const refId of (entry.raw.references ?? [])) {
                 const refObj = typeof refId === 'string' ? idlookup[refId] as any : null;
                 if (!refObj) continue;
+                // Cross-MM retarget with a leftover persisted edge → mark it for
+                // deletion in Step 3. Detection mirrors Step 3 (get_type via L-proxy,
+                // not raw type); computed only when a persisted edge actually exists.
+                if (typeof refId === 'string' && (existingRefEdgesByRefId.get(refId)?.length ?? 0) > 0) {
+                    const sMM = (LPointerTargetable.fromPointer(entry.id) as any)?.model?.id;
+                    const tMM = (LPointerTargetable.fromPointer(refId) as any)?.type?.model?.id;
+                    if (sMM && tMM && sMM !== tMM) staleCrossMMEdgeCount++;
+                }
                 const targetId = typeof refObj.type === 'string' ? refObj.type : null;
                 if (!targetId) continue;
                 const s = vertexIdByModelId.get(entry.id);
@@ -597,9 +610,12 @@ export function useJjomSync(
         }
 
         // Nothing to do? Early exit.
+        // staleCrossMMEdgeCount keeps Step 3 reachable when a cross-MM retarget
+        // left a stale edge to delete (no missing element would otherwise fire).
         if (!needsNewGraph && missingClassifiers.length === 0
             && missingObjectsCount === 0
-            && missingEdgeCount === 0 && missingM1EdgeCount === 0) return;
+            && missingEdgeCount === 0 && missingM1EdgeCount === 0
+            && staleCrossMMEdgeCount === 0) return;
 
         // ── Create missing elements ─────────────────────────────────────
         // Each DVertex.new / DVoidEdge.new2 has its own internal TRANSACTION,
@@ -732,6 +748,53 @@ export function useJjomSync(
                     if (!refObj) continue;
                     const targetId = typeof refObj.type === 'string' ? refObj.type : null;
                     if (!targetId) continue;
+
+                    // Cross-metamodel target: rendered as an in-node `ghostTargets`
+                    // overlay (jjomTransformers), never as an edge. Use the SAME
+                    // source of truth as that overlay (jjomTransformers.ts:130): the
+                    // reference's resolved `type` via the L-proxy get_type, NOT the
+                    // raw `DReference.type` field. A cross-MM retarget updates the
+                    // effective get_type target but can leave the raw `type` pointing
+                    // at the old (self) class, so reading `targetId` (raw) would miss
+                    // the cross-MM case. Also NOT `!tgtVertex` — a same-MM class not
+                    // yet on the canvas would also lack a vertex but is not cross-MM.
+                    // Any persisted DVoidEdge for this refId is therefore stale
+                    // (e.g. the leftover self-loop from the default self-target) and
+                    // must be deleted. See discovery 2026-05-30_self_loop_crossmm_retarget.md.
+                    const srcModelId = (LPointerTargetable.fromPointer(entry.id) as any)?.model?.id;
+                    const tgtModelId = (LPointerTargetable.fromPointer(refId) as any)?.type?.model?.id;
+                    const targetCrossMM = !!(srcModelId && tgtModelId && srcModelId !== tgtModelId);
+                    if (targetCrossMM) {
+                        const staleEdges = existingRefEdgesByRefId.get(refId) ?? [];
+                        const crossDecision = classifyRefEdgeReconcile(staleEdges, null, { targetCrossMM: true });
+                        if (crossDecision.action === 'delete-all' && crossDecision.deleteEdgeIds.length > 0) {
+                            // Same delete idiom as the reconcile branch's extras
+                            // cleanup below: resolve the raw edge by id and
+                            // DeleteElementAction.new inside a TRANSACTION. Safe in
+                            // this sync-adjacent file because the body has no creator
+                            // (.new2) — §3.3's coordinate-loss hazard does not apply.
+                            // DeleteElementAction cascades via pointedBy, which
+                            // maintains the edgesIn/edgesOut reciprocals (same as the
+                            // reconcile extras delete and syncDeleteEdge).
+                            TRANSACTION('Delete stale DReference edge (cross-metamodel retarget)', () => {
+                                for (const staleId of crossDecision.deleteEdgeIds) {
+                                    const staleRaw = idlookup[staleId];
+                                    if (staleRaw) DeleteElementAction.new(staleRaw);
+                                }
+                            });
+                            // Remove the RF edge from the canvas + cache immediately.
+                            // The D-layer delete alone does not refresh live: the
+                            // incremental sync does not observe the subElements change
+                            // in time, so the self-loop would linger until a full
+                            // rebuild (reopen). setEdges is safe here — unlike setNodes
+                            // it does not trigger the re-measure loop (see :135).
+                            const removedEdgeIds = new Set(crossDecision.deleteEdgeIds);
+                            for (const staleId of removedEdgeIds) rfEdgeCache.current.delete(staleId);
+                            setEdges(prev => prev.filter(e => !removedEdgeIds.has(e.id)));
+                        }
+                        continue;   // cross-MM = overlay, never an edge
+                    }
+
                     const srcVertex = vertexIdByModelId.get(entry.id);
                     const tgtVertex = vertexIdByModelId.get(targetId);
                     if (!srcVertex || !tgtVertex) continue;

@@ -157,6 +157,62 @@ describe('classifyRefEdgeReconcile — Step 3 reconcile-or-create decision', () 
             deleteEdgeIds: [],
         });
     });
+
+    // TX1 — cross-MM with one existing edge (the stale self-loop): delete it,
+    //   create nothing. targetClassId is null (the cross target has no on-canvas
+    //   vertex). See discovery 2026-05-30_self_loop_crossmm_retarget.md §2.
+    it('TX1 — targetCrossMM with one existing edge → delete-all that edge, no create', () => {
+        const d = classifyRefEdgeReconcile(
+            [snap('E_self', 'V_A', 'Class_A')],
+            null,
+            { targetCrossMM: true },
+        );
+        expect(d).toEqual({ action: 'delete-all', deleteEdgeIds: ['E_self'] });
+    });
+
+    // TX2 — cross-MM with several existing edges: delete all of them.
+    it('TX2 — targetCrossMM with N existing edges → delete-all', () => {
+        const d = classifyRefEdgeReconcile(
+            [snap('E0', 'V0', 'Class_0'), snap('E1', 'V1', 'Class_1'), snap('E2', 'V2', 'Class_2')],
+            null,
+            { targetCrossMM: true },
+        );
+        expect(d).toEqual({ action: 'delete-all', deleteEdgeIds: ['E0', 'E1', 'E2'] });
+    });
+
+    // TX3 — cross-MM with no existing edges → no-op (idempotence: nothing to delete).
+    it('TX3 — targetCrossMM with empty pool → nothing', () => {
+        const d = classifyRefEdgeReconcile([], null, { targetCrossMM: true });
+        expect(d).toEqual({ action: 'nothing' });
+    });
+
+    // TX4 — cross-MM precedence: even when an existing edge happens to be coherent
+    //   with some targetClassId, targetCrossMM short-circuits to delete-all.
+    it('TX4 — targetCrossMM overrides keep-selection even if an edge looks coherent', () => {
+        const d = classifyRefEdgeReconcile(
+            [snap('E_coh', 'V_T', 'Class_target')],
+            'Class_target',
+            { targetCrossMM: true },
+        );
+        expect(d).toEqual({ action: 'delete-all', deleteEdgeIds: ['E_coh'] });
+    });
+
+    // TX5 — regression: same-MM behavior is unchanged when targetCrossMM is absent
+    //   or false (the option defaults to the original create/reconcile/nothing).
+    it('TX5 — targetCrossMM false/absent preserves the same-MM decisions', () => {
+        expect(classifyRefEdgeReconcile([], 'Class_target', { targetCrossMM: false }))
+            .toEqual({ action: 'create' });
+        expect(classifyRefEdgeReconcile([snap('E0', 'V_T', 'Class_target')], 'Class_target', {}))
+            .toEqual({ action: 'nothing' });
+        expect(classifyRefEdgeReconcile([snap('E0', 'V_oldT', 'Class_old')], 'Class_target'))
+            .toEqual({
+                action: 'reconcile',
+                keepEdgeId: 'E0',
+                retargetNeeded: true,
+                oldEndVertexId: 'V_oldT',
+                deleteEdgeIds: [],
+            });
+    });
 });
 
 // ---------------------------------------------------------------------------
