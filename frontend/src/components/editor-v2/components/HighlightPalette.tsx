@@ -20,11 +20,12 @@ function HighlightPalette({ activeColor, onSelect, onClear }: HighlightPalettePr
                     key={n}
                     type="button"
                     className={`hl-palette__swatch ${activeColor === n ? 'active' : ''}`}
-                    style={{ background: `var(--hl-${n})` }}
                     onClick={() => onSelect(n)}
                     title={`Highlight color ${n}`}
                     aria-pressed={activeColor === n}
-                />
+                >
+                    <span className="hl-palette__dot" style={{ background: `var(--hl-${n})` }} />
+                </button>
             ))}
             <button
                 type="button"
