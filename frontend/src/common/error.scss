@@ -308,51 +308,41 @@
 }
 
 // ============================================
-// ERROR BADGE - Slick Modern Design
-// Clickable badge with left accent border
+// ERROR BADGE - In-place placeholder
+// Calm, clickable badge rendered in place of a view that failed to render.
+// Clicking it opens the ErrorPortal modal (details).
 // ============================================
 .error-badge-slick {
     display: inline-flex;
     align-items: center;
-    gap: 12px;
-    padding: 10px 16px;
-    background: #ffffff;
-    border: 1px solid #fecaca;
-    border-left: 4px solid #ef4444;
-    border-radius: 8px;
+    gap: 10px;
+    padding: 8px 12px;
+    background: var(--color-bg-secondary);
+    border: 0.5px solid var(--color-border-secondary);
+    border-radius: var(--radius-md);
     cursor: pointer;
-    transition: all 200ms ease;
-    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.1);
+    transition: border-color 150ms ease;
     min-width: 200px;
-    max-width: 350px;
-    animation: errorPulse 2s ease-in-out infinite;
+    max-width: 360px;
 
     &:hover {
-        background: #fef2f2;
-        border-color: #fca5a5;
-        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
-        transform: translateY(-1px);
-        animation: none; // Stop pulse on hover
+        border-color: var(--color-border-primary);
     }
 
-    &:active {
-        transform: translateY(0);
-    }
-
-    // Icon container
+    // Icon chip
     .error-badge-icon {
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 32px;
-        height: 32px;
-        background: #fef2f2;
-        border-radius: 8px;
+        width: 24px;
+        height: 24px;
+        background: var(--color-error-bg);
+        border-radius: var(--radius-md);
         flex-shrink: 0;
 
         i {
-            font-size: 16px;
-            color: #ef4444;
+            font-size: 13px;
+            color: var(--color-error);
         }
     }
 
@@ -364,40 +354,62 @@
         min-width: 0; // For text-overflow
     }
 
-    // Main title
+    // Label + name chip
     .error-badge-title {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
         font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif;
         font-size: 13px;
-        color: #991b1b;
+        font-weight: 400;
+        color: var(--color-text-secondary);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+    }
 
-        strong {
-            font-weight: 600;
-            color: #7f1d1d;
-        }
+    // View name, demoted to a neutral mono chip
+    .error-badge-name {
+        flex-shrink: 1;
+        min-width: 0;
+        padding: 1px 6px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--color-text-primary);
+        background: var(--color-bg-tertiary);
+        border-radius: var(--radius-md);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     // Instance info
     .error-badge-instance {
         font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif;
         font-size: 11px;
-        color: #64748b;
+        color: var(--color-text-tertiary);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
+
+    // Trailing affordance hinting the badge is clickable
+    .error-badge-hint {
+        margin-left: auto;
+        flex-shrink: 0;
+        font-size: 12px;
+        color: var(--color-text-tertiary);
+    }
 }
 
-// Subtle pulse animation to attract attention
-@keyframes errorPulse {
-    0%, 100% {
-        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.1);
-    }
-    50% {
-        box-shadow: 0 2px 12px rgba(239, 68, 68, 0.25);
-    }
+// --color-error-bg is defined only in the light theme, so the icon chip needs
+// an explicit dark-appropriate tint in dark mode. Every other badge token
+// auto-adapts, so this is the single dark override required.
+html[data-theme="dark"] .error-badge-slick .error-badge-icon,
+html[data-theme="dark"] .error-indicator-only .error-badge-icon,
+[data-theme="dark"] .error-badge-slick .error-badge-icon,
+[data-theme="dark"] .error-indicator-only .error-badge-icon {
+    background: var(--color-error-muted);
 }
 
 // Legacy support for old class name
@@ -518,39 +530,6 @@ html[data-theme="dark"] {
         }
     }
 
-    .error-badge-slick,
-    .error-indicator-only {
-        background: #1e293b;
-        border-color: #7f1d1d;
-        border-left-color: #f87171;
-        box-shadow: 0 2px 8px rgba(248, 113, 113, 0.15);
-
-        .error-badge-icon {
-            background: rgba(248, 113, 113, 0.15);
-
-            i {
-                color: #f87171;
-            }
-        }
-
-        .error-badge-title {
-            color: #fca5a5;
-
-            strong {
-                color: #fecaca;
-            }
-        }
-
-        .error-badge-instance {
-            color: #94a3b8;
-        }
-
-        &:hover {
-            background: rgba(248, 113, 113, 0.1);
-            box-shadow: 0 4px 12px rgba(248, 113, 113, 0.2);
-        }
-    }
-
     .error-instance-info {
         background: #0f172a;
         color: #e2e8f0;
@@ -629,36 +608,4 @@ html[data-theme="dark"] {
         }
     }
 
-    .error-badge-slick,
-    .error-indicator-only {
-        background: #1e293b;
-        border-color: #7f1d1d;
-        border-left-color: #f87171;
-        box-shadow: 0 2px 8px rgba(248, 113, 113, 0.15);
-
-        .error-badge-icon {
-            background: rgba(248, 113, 113, 0.15);
-
-            i {
-                color: #f87171;
-            }
-        }
-
-        .error-badge-title {
-            color: #fca5a5;
-
-            strong {
-                color: #fecaca;
-            }
-        }
-
-        .error-badge-instance {
-            color: #94a3b8;
-        }
-
-        &:hover {
-            background: rgba(248, 113, 113, 0.1);
-            box-shadow: 0 4px 12px rgba(248, 113, 113, 0.2);
-        }
-    }
 }

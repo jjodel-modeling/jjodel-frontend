@@ -137,6 +137,10 @@ export interface ReferenceEdgeData {
     waypoints?: EdgeWaypoint[];
     sourceAnchor?: AnchorConfig;
     targetAnchor?: AnchorConfig;
+    /** Depth stagger (px) for the cardinality when several share a target side. Set by applyDistribution. */
+    cardinalityShift?: number;
+    /** Arc-length offset (px) sliding the role along its edge to de-overlap bundles. Set by applyDistribution. */
+    roleArcShift?: number;
     [key: string]: unknown;
 }
 

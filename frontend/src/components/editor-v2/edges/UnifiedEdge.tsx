@@ -17,6 +17,8 @@ import {
     getNodeRect,
     computeLabelPosition,
     computeCardinalityPosition,
+    computeCardinalityAnchor,
+    CARD_BOX_GAP,
     parsePathPoints,
     applyWaypoints,
     pointsToPath,
@@ -40,6 +42,11 @@ import { EndpointHandles } from './EndpointHandles';
 // sourceHandleId/targetHandleId (format: "${side}-${index}").
 const BUNDLE_SPREAD_PX = 12;
 const LABEL_SPREAD_PX = 18;
+const ROLE_LINE_GAP = 10; // px, perpendicular nudge so the role text is off the line
+const ROLE_LINE_GAP_PX = 10; // px, perpendicular nudge so the role text is off the line
+const ROLE_LINE_GAP_PY = 10; // px, perpendicular nudge so the role text is off the line
+
+
 
 function getHandleIndex(handleId: string | null | undefined): number {
     if (!handleId) return 0;
@@ -276,70 +283,34 @@ function UnifiedEdge(props: EdgeProps) {
         return roundManhattanPath(spreadPath, 4);
     }, [spreadPath, spreadPoints, crossings, isSelfLoop, selfLoopGeom, sourceX, sourceY, targetX, targetY]);
 
-    // ─── Label positioning (reference edges) ───
-    const labelPos = useMemo(() => {
-        if (isSelfLoop && selfLoopGeom?.labelPoint) return selfLoopGeom.labelPoint;
-        return computeLabelPosition(spreadPath);
-    }, [spreadPath, isSelfLoop, selfLoopGeom]);
+    // De-overlap shifts precomputed in EditorV2.applyDistribution (0 when no bundle/collision).
+    const roleArcShift = edgeData?.roleArcShift ?? 0;
+    const cardinalityShift = edgeData?.cardinalityShift ?? 0;
 
+    // ─── Role label positioning (reference / composition edges) ───
+    const labelPos = useMemo(() => {
+        if (isSelfLoop) {
+            const p = selfLoopGeom?.labelPoint ?? computeLabelPosition(spreadPath);
+            return { x: p.x, y: p.y, isHorizontal: true };
+        }
+        return computeLabelPosition(spreadPath, roleArcShift); // arc-length midpoint, slid for bundles
+    }, [spreadPath, isSelfLoop, selfLoopGeom, roleArcShift]);
+
+    // Small perpendicular nudge off the line. No cross-edge de-overlap here (see 2c).
     const labelOffset = useMemo(() => {
         if (isSelfLoop) return { x: 0, y: 0 };
+        return labelPos.isHorizontal ? { x: 10, y: -ROLE_LINE_GAP_PY } : { x: ROLE_LINE_GAP_PX, y: 0 };
+    }, [isSelfLoop, labelPos]);
 
-        const points = parsePathPoints(spreadPath);
-        let longestLen = 0;
-        let longestIsHorizontal = true;
-
-        for (let i = 0; i < points.length - 1; i++) {
-            const p1 = points[i];
-            const p2 = points[i + 1];
-            const len = Math.abs(p2.x - p1.x) + Math.abs(p2.y - p1.y);
-            if (len > longestLen) {
-                longestLen = len;
-                longestIsHorizontal = Math.abs(p2.y - p1.y) < 1;
-            }
+    // ─── Cardinality positioning ───
+    const cardinalityTransform = useMemo(() => {
+        if (isSelfLoop) {
+            const p = selfLoopGeom?.cardinalityPoint ?? computeCardinalityPosition(spreadPath);
+            return `translate(-50%, -50%) translate(${p.x}px, ${p.y}px)`;
         }
-
-        // Stack labels along the longest segment based on combined handle index,
-        // so multiple bundled edges have separated label positions.
-        const sourceIndex = getHandleIndex(sourceHandleId);
-        const targetIndex = getHandleIndex(targetHandleId);
-        const directionSign = source < target ? 1 : -1;
-        const labelIndex = (sourceIndex + targetIndex) / 2 + directionSign * 0.5;
-        const offset = (labelIndex - (MAX_HANDLES_PER_SIDE - 1) / 2) * LABEL_SPREAD_PX;
-
-        return longestIsHorizontal
-            ? { x: 0, y: offset }
-            : { x: offset, y: 0 };
-    }, [spreadPath, isSelfLoop, sourceHandleId, targetHandleId, source, target]);
-
-    // ─── Cardinality positioning (reference edges) ───
-    const cardinalityPos = useMemo(() => {
-        // Self-loop: cardinality sits near the arrow tip on the inner side of the
-        // entry segment, opposite the label (computed in computeSelfLoopCornerPath).
-        if (isSelfLoop && selfLoopGeom?.cardinalityPoint) {
-            return selfLoopGeom.cardinalityPoint;
-        }
-        return computeCardinalityPosition(spreadPath);
-    }, [spreadPath, isSelfLoop, selfLoopGeom]);
-    const cardinalityOffset = useMemo(() => {
-        if (isSelfLoop) return { x: 0, y: 0 };
-        const points = parsePathPoints(spreadPath);
-        if (points.length < 2) return { x: 0, y: -16 };
-        const last = points[points.length - 1];
-        const prev = points[points.length - 2];
-        const isLastHorizontal = Math.abs(last.y - prev.y) < Math.abs(last.x - prev.x);
-
-        // Use targetHandleId-driven spread, mirroring the label rule.
-        const sourceIndex = getHandleIndex(sourceHandleId);
-        const targetIndex = getHandleIndex(targetHandleId);
-        const directionSign = source < target ? 1 : -1;
-        const labelIndex = (sourceIndex + targetIndex) / 2 + directionSign * 0.5;
-        const offset = (labelIndex - (MAX_HANDLES_PER_SIDE - 1) / 2) * LABEL_SPREAD_PX;
-
-        return isLastHorizontal
-            ? { x: 0, y: offset }
-            : { x: offset, y: 0 };
-    }, [spreadPath, isSelfLoop, sourceHandleId, targetHandleId, source, target]);
+        // Just outside the target box at the entry handle, per-side corner clearance.
+        return computeCardinalityAnchor(targetX, targetY, targetSide, CARD_BOX_GAP, cardinalityShift);
+    }, [isSelfLoop, selfLoopGeom, spreadPath, targetX, targetY, targetSide, cardinalityShift]);
 
     // ─── ISA label midpoint (inheritance ER notation) ───
     const midPoint = useMemo(() => {
@@ -487,7 +458,7 @@ function UnifiedEdge(props: EdgeProps) {
                         <div
                             className={`edge-label ${selectedClass} ${hlClass}`}
                             style={{
-                                position: 'absolute',
+                                position: 'absolute', 
                                 transform: `translate(-50%, -50%) translate(${targetX}px, ${targetY + 16}px)`,
                                 pointerEvents: 'none',
                             }}
@@ -669,7 +640,7 @@ function UnifiedEdge(props: EdgeProps) {
                         className={`edge-label ${selected ? 'selected' : ''} ${isM1Edge ? `edge-label--m1-hover${hovered || selected ? ' edge-label--m1-visible' : ''}` : ''} ${hlClass}`}
                         style={{
                             position: 'absolute',
-                            transform: `translate(-50%, -50%) translate(${labelPos.x + labelOffset.x}px, ${labelPos.y + labelOffset.y}px)`,
+                            transform: `translate(-50%, -50%) translate(${10+ labelPos.x + labelOffset.x}px, ${labelPos.y + labelOffset.y}px)`,
                             pointerEvents: 'all',
                         }}
                         onDoubleClick={(e) => { e.stopPropagation(); setEditing(true); }}
@@ -697,7 +668,7 @@ function UnifiedEdge(props: EdgeProps) {
                         className={`edge-cardinality ${hlClass}`}
                         style={{
                             position: 'absolute',
-                            transform: `translate(-50%, -50%) translate(${cardinalityPos.x + cardinalityOffset.x}px, ${cardinalityPos.y + cardinalityOffset.y}px)`,
+                            transform: cardinalityTransform,
                             pointerEvents: 'none',
                         }}
                     >

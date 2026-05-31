@@ -242,6 +242,7 @@ function ManhattanEdge(props: EdgeProps) {
                 <div
                     className={`edge-label ${selected ? 'selected' : ''}`}
                     style={{
+                        textAlign: 'left', 
                         position: 'absolute',
                         transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
                         pointerEvents: 'all',

@@ -783,34 +783,53 @@ export function parsePathSubPaths(path: string): { x: number; y: number }[][] {
 }
 
 /**
- * Finds the best position for an edge label.
- * Chooses the longest segment of the path and positions the label at its center.
+ * Finds the position for an edge label: the arc-length midpoint of the path
+ * (the point at 50% of the total path length). Stable for any polyline,
+ * independent of how the orthogonal routing splits it into segments.
+ *
+ * Also reports the orientation of the segment the midpoint lands on, so callers
+ * can nudge the label perpendicular to the line.
  *
  * @param path - SVG path ("M x y L x y L x y ...")
- * @returns { x, y } - Coordinates for the label
+ * @param arcOffset - Signed shift (px) of the anchor along the path: positive
+ *   slides toward the target, negative toward the source. Used to de-overlap
+ *   bundled parallel edges. Default 0 = exact arc-length midpoint.
+ * @returns { x, y, isHorizontal } - Coordinates + orientation of the host segment
  */
-export function computeLabelPosition(path: string): { x: number; y: number } {
+export function computeLabelPosition(
+    path: string,
+    arcOffset: number = 0,
+): { x: number; y: number; isHorizontal: boolean } {
     const points = parsePathPoints(path);
-    if (points.length < 2) return { x: 0, y: 0 };
+    if (points.length < 2) return { x: 0, y: 0, isHorizontal: true };
 
-    let longestLength = 0;
-    let longestMidpoint = { x: 0, y: 0 };
-
+    const segLen: number[] = [];
+    let total = 0;
     for (let i = 0; i < points.length - 1; i++) {
-        const p1 = points[i];
-        const p2 = points[i + 1];
-        const length = Math.abs(p2.x - p1.x) + Math.abs(p2.y - p1.y);
-
-        if (length > longestLength) {
-            longestLength = length;
-            longestMidpoint = {
-                x: (p1.x + p2.x) / 2,
-                y: (p1.y + p2.y) / 2,
-            };
-        }
+        const dx = points[i + 1].x - points[i].x;
+        const dy = points[i + 1].y - points[i].y;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        segLen.push(len);
+        total += len;
     }
+    if (total === 0) return { x: points[0].x, y: points[0].y, isHorizontal: true };
 
-    return longestMidpoint;
+    // Slide the anchor along the path; clamp inside [margin, total - margin] so
+    // the role never rides onto an endpoint.
+    const margin = Math.min(12, total / 2);
+    let remaining = Math.max(margin, Math.min(total - margin, total / 2 + arcOffset));
+    for (let i = 0; i < segLen.length; i++) {
+        if (remaining <= segLen[i] || i === segLen.length - 1) {
+            const p1 = points[i];
+            const p2 = points[i + 1];
+            const t = segLen[i] === 0 ? 0 : Math.min(1, remaining / segLen[i]);
+            const isHorizontal = Math.abs(p2.y - p1.y) < Math.abs(p2.x - p1.x);
+            return { x: p1.x + (p2.x - p1.x) * t, y: p1.y + (p2.y - p1.y) * t, isHorizontal };
+        }
+        remaining -= segLen[i];
+    }
+    const mid = points[Math.floor(points.length / 2)];
+    return { x: mid.x, y: mid.y, isHorizontal: true };
 }
 
 /**
@@ -841,6 +860,39 @@ export function computeCardinalityPosition(
         x: last.x - (dx / len) * offset,
         y: last.y - (dy / len) * offset,
     };
+}
+
+// Distance from the target node border to the cardinality, just outside the box.
+export const CARD_BOX_GAP = 8;
+// Lateral offset placing the cardinality beside the entry edge (not on top of it).
+export const CARD_LINE_GAP = 4;
+
+/**
+ * CSS transform anchoring the cardinality just outside the target box at the entry
+ * handle. `depthShift` pushes it further out along the entry axis (0 here; 2c uses
+ * it for the de-overlap stagger).
+ *
+ * The cardinality is also shifted laterally so it sits *beside* the entry edge,
+ * never on top of it: top → right, bottom → left (vertical edges); right → up,
+ * left → down (horizontal edges).
+ */
+export function computeCardinalityAnchor(
+    targetX: number,
+    targetY: number,
+    targetSide: Side,
+    boxGap: number,
+    depthShift: number = 0,
+): string {
+    const gap = boxGap + depthShift;
+    switch (targetSide) {
+        // Vertical entry edge → shift sideways (top → right, bottom → left).
+        case 'top':    return `translate(0%, -100%) translate(${targetX + CARD_LINE_GAP}px, ${targetY - gap}px)`;
+        case 'bottom': return `translate(-100%, 0%) translate(${targetX - CARD_LINE_GAP}px, ${targetY + gap}px)`;
+        // Horizontal entry edge → shift vertically (right → up, left → down).
+        case 'left':   return `translate(-100%, 0%) translate(${targetX - gap}px, ${targetY + CARD_LINE_GAP}px)`;
+        case 'right':
+        default:       return `translate(0%, -100%) translate(${targetX + gap}px, ${targetY - CARD_LINE_GAP}px)`;
+    }
 }
 
 // === Waypoint Types ===

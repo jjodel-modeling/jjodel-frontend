@@ -39,6 +39,7 @@ import { useAutoAnchor, computeAnchorsWithHysteresis, getNodeRect } from './hook
 import { EditorContext } from './contexts/EditorContext';
 import { HighlightProvider, type HighlightState } from './contexts/HighlightContext';
 import { getNextFreeHandleIndex, computePortDistribution } from './utils/portDistribution';
+import { getSideFromHandle } from './utils/edgeUtils';
 import type { ClassNodeData, EnumNodeData, PackageNodeData, ObjectNodeData, ReferenceEdgeData, InheritanceEdgeData, CompositionEdgeData, InstanceReferenceEdgeData, AnchorConfig, ReferenceKind, NotationMode, ColorScheme } from './types';
 import { EdgeTypePopup, type EdgeTypeChoice } from './components/EdgeTypePopup';
 import { M1ReferencePopup } from './components/M1ReferencePopup';
@@ -98,6 +99,10 @@ const nodeTypes: NodeTypes = {
 };
 
 // Register custom edge types — all map to UnifiedEdge which handles all variants
+// De-overlap steps for edge labels (assigned in applyDistribution, consumed by UnifiedEdge):
+const CARD_STAGGER_STEP = 11; // px extra depth per extra cardinality on the same target side
+const ROLE_ARC_STEP = 22;     // px arc-length separation between bundled roles
+
 const edgeTypes: EdgeTypes = {
     reference: UnifiedEdge,
     inheritance: UnifiedEdge,
@@ -830,18 +835,71 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
         const { edgeHandles } = computePortDistribution(edgeList, nodeIds, positions);
 
+        const handleIdx = (h?: string | null): number => {
+            const m = h?.match(/-(\d+)$/);
+            return m ? parseInt(m[1], 10) : 0;
+        };
+
+        // Only reference edges draw a cardinality and a (non-hover) role. The
+        // composition/instanceRef types are M1 (no cardinality); M2 containments are
+        // themselves reference edges with kind='composition'. See 2c discovery.
+        const CARD_TYPES = new Set(['reference']);
+        const ROLE_TYPES = new Set(['reference']);
+
+        // (A) Cardinality depth stagger — grouped by (target node, target side).
+        const cardGroups = new Map<string, string[]>();
+        for (const edge of edgeList) {
+            if (!CARD_TYPES.has(edge.type ?? '')) continue;
+            const th = edgeHandles.get(edge.id)?.targetHandle ?? edge.targetHandle ?? null;
+            if (!th) continue;
+            const key = `${edge.target}:${getSideFromHandle(th)}`;
+            if (!cardGroups.has(key)) cardGroups.set(key, []);
+            cardGroups.get(key)!.push(edge.id);
+        }
+        const cardShift = new Map<string, number>();
+        for (const ids of cardGroups.values()) {
+            if (ids.length < 2) continue; // single cardinality: no stagger
+            ids.sort((a, b) =>
+                handleIdx(edgeHandles.get(a)?.targetHandle) - handleIdx(edgeHandles.get(b)?.targetHandle));
+            ids.forEach((id, i) => cardShift.set(id, i * CARD_STAGGER_STEP));
+        }
+
+        // (B) Role arc-slide — grouped by unordered {source, target} pair (bundles).
+        const pairKey = (e: { source: string; target: string }): string =>
+            e.source < e.target ? `${e.source}|${e.target}` : `${e.target}|${e.source}`;
+        const roleGroups = new Map<string, string[]>();
+        for (const edge of edgeList) {
+            if (!ROLE_TYPES.has(edge.type ?? '')) continue;
+            const key = pairKey(edge);
+            if (!roleGroups.has(key)) roleGroups.set(key, []);
+            roleGroups.get(key)!.push(edge.id);
+        }
+        const roleShift = new Map<string, number>();
+        for (const ids of roleGroups.values()) {
+            if (ids.length < 2) continue; // lone edge: midpoint unchanged
+            ids.sort(); // deterministic by edge id
+            const center = (ids.length - 1) / 2;
+            ids.forEach((id, i) => roleShift.set(id, (i - center) * ROLE_ARC_STEP));
+        }
+
         return edgeList.map(edge => {
             const distributed = edgeHandles.get(edge.id);
-            if (distributed &&
+            const cShift = cardShift.get(edge.id) ?? 0;
+            const rShift = roleShift.get(edge.id) ?? 0;
+            const handlesChanged = !!distributed &&
                 (edge.sourceHandle !== distributed.sourceHandle ||
-                 edge.targetHandle !== distributed.targetHandle)) {
-                return {
-                    ...edge,
-                    sourceHandle: distributed.sourceHandle,
-                    targetHandle: distributed.targetHandle,
-                };
-            }
-            return edge;
+                 edge.targetHandle !== distributed.targetHandle);
+            const data = edge.data as { cardinalityShift?: number; roleArcShift?: number } | undefined;
+            const cChanged = (data?.cardinalityShift ?? 0) !== cShift;
+            const rChanged = (data?.roleArcShift ?? 0) !== rShift;
+            if (!handlesChanged && !cChanged && !rChanged) return edge; // preserve identity → no re-render
+            return {
+                ...edge,
+                ...(distributed
+                    ? { sourceHandle: distributed.sourceHandle, targetHandle: distributed.targetHandle }
+                    : {}),
+                data: { ...edge.data, cardinalityShift: cShift, roleArcShift: rShift },
+            };
         });
     }, [getNodes, buildNodePositions]);
     applyDistributionRef.current = applyDistribution;

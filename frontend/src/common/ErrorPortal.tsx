@@ -174,7 +174,7 @@ export const ErrorDisplay = React.forwardRef<HTMLDivElement, ErrorDisplayProps>(
                 </div>
                 <div className="error-badge-content">
                     <span className="error-badge-title">
-                        Error in View: <strong>{viewName || 'Unknown'}</strong>
+                        Error in View: <span className="error-badge-name">{viewName || 'Unknown'}</span>
                     </span>
                     {instanceInfo && (
                         <span className="error-badge-instance">
@@ -182,6 +182,7 @@ export const ErrorDisplay = React.forwardRef<HTMLDivElement, ErrorDisplayProps>(
                         </span>
                     )}
                 </div>
+                <i className="bi bi-chevron-right error-badge-hint" aria-hidden="true" />
             </div>
 
             {/* Modal portal */}
