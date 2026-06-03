@@ -194,6 +194,8 @@ interface UseJjomSelectionResult {
 export function useJjomSelection(
     modelid: string | undefined,
     isJjomMode: boolean,
+    highlightActive?: boolean,
+    onAssign?: (id: string) => void,
 ): UseJjomSelectionResult {
     // When the editor opens a different model (tab switch), update
     // _lastSelected.modelElement so Jjodie and other context-dependent
@@ -215,17 +217,22 @@ export function useJjomSelection(
     const onNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
         _event.stopPropagation();  // ← aggiungi questo
+        // Highlight mode ON: il click assegna il colore attivo al nodo e salta
+        // la selezione (niente ring `.selected` nella figura).
+        if (highlightActive && onAssign) { onAssign(node.id); return; }
         if (isJjomMode && modelid) selectElement(node.id, modelid);
     },
-    [isJjomMode, modelid],
+    [isJjomMode, modelid, highlightActive, onAssign],
 );
 
 const onEdgeClick = useCallback(
     (_event: React.MouseEvent, edge: Edge) => {
         _event.stopPropagation();  // prevent pane click deselect race
+        // Highlight mode ON: il click assegna il colore attivo all'edge.
+        if (highlightActive && onAssign) { onAssign(edge.id); return; }
         if (isJjomMode && modelid) selectElement(edge.id, modelid);
     },
-    [isJjomMode, modelid],
+    [isJjomMode, modelid, highlightActive, onAssign],
 );
 
     const onPaneClick = useCallback(() => {

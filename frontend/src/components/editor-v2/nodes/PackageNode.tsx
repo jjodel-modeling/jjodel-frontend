@@ -4,12 +4,14 @@ import DynamicHandles from '../components/DynamicHandles';
 import { syncNodeLabel } from '../sync/canvasToJjom';
 import type { PackageNodeData } from '../types';
 import { useEditorContextSafe } from '../contexts/EditorContext';
+import { useNodeHighlightClass } from '../contexts/HighlightContext';
 
 export type PackageNodeType = Node<PackageNodeData, 'packageNode'>;
 
 function PackageNode({ id, data, selected }: NodeProps<PackageNodeType>) {
     const { setNodes } = useReactFlow();
     const editorContext = useEditorContextSafe();
+    const hlClass = useNodeHighlightClass(id);
     const [editing, setEditing] = useState(false);
     const [name, setName] = useState(data.label);
     const lastCommittedName = useRef(data.label);
@@ -58,7 +60,7 @@ function PackageNode({ id, data, selected }: NodeProps<PackageNodeType>) {
     );
 
     return (
-        <div className={`mm-node mm-package ${selected ? 'selected' : ''}`}>
+        <div className={`mm-node mm-package ${selected ? 'selected' : ''} ${hlClass}`}>
             <NodeResizer
                 isVisible={selected}
                 minWidth={200}

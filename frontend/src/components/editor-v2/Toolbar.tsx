@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import type { NotationMode, ColorScheme } from './types';
 import ColorSchemeSelector from './components/ColorSchemeSelector';
+import HighlightPalette from './components/HighlightPalette';
 import { LayoutMode, getSavedLayoutMode, saveLayoutMode } from '../abstract/Dock';
 import { isProjectOverviewPage } from '../../utils/navigationUtils';
 import { LPointerTargetable, LViewPoint } from '../../joiner';
@@ -42,6 +43,11 @@ interface ToolbarProps {
     editorMode?: 'flow' | 'classic' | 'split';
     hasViewpoint?: boolean;
     onEditorModeChange?: (mode: 'flow' | 'classic' | 'split') => void;
+    // Highlight mode palette (rendered only when highlight mode is active)
+    highlightModeActive?: boolean;
+    activeHighlightColor?: number;
+    onSelectHighlightColor?: (n: number) => void;
+    onClearHighlights?: () => void;
 }
 
 const NOTATION_OPTIONS: Array<{ id: NotationMode; name: string; desc: string; icon: string }> = [
@@ -152,6 +158,10 @@ function Toolbar({
     editorMode,
     hasViewpoint = false,
     onEditorModeChange,
+    highlightModeActive = false,
+    activeHighlightColor = 1,
+    onSelectHighlightColor,
+    onClearHighlights,
 }: ToolbarProps) {
     // Toggle is always rendered. When no viewpoint is active the buttons are
     // visible but inert (greyed out, "flow" stays highlighted as the default).
@@ -348,6 +358,18 @@ function Toolbar({
                     onColorSchemeChange={onColorSchemeChange}
                 />
             </div>
+
+            {/* Highlight mode palette — only while highlight mode is active */}
+            {highlightModeActive && (
+                <>
+                    <div className="toolbar-separator" />
+                    <HighlightPalette
+                        activeColor={activeHighlightColor}
+                        onSelect={(n) => onSelectHighlightColor?.(n)}
+                        onClear={() => onClearHighlights?.()}
+                    />
+                </>
+            )}
 
             <div className="toolbar-separator" />
 

@@ -13,8 +13,12 @@ import {
     computeManhattanPath,
     roundManhattanPath,
     computeSelfLoopPath,
+    computeSelfLoopCornerPath,
+    getNodeRect,
     computeLabelPosition,
     computeCardinalityPosition,
+    computeCardinalityAnchor,
+    CARD_BOX_GAP,
     parsePathPoints,
     applyWaypoints,
     pointsToPath,
@@ -26,6 +30,7 @@ import {
 } from '../utils/edgeUtils';
 import { MAX_HANDLES_PER_SIDE } from '../utils/portDistribution';
 import { useEditorContextSafe } from '../contexts/EditorContext';
+import { useEdgeHighlightClass } from '../contexts/HighlightContext';
 import { useTreeLayout } from '../hooks/useTreeLayout';
 import { SegmentHandles } from './SegmentHandles';
 import { EndpointHandles } from './EndpointHandles';
@@ -37,6 +42,11 @@ import { EndpointHandles } from './EndpointHandles';
 // sourceHandleId/targetHandleId (format: "${side}-${index}").
 const BUNDLE_SPREAD_PX = 12;
 const LABEL_SPREAD_PX = 18;
+const ROLE_LINE_GAP = 10; // px, perpendicular nudge so the role text is off the line
+const ROLE_LINE_GAP_PX = 10; // px, perpendicular nudge so the role text is off the line
+const ROLE_LINE_GAP_PY = 10; // px, perpendicular nudge so the role text is off the line
+
+
 
 function getHandleIndex(handleId: string | null | undefined): number {
     if (!handleId) return 0;
@@ -123,6 +133,8 @@ function UnifiedEdge(props: EdgeProps) {
         label,
         type: edgeType,
     } = props;
+
+    const hlClass = useEdgeHighlightClass(id);
 
     // ─── Determine edge type ───
     // M1 edges (composition, instanceRef) use different data shapes than M2 edges
@@ -230,70 +242,75 @@ function UnifiedEdge(props: EdgeProps) {
         [id, spreadPoints, activeNodeIds, allEdges]
     );
 
+    // ─── Self-loop corner geometry (source === target) ───
+    // Computed once and shared by the path and the label/cardinality positioning.
+    // Falls back to the legacy curl for the frame before the node is in allNodes.
+    const selfLoopGeom = useMemo((): {
+        path: string;
+        labelPoint: { x: number; y: number } | null;
+        cardinalityPoint: { x: number; y: number } | null;
+    } | null => {
+        if (!isSelfLoop) return null;
+        const node = allNodes.find(n => n.id === source);
+        if (!node) {
+            return {
+                path: computeSelfLoopPath(sourceX, sourceY, targetX, targetY),
+                labelPoint: null,
+                cardinalityPoint: null,
+            };
+        }
+        const rect = getNodeRect(node);
+        const siblings = allEdges
+            .filter(e => e.source === e.target && e.source === source)
+            .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+        const ordinal = Math.max(0, siblings.findIndex(e => e.id === id));
+        const loop = computeSelfLoopCornerPath(rect, ordinal);
+        return {
+            path: loop.path,
+            labelPoint: loop.labelPoint,
+            cardinalityPoint: loop.cardinalityPoint,
+        };
+    }, [isSelfLoop, allNodes, allEdges, source, id, sourceX, sourceY, targetX, targetY]);
+
     // ─── Final path with rounding and bridge arcs ───
     const path = useMemo(() => {
         if (isSelfLoop) {
-            return computeSelfLoopPath(sourceX, sourceY, targetX, targetY);
+            return selfLoopGeom ? selfLoopGeom.path : computeSelfLoopPath(sourceX, sourceY, targetX, targetY);
         }
         if (crossings.length > 0) {
             return buildFinalPath(spreadPoints, crossings, 4, 6);
         }
         return roundManhattanPath(spreadPath, 4);
-    }, [spreadPath, spreadPoints, crossings, isSelfLoop, sourceX, sourceY, targetX, targetY]);
+    }, [spreadPath, spreadPoints, crossings, isSelfLoop, selfLoopGeom, sourceX, sourceY, targetX, targetY]);
 
-    // ─── Label positioning (reference edges) ───
-    const labelPos = useMemo(() => computeLabelPosition(spreadPath), [spreadPath]);
+    // De-overlap shifts precomputed in EditorV2.applyDistribution (0 when no bundle/collision).
+    const roleArcShift = edgeData?.roleArcShift ?? 0;
+    const cardinalityShift = edgeData?.cardinalityShift ?? 0;
 
-    const labelOffset = useMemo(() => {
-        if (isSelfLoop) return { x: 0, y: -16 };
-
-        const points = parsePathPoints(spreadPath);
-        let longestLen = 0;
-        let longestIsHorizontal = true;
-
-        for (let i = 0; i < points.length - 1; i++) {
-            const p1 = points[i];
-            const p2 = points[i + 1];
-            const len = Math.abs(p2.x - p1.x) + Math.abs(p2.y - p1.y);
-            if (len > longestLen) {
-                longestLen = len;
-                longestIsHorizontal = Math.abs(p2.y - p1.y) < 1;
-            }
+    // ─── Role label positioning (reference / composition edges) ───
+    const labelPos = useMemo(() => {
+        if (isSelfLoop) {
+            const p = selfLoopGeom?.labelPoint ?? computeLabelPosition(spreadPath);
+            return { x: p.x, y: p.y, isHorizontal: true };
         }
+        return computeLabelPosition(spreadPath, roleArcShift); // arc-length midpoint, slid for bundles
+    }, [spreadPath, isSelfLoop, selfLoopGeom, roleArcShift]);
 
-        // Stack labels along the longest segment based on combined handle index,
-        // so multiple bundled edges have separated label positions.
-        const sourceIndex = getHandleIndex(sourceHandleId);
-        const targetIndex = getHandleIndex(targetHandleId);
-        const directionSign = source < target ? 1 : -1;
-        const labelIndex = (sourceIndex + targetIndex) / 2 + directionSign * 0.5;
-        const offset = (labelIndex - (MAX_HANDLES_PER_SIDE - 1) / 2) * LABEL_SPREAD_PX;
+    // Small perpendicular nudge off the line. No cross-edge de-overlap here (see 2c).
+    const labelOffset = useMemo(() => {
+        if (isSelfLoop) return { x: 0, y: 0 };
+        return labelPos.isHorizontal ? { x: 10, y: -ROLE_LINE_GAP_PY } : { x: ROLE_LINE_GAP_PX, y: 0 };
+    }, [isSelfLoop, labelPos]);
 
-        return longestIsHorizontal
-            ? { x: 0, y: offset }
-            : { x: offset, y: 0 };
-    }, [spreadPath, isSelfLoop, sourceHandleId, targetHandleId, source, target]);
-
-    // ─── Cardinality positioning (reference edges) ───
-    const cardinalityPos = useMemo(() => computeCardinalityPosition(spreadPath), [spreadPath]);
-    const cardinalityOffset = useMemo(() => {
-        const points = parsePathPoints(spreadPath);
-        if (points.length < 2) return { x: 0, y: -16 };
-        const last = points[points.length - 1];
-        const prev = points[points.length - 2];
-        const isLastHorizontal = Math.abs(last.y - prev.y) < Math.abs(last.x - prev.x);
-
-        // Use targetHandleId-driven spread, mirroring the label rule.
-        const sourceIndex = getHandleIndex(sourceHandleId);
-        const targetIndex = getHandleIndex(targetHandleId);
-        const directionSign = source < target ? 1 : -1;
-        const labelIndex = (sourceIndex + targetIndex) / 2 + directionSign * 0.5;
-        const offset = (labelIndex - (MAX_HANDLES_PER_SIDE - 1) / 2) * LABEL_SPREAD_PX;
-
-        return isLastHorizontal
-            ? { x: 0, y: offset }
-            : { x: offset, y: 0 };
-    }, [spreadPath, sourceHandleId, targetHandleId, source, target]);
+    // ─── Cardinality positioning ───
+    const cardinalityTransform = useMemo(() => {
+        if (isSelfLoop) {
+            const p = selfLoopGeom?.cardinalityPoint ?? computeCardinalityPosition(spreadPath);
+            return `translate(-50%, -50%) translate(${p.x}px, ${p.y}px)`;
+        }
+        // Just outside the target box at the entry handle, per-side corner clearance.
+        return computeCardinalityAnchor(targetX, targetY, targetSide, CARD_BOX_GAP, cardinalityShift);
+    }, [isSelfLoop, selfLoopGeom, spreadPath, targetX, targetY, targetSide, cardinalityShift]);
 
     // ─── ISA label midpoint (inheritance ER notation) ───
     const midPoint = useMemo(() => {
@@ -408,7 +425,7 @@ function UnifiedEdge(props: EdgeProps) {
                 <path
                     d={trunkPathFinal}
                     fill="none"
-                    className={`inheritance-edge ${selectedClass}`}
+                    className={`inheritance-edge ${selectedClass} ${hlClass}`}
                     markerEnd={isERNotation ? undefined : `url(#${treeMarkerId})`}
                 />
 
@@ -417,7 +434,7 @@ function UnifiedEdge(props: EdgeProps) {
                     <path
                         d={barBranchesPathFinal}
                         fill="none"
-                        className={`inheritance-edge ${selectedClass}`}
+                        className={`inheritance-edge ${selectedClass} ${hlClass}`}
                     />
                 )}
 
@@ -439,9 +456,9 @@ function UnifiedEdge(props: EdgeProps) {
                 {isERNotation && (
                     <EdgeLabelRenderer>
                         <div
-                            className={`edge-label ${selectedClass}`}
+                            className={`edge-label ${selectedClass} ${hlClass}`}
                             style={{
-                                position: 'absolute',
+                                position: 'absolute', 
                                 transform: `translate(-50%, -50%) translate(${targetX}px, ${targetY + 16}px)`,
                                 pointerEvents: 'none',
                             }}
@@ -502,8 +519,8 @@ function UnifiedEdge(props: EdgeProps) {
         : `url(#${markerArrowId})`;
 
     const edgeClassName = isInheritance
-        ? `inheritance-edge ${selected ? 'selected' : ''}`
-        : `reference-edge ${kind} ${selected ? 'selected' : ''}`;
+        ? `inheritance-edge ${selected ? 'selected' : ''} ${hlClass}`
+        : `reference-edge ${kind} ${selected ? 'selected' : ''} ${hlClass}`;
 
     return (
         <>
@@ -620,10 +637,10 @@ function UnifiedEdge(props: EdgeProps) {
                 {/* M1 edges: label hidden by default, shown on hover via CSS */}
                 {!isInheritance && (
                     <div
-                        className={`edge-label ${selected ? 'selected' : ''} ${isM1Edge ? `edge-label--m1-hover${hovered || selected ? ' edge-label--m1-visible' : ''}` : ''}`}
+                        className={`edge-label ${selected ? 'selected' : ''} ${isM1Edge ? `edge-label--m1-hover${hovered || selected ? ' edge-label--m1-visible' : ''}` : ''} ${hlClass}`}
                         style={{
                             position: 'absolute',
-                            transform: `translate(-50%, -50%) translate(${labelPos.x + labelOffset.x}px, ${labelPos.y + labelOffset.y}px)`,
+                            transform: `translate(-50%, -50%) translate(${10+ labelPos.x + labelOffset.x}px, ${labelPos.y + labelOffset.y}px)`,
                             pointerEvents: 'all',
                         }}
                         onDoubleClick={(e) => { e.stopPropagation(); setEditing(true); }}
@@ -648,10 +665,10 @@ function UnifiedEdge(props: EdgeProps) {
                 {/* Cardinality badge — positioned near target */}
                 {showCardinality && cardinality && (
                     <div
-                        className="edge-cardinality"
+                        className={`edge-cardinality ${hlClass}`}
                         style={{
                             position: 'absolute',
-                            transform: `translate(-50%, -50%) translate(${cardinalityPos.x + cardinalityOffset.x}px, ${cardinalityPos.y + cardinalityOffset.y}px)`,
+                            transform: cardinalityTransform,
                             pointerEvents: 'none',
                         }}
                     >
@@ -662,7 +679,7 @@ function UnifiedEdge(props: EdgeProps) {
                 {/* ISA label for ER notation (inheritance only) */}
                 {isInheritance && isERNotation && (
                     <div
-                        className={`edge-label ${selected ? 'selected' : ''}`}
+                        className={`edge-label ${selected ? 'selected' : ''} ${hlClass}`}
                         style={{
                             position: 'absolute',
                             transform: `translate(-50%, -50%) translate(${midPoint.x}px, ${midPoint.y}px)`,

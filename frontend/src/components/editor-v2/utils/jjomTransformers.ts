@@ -11,6 +11,8 @@
 import type { Node, Edge } from '@xyflow/react';
 import type {
     ClassNodeData,
+    GhostParentInfo,
+    GhostTargetInfo,
     EnumNodeData,
     PackageNodeData,
     ObjectNodeData,
@@ -102,6 +104,43 @@ function classVertexToRFNode(vertex: any): Node<ClassNodeData> {
         }
     } catch { /* proxy access can throw */ }
 
+    // Cross-metamodel parents (extends pointing to a class in another metamodel).
+    // Rendered as an in-node "ghost parent" overlay by ClassNode — no real edge/node.
+    const ghostParents: GhostParentInfo[] = [];
+    try {
+        for (const p of (lClass?.extends ?? [])) {
+            if (p?.model && p.model.id !== lClass.model.id) {
+                ghostParents.push({
+                    id: p.id,
+                    name: p.name,
+                    metamodelName: p.model.name,
+                    fullname: p.fullname,
+                });
+            }
+        }
+    } catch { /* proxy access can throw if data is stale */ }
+
+    // Cross-metamodel reference targets (type pointing to a class in another
+    // metamodel). Rendered as an in-node "ghost target" stub by ClassNode — no
+    // real edge (the leftover self-loop edge is suppressed in jjomEdgeToRFEdge).
+    const ghostTargets: GhostTargetInfo[] = [];
+    try {
+        for (const ref of (lClass?.references ?? [])) {
+            const t = ref?.type;
+            if (t?.model && t.model.id !== lClass.model.id) {
+                const lower = ref.lowerBound ?? 0;
+                const upper = ref.upperBound ?? -1;
+                ghostTargets.push({
+                    refName: ref.name ?? '',
+                    targetName: t.name,
+                    targetMetamodel: t.model.name,
+                    cardinality: `${lower}..${upper === -1 ? '*' : upper}`,
+                    targetFullname: t.fullname,
+                });
+            }
+        }
+    } catch { /* proxy access can throw if data is stale */ }
+
     // Use __raw for reliable numeric coordinates (LProxy gotcha:
     // proxy getters return {} instead of numbers when stale)
     const raw = vertex.__raw ?? vertex;
@@ -123,6 +162,8 @@ function classVertexToRFNode(vertex: any): Node<ClassNodeData> {
             attributes: attrs,
             references: refs.length > 0 ? refs : undefined,
             operations: ops.length > 0 ? ops : undefined,
+            ghostParents: ghostParents.length > 0 ? ghostParents : undefined,
+            ghostTargets: ghostTargets.length > 0 ? ghostTargets : undefined,
         },
     };
 }
@@ -440,6 +481,20 @@ export function jjomEdgeToRFEdge(edge: any): Edge | null {
     if (edge.isReference) {
         // Reference edge — extract info from the model (DReference)
         const refModel = edge.model;
+
+        // Suppress cross-metamodel references: their target lives in another
+        // metamodel (off-canvas) and is shown as an in-node ghost-target stub,
+        // not an edge. Decide on the CURRENT type (refModel.type), NOT edge.end
+        // (cached/stale). A legitimate self-loop is same-metamodel → not cross,
+        // so it is never suppressed here. See discovery 2026-05-30 ghost-target.
+        try {
+            const refTypeModelId = refModel?.type?.model?.id;
+            const srcModelId = sourceModel?.model?.id;
+            if (refTypeModelId && srcModelId && refTypeModelId !== srcModelId) {
+                return null;
+            }
+        } catch { /* on proxy error fall through and render normally */ }
+
         let kind: ReferenceKind = 'association';
         if (refModel?.composition) kind = 'composition';
         else if (refModel?.aggregation) kind = 'aggregation';
@@ -471,6 +526,7 @@ export function jjomEdgeToRFEdge(edge: any): Edge | null {
             sourceHandle: handles.sourceHandle,
             targetHandle: handles.targetHandle,
             type: 'reference',
+            reconnectable: 'target',   // only the target endpoint is grabbable (re-target via drag)
             label: refModel?.name ?? '',
             data: refData,
         };

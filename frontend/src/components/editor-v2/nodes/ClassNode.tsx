@@ -4,6 +4,7 @@ import ViewpointRenderer from '../viewpoint/ViewpointRenderer';
 import DynamicHandles from '../components/DynamicHandles';
 import InlineTypeSelect from '../components/InlineTypeSelect';
 import { useEditorContextSafe } from '../contexts/EditorContext';
+import { useNodeHighlightClass } from '../contexts/HighlightContext';
 import {
     syncNodeLabel,
     syncAddAttribute,
@@ -23,9 +24,14 @@ export type { ClassNodeData } from '../types';
 function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
     const { setNodes } = useReactFlow();
     const editorContext = useEditorContextSafe();
+    const hlClass = useNodeHighlightClass(id);
 
     const attributes = data.attributes ?? [];
     const operations = data.operations ?? [];
+    // First iteration: render only a single external (cross-metamodel) parent.
+    const ghost = data.ghostParents?.[0];
+    // Cross-metamodel reference targets, rendered as in-node stubs on the right.
+    const ghostTargets = data.ghostTargets ?? [];
 
     const [editing, setEditing] = useState(false);
     const [name, setName] = useState(data.label);
@@ -212,7 +218,7 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
     // Viewpoint rendering
     if (data.jsxString) {
         return (
-            <div className={`mm-node mm-class viewpoint-wrapper ${selected ? 'selected' : ''}`}>
+            <div className={`mm-node mm-class viewpoint-wrapper ${selected ? 'selected' : ''} ${hlClass}`}>
                 <NodeResizer
                     isVisible={selected}
                     minWidth={120}
@@ -243,7 +249,7 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
 
     return (
         <div
-            className={`mm-node mm-class ${selected ? 'selected' : ''} ${isAbstract ? 'abstract' : ''} ${isSingleton ? 'singleton' : ''} ${dragOver ? 'drop-target' : ''}`}
+            className={`mm-node mm-class ${selected ? 'selected' : ''} ${isAbstract ? 'abstract' : ''} ${isSingleton ? 'singleton' : ''} ${dragOver ? 'drop-target' : ''} ${hlClass}`}
             onDragOver={(e) => { handleDragOver(e); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
@@ -257,6 +263,49 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
             />
 
             <DynamicHandles nodeId={id} />
+
+            {/* Ghost parent: cross-metamodel extends drawn as an in-node overlay
+                (dashed chip + UML generalization arc), not a real ReactFlow edge. */}
+            {ghost && (
+                <div
+                    className="ghost-parent-stub"
+                    data-ghost-parent-id={ghost.id}
+                    title={ghost.fullname}
+                >
+                    <div className="ghost-parent-stub__chip">
+                        <span className="ghost-parent-stub__name">{ghost.name}</span>
+                        <span className="ghost-parent-stub__mm">{ghost.metamodelName}</span>
+                    </div>
+                    <svg className="ghost-parent-stub__connector" viewBox="0 0 12 18" aria-hidden="true">
+                        <polygon points="6,1 2,8 10,8" fill="none" stroke="var(--color-canvas-accent)" strokeWidth="1.2" strokeLinejoin="round" />
+                        <line x1="6" y1="8" x2="6" y2="18" stroke="var(--color-canvas-accent)" strokeWidth="1.2" />
+                    </svg>
+                </div>
+            )}
+
+            {/* Ghost targets: cross-metamodel references drawn as in-node
+                overlays (association arc + dashed chip on the right), not real
+                ReactFlow edges. The leftover self-loop edge is suppressed in
+                jjomEdgeToRFEdge. */}
+            {ghostTargets.length > 0 && (
+                <div className="ghost-target-stub">
+                    {ghostTargets.map((gt, i) => (
+                        <div key={`${gt.refName}-${i}`} className="ghost-target-stub__item">
+                            <span className="ghost-target-stub__label">{gt.refName} {gt.cardinality}</span>
+                            <div className="ghost-target-stub__arc">
+                                <svg className="ghost-target-stub__connector" viewBox="0 0 24 12" aria-hidden="true">
+                                    <line x1="0" y1="6" x2="23" y2="6" stroke="var(--color-canvas-accent)" strokeWidth="1.2" />
+                                    <polyline points="17,2 23,6 17,10" fill="none" stroke="var(--color-canvas-accent)" strokeWidth="1.2" strokeLinejoin="round" strokeLinecap="round" />
+                                </svg>
+                            </div>
+                            <div className="ghost-target-stub__chip" title={gt.targetFullname}>
+                                <span className="ghost-target-stub__name">{gt.targetName}</span>
+                                <span className="ghost-target-stub__mm">{gt.targetMetamodel}</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
 
             {/* Header — abstract classes get italic name via CSS (.abstract .mm-node__name) */}
             <div

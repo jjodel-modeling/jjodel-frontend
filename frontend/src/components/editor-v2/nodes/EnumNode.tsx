@@ -5,12 +5,14 @@ import { syncNodeLabel, syncAddEnumLiteral, syncUpdateEnumLiteral } from '../syn
 import type { EnumNodeData } from '../types';
 import { createLiteral } from '../types';
 import { useEditorContextSafe } from '../contexts/EditorContext';
+import { useNodeHighlightClass } from '../contexts/HighlightContext';
 
 export type EnumNodeType = Node<EnumNodeData, 'enumNode'>;
 
 function EnumNode({ id, data, selected }: NodeProps<EnumNodeType>) {
     const { setNodes } = useReactFlow();
     const editorContext = useEditorContextSafe();
+    const hlClass = useNodeHighlightClass(id);
     const [editing, setEditing] = useState(false);
     const [name, setName] = useState(data.label);
     const [dragOver, setDragOver] = useState(false);
@@ -148,7 +150,7 @@ function EnumNode({ id, data, selected }: NodeProps<EnumNodeType>) {
 
     return (
         <div
-            className={`mm-node mm-enum ${selected ? 'selected' : ''} ${dragOver ? 'drop-target' : ''}`}
+            className={`mm-node mm-enum ${selected ? 'selected' : ''} ${dragOver ? 'drop-target' : ''} ${hlClass}`}
             onDragOver={(e) => { handleDragOver(e); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}

@@ -25,6 +25,16 @@ NON-NEGOTIABLE RULES — re-read before every task
 10. Hard stop before commit: show diff, wait for approval.
 ═══════════════════════════════════════════════════════════════════
 ```
+## 0. Runtime — model & effort
+
+This agent runs as **Claude Opus 4.8** (requires Claude Code v2.1.154+; run `claude update` if older).
+
+Effort is set with `/effort` and persists across sessions:
+- **Default: xhigh** — the working level for all real tasks, including the critical zone (§3) and discovery (§5).
+- Step down to **high / medium** only for trivial, out-of-critical-zone work (a CSS tweak, a doc fix, a single `str_replace`).
+- **Never max** unless the prompt explicitly asks for it.
+
+Note: switching to Opus 4.8 resets effort to its model default (high). If a session opens at high, set `/effort xhigh` before working.
 
 ---
 

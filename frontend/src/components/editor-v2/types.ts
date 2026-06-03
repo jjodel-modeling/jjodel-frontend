@@ -60,6 +60,23 @@ export interface MetaReference {
     type?: { id: string; name: string };  // resolved type info from JjOM
 }
 
+// === Ghost parent (cross-metamodel extends, rendered as in-node overlay) ===
+export interface GhostParentInfo {
+    id: string;
+    name: string;
+    metamodelName: string;
+    fullname: string;
+}
+
+// === Ghost target (cross-metamodel reference, rendered as in-node overlay) ===
+export interface GhostTargetInfo {
+    refName: string;
+    targetName: string;
+    targetMetamodel: string;
+    cardinality: string;
+    targetFullname: string;
+}
+
 // === Node Data ===
 export interface ClassNodeData {
     label: string;
@@ -69,6 +86,8 @@ export interface ClassNodeData {
     references?: MetaReference[];
     operations?: MetaOperation[];
     jsxString?: string;
+    ghostParents?: GhostParentInfo[];
+    ghostTargets?: GhostTargetInfo[];
     [key: string]: unknown;
 }
 
@@ -118,6 +137,10 @@ export interface ReferenceEdgeData {
     waypoints?: EdgeWaypoint[];
     sourceAnchor?: AnchorConfig;
     targetAnchor?: AnchorConfig;
+    /** Depth stagger (px) for the cardinality when several share a target side. Set by applyDistribution. */
+    cardinalityShift?: number;
+    /** Arc-length offset (px) sliding the role along its edge to de-overlap bundles. Set by applyDistribution. */
+    roleArcShift?: number;
     [key: string]: unknown;
 }
 

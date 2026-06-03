@@ -13,7 +13,6 @@ import {
     SelectionMode,
     ConnectionMode,
     PanOnScrollMode,
-    reconnectEdge,
     applyEdgeChanges,
     type Node,
     type Edge,
@@ -38,7 +37,9 @@ import { useHistory } from './hooks/useHistory';
 import { useAlignment } from './hooks/useAlignment';
 import { useAutoAnchor, computeAnchorsWithHysteresis, getNodeRect } from './hooks/useAutoAnchor';
 import { EditorContext } from './contexts/EditorContext';
+import { HighlightProvider, type HighlightState } from './contexts/HighlightContext';
 import { getNextFreeHandleIndex, computePortDistribution } from './utils/portDistribution';
+import { getSideFromHandle } from './utils/edgeUtils';
 import type { ClassNodeData, EnumNodeData, PackageNodeData, ObjectNodeData, ReferenceEdgeData, InheritanceEdgeData, CompositionEdgeData, InstanceReferenceEdgeData, AnchorConfig, ReferenceKind, NotationMode, ColorScheme } from './types';
 import { EdgeTypePopup, type EdgeTypeChoice } from './components/EdgeTypePopup';
 import { M1ReferencePopup } from './components/M1ReferencePopup';
@@ -50,7 +51,7 @@ import { useClassRemoval } from './hooks/useClassRemoval';
 import { useConformanceGuard } from '../../model/conformance/useConformanceGuard';
 import { useOrphanFeatures } from './hooks/useOrphanFeatures';
 import { UniquenessProblemSync } from './problems/UniquenessProblemSync';
-import { getSyncMode, markDropCreated, suppressSingleton, unsuppressSingleton, clearSuppressedSingletons, getSuppressedSingletonIds } from './sync/syncState';
+import { getSyncMode, markDropCreated, suppressSingleton, unsuppressSingleton, clearSuppressedSingletons, getSuppressedSingletonIds, getEdgeRefId } from './sync/syncState';
 import {
     syncPositionToJjom,
     syncPositionBatchToJjom,
@@ -98,6 +99,10 @@ const nodeTypes: NodeTypes = {
 };
 
 // Register custom edge types — all map to UnifiedEdge which handles all variants
+// De-overlap steps for edge labels (assigned in applyDistribution, consumed by UnifiedEdge):
+const CARD_STAGGER_STEP = 11; // px extra depth per extra cardinality on the same target side
+const ROLE_ARC_STEP = 22;     // px arc-length separation between bundled roles
+
 const edgeTypes: EdgeTypes = {
     reference: UnifiedEdge,
     inheritance: UnifiedEdge,
@@ -435,8 +440,47 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const modeInfoRef = useRef(modeInfo);
     modeInfoRef.current = modeInfo;
 
+    // ─── Highlight mode (figure authoring) ──────────────────────────
+    // Mode on/off: effimero+globale, mirror del toggle in Navbar (View menu).
+    // Tagging multi-colore manuale: mappa id->colore (1..5) persistita in
+    // localStorage keyed per modello; NON viaggia col file di progetto. Click su
+    // nodo o edge assegna il colore attivo (stesso colore = rimuove). La
+    // colorazione è render-time via HighlightContext (no patch node.data/edge.data,
+    // no modifiche al transform). Il colore attivo si sceglie dalla palette in toolbar.
+    const [highlightModeActive, setHighlightModeActive] = useState<boolean>(() => {
+        try { return localStorage.getItem('jjodel.highlightMode') === 'true'; } catch { return false; }
+    });
+    const [highlightColors, setHighlightColors] = useState<Record<string, number>>(() => {
+        try { return JSON.parse(localStorage.getItem(`jjodel.highlight.${modelid}`) || '{}'); }
+        catch { return {}; }
+    });
+    const [activeHighlightColor, setActiveHighlightColor] = useState<number>(1);
+    const activeColorRef = useRef(activeHighlightColor);
+    useEffect(() => { activeColorRef.current = activeHighlightColor; }, [activeHighlightColor]);
+    useEffect(() => {
+        try { localStorage.setItem(`jjodel.highlight.${modelid}`, JSON.stringify(highlightColors)); } catch {}
+    }, [highlightColors, modelid]);
+    useEffect(() => {
+        const onToggleHL = (e: Event) => setHighlightModeActive(!!(e as CustomEvent).detail?.active);
+        window.addEventListener(JjodelEvents.TOGGLE_HIGHLIGHT_MODE, onToggleHL);
+        return () => window.removeEventListener(JjodelEvents.TOGGLE_HIGHLIGHT_MODE, onToggleHL);
+    }, []);
+    const assignHighlight = useCallback((id: string) => {
+        setHighlightColors(prev => {
+            const next = { ...prev };
+            if (next[id] === activeColorRef.current) delete next[id];
+            else next[id] = activeColorRef.current;
+            return next;
+        });
+    }, []);
+    const clearHighlights = useCallback(() => setHighlightColors({}), []);
+    const highlightState = useMemo<HighlightState>(
+        () => ({ active: highlightModeActive, colorById: highlightColors }),
+        [highlightModeActive, highlightColors],
+    );
+
     // Selection sync: standalone hook — updates Properties panel via _lastSelected
-    const jjomSelection = useJjomSelection(modelid, isJjomMode);
+    const jjomSelection = useJjomSelection(modelid, isJjomMode, highlightModeActive, assignHighlight);
 
     const { screenToFlowPosition, getNodes, getEdges, zoomIn, zoomOut, fitView, getViewport, setViewport } = useReactFlow();
     const storeApi = useStoreApi();
@@ -791,18 +835,71 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
         const { edgeHandles } = computePortDistribution(edgeList, nodeIds, positions);
 
+        const handleIdx = (h?: string | null): number => {
+            const m = h?.match(/-(\d+)$/);
+            return m ? parseInt(m[1], 10) : 0;
+        };
+
+        // Only reference edges draw a cardinality and a (non-hover) role. The
+        // composition/instanceRef types are M1 (no cardinality); M2 containments are
+        // themselves reference edges with kind='composition'. See 2c discovery.
+        const CARD_TYPES = new Set(['reference']);
+        const ROLE_TYPES = new Set(['reference']);
+
+        // (A) Cardinality depth stagger — grouped by (target node, target side).
+        const cardGroups = new Map<string, string[]>();
+        for (const edge of edgeList) {
+            if (!CARD_TYPES.has(edge.type ?? '')) continue;
+            const th = edgeHandles.get(edge.id)?.targetHandle ?? edge.targetHandle ?? null;
+            if (!th) continue;
+            const key = `${edge.target}:${getSideFromHandle(th)}`;
+            if (!cardGroups.has(key)) cardGroups.set(key, []);
+            cardGroups.get(key)!.push(edge.id);
+        }
+        const cardShift = new Map<string, number>();
+        for (const ids of cardGroups.values()) {
+            if (ids.length < 2) continue; // single cardinality: no stagger
+            ids.sort((a, b) =>
+                handleIdx(edgeHandles.get(a)?.targetHandle) - handleIdx(edgeHandles.get(b)?.targetHandle));
+            ids.forEach((id, i) => cardShift.set(id, i * CARD_STAGGER_STEP));
+        }
+
+        // (B) Role arc-slide — grouped by unordered {source, target} pair (bundles).
+        const pairKey = (e: { source: string; target: string }): string =>
+            e.source < e.target ? `${e.source}|${e.target}` : `${e.target}|${e.source}`;
+        const roleGroups = new Map<string, string[]>();
+        for (const edge of edgeList) {
+            if (!ROLE_TYPES.has(edge.type ?? '')) continue;
+            const key = pairKey(edge);
+            if (!roleGroups.has(key)) roleGroups.set(key, []);
+            roleGroups.get(key)!.push(edge.id);
+        }
+        const roleShift = new Map<string, number>();
+        for (const ids of roleGroups.values()) {
+            if (ids.length < 2) continue; // lone edge: midpoint unchanged
+            ids.sort(); // deterministic by edge id
+            const center = (ids.length - 1) / 2;
+            ids.forEach((id, i) => roleShift.set(id, (i - center) * ROLE_ARC_STEP));
+        }
+
         return edgeList.map(edge => {
             const distributed = edgeHandles.get(edge.id);
-            if (distributed &&
+            const cShift = cardShift.get(edge.id) ?? 0;
+            const rShift = roleShift.get(edge.id) ?? 0;
+            const handlesChanged = !!distributed &&
                 (edge.sourceHandle !== distributed.sourceHandle ||
-                 edge.targetHandle !== distributed.targetHandle)) {
-                return {
-                    ...edge,
-                    sourceHandle: distributed.sourceHandle,
-                    targetHandle: distributed.targetHandle,
-                };
-            }
-            return edge;
+                 edge.targetHandle !== distributed.targetHandle);
+            const data = edge.data as { cardinalityShift?: number; roleArcShift?: number } | undefined;
+            const cChanged = (data?.cardinalityShift ?? 0) !== cShift;
+            const rChanged = (data?.roleArcShift ?? 0) !== rShift;
+            if (!handlesChanged && !cChanged && !rChanged) return edge; // preserve identity → no re-render
+            return {
+                ...edge,
+                ...(distributed
+                    ? { sourceHandle: distributed.sourceHandle, targetHandle: distributed.targetHandle }
+                    : {}),
+                data: { ...edge.data, cardinalityShift: cShift, roleArcShift: rShift },
+            };
         });
     }, [getNodes, buildNodePositions]);
     applyDistributionRef.current = applyDistribution;
@@ -1415,12 +1512,38 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // Handle edge reconnection (drag endpoint to a new target/source)
     const handleReconnect = useCallback(
         (oldEdge: Edge, newConnection: Connection) => {
-            setEdges((eds) => {
-                const updated = reconnectEdge(oldEdge, newConnection, eds);
-                return applyDistribution(updated);
-            });
+            // Re-target di una reference M2: cambia DReference.type alla nuova classe.
+            // Stessa mutazione del property panel (lRef.type = classId); il sync re-instrada.
+            // Non muta gli edge ReactFlow.
+
+            if (oldEdge.type !== 'reference') return;            // solo reference M2
+            if (!newConnection.target) return;                   // serve un target
+            if (newConnection.source !== oldEdge.source) return; // solo il capo target si muove
+            if (newConnection.target === oldEdge.target) return; // no-op se invariato
+
+            try {
+                // DReference dall'edge: canale primario jjomRefId, fallback registry
+                const refId = (oldEdge.data as any)?.jjomRefId ?? getEdgeRefId(oldEdge.id);
+                if (!refId) return;
+                const lRef: any = LPointerTargetable.fromPointer(refId);
+                if (!lRef) return;
+
+                // Nuova classe dal vertice droppato (newConnection.target è un VERTEX id)
+                const targetVertex: any = LPointerTargetable.fromPointer(newConnection.target);
+                const newClassId: string | undefined = targetVertex?.model?.id;
+                if (!newClassId) return;
+
+                // Spec C — solo EClass: rifiuta enum/package/object
+                const rawClass = (store.getState() as any).idlookup[newClassId];
+                if (!rawClass || rawClass.className !== 'DClass') return;
+
+                // Mutazione: identica a canvasToJjom.ts:212 e al property panel
+                lRef.type = newClassId;
+            } catch (err) {
+                console.warn('[reference re-target] reconnect aborted', err);
+            }
         },
-        [setEdges, applyDistribution]
+        []
     );
 
     const handleReconnectStart = useCallback(() => {
@@ -2216,6 +2339,48 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 }
             }
 
+            // Add a reference to a class node. Creates the model feature only
+            // (no edge): a self-loop, if rendered, is drawn by the sync layer.
+            // Mirrors the composition-children block above for gating/structure.
+            if (node?.type === 'classNode') {
+                items.push({
+                    label: 'Add reference',
+                    icon: 'bi-link-45deg',
+                    onClick: () => {
+                        const lClass: any = LPointerTargetable.fromPointer(node.id)?.model;
+                        if (!lClass || typeof lClass.addReference !== 'function') return;
+                        // Unique name among the class's existing references
+                        // (mirror canvasToJjom.ts uniqueName via raw store lookup).
+                        const baseName = 'newReference';
+                        let uniqueName = baseName;
+                        try {
+                            const state = store.getState();
+                            const rawVertex = state.idlookup?.[node.id] as any;
+                            const classId = rawVertex?.model;
+                            const dClass = classId ? state.idlookup?.[classId] as any : null;
+                            if (dClass) {
+                                const refNames = new Set<string>();
+                                for (const rid of (dClass.references ?? [])) {
+                                    const r = state.idlookup?.[rid] as any;
+                                    if (r?.name) refNames.add(r.name);
+                                }
+                                if (refNames.has(uniqueName)) {
+                                    let i = 1;
+                                    while (refNames.has(`${baseName}${i}`)) i++;
+                                    uniqueName = `${baseName}${i}`;
+                                }
+                            }
+                        } catch { /* fall back to base name */ }
+                        const lRef: any = lClass.addReference(uniqueName);
+                        const refId = lRef?.id ?? lRef;
+                        if (refId) {
+                            SetRootFieldAction.new('_lastSelected' as any, { node: '', view: '', modelElement: refId });
+                        }
+                    },
+                });
+                items.push({ divider: true });
+            }
+
             const classicTooltip = 'Available in classic editor';
             items.push(
                 {
@@ -2960,7 +3125,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // inside the `.editor-split-flow` pane (split mode).
 
     const flowCanvas = (
-        <>
+        <HighlightProvider value={highlightState}>
             <ReactFlow
                 nodes={stableNodes}
                 edges={stableEdges}
@@ -2970,7 +3135,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 onConnectEnd={onConnectEnd}
                 onReconnect={handleReconnect}
                 onReconnectStart={handleReconnectStart}
-                reconnectRadius={15}
+                edgesReconnectable={true}
+                reconnectRadius={20}
                 onDrop={onDrop}
                 onDragOver={onDragOver}
                 onNodeContextMenu={onNodeContextMenu}
@@ -3043,12 +3209,12 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     onCancel={() => setPendingM1Connection(null)}
                 />
             )}
-        </>
+        </HighlightProvider>
     );
 
     return (
         <EditorContext.Provider value={editorContextValue}>
-            <div className={`editor-v2 theme-${theme} notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}${showBackground ? '' : ' hide-background'}`} tabIndex={0} onKeyDown={onKeyDown}>
+            <div className={`editor-v2 theme-${theme} notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}${showBackground ? '' : ' hide-background'}${highlightModeActive ? ' highlight-mode' : ''}`} tabIndex={0} onKeyDown={onKeyDown}>
                 <UniquenessProblemSync modelid={modelid} />
                 <PalettePanel
                     editorMode={modeInfo.mode}
@@ -3089,6 +3255,10 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         editorMode={editorMode}
                         hasViewpoint={hasViewpoint}
                         onEditorModeChange={onEditorModeChange}
+                        highlightModeActive={highlightModeActive}
+                        activeHighlightColor={activeHighlightColor}
+                        onSelectHighlightColor={setActiveHighlightColor}
+                        onClearHighlights={clearHighlights}
                     />
                     {(editorMode === 'classic' && classicSlot) ? (
                         <div

@@ -1351,6 +1351,121 @@
 }
 
 // ============================================
+// GHOST PARENT STUB (cross-metamodel extends overlay)
+// ============================================
+
+.ghost-parent-stub {
+    position: absolute;
+    bottom: 100%;            // anchored to the node top, grows upward
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 4;              // above node body (cf. .node-problem-dot z-index: 3)
+    pointer-events: auto;
+
+    &__chip {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 2px 8px;
+        border: 1px dashed var(--color-canvas-accent);
+        border-radius: 6px;
+        background: var(--color-canvas-bg, transparent);
+        white-space: nowrap;
+    }
+
+    &__name {
+        font-size: 11px;
+        color: var(--color-accent);
+    }
+
+    &__mm {
+        font-size: 11px;
+        color: var(--color-text-secondary);
+    }
+
+    &__connector {
+        width: 12px;
+        height: 18px;
+        display: block;
+    }
+}
+
+// Ghost-target stub: cross-metamodel reference shown as an in-node overlay on
+// the right edge (association arc + dashed chip), mirroring .ghost-parent-stub.
+.ghost-target-stub {
+    position: absolute;
+    top: 0;
+    left: 100%;             // anchored to the node right edge, grows rightward
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;              // regular vertical spacing between stacked stubs
+    padding-top: 8px;       // offset first stub below the node top / label room
+    z-index: 4;             // above node body (cf. .ghost-parent-stub)
+    pointer-events: none;   // do not block right-side handle interaction
+
+    // Positioning context for the absolutely-placed label (kept above the whole
+    // row so it never overlaps the chip).
+    &__item {
+        position: relative;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+    }
+
+    // Connector wrapper flush to the node edge so the line starts at the node
+    // and runs continuously to the chip. The label width never shifts it.
+    &__arc {
+        display: flex;
+        align-items: center;
+    }
+
+    &__label {
+        position: absolute;
+        bottom: 100%;
+        left: 0;
+        right: 0;
+        margin-bottom: 2px;
+        text-align: center;     // centered above the connector + chip
+        font-size: 11px;
+        color: var(--color-text-secondary);
+        white-space: nowrap;
+        line-height: 1.2;
+    }
+
+    &__connector {
+        width: 24px;
+        height: 12px;
+        display: block;
+    }
+
+    &__chip {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 2px 8px;
+        border: 1px dashed var(--color-canvas-accent);
+        border-radius: 6px;
+        background: var(--color-canvas-bg, transparent);
+        white-space: nowrap;
+        pointer-events: auto;   // tooltip target
+    }
+
+    &__name {
+        font-size: 11px;
+        color: var(--color-accent);
+    }
+
+    &__mm {
+        font-size: 11px;
+        color: var(--color-text-secondary);
+    }
+}
+
+// ============================================
 // MM-CLASS (Class Node)
 // ============================================
 
@@ -1938,7 +2053,6 @@
     font-family: var(--font-sans);
     font-size: 10px;
     color: var(--text-secondary);
-    //background: var(--edge-label-bg);
     padding: 1px 5px;
     border-radius: 3px;
     border: none;
@@ -3421,5 +3535,113 @@ body.header-variant-c {
     opacity: 0.85;
     filter: saturate(0.6);
     transition: opacity 0.15s ease, filter 0.15s ease;
+}
+
+// ============================================
+// HIGHLIGHT MODE (figure authoring)
+// Tagging multi-colore manuale: classi `hl-c1`..`hl-c5` (id->colore) iniettate a
+// render-time da HighlightContext su nodi/edge; `hl-dimmed` su tutto il resto.
+// Flag root del mode: `.editor-v2.highlight-mode`. Colori tema-adattivi via var
+// `--hl-1`..`--hl-5` (+ override High Contrast / Print; gli altri temi ereditano
+// il set base). Nomi `hl-` verificati non collidenti (grep). L'opacity sul
+// <path> sfuma anche i suoi marker. Limite noto: i marker (frecce/diamanti) usano
+// def SVG condivise, quindi NON assumono il colore del gruppo (incoerenza minore).
+// Sorgenti: contexts/HighlightContext.tsx + components/HighlightPalette.tsx.
+// ============================================
+
+// Color set (base — ereditato da Default, Monochrome e dai temi pastello).
+.editor-v2 {
+    --hl-1: #E03E3E;
+    --hl-2: #D9730D;
+    --hl-3: #2F9E44;
+    --hl-4: #1C7ED6;
+    --hl-5: #7048E8;
+    --hl-text: #ffffff;
+    --hl-dim-opacity: 0.45;
+    --hl-dim-grayscale: 0.2;
+}
+.editor-v2.scheme-high-contrast {
+    --hl-1: #FF4D4D; --hl-2: #FF9A1F; --hl-3: #2FD05A; --hl-4: #2F9BFF; --hl-5: #9A6BFF;
+}
+.editor-v2.scheme-print {
+    --hl-1: #C0504D; --hl-2: #C2853F; --hl-3: #5F9E6B; --hl-4: #5580A8; --hl-5: #836FA8;
+}
+
+// Dimming di tutto ciò che non è taggato.
+.hl-dimmed {
+    opacity: var(--hl-dim-opacity);
+    filter: grayscale(var(--hl-dim-grayscale));
+    transition: opacity .15s ease, filter .15s ease;
+}
+
+// Transizione morbida su tag/dim.
+.mm-node[class*="hl-c"],
+.mm-node.hl-dimmed,
+path[class*="hl-c"],
+path.hl-dimmed,
+.edge-label[class*="hl-c"],
+.edge-label.hl-dimmed {
+    transition: opacity 0.15s ease, filter 0.15s ease;
+}
+
+// Nodi taggati: header + bordo nel colore del gruppo, corpo invariato (chiaro).
+@for $i from 1 through 5 {
+    .mm-node.hl-c#{$i} {
+        border-color: var(--hl-#{$i}) !important;
+    }
+    .mm-node.hl-c#{$i} .mm-node__header,
+    .mm-node.hl-c#{$i} .mm-node__tab {
+        background: var(--hl-#{$i}) !important;
+        color: var(--hl-text) !important;
+    }
+}
+
+// Edge taggati: stroke + label nel colore del gruppo.
+@for $i from 1 through 5 {
+    path.hl-c#{$i},
+    .hl-c#{$i}.react-flow__edge-path {
+        stroke: var(--hl-#{$i}) !important;
+    }
+    .edge-label.hl-c#{$i},
+    .edge-label.hl-c#{$i} .edge-label__text {
+        color: var(--hl-#{$i});
+    }
+}
+
+// ── Palette in toolbar (presentazione) ──
+.hl-palette {
+    display: flex;
+    align-items: center;
+    gap: 0px;
+}
+.hl-palette__swatch {
+    // Fixed-size slot: the circle scales inside, neighbours never reflow.
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.hl-palette__dot {
+    // Selection is conveyed by size + opacity, not a ring.
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    aspect-ratio: 1 / 1;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    opacity: 0.55;
+    transition: width 0.14s ease, height 0.14s ease, opacity 0.14s ease;
+
+    .hl-palette__swatch.active & {
+        width: 22px;
+        height: 22px;
+        opacity: 1;
+    }
 }
 
