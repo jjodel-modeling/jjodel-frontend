@@ -449,6 +449,29 @@ function ClassNode({ id, data, selected, width, height }: NodeProps<ClassNodeTyp
                         const bly = (endBorderY - AL * sin - AW * cos).toFixed(1);
                         const brx = (endBorderX - AL * cos - AW * sin).toFixed(1);
                         const bry = (endBorderY - AL * sin + AW * cos).toFixed(1);
+                        // Source-side UML marker by reference kind. The kind is read
+                        // from the matching MetaReference already in props
+                        // (data.references carries `kind`, keyed by name — the cross-MM
+                        // ref appears there too), so no transformer/types change is needed.
+                        // composition → filled diamond, aggregation → hollow diamond,
+                        // association → none. The target arrowhead is unchanged in all cases.
+                        const refKind = data.references?.find((r) => r.name === gt.refName)?.kind ?? 'association';
+                        const hasDiamond = refKind === 'composition' || refKind === 'aggregation';
+                        // Rhombus along the axis at the node border (B = startX,startY):
+                        // T toward the chip, S1/S2 the side vertices. Same 3:2 proportions
+                        // as the same-MM edge markers (UnifiedEdge). For comp/agg the line
+                        // starts at T so it never shows through the (hollow) diamond.
+                        const DL = 12, DW = 8;            // diamond length / width (flow px)
+                        const perpX = -sin, perpY = cos;  // axis perpendicular
+                        const dTx = startX + cos * DL, dTy = startY + sin * DL;
+                        const dS1x = startX + cos * (DL / 2) + perpX * (DW / 2);
+                        const dS1y = startY + sin * (DL / 2) + perpY * (DW / 2);
+                        const dS2x = startX + cos * (DL / 2) - perpX * (DW / 2);
+                        const dS2y = startY + sin * (DL / 2) - perpY * (DW / 2);
+                        const diamondPoints = `${startX.toFixed(1)},${startY.toFixed(1)} ${dS1x.toFixed(1)},${dS1y.toFixed(1)} ${dTx.toFixed(1)},${dTy.toFixed(1)} ${dS2x.toFixed(1)},${dS2y.toFixed(1)}`;
+                        const diamondFill = refKind === 'composition' ? 'var(--color-canvas-accent)' : 'var(--color-canvas-bg)';
+                        const lineStartX = hasDiamond ? dTx : startX;
+                        const lineStartY = hasDiamond ? dTy : startY;
                         return (
                             <div key={`${gt.refName}-${i}`} className="ghost-target-stub__item">
                                 {/* Connector: absolute SVG whose (0,0) sits on the node
@@ -468,8 +491,11 @@ function ClassNode({ id, data, selected, width, height }: NodeProps<ClassNodeTyp
                                 >
                                     {!degenerate && (
                                         <>
-                                            <line x1={startX.toFixed(1)} y1={startY.toFixed(1)} x2={endBorderX.toFixed(1)} y2={endBorderY.toFixed(1)} stroke="var(--color-canvas-accent)" strokeWidth="1.2" />
+                                            <line x1={lineStartX.toFixed(1)} y1={lineStartY.toFixed(1)} x2={endBorderX.toFixed(1)} y2={endBorderY.toFixed(1)} stroke="var(--color-canvas-accent)" strokeWidth="1.2" />
                                             <polyline points={`${blx},${bly} ${endBorderX.toFixed(1)},${endBorderY.toFixed(1)} ${brx},${bry}`} fill="none" stroke="var(--color-canvas-accent)" strokeWidth="1.2" strokeLinejoin="round" strokeLinecap="round" />
+                                            {hasDiamond && (
+                                                <polygon points={diamondPoints} fill={diamondFill} stroke="var(--color-canvas-accent)" strokeWidth="1.2" strokeLinejoin="round" />
+                                            )}
                                         </>
                                     )}
                                 </svg>
