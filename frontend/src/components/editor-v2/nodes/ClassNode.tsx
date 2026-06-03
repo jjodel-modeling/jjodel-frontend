@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import { NodeResizer, useReactFlow, type NodeProps, type Node } from '@xyflow/react';
 import ViewpointRenderer from '../viewpoint/ViewpointRenderer';
 import DynamicHandles from '../components/DynamicHandles';
@@ -21,8 +21,14 @@ export type ClassNodeType = Node<ClassNodeData, 'classNode'>;
 // Re-export for backwards compatibility
 export type { ClassNodeData } from '../types';
 
-function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
-    const { setNodes } = useReactFlow();
+// Default horizontal gap (flow px) between the node right edge and a ghost-target
+// chip when its drag offset is zero. Single source of truth for both the chip
+// transform and the connector geometry. Mirrors the connector length the stub
+// had before it became draggable.
+const GHOST_TARGET_DEFAULT_GAP = 24;
+
+function ClassNode({ id, data, selected, width, height }: NodeProps<ClassNodeType>) {
+    const { setNodes, getViewport } = useReactFlow();
     const editorContext = useEditorContextSafe();
     const hlClass = useNodeHighlightClass(id);
 
@@ -32,6 +38,11 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
     const ghost = data.ghostParents?.[0];
     // Cross-metamodel reference targets, rendered as in-node stubs on the right.
     const ghostTargets = data.ghostTargets ?? [];
+    // Stable signature of the cross-MM stub set, used to re-measure connector
+    // origins and chip sizes when stubs are added/removed or their text changes.
+    const ghostSig = ghostTargets
+        .map((g) => `${g.refName}:${g.targetName}:${g.targetMetamodel}:${g.cardinality}`)
+        .join('|');
 
     const [editing, setEditing] = useState(false);
     const [name, setName] = useState(data.label);
@@ -47,6 +58,96 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
         kind: 'attr' | 'op';
     } | null>(null);
     const [editValue, setEditValue] = useState('');
+
+    // === Ghost-target drag (in-session offset only; NOT persisted) ===
+    // Each cross-metamodel stub chip can be dragged out of crowded areas. The
+    // offset is keyed by gt.refName (unique among a class's references, and all
+    // chips live in this one ClassNode) and lives only in local state — it
+    // resets on reload, like AnchorConfig. No DVertex / D-layer write.
+    const [ghostOffsets, setGhostOffsets] = useState<Record<string, { dx: number; dy: number }>>({});
+    const ghostDragRef = useRef<{ refName: string; startX: number; startY: number; baseDx: number; baseDy: number } | null>(null);
+
+    const onGhostPointerDown = useCallback((e: React.PointerEvent, refName: string) => {
+        e.stopPropagation();   // do not let the press start a node drag / pan
+        try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* noop */ }
+        const cur = ghostOffsets[refName] ?? { dx: 0, dy: 0 };
+        ghostDragRef.current = { refName, startX: e.clientX, startY: e.clientY, baseDx: cur.dx, baseDy: cur.dy };
+    }, [ghostOffsets]);
+
+    const onGhostPointerMove = useCallback((e: React.PointerEvent) => {
+        const d = ghostDragRef.current;
+        if (!d) return;
+        const zoom = getViewport().zoom || 1;   // screen px -> flow px
+        const dx = d.baseDx + (e.clientX - d.startX) / zoom;
+        const dy = d.baseDy + (e.clientY - d.startY) / zoom;
+        setGhostOffsets(prev => ({ ...prev, [d.refName]: { dx, dy } }));
+    }, [getViewport]);
+
+    const onGhostPointerUp = useCallback((e: React.PointerEvent) => {
+        if (!ghostDragRef.current) return;
+        try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* noop */ }
+        ghostDragRef.current = null;
+    }, []);
+
+    // Double-click resets a chip to its default anchored position.
+    const onGhostReset = useCallback((refName: string) => {
+        setGhostOffsets(prev => {
+            if (!prev[refName]) return prev;
+            const next = { ...prev };
+            delete next[refName];
+            return next;
+        });
+    }, []);
+
+    // Node root + per-connector SVG refs + per-chip DOM refs, and the measured
+    // per-stub geometry in flow px: the connector origin's vertical offset from
+    // the node top (ghostOriginY = Δ) and the chip box size (ghostChipSize).
+    const rootRef = useRef<HTMLDivElement>(null);
+    const ghostConnectorRefs = useRef<Map<string, SVGSVGElement>>(new Map());
+    const ghostChipRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+    const [ghostOriginY, setGhostOriginY] = useState<Record<string, number>>({});
+    const [ghostChipSize, setGhostChipSize] = useState<Record<string, { w: number; h: number }>>({});
+
+    // Measure each connector origin and chip box, relative to the node, in flow
+    // px. The connector origin sits at the chip-row level (CSS top:50% of the
+    // item), near the node top and varying per stacked stub — NOT the node
+    // mid-height — so cy = H/2 − originY. The chip size feeds the chip-border
+    // clip of the arrowhead. Both are stable under chip drag (translate does not
+    // resize, and the SVG top-left anchor does not move) and under node height
+    // changes (the stub is top-anchored), so we re-measure only when the stub
+    // set or its text changes (ghostSig).
+    useLayoutEffect(() => {
+        const root = rootRef.current;
+        if (!root) return;
+        const zoom = getViewport().zoom || 1;
+        const nodeTop = root.getBoundingClientRect().top;
+        const nextOrigin: Record<string, number> = {};
+        const nextChip: Record<string, { w: number; h: number }> = {};
+        for (const gt of ghostTargets) {
+            const svg = ghostConnectorRefs.current.get(gt.refName);
+            if (svg) nextOrigin[gt.refName] = (svg.getBoundingClientRect().top - nodeTop) / zoom;
+            const chipEl = ghostChipRefs.current.get(gt.refName);
+            if (chipEl) {
+                const r = chipEl.getBoundingClientRect();
+                nextChip[gt.refName] = { w: r.width / zoom, h: r.height / zoom };
+            }
+        }
+        setGhostOriginY((prev) => {
+            const keys = Object.keys(nextOrigin);
+            if (keys.length === Object.keys(prev).length && keys.every((k) => prev[k] === nextOrigin[k])) {
+                return prev;
+            }
+            return nextOrigin;
+        });
+        setGhostChipSize((prev) => {
+            const keys = Object.keys(nextChip);
+            if (keys.length === Object.keys(prev).length && keys.every((k) => prev[k]?.w === nextChip[k].w && prev[k]?.h === nextChip[k].h)) {
+                return prev;
+            }
+            return nextChip;
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ghostSig, getViewport]);
 
     // Sync name from model only when changed externally (not by our own commit).
     useEffect(() => {
@@ -249,6 +350,7 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
 
     return (
         <div
+            ref={rootRef}
             className={`mm-node mm-class ${selected ? 'selected' : ''} ${isAbstract ? 'abstract' : ''} ${isSingleton ? 'singleton' : ''} ${dragOver ? 'drop-target' : ''} ${hlClass}`}
             onDragOver={(e) => { handleDragOver(e); setDragOver(true); }}
             onDragLeave={() => setDragOver(false)}
@@ -286,24 +388,117 @@ function ClassNode({ id, data, selected }: NodeProps<ClassNodeType>) {
             {/* Ghost targets: cross-metamodel references drawn as in-node
                 overlays (association arc + dashed chip on the right), not real
                 ReactFlow edges. The leftover self-loop edge is suppressed in
-                jjomEdgeToRFEdge. */}
+                jjomEdgeToRFEdge. The chip (label + chip = one unit) is draggable
+                to declutter the canvas; the connector stays glued to the node
+                right edge and follows the dragged chip. Offset is in-session only. */}
             {ghostTargets.length > 0 && (
                 <div className="ghost-target-stub">
-                    {ghostTargets.map((gt, i) => (
-                        <div key={`${gt.refName}-${i}`} className="ghost-target-stub__item">
-                            <span className="ghost-target-stub__label">{gt.refName} {gt.cardinality}</span>
-                            <div className="ghost-target-stub__arc">
-                                <svg className="ghost-target-stub__connector" viewBox="0 0 24 12" aria-hidden="true">
-                                    <line x1="0" y1="6" x2="23" y2="6" stroke="var(--color-canvas-accent)" strokeWidth="1.2" />
-                                    <polyline points="17,2 23,6 17,10" fill="none" stroke="var(--color-canvas-accent)" strokeWidth="1.2" strokeLinejoin="round" strokeLinecap="round" />
+                    {ghostTargets.map((gt, i) => {
+                        const off = ghostOffsets[gt.refName] ?? { dx: 0, dy: 0 };
+                        const endX = GHOST_TARGET_DEFAULT_GAP + off.dx;   // chip left edge, x
+                        const endY = off.dy;                              // chip vertical center, y
+                        // The connector origin (0,0) sits on the node right edge at the
+                        // chip-row level (CSS left:0; top:50% of the item) — NOT the node
+                        // mid-height. ghostOriginY[refName] is the measured distance (flow
+                        // px) from the node top down to that origin (per stacked stub);
+                        // fall back to H/2 (origin ≈ node center) until measured.
+                        const W = width ?? 180;
+                        const H = height ?? 80;
+                        const dY = ghostOriginY[gt.refName] ?? (H / 2);
+                        // Node box in connector-local coords. Center (cx,cy): cy = H/2 − Δ
+                        // because the origin sits at the chip-row level, not the node
+                        // mid-height (Δ measured per stub).
+                        const cx = -W / 2;
+                        const cy = H / 2 - dY;
+                        const nhw = W / 2;
+                        const nhh = H / 2;
+                        // Chip box. (endX,endY) is the chip LEFT-CENTER (endX = left edge,
+                        // endY = vertical center), so the chip center is +chipW/2 in x.
+                        // chipW/chipH are measured per stub; until measured they are 0 and
+                        // the chip-border clip is skipped (the arrowhead falls back to the
+                        // left-center anchor — the pre-part-2 behaviour).
+                        const chip = ghostChipSize[gt.refName];
+                        const chipW = chip?.w ?? 0;
+                        const chipH = chip?.h ?? 0;
+                        const chw = chipW / 2;
+                        const chh = chipH / 2;
+                        const chipCx = endX + chw;
+                        const chipCy = endY;
+                        // Axis node-center → chip-center. Both endpoints are clipped to
+                        // their box border along this axis (closed-form ray/rect), so the
+                        // line leaves the node border facing the chip and the arrowhead
+                        // lands on the chip border facing the node — from any drag position.
+                        const dx = chipCx - cx;
+                        const dy = chipCy - cy;
+                        const degenerate = dx === 0 && dy === 0;
+                        // Node border (toward the chip): clamp ≤1 so start never overshoots.
+                        const sDen = Math.max(Math.abs(dx) / nhw, Math.abs(dy) / nhh);
+                        const sScale = sDen > 0 ? Math.min(1, 1 / sDen) : 0;
+                        const startX = cx + sScale * dx;
+                        const startY = cy + sScale * dy;
+                        // Chip border (toward the node, direction −d): only when measured.
+                        const tDen = (chw > 0 && chh > 0) ? Math.max(Math.abs(dx) / chw, Math.abs(dy) / chh) : 0;
+                        const tScale = tDen > 0 ? Math.min(1, 1 / tDen) : 0;
+                        const endBorderX = chipCx - tScale * dx;
+                        const endBorderY = chipCy - tScale * dy;
+                        // Arrowhead at the chip border, pointing along the axis into the chip.
+                        const ang = Math.atan2(dy, dx);
+                        const AL = 6, AW = 4;
+                        const cos = Math.cos(ang), sin = Math.sin(ang);
+                        const blx = (endBorderX - AL * cos + AW * sin).toFixed(1);
+                        const bly = (endBorderY - AL * sin - AW * cos).toFixed(1);
+                        const brx = (endBorderX - AL * cos - AW * sin).toFixed(1);
+                        const bry = (endBorderY - AL * sin + AW * cos).toFixed(1);
+                        return (
+                            <div key={`${gt.refName}-${i}`} className="ghost-target-stub__item">
+                                {/* Connector: absolute SVG whose (0,0) sits on the node
+                                    right edge at the chip-row level (CSS left:0; top:50%).
+                                    The line runs from the node border (startX,startY) along
+                                    the center→chip ray to the chip (endX,endY).
+                                    overflow:visible so it is never clipped. */}
+                                <svg
+                                    ref={(el) => {
+                                        if (el) ghostConnectorRefs.current.set(gt.refName, el);
+                                        else ghostConnectorRefs.current.delete(gt.refName);
+                                    }}
+                                    className="ghost-target-stub__connector"
+                                    width={Math.max(endX + 8, 1)}
+                                    height={Math.max(Math.abs(endY) + 8, 1)}
+                                    aria-hidden="true"
+                                >
+                                    {!degenerate && (
+                                        <>
+                                            <line x1={startX.toFixed(1)} y1={startY.toFixed(1)} x2={endBorderX.toFixed(1)} y2={endBorderY.toFixed(1)} stroke="var(--color-canvas-accent)" strokeWidth="1.2" />
+                                            <polyline points={`${blx},${bly} ${endBorderX.toFixed(1)},${endBorderY.toFixed(1)} ${brx},${bry}`} fill="none" stroke="var(--color-canvas-accent)" strokeWidth="1.2" strokeLinejoin="round" strokeLinecap="round" />
+                                        </>
+                                    )}
                                 </svg>
+                                {/* Draggable unit: chip + label above it move together.
+                                    `nodrag` stops ReactFlow from panning the node. */}
+                                <div
+                                    className="ghost-target-stub__draggable nodrag"
+                                    style={{ transform: `translate(${endX}px, ${endY}px)` }}
+                                >
+                                    <span className="ghost-target-stub__label">{gt.refName} {gt.cardinality}</span>
+                                    <div
+                                        ref={(el) => {
+                                            if (el) ghostChipRefs.current.set(gt.refName, el);
+                                            else ghostChipRefs.current.delete(gt.refName);
+                                        }}
+                                        className="ghost-target-stub__chip"
+                                        title={gt.targetFullname}
+                                        onPointerDown={(e) => onGhostPointerDown(e, gt.refName)}
+                                        onPointerMove={onGhostPointerMove}
+                                        onPointerUp={onGhostPointerUp}
+                                        onDoubleClick={() => onGhostReset(gt.refName)}
+                                    >
+                                        <span className="ghost-target-stub__name">{gt.targetName}</span>
+                                        <span className="ghost-target-stub__mm">{gt.targetMetamodel}</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="ghost-target-stub__chip" title={gt.targetFullname}>
-                                <span className="ghost-target-stub__name">{gt.targetName}</span>
-                                <span className="ghost-target-stub__mm">{gt.targetMetamodel}</span>
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
 

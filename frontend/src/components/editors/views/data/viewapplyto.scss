@@ -201,7 +201,7 @@
   padding: 0 !important;
 
   &.active {
-    background: #334155 !important;   // solid slate-700, no gradient
+    background: #0ea5e9 !important;   // active = cyan accent (design system A)
   }
 
   &:hover:not(.active) {
@@ -365,24 +365,24 @@
     }
   }
 
-  // Chips — slate-50 background, slate-700 text, minimal border
+  // Chips — cyan-tint background/text (active = cyan accent, design system A)
   [class*="-multiValue"] {
-    background: #f1f5f9 !important;   // slate-100
-    border: 1px solid #e2e8f0 !important;
+    background: #e0f2fe !important;   // cyan-100
+    border: 1px solid #bae6fd !important;
     border-radius: 3px !important;
     flex-shrink: 0 !important;
     margin: 1px !important;
   }
 
   [class*="-multiValue__label"] {
-    color: #1e293b !important;         // slate-900 — matches input text
+    color: #0369a1 !important;         // cyan-700 — matches chip tint
     font-size: 11px !important;
     font-weight: 400 !important;
     padding: 1px 4px !important;
   }
 
   [class*="-multiValue__remove"] {
-    color: #94a3b8 !important;         // slate-400
+    color: #0369a1 !important;         // cyan-700
     padding: 0 3px !important;
     cursor: pointer !important;
     border-radius: 0 3px 3px 0 !important;
@@ -457,10 +457,10 @@
   background: #f1f5f9 !important;
 }
 
-// Selected option — subtle slate, no cyan
+// Selected option — cyan tint (active = cyan accent, design system A)
 .apply-to-tab .form-field [class*="-option--is-selected"] {
-  background: rgba(51, 65, 85, 0.08) !important;
-  color: #1e293b !important;
+  background: #e0f2fe !important;
+  color: #0369a1 !important;
   font-weight: 500 !important;
 
   &:hover {

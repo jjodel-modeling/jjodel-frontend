@@ -3614,7 +3614,7 @@ html[data-theme="dark"] {
 
   &.active {
     color: var(--color-text-primary);
-    border-bottom-color: var(--color-accent);
+    border-bottom-color: #0ea5e9;   // active tab = cyan accent (design system A)
     font-weight: 500;
   }
 }
