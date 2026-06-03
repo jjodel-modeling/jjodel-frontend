@@ -23,7 +23,6 @@ import type { ViewpointType } from '../../view/viewPoint/viewpoint';
 import { useTreeViewPanel, ElementAction } from '../../contexts/TreeViewPanelContext';
 import { getLastEditedViewpointId, createViewInWorkbench, createBlankViewInViewpoint } from '../../utils/lastViewpoint';
 import { JjodelEvents, SystemEvents } from '../../events/registry';
-import { Tooltip } from '../forEndUser/Tooltip';
 import { useNodeProblems } from '../editor-v2/problems/useNodeProblems';
 import type { NodeProblem } from '../editor-v2/problems/registry';
 
@@ -317,7 +316,7 @@ const SectionNode = memo(function SectionNode({
 
 // ─── EntityRow — single row for a real entity (M, P, m, C, VP) ──────────────
 
-type EntityBadge = 'M' | 'P' | 'm' | 'C' | 'VP' | 'v';
+type EntityBadge = 'M' | 'P' | 'm' | 'C' | 'VP' | 'v' | 'A' | 'R';
 
 interface EntityRowProps {
     badge: EntityBadge;
@@ -330,8 +329,6 @@ interface EntityRowProps {
     expanded?: boolean;
     onToggle?: () => void;
     extraIcon?: 'bezier2' | 'stack' | null;
-    extraIconTitle?: string;
-    tooltip?: ReactNode;
     selected?: boolean;
     onClick?: (e: React.MouseEvent) => void;
     onContextMenu?: (e: React.MouseEvent) => void;
@@ -348,7 +345,7 @@ interface EntityRowProps {
 const EntityRow = memo(function EntityRow(props: EntityRowProps): ReactElement {
     const {
         badge, badgeClassName, name, nameClassName, pillText, expandKey, isLeaf,
-        expanded, onToggle, extraIcon, extraIconTitle, tooltip, selected,
+        expanded, onToggle, extraIcon, selected,
         onClick, onContextMenu, depth, dataElementId, highlightAction, isHighlighted, showNewBadge,
         actions, nameOverride, activeIndicator,
     } = props;
@@ -407,22 +404,19 @@ const EntityRow = memo(function EntityRow(props: EntityRowProps): ReactElement {
                     <i
                         className="bi bi-bezier2 tree-edge-marker"
                         aria-hidden
-                        title={extraIconTitle || 'View as edge'}
                     />
                 )}
                 {extraIcon === 'stack' && (
                     <i
                         className="bi bi-stack tree-stack-marker"
                         aria-hidden
-                        title={extraIconTitle || 'Stack'}
                     />
                 )}
                 {topProblem && (
                     <i
                         className="bi bi-exclamation-triangle-fill tree-problem-icon"
                         data-severity={topProblem.severity}
-                        aria-hidden
-                        title={problemTooltip || ''}
+                        aria-label={problemTooltip || undefined}
                     />
                 )}
                 {showNewBadge && (
@@ -439,11 +433,7 @@ const EntityRow = memo(function EntityRow(props: EntityRowProps): ReactElement {
         </div>
     );
 
-    return (
-        <Tooltip tooltip={tooltip} inline position="r" offsetY={0}>
-            {rowContent}
-        </Tooltip>
-    );
+    return rowContent;
 });
 
 // ─── Feature (leaf) row — M1 instance, no chevron, no tooltip ────────────────
@@ -562,13 +552,6 @@ const ClassNode = memo(function ClassNode({
 
     const hasStructuralFeatures = cls.attributes.length > 0 || cls.references.length > 0;
 
-    const tooltip = useMemo(() => (
-        <div>
-            <div><strong>{cls.fqn}</strong></div>
-            <div>{cls.instanceCount} instances across all models</div>
-        </div>
-    ), [cls.fqn, cls.instanceCount]);
-
     return (
         <div ref={nodeRef} className="tree-node" data-element-id={cls.id}>
             <EntityRow
@@ -580,8 +563,6 @@ const ClassNode = memo(function ClassNode({
                 expanded={isExpanded && hasStructuralFeatures}
                 onToggle={onToggle}
                 extraIcon={cls.isEdgeView ? 'bezier2' : null}
-                extraIconTitle={cls.isEdgeView ? 'View as edge' : undefined}
-                tooltip={tooltip}
                 selected={isSelected}
                 onClick={handleClick}
                 onContextMenu={handleContextMenu}
@@ -656,13 +637,6 @@ const PackageNode = memo(function PackageNode({
         }, '', false);
     }, [pkg.id]);
 
-    const tooltip = useMemo(() => (
-        <div>
-            <div><strong>{pkg.fqn}</strong></div>
-            <div>{pkg.classCount} classes, {pkg.subPackageCount} sub-packages</div>
-        </div>
-    ), [pkg.fqn, pkg.classCount, pkg.subPackageCount]);
-
     return (
         <div ref={nodeRef} className="tree-node" data-element-id={pkg.id}>
             <EntityRow
@@ -672,7 +646,6 @@ const PackageNode = memo(function PackageNode({
                 expandKey={pkg.id}
                 expanded={isExpanded}
                 onToggle={onToggle}
-                tooltip={tooltip}
                 selected={isSelected}
                 onClick={handleClick}
                 onContextMenu={handleContextMenu}
@@ -746,13 +719,6 @@ const ModelNode = memo(function ModelNode({
         onSelect?.();
     }, [model.id, onSelect]);
 
-    const tooltip = useMemo(() => (
-        <div>
-            <div><strong>{model.fqn}</strong></div>
-            <div>{model.objectCount} objects</div>
-        </div>
-    ), [model.fqn, model.objectCount]);
-
     const hasInstances = model.instances.length > 0;
     const canExpand = model.isActive && hasInstances;
 
@@ -766,7 +732,6 @@ const ModelNode = memo(function ModelNode({
                 isLeaf={!canExpand}
                 expanded={isExpanded && canExpand}
                 onToggle={onToggle}
-                tooltip={tooltip}
                 selected={isSelected}
                 activeIndicator={model.isActive ? 'model' : null}
                 onClick={handleClick}
@@ -829,13 +794,6 @@ const MetamodelNode = memo(function MetamodelNode({
         onSelect?.();
     }, [mm.id, onSelect]);
 
-    const tooltip = useMemo(() => (
-        <div>
-            <div><strong>{mm.fqn}</strong></div>
-            <div>{mm.modelCount} models, {mm.classCount} classes</div>
-        </div>
-    ), [mm.fqn, mm.modelCount, mm.classCount]);
-
     const modelsKey = modelsSectionKey(mm.id);
     const modelsSectionExpanded = isExpandedFn(modelsKey);
 
@@ -848,7 +806,6 @@ const MetamodelNode = memo(function MetamodelNode({
                 expandKey={mm.id}
                 expanded={isExpanded}
                 onToggle={onToggle}
-                tooltip={tooltip}
                 selected={isSelected}
                 onClick={handleClick}
                 onContextMenu={handleContextMenu}
@@ -983,7 +940,6 @@ const SubViewItem = memo(function SubViewItem({
             <button
                 className="tree-row__action"
                 onClick={handleDuplicate}
-                title="Duplicate"
                 aria-label="Duplicate"
             >
                 <i className="bi bi-copy" />
@@ -991,7 +947,6 @@ const SubViewItem = memo(function SubViewItem({
             <button
                 className="tree-row__action tree-row__action--danger"
                 onClick={handleDelete}
-                title="Delete"
                 aria-label="Delete"
             >
                 <i className="bi bi-trash" />
@@ -1100,7 +1055,6 @@ const ViewpointNode = memo(function ViewpointNode({
         <button
             className="tree-row__action"
             onClick={(e) => { e.stopPropagation(); handleAddView(); }}
-            title="Add view"
             aria-label="Add view"
         >
             <i className="bi bi-plus-lg" />
@@ -1118,7 +1072,6 @@ const ViewpointNode = memo(function ViewpointNode({
                 expanded={expanded}
                 onToggle={() => onToggleFn(vp.id)}
                 extraIcon={!vp.isExclusive ? 'stack' : null}
-                extraIconTitle={!vp.isExclusive ? 'Overlay viewpoint' : undefined}
                 onClick={handleClick}
                 depth={depth}
                 dataElementId={vp.id}

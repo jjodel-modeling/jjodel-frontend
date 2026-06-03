@@ -273,6 +273,18 @@
 
 ---
 
+## 2026-05-25 — fix(tree-view): remove all tooltips from tree editor (issue #88)
+**Prompt**: risolvere issue #88 (rimuovere tooltip della tree view) ed estendere la fix rimuovendo tutte le tooltip nel perimetro tree editor.
+**File toccati**: frontend/src/components/TreeViewSidebar/TreeViewContent.tsx, frontend/src/components/TreeViewSidebar/TreeViewSidebar.tsx, frontend/src/components/editors/PropertiesWithTreeView.tsx, frontend/src/jjtl/views/MetamodelTreeView.tsx, frontend/src/components/forEndUser/Tooltip.tsx, docs/claude-code-log.md
+**Esito**: ✅ completato
+**Regressions**: no
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Notes**: creato branch `tree-editor#88`; rimossi il wrapper `Tooltip` e la propagazione `tooltip` in `EntityRow`, eliminati tutti gli attributi `title` dai controlli tree editor (rows, action buttons, resize handles, toggle buttons) mantenendo `aria-label`; rimosse anche label metriche nel tree JJTL (`dataType`/`multiplicity`). Aggiunta protezione centralizzata in `Tooltip.tsx`: nessun tooltip viene mostrato se l'elemento appartiene al perimetro tree editor (`.tree-view-sidebar`, `.tree-view-overlay`, `.tree-view-panel-*`, `.tree-row`, `.tree-node`), con blocco sia in `Tooltip.show` sia in `onMouseEnter` usando `event.currentTarget/target` come fallback al ref. Corretto anche `EntityBadge` aggiungendo `'A' | 'R'` per allinearlo ai badge delle feature strutturali. Build finale verde (`npm run build`).
+**Prompt document name**: 2026-05-25 HH:mm
+
+---
+
 ## 2026-05-21 — fix: directional spread to separate paths and labels of mirrored edges
 **Prompt**: La formula bundleSpread precedente era invariante per swap di source/target, causando il collasso degli edge speculari sullo stesso path. Stesso bug sulle label. Introduce directionSign basato sul confronto lessicografico dei node ID per spezzare la simmetria.
 **File toccati**: frontend/src/components/editor-v2/edges/UnifiedEdge.tsx
