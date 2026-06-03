@@ -1416,11 +1416,23 @@
         align-items: center;
     }
 
-    // Connector wrapper flush to the node edge so the line starts at the node
-    // and runs continuously to the chip. The label width never shifts it.
+    // TODO: cleanup — no longer used after the draggable-connector refactor
+    // (2026-05-31); the connector is now an absolute SVG, not a flex wrapper.
     &__arc {
         display: flex;
         align-items: center;
+    }
+
+    // Draggable unit: label + chip move together via an inline transform set in
+    // ClassNode. Positioning context for the absolutely-placed label above it.
+    // pointer-events stays none so only the chip (below) is the drag handle.
+    &__draggable {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        pointer-events: none;
+        will-change: transform;
     }
 
     &__label {
@@ -1429,17 +1441,23 @@
         left: 0;
         right: 0;
         margin-bottom: 2px;
-        text-align: center;     // centered above the connector + chip
+        text-align: center;     // centered above the chip
         font-size: 11px;
         color: var(--color-text-secondary);
         white-space: nowrap;
         line-height: 1.2;
     }
 
+    // Connector: y=0 sits at the chip's default vertical center (top:50%).
+    // Width/height come from SVG attributes (depend on the drag offset);
+    // overflow:visible keeps the line drawn when the chip is dragged up/left.
     &__connector {
-        width: 24px;
-        height: 12px;
+        position: absolute;
+        left: 0;
+        top: 50%;
         display: block;
+        overflow: visible;
+        pointer-events: none;
     }
 
     &__chip {
@@ -1451,7 +1469,14 @@
         border-radius: 6px;
         background: var(--color-canvas-bg, transparent);
         white-space: nowrap;
-        pointer-events: auto;   // tooltip target
+        pointer-events: auto;   // tooltip + drag handle
+        cursor: grab;
+        touch-action: none;     // pointer drag works on touch without scrolling
+        user-select: none;
+
+        &:active {
+            cursor: grabbing;
+        }
     }
 
     &__name {

@@ -17,8 +17,12 @@ function loadConfig(): AvatarConfig {
                 parsed.colorIndex >= 0 && parsed.colorIndex < AVATAR_COLORS.length &&
                 parsed.iconIndex >= 0 && parsed.iconIndex < AVATAR_ICONS.length
             ) {
-                // Strip legacy patternIndex if present
-                return { colorIndex: parsed.colorIndex, iconIndex: parsed.iconIndex };
+                // Strip legacy patternIndex if present.
+                // STYLE row removed: avatar is initials-only. Coerce iconIndex to 0
+                // (the null/initials default) to neutralize any previously-saved icon
+                // for every consumer in one place. Full icon removal deferred to
+                // pre-3.0.0 cleanup.
+                return { colorIndex: parsed.colorIndex, iconIndex: 0 };
             }
         }
     } catch { /* ignore */ }

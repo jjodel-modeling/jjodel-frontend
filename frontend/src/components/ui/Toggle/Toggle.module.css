@@ -74,13 +74,13 @@
   padding: 2px;
 }
 
-/* CHECKED STATE - solid slate (not cyan!) */
+/* CHECKED STATE - active = cyan accent #0ea5e9 (design system A) */
 .toggleChecked {
-  background: #334155;
+  background: #0ea5e9;
 }
 
 .toggleChecked:hover:not(:disabled) {
-  background: #1e293b;
+  background: #0284c7;
 }
 
 /* THUMB - white circle with shadow */

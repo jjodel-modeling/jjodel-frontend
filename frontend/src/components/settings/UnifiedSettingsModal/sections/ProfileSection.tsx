@@ -205,32 +205,6 @@ function ProfileSectionComponent({ user, advanced }: ProfileSectionProps): JSX.E
                     </div>
                 </div>
 
-                {/* Style — initials + icons */}
-                <div className="avatar-customizer__label">Style</div>
-                <div className="avatar-customizer__style-grid">
-                    {AVATAR_ICONS.map((icon, index) => {
-                        const isSelected = avatarConfig.iconIndex === index;
-                        return (
-                            <button
-                                key={index}
-                                className={`avatar-customizer__style-option ${isSelected ? 'selected' : ''}`}
-                                style={isSelected
-                                    ? { backgroundColor: currentColor.hex, color: '#ffffff', borderColor: currentColor.hex }
-                                    : { color: currentColor.hex }
-                                }
-                                onClick={() => setAvatarConfig({ ...avatarConfig, iconIndex: index })}
-                                title={icon === null ? 'Initials' : icon.replace('bi-', '').replace(/-/g, ' ')}
-                            >
-                                {icon === null
-                                    ? <span>{`${user.name || ''}${user.surname ? ' ' + user.surname : ''}`
-                                        .trim().split(' ').map(n => n[0] || '').join('').toUpperCase().slice(0, 2) || '?'}</span>
-                                    : <i className={`bi ${icon}`} />
-                                }
-                            </button>
-                        );
-                    })}
-                </div>
-
                 {/* Color */}
                 <div className="avatar-customizer__label">Color</div>
                 <div className="avatar-customizer__color-row">
@@ -238,11 +212,12 @@ function ProfileSectionComponent({ user, advanced }: ProfileSectionProps): JSX.E
                         <button
                             key={color.name}
                             className={`avatar-customizer__color-swatch ${avatarConfig.colorIndex === index ? 'selected' : ''}`}
-                            style={{ backgroundColor: color.hex }}
                             onClick={() => setAvatarConfig({ ...avatarConfig, colorIndex: index })}
                             title={color.name}
                             aria-label={`Select ${color.name} avatar color`}
-                        />
+                        >
+                            <span className="avatar-customizer__color-dot" style={{ backgroundColor: color.hex }} />
+                        </button>
                     ))}
                 </div>
             </div>
