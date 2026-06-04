@@ -76,43 +76,38 @@ function deconflictBidirectionalEdges(
             }
         }
 
-        // Assign alternating anchors to bidirectional pairs
+        // Assign FACING (opposing) anchors to bidirectional pairs.
+        // Both directed edges share ONE facing side-pair (e.g. A-right / B-left); the
+        // two directions are separated on that shared channel downstream by
+        // computeSidePositions' pair-stable ordering. Mirrors the dominant-axis rule
+        // in jjomTransformers.computeOptimalHandles (vertical-dominant on ties) so that
+        // load-time and post-drag side selection agree.
         for (const pair of bidirectionalPairs) {
             const sourceRect = nodeRects.get(pair.forward.source);
             const targetRect = nodeRects.get(pair.forward.target);
 
             if (!sourceRect || !targetRect) continue;
 
-            // Determine dominant axis between nodes
+            // Geometry of the forward edge (forward.source → forward.target).
             const dx = targetRect.centerX - sourceRect.centerX;
             const dy = targetRect.centerY - sourceRect.centerY;
-            const isHorizontalDominant = Math.abs(dx) > Math.abs(dy);
+            const isVerticalDominant = Math.abs(dy) >= Math.abs(dx);
 
-            if (isHorizontalDominant) {
-                // Nodes are horizontally separated → use vertical anchors for separation
-                // Forward edge: top-to-top, Reverse edge: bottom-to-bottom
-                if (dx > 0) {
-                    // Target is to the right
-                    result.set(pair.forward.id, { sourceHandle: 'top', targetHandle: 'top' });
-                    result.set(pair.reverse.id, { sourceHandle: 'bottom', targetHandle: 'bottom' });
-                } else {
-                    // Target is to the left
-                    result.set(pair.forward.id, { sourceHandle: 'bottom', targetHandle: 'bottom' });
-                    result.set(pair.reverse.id, { sourceHandle: 'top', targetHandle: 'top' });
-                }
+            // ownerSide sits on forward.source's box; otherSide on forward.target's box.
+            let ownerSide: Side;
+            let otherSide: Side;
+            if (isVerticalDominant) {
+                if (dy >= 0) { ownerSide = 'bottom'; otherSide = 'top'; } // target below
+                else { ownerSide = 'top'; otherSide = 'bottom'; }         // target above
             } else {
-                // Nodes are vertically separated → use horizontal anchors for separation
-                // Forward edge: left-to-left, Reverse edge: right-to-right
-                if (dy > 0) {
-                    // Target is below
-                    result.set(pair.forward.id, { sourceHandle: 'left', targetHandle: 'left' });
-                    result.set(pair.reverse.id, { sourceHandle: 'right', targetHandle: 'right' });
-                } else {
-                    // Target is above
-                    result.set(pair.forward.id, { sourceHandle: 'right', targetHandle: 'right' });
-                    result.set(pair.reverse.id, { sourceHandle: 'left', targetHandle: 'left' });
-                }
+                if (dx > 0) { ownerSide = 'right'; otherSide = 'left'; }  // target right
+                else { ownerSide = 'left'; otherSide = 'right'; }         // target left
             }
+
+            // Forward: source on owner box, target on the other box.
+            result.set(pair.forward.id, { sourceHandle: ownerSide, targetHandle: otherSide });
+            // Reverse runs the opposite direction over the SAME facing channel.
+            result.set(pair.reverse.id, { sourceHandle: otherSide, targetHandle: ownerSide });
         }
     }
 
