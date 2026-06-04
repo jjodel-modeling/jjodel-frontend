@@ -833,6 +833,11 @@ everytime you put hands into a D-Object shape or valid values, you should docume
     // per-instance seeding is needed — bump only.
     private ['2.218 -> 2.219'](s: DState): DState { return s; }
 
+    // 2.219 → 2.220: introduce optional DVertex.ghostParentOffsets (per-parent drag offset of
+    // cross-MM ghost-parent chips, keyed by super-type DClass id). Default-absent (undefined →
+    // {} consumer-side), so no per-instance seeding is needed — bump only.
+    private ['2.219 -> 2.220'](s: DState): DState { return s; }
+
 }
 
 

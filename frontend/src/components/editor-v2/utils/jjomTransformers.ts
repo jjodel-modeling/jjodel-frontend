@@ -107,6 +107,7 @@ function classVertexToRFNode(vertex: any): Node<ClassNodeData> {
     // Cross-metamodel parents (extends pointing to a class in another metamodel).
     // Rendered as an in-node "ghost parent" overlay by ClassNode — no real edge/node.
     const ghostParents: GhostParentInfo[] = [];
+    const ghostParentOffsetsRaw = (vertex.__raw ?? vertex).ghostParentOffsets;
     try {
         for (const p of (lClass?.extends ?? [])) {
             if (p?.model && p.model.id !== lClass.model.id) {
@@ -115,6 +116,7 @@ function classVertexToRFNode(vertex: any): Node<ClassNodeData> {
                     name: p.name,
                     metamodelName: p.model.name,
                     fullname: p.fullname,
+                    offset: ghostParentOffsetsRaw?.[p.id],
                 });
             }
         }

@@ -66,6 +66,7 @@ export interface GhostParentInfo {
     name: string;
     metamodelName: string;
     fullname: string;
+    offset?: { dx: number; dy: number };
 }
 
 // === Ghost target (cross-metamodel reference, rendered as in-node overlay) ===

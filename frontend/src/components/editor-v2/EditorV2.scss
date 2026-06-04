@@ -1363,7 +1363,18 @@
     flex-direction: column;
     align-items: center;
     z-index: 4;              // above node body (cf. .node-problem-dot z-index: 3)
-    pointer-events: auto;
+    pointer-events: none;    // only the chip (below) is the drag handle
+
+    // Draggable unit: the chip moves together via an inline transform set in
+    // ClassNode. pointer-events stays none so only the chip is the drag handle.
+    &__draggable {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        pointer-events: none;
+        will-change: transform;
+    }
 
     &__chip {
         display: flex;
@@ -1374,6 +1385,14 @@
         border-radius: 6px;
         background: var(--color-canvas-bg, transparent);
         white-space: nowrap;
+        pointer-events: auto;   // tooltip + drag handle
+        cursor: grab;
+        touch-action: none;     // pointer drag works on touch without scrolling
+        user-select: none;
+
+        &:active {
+            cursor: grabbing;
+        }
     }
 
     &__name {
@@ -1390,6 +1409,7 @@
         width: 12px;
         height: 18px;
         display: block;
+        overflow: visible;      // line/triangle can draw beyond the box when dragged
     }
 }
 
