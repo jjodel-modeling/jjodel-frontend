@@ -75,6 +75,8 @@ export interface GhostTargetInfo {
     targetMetamodel: string;
     cardinality: string;
     targetFullname: string;
+    refId?: string;
+    offset?: { dx: number; dy: number };
 }
 
 // === Node Data ===

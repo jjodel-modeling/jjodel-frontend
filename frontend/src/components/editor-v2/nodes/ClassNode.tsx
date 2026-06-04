@@ -15,6 +15,7 @@ import {
 import type { ClassNodeData } from '../types';
 import { createAttribute, createOperation } from '../types';
 import { JjodelEvents } from '../../../events/registry';
+import { TRANSACTION, SetFieldAction } from '../../../joiner';
 
 export type ClassNodeType = Node<ClassNodeData, 'classNode'>;
 
@@ -64,8 +65,28 @@ function ClassNode({ id, data, selected, width, height }: NodeProps<ClassNodeTyp
     // offset is keyed by gt.refName (unique among a class's references, and all
     // chips live in this one ClassNode) and lives only in local state — it
     // resets on reload, like AnchorConfig. No DVertex / D-layer write.
-    const [ghostOffsets, setGhostOffsets] = useState<Record<string, { dx: number; dy: number }>>({});
+    // Seed once at mount from the persisted offsets carried on each ghost target
+    // (D-layer DVertex.ghostOffsets, keyed by refId, mapped back to refName here).
+    // State stays keyed by refName; do NOT add an effect that re-syncs from data.
+    const [ghostOffsets, setGhostOffsets] = useState<Record<string, { dx: number; dy: number }>>(
+        () => {
+            const init: Record<string, { dx: number; dy: number }> = {};
+            (data.ghostTargets ?? []).forEach(gt => { if (gt.offset) init[gt.refName] = gt.offset; });
+            return init;
+        }
+    );
     const ghostDragRef = useRef<{ refName: string; startX: number; startY: number; baseDx: number; baseDy: number } | null>(null);
+
+    // Persist the by-refName offsets to the source DVertex as a by-refId map.
+    // Mirrors syncPositionToJjom (canvasToJjom.ts): TRANSACTION + SetFieldAction.
+    const persistGhostOffsets = useCallback((byRefName: Record<string, { dx: number; dy: number }>) => {
+        const map: { [refId: string]: { dx: number; dy: number } } = {};
+        for (const [refName, off] of Object.entries(byRefName)) {
+            const refId = data.ghostTargets?.find(gt => gt.refName === refName)?.refId;
+            if (refId) map[refId] = off;
+        }
+        TRANSACTION('persist ghost offset', () => { SetFieldAction.new(id as any, 'ghostOffsets' as any, map, undefined, false); });
+    }, [id, data.ghostTargets]);
 
     const onGhostPointerDown = useCallback((e: React.PointerEvent, refName: string) => {
         e.stopPropagation();   // do not let the press start a node drag / pan
@@ -84,20 +105,27 @@ function ClassNode({ id, data, selected, width, height }: NodeProps<ClassNodeTyp
     }, [getViewport]);
 
     const onGhostPointerUp = useCallback((e: React.PointerEvent) => {
-        if (!ghostDragRef.current) return;
+        const d = ghostDragRef.current;
+        if (d) {
+            const zoom = getViewport().zoom || 1;
+            const dx = d.baseDx + (e.clientX - d.startX) / zoom;
+            const dy = d.baseDy + (e.clientY - d.startY) / zoom;
+            const next = { ...ghostOffsets, [d.refName]: { dx, dy } };
+            setGhostOffsets(next);
+            persistGhostOffsets(next);
+        }
         try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* noop */ }
         ghostDragRef.current = null;
-    }, []);
+    }, [ghostOffsets, getViewport, persistGhostOffsets]);
 
     // Double-click resets a chip to its default anchored position.
     const onGhostReset = useCallback((refName: string) => {
-        setGhostOffsets(prev => {
-            if (!prev[refName]) return prev;
-            const next = { ...prev };
-            delete next[refName];
-            return next;
-        });
-    }, []);
+        if (!ghostOffsets[refName]) return;
+        const next = { ...ghostOffsets };
+        delete next[refName];
+        setGhostOffsets(next);
+        persistGhostOffsets(next);
+    }, [ghostOffsets, persistGhostOffsets]);
 
     // Node root + per-connector SVG refs + per-chip DOM refs, and the measured
     // per-stub geometry in flow px: the connector origin's vertical offset from

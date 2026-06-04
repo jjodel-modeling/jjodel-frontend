@@ -1682,6 +1682,8 @@ export class DVertex extends DGraphElement { // DVoidVertex
     h!: number;
     isResized!: boolean;
     snap?: GraphPoint;
+    // Persisted per-reference drag offset of cross-MM ghost-target chips, keyed by refId.
+    ghostOffsets?: { [refId: string]: { dx: number; dy: number } };
     // size!: GraphSize; // virtual, gets extracted from this. x and y are stored directly here as it extends GraphSize
     // personal attributes
     __isDVertex!: true;

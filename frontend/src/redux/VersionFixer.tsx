@@ -828,6 +828,11 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         return s;
     }
 
+    // 2.218 → 2.219: introduce optional DVertex.ghostOffsets (per-refId drag offset of
+    // cross-MM ghost-target chips). Default-absent (undefined → {} consumer-side), so no
+    // per-instance seeding is needed — bump only.
+    private ['2.218 -> 2.219'](s: DState): DState { return s; }
+
 }
 
 

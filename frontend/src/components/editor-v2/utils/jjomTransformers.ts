@@ -124,6 +124,7 @@ function classVertexToRFNode(vertex: any): Node<ClassNodeData> {
     // metamodel). Rendered as an in-node "ghost target" stub by ClassNode — no
     // real edge (the leftover self-loop edge is suppressed in jjomEdgeToRFEdge).
     const ghostTargets: GhostTargetInfo[] = [];
+    const ghostOffsetsRaw = (vertex.__raw ?? vertex).ghostOffsets;
     try {
         for (const ref of (lClass?.references ?? [])) {
             const t = ref?.type;
@@ -136,6 +137,8 @@ function classVertexToRFNode(vertex: any): Node<ClassNodeData> {
                     targetMetamodel: t.model.name,
                     cardinality: `${lower}..${upper === -1 ? '*' : upper}`,
                     targetFullname: t.fullname,
+                    refId: ref.id,
+                    offset: ghostOffsetsRaw?.[ref.id],
                 });
             }
         }
