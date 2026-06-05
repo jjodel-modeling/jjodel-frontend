@@ -15,6 +15,7 @@ import {
 import type { ClassNodeData } from '../types';
 import { createAttribute, createOperation } from '../types';
 import { JjodelEvents } from '../../../events/registry';
+import { TRANSACTION, SetFieldAction } from '../../../joiner';
 
 export type ClassNodeType = Node<ClassNodeData, 'classNode'>;
 
@@ -64,8 +65,28 @@ function ClassNode({ id, data, selected, width, height }: NodeProps<ClassNodeTyp
     // offset is keyed by gt.refName (unique among a class's references, and all
     // chips live in this one ClassNode) and lives only in local state — it
     // resets on reload, like AnchorConfig. No DVertex / D-layer write.
-    const [ghostOffsets, setGhostOffsets] = useState<Record<string, { dx: number; dy: number }>>({});
+    // Seed once at mount from the persisted offsets carried on each ghost target
+    // (D-layer DVertex.ghostOffsets, keyed by refId, mapped back to refName here).
+    // State stays keyed by refName; do NOT add an effect that re-syncs from data.
+    const [ghostOffsets, setGhostOffsets] = useState<Record<string, { dx: number; dy: number }>>(
+        () => {
+            const init: Record<string, { dx: number; dy: number }> = {};
+            (data.ghostTargets ?? []).forEach(gt => { if (gt.offset) init[gt.refName] = gt.offset; });
+            return init;
+        }
+    );
     const ghostDragRef = useRef<{ refName: string; startX: number; startY: number; baseDx: number; baseDy: number } | null>(null);
+
+    // Persist the by-refName offsets to the source DVertex as a by-refId map.
+    // Mirrors syncPositionToJjom (canvasToJjom.ts): TRANSACTION + SetFieldAction.
+    const persistGhostOffsets = useCallback((byRefName: Record<string, { dx: number; dy: number }>) => {
+        const map: { [refId: string]: { dx: number; dy: number } } = {};
+        for (const [refName, off] of Object.entries(byRefName)) {
+            const refId = data.ghostTargets?.find(gt => gt.refName === refName)?.refId;
+            if (refId) map[refId] = off;
+        }
+        TRANSACTION('persist ghost offset', () => { SetFieldAction.new(id as any, 'ghostOffsets' as any, map, undefined, false); });
+    }, [id, data.ghostTargets]);
 
     const onGhostPointerDown = useCallback((e: React.PointerEvent, refName: string) => {
         e.stopPropagation();   // do not let the press start a node drag / pan
@@ -84,20 +105,89 @@ function ClassNode({ id, data, selected, width, height }: NodeProps<ClassNodeTyp
     }, [getViewport]);
 
     const onGhostPointerUp = useCallback((e: React.PointerEvent) => {
-        if (!ghostDragRef.current) return;
+        const d = ghostDragRef.current;
+        if (d) {
+            const zoom = getViewport().zoom || 1;
+            const dx = d.baseDx + (e.clientX - d.startX) / zoom;
+            const dy = d.baseDy + (e.clientY - d.startY) / zoom;
+            const next = { ...ghostOffsets, [d.refName]: { dx, dy } };
+            setGhostOffsets(next);
+            persistGhostOffsets(next);
+        }
         try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* noop */ }
         ghostDragRef.current = null;
-    }, []);
+    }, [ghostOffsets, getViewport, persistGhostOffsets]);
 
     // Double-click resets a chip to its default anchored position.
     const onGhostReset = useCallback((refName: string) => {
-        setGhostOffsets(prev => {
-            if (!prev[refName]) return prev;
-            const next = { ...prev };
-            delete next[refName];
-            return next;
-        });
-    }, []);
+        if (!ghostOffsets[refName]) return;
+        const next = { ...ghostOffsets };
+        delete next[refName];
+        setGhostOffsets(next);
+        persistGhostOffsets(next);
+    }, [ghostOffsets, persistGhostOffsets]);
+
+    // === Ghost-parent drag (mirrors ghost-target, keyed by super-type DClass id) ===
+    // The cross-metamodel parent chip can be dragged out of crowded areas; the
+    // offset persists to the source DVertex (D-layer DVertex.ghostParentOffsets,
+    // keyed by parent id) — a SEPARATE field from ghostOffsets so the parent and
+    // target persists never clobber each other. Seed once at mount from the
+    // persisted offset carried on each ghost parent. State stays keyed by parent
+    // id; do NOT add an effect that re-syncs from data.
+    const [ghostParentOffsets, setGhostParentOffsets] = useState<Record<string, { dx: number; dy: number }>>(
+        () => {
+            const init: Record<string, { dx: number; dy: number }> = {};
+            (data.ghostParents ?? []).forEach(p => { if (p.offset) init[p.id] = p.offset; });
+            return init;
+        }
+    );
+    const ghostParentDragRef = useRef<{ id: string; startX: number; startY: number; baseDx: number; baseDy: number } | null>(null);
+
+    // Persist the by-id parent offsets to the source DVertex. The state is already
+    // id-keyed, so no name↔id bridge — write the map directly. Drag UI handler →
+    // TRANSACTION is the correct context (not sync-adjacent like useJjomSync).
+    const persistGhostParentOffsets = useCallback((map: Record<string, { dx: number; dy: number }>) => {
+        TRANSACTION('persist ghost parent offset', () => { SetFieldAction.new(id as any, 'ghostParentOffsets' as any, map, undefined, false); });
+    }, [id]);
+
+    const onGhostParentPointerDown = useCallback((e: React.PointerEvent, parentId: string) => {
+        e.stopPropagation();   // do not let the press start a node drag / pan
+        try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* noop */ }
+        const cur = ghostParentOffsets[parentId] ?? { dx: 0, dy: 0 };
+        ghostParentDragRef.current = { id: parentId, startX: e.clientX, startY: e.clientY, baseDx: cur.dx, baseDy: cur.dy };
+    }, [ghostParentOffsets]);
+
+    const onGhostParentPointerMove = useCallback((e: React.PointerEvent) => {
+        const d = ghostParentDragRef.current;
+        if (!d) return;
+        const zoom = getViewport().zoom || 1;   // screen px -> flow px
+        const dx = d.baseDx + (e.clientX - d.startX) / zoom;
+        const dy = d.baseDy + (e.clientY - d.startY) / zoom;
+        setGhostParentOffsets(prev => ({ ...prev, [d.id]: { dx, dy } }));
+    }, [getViewport]);
+
+    const onGhostParentPointerUp = useCallback((e: React.PointerEvent) => {
+        const d = ghostParentDragRef.current;
+        if (d) {
+            const zoom = getViewport().zoom || 1;
+            const dx = d.baseDx + (e.clientX - d.startX) / zoom;
+            const dy = d.baseDy + (e.clientY - d.startY) / zoom;
+            const next = { ...ghostParentOffsets, [d.id]: { dx, dy } };
+            setGhostParentOffsets(next);
+            persistGhostParentOffsets(next);
+        }
+        try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* noop */ }
+        ghostParentDragRef.current = null;
+    }, [ghostParentOffsets, getViewport, persistGhostParentOffsets]);
+
+    // Double-click resets the parent chip to its default anchored position.
+    const onGhostParentReset = useCallback((parentId: string) => {
+        if (!ghostParentOffsets[parentId]) return;
+        const next = { ...ghostParentOffsets };
+        delete next[parentId];
+        setGhostParentOffsets(next);
+        persistGhostParentOffsets(next);
+    }, [ghostParentOffsets, persistGhostParentOffsets]);
 
     // Node root + per-connector SVG refs + per-chip DOM refs, and the measured
     // per-stub geometry in flow px: the connector origin's vertical offset from
@@ -348,6 +438,24 @@ function ClassNode({ id, data, selected, width, height }: NodeProps<ClassNodeTyp
         return `[${lower}..${upper}]`;
     };
 
+    // --- Ghost-parent connector geometry (follows the dragged chip) ---
+    // Connector-local coords = the 12x18 viewBox (1 unit = 1 flow px).
+    // (6,18) = node-top-center (node-end, stays pinned); (6,1) = chip-bottom apex
+    // at rest (= the old static apex). Same offset that drives the chip transform.
+    const gpOff = ghost ? (ghostParentOffsets[ghost.id] ?? { dx: 0, dy: 0 }) : { dx: 0, dy: 0 };
+    const gpStartX = 6, gpStartY = 18;                       // node-end, fixed
+    const gpApexX = 6 + gpOff.dx, gpApexY = 1 + gpOff.dy;    // chip-end, follows drag
+    const GP_TL = 7, GP_TW = 8;                              // triangle length / base width (from static)
+    const gpAx = gpApexX - gpStartX, gpAy = gpApexY - gpStartY;
+    const gpDegenerate = gpAx === 0 && gpAy === 0;           // chip dragged onto the node-end
+    const gpAng = Math.atan2(gpAy, gpAx);
+    const gpCos = Math.cos(gpAng), gpSin = Math.sin(gpAng);
+    const gpBaseCx = gpApexX - GP_TL * gpCos, gpBaseCy = gpApexY - GP_TL * gpSin;
+    const gpPx = -gpSin, gpPy = gpCos;                       // axis perpendicular
+    const gpB1x = gpBaseCx + (GP_TW / 2) * gpPx, gpB1y = gpBaseCy + (GP_TW / 2) * gpPy;
+    const gpB2x = gpBaseCx - (GP_TW / 2) * gpPx, gpB2y = gpBaseCy - (GP_TW / 2) * gpPy;
+    const gpTriangle = `${gpApexX.toFixed(1)},${gpApexY.toFixed(1)} ${gpB1x.toFixed(1)},${gpB1y.toFixed(1)} ${gpB2x.toFixed(1)},${gpB2y.toFixed(1)}`;
+
     return (
         <div
             ref={rootRef}
@@ -374,13 +482,41 @@ function ClassNode({ id, data, selected, width, height }: NodeProps<ClassNodeTyp
                     data-ghost-parent-id={ghost.id}
                     title={ghost.fullname}
                 >
-                    <div className="ghost-parent-stub__chip">
-                        <span className="ghost-parent-stub__name">{ghost.name}</span>
-                        <span className="ghost-parent-stub__mm">{ghost.metamodelName}</span>
+                    {/* Draggable unit: the chip moves via an inline transform; the
+                        connector below is computed and follows the dragged chip
+                        (its node-end stays pinned at node-top-center). `nodrag`
+                        stops ReactFlow from panning the node on press. */}
+                    <div
+                        className="ghost-parent-stub__draggable nodrag"
+                        style={{ transform: `translate(${ghostParentOffsets[ghost.id]?.dx ?? 0}px, ${ghostParentOffsets[ghost.id]?.dy ?? 0}px)` }}
+                    >
+                        <div
+                            className="ghost-parent-stub__chip"
+                            title={ghost.fullname}
+                            onPointerDown={(e) => onGhostParentPointerDown(e, ghost.id)}
+                            onPointerMove={onGhostParentPointerMove}
+                            onPointerUp={onGhostParentPointerUp}
+                            onDoubleClick={() => onGhostParentReset(ghost.id)}
+                        >
+                            <span className="ghost-parent-stub__name">{ghost.name}</span>
+                            <span className="ghost-parent-stub__mm">{ghost.metamodelName}</span>
+                        </div>
                     </div>
                     <svg className="ghost-parent-stub__connector" viewBox="0 0 12 18" aria-hidden="true">
-                        <polygon points="6,1 2,8 10,8" fill="none" stroke="var(--color-canvas-accent)" strokeWidth="1.2" strokeLinejoin="round" />
-                        <line x1="6" y1="8" x2="6" y2="18" stroke="var(--color-canvas-accent)" strokeWidth="1.2" />
+                        {!gpDegenerate && (
+                            <>
+                                <line
+                                    x1={gpStartX} y1={gpStartY}
+                                    x2={gpBaseCx.toFixed(1)} y2={gpBaseCy.toFixed(1)}
+                                    stroke="var(--color-canvas-accent)" strokeWidth="1.2"
+                                />
+                                <polygon
+                                    points={gpTriangle}
+                                    fill="none" stroke="var(--color-canvas-accent)"
+                                    strokeWidth="1.2" strokeLinejoin="round"
+                                />
+                            </>
+                        )}
                     </svg>
                 </div>
             )}
@@ -449,6 +585,29 @@ function ClassNode({ id, data, selected, width, height }: NodeProps<ClassNodeTyp
                         const bly = (endBorderY - AL * sin - AW * cos).toFixed(1);
                         const brx = (endBorderX - AL * cos - AW * sin).toFixed(1);
                         const bry = (endBorderY - AL * sin + AW * cos).toFixed(1);
+                        // Source-side UML marker by reference kind. The kind is read
+                        // from the matching MetaReference already in props
+                        // (data.references carries `kind`, keyed by name — the cross-MM
+                        // ref appears there too), so no transformer/types change is needed.
+                        // composition → filled diamond, aggregation → hollow diamond,
+                        // association → none. The target arrowhead is unchanged in all cases.
+                        const refKind = data.references?.find((r) => r.name === gt.refName)?.kind ?? 'association';
+                        const hasDiamond = refKind === 'composition' || refKind === 'aggregation';
+                        // Rhombus along the axis at the node border (B = startX,startY):
+                        // T toward the chip, S1/S2 the side vertices. Same 3:2 proportions
+                        // as the same-MM edge markers (UnifiedEdge). For comp/agg the line
+                        // starts at T so it never shows through the (hollow) diamond.
+                        const DL = 12, DW = 8;            // diamond length / width (flow px)
+                        const perpX = -sin, perpY = cos;  // axis perpendicular
+                        const dTx = startX + cos * DL, dTy = startY + sin * DL;
+                        const dS1x = startX + cos * (DL / 2) + perpX * (DW / 2);
+                        const dS1y = startY + sin * (DL / 2) + perpY * (DW / 2);
+                        const dS2x = startX + cos * (DL / 2) - perpX * (DW / 2);
+                        const dS2y = startY + sin * (DL / 2) - perpY * (DW / 2);
+                        const diamondPoints = `${startX.toFixed(1)},${startY.toFixed(1)} ${dS1x.toFixed(1)},${dS1y.toFixed(1)} ${dTx.toFixed(1)},${dTy.toFixed(1)} ${dS2x.toFixed(1)},${dS2y.toFixed(1)}`;
+                        const diamondFill = refKind === 'composition' ? 'var(--color-canvas-accent)' : 'var(--color-canvas-bg)';
+                        const lineStartX = hasDiamond ? dTx : startX;
+                        const lineStartY = hasDiamond ? dTy : startY;
                         return (
                             <div key={`${gt.refName}-${i}`} className="ghost-target-stub__item">
                                 {/* Connector: absolute SVG whose (0,0) sits on the node
@@ -468,8 +627,11 @@ function ClassNode({ id, data, selected, width, height }: NodeProps<ClassNodeTyp
                                 >
                                     {!degenerate && (
                                         <>
-                                            <line x1={startX.toFixed(1)} y1={startY.toFixed(1)} x2={endBorderX.toFixed(1)} y2={endBorderY.toFixed(1)} stroke="var(--color-canvas-accent)" strokeWidth="1.2" />
+                                            <line x1={lineStartX.toFixed(1)} y1={lineStartY.toFixed(1)} x2={endBorderX.toFixed(1)} y2={endBorderY.toFixed(1)} stroke="var(--color-canvas-accent)" strokeWidth="1.2" />
                                             <polyline points={`${blx},${bly} ${endBorderX.toFixed(1)},${endBorderY.toFixed(1)} ${brx},${bry}`} fill="none" stroke="var(--color-canvas-accent)" strokeWidth="1.2" strokeLinejoin="round" strokeLinecap="round" />
+                                            {hasDiamond && (
+                                                <polygon points={diamondPoints} fill={diamondFill} stroke="var(--color-canvas-accent)" strokeWidth="1.2" strokeLinejoin="round" />
+                                            )}
                                         </>
                                     )}
                                 </svg>

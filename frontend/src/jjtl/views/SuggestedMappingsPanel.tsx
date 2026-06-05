@@ -17,6 +17,7 @@ import {
     SuggestionResult
 } from '../types/suggestions';
 import { mappingSuggestionService } from '../services';
+import { downloadSuggestedMappings } from '../utils/exportSuggestedMappings';
 import { MappingCard } from './MappingCard';
 import GrammarTab from './GrammarTab';
 import type { GrammarRule } from '../components/GrammarDiagram/types';
@@ -26,7 +27,7 @@ import {
     MappingAnalysisStep,
     MappingAnalysisStepEntry,
 } from '../types/suggestions';
-import {AIConfig, JodieConfig} from "../../types/jodie";
+import {AI, AIConfig, JodieConfig} from "../../types/jodie";
 import { useSettingsModalSafe } from '../../contexts/SettingsModalContext';
 
 export interface SuggestedMappingsPanelProps {
@@ -40,6 +41,8 @@ export interface SuggestedMappingsPanelProps {
     getTargetMetamodel?: () => MetamodelElement[];
     sourceMetamodelName?: string;
     targetMetamodelName?: string;
+    /** Transformation name, used for the JSON export filename + metadata. */
+    transformationName?: string;
     /** Callback when a mapping is hovered (for arrow highlighting) */
     onMappingHover?: (mappingId: string | null) => void;
     /** Currently hovered mapping ID (from external source like arrow hover) */
@@ -227,6 +230,7 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
     getTargetMetamodel,
     sourceMetamodelName = 'Source',
     targetMetamodelName = 'Target',
+    transformationName,
     onMappingHover,
     hoveredMapping,
     onSuggestionsChange,
@@ -506,6 +510,35 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
         onInsertCode?.(code);
     }, [toInsertSuggestions, onInsertCode, getSourceMetamodel, staticSourceMetamodel]);
 
+    // Export the full current suggestion list (every status) as a JSON document.
+    // Provider/model/label mirror the visible ProviderModelSelector selection.
+    const handleExportJson = useCallback(() => {
+        if (!result || result.suggestions.length === 0) return;
+
+        const modelId = AIConfig.getPreferredModel('mappings') ?? null;
+        const version = resolvedProvider && modelId ? AI[resolvedProvider]?.versions[modelId] : undefined;
+        const modelLabel = (() => {
+            if (!modelId || !version) return null;
+            const label = version.label;
+            const startsWithProvider = label.toLowerCase().startsWith(resolvedProvider.toLowerCase());
+            return startsWithProvider ? label : `${resolvedProvider} ${label}`;
+        })();
+
+        const sourceMetamodel = getSourceMetamodel ? getSourceMetamodel() : staticSourceMetamodel;
+
+        downloadSuggestedMappings({
+            suggestions: result.suggestions,
+            transformationName,
+            sourceMetamodelName,
+            targetMetamodelName,
+            provider: resolvedProvider ?? null,
+            model: modelId,
+            modelLabel,
+            generatedAt: new Date().toISOString(),
+            getJjtl: (m) => generateJjtlCode([m], sourceMetamodel),
+        });
+    }, [result, resolvedProvider, transformationName, sourceMetamodelName, targetMetamodelName, getSourceMetamodel, staticSourceMetamodel]);
+
     // Handle hover
     const handleHover = useCallback((id: string | null) => {
         setInternalHoveredId(id);
@@ -652,6 +685,18 @@ export const SuggestedMappingsPanel: React.FC<SuggestedMappingsPanelProps> = ({
                                 <span className="stat to-insert">
                                     <strong>{toInsertSuggestions.length}</strong> to insert
                                 </span>
+                                {result.suggestions.length > 0 && (
+                                    <button
+                                        type="button"
+                                        className="select-all-link"
+                                        style={{ marginLeft: 'auto' }}
+                                        onClick={handleExportJson}
+                                        title="Export suggested mappings as JSON"
+                                        aria-label="Export suggested mappings as JSON"
+                                    >
+                                        <i className="bi bi-download" /> Export JSON
+                                    </button>
+                                )}
                             </div>
 
                             {/* TO INSERT Section */}

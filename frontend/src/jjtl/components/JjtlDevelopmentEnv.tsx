@@ -742,6 +742,7 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
                             getTargetMetamodel={getTargetMetamodel}
                             sourceMetamodelName={sourceMetamodelName}
                             targetMetamodelName={targetMetamodelName}
+                            transformationName={ast?.name || 'Untitled'}
                             hoveredMapping={hoveredSuggestion}
                             onMappingHover={handleSuggestionHover}
                             onSuggestionsChange={handleSuggestionsChange}

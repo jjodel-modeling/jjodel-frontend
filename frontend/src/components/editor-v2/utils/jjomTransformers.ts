@@ -107,6 +107,7 @@ function classVertexToRFNode(vertex: any): Node<ClassNodeData> {
     // Cross-metamodel parents (extends pointing to a class in another metamodel).
     // Rendered as an in-node "ghost parent" overlay by ClassNode — no real edge/node.
     const ghostParents: GhostParentInfo[] = [];
+    const ghostParentOffsetsRaw = (vertex.__raw ?? vertex).ghostParentOffsets;
     try {
         for (const p of (lClass?.extends ?? [])) {
             if (p?.model && p.model.id !== lClass.model.id) {
@@ -115,6 +116,7 @@ function classVertexToRFNode(vertex: any): Node<ClassNodeData> {
                     name: p.name,
                     metamodelName: p.model.name,
                     fullname: p.fullname,
+                    offset: ghostParentOffsetsRaw?.[p.id],
                 });
             }
         }
@@ -124,6 +126,7 @@ function classVertexToRFNode(vertex: any): Node<ClassNodeData> {
     // metamodel). Rendered as an in-node "ghost target" stub by ClassNode — no
     // real edge (the leftover self-loop edge is suppressed in jjomEdgeToRFEdge).
     const ghostTargets: GhostTargetInfo[] = [];
+    const ghostOffsetsRaw = (vertex.__raw ?? vertex).ghostOffsets;
     try {
         for (const ref of (lClass?.references ?? [])) {
             const t = ref?.type;
@@ -136,6 +139,8 @@ function classVertexToRFNode(vertex: any): Node<ClassNodeData> {
                     targetMetamodel: t.model.name,
                     cardinality: `${lower}..${upper === -1 ? '*' : upper}`,
                     targetFullname: t.fullname,
+                    refId: ref.id,
+                    offset: ghostOffsetsRaw?.[ref.id],
                 });
             }
         }

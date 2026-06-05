@@ -66,6 +66,7 @@ export interface GhostParentInfo {
     name: string;
     metamodelName: string;
     fullname: string;
+    offset?: { dx: number; dy: number };
 }
 
 // === Ghost target (cross-metamodel reference, rendered as in-node overlay) ===
@@ -75,6 +76,8 @@ export interface GhostTargetInfo {
     targetMetamodel: string;
     cardinality: string;
     targetFullname: string;
+    refId?: string;
+    offset?: { dx: number; dy: number };
 }
 
 // === Node Data ===
