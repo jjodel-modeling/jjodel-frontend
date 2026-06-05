@@ -86,6 +86,7 @@ export function computeHandlePercent(params: {
 
 /** Minimal edge shape consumed by the cross-role positioning functions. */
 interface EndpointEdge {
+    id?: string;
     source: string;
     target: string;
     sourceHandle?: string | null;
@@ -107,6 +108,12 @@ export interface SideEndpoint {
      *  backward-compat of the exported interface — always set by
      *  computeSideEndpoints in practice. */
     oppositeNodeId?: string;
+    /** Id of the edge using this endpoint. Identical viewed from either endpoint,
+     *  so it is the pair-stable tiebreak in computeSidePositions: the same edge
+     *  ranks identically on both facing sides → matched fractions → aligned paths.
+     *  Optional only for backward-compat of the exported interface — always set by
+     *  computeSideEndpoints in practice. */
+    edgeId?: string;
 }
 
 /**
@@ -127,19 +134,19 @@ export function computeSideEndpoints(
     side: Side,
 ): SideEndpoint[] {
     const byKey = new Map<string, SideEndpoint>();
-    const note = (handleId: string, role: 'source' | 'target', type: string | null | undefined, oppositeNodeId: string) => {
+    const note = (handleId: string, role: 'source' | 'target', type: string | null | undefined, oppositeNodeId: string, edgeId: string | undefined) => {
         const edgeType: SideEndpoint['edgeType'] = type === 'inheritance' ? 'inheritance' : 'reference';
         const key = `${handleId}:${role}`;
         const existing = byKey.get(key);
-        if (!existing) byKey.set(key, { handleId, role, edgeType, oppositeNodeId });
+        if (!existing) byKey.set(key, { handleId, role, edgeType, oppositeNodeId, edgeId });
         else if (edgeType === 'inheritance') existing.edgeType = 'inheritance';
     };
     for (const e of edges) {
         if (e.source === nodeId && e.sourceHandle && getBaseSide(e.sourceHandle) === side) {
-            note(e.sourceHandle, 'source', e.type, e.target);
+            note(e.sourceHandle, 'source', e.type, e.target, e.id);
         }
         if (e.target === nodeId && e.targetHandle && getBaseSide(e.targetHandle) === side) {
-            note(e.targetHandle, 'target', e.type, e.source);
+            note(e.targetHandle, 'target', e.type, e.source, e.id);
         }
     }
     return Array.from(byKey.values());
@@ -194,9 +201,8 @@ export function computeSidePositions(
         return useY ? p.centerY : p.centerX;
     };
 
-    // Role-primary order: the deterministic fallback used when no geometry is
-    // supplied (computeHandlePositionForNode -> useTreeLayout passes none and
-    // must stay byte-identical to the previous behavior).
+    // Role-primary order: deterministic fallback for inheritance (centered,
+    // geometry-independent) and for degenerate inputs that carry no edge id.
     const bySortKey = (a: SideEndpoint, b: SideEndpoint) => {
         const ra = a.role === 'source' ? 0 : 1;
         const rb = b.role === 'source' ? 0 : 1;
@@ -204,14 +210,28 @@ export function computeSidePositions(
         return parseHandleId(a.handleId).index - parseHandleId(b.handleId).index;
     };
 
+    // Pair-stable tiebreak for references when the opposite centroid ties — i.e. the
+    // two endpoints share the same opposite node (a bidirectional pair, or two edges
+    // to the same node). The edge id is identical viewed from either endpoint, so the
+    // same edge ranks identically on BOTH facing sides → matched fractions → aligned
+    // (straight/parallel) paths. This replaces the old role-primary tiebreak, which
+    // ordered source-before-target on each side and therefore inverted the matched
+    // edge across the two facing sides, producing the diagonal jog (defects 2 & 3).
+    // A non-self-loop edge contributes at most one endpoint per side, so the ids are
+    // distinct here; when an id is absent (degenerate input) we fall back to
+    // bySortKey, leaving the no-geometry useTreeLayout path unchanged.
+    const byPairStable = (a: SideEndpoint, b: SideEndpoint) => {
+        if (a.edgeId && b.edgeId && a.edgeId !== b.edgeId) return a.edgeId < b.edgeId ? -1 : 1;
+        return bySortKey(a, b);
+    };
+
     // Geometry-aware order for references: opposite-centroid first, then the
-    // role/index fallback as tiebreakers. A missing or equal centroid reproduces
-    // bySortKey exactly, so absent nodePositions == previous behavior.
+    // pair-stable tiebreak. A missing or equal centroid falls to byPairStable.
     const byGeometry = (a: SideEndpoint, b: SideEndpoint) => {
         const ca = oppositeCoord(a);
         const cb = oppositeCoord(b);
         if (ca !== undefined && cb !== undefined && ca !== cb) return ca - cb;
-        return bySortKey(a, b);
+        return byPairStable(a, b);
     };
 
     // Inheritance stays on bySortKey (centered, geometry-independent) so the
