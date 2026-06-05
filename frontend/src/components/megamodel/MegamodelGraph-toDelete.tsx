@@ -147,6 +147,7 @@ interface EdgeStyle {
 
 const EDGE_STYLES: Record<EdgeType, EdgeStyle> = {
     conformsTo:      { color: '#94a3b8', strokeDasharray: '6 3',  strokeWidth: 1.5, markerId: 'mm-arrow-slate'  },
+    uses:            { color: '#0F766E',                           strokeWidth: 1.5, markerId: 'mm-arrow-teal'   },
     inputOf:         { color: '#0ea5e9',                           strokeWidth: 1.5, markerId: 'mm-arrow-cyan'   },
     outputOf:        { color: '#10b981',                           strokeWidth: 1.5, markerId: 'mm-arrow-green'  },
     tracedBy:        { color: '#f59e0b', strokeDasharray: '2 4',  strokeWidth: 1.5, markerId: 'mm-arrow-amber'  },
@@ -158,6 +159,7 @@ const EDGE_STYLES: Record<EdgeType, EdgeStyle> = {
 
 const EDGE_LABELS: Record<EdgeType, string> = {
     conformsTo:     'conforms to',
+    uses:           'uses',
     inputOf:        'input of',
     outputOf:       'output of',
     tracedBy:       'traced by',

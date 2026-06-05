@@ -67,6 +67,43 @@ describe('inferMegamodelEdges', () => {
         expect(edges.filter(e => e.type === 'conformsTo')).toHaveLength(0)
     })
 
+    it('produces a uses edge: metamodel → metamodel (cross-metamodel dependency)', () => {
+        const artifacts = makeArtifacts({
+            metamodels: [
+                { id: 'mm1', name: 'PetriNet', usesMetamodelIds: ['mm2'] },
+                { id: 'mm2', name: 'WorkflowNet' },
+            ],
+        })
+        const uses = inferMegamodelEdges(artifacts).filter(e => e.type === 'uses')
+        expect(uses).toHaveLength(1)
+        expect(uses[0].source.id).toBe('mm1')
+        expect(uses[0].target.id).toBe('mm2')
+        expect(uses[0].origin).toBe('derived')
+        expect(uses[0].id).toBe('derived_mm1_uses_mm2')
+    })
+
+    it('collapses multiple cross-metamodel links into a single uses edge and ignores self/unknown ids', () => {
+        const artifacts = makeArtifacts({
+            metamodels: [
+                { id: 'mm1', name: 'PetriNet', usesMetamodelIds: ['mm2', 'mm2', 'mm1', 'ghost'] },
+                { id: 'mm2', name: 'WorkflowNet' },
+            ],
+        })
+        const uses = inferMegamodelEdges(artifacts).filter(e => e.type === 'uses')
+        expect(uses).toHaveLength(1)
+        expect(uses[0].target.id).toBe('mm2')
+    })
+
+    it('produces no uses edge when usesMetamodelIds is absent or empty', () => {
+        const none = inferMegamodelEdges(makeArtifacts())
+        expect(none.filter(e => e.type === 'uses')).toHaveLength(0)
+
+        const empty = inferMegamodelEdges(makeArtifacts({
+            metamodels: [{ id: 'mm1', name: 'PetriNet', usesMetamodelIds: [] }],
+        }))
+        expect(empty.filter(e => e.type === 'uses')).toHaveLength(0)
+    })
+
     it('produces inputOf edge: metamodel → transformation', () => {
         const edges = inferMegamodelEdges(makeArtifacts())
         const inputOf = edges.filter(e => e.type === 'inputOf')

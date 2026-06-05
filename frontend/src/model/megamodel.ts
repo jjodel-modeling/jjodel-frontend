@@ -31,6 +31,7 @@ export interface ArtifactRef {
 
 export type EdgeType =
     | 'conformsTo'    // model → metamodel
+    | 'uses'          // metamodel → metamodel  (a class in the source references or extends a class in the target)
     | 'inputOf'       // metamodel → transformation  (the transformation consumes models of this type)
     | 'outputOf'      // transformation → metamodel  (the transformation produces models of this type)
     | 'generatedBy'   // generated model → transformation  (instance-level: this model was produced by this transformation)
