@@ -419,7 +419,24 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         if (!projectId) return;
 
         const artifacts = {
-            metamodels: metamodels.map(mm => ({ id: mm.id, name: mm.name || '' })),
+            metamodels: metamodels.map(mm => {
+                // Cross-metamodel dependencies: a class in this metamodel references or
+                // extends a class living in another metamodel (same detection as the
+                // editor's ghostTargets / ghostParents overlays). Drives 'uses' edges.
+                const usesMetamodelIds = new Set<string>();
+                try {
+                    for (const cls of ((mm.classes || []) as any[])) {
+                        for (const ref of (cls.references || [])) {
+                            const t = ref?.type;
+                            if (t?.model && t.model.id !== mm.id) usesMetamodelIds.add(t.model.id);
+                        }
+                        for (const sup of (cls.extends || [])) {
+                            if (sup?.model && sup.model.id !== mm.id) usesMetamodelIds.add(sup.model.id);
+                        }
+                    }
+                } catch { /* L-proxy access can throw on stale data */ }
+                return { id: mm.id, name: mm.name || '', usesMetamodelIds: [...usesMetamodelIds] };
+            }),
             models: models.map(m => {
                 const rawInstanceof = (m.__raw as any)['instanceof'];
                 const instanceofMetamodelId = typeof rawInstanceof === 'string' ? rawInstanceof : undefined;
