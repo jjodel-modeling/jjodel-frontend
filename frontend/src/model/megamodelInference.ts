@@ -22,6 +22,13 @@ import type { ArtifactRef, MegamodelEdge } from './megamodel'
 export interface MetamodelArtifact {
     id: string
     name: string
+    /**
+     * IDs of other metamodels this metamodel depends on — a class in this metamodel
+     * has a reference whose type, or a supertype it extends, lives in the target
+     * metamodel. Computed from the L-proxy by the caller (cross-metamodel detection).
+     * Used to derive 'uses' edges. Self-references and unknown ids are ignored.
+     */
+    usesMetamodelIds?: string[]
 }
 
 export interface ModelArtifact {
@@ -86,6 +93,32 @@ export function inferMegamodelEdges(artifacts: ProjectArtifacts): MegamodelEdge[
             type: 'conformsTo',
             origin: 'derived',
         })
+    }
+
+    // uses: metamodel → metamodel (cross-metamodel reference or extension)
+    for (const metamodel of artifacts.metamodels) {
+        if (!metamodel.usesMetamodelIds) continue
+
+        const seen = new Set<string>()
+        for (const targetId of metamodel.usesMetamodelIds) {
+            if (targetId === metamodel.id) continue  // self — not a cross-metamodel relation
+            if (seen.has(targetId)) continue          // collapse multiple links into one edge
+            seen.add(targetId)
+
+            const target = metamodelIndex.get(targetId)
+            if (!target) continue  // target metamodel not in current project — skip
+
+            const source: ArtifactRef = { id: metamodel.id, type: 'metamodel', name: metamodel.name }
+            const targetRef: ArtifactRef = { id: target.id, type: 'metamodel', name: target.name }
+
+            edges.push({
+                id: `derived_${source.id}_uses_${targetRef.id}`,
+                source,
+                target: targetRef,
+                type: 'uses',
+                origin: 'derived',
+            })
+        }
     }
 
     // inputOf: metamodel → transformation

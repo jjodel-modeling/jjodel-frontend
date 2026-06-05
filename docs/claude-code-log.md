@@ -1,5 +1,29 @@
 # Claude Code Session Log
 
+## 2026-06-05 — feat(megamodel): geometry-aware edge anchoring (level 1)
+**Prompt**: implementare il "livello 1" dell'anchor handling nell'editor di megamodelli (lati adattivi alla geometria invece che fissi per tipo) + nota di futuro enhancement per la funzionalità.
+**Files touched**: frontend/src/components/megamodel/MegamodelEdge.ts, frontend/src/components/megamodel/MegamodelView.tsx, frontend/src/components/megamodel/__tests__/MegamodelEdge.test.ts (new)
+**Outcome**: ✅ completed — build green (33s), 39/39 tests pass (8 new geometry + 31 inference)
+**Regressions**: no (build + tests pass; pre-existing tsc error ProjectEditor.tsx:177 unrelated, still present on HEAD)
+**Out-of-scope changes**: no (solo i 3 file megamodel)
+**Layer Impact Report**: not-required (renderer SVG custom dell'editor megamodelli, non ReactFlow; nessun file sync/D-L)
+**Notes**: nuova pura `computeAdaptiveSides(from, to, fallbackFrom, fallbackTo)` in MegamodelEdge.ts: sceglie il lato che fronteggia il nodo opposto per asse dominante (|dx|>=|dy| → left/right, else top/bottom); centri coincidenti → fallback statico (i lati per-tipo di `edgeSides`). Wired in `edgePaths` (MegamodelView): pre-pass `oriented` ricalcola fromSide/toSide su posizioni correnti, passato sia a `computeAnchorTs` (spread) sia al routing → grouping consistente. `edgeSides` resta come sorgente del fallback (build-time, posizioni non ancora note); `buildGraph` non toccato. Si ricalcola già su drag nodi (dep `nodeMap`). FUTURE ENHANCEMENT documentato nel JSDoc di computeAdaptiveSides: livello 3 = ancore trascinabili+pinnabili dall'utente, override persistito per edge-id in localStorage (gli edge megamodel sono derived, non persistiti sull'edge; mirror di savePositions), con questa funzione come auto-fallback. Test eseguono la logica su input reali (4 direzioni + asse dominante + degenere), non solo lettura del comparatore (§5.1). Not committed (no commit requested).
+**Prompt document name**: 2026-06-05 — megamodel adaptive anchoring level 1
+
+---
+
+## 2026-06-04 — feat(megamodel): add 'uses' edge between related metamodels
+**Prompt**: get context on the Megamodel diagram, then add a "use" edge between metamodels that are related. Clarified via AskUserQuestion: "related" = cross-metamodel reference OR inheritance; label = "uses".
+**Files touched**: frontend/src/model/megamodel.ts, frontend/src/model/megamodelInference.ts, frontend/src/components/megamodel/MegamodelEdge.ts, frontend/src/components/megamodel/MegamodelView.tsx, frontend/src/components/project/ProjectEditor.tsx, frontend/src/model/__tests__/megamodel.test.ts, frontend/src/components/megamodel/MegamodelGraph-toDelete.tsx (forced by EdgeType widening)
+**Outcome**: ✅ completed — build green (33.5s), 31/31 megamodel tests pass (+3 new)
+**Regressions**: no (build + targeted tests pass; pre-existing tsc error ProjectEditor.tsx:177 confirmed present on HEAD, unrelated)
+**Out-of-scope changes**: yes — MegamodelGraph-toDelete.tsx (dead, imported nowhere) needed two `Record<EdgeType,…>` map entries to keep compiling after widening EdgeType; added minimal `uses` entries instead of deleting the file (§2).
+**Layer Impact Report**: not-required (megamodel domain/view layer only; no useJjomSync/syncState/canvasToJjom/portDistribution/VersionFixer touched)
+**Notes**: 'uses' is a DERIVED edge (origin 'derived', never persisted → no VersionFixer migration needed). Detection mirrors the editor's ghostTargets/ghostParents: in ProjectEditor's artifact-building useEffect, walk `mm.classes[].references[].type.model.id` and `mm.classes[].extends[].model.id`, collect ids `!== mm.id` into `usesMetamodelIds` (new optional field on MetamodelArtifact — additive, backward compatible). inferMegamodelEdges emits one metamodel→metamodel edge per distinct target (self + unknown ids skipped, multiple links collapsed). View wiring: MmEdgeType + EDGE_STYLES (teal #0F766E solid), edgeSides (right→left), mapEdgeType, LEGEND_EDGES. Not committed (no commit requested).
+**Prompt document name**: 2026-06-04 — add megamodel uses edge
+
+---
+
 ## 2026-06-02 — discovery: inventario controlli di form Properties panel
 **Prompt**: mappa read-only dei controlli di form (toggle, select, checkbox, tab, badge, stepper, chip, focus, header) nel Properties panel e nell'editor VIEW; accertati numeri arancioni, checkbox e origine errore Invalid GInput type.
 **File toccati**: docs/discovery/2026-06-02_form_controls_inventory.md (nuovo), docs/claude-code-log.md
