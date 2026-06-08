@@ -1,5 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { toast } from '../components/Toast/toastDispatch';
+
+// Module-level, per-defect throttle so a broken template across N nodes
+// (and React re-renders / StrictMode double-invoke) yields a single toast.
+const VIEW_ERROR_TOAST_WINDOW_MS = 5000;
+const lastViewErrorToast = new Map<string, number>();
+
+// Flatten a ReactNode error message to plain text for the toast + dedup key.
+function reactNodeToText(node: React.ReactNode): string {
+    if (node == null || typeof node === 'boolean') return '';
+    if (typeof node === 'string' || typeof node === 'number') return String(node);
+    if (Array.isArray(node)) return node.map(reactNodeToText).join(' ');
+    if (React.isValidElement(node)) return reactNodeToText((node.props as any)?.children);
+    return '';
+}
 
 interface ErrorPortalProps {
     isOpen: boolean;
@@ -138,6 +153,38 @@ export const ErrorDisplay = React.forwardRef<HTMLDivElement, ErrorDisplayProps>(
         window.location.pathname.startsWith('/project') ||
         window.location.hash.includes('/project')
     );
+
+    // Per-defect identity: VIEW + error type + error text. Deliberately excludes
+    // the per-instance dname/nodename, so the same broken template across many
+    // nodes collapses to a single toast.
+    const errorText = reactNodeToText(message).replace(/\s+/g, ' ').trim();
+    const dedupKey = `${viewName || 'Unknown'}|${errorType || ''}|${errorText}`;
+
+    // Additive to the inline badge: emit one deduped, time-throttled, auto-
+    // dismissing error toast (it also lands in the Bell history) per defect.
+    useEffect(() => {
+        if (!isInEditor) return;
+        const now = Date.now();
+        const last = lastViewErrorToast.get(dedupKey);
+        if (last != null && now - last < VIEW_ERROR_TOAST_WINDOW_MS) return;
+        lastViewErrorToast.set(dedupKey, now);
+        if (lastViewErrorToast.size > 50) {
+            for (const [k, ts] of lastViewErrorToast) {
+                if (now - ts >= VIEW_ERROR_TOAST_WINDOW_MS) lastViewErrorToast.delete(k);
+            }
+        }
+
+        const instance = [dname, nodename].filter(Boolean).join(': ');
+        const detail = errorText || `${errorType || 'View'} error`;
+        const messageStr = instance ? `on ${instance} — ${detail}` : detail;
+
+        toast.error(messageStr.slice(0, 160), {
+            title: `Error in View: ${viewName || 'Unknown'}`,
+            duration: 7000,   // auto-dismiss; overrides the persistent error default
+            dismiss: 'auto',
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dedupKey, isInEditor]);
 
     // Don't render anything if not in editor
     if (!isInEditor) {
