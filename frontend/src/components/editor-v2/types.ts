@@ -13,6 +13,16 @@ export type ColorScheme =
     | 'high-contrast'
     | 'print';
 
+// === User-created (seed-driven) palettes ===
+export interface CustomColorScheme {
+    id: string;     // 'custom-<uuid>' — also the `scheme-<id>` root class suffix
+    name: string;   // user-facing label
+    seed: string;   // hex seed color the palette is derived from
+}
+
+// A built-in scheme id OR a custom palette id (`custom-<uuid>`).
+export type ActiveColorScheme = ColorScheme | string;
+
 // === Tipi primitivi Ecore ===
 export type EDataType =
     | 'EString'

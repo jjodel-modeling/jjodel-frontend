@@ -7,8 +7,7 @@ import {
     LModel,
     LModelElement,
     LObject, LPackage, LPointerTargetable, LProject, LReference, LStructuralFeature, LValue,
-    LViewElement, LViewPoint, MultiSelect, Pointer, Pointers,
-    Select,
+    LViewElement, LViewPoint, Pointer, Pointers,
     Selectors, SetFieldAction, SetRootFieldAction, store, TRANSACTION, U, ValueDetail
 } from '../../joiner';
 import { ViewData } from './views/ViewData';
@@ -29,7 +28,7 @@ import { Tooltip } from '../forEndUser/Tooltip';
 import { icon } from '../../pages/components/icons/Icons';
 import { Toggle as JoinerToggle } from '../../joiner/components';
 // import { UpgradePrompt } from '../ModeSystem'; // TODO: reintroduce as toast or first-visit hint
-import { Button, EmptyState, Toggle, NumberInput } from '../ui';
+import { Button, EmptyState, Toggle, NumberInput, JjSelect } from '../ui';
 import { M2AnalyticsModal, M2AnalyticsData } from '../M2AnalyticsModal';
 import { useInterfaceMode } from '../../hooks/useInterfaceMode';
 
@@ -122,7 +121,7 @@ function InheritanceSection(props: {
                 <div className="jj-divider" />
                 <div className="jj-field" style={{marginTop: 4}}>
                     <div className="jj-field-label">Extends</div>
-                    <MultiSelect classNamePrefix="jj-select" isMulti={true} options={extendOptions as any} value={extendValue}
+                    <JjSelect isMulti={true} options={extendOptions as any} value={extendValue}
                         placeholder="Select superclass..."
                         onChange={(v: any) => {
                             lclass.extends = v.map((e: any) => e.value) as Any<string[]>;
@@ -160,6 +159,31 @@ function PropertiesNumberInput(props: { data: LModelElement; field: string; min?
 
     return (
         <NumberInput value={value} onChange={handleChange} min={min} max={max} />
+    );
+}
+
+// Type / Return-type select — custom JjSelect reusing the joiner <Select field='type'> binding.
+// Identical read/options/write to forEndUser/Input.tsx's Select path (no new write path):
+//   - options: data.validTargetOptions (grouped: Primitives, then metamodel types) === getSelectOptions_raw(data,'type')
+//   - value:   current type id = data.type?.id (serializeValue of data['type'])
+//   - write:   data['type'] = <classifierId>  (the same L-proxy setter the native select used)
+function TypeSelect(props: { data: LModelElement }) {
+    const { data } = props;
+    const groups = ((data as any).validTargetOptions || []) as { label: string; options: { value: string; label: string }[] }[];
+    const currentId = (data as any).type?.id ?? (data as any).type;
+    const flat = groups.flatMap(g => g.options);
+    let current = flat.find(o => o.value === currentId) ?? null;
+    if (!current && currentId) {
+        const t = (data as any).type;
+        current = { value: currentId, label: (t && t.name) || String(currentId) };
+    }
+    return (
+        <JjSelect
+            options={groups as any}
+            value={current}
+            placeholder="Select your option"
+            onChange={(opt: any) => { (data as any).type = opt ? opt.value : ''; }}
+        />
     );
 }
 
@@ -328,15 +352,14 @@ class builder {
             <CollapsibleSection title="DEPENDENCIES">
                 <label className={'input-container'}>
                     <b className={'me-2'}>Depends from models</b>
-                    <MultiSelect
-                        classNamePrefix="jj-select"
+                    <JjSelect
                         isMulti={true}
                         options={multiselectOptions as any}
                         value={multiselectValue}
                         placeholder="Select models..."
-                        onChange={(v) => {
+                        onChange={(v: any) => {
                             // console.log('setting model dependencies', v);
-                            l.dependencies = v.map(e => e.value) as Any<string[]>;
+                            l.dependencies = v.map((e: any) => e.value) as Any<string[]>;
                         }}
                     />
                 </label>
@@ -411,7 +434,7 @@ class builder {
             <CollapsibleSection title="TYPE &amp; BOUNDS">
                 <div className="jj-field">
                     <div className="jj-field-label">Type <span className="jj-field-required">*</span></div>
-                    <Select data={data} field={'type'} />
+                    <TypeSelect data={data} />
                 </div>
                 <div className="jj-bounds-row">
                     <div className="jj-bounds-field">
@@ -478,7 +501,7 @@ class builder {
             <CollapsibleSection title="RETURN">
                 <div className="jj-field">
                     <div className="jj-field-label">Return type</div>
-                    <Select data={data} field={'type'} />
+                    <TypeSelect data={data} />
                 </div>
             </CollapsibleSection>
         </>);

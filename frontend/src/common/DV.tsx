@@ -1054,7 +1054,7 @@ foreignObject.label-end, foreignObject.label-start {
             (v: DViewElement) => {
                 // v.appliableToClasses = [DVoidEdge.cname];
                 v.appliableTo = 'Edge';
-                v.bendingMode = EdgeBendingMode.Line;
+                v.bendingMode = EdgeBendingMode.Manhattan;
                 v.edgeHeadSize = headSize;
                 v.edgeTailSize = tailSize;
                 //v.constants = edgeConstants;

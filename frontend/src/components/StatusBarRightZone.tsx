@@ -16,6 +16,7 @@ import NotificationCenter, { useToastHistorySnapshot } from './NotificationCente
 import './StatusBarRightZone.scss';
 import { AIConfig, JodieConfig } from "../types/jodie";
 import { AIEvents } from '../events/registry';
+import { VERSION_LABEL, VERSION_FULL_BASE } from '../version';
 
 interface StatusBarRightZoneProps {
     variant?: 'light' | 'dark';
@@ -29,10 +30,7 @@ const StatusBarRightZone: React.FC<StatusBarRightZoneProps> = ({ variant = 'ligh
     const [aiConnected, setAiConnected] = useState(() => JodieConfig.hasEnabledProviders());
     const bellRef = useRef<HTMLButtonElement>(null);
 
-    const engineVersion = useSelector((state: DState) => {
-        const v = (state as any).version;
-        return v?.n ? `v${v.n}` : 'v2.0';
-    });
+    const schemaVersion = useSelector((state: DState) => (state as any).version?.n);
 
     useEffect(() => {
         const handler = () => setAiConnected(JodieConfig.hasEnabledProviders());
@@ -58,6 +56,9 @@ const StatusBarRightZone: React.FC<StatusBarRightZoneProps> = ({ variant = 'ligh
 
     const isDark = variant === 'dark';
     const badgeLabel = unreadCount > 99 ? '99+' : String(unreadCount);
+    const versionTitle = schemaVersion
+        ? `${VERSION_FULL_BASE} · schema ${schemaVersion}`
+        : VERSION_FULL_BASE;
 
     return (
         <div className={`sb-rz${isDark ? ' sb-rz--dark' : ''}`}>
@@ -111,7 +112,7 @@ const StatusBarRightZone: React.FC<StatusBarRightZoneProps> = ({ variant = 'ligh
             <span className="sb-rz__sep" />
 
             {/* Version */}
-            <span className="sb-rz__version">{engineVersion}</span>
+            <span className="sb-rz__version" title={versionTitle}>{VERSION_LABEL}</span>
         </div>
     );
 };

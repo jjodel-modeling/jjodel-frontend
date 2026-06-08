@@ -132,9 +132,7 @@ select.model-select {
   overflow: visible !important;
 
   // 1. Main control container - auto height with max limit
-  .jjodel-select__control,
-  [class$="-control"],
-  [class*="-control "] {
+  .jjodel-select__control {
     min-height: 38px !important;
     height: auto !important;
     max-height: 60px !important;
@@ -152,9 +150,7 @@ select.model-select {
   }
 
   // Value container - Input LEFT, Tags RIGHT
-  .jjodel-select__value-container,
-  [class$="-ValueContainer"],
-  [class*="-valueContainer"] {
+  .jjodel-select__value-container {
     display: flex !important;
     flex-direction: row !important;
     flex-wrap: nowrap !important;
@@ -166,8 +162,7 @@ select.model-select {
   }
 
   // 2. Filter input - grows to push tags right
-  .jjodel-select__input,
-  [class*="-Input"] {
+  .jjodel-select__input {
     flex: 1 1 auto;
     min-width: 50px;
     margin: 0;
@@ -187,16 +182,12 @@ select.model-select {
   }
 
   // FIRST tag - pushed to right with margin-left: auto
-  .jjodel-select__multi-value:first-of-type,
-  [class$="-multiValue"]:first-of-type,
-  [class*="-multiValue "]:first-of-type {
+  .jjodel-select__multi-value:first-of-type {
     margin-left: auto !important;
   }
 
   // ALL tags - styling and spacing
-  .jjodel-select__multi-value,
-  [class$="-multiValue"],
-  [class*="-multiValue "] {
+  .jjodel-select__multi-value {
     background: #f1f5f9 !important;
     border: 1px solid #e2e8f0 !important;
     border-radius: 4px !important;
@@ -206,13 +197,11 @@ select.model-select {
   }
 
   // HIDE clear indicator (X button)
-  .jjodel-select__clear-indicator,
-  [class*="-clearIndicator"] {
+  .jjodel-select__clear-indicator {
     display: none !important;
   }
 
-  .jjodel-select__multi-value__label,
-  [class$="-multiValue__label"] {
+  .jjodel-select__multi-value__label {
     color: #334155 !important;  // slate-700 — readable
     font-size: 12px !important;
     font-weight: 500 !important;
@@ -220,8 +209,7 @@ select.model-select {
     padding-right: 4px !important;
   }
 
-  .jjodel-select__multi-value__remove,
-  [class$="-multiValue__remove"] {
+  .jjodel-select__multi-value__remove {
     color: #94a3b8 !important;  // slate-400
     padding: 0 4px !important;
     cursor: pointer !important;
@@ -239,9 +227,7 @@ select.model-select {
   }
 
   // 3. Indicator icons - smaller, lighter to match single select chevron
-  .jjodel-select__indicators,
-  [class$="-IndicatorsContainer"],
-  [class*="-indicatorsContainer"] {
+  .jjodel-select__indicators {
     align-self: center !important;
     padding: 0 4px !important;
     flex-shrink: 0 !important;
@@ -257,8 +243,7 @@ select.model-select {
     }
   }
 
-  .jjodel-select__dropdown-indicator,
-  [class*="-dropdownIndicator"] {
+  .jjodel-select__dropdown-indicator {
     padding: 4px !important;
 
     svg {
@@ -268,8 +253,7 @@ select.model-select {
     }
   }
 
-  .jjodel-select__clear-indicator,
-  [class*="-clearIndicator"] {
+  .jjodel-select__clear-indicator {
     padding: 4px !important;
 
     svg {
@@ -284,14 +268,12 @@ select.model-select {
   }
 
   // Hide separator between X and chevron
-  .jjodel-select__indicator-separator,
-  [class$="-indicatorSeparator"] {
+  .jjodel-select__indicator-separator {
     display: none !important;
   }
 
   // 4. Dropdown menu - match Jjodel design system
-  .jjodel-select__menu,
-  [class*="-menu"] {
+  .jjodel-select__menu {
     z-index: 999 !important;
     border: 1px solid #e2e8f0 !important;
     border-radius: 6px !important;
@@ -303,13 +285,11 @@ select.model-select {
   }
 
   // Group header ("APPLY TO")
-  .jjodel-select__group,
-  [class*="-group"] {
+  .jjodel-select__group {
     padding: 0 !important;
   }
 
-  .jjodel-select__group-heading,
-  [class*="-groupHeading"] {
+  .jjodel-select__group-heading {
     font-size: 10px !important;
     font-weight: 700 !important;
     letter-spacing: 0.05em !important;
@@ -320,8 +300,7 @@ select.model-select {
   }
 
   // Option items
-  .jjodel-select__option,
-  [class*="-option"] {
+  .jjodel-select__option {
     font-size: 13px !important;
     color: #334155 !important;
     padding: 8px 12px !important;
@@ -334,14 +313,12 @@ select.model-select {
     }
   }
 
-  .jjodel-select__option--is-focused,
-  [class*="-option--is-focused"] {
+  .jjodel-select__option--is-focused {
     background: #f1f5f9 !important;  // slate-100
   }
 
   // Selected/active state
-  .jjodel-select__option--is-selected,
-  [class*="-option--is-selected"] {
+  .jjodel-select__option--is-selected {
     background: rgba(14, 165, 233, 0.08) !important;  // very subtle cyan
     color: #0ea5e9 !important;
     font-weight: 500 !important;
@@ -352,8 +329,7 @@ select.model-select {
   }
 
   // Placeholder
-  .jjodel-select__placeholder,
-  [class*="-placeholder"] {
+  .jjodel-select__placeholder {
     color: #9ca3af !important;
     font-size: 13px !important;
   }

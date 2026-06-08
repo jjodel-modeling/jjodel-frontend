@@ -117,3 +117,35 @@ export function computePoints(
     }
     return all;
 }
+
+/**
+ * Manhattan (orthogonal) corner waypoints between two node boxes, chosen by dominant axis.
+ *
+ * Turns the single diagonal leg source-center → target-center into an orthogonal HVH / VHV
+ * path:
+ *   - horizontal dominant (|dx| >= |dy|): exit/enter on left|right; corners on the vertical
+ *     midline → [(midX, srcY), (midX, tgtY)];
+ *   - vertical dominant: exit/enter on top|bottom; corners on the horizontal midline
+ *     → [(srcX, midY), (tgtX, midY)].
+ * Each corner is aligned to one node's center axis, so the existing border ray-cast in
+ * snapSegmentsToBorders lands on the side-midpoint with no snap change.
+ *
+ * Returns [] when the boxes are already axis-aligned (dx === 0 || dy === 0): a single
+ * straight orthogonal leg already suffices and inserting corners would create a zero-length
+ * segment. Pure — reads only the two sizes, no store/proxy access.
+ */
+export function chooseManhattanSidesAndWaypoints(srcSize: GraphSize, tgtSize: GraphSize): GraphPoint[] {
+    const sx = srcSize.x + srcSize.w / 2;
+    const sy = srcSize.y + srcSize.h / 2;
+    const tx = tgtSize.x + tgtSize.w / 2;
+    const ty = tgtSize.y + tgtSize.h / 2;
+    const dx = tx - sx;
+    const dy = ty - sy;
+    if (dx === 0 || dy === 0) return []; // already orthogonal: no bend needed
+    if (Math.abs(dx) >= Math.abs(dy)) {
+        const midX = (sx + tx) / 2;
+        return [new GraphPoint(midX, sy), new GraphPoint(midX, ty)];
+    }
+    const midY = (sy + ty) / 2;
+    return [new GraphPoint(sx, midY), new GraphPoint(tx, midY)];
+}

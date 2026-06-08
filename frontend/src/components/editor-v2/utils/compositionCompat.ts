@@ -136,7 +136,27 @@ export function getCompositionChildOptions(
         if (!ref.containment && !ref.aggregation) continue;
 
         const targetClass = classById.get(ref.targetClassId);
-        if (!targetClass) continue;
+        if (!targetClass) {
+            // Cross-MM: the target class lives in another metamodel and is
+            // absent from the single-metamodel `allClasses`. Its id/name were
+            // resolved at build time via get_type (cross-MM aware, see
+            // useEditorMode.ts:362-363), so build a minimal stand-in option
+            // from the descriptor. No subtype expansion for cross-MM targets.
+            if (ref.targetClassName) {
+                result.push({
+                    ref,
+                    concreteOptions: [{
+                        id: ref.targetClassId,
+                        name: ref.targetClassName,
+                        isAbstract: false,
+                        attributes: [],
+                        references: [],
+                        concreteSubclasses: [],
+                    }],
+                });
+            }
+            continue;
+        }
 
         const concreteOptions: MetaclassInfo[] = [];
 

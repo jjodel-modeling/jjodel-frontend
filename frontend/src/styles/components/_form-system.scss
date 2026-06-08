@@ -518,12 +518,14 @@ input[type="number"] {
   box-shadow: none !important;
   background: var(--form-input-bg) !important;
 
+  
+
   &:hover {
     border-color: var(--form-input-border-color-hover) !important;
   }
 }
 
-[class*="-control--is-focused"],
+.jjodel-select__control--is-focused,
 .css-control--is-focused,
 .select__control--is-focused {
   border-color: var(--form-input-border-color-focus) !important;
@@ -531,27 +533,28 @@ input[type="number"] {
 }
 
 // Value container padding
-[class*="-valueContainer"],
+.jjodel-select__value-container,
 .select__value-container {
   padding: 0 var(--form-input-padding-x) !important;
+    
 }
 
 // Multi-value chips
-[class*="-multiValue"],
+.jjodel-select__multi-value,
 .select__multi-value {
   background: #e2e8f0 !important;
   border-radius: 4px !important;
   margin: 2px !important;
 }
 
-[class*="-multiValue__label"],
+.jjodel-select__multi-value__label,
 .select__multi-value__label {
   color: #334155 !important;
   font-size: 13px !important;
   padding: 2px 6px !important;
 }
 
-[class*="-multiValue__remove"],
+.jjodel-select__multi-value__remove,
 .select__multi-value__remove {
   color: #64748b !important;
 
@@ -568,11 +571,14 @@ input[type="number"] {
   border-radius: var(--form-input-border-radius) !important;
   //box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
   z-index: 100;
+
+  
 }
 
 // Menu options
 // [class*="-option"],
 .select__option {
+  
   padding: 10px var(--form-input-padding-x) !important;
   font-size: var(--form-input-font-size) !important;
 
@@ -581,7 +587,7 @@ input[type="number"] {
   }
 }
 
-[class*="-option--is-selected"],
+.jjodel-select__option--is-selected,
 .select__option--is-selected {
   background: #e0f2fe !important;
   color: #0369a1 !important;
@@ -792,31 +798,31 @@ input[type="number"] {
   }
 
   // MultiSelect dark mode
-  [class*="-control"],
+  .jjodel-select__control,
   .select__control {
     background: #1e293b !important;
     border-color: #334155 !important;
   }
 
-  [class*="-menu"],
+  .jjodel-select__menu,
   .select__menu {
     background: #1e293b !important;
     border-color: #334155 !important;
   }
 
-  [class*="-option"],
+  .jjodel-select__option,
   .select__option {
     &:hover {
       background: #334155 !important;
     }
   }
 
-  [class*="-multiValue"],
+  .jjodel-select__multi-value,
   .select__multi-value {
     background: #334155 !important;
   }
 
-  [class*="-multiValue__label"],
+  .jjodel-select__multi-value__label,
   .select__multi-value__label {
     color: #e2e8f0 !important;
   }
@@ -994,6 +1000,14 @@ html[data-theme="dark"] {
 
   &--collapsed { transform: rotate(-90deg); }
 }
+
+
+.jj-select {
+
+  padding-bottom: 20px;
+}
+
+
 
 // Toggle row (label + toggle on same line)
 .jj-toggle-row {

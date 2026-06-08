@@ -90,8 +90,10 @@ describe('computeSidePositions — geometry-aware ordering (Option A)', () => {
         expect(r.get('top-0:target')).toEqual(f.get('top-0:target')); // geometry-independent
     });
 
-    // Case 4 — tie on opposite centroid → role tiebreaker (source before target).
-    it('centroid tie: falls back to role (source before target)', () => {
+    // Case 4 — tie on opposite centroid and NO edge id present → degenerate role
+    // tiebreaker (source before target). The production tie path (edge ids present)
+    // is the pair-stable ordering proven in the pair-alignment block below.
+    it('centroid tie, no edge id: degenerate role fallback (source before target)', () => {
         const endpoints: SideEndpoint[] = [
             { handleId: 'left-0', role: 'target', edgeType: 'reference', oppositeNodeId: 'A' },
             { handleId: 'left-1', role: 'source', edgeType: 'reference', oppositeNodeId: 'B' },
@@ -131,17 +133,62 @@ describe('computeSidePositions — geometry-aware ordering (Option A)', () => {
     });
 });
 
-describe('computeSideEndpoints — oppositeNodeId wiring', () => {
-    it('records the node at the other end of each edge', () => {
+describe('computeSideEndpoints — oppositeNodeId + edgeId wiring', () => {
+    it('records the opposite node and the edge id at each end', () => {
         const edges = [
-            { source: 'Dep', target: 'Lab', sourceHandle: 'left-0', targetHandle: 'right-0', type: 'reference' },
+            { id: 'e1', source: 'Dep', target: 'Lab', sourceHandle: 'left-0', targetHandle: 'right-0', type: 'reference' },
         ];
         const fromDep = computeSideEndpoints(edges, 'Dep', 'left');
         expect(fromDep).toHaveLength(1);
-        expect(fromDep[0]).toMatchObject({ handleId: 'left-0', role: 'source', oppositeNodeId: 'Lab' });
+        expect(fromDep[0]).toMatchObject({ handleId: 'left-0', role: 'source', oppositeNodeId: 'Lab', edgeId: 'e1' });
 
         const fromLab = computeSideEndpoints(edges, 'Lab', 'right');
         expect(fromLab).toHaveLength(1);
-        expect(fromLab[0]).toMatchObject({ handleId: 'right-0', role: 'target', oppositeNodeId: 'Dep' });
+        expect(fromLab[0]).toMatchObject({ handleId: 'right-0', role: 'target', oppositeNodeId: 'Dep', edgeId: 'e1' });
+    });
+});
+
+describe('computeSidePositions — pair-stable alignment (edge id tiebreak)', () => {
+    // Bidirectional pair Loan <-> BookCopy on facing sides Loan-bottom / BookCopy-top.
+    // portDistribution gives both edges index 0 on each side (one edge per role
+    // bucket), so the two endpoints on a side share the same opposite node => the
+    // opposite centroid ties. The edge-id tiebreak must rank the SAME edge
+    // identically on both sides, so each edge's source fraction equals its target
+    // fraction => aligned anchors => the router's straight/parallel branch fires.
+    it('same edge ranks identically on both facing sides (aligned + distinct)', () => {
+        const loanBottom: SideEndpoint[] = [
+            { handleId: 'bottom-0', role: 'source', edgeType: 'reference', oppositeNodeId: 'BookCopy', edgeId: 'e-copy' },
+            { handleId: 'bottom-0', role: 'target', edgeType: 'reference', oppositeNodeId: 'BookCopy', edgeId: 'e-loans' },
+        ];
+        const bookCopyTop: SideEndpoint[] = [
+            { handleId: 'top-0', role: 'source', edgeType: 'reference', oppositeNodeId: 'Loan', edgeId: 'e-loans' },
+            { handleId: 'top-0', role: 'target', edgeType: 'reference', oppositeNodeId: 'Loan', edgeId: 'e-copy' },
+        ];
+        const positions = new Map([['Loan', pos(100, 100)], ['BookCopy', pos(100, 800)]]);
+        const onLoan = computeSidePositions(loanBottom, positions);
+        const onBook = computeSidePositions(bookCopyTop, positions);
+
+        // e-copy: source on Loan-bottom == target on BookCopy-top (aligned).
+        expect(onLoan.get('bottom-0:source')).toBeCloseTo(onBook.get('top-0:target')!);
+        // e-loans: target on Loan-bottom == source on BookCopy-top (aligned).
+        expect(onLoan.get('bottom-0:target')).toBeCloseTo(onBook.get('top-0:source')!);
+        // R3: distinct fractions on each side (never coincident).
+        expect(Math.abs(onLoan.get('bottom-0:source')! - onLoan.get('bottom-0:target')!)).toBeGreaterThan(0.1);
+        // 'e-copy' < 'e-loans' by id → e-copy at 1/3, e-loans at 2/3 on both sides.
+        expect(onLoan.get('bottom-0:source')).toBeCloseTo(1 / 3);
+        expect(onBook.get('top-0:target')).toBeCloseTo(1 / 3);
+    });
+
+    // The id tiebreak only fires on a centroid tie: distinct opposite nodes keep
+    // geometry primary even when edge ids would order the other way.
+    it('distinct opposite centroids: geometry wins over edge id', () => {
+        const endpoints: SideEndpoint[] = [
+            { handleId: 'left-0', role: 'source', edgeType: 'reference', oppositeNodeId: 'Low', edgeId: 'zzz' },  // Y=800
+            { handleId: 'left-1', role: 'source', edgeType: 'reference', oppositeNodeId: 'High', edgeId: 'aaa' }, // Y=100
+        ];
+        const positions = new Map([['Low', pos(0, 800)], ['High', pos(0, 100)]]);
+        const r = computeSidePositions(endpoints, positions);
+        expect(r.get('left-1:source')!).toBeLessThan(r.get('left-0:source')!); // High above Low
+        expect(r.get('left-1:source')).toBeCloseTo(1 / 3);
     });
 });

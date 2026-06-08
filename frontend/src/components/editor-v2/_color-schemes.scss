@@ -628,4 +628,218 @@
     .editor-v2.theme-light & &__swatch {
         border-color: rgba(0, 0, 0, 0.12);
     }
+
+    // ── Your palettes / new-palette editor ──
+    &__divider {
+        height: 1px;
+        background: var(--border-default);
+        margin: 4px 0;
+    }
+
+    &__section-label {
+        padding: 4px 10px 2px;
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-muted);
+    }
+
+    &__new-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        height: 32px;
+        padding: 6px 10px;
+        border: none;
+        background: transparent;
+        color: var(--text-secondary);
+        font-size: 11px;
+        font-weight: 500;
+        cursor: pointer;
+        text-align: left;
+        outline: none;
+        transition: background-color 0.1s;
+
+        > i {
+            font-size: 12px;
+            width: 16px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        &:hover,
+        &:focus-visible {
+            background: var(--surface-hover);
+        }
+    }
+
+    &__editor {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 8px 10px;
+    }
+
+    &__editor-name {
+        width: 100%;
+        height: 28px;
+        padding: 4px 8px;
+        font-size: 12px;
+        border: 1px solid var(--border-default);
+        border-radius: 4px;
+        background: var(--surface-primary, var(--surface-1));
+        color: var(--text-secondary);
+        outline: none;
+
+        &:focus {
+            border-color: #0ea5e9;
+        }
+    }
+
+    &__editor-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    &__editor-seed {
+        width: 32px;
+        height: 28px;
+        padding: 0;
+        border: 1px solid var(--border-default);
+        border-radius: 4px;
+        background: none;
+        cursor: pointer;
+        flex-shrink: 0;
+
+        &::-webkit-color-swatch-wrapper { padding: 2px; }
+        &::-webkit-color-swatch { border: none; border-radius: 2px; }
+        &::-moz-color-swatch { border: none; border-radius: 2px; }
+    }
+
+    &__editor-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 6px;
+    }
+
+    &__editor-btn {
+        padding: 4px 12px;
+        font-size: 11px;
+        font-weight: 500;
+        border: 1px solid var(--border-default);
+        border-radius: 4px;
+        background: transparent;
+        color: var(--text-secondary);
+        cursor: pointer;
+        outline: none;
+        transition: background-color 0.1s, filter 0.1s;
+
+        &:hover {
+            background: var(--surface-hover);
+        }
+
+        &--primary {
+            border: none;
+            background: linear-gradient(135deg, #334155, #1e293b);
+            color: #fff;
+
+            &:hover {
+                background: linear-gradient(135deg, #334155, #1e293b);
+                filter: brightness(1.1);
+            }
+        }
+    }
+
+    // ── Custom palette right slot (swatches ⇄ actions) ──
+    // Fixed-width slot shared by the swatches and the row actions: the actions
+    // REPLACE the swatches on hover (no overlay), and the fixed width keeps the
+    // row from reflowing as they swap.
+    &__row-slot {
+        margin-left: auto;
+        flex-shrink: 0;
+        width: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+    }
+
+    &__custom-row {
+        // On hover the swatches give up the slot and the actions take it.
+        &:hover .scheme-selector__row-slot .scheme-selector__swatches {
+            display: none;
+        }
+
+        &:hover .scheme-selector__row-slot .scheme-selector__row-actions {
+            display: flex;
+        }
+    }
+
+    &__row-actions {
+        display: none;   // hidden at rest; shown on hover (slot) or via --static
+        align-items: center;
+        gap: 2px;
+
+        // Inline (always-visible) variant for rename / delete-confirm modes.
+        &--static {
+            display: flex;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+    }
+
+    &__row-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border: none;
+        border-radius: 4px;
+        background: transparent;
+        color: var(--text-muted);
+        font-size: 12px;
+        cursor: pointer;
+        outline: none;
+        transition: background-color 0.1s, color 0.1s;
+
+        &:hover {
+            background: var(--border-default);
+            color: var(--text-secondary);
+        }
+
+        &--danger:hover {
+            color: #ef4444;
+        }
+
+        &:disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
+    }
+
+    &__rename-input {
+        flex: 1;
+        min-width: 0;
+        height: 24px;
+        padding: 2px 6px;
+        font-size: 11px;
+        border: 1px solid var(--border-default);
+        border-radius: 4px;
+        background: var(--surface-primary, var(--surface-1));
+        color: var(--text-secondary);
+        outline: none;
+
+        &:focus { border-color: #0ea5e9; }
+        &.invalid { border-color: #ef4444; }
+    }
+
+    &__confirm-label {
+        flex: 1;
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--text-secondary);
+    }
 }

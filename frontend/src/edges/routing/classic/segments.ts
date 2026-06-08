@@ -3,13 +3,14 @@ import {
     EdgeGapMode,
     GObject,
     GraphPoint,
+    GraphSize,
     windoww,
 } from '../../../joiner';
 import {
     EdgeSegment,
     segmentmaker,
 } from '../../../model/dataStructure/GraphDataElements';
-import { computePoints } from './points';
+import { computePoints, chooseManhattanSidesAndWaypoints } from './points';
 import { computeHeadPosition } from './markers';
 import { setLabels } from './labels';
 import { snapSegmentsToBorders } from './snap';
@@ -54,7 +55,38 @@ export function computeRouting(input: RoutingInput): RoutingOutput {
     let ret: EdgeSegment[] = [];
     let bm: EdgeBendingMode = v.bendingMode;
     let gapMode: EdgeGapMode = v.edgeGapMode;
-    let segmentSize = svgLetterSize(bm, false, true);
+
+    // Manhattan routing (orthogonal): insert axis-aligned corner waypoints between
+    // consecutive node attachments so every leg stays a straight `L`. Corners are pushed as
+    // DOUBLED pairs (arrival + departure at the same point), mirroring the midnode convention
+    // the stride-1 grouping loop below relies on (it advances i += 2; a single corner would
+    // be skipped and its outgoing leg dropped). effectiveBm = Line makes svgLetterSize and
+    // EdgeSegment treat each leg as a straight segment, so no GraphDataElements/stride change
+    // is needed. The non-Manhattan path is untouched.
+    let effectiveBm: EdgeBendingMode = bm;
+    if (bm === EdgeBendingMode.Manhattan) {
+        effectiveBm = EdgeBendingMode.Line;
+        let rebuilt: segmentmaker[] = [];
+        for (let i = 0; i < all.length; i++) {
+            rebuilt.push(all[i]);
+            // real legs run from an even index (a departure) to the next (an arrival);
+            // odd→even transitions are zero-length midnode pass-throughs and are skipped.
+            if (i % 2 === 0 && i + 1 < all.length) {
+                let corners = chooseManhattanSidesAndWaypoints(all[i].size, all[i + 1].size);
+                for (let cpt of corners) {
+                    let arrival: segmentmaker = {
+                        size: new GraphSize(cpt.x, cpt.y, 0.01, 0.01),
+                        view: all[i].view, ge: all[i].ge, pt: cpt, uncutPt: cpt,
+                    };
+                    rebuilt.push(arrival);        // arrival at corner
+                    rebuilt.push({ ...arrival });  // departure (doubled, mirrors midnode pair)
+                }
+            }
+        }
+        all = rebuilt;
+    }
+
+    let segmentSize = svgLetterSize(effectiveBm, false, true);
     let increase: number = segmentSize.first;
     let segment: EdgeSegment | undefined = undefined;
     /// grouping points according to SvgLetter
@@ -67,7 +99,7 @@ export function computeRouting(input: RoutingInput): RoutingOutput {
         // makes sure the edge actually reaches his target even if there is an invalid amount of midnodes fot the current EdgeBendingMode
         if (i === endindex && segment) start = segment.end;
         // segment = this.get_segmentv3(start, mid, end, getSvgLetter(i), i, segment, all);
-        segment = new EdgeSegment(start, mid, end, bm, gapMode, i, segment);
+        segment = new EdgeSegment(start, mid, end, effectiveBm, gapMode, i, segment);
         // segment = this.get_segment(start.ge, start.size, start.view, end.ge, end.size, end.view, cut, v.bendingMode, mid, ret[ret.length -1], fillMode, segment);
         ret.push(segment);
         i+= increase+1; // because increase index is already inserted at the end of prev segment

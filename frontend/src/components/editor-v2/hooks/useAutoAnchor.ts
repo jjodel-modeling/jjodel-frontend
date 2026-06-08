@@ -34,11 +34,20 @@ function getNodeRect(node: any): NodeRect {
 }
 
 /**
- * Deconflicts bidirectional edges (A→B and B→A) by assigning them different anchor combinations.
+ * Bundles every co-located edge group onto a shared facing channel.
  *
- * When two edges connect the same pair of nodes in opposite directions, they would normally
- * choose the same anchor sides and overlap completely. This function detects such pairs and
- * assigns alternating anchor combinations based on the dominant axis between nodes.
+ * Any group of edges sharing the same unordered node pair {A,B} with two or more
+ * routable edges (references; inheritance and self-references are excluded) is forced
+ * onto the facing (opposing) side-pair, chosen by the dominant axis between the two
+ * nodes — the same rule as jjomTransformers.computeOptimalHandles (vertical-dominant on
+ * ties) so load-time and post-drag side selection agree. Each edge's source endpoint
+ * lands on the source box's facing side and its target endpoint on the target box's
+ * facing side, so covariant ({A→B, A→B}) and contravariant ({A→B, B→A}) groups share the
+ * same two facing sides; the directions are separated downstream on that shared channel
+ * by computeSidePositions' pair-stable ordering.
+ *
+ * Name retained for historical continuity even though the scope is no longer limited to
+ * bidirectional pairs.
  *
  * @param edges - Array of edges with their computed anchors
  * @param nodeRects - Map of node IDs to their rectangles
@@ -61,58 +70,45 @@ function deconflictBidirectionalEdges(
 
     // Process each pair group
     for (const [, group] of pairMap) {
-        // Find bidirectional pairs (same nodes, opposite directions)
-        const bidirectionalPairs: Array<{ forward: typeof edges[0]; reverse: typeof edges[0] }> = [];
-        const processed = new Set<string>();
+        // Only references participate: inheritance keeps its sacred top/bottom convention
+        // and self-references have a dedicated routing, so both are left untouched here.
+        const routable = group.filter(e => e.type !== 'inheritance' && e.source !== e.target);
 
-        for (const edge of group) {
-            if (processed.has(edge.id)) continue;
+        // A facing channel is only meaningful when two or more edges share the pair.
+        // Single edges keep the per-edge side selection computed upstream.
+        if (routable.length < 2) continue;
 
-            const opposite = group.find(e => e.source === edge.target && e.target === edge.source);
-            if (opposite && !processed.has(opposite.id)) {
-                bidirectionalPairs.push({ forward: edge, reverse: opposite });
-                processed.add(edge.id);
-                processed.add(opposite.id);
-            }
+        // The two distinct endpoint nodes of this group (every routable edge connects them).
+        const nodeA = routable[0].source;
+        const nodeB = routable[0].target;
+        const rectA = nodeRects.get(nodeA);
+        const rectB = nodeRects.get(nodeB);
+        if (!rectA || !rectB) continue;
+
+        // Facing side-pair by dominant axis (vertical-dominant on ties), mirroring
+        // jjomTransformers.computeOptimalHandles so load-time and post-drag agree.
+        // sideA faces from A toward B; sideB is its opposite, on B.
+        const dx = rectB.centerX - rectA.centerX;
+        const dy = rectB.centerY - rectA.centerY;
+        const isVerticalDominant = Math.abs(dy) >= Math.abs(dx);
+        let sideA: Side;
+        let sideB: Side;
+        if (isVerticalDominant) {
+            if (dy >= 0) { sideA = 'bottom'; sideB = 'top'; } // B below A
+            else { sideA = 'top'; sideB = 'bottom'; }         // B above A
+        } else {
+            if (dx > 0) { sideA = 'right'; sideB = 'left'; }  // B right of A
+            else { sideA = 'left'; sideB = 'right'; }         // B left of A
         }
 
-        // Assign alternating anchors to bidirectional pairs
-        for (const pair of bidirectionalPairs) {
-            const sourceRect = nodeRects.get(pair.forward.source);
-            const targetRect = nodeRects.get(pair.forward.target);
-
-            if (!sourceRect || !targetRect) continue;
-
-            // Determine dominant axis between nodes
-            const dx = targetRect.centerX - sourceRect.centerX;
-            const dy = targetRect.centerY - sourceRect.centerY;
-            const isHorizontalDominant = Math.abs(dx) > Math.abs(dy);
-
-            if (isHorizontalDominant) {
-                // Nodes are horizontally separated → use vertical anchors for separation
-                // Forward edge: top-to-top, Reverse edge: bottom-to-bottom
-                if (dx > 0) {
-                    // Target is to the right
-                    result.set(pair.forward.id, { sourceHandle: 'top', targetHandle: 'top' });
-                    result.set(pair.reverse.id, { sourceHandle: 'bottom', targetHandle: 'bottom' });
-                } else {
-                    // Target is to the left
-                    result.set(pair.forward.id, { sourceHandle: 'bottom', targetHandle: 'bottom' });
-                    result.set(pair.reverse.id, { sourceHandle: 'top', targetHandle: 'top' });
-                }
-            } else {
-                // Nodes are vertically separated → use horizontal anchors for separation
-                // Forward edge: left-to-left, Reverse edge: right-to-right
-                if (dy > 0) {
-                    // Target is below
-                    result.set(pair.forward.id, { sourceHandle: 'left', targetHandle: 'left' });
-                    result.set(pair.reverse.id, { sourceHandle: 'right', targetHandle: 'right' });
-                } else {
-                    // Target is above
-                    result.set(pair.forward.id, { sourceHandle: 'right', targetHandle: 'right' });
-                    result.set(pair.reverse.id, { sourceHandle: 'left', targetHandle: 'left' });
-                }
-            }
+        // Per-edge, direction-aware assignment: each endpoint lands on its own box's
+        // facing side. Covariant and contravariant groups thus share the same two facing
+        // sides; computeSidePositions' pair-stable ordering then separates the edges into
+        // parallel paths on that shared channel.
+        for (const edge of routable) {
+            const sourceHandle = edge.source === nodeA ? sideA : sideB;
+            const targetHandle = edge.target === nodeA ? sideA : sideB;
+            result.set(edge.id, { sourceHandle, targetHandle });
         }
     }
 
