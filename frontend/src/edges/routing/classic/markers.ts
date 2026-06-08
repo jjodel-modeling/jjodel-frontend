@@ -60,10 +60,15 @@ export function computeHeadPosition(
     let segmentDistance = start.distanceFromPoint(end);
     if (segmentDistance <= Math.sqrt(headPos.w**2 + headPos.h**2)){ // todo: if pts are too close and m is infinite, this crashes?
         let safeDistance = Math.max(headPos.w, headPos.h)*5;
-        // TODO: suspected bug — see discovery report 2026-05-03, likely should be end.x for first arg
-        end = new GraphPoint( end.y + safeDistance, end.y + m * safeDistance); // move the point away so it doesn't intersect anymore. i just need direction
-        // too small to fit edgeHead, i simply put it centered on the whole segment
-        // secondIntersection = end;
+        // Push `end` away from `start` ALONG the segment's actual direction so the box
+        // intersection below has room. Normalising by (dx,dy) keeps this correct for
+        // horizontal, vertical (m = Infinity) and diagonal short segments alike — the old
+        // form placed end.y on the X axis and routed through m, which blew up for vertical
+        // stubs (frequent with top/bottom anchors in Manhattan routing).
+        const dx = end.x - start.x, dy = end.y - start.y;
+        const len = Math.hypot(dx, dy) || 1;
+        end = new GraphPoint(end.x + (dx / len) * safeDistance, end.y + (dy / len) * safeDistance);
+        // too small to fit edgeHead; we only need the direction — the box-intersection re-centers it
     }
     secondIntersection = GraphSize.closestIntersection(x4headsize, start, end, undefined, m, undefined);
     if (!secondIntersection) {
