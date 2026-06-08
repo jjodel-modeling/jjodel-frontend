@@ -2376,11 +2376,11 @@ replaced by startPoint
     // Local fillet pass for the merged Manhattan preview `d` (no editor-v2 import; replicates the
     // arc construction). Each interior corner Pi between two axis-aligned legs becomes a quadratic
     // fillet: a straight `L` up to r before Pi, then `Q Pi <point r after Pi>`, with
-    // r = min(8, half each adjacent leg) so the arc never overshoots the shorter leg. P0 and Pn are
+    // r = min(5, half each adjacent leg) so the arc never overshoots the shorter leg. P0 and Pn are
     // kept unchanged; degenerate or collinear corners emit a plain `L`. Defensive gate: only a pure
     // absolute M/L polyline is rounded — any other SVG command returns `d` untouched (get_d is shared
     // by bezier and non-orthogonal edges).
-    private static roundManhattanCorners(d: string, R: number = 8): string {
+    private static roundManhattanCorners(d: string, R: number = 5): string {
         const letters = d.match(/[a-zA-Z]/g);
         if (!letters || letters.some(ch => ch !== 'M' && ch !== 'L')) return d;
         // Tokenize on spaces and commas; the moveto glues its letter to the first number ("M100 200,"),
