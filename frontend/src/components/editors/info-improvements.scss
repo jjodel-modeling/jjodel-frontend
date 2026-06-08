@@ -1086,6 +1086,8 @@ html[data-theme="dark"] {
   margin: 0;
   gap: 4px;    
 
+
+
   &::before {
     display: none !important;
     content: none !important;
@@ -1118,9 +1120,9 @@ html[data-theme="dark"] {
   input[type="number"] {
     font-size: 12px;
     border: 1px solid #e2e8f0;
-    border-radius: 4px;
+    border-radius: 6px;
     padding: 4px 8px;
-    height: 28px;
+    height: 32px;
     width: 100%;
     max-width: none;
     outline: none;
@@ -1128,8 +1130,9 @@ html[data-theme="dark"] {
     color: #1e293b;
 
     &:focus {
-      border-color: #334155;
-      box-shadow: 0 0 0 2px rgba(51, 65, 85, 0.15);
+      border-color: #334155 !important;
+      box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.15) !important;
+      outline: none !important;
     }
   }
 
@@ -1145,17 +1148,37 @@ html[data-theme="dark"] {
     border: 1px solid #e2e8f0;
     border-radius: 4px;
     padding: 4px 8px;
-    height: 28px;
+    height: 32px;
     width: 100%;
     max-width: none;
     outline: none;
     background: #fff;
     color: #1e293b;
 
+
+
     &:focus {
       border-color: #334155;
     }
   }
+}
+
+
+
+/* Bare single-line inputs in New-UI fields (e.g. Name, Uri, Prefix) — match the 32px select/combobox height */
+.properties-panel .jj-field input[type="text"] {
+}
+
+/* Panel text-input focus = JjSelect's box-shadow ring (follows border-radius), not the global outline.
+   Values are identical to JjSelect's control focus: border #334155, box-shadow 0 0 0 3px rgba(51,65,85,0.15). */
+.properties-panel .jj-field input[type="text"]:focus,
+.properties-panel .jj-field input[type="number"]:focus {
+    border-color: none !important;
+    // box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.15) !important;
+    outline: none !important;
+
+
+
 }
 
 /* --- Toggle switches inside property rows --- */
@@ -1533,7 +1556,7 @@ section .property-panel {
 
 .jj-slot-value-input {
   flex: 1;
-  height: 28px;
+  height: 32px;
   padding: 0 8px;
   border: 1px solid #e2e8f0;
   border-radius: 5px;
@@ -1552,7 +1575,7 @@ section .property-panel {
 
 .jj-slot-value-select {
   flex: 1;
-  height: 28px;
+  height: 32px;
   padding: 0 8px;
   border: 1px solid #e2e8f0;
   border-radius: 5px;

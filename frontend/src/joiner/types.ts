@@ -124,6 +124,7 @@ export type TLCoord = // 1° priority: center, 2° priority: Y, 3° X
 
 export enum EdgeBendingMode {
     "Line"="L", // end
+    "Manhattan"="Manhattan", // routing strategy: orthogonal HVH/VHV waypoints, each leg a straight L
     "Bezier_quadratic"="Q", // bending1, end
     "Bezier_cubic"="C", // bending1, bending2, end
     // "Bezier_cubic_mirrored"="S", // bending1, end // when there are multiple bezier curves on a row, this takes a bendingpoint1 from the last bezier curves mirrored https://css-tricks.com/svg-path-syntax-illustrated-guide/

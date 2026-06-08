@@ -6,3 +6,7 @@ declare module 'jsx-runtime' {
 declare module 'jsx-recast' { export default {} as any; }
 declare module 'jsx-transform/browserify' { export default {} as any; }
 declare module 'jsx-transform/lib/jsx.js' { export default {} as any; }
+
+declare const __APP_VERSION__: string;
+declare const __BUILD_COUNT__: string;
+declare const __BUILD_SHA__: string;

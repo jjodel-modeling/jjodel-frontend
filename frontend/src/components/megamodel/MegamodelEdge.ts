@@ -54,7 +54,7 @@ export interface MmNode {
     generatedLabel?: string;
 }
 
-export type MmEdgeType = 'conformsTo' | 'inputOf' | 'outputOf' | 'definedOn' | 'renderedBy' | 'generatedBy' | 'sourceOf' | 'instanceInputOf';
+export type MmEdgeType = 'conformsTo' | 'uses' | 'inputOf' | 'outputOf' | 'definedOn' | 'renderedBy' | 'generatedBy' | 'sourceOf' | 'instanceInputOf';
 
 export interface MmEdgeStyle {
     color: string;
@@ -78,6 +78,7 @@ export interface MmEdge {
 
 export const EDGE_STYLES: Record<MmEdgeType, MmEdgeStyle & { label: string }> = {
     conformsTo:  { color: '#888780', dasharray: '5,3',  strokeWidth: 1,   opacity: 0.6, label: 'conformsTo' },
+    uses:        { color: '#0F766E',                     strokeWidth: 1.4, opacity: 1.0, label: 'uses' },
     inputOf:     { color: '#1D9E75',                     strokeWidth: 1.2, opacity: 1.0, label: 'inputOf' },
     outputOf:    { color: '#D85A30',                     strokeWidth: 1.2, opacity: 1.0, label: 'outputOf' },
     definedOn:   { color: '#7F77DD', dasharray: '3,3',   strokeWidth: 1,   opacity: 0.7, label: 'definedOn' },
@@ -108,6 +109,47 @@ export function spreadAnchors(count: number): number[] {
         result.push(k / (count + 1));
     }
     return result;
+}
+
+/**
+ * Geometry-aware anchor side selection.
+ *
+ * Picks the side of each node that faces the other, based on the dominant axis
+ * of separation between node centers (horizontal gap dominates → left/right,
+ * vertical → top/bottom). This replaces the static per-edge-type sides from
+ * `edgeSides()` so an edge always exits/enters on the side actually facing its
+ * counterpart — including after the user drags nodes around the canvas.
+ *
+ * `fallbackFrom` / `fallbackTo` are the static per-type sides; they are returned
+ * only for the degenerate case of perfectly overlapping node centers.
+ *
+ * FUTURE ENHANCEMENT (anchor handling, level 3): allow the user to manually
+ * grab an edge endpoint and pin it to a chosen side + offset, overriding this
+ * automatic choice. Since megamodel edges are derived (never persisted on the
+ * edge itself), such overrides would be stored per stable edge id in
+ * localStorage, mirroring the node-position persistence (`savePositions`).
+ * This function would then be the auto fallback when no manual override exists.
+ */
+export function computeAdaptiveSides(
+    from: MmNode,
+    to: MmNode,
+    fallbackFrom: Side,
+    fallbackTo: Side,
+): { fromSide: Side; toSide: Side } {
+    const dx = (to.x + NODE_W / 2) - (from.x + NODE_W / 2);
+    const dy = (to.y + NODE_H / 2) - (from.y + NODE_H / 2);
+
+    // Overlapping centers — no meaningful direction, keep the semantic default.
+    if (dx === 0 && dy === 0) return { fromSide: fallbackFrom, toSide: fallbackTo };
+
+    if (Math.abs(dx) >= Math.abs(dy)) {
+        return dx >= 0
+            ? { fromSide: 'right', toSide: 'left' }
+            : { fromSide: 'left', toSide: 'right' };
+    }
+    return dy >= 0
+        ? { fromSide: 'bottom', toSide: 'top' }
+        : { fromSide: 'top', toSide: 'bottom' };
 }
 
 // ─── Manhattan routing ────────────────────────────────────────────────────────

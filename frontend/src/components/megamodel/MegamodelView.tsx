@@ -19,7 +19,7 @@ import {
     NODE_W, NODE_H,
     type MmNode, type MmEdge, type MmEdgeType, type MmNodeKind, type MmNodeStats, type MmNodeStatus, type Side, type Point,
     EDGE_STYLES,
-    getPort, spreadAnchors, routePoints, buildRoundedPath, labelMidpoint,
+    getPort, spreadAnchors, routePoints, buildRoundedPath, labelMidpoint, computeAdaptiveSides,
 } from './MegamodelEdge';
 import './MegamodelView.scss';
 
@@ -67,6 +67,7 @@ function artifactTypeToKind(type: ArtifactType): MmNodeKind {
 function edgeSides(type: MmEdgeType): { fromSide: Side; toSide: Side } {
     switch (type) {
         case 'conformsTo':  return { fromSide: 'top',    toSide: 'bottom' };
+        case 'uses':        return { fromSide: 'right',  toSide: 'left' };   // MM → MM (cross-metamodel)
         case 'inputOf':     return { fromSide: 'right',  toSide: 'left' };   // MM → transformation
         case 'outputOf':    return { fromSide: 'right',  toSide: 'left' };   // transformation → MM
         case 'definedOn':   return { fromSide: 'top',    toSide: 'bottom' };
@@ -197,6 +198,7 @@ function buildGraph(
 function mapEdgeType(type: MegaEdge['type']): MmEdgeType | null {
     switch (type) {
         case 'conformsTo':  return 'conformsTo';
+        case 'uses':        return 'uses';
         case 'inputOf':     return 'inputOf';
         case 'outputOf':    return 'outputOf';
         case 'generatedBy':    return 'generatedBy';
@@ -259,6 +261,7 @@ function computeAnchorTs(edges: MmEdge[]): Map<string, { fromT: number; toT: num
 
 const LEGEND_EDGES: Array<{ key: MmEdgeType; label: string }> = [
     { key: 'conformsTo', label: 'conformsTo' },
+    { key: 'uses', label: 'uses' },
     { key: 'inputOf', label: 'inputOf' },
     { key: 'outputOf', label: 'outputOf' },
     { key: 'generatedBy', label: 'generatedBy' },
@@ -512,9 +515,21 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
     const edgePaths = useMemo(() => {
         if (!layoutReady) return [];
 
-        const anchorTs = computeAnchorTs(visibleEdges);
+        // Re-orient each edge to the sides actually facing its counterpart, based
+        // on current node positions, instead of the static per-type sides. Edges
+        // with a missing endpoint keep their static sides. Spread + routing below
+        // both run on these oriented sides so grouping stays consistent.
+        const oriented = visibleEdges.map(edge => {
+            const fromNode = nodeMap.get(edge.from);
+            const toNode   = nodeMap.get(edge.to);
+            if (!fromNode || !toNode) return edge;
+            const sides = computeAdaptiveSides(fromNode, toNode, edge.fromSide, edge.toSide);
+            return { ...edge, fromSide: sides.fromSide, toSide: sides.toSide };
+        });
 
-        return visibleEdges.map(edge => {
+        const anchorTs = computeAnchorTs(oriented);
+
+        return oriented.map(edge => {
             const fromNode = nodeMap.get(edge.from);
             const toNode   = nodeMap.get(edge.to);
             if (!fromNode || !toNode) return null;

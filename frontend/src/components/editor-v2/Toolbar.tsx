@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSelector } from 'react-redux';
-import type { NotationMode, ColorScheme } from './types';
+import type { NotationMode, ActiveColorScheme, CustomColorScheme } from './types';
 import ColorSchemeSelector from './components/ColorSchemeSelector';
 import HighlightPalette from './components/HighlightPalette';
 import { LayoutMode, getSavedLayoutMode, saveLayoutMode } from '../abstract/Dock';
@@ -22,8 +22,12 @@ interface ToolbarProps {
     onNotationChange: (notation: NotationMode) => void;
     onAutoLayout?: () => void;
     onDuplicateSelected?: () => void;
-    colorScheme: ColorScheme;
-    onColorSchemeChange: (scheme: ColorScheme) => void;
+    colorScheme: ActiveColorScheme;
+    onColorSchemeChange: (scheme: ActiveColorScheme) => void;
+    customPalettes: CustomColorScheme[];
+    onCreateCustomPalette: (name: string, seed: string) => void;
+    onRenamePalette: (id: string, name: string) => void;
+    onDeletePalette: (id: string) => void;
     // Zoom controls
     zoomLevel?: number;
     onZoomIn?: () => void;
@@ -141,6 +145,10 @@ function Toolbar({
     onDuplicateSelected,
     colorScheme,
     onColorSchemeChange,
+    customPalettes,
+    onCreateCustomPalette,
+    onRenamePalette,
+    onDeletePalette,
     zoomLevel,
     onZoomIn,
     onZoomOut,
@@ -356,6 +364,10 @@ function Toolbar({
                 <ColorSchemeSelector
                     colorScheme={colorScheme}
                     onColorSchemeChange={onColorSchemeChange}
+                    customPalettes={customPalettes}
+                    onCreateCustomPalette={onCreateCustomPalette}
+                    onRenamePalette={onRenamePalette}
+                    onDeletePalette={onDeletePalette}
                 />
             </div>
 

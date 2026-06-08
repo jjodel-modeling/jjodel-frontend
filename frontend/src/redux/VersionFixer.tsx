@@ -3,7 +3,7 @@ import {
     GObject,
     GraphPoint, DViewPoint, DViewElement, PointedBy,
     DProject, LViewElement,
-    DV, DPackage, DObject,
+    DV, DPackage, DObject, EdgeBendingMode,
 } from "../joiner";
 import {
     Defaults, DGraphElement,
@@ -837,6 +837,32 @@ everytime you put hands into a D-Object shape or valid values, you should docume
     // cross-MM ghost-parent chips, keyed by super-type DClass id). Default-absent (undefined →
     // {} consumer-side), so no per-instance seeding is needed — bump only.
     private ['2.219 -> 2.220'](s: DState): DState { return s; }
+
+    // 2.220 → 2.221: native Classic edges now route orthogonally (Manhattan) by default.
+    // Flip default edge views from Line ('L') to Manhattan. Keyed on the stable default
+    // edge-view id prefix + appliableTo === 'Edge' (excludes Pointer_ViewEdgePoint, whose
+    // appliableTo is 'EdgePoint') + bendingMode === Line (preserves any deliberate user-chosen
+    // mode). User-custom edge views use timestamp ids → not matched. Idempotent: re-running
+    // finds nothing. NB: untouched default edge views are also regenerated wholesale by
+    // updateDefaultView via the version bump; this method additionally covers touched
+    // (clonedCounter) defaults, which updateDefaultView skips.
+    private ['2.220 -> 2.221'](s: DState): DState {
+        let migrated = 0;
+        for (let k in s.idlookup) {
+            let e = s.idlookup[k] as any;
+            if (!e || typeof e !== 'object') continue;
+            if (e.className !== 'DViewElement') continue;
+            if (typeof e.id !== 'string' || !e.id.startsWith('Pointer_ViewEdge')) continue;
+            if (e.appliableTo !== 'Edge') continue;               // excludes Pointer_ViewEdgePoint
+            if (e.bendingMode !== EdgeBendingMode.Line) continue;  // preserve user-chosen modes
+            e.bendingMode = EdgeBendingMode.Manhattan;
+            migrated++;
+        }
+        if (migrated > 0) {
+            console.log(`[VersionFixer 2.220 -> 2.221] Migrated ${migrated} default edge view(s) Line → Manhattan.`);
+        }
+        return s;
+    }
 
 }
 

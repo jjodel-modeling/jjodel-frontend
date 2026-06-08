@@ -4152,7 +4152,7 @@ export class DAttribute extends DModelElement { // DStructuralFeature
 
     public static new(name?: DAttribute["name"], type?: DAttribute["type"], father?: DAttribute["father"], persist: boolean = true): DAttribute {
         if (!name) name = this.defaultname("attr_", father);
-        if (!type) type = LPointerTargetable.from(Selectors.getFirstPrimitiveTypes()).id; // default type as string
+        if (!type) type = LPointerTargetable.from(Selectors.getPrimitiveType(ShortAttribETypes.EString)).id; // default type as string
         return new Constructors(new DAttribute('dwc'), father, persist, undefined).DPointerTargetable().DModelElement()
             .DNamedElement(name).DTypedElement(type).DStructuralFeature().DAttribute().end();
     }

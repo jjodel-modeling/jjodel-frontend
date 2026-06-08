@@ -40,11 +40,14 @@ import { EditorContext } from './contexts/EditorContext';
 import { HighlightProvider, type HighlightState } from './contexts/HighlightContext';
 import { getNextFreeHandleIndex, computePortDistribution } from './utils/portDistribution';
 import { getSideFromHandle } from './utils/edgeUtils';
-import type { ClassNodeData, EnumNodeData, PackageNodeData, ObjectNodeData, ReferenceEdgeData, InheritanceEdgeData, CompositionEdgeData, InstanceReferenceEdgeData, AnchorConfig, ReferenceKind, NotationMode, ColorScheme } from './types';
+import { LANE_DEBUG, reconstructEdgePoints, type LaneRect, type ReconstructEdge } from './utils/laneSeparation';
+import type { ClassNodeData, EnumNodeData, PackageNodeData, ObjectNodeData, ReferenceEdgeData, InheritanceEdgeData, CompositionEdgeData, InstanceReferenceEdgeData, AnchorConfig, ReferenceKind, NotationMode, ColorScheme, CustomColorScheme, ActiveColorScheme } from './types';
 import { EdgeTypePopup, type EdgeTypeChoice } from './components/EdgeTypePopup';
 import { M1ReferencePopup } from './components/M1ReferencePopup';
 import { useJjomSync } from './hooks/useJjomSync';
 import { useM1ReferenceEdges } from './hooks/useM1ReferenceEdges';
+import { useLayoutAutosave } from './hooks/useLayoutAutosave';
+import { useCustomPaletteStyleSheet } from './hooks/useCustomPaletteStyleSheet';
 import { useJjomSelection } from './hooks/useJjomSelection';
 import { useEditorMode, type MetaclassInfo, type MetaclassReference } from './hooks/useEditorMode';
 import { useClassRemoval } from './hooks/useClassRemoval';
@@ -352,6 +355,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         }, 50);
     });
     useM1ReferenceEdges(modelid, graphId);
+
+    // Debounced autosave of node positions on drag-end (gated by autosaveLayout)
+    const { scheduleLayoutSave } = useLayoutAutosave();
 
     // M1/M2 mode detection — resolves metamodel classes, rootable classes, hierarchy
     const modeInfo = useEditorMode(modelid);
@@ -729,16 +735,58 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         localStorage.setItem('editor-v2-notation', notation);
     }, [notation]);
 
+    // User-created (seed-driven) palettes — declared above colorScheme so the
+    // colorScheme initializer below can validate a persisted custom id.
+    const [customPalettes, setCustomPalettes] = useState<CustomColorScheme[]>(() => {
+        try {
+            const raw = localStorage.getItem('jjodel.customPalettes');
+            const parsed = raw ? JSON.parse(raw) : [];
+            return Array.isArray(parsed) ? parsed : [];
+        } catch { return []; }
+    });
+
+    useEffect(() => {
+        try { localStorage.setItem('jjodel.customPalettes', JSON.stringify(customPalettes)); } catch { /* quota / private mode */ }
+    }, [customPalettes]);
+
+    // Inject the runtime <style> for the custom palettes (built-ins are static SCSS).
+    useCustomPaletteStyleSheet(customPalettes);
+
     // Color scheme state with localStorage persistence
     const VALID_SCHEMES: ColorScheme[] = ['default', 'monochrome', 'sapphire', 'amethyst', 'jade', 'terracotta', 'crimson', 'high-contrast', 'print'];
-    const [colorScheme, setColorScheme] = useState<ColorScheme>(() => {
+    const [colorScheme, setColorScheme] = useState<ActiveColorScheme>(() => {
         const saved = localStorage.getItem('editor-v2-color-scheme');
-        return VALID_SCHEMES.includes(saved as ColorScheme) ? (saved as ColorScheme) : 'default';
+        if (!saved) return 'default';
+        const isBuiltIn = VALID_SCHEMES.includes(saved as ColorScheme);
+        const isCustom = customPalettes.some(p => p.id === saved);
+        return isBuiltIn || isCustom ? saved : 'default';
     });
 
     useEffect(() => {
         localStorage.setItem('editor-v2-color-scheme', colorScheme);
     }, [colorScheme]);
+
+    // Create a seed-driven palette and immediately activate it.
+    const handleCreateCustomPalette = useCallback((name: string, seed: string) => {
+        const uuid = (typeof crypto !== 'undefined' && crypto.randomUUID)
+            ? crypto.randomUUID()
+            : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+        const id = `custom-${uuid}`;
+        setCustomPalettes(prev => [...prev, { id, name, seed }]);
+        setColorScheme(id);
+    }, []);
+
+    // Rename a custom palette (name only — id/seed unchanged, so colors and the
+    // active scheme are unaffected). Persistence runs through the existing effect.
+    const handleRenameCustomPalette = useCallback((id: string, name: string) => {
+        setCustomPalettes(prev => prev.map(p => (p.id === id ? { ...p, name } : p)));
+    }, []);
+
+    // Delete a custom palette; if it was the active scheme, fall back to default.
+    const handleDeleteCustomPalette = useCallback((id: string) => {
+        setCustomPalettes(prev => prev.filter(p => p.id !== id));
+        setColorScheme(prev => (prev === id ? 'default' : prev));
+    }, []);
 
     // Block native text selection on the canvas. CSS `user-select: none` is
     // not enough — the browser ignores it once a drag is already in flight,
@@ -834,6 +882,37 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         const positions = buildNodePositions(currentNodes);
 
         const { edgeHandles } = computePortDistribution(edgeList, nodeIds, positions);
+
+        // ── Lane separation Phase A: reconstruct edge geometry + log (no visual change) ──
+        // Build the to-be-rendered edge list (handles overridden with the just-assigned
+        // distribution) + node rects from the same source as buildNodePositions, then
+        // reconstruct each edge's point array with the SAME pure functions the render uses.
+        // Gated by LANE_DEBUG; produces no offsets and mutates nothing.
+        if (LANE_DEBUG) {
+            const nodeRects = new Map<string, LaneRect>();
+            for (const n of currentNodes) {
+                const w = ((n.measured?.width ?? (n as any).width ?? 180) as number);
+                const h = ((n.measured?.height ?? (n as any).height ?? 80) as number);
+                nodeRects.set(n.id, { x: n.position.x, y: n.position.y, width: w, height: h });
+            }
+            const distributedEdges: ReconstructEdge[] = edgeList.map(e => {
+                const d = edgeHandles.get(e.id);
+                return {
+                    id: e.id,
+                    source: e.source,
+                    target: e.target,
+                    type: e.type,
+                    sourceHandle: d?.sourceHandle ?? e.sourceHandle,
+                    targetHandle: d?.targetHandle ?? e.targetHandle,
+                    data: e.data as ReconstructEdge['data'],
+                };
+            });
+            for (const e of distributedEdges) {
+                const reconstructed = reconstructEdgePoints(e, distributedEdges, nodeRects, positions);
+                // eslint-disable-next-line no-console
+                console.log('[laneA:producer]', e.id, JSON.stringify(reconstructed));
+            }
+        }
 
         const handleIdx = (h?: string | null): number => {
             const m = h?.match(/-(\d+)$/);
@@ -2924,6 +3003,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                             syncPositionToJjom(c.id, c.position.x, c.position.y);
                         }
                     }
+                    // Positions are now committed to the D-layer — debounce a
+                    // full project save so the new layout survives a reload.
+                    scheduleLayoutSave();
                 }
 
                 // -- Faithful drag: during drag, dispatch position via RAF throttle --
@@ -3006,7 +3088,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 isProcessingNodesChangeRef.current = false;
             }
         },
-        [onNodesChange, takeSnapshot, setEdges, getNodes, applyDistribution, isJjomMode]
+        [onNodesChange, takeSnapshot, setEdges, getNodes, applyDistribution, isJjomMode, scheduleLayoutSave]
     );
 
     // Recalculate anchors for a specific edge (called by SegmentHandles after drag).
@@ -3238,6 +3320,10 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         onNotationChange={setNotation}
                         colorScheme={colorScheme}
                         onColorSchemeChange={setColorScheme}
+                        customPalettes={customPalettes}
+                        onCreateCustomPalette={handleCreateCustomPalette}
+                        onRenamePalette={handleRenameCustomPalette}
+                        onDeletePalette={handleDeleteCustomPalette}
                         zoomLevel={activeController ? activeZoomLevel : undefined}
                         onZoomIn={activeController ? handleActiveZoomIn : undefined}
                         onZoomOut={activeController ? handleActiveZoomOut : undefined}

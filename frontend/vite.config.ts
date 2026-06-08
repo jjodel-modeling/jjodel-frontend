@@ -2,8 +2,23 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 import path from 'path'
+import { execSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 
 const __dirname = import.meta.dirname
+
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8'))
+
+function gitSafe(cmd: string, fallback: string): string {
+  try {
+    return execSync(cmd, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
+  } catch {
+    return fallback
+  }
+}
+
+const BUILD_COUNT = gitSafe('git rev-list --count HEAD', '0')
+const BUILD_SHA = gitSafe('git rev-parse --short HEAD', 'unknown')
 
 export default defineConfig(({ mode }) => ({
   plugins: [
@@ -47,6 +62,9 @@ export default defineConfig(({ mode }) => ({
   },
   define: {
     'global': 'globalThis',
+    __APP_VERSION__: JSON.stringify(pkg.version),
+    __BUILD_COUNT__: JSON.stringify(BUILD_COUNT),
+    __BUILD_SHA__: JSON.stringify(BUILD_SHA),
     // 'window.jQuery': 'window.$',
     // 'window.$': 'window.$'
   },
