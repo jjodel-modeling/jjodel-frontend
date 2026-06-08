@@ -1857,6 +1857,9 @@ export class DVoidEdge extends DGraphElement {
     labels?: DocString<"function">;
     anchorStart?: string | GObject<{x: number, y: number}>;
     anchorEnd?: string | GObject<{x: number, y: number}>;
+    // per-internal-segment perpendicular drag offset (classic-editor draggable segment handles).
+    // Optional → existing edges read undefined → no VersionFixer migration. Applied in get_segments_impl.
+    segmentOffsets?: { segmentIndex: number, offset: number }[];
 
     isExtend!: boolean;
     isReference!: boolean;
@@ -2127,6 +2130,7 @@ export class LVoidEdge<Context extends LogicContext<DVoidEdge> = any, D extends 
     __isLVoidEdge!: true;
     midPoints!: InitialVertexSize[]; // the logic part which instructs to generate the midnodes
     midnodes!: LEdgePoint[];
+    segmentOffsets?: { segmentIndex: number, offset: number }[]; // classic-editor draggable segment-handle offsets
     edge!: LVoidEdge; // returns self. useful to get edge from edgePoints without triggering error if you are already on edge.
     __info_of__edge: Info = {type:"?LEdge", txt:"returns this if called on an edge, the containing edge if called on an EdgePoint, undefined otherwise."}
 
@@ -2258,6 +2262,14 @@ replaced by startPoint
     protected get_edge(c: Context): this{ return c.proxyObject as this; }
     protected set_edge(v: any, c: Context): false { return this.cannotSet("edge field, on an edge element"); }
     protected get_midPoints(c: Context):this["midPoints"] { return c.data.midPoints; }
+    protected get_segmentOffsets(c: Context): this["segmentOffsets"] { return c.data.segmentOffsets || []; }
+    protected set_segmentOffsets(val: this["segmentOffsets"], c: Context): boolean {
+        let name = this.get_name(c)||'';
+        TRANSACTION((name.toLowerCase().indexOf('edge')>=0 ? name : 'Edge: '+name)+'.segmentOffsets', ()=>{
+            SetFieldAction.new(c.data.id, "segmentOffsets", val || [], undefined, false);
+        });
+        return true;
+    }
     public addMidPoint(v: this["midPoints"][0]): boolean { return this.wrongAccessMessage("addMidPoint"); }
     public addEdgePoint(v: this["midPoints"][0]): boolean { return this.wrongAccessMessage("addEdgePoint"); }
     protected set_midPoints(val: this["midPoints"], c: Context): boolean {
@@ -2366,7 +2378,7 @@ replaced by startPoint
     // public get_segments_inner(c: Context): this["segments"] { return this.get_segments_impl(c, false); }
     private get_segments_impl(c: Context, outer: boolean): this["segments"] {
         const l = c.proxyObject as LVoidEdge;
-        return computeRouting({
+        const routed = computeRouting({
             allNodes: l.allNodes,
             edge: l,
             edgeId: c.data.id,
@@ -2382,6 +2394,39 @@ replaced by startPoint
             endFollow: LVoidEdge.endFollow,
             outer,
         }) as this["segments"];
+        return this.applySegmentOffsets(routed, c);
+    }
+
+    // Consumer-side post-process for classic-editor draggable segment handles: translate each dragged
+    // internal leg perpendicular by its stored offset. The Manhattan corner GraphPoints are transient
+    // (re-created each computeRouting call) and shared by reference between adjacent legs, so moving a
+    // corner stretches its neighbours while preserving orthogonality; adjacent legs change length but
+    // not direction, so the head/tail computed upstream stay valid. No edit to edges/routing/classic;
+    // offsets are optional → no VersionFixer migration.
+    private applySegmentOffsets(routed: this["segments"], c: Context): this["segments"] {
+        const offsets = c.data.segmentOffsets;
+        const legs = routed && routed.segments;
+        if (!offsets || !offsets.length || !legs || legs.length < 3) return routed;
+        let changed = false;
+        for (const o of offsets) {
+            const si = o && o.segmentIndex;
+            if (typeof si !== 'number' || si <= 0 || si >= legs.length - 1) continue; // internal-only; prune stale
+            const off = o.offset;
+            if (!off) continue;
+            const seg = legs[si];
+            if (!seg || !seg.start || !seg.end) continue;
+            const horizontal = Math.abs(seg.end.pt.y - seg.start.pt.y) <= Math.abs(seg.end.pt.x - seg.start.pt.x);
+            for (const sm of [seg.start, seg.end]) {
+                if (horizontal) { sm.pt.y += off; if (sm.uncutPt && sm.uncutPt !== sm.pt) sm.uncutPt.y += off; }
+                else            { sm.pt.x += off; if (sm.uncutPt && sm.uncutPt !== sm.pt) sm.uncutPt.x += off; }
+            }
+            changed = true;
+        }
+        if (changed) {
+            const gapMode: EdgeGapMode = this.get_view(c).edgeGapMode;
+            for (let i = 0; i < routed.all.length; i++) routed.all[i].makeD(i, gapMode);
+        }
+        return routed;
     }
     // setLabels: extracted to edges/routing/classic/labels.ts
 
