@@ -513,9 +513,13 @@
    ---------------------------------------- */
 
 /* Base label container */
-.label-start,
-.label-end {
+.label-start {
   overflow: visible;
+}
+
+/* Multiplicity labels are not shown in the classic editor */
+.label-end {
+  display: none;
 }
 
 /* Label text styling - pill style */
@@ -523,15 +527,13 @@
   display: inline-flex;
   align-items: center;
   padding: 2px 6px;
-  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-family: var(--font-sans, 'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif);
   font-size: 9px;
   font-weight: var(--font-medium, 500);
   color: var(--color-text-secondary, #525866);
   background-color: var(--color-bg-secondary, #f9fafb);
-  border: 1px solid var(--color-border-secondary, #eaecf0);
   border-radius: 2px;
   white-space: nowrap;
-  box-shadow: var(--shadow-xs, 0 1px 2px 0 rgba(0, 0, 0, 0.03));
 
   /* Alignment classes */
   &.left {
