@@ -863,13 +863,20 @@ settingsModal?.openSettings('providers');
 ## 17. Development commands
 
 ```bash
-npm run dev          # Vite dev server
-npm run test         # test suite
-npm run test:watch
-npm run typecheck    # tsc --noEmit
-npm run build
-npm run lint
+npm start            # Vite dev server
+npm run build        # vite build (production bundle)
+npm run typecheck    # tsc --noEmit (real type gate; vite/esbuild does not type-check)
+npm run test         # vitest run
+npm run test:watch   # vitest (watch mode)
+npm run dev          # docker-compose dev stack, not the dev server (use npm start)
 ```
+
+No `lint` script: ESLint is not installed, so do not run it. No coverage script.
+
+Verification gates before commit:
+- `npm run build` must pass (exit 0, only the pre-existing chunk-size warning).
+- `npm run typecheck` has a known non-zero baseline (filename casing plus a few genuine type errors). Your change must not increase the count.
+- `npm run test` where the touched area has tests. The suite has known failures; do not treat a red suite as caused by your change without checking.
 
 ---
 

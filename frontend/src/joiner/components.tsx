@@ -29,6 +29,7 @@ export {DefaultNode, DefaultNodeComponent} from "../graph/defaultNode/DefaultNod
 export {GraphsContainer, GraphsContainerComponent} from "../graph/graph/graphContainer"; // require vertex, graph
 export {Edge, EdgeComponent,} from "../graph/damedges/damedge";
 export {GenericInput} from "../components/forEndUser/GenericInput"
+export {IRView} from "../ai/viewpointIR/IRView";
 // other exports
 //export {DockLayoutComponent} from "../components/abstract/DockLayoutComponent";
 
