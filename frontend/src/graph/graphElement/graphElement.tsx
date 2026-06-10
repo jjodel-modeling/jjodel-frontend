@@ -414,6 +414,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         const nid = nextProps.nodeid;
 
         let subViewUpdated = false;
+        let stormSubviewVid: string | undefined = undefined; // [scuStorm] which subview first forced the update
         let newViews: Dictionary<Pointer, LViewElement> = U.objectFromArray(nextProps.views, 'id');
         let oldViews: Dictionary<Pointer, LViewElement> = U.objectFromArray(this.props?.views, 'id');
         for (let vid in newViews) {
@@ -455,7 +456,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
             Log.l(debug, "DECORATIVE_VIEW ShouldComponentUpdate " + data?.name + (nodeviewentry.shouldUpdate ? " UPDATED " : " REJECTED ")  + vid,
                 {ret:nodeviewentry.shouldUpdate, reason: out.reason, old_ud, new_ud, oldProps:oldProps, nextProps, vid});
-            if (!subViewUpdated && nodeviewentry.shouldUpdate) subViewUpdated = true;
+            if (!subViewUpdated && nodeviewentry.shouldUpdate) { subViewUpdated = true; if (windoww.__scuStormDebug) stormSubviewVid = vid; }
         }
 
         if (!subViewUpdated && this.props?.views) {
@@ -466,6 +467,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
                 // let v = oldViews[vid];
                 let nodeviewentry = transientProperties.node[nid].viewScores[vid];
                 subViewUpdated = nodeviewentry.shouldUpdate = true;
+                if (windoww.__scuStormDebug) stormSubviewVid = vid + ' (removed)';
                 let reason = 'subview removed'
                 out.reason.push(reason);
                 nodeviewentry.shouldUpdate_reason = {...out, reason};
@@ -496,6 +498,16 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
             let reason = 'main jsx changed';
             out.reason.push(reason);
             nodeviewentry.shouldUpdate_reason = {...out};
+        }
+        if (windoww.__scuStormDebug && ret) { // ret here is true only via subViewUpdated or main jsxChanged (BEFORE the UD compare)
+            try {
+                console.log('[scuStorm] SCU true before UD compare', {
+                    id: nextProps.nodeid,
+                    className: data?.className,
+                    reason: subViewUpdated ? 'subViewUpdated' : 'jsxChanged',
+                    subview: subViewUpdated ? stormSubviewVid : undefined,
+                });
+            } catch (e) {}
         }
         if (!ret) {
             // NB: UD changes as a string are handled in reducer and triggers JSX recompilation.
@@ -530,6 +542,18 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         Log.l(debug, "MAIN_VIEW ShouldComponentUpdate " + data?.name + (nodeviewentry.shouldUpdate ? " UPDATED " : " REJECTED ") + vid,
             {ret:nodeviewentry.shouldUpdate, reason: out.reason, old_ud, new_ud, oldProps:oldProps, nextProps});
         if (!ret && nodeviewentry.shouldUpdate) ret = true;
+        if (windoww.__segDragDebug && windoww.__segDragTarget && windoww.__segDragTarget === nextProps.nodeid) {
+            try {
+                const dbg = (nodeviewentry as any).shouldUpdate_reasonDebug;
+                console.log('[segDrag] SCU', {
+                    id: nextProps.nodeid,
+                    scuFired: true,
+                    equal: dbg && dbg.udCompare ? dbg.udCompare.equal : undefined,
+                    changedKeys: (nodeviewentry.shouldUpdate_reason as any)?.changedKeys,
+                    ret,
+                });
+            } catch (e) {}
+        }
         return ret; // if any of main view or decorative views need updating
         // also check docklayout shouldupdate
     }
@@ -723,12 +747,20 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     protected getTemplate3_(vid: Pointer<DViewElement>, v: LViewElement, context: GObject): ReactNode{
         let tnv = transientProperties.node[this.props.nodeid].viewScores[vid];
         //console.log("render debug view template 0: " + v.name, {tnv, s_up:tnv.shouldUpdate, oldjsx:tnv.jsxOutput});
-        if (!tnv.shouldUpdate && tnv.jsxOutput) return tnv.jsxOutput;
+        if (!tnv.shouldUpdate && tnv.jsxOutput) {
+            if (windoww.__segDragDebug && windoww.__segDragTarget && windoww.__segDragTarget === this.props.nodeid) {
+                try { console.log('[segDrag] render REUSED cached jsxOutput', {id: this.props.nodeid, vid}); } catch (e) {}
+            }
+            return tnv.jsxOutput;
+        }
 
         let tv = transientProperties.view[vid];
         // console.log('gt3', tv.JSXFunction, context);
         tnv.contextMenu = []; // reset old entries, new ones are computed now.
         let ret = tnv.jsxOutput = (tv.JSXFunction ? tv.JSXFunction.call(context, context) : null);
+        if (windoww.__segDragDebug && (!windoww.__segDragTarget || windoww.__segDragTarget === this.props.nodeid)) {
+            try { console.log('[segDrag] render RE-EVALUATED jsxString', {id: this.props.nodeid, vid}); } catch (e) {}
+        }
         /*if (typeof ret === "object" && ret !== null && !React.isValidElement(ret)) {
             // plain objects cannot be react nodes, but react nodes are objects. so i try serializing
             // this only happens if someone puts an object in jsx

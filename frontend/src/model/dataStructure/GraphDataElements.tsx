@@ -2265,8 +2265,10 @@ replaced by startPoint
     protected get_segmentOffsets(c: Context): this["segmentOffsets"] { return c.data.segmentOffsets || []; }
     protected set_segmentOffsets(val: this["segmentOffsets"], c: Context): boolean {
         let name = this.get_name(c)||'';
+        const id = c.data.id;
+        if (windoww.__segDragDebug) { try { console.log('[segDrag] write set_segmentOffsets', {id, oldOffsets: c.data.segmentOffsets, newOffsets: val}); } catch (e) {} }
         TRANSACTION((name.toLowerCase().indexOf('edge')>=0 ? name : 'Edge: '+name)+'.segmentOffsets', ()=>{
-            SetFieldAction.new(c.data.id, "segmentOffsets", val || [], undefined, false);
+            SetFieldAction.new(id, "segmentOffsets", val || [], undefined, false);
         });
         return true;
     }
@@ -2453,11 +2455,15 @@ replaced by startPoint
     }
 
     // Consumer-side post-process for classic-editor draggable segment handles: translate each dragged
-    // internal leg perpendicular by its stored offset. The Manhattan corner GraphPoints are transient
-    // (re-created each computeRouting call) and shared by reference between adjacent legs, so moving a
-    // corner stretches its neighbours while preserving orthogonality; adjacent legs change length but
-    // not direction, so the head/tail computed upstream stay valid. No edit to edges/routing/classic;
-    // offsets are optional → no VersionFixer migration.
+    // internal leg perpendicular by its stored offset, parallel to itself — both bounding corners move
+    // by the same amount so the leg keeps its axis and only shifts; the adjacent legs change length but
+    // not direction, so the head/tail computed upstream stay valid. The Manhattan corner GraphPoints are
+    // transient (re-created each computeRouting call) and START shared by reference between adjacent legs,
+    // but snapSegmentsToBorders can de-sync a shared corner into two distinct objects (average/center
+    // gapModes .duplicate() it; cut modes reassign it to the border intersection). Since the visible merged
+    // `d` renders each leg from its end.pt, moving only this leg's start/end would leave the previous
+    // corner behind and the leg would go diagonal — so we also translate the neighbours' touching points.
+    // No edit to edges/routing/classic; offsets are optional → no VersionFixer migration.
     private applySegmentOffsets(routed: this["segments"], c: Context): this["segments"] {
         const offsets = c.data.segmentOffsets;
         const legs = routed && routed.segments;
@@ -2471,15 +2477,34 @@ replaced by startPoint
             const seg = legs[si];
             if (!seg || !seg.start || !seg.end) continue;
             const horizontal = Math.abs(seg.end.pt.y - seg.start.pt.y) <= Math.abs(seg.end.pt.x - seg.start.pt.x);
-            for (const sm of [seg.start, seg.end]) {
-                if (horizontal) { sm.pt.y += off; if (sm.uncutPt && sm.uncutPt !== sm.pt) sm.uncutPt.y += off; }
-                else            { sm.pt.x += off; if (sm.uncutPt && sm.uncutPt !== sm.pt) sm.uncutPt.x += off; }
+            // Both bounding corners must shift, but snap may have de-synced each shared corner into two
+            // objects, so translate it as seen by both legs: this leg's start/end AND the touching
+            // end/start of the neighbours. Dedupe by identity so a still-shared corner moves once, not twice.
+            const cornerPts = [seg.start, legs[si - 1] && legs[si - 1].end, seg.end, legs[si + 1] && legs[si + 1].start];
+            const moved = new Set<GraphPoint>();
+            for (const sm of cornerPts) {
+                if (!sm) continue;
+                for (const p of [sm.pt, sm.uncutPt]) {
+                    if (!p || moved.has(p)) continue;
+                    moved.add(p);
+                    if (horizontal) p.y += off; else p.x += off;
+                }
             }
             changed = true;
         }
         if (changed) {
             const gapMode: EdgeGapMode = this.get_view(c).edgeGapMode;
             for (let i = 0; i < routed.all.length; i++) routed.all[i].makeD(i, gapMode);
+        }
+        if (windoww.__segDragDebug && windoww.__segDragTarget && windoww.__segDragTarget === c.data.id) {
+            try {
+                console.log('[segDrag] applySegmentOffsets', {
+                    id: c.data.id,
+                    offsets: JSON.stringify(offsets),
+                    changed,
+                    legD: JSON.stringify(offsets.map((o: any) => ({ segmentIndex: o && o.segmentIndex, d: legs[o && o.segmentIndex] && legs[o && o.segmentIndex].d }))),
+                });
+            } catch (e) {}
         }
         return routed;
     }

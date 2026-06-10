@@ -197,6 +197,7 @@ export class EdgeComponent<AllProps extends AllPropss = AllPropss, ThisState ext
 
     private onSegmentHandleDown(e: React.MouseEvent, edgeId: string, segmentIndex: number,
                                 horizontal: boolean, baseX: number, baseY: number, existingOffset: number): void {
+        if ((window as any).__segDragDebug) { try { console.log('[segDrag] onDown fired', {edgeId, segmentIndex}); } catch (e) {} }
         e.preventDefault();
         e.stopPropagation();                                                 // don't start an edge drag / change selection
         const graph: any = (this.props.node as any) && (this.props.node as any).graph;
@@ -212,9 +213,10 @@ export class EdgeComponent<AllProps extends AllPropss = AllPropss, ThisState ext
             if (target && target.style) target.style.transform = `translate(${nx}px, ${ny}px)`;
         };
         const onUp = (me: MouseEvent) => {
-            document.removeEventListener('mousemove', onMove);
-            document.removeEventListener('mouseup', onUp);
+            document.removeEventListener('mousemove', onMove, true);
+            document.removeEventListener('mouseup', onUp, true);
             const node: any = this.props.node;
+            if ((window as any).__segDragDebug) { try { console.log('[segDrag] onUp fired', {edgeId, segmentIndex, horizontal, hasNode: !!node, rawDelta: delta(me)}); } catch (e) {} }
             if (!node) return;
             const newOffset = existingOffset + delta(me);
             const cur: any[] = Array.isArray(node.segmentOffsets)
@@ -224,10 +226,11 @@ export class EdgeComponent<AllProps extends AllPropss = AllPropss, ThisState ext
             if (idx >= 0) next = cur.map((o, i) => i === idx ? { segmentIndex, offset: newOffset } : o);
             else next = [...cur, { segmentIndex, offset: newOffset }];
             next = next.filter((o) => Math.abs(o.offset) > 1);               // drop near-zero (dragged back to original)
+            if ((window as any).__segDragDebug) { try { console.log('[segDrag] onUp next (post-filter)', {edgeId, segmentIndex, existingOffset, newOffset, next: JSON.stringify(next)}); } catch (e) {} }
             node.segmentOffsets = next;                                      // L setter → TRANSACTION + SetFieldAction
         };
-        document.addEventListener('mousemove', onMove);
-        document.addEventListener('mouseup', onUp);
+        document.addEventListener('mousemove', onMove, true);
+        document.addEventListener('mouseup', onUp, true);
     }
 }
 

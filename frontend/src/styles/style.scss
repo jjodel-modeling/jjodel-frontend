@@ -165,7 +165,7 @@ input.autosize-input{
     margin: 0 !important;
     padding: 0 0.5em !important;
     // padding-bottom: 1px !important; // no idea why, or it doesnt' align vertically
-    font-weight: var(--font-light);
+    font-weight: var(--font-medium) !important;
     height: 1lh;
     max-height: 1lh !important;
     min-height: 1lh !important;

@@ -29,6 +29,7 @@ import "./error.scss";
 import { ErrorDisplay } from "./ErrorPortal";
 import {Ohm} from "../DSL/ohm";
 import {ETA} from "../DSL/templates_t2m/ETA";
+import {CLASSIC_OBJECT_VIEW_JSX, CLASSIC_VALUE_VIEW_JSX, CLASSIC_SINGLETON_VIEW_JSX} from "../utils/defaultViewTemplate";
 
 const notificationType: 'classic'|'alert'|'notification' = 'classic';
 
@@ -662,7 +663,7 @@ end:`
         let fill: string;
         switch (modename) {
             case EdgeHead.reference: default: fill = '#fff0'; break;
-            case EdgeHead.composition: fill = '#6A6A6A'; break;
+            case EdgeHead.composition: fill = '#fff0'; break;
             case EdgeHead.aggregation:
             case EdgeHead.extend: fill = '#fff'; break;
         }
@@ -672,8 +673,8 @@ end:`
             default: break;
             case EdgeHead.extend:      headPath = EdgeHead.Head_extend;      tailPath = EdgeHead.Tail_extend;      break;
             case EdgeHead.reference:   headPath = EdgeHead.Head_reference;   tailPath = EdgeHead.Tail_reference;   break;
-            case EdgeHead.aggregation: headPath = EdgeHead.Head_aggregation; tailPath = EdgeHead.Tail_aggregation; break;
-            case EdgeHead.composition: headPath = EdgeHead.Head_composition; tailPath = EdgeHead.Tail_composition; break;
+            case EdgeHead.aggregation: headPath = EdgeHead.Head_reference;   tailPath = EdgeHead.Tail_aggregation; break;
+            case EdgeHead.composition: headPath = EdgeHead.Head_reference;   tailPath = '';                        break;
             case EdgeHead.zero:        headPath = EdgeHead.Head_zero;        tailPath = EdgeHead.Tail_zero;        break;
             case EdgeHead.one:         headPath = EdgeHead.Head_one;         tailPath = EdgeHead.Tail_one;         break;
             case EdgeHead.many:        headPath = EdgeHead.Head_many;        tailPath = EdgeHead.Tail_many;        break;
@@ -1675,61 +1676,15 @@ public static parameter(): string { return (
 
 /* OBJECT */
 
-public static object(): string { return (
-`
-/* -- Jjodel Abstract Syntax Specification v2.0 -- */
-
-
-<View className={'root object'}>
-    <div className={'header'}>
-        <div style={{textDecoration: 'underline'}}>
-            <span style={{fontWeight: 500, textDecoration: 'underline'}}>
-                {data.$name ?
-                    <Input data={data.$name} field={'value'} hidden={true} autosize={true} placeholder={'name'} /> :
-                    <Input data={data} field={'name'} hidden={true} autosize={true} placeholder={'name'} />
-                }:&nbsp;
-                {data.instanceof ? data.instanceof.name : 'Object'}
-            </span>
-        </div>
-    </div>
-    <hr/>
-    <div className={'object-children'}>
-        {level >= 2 && data.features.map(f => <DefaultNode key={f.id} data={f} />)}
-    </div>
-    {decorators}
-</View>`
-);}
+public static object(): string { return CLASSIC_OBJECT_VIEW_JSX; }
 
     /* VALUE */
 
-    public static value() { return (
-`
-/* -- Jjodel Abstract Syntax Specification v2.0 -- */
-
-
-<View className={'root value d-flex'}>
-    {instanceofname && <label className={'d-block ms-1 name'}>{instanceofname}</label>}
-    {!instanceofname && <Input className='name' data={data} field={'name'} hidden={true} autosize={true} />}
-    <label className={'d-block ms-1 values_str'} style={{color: constants[typeString] || 'gray', fontStyle: 'italic'}}>
-        = {valuesString}
-    </label>
-    {decorators}
-</View>`
-);}
+    public static value() { return CLASSIC_VALUE_VIEW_JSX; }
 
     /* SINGLETON OBJECT */
 
-    public static singleton(): string { return (
-    `
-/* -- Jjodel Abstract Syntax Specification v2.0 -- */
-
-
-
-<View className={'singleton'}>
-    <div className={'header'}>
-        {data.name}        
-    </div>
-</View>`);}
+    public static singleton(): string { return CLASSIC_SINGLETON_VIEW_JSX; }
 
     /* ERROR */
 

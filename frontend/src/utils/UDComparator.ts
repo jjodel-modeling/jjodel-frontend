@@ -70,13 +70,15 @@ function extractComparableValue(value: UDValue, depth: number = 0): any {
     // Null/undefined
     if (value == null) return value;
 
-    // Primitives
-    if (typeof value !== 'object') return value;
-
-    // Functions - compare by reference (should be same if JSX didn't change)
+    // Functions - normalize by name. MUST run before the `!== 'object'` guard below: typeof a
+    // function is 'function' (not 'object'), so otherwise it returns by reference and two
+    // equivalent closures never compare equal.
     if (typeof value === 'function') {
         return { __isFunction: true, name: value.name || 'anonymous' };
     }
+
+    // Primitives
+    if (typeof value !== 'object') return value;
 
     // L-Proxy object
     if (isLProxy(value)) {
