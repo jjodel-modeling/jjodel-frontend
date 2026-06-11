@@ -1,0 +1,2 @@
+tsc_errors=33
+note: run from frontend/ (no root package.json; npm run typecheck is defined in frontend/package.json)

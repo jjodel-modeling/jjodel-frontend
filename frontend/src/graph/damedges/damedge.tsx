@@ -37,6 +37,30 @@ const superclassGraphElementComponent: typeof GraphElementComponent = RuntimeAcc
 const superclassGraphElementComponentuntyped: any = RuntimeAccessibleClass.classes.GraphElementComponent as any;
 class ThisStatee extends GraphElementStatee {}
 
+// Recursively append `extra` children into the first <svg> found in `node`, without editing the
+// persisted jsxString. Returns {node, injected}; if no <svg> is found the input is returned untouched
+// so the handles are skipped rather than mis-positioned. Used to host the draggable internal-segment
+// handles in the edge's own SVG coordinate space. See docs/discovery/discovery_2026-06-08_classic_segment_handles.md.
+function appendIntoFirstSvg(node: ReactNode, extra: ReactNode[]): { node: ReactNode, injected: boolean } {
+    if (!React.isValidElement(node)) return { node, injected: false };
+    const el = node as ReactElement;
+    if (el.type === 'svg') {
+        const kids = React.Children.toArray((el.props as GObject).children);
+        return { node: React.cloneElement(el, {}, [...kids, ...extra]), injected: true };
+    }
+    const kids = React.Children.toArray((el.props as GObject).children);
+    if (!kids.length) return { node: el, injected: false };
+    let injected = false;
+    const newKids = kids.map((k) => {
+        if (injected) return k;
+        const r = appendIntoFirstSvg(k as ReactNode, extra);
+        if (r.injected) injected = true;
+        return r.node;
+    });
+    if (!injected) return { node: el, injected: false };
+    return { node: React.cloneElement(el, {}, newKids), injected: true };
+}
+
 export class EdgeComponent<AllProps extends AllPropss = AllPropss, ThisState extends ThisStatee = ThisStatee>
     extends superclassGraphElementComponent<AllProps, ThisState> {
     public static cname: string = "EdgeComponent";
@@ -111,12 +135,102 @@ export class EdgeComponent<AllProps extends AllPropss = AllPropss, ThisState ext
         // set classes end
         let styleoverride: React.CSSProperties = {};
 
-        return super.render(nodeType, styleoverride, classesoverride);
+        const out: ReactNode = super.render(nodeType, styleoverride, classesoverride);
+        return this.injectSegmentHandles(out);
     }
 
     shouldComponentUpdate(nextProps: Readonly<AllProps>, nextState: Readonly<ThisState>, nextContext: any, oldProps?: Readonly<AllProps>): boolean {
         // console.log('shouldComponentUpdate render edge', {props: this.props, node:this.props.node, start:this.props.start});
         return super.shouldComponentUpdate(nextProps, nextState, nextContext, oldProps);
+    }
+
+    // ---- classic-editor draggable internal-segment handles ----
+    // Appended into the edge's own <svg> after super.render(), so they live in the same coordinate
+    // space as the existing edge anchors with no edit to the persisted jsxString (no VersionFixer
+    // migration). The dragged offset persists on DVoidEdge.segmentOffsets and is applied as a
+    // consumer-side post-process in GraphDataElements.get_segments_impl.
+    private injectSegmentHandles(out: ReactNode): ReactNode {
+        let handles: ReactElement[] | null = null;
+        try { handles = this.renderSegmentHandles(); } catch (e) { handles = null; }
+        if (!handles || !handles.length) return out;
+        const res = appendIntoFirstSvg(out, handles);
+        return res.injected ? res.node : out;
+    }
+
+    private renderSegmentHandles(): ReactElement[] | null {
+        const node: any = this.props.node;
+        const view: any = this.props.view;
+        if (!node || !view) return null;
+        if (view.bendingMode !== EdgeBendingMode.Manhattan) return null;     // only Manhattan-routed legacy edges
+        let selected = false;
+        try { selected = !!node.isSelected(); } catch (e) { selected = false; }
+        if (!selected) return null;                                          // handles only on the selected edge
+        const legs: any[] | undefined = node.segments && node.segments.segments;
+        if (!legs || legs.length < 3) return null;                           // need >= 3 legs to have an internal one
+        const stored: any[] = Array.isArray(node.segmentOffsets) ? node.segmentOffsets : [];
+        const edgeId: string = node.id;
+        // Only the single CENTRAL internal leg: drop the two legs adjacent to the anchors (first/last),
+        // then pick the middle of what's left. `k` is the index into node.segments.segments — the same
+        // key applySegmentOffsets indexes with (NOT EdgeSegment.index, which is the doubled-point index).
+        const k = 1 + Math.floor((legs.length - 2) / 2);
+        const seg = legs[k];
+        if (!seg || !seg.start || !seg.end) return null;
+        const sx = seg.start.pt.x, sy = seg.start.pt.y, ex = seg.end.pt.x, ey = seg.end.pt.y;
+        const midX = (sx + ex) / 2, midY = (sy + ey) / 2;
+        const horizontal = Math.abs(ey - sy) <= Math.abs(ex - sx);
+        const existing = (stored.find((o) => o && o.segmentIndex === k) || {}).offset || 0;
+        return [<circle
+            key={'seg-handle-' + k}
+            className={'edge-segment-handle clickable content no-drag'}
+            r={5}
+            style={{
+                transform: `translate(${midX}px, ${midY}px)`,
+                fill: '#0ea5e9',
+                stroke: '#ffffff',
+                strokeWidth: 2,
+                cursor: horizontal ? 'ns-resize' : 'ew-resize',
+                pointerEvents: 'all',
+            }}
+            onMouseDown={(e) => this.onSegmentHandleDown(e, edgeId, k, horizontal, midX, midY, existing)}
+        />];
+    }
+
+    private onSegmentHandleDown(e: React.MouseEvent, edgeId: string, segmentIndex: number,
+                                horizontal: boolean, baseX: number, baseY: number, existingOffset: number): void {
+        if ((window as any).__segDragDebug) { try { console.log('[segDrag] onDown fired', {edgeId, segmentIndex}); } catch (e) {} }
+        e.preventDefault();
+        e.stopPropagation();                                                 // don't start an edge drag / change selection
+        const graph: any = (this.props.node as any) && (this.props.node as any).graph;
+        const zoom: any = (graph && (graph.cumulativeZoom || graph.zoom)) || { x: 1, y: 1 };
+        const zx = zoom.x || 1, zy = zoom.y || 1;
+        const startX = e.clientX, startY = e.clientY;
+        const target = e.currentTarget as unknown as SVGElement;
+        const delta = (me: MouseEvent) => horizontal ? (me.clientY - startY) / zy : (me.clientX - startX) / zx;
+        const onMove = (me: MouseEvent) => {                                 // live preview: move only the handle
+            const d = delta(me);
+            const nx = horizontal ? baseX : baseX + d;
+            const ny = horizontal ? baseY + d : baseY;
+            if (target && target.style) target.style.transform = `translate(${nx}px, ${ny}px)`;
+        };
+        const onUp = (me: MouseEvent) => {
+            document.removeEventListener('mousemove', onMove, true);
+            document.removeEventListener('mouseup', onUp, true);
+            const node: any = this.props.node;
+            if ((window as any).__segDragDebug) { try { console.log('[segDrag] onUp fired', {edgeId, segmentIndex, horizontal, hasNode: !!node, rawDelta: delta(me)}); } catch (e) {} }
+            if (!node) return;
+            const newOffset = existingOffset + delta(me);
+            const cur: any[] = Array.isArray(node.segmentOffsets)
+                ? node.segmentOffsets.map((o: any) => ({ segmentIndex: o.segmentIndex, offset: o.offset })) : [];
+            const idx = cur.findIndex((o) => o && o.segmentIndex === segmentIndex);
+            let next: any[];
+            if (idx >= 0) next = cur.map((o, i) => i === idx ? { segmentIndex, offset: newOffset } : o);
+            else next = [...cur, { segmentIndex, offset: newOffset }];
+            next = next.filter((o) => Math.abs(o.offset) > 1);               // drop near-zero (dragged back to original)
+            if ((window as any).__segDragDebug) { try { console.log('[segDrag] onUp next (post-filter)', {edgeId, segmentIndex, existingOffset, newOffset, next: JSON.stringify(next)}); } catch (e) {} }
+            node.segmentOffsets = next;                                      // L setter → TRANSACTION + SetFieldAction
+        };
+        document.addEventListener('mousemove', onMove, true);
+        document.addEventListener('mouseup', onUp, true);
     }
 }
 

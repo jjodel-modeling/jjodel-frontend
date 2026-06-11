@@ -595,6 +595,17 @@ ret .b = 3
 // then add to it: content of props, constants, usageDeclarations
 
 export function reducer(oldState: DState = initialState, action: Action, liveChange: boolean = false): DState {
+    if (windoww.__scuStormDebug) {
+        try {
+            const a: any = action;
+            console.log('[scuStorm] action', {
+                type: a && a.type,
+                field: a && (a.field ?? a.key),
+                path: a && (a.path ?? (Array.isArray(a.pathArray) ? a.pathArray.join('.') : undefined)),
+                nested: a && Array.isArray(a.actions) ? a.actions.length : undefined,
+            });
+        } catch (e) {}
+    }
     if (U.navigating) return oldState;
     if (!windoww.jjactions) windoww.jjactions = [];
     windoww.jjactions.push(action);

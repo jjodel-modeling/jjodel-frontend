@@ -118,34 +118,168 @@ export function computePoints(
     return all;
 }
 
+const MANHATTAN_STUB = 16; // px perpendicular exit stub out of the node side; tune on screen
+
+type ManhattanSide = 'L' | 'R' | 'T' | 'B';
+
+/** True when the attachment sits ~center, i.e. has no inherent side. */
+function manhattanIsCenter(pt: GraphPoint, size: GraphSize): boolean {
+    const rx = size.w ? (pt.x - size.x) / size.w : 0.5;
+    const ry = size.h ? (pt.y - size.y) / size.h : 0.5;
+    return Math.abs(rx - 0.5) < 0.15 && Math.abs(ry - 0.5) < 0.15;
+}
+
 /**
- * Manhattan (orthogonal) corner waypoints between two node boxes, chosen by dominant axis.
- *
- * Turns the single diagonal leg source-center → target-center into an orthogonal HVH / VHV
- * path:
- *   - horizontal dominant (|dx| >= |dy|): exit/enter on left|right; corners on the vertical
- *     midline → [(midX, srcY), (midX, tgtY)];
- *   - vertical dominant: exit/enter on top|bottom; corners on the horizontal midline
- *     → [(srcX, midY), (tgtX, midY)].
- * Each corner is aligned to one node's center axis, so the existing border ray-cast in
- * snapSegmentsToBorders lands on the side-midpoint with no snap change.
- *
- * Returns [] when the boxes are already axis-aligned (dx === 0 || dy === 0): a single
- * straight orthogonal leg already suffices and inserting corners would create a zero-length
- * segment. Pure — reads only the two sizes, no store/proxy access.
+ * Exact side (L/R/T/B) an edge endpoint attaches to, from where its anchor-resolved
+ * attachment point sits inside the node bbox. A ~center attachment has no inherent side, so
+ * it faces the other endpoint (towardX/towardY = the other attachment minus this one) — this
+ * preserves the default-center look.
  */
-export function chooseManhattanSidesAndWaypoints(srcSize: GraphSize, tgtSize: GraphSize): GraphPoint[] {
-    const sx = srcSize.x + srcSize.w / 2;
-    const sy = srcSize.y + srcSize.h / 2;
-    const tx = tgtSize.x + tgtSize.w / 2;
-    const ty = tgtSize.y + tgtSize.h / 2;
-    const dx = tx - sx;
-    const dy = ty - sy;
-    if (dx === 0 || dy === 0) return []; // already orthogonal: no bend needed
-    if (Math.abs(dx) >= Math.abs(dy)) {
-        const midX = (sx + tx) / 2;
-        return [new GraphPoint(midX, sy), new GraphPoint(midX, ty)];
+function manhattanSideOf(pt: GraphPoint, size: GraphSize, towardX: number, towardY: number): ManhattanSide {
+    if (manhattanIsCenter(pt, size)) {                  // ~center → face the other endpoint
+        return Math.abs(towardX) >= Math.abs(towardY)
+            ? (towardX >= 0 ? 'R' : 'L')
+            : (towardY >= 0 ? 'B' : 'T');
     }
-    const midY = (sy + ty) / 2;
-    return [new GraphPoint(sx, midY), new GraphPoint(tx, midY)];
+    const rx = size.w ? (pt.x - size.x) / size.w : 0.5; // 0 = left border, 1 = right border
+    const ry = size.h ? (pt.y - size.y) / size.h : 0.5; // 0 = top border, 1 = bottom border
+    return Math.abs(rx - 0.5) >= Math.abs(ry - 0.5) ? (rx >= 0.5 ? 'R' : 'L') : (ry >= 0.5 ? 'B' : 'T');
+}
+
+/**
+ * Project an attachment point onto the chosen side of its node bbox: keep the along-side
+ * coordinate, snap the perpendicular one to that border (left = size.x, right = size.x+w,
+ * top = size.y, bottom = size.y+h). The stub then starts at the border and points outward.
+ */
+function manhattanBorderPoint(a: GraphPoint, size: GraphSize, side: ManhattanSide): GraphPoint {
+    switch (side) {
+        case 'R': return new GraphPoint(size.x + size.w, a.y);
+        case 'L': return new GraphPoint(size.x, a.y);
+        case 'B': return new GraphPoint(a.x, size.y + size.h);
+        case 'T': return new GraphPoint(a.x, size.y);
+        default:  return new GraphPoint(a.x, a.y);
+    }
+}
+
+// ── orthogonal port routing — connect two stubs without entering either node interior ──
+
+interface ManhattanBox { L: number; R: number; T: number; B: number; }
+function manhattanBox(size: GraphSize): ManhattanBox {
+    return { L: size.x, R: size.x + size.w, T: size.y, B: size.y + size.h };
+}
+
+/** Does the axis-aligned segment a→b pass through the STRICT interior of box? */
+function manhattanSegHitsBox(a: GraphPoint, b: GraphPoint, box: ManhattanBox): boolean {
+    const eps = 0.5;
+    if (a.y === b.y) {                                  // horizontal
+        if (a.y <= box.T + eps || a.y >= box.B - eps) return false;
+        return Math.max(a.x, b.x) > box.L + eps && Math.min(a.x, b.x) < box.R - eps;
+    }
+    if (a.x === b.x) {                                  // vertical
+        if (a.x <= box.L + eps || a.x >= box.R - eps) return false;
+        return Math.max(a.y, b.y) > box.T + eps && Math.min(a.y, b.y) < box.B - eps;
+    }
+    return false;                                       // non-axis-aligned: not produced here
+}
+function manhattanPathHitsBoxes(pts: GraphPoint[], a: ManhattanBox, b: ManhattanBox): boolean {
+    for (let i = 0; i + 1 < pts.length; i++) {
+        if (manhattanSegHitsBox(pts[i], pts[i + 1], a)) return true;
+        if (manhattanSegHitsBox(pts[i], pts[i + 1], b)) return true;
+    }
+    return false;
+}
+function manhattanPathLen(pts: GraphPoint[]): number {
+    let len = 0;
+    for (let i = 0; i + 1 < pts.length; i++) len += Math.abs(pts[i + 1].x - pts[i].x) + Math.abs(pts[i + 1].y - pts[i].y);
+    return len;
+}
+
+/**
+ * Compact facing connector (Z when the two stubs share an axis, L when perpendicular)
+ * between two stubs — the confirmed center-anchor baseline. Returns [p, …corners…, q].
+ */
+function manhattanCompactConnector(p: GraphPoint, sideP: ManhattanSide, q: GraphPoint, sideQ: ManhattanSide): GraphPoint[] {
+    const axisP = (sideP === 'L' || sideP === 'R') ? 'H' : 'V';
+    const axisQ = (sideQ === 'L' || sideQ === 'R') ? 'H' : 'V';
+    if (axisP === axisQ) {
+        if (axisP === 'H') { const midX = (p.x + q.x) / 2; return [p, new GraphPoint(midX, p.y), new GraphPoint(midX, q.y), q]; }
+        const midY = (p.y + q.y) / 2; return [p, new GraphPoint(p.x, midY), new GraphPoint(q.x, midY), q];
+    }
+    return axisP === 'H' ? [p, new GraphPoint(q.x, p.y), q] : [p, new GraphPoint(p.x, q.y), q];
+}
+
+/**
+ * Port router: connect the two stubs with the shortest orthogonal polyline that does NOT
+ * enter either node interior. Enumerates L-shapes and Z-shapes through vertical/horizontal
+ * channels (the midpoint, each box edge ± clearance, and the outer wrap edges), keeps the
+ * box-clear ones, and returns the shortest. When the target lies behind the exit direction,
+ * the clean candidate is necessarily a wrap channel past the node's edge — exactly the
+ * "route around" detour. Falls back to the shortest candidate if a pathological config
+ * admits none (never crashes). Returns [p, …corners…, q].
+ */
+function manhattanPortRoute(
+    p: GraphPoint, q: GraphPoint, boxS: ManhattanBox, boxT: ManhattanBox, bSrc: GraphPoint, bTgt: GraphPoint,
+): GraphPoint[] {
+    const S = MANHATTAN_STUB;
+    const candXs = [(p.x + q.x) / 2,
+        boxS.L - S, boxS.R + S, boxT.L - S, boxT.R + S,
+        Math.min(boxS.L, boxT.L) - S, Math.max(boxS.R, boxT.R) + S];
+    const candYs = [(p.y + q.y) / 2,
+        boxS.T - S, boxS.B + S, boxT.T - S, boxT.B + S,
+        Math.min(boxS.T, boxT.T) - S, Math.max(boxS.B, boxT.B) + S];
+    const candidates: GraphPoint[][] = [
+        [p, new GraphPoint(q.x, p.y), q],   // L-shape (H then V)
+        [p, new GraphPoint(p.x, q.y), q],   // L-shape (V then H)
+    ];
+    for (const vx of candXs) candidates.push([p, new GraphPoint(vx, p.y), new GraphPoint(vx, q.y), q]); // Z via vertical channel
+    for (const vy of candYs) candidates.push([p, new GraphPoint(p.x, vy), new GraphPoint(q.x, vy), q]); // Z via horizontal channel
+
+    const cost = (c: GraphPoint[]) => manhattanPathLen([bSrc, ...c, bTgt]);
+    const clear = candidates.filter(c => !manhattanPathHitsBoxes([bSrc, ...c, bTgt], boxS, boxT));
+    const pool = clear.length ? clear : candidates;
+    return pool.reduce((best, c) => (cost(c) < cost(best) ? c : best));
+}
+
+/**
+ * Manhattan (orthogonal) corner waypoints between two edge endpoints. Each endpoint exits
+ * perpendicular to the side its anchor sits on, via a short stub OUTSIDE the node border
+ * (manhattanBorderPoint + MANHATTAN_STUB). The two stubs are joined by manhattanPortRoute,
+ * which guarantees no segment enters the source or target interior — when the target lies
+ * behind the exit direction it routes AROUND the node instead of crossing it. Pure center
+ * anchors keep the compact facing connector (the confirmed baseline): no side constraint,
+ * leave toward the other node.
+ *
+ * Returns the ordered interior corner points between the two attachments (stub ends + the
+ * connector bends), spliced as doubled pairs in computeRouting. snapSegmentsToBorders then
+ * cuts each attachment to its border along the stub axis with no snap change. Pure — reads
+ * only the two points and sizes, no store/proxy access.
+ */
+export function chooseManhattanSidesAndWaypoints(
+    aSrc: GraphPoint, sizeSrc: GraphSize, aTgt: GraphPoint, sizeTgt: GraphSize,
+): GraphPoint[] {
+    const sideS = manhattanSideOf(aSrc, sizeSrc, aTgt.x - aSrc.x, aTgt.y - aSrc.y);
+    const sideT = manhattanSideOf(aTgt, sizeTgt, aSrc.x - aTgt.x, aSrc.y - aTgt.y);
+    const dirX = (s: ManhattanSide) => (s === 'L' ? -1 : s === 'R' ? 1 : 0);
+    const dirY = (s: ManhattanSide) => (s === 'T' ? -1 : s === 'B' ? 1 : 0);
+    // Start the stub at the node BORDER (project the attachment onto its side), then push it
+    // STUB px outside. The ray aSrc→sStub thus crosses the border, so snapSegmentsToBorders
+    // cuts the attachment exactly there and no segment dips into the box interior.
+    const bSrc = manhattanBorderPoint(aSrc, sizeSrc, sideS);
+    const bTgt = manhattanBorderPoint(aTgt, sizeTgt, sideT);
+    const sStub = new GraphPoint(bSrc.x + dirX(sideS) * MANHATTAN_STUB, bSrc.y + dirY(sideS) * MANHATTAN_STUB);
+    const tStub = new GraphPoint(bTgt.x + dirX(sideT) * MANHATTAN_STUB, bTgt.y + dirY(sideT) * MANHATTAN_STUB);
+
+    // Center anchors: keep the compact facing connector (confirmed baseline). Otherwise route
+    // with the port router that guarantees no segment enters either node interior.
+    const corners = (manhattanIsCenter(aSrc, sizeSrc) && manhattanIsCenter(aTgt, sizeTgt))
+        ? manhattanCompactConnector(sStub, sideS, tStub, sideT)
+        : manhattanPortRoute(sStub, tStub, manhattanBox(sizeSrc), manhattanBox(sizeTgt), bSrc, bTgt);
+
+    // drop consecutive coincident points (zero-length legs) for clean snapping
+    const out: GraphPoint[] = [];
+    for (const c of corners) {
+        const last = out[out.length - 1];
+        if (!last || last.x !== c.x || last.y !== c.y) out.push(c);
+    }
+    return out;
 }

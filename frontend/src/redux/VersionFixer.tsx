@@ -3,7 +3,7 @@ import {
     GObject,
     GraphPoint, DViewPoint, DViewElement, PointedBy,
     DProject, LViewElement,
-    DV, DPackage, DObject, EdgeBendingMode,
+    DV, DPackage, DObject, EdgeBendingMode, EdgeHead,
 } from "../joiner";
 import {
     Defaults, DGraphElement,
@@ -14,7 +14,9 @@ import {
     U
 } from "../joiner";
 import {Tooltip} from "../components/forEndUser/Tooltip";
-import {DEFAULT_VIEW_JSX_STRING, LEGACY_PLACEHOLDER_MARKER, V2_2_TO_V2_3_DETECT_MARKER} from "../utils/defaultViewTemplate";
+import {DEFAULT_VIEW_JSX_STRING, LEGACY_PLACEHOLDER_MARKER, V2_2_TO_V2_3_DETECT_MARKER,
+    CLASSIC_OBJECT_VIEW_JSX, CLASSIC_VALUE_VIEW_JSX, CLASSIC_SINGLETON_VIEW_JSX,
+    CLASSIC_OBJECT_VIEW_MARKER, CLASSIC_VALUE_VIEW_MARKER, CLASSIC_SINGLETON_VIEW_MARKER} from "../utils/defaultViewTemplate";
 
 /*
                                     TODO for every update: check the VersionFixer.help() function
@@ -860,6 +862,89 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         }
         if (migrated > 0) {
             console.log(`[VersionFixer 2.220 -> 2.221] Migrated ${migrated} default edge view(s) Line → Manhattan.`);
+        }
+        return s;
+    }
+
+    // 2.221 → 2.222: composition & aggregation default edge views gain a target arrow
+    // (head → Head_reference). Composition additionally drops its tail diamond (tail → '') and
+    // switches its solid #6A6A6A fill → #fff0 so the arrow renders OPEN like Association's (head
+    // and tail share one per-view --fill; with the diamond gone that fill only drives the arrow).
+    // Aggregation keeps its hollow diamond and #fff fill. The shared EdgeHead.* constants and the
+    // palette dropdown stay untouched. Keyed on the stable default ids (touched defaults keep them;
+    // clonedCounter only versions the object). Per-slot conditional: each slot is rewritten only
+    // while it still holds its previous default — preserves user-customized slots, idempotent on
+    // re-run. css_MUST_RECOMPILE forces --head/--tail/--fill to recompile. Untouched defaults are
+    // also regenerated wholesale by updateDefaultView via the bump; this additionally covers the
+    // touched (clonedCounter) ones it skips.
+    private ['2.221 -> 2.222'](s: DState): DState {
+        const ARROW = EdgeHead.Head_reference;
+        const gray = U.hexToPalette('#6A6A6A').value[0];   // composition's previous default fill
+        let migrated = 0;
+        for (let k in s.idlookup) {
+            let e = s.idlookup[k] as any;
+            if (!e || typeof e !== 'object') continue;
+            if (e.className !== 'DViewElement') continue;
+            if (e.appliableTo !== 'Edge') continue;
+            let p = e.palette;
+            if (!p) continue;
+            let changed = false;
+            if (e.id === 'Pointer_ViewEdgeComposition') {
+                if (p.tail && p.tail.value === EdgeHead.Tail_composition) { p.tail.value = ''; changed = true; } // drop diamond
+                if (p.head && p.head.value === '') { p.head.value = ARROW; changed = true; }                     // add target arrow
+                let c = p.fill && p.fill.value && p.fill.value[0];
+                if (c && c.r === gray.r && c.g === gray.g && c.b === gray.b && c.a === gray.a) {
+                    p.fill = U.hexToPalette('#fff0'); changed = true;                                            // #6A6A6A → open
+                }
+            } else if (e.id === 'Pointer_ViewEdgeAggregation') {
+                if (p.head && p.head.value === '') { p.head.value = ARROW; changed = true; }                     // add target arrow
+            }
+            if (changed) { e.css_MUST_RECOMPILE = true; migrated++; }
+        }
+        if (migrated > 0) {
+            console.log(`[VersionFixer 2.221 -> 2.222] Updated ${migrated} composition/aggregation default edge view(s).`);
+        }
+        return s;
+    }
+
+    // 2.222 → 2.223: redesign the classic-editor M1 Default views (Object, Value,
+    // Singleton) for visual parity with the flow editor (palette-aware header band,
+    // attribute-only body, italic palette-colored values). String-replaces stale
+    // persisted jsxString and clears the legacy per-view `css`/`palette` (styling
+    // now lives in `frontend/src/styles/classic-object-view.scss`).
+    //
+    // Detection mirrors '2.211 -> 2.212': a stable substring kept from the legacy
+    // template (`object-children` / `values_str` / `singleton`) paired with the
+    // ABSENCE of the v3 marker — the NEW templates intentionally keep that substring
+    // (the className is `jjodel-classic-object`, WITHOUT the ` v3` suffix that only
+    // the marker comment carries), so the marker is what makes this idempotent.
+    //
+    // Dual mechanism (cf. '2.220 -> 2.221' / '2.221 -> 2.222'): the version bump makes
+    // updateDefaultView regenerate UNTOUCHED defaults (clonedCounter undefined) wholesale
+    // from source (DV.tsx → the new constants); this method additionally covers TOUCHED
+    // (clonedCounter) defaults, which updateDefaultView skips.
+    private ['2.222 -> 2.223'](s: DState): DState {
+        let migrated = 0;
+        for (let k in s.idlookup) {
+            let e = s.idlookup[k] as any;
+            if (!e || typeof e !== 'object') continue;
+            if (e.className !== 'DViewElement') continue;
+            if (typeof e.jsxString !== 'string') continue;
+
+            let replacement: string | undefined = undefined;
+            if (e.jsxString.includes('object-children') && !e.jsxString.includes(CLASSIC_OBJECT_VIEW_MARKER)) replacement = CLASSIC_OBJECT_VIEW_JSX;
+            else if (e.jsxString.includes('values_str') && !e.jsxString.includes(CLASSIC_VALUE_VIEW_MARKER)) replacement = CLASSIC_VALUE_VIEW_JSX;
+            else if (e.jsxString.includes('singleton') && !e.jsxString.includes(CLASSIC_SINGLETON_VIEW_MARKER)) replacement = CLASSIC_SINGLETON_VIEW_JSX;
+            if (replacement === undefined) continue;
+
+            e.jsxString = replacement;
+            e.css = '';
+            e.palette = {};
+            e.css_MUST_RECOMPILE = true;
+            migrated++;
+        }
+        if (migrated > 0) {
+            console.log(`[VersionFixer 2.222 -> 2.223] Migrated ${migrated} classic M1 default view(s) for flow parity.`);
         }
         return s;
     }

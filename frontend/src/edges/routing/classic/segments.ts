@@ -72,7 +72,7 @@ export function computeRouting(input: RoutingInput): RoutingOutput {
             // real legs run from an even index (a departure) to the next (an arrival);
             // odd→even transitions are zero-length midnode pass-throughs and are skipped.
             if (i % 2 === 0 && i + 1 < all.length) {
-                let corners = chooseManhattanSidesAndWaypoints(all[i].size, all[i + 1].size);
+                let corners = chooseManhattanSidesAndWaypoints(all[i].pt, all[i].size, all[i + 1].pt, all[i + 1].size);
                 for (let cpt of corners) {
                     let arrival: segmentmaker = {
                         size: new GraphSize(cpt.x, cpt.y, 0.01, 0.01),

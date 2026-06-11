@@ -153,3 +153,82 @@ export const LEGACY_PLACEHOLDER_MARKER: string = 'To add information here,';
  * v2.2 salvato nei progetti esistenti.
  */
 export const V2_2_TO_V2_3_DETECT_MARKER: string = 'Customize this view';
+
+// ============================================================
+// Classic-editor M1 Default views — v3 (visual parity with flow editor)
+//
+// These three templates redesign the Default-viewpoint M1 views rendered by
+// the CLASSIC editor (DefaultView.object/value/singleton in DV.tsx) so they
+// read like the editor-v2 flow node, including automatic adoption of the
+// active custom palette. The Object body lists attribute slots visibly and
+// renders reference slots in a height:0 anchor container (references show as
+// edges, not rows; the container keeps each reference DValue's GraphElement
+// alive with a live DOM node so M1 reference edges can resolve their source
+// endpoint — see impl_get_suggestedEdgesM1 in LModelElement.tsx). Styling lives
+// in `frontend/src/styles/classic-object-view.scss` (BEM `.jjodel-classic-*`),
+// consuming the SAME palette CSS variables (and fallbacks) the flow node uses.
+//
+// TEMPLATE ENGINE CONSTRAINTS (see top-of-file note, verified 2026-05-03/04):
+// no `?.`, no `??`, IIFEs return strings only, `var` only inside IIFEs,
+// hook-free, `className` ternary on a SINGLE line.
+//
+// Migration `2.222 -> 2.223` (VersionFixer) rewrites stale persisted jsxStrings
+// to these constants. Detection pairs a stable substring kept from the legacy
+// template (`object-children` / `values_str` / `singleton`) with the ABSENCE
+// of the v3 marker below — the new templates intentionally keep that substring,
+// so the marker is what prevents re-firing.
+// ============================================================
+
+/** v3 marker — present only in the comment, NOT in the `.jjodel-classic-object`
+ *  className (which omits the ` v3` suffix). Do not modify across redesigns. */
+export const CLASSIC_OBJECT_VIEW_MARKER = 'jjodel-classic-object v3';
+export const CLASSIC_VALUE_VIEW_MARKER = 'jjodel-classic-value v3';
+export const CLASSIC_SINGLETON_VIEW_MARKER = 'jjodel-classic-singleton v3';
+
+export const CLASSIC_OBJECT_VIEW_JSX: string = `
+/* jjodel-classic-object v3 */
+
+
+<View className={'root object jjodel-classic-object'}>
+    <div className={'jjodel-classic-object__header'}>
+        <span className={'jjodel-classic-object__title'}>
+            <span className={'jjodel-classic-object__name'}>
+                {data.$name ?
+                    <Input data={data.$name} field={'value'} hidden={true} autosize={true} placeholder={'name'} /> :
+                    <Input data={data} field={'name'} hidden={true} autosize={true} placeholder={'name'} />
+                }
+            </span>
+            <span className={'jjodel-classic-object__separator'}> : </span>
+            <span className={'jjodel-classic-object__type'}>{data.instanceof ? data.instanceof.name : 'Object'}</span>
+        </span>
+    </div>
+    <div className={'jjodel-classic-object__body object-children'}>
+        {level >= 2 && data.attributeFeatures.map(f => <DefaultNode key={f.id} data={f} />)}
+        <div className={'jjodel-classic-object__ref-anchors'}>
+            {level >= 2 && data.referenceFeatures.map(f => <DefaultNode key={f.id} data={f} />)}
+        </div>
+    </div>
+    {decorators}
+</View>`;
+
+export const CLASSIC_VALUE_VIEW_JSX: string = `
+/* jjodel-classic-value v3 */
+
+
+<View className={'root value d-flex jjodel-classic-value' + (valuesString === '' ? ' jjodel-classic-value--empty' : '')}>
+    {instanceofname && <label className={'d-block ms-1 name jjodel-classic-value__name'}>{instanceofname}</label>}
+    {!instanceofname && <Input className='name jjodel-classic-value__name' data={data} field={'name'} hidden={true} autosize={true} />}
+    <span className={'jjodel-classic-value__sep'}>=</span>
+    <label className={'d-block ms-1 values_str jjodel-classic-value__value'}>{valuesString}</label>
+    {decorators}
+</View>`;
+
+export const CLASSIC_SINGLETON_VIEW_JSX: string = `
+/* jjodel-classic-singleton v3 */
+
+
+<View className={'singleton jjodel-classic-singleton'}>
+    <div className={'jjodel-classic-object__header jjodel-classic-singleton__header'}>
+        <span className={'jjodel-classic-object__name'}>{data.name}</span>
+    </div>
+</View>`;

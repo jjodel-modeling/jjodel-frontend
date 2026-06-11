@@ -1857,6 +1857,9 @@ export class DVoidEdge extends DGraphElement {
     labels?: DocString<"function">;
     anchorStart?: string | GObject<{x: number, y: number}>;
     anchorEnd?: string | GObject<{x: number, y: number}>;
+    // per-internal-segment perpendicular drag offset (classic-editor draggable segment handles).
+    // Optional → existing edges read undefined → no VersionFixer migration. Applied in get_segments_impl.
+    segmentOffsets?: { segmentIndex: number, offset: number }[];
 
     isExtend!: boolean;
     isReference!: boolean;
@@ -2127,6 +2130,7 @@ export class LVoidEdge<Context extends LogicContext<DVoidEdge> = any, D extends 
     __isLVoidEdge!: true;
     midPoints!: InitialVertexSize[]; // the logic part which instructs to generate the midnodes
     midnodes!: LEdgePoint[];
+    segmentOffsets?: { segmentIndex: number, offset: number }[]; // classic-editor draggable segment-handle offsets
     edge!: LVoidEdge; // returns self. useful to get edge from edgePoints without triggering error if you are already on edge.
     __info_of__edge: Info = {type:"?LEdge", txt:"returns this if called on an edge, the containing edge if called on an EdgePoint, undefined otherwise."}
 
@@ -2258,6 +2262,16 @@ replaced by startPoint
     protected get_edge(c: Context): this{ return c.proxyObject as this; }
     protected set_edge(v: any, c: Context): false { return this.cannotSet("edge field, on an edge element"); }
     protected get_midPoints(c: Context):this["midPoints"] { return c.data.midPoints; }
+    protected get_segmentOffsets(c: Context): this["segmentOffsets"] { return c.data.segmentOffsets || []; }
+    protected set_segmentOffsets(val: this["segmentOffsets"], c: Context): boolean {
+        let name = this.get_name(c)||'';
+        const id = c.data.id;
+        if (windoww.__segDragDebug) { try { console.log('[segDrag] write set_segmentOffsets', {id, oldOffsets: c.data.segmentOffsets, newOffsets: val}); } catch (e) {} }
+        TRANSACTION((name.toLowerCase().indexOf('edge')>=0 ? name : 'Edge: '+name)+'.segmentOffsets', ()=>{
+            SetFieldAction.new(id, "segmentOffsets", val || [], undefined, false);
+        });
+        return true;
+    }
     public addMidPoint(v: this["midPoints"][0]): boolean { return this.wrongAccessMessage("addMidPoint"); }
     public addEdgePoint(v: this["midPoints"][0]): boolean { return this.wrongAccessMessage("addEdgePoint"); }
     protected set_midPoints(val: this["midPoints"], c: Context): boolean {
@@ -2352,7 +2366,62 @@ replaced by startPoint
     public d!: string;
     public __info_of__d: Info = {type: ShortAttribETypes.EString, txt:"the full suggested path of SVG path \"d\" attribute, merging all segments."}
     public get_d(c: Context) {
-        return this.get_segments(c).all.map(s => s.d).join(" ");
+        const d = this.get_segments(c).all.map(s => s.d).join(" ");
+        // Round Manhattan corners on the merged preview path only. Gate 1 (primary): bendingMode
+        // must be Manhattan — get_view(c) is already resolved in get_segments_impl, so no new
+        // coupling. Gate 2 (defensive, M/L-only) lives in roundManhattanCorners. Per-segment dpart
+        // paths are untouched and endpoints P0/Pn are preserved, so markers keep their attach points.
+        if (this.get_view(c).bendingMode !== EdgeBendingMode.Manhattan) return d;
+        return LVoidEdge.roundManhattanCorners(d);
+    }
+
+    // Local fillet pass for the merged Manhattan preview `d` (no editor-v2 import; replicates the
+    // arc construction). Each interior corner Pi between two axis-aligned legs becomes a quadratic
+    // fillet: a straight `L` up to r before Pi, then `Q Pi <point r after Pi>`, with
+    // r = min(5, half each adjacent leg) so the arc never overshoots the shorter leg. P0 and Pn are
+    // kept unchanged; degenerate or collinear corners emit a plain `L`. Defensive gate: only a pure
+    // absolute M/L polyline is rounded — any other SVG command returns `d` untouched (get_d is shared
+    // by bezier and non-orthogonal edges).
+    private static roundManhattanCorners(d: string, R: number = 5): string {
+        const letters = d.match(/[a-zA-Z]/g);
+        if (!letters || letters.some(ch => ch !== 'M' && ch !== 'L')) return d;
+        // Tokenize on spaces and commas; the moveto glues its letter to the first number ("M100 200,"),
+        // so split a leading command letter off its token before reading coordinate pairs.
+        const flat: string[] = [];
+        for (const t of d.trim().split(/[\s,]+/)) {
+            if (!t) continue;
+            const m = /^([ML])(.*)$/.exec(t);
+            if (m) { flat.push(m[1]); if (m[2]) flat.push(m[2]); }
+            else flat.push(t);
+        }
+        const P: { x: number, y: number }[] = [];
+        for (let j = 0; j < flat.length;) {
+            if (flat[j] === 'M' || flat[j] === 'L') {
+                const x = parseFloat(flat[j + 1]), y = parseFloat(flat[j + 2]);
+                if (Number.isFinite(x) && Number.isFinite(y)) P.push({ x, y });
+                j += 3;
+            } else j += 1;
+        }
+        if (P.length < 3) return d; // straight or single leg: no interior corner to fillet
+        let out = `M ${P[0].x} ${P[0].y}`;
+        for (let i = 1; i < P.length - 1; i++) {
+            const prev = P[i - 1], cur = P[i], next = P[i + 1];
+            const inX = cur.x - prev.x, inY = cur.y - prev.y;
+            const outX = next.x - cur.x, outY = next.y - cur.y;
+            const lenIn = Math.hypot(inX, inY), lenOut = Math.hypot(outX, outY);
+            const cross = inX * outY - inY * outX;
+            if (lenIn === 0 || lenOut === 0 || Math.abs(cross) < 1e-6) { // degenerate or collinear
+                out += ` L ${cur.x} ${cur.y}`;
+                continue;
+            }
+            const r = Math.min(R, lenIn / 2, lenOut / 2);
+            const ax = cur.x - (inX / lenIn) * r, ay = cur.y - (inY / lenIn) * r;
+            const bx = cur.x + (outX / lenOut) * r, by = cur.y + (outY / lenOut) * r;
+            out += ` L ${ax} ${ay} Q ${cur.x} ${cur.y} ${bx} ${by}`;
+        }
+        const last = P[P.length - 1];
+        out += ` L ${last.x} ${last.y}`;
+        return out;
     }/*
     private get_fillingSegments(c: Context): Partial<this["segments"]> {
         return this.get_segments(c).fillers;
@@ -2366,7 +2435,7 @@ replaced by startPoint
     // public get_segments_inner(c: Context): this["segments"] { return this.get_segments_impl(c, false); }
     private get_segments_impl(c: Context, outer: boolean): this["segments"] {
         const l = c.proxyObject as LVoidEdge;
-        return computeRouting({
+        const routed = computeRouting({
             allNodes: l.allNodes,
             edge: l,
             edgeId: c.data.id,
@@ -2382,6 +2451,62 @@ replaced by startPoint
             endFollow: LVoidEdge.endFollow,
             outer,
         }) as this["segments"];
+        return this.applySegmentOffsets(routed, c);
+    }
+
+    // Consumer-side post-process for classic-editor draggable segment handles: translate each dragged
+    // internal leg perpendicular by its stored offset, parallel to itself — both bounding corners move
+    // by the same amount so the leg keeps its axis and only shifts; the adjacent legs change length but
+    // not direction, so the head/tail computed upstream stay valid. The Manhattan corner GraphPoints are
+    // transient (re-created each computeRouting call) and START shared by reference between adjacent legs,
+    // but snapSegmentsToBorders can de-sync a shared corner into two distinct objects (average/center
+    // gapModes .duplicate() it; cut modes reassign it to the border intersection). Since the visible merged
+    // `d` renders each leg from its end.pt, moving only this leg's start/end would leave the previous
+    // corner behind and the leg would go diagonal — so we also translate the neighbours' touching points.
+    // No edit to edges/routing/classic; offsets are optional → no VersionFixer migration.
+    private applySegmentOffsets(routed: this["segments"], c: Context): this["segments"] {
+        const offsets = c.data.segmentOffsets;
+        const legs = routed && routed.segments;
+        if (!offsets || !offsets.length || !legs || legs.length < 3) return routed;
+        let changed = false;
+        for (const o of offsets) {
+            const si = o && o.segmentIndex;
+            if (typeof si !== 'number' || si <= 0 || si >= legs.length - 1) continue; // internal-only; prune stale
+            const off = o.offset;
+            if (!off) continue;
+            const seg = legs[si];
+            if (!seg || !seg.start || !seg.end) continue;
+            const horizontal = Math.abs(seg.end.pt.y - seg.start.pt.y) <= Math.abs(seg.end.pt.x - seg.start.pt.x);
+            // Both bounding corners must shift, but snap may have de-synced each shared corner into two
+            // objects, so translate it as seen by both legs: this leg's start/end AND the touching
+            // end/start of the neighbours. Dedupe by identity so a still-shared corner moves once, not twice.
+            const cornerPts = [seg.start, legs[si - 1] && legs[si - 1].end, seg.end, legs[si + 1] && legs[si + 1].start];
+            const moved = new Set<GraphPoint>();
+            for (const sm of cornerPts) {
+                if (!sm) continue;
+                for (const p of [sm.pt, sm.uncutPt]) {
+                    if (!p || moved.has(p)) continue;
+                    moved.add(p);
+                    if (horizontal) p.y += off; else p.x += off;
+                }
+            }
+            changed = true;
+        }
+        if (changed) {
+            const gapMode: EdgeGapMode = this.get_view(c).edgeGapMode;
+            for (let i = 0; i < routed.all.length; i++) routed.all[i].makeD(i, gapMode);
+        }
+        if (windoww.__segDragDebug && windoww.__segDragTarget && windoww.__segDragTarget === c.data.id) {
+            try {
+                console.log('[segDrag] applySegmentOffsets', {
+                    id: c.data.id,
+                    offsets: JSON.stringify(offsets),
+                    changed,
+                    legD: JSON.stringify(offsets.map((o: any) => ({ segmentIndex: o && o.segmentIndex, d: legs[o && o.segmentIndex] && legs[o && o.segmentIndex].d }))),
+                });
+            } catch (e) {}
+        }
+        return routed;
     }
     // setLabels: extracted to edges/routing/classic/labels.ts
 

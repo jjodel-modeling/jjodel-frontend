@@ -424,8 +424,8 @@ function makeDefaultGraphViews(vp: DViewPoint, validationVP: DViewPoint): DViewE
 if (!data) return;
 let err = undefined;
 if (name.length === 0) err = type + " must be named.";
-else if (!name[0].match(/[A-Za-z_$]/)) err = type + " names must begin with an alphabet letter or $_ symbols.";
-else if (!name.match(/^[A-Za-z_$]+[A-Za-z0-9$_\\s]*$/)) err = type + " names can only contain an alphanumeric chars or or $_ symbols";
+else if (!name[0].match(/[\\p{L}_$]/u)) err = type + " names must begin with a letter or $_ symbols.";
+else if (!name.match(/^[\\p{L}_$]+[\\p{L}\\p{N}$_\\s'\\u2019]*$/u)) err = type + " names can only contain letters, digits, spaces, apostrophes, or $_ symbols";
 if (node.state.error_naming !== err) node.state = {error_naming: err};
 `.trim();}, false, Defaults.Pointer_ViewCheckName );
 

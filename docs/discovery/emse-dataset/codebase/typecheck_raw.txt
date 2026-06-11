@@ -1,0 +1,124 @@
+
+> jjodel@3.0.0-beta typecheck
+> tsc --noEmit
+
+src/api/data.ts(831,22): error TS2304: Cannot find name 'DDataType'.
+src/api/data.ts(831,34): error TS2304: Cannot find name 'DDataType'.
+src/api/data.ts(1089,44): error TS2322: Type 'string | number | boolean | ({ [key: string]: any; } & NoCaller) | ({ [key: string]: any; } & NoBind) | ({ [key: string]: any; } & NoApply) | ({ [key: string]: any; } & NoCall)' is not assignable to type 'Json<RawObject>'.
+  Type 'string' is not assignable to type 'Json<RawObject>'.
+src/common/Dummy.ts(46,17): error TS2307: Cannot find module 'vite/dist/node/chunks/moduleRunnerTransport' or its corresponding type declarations.
+src/components/editor-v2/EditorV2.tsx(2429,86): error TS2339: Property 'model' does not exist on type 'never'.
+src/components/forEndUser/Measurable.tsx(271,86): error TS2552: Cannot find name 'jquievent'. Did you mean 'UIEvent'?
+src/components/forEndUser/Measurable.tsx(287,21): error TS7053: Element implicitly has an 'any' type because expression of type 'string | number | symbol' can't be used to index type '{ s: string; ing: string; e: string; }'.
+  No index signature with a parameter of type 'string' was found on type '{ s: string; ing: string; e: string; }'.
+src/components/forEndUser/Measurable.tsx(289,32): error TS7053: Element implicitly has an 'any' type because expression of type 'string | number | symbol' can't be used to index type '{ s: { draggable: string; rotatable: string; resizable: string; }; ing: { draggable: string; rotatable: string; resizable: string; }; e: { draggable: string; rotatable: string; resizable: string; }; }'.
+  No index signature with a parameter of type 'string' was found on type '{ s: { draggable: string; rotatable: string; resizable: string; }; ing: { draggable: string; rotatable: string; resizable: string; }; e: { draggable: string; rotatable: string; resizable: string; }; }'.
+src/components/forEndUser/Measurable.tsx(292,40): error TS7053: Element implicitly has an 'any' type because expression of type 'string | number | symbol' can't be used to index type '{ s: { draggable: string; rotatable: string; resizable: string; }; ing: { draggable: string; rotatable: string; resizable: string; }; e: { draggable: string; rotatable: string; resizable: string; }; }'.
+  No index signature with a parameter of type 'string' was found on type '{ s: { draggable: string; rotatable: string; resizable: string; }; ing: { draggable: string; rotatable: string; resizable: string; }; e: { draggable: string; rotatable: string; resizable: string; }; }'.
+src/components/forEndUser/Measurable.tsx(298,79): error TS2345: Argument of type 'string | number | symbol' is not assignable to parameter of type 'EventLetter'.
+  Type 'string' is not assignable to type 'EventLetter'.
+src/components/forEndUser/Measurable.tsx(302,36): error TS7053: Element implicitly has an 'any' type because expression of type 'string | number | symbol' can't be used to index type '{ s: { draggable: string; rotatable: string; resizable: string; }; ing: { draggable: string; rotatable: string; resizable: string; }; e: { draggable: string; rotatable: string; resizable: string; }; }'.
+  No index signature with a parameter of type 'string' was found on type '{ s: { draggable: string; rotatable: string; resizable: string; }; ing: { draggable: string; rotatable: string; resizable: string; }; e: { draggable: string; rotatable: string; resizable: string; }; }'.
+src/components/Jodie/ChatMessages.tsx(190,13): error TS2322: Type 'unknown' is not assignable to type 'ReactNode'.
+src/components/project/ProjectEditor.tsx(177,67): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(me: DProject | NotAString<DProject, 1, 1, LPointerTargetable<any, DPointerTargetable>>, field: "transformations", val: "must specify \"isPointer\" parameter", accessModifier?: "" | undefined, isPointer?: false | undefined, skipCollaborative?: boolean | undefined): boolean', gave the following error.
+    Argument of type 'JjtlTransformation[]' is not assignable to parameter of type '"must specify \"isPointer\" parameter"'.
+  Overload 2 of 2, '(me: DProject | NotAString<DProject, 1, 1, LPointerTargetable<any, DPointerTargetable>>, field: "transformations", val: orArr<...>, accessModifier: "", isPointer: boolean, skipCollaborative?: boolean | undefined): boolean', gave the following error.
+    Argument of type 'JjtlTransformation[]' is not assignable to parameter of type 'orArr<string | null | undefined>'.
+      Type 'JjtlTransformation[]' is not assignable to type '(string | null | undefined)[]'.
+        Type 'JjtlTransformation' is not assignable to type 'string'.
+src/components/settings/PromptsSettingsSection.tsx(10,30): error TS1261: Already included file name '/Users/alfonso/jjodel/frontend/src/components/settings/PromptEditor.tsx' differs from file name '/Users/alfonso/jjodel/frontend/src/components/Settings/PromptEditor.tsx' only in casing.
+  The file is in the program because:
+    Imported via './PromptEditor' from file '/Users/alfonso/jjodel/frontend/src/components/settings/PromptsSettingsSection.tsx'
+    Matched by include pattern 'src' in '/Users/alfonso/jjodel/frontend/tsconfig.json'
+src/components/settings/UnifiedSettingsModal/index.ts(1,60): error TS1261: Already included file name '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/UnifiedSettingsModal.tsx' differs from file name '/Users/alfonso/jjodel/frontend/src/components/Settings/UnifiedSettingsModal/UnifiedSettingsModal.tsx' only in casing.
+  The file is in the program because:
+    Imported via './UnifiedSettingsModal' from file '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/index.ts'
+    Imported via './UnifiedSettingsModal' from file '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/index.ts'
+    Matched by include pattern 'src' in '/Users/alfonso/jjodel/frontend/tsconfig.json'
+src/components/Settings/UnifiedSettingsModal/sections/index.ts(1,32): error TS1149: File name '/Users/alfonso/jjodel/frontend/src/components/Settings/UnifiedSettingsModal/sections/ProfileSection.tsx' differs from already included file name '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/sections/ProfileSection.tsx' only in casing.
+  The file is in the program because:
+    Imported via './sections/ProfileSection' from file '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/UnifiedSettingsModal.tsx'
+    Matched by include pattern 'src' in '/Users/alfonso/jjodel/frontend/tsconfig.json'
+    Imported via './ProfileSection' from file '/Users/alfonso/jjodel/frontend/src/components/Settings/UnifiedSettingsModal/sections/index.ts'
+src/components/Settings/UnifiedSettingsModal/sections/index.ts(2,33): error TS1149: File name '/Users/alfonso/jjodel/frontend/src/components/Settings/UnifiedSettingsModal/sections/SecuritySection.tsx' differs from already included file name '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/sections/SecuritySection.tsx' only in casing.
+  The file is in the program because:
+    Imported via './sections/SecuritySection' from file '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/UnifiedSettingsModal.tsx'
+    Matched by include pattern 'src' in '/Users/alfonso/jjodel/frontend/tsconfig.json'
+    Imported via './SecuritySection' from file '/Users/alfonso/jjodel/frontend/src/components/Settings/UnifiedSettingsModal/sections/index.ts'
+src/components/Settings/UnifiedSettingsModal/sections/index.ts(3,34): error TS1149: File name '/Users/alfonso/jjodel/frontend/src/components/Settings/UnifiedSettingsModal/sections/ProvidersSection.tsx' differs from already included file name '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/sections/ProvidersSection.tsx' only in casing.
+  The file is in the program because:
+    Imported via './sections/ProvidersSection' from file '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/UnifiedSettingsModal.tsx'
+    Matched by include pattern 'src' in '/Users/alfonso/jjodel/frontend/tsconfig.json'
+    Imported via './ProvidersSection' from file '/Users/alfonso/jjodel/frontend/src/components/Settings/UnifiedSettingsModal/sections/index.ts'
+src/components/Settings/UnifiedSettingsModal/sections/index.ts(4,32): error TS1149: File name '/Users/alfonso/jjodel/frontend/src/components/Settings/UnifiedSettingsModal/sections/PromptsSection.tsx' differs from already included file name '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/sections/PromptsSection.tsx' only in casing.
+  The file is in the program because:
+    Imported via './sections/PromptsSection' from file '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/UnifiedSettingsModal.tsx'
+    Matched by include pattern 'src' in '/Users/alfonso/jjodel/frontend/tsconfig.json'
+    Imported via './PromptsSection' from file '/Users/alfonso/jjodel/frontend/src/components/Settings/UnifiedSettingsModal/sections/index.ts'
+src/components/Settings/UnifiedSettingsModal/sections/index.ts(5,35): error TS1149: File name '/Users/alfonso/jjodel/frontend/src/components/Settings/UnifiedSettingsModal/sections/AppearanceSection.tsx' differs from already included file name '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/sections/AppearanceSection.tsx' only in casing.
+  The file is in the program because:
+    Imported via './sections/AppearanceSection' from file '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/UnifiedSettingsModal.tsx'
+    Matched by include pattern 'src' in '/Users/alfonso/jjodel/frontend/tsconfig.json'
+    Imported via './AppearanceSection' from file '/Users/alfonso/jjodel/frontend/src/components/Settings/UnifiedSettingsModal/sections/index.ts'
+src/components/Settings/UnifiedSettingsModal/sections/index.ts(6,33): error TS1149: File name '/Users/alfonso/jjodel/frontend/src/components/Settings/UnifiedSettingsModal/sections/AdvancedSection.tsx' differs from already included file name '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/sections/AdvancedSection.tsx' only in casing.
+  The file is in the program because:
+    Imported via './sections/AdvancedSection' from file '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/UnifiedSettingsModal.tsx'
+    Matched by include pattern 'src' in '/Users/alfonso/jjodel/frontend/tsconfig.json'
+    Imported via './AdvancedSection' from file '/Users/alfonso/jjodel/frontend/src/components/Settings/UnifiedSettingsModal/sections/index.ts'
+src/components/Settings/UnifiedSettingsModal/sections/index.ts(7,38): error TS1149: File name '/Users/alfonso/jjodel/frontend/src/components/Settings/UnifiedSettingsModal/sections/NotificationsSection.tsx' differs from already included file name '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/sections/NotificationsSection.tsx' only in casing.
+  The file is in the program because:
+    Imported via './sections/NotificationsSection' from file '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/UnifiedSettingsModal.tsx'
+    Matched by include pattern 'src' in '/Users/alfonso/jjodel/frontend/tsconfig.json'
+    Imported via './NotificationsSection' from file '/Users/alfonso/jjodel/frontend/src/components/Settings/UnifiedSettingsModal/sections/index.ts'
+src/components/settings/UnifiedSettingsModal/sections/PromptsSection.tsx(7,40): error TS1261: Already included file name '/Users/alfonso/jjodel/frontend/src/components/settings/PromptsSettingsSection.tsx' differs from file name '/Users/alfonso/jjodel/frontend/src/components/Settings/PromptsSettingsSection.tsx' only in casing.
+  The file is in the program because:
+    Imported via '../../PromptsSettingsSection' from file '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/sections/PromptsSection.tsx'
+    Imported via '../components/settings/PromptsSettingsSection' from file '/Users/alfonso/jjodel/frontend/src/pages/Settings.tsx'
+    Imported via '../settings/PromptsSettingsSection' from file '/Users/alfonso/jjodel/frontend/src/components/GlobalDrawer/SettingsDrawerContent.tsx'
+    Matched by include pattern 'src' in '/Users/alfonso/jjodel/frontend/tsconfig.json'
+src/components/settings/UnifiedSettingsModal/sections/ProvidersSection.tsx(7,35): error TS1261: Already included file name '/Users/alfonso/jjodel/frontend/src/components/settings/AISettingsContent.tsx' differs from file name '/Users/alfonso/jjodel/frontend/src/components/Settings/AISettingsContent.tsx' only in casing.
+  The file is in the program because:
+    Imported via '../../AISettingsContent' from file '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/sections/ProvidersSection.tsx'
+    Matched by include pattern 'src' in '/Users/alfonso/jjodel/frontend/tsconfig.json'
+src/components/settings/UnifiedSettingsModal/UnifiedSettingsModal.tsx(9,32): error TS1261: Already included file name '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/sections/ProfileSection.tsx' differs from file name '/Users/alfonso/jjodel/frontend/src/components/Settings/UnifiedSettingsModal/sections/ProfileSection.tsx' only in casing.
+  The file is in the program because:
+    Imported via './sections/ProfileSection' from file '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/UnifiedSettingsModal.tsx'
+    Matched by include pattern 'src' in '/Users/alfonso/jjodel/frontend/tsconfig.json'
+    Imported via './ProfileSection' from file '/Users/alfonso/jjodel/frontend/src/components/Settings/UnifiedSettingsModal/sections/index.ts'
+src/components/settings/UnifiedSettingsModal/UnifiedSettingsModal.tsx(10,33): error TS1261: Already included file name '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/sections/SecuritySection.tsx' differs from file name '/Users/alfonso/jjodel/frontend/src/components/Settings/UnifiedSettingsModal/sections/SecuritySection.tsx' only in casing.
+  The file is in the program because:
+    Imported via './sections/SecuritySection' from file '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/UnifiedSettingsModal.tsx'
+    Matched by include pattern 'src' in '/Users/alfonso/jjodel/frontend/tsconfig.json'
+    Imported via './SecuritySection' from file '/Users/alfonso/jjodel/frontend/src/components/Settings/UnifiedSettingsModal/sections/index.ts'
+src/components/settings/UnifiedSettingsModal/UnifiedSettingsModal.tsx(11,34): error TS1261: Already included file name '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/sections/ProvidersSection.tsx' differs from file name '/Users/alfonso/jjodel/frontend/src/components/Settings/UnifiedSettingsModal/sections/ProvidersSection.tsx' only in casing.
+  The file is in the program because:
+    Imported via './sections/ProvidersSection' from file '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/UnifiedSettingsModal.tsx'
+    Matched by include pattern 'src' in '/Users/alfonso/jjodel/frontend/tsconfig.json'
+    Imported via './ProvidersSection' from file '/Users/alfonso/jjodel/frontend/src/components/Settings/UnifiedSettingsModal/sections/index.ts'
+src/components/settings/UnifiedSettingsModal/UnifiedSettingsModal.tsx(12,32): error TS1261: Already included file name '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/sections/PromptsSection.tsx' differs from file name '/Users/alfonso/jjodel/frontend/src/components/Settings/UnifiedSettingsModal/sections/PromptsSection.tsx' only in casing.
+  The file is in the program because:
+    Imported via './sections/PromptsSection' from file '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/UnifiedSettingsModal.tsx'
+    Matched by include pattern 'src' in '/Users/alfonso/jjodel/frontend/tsconfig.json'
+    Imported via './PromptsSection' from file '/Users/alfonso/jjodel/frontend/src/components/Settings/UnifiedSettingsModal/sections/index.ts'
+src/components/settings/UnifiedSettingsModal/UnifiedSettingsModal.tsx(13,35): error TS1261: Already included file name '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/sections/AppearanceSection.tsx' differs from file name '/Users/alfonso/jjodel/frontend/src/components/Settings/UnifiedSettingsModal/sections/AppearanceSection.tsx' only in casing.
+  The file is in the program because:
+    Imported via './sections/AppearanceSection' from file '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/UnifiedSettingsModal.tsx'
+    Matched by include pattern 'src' in '/Users/alfonso/jjodel/frontend/tsconfig.json'
+    Imported via './AppearanceSection' from file '/Users/alfonso/jjodel/frontend/src/components/Settings/UnifiedSettingsModal/sections/index.ts'
+src/components/settings/UnifiedSettingsModal/UnifiedSettingsModal.tsx(14,33): error TS1261: Already included file name '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/sections/AdvancedSection.tsx' differs from file name '/Users/alfonso/jjodel/frontend/src/components/Settings/UnifiedSettingsModal/sections/AdvancedSection.tsx' only in casing.
+  The file is in the program because:
+    Imported via './sections/AdvancedSection' from file '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/UnifiedSettingsModal.tsx'
+    Matched by include pattern 'src' in '/Users/alfonso/jjodel/frontend/tsconfig.json'
+    Imported via './AdvancedSection' from file '/Users/alfonso/jjodel/frontend/src/components/Settings/UnifiedSettingsModal/sections/index.ts'
+src/components/settings/UnifiedSettingsModal/UnifiedSettingsModal.tsx(15,38): error TS1261: Already included file name '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/sections/NotificationsSection.tsx' differs from file name '/Users/alfonso/jjodel/frontend/src/components/Settings/UnifiedSettingsModal/sections/NotificationsSection.tsx' only in casing.
+  The file is in the program because:
+    Imported via './sections/NotificationsSection' from file '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/UnifiedSettingsModal.tsx'
+    Matched by include pattern 'src' in '/Users/alfonso/jjodel/frontend/tsconfig.json'
+    Imported via './NotificationsSection' from file '/Users/alfonso/jjodel/frontend/src/components/Settings/UnifiedSettingsModal/sections/index.ts'
+src/contexts/SettingsModalContext.tsx(8,55): error TS1261: Already included file name '/Users/alfonso/jjodel/frontend/src/components/settings/UnifiedSettingsModal/index.ts' differs from file name '/Users/alfonso/jjodel/frontend/src/components/Settings/UnifiedSettingsModal/index.ts' only in casing.
+  The file is in the program because:
+    Imported via '../components/settings/UnifiedSettingsModal' from file '/Users/alfonso/jjodel/frontend/src/contexts/SettingsModalContext.tsx'
+    Matched by include pattern 'src' in '/Users/alfonso/jjodel/frontend/tsconfig.json'
+src/pages/components/Dashboard.tsx(569,66): error TS2339: Property 'activeId' does not exist on type 'PanelData | BoxData'.
+  Property 'activeId' does not exist on type 'BoxData'.
