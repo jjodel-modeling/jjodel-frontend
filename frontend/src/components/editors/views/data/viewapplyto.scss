@@ -711,28 +711,33 @@ section.page-root {
 // docs/discovery/2026-06-11_view_properties_panel_visual_issues.md.
 // ============================================================================
 
-// --- Issue 1: "Applicable to" multiselect chips — readable slate (not dark/illegible).
-// `!important` is required here: _form-system.scss uses `!important` on these same
-// react-select classes, so a non-!important rule (even at higher specificity) would
-// lose the cascade. The (0,3,0) specificity wins among the competing !important rules.
-.properties-panel .jj-field .jjodel-select__multi-value {
+// --- Issue 1: "Applicable to" multiselect chips — force readable slate, light & dark.
+// Scoped to the panel root `.properties-tab.properties-panel` (the section InfoData and
+// Info both render) instead of `.properties-panel .jj-field`: the sibling spinner/width
+// rules below (same `.properties-panel .jj-field` base) DO take effect, which proves that
+// base matches the live DOM — so the prior chip rule should have matched too and the
+// "still black" residual was most likely stale styles. Dropping the `.jj-field` ancestor
+// removes that dependency for determinism (the chip sits under a label wrapper that lost
+// its `.input-container` class, per the known rootprops override). `!important` + (0,3,0)
+// specificity beats the global `_form-system.scss` !important stack (light :543 = (0,1,0),
+// dark :820 = (0,2,0)) and react-select's non-!important emotion styles.
+.properties-tab.properties-panel .jjodel-select__multi-value {
   background-color: #e2e8f0 !important;
 }
-.properties-panel .jj-field .jjodel-select__multi-value__label {
+.properties-tab.properties-panel .jjodel-select__multi-value__label {
   color: #334155 !important;
 }
-.properties-panel .jj-field .jjodel-select__multi-value__remove {
+.properties-tab.properties-panel .jjodel-select__multi-value__remove {
   color: #64748b !important;
 }
-// Preserve the dark-theme chip appearance (mirrors _form-system's dark values) so
-// this scoped override does not regress dark mode.
-[data-theme="dark"] .properties-panel .jj-field .jjodel-select__multi-value {
+// Preserve the dark-theme chip appearance (mirrors _form-system's dark values).
+[data-theme="dark"] .properties-tab.properties-panel .jjodel-select__multi-value {
   background-color: #334155 !important;
 }
-[data-theme="dark"] .properties-panel .jj-field .jjodel-select__multi-value__label {
+[data-theme="dark"] .properties-tab.properties-panel .jjodel-select__multi-value__label {
   color: #e2e8f0 !important;
 }
-[data-theme="dark"] .properties-panel .jj-field .jjodel-select__multi-value__remove {
+[data-theme="dark"] .properties-tab.properties-panel .jjodel-select__multi-value__remove {
   color: #94a3b8 !important;
 }
 
