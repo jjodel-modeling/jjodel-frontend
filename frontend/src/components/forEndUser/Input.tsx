@@ -104,13 +104,14 @@ export function InputComponent(props: AllProps) {
     useLayoutEffect(() => {
         if (visible && inputRef.current) {
             let input = inputRef.current;
-            // input.select() works on inputs, but this works for contenteditable too
-            (inputRef.current as any)?.focus();
-            // Inline-rename affordance: pre-select the content so the user can type over it.
-            // Skip it for <select> (the Range/selectNodeContents branch paints a native
-            // text-selection highlight on the chosen option / react-select chips) and for
-            // read-only fields (nothing to edit). See discovery 2026-06-11, Issue 2.
+            // Auto-focus + pre-select on mount is the inline-rename affordance for editable
+            // text inputs (and contenteditable). Skip it entirely — including focus() — for
+            // <select> elements (a focus ring / native text-selection highlight would appear
+            // on panel load with no user interaction) and for read-only fields (nothing to
+            // edit). See discovery 2026-06-11, Issue 2 (+ focus-ring follow-up).
             if (props.tag !== 'select' && !readOnly) {
+                // input.select() works on inputs, but this works for contenteditable too
+                (inputRef.current as any)?.focus();
                 if (input.tagName === 'INPUT') (input as HTMLInputElement).select();
                 else {
                     const range = document.createRange();
