@@ -700,3 +700,79 @@ section.page-root {
     cursor: not-allowed;
   }
 }
+
+// ============================================================================
+// LIVE RULES for the rendered DOM: `.properties-panel .jj-field` (InfoData).
+//
+// The `.apply-to-tab` / `.form-field` rules above are DEAD — InfoData renders
+// `section.properties-tab.properties-panel > .jj-field > <bare widget>`, never
+// `.apply-to-tab`. (Cleanup of the dead rules is deferred to a pre-3.0.0 session.)
+// These scoped rules fix View Properties panel issues 1/3/5/7 from
+// docs/discovery/2026-06-11_view_properties_panel_visual_issues.md.
+// ============================================================================
+
+// --- Issue 1: "Applicable to" multiselect chips — readable slate (not dark/illegible).
+// `!important` is required here: _form-system.scss uses `!important` on these same
+// react-select classes, so a non-!important rule (even at higher specificity) would
+// lose the cascade. The (0,3,0) specificity wins among the competing !important rules.
+.properties-panel .jj-field .jjodel-select__multi-value {
+  background-color: #e2e8f0 !important;
+}
+.properties-panel .jj-field .jjodel-select__multi-value__label {
+  color: #334155 !important;
+}
+.properties-panel .jj-field .jjodel-select__multi-value__remove {
+  color: #64748b !important;
+}
+// Preserve the dark-theme chip appearance (mirrors _form-system's dark values) so
+// this scoped override does not regress dark mode.
+[data-theme="dark"] .properties-panel .jj-field .jjodel-select__multi-value {
+  background-color: #334155 !important;
+}
+[data-theme="dark"] .properties-panel .jj-field .jjodel-select__multi-value__label {
+  color: #e2e8f0 !important;
+}
+[data-theme="dark"] .properties-panel .jj-field .jjodel-select__multi-value__remove {
+  color: #94a3b8 !important;
+}
+
+// --- Issue 3: disabled/readonly values render legible (slate), not placeholder-gray.
+// `-webkit-text-fill-color` overrides WebKit's disabled-input text dimming.
+.properties-panel .jj-field input:disabled,
+.properties-panel .jj-field select:disabled {
+  color: #334155;
+  -webkit-text-fill-color: #334155;
+  opacity: 1;
+  background-color: #f8fafc;
+}
+
+// --- Issue 5: hide native number spinners on Priority.
+// _form-system.scss:189-199 forces spinners globally (without !important); this
+// scoped rule wins on specificity, so no !important is needed.
+.properties-panel .jj-field input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.properties-panel .jj-field input[type="number"]::-webkit-inner-spin-button,
+.properties-panel .jj-field input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+// --- Issue 7: uniform field widths. Native selects otherwise auto-size to their
+// widest option. The child combinator (>) targets only the bare widgets and avoids
+// react-select's internal autosize <input>; the multiselect control is capped
+// separately (below) to align with the rest. OCL/JS editors sit OUTSIDE .jj-field,
+// so they are unaffected.
+.properties-panel .jj-field > input,
+.properties-panel .jj-field > select {
+  width: 100%;
+  max-width: 420px;
+  box-sizing: border-box;
+}
+.properties-panel .jj-field > input[type="number"] {
+  max-width: 160px;
+}
+.properties-panel .jj-field .jjodel-select__control {
+  max-width: 420px;
+}
