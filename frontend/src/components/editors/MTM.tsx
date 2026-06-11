@@ -460,7 +460,7 @@ function MTMEditor(props: EditorAllProps): JSX.Element{
                                     if (f !== '+') SetRootFieldAction.new('languages.' + language + '.'+a.label+'.' + a.engine + '.'+f, undefined, '', false);
                                     AT_TRANSACTION(()=>clearCache(language, a.engine));
                                 }, f, v)
-                                }} clickHidden={true}/>
+                                }} clickHidden={true} selectOnMount={true}/>
                             }</div>
                         )}</div></div> : <div></div>}
                     <div className={'editor-wrapper w-100 h-100 '+a.label} tabIndex={-1} onBlur={() => {

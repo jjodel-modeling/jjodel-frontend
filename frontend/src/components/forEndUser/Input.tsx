@@ -104,12 +104,12 @@ export function InputComponent(props: AllProps) {
     useLayoutEffect(() => {
         if (visible && inputRef.current) {
             let input = inputRef.current;
-            // Auto-focus + pre-select on mount is the inline-rename affordance for editable
-            // text inputs (and contenteditable). Skip it entirely — including focus() — for
-            // <select> elements (a focus ring / native text-selection highlight would appear
-            // on panel load with no user interaction) and for read-only fields (nothing to
-            // edit). See discovery 2026-06-11, Issue 2 (+ focus-ring follow-up).
-            if (props.tag !== 'select' && !readOnly) {
+            // Auto-focus + pre-select on mount is an OPT-IN inline-rename affordance
+            // (selectOnMount): it pre-selects the value so the user can type over it when a
+            // rename-in-place input is revealed. OFF by default so ordinary panels do not
+            // steal focus / show a caret on load. Never runs for <select> elements or
+            // read-only fields. See discovery 2026-06-11, Issue 2 (+ focus/caret follow-up).
+            if (props.selectOnMount && props.tag !== 'select' && !readOnly) {
                 // input.select() works on inputs, but this works for contenteditable too
                 (inputRef.current as any)?.focus();
                 if (input.tagName === 'INPUT') (input as HTMLInputElement).select();
@@ -266,6 +266,7 @@ export function InputComponent(props: AllProps) {
     delete otherprops.inputStyle;
     delete otherprops.children;
     delete otherprops.autosize; // because react complains is bool in dom attribute or unknown attrib name
+    delete otherprops.selectOnMount; // custom prop — must not leak onto the DOM element
 
     let checked: boolean | undefined = undefined;
     if (isBoolean) checked = typeof value === "boolean" ? value :
@@ -496,6 +497,8 @@ export interface InputOwnProps extends GenericProps {
     tooltip?: boolean | ReactNode;
     hidden?: boolean;
     clickHidden?: boolean;
+    // Opt-in: focus + pre-select the value when this input mounts/reveals (inline-rename).
+    selectOnMount?: boolean;
     autosize?: boolean;
     inputClassName?: string;
     inputStyle?: GObject;
