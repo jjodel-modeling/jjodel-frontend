@@ -3,7 +3,7 @@
  * Handles API calls to different AI providers (Claude, OpenAI, DeepSeek, Gemini)
  */
 
-import {AIProvider, TAIProvider, ChatMessage, ChatImage, ChatDocument, AI, AIConfig, resolveLegacyModelId} from '../types/jodie';
+import {AIProvider, TAIProvider, ChatMessage, ChatImage, ChatDocument, AI, AIConfig, resolveLegacyModelId, isForeignModel, getAICompany} from '../types/jodie';
 import { PromptService } from './PromptService';
 import { PromptContext } from '../types/prompts';
 
@@ -38,9 +38,27 @@ export class AIProviderService {
             throw new Error(`Provider ${provider} is not configured. Please add your API key in Settings.`);
         }
 
+        // Pre-send validation (no network call): the API key's prefix must be coherent with
+        // the active provider. Surfaces a plain-language message through the caller's existing
+        // error channel (e.g. the Jodie chat bubble) instead of a cryptic 401 from the endpoint.
+        const keyError = this.validateKeyCoherence(provider, config);
+        if (keyError) throw new Error(keyError);
+
         // Resolve effective model: explicit param > per-provider config. Run through legacy ID map
         // so stale identifiers (e.g. persisted before a rename) reach the current canonical form.
-        const effectiveModel = resolveLegacyModelId(provider, model ?? config.model) ?? config.model;
+        let effectiveModel = resolveLegacyModelId(provider, model ?? config.model) ?? config.model ?? '';
+        // Guard the provider/model pairing: a model belonging to a *different* provider (e.g. a
+        // per-feature "chat" model chosen under OpenAI while the active provider is Claude) must
+        // never be sent — it yields a cryptic 404. Fall back to the provider's own model.
+        if (effectiveModel && isForeignModel(provider, effectiveModel)) {
+            let own = resolveLegacyModelId(provider, config.model) ?? config.model ?? '';
+            if (!own || isForeignModel(provider, own)) own = Object.keys(llm?.versions ?? {})[0] ?? '';
+            console.warn(`[AIProviderService] Discarding model "${effectiveModel}" — not a ${provider} model; using "${own}" instead.`);
+            effectiveModel = own;
+        }
+        if (!effectiveModel.trim()) {
+            throw new Error(`No model selected for ${provider}. Please choose a model in Settings.`);
+        }
 
         // Build system prompt with optional project context using PromptService
         const context: PromptContext | undefined = projectContext
@@ -1048,6 +1066,62 @@ export class AIProviderService {
             }
             return {success: false, error: `Connection error: ${errorMessage}` };
         }
+    }
+
+    // ── Pre-send credential validation ───────────────────────────────────────────
+
+    /**
+     * Distinctive key prefixes that unambiguously identify a provider. Used to detect a key
+     * pasted under the wrong provider (e.g. a Google "AIza…" key under OpenAI).
+     */
+    private static readonly DISTINCTIVE_KEY_PREFIXES: ReadonlyArray<{ prefix: string; provider: TAIProvider }> = [
+        { prefix: 'sk-ant-', provider: AIProvider.Claude },
+        { prefix: 'AIza',    provider: AIProvider.Gemini },
+        { prefix: 'gsk_',    provider: AIProvider.Groq },
+    ];
+
+    /**
+     * Expected key prefix per provider, where one is well-known. DeepSeek shares OpenAI's
+     * "sk-" prefix, so those two cannot be told apart by prefix alone.
+     */
+    private static readonly EXPECTED_KEY_PREFIX: Partial<Record<TAIProvider, string>> = {
+        [AIProvider.Claude]:   'sk-ant-',
+        [AIProvider.GPT]:      'sk-',
+        [AIProvider.Gemini]:   'AIza',
+        [AIProvider.Groq]:     'gsk_',
+        [AIProvider.DeepSeek]: 'sk-',
+    };
+
+    /** Human-friendly provider label, e.g. "OpenAI (GPT)", "Anthropic (Claude)", "Groq". */
+    private static providerLabel(provider: TAIProvider): string {
+        const company = getAICompany(provider);
+        return company && company !== provider ? `${company} (${provider})` : provider;
+    }
+
+    /**
+     * Returns a plain-language error string when the API key's prefix is incoherent with the
+     * active provider, or null when the key looks fine (or coherence cannot be judged).
+     * Skips providers that don't require a key (Ollama) and the Custom provider. Assumes the
+     * key is present (empty keys are handled upstream by AIConfig.isConfigured()).
+     */
+    private static validateKeyCoherence(provider: TAIProvider, config: AIConfig): string | null {
+        const llm = AI[provider];
+        if (!llm || !llm.requiresKey || provider === AIProvider.Custom) return null;
+        const apiKey = (config.apiKey || '').trim();
+        if (!apiKey) return null;
+
+        // A. The key unmistakably belongs to a *different* provider.
+        for (const d of this.DISTINCTIVE_KEY_PREFIXES) {
+            if (apiKey.startsWith(d.prefix) && d.provider !== provider) {
+                return `This looks like a ${this.providerLabel(d.provider)} API key, but the active provider is ${this.providerLabel(provider)}. Enter the ${this.providerLabel(provider)} key, or switch the provider in Settings.`;
+            }
+        }
+        // B. The active provider has a well-known prefix the key does not match.
+        const expected = this.EXPECTED_KEY_PREFIX[provider];
+        if (expected && !apiKey.startsWith(expected)) {
+            return `${this.providerLabel(provider)} API keys should start with "${expected}". The key you entered does not — please check it in Settings.`;
+        }
+        return null;
     }
 }
 
