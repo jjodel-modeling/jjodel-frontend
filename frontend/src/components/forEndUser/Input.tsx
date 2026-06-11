@@ -106,14 +106,20 @@ export function InputComponent(props: AllProps) {
             let input = inputRef.current;
             // input.select() works on inputs, but this works for contenteditable too
             (inputRef.current as any)?.focus();
-            if (input.tagName === 'INPUT') (input as HTMLInputElement).select();
-            else {
-                const range = document.createRange();
-                range.selectNodeContents(input);
-                const selection = window.getSelection();
-                if (selection) {
-                    selection.removeAllRanges();
-                    selection.addRange(range);
+            // Inline-rename affordance: pre-select the content so the user can type over it.
+            // Skip it for <select> (the Range/selectNodeContents branch paints a native
+            // text-selection highlight on the chosen option / react-select chips) and for
+            // read-only fields (nothing to edit). See discovery 2026-06-11, Issue 2.
+            if (props.tag !== 'select' && !readOnly) {
+                if (input.tagName === 'INPUT') (input as HTMLInputElement).select();
+                else {
+                    const range = document.createRange();
+                    range.selectNodeContents(input);
+                    const selection = window.getSelection();
+                    if (selection) {
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                    }
                 }
             }
 
