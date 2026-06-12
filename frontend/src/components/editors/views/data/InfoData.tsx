@@ -216,11 +216,12 @@ function InfoDataComponent(props: AllProps) {
                             data={view}
                             field={'edgeRouting'}
                             readOnly={readOnly}
-                            options={<>
-                                <option value={'manhattan-rounded'}>Manhattan (rounded)</option>
-                                <option value={'straight'}>Straight</option>
-                                <option value={'bezier'}>Bezier curve</option>
-                            </>}
+                            jjSelect={true}
+                            options={[
+                                { value: 'manhattan-rounded', label: 'Manhattan (rounded)' },
+                                { value: 'straight', label: 'Straight' },
+                                { value: 'bezier', label: 'Bezier curve' },
+                            ] as any}
                             getter={(d: LViewElement) => d.edgeRouting || 'manhattan-rounded'}
                             setter={(v: string) => { view.edgeRouting = v as any; }}
                         />
