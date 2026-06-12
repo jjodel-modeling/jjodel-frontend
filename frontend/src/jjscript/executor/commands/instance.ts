@@ -303,7 +303,7 @@ export async function executeDeleteInstance(
         };
     }
 
-    const instanceName = args.target.raw;
+    const instanceName = args.target.segments.join('::') || args.target.raw; // instance name from segments; raw may carry a dotted '.property' member (P0b)
     const lObject = findInstanceByName(targetModel, instanceName);
     if (!lObject) {
         return {
@@ -369,7 +369,7 @@ export async function executeRenameInstance(
         };
     }
 
-    const instanceName = args.target.raw;
+    const instanceName = args.target.segments.join('::') || args.target.raw; // instance name from segments; raw may carry a dotted '.property' member (P0b)
     const lObject = findInstanceByName(targetModel, instanceName);
     if (!lObject) {
         return {
@@ -446,7 +446,7 @@ export async function executeSetInstance(
         };
     }
 
-    const instanceName = args.target.raw;
+    const instanceName = args.target.segments.join('::') || args.target.raw; // instance name from segments; raw may carry a dotted '.property' member (P0b)
     const lObject = findInstanceByName(targetModel, instanceName);
     if (!lObject) {
         return {
