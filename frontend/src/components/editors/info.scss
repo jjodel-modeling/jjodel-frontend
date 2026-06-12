@@ -305,7 +305,7 @@
   }
 
   & h5 {
-    font-size: 1.1em !important;
+    font-size: 13px !important;
     color: var(--color-accent);
   }
 
@@ -342,13 +342,14 @@
       color: var(--color-accent);
       margin-left: 0;
       padding-left: 0 !important;
-      font-size: 1.2em;
+      font-size: 13px!important;
     }
   }
 }
 
 .options-tab .section .node h5 {
   padding-left: 0 !important;
+  font-size: 13px !important;
 }
 
 /* Node editor */
