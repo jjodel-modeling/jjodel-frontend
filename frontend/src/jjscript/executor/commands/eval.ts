@@ -127,6 +127,33 @@ export function buildEvalContext(context: ExecutionContext): Record<string, Jjel
     const allInstancesJjel: JjelValue[] = rawM1Objects.map((o) => shallowObjectToJjelValue(o, classByName));
     variables['instances'] = allInstancesJjel;
 
+    // Pass 3b (Stage 1): id -> handle index, then materialize feature slots.
+    // The index is built from the shared pool so reference slots resolve to the
+    // SAME handle object (instance identity for `==`). It must be complete before
+    // slot-filling, hence a separate pass: a reference may point at an instance
+    // built later in the pool.
+    const instanceById: Map<string, JjelValue> = new Map();
+    for (let j = 0; j < rawM1Objects.length; j++) {
+        const oid = rawM1Objects[j]?.id;
+        if (typeof oid === 'string' && oid) instanceById.set(oid, allInstancesJjel[j]);
+    }
+    // PERF: O(objects × features) per context build; no cross-evaluation cache in
+    // Stage 1. Context-level memoization is the future lever.
+    //
+    // Worklist (not a plain loop) so an out-of-pool (cross-MM) reference target,
+    // wrapped on demand mid-fill, is itself enqueued and filled exactly once —
+    // never re-entering a handle that is currently mid-fill (recursion guard via
+    // the `filled` set keyed on handle identity).
+    const filled = new Set<JjelValue>();
+    const fillWorklist: Array<[any, JjelValue]> = [];
+    for (let j = 0; j < rawM1Objects.length; j++) fillWorklist.push([rawM1Objects[j], allInstancesJjel[j]]);
+    while (fillWorklist.length) {
+        const [srcObj, srcHandle] = fillWorklist.pop()!;
+        if (filled.has(srcHandle)) continue;
+        filled.add(srcHandle);
+        fillInstanceSlots(srcObj, srcHandle as any, instanceById, classByName, fillWorklist);
+    }
+
     // Pass 4: populate per-class instances/allInstances by sharing references
     // with the global pool, so identity holds across both surfaces.
     for (let i = 0; i < classes.length; i++) {
@@ -406,6 +433,213 @@ function shallowObjectToJjelValue(obj: any, classByName?: Map<string, JjelValue>
     // Expose metamodel feature values (from $name.value etc.) directly.
     extractAttributeValues(obj, result);
     return result as JjelValue;
+}
+
+/**
+ * Stage 1 — materialize an M1 instance's feature slots onto its extent handle.
+ *
+ * Runs as a second pass (after the full id->handle index exists) so reference
+ * slots can resolve to the shared pool handles. Two read strategies, by feature
+ * kind (distinguished via the slot's `instanceof` M2 feature):
+ *
+ *   - Attributes: read through the L-layer getter (`feature.value`/`feature.values`)
+ *     so primitive coercion (EBoolean, numeric clamping, EString identity
+ *     fallback) and enum-literal resolution reuse the verified `LValue.get_values`
+ *     pipeline. Enum literals are collapsed to their `name` string so no L-proxy
+ *     is ever stored on the handle (the inspector / `==` need plain values).
+ *   - References: read the raw DValue pointer ids and resolve them against the
+ *     shared pool BY POINTER — never by class name (cross-MM safe). A resolved
+ *     target is the SAME handle object, giving instance identity for `==`.
+ *     Out-of-pool targets (e.g. cross-metamodel) are wrapped on demand, memoized
+ *     into the index, and enqueued on `fillWorklist` so their own slots are
+ *     filled exactly once (their `instanceOf` may legitimately be null when the
+ *     class is not in `classByName` — not extended across metamodels in Stage 1).
+ *
+ * Shape follows cardinality: upperBound 1 -> single value | handle | null;
+ * multi -> array (never null). Reserved keys (`id`, `__type`, `instanceOf`,
+ * `instanceof`) are never overwritten; a user feature MAY shadow `name`
+ * (user-feature-first, book §3.13.4).
+ */
+function fillInstanceSlots(
+    rawObj: any,
+    handle: any,
+    instanceById: Map<string, JjelValue>,
+    classByName: Map<string, JjelValue> | null,
+    fillWorklist: Array<[any, JjelValue]>
+): void {
+    if (!rawObj || !handle || typeof handle !== 'object') return;
+
+    let features: any[];
+    try { features = rawObj.features || []; } catch { return; }
+    if (!Array.isArray(features)) return;
+
+    const collapse = (v: any): JjelValue => {
+        // Enum literals (and any stray L-proxy) collapse to their name string;
+        // primitives pass through; undefined normalizes to null.
+        if (v && typeof v === 'object') {
+            try {
+                if ((v as any).__isProxy || (v as any).className === 'DEnumLiteral') {
+                    const n = (v as any).name;
+                    return typeof n === 'string' ? n : null;
+                }
+            } catch { /* skip */ }
+            try {
+                const n = (v as any).name;
+                if (typeof n === 'string') return n;
+            } catch { /* skip */ }
+        }
+        return v === undefined ? null : v;
+    };
+
+    for (const feature of features) {
+        if (!feature) continue;
+        let fname: string | undefined;
+        try { fname = feature.name; } catch { continue; }
+        if (!fname || typeof fname !== 'string') continue;
+        // Identity/type markers are not overwritable. `name` is intentionally
+        // absent here so a user feature named "name" can shadow it.
+        if (fname === 'id' || fname === '__type' || fname === 'instanceOf' || fname === 'instanceof') continue;
+
+        let meta: any;
+        try { meta = feature.instanceof; } catch { meta = undefined; }
+        const metaClass: string | undefined = meta?.className;
+
+        let ub: any;
+        try { ub = meta?.upperBound; } catch { ub = undefined; }
+        const isMany = ub === -1 || ub === '*' || (typeof ub === 'number' && ub > 1);
+
+        if (metaClass === 'DReference') {
+            let rawVals: any[];
+            try {
+                const r = feature.__raw?.values;
+                rawVals = Array.isArray(r) ? r : [];
+            } catch { rawVals = []; }
+
+            const seen = new Set<string>();
+            const resolved: JjelValue[] = [];
+            for (const v of rawVals) {
+                if (typeof v !== 'string' || !v) continue;
+                if (seen.has(v)) continue;
+                seen.add(v);
+                let target: JjelValue | null = instanceById.get(v) ?? null;
+                if (target === null) {
+                    try {
+                        const ltarget = LPointerTargetable.fromPointer(v) as any;
+                        if (ltarget) {
+                            target = shallowObjectToJjelValue(ltarget, classByName);
+                            instanceById.set(v, target);
+                            // Fill the on-demand target's own slots too (guarded
+                            // fill-once by the caller's `filled` set).
+                            fillWorklist.push([ltarget, target]);
+                        }
+                    } catch { target = null; }
+                }
+                if (target !== null) resolved.push(target);
+            }
+            handle[fname] = isMany ? resolved : (resolved.length ? resolved[0] : null);
+            continue;
+        }
+
+        // Attribute (or shapeless/unknown meta): L-getter for correct coercion.
+        if (isMany) {
+            let vals: any[];
+            try {
+                const vv = feature.values;
+                vals = Array.isArray(vv) ? vv : (vv == null ? [] : [vv]);
+            } catch { vals = []; }
+            handle[fname] = vals.map(collapse);
+        } else {
+            let v: any;
+            try { v = feature.value; } catch { v = null; }
+            const collapsed = collapse(v);
+            // Stage 1 amendment: an empty single-valued attribute resolves to its
+            // declared default / canonical type default / null (not bare null).
+            handle[fname] = collapsed === null ? emptyAttributeDefault(meta) : collapsed;
+        }
+    }
+}
+
+/**
+ * Stage 1 amendment — resolve the value of an EMPTY single-valued attribute slot
+ * (called by fillInstanceSlots only when the L-getter yields no value).
+ *
+ * Resolution order, from the typing M2 attribute `meta` (an LAttribute):
+ *   1. Declared default: if the attribute declares a `defaultValue`, use it,
+ *      coerced to the attribute's primitive type (same `type`/`defaultValue`
+ *      fields read by shallowAttributeToJjelValue — no parallel value pipeline).
+ *   2. Mandatory: else if `lowerBound >= 1`, the canonical type default —
+ *      boolean -> false, numeric -> 0, EString -> "", enum -> first literal name.
+ *   3. Optional: else (lowerBound 0, or not reliably readable) -> null.
+ *
+ * NB: the D-layer default for `lowerBound` is 0 (DAttribute.lowerBound), so an
+ * attribute is OPTIONAL unless explicitly made mandatory — step 2 fires only for
+ * attributes whose lower bound was set to >= 1. Multi-valued attributes (empty
+ * array) and references never reach here.
+ */
+function emptyAttributeDefault(meta: any): JjelValue {
+    if (!meta) return null;
+
+    // Type categorisation, shared by declared-default coercion and the canonical
+    // default. Reuses the attribute's classifier; introduces no parallel pipeline.
+    let typeName = '';
+    let isEnum = false;
+    let enumLiterals: any[] = [];
+    try {
+        const t = meta.type;
+        if (t) {
+            isEnum = t.isEnum === true || t.className === 'DEnumerator';
+            typeName = String(t.name || '').toLowerCase();
+            if (isEnum) { try { enumLiterals = t.literals || []; } catch { enumLiterals = []; } }
+        }
+    } catch { /* type unreadable -> 'other' below */ }
+
+    const isBool = !isEnum && typeName.includes('bool');
+    const isNum  = !isEnum && /(int|long|short|byte|float|double|decimal|integer|number)/.test(typeName);
+    const isStr  = !isEnum && typeName.includes('string');
+
+    const firstLiteralName = (): JjelValue => {
+        try { const n = enumLiterals[0]?.name; return typeof n === 'string' ? n : null; }
+        catch { return null; }
+    };
+
+    // 1. Declared default (coerced to the attribute's type).
+    let declared: any;
+    try { declared = meta.defaultValue; } catch { declared = undefined; }
+    if (declared !== undefined && declared !== null && declared !== '') {
+        if (isEnum) {
+            try {
+                if (typeof declared === 'number') {
+                    const lit = enumLiterals.find((l: any) => l?.value === declared) || enumLiterals[declared];
+                    return (lit?.name) ?? null;
+                }
+                const named = enumLiterals.find((l: any) => l?.name === declared);
+                if (named?.name) return named.name;
+                return typeof declared === 'string' ? declared : null;
+            } catch { return null; }
+        }
+        if (isBool) {
+            if (declared === true || declared === 'true' || declared === 1 || declared === '1') return true;
+            if (declared === false || declared === 'false' || declared === 0 || declared === '0') return false;
+            return Boolean(declared);
+        }
+        if (isNum) { const n = Number(declared); return Number.isFinite(n) ? n : 0; }
+        if (isStr) return typeof declared === 'string' ? declared : String(declared);
+        return declared;
+    }
+
+    // 2. Mandatory -> canonical type default.
+    let lower: any;
+    try { lower = meta.lowerBound; } catch { lower = undefined; }
+    if (typeof lower === 'number' && lower >= 1) {
+        if (isEnum) return firstLiteralName();
+        if (isBool) return false;
+        if (isNum)  return 0;
+        if (isStr)  return '';
+        return null;
+    }
+
+    // 3. Optional / unknown lower bound -> null.
+    return null;
 }
 
 /**
