@@ -225,6 +225,25 @@ export class JjelEvaluator {
         // suggestion. The evaluation result remains null either way.
         if (ctx.diagnostics) {
             const sink = ctx.diagnostics;
+            // Ambiguous M1 instance name: a name shared by 2+ pool instances is
+            // intentionally left unbound (Stage 2). Steer the user to the
+            // qualified form instead of emitting a generic 'unknown identifier'.
+            const ambig = ctx.ambiguousInstances?.get(expr.name);
+            if (ambig) {
+                const seen = sink.some(
+                    w => w.kind === 'ambiguous-instance' && w.identifier === expr.name,
+                );
+                if (!seen) {
+                    sink.push({
+                        kind: 'ambiguous-instance',
+                        identifier: expr.name,
+                        count: ambig.count,
+                        sampleClass: ambig.sampleClass,
+                        suggestion: null,
+                    });
+                }
+                return null;
+            }
             const already = sink.some(
                 w => w.kind === 'undefined-identifier' && w.identifier === expr.name,
             );

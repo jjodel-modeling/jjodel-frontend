@@ -7,7 +7,7 @@ import React, { useEffect, useRef, useCallback, useState } from 'react';
 import {AI, ChatMessage, ConsoleEntry, CodeEntry, isCodeEntry} from '../../types/jodie';
 import { MarkdownMessage } from './MarkdownMessage';
 import { JjelValueInspector, detectKind } from './JjelValueInspector';
-import { executeCommand, ScriptLineResult } from '../../jjscript';
+import { JjScriptService, ScriptLineResult } from '../../jjscript';
 import { DUser, L, LUser, LProject, LModel, store } from '../../joiner';
 import { Selectors } from '../../redux/selectors/selectors';
 import { ProviderIcon } from '../icons';
@@ -201,7 +201,9 @@ function CodeReplEntry({ entry, onAskJjodie }: { entry: CodeEntry; onAskJjodie?:
                             <span>
                                 {w.kind === 'property-not-found'
                                     ? <>Property <code>{w.identifier}</code> not found on object.</>
-                                    : <>Unknown identifier <code>{w.identifier}</code>.</>}
+                                    : w.kind === 'ambiguous-instance'
+                                        ? <>Ambiguous instance name <code>{w.identifier}</code> ({w.count} matches). Use the qualified form <code>{(w.sampleClass ?? 'ClassName')}.{w.identifier}</code>.</>
+                                        : <>Unknown identifier <code>{w.identifier}</code>.</>}
                                 {w.suggestion && <> Did you mean <code>{w.suggestion}</code>?</>}
                             </span>
                         </div>
@@ -334,7 +336,12 @@ export function ChatMessages({ messages, isWaiting, onJjScriptExecuted, onTestIn
 
         for (const command of commands) {
             try {
-                const result = await executeCommand(command);
+                // Route through JjScriptService.execute (the same path used for typed
+                // commands in Jodie.tsx) so the executor receives the active context
+                // level/modelId/targetMetamodelId. A bare executeCommand(command) would
+                // reuse the singleton's stale context and reject M1 instance commands
+                // with WRONG_LEVEL. See docs/discovery/2026-06-12_jjscript_m1_coverage.md (Q8).
+                const result = await JjScriptService.execute(command);
                 results.push({
                     command,
                     success: result.success,

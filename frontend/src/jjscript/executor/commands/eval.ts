@@ -12,6 +12,7 @@ import { getProject, getTargetMetamodel } from '../utils';
 import { jjelEval } from '../../../jjel';
 import type { JjelValue } from '../../../jjel';
 import { extractAttributeValues } from '../../../jjel/evaluator/modelContext';
+import { AMBIGUOUS_INSTANCES_KEY } from '../../../jjel/evaluator/context';
 import { store, LPointerTargetable } from '../../../joiner';
 
 // ============================================
@@ -186,6 +187,24 @@ export function buildEvalContext(context: ExecutionContext): Record<string, Jjel
         classObj.instances = instances;
         classObj.allInstances = allInstances;
         classObj.instanceCount = instances.length;
+
+        // Stage 2 (B): qualified instance-by-name on the class shell (Class.Name),
+        // bound only when the name is unique within this class's DIRECT instances
+        // and does not collide with a structural key (name/attributes/instances/
+        // isAbstract/...). Ambiguous-within-class names are left unbound (the
+        // standard property-not-found applies — not recorded in the ambiguity map).
+        const directByName = new Map<string, JjelValue[]>();
+        for (const inst of instances) {
+            const nm = (inst as any)?.name;
+            if (typeof nm !== 'string' || !nm) continue;
+            const a = directByName.get(nm);
+            if (a) a.push(inst); else directByName.set(nm, [inst]);
+        }
+        for (const [nm, a] of directByName) {
+            if (a.length !== 1) continue;   // ambiguous within class -> unbound
+            if (nm in classObj) continue;   // structural key wins
+            classObj[nm] = a[0];
+        }
     }
 
     // Flat list of all attributes across all classes
@@ -253,15 +272,57 @@ export function buildEvalContext(context: ExecutionContext): Record<string, Jjel
         const selectedNodeId = state?._lastSelected?.node;
         if (selectedMeId) {
             const me = LPointerTargetable.fromPointer(selectedMeId) as any;
-            if (me) variables['data'] = wrapSelectedElement(me, classByName);
+            if (me) variables['data'] = wrapSelectedElement(me, classByName, instanceById, fillWorklist);
         }
         if (selectedNodeId) {
             const n = LPointerTargetable.fromPointer(selectedNodeId) as any;
-            if (n) variables['node'] = wrapSelectedElement(n, classByName);
+            if (n) variables['node'] = wrapSelectedElement(n, classByName, instanceById, fillWorklist);
         }
     } catch {
         // selected element not available — skip
     }
+
+    // Drain any container handles materialized on-demand by self/node `parent`
+    // resolution (owners outside the initial pool); fill-once via `filled`. A
+    // no-op in the common case (the selected element's owner is already pooled).
+    while (fillWorklist.length) {
+        const [srcObj, srcHandle] = fillWorklist.pop()!;
+        if (filled.has(srcHandle)) continue;
+        filled.add(srcHandle);
+        fillInstanceSlots(srcObj, srcHandle as any, instanceById, classByName, fillWorklist);
+    }
+
+    // Stage 2 (A): bare M1 instance-by-name. Group the pool by name; bind a name
+    // to its handle only when unique across the pool AND not already a key
+    // (collections, classes, data/node, metamodel, project, ... set above always
+    // win — same skip-on-collision as the class loop; builtins win at resolution
+    // time since the evaluator checks them before context vars). Names shared by
+    // 2+ instances are NOT bound and are recorded so the evaluator can emit a
+    // 'use the qualified form' warning.
+    const instancesByName = new Map<string, JjelValue[]>();
+    for (let j = 0; j < allInstancesJjel.length; j++) {
+        const h = allInstancesJjel[j] as any;
+        const nm = (h && typeof h.name === 'string') ? h.name : '';
+        if (!nm) continue;
+        const a = instancesByName.get(nm);
+        if (a) a.push(allInstancesJjel[j]); else instancesByName.set(nm, [allInstancesJjel[j]]);
+    }
+    const ambiguousInstances = new Map<string, { count: number; sampleClass: string | null }>();
+    for (const [nm, a] of instancesByName) {
+        if (a.length === 1) {
+            if (!(nm in variables)) variables[nm] = a[0];
+        } else {
+            let sampleClass: string | null = null;
+            try {
+                const io = (a[0] as any)?.instanceOf;
+                if (io && typeof io.name === 'string') sampleClass = io.name;
+            } catch { /* skip */ }
+            ambiguousInstances.set(nm, { count: a.length, sampleClass });
+        }
+    }
+    // Thread the ambiguity map to the evaluator (lifted into
+    // EvaluationContext.ambiguousInstances at construction; never a user var).
+    (variables as Record<string, any>)[AMBIGUOUS_INSTANCES_KEY] = ambiguousInstances;
 
     return variables;
 }
@@ -521,19 +582,7 @@ function fillInstanceSlots(
                 if (typeof v !== 'string' || !v) continue;
                 if (seen.has(v)) continue;
                 seen.add(v);
-                let target: JjelValue | null = instanceById.get(v) ?? null;
-                if (target === null) {
-                    try {
-                        const ltarget = LPointerTargetable.fromPointer(v) as any;
-                        if (ltarget) {
-                            target = shallowObjectToJjelValue(ltarget, classByName);
-                            instanceById.set(v, target);
-                            // Fill the on-demand target's own slots too (guarded
-                            // fill-once by the caller's `filled` set).
-                            fillWorklist.push([ltarget, target]);
-                        }
-                    } catch { target = null; }
-                }
+                const target = resolveOrMaterialize(v, instanceById, classByName, fillWorklist);
                 if (target !== null) resolved.push(target);
             }
             handle[fname] = isMany ? resolved : (resolved.length ? resolved[0] : null);
@@ -556,6 +605,13 @@ function fillInstanceSlots(
             // declared default / canonical type default / null (not bare null).
             handle[fname] = collapsed === null ? emptyAttributeDefault(meta) : collapsed;
         }
+    }
+
+    // Stage 3: `parent` = the containing object (eContainer). Set after the user
+    // features so a user-defined M2 feature named `parent` wins (user-feature-wins
+    // shadowing): if the loop above already populated the key, skip the built-in.
+    if (!('parent' in handle)) {
+        handle.parent = resolveParentHandle(rawObj, instanceById, classByName, fillWorklist);
     }
 }
 
@@ -643,6 +699,61 @@ function emptyAttributeDefault(meta: any): JjelValue {
 }
 
 /**
+ * Resolve a DObject id to its pool handle, materializing + enqueuing it through
+ * the SAME Stage 1 fill path when absent (so reference/parent identity holds and
+ * no divergent shallow wrapper is created). Returns null only when the id cannot
+ * be wrapped. Shared by the reference-slot branch and the `parent` resolution.
+ */
+function resolveOrMaterialize(
+    id: string,
+    instanceById: Map<string, JjelValue>,
+    classByName: Map<string, JjelValue> | null,
+    fillWorklist: Array<[any, JjelValue]>
+): JjelValue | null {
+    let target: JjelValue | null = instanceById.get(id) ?? null;
+    if (target === null) {
+        try {
+            const ltarget = LPointerTargetable.fromPointer(id) as any;
+            if (ltarget) {
+                target = shallowObjectToJjelValue(ltarget, classByName);
+                instanceById.set(id, target);
+                // Fill the on-demand target's own slots too (guarded fill-once by
+                // the caller's `filled` set when the worklist is drained).
+                fillWorklist.push([ltarget, target]);
+            }
+        } catch { target = null; }
+    }
+    return target;
+}
+
+/**
+ * Stage 3 — resolve an M1 object's `parent` (eContainer semantics): the owning
+ * object, never the DValue storage slot. 2-hop on the raw containment chain:
+ *   DObject.father -> DValue (containment slot) -> DValue.father -> owner DObject.
+ * Root objects (father is the DModel) return explicit null. The owner resolves to
+ * the SAME pool handle (so `t.parent == s` holds via pool identity), materialized
+ * on-demand if it lies outside the initial pool.
+ */
+function resolveParentHandle(
+    rawObj: any,
+    instanceById: Map<string, JjelValue>,
+    classByName: Map<string, JjelValue> | null,
+    fillWorklist: Array<[any, JjelValue]>
+): JjelValue {
+    let fatherPtr: any;
+    try { fatherPtr = rawObj?.__raw?.father; } catch { fatherPtr = undefined; }
+    if (typeof fatherPtr !== 'string' || !fatherPtr) return null;
+    let fatherData: any;
+    try { fatherData = (store.getState() as any)?.idlookup?.[fatherPtr]; } catch { fatherData = undefined; }
+    // Root: contained directly in the model (father is the DModel, not a
+    // containment DValue) -> no container object.
+    if (!fatherData || fatherData.className !== 'DValue') return null;
+    const ownerId = fatherData.father;
+    if (typeof ownerId !== 'string' || !ownerId) return null;
+    return resolveOrMaterialize(ownerId, instanceById, classByName, fillWorklist);
+}
+
+/**
  * Wrap the currently-selected model element or graph node for use in the JjEL
  * context. Attribute values are surfaced as top-level properties so users can
  * write `data.age` instead of `data.$age.value`.
@@ -652,7 +763,12 @@ function emptyAttributeDefault(meta: any): JjelValue {
  * `self.instanceOf == Person` resolves by reference identity, consistent with
  * `instances[i].instanceOf` exposed by shallowObjectToJjelValue.
  */
-function wrapSelectedElement(me: any, classByName?: Map<string, JjelValue> | null): JjelValue {
+function wrapSelectedElement(
+    me: any,
+    classByName?: Map<string, JjelValue> | null,
+    instanceById?: Map<string, JjelValue> | null,
+    fillWorklist?: Array<[any, JjelValue]>
+): JjelValue {
     // `__type: 'Object'` aligns the discriminator used elsewhere
     // (shallowObjectToJjelValue) so the evaluator's pedagogical error for
     // `obj.className` on instances triggers symmetrically on `data`/`self`.
@@ -720,6 +836,25 @@ function wrapSelectedElement(me: any, classByName?: Map<string, JjelValue> | nul
             result.className        = classPlainObj.className        ?? null;
         }
     }
+
+    // Stage 3: `parent` = the containing object (eContainer), replacing the raw
+    // `parent` storage artifact copied above. Only for model objects (DObject) —
+    // graph nodes keep their copied value. User-feature-wins shadowing: if the
+    // object's class declares an M2 feature named `parent`, leave the surfaced
+    // user value in place (extractAttributeValues already wrote it).
+    try {
+        if (instanceById && fillWorklist && me?.__raw?.className === 'DObject') {
+            let declaresParent = false;
+            try {
+                const cls = me.instanceof;
+                const feats = cls ? [...(cls.attributes || []), ...(cls.references || [])] : [];
+                declaresParent = feats.some((f: any) => f?.name === 'parent');
+            } catch { declaresParent = false; }
+            if (!declaresParent) {
+                result.parent = resolveParentHandle(me, instanceById, classByName ?? null, fillWorklist);
+            }
+        }
+    } catch { /* leave the copied value */ }
 
     return result as JjelValue;
 }

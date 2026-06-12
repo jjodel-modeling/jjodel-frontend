@@ -132,7 +132,7 @@ function MultiValueRemove<
 >(props: MultiValueRemoveProps<Option, IsMulti, Group>) {
     return (
         <components.MultiValueRemove {...props}>
-            <i className="bi bi-x-lg" style={{ fontSize: 12, display: 'block', lineHeight: 1 }} />
+            <i className="bi bi-x" style={{ fontSize: 12, display: 'block', lineHeight: 1, color: 'white' }} />
         </components.MultiValueRemove>
     );
 }

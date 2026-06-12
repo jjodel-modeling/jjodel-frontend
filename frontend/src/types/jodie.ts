@@ -881,9 +881,13 @@ export interface CodeEntry {
  * into types/jodie. Today they map 1:1.
  */
 export interface CodeWarning {
-    kind: 'undefined-identifier' | 'property-not-found';
+    kind: 'undefined-identifier' | 'property-not-found' | 'ambiguous-instance';
     identifier: string;
     suggestion: string | null;
+    /** ambiguous-instance only: number of pool instances sharing the name. */
+    count?: number;
+    /** ambiguous-instance only: a sample owning class name for the hint, or null. */
+    sampleClass?: string | null;
 }
 
 /** Anything that may appear in the unified Jjodie history. */

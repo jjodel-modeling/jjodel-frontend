@@ -28,6 +28,9 @@ import {
     UX
 } from '../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
+// TypeScript may complain about missing declarations for .scss imports in projects
+// without appropriate module typings. Ignore the check for this side-effect import.
+// @ts-ignore
 import './inputselect.scss';
 import { Tooltip } from './Tooltip';
 import { JjSelect } from '../ui';
@@ -385,7 +388,7 @@ export function InputComponent(props: AllProps) {
                         }),
                         valueContainer: (base: any) => ({
                             ...base,
-                            padding: '4px 8px',
+                            padding: '4px 8px', 
                             flexWrap: 'nowrap',
                             gap: '4px',
                             overflow: 'visible',
