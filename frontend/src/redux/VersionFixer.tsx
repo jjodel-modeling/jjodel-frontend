@@ -15,6 +15,7 @@ import {
 } from "../joiner";
 import {Tooltip} from "../components/forEndUser/Tooltip";
 import {DEFAULT_VIEW_JSX_STRING, LEGACY_PLACEHOLDER_MARKER, V2_2_TO_V2_3_DETECT_MARKER,
+    DEFAULT_VIEW_JSX_V2_3_LEGACY, V2_3_TO_V3_DETECT_MARKER,
     CLASSIC_OBJECT_VIEW_JSX, CLASSIC_VALUE_VIEW_JSX, CLASSIC_SINGLETON_VIEW_JSX,
     CLASSIC_OBJECT_VIEW_MARKER, CLASSIC_VALUE_VIEW_MARKER, CLASSIC_SINGLETON_VIEW_MARKER} from "../utils/defaultViewTemplate";
 
@@ -945,6 +946,39 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         }
         if (migrated > 0) {
             console.log(`[VersionFixer 2.222 -> 2.223] Migrated ${migrated} classic M1 default view(s) for flow parity.`);
+        }
+        return s;
+    }
+
+    // 2.223 → 2.224: isEdge rendering moved OUT of the default jsxString into the TS rendering layer
+    // (graphElement.tsx renderView + components/edgeOverlay/EdgeFallbackCard). Rewrites DViewElement
+    // jsxStrings still carrying the v2.3 default template (the isEdge top-level gate + the
+    // `length === 2` edge-like heuristic) to the simplified v3 DEFAULT_VIEW_JSX_STRING
+    // (header + hint + decorators). Detection mirrors '2.211 -> 2.212' / '2.213 -> 2.214': exact
+    // match against the frozen v2.3 constant (fast path) OR the marker V2_3_TO_V3_DETECT_MARKER
+    // ('jjodel-default-view--edge-fallback') — present only in v2.3, absent from v2.2 and from the
+    // simplified template, so re-running is a no-op (idempotent). Clears legacy per-view css/palette
+    // and forces a recompile, exactly as '2.222 -> 2.223' does for jsxString rewrites. Dual
+    // mechanism: the version bump makes updateDefaultView regenerate UNTOUCHED defaults (clonedCounter
+    // undefined) wholesale from source (DEFAULT_VIEW_JSX_STRING); this method additionally covers
+    // TOUCHED (clonedCounter) defaults, which updateDefaultView skips.
+    private ['2.223 -> 2.224'](s: DState): DState {
+        let migrated = 0;
+        for (let k in s.idlookup) {
+            let e = s.idlookup[k] as any;
+            if (!e || typeof e !== 'object') continue;
+            if (e.className !== 'DViewElement') continue;
+            if (typeof e.jsxString !== 'string') continue;
+            if (e.jsxString !== DEFAULT_VIEW_JSX_V2_3_LEGACY && !e.jsxString.includes(V2_3_TO_V3_DETECT_MARKER)) continue;
+
+            e.jsxString = DEFAULT_VIEW_JSX_STRING;
+            e.css = '';
+            e.palette = {};
+            e.css_MUST_RECOMPILE = true;
+            migrated++;
+        }
+        if (migrated > 0) {
+            console.log(`[VersionFixer 2.223 -> 2.224] Migrated ${migrated} default view(s): isEdge logic moved to TS.`);
         }
         return s;
     }
