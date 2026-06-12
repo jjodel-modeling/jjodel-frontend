@@ -838,6 +838,10 @@
 // (reuse the panel components), so they need no rule here.
 // ============================================================================
 .view-editor-tab-content .options-tab {
+  // Common-source LEFT alignment: an ancestor applies `text-align: center` which the bare
+  // <h5>/<b>/<input> values would otherwise inherit (that's the "centered" rows/labels).
+  // Reset it once here at the tab root so labels and field values are left-aligned.
+  text-align: left;
 
   // Section titles ("Field" / "Vertex") → match the metaclass `.props-section__title`
   // (uppercase, small, muted) instead of the bare large <h5>.
@@ -848,14 +852,16 @@
     letter-spacing: 0.5px;
     color: #64748b;
     margin: 4px 0 10px 0;
+    text-align: left;
   }
 
   // Remaining label rows (Snap, Default Width/Height): label LEFT, control RIGHT, like
   // the Apply-to toggle rows. Direct children only (not the nested SizeInput wrappers).
   .px-2 > label.input-container {
-    display: flex;
+    display: flex !important;
     align-items: center;
-    justify-content: space-between;
+    justify-content: space-between !important;
+    text-align: left;
     padding: 5px 0;
     gap: 8px;
     margin: 0;
@@ -868,11 +874,12 @@
     }
   }
 
-  // Number inputs (Snap x/y disabled, Default Width/Height): hide native spinners and
-  // keep disabled values legible (slate, not placeholder-gray) — same as the Apply-to tab.
+  // Number inputs (Snap x/y disabled, Default Width/Height): hide native spinners, keep
+  // disabled values legible (slate, not placeholder-gray), and left-align the value.
   input[type="number"] {
     -moz-appearance: textfield;
     appearance: textfield;
+    text-align: left;
 
     &::-webkit-inner-spin-button,
     &::-webkit-outer-spin-button {
@@ -887,8 +894,12 @@
     }
   }
 
-  // Default Width / Height capped at ~8 digits + comma.
+  // Default Width / Height capped at ~8 digits + comma. Forced width (not just max-width)
+  // + `flex: 0 0 auto` so the flex row cannot stretch it to full width.
   .number-input-compact {
-    max-width: 110px;
+    flex: 0 0 auto;
+    width: 110px !important;
+    max-width: 110px !important;
+    min-width: 0 !important;
   }
 }
