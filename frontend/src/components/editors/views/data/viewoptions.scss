@@ -837,11 +837,17 @@
 // and "Applicable to" → `.jj-field` + JjSelect are handled in NodeData.tsx / FieldData.tsx
 // (reuse the panel components), so they need no rule here.
 // ============================================================================
-.view-editor-tab-content .options-tab {
+// Anchored on `.options-tab` (the section's own class, guaranteed present) — NOT on
+// `.view-editor-tab-content`, which proved unreliable across attempts (Vite dev-server
+// HMR for this component-imported SCSS is flaky). The Snap/Default-Width rows themselves
+// were moved to the global `.jj-toggle-row` pattern in NodeData.tsx (same mechanism the
+// working toggles use) so their alignment no longer depends on this file; these rules
+// still left-align the remaining sections (Graph/Edge/EdgePoint) + the number inputs.
+.options-tab {
   // Common-source LEFT alignment: an ancestor applies `text-align: center` which the bare
   // <h5>/<b>/<input> values would otherwise inherit (that's the "centered" rows/labels).
   // Reset it once here at the tab root so labels and field values are left-aligned.
-  text-align: left;
+  text-align: left !important;
 
   // Section titles ("Field" / "Vertex") → match the metaclass `.props-section__title`
   // (uppercase, small, muted) instead of the bare large <h5>.

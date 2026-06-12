@@ -93,31 +93,33 @@ function NodeDataComponent(props: AllProps) {
                 />
             </div>
 
-            <label className={'input-container'}>
-                <b className={'me-2'}>Snap:</b>
+            <div className={'jj-toggle-row'}>
+                <span className={'jj-toggle-row__label'}>Snap</span>
                 <SizeInput data={view} readOnly={true}
                            xgetter={(l) => '' + ((l as LVoidVertex).snap.x || 0)}
                            xsetter={(val, l) => l.snap = {x: +val || 0} as any}
                            ygetter={(l) => '' + ((l as LVoidVertex).snap.y || 0)}
                            ysetter={(val, l) => l.snap = {y: +val || 0} as any}
                 />
-            </label>
+            </div>
 
-            <label className={'input-container number-field'} hidden={dview.adaptWidth}>
-                <b>Default Width</b>
+            {!dview.adaptWidth && <div className={'jj-toggle-row'}>
+                <span className={'jj-toggle-row__label'}>Default Width</span>
                 <Input data={view} type={"number"} readOnly={readOnly}
                        inputClassName="number-input-compact"
+                       inputStyle={{width: '110px', maxWidth: '110px', textAlign: 'left'}}
                        getter={() => (view.defaultVSize?.w || 0).toFixed(2)}
                        setter={(val) => view.defaultVSize = {w: +val} as any}/>
-            </label>
+            </div>}
 
-            <label className={'input-container number-field'} hidden={dview.adaptHeight}>
-                <b>Default Height</b>
+            {!dview.adaptHeight && <div className={'jj-toggle-row'}>
+                <span className={'jj-toggle-row__label'}>Default Height</span>
                 <Input data={view} type={"number"} readOnly={readOnly}
                        inputClassName="number-input-compact"
+                       inputStyle={{width: '110px', maxWidth: '110px', textAlign: 'left'}}
                        getter={() => (view.defaultVSize?.h || 0).toFixed(2)}
                        setter={(val) => view.defaultVSize = {h: +val} as any} />
-            </label>
+            </div>}
         </div>
     </section>);
 }
