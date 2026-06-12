@@ -33,69 +33,69 @@ function NodeDataComponent(props: AllProps) {
     return(<section className='node'>
         <h5>Vertex</h5>
         <div className={'px-2'}>
-            <label className={'input-container'}>
-                <b>Store Size in View</b>
+            <div className={'jj-toggle-row'}>
+                <span className={'jj-toggle-row__label'}>Store Size in View</span>
                 <Toggle
                     checked={!!view?.storeSize}
                     onChange={(val) => setField('storeSize', val)}
                     disabled={readOnly}
                     size="sm"
                 />
-            </label>
+            </div>
 
-            <label className={'input-container'}>
-                <b>Lazy Update</b>
+            <div className={'jj-toggle-row'}>
+                <span className={'jj-toggle-row__label'}>Lazy Update</span>
                 <Toggle
                     checked={!!view?.lazySizeUpdate}
                     onChange={(val) => setField('lazySizeUpdate', val)}
                     disabled={readOnly}
                     size="sm"
                 />
-            </label>
+            </div>
 
-            <label className={'input-container'}>
-                <b>Adapt Width</b>
+            <div className={'jj-toggle-row'}>
+                <span className={'jj-toggle-row__label'}>Adapt Width</span>
                 <Toggle
                     checked={!!view?.adaptWidth}
                     onChange={(val) => setField('adaptWidth', val)}
                     disabled={readOnly}
                     size="sm"
                 />
-            </label>
+            </div>
 
-            <label className={'input-container'}>
-                <b>Adapt Height</b>
+            <div className={'jj-toggle-row'}>
+                <span className={'jj-toggle-row__label'}>Adapt Height</span>
                 <Toggle
                     checked={!!view?.adaptHeight}
                     onChange={(val) => setField('adaptHeight', val)}
                     disabled={readOnly}
                     size="sm"
                 />
-            </label>
+            </div>
 
-            <label className={'input-container'}>
-                <b>Draggable</b>
+            <div className={'jj-toggle-row'}>
+                <span className={'jj-toggle-row__label'}>Draggable</span>
                 <Toggle
                     checked={!!view?.draggable}
                     onChange={(val) => setField('draggable', val)}
                     disabled={readOnly}
                     size="sm"
                 />
-            </label>
+            </div>
 
-            <label className={'input-container'}>
-                <b>Resizable</b>
+            <div className={'jj-toggle-row'}>
+                <span className={'jj-toggle-row__label'}>Resizable</span>
                 <Toggle
                     checked={!!view?.resizable}
                     onChange={(val) => setField('resizable', val)}
                     disabled={readOnly}
                     size="sm"
                 />
-            </label>
+            </div>
 
             <label className={'input-container'}>
                 <b className={'me-2'}>Snap:</b>
-                <SizeInput data={view}
+                <SizeInput data={view} readOnly={true}
                            xgetter={(l) => '' + ((l as LVoidVertex).snap.x || 0)}
                            xsetter={(val, l) => l.snap = {x: +val || 0} as any}
                            ygetter={(l) => '' + ((l as LVoidVertex).snap.y || 0)}
