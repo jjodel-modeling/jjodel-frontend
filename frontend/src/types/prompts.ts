@@ -30,6 +30,16 @@ export interface PromptMeta {
 }
 
 /**
+ * A single release-note entry for a default prompt.
+ * `version` is a plain incremental integer (not semver); `note` is a
+ * one-line, English, imperative summary of what changed in that version.
+ */
+export interface PromptChangelogEntry {
+    version: number;
+    note: string;
+}
+
+/**
  * Stored prompt with metadata
  */
 export interface StoredPrompt {
@@ -37,6 +47,13 @@ export interface StoredPrompt {
     content: string;
     updatedAt: number;
     isCustom: boolean;
+    /**
+     * The default prompt's `version` at the moment this customization was saved.
+     * Lets the UI detect when the built-in default has advanced past the base the
+     * user customized. A persisted customization without this field is treated as
+     * `baseVersion = 1` (see PromptService.getBaseVersion).
+     */
+    baseVersion?: number;
 }
 
 /**

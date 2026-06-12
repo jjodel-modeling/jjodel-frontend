@@ -131,6 +131,18 @@
     }
 }
 
+// "Default updated" indicator — shown next to the source chip when the
+// built-in default has advanced past the version the customization is based on.
+// Subtle cyan accent per design system (cyan is an indicator, never a button bg).
+.prompt-card__updated {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: rgba(14, 165, 233, 0.08);
+    color: #0369a1;
+}
+
 .prompt-card__body {
     border-top: 1px solid var(--border-color, #e2e8f0);
 }
@@ -193,6 +205,11 @@
             background: #831843;
             color: #f9a8d4;
         }
+    }
+
+    .prompt-card__updated {
+        background: rgba(14, 165, 233, 0.15);
+        color: #7dd3fc;
     }
 
     .prompt-card__header:hover {

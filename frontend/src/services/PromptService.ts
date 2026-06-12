@@ -7,11 +7,12 @@ import {
     PromptType,
     PromptContext,
     StoredPrompt,
+    PromptChangelogEntry,
     PROMPT_GLOBAL_PREFIX,
     PROMPT_PROJECT_PREFIX,
     PROMPT_REGISTRY
 } from '../types/prompts';
-import { DEFAULT_PROMPTS } from '../constants/defaultPrompts';
+import { DEFAULT_PROMPTS, DEFAULT_PROMPT_VERSIONS } from '../constants/defaultPrompts';
 import { AIEvents } from '../events/registry';
 
 // ============================================
@@ -151,6 +152,7 @@ export class PromptService {
             content,
             updatedAt: Date.now(),
             isCustom: true,
+            baseVersion: DEFAULT_PROMPT_VERSIONS[type].version,
         };
         localStorage.setItem(key, JSON.stringify(prompt));
 
@@ -206,6 +208,7 @@ export class PromptService {
             content,
             updatedAt: Date.now(),
             isCustom: true,
+            baseVersion: DEFAULT_PROMPT_VERSIONS[type].version,
         };
         localStorage.setItem(key, JSON.stringify(prompt));
 
@@ -265,6 +268,50 @@ export class PromptService {
      */
     static getAllDefaults(): Record<PromptType, string> {
         return { ...DEFAULT_PROMPTS };
+    }
+
+    // ========================================
+    // VERSIONING / RELEASE NOTES
+    // ========================================
+
+    /**
+     * Current version of a built-in default prompt.
+     */
+    static getDefaultVersion(type: PromptType): number {
+        return DEFAULT_PROMPT_VERSIONS[type].version;
+    }
+
+    /**
+     * Full changelog of a built-in default prompt (ascending by version).
+     */
+    static getChangelog(type: PromptType): PromptChangelogEntry[] {
+        return DEFAULT_PROMPT_VERSIONS[type].changelog;
+    }
+
+    /**
+     * Base default version a customization was built on.
+     * Returns null when the prompt is not customized (i.e. using the default).
+     * A customization persisted without `baseVersion` is treated as 1.
+     */
+    static getBaseVersion(type: PromptType, projectId?: string): number | null {
+        const source = this.getPromptSource(type, projectId);
+        if (source === 'project' && projectId) {
+            return this.getProjectPrompt(type, projectId)?.baseVersion ?? 1;
+        }
+        if (source === 'global') {
+            return this.getGlobalPrompt(type)?.baseVersion ?? 1;
+        }
+        return null;
+    }
+
+    /**
+     * True when the prompt is customized and the built-in default has advanced
+     * past the version the customization was based on.
+     */
+    static isDefaultUpdated(type: PromptType, projectId?: string): boolean {
+        const base = this.getBaseVersion(type, projectId);
+        if (base === null) return false;
+        return base < this.getDefaultVersion(type);
     }
 
     // ========================================

@@ -3,7 +3,26 @@
  * These are the built-in prompts that can be overridden by users
  */
 
-import { PromptType } from '../types/prompts';
+import { PromptType, PromptChangelogEntry } from '../types/prompts';
+
+// ============================================
+// VERSIONING / RELEASE NOTES — BUMP RULE
+// ============================================
+//
+// Every default prompt below carries a version number and a changelog,
+// declared in DEFAULT_PROMPT_VERSIONS at the bottom of this file.
+//
+// When you change the TEXT of a default prompt:
+//   1. Increment that prompt's `version` in DEFAULT_PROMPT_VERSIONS.
+//   2. Append ONE new `changelog` entry: { version, note } where `note`
+//      is a single English imperative line (e.g. "Add JjTL context to
+//      system instructions"). Keep the array ordered ascending by version.
+//   3. Never rewrite or delete past changelog entries — they are the
+//      history users read to decide whether to re-apply a customization.
+//
+// Versions are plain incremental integers, not semver. This is surfaced
+// in Settings > Prompts so users who customized a prompt can see when the
+// default advanced; it does NOT auto-migrate their customization.
 
 // ============================================
 // CHAT PROMPT
@@ -643,6 +662,29 @@ export const DEFAULT_PROMPTS: Record<PromptType, string> = {
     ocl: OCL_PROMPT,
     import: IMPORT_PROMPT,
     mappings: MAPPINGS_PROMPT,
+};
+
+// ============================================
+// DEFAULT PROMPT VERSIONS + RELEASE NOTES
+// ============================================
+//
+// See the "VERSIONING / RELEASE NOTES — BUMP RULE" block at the top of this
+// file before editing. One entry per prompt; `changelog` ordered ascending.
+
+export const DEFAULT_PROMPT_VERSIONS: Record<PromptType, { version: number; changelog: PromptChangelogEntry[] }> = {
+    chat: {
+        version: 2,
+        changelog: [
+            { version: 1, note: 'Initial JjScript-based metamodeling assistant' },
+            { version: 2, note: 'Significant revision: project-context injection, JjScript hardening, M1 instance commands' },
+        ],
+    },
+    documentation: { version: 1, changelog: [{ version: 1, note: 'Initial version' }] },
+    validation: { version: 1, changelog: [{ version: 1, note: 'Initial version' }] },
+    refactoring: { version: 1, changelog: [{ version: 1, note: 'Initial version' }] },
+    ocl: { version: 1, changelog: [{ version: 1, note: 'Initial version' }] },
+    import: { version: 1, changelog: [{ version: 1, note: 'Initial version' }] },
+    mappings: { version: 1, changelog: [{ version: 1, note: 'Initial version' }] },
 };
 
 export default DEFAULT_PROMPTS;
