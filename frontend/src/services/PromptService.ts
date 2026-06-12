@@ -276,13 +276,17 @@ export class PromptService {
      * Supports Handlebars-like syntax: {{variable}}, {{#if}}, {{#each}}
      */
     static renderTemplate(template: string, context?: PromptContext): string {
-        if (!context) return template;
+        // Normalize to an empty context rather than returning the template
+        // verbatim: an undefined context must still strip {{var}} / {{#if}} /
+        // {{#each}} markers so literal handlebars never reach a provider.
+        // See docs/discovery/2026-06-12_prompt_render_bug.md (Q1/Q4, Fix 2).
+        const ctx: PromptContext = context ?? {};
 
         let result = template;
 
         // Simple variable replacement: {{variableName}}
         result = result.replace(/\{\{(\w+)\}\}/g, (match, varName) => {
-            const value = (context as Record<string, unknown>)[varName] ?? context.customVariables?.[varName];
+            const value = (ctx as Record<string, unknown>)[varName] ?? ctx.customVariables?.[varName];
             return value !== undefined ? String(value) : '';
         });
 
@@ -290,7 +294,7 @@ export class PromptService {
         result = result.replace(
             /\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g,
             (match, varName, content) => {
-                const value = (context as Record<string, unknown>)[varName] ?? context.customVariables?.[varName];
+                const value = (ctx as Record<string, unknown>)[varName] ?? ctx.customVariables?.[varName];
                 return value ? content : '';
             }
         );
@@ -299,7 +303,7 @@ export class PromptService {
         result = result.replace(
             /\{\{#each\s+(\w+)\}\}([\s\S]*?)\{\{\/each\}\}/g,
             (match, varName, itemTemplate) => {
-                const array = (context as Record<string, unknown>)[varName];
+                const array = (ctx as Record<string, unknown>)[varName];
                 if (!Array.isArray(array)) return '';
 
                 return array.map(item => {
