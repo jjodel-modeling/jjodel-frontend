@@ -816,3 +816,17 @@ section.page-root {
   border: 1px solid #e2e8f0 !important;
   box-shadow: none !important;
 }
+
+// The unified focus ring above also matches react-select's inner search <input>
+// (JjSelect renders it inside its `.jj-select` container; JjSelect.tsx sets
+// `className='jj-select'` and NO classNamePrefix, so the inner input has no semantic
+// `__input` class — it must be targeted via the container). The outer JjSelect control
+// already conveys focus, so its inner search input must show no ring/border/shadow of
+// its own (otherwise small bars appear next to the caret while filtering). Scoped to
+// `.jj-select`, this never touches the native Name/Priority inputs (not inside a JjSelect).
+.properties-tab.properties-panel .jj-field .jj-select input,
+.properties-tab.properties-panel .jj-field .jj-select input:focus {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
