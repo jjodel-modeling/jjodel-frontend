@@ -398,6 +398,12 @@ export async function executeRenameInstance(
         try {
             TRANSACTION('JjScript: Rename instance', () => {
                 SetFieldAction.new(lObject, 'name', args.newName);
+                // Mirror the create fix: keep initialName in sync so the identity-slot
+                // fallback (initialName || data.name) does not shadow the new name when the
+                // name:EString slot is empty. SetFieldAction (not the set_name proxy setter)
+                // writes data.name only, so initialName must be updated explicitly.
+                // See docs/discovery/2026-06-12_create_instance_name_regression.md.
+                SetFieldAction.new(lObject, 'initialName', args.newName);
                 resolve({
                     success: true,
                     command: 'rename',
