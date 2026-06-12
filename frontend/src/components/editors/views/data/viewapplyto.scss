@@ -781,3 +781,35 @@ section.page-root {
 .properties-panel .jj-field .jjodel-select__control {
   max-width: 420px;
 }
+
+// ============================================================================
+// 2026-06-12 — unified focus ring + neutralize the rogue select rest-border.
+// ============================================================================
+
+// Unified focus ring for every native control in the panel (design system:
+// slate border + soft slate shadow, no naked outline). Scoped to the panel root
+// `.properties-tab.properties-panel .jj-field` with `[type]` variants so it beats
+// the prior outline-suppression rule `info-improvements.scss:1174-1182`
+// (`.properties-panel .jj-field input[type="text"]:focus { border-color: none;
+// outline: none !important; }`, (0,4,1) — which left text/number inputs with NO
+// focus indicator). The typed variants here are (0,5,1), so they win.
+.properties-tab.properties-panel .jj-field input:focus,
+.properties-tab.properties-panel .jj-field input[type="text"]:focus,
+.properties-tab.properties-panel .jj-field input[type="number"]:focus,
+.properties-tab.properties-panel .jj-field select:focus {
+  outline: none !important;
+  border-color: #334155 !important;
+  box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.15) !important;
+}
+
+// Neutralize the reported "heavy dark border at rest" on a panel <select>
+// (observed on "Preferred appearance"). NB: the `select:invalid` hypothesis does
+// NOT hold — Input.tsx adds no `required` attribute, `auth.scss`'s `select:invalid`
+// is scoped to `.auth-split-screen.dirty`, and `App.scss`'s `&:invalid` parent list
+// excludes `select`. The exact source could not be pinned statically; this rule
+// defensively forces the standard 1px light border (no shadow) at rest. Commit B
+// migrates these selects to JjSelect, removing the native <select> entirely.
+.properties-tab.properties-panel .jj-field select {
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: none !important;
+}
