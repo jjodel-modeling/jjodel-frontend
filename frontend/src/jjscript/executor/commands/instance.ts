@@ -232,6 +232,17 @@ export async function executeCreateInstance(
             true
         );
 
+        // Apply the explicit instance name to initialName as well. DObject.new always
+        // stamps initialName with the auto default (<Class>_<N>), and the M1 identity-slot
+        // value getter (LModelElement.tsx ~7280) surfaces initialName BEFORE data.name for an
+        // empty name:EString slot — so without this the quoted name is shadowed (displayed as
+        // <Class>_<N> and not addressable by findInstanceByName). Direct assignment mirrors
+        // DObject.new's own `ret.initialName = ...` write (no TRANSACTION — see §3.3).
+        // See docs/discovery/2026-06-12_create_instance_name_regression.md.
+        if (explicitInstanceName && dObject) {
+            (dObject as any).initialName = explicitInstanceName;
+        }
+
         if (!dObject?.id) {
             return {
                 success: false,
