@@ -1,9 +1,11 @@
 import React from 'react';
 import { useSelector } from 'react-redux';
 
-import { GraphPoint, GraphSize } from '../../joiner';
+import { GraphPoint, GraphSize, EdgeHead } from '../../joiner';
+import type { EdgeSegment } from '../../joiner';
 import { chooseManhattanSidesAndWaypoints } from '../../edges/routing/classic/points';
 import { roundManhattanCorners } from '../../edges/routing/classic/round';
+import { computeHeadPosition } from '../../edges/routing/classic/markers';
 import './EdgeOverlay.scss';
 
 /**
@@ -389,9 +391,14 @@ const EdgeRenderItem = React.memo(function EdgeRenderItem({
     if (srcPoint.x === tgtPoint.x && srcPoint.y === tgtPoint.y) return null;
 
     let d: string;
+    // Phase 2C — terminal leg feeding the arrowhead orientation (come-from -> tip at the target end).
+    // Defaults (src -> tgt) cover straight + bezier; the manhattan branch overrides with its last routed leg.
+    let headPrevPt: { x: number; y: number } = srcPoint;
+    let headTipPt: { x: number; y: number } = tgtPoint;
     if (routing === 'straight') {
         d = `M ${srcPoint.x} ${srcPoint.y} L ${tgtPoint.x} ${tgtPoint.y}`;
     } else if (routing === 'bezier') {
+        // head orientation uses the src->tgt chord, NOT the true cubic end-tangent — approximate on bezier (P3).
         d = bezierPath(srcPoint, sides.srcSide, tgtPoint, sides.tgtSide);
     } else {
         // Manhattan — share the native classic-edge geometry: perpendicular stub exits + the same
@@ -412,12 +419,54 @@ const EdgeRenderItem = React.memo(function EdgeRenderItem({
         const pts: { x: number; y: number }[] = [srcBorder, ...waypoints, tgtBorder];
         const rawPath = 'M ' + pts.map(p => `${p.x} ${p.y}`).join(' L ');
         d = roundManhattanCorners(rawPath);
+        headPrevPt = pts[pts.length - 2];
+        headTipPt = pts[pts.length - 1];
     }
 
     const strokeColorCss = resolveStrokeColorVar(strokeColor);
     const dasharray = resolveStrokeDasharray(strokeStyle);
     const midX = (srcPoint.x + tgtPoint.x) / 2;
     const midY = (srcPoint.y + tgtPoint.y) / 2;
+
+    // Phase 2C — native-parity arrowhead at the target end (Option A / Scope-1). Reuse the classic engine's
+    // computeHeadPosition (box-intersection recentering, not a plain rotation) so the head sits exactly where
+    // a native edge head would. Render-time only: no DVoidEdge, no view field, no migration. Shape = open
+    // chevron (EdgeHead.Head_reference, the native Association head); fill none; stroke/width REUSE the same
+    // resolved line values (head color == line color, the native invariant); size = native 12x12 head box.
+    let headPath: React.ReactElement | null = null;
+    if (headPrevPt.x !== headTipPt.x || headPrevPt.y !== headTipPt.y) {
+        // minimal segment: computeHeadPosition reads only start.pt / end.pt / bezier (markers.ts:34). end.pt
+        // must be the tip (target), start.pt the come-from point. Wrapped in GraphPoint for its instance methods.
+        const headSeg = {
+            start: { pt: new GraphPoint(headPrevPt.x, headPrevPt.y) },
+            end: { pt: new GraphPoint(headTipPt.x, headTipPt.y) },
+            bezier: [],
+        } as unknown as EdgeSegment;
+        const headPos = computeHeadPosition(
+            true,                    // isHead
+            null as any,             // view: UNREAD here because headSize0 is provided (markers.ts:19)
+            new GraphPoint(1, 1),    // zoom: unused (markers.ts:26-28)
+            headSeg,
+            new GraphPoint(12, 12),  // headSize0: native Association head box; Head_reference is authored 0..12 (1:1)
+        );
+        // computeHeadPosition logs + returns undefined if the box intersection fails (Log.exDevv is
+        // non-throwing); guard so a failed head can never crash the verified edge-line render.
+        if (headPos && Number.isFinite(headPos.x) && Number.isFinite(headPos.y) && Number.isFinite(headPos.rad)) {
+            headPath = (
+                <path
+                    d={EdgeHead.Head_reference}
+                    fill="none"
+                    stroke={strokeColorCss}
+                    strokeWidth={strokeWidth}
+                    pointerEvents="none"
+                    style={{
+                        transform: `translate(${headPos.x}px, ${headPos.y}px) rotate(${headPos.rad}rad)`,
+                        transformOrigin: `${headPos.w / 2}px ${headPos.h / 2}px`,
+                    }}
+                />
+            );
+        }
+    }
 
     return (
         <g>
@@ -428,6 +477,7 @@ const EdgeRenderItem = React.memo(function EdgeRenderItem({
                 strokeWidth={strokeWidth}
                 {...(dasharray ? { strokeDasharray: dasharray } : {})}
             />
+            {headPath}
             {labelText && (
                 <text
                     className="jjodel-edge-overlay__label"
