@@ -50,7 +50,9 @@ export class AIProviderService {
         // Guard the provider/model pairing: a model belonging to a *different* provider (e.g. a
         // per-feature "chat" model chosen under OpenAI while the active provider is Claude) must
         // never be sent — it yields a cryptic 404. Fall back to the provider's own model.
-        if (effectiveModel && isForeignModel(provider, effectiveModel)) {
+        // Custom has no model registry — any user-supplied model is valid (e.g. an OpenAI-compatible
+        // proxy serving 'gpt-4o' or 'mistral-large-latest'), so it must bypass the foreign-model guard.
+        if (effectiveModel && provider !== AIProvider.Custom && isForeignModel(provider, effectiveModel)) {
             let own = resolveLegacyModelId(provider, config.model) ?? config.model ?? '';
             if (!own || isForeignModel(provider, own)) own = Object.keys(llm?.versions ?? {})[0] ?? '';
             console.warn(`[AIProviderService] Discarding model "${effectiveModel}" — not a ${provider} model; using "${own}" instead.`);
@@ -83,9 +85,65 @@ export class AIProviderService {
                 return await this.chatKimi(message, config.apiKey, effectiveModel, conversationHistory, systemPrompt);
             case AIProvider.Ollama:
                 return await this.chatOllama(message, effectiveModel, conversationHistory, systemPrompt, config.baseUrl);
+            case AIProvider.Custom:
+                return await this.chatCustom(message, config.apiKey, effectiveModel, conversationHistory, systemPrompt, config.baseUrl, images);
+            case AIProvider.Llama:
+                throw new Error('Llama is not yet supported (no endpoint configured).');
+            case AIProvider.Copilot:
+                throw new Error('Copilot is not yet supported.');
             default:
                 throw new Error(`Unsupported provider: ${provider}`);
         }
+    }
+
+    /**
+     * Resolve an OpenAI-compatible chat-completions URL from a user-supplied base URL.
+     * Shared by the two baseUrl providers (Ollama, Custom). Idempotent and robust:
+     *   - already a full ".../chat/completions"   → used as-is
+     *   - a versioned root ".../v1" (or /v2, …)    → append "/chat/completions"
+     *   - a bare host "http://localhost:11434"     → append "/v1/chat/completions"
+     * Trailing slashes are trimmed first.
+     */
+    private static resolveChatCompletionsUrl(baseUrl: string): string {
+        const b = baseUrl.trim().replace(/\/+$/, '');
+        if (/\/chat\/completions$/.test(b)) return b;          // full endpoint already
+        if (/\/v\d+$/.test(b)) return `${b}/chat/completions`; // .../v1 root, append
+        return `${b}/v1/chat/completions`;                     // bare host (Ollama default)
+    }
+
+    /**
+     * Shared transport for all OpenAI-compatible providers (GPT, DeepSeek, Mistral, Groq, Kimi,
+     * Ollama, Custom). Performs ONLY the network round-trip: it takes an already-built `messages`
+     * array (each caller keeps its own content builder) plus provider-specific `bodyExtras`
+     * (e.g. {max_tokens} vs {stream:false}), applies auth per the registry `authScheme`, POSTs the
+     * standard chat-completions body, extracts the assistant text, and reports errors in the
+     * existing style. Claude/Gemini are NOT OpenAI-compatible and keep their dedicated methods.
+     */
+    private static async chatOpenAICompatible(
+        endpoint: string,
+        authScheme: AI['authScheme'],
+        apiKey: string,
+        model: string,
+        messages: any[],
+        bodyExtras: Record<string, unknown>,
+        providerLabel: string
+    ): Promise<string> {
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (authScheme === 'bearer') headers['Authorization'] = `Bearer ${apiKey}`;
+
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ model, messages, ...bodyExtras }),
+        });
+
+        if (!response.ok) {
+            const error = await response.text();
+            throw new Error(`${providerLabel} API error: ${response.status} - ${error}`);
+        }
+
+        const data = await response.json();
+        return data.choices[0].message.content;
     }
 
     /**
@@ -216,27 +274,15 @@ export class AIProviderService {
 
         messages.push({ role: 'user' as const, content: currentContent });
 
-        // OpenAI doesn't support browser CORS — use proxy when configured (AI.GPT.proxy)
-        const response = await fetch(AI.GPT.getEndpoint(), {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`,
-            },
-            body: JSON.stringify({
-                model,
-                messages,
-                max_tokens: 2000,
-            }),
-        });
-
-        if (!response.ok) {
-            const error = await response.text();
-            throw new Error(`OpenAI API error: ${response.status} - ${error}`);
-        }
-
-        const data = await response.json();
-        return data.choices[0].message.content;
+        return this.chatOpenAICompatible(
+            AI.GPT.getEndpoint(),
+            AI.GPT.authScheme,
+            apiKey,
+            model,
+            messages,
+            { max_tokens: 2000 },
+            'OpenAI'
+        );
     }
 
     /**
@@ -283,26 +329,15 @@ export class AIProviderService {
             { role: 'user' as const, content: message },
         ];
 
-        const response = await fetch(AI.DeepSeek.endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`,
-            },
-            body: JSON.stringify({
-                model,
-                messages,
-                max_tokens: 2000,
-            }),
-        });
-
-        if (!response.ok) {
-            const error = await response.text();
-            throw new Error(`DeepSeek API error: ${response.status} - ${error}`);
-        }
-
-        const data = await response.json();
-        return data.choices[0].message.content;
+        return this.chatOpenAICompatible(
+            AI.DeepSeek.getEndpoint(),
+            AI.DeepSeek.authScheme,
+            apiKey,
+            model,
+            messages,
+            { max_tokens: 2000 },
+            'DeepSeek'
+        );
     }
 
     /**
@@ -442,26 +477,15 @@ export class AIProviderService {
 
         messages.push({ role: 'user' as const, content: currentContent });
 
-        const response = await fetch(AI.Mistral.endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`,
-            },
-            body: JSON.stringify({
-                model,
-                messages,
-                max_tokens: 2000,
-            }),
-        });
-
-        if (!response.ok) {
-            const error = await response.text();
-            throw new Error(`Mistral API error: ${response.status} - ${error}`);
-        }
-
-        const data = await response.json();
-        return data.choices[0].message.content;
+        return this.chatOpenAICompatible(
+            AI.Mistral.getEndpoint(),
+            AI.Mistral.authScheme,
+            apiKey,
+            model,
+            messages,
+            { max_tokens: 2000 },
+            'Mistral'
+        );
     }
 
     /**
@@ -506,26 +530,15 @@ export class AIProviderService {
             { role: 'user' as const, content: message },
         ];
 
-        const response = await fetch(AI.Groq.endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`,
-            },
-            body: JSON.stringify({
-                model,
-                messages,
-                max_tokens: 2000,
-            }),
-        });
-
-        if (!response.ok) {
-            const error = await response.text();
-            throw new Error(`Groq API error: ${response.status} - ${error}`);
-        }
-
-        const data = await response.json();
-        return data.choices[0].message.content;
+        return this.chatOpenAICompatible(
+            AI.Groq.getEndpoint(),
+            AI.Groq.authScheme,
+            apiKey,
+            model,
+            messages,
+            { max_tokens: 2000 },
+            'Groq'
+        );
     }
 
     /**
@@ -548,26 +561,15 @@ export class AIProviderService {
             { role: 'user' as const, content: message },
         ];
 
-        const response = await fetch(AI.Kimi.endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`,
-            },
-            body: JSON.stringify({
-                model,
-                messages,
-                max_tokens: 2000,
-            }),
-        });
-
-        if (!response.ok) {
-            const error = await response.text();
-            throw new Error(`Kimi API error: ${response.status} - ${error}`);
-        }
-
-        const data = await response.json();
-        return data.choices[0].message.content;
+        return this.chatOpenAICompatible(
+            AI.Kimi.getEndpoint(),
+            AI.Kimi.authScheme,
+            apiKey,
+            model,
+            messages,
+            { max_tokens: 2000 },
+            'Kimi'
+        );
     }
 
     /**
@@ -590,27 +592,57 @@ export class AIProviderService {
             { role: 'user' as const, content: message },
         ];
 
-        const endpoint = baseUrl ? `${baseUrl}/v1/chat/completions` : AI.Ollama.endpoint;
+        const endpoint = baseUrl ? this.resolveChatCompletionsUrl(baseUrl) : AI.Ollama.endpoint;
 
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                model,
-                messages,
-                stream: false,
-            }),
-        });
+        return this.chatOpenAICompatible(
+            endpoint,
+            AI.Ollama.authScheme,
+            '',
+            model,
+            messages,
+            { stream: false },
+            'Ollama'
+        );
+    }
 
-        if (!response.ok) {
-            const error = await response.text();
-            throw new Error(`Ollama API error: ${response.status} - ${error}`);
+    /**
+     * Chat with a user-configured Custom provider (any OpenAI-compatible chat-completions endpoint).
+     * Endpoint comes from the user's Base URL (normalized via resolveChatCompletionsUrl); a missing
+     * Base URL fails loudly because Custom's isConfigured() passes on an API key alone.
+     */
+    private static async chatCustom(
+        message: string,
+        apiKey: string,
+        model: string,
+        history: ChatMessage[],
+        systemPrompt: string,
+        baseUrl: string,
+        images?: ChatImage[]
+    ): Promise<string> {
+        if (!baseUrl || !baseUrl.trim()) {
+            throw new Error('Custom provider requires a Base URL. Set it in Settings.');
         }
 
-        const data = await response.json();
-        return data.choices[0].message.content;
+        // OpenAI-compatible message shape (same content builder as GPT).
+        const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string | Array<{ type: string; text?: string; image_url?: { url: string } }> }> = [
+            { role: 'system' as const, content: systemPrompt },
+            ...history.map(msg => ({
+                role: msg.role as 'user' | 'assistant',
+                content: msg.images?.length ? this.buildOpenAIContent(msg.content, msg.images) : msg.content,
+            })),
+        ];
+        const currentContent = images?.length ? this.buildOpenAIContent(message, images) : message;
+        messages.push({ role: 'user' as const, content: currentContent });
+
+        return this.chatOpenAICompatible(
+            this.resolveChatCompletionsUrl(baseUrl),
+            AI.Custom.authScheme,
+            apiKey,
+            model,
+            messages,
+            { max_tokens: 2000 },
+            'Custom'
+        );
     }
 
     /**
@@ -626,24 +658,48 @@ export class AIProviderService {
             // Ollama doesn't require API key, other providers do
             if (!config.isConfigured()) return { success: false, error: 'API key not configured' };
 
-            // Use provider-specific test methods for better error handling
+            // Claude/Gemini keep their dedicated tests; the OpenAI-compatible providers route
+            // through the shared testOpenAICompatible, preserving each provider's success criterion
+            // and 401/404/network hints via parameters.
             switch (provider) {
                 case AIProvider.Claude:
                     return await this.testClaude(config.apiKey, config.model);
-                case  AIProvider.GPT:
-                    return await this.testOpenAI(config.apiKey, config.model);
-                case  AIProvider.DeepSeek:
-                    return await this.testDeepSeek(config.apiKey, config.model);
-                case  AIProvider.Gemini:
+                case AIProvider.Gemini:
                     return await this.testGemini(config.apiKey, config.model);
-                case  AIProvider.Mistral:
-                    return await this.testMistral(config.apiKey, config.model);
-                case  AIProvider.Groq:
-                    return await this.testGroq(config.apiKey, config.model);
+                case AIProvider.GPT:
+                    return await this.testOpenAICompatible(AI.GPT.getEndpoint(), AI.GPT.authScheme, config.apiKey, config.model, { max_tokens: 10 }, {
+                        expectedKeyPrefix: 'sk-',
+                        invalidKeyHint: 'Invalid API key. Please check your key in the OpenAI Dashboard.',
+                    });
+                case AIProvider.DeepSeek:
+                    return await this.testOpenAICompatible(AI.DeepSeek.getEndpoint(), AI.DeepSeek.authScheme, config.apiKey, config.model, { max_tokens: 10 });
+                case AIProvider.Mistral:
+                    return await this.testOpenAICompatible(AI.Mistral.getEndpoint(), AI.Mistral.authScheme, config.apiKey, config.model, { max_tokens: 10 }, {
+                        invalidKeyHint: 'Invalid API key. Please check your key in the Mistral Console.',
+                    });
+                case AIProvider.Groq:
+                    return await this.testOpenAICompatible(AI.Groq.getEndpoint(), AI.Groq.authScheme, config.apiKey, config.model, { max_tokens: 10 }, {
+                        invalidKeyHint: 'Invalid API key. Please check your key in the Groq Console.',
+                    });
                 case AIProvider.Kimi:
-                    return await this.testKimi(config.apiKey, config.model);
-                case AIProvider.Ollama:
-                    return await this.testOllama(config.model, config.baseUrl);
+                    return await this.testOpenAICompatible(AI.Kimi.getEndpoint(), AI.Kimi.authScheme, config.apiKey, config.model, { max_tokens: 10 }, {
+                        invalidKeyHint: 'Invalid API key. Please check your key in the Moonshot AI Console.',
+                    });
+                case AIProvider.Ollama: {
+                    const endpoint = config.baseUrl ? this.resolveChatCompletionsUrl(config.baseUrl) : AI.Ollama.endpoint;
+                    return await this.testOpenAICompatible(endpoint, AI.Ollama.authScheme, '', config.model, { stream: false }, {
+                        notFoundHint: `Model "${config.model}" not found. Make sure it's pulled in Ollama.`,
+                        networkErrorHint: `Cannot connect to Ollama at ${endpoint}. Make sure Ollama is running.`,
+                    });
+                }
+                case AIProvider.Custom: {
+                    if (!config.baseUrl || !config.baseUrl.trim()) return { success: false, error: 'Custom provider requires a Base URL.' };
+                    return await this.testOpenAICompatible(this.resolveChatCompletionsUrl(config.baseUrl), AI.Custom.authScheme, config.apiKey, config.model, { max_tokens: 10 });
+                }
+                case AIProvider.Llama:
+                    return { success: false, error: 'Llama is not yet supported (no endpoint configured).' };
+                case AIProvider.Copilot:
+                    return { success: false, error: 'Copilot is not yet supported.' };
                 default:
                     return { success: false, error: `Unsupported provider: ${provider}` };
             }
@@ -733,103 +789,6 @@ export class AIProviderService {
     }
 
     /**
-     * Test OpenAI API connection
-     */
-    private static async testOpenAI(apiKey: string, model: string): Promise<{ success: boolean; error?: string }> {
-        try {
-            if (!apiKey.startsWith('sk-')) {
-                return {
-                    success: false,
-                    error: 'Invalid API key format. OpenAI API keys should start with "sk-"',
-                };
-            }
-
-            const response = await fetch(AI.GPT.endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`,
-                },
-                body: JSON.stringify({
-                    model,
-                    max_tokens: 10,
-                    messages: [{ role: 'user', content: 'Hi' }],
-                }),
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                let errorMsg = `API Error (${response.status})`;
-
-                try {
-                    const errorJson = JSON.parse(errorText);
-                    errorMsg = errorJson.error?.message || errorJson.message || errorMsg;
-                } catch {
-                    errorMsg += `: ${errorText.substring(0, 150)}`;
-                }
-
-                if (response.status === 401) {
-                    errorMsg = 'Invalid API key. Please check your key in the OpenAI Dashboard.';
-                }
-
-                return { success: false, error: errorMsg };
-            }
-
-            await response.json();
-            return { success: true };
-        } catch (error) {
-            const errorMessage = (error as Error).message;
-            if (errorMessage.includes('Failed to fetch')) {
-                return { success: false, error: 'Network error. Check your internet connection.' };
-            }
-            return { success: false, error: `Connection error: ${errorMessage}` };
-        }
-    }
-
-    /**
-     * Test DeepSeek API connection
-     */
-    private static async testDeepSeek(apiKey: string, model: string): Promise<{ success: boolean; error?: string }> {
-        try {
-            const response = await fetch(AI.DeepSeek.endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`,
-                },
-                body: JSON.stringify({
-                    model,
-                    max_tokens: 10,
-                    messages: [{ role: 'user', content: 'Hi' }],
-                }),
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                let errorMsg = `API Error (${response.status})`;
-
-                try {
-                    const errorJson = JSON.parse(errorText);
-                    errorMsg = errorJson.error?.message || errorJson.message || errorMsg;
-                } catch {
-                    errorMsg += `: ${errorText.substring(0, 150)}`;
-                }
-
-                return { success: false, error: errorMsg };
-            }
-
-            await response.json();
-            return { success: true };
-        } catch (error) {
-            const errorMessage = (error as Error).message;
-            if (errorMessage.includes('Failed to fetch')) {
-                return { success: false, error: 'Network error. Check your internet connection.' };
-            }
-            return { success: false, error: `Connection error: ${errorMessage}` };
-        }
-    }
-
-    /**
      * Test Gemini API connection (via proxy)
      */
     private static async testGemini(apiKey: string, model: string): Promise<{ success: boolean; error?: string }> {
@@ -878,162 +837,39 @@ export class AIProviderService {
     }
 
     /**
-     * Test Mistral API connection
+     * Shared connection test for all OpenAI-compatible providers (GPT, DeepSeek, Mistral, Groq,
+     * Kimi, Ollama, Custom). POSTs a minimal "Hi" probe and treats any 2xx as success. Per-provider
+     * differences are passed as options: an optional key-prefix format check, and 401/404/network
+     * hint overrides. Body shape varies via `bodyExtras` ({max_tokens:10} vs {stream:false}).
      */
-    private static async testMistral(apiKey: string, model: string): Promise<{ success: boolean; error?: string }> {
-        try {
-            const response = await fetch(AI.Mistral.endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`,
-                },
-                body: JSON.stringify({
-                    model,
-                    max_tokens: 10,
-                    messages: [{ role: 'user', content: 'Hi' }],
-                }),
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                let errorMsg = `API Error (${response.status})`;
-
-                try {
-                    const errorJson = JSON.parse(errorText);
-                    errorMsg = errorJson.error?.message || errorJson.message || errorMsg;
-                } catch {
-                    errorMsg += `: ${errorText.substring(0, 150)}`;
-                }
-
-                if (response.status === 401) {
-                    errorMsg = 'Invalid API key. Please check your key in the Mistral Console.';
-                }
-
-                return { success: false, error: errorMsg };
-            }
-
-            await response.json();
-            return { success: true };
-        } catch (error) {
-            const errorMessage = (error as Error).message;
-            if (errorMessage.includes('Failed to fetch')) {
-                return { success: false, error: 'Network error. Check your internet connection.' };
-            }
-            return { success: false, error: `Connection error: ${errorMessage}` };
+    private static async testOpenAICompatible(
+        endpoint: string,
+        authScheme: AI['authScheme'],
+        apiKey: string,
+        model: string,
+        bodyExtras: Record<string, unknown>,
+        opts?: {
+            expectedKeyPrefix?: string;
+            invalidKeyHint?: string;
+            notFoundHint?: string;
+            networkErrorHint?: string;
         }
-    }
-
-    /**
-     * Test Groq API connection
-     */
-    private static async testGroq(apiKey: string, model: string): Promise<{ success: boolean; error?: string }> {
+    ): Promise<{ success: boolean; error?: string }> {
         try {
-            const response = await fetch(AI.Groq.endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`,
-                },
-                body: JSON.stringify({
-                    model,
-                    max_tokens: 10,
-                    messages: [{ role: 'user', content: 'Hi' }],
-                }),
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                let errorMsg = `API Error (${response.status})`;
-
-                try {
-                    const errorJson = JSON.parse(errorText);
-                    errorMsg = errorJson.error?.message || errorJson.message || errorMsg;
-                } catch {
-                    errorMsg += `: ${errorText.substring(0, 150)}`;
-                }
-
-                if (response.status === 401) {
-                    errorMsg = 'Invalid API key. Please check your key in the Groq Console.';
-                }
-
-                return { success: false, error: errorMsg };
+            if (opts?.expectedKeyPrefix && !apiKey.startsWith(opts.expectedKeyPrefix)) {
+                return {
+                    success: false,
+                    error: `Invalid API key format. Keys should start with "${opts.expectedKeyPrefix}"`,
+                };
             }
 
-            await response.json();
-            return { success: true };
-        } catch (error) {
-            const errorMessage = (error as Error).message;
-            if (errorMessage.includes('Failed to fetch')) {
-                return { success: false, error: 'Network error. Check your internet connection.' };
-            }
-            return { success: false, error: `Connection error: ${errorMessage}` };
-        }
-    }
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+            if (authScheme === 'bearer') headers['Authorization'] = `Bearer ${apiKey}`;
 
-    /**
-     * Test Kimi (Moonshot AI) API connection
-     */
-    private static async testKimi(apiKey: string, model: string): Promise<{ success: boolean; error?: string }> {
-        try {
-            const response = await fetch(AI.Kimi.endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`,
-                },
-                body: JSON.stringify({
-                    model,
-                    max_tokens: 10,
-                    messages: [{ role: 'user', content: 'Hi' }],
-                }),
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                let errorMsg = `API Error (${response.status})`;
-
-                try {
-                    const errorJson = JSON.parse(errorText);
-                    errorMsg = errorJson.error?.message || errorJson.message || errorMsg;
-                } catch {
-                    errorMsg += `: ${errorText.substring(0, 150)}`;
-                }
-
-                if (response.status === 401) {
-                    errorMsg = 'Invalid API key. Please check your key in the Moonshot AI Console.';
-                }
-
-                return { success: false, error: errorMsg };
-            }
-
-            await response.json();
-            return { success: true };
-        } catch (error) {
-            const errorMessage = (error as Error).message;
-            if (errorMessage.includes('Failed to fetch')) {
-                return { success: false, error: 'Network error. Check your internet connection.' };
-            }
-            return { success: false, error: `Connection error: ${errorMessage}` };
-        }
-    }
-
-    /**
-     * Test Ollama (Local) connection
-     */
-    private static async testOllama(model: string, baseUrl?: string): Promise<{ success: boolean; error?: string }> {
-        const endpoint = baseUrl ? `${baseUrl}/v1/chat/completions` : AI.Ollama.endpoint;
-        try {
             const response = await fetch(endpoint, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    model,
-                    messages: [{ role: 'user', content: 'Hi' }],
-                    stream: false,
-                }),
+                headers,
+                body: JSON.stringify({ model, messages: [{ role: 'user', content: 'Hi' }], ...bodyExtras }),
             });
 
             if (!response.ok) {
@@ -1047,9 +883,8 @@ export class AIProviderService {
                     errorMsg += `: ${errorText.substring(0, 150)}`;
                 }
 
-                if (response.status === 404) {
-                    errorMsg = `Model "${model}" not found. Make sure it's pulled in Ollama.`;
-                }
+                if (response.status === 401 && opts?.invalidKeyHint) errorMsg = opts.invalidKeyHint;
+                if (response.status === 404 && opts?.notFoundHint) errorMsg = opts.notFoundHint;
 
                 return { success: false, error: errorMsg };
             }
@@ -1059,12 +894,9 @@ export class AIProviderService {
         } catch (error) {
             const errorMessage = (error as Error).message;
             if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
-                return {
-                    success: false,
-                    error: `Cannot connect to Ollama at ${endpoint}. Make sure Ollama is running.`
-                };
+                return { success: false, error: opts?.networkErrorHint || 'Network error. Check your internet connection.' };
             }
-            return {success: false, error: `Connection error: ${errorMessage}` };
+            return { success: false, error: `Connection error: ${errorMessage}` };
         }
     }
 

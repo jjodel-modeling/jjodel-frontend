@@ -170,6 +170,10 @@ export class AI{
     endpoint!: string;
     proxy?: string;
     requiresKey: boolean = true;
+    /** Auth scheme for OpenAI-compatible request construction (consumed by
+     *  AIProviderService.chatOpenAICompatible / testOpenAICompatible). Default 'bearer'
+     *  (Authorization: Bearer). Claude uses 'x-api-key', Gemini 'query-key', Ollama 'none'. */
+    authScheme: 'bearer' | 'x-api-key' | 'query-key' | 'none' = 'bearer';
     // gui stuff
     color!: string;
     bgColor!: string;
@@ -374,6 +378,19 @@ AI.Mistral.endpoint = 'https://api.mistral.ai/v1/chat/completions';
 AI.Groq.endpoint = 'https://api.groq.com/openai/v1/chat/completions';
 AI.Kimi.endpoint = 'https://api.moonshot.cn/v1/chat/completions';
 AI.Ollama.endpoint = 'http://localhost:11434/v1/chat/completions'; // Default local, configurable via baseUrl
+
+// Auth scheme per provider (registry-driven; read by the OpenAI-compatible transport in
+// AIProviderService). The 'bearer' assignments are explicit for clarity even though it is the
+// class default. Llama/Copilot are parked (no endpoint, not routed) and keep the default.
+AI.GPT.authScheme      = 'bearer';
+AI.DeepSeek.authScheme = 'bearer';
+AI.Mistral.authScheme  = 'bearer';
+AI.Groq.authScheme     = 'bearer';
+AI.Kimi.authScheme     = 'bearer';
+AI.Custom.authScheme   = 'bearer';
+AI.Claude.authScheme   = 'x-api-key';
+AI.Gemini.authScheme   = 'query-key';
+AI.Ollama.authScheme   = 'none';
 
 AI.GPT.bi_icon = 'openai'; // chat-dots bubble speech generic candidate
 AI.Claude.bi_icon = 'claude';
