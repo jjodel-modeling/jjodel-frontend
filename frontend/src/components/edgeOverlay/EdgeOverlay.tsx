@@ -1,7 +1,9 @@
 import React from 'react';
 import { useSelector } from 'react-redux';
 
-import { roundManhattanPath } from '../editor-v2/utils/edgeUtils';
+import { GraphPoint, GraphSize } from '../../joiner';
+import { chooseManhattanSidesAndWaypoints } from '../../edges/routing/classic/points';
+import { roundManhattanCorners } from '../../edges/routing/classic/round';
 import './EdgeOverlay.scss';
 
 /**
@@ -22,8 +24,8 @@ import './EdgeOverlay.scss';
  *      child whose only props are the two endpoint rects. During canvas
  *      pan, the rects in canvas space don't change (only the parent
  *      `<g transform>` shifts), so every child memo-hits and the
- *      chooseSides/buildPathFromSides/roundManhattanPath pipeline stays
- *      cached. During node drag, only edges whose endpoints moved
+ *      routing pipeline (chooseManhattanSidesAndWaypoints + clipToRect +
+ *      roundManhattanCorners) stays cached. During node drag, only edges whose endpoints moved
  *      invalidate; siblings stay cached.
  *
  *   This keeps SVG `<g transform>` as the single point that updates
@@ -349,7 +351,8 @@ interface EdgeRenderItemProps {
  * canvas space don't change — only the parent `<g transform>`).
  *
  * Routing modes:
- *   - 'manhattan-rounded' (default): chooseSides + buildPathFromSides + roundManhattanPath
+ *   - 'manhattan-rounded' (default): chooseManhattanSidesAndWaypoints (shared classic router) +
+ *     clipToRect (border clip) + roundManhattanCorners (shared R=5 fillet)
  *   - 'straight': single line between side midpoints
  *   - 'bezier': cubic Bezier with tangents normal to the chosen exit/entry sides
  *
@@ -391,9 +394,24 @@ const EdgeRenderItem = React.memo(function EdgeRenderItem({
     } else if (routing === 'bezier') {
         d = bezierPath(srcPoint, sides.srcSide, tgtPoint, sides.tgtSide);
     } else {
-        const rawPath = buildPathFromSides(srcPoint, sides.srcSide, tgtPoint, sides.tgtSide);
-        if (!rawPath) return null;
-        d = roundManhattanPath(rawPath, 8);
+        // Manhattan — share the native classic-edge geometry: perpendicular stub exits + the same
+        // corner waypoints (chooseManhattanSidesAndWaypoints, pure) and the same R=5 quadratic fillet
+        // (roundManhattanCorners, extracted from GraphDataElements). isEdge views have no anchors, so
+        // we attach at the rect centers; the classic router returns stub points OUTSIDE both boxes
+        // ([sStub, ...bends, tStub]). The native pipeline cuts the first/last leg to the node borders
+        // via snapSegmentsToBorders (needs an LViewElement, unavailable for an overlay arc), so we
+        // clip those two legs here with clipToRect (axis-aligned center->stub ray = the border point).
+        const aSrc = new GraphPoint(srcBbox.cx, srcBbox.cy);
+        const aTgt = new GraphPoint(tgtBbox.cx, tgtBbox.cy);
+        const sizeSrc = new GraphSize(srcRect.x, srcRect.y, srcRect.w, srcRect.h);
+        const sizeTgt = new GraphSize(tgtRect.x, tgtRect.y, tgtRect.w, tgtRect.h);
+        const waypoints = chooseManhattanSidesAndWaypoints(aSrc, sizeSrc, aTgt, sizeTgt);
+        if (!waypoints.length) return null;
+        const srcBorder = clipToRect(waypoints[0], srcRect);
+        const tgtBorder = clipToRect(waypoints[waypoints.length - 1], tgtRect);
+        const pts: { x: number; y: number }[] = [srcBorder, ...waypoints, tgtBorder];
+        const rawPath = 'M ' + pts.map(p => `${p.x} ${p.y}`).join(' L ');
+        d = roundManhattanCorners(rawPath);
     }
 
     const strokeColorCss = resolveStrokeColorVar(strokeColor);
@@ -591,9 +609,8 @@ interface Bbox {
  * comparison damps flip-flopping when |dx| ≈ |dy| during drag/resize.
  *
  * The chosen sides always lie on the **same axis** (both horizontal or both
- * vertical) — never perpendicular. Perpendicular cases are handled by the
- * 3-segment opposite-axis path in `buildPathFromSides` and never produced
- * directly here.
+ * vertical) — never perpendicular. Consumed by the straight/bezier branches and
+ * the label midpoint (the Manhattan branch routes via the classic router instead).
  */
 function chooseSides(src: Bbox, tgt: Bbox): { srcSide: Side; tgtSide: Side } {
     const dx = tgt.cx - src.cx;
@@ -631,56 +648,9 @@ function sideMidpoint(b: Bbox, side: Side): { x: number; y: number } {
     }
 }
 
-/**
- * Builds the SVG path coherent with the selected exit/entry sides.
- *
- *   - Opposite sides on the same axis → 3 segments with a midpoint detour
- *     (collapses to a single straight segment when both endpoints are
- *     already aligned on the transition axis).
- *   - Perpendicular axes → L-shape, 2 segments meeting at one corner.
- *   - Same side / same-axis-same-side → unreachable from `chooseSides`;
- *     defensive `null` return + opt-in warn via `window.__edgeOverlayDebug`.
- */
-function buildPathFromSides(
-    src: { x: number; y: number },
-    srcSide: Side,
-    tgt: { x: number; y: number },
-    tgtSide: Side,
-): string | null {
-    const opposites: Record<Side, Side> = {
-        top: 'bottom', bottom: 'top', left: 'right', right: 'left',
-    };
-
-    // Case 1: opposite sides on the same axis — 3-segment Z (or straight if aligned).
-    if (opposites[srcSide] === tgtSide) {
-        const horizontalAxis = srcSide === 'left' || srcSide === 'right';
-        if (horizontalAxis) {
-            if (src.y === tgt.y) return `M ${src.x} ${src.y} L ${tgt.x} ${tgt.y}`;
-            const midX = (src.x + tgt.x) / 2;
-            return `M ${src.x} ${src.y} L ${midX} ${src.y} L ${midX} ${tgt.y} L ${tgt.x} ${tgt.y}`;
-        } else {
-            if (src.x === tgt.x) return `M ${src.x} ${src.y} L ${tgt.x} ${tgt.y}`;
-            const midY = (src.y + tgt.y) / 2;
-            return `M ${src.x} ${src.y} L ${src.x} ${midY} L ${tgt.x} ${midY} L ${tgt.x} ${tgt.y}`;
-        }
-    }
-
-    // Case 2: perpendicular axes — L-shape, single corner.
-    const srcHorizontal = srcSide === 'left' || srcSide === 'right';
-    const tgtHorizontal = tgtSide === 'left' || tgtSide === 'right';
-    if (srcHorizontal !== tgtHorizontal) {
-        const corner = srcHorizontal
-            ? { x: tgt.x, y: src.y }
-            : { x: src.x, y: tgt.y };
-        return `M ${src.x} ${src.y} L ${corner.x} ${corner.y} L ${tgt.x} ${tgt.y}`;
-    }
-
-    // Case 3: same side / same-axis-same-side — defensive (chooseSides shouldn't produce this).
-    if (typeof window !== 'undefined' && (window as any).__edgeOverlayDebug) {
-        console.warn('[EdgeOverlay] Unexpected same-side routing:', srcSide, tgtSide);
-    }
-    return null;
-}
+// NOTE: buildPathFromSides (the side-midpoint Z/L Manhattan builder) was removed in Phase 2B — the
+// Manhattan branch now shares the classic router's chooseManhattanSidesAndWaypoints + roundManhattanCorners.
+// chooseSides/sideMidpoint are kept: they still feed the straight/bezier branches and the label midpoint.
 
 /**
  * Returns the intersection of the segment from `rect`'s center toward `point`
@@ -692,11 +662,11 @@ function buildPathFromSides(
  * axis-aligned rect this reduces to t = min(hw/|dx|, hh/|dy|) where hw, hh
  * are half-extents.
  *
- * NOTE: not currently called — side-aware routing (`chooseSides` +
- * `sideMidpoint`) replaces center-projected clipping for static rendering.
- * Preserved for Fase 3b drag-aware live updates, where intermediate frames
- * may need a generic point→border projection that doesn't depend on bbox-pair
- * geometry.
+ * Used by the Manhattan branch (Phase 2B) to cut the first/last leg of the
+ * classic-router polyline (center → stub) to the node border, since the native
+ * pipeline's `snapSegmentsToBorders` needs an `LViewElement` unavailable to the
+ * overlay. For a center attachment the ray center→stub is axis-aligned, so the
+ * returned intersection is exactly the perpendicular border point.
  */
 function clipToRect(
     point: { x: number; y: number },
