@@ -1408,7 +1408,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         if (v.isEdge === true && props.data) {
             const srcL = evalEdgeExpression(props.data, v.edgeSource);
             const tgtL = evalEdgeExpression(props.data, v.edgeTarget);
-            rnode = (srcL && tgtL) ? null : <EdgeFallbackCard data={props.data} srcL={srcL} tgtL={tgtL} />;
+            rnode = (srcL && tgtL) ? null : <EdgeFallbackCard data={props.data} srcL={srcL} tgtL={tgtL} decorators={otherViews} />;
         }
         else try { rnode = this.getTemplate3(vid, v, context); }
         catch (e: any) {
