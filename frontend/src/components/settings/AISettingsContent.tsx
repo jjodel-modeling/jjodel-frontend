@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {AI, AIConfig, AIProvider, AIVersion, ALL_AI_PROVIDERS, JodieConfig, TAIProvider} from '../../types/jodie';
 import { Badge } from '../common/Badge';
 import { Button } from '../common/Button';
@@ -7,6 +7,7 @@ import type {Dictionary, GObject} from "../../joiner";
 import {U} from "../../joiner";
 import { OpenAIIcon } from '../icons/ProviderIcons';
 import { AIProviderService } from '../../services/AIProviderService';
+import { AIEvents } from '../../events/registry';
 
 import groqLogo from '../../static/img/groq.webp';
 import kimiLogo from '../../static/img/kimi.svg';
@@ -90,12 +91,65 @@ export function AISettingsContent({
     const [testStatus, setTestStatus] = useState<Dictionary<string, 'idle' | 'testing' | 'success' | 'error'>>({});
     const [testError, setTestError] = useState<Dictionary<string, string>>({});
     const [expandedProvider, setExpandedProvider] = useState<TAIProvider | null>(null);
+    // Forces a re-render on non-key field edits (baseUrl/model) so the card reflects them live.
+    const [, forceRefresh] = useState(0);
+    // SINGLE SOURCE OF TRUTH for each provider's API key: seeded from persisted config on mount,
+    // mirrored back to config on every change, and re-synced from config on PROVIDER_CHANGED. The
+    // field value, the status pill, and the test-button enablement all derive from this map — so an
+    // empty field can never coexist with a "Configured" pill. Keyed by provider id (independent).
+    const [apiKeyByProvider, setApiKeyByProvider] = useState<Dictionary<string, string>>(() => {
+        const init: Dictionary<string, string> = {};
+        for (const p of ALL_AI_PROVIDERS) init[p] = AIConfig.get(p).apiKey || '';
+        return init;
+    });
     // const [update, setUpdate] = useState(0);
+
+    // After a test resolves, the button holds its result for REVERT_DELAY_MS then returns to the
+    // idle "Test Connection" label. Timers are held per-provider in a ref so a new test cancels the
+    // pending revert, and all are cleared on unmount (no setState-after-unmount).
+    const REVERT_DELAY_MS = 3000;
+    const revertTimers = useRef<Dictionary<string, ReturnType<typeof setTimeout>>>({});
+
+    // Keep the key state in lockstep with persisted config whenever any provider is saved
+    // (covers changes made elsewhere, e.g. ProviderConfigModal) — preserves the single source of truth.
+    useEffect(() => {
+        const onProviderChanged = () => {
+            const next: Dictionary<string, string> = {};
+            for (const p of ALL_AI_PROVIDERS) next[p] = AIConfig.get(p).apiKey || '';
+            setApiKeyByProvider(next);
+        };
+        window.addEventListener(AIEvents.PROVIDER_CHANGED, onProviderChanged);
+        return () => window.removeEventListener(AIEvents.PROVIDER_CHANGED, onProviderChanged);
+    }, []);
+
+    // Clear any pending revert timers when the component unmounts.
+    useEffect(() => () => {
+        Object.values(revertTimers.current).forEach(id => clearTimeout(id));
+    }, []);
+
+    const clearRevertTimer = (provider: TAIProvider) => {
+        const id = revertTimers.current[provider];
+        if (id) {
+            clearTimeout(id);
+            delete revertTimers.current[provider];
+        }
+    };
+
+    // Hold the test result (success/error) for REVERT_DELAY_MS, then revert the button to idle.
+    const scheduleRevert = (provider: TAIProvider) => {
+        clearRevertTimer(provider);
+        revertTimers.current[provider] = setTimeout(() => {
+            setTestStatus(prev => ({ ...prev, [provider]: 'idle' }));
+            delete revertTimers.current[provider];
+        }, REVERT_DELAY_MS);
+    };
 
     // Test provider connection against the real provider endpoint (shared AIProviderService).
     // On success persist lastTested + enabled (mirrors ProviderConfigModal) so the provider's
     // status is consistent across both settings UIs; on failure clear enabled and keep the error.
+    // The transient button result auto-reverts to idle via scheduleRevert (success and failure alike).
     const handleTestConnection = async (provider: TAIProvider) => {
+        clearRevertTimer(provider); // cancel a pending revert from a previous test before starting a new one
         setTestStatus(prev => ({ ...prev, [provider]: 'testing' }));
         setTestError(prev => ({ ...prev, [provider]: '' }));
 
@@ -108,9 +162,6 @@ export function AISettingsContent({
                 config.enabled = true;
                 config.save();
                 setTestStatus(prev => ({ ...prev, [provider]: 'success' }));
-                setTimeout(() => {
-                    setTestStatus(prev => ({ ...prev, [provider]: 'idle' }));
-                }, 3000);
             } else {
                 config.enabled = false;
                 config.save();
@@ -123,6 +174,8 @@ export function AISettingsContent({
             config.save();
             setTestError(prev => ({ ...prev, [provider]: (err as Error).message || 'Connection failed' }));
             setTestStatus(prev => ({ ...prev, [provider]: 'error' }));
+        } finally {
+            scheduleRevert(provider); // hold result ~3s then revert button to idle (both success and failure)
         }
     };
 
@@ -131,7 +184,6 @@ export function AISettingsContent({
         name: TAIProvider,
         fields: {key: 'apiKey' | 'model' | 'baseUrl' /*| 'name'*/; label: string; type: 'text' | 'password' | 'model'; placeholder: string }[]
     ) => {
-        const [update, setUpdate] = useState(0);
         const isExpanded = expandedProvider === name;
         const config = AIConfig.get(name);
         let llm = AI[name];
@@ -141,7 +193,14 @@ export function AISettingsContent({
         let nonLegacyVersions = Object.values(llm.versions).filter(v => !v.deprecated);
         let description: string = nonLegacyVersions.slice(0, 3).map(e=>e.label).join(', ') + (nonLegacyVersions.length>3 ? "…" : "");
         if (!description) description = 'OpenAI-compatible endpoint';
-        const isConfigured: boolean = config.isConfigured();
+        // Derive configured-state from the single source of truth (key map), mirroring isConfigured()
+        // semantics: requiresKey providers → non-empty key; Ollama → baseUrl; Custom → key OR baseUrl.
+        const liveKey = (apiKeyByProvider[name] ?? '').trim();
+        const baseUrlConfigured = !!(config.baseUrl && String(config.baseUrl).trim());
+        const isConfigured: boolean =
+            name === AIProvider.Custom ? (liveKey !== '' || baseUrlConfigured)
+            : llm.requiresKey ? liveKey !== ''
+            : baseUrlConfigured;
 
         const status = testStatus[name] || 'idle';
 
@@ -205,10 +264,15 @@ export function AISettingsContent({
                         </div>
                     </div>
                     <div className="provider-status">
-                        {isConfigured && (
+                        {isConfigured ? (
                             <Badge category="version">
                                 <i className="bi bi-check-circle-fill" />
                                 Configured
+                            </Badge>
+                        ) : (
+                            <Badge category="state">
+                                <i className="bi bi-dash-circle" />
+                                Not configured
                             </Badge>
                         )}
                         <i className={`bi bi-chevron-${isExpanded ? 'up' : 'down'} chevron`} />
@@ -230,11 +294,15 @@ export function AISettingsContent({
                                     // Regular input (text/password)
                                     <input
                                         type={field.type}
-                                        value={config[field.key] || ''}
+                                        value={field.key === 'apiKey' ? (apiKeyByProvider[name] ?? '') : (config[field.key] || '')}
                                         onChange={(e) => {
                                             let val = e.target.value;
                                             switch (field.key) {
-                                                case "apiKey": config.apiKey = val; break;
+                                                case "apiKey":
+                                                    config.apiKey = val;
+                                                    // mirror to the single source of truth (drives field + pill)
+                                                    setApiKeyByProvider(prev => ({ ...prev, [name]: val }));
+                                                    break;
                                                 case "model": config.model = val; break;
                                                 case "baseUrl": config.baseUrl = val; break;
                                                 /*case "name":
@@ -248,7 +316,9 @@ export function AISettingsContent({
                                                 break;*/
                                             }
                                             config.save();
-                                            setUpdate(update + 1);
+                                            // Re-render for non-key edits (baseUrl/model); the apiKey
+                                            // case already re-renders via setApiKeyByProvider above.
+                                            forceRefresh(v => v + 1);
                                         }}
                                         placeholder={field.placeholder}
                                     />
