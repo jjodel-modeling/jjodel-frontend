@@ -979,7 +979,6 @@ foreignObject.label-end, foreignObject.label-start {
         let edgeUsageDeclarations = "(ret)=>{\n" +
             "// ** preparations and default behaviour here ** //\n" +
             "// ret.data = data\n" +
-            "ret.edgeview = edge.view.id\n" +
             "ret.view = view\n" +
             "// data, edge, view are dependencies by default. delete the line(s) above if you want to remove them.\n" +
             "// add preparation code here (like for loops to count something), then list the dependencies below.\n\n" +
@@ -1075,6 +1074,7 @@ foreignObject.label-end, foreignObject.label-start {
             "ret.end = edge.end\n"+
             "ret.segments = edge.segments\n\n"+
             "ret.position = ret.getPosition()\n"+
+            "ret.edgeview = view?.id\n" +
             "ret.sPos = ret.position ? ret.position.start : { x: 0, y: 0, align: 'left' }\n"+
             "ret.ePos = ret.position ? ret.position.end : { x: 0, y: 0, align: 'right' }\n" +
             "}";

@@ -1697,7 +1697,7 @@ export class Pointers{
         if (!data) return null;
         if (Array.isArray(data)) return data.filter(d => !!d).map(d => Pointers.from(d)) as any;
         if (typeof data === "string") {
-            if (data.indexOf("Pointer_") === 0) return data as PTR;
+            if (data.indexOf(Pointers.prefix) === 0) return data as PTR;
             else return (RuntimeAccessibleClass.get("LValue") as typeof LValue).resolveReferenceTODO(data)?.id as PTR;
         }
         return (data as any)?.id;

@@ -1094,6 +1094,7 @@ export class ECoreAttribute {
     static transient: string;
     static volatile: string;
     static unsettable: string;
+    static id: string;
 }
 
 @RuntimeAccessible('ECoreOperation')
@@ -1183,14 +1184,14 @@ ECoreClass.interface = EcoreParser.XMLinlineMarker + 'interface'; // bool
 ECoreClass.instanceClassName = EcoreParser.XMLinlineMarker + 'instanceClassName'; // null, maps to java classes
 
 ECoreEnum.instanceTypeName = ECoreClass.instanceTypeName;
-ECoreEnum.serializable = 'serializable'; // "false", "true"
+ECoreEnum.serializable =  EcoreParser.XMLinlineMarker + 'serializable'; // "false", "true"
 ECoreEnum.xsitype = ECoreClass.xsitype; // "ecore:EEnum"
 ECoreEnum.eLiterals = 'eLiterals';
 ECoreEnum.namee = ECorePackage.namee;
 
 ECoreEnum.defaultValueLiteral = EcoreParser.XMLinlineMarker + "defaultValueLiteral";
 
-ECoreLiteral.literal = 'literal';
+ECoreLiteral.literal =  EcoreParser.XMLinlineMarker + 'literal';
 ECoreLiteral.namee = ECorePackage.namee;
 ECoreLiteral.value = 'value'; // any integer (-inf, +inf), not null. limiti = a type int 32 bit? vv4
 
@@ -1226,6 +1227,7 @@ ECoreAttribute.derived = EcoreParser.XMLinlineMarker + 'derived'; // "true"
 ECoreAttribute.transient = EcoreParser.XMLinlineMarker + 'transient'; // "true"
 ECoreAttribute.volatile = EcoreParser.XMLinlineMarker + 'volatile'; // "true"
 ECoreAttribute.unsettable = EcoreParser.XMLinlineMarker + 'unsettable'; // "false"
+ECoreAttribute.id = EcoreParser.XMLinlineMarker + 'iD'; // "false"
 
 
 ECoreOperation.eParameters = 'eParameters';
@@ -1257,3 +1259,136 @@ export const EcoreXmiTags = [
     "xmlns:xsi",
     "xmlns:ecore",
 ];
+export const allEcoreKeys: Dictionary<string, string> = {
+    ...ECoreRoot,
+    ...ECoreAnnotation,
+    ...ECoreNamed,
+    ...ECoreDetail,
+    ...ECoreSubPackage,
+    ...ECorePackage,
+    ...ECoreClass,
+    ...ECoreEnum,
+    ...ECoreLiteral,
+    ...ECoreReference,
+    ...ECoreAttribute,
+    ...ECoreOperation,
+    ...ECoreParameter,
+    ...ECoreObject,
+    ...XMIModel
+} as any;
+let allLkKeys: GObject = {};
+windoww.allLkKeys = allLkKeys;
+windoww.allEcoreKeys = allEcoreKeys;
+for (let k0 in allEcoreKeys) {
+    let v = allEcoreKeys[k0];
+    if (typeof k0 !== "string") continue;
+    let k: string = (k0[0] === EcoreParser.XMLinlineMarker) ? k0.substring(1) : k0;
+    allEcoreKeys[k] = allEcoreKeys[EcoreParser.XMLinlineMarker+k] = v;
+    let lk = k.toLowerCase();
+    if (lk !== k) v = v.toLowerCase(); // if the key was already lowercase and the value not, i keep the originals (avoid overwrite originals)
+    allEcoreKeys[lk] = allEcoreKeys[EcoreParser.XMLinlineMarker+lk] = v;
+    allLkKeys[lk] = v;
+}
+
+switch(null as any) {
+    case "ecore": break;
+    case "source": break;
+    case "references": break;
+    case "details": break;
+    case "namee": break;
+    case "key": break;
+    case "value": break;
+    case "eannotations": break;
+    case "eclassifiers": break;
+    case "nsuri": break;
+    case "nsprefix": break;
+    case "esubpackages": break;
+    case "xmlns:xmi": break;
+    case "xmlns:xsi": break;
+    case "xmi:version": break;
+    case "xmlns:ecore": break;
+    case "estructuralfeatures": break;
+    case "xsi:type": break;
+    case "eoperations": break;
+    case "instancetypename": break;
+    case "esupertypes": break;
+    case "abstract": break;
+    case "interface": break;
+    case "instanceclassname": break;
+    case "serializable": break;
+    case "eliterals": break;
+    case "defaultvalueliteral": break;
+    case "literal": break;
+    case "etype": break;
+    case "unique": break;
+    case "ordered": break;
+    case "upperbound": break;
+    case "lowerbound": break;
+    case "containment": break;
+    case "container": break;
+    case "changeable": break;
+    case "derived": break;
+    case "transient": break;
+    case "volatile": break;
+    case "unsettable": break;
+    case "eopposite": break;
+    case "resolveproxies": break;
+    case "id": break;
+    case "eexceptions": break;
+    case "eparameters": break;
+    case "xmlns:xmi": break;
+    case "xmi:version": break;
+    case "type": break;
+}
+
+
+let allEKeys = {
+    "ecore:epackage": "ecore:epackage",
+    "source": "@source",
+    "references": "@references",
+    "details": "details",
+    "namee": "@name",
+    "key": "@key",
+    "value": "value",
+    "eannotations": "eannotations",
+    "eclassifiers": "eclassifiers",
+    "nsuri": "@nsuri",
+    "nsprefix": "@nsprefix",
+    "esubpackages": "esubpackages",
+    "xmlns:xmi": "@xmlns:xmi",
+    "xmlns:xsi": "@xmlns:xsi",
+    "xmi:version": "@xmi:version",
+    "xmlns:ecore": "@xmlns:ecore",
+    "estructuralfeatures": "estructuralfeatures",
+    "xsi:type": "@xsi:type",
+    "eoperations": "eoperations",
+    "instancetypename": "@instancetypename",
+    "esupertypes": "@esupertypes",
+    "abstract": "@abstract",
+    "interface": "@interface",
+    "instanceclassname": "@instanceclassname",
+    "serializable": "@serializable",
+    "eliterals": "eliterals",
+    "defaultvalueliteral": "@defaultvalueliteral",
+    "literal": "@literal",
+    "etype": "@etype",
+    "unique": "@unique",
+    "ordered": "@ordered",
+    "upperbound": "@upperbound",
+    "lowerbound": "@lowerbound",
+    "containment": "@containment",
+    "container": "@container",
+    "changeable": "@changeable",
+    "derived": "@derived",
+    "transient": "@transient",
+    "volatile": "@volatile",
+    "unsettable": "@unsettable",
+    "eopposite": "@eOpposite",
+    "resolveproxies": "@resolveproxies",
+    "id": "@iD",
+    "eexceptions": "@eExceptions",
+    "eparameters": "eparameters",
+    "xmlns:xmi": "@xmlns:xmi",
+    "xmi:version": "@xmi:version",
+    "type": "@type"
+}

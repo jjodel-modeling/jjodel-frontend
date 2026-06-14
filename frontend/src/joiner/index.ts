@@ -89,6 +89,9 @@ export type { WAnnotation, WNamedElement, WFactory_useless_, WClass, WAttribute,
     WModelElement, WEnumerator, WObject, WPackage, WOperation, WValue, WParameter, WReference, WTypedElement, WEnumLiteral, WStructuralFeature,
     ValueDetail, SetValueAtPositionInfoType
 } from "../model/logicWrapper/LModelElement";
+
+export type {GenericTypeName, TYPE} from "../model/logicWrapper/etype";
+
 export type {WEdge, WEdgePoint, WExtEdge, WGraph, WRefEdge, WGraphElement, WVoidEdge, WGraphVertex, WVertex, WVoidVertex, EdgeSegment, EdgeFillSegment} from "../model/dataStructure/GraphDataElements";
 export type {PackagePointers, EdgePointers, AnnotationPointers, AttributePointers, EnumPointers, ClassPointers,
     LiteralPointers, OperationPointers, ObjectPointers, GraphPointers, ParameterPointers, ReferencePointers, VertexPointers,
@@ -184,6 +187,7 @@ export {
     EJavaObject,
     DFactory_useless_, LFactory_useless_, DMap, LMap
 } from "../model/logicWrapper/LModelElement";
+export {GenericType,  GenericTypeParser} from "../model/logicWrapper/etype";
 
 
 export {
@@ -233,6 +237,7 @@ class JSXT_TYPE{
     browserifyTransform(...params: any): any {}
     visitor: unknown = null;
 }
+export {MyTest} from "../test/MyTests";
 
 export const JSXT = jsxtt as any as JSXT_TYPE/*as {
     fromString: (str: string, options?:

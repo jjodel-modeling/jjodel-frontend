@@ -351,7 +351,7 @@ export class Action extends RuntimeAccessibleClass {
             printobj['this'] = this;
             printobj['stack'] = this.stack;
             printobj['list'] = (this as any).actions;
-            console.log('firing action:', printobj);
+            if (U.debug) console.log('firing action:', printobj);
             setTimeout(()=>storee.dispatch({...this}), 0); // force action execution to be async, so i can add callbacks like AFTER_TRANSACTION
             /*
             // OPTIMIZATION: Wrap dispatch in batchedUpdates to ensure React batches the render
@@ -786,7 +786,6 @@ export class CompositeAction extends Action {
     public static new(actions: Action[], launch: boolean = true): CompositeAction { return new CompositeAction(actions, launch); }
     constructor(actions: Action[], launch: boolean = false) {
         super('', '');
-        console.log('compositeact2', JSON.parse(JSON.stringify(actions || [])));
         this.actions = actions;
         this.className = CompositeAction.cname;
         this.fromCollaborative = false;

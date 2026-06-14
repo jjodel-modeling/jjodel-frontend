@@ -924,7 +924,6 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         e.stopPropagation();
         let state: DState = store.getState();
         const target = (e.target as HTMLElement);
-        console.log("click vertex", {target, e})
         switch (target.tagName.toLowerCase()) {
             case "select":
             case "input":
@@ -1170,13 +1169,13 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         }
         if (props.start && props.isEdge) {
             ptr = Pointers.from(props.start);
-            console.log("edge props start debug", {id:dedge.id, ps:props.start, props, ptr});
+            // console.log("edge props start debug", {id:dedge.id, ps:props.start, props, ptr});
             if (dedge.id !== ptr) edge.start = ptr as any;
         }
         // console.log("changing endpt", props, props.end, props.end?.model?.name);
         if (props.end && props.isEdge) {
             ptr = Pointers.from(props.end);
-            console.log("edge props end debug", {id:dedge.id, ps:props.start, props, ptr});
+            // console.log("edge props end debug", {id:dedge.id, ps:props.start, props, ptr});
             if (dedge.id !== ptr) edge.end = ptr as any;
         }
         if (props.labels) { tn.labels = props.labels; }

@@ -596,7 +596,7 @@ export function reducer(oldState: DState = initialState, action: Action, liveCha
     if (!windoww.jjactions) windoww.jjactions = [];
     windoww.jjactions.push(action);
     let safeMode = false;
-    console.log('execute action', action);
+    if (U.debug) console.log('execute action', action);
     if (!safeMode) {
         let ret = unsafereducer(oldState, action);
         DO_AFTER_TRANSACTION_NOT_FOR_USERS(ret);

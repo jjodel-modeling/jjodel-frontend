@@ -632,7 +632,7 @@ export class Dummy {
                     switch (k) {
                         case '_state': thiss.set_state(v, c); continue;
                         default:
-                            if (k[0] === "@") console.error("setting wrong stuff", {d:c.data, k, v, json, old});
+                            if (k[0] === "@" || k.toLowerCase().includes("annota")) console.error("setting wrong stuff", {d:c.data, k, v, json, old});
                             // @ts-ignore
                             c.proxyObject[k] = v;
                             continue;
@@ -655,8 +655,6 @@ export class Dummy {
 
                 for (let k of DPointerTargetable.childKeys) { switch (k) {
                     case 'annotations':
-                        // todo
-                        continue;
                     case '__childrenToSort': // if they got id or name they can be registered right away. not ambiguous.
                     case 'packages': case 'subpackages': case 'classes': case 'enumerators':
                     case 'attributes': case 'references': case 'operations': case 'parameters': case 'literals':

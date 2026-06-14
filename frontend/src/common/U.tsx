@@ -1631,7 +1631,7 @@ export class U {
         // nb: mind that typeof [] === 'object'
         return typeof v === 'object'; }
 
-    static objectFromArray<V extends any>(arr: V[], getKey?: keyof V|((entry:V) => string)): Dictionary<string, V>{
+    static objectFromArray<V extends any>(arr: V[], getKey?: keyof V|((entry:V) => string), getVal?: any|((entry:V) => any)): Dictionary<string, V>{
         if (!arr || !Array.isArray(arr)) return {};
         // @ts-ignore
         return arr.reduce((acc, val, i) => {
@@ -1640,8 +1640,15 @@ export class U {
             if (getKey === undefined) key = val as any;
             else if (typeof getKey === 'string') key = (val || {} as any)[getKey] as any;
             else if (typeof getKey === 'function') key = getKey(val);
+
             // else key = i;
             if (key === null || key === undefined) return acc; // skip element
+
+            if (typeof getVal === 'string') val = (val || {} as any)[getKey] as any;
+            else if (typeof getVal === 'function') val = (getVal as any)(val);
+            else if (getVal === '__jj_empty') val = undefined as any;
+            else if (getVal !== undefined) val = getVal;
+
             // @ts-ignore
             acc[key] = val;
             return acc;
@@ -1662,11 +1669,11 @@ export class U {
      return !!v;
     }
 
-    static fromBoolString<T extends any>(str?: string | boolean): boolean;
-    static fromBoolString<T extends any>(str?: string | boolean, defaultVal?: T): boolean | T;
-    static fromBoolString<T extends any>(str?: string | boolean, defaultVal?: T, nullValue?: T): boolean | T;
-    static fromBoolString<T extends any>(str?: string | boolean, defaultVal?: T, nullValue?: T, undefValue?: T): boolean | T;
-    static fromBoolString<T extends any>(str?: string | boolean, defaultVal: T = false as any, nullValue: T = null as any, undefValue: T = undefined as any): boolean | T {
+    static fromBoolString<T extends any>(str?: string | boolean | null): boolean;
+    static fromBoolString<T extends any>(str?: string | boolean | null, defaultVal?: T): boolean | T;
+    static fromBoolString<T extends any>(str?: string | boolean | null, defaultVal?: T, nullValue?: T): boolean | T;
+    static fromBoolString<T extends any>(str?: string | boolean | null, defaultVal?: T, nullValue?: T, undefValue?: T): boolean | T;
+    static fromBoolString<T extends any>(str?: string | boolean | null, defaultVal: T = false as any, nullValue: T = null as any, undefValue: T = undefined as any): boolean | T {
         if (str === false) return false;
         if (str === true) return true;
         str = ('' + str).toLowerCase().trim();

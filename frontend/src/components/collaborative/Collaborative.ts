@@ -37,7 +37,7 @@ export class Collaborative {
     public static online: boolean = false;
 
     private static canSend(action: Action): boolean {
-        console.log('Collaborative.canSend', {action,
+        if (false as any) console.log('Collaborative.canSend', {action,
             sender: action.sender !== DUser.current,
             skip: action.skipCollaborative,
             ignore: action.type === SetRootFieldAction.type && ignoredRootFields.includes(action.field as keyof DState),
