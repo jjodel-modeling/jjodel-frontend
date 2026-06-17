@@ -167,6 +167,13 @@ export class Dummy {
                         }
                         break;
 
+                    case 'opposite':
+                        // B.Y: the dependent DReference points at the deleted reference via its
+                        // 'opposite' pointer. Clear it so it does not dangle. Same L-proxy setter
+                        // mechanism as case 'type'; only DReference owns an 'opposite' field.
+                        lObj.opposite = undefined;
+                        break;
+
                     case 'subElements':
                     case 'values':
                     case 'packages':
