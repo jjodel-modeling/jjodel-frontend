@@ -94,6 +94,7 @@ import { toast } from "../../components/Toast";
 import React, {JSX} from "react";
 import { checkObjectCreation, checkLinkCreation, checkValueAssignment, emitGuardViolation } from '../conformance/ConformanceGuard';
 import {Dummy} from "../../common/Dummy";
+import {inferAttributeType} from "../attributeTypeInference";
 
 type outactions = {clear:(()=>void)[], set:(()=>void)[], immediatefire?: boolean};
 export type SchemaMatchingScore = {
@@ -3100,7 +3101,20 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
 
     public addAttribute(name?: DAttribute["name"], type?: DAttribute["type"]): LAttribute { return this.cannotCall("addAttribute"); }
     protected get_addAttribute(context: Context): this["addAttribute"] {
-        return (name?: DAttribute["name"], type?: DAttribute["type"]) => LPointerTargetable.fromD(DAttribute.new(name, type, context.data.id, true));
+        return (name?: DAttribute["name"], type?: DAttribute["type"]) => {
+            // Creation-time type inference: only when the caller passes a non-empty name
+            // and NO explicit type. An explicit type (Ecore/XMI import, undo-reconcile,
+            // examples, Jjodie) is forwarded untouched, and a missing name falls through
+            // to DAttribute.new's EString seed unchanged.
+            if (!type && name) {
+                const inferred = inferAttributeType(name);
+                if (inferred && inferred !== ShortAttribETypes.EString) {
+                    const dtype = Selectors.getPrimitiveType(inferred);
+                    if (dtype) type = LPointerTargetable.from(dtype).id as DAttribute["type"];
+                }
+            }
+            return LPointerTargetable.fromD(DAttribute.new(name, type, context.data.id, true));
+        };
     }
 
     public addReference(name?: DReference["name"], type?: DReference["type"]): LReference { return this.cannotCall("addReference"); }
@@ -4209,6 +4223,34 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
     isID: boolean = false; // ? exist in ecore as "iD" ?
     isIoT: boolean = false;
     allowCrossReference!:boolean;
+
+    // Name-based type inference (Phase 2). When an attribute still on the untouched
+    // EString default is renamed to a rule-matching name, fill in the inferred primitive
+    // type (e.g. attr_0 → isActive ⇒ EBoolean). It is only a default and never overrides
+    // a type the user or an import set explicitly.
+    //
+    // The decision uses SYNCHRONOUS pre-state only: super.set_name commits asynchronously
+    // (TRANSACTION is async — classes.ts:2153 / action.ts:217), so re-reading the committed
+    // name here is unreliable. wasDefaultString + isRealChange are both known before the
+    // commit. super.set_name and set_type each run their own TRANSACTION — never wrapped in
+    // a new outer one (CLAUDE.md §3.3); mirrors the LClass.set_name super-then-extra pattern.
+    //
+    // Accepted caveat: on a sibling-name collision super.set_name rejects the rename (the
+    // name stays) but the inferred type is still applied. Rare and harmless; the common
+    // collision names (name/id/code) match no rule anyway.
+    protected set_name(val: this["name"], context: Context): boolean {
+        const wasDefaultString = context.data.type === Pointers.ESTRING;
+        const isRealChange = context.data.name !== val;
+        const ret = super.set_name(val, context);
+        if (wasDefaultString && isRealChange) {
+            const inferred = inferAttributeType(val);
+            if (inferred && inferred !== ShortAttribETypes.EString) {
+                const dtype = Selectors.getPrimitiveType(inferred);
+                if (dtype) this.set_type(LPointerTargetable.from(dtype).id as any, context);
+            }
+        }
+        return ret;
+    }
 
     protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}, deep: boolean = true, crossRef: boolean = true): Json {
         if (loopDetectionObj[c.data.id]) return Log.exx('Cannot serialize in ecore, found loop', {loopDetectionObj, c});

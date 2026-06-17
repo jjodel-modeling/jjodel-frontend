@@ -95,6 +95,8 @@ export function PromptsSettingsSection({
                         {types.map(type => {
                             const meta = PROMPT_REGISTRY[type];
                             const source = PromptService.getPromptSource(type, projectId);
+                            const defaultVersion = PromptService.getDefaultVersion(type);
+                            const isOutdated = PromptService.isDefaultUpdated(type, projectId);
                             const isExpanded = expandedPrompt === type;
 
                             return (
@@ -115,8 +117,16 @@ export function PromptsSettingsSection({
                                             <span className={`prompt-card__source source--${source}`}>
                                                 {source === 'project' ? 'Project' :
                                                  source === 'global' ? 'Global' :
-                                                 'Default'}
+                                                 `Default · v${defaultVersion}`}
                                             </span>
+                                            {isOutdated && (
+                                                <span
+                                                    className="prompt-card__updated"
+                                                    title="The built-in default has a newer version than your customization"
+                                                >
+                                                    Default updated
+                                                </span>
+                                            )}
                                         </div>
                                         <i className={`bi bi-chevron-${isExpanded ? 'up' : 'down'}`} />
                                     </div>

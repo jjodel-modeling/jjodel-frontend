@@ -28,8 +28,12 @@ import {
     UX
 } from '../../joiner';
 import {useStateIfMounted} from 'use-state-if-mounted';
+// TypeScript may complain about missing declarations for .scss imports in projects
+// without appropriate module typings. Ignore the check for this side-effect import.
+// @ts-ignore
 import './inputselect.scss';
 import { Tooltip } from './Tooltip';
+import { JjSelect } from '../ui';
 import {GenericProps} from "../../joiner";
 
 export function getSelectOptions_raw(data: LPointerTargetable, field: string): MultiSelectOptGroup[] {
@@ -104,16 +108,23 @@ export function InputComponent(props: AllProps) {
     useLayoutEffect(() => {
         if (visible && inputRef.current) {
             let input = inputRef.current;
-            // input.select() works on inputs, but this works for contenteditable too
-            (inputRef.current as any)?.focus();
-            if (input.tagName === 'INPUT') (input as HTMLInputElement).select();
-            else {
-                const range = document.createRange();
-                range.selectNodeContents(input);
-                const selection = window.getSelection();
-                if (selection) {
-                    selection.removeAllRanges();
-                    selection.addRange(range);
+            // Auto-focus + pre-select on mount is an OPT-IN inline-rename affordance
+            // (selectOnMount): it pre-selects the value so the user can type over it when a
+            // rename-in-place input is revealed. OFF by default so ordinary panels do not
+            // steal focus / show a caret on load. Never runs for <select> elements or
+            // read-only fields. See discovery 2026-06-11, Issue 2 (+ focus/caret follow-up).
+            if (props.selectOnMount && props.tag !== 'select' && !readOnly) {
+                // input.select() works on inputs, but this works for contenteditable too
+                (inputRef.current as any)?.focus();
+                if (input.tagName === 'INPUT') (input as HTMLInputElement).select();
+                else {
+                    const range = document.createRange();
+                    range.selectNodeContents(input);
+                    const selection = window.getSelection();
+                    if (selection) {
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                    }
                 }
             }
 
@@ -259,6 +270,8 @@ export function InputComponent(props: AllProps) {
     delete otherprops.inputStyle;
     delete otherprops.children;
     delete otherprops.autosize; // because react complains is bool in dom attribute or unknown attrib name
+    delete otherprops.selectOnMount; // custom prop — must not leak onto the DOM element
+    delete otherprops.jjSelect; // custom prop — must not leak onto the DOM element
 
     let checked: boolean | undefined = undefined;
     if (isBoolean) checked = typeof value === "boolean" ? value :
@@ -342,6 +355,17 @@ export function InputComponent(props: AllProps) {
                 delete valuesMap[undefined as any];
                 inputProps.value = [];
                 for (let optgrp of multiOptions) for (let opt of optgrp.options) if (valuesMap[opt.value]) inputProps.value.push(opt);
+                if (props.jjSelect) {
+                    // Opt-in design-system multiselect: same data-binding, JjSelect chrome.
+                    input = <JjSelect
+                        isMulti={true}
+                        isDisabled={readOnly}
+                        placeholder={props.placeholder || 'Select...'}
+                        options={options}
+                        value={inputProps.value as any}
+                        onChange={((v0: any) => confirmValue(undefined, ((v0 as any[]) || []).map((v: any) => v.value))) as any}
+                    />;
+                } else {
                 // rootprops.className = (rootprops.className || '') + ' clearfix';
                 let old = {...rootprops};
                 rootprops.onMouseMove = (e:any) => { UX.stopEvt(e); old.onMouseMove?.(); /* console.log('multiselect onmove'); */ };
@@ -364,7 +388,7 @@ export function InputComponent(props: AllProps) {
                         }),
                         valueContainer: (base: any) => ({
                             ...base,
-                            padding: '4px 8px',
+                            padding: '4px 8px', 
                             flexWrap: 'nowrap',
                             gap: '4px',
                             overflow: 'visible',
@@ -401,14 +425,33 @@ export function InputComponent(props: AllProps) {
                         confirmValue(undefined, v);
                     }) as any}
                 />;
+                }
             }
             else {
+                if (props.jjSelect) {
+                    // Opt-in design-system single select. props.options must be DATA arrays
+                    // (flat [{value,label}] or grouped [{label, options:[...]}]).
+                    const dataOptions = (props.options as any[]) || [];
+                    const flatOpts: any[] = [];
+                    for (const o of dataOptions) { if (o && Array.isArray((o as any).options)) flatOpts.push(...(o as any).options); else flatOpts.push(o); }
+                    const cur = inputProps.value;
+                    const selectedOpt = flatOpts.find((o: any) => `${o.value}` === `${cur}`) || null;
+                    input = <JjSelect
+                        isMulti={false}
+                        isDisabled={readOnly}
+                        placeholder={props.placeholder || 'Select your option'}
+                        options={dataOptions as any}
+                        value={selectedOpt as any}
+                        onChange={((opt: any) => confirmValue(undefined, opt ? opt.value : undefined)) as any}
+                    />;
+                } else {
                 let options = getSelectOptions(data, field, props.options, props.children, props.id);
                 if (U.isError(options)) throw errorUpdate("Error on <Select> options getter", options);
                 input = <select {...inputProps}>
                     <option value="" disabled selected>{props.placeholder || 'Select your option'}</option>
                     {options}
                 </select>;
+                }
             }
             break;
         case null: case undefined: case "": case "input": input = <input {...inputProps} />; break;
@@ -489,6 +532,11 @@ export interface InputOwnProps extends GenericProps {
     tooltip?: boolean | ReactNode;
     hidden?: boolean;
     clickHidden?: boolean;
+    // Opt-in: focus + pre-select the value when this input mounts/reveals (inline-rename).
+    selectOnMount?: boolean;
+    // Opt-in: render the design-system JjSelect (react-select) instead of the native
+    // <select>/bare MultiSelect. Data-binding is unchanged; only the control differs.
+    jjSelect?: boolean;
     autosize?: boolean;
     inputClassName?: string;
     inputStyle?: GObject;

@@ -21,6 +21,7 @@ import PaletteData from "./data/PaletteData";
 import GenericNodeData from "./data/GenericNodeData";
 
 import {Btn, CommandBar} from '../../commandbar/CommandBar';
+import HelpButton from '../../HelpButton';
 import "./nestedView.scss";
 import {ComponentsTab} from "./data/ComponentsTab";
 
@@ -111,25 +112,32 @@ function ViewDataComponent(props: AllProps) {
 
     return (
         <div className={"view-editor-root"}>
-            <div className={'view-editor-header'}>
-                <CommandBar>
-                    <Btn icon={'back'} action={() => props.setSelectedView(undefined)} tip={'Back'}/>
-                </CommandBar>
-                <div className={"path-list"}>{
-                    (viewChain.map((v, i) => <>
-                        <div className={"path-element"} onClick={()=>props.setSelectedView(v.id)}>
-                            {U.cropStr(v.name, 1,1, 10, 10)}
-                        </div>
-                        {i === viewChain.length - 1 && (
-                            <span className={`breadcrumb-type-badge ${isVP ? 'viewpoint' : 'view'}`}>
-                                {isVP ? 'VIEWPOINT' : 'VIEW'}
-                            </span>
-                        )}
-                    </>) as any
-                    ).separator(
-                        <i className={"path-separator bi bi-chevron-right"} />
-                    )
-                }</div>
+            <div className={'view-editor-header view-entity-header'}>
+                {/* Row 1 — entity-style header, homogeneous with the metaclass .props-header */}
+                <div className="props-header">
+                    <CommandBar>
+                        <Btn icon={'back'} action={() => props.setSelectedView(undefined)} tip={'Back'}/>
+                    </CommandBar>
+                    <div className="props-header__icon"><i className="bi bi-eye" /></div>
+                    <span className="props-header__name">{view.name || 'Unnamed'}</span>
+                    <span className={`jj-type-badge ${isVP ? 'jj-type-badge--viewpoint' : 'jj-type-badge--view'}`}>
+                        {isVP ? 'VIEWPOINT' : 'VIEW'}
+                    </span>
+                    <HelpButton helpKey="properties-panel" />
+                </div>
+                {/* Row 2 — light-blue breadcrumb band hosting the existing .path-list */}
+                <div className="view-header-breadcrumb-band">
+                    <div className={"path-list"}>{
+                        (viewChain.map((v) => (
+                            <div className={"path-element"} onClick={()=>props.setSelectedView(v.id)}>
+                                {U.cropStr(v.name, 1,1, 10, 10)}
+                            </div>
+                        )) as any
+                        ).separator(
+                            <i className={"path-separator bi bi-chevron-right"} />
+                        )
+                    }</div>
+                </div>
             </div>
 
             <div className={"view-editor-tabs"}>

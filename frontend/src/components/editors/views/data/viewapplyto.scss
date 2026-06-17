@@ -26,7 +26,10 @@
 // Uses !important + higher specificity than `.properties-panel { padding: 0px !important }`
 // (info-improvements.scss:1207) so it wins the cascade.
 .view-editor-tab-content > section.properties-tab.properties-panel {
-  padding: 12px 0px !important;
+  // 16px horizontal (8px grid ×2) so the Name field's left border + focus ring
+  // and the right-aligned toggles have clearance from the panel edges; vertical
+  // padding unchanged.
+  padding: 12px 16px !important;
 }
 
 // ============================================
@@ -699,4 +702,131 @@ section.page-root {
     opacity: 0.5;
     cursor: not-allowed;
   }
+}
+
+// ============================================================================
+// LIVE RULES for the rendered DOM: `.properties-panel .jj-field` (InfoData).
+//
+// The `.apply-to-tab` / `.form-field` rules above are DEAD — InfoData renders
+// `section.properties-tab.properties-panel > .jj-field > <bare widget>`, never
+// `.apply-to-tab`. (Cleanup of the dead rules is deferred to a pre-3.0.0 session.)
+// These scoped rules fix View Properties panel issues 1/3/5/7 from
+// docs/discovery/2026-06-11_view_properties_panel_visual_issues.md.
+// ============================================================================
+
+// --- Issue 1: "Applicable to" multiselect chips — force readable slate, light & dark.
+// Scoped to the panel root `.properties-tab.properties-panel` (the section InfoData and
+// Info both render) instead of `.properties-panel .jj-field`: the sibling spinner/width
+// rules below (same `.properties-panel .jj-field` base) DO take effect, which proves that
+// base matches the live DOM — so the prior chip rule should have matched too and the
+// "still black" residual was most likely stale styles. Dropping the `.jj-field` ancestor
+// removes that dependency for determinism (the chip sits under a label wrapper that lost
+// its `.input-container` class, per the known rootprops override). `!important` + (0,3,0)
+// specificity beats the global `_form-system.scss` !important stack (light :543 = (0,1,0),
+// dark :820 = (0,2,0)) and react-select's non-!important emotion styles.
+.properties-tab.properties-panel .jjodel-select__multi-value {
+  background-color: #e2e8f0 !important;
+}
+.properties-tab.properties-panel .jjodel-select__multi-value__label {
+  color: #334155 !important;
+}
+.properties-tab.properties-panel .jjodel-select__multi-value__remove {
+  color: #64748b !important;
+}
+// Preserve the dark-theme chip appearance (mirrors _form-system's dark values).
+[data-theme="dark"] .properties-tab.properties-panel .jjodel-select__multi-value {
+  background-color: #334155 !important;
+}
+[data-theme="dark"] .properties-tab.properties-panel .jjodel-select__multi-value__label {
+  color: #e2e8f0 !important;
+}
+[data-theme="dark"] .properties-tab.properties-panel .jjodel-select__multi-value__remove {
+  color: #94a3b8 !important;
+}
+
+// --- Issue 3: disabled/readonly values render legible (slate), not placeholder-gray.
+// `-webkit-text-fill-color` overrides WebKit's disabled-input text dimming.
+.properties-panel .jj-field input:disabled,
+.properties-panel .jj-field select:disabled {
+  color: #334155;
+  -webkit-text-fill-color: #334155;
+  opacity: 1;
+  background-color: #f8fafc;
+}
+
+// --- Issue 5: hide native number spinners on Priority.
+// _form-system.scss:189-199 forces spinners globally (without !important); this
+// scoped rule wins on specificity, so no !important is needed.
+.properties-panel .jj-field input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.properties-panel .jj-field input[type="number"]::-webkit-inner-spin-button,
+.properties-panel .jj-field input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+// --- Issue 7: uniform field widths. Native selects otherwise auto-size to their
+// widest option. The child combinator (>) targets only the bare widgets and avoids
+// react-select's internal autosize <input>; the multiselect control is capped
+// separately (below) to align with the rest. OCL/JS editors sit OUTSIDE .jj-field,
+// so they are unaffected.
+.properties-panel .jj-field > input,
+.properties-panel .jj-field > select {
+  width: 100%;
+  max-width: 420px;
+  box-sizing: border-box;
+}
+.properties-panel .jj-field > input[type="number"] {
+  max-width: 160px;
+}
+.properties-panel .jj-field .jjodel-select__control {
+  max-width: 420px;
+}
+
+// ============================================================================
+// 2026-06-12 — unified focus ring + neutralize the rogue select rest-border.
+// ============================================================================
+
+// Unified focus ring for every native control in the panel (design system:
+// slate border + soft slate shadow, no naked outline). Scoped to the panel root
+// `.properties-tab.properties-panel .jj-field` with `[type]` variants so it beats
+// the prior outline-suppression rule `info-improvements.scss:1174-1182`
+// (`.properties-panel .jj-field input[type="text"]:focus { border-color: none;
+// outline: none !important; }`, (0,4,1) — which left text/number inputs with NO
+// focus indicator). The typed variants here are (0,5,1), so they win.
+.properties-tab.properties-panel .jj-field input:focus,
+.properties-tab.properties-panel .jj-field input[type="text"]:focus,
+.properties-tab.properties-panel .jj-field input[type="number"]:focus,
+.properties-tab.properties-panel .jj-field select:focus {
+  outline: none !important;
+  border-color: #334155 !important;
+  box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.15) !important;
+}
+
+// Neutralize the reported "heavy dark border at rest" on a panel <select>
+// (observed on "Preferred appearance"). NB: the `select:invalid` hypothesis does
+// NOT hold — Input.tsx adds no `required` attribute, `auth.scss`'s `select:invalid`
+// is scoped to `.auth-split-screen.dirty`, and `App.scss`'s `&:invalid` parent list
+// excludes `select`. The exact source could not be pinned statically; this rule
+// defensively forces the standard 1px light border (no shadow) at rest. Commit B
+// migrates these selects to JjSelect, removing the native <select> entirely.
+.properties-tab.properties-panel .jj-field select {
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: none !important;
+}
+
+// The unified focus ring above also matches react-select's inner search <input>
+// (JjSelect renders it inside its `.jj-select` container; JjSelect.tsx sets
+// `className='jj-select'` and NO classNamePrefix, so the inner input has no semantic
+// `__input` class — it must be targeted via the container). The outer JjSelect control
+// already conveys focus, so its inner search input must show no ring/border/shadow of
+// its own (otherwise small bars appear next to the caret while filtering). Scoped to
+// `.jj-select`, this never touches the native Name/Priority inputs (not inside a JjSelect).
+.properties-tab.properties-panel .jj-field .jj-select input,
+.properties-tab.properties-panel .jj-field .jj-select input:focus {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
 }

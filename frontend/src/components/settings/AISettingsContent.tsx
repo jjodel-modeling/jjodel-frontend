@@ -6,6 +6,7 @@ import './AISettingsContent.scss';
 import type {Dictionary, GObject} from "../../joiner";
 import {U} from "../../joiner";
 import { OpenAIIcon } from '../icons/ProviderIcons';
+import { AIProviderService } from '../../services/AIProviderService';
 
 import groqLogo from '../../static/img/groq.webp';
 import kimiLogo from '../../static/img/kimi.svg';
@@ -87,30 +88,41 @@ export function AISettingsContent({
     onDirtyChange
 }: AISettingsContentProps) {
     const [testStatus, setTestStatus] = useState<Dictionary<string, 'idle' | 'testing' | 'success' | 'error'>>({});
+    const [testError, setTestError] = useState<Dictionary<string, string>>({});
     const [expandedProvider, setExpandedProvider] = useState<TAIProvider | null>(null);
     // const [update, setUpdate] = useState(0);
 
-    // Test provider connection
-    const handleTestConnection = async (providerId: string) => {
-        setTestStatus(prev => ({ ...prev, [providerId]: 'testing' }));
+    // Test provider connection against the real provider endpoint (shared AIProviderService).
+    // On success persist lastTested + enabled (mirrors ProviderConfigModal) so the provider's
+    // status is consistent across both settings UIs; on failure clear enabled and keep the error.
+    const handleTestConnection = async (provider: TAIProvider) => {
+        setTestStatus(prev => ({ ...prev, [provider]: 'testing' }));
+        setTestError(prev => ({ ...prev, [provider]: '' }));
 
         try {
-            // Simulate test delay
-            await new Promise(r => setTimeout(r, 1000));
+            const result = await AIProviderService.testConnection(provider);
+            const config = AIConfig.get(provider);
 
-            // TODO: Implement real connection test
-            // const result = await AIService.testConnection(providerId, providers[providerId]);
-
-            setTestStatus(prev => ({ ...prev, [providerId]: 'success' }));
-            setTimeout(() => {
-                setTestStatus(prev => ({ ...prev, [providerId]: 'idle' }));
-            }, 3000);
-
+            if (result.success) {
+                config.lastTested = Date.now();
+                config.enabled = true;
+                config.save();
+                setTestStatus(prev => ({ ...prev, [provider]: 'success' }));
+                setTimeout(() => {
+                    setTestStatus(prev => ({ ...prev, [provider]: 'idle' }));
+                }, 3000);
+            } else {
+                config.enabled = false;
+                config.save();
+                setTestError(prev => ({ ...prev, [provider]: result.error || 'Connection failed' }));
+                setTestStatus(prev => ({ ...prev, [provider]: 'error' }));
+            }
         } catch (err) {
-            setTestStatus(prev => ({ ...prev, [providerId]: 'error' }));
-            setTimeout(() => {
-                setTestStatus(prev => ({ ...prev, [providerId]: 'idle' }));
-            }, 3000);
+            const config = AIConfig.get(provider);
+            config.enabled = false;
+            config.save();
+            setTestError(prev => ({ ...prev, [provider]: (err as Error).message || 'Connection failed' }));
+            setTestStatus(prev => ({ ...prev, [provider]: 'error' }));
         }
     };
 
@@ -249,6 +261,7 @@ export function AISettingsContent({
                                 className={`test-btn ${status}`}
                                 onClick={() => handleTestConnection(name)}
                                 disabled={status === 'testing' || !isConfigured}
+                                title={status === 'error' && testError[name] ? testError[name] : undefined}
                             >
                                 {status === 'testing' && <><i className="bi bi-arrow-repeat spinning" /> Testing...</>}
                                 {status === 'success' && <><i className="bi bi-check-lg" /> Connected</>}

@@ -827,3 +827,85 @@
   }
 
 }
+
+// ============================================================================
+// 2026-06-12 — LIVE rules for the Properties-panel Options tab.
+// The `.editor-switch-v2-wrapper` block above is DEAD here: that wrapper is NOT an
+// ancestor of the Properties-panel Options tab (GenericNodeData renders
+// `<section.p-3.options-tab>` inside `.view-editor-tab-content`). These bring the tab
+// in line with the rest of the panel (Options-tab consistency). Toggles → `.jj-toggle-row`
+// and "Applicable to" → `.jj-field` + JjSelect are handled in NodeData.tsx / FieldData.tsx
+// (reuse the panel components), so they need no rule here.
+// ============================================================================
+// Anchored on `.options-tab` (the section's own class, guaranteed present) — NOT on
+// `.view-editor-tab-content`, which proved unreliable across attempts (Vite dev-server
+// HMR for this component-imported SCSS is flaky). The Snap/Default-Width rows themselves
+// were moved to the global `.jj-toggle-row` pattern in NodeData.tsx (same mechanism the
+// working toggles use) so their alignment no longer depends on this file; these rules
+// still left-align the remaining sections (Graph/Edge/EdgePoint) + the number inputs.
+.options-tab {
+  // Common-source LEFT alignment: an ancestor applies `text-align: center` which the bare
+  // <h5>/<b>/<input> values would otherwise inherit (that's the "centered" rows/labels).
+  // Reset it once here at the tab root so labels and field values are left-aligned.
+  text-align: left !important;
+
+  // Section titles ("Field" / "Vertex") → match the metaclass `.props-section__title`
+  // (uppercase, small, muted) instead of the bare large <h5>.
+  h5 {
+    font-size: 13px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #64748b;
+    margin: 4px 0 10px 0;
+    text-align: left;
+  }
+
+  // Remaining label rows (Snap, Default Width/Height): label LEFT, control RIGHT, like
+  // the Apply-to toggle rows. Direct children only (not the nested SizeInput wrappers).
+  .px-2 > label.input-container {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between !important;
+    text-align: left;
+    padding: 5px 0;
+    gap: 8px;
+    margin: 0;
+
+    > b {
+      font-size: 13px;
+      font-weight: 500;
+      color: #334155;
+      margin: 0;
+    }
+  }
+
+  // Number inputs (Snap x/y disabled, Default Width/Height): hide native spinners, keep
+  // disabled values legible (slate, not placeholder-gray), and left-align the value.
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+    text-align: left;
+
+    &::-webkit-inner-spin-button,
+    &::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    &:disabled {
+      color: #334155;
+      -webkit-text-fill-color: #334155;
+      opacity: 1;
+    }
+  }
+
+  // Default Width / Height capped at ~8 digits + comma. Forced width (not just max-width)
+  // + `flex: 0 0 auto` so the flex row cannot stretch it to full width.
+  .number-input-compact {
+    flex: 0 0 auto;
+    width: 110px !important;
+    max-width: 110px !important;
+    min-width: 0 !important;
+  }
+}

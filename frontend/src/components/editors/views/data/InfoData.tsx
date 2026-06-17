@@ -216,11 +216,12 @@ function InfoDataComponent(props: AllProps) {
                             data={view}
                             field={'edgeRouting'}
                             readOnly={readOnly}
-                            options={<>
-                                <option value={'manhattan-rounded'}>Manhattan (rounded)</option>
-                                <option value={'straight'}>Straight</option>
-                                <option value={'bezier'}>Bezier curve</option>
-                            </>}
+                            jjSelect={true}
+                            options={[
+                                { value: 'manhattan-rounded', label: 'Manhattan (rounded)' },
+                                { value: 'straight', label: 'Straight' },
+                                { value: 'bezier', label: 'Bezier curve' },
+                            ] as any}
                             getter={(d: LViewElement) => d.edgeRouting || 'manhattan-rounded'}
                             setter={(v: string) => { view.edgeRouting = v as any; }}
                         />
@@ -264,23 +265,14 @@ function InfoDataComponent(props: AllProps) {
                         data={view}
                         field={'forceNodeType'}
                         readOnly={readOnly}
-                        options={
-                            <>
-                                <option value={'unset'} key={-1}>Select appearance...</option>
-                                <optgroup label={'Graph'} key={0}>{
-                                    Object.keys(Graphs).map((key: string) => <option value={key} key={key}>{GraphElements[key].cname}</option>)
-                                }</optgroup>
-                                <optgroup label={'Edge'} key={1}>{
-                                    Object.keys(Edges).map((key: string) => <option value={key} key={key}>{GraphElements[key].cname}</option>)
-                                }</optgroup>
-                                <optgroup label={'Field'} key={3}>{
-                                    Object.keys(Fields).map((key: string) => <option value={key} key={key}>{GraphElements[key].cname}</option>)
-                                }</optgroup>
-                                <optgroup label={'Vertex'} key={2}>{
-                                    Object.keys(Vertexes).map((key: string) => <option value={key} key={key}>{GraphElements[key].cname}</option>)
-                                }</optgroup>
-                            </>
-                        }
+                        jjSelect={true}
+                        options={[
+                            { value: 'unset', label: 'Select appearance...' },
+                            { label: 'Graph', options: Object.keys(Graphs).map((key: string) => ({ value: key, label: GraphElements[key].cname })) },
+                            { label: 'Edge', options: Object.keys(Edges).map((key: string) => ({ value: key, label: GraphElements[key].cname })) },
+                            { label: 'Field', options: Object.keys(Fields).map((key: string) => ({ value: key, label: GraphElements[key].cname })) },
+                            { label: 'Vertex', options: Object.keys(Vertexes).map((key: string) => ({ value: key, label: GraphElements[key].cname })) },
+                        ] as any}
                         setter={(val, data, key) => { view.forceNodeType = val === 'unset' ? undefined : val; }}
                         getter={(data, key) => { return data[key] || 'unset'; }}
                     />
@@ -297,6 +289,7 @@ function InfoDataComponent(props: AllProps) {
                         field={'appliableToClasses'}
                         readOnly={readOnly}
                         isMultiSelect={true}
+                        jjSelect={true}
                         options={classesOptions as any}
                     />
                 </div>
@@ -311,13 +304,11 @@ function InfoDataComponent(props: AllProps) {
                         readOnly={readOnly}
                         data={view}
                         field={'father'}
+                        jjSelect={true}
                         getter={() => vpid}
-                    >
-                        <option value="">Select viewpoint...</option>
-                        {...dallVP.map((viewpoint) => (
-                            <option key={viewpoint.id} value={viewpoint.id}>{viewpoint.name}</option>
-                        ))}
-                    </Select>
+                        placeholder={'Select viewpoint...'}
+                        options={dallVP.map((viewpoint) => ({ value: viewpoint.id, label: viewpoint.name })) as any}
+                    />
                 </div>
 
                 {/* Parent view */}
@@ -330,12 +321,10 @@ function InfoDataComponent(props: AllProps) {
                         readOnly={readOnly}
                         data={view}
                         field={'father'}
-                    >
-                        <option value="">None</option>
-                        {...view.allPossibleParentViews.filter(v => v.viewpoint?.id === vpid).map((view) => (
-                            <option key={view.id} value={view.id}>{view.name}</option>
-                        ))}
-                    </Select>
+                        jjSelect={true}
+                        placeholder={'None'}
+                        options={[{ value: '', label: 'None' }, ...view.allPossibleParentViews.filter(v => v.viewpoint?.id === vpid).map((v) => ({ value: v.id, label: v.name }))] as any}
+                    />
                 </div>
 
                 {/* OCL Editor */}

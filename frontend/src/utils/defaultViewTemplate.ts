@@ -1,96 +1,19 @@
 /**
- * Default jsxString template per le view di default generate dai context menu
- * (vedi `createViewInWorkbench` e `LViewElement.newDefault`).
+ * FROZEN LEGACY (v2.3). The constant `DEFAULT_VIEW_JSX_V2_3_LEGACY` immediately below is the
+ * historical default template that embedded edge rendering (the `isEdge` top-level gate, the
+ * `--edge-fallback` branch) and the `length === 2` "edge-like" heuristic INSIDE the jsxString.
  *
- * Variante 2.3 — L2 isEdge support (sessione 2026-05-04, Fase 4).
+ * It is FROZEN and kept for ONE purpose: migration `'2.223 -> 2.224'` uses it (together with the
+ * marker `V2_3_TO_V3_DETECT_MARKER`) to detect and rewrite persisted v2.3 jsxStrings. Do not
+ * modify it and do not wire it into rendering.
  *
- * Tre rami di rendering controllati al top-level del jsxString:
- *
- *   A) view.isEdge=true ed entrambe le espressioni edge risolvibili:
- *      → ritorna `null`. L'overlay SVG (EdgeOverlay.tsx) disegna l'arco;
- *      la card non viene resa nel DOM. La gate IIFE in cima al template
- *      controlla questo caso e bypassa l'intero `<View>`.
- *
- *   B) view.isEdge=true ma almeno una espressione non risolvibile:
- *      → la card si renderizza con `--edge-like --edge-fallback`. Preview
- *      "S1 → ?" o "? → ?" segnala lo stato edge non collegato. T1 resta
- *      cliccabile per fix dal properties panel — niente user trap.
- *
- *   C) view.isEdge=false (default per progetti pre-L2 e per view non-edge):
- *      → comportamento "minimal clean" 2.2 invariato. Heuristic edge-like
- *      auto-rilevata su 2 reference (associative class binary).
- *
- * Design "Minimal clean" (caso C):
- *   - Nome dell'oggetto come titolo (Input field=name, editabile inline).
- *   - Pill cyan con il nome della classe (data.instanceof.name).
- *   - Smart preview "S1 → S2" per metaclasse con esattamente 2 reference.
- *   - Hint in basso "Customize this view" (nascosto via SCSS quando smart preview attivo).
- *
- * Heuristic edge-like (auto-rilevata): se la metaclasse ha esattamente
- * 2 reference, la card si renderizza compatta E mostra lo smart preview.
- *
- * Trade-off heuristic: falsi positivi su entity con esattamente 2 reference
- * (es. Person con friend + parent). La card appare compatta + preview
- * "John → Mary" anche se Person non è un'associative class. Accettato come
- * limite noto: l'estetica è "fuori contesto" ma funzionalmente nulla si rompe.
- * Distinzione corretta entity-vs-edge richiede campo `representation` esplicito
- * sulla DClass, materia del task strutturato di edge representation (backlog).
- *
- * Nota sull'evoluzione della heuristic: una versione precedente confrontava
- * anche `references[0].type === references[1].type` per restringere a casi
- * "self-loop" (es. Transition con source: State + target: State). Test runtime
- * su TUTTO con `source: Source` + `target: Target` (target classifier diversi)
- * ha mostrato che il proxy L non garantisce `===` su classi diverse, quindi
- * il check escludeva il caso. Rilassato a `length === 2` accettando i falsi
- * positivi sulle entity binary.
- *
- * VINCOLI DEL TEMPLATE ENGINE (verificati in canvas, sessione 2026-05-03/04):
- *   - NIENTE optional chaining `?.` — solo AND-chain esplicita.
- *   - NIENTE nullish coalescing `??` — solo ternary.
- *   - JSX nidificato dentro IIFE NON funziona — IIFE ritorna stringa o
- *     boolean, il `<div>` / `<View>` sta fuori.
- *   - L'espressione del `className` sul `<View>` deve stare su singola riga;
- *     spalmare il ternary su più linee causa `Unexpected token ')'` runtime.
- *   - `data['$' + name]` con `name` runtime FUNZIONA sul proxy L.
- *   - `data.instanceof.references` ritorna l'array delle reference proprie.
- *   - `var` per le variabili IIFE (no `let`/`const` per safety).
- *   - Top-level JS ternary `condition ? null : <View>...</View>` FUNZIONA
- *     (verificato sessione 2026-05-04 contro `graphElement.tsx:1376/1395/1526`:
- *     `null` è gestito pulito dal renderer, niente wrapper DOM residuo).
- *   - Carattere "→" scritto come `→` per safety encoding.
- *
- * Variabili runtime in scope:
- *   - `data` — LObject istanza M1 (può essere null).
- *   - `view` — LViewElement della DV corrente (espone view.isEdge,
- *     view.edgeSource, view.edgeTarget — campi L2 di Fase 1).
- *   - `windoww.evalEdgeExpression(data, expr)` — mini-evaluator L2 per
- *     edgeSource/edgeTarget (vedi `utils/edgeExpressionEval.ts`).
- *   - `decorators` — subview decorator nodes (caso non-exclusive).
- *
- * Naming collision attention: in scope esiste anche un flag locale `isEdge`
- * (boolean, "il nodo corrente è un edge?" — da EdgeOwnProps). Distinto da
- * `view.isEdge` (campo L2 della DV) grazie al prefisso `view.`. SEMPRE usare
- * `view.isEdge` quando si testa il nuovo schema, MAI `isEdge` bare.
- *
- * Lo styling vive in `frontend/src/styles/default-view.scss` (classe BEM
- * `.jjodel-default-view`, modifier `.jjodel-default-view--edge-like` e
- * `.jjodel-default-view--edge-fallback`). Stati interattivi (`:hover`,
- * `&.selected`, `&.selected-by-me`) sono gestiti dallo SCSS, non dal template.
- *
- * Visibilità di hint vs preview:
- *   - Il template renderizza SEMPRE entrambi i `<div>` (preview + hint).
- *   - Lo SCSS nasconde la preview di default; la mostra in modalità --edge-like.
- *   - Lo SCSS nasconde l'hint in modalità --edge-like e --edge-fallback.
- *   - L'IIFE preview ritorna '' (stringa vuota) quando non applicabile;
- *     in quel caso il div preview è block-vuoto ma non visibile (hidden by SCSS
- *     in modalità non-edge-like).
- *
- * Questa costante è importata da:
- *   - frontend/src/utils/lastViewpoint.ts (path 1A)
- *   - frontend/src/view/viewElement/view.tsx (path 1B)
- *   - frontend/src/redux/VersionFixer.tsx (migration 2.211 -> 2.212 e 2.213 -> 2.214)
+ * The ACTIVE default template is the simplified `DEFAULT_VIEW_JSX_STRING` further down. Edge
+ * rendering NO LONGER lives in any template: it is handled in TS BEFORE template evaluation —
+ * `graphElement.tsx` `renderView` resolves the two edge endpoint expressions and renders either
+ * `null` (the SVG overlay `EdgeOverlay.tsx` draws the arc) or a native `EdgeFallbackCard`
+ * (`components/edgeOverlay/EdgeFallbackCard.tsx`). The `length === 2` heuristic is removed entirely.
  */
-export const DEFAULT_VIEW_JSX_STRING: string = `(function(){
+export const DEFAULT_VIEW_JSX_V2_3_LEGACY: string = `(function(){
     if (!view) return false;
     if (view.isEdge !== true) return false;
     if (!windoww.evalEdgeExpression) return false;
@@ -128,6 +51,45 @@ export const DEFAULT_VIEW_JSX_STRING: string = `(function(){
         var tgtName2 = tgtAcc && tgtAcc.value && tgtAcc.value.name ? tgtAcc.value.name : '?';
         return srcName2 + ' → ' + tgtName2;
     }())}</div>
+    <div className={'jjodel-default-view__hint'}>Customize this view</div>
+    {decorators}
+</View>`;
+
+/**
+ * Substring unique to the v2.3 template: present in `DEFAULT_VIEW_JSX_V2_3_LEGACY`, absent from
+ * both the v2.2 template and the simplified v3 `DEFAULT_VIEW_JSX_STRING`. Consumed by migration
+ * `'2.223 -> 2.224'` to detect still-default v2.3 jsxStrings. Never modify.
+ */
+export const V2_3_TO_V3_DETECT_MARKER: string = 'jjodel-default-view--edge-fallback';
+
+/**
+ * Simplified v3 default template for context-menu Default views — consumed by
+ * `createViewInWorkbench` (`utils/lastViewpoint.ts`), `LViewElement.newDefault`
+ * (`view/viewElement/view.tsx`), and the `Defaults` map that `updateDefaultView` regenerates from,
+ * plus migration `'2.223 -> 2.224'` (rewrite target). Header (inline-editable name Input + type
+ * pill) + hint + decorators. NO edge logic: edge views are handled in TS before template
+ * evaluation (`graphElement.tsx` renderView -> `EdgeFallbackCard`); see the FROZEN LEGACY note above.
+ *
+ * TEMPLATE ENGINE CONSTRAINTS (still apply to anyone authoring a jsxString, verified 2026-05-03/04):
+ *   - no optional chaining `?.` — explicit AND-chains only.
+ *   - no nullish coalescing `??` — ternary only.
+ *   - JSX nested inside an IIFE does NOT work — an IIFE returns a string/boolean; the `<View>` stays outside.
+ *   - the `className` expression on `<View>` must stay on a single line.
+ *   - `data['$' + name]` with a runtime `name` works on the L proxy.
+ *   - `var` only inside IIFEs (no `let`/`const`).
+ *   - a top-level JS ternary `condition ? null : <View>...</View>` is handled cleanly by the renderer.
+ */
+export const DEFAULT_VIEW_JSX_STRING: string = `<View className={'root jjodel-default-view'}>
+    <div className={'jjodel-default-view__header'}>
+        {!data ? null :
+            <label className={'jjodel-default-view__name'}>
+                <Input data={data} field={'name'} hidden={true} autosize={true} placeholder={'unnamed'}/>
+            </label>
+        }
+        {!(data && data.instanceof && data.instanceof.name) ? null :
+            <span className={'jjodel-default-view__type'}>{data.instanceof.name}</span>
+        }
+    </div>
     <div className={'jjodel-default-view__hint'}>Customize this view</div>
     {decorators}
 </View>`;

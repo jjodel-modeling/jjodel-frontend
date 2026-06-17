@@ -35,6 +35,13 @@ export function PromptEditor({
     const source = PromptService.getPromptSource(type, projectId);
     const isCustomized = source !== 'default';
 
+    // Release notes: when this customization is based on an older default, list
+    // the changelog entries newer than the base the user customized.
+    const baseVersion = PromptService.getBaseVersion(type, projectId);
+    const newerChanges = PromptService.isDefaultUpdated(type, projectId) && baseVersion != null
+        ? PromptService.getChangelog(type).filter(e => e.version > baseVersion)
+        : [];
+
     // Handle content change
     const handleChange = useCallback((value: string) => {
         setContent(value);
@@ -134,6 +141,18 @@ export function PromptEditor({
                     </Button>
                 </div>
             </div>
+
+            {/* "What changed in the default" — only for an outdated customized prompt */}
+            {newerChanges.length > 0 && (
+                <div className="prompt-editor__changelog">
+                    <span className="prompt-editor__changelog-title">What changed in the default</span>
+                    <ul className="prompt-editor__changelog-list">
+                        {newerChanges.map(entry => (
+                            <li key={entry.version}>v{entry.version} — {entry.note}</li>
+                        ))}
+                    </ul>
+                </div>
+            )}
 
             {/* Editor / Preview */}
             <div className="prompt-editor__content">

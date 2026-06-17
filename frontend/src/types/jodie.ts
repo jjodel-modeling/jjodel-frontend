@@ -120,6 +120,25 @@ export function resolveLegacyModelId(provider: TAIProvider, modelId: string | un
     return map[modelId] ?? modelId;
 }
 
+/**
+ * True when `modelId` is a known model of `provider` (present in its version registry).
+ */
+export function isModelOfProvider(provider: TAIProvider, modelId: string | undefined): boolean {
+    return !!(modelId && AI[provider]?.versions?.[modelId]);
+}
+
+/**
+ * True when `modelId` clearly belongs to a DIFFERENT provider — absent from `provider`'s
+ * registry but present in some other provider's registry. Models that are in no registry
+ * (custom / user-pulled Ollama tags) are NOT considered foreign, so they stay usable.
+ * Used to block provider/model mismatches (e.g. an OpenAI "gpt-4o" model sent to Claude).
+ */
+export function isForeignModel(provider: TAIProvider, modelId: string | undefined): boolean {
+    if (!modelId) return false;
+    if (isModelOfProvider(provider, modelId)) return false;
+    return ALL_AI_PROVIDERS.some(p => p !== provider && !!AI[p]?.versions?.[modelId]);
+}
+
 @RuntimeAccessible('AI')
 export class AI{
     static cname = 'AI';
@@ -151,6 +170,10 @@ export class AI{
     endpoint!: string;
     proxy?: string;
     requiresKey: boolean = true;
+    /** Auth scheme for OpenAI-compatible request construction (consumed by
+     *  AIProviderService.chatOpenAICompatible / testOpenAICompatible). Default 'bearer'
+     *  (Authorization: Bearer). Claude uses 'x-api-key', Gemini 'query-key', Ollama 'none'. */
+    authScheme: 'bearer' | 'x-api-key' | 'query-key' | 'none' = 'bearer';
     // gui stuff
     color!: string;
     bgColor!: string;
@@ -356,6 +379,19 @@ AI.Groq.endpoint = 'https://api.groq.com/openai/v1/chat/completions';
 AI.Kimi.endpoint = 'https://api.moonshot.cn/v1/chat/completions';
 AI.Ollama.endpoint = 'http://localhost:11434/v1/chat/completions'; // Default local, configurable via baseUrl
 
+// Auth scheme per provider (registry-driven; read by the OpenAI-compatible transport in
+// AIProviderService). The 'bearer' assignments are explicit for clarity even though it is the
+// class default. Llama/Copilot are parked (no endpoint, not routed) and keep the default.
+AI.GPT.authScheme      = 'bearer';
+AI.DeepSeek.authScheme = 'bearer';
+AI.Mistral.authScheme  = 'bearer';
+AI.Groq.authScheme     = 'bearer';
+AI.Kimi.authScheme     = 'bearer';
+AI.Custom.authScheme   = 'bearer';
+AI.Claude.authScheme   = 'x-api-key';
+AI.Gemini.authScheme   = 'query-key';
+AI.Ollama.authScheme   = 'none';
+
 AI.GPT.bi_icon = 'openai'; // chat-dots bubble speech generic candidate
 AI.Claude.bi_icon = 'claude';
 AI.DeepSeek.bi_icon = 'robot'; // missing
@@ -478,7 +514,12 @@ export class AIConfig{
             if (!stored) return undefined;
             const pref: ProviderPreference = JSON.parse(stored);
             if (!pref.modelId) return undefined;
-            return resolveLegacyModelId(pref.providerId as TAIProvider, pref.modelId);
+            const resolved = resolveLegacyModelId(pref.providerId as TAIProvider, pref.modelId);
+            // Integrity guard: a stored modelId that belongs to a different provider than
+            // pref.providerId is a corrupted preference — ignore it so callers fall back to
+            // the provider's own default model (prevents a provider/model mismatch on send).
+            if (resolved && isForeignModel(pref.providerId as TAIProvider, resolved)) return undefined;
+            return resolved;
         } catch {
             return undefined;
         }
@@ -554,6 +595,44 @@ export class AIConfig{
             localStorage.setItem(SENTINEL_KEY, '1');
         } catch (e) {
             console.warn('[jodie] migrateLegacyModelIds failed:', e);
+        }
+    }
+
+    /**
+     * One-time sanitizer for already-corrupted per-feature preferences: drops any stored
+     * modelId that belongs to a different provider than its own pref.providerId (e.g. a
+     * "chat" pref left pointing at an OpenAI model under the Claude provider). Keeps the
+     * provider choice; the read path then falls back to that provider's own default model.
+     *
+     * Idempotent: only writes when it actually repairs something, so a clean install is a
+     * no-op and re-running finds nothing to fix. Never reads or writes provider credential
+     * storage (jjodie_provider_<name>) — it only touches jjodel_provider_<feature> prefs,
+     * which contain no API keys — so it can never drop a stored key. Logs one concise line
+     * when (and only when) it repairs at least one preference.
+     */
+    static sanitizeForeignFeatureModels(): void {
+        try {
+            const features: AIFeature[] = ['documentation', 'chat', 'scriptblock', 'mappings', 'explain'];
+            let repaired = 0;
+            for (const feature of features) {
+                const key = `${AI.STORAGE_PREFIX}${feature}`;
+                const raw = localStorage.getItem(key);
+                if (!raw) continue;
+                try {
+                    const pref: ProviderPreference = JSON.parse(raw);
+                    if (!pref.modelId) continue;
+                    const resolved = resolveLegacyModelId(pref.providerId as TAIProvider, pref.modelId) ?? pref.modelId;
+                    if (isForeignModel(pref.providerId as TAIProvider, resolved)) {
+                        delete pref.modelId; // keep providerId; never touches credential storage
+                        pref.updatedAt = Date.now();
+                        localStorage.setItem(key, JSON.stringify(pref));
+                        repaired++;
+                    }
+                } catch { /* skip malformed entries */ }
+            }
+            if (repaired > 0) console.info(`[jodie] sanitizeForeignFeatureModels: repaired ${repaired} mismatched per-feature model preference(s).`);
+        } catch (e) {
+            console.warn('[jodie] sanitizeForeignFeatureModels failed:', e);
         }
     }
 
@@ -699,6 +778,8 @@ export class JodieConfig {
         // Placed at the very start so they run regardless of which exit path load() takes.
         AIConfig.migrateGlobalDefaultToPerFeature();
         AIConfig.migrateLegacyModelIds();
+        // (3) Repair per-feature prefs whose modelId belongs to a different provider.
+        AIConfig.sanitizeForeignFeatureModels();
 
         let data: GObject<JodieConfig>;
         if (!json) json = localStorage.getItem(AI.STORAGE_GLOBAL_CONFIG);
@@ -817,9 +898,13 @@ export interface CodeEntry {
  * into types/jodie. Today they map 1:1.
  */
 export interface CodeWarning {
-    kind: 'undefined-identifier' | 'property-not-found';
+    kind: 'undefined-identifier' | 'property-not-found' | 'ambiguous-instance';
     identifier: string;
     suggestion: string | null;
+    /** ambiguous-instance only: number of pool instances sharing the name. */
+    count?: number;
+    /** ambiguous-instance only: a sample owning class name for the hint, or null. */
+    sampleClass?: string | null;
 }
 
 /** Anything that may appear in the unified Jjodie history. */

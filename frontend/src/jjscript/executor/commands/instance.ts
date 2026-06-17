@@ -232,6 +232,17 @@ export async function executeCreateInstance(
             true
         );
 
+        // Apply the explicit instance name to initialName as well. DObject.new always
+        // stamps initialName with the auto default (<Class>_<N>), and the M1 identity-slot
+        // value getter (LModelElement.tsx ~7280) surfaces initialName BEFORE data.name for an
+        // empty name:EString slot — so without this the quoted name is shadowed (displayed as
+        // <Class>_<N> and not addressable by findInstanceByName). Direct assignment mirrors
+        // DObject.new's own `ret.initialName = ...` write (no TRANSACTION — see §3.3).
+        // See docs/discovery/2026-06-12_create_instance_name_regression.md.
+        if (explicitInstanceName && dObject) {
+            (dObject as any).initialName = explicitInstanceName;
+        }
+
         if (!dObject?.id) {
             return {
                 success: false,
@@ -292,7 +303,7 @@ export async function executeDeleteInstance(
         };
     }
 
-    const instanceName = args.target.raw;
+    const instanceName = args.target.segments.join('::') || args.target.raw; // instance name from segments; raw may carry a dotted '.property' member (P0b)
     const lObject = findInstanceByName(targetModel, instanceName);
     if (!lObject) {
         return {
@@ -358,7 +369,7 @@ export async function executeRenameInstance(
         };
     }
 
-    const instanceName = args.target.raw;
+    const instanceName = args.target.segments.join('::') || args.target.raw; // instance name from segments; raw may carry a dotted '.property' member (P0b)
     const lObject = findInstanceByName(targetModel, instanceName);
     if (!lObject) {
         return {
@@ -387,6 +398,12 @@ export async function executeRenameInstance(
         try {
             TRANSACTION('JjScript: Rename instance', () => {
                 SetFieldAction.new(lObject, 'name', args.newName);
+                // Mirror the create fix: keep initialName in sync so the identity-slot
+                // fallback (initialName || data.name) does not shadow the new name when the
+                // name:EString slot is empty. SetFieldAction (not the set_name proxy setter)
+                // writes data.name only, so initialName must be updated explicitly.
+                // See docs/discovery/2026-06-12_create_instance_name_regression.md.
+                SetFieldAction.new(lObject, 'initialName', args.newName);
                 resolve({
                     success: true,
                     command: 'rename',
@@ -435,7 +452,7 @@ export async function executeSetInstance(
         };
     }
 
-    const instanceName = args.target.raw;
+    const instanceName = args.target.segments.join('::') || args.target.raw; // instance name from segments; raw may carry a dotted '.property' member (P0b)
     const lObject = findInstanceByName(targetModel, instanceName);
     if (!lObject) {
         return {

@@ -22,25 +22,20 @@ function FieldDataComponent(props: AllProps) {
         case 'GraphVertex': if (preferredDisplay !== 'Graph' || (preferredDisplay as any) !== 'Vertex') preferredDisplay = appliableTo; break;
         default: preferredDisplay = appliableTo; break;
     }
-    let graphElementOptions = <optgroup label={'Type of GraphElement'}>
-        <option>Any</option>
-        <option>Graph</option>
-        <option>GraphVertex</option>
-        <option>Vertex</option>
-        <option>Edge</option>
-        <option>EdgePoint</option>
-        <option>Field</option>
-    </optgroup>;
+    const graphElementOptions = [{
+        label: 'Type of GraphElement',
+        options: ['Any', 'Graph', 'GraphVertex', 'Vertex', 'Edge', 'EdgePoint', 'Field'].map(o => ({ value: o, label: o })),
+    }];
     return(<section className={'options-field'}>
         <h5>Field</h5>
-        <div>
-            <label className={'input-container'}>
-                <p>Applicable to:</p>
-                <Select data={view} field={'appliableTo'}
-                        options={graphElementOptions}
-                        getter={() => dview.appliableTo || 'Any'}
-                        setter={(v: string, data: DViewElement, field: string, )=>view.appliableTo = v as any} />
-            </label>
+        <div className={'jj-field'}>
+            <div className={'jj-field-label'}>Applicable to</div>
+            <Select data={view} field={'appliableTo'}
+                    readOnly={readOnly}
+                    jjSelect={true}
+                    options={graphElementOptions as any}
+                    getter={() => dview.appliableTo || 'Any'}
+                    setter={(v: string, data: DViewElement, field: string, )=>view.appliableTo = v as any} />
         </div>
     </section>);
 }

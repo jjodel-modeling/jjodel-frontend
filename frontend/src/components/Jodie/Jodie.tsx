@@ -89,9 +89,8 @@ export function Jodie(): JSX.Element {
     // Root ref used by the Cmd+J listener to detect "focus is inside Jjodie".
     const jodieRootRef = useRef<HTMLDivElement>(null);
 
-    // using state just for caching, so project is not re-computed.
+    // using state just for caching, so user/userName are not re-computed.
     const user = useMemo(()=> (L.fromPointer(DUser.current) as LUser), []);
-    const project = useMemo(()=> user.project, []);
     const userName = useMemo(() => `${user.name || ''} ${user.surname || ''}`.trim(), []);
     const activeVersion = useMemo(() => AI.getActiveVersion(activeProvider), [activeProvider]);
     const state = store.getState();
@@ -107,6 +106,11 @@ export function Jodie(): JSX.Element {
     // Get current project context for AI — reactive to redux state AND active editor changes.
     // Scoped to the metamodel relevant to the active artefact (M1 model or M2 metamodel).
     const projectContext = useMemo((): string | undefined => {
+        // Read the project live on every recomputation. A frozen []-deps memo
+        // here would capture a mount-time `undefined` (Jodie mounts before the
+        // project finishes loading), so the context would never reach the LLM.
+        // See docs/discovery/2026-06-12_prompt_render_bug.md (Q3, Fix 1).
+        const project = user.project;
         if (!project) return undefined;
         try {
             const activeModel = getActiveModel();
@@ -551,7 +555,7 @@ export function Jodie(): JSX.Element {
                 isWaiting: false,
             }));
         }
-    }, [activeProvider, chatState.messages, state.idlookup.clonedCounter /*this means projectContext changed*/, userName]);
+    }, [activeProvider, chatState.messages, state.idlookup.clonedCounter, projectContext, userName]);
 
     // Open settings - open unified settings modal at Providers section
     const handleOpenSettings = useCallback(() => {

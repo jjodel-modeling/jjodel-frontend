@@ -3639,3 +3639,44 @@ html[data-theme="dark"] {
   //
   // Toggle rows keep their `.jj-toggle-row { padding: 5px 0 }` baseline.
 }
+
+// ============================================================================
+// Issue 6 (2026-06-12) — entity-style header for the View Properties panel,
+// homogeneous with the metaclass `.props-header`. `.view-entity-header` is a SECOND
+// class on the existing `.view-editor-header` wrapper (kept so the dock sibling
+// selector `.view-editor-header + .dock-layout` in DockManagerStyles.scss still
+// matches). Row 1 reuses the global `.props-header*` classes (info-improvements.scss,
+// loaded by the Info host); row 2 is a light-blue band hosting the existing `.path-list`.
+// Badge `--view/--viewpoint` modifiers are defined here (additive — the global
+// `_form-system.scss` badge file is NOT touched).
+// ============================================================================
+.view-editor-header.view-entity-header {
+  display: flex !important;
+  flex-direction: column;
+  align-items: stretch;
+  margin: 0 !important;        // override the base .view-editor-header inner-page margins
+  padding: 0;
+  width: 100%;
+}
+
+// Row 2 — light-blue breadcrumb band; re-hosts the existing .path-list left-aligned
+// ((0,4,0) beats the base `.view-editor-root .view-editor-header .path-list` (0,3,0)).
+.view-editor-header.view-entity-header .view-header-breadcrumb-band {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  background: #f0f9ff;                 // cyan-50 — light-blue band
+  border-bottom: 1px solid #e0f2fe;    // cyan-100
+
+  .path-list {
+    display: inline-flex !important;
+    float: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}
+
+// VIEW / VIEWPOINT type badge — same visual language as `.jj-type-badge--*`;
+// colors mirror the prior `.breadcrumb-type-badge` slate / violet.
+.jj-type-badge--view { background: rgba(71, 85, 105, 0.1); color: #475569; }
+.jj-type-badge--viewpoint { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }

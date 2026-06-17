@@ -147,7 +147,32 @@ export type JjelWarning =
         identifier: string;
         /** Closest available property name within Levenshtein distance ≤ 3, or null. */
         suggestion: string | null;
+    }
+    | {
+        kind: 'ambiguous-instance';
+        /** The M1 instance name shared by 2+ pool instances (intentionally unbound). */
+        identifier: string;
+        /** How many pool instances share this name. */
+        count: number;
+        /** A sample owning class name for the qualified-form hint, or null. */
+        sampleClass: string | null;
+        /** No Levenshtein suggestion for this kind; null for shape parity. */
+        suggestion: string | null;
     };
+
+/**
+ * Reserved key under which `buildEvalContext` passes the M1 instance-name
+ * ambiguity map (name -> { count, sampleClass }) inside the initial bindings.
+ * The `EvaluationContext` constructor lifts it into `ambiguousInstances` and
+ * does NOT expose it as a user-visible variable.
+ */
+export const AMBIGUOUS_INSTANCES_KEY = '__ambiguousInstances';
+
+/** Per-name ambiguity info for the qualified-form pedagogical warning. */
+export interface AmbiguousInstanceInfo {
+    count: number;
+    sampleClass: string | null;
+}
 
 // ============================================
 // EVALUATION CONTEXT
@@ -167,6 +192,13 @@ export class EvaluationContext {
      * the sink. `undefined` means: don't collect — back to silent-null.
      */
     diagnostics?: JjelWarning[];
+    /**
+     * M1 instance names that are ambiguous (shared by 2+ pool instances) and so
+     * left unbound. Consulted by the evaluator on a resolution miss to emit a
+     * pedagogical 'use the qualified form' warning. Lifted from the reserved
+     * `AMBIGUOUS_INSTANCES_KEY` binding at construction; inherited by children.
+     */
+    ambiguousInstances?: Map<string, AmbiguousInstanceInfo>;
 
     constructor(
         initialBindings?: Record<string, JjelValue>,
@@ -176,7 +208,10 @@ export class EvaluationContext {
         this.pushScope();
 
         if (initialBindings) {
+            const ambig = (initialBindings as Record<string, unknown>)[AMBIGUOUS_INSTANCES_KEY];
+            if (ambig instanceof Map) this.ambiguousInstances = ambig as Map<string, AmbiguousInstanceInfo>;
             for (const [name, value] of Object.entries(initialBindings)) {
+                if (name === AMBIGUOUS_INSTANCES_KEY) continue;
                 this.set(name, value);
             }
         }
@@ -238,6 +273,8 @@ export class EvaluationContext {
         child.builtins = this.builtins;
         // Propagate the same diagnostics sink reference to nested evaluations.
         child.diagnostics = this.diagnostics;
+        // Propagate the ambiguity map so warnings fire inside forall/lambda scopes.
+        child.ambiguousInstances = this.ambiguousInstances;
         child.pushScope();
 
         if (bindings) {

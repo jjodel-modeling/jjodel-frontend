@@ -71,6 +71,8 @@ import {ShowContextMenu} from "../../components/contextMenu/ContextMenu";
 import { compareUsageDeclarations } from "../../utils/UDComparator";
 import { PerformanceMetrics } from "../../utils/PerformanceMetrics";
 import { checkVisibility, getViewportFromGraph, shouldEnableCulling, getCullingStats } from "../../utils/ViewportCulling";
+import { evalEdgeExpression } from "../../utils/edgeExpressionEval";
+import { EdgeFallbackCard } from "../../components/edgeOverlay/EdgeFallbackCard";
 
 const ext_on = "class-can-be-extended";
 const ext_off = "class-cannot-be-extended";
@@ -1398,7 +1400,17 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
 
         if (isMainView) context.decorators = otherViews;
         let rnode: ReactNode;
-        try { rnode = this.getTemplate3(vid, v, context); }
+        // L2 (Phase 2A) — isEdge rendering moved out of the default jsxString into TS. For an edge
+        // view, resolve both endpoint expressions here: both resolved -> null (EdgeOverlay draws the
+        // arc; the prop-injection guard below then skips the card, exactly as the v2.3 template's
+        // top-level `? null :` did, reaching the null path identically); at least one unresolved ->
+        // a native EdgeFallbackCard. Non-edge views keep the exact prior template path unchanged.
+        if (v.isEdge === true && props.data) {
+            const srcL = evalEdgeExpression(props.data, v.edgeSource);
+            const tgtL = evalEdgeExpression(props.data, v.edgeTarget);
+            rnode = (srcL && tgtL) ? null : <EdgeFallbackCard data={props.data} srcL={srcL} tgtL={tgtL} decorators={otherViews} />;
+        }
+        else try { rnode = this.getTemplate3(vid, v, context); }
         catch (e: any) {
             console.debug("[renderView] error get template:", {e, dv, tnv});
             // rnode = undefined as any;
