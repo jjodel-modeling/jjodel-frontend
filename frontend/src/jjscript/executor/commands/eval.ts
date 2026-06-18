@@ -125,6 +125,25 @@ export function buildEvalContext(context: ExecutionContext): Record<string, Jjel
         if (typeof cName === 'string' && cName) classByName.set(cName, classJjelValues[i]);
     }
 
+    // Option C linking pass (Gate 2): resolve each shell's supertype NAMES to the
+    // SHARED class shells registered in classByName, and wire the inverse subTypes.
+    // Runs after classByName is complete so identity holds — superTypes/subTypes
+    // entries are the exact instances in `classes`, which the evaluator's
+    // identity-based closures (getAllSuperclasses/getAllSubclasses) depend on.
+    for (const shell of classJjelValues) {
+        const names = (shell as any).__superTypeNames as string[] | undefined;
+        if (!names) continue;
+        const supers: JjelValue[] = [];
+        for (const nm of names) {
+            const superShell = classByName.get(nm);
+            if (!superShell) continue;   // cross-package / primitive: skip, never push null
+            supers.push(superShell);
+            ((superShell as any).subTypes as JjelValue[]).push(shell);
+        }
+        (shell as any).superTypes = supers;
+    }
+    for (const shell of classJjelValues) delete (shell as any).__superTypeNames;
+
     const allInstancesJjel: JjelValue[] = rawM1Objects.map((o) => shallowObjectToJjelValue(o, classByName));
     variables['instances'] = allInstancesJjel;
 
@@ -351,13 +370,18 @@ function shallowClassToJjelValue(cls: any): JjelValue {
         className
     }));
 
-    // Read superclass names
-    const superTypes: string[] = [];
+    // Read superclass names. Option C: these names are resolved to the SHARED
+    // class shells by the linking pass in buildEvalContext (which runs after
+    // classByName exists, see Gate 2 of
+    // docs/discovery/2026-06-17_jjel_supertypes_fix_gates.md). They are stashed
+    // on the transient __superTypeNames field here; the pass consumes it and
+    // deletes it so it never surfaces in the value inspector.
+    const superTypeNames: string[] = [];
     try {
         const supers = cls.extends || cls.extend || cls.superClasses || [];
         for (const s of supers) {
-            if (typeof s === 'string') superTypes.push(s);
-            else if (s?.name) superTypes.push(s.name);
+            if (typeof s === 'string') superTypeNames.push(s);
+            else if (s?.name) superTypeNames.push(s.name);
         }
     } catch { /* proxy access can fail */ }
 
@@ -378,7 +402,13 @@ function shallowClassToJjelValue(cls: any): JjelValue {
         attributes,
         references,
         operations,
-        superTypes,
+        // Option C: superTypes/subTypes hold SHARED class shells (navigable
+        // objects), wired by the buildEvalContext linking pass. Empty until then.
+        // __superTypeNames is the transient name list that pass consumes, then
+        // deletes so it never surfaces in the value inspector.
+        superTypes: [] as JjelValue[],
+        subTypes: [] as JjelValue[],
+        __superTypeNames: superTypeNames,
         // Populated by buildEvalContext post-pass. Empty here so that nested
         // contexts (e.g. project.metamodels[*].classes) that build classes in
         // isolation get a consistent shape without paying for instance enumeration.
