@@ -203,8 +203,11 @@ export class Dummy {
                         lObj[field] = newList;*/
                         break;
 
-                    case 'instanceof': // all elements being instance of a removed element are also removed
-                        lObj.delete();
+                    case 'instanceof': // orphan DObject instances (C.3); delete other instanceof dependents (DValue slots)
+                        if (dObj.className === 'DObject')
+                            SetFieldAction.new(dObj.id, 'instanceof', '', '', true);  // orphan: clear instanceof, do not delete
+                        else
+                            lObj.delete();
                         break;
                     case 'model':
                         // pkg.model --> deleted element should delete but i ignore because is already removed through children
