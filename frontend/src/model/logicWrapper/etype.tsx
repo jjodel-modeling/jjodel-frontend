@@ -1,6 +1,14 @@
 import {
-    Pointer, DClassifier, LClassifier, Pointers, U, Dictionary, GObject, L, LModel, LClass, DClass, LEnumerator,
-    DEnumerator, EcoreParser, LValue,
+    Pointer,
+    Dictionary,
+    GObject,
+    LogicContext,
+    Info, DPointerTargetable, DOperation
+} from "../../joiner";
+import {
+    DClassifier, LClassifier, Pointers, U, L, LModel, LClass, DClass, LEnumerator,
+    LModelElement,
+    DEnumerator, EcoreParser, LValue, AttribETypes, RuntimeAccessible, Uobj, TRANSACTION, SetFieldAction,
 } from "../../joiner";
 
 // ------------------------------------------------------------------
@@ -8,7 +16,7 @@ import {
 // Handles: T, Foo, Foo<A,B>, ?, ? extends A & B, ? super A,
 //          A & B (intersection), T[], (Foo<A>)[]
 // ------------------------------------------------------------------
-export class GenericTypeParser {
+class GenericTypeParser {
     private pos: number = 0;
 
     constructor(
@@ -173,8 +181,10 @@ type String = DClassifier;
 
 export type GenericTypeName = string;
 export type TYPE =  Pointer<DClassifier> | GenericTypeName; // pointer or string like "T", because i can have stuff like K extends V
+@RuntimeAccessible("GenericType")
 export class GenericType {
-    kind: "raw" | "parameterized" | "typeParam" | "wildcard" | "intersection" | "array";
+    static cname = "GenericType";
+    kind: "raw" | "parameterized" | "typeParam" | "wildcard" | "intersection" | "array" | "todo";
     name?: GenericTypeName;
     classifier?: TYPE;
     typeArgs: GenericType[];
@@ -182,6 +192,81 @@ export class GenericType {
     lower: (TYPE | GenericType)[];
     operands: GenericType[];
     componentType?: GenericType;
+
+
+    // validate and fix a tentative object received through API
+    private static PointerOrName<T extends DPointerTargetable>(v: any, allowGenericType = false): string | Pointer<T> | undefined {
+        if (!v) return undefined;
+        let tv = typeof v;
+        if (tv === "object") return Pointers.from(v) || (allowGenericType ? GenericType.getter(v) : undefined);
+        if (tv === "string") return v;
+        return undefined;
+    }
+
+    public static desc: Info = {type: "GenericType", txt: "Type parameters used to extend a superclass or create an object whose class have generic typings."}
+    public static descArr: Info = {type: "GenericType[]", txt: GenericType.desc.txt }
+    public static descTypeParameters: Info = {type: "TypeDeclaration[]", txt: "Type parameters attached to the classifier, like in HashMap<K, V>"}
+    public static getter(v?: Partial<GenericType>): GenericType | undefined{
+        if (!v || !v.kind || typeof v.kind !== "string") return undefined;
+        let ret = new GenericType(v.kind);
+        ret.name = typeof v.name === "string" && v.name ? v.name : undefined;
+        ret.classifier = this.PointerOrName<DClass>(v.classifier);
+        ret.upper = (v.upper || []).map<GenericType | TYPE>(e=> GenericType.PointerOrName(e, true) as any).filter(e=>!!e);
+        ret.lower = (v.lower || []).map<GenericType | TYPE>(e=> GenericType.PointerOrName(e, true) as any).filter(e=>!!e);
+        ret.operands = (v.operands || []).map(e=> GenericType.getter(e)).filter(e=>!!e);
+        ret.typeArgs = (v.typeArgs || []).map(e=> GenericType.getter(e)).filter(e=>!!e);
+        ret.componentType = GenericType.getter(v.componentType);
+
+        return ret;
+    }
+
+    public static setter(v: GenericType | undefined, c: LogicContext<any>, thiss: LModelElement): boolean {
+        v = GenericType.getter(v);
+        let old  = GenericType.getter(c.data.genericType);
+        let delta = old && v && Uobj.objectDelta(old, v, true, false);
+        if (delta && Object.keys(delta).length === 0) return true;
+        TRANSACTION((thiss as any).get_name(c)+".genericType", ()=> {
+            if (v) SetFieldAction.new(c.data, "genericType", delta, "+=", false);
+            else SetFieldAction.new(c.data, "genericType", undefined, '', false);
+        }, delta ? delta : old, delta ? undefined : (old ? v : null))
+        return true;
+    }
+
+    public static getter_typeParametersArr(v?: Partial<TypeDeclaration>[]): TypeDeclaration[] | undefined {
+        if (!v) return undefined;
+        if (!Array.isArray(v)) v = [v];
+        v.map(e=> GenericType.getter_typeParameters(e)).filter(e=>!!e);
+    }
+
+    public static getter_typeParameters(v?: Partial<TypeDeclaration>): TypeDeclaration | undefined {
+        if (!v) return undefined;
+        let ret = new TypeDeclaration();
+        if (v.name && typeof v.name === "string") ret.name = v.name;
+        else return undefined;
+        ret.defaultType = GenericType.PointerOrName(v?.defaultType);
+        ret.upper = (v.upper || []).map<GenericType | TYPE>(e=> GenericType.PointerOrName(e, true) as any).filter(e=>!!e);
+        ret.lower = (v.lower || []).map<GenericType | TYPE>(e=> GenericType.PointerOrName(e, true) as any).filter(e=>!!e);
+        let dir = typeof v.direction === "string" ? v.direction.toLowerCase() : undefined;
+        switch (dir) {
+            case "in":
+            case "out":
+            case "inout": ret.direction = dir; break;
+            default: break;
+        }
+        return ret;
+    }
+
+    public static setter_typeParameters(v: Partial<TypeDeclaration>[] | undefined, c: LogicContext<DClass | DOperation>, thiss: LModelElement): boolean {
+        let old = GenericType.getter_typeParametersArr(c.data.typeParameters);
+        v = GenericType.getter_typeParametersArr(v);
+        let delta = old && v?.length && Uobj.objectDelta(old, v, true, false);
+        if (delta && Object.keys(delta).length === 0) return true;
+        TRANSACTION((thiss as any).get_name(c)+".typeParameters", ()=> {
+            if (v) SetFieldAction.new(c.data, "typeParameters", delta as any, "+=", false);
+            else SetFieldAction.new(c.data, "typeParameters", undefined, '', false);
+        }, delta ? delta : old, delta ? undefined : (old ? v : null))
+        return true;
+    }
 
 
     constructor(
@@ -206,7 +291,7 @@ export class GenericType {
     // ------------------------------------------------------------------
     // Helper: extract a display name from a TYPE (Pointer or plain string)
     // ------------------------------------------------------------------
-    static classifierName(t: TYPE, defaultRet: string = ""): string {
+    private static classifierName(t: TYPE, defaultRet: string = ""): string {
         let tt = typeof t;
         if (tt === "object") return (t as any as LClassifier)?.name || defaultRet;
         if (tt === "string") {
@@ -225,7 +310,12 @@ export class GenericType {
     //   intersection:  "A & B & C"
     //   array:         "T[]", "List<T>[]"
     // ------------------------------------------------------------------
-    static serialize(o0: GenericType | TYPE ): string {
+    static serializeDict(o: Dictionary<TYPE, GenericType>): string {
+        return Object.values(o).map( e => GenericType.serializeJOM(e)).join(", ");
+    }
+
+    public static serializeEcore(type: EGenericType, m: LModel, asID = true){ return serializeGenericType(type, m, asID); }
+    public static serializeJOM(o0: GenericType | TYPE): string {
         if (typeof o0 === "string") {
             if (Pointers.isPointer(o0)) return L.from(o0)?.name || "";
             return o0;
@@ -242,7 +332,7 @@ export class GenericType {
                 if (!o.classifier) throw new Error("parameterized GenericType missing classifier");
                 const base = GenericType.classifierName(o.classifier);
                 if (o.typeArgs.length === 0) return base;
-                const args = o.typeArgs.map(GenericType.serialize).join(", ");
+                const args = o.typeArgs.map(GenericType.serializeJOM).join(", ");
                 return `${base}<${args}>`;
             }
 
@@ -254,12 +344,12 @@ export class GenericType {
             case "wildcard": {
                 // upper and lower are mutually exclusive in practice
                 if (o.upper.length > 0) {
-                    const bounds = o.upper.map(GenericType.serialize).join(" & ");
+                    const bounds = o.upper.map(GenericType.serializeJOM).join(" & ");
                     return `? extends ${bounds}`;
                 }
                 if (o.lower.length > 0) {
                     // Java only allows a single lower bound but we stay general
-                    const bounds = o.lower.map(GenericType.serialize).join(" & ");
+                    const bounds = o.lower.map(GenericType.serializeJOM).join(" & ");
                     return `? super ${bounds}`;
                 }
                 return "?";
@@ -267,12 +357,12 @@ export class GenericType {
 
             case "intersection": {
                 if (o.operands.length === 0) throw new Error("intersection GenericType has no operands");
-                return o.operands.map(GenericType.serialize).join(" & ");
+                return o.operands.map(GenericType.serializeJOM).join(" & ");
             }
 
             case "array": {
                 if (!o.componentType) throw new Error("array GenericType missing componentType");
-                const inner = GenericType.serialize(o.componentType);
+                const inner = GenericType.serializeJOM(o.componentType);
                 // Wrap parameterized/intersection in parens for clarity, e.g. (Map<K,V>)[]
                 const needsParens = o.componentType.kind === "parameterized"
                     || o.componentType.kind === "intersection";
@@ -285,11 +375,10 @@ export class GenericType {
     }
 
     // ------------------------------------------------------------------
-    // PARSE
     // Parses the same format produced by serialize().
     // Entry point: parse("Map<String, List<? extends Foo>>")
     // ------------------------------------------------------------------
-    static parse(s: string,
+    public static parse(s: string,
                  classes: LClass[] & Dictionary<string, LClass>,
                  enums: LEnumerator[] & Dictionary<string, LEnumerator>): GenericType {
         const trimmed = s.trim();
@@ -297,6 +386,7 @@ export class GenericType {
         return parser.parseRef();
     }
 }
+
 // A type parameter declaration (the <T extends ...> part in a class or function header)
 
 
@@ -387,18 +477,23 @@ class ECoreGenericType {
 
     // A wildcard has neither eClassifier nor eTypeParameter
 }
-function normalizeEcoreKeys(go: GObject, deep = true): GObject{
+function normalizeEcoreKeys<T extends GObject>(go: T, deep = true): T{
     go = {...go};
-    for (let k in go) {
-        let v = go[k];
-        delete go[k];
-        k = k.toLowerCase();
-        if (k[0] === EcoreParser.XMLinlineMarker) k = k.substring(1);
+    for (let k0 in go) {
+        if (typeof k0 !== "string") continue;
+        let v = go[k0];
+        delete go[k0];
+        let ks = k0 as string & keyof T;
+        ks = ks.toLowerCase();
+        if (ks[0] === EcoreParser.XMLinlineMarker) ks = ks.substring(1);
         if (deep && v && typeof v === "object") {
-            if (Array.isArray(v)) v = v.map(e=> normalizeEcoreKeys(e));
+            if (Array.isArray(v)) v = v.map((e: unknown)=> {
+                if (!e || typeof e !== "object") return e;
+                return normalizeEcoreKeys(e);
+            });
             else v = normalizeEcoreKeys(v);
         }
-        go[k] = v;
+        go[ks] = v;
     }
     return go;
 }
@@ -419,25 +514,6 @@ interface XmiGenericTypeJson {
 //////    parser start
 
 
-
-
-
-
-
-
-
-
-// ------------------------------------------------------------------
-// STEP 1 — XMI JSON → Java string
-// ------------------------------------------------------------------
-
-function xmiToJavaSsx(
-    node: XmiGenericTypeJson,
-    resolveClassifier: ClassifierResolver,
-    resolveTypeParam: (path: string) => string,  // resolves "../0/Container/0" → "T"
-): JSX.Element | null{
-    return xmiToJavaString(node, resolveClassifier, resolveTypeParam, "jsx") as any;
-}
 
 
 let test = [
@@ -519,15 +595,23 @@ type EUpperBound = EGenericType;
 type ELowerBound = EGenericType;
 
 // Structural application
-class ETypeParameter { // K extends ...
+export class ETypeParameter { // K extends ...
     name!: string;
     ebounds!: EBound[];
 }
+export class TypeDeclaration {
+    name!: string;
+    upper!: (GenericType | TYPE)[];
+    lower!: (GenericType | TYPE)[];
+    direction!: "in" | "out" | "inout"; // also called variance: Input (contravariant) or an Output (covariant).
+    defaultType?: Pointer<DClassifier> | TypeDeclaration;
+}
+
 // ? type TypeDecl = EGenericType;
 // ? type TypeFill = ETypeParameter;
 
 
-class EGenericType{
+class EGenericType {
     elowerbound?: ELowerBound;
     eupperbound?: EUpperBound;
     etypearguments?: ETypeArgument[]; // containment, assign a value to a generic type, can only appear to fill slots in extending a egenericsupertype
@@ -536,7 +620,7 @@ class EGenericType{
     eclassifier?: string | Pointer<DClassifier>; // mutually exclusive with etypeparameter
     // SINGLE type used for typing features with a generic type, like: class Tree<T>{ public node:T }
     // etypeparameter is mutually exclusive with eclassifier
-    etypeparameter?: Pointer</*ETypeParameter*/>; // actually a string, ecore style pointer to ETypeParameter!
+    etypeparameter?: Pointer<any/*ETypeParameter*/>; // actually a string, ecore style pointer to ETypeParameter!
 }
 // public class Repository<T extends Number> extends AbstractData<T, String> { }
 //                         T = ETypeParameter declaration,
@@ -569,31 +653,17 @@ interface EcoreClassJSON {
     egenericsupertypes?: EGenericSuperTypes[]; // only references, assign a value to a eTypeParameter.
     // class can only do it when extending, like: class C extends List<String>{}
 }
-export function serializeEcoreToJava(
-    arr: ETypeParameter[],
-    resolveClassifier: ResolveClassifierFn
-): string {
-    if (!arr?.length) return "";
-    return arr.map((param) => {
-            let paramStr = param.name || "";
-
-            // Check if the parameter has an upper bound (extends clause)
-            if (param.ebounds) {
-                const boundStr = param.ebounds.map(b=>serializeGenericType(b, resolveClassifier));
-                if (boundStr) {
-                    paramStr += ` extends ${boundStr}`;
-                }
-            }
-            return paramStr;
-        }).join(", ")
-}
-
 
 function resolveClassifier(s: string, m: LModel): LClassifier | null{
+    // as ecore primitive
+    let ptr = U.solveEcoreType(s, true);
+    if (ptr) return L.from(ptr) || null;
     if (Pointers.isPointer(s)) return L.from(s) || null;
     else return LValue.resolveReference(s, m) as any || null;
 }
-function resolveClassifierName(s: string, m: LModel, asID: boolean = true): string | null{
+
+function resolveClassifierName(s: string, m: LModel, asID: boolean = true): string | null {
+    // as class eid
     let lc =  resolveClassifier(s, m);
     let fallbackRet = null;
     if (lc && typeof lc === "object") return lc[asID ? "id" : "name"] || fallbackRet;
@@ -603,12 +673,29 @@ function resolveClassifierName(s: string, m: LModel, asID: boolean = true): stri
     return fragment.split("/").pop() || fallbackRet;
 }
 
+export function serializeETypeParameter(arr: ETypeParameter[], m: LModel, asID: boolean = true ): string | null {
+    const fallback = null;
+    arr = normalizeArray(arr);
+    if (!arr?.length) return fallback;
+    return arr.map((param) => {
+        let paramStr = param.name || fallback;
+
+        // Check if the parameter has an upper bound (extends clause)
+        if (param.ebounds) {
+            const boundStr = normalizeArray(param.ebounds).map(b=>serializeGenericType(b, m, asID) || fallback).join( " & ");
+            if (boundStr) paramStr += ` extends ${boundStr}`;
+        }
+        return paramStr;
+    }).join(", ")
+}
+
 /**
  * Helper function to recursively serialize ebounds / etypearguments GObjects.
  */
-function serializeGenericType(gType: EBound, m: LModel, asID: boolean = true): string | null {
+export function serializeGenericType(gType: EBound, m: LModel, asID: boolean = true): string | null {
     const fallback = null;
     if (!gType) return fallback;
+    gType = normalizeEcoreKeys(gType);
 
     // NB: eclassifier and etypeparameter are mutually exclusive: (public next: List) vs (public next: T)
     // Case 1: The generic type points to a concrete classifier (e.g., #//List)
@@ -617,9 +704,9 @@ function serializeGenericType(gType: EBound, m: LModel, asID: boolean = true): s
         // if (!baseName) return fallback;
         // If it has nested type arguments (e.g., List<B>), process them recursively
         let args: string = "";
-        if (gType.etypearguments && gType.etypearguments.length > 0) {
-            args = gType.etypearguments
-                .map((arg) => serializeGenericType(arg, m, asID) || fallback)
+        let arr = normalizeArray(gType.etypearguments);
+        if (arr && arr.length > 0) {
+            args = arr.map((arg) => serializeGenericType(arg, m, asID) || fallback)
                 .join(", ");
         }
         return baseName + (args.length ? `<${args}>` : "");
@@ -638,6 +725,51 @@ function serializeGenericType(gType: EBound, m: LModel, asID: boolean = true): s
     return "?";
 }
 
+let windoww = window as any;
+windoww.serializeGenericType = serializeGenericType;
+windoww.serializeETypeParameter = serializeETypeParameter;
+windoww.test = test;
+setTimeout(()=>{
+
+windoww.jsonn = windoww.XMI.toJSON(`<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="generics_example" nsURI="http://www.example.org/generics_example"
+    nsPrefix="generics_example">
+  
+  <!-- Example of ETypeParameter definition on an EClass -->
+  <eClassifiers xsi:type="ecore:EClass" name="Repository">
+    <eTypeParameters name="T"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="elements" upperBound="-1">
+      <!-- Example of EGenericType referencing an ETypeParameter -->
+      <eGenericType eTypeParameter="#//Repository/T"/>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- Example of EClass that binds a specific type to a generic class using EGenericType -->
+  <eClassifiers xsi:type="ecore:EClass" name="StringRepository" eSuperTypes="#//Repository">
+    <eGenericSuperTypes eClassifier="#//Repository">
+      <!-- Example of EGenericType specifying the type argument for the super type -->
+      <eTypeArguments eClassifier="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eGenericSuperTypes>
+
+  </eClassifiers>
+
+  <!-- Example of ETypeParameter definition on an EOperation -->
+  <eClassifiers xsi:type="ecore:EClass" name="UtilityContainer">
+    <eOperations name="transform" upperBound="-1">
+      <eTypeParameters name="E"/>
+      <!-- The operation returns a list of E generic types -->
+      <eGenericType eTypeParameter="#//UtilityContainer/transform/E"/>
+      <eParameters name="input" upperBound="-1">
+        <!-- The operation accepts a list of E generic types -->
+        <eGenericType eTypeParameter="#//UtilityContainer/transform/E"/>
+      </eParameters>
+    </eOperations>
+  </eClassifiers>
+
+</ecore:EPackage>
+`);
+}, 1000);
 // c
 /*
 function xmiToJavaString(
@@ -865,7 +997,8 @@ class ScopedGenericTypeParser {
     }
 
     private parseIdentifier(): string {
-        const match = /^[A-Za-z_$][A-Za-z0-9_$]*//*.exec(this.input.slice(this.pos));
+        const match = /^[A-Za-z_$][A-Za-z0-9_$]*/
+/*.exec(this.input.slice(this.pos));
         if (!match) return "";
         this.pos += match[0].length;
         return match[0];
@@ -908,162 +1041,9 @@ class ScopedGenericTypeParser {
 
 
 
-/* OLD APPROACH */
-
-
-
-
-
-
-
-
-// ------------------------------------------------------------------
-// Entry point
-// ------------------------------------------------------------------
-
-function xmiGenericTypeToRef(
-    node: XmiGenericTypeJson,
-    resolve: ClassifierResolver,
-    m2: LModel,
-    scopeTypeParams: Set<string> = new Set(),
-): GenericType | null{
-
-    const classifierRef = node[ECoreGenericType.eclassifier];
-    const typeParamRef  = node[ECoreGenericType.etypeparameter];
-    const typeArgs  = normalizeArray(node[ECoreGenericType.etypearguments]);
-    const bounds    = normalizeArray(node[ECoreGenericType.ebounds]);
-
-    // ----------------------------------------------------------------
-    // 1. typeParam — explicit eTypeParameter reference
-    //    e.g. <eGenericType eTypeParameter="../0/Container/0"/>
-    //    Java: class Container<T>
-    // ----------------------------------------------------------------
-    if (typeParamRef !== undefined) {
-        // The last path segment is the index; we recover the name from
-        // scopeTypeParams if available, otherwise store the raw path.
-        if (Pointers.isPointer(typeParamRef)) {
-            return new GenericType("typeParam", typeParamRef);
-        }
-        else {
-            /*PROBLEM: it could also point to a generic type instead of a class.... like
-            <eClassifiers xsi:type="ecore:EClass" name="Container">
-              <!-- declaration: index 0 on Container, name is "T" -->
-              <eTypeParameters name="T"/>
-              <!-- use-site: the field "value" has type T -->
-              <eStructuralFeatures xsi:type="ecore:EReference" name="value">
-                <eGenericType eTypeParameter="../0/Container/0"/>
-                <!--                          ^    ^         ^
-                                              |    |         position 0 = first eTypeParameter
-                                              |    Container = the owning class
-                                              ../0 = the EPackage at index 0               -->
-              </eStructuralFeature>
-            </eClassifiers>
-            * */
-            const target = LValue.resolveReference(typeParamRef, m2);
-            if (target) return new GenericType("typeParam", undefined, target.name);
-            else return null as any;
-        }
-    }
-
-    // ----------------------------------------------------------------
-    // 2. wildcard — no eClassifier and no eTypeParameter
-    //    e.g. <eGenericType/>
-    //    e.g. <eGenericType><eBounds eClassifier="#//Foo"/></eGenericType>
-    //    Java: void print(Container<?> c)
-    // ----------------------------------------------------------------
-    if (classifierRef === undefined) {
-        const upper = bounds.map(b => xmiGenericTypeToRef(b, resolve, m2, scopeTypeParams)).filter(e=>!!e);
-        // Ecore only supports upper bounds (extends), never lower (super) on wildcards.
-        return new GenericType("wildcard", undefined, undefined, [], upper, []);
-    }
-
-    // ----------------------------------------------------------------
-    // 3. parameterized — has eClassifier AND eTypeArguments children
-    //    e.g. <eGenericType eClassifier="#//Repository">
-    //           <eTypeArguments eClassifier="...#//EString"/>
-    //         </eGenericType>
-    // ----------------------------------------------------------------
-    if (typeArgs.length > 0) {
-        const classifier = resolve(classifierRef);
-        const resolvedArgs = typeArgs.map(a =>
-            xmiGenericTypeToRef(a, resolve, scopeTypeParams)
-        );
-        return new GenericType("parameterized", classifier, undefined, resolvedArgs);
-    }
-
-    // ----------------------------------------------------------------
-    // 4. raw — has eClassifier, no type arguments
-    //    e.g. <eGenericType eClassifier="ecore:EDataType ...#//EString"/>
-    // ----------------------------------------------------------------
-    const classifier = resolve(classifierRef);
-    return new GenericType("raw", classifier);
-}
-
-// ------------------------------------------------------------------
-// Convert eGenericSuperTypes nodes on an EClass
-// ------------------------------------------------------------------
-
-function xmiGenericSuperTypesToRefs(
-    superTypesNode: XmiGenericTypeJson | XmiGenericTypeJson[] | undefined,
-    resolve: ClassifierResolver,
-    scopeTypeParams: Set<string>
-): GenericType[] {
-    if (!superTypesNode) return [];
-    return normalizeArray(superTypesNode)
-        .map(n => xmiGenericTypeToRef(n, resolve, scopeTypeParams));
-}
-
-// ------------------------------------------------------------------
-// Convert eTypeParameters nodes on an EClass or EOperation
-// ------------------------------------------------------------------
-
-interface XmiTypeParameterJson {
-    "@_name": string;
-    "eBounds"?: XmiGenericTypeJson | XmiGenericTypeJson[];
-}
-
-interface TypeParameterDecl {
-    name: string;
-    upper: GenericType[];
-    lower: GenericType[];
-}
-
-function xmiTypeParameterToDecl(
-    node: XmiTypeParameterJson,
-    resolve: ClassifierResolver,
-    scopeTypeParams: Set<string>
-): TypeParameterDecl {
-    const name   = node["@_name"];
-    const bounds = normalizeArray(node["eBounds"]);
-    // Ecore eBounds are always upper bounds (extends), never lower
-    const upper  = bounds.map(b => xmiGenericTypeToRef(b, resolve, scopeTypeParams));
-    return { name, upper, lower: [] };
-}
-
-// ------------------------------------------------------------------
-// Helpers
-// ------------------------------------------------------------------
-
 // XMI parsers emit a single object when there is one child,
 // and an array when there are multiple. Normalise to always array.
 function normalizeArray<T>(value: T | T[] | undefined): T[] {
     if (value === undefined || value === null) return [];
     return Array.isArray(value) ? value : [value];
-}
-
-// Ecore type parameter cross-references look like "../0/Container/0"
-// The last segment is a positional index into the eTypeParameters list.
-// If we have the resolved names in scope we return the name; otherwise
-// we fall back to the raw path so nothing is lost.
-function resolveTypeParamName(
-    path: string,
-    scopeTypeParams: Set<string>
-): string {
-    // If the caller passed resolved names, try to match by them directly
-    // (useful when the path has already been pre-resolved upstream).
-    if (scopeTypeParams.has(path)) return path;
-
-    // Otherwise keep the raw path as an opaque name — callers that do
-    // full model indexing can post-process this.
-    return path;
 }

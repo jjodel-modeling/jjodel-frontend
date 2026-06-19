@@ -362,7 +362,7 @@ export class U {
         return Object.values(map);
     }
 
-    static solveEcoreType(v: string): string{
+    static solveEcoreType(v: string, asPointer: boolean = false): string {
         if (v.indexOf('#//') === 0) v = v.substring(3);
         switch (v) {
             case ShortAttribETypes.EVoid:     v = 'Void';    break;
@@ -376,8 +376,12 @@ export class U {
             case ShortAttribETypes.ELong:     v = 'Long';    break;
             case ShortAttribETypes.EFloat:    v = 'Float';   break;
             case ShortAttribETypes.EDouble:   v = 'Double';  break;
+            default: return asPointer ? "" : v;
         }
-        return v;
+        if (!asPointer) return v;
+        // return as pointer
+        if (!v || v === "Void") return "";
+        return (window as any).Pointers.prefix + "_" + v;
     }
     static alertSeparator: string = '£';
     static alert(type: 'i'|'w'|'e', title: React.ReactNode, message: React.ReactNode = ''): void {
@@ -3235,14 +3239,14 @@ export class Uarr{
         return subarray.every((el) => array.includes(el));
     }
 
-    public static arrayDifference<T>(starting: T[], final: T[], filter: boolean = false, unsorted = false): {added: T[], removed: T[], starting: T[], final: T[]} {
+    public static arrayDifference<T>(starting: T[], final: T[], filter: boolean = false, unsorted = true, equals?: (e1:T, e2:T) => boolean): {added: T[], removed: T[], starting: T[], final: T[]} {
         let ret: {added: T[], removed: T[], starting: T[], final: T[]} = {} as any;
         ret.starting = starting;
         ret.final = final;
         if (!starting) starting = [];
         if (!final) final = [];
-        ret.removed = Uarr.arraySubtract(starting, final, false); // start & !end
-        ret.added = Uarr.arraySubtract(final, starting, false); // end & !start
+        ret.removed = Uarr.arraySubtract1(starting, final, false, filter, equals); // start & !end
+        ret.added = Uarr.arraySubtract1(final, starting, false, filter, equals); // end & !start
         if (filter) {
             ret.removed = ret.removed.filter(e => !!e);
             ret.added = ret.added.filter(e => !!e);
@@ -3255,11 +3259,30 @@ export class Uarr{
         return arr1.filter( e => arr2.indexOf(e) >= 0);
     }
 
+    static arraySubtract1<T>(arr1: T[], arr2: T[], inPlace: boolean, filter = true, equals?: (e1:T, e2:T) => boolean): any[]{
+        const ret: any[] = inPlace ? arr1 : [...arr1];
+        let toDelete = Symbol("to_delete");
+        for (let e1 of arr2) {
+            for (let i = 0; i < ret.length; i++) {
+                let e2 = ret[i];
+                if (e2 === toDelete) continue;
+                if (equals ? !equals(e1, e2) : e1 !== e2) continue;
+                ret[i] = toDelete;
+            }
+        }
+        if (filter) return ret.filter(e=> e !== toDelete);
+        for (let i = 0; i < ret.length) {
+            if (ret[i] === toDelete) delete ret[i];
+        }
+        return ret;
+    }
+
     static arraySubtract(arr1: any[], arr2: any[], inPlace: boolean): any[]{
         let i: number;
         const ret: any[] = inPlace ? arr1 : [...arr1];
         for (i = 0; i < arr2.length; i++) { U.arrayRemoveAll(ret, arr2[i]); }
-        return ret; }
+        return ret;
+    }
 
     static equals<T extends any>(a1: T[], a2: T[], deep: boolean): boolean {
         Log.ex(deep, "deep array comparison is not supported yet");

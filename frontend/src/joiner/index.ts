@@ -182,12 +182,12 @@ export {
     DParameter, LParameter,
     DOperation, LOperation,
     DPackage, LPackage,
-    DTypedElement, LTypedElement,
-    DAnnotation, LAnnotation,
+    DTypedElement, DAnnotation, LAnnotation,
     EJavaObject,
     DFactory_useless_, LFactory_useless_, DMap, LMap
 } from "../model/logicWrapper/LModelElement";
-export {GenericType,  GenericTypeParser} from "../model/logicWrapper/etype";
+export {default as LTypedElement} from "../model/logicWrapper/LModelElement"
+export {GenericType} from "../model/logicWrapper/etype";
 
 
 export {

@@ -43,6 +43,7 @@ import {
     ModelPointers,
     MultiSelectOptGroup,
     MultiSelectOption,
+    NamedArr,
     NamedArray,
     Node,
     ObjectPointers,
@@ -68,7 +69,7 @@ import {
     ShortAttribSuperTypes,
     store,
     TargetableProxyHandler,
-    TRANSACTION, TYPE,
+    TRANSACTION,
     U,
     Uarr,
     unArr,
@@ -95,6 +96,7 @@ import {Alias, transientProperties} from "../../joiner/classes";
 import React, {JSX} from "react";
 import {Dummy} from "../../common/Dummy";
 import {TRANSACTION_MERGE} from "../../redux/action/action";
+import {TypeDeclaration} from "./etype";
 
 type outactions = {clear:(()=>void)[], set:(()=>void)[], immediatefire?: boolean};
 export type SchemaMatchingScore = {
@@ -1431,14 +1433,15 @@ export class DTypedElement extends DModelElement { // Mixin(DTypedElement0, DNam
     instances!: Pointer<DValue, 0, 'N', LValue>;
     // personal
     type!: Pointer<DClassifier, 1, 1, LClassifier>;
-    genericType!: Dictionary<string, GenericType>;
     ordered: boolean = true;
     unique: boolean = true;
     lowerBound: number = 0;
     upperBound: number = 1;
-    many!: boolean; // ?
-    required!: boolean; // ?
+    // many!: boolean; // exist in ecore, but derived from upperBound
+    // required!: boolean; // exist in ecore, but derived from lowerBound
     allowCrossReference!:boolean;
+    // generic type
+    genericType!: GenericType;
 
 
     public static new(name?: DNamedElement["name"], type?: DTypedElement["type"], father?: Pointer, persist: boolean = true): DTypedElement {
@@ -1450,7 +1453,7 @@ export class DTypedElement extends DModelElement { // Mixin(DTypedElement0, DNam
 
 @Abstract
 @RuntimeAccessible('LTypedElement')
-export class LTypedElement<Context extends LogicContext<DTypedElement> = any> extends LNamedElement { // extends Mixin(DTypedElement0, LNamedElement)
+class LTypedElement<Context extends LogicContext<DTypedElement> = any> extends LNamedElement { // extends Mixin(DTypedElement0, LNamedElement)
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public __raw!: DTypedElement;
@@ -1468,91 +1471,61 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
     instances!: LValue[];
     // personal
     type!: LClassifier;
-    genericType!: GenericType; // eg: type<T extends BOUND1, T extends BOUND2, ....>
+    genericType?: GenericType; // eg: type<T extends BOUND1, T extends BOUND2, ....>
+    get_genericType(c: Context): this["genericType"] { return GenericType.getter(c.data.genericType); }
+    set_genericType(v: GenericType, c: Context): boolean { return GenericType.setter(v, c, this); }
+    __info_of__genericType = GenericType.desc;
 
-    _GenerictypeBounds!: Dictionary<DocString<"Variable type declaration name like T, K, V">,
-        {
-            lower:(DocString<"K super --> what?"> | LClassifier)[],
-            upper:(DocString<"K extends --> what?"> | LClassifier)[],
-        }>;
-    bounds!: Dictionary<DocString<"Variable type declaration name like T, K, V">, (DocString<"K extends --> what?"> | LClassifier)[]>;
-    __info_of__bounds: Info = {type: "Map<String1, (string2 | Classifier)[]", txt: "Specify restraints to a generic type, as in:" +
+    __info_of__required: Info = {type: ShortAttribETypes.EBoolean, txt: "Derived feature, true if lowerBound >= 1"}
+    __info_of__many: Info = {type: ShortAttribETypes.EBoolean, txt: "Derived feature, true if upperBound >= 1"}
+    get_required(c: Context): this["required"]{ return this.lowerBound >= 1; }
+    set_required(v: this["required"], c: Context) {
+        if (this.get_lowerBound(c) >= 1) return true;
+        return this.set_lowerBound(1, c);
+    }
+    get_many(c: Context): this["many"]{ let u = this.get_upperBound(c); return u === -1 || u >= 1; }
+    set_many(v: this["many"], c: Context) {
+        let u = this.get_upperBound(c);
+        if (u === -1 || u >= 1) return true;
+        return this.set_upperBound(-1, c);
+    }
+
+/*
+    bounds!: (DocString<"K extends --> what?"> | LClassifier)[];
+    __info_of__bounds: Info = {type: "(string | Classifier)[]", txt: "Specify restraints to a generic type, as in:" +
             "\nclass List<N extends int> { ... }\n" +
-            "The structure representing that example would be: operation.bounds = { \"N\": \"int\"};\n" +
-            "Bounds keys must match with this.typeParameters declarations or will be ignored." }
+            "The structure representing that example would be: operation.bounds = [\"int\"]};\n" +
+            "Bounds keys must match with this.typeParameters declarations or will be ignored." }*/
+/*
     get_bounds(c: Context, filter: boolean = true, upper = true): this["bounds"] {
         let raw = c.data.genericType;
-        let ret: Dictionary = {};
-        for (let k in raw) {
-            let v = raw[k];
-            if (!v || typeof v !== "object") continue;
-            let bounds: (string | LClassifier)[] = (v[upper ? "upper" : "lower"] || []) as any[];
-            bounds = bounds.map(s=> {
-                let ts = typeof s;
-                if (s && ts === "object") return GenericType.serialize(ts);
-                if (ts === "string") return Pointers.isPointer(s) ? L.from(s) : (s as string).trim();
-                return '';
-            }).filter(s=>!!s);
-            if (filter && !bounds?.length) continue;
-            ret[k] = bounds;
-        }
-        return ret;
+        let v = raw;
+        if (!v || typeof v !== "object") return [] as any[];
+        let bounds: (string | LClassifier)[] = (v[upper ? "upper" : "lower"] || []) as any[];
+        bounds = bounds.map<string | LClassifier>(s=> {
+            let ts = typeof s;
+            if (s && ts === "object") return GenericType.serializeJOM(ts);
+            if (ts === "string") return Pointers.isPointer(s) ? L.from(s) : (s as string).trim();
+            return '';
+        }).filter(s=>!!s);
+        return bounds;
     }
     set_bounds(val: this["bounds"], c: Context, upper = true): boolean {
         if (!val || typeof val !== "object") return true;
-        let old = c.data.genericType;
-        let neww = {...old};
-        for (let k in val) {
-            let ptrs: TYPE[] = (val[k] || []).map<string>(e => {
-            let te = typeof e;
-            if (te === "object") e = Pointers.from(te);
-            else if (te === "string") {
-                if (!Pointers.isPointer(e)) {
-                    // todo try to match be name
-                    e = '' as any ; // todo find classifier pointed by name or ecore reference, store pointer in e.
-                }
-            }
-            return (e as string).trim();
-            }).filter(e => !!e);
+        let key = (upper ? "upper" : "lower") as "upper" | "lower";
+        let old = c.data.genericType[key];
+        if (!val) val = [];
+        else val = (Array.isArray(val) ? val : [val]);
+        let ptrs: (Pointer<any> | string | GenericType)[] = val.map(v => Pointers.from(v) || v) as any[];
+        let delta = Uobj.objectDelta(old, ptrs);
+        if (Object.keys(delta).length === 0) return true;
 
-            if (!neww[k]) {
-                neww[k] = new GenericType("", "", "", "", upper ? val : [], !upper ? val : [], [], undefined);
-            } else {
-                neww[k] = {...neww[k], upper: [...neww[k].upper], lower: [...neww[k].lower]}
-            }
-            let v = neww[k];
-            // todo: update v[upper ? "upper" : "lower"]; using ptrs, but how to handle subelements that are nested? (of type GenericType, like: V extends List<T>)
-        }
-        let diff = Uobj.objdiff(old, neww, false, true);
-
-
-        if (!Object.keys(diff.added || {}).length && !Object.keys(diff.removed || {}).length && !Object.keys(diff.changed || {}).length) return true;
         TRANSACTION("update " + this.get_name(c) + " bounds", ()=>{
-            SetFieldAction.new(c.data, "genericType", neww, "", true);
-        }, diff);
+            SetFieldAction.new(c.data, "genericType."+key as any, delta, "+=", true);
+        }, delta);
         return true;
-    }
+    }*/
 
-    typeParameters!: DocString<"Variable type declaration name like T, K, V">[]; // eg: class Dictionary<K, V>
-    __info_of__typeParameters: Info = {type: "Map<String1, (string2 | Classifier)[]", txt: "Declares a generic type, as in:\n" +
-            "class List<N>{ ... }\n"}
-
-    get_typeParameters(c: Context): this["typeParameters"] { return Object.keys(c.data.genericType); }
-    set_typeParameters(val0: Dictionary<string, (string|Pointer)[]> | (string|Pointer)[], c: Context): boolean {
-        let old = this.get_bounds(c, false);
-        if (!val0 || typeof val0 !== "object") return true;
-        // validate input to become a Dictionary<string, (string|Pointer)[]>
-        let val: Dictionary<string, (string|Pointer)[]> = Array.isArray(val0) ? U.objectFromArray(val0, undefined, []) : val0 as any;
-        for (let k in val) if (!Array.isArray(val[k])) val[k] = val[k] && typeof val[k] === "string" ? [val[k]] : [];
-        let arr = Object.keys(old);
-        let diff = Uarr.arrayDifference(old, arr);
-        if (diff.added.length + diff.removed.length === 0) return true;
-        val = {...old, ...val};
-        TRANSACTION("update " + this.get_name(c) + " bounds", ()=>{
-            SetFieldAction.new(c.data, "genericType", val, "", true);
-        }, diff);
-        return true;
-    }
 
     eGenericType!: DocString<"Variable type declaration name like T, K, V, declared in class and referenced here by string name">;
     __info_of__eGenericType: Info = {type: ShortAttribETypes.EString, txt: "Mutually exclusive with this.type, it specified a parametrized type.\n" +
@@ -1694,24 +1667,25 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
 
     protected get_classType(context: Context): this["classType"] {
         let type = this.get_type(context);
-        return type.isClass ? type as LClass : undefined;
+        return type?.isClass ? type as LClass : undefined;
     }
 
     protected get_enumType(context: Context): this["enumType"] {
         let type = this.get_type(context);
-        return type.isEnum ? type as LEnumerator : undefined;
+        return type?.isEnum ? type as any : undefined;
     }
 
     protected get_primitiveType(context: Context): this["primitiveType"] {
         let type = this.get_type(context);
-        return type.isPrimitive ? type as LClass : undefined;
+        return type?.isPrimitive ? type as LClass : undefined;
     }
 
     protected get_typeName(c: Context): string{
-        return GenericTypeRef.serialize(c.data.genericType);
+        return GenericType.serializeJOM(c.data.genericType);
     }
+
     protected get_type(c: Context): this["type"] {
-        let type: LClassifier = LPointerTargetable.from(c.data.type) as LClassifier;
+        let type: LClassifier | LEnumerator = LPointerTargetable.from(c.data.type) as LClassifier;
         // 1) actual type if present
         if (type) return type;
         // 2) translate "Human" string to object reference, or "Boolean" to primitive reference
@@ -1734,7 +1708,7 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
                 if (model) type = model.getClassByName(rawType) as LClass;
                 else type = Selectors.getByName(DClass, rawType, false, true) as LClass;
             }
-            let ptr: Pointer<DClassifier> | undefined = type?.id;
+            let ptr: Pointer<DClassifier | DEnumerator> | undefined = type?.id;
             if (ptr) {
                 // console.warn('autocorrected type get: ', {rawType, tn:type?.name, ptr, type, });
                 this.set_type(ptr as any, c);
@@ -1885,32 +1859,6 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
         return true;
     }
 
-    protected get_many(context: Context): this["many"] {
-        return context.data.many;
-    }
-
-    protected set_many(val: this["many"], c: Context): boolean {
-        val = U.fromBoolString(val);
-        if (val === c.data.many) return true;
-        TRANSACTION(this.get_name(c)+'.many', ()=>{
-            SetFieldAction.new(c.data, 'many', val);
-        }, c.data.many, val)
-        return true;
-    }
-
-    protected get_required(context: Context): this["required"] {
-        return context.data.required;
-    }
-
-    protected set_required(val: this["required"], c: Context): boolean {
-        val = U.fromBoolString(val);
-        if (val === c.data.many) return true;
-        TRANSACTION(this.get_name(c)+'.required', ()=>{
-            SetFieldAction.new(c.data, 'required', val);
-        }, c.data.many, val)
-        return true;
-    }
-
     public typeToEcoreString(): string {
         return this.cannotCall("typeToEcoreString");
     }
@@ -1952,6 +1900,8 @@ export class LTypedElement<Context extends LogicContext<DTypedElement> = any> ex
 
 }
 
+export default LTypedElement
+
 // @RuntimeAccessible('') export class _WTypedElement extends _WNamedElement { }
 // export type WTypedElement = DTypedElement | LTypedElement | _WTypedElement;
 RuntimeAccessibleClass.set_extend(DNamedElement, DTypedElement);
@@ -1975,7 +1925,6 @@ export class DClassifier extends DModelElement { // extends DNamedElement
     instanceTypeName!: string;
     // instanceClass: EJavaClass // ?
     defaultValue!: Pointer<DObject, 1, 1, LObject>[] | string[];
-    eTypeParameters!: string[];
     // isInstance(object: EJavaObject): boolean; ?
     // getClassifierID(): number;
 
@@ -1991,7 +1940,7 @@ export class DClassifier extends DModelElement { // extends DNamedElement
 export class LClassifier<Context extends LogicContext<DClassifier> = any> extends LNamedElement { // extends DNamedElement
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
-    static singleton: LClassifier = null as any;
+    static singleton: LClass = null as any;
     public __raw!: DClassifier;
     id!: Pointer<DClassifier, 1, 1, LClassifier>;
     // static singleton: LClassifier;
@@ -2024,40 +1973,6 @@ export class LClassifier<Context extends LogicContext<DClassifier> = any> extend
             SetFieldAction.new(c.data, 'instanceClassName', val, "", false);
         }, c.data.instanceClassName, val)
         return true;
-    }
-
-    eTypeParameters!: string[];
-    __info_of__eTypeParameters: Info = { type: "string[]", txt: "Type parameters attached to the classifier, like in HashMap<K, V>"}
-    get_typeParameters(c: Context): this["eTypeParameters"] { return this.get_eTypeParameters(c); }
-    get_eTypeParameters(c: Context): this["eTypeParameters"] { return c.data.eTypeParameters || []; }
-    set_typeParameters(v: Pointer[], c: Context) { return this.set_eTypeParameters(v, c); }
-    set_eTypeParameters(v: Pointer[], c: Context) {
-        if (!v) v = [];
-        if (!Array.isArray(v)) v = [v];
-        const ptrs: Pointer[] = U.arrayUnique(v.map(e=>Pointers.from(e)).filter(e=>!!e));
-        let old = c.data.eTypeParameters;
-        let diff = Uarr.arrayDifference(old, ptrs);
-        if (diff.added.length + diff.removed.length == 0) return true;
-        TRANSACTION("set eTypeParameters", ()=> { SetFieldAction.new(c.data, "eTypeParameters", ptrs, "", true)});
-    }
-    get_addTypeParameter(c: Context): (v: Pointer[]) => void {
-        return (v: Pointer[])=> {
-            U.arrayMergeInPlace(v, c.data.eTypeParameters);
-            this.set_eTypeParameters(v, c);
-        }
-    }
-    get_removeTypeParameter(c: Context): (v: Pointer[]) => void {
-        return (v: Pointer[])=> {
-            if (!v) v = [];
-            if (!Array.isArray(v)) v = [v];
-            let ptrs: Pointer<any>[] = U.arrayUnique(v.map(e=>Pointers.from(e)).filter(e=>!!e));
-            let old = c.data.eTypeParameters;
-            ptrs = ptrs.filter(p => old.includes(p));
-            if (!ptrs.length) return true;
-
-            TRANSACTION("remove eTypeParameters", ()=> { SetFieldAction.new(c.data, "eTypeParameters", ptrs, "-=", true)});
-            this.set_eTypeParameters(v, c);
-        }
     }
 
     protected set_isPrimitive(val: this["isPrimitive"], context: Context): boolean {
@@ -2357,6 +2272,10 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
     }
 
     protected get_classifiers(context: Context): this["classifiers"] {
+        let lc: LClassifier = null as any;
+        let le: LEnumerator = null as any;
+        lc = le;
+        le = lc;
         return U.arrayMergeInPlace(
             context.data.classes.map(pointer => LPointerTargetable.from(pointer)).filter(e=>!!e),
             context.data.enumerators.map(pointer => LPointerTargetable.from(pointer)).filter(e=>!!e)
@@ -2468,13 +2387,11 @@ export class DStructuralFeature extends DModelElement { // DTypedElement
     father!: Pointer<DClass, 1, 1, LClass>;
     name!: string;
     type!: Pointer<DClassifier, 1, 1, LClassifier>;
-    genericType!: GenericType; // eg: type<T extends BOUND1, T extends BOUND2, ....>
+    genericType!: GenericType;
     ordered: boolean = true;
     unique: boolean = true;
     lowerBound: number = 0;
     upperBound: number = 1;
-    many!: boolean;
-    required!: boolean;
     // personal
     instances: Pointer<DValue, 0, 'N', LValue> = [];
     changeable: boolean = true;
@@ -2518,7 +2435,7 @@ export class LStructuralFeature<Context extends LogicContext<DStructuralFeature>
     name!: string;
     namespace!: string;
     type!: LClassifier;
-    genericType!: GenericType; // eg: type<T extends BOUND1, T extends BOUND2, ....>
+    genericType!: GenericType;
     ordered: boolean = true;
     unique: boolean = true;
     lowerBound: number = 0;
@@ -2663,13 +2580,10 @@ export class DOperation extends DModelElement { // extends DTypedElement
     father!: Pointer<DClass, 1, 1, LClass>;
     name!: string;
     type!: Pointer<DClassifier, 1, 1, LClassifier>;
-    genericType!: GenericType; // eg: type<T extends BOUND1, T extends BOUND2, ....>
     ordered: boolean = true;
     unique: boolean = true;
     lowerBound: number = 0;
     upperBound: number = 1;
-    many!: boolean;
-    required!: boolean;
     // personal
     exceptions: Pointer<DClassifier, 0, 'N', LClassifier> = [];
     parameters: Pointer<DParameter, 0, 'N', LParameter> = [];
@@ -2685,7 +2599,9 @@ export class DOperation extends DModelElement { // extends DTypedElement
     public derived!: boolean;
     defaultValue!: (Pointer<DObject, 1, 1, LObject> | PrimitiveType)[];
     __isDOperation!: boolean; // to avoid duck typing mistaking it for DStructuralFeature
-
+    // generic types
+    genericType?: GenericType;
+    typeParameters?: TypeDeclaration[];
 
 
     public static new(name?: DNamedElement["name"], type?: DOperation["type"], exceptions: DOperation["exceptions"] = [], father?: DOperation["father"], persist: boolean = true): DOperation {
@@ -2731,7 +2647,6 @@ export class LOperation<Context extends LogicContext<DOperation, LOperation> = a
     name!: string;
     namespace!: string;
     type!: LClassifier;
-    genericType!: GenericType; // eg: type<T extends BOUND1, T extends BOUND2, ....>
     ordered: boolean = true;
     unique: boolean = true;
     lowerBound: number = 0;
@@ -2748,6 +2663,10 @@ export class LOperation<Context extends LogicContext<DOperation, LOperation> = a
     defaultValue!: (Pointer<DObject, 1, 1, LObject> | PrimitiveType)[];
     defaultValueLiteral!: string;
     __isLOperation!: boolean; // to avoid duck typing mistaking it for LStructuralFeature
+    // generic types
+    genericType?: GenericType;
+    typeParameters!: TypeDeclaration[];
+    eTypeParameters!: TypeDeclaration[];
 
     protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}, deep: boolean = true, crossRef: boolean = true): Json {
         if (loopDetectionObj[c.data.id]) return Log.exx('Cannot serialize in ecore, found loop', {loopDetectionObj, c});
@@ -2773,11 +2692,9 @@ export class LOperation<Context extends LogicContext<DOperation, LOperation> = a
             TRANSACTION('duplicate ' + this.get_name(context), ()=>{
                 let le: LOperation = context.proxyObject.father.addOperation(context.data.name, context.data.type);
                 let de: D = le.__raw as D;
-                de.many = context.data.many;
                 de.lowerBound = context.data.lowerBound;
                 de.upperBound = context.data.upperBound;
                 de.ordered = context.data.ordered;
-                de.required = context.data.required;
                 de.unique = context.data.unique;
                 de.visibility = context.data.visibility;
                 de.exceptions = context.data.exceptions;
@@ -2798,14 +2715,15 @@ export class LOperation<Context extends LogicContext<DOperation, LOperation> = a
         return (name?: DParameter["name"], type?: DParameter["type"]) => LPointerTargetable.fromD(DParameter.new(name, type, context.data.id, true)); }
 
 
-    eTypeParameters!: string[];
-    __info_of__eTypeParameters: Info = { type: "string[]", txt: "Type parameters attached to the classifier, like in HashMap<K, V>"}
-    get_typeParameters(c: Context): this["eTypeParameters"] { return this.get_eTypeParameters(c); }
-    get_eTypeParameters(c: Context): this["eTypeParameters"] { return LClassifier.singleton.get_eTypeParameters(c); }
-    set_typeParameters(v: Pointer[], c: Context) { return this.set_eTypeParameters(v, c); }
-    set_eTypeParameters(v: Pointer[], c: Context) { return LClassifier.singleton.set_eTypeParameters(v, c); }
-    get_addTypeParameter(c: Context) { return LClassifier.singleton.get_addTypeParameter(c); }
-    get_removeTypeParameter(c: Context) { return LClassifier.singleton.get_removeTypeParameter(c); }
+
+    __info_of__typeParameters: Info = GenericType.descTypeParameters;
+    __info_of__eTypeParameters: Info = GenericType.descTypeParameters;
+    get_typeParameters(c: Context): this["eTypeParameters"] { return LClass.singleton.get_typeParameters(c); }
+    set_typeParameters(v: any, c: Context) {return LClass.singleton.get_typeParameters(v, c); }
+    get_eTypeParameters(c: Context): this["eTypeParameters"] { return LClass.singleton.get_eTypeParameters(c); }
+    set_eTypeParameters(v: Pointer[], c: Context): boolean { return LClass.singleton.set_eTypeParameters(v, c); }
+    /*get_addTypeParameter(c: Context) { return LClassifier.singleton.get_addTypeParameter(c); }
+    get_removeTypeParameter(c: Context) { return LClassifier.singleton.get_removeTypeParameter(c); }*/
 
 
     public execute(thiss: LObject, ...params: any): any { return this.cannotCall("execute"); }
@@ -2916,13 +2834,11 @@ export class DParameter extends DModelElement { // extends DTypedElement
     father!: Pointer<DOperation, 1, 1, LOperation>;
     name!: string;
     type!: Pointer<DClassifier, 1, 1, LClassifier>;
-    genericType!: GenericType; // eg: type<T extends BOUND1, T extends BOUND2, ....>
+    genericType!: GenericType;
     ordered: boolean = true;
     unique: boolean = true;
     lowerBound: number = 0;
     upperBound: number = 1;
-    many!: boolean;
-    required!: boolean;
     defaultValue!: any;
     // personal
     allowCrossReference!: boolean;
@@ -2966,7 +2882,7 @@ export class LParameter<Context extends LogicContext<DParameter> = any, C extend
     name!: string;
     namespace!: string;
     type!: LClassifier;
-    genericType!: GenericType; // eg: type<T extends BOUND1, T extends BOUND2, ....>
+    genericType!: GenericType;
     ordered: boolean = true;
     unique: boolean = true;
     lowerBound: number = 0;
@@ -3080,6 +2996,10 @@ export class DClass extends DModelElement { // extends DClassifier
     final!: boolean;
     allowCrossReference!: boolean;//for extend
     eidFeature?: Pointer<DAttribute>; // pointing to isID=true attribute
+    // generics
+    typeParameters!: TypeDeclaration[];
+    genericSuperTypes!: GenericType[];
+
 
     // for m1:
     // hideExcessFeatures: boolean = true; // isn't it like partial?? // old comment: se attivo questo e creo una DClass di sistema senza nessuna feature e di nome Object, ho creato lo schema di un oggetto schema-less a cui tutti sono conformi
@@ -3152,6 +3072,26 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     nodes!: LGraphElement[]; // ipotesi, non so se tenerlo
     allowCrossReference!: boolean;
 
+
+    // generics
+    typeParameters!: TypeDeclaration[];
+    __info_of__typeParameters: Info = GenericType.descTypeParameters;
+    get_typeParameters(c: LogicContext<DClass | DOperation>): this["typeParameters"] { return GenericType.getter_typeParametersArr(c.data.typeParameters) || []; }
+    set_typeParameters(v: this["typeParameters"], c: LogicContext<DClass | DOperation>): boolean { return GenericType.setter_typeParameters(v, c, this); }
+
+    genericSuperTypes!: GenericType[];
+    __info_of__genericSuperTypes: Info = {type: "GenericType[]", txt: "Describes the type arguments used to extend or implement superclasses." +
+            "\nEg: class Team extends Set<Human>"}
+    get_genericSuperTypes(c: Context): this["genericSuperTypes"] { return c.data.genericSuperTypes; }
+    set_genericSuperTypes(v: this["genericSuperTypes"], c: Context): boolean {
+        let old = c.data.genericSuperTypes;
+        let delta = Uobj.objectDelta(old, v);
+        if (!Object.keys(delta)) return true;
+        TRANSACTION(this.get_name(c)+".genericSuperTypes", ()=> {
+            SetFieldAction.new(c.data, "genericSuperTypes", delta as any, "+=", false);
+        });
+    return true;
+    }
 
     instanceClassName!: string;
     __info_of__instanceClassName: Info = {type: ShortAttribETypes.EString, txt: "The name of a java class mapped to this eClassifier. Unlike instanceTypeName generic typings are not allowed."};
@@ -4336,7 +4276,6 @@ export class DDataType extends DModelElement { // extends DClassifier
     annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
     name!: string;
     defaultValue!: Pointer<DObject, 1, 1, LObject>[] | string[];
-    eTypeParameters!: string[];
     // personal
     serializable: boolean = true;
     // usedBy: Pointer<DAttribute, 0, 'N', LAttribute> = [];
@@ -4373,7 +4312,6 @@ export class LDataType<Context extends LogicContext<DDataType> = any, C extends 
     name!: string;
     namespace!: string;
     defaultValue!: LObject[] | string[];
-    eTypeParameters!: string[];
     isPrimitive!: false;
     isClass!: false;
     isEnum!: true;
@@ -4413,13 +4351,11 @@ export class DReference extends DModelElement { // DStructuralFeature
     annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
     name!: string;
     type!: Pointer<DClass, 1, 1, LClass>;
-    genericType!: GenericType; // eg: type<T extends BOUND1, T extends BOUND2, ....>
+    genericType!: GenericType;
     ordered: boolean = true;
     unique: boolean = true;
     lowerBound: number = 0;
     upperBound: number = 1;
-    many!: boolean;
-    required!: boolean;
     changeable: boolean = true;
     volatile: boolean = false;
     transient: boolean = false;
@@ -4485,7 +4421,7 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
     annotations!: LAnnotation[];
     name!: string;
     namespace!: string;
-    genericType!: GenericType; // eg: type<T extends BOUND1, T extends BOUND2, ....>
+    genericType!: GenericType;
     type!: LClass;
     __info_of__type: Info = {type: "boolean", txt: "The type which the values must conform tp."}
     ordered!: boolean;
@@ -4497,7 +4433,7 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
     upperBound!: number;
     __info_of__upperBound: Info = {type: "boolean", txt: "The maximum number of values expected to have."}
     many!: boolean;
-    __info_of__many: Info = {type: "boolean", txt: "A derived attribute, equivalent to data.upperBound !== 0."}
+    __info_of__many: Info = {type: "boolean", txt: "A derived attribute, equivalent to upperBound !== -1 && upperBound > 0."}
     required!: boolean;
     __info_of__required: Info = {type: "boolean", txt: "A derived attribute, equivalent to data.lowerBound > 0."}
     changeable!: boolean;
@@ -4531,8 +4467,6 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
     /*protected */derived_read?: string;
     /*protected */derived_write?: string;
 
-    get_many(c: Context): boolean{ return this.get_upperBound(c) !== 0; }
-    get_required(c: Context): boolean{ return this.get_lowerBound(c) > 0; }
 
 
     protected get_isContainment(c: Context): LReference["containment"] { return this.get_containment(c); }
@@ -4828,13 +4762,11 @@ export class DAttribute extends DModelElement { // DStructuralFeature
     annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
     name!: string;
     type!: Pointer<DClassifier, 1, 1, LClassifier>;
-    genericType!: GenericType; // eg: type<T extends BOUND1, T extends BOUND2, ....>
+    genericType!: GenericType;
     ordered: boolean = true;
     unique: boolean = true;
     lowerBound: number = 0;
     upperBound: number = 1;
-    many!: boolean;
-    required!: boolean;
     changeable: boolean = true;
     volatile: boolean = false;
     transient: boolean = false;
@@ -4898,7 +4830,7 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
     name!: string;
     namespace!: string;
     type!: LClassifier;
-    genericType!: GenericType; // eg: type<T extends BOUND1, T extends BOUND2, ....>
+    genericType!: GenericType;
     ordered!: boolean;
     unique!: boolean;
     lowerBound!: number;
@@ -5215,7 +5147,6 @@ export class DEnumerator extends DModelElement { // DDataType
     annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
     name!: string;
     defaultValue!: string[];
-    eTypeParameters!: string[];
     serializable: boolean = true;
     // usedBy: Pointer<DAttribute, 0, 'N', LAttribute> = []; obsolete?
     // personal
@@ -5264,7 +5195,6 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
     name!: string;
     namespace!: string;
     defaultValue!:string[];
-    eTypeParameters!: string[];
     serializable!: boolean;
     // usedBy!: LAttribute[];
     isPrimitive!: false;
@@ -7214,7 +7144,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     namespace!: string;
     fullname!:string;
     type!: LClassifier; // Classifiers describing PrimitiveTypes or the classes that can be pointed.
-    genericType!: GenericType; // eg: type<T extends BOUND1, T extends BOUND2, ....>
+    genericType!: GenericType;
     primitiveType!: LClass;
     classType!: LClass;
     enumType!: LEnumerator;
@@ -7351,17 +7281,19 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
         let segments = query.split("/");
         let current: LObject | null = null;
         console.log("resolvereference 000", {segments, current});
+        // is this even valid? i'm expecting #identifier instead of #//identifier
+        if (query.indexOf("#//") > 0) Log.ee("this kind of reference format is not supported");
         outer:
         for (let i = 0; i < segments.length; i++) {
             let segment = segments[i];
-            console.log("resolvereference "+i, {segment, i, segments, current});
+            console.log("resolvereference 0."+i, {segment, i, segments, current});
 
             if (i === 0 && segment === "") segment = "0"; // "//" has implicit index, it means "/0/" which is first root element
             if (i === 0 && U.isNumericString(segment)) {
                 current = model.roots[+segment];
                 continue;
             }
-            if (segment[0] !== '@') {
+            if (i === 0 && segment[0] !== '@') {
                 /// resolve anchor part
                 // anchor becomes: "#@name", or "@name" if anchor is hidden. ref becomes ["","@name"]
                 // so if first char !== "@" it is an anchor
@@ -7373,7 +7305,8 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                     current = o;
                     continue outer;
                 }
-            } // resolve positional ref part
+                if (!current) return null; // not found
+            } // resolve @ positional ref part
             else segment = segment.substring(1);
             let indexPos = segment.lastIndexOf(".");
             let name: string;
@@ -7384,7 +7317,7 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
                 if (U.isNumericString(sindex)) index = +sindex;
                 else index = 0;
             } else { name = segment; index = 0; }
-            console.log("resolvereference "+i, {segment, index, name, current});
+            console.log("resolvereference 1."+i, {segment, index, name, current});
             let feature: LValue = (current as any)["$"+name];
             if (!feature) return null;
             let values = feature.values;

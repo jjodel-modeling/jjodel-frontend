@@ -312,7 +312,7 @@ export class EcoreParser{
             let dval: DValue = elem as DValue;
             let meta: DAttribute | DReference = DfromPtr(dval.instanceof as Pointer<DAttribute|DReference>);
             if (!meta) continue;
-            let type: DEnumerator = DfromPtr(meta.type) as DEnumerator;
+            let type: DEnumerator = DfromPtr(meta.type) as any as DEnumerator;
             if (!type || type.className !== DEnumLiteral.cname) continue;
             let mapper = (v: unknown): Pointer<DEnumLiteral> => {
                 if (typeof v !== "number") { Log.ee("found non-numeric value in a literal value.", v, dval); return v as any; }
@@ -1388,7 +1388,5 @@ let allEKeys = {
     "id": "@iD",
     "eexceptions": "@eExceptions",
     "eparameters": "eparameters",
-    "xmlns:xmi": "@xmlns:xmi",
-    "xmi:version": "@xmi:version",
     "type": "@type"
 }

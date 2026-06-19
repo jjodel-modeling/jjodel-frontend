@@ -2,6 +2,81 @@
 // 'describe' groups related tests together
 import {Dictionary, GenericType, GObject, U} from "../joiner";
 
+
+
+// NB: cannot actually run the tests with vitest because it fails on the imports.
+// so i'm making my run-time tests in browser
+
+export class MyTest{
+    static all: Dictionary<string, TestFN> = {};
+    static run(name: string) {
+        if (name) {
+            console.log("Testing: "+name);
+            MyTest.all[name]();
+            return;
+        }
+        for (let k in MyTest.all) {
+            console.log("Testing all: "+k);
+            MyTest.all[k]();
+        }
+    }
+}
+
+function describe(name: string, fn: ()=>any) { fn(); }
+function test(name: string, fn: ()=>any): any {
+    MyTest.all[name] = fn;
+}
+
+type TestFN = ()=>any;
+(window as any).MyTest = MyTest;
+(window as any).T = MyTest;
+(window as any).test = MyTest;
+(window as any).jjsonn = {
+    "type": "ecore:EGenericType",
+    "eClassifier": "#//Map",
+    "eTypeArguments": [
+        {
+            "comment": "Argument 1: The key type parameter 'T'",
+            "type": "ecore:EGenericType",
+            "eTypeParameter": "#//MyClass/T"
+        },
+        {
+            "comment": "Argument 2: The value wildcard '? extends List<...>'",
+            "type": "ecore:EGenericType",
+            "eUpperBound": {
+                "type": "ecore:EGenericType",
+                "eClassifier": "#//List",
+                "eTypeArguments": [
+                    {
+                        "comment": "Nested Argument: Wildcard '? super Map<...>'",
+                        "type": "ecore:EGenericType",
+                        "eLowerBound": {
+                            "type": "ecore:EGenericType",
+                            "eClassifier": "#//Map",
+                            "eTypeArguments": [
+                                {
+                                    "comment": "Deep Argument 1: Concrete class 'String'",
+                                    "type": "ecore:EGenericType",
+                                    "eClassifier": "#//String"
+                                },
+                                {
+                                    "comment": "Deep Argument 2: Type parameter reference 'B'",
+                                    "type": "ecore:EGenericType",
+                                    "eTypeParameter": "#//MyClass/B"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+};
+
+
+
+
+
 describe('test generic type api', () => {
 
     // A basic test case checking for an exact match
@@ -24,32 +99,3 @@ describe('test generic type api', () => {
     });
 
 });
-
-
-// NB: cannot actually run the tests with vitest because it fails on the imports.
-// so i'm making my run-time tests in browser
-
-function describe(name: string, fn: ()=>any) { fn(); }
-function test(name: string, fn: ()=>any): any {
-    MyTest.all[name] = fn;
-}
-
-type TestFN = ()=>any;
-export class MyTest{
-    static all: Dictionary<string, TestFN> = {};
-    static run(name: string) {
-        if (name) {
-            console.log("Testing: "+name);
-            MyTest.all[name]();
-            return;
-        }
-        for (let k in MyTest.all) {
-            console.log("Testing all: "+k);
-            MyTest.all[k]();
-        }
-    }
-}
-
-(window as any).MyTest = MyTest;
-(window as any).T = MyTest;
-(window as any).test = MyTest;

@@ -3935,7 +3935,7 @@ export type getWParams<L extends LPointerTargetable, D extends Object> ={
     (Property extends string ? (
         Property extends "id" ? 'id is read-only' :
             //@ts-ignore
-            (L[`set_${Property}`] extends (a:any, b: any, ...b:any)=> any ? // at least 2 params: 1 for val and 1 for Context
+            (L[`set_${Property}`] extends (a:any, b: any, ...c:any)=> any ? // at least 2 params: 1 for val and 1 for Context
                 // if a set_ first parameter is Context it means the set_ is ill-defined, need to change actual method signature.
                 //@ts-ignore
                 Parameters<L[`set_${Property}`]>[0] // if set_X function is defined, get first param
