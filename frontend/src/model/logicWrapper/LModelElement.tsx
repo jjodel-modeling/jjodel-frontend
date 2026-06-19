@@ -73,6 +73,7 @@ import {
     UX,
     windoww,
 } from "../../joiner";
+import { AFTER_UPDATE } from "../../redux/action/action";
 
 import {
     AccessModifier,
@@ -6075,12 +6076,44 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         }
 
         TRANSACTION(this.get_name(c) + '.name', () => {
-            const nameattribute = (c.proxyObject as any).$name;
-            if (nameattribute && nameattribute.className === 'LValue') {
-                nameattribute.value = val;
-            }
             SetFieldAction.new(c.data, 'name', name, '', false);
         }, undefined, val);
+
+        // Direction A (CLAUDE.md §3.12; docs/discovery/2026-06-19_slot_write_failure.md):
+        // the name→slot write CANNOT run inside set_name's batch — it mutates a DValue + its
+        // pointer graph against uncommitted state and rolls the whole transaction back. Defer
+        // it to AFTER_UPDATE, which fires post-commit as a fresh top-level dispatch, i.e. the
+        // same committed-state conditions under which Direction B's setValueAtPosition already
+        // succeeds. Loop-safe: the slot→name echo (the direct SetFieldAction at :7493) never
+        // routes through set_name, so it never schedules this callback. Handles both overwrite
+        // (populated slot) and create (populate an empty EXISTING slot — never mint a DValue).
+        const identityAttr = self.instanceof?.identityAttribute;
+        if (identityAttr) {
+            const dObjId = c.data.id;
+            const identAttrName = identityAttr.name;
+            const newName = name;
+            AFTER_UPDATE(() => {
+                // Re-resolve from committed state — do NOT capture proxies from set_name's scope (§9.2).
+                const lobj = LPointerTargetable.fromPointer(dObjId) as any;
+                if (!lobj) return;
+                const slot = lobj['$' + identAttrName];
+                const rawValues = slot?.__raw?.values;
+                const cur = rawValues?.[0]; // raw current slot value (bypasses the read-fallback)
+                const isValueSlot = !!slot && slot.className === 'DValue'; // L-proxy reports the D-layer className ('DValue'), never 'LValue' — see CLAUDE.md §3.13
+                if (isValueSlot && cur !== undefined && cur !== null && cur !== '') {
+                    // Populated slot → overwrite (equality-guarded on the pre-write value).
+                    if (cur !== newName) slot.value = newName; // existing setValueAtPosition path — the write Direction B uses
+                } else if (isValueSlot && Array.isArray(rawValues) && rawValues.length === 0
+                           && newName !== undefined && newName !== null && newName !== '') {
+                    // Empty existing slot → populate it post-commit, mirroring Direction B:
+                    //   1) append the real name via the proven '+=' path (NOT addValue / a new DValue);
+                    //   2) clear isMirage so a placeholder slot's value persists (no-op if already false).
+                    SetFieldAction.new(slot.id, 'values', newName, '+=', false);
+                    SetFieldAction.new(slot.id, 'isMirage', false, '', false);
+                }
+                // else: no existing slot DValue, only an explicit empty-string value, or empty newName → nothing to do.
+            });
+        }
         return true;
     }
 

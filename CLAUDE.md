@@ -307,6 +307,26 @@ exactly why no sync loop exists: the name-side write is terminal, so the cycle
 slot → name go through `set_name` (instead of the direct field write) reintroduces the
 loop. See `docs/discovery/2026-06-17_name_slot_sync.md` §10 for the full trace.
 
+### 3.13 L-layer proxies report the D-layer className
+
+An L-proxy's `.className` returns the **D-layer** class name (`'DValue'`, `'DObject'`,
+`'DClass'`, …) — **never** the L-name (`'LValue'`, `'LObject'`). A guard like
+`lproxy.className === 'LValue'` is therefore **always false** and silently disables whatever
+it protects, with no compile error and no type warning.
+
+```typescript
+if (slot.className === 'DValue') { ... }   // correct
+// NOT: slot.className === 'LValue'         // always false — silently dead
+```
+
+The convention is consistent across the codebase (e.g. `setValueAtPosition`'s
+`oldTarget?.className === "DObject"` on an `LObject.fromPointer(...)` result;
+`proxy.ts` returns the D-name). This typo cost the entire Direction-A identity-sync effort:
+the name → slot write was gated on `=== 'LValue'` and never ran. Residual dead occurrences of
+the same typo remain in the base `LPointerTargetable.set_name`/`get_name`
+(`classes.ts:2129`, `:2155`) — dead for instances (`LObject` overrides them), pending a
+consistency cleanup.
+
 ---
 
 ## 4. Scope & anti-refactoring
