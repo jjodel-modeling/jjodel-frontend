@@ -415,6 +415,9 @@ export class AIConfig{
     apiKey: string = '';
     baseUrl: string; // equivalent to AI.endpoint? redundant?
     lastTested?: number;
+    /** Outcome of the most recent connection test for the current key: true=passed, false=failed,
+     *  undefined=not tested (or invalidated by a credential edit). Drives the Settings status pill. */
+    lastTestOk?: boolean;
     messages: ChatMessage[] = [];
     isOpen: boolean = false;
     isMinimized: boolean = false;

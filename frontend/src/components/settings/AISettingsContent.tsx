@@ -145,8 +145,8 @@ export function AISettingsContent({
     };
 
     // Test provider connection against the real provider endpoint (shared AIProviderService).
-    // On success persist lastTested + enabled (mirrors ProviderConfigModal) so the provider's
-    // status is consistent across both settings UIs; on failure clear enabled and keep the error.
+    // Persist the outcome on config (lastTested + lastTestOk, plus enabled) so the status pill can
+    // show Connected / Invalid key across both settings UIs; on failure keep the error message.
     // The transient button result auto-reverts to idle via scheduleRevert (success and failure alike).
     const handleTestConnection = async (provider: TAIProvider) => {
         clearRevertTimer(provider); // cancel a pending revert from a previous test before starting a new one
@@ -159,10 +159,13 @@ export function AISettingsContent({
 
             if (result.success) {
                 config.lastTested = Date.now();
+                config.lastTestOk = true;
                 config.enabled = true;
                 config.save();
                 setTestStatus(prev => ({ ...prev, [provider]: 'success' }));
             } else {
+                config.lastTested = Date.now();
+                config.lastTestOk = false;
                 config.enabled = false;
                 config.save();
                 setTestError(prev => ({ ...prev, [provider]: result.error || 'Connection failed' }));
@@ -170,6 +173,8 @@ export function AISettingsContent({
             }
         } catch (err) {
             const config = AIConfig.get(provider);
+            config.lastTested = Date.now();
+            config.lastTestOk = false;
             config.enabled = false;
             config.save();
             setTestError(prev => ({ ...prev, [provider]: (err as Error).message || 'Connection failed' }));
@@ -201,6 +206,19 @@ export function AISettingsContent({
             name === AIProvider.Custom ? (liveKey !== '' || baseUrlConfigured)
             : llm.requiresKey ? liveKey !== ''
             : baseUrlConfigured;
+
+        // 4-state status pill — persistent at-a-glance status (complements the transient test button):
+        //   no key → "Not configured" (muted) · key untested → "Configured" (slate, NOT green) ·
+        //   last test passed → "Connected" (green) · last test failed → "Invalid key" (red).
+        // Reactive: recomputes on key changes (liveKey) and on test completion (config.lastTested/Ok).
+        const tested = isConfigured && config.lastTested != null;
+        const statusPill = !isConfigured
+            ? { label: 'Not configured', category: 'context' as const, icon: 'bi-dash-circle' }
+            : tested && config.lastTestOk === true
+                ? { label: 'Connected', category: 'version' as const, icon: 'bi-check-circle-fill' }
+            : tested && config.lastTestOk === false
+                ? { label: 'Invalid key', category: 'state-danger' as const, icon: 'bi-x-circle' }
+                : { label: 'Configured', category: 'state' as const, icon: 'bi-key' };
 
         const status = testStatus[name] || 'idle';
 
@@ -264,17 +282,10 @@ export function AISettingsContent({
                         </div>
                     </div>
                     <div className="provider-status">
-                        {isConfigured ? (
-                            <Badge category="version">
-                                <i className="bi bi-check-circle-fill" />
-                                Configured
-                            </Badge>
-                        ) : (
-                            <Badge category="state">
-                                <i className="bi bi-dash-circle" />
-                                Not configured
-                            </Badge>
-                        )}
+                        <Badge category={statusPill.category}>
+                            <i className={`bi ${statusPill.icon}`} />
+                            {statusPill.label}
+                        </Badge>
                         <i className={`bi bi-chevron-${isExpanded ? 'up' : 'down'} chevron`} />
                     </div>
                 </div>
@@ -315,6 +326,9 @@ export function AISettingsContent({
                                                     config.name = val;
                                                 break;*/
                                             }
+                                            // Any credential edit invalidates a prior test result → untested.
+                                            config.lastTested = undefined;
+                                            config.lastTestOk = undefined;
                                             config.save();
                                             // Re-render for non-key edits (baseUrl/model); the apiKey
                                             // case already re-renders via setApiKeyByProvider above.
