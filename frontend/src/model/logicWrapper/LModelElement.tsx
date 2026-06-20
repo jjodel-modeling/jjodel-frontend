@@ -1441,7 +1441,7 @@ export class DTypedElement extends DModelElement { // Mixin(DTypedElement0, DNam
     // required!: boolean; // exist in ecore, but derived from lowerBound
     allowCrossReference!:boolean;
     // generic type
-    genericType!: GenericType;
+    genericType?: GenericType;
 
 
     public static new(name?: DNamedElement["name"], type?: DTypedElement["type"], father?: Pointer, persist: boolean = true): DTypedElement {
@@ -1525,20 +1525,6 @@ class LTypedElement<Context extends LogicContext<DTypedElement> = any> extends L
         }, delta);
         return true;
     }*/
-
-
-    eGenericType!: DocString<"Variable type declaration name like T, K, V, declared in class and referenced here by string name">;
-    __info_of__eGenericType: Info = {type: ShortAttribETypes.EString, txt: "Mutually exclusive with this.type, it specified a parametrized type.\n" +
-            "The type must be declared in the class definition, and referenced here by name (string). example:" +
-            "class Proxy<N>{" +
-            "\tprivate originalData: N;\n;" +
-            " ... }\n"};
-
-    __info_of__todooooooo: Info = {type: ShortAttribETypes.EString, txt: "example:" +
-            "class ListElement<N>{" +
-            "\tnext: ListElement<N>;\n;" +
-            "\tprev: ListElement<N>;\n   how do i do this in ecore???" +
-            " ... }\n"}
 
 
 
@@ -1680,8 +1666,8 @@ class LTypedElement<Context extends LogicContext<DTypedElement> = any> extends L
         return type?.isPrimitive ? type as LClass : undefined;
     }
 
-    protected get_typeName(c: Context): string{
-        return GenericType.serializeJOM(c.data.genericType);
+    protected get_typeName(c: Context): string {
+        return c.data.genericType ? GenericType.serializeJOM(c.data.genericType) : this.get_type(c)?.name || "shapeless";
     }
 
     protected get_type(c: Context): this["type"] {
@@ -2272,10 +2258,6 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
     }
 
     protected get_classifiers(context: Context): this["classifiers"] {
-        let lc: LClassifier = null as any;
-        let le: LEnumerator = null as any;
-        lc = le;
-        le = lc;
         return U.arrayMergeInPlace(
             context.data.classes.map(pointer => LPointerTargetable.from(pointer)).filter(e=>!!e),
             context.data.enumerators.map(pointer => LPointerTargetable.from(pointer)).filter(e=>!!e)
@@ -2387,7 +2369,7 @@ export class DStructuralFeature extends DModelElement { // DTypedElement
     father!: Pointer<DClass, 1, 1, LClass>;
     name!: string;
     type!: Pointer<DClassifier, 1, 1, LClassifier>;
-    genericType!: GenericType;
+    genericType?: GenericType;
     ordered: boolean = true;
     unique: boolean = true;
     lowerBound: number = 0;
@@ -2435,7 +2417,7 @@ export class LStructuralFeature<Context extends LogicContext<DStructuralFeature>
     name!: string;
     namespace!: string;
     type!: LClassifier;
-    genericType!: GenericType;
+    genericType?: GenericType;
     ordered: boolean = true;
     unique: boolean = true;
     lowerBound: number = 0;
@@ -2601,7 +2583,7 @@ export class DOperation extends DModelElement { // extends DTypedElement
     __isDOperation!: boolean; // to avoid duck typing mistaking it for DStructuralFeature
     // generic types
     genericType?: GenericType;
-    typeParameters?: TypeDeclaration[];
+    typeParameters!: TypeDeclaration[];
 
 
     public static new(name?: DNamedElement["name"], type?: DOperation["type"], exceptions: DOperation["exceptions"] = [], father?: DOperation["father"], persist: boolean = true): DOperation {
@@ -2663,10 +2645,6 @@ export class LOperation<Context extends LogicContext<DOperation, LOperation> = a
     defaultValue!: (Pointer<DObject, 1, 1, LObject> | PrimitiveType)[];
     defaultValueLiteral!: string;
     __isLOperation!: boolean; // to avoid duck typing mistaking it for LStructuralFeature
-    // generic types
-    genericType?: GenericType;
-    typeParameters!: TypeDeclaration[];
-    eTypeParameters!: TypeDeclaration[];
 
     protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}, deep: boolean = true, crossRef: boolean = true): Json {
         if (loopDetectionObj[c.data.id]) return Log.exx('Cannot serialize in ecore, found loop', {loopDetectionObj, c});
@@ -2686,25 +2664,28 @@ export class LOperation<Context extends LogicContext<DOperation, LOperation> = a
 
     public duplicate(deep: boolean = true): this {
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
-    protected get_duplicate(context: Context): ((deep?: boolean) => LOperation) {
+    protected get_duplicate(c: Context): ((deep?: boolean) => LOperation) {
         return (deep: boolean = true) => {
             let ret: LOperation = null as any;
-            TRANSACTION('duplicate ' + this.get_name(context), ()=>{
-                let le: LOperation = context.proxyObject.father.addOperation(context.data.name, context.data.type);
+            TRANSACTION('duplicate ' + this.get_name(c), ()=>{
+                let le: LOperation = c.proxyObject.father.addOperation(c.data.name, c.data.type);
                 let de: D = le.__raw as D;
-                de.lowerBound = context.data.lowerBound;
-                de.upperBound = context.data.upperBound;
-                de.ordered = context.data.ordered;
-                de.unique = context.data.unique;
-                de.visibility = context.data.visibility;
-                de.exceptions = context.data.exceptions;
+
+                de.genericType = c.data.genericType ? U.deepCopy(c.data.genericType) : c.data.genericType;
+                de.typeParameters = c.data.typeParameters ? U.deepCopy(c.data.typeParameters) : c.data.typeParameters;
+                de.lowerBound = c.data.lowerBound;
+                de.upperBound = c.data.upperBound;
+                de.ordered = c.data.ordered;
+                de.unique = c.data.unique;
+                de.visibility = c.data.visibility;
+                de.exceptions = c.data.exceptions;
                 let we: WOperation = le as any;
 
                 if (deep) {
-                    we.annotations = context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id);
-                    we.parameters = context.proxyObject.parameters.map(lchild => lchild.duplicate(deep).id);
+                    we.annotations = c.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id);
+                    we.parameters = c.proxyObject.parameters.map(lchild => lchild.duplicate(deep).id);
                 }
-                we.exceptions = context.data.exceptions;
+                we.exceptions = c.data.exceptions;
                 ret = le;
             })
             return ret; }
@@ -2716,12 +2697,21 @@ export class LOperation<Context extends LogicContext<DOperation, LOperation> = a
 
 
 
+    // generic types
+    genericType?: GenericType;
+    genericType?: GenericType; // eg: type<T extends BOUND1, T extends BOUND2, ....>
+    get_genericType(c: Context): this["genericType"] { return GenericType.getter(c.data.genericType); }
+    set_genericType(v: GenericType, c: Context): boolean { return GenericType.setter(v, c, this); }
+    __info_of__genericType = GenericType.desc;
+
+    typeParameters!: TypeDeclaration[];
+    eTypeParameters!: TypeDeclaration[];
     __info_of__typeParameters: Info = GenericType.descTypeParameters;
     __info_of__eTypeParameters: Info = GenericType.descTypeParameters;
-    get_typeParameters(c: Context): this["eTypeParameters"] { return LClass.singleton.get_typeParameters(c); }
-    set_typeParameters(v: any, c: Context) {return LClass.singleton.get_typeParameters(v, c); }
+    get_typeParameters(c: Context): this["typeParameters"] { return LClass.singleton.get_typeParameters(c); }
+    set_typeParameters(v: this["typeParameters"], c: Context) {return LClass.singleton.set_typeParameters(v, c); }
     get_eTypeParameters(c: Context): this["eTypeParameters"] { return LClass.singleton.get_eTypeParameters(c); }
-    set_eTypeParameters(v: Pointer[], c: Context): boolean { return LClass.singleton.set_eTypeParameters(v, c); }
+    set_eTypeParameters(v: this["eTypeParameters"], c: Context): boolean { return LClass.singleton.set_eTypeParameters(v, c); }
     /*get_addTypeParameter(c: Context) { return LClassifier.singleton.get_addTypeParameter(c); }
     get_removeTypeParameter(c: Context) { return LClassifier.singleton.get_removeTypeParameter(c); }*/
 
@@ -2834,7 +2824,7 @@ export class DParameter extends DModelElement { // extends DTypedElement
     father!: Pointer<DOperation, 1, 1, LOperation>;
     name!: string;
     type!: Pointer<DClassifier, 1, 1, LClassifier>;
-    genericType!: GenericType;
+    genericType?: GenericType;
     ordered: boolean = true;
     unique: boolean = true;
     lowerBound: number = 0;
@@ -2882,7 +2872,7 @@ export class LParameter<Context extends LogicContext<DParameter> = any, C extend
     name!: string;
     namespace!: string;
     type!: LClassifier;
-    genericType!: GenericType;
+
     ordered: boolean = true;
     unique: boolean = true;
     lowerBound: number = 0;
@@ -2892,6 +2882,11 @@ export class LParameter<Context extends LogicContext<DParameter> = any, C extend
     // personal
     defaultValue!: any;
     allowCrossReference!: boolean;
+
+    genericType?: GenericType; // eg: type<T extends BOUND1, T extends BOUND2, ....>
+    __info_of__genericType = GenericType.desc;
+    get_genericType(c: Context): this["genericType"] { return GenericType.getter(c.data.genericType); }
+    set_genericType(v: GenericType, c: Context): boolean { return GenericType.setter(v, c, this); }
 
     protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}, deep: boolean = true, crossRef: boolean = true): Json {
         if (loopDetectionObj[c.data.id]) return Log.exx('Cannot serialize in ecore, found loop', {loopDetectionObj, c});
@@ -2908,21 +2903,21 @@ export class LParameter<Context extends LogicContext<DParameter> = any, C extend
 
     public duplicate(deep: boolean = true): this {
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
-    protected get_duplicate(context: Context): ((deep?: boolean) => LParameter) {
+    protected get_duplicate(c: Context): ((deep?: boolean) => LParameter) {
         return (deep: boolean = true) => {
             let ret: LParameter = null as any;
-            TRANSACTION('duplicate ' + this.get_name(context), ()=>{
-                let le: LParameter = context.proxyObject.father.addParameter(context.data.name, context.data.type);
+            TRANSACTION('duplicate ' + this.get_name(c), ()=>{
+                let le: LParameter = c.proxyObject.father.addParameter(c.data.name, c.data.type);
                 let de: D = le.__raw as D;
-                de.many = context.data.many;
-                de.lowerBound = context.data.lowerBound;
-                de.upperBound = context.data.upperBound;
-                de.ordered = context.data.ordered;
-                de.required = context.data.required;
-                de.unique = context.data.unique;
+
+                de.genericType = c.data.genericType ? U.deepCopy(c.data.genericType) : c.data.genericType;
+                de.lowerBound = c.data.lowerBound;
+                de.upperBound = c.data.upperBound;
+                de.ordered = c.data.ordered;
+                de.unique = c.data.unique;
                 let we: WParameter = le as any;
 
-                if (deep) we.annotations = context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id);
+                if (deep) we.annotations = c.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id);
                 ret = le;
             })
             return ret; }
@@ -2967,7 +2962,6 @@ export class DClass extends DModelElement { // extends DClassifier
     annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
     name!: string;
     defaultValue!: Pointer<DObject, 1, 1, LObject>[];
-    eTypeParameters!: string[];
     // personal
     // isSuperTypeOf(someClass: DClassifier): boolean { return todoret; }
     // getEstructuralFeatureByID(featureID: number): DStructuralFeature { return todoret; }
@@ -3051,7 +3045,6 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     name!: string;
     namespace!: string;
     defaultValue!: LObject[];
-    eTypeParameters!: string[];
     // personal
     // isSuperTypeOf(someClass: DClassifier): boolean { return todoret; }
     // getEstructuralFeatureByID(featureID: number): DStructuralFeature { return todoret; }
@@ -3079,7 +3072,10 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     get_typeParameters(c: LogicContext<DClass | DOperation>): this["typeParameters"] { return GenericType.getter_typeParametersArr(c.data.typeParameters) || []; }
     set_typeParameters(v: this["typeParameters"], c: LogicContext<DClass | DOperation>): boolean { return GenericType.setter_typeParameters(v, c, this); }
 
-    genericSuperTypes!: GenericType[];
+    get_eTypeParameters(c: LogicContext<DClass | DOperation>): this["typeParameters"] { return GenericType.getter_typeParametersArr(c.data.typeParameters) || []; }
+    set_eTypeParameters(v: this["typeParameters"], c: LogicContext<DClass | DOperation>): boolean { return GenericType.setter_typeParameters(v, c, this); }
+
+    /*genericSuperTypes!: GenericType[];
     __info_of__genericSuperTypes: Info = {type: "GenericType[]", txt: "Describes the type arguments used to extend or implement superclasses." +
             "\nEg: class Team extends Set<Human>"}
     get_genericSuperTypes(c: Context): this["genericSuperTypes"] { return c.data.genericSuperTypes; }
@@ -3091,7 +3087,17 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             SetFieldAction.new(c.data, "genericSuperTypes", delta as any, "+=", false);
         });
     return true;
-    }
+    }*/
+
+    genericSuperTypes!: GenericType[]; // eg: type<T extends BOUND1, T extends BOUND2, ....>
+    __info_of__genericSuperTypes = GenericType.descs;
+    get_genericSuperTypes(c: Context): this["genericType"] { return GenericType.getter(c.data.genericSuperTypes); }
+    set_genericSuperTypes(v: this["genericType"], c: Context): boolean { todo for arr return GenericType.setter(v, c, this); }
+
+
+    genericType!: GenericType[]; // alias
+    get_genericTypes(c: Context): this["genericType"] { return this.get_genericSuperTypes(c); }
+    set_genericTypes(v: this["genericType"], c: Context): boolean { return this.set_genericSuperTypes(v, c); }
 
     instanceClassName!: string;
     __info_of__instanceClassName: Info = {type: ShortAttribETypes.EString, txt: "The name of a java class mapped to this eClassifier. Unlike instanceTypeName generic typings are not allowed."};
@@ -3531,22 +3537,24 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
 
     public duplicate(deep: boolean = true): this {
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
-    protected get_duplicate(context: Context): ((deep?: boolean) => LClass) {
+    protected get_duplicate(c: Context): ((deep?: boolean) => LClass) {
         return (deep: boolean = true) => {
             let ret: LClass = null as any;
-            TRANSACTION('duplicate '+this.get_name(context), () => {
-                let le: LClass = context.proxyObject.father.addClass(context.data.name, context.data.interface, context.data.abstract, context.data.isPrimitive);
+            TRANSACTION('duplicate '+this.get_name(c), () => {
+                let le: LClass = c.proxyObject.father.addClass(c.data.name, c.data.interface, c.data.abstract, c.data.isPrimitive);
                 let de: D = le.__raw as D;
                 // de.hideExcessFeatures = context.data.hideExcessFeatures;
                 let we: WClass = le as any;
-                we.defaultValue = context.data.defaultValue;
-                we.extends = context.data.extends;
+                we.defaultValue = c.data.defaultValue;
+                we.extends = c.data.extends;
+                we.genericSuperTypes = c.data.genericSuperTypes ? U.deepCopy(c.data.genericSuperTypes) : c.data.genericSuperTypes;
+                we.typeParameters = c.data.typeParameters ? U.deepCopy(c.data.typeParameters) : c.data.typeParameters;
 
                 if (deep) {
-                    we.annotations = context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id);
-                    we.attributes = context.proxyObject.attributes.map(lchild => lchild.duplicate(deep).id);
-                    we.references = context.proxyObject.references.map(lchild => lchild.duplicate(deep).id);
-                    we.operations = context.proxyObject.operations.map(lchild => lchild.duplicate(deep).id);
+                    we.annotations = c.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id);
+                    we.attributes = c.proxyObject.attributes.map(lchild => lchild.duplicate(deep).id);
+                    we.references = c.proxyObject.references.map(lchild => lchild.duplicate(deep).id);
+                    we.operations = c.proxyObject.operations.map(lchild => lchild.duplicate(deep).id);
                 }
                 ret = le; // set ret = le only if the transaction is complete.
             });
@@ -4351,7 +4359,7 @@ export class DReference extends DModelElement { // DStructuralFeature
     annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
     name!: string;
     type!: Pointer<DClass, 1, 1, LClass>;
-    genericType!: GenericType;
+    genericType?: GenericType;
     ordered: boolean = true;
     unique: boolean = true;
     lowerBound: number = 0;
@@ -4421,7 +4429,12 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
     annotations!: LAnnotation[];
     name!: string;
     namespace!: string;
-    genericType!: GenericType;
+
+    genericType?: GenericType; // eg: type<T extends BOUND1, T extends BOUND2, ....>
+    __info_of__genericType = GenericType.desc;
+    get_genericType(c: Context): this["genericType"] { return GenericType.getter(c.data.genericType); }
+    set_genericType(v: GenericType, c: Context): boolean { return GenericType.setter(v, c, this); }
+
     type!: LClass;
     __info_of__type: Info = {type: "boolean", txt: "The type which the values must conform tp."}
     ordered!: boolean;
@@ -4570,33 +4583,32 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
 
     public duplicate(deep: boolean = true): this {
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
-    protected get_duplicate(context: Context): ((deep?: boolean) => LReference) {
+    protected get_duplicate(c: Context): ((deep?: boolean) => LReference) {
         return (deep: boolean = true) => {
             let ret: LReference = undefined as any;
-            TRANSACTION('duplicate ' + this.get_name(context), ()=>{
-                let le: LReference = context.proxyObject.father.addReference(context.data.name, context.data.type);
+            TRANSACTION('duplicate ' + this.get_name(c), ()=>{
+                let le: LReference = c.proxyObject.father.addReference(c.data.name, c.data.type);
                 let de: D = le.__raw as D;
-                de.many = context.data.many;
-                de.lowerBound = context.data.lowerBound;
-                de.upperBound = context.data.upperBound;
-                de.ordered = context.data.ordered;
-                de.required = context.data.required;
-                de.unique = context.data.unique;
-                de.changeable = context.data.changeable;
-                de.container = context.data.container;
-                de.composition = context.data.composition;
-                de.aggregation = context.data.aggregation;
-                de.resolveProxies = context.data.resolveProxies;
-                de.defaultValueLiteral = context.data.defaultValueLiteral;
-                de.derived = context.data.derived;
-                de.transient = context.data.transient;
-                de.unsettable = context.data.unsettable;
-                de.volatile = context.data.volatile;
+                de.genericType = c.data.genericType ? U.deepCopy(c.data.genericType) : c.data.genericType;
+                de.lowerBound = c.data.lowerBound;
+                de.upperBound = c.data.upperBound;
+                de.ordered = c.data.ordered;
+                de.unique = c.data.unique;
+                de.changeable = c.data.changeable;
+                de.container = c.data.container;
+                de.composition = c.data.composition;
+                de.aggregation = c.data.aggregation;
+                de.resolveProxies = c.data.resolveProxies;
+                de.defaultValueLiteral = c.data.defaultValueLiteral;
+                de.derived = c.data.derived;
+                de.transient = c.data.transient;
+                de.unsettable = c.data.unsettable;
+                de.volatile = c.data.volatile;
                 let we: WReference = le as any;
-                we.opposite = context.data.opposite || undefined;
-                we.defaultValue = context.data.defaultValue;
-                we.type = context.data.type;
-                if (deep) we.annotations = context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id);
+                we.opposite = c.data.opposite || undefined;
+                we.defaultValue = c.data.defaultValue;
+                we.type = c.data.type;
+                if (deep) we.annotations = c.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id);
                 // we.target = deep ? context.proxyObject.target.map(lchild => lchild.duplicate(deep).id) : context.data.target;
                 ret = le;
             })
@@ -4762,7 +4774,7 @@ export class DAttribute extends DModelElement { // DStructuralFeature
     annotations: Pointer<DAnnotation, 0, 'N', LAnnotation> = [];
     name!: string;
     type!: Pointer<DClassifier, 1, 1, LClassifier>;
-    genericType!: GenericType;
+    genericType?: GenericType;
     ordered: boolean = true;
     unique: boolean = true;
     lowerBound: number = 0;
@@ -4830,7 +4842,6 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
     name!: string;
     namespace!: string;
     type!: LClassifier;
-    genericType!: GenericType;
     ordered!: boolean;
     unique!: boolean;
     lowerBound!: number;
@@ -4851,6 +4862,11 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
     isID: boolean = false; // ? exist in ecore as "iD" ?
     isIoT: boolean = false;
     allowCrossReference!:boolean;
+
+    genericType?: GenericType; // eg: type<T extends BOUND1, T extends BOUND2, ....>
+    __info_of__genericType = GenericType.desc;
+    get_genericType(c: Context): this["genericType"] { return GenericType.getter(c.data.genericType); }
+    set_genericType(v: GenericType, c: Context): boolean { return GenericType.setter(v, c, this); }
 
     protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}, deep: boolean = true, crossRef: boolean = true): Json {
         if (loopDetectionObj[c.data.id]) return Log.exx('Cannot serialize in ecore, found loop', {loopDetectionObj, c});
@@ -4873,30 +4889,29 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
 
     public duplicate(deep: boolean = true): this {
         return this.cannotCall( ((this.constructor as typeof RuntimeAccessibleClass).cname || this.constructor.name) + "duplicate()"); }
-    protected get_duplicate(context: Context): ((deep?: boolean) => LAttribute) {
+    protected get_duplicate(c: Context): ((deep?: boolean) => LAttribute) {
         return (deep: boolean = true) => {
             let ret: LAttribute = null as any;
-            TRANSACTION('duplicate ' + this.get_name(context), ()=>{
-                let le: LAttribute = context.proxyObject.father.addAttribute(context.data.name, context.data.type);
+            TRANSACTION('duplicate ' + this.get_name(c), ()=>{
+                let le: LAttribute = c.proxyObject.father.addAttribute(c.data.name, c.data.type);
                 let de: D = le.__raw as D;
-                de.many = context.data.many;
-                de.lowerBound = context.data.lowerBound;
-                de.upperBound = context.data.upperBound;
-                de.ordered = context.data.ordered;
-                de.required = context.data.required;
-                de.unique = context.data.unique;
-                de.changeable = context.data.changeable;
-                de.defaultValue = context.data.defaultValue;
-                de.defaultValueLiteral = context.data.defaultValueLiteral;
-                de.derived = context.data.derived;
-                de.transient = context.data.transient;
-                de.unsettable = context.data.unsettable;
-                de.volatile = context.data.volatile;
-                de.isID = context.data.isID;
-                de.isIoT = context.data.isIoT;
+                de.genericType = c.data.genericType ? U.deepCopy(c.data.genericType) : c.data.genericType;
+                de.lowerBound = c.data.lowerBound;
+                de.upperBound = c.data.upperBound;
+                de.ordered = c.data.ordered;
+                de.unique = c.data.unique;
+                de.changeable = c.data.changeable;
+                de.defaultValue = c.data.defaultValue;
+                de.defaultValueLiteral = c.data.defaultValueLiteral;
+                de.derived = c.data.derived;
+                de.transient = c.data.transient;
+                de.unsettable = c.data.unsettable;
+                de.volatile = c.data.volatile;
+                de.isID = c.data.isID;
+                de.isIoT = c.data.isIoT;
                 let we: WAttribute = le as any;
-                we.type = context.data.type;
-                if (deep) we.annotations = context.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id);
+                we.type = c.data.type;
+                if (deep) we.annotations = c.proxyObject.annotations.map(lchild => lchild.duplicate(deep).id);
                 ret = le;
             })
             return ret; }
@@ -7144,7 +7159,11 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     namespace!: string;
     fullname!:string;
     type!: LClassifier; // Classifiers describing PrimitiveTypes or the classes that can be pointed.
-    genericType!: GenericType;
+    genericType?: GenericType; todo for dvalue? // eg: type<T extends BOUND1, T extends BOUND2, ....>
+    __info_of__genericType = GenericType.desc;
+    get_genericType(c: Context): this["genericType"] { return GenericType.getter(c.data.genericType); }
+    set_genericType(v: GenericType, c: Context): boolean { return GenericType.setter(v, c, this); }
+
     primitiveType!: LClass;
     classType!: LClass;
     enumType!: LEnumerator;

@@ -3,7 +3,7 @@ import {
     Dictionary,
     GObject,
     LogicContext,
-    Info, DPointerTargetable, DOperation
+    Info, DPointerTargetable, DOperation, ShortAttribETypes
 } from "../../joiner";
 import {
     DClassifier, LClassifier, Pointers, U, L, LModel, LClass, DClass, LEnumerator,
@@ -194,6 +194,12 @@ export class GenericType {
     componentType?: GenericType;
 
 
+    static descc eGenericType!: DocString<"Variable type declaration name like T, K, V, declared in class and referenced here by string name">;
+    static descc __info_of__eGenericType: Info = {type: ShortAttribETypes.EString, txt: "Mutually exclusive with this.type, it specified a parametrized type.\n" +
+            "The type must be declared in the class definition, and referenced here by name (string). example:" +
+            "class Proxy<N>{" +
+            "\tprivate originalData: N;\n;" +
+            " ... }\n"};
     // validate and fix a tentative object received through API
     private static PointerOrName<T extends DPointerTargetable>(v: any, allowGenericType = false): string | Pointer<T> | undefined {
         if (!v) return undefined;
