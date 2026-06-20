@@ -159,7 +159,12 @@ export class Dummy {
                         switch (dObj.className) {
                             default: Log.eDevv('unexpected pointer to type:' + dObj.className, {dObj, dDeleted, field}); break;
                             case 'DParameter': case 'DAttribute': lObj.type = 'Pointer_ESTRING'; break;
-                            case 'DReference': case 'DOperation':
+                            case 'DReference':
+                                // incoming reference to a deleted class → delete it at M2.
+                                // cascades to its M1 DValue slots via case 'instanceof' (else branch, preserved by 2c).
+                                lObj.delete();
+                                break;
+                            case 'DOperation':
                                 // would be nice to set dObj.extends[0] instead but i cannot tell if it was deleted too.
                                 // lData.father instead is safe as even if it's deleted it does not matter as it will delete the feature together
                                 lObj.type = lDeleted.father;
