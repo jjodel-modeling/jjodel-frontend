@@ -28,6 +28,7 @@ export { Polygon, Circle, Cross, Decagon,
 export {DefaultNode, DefaultNodeComponent} from "../graph/defaultNode/DefaultNode"; // require graphelement
 export {GraphsContainer, GraphsContainerComponent} from "../graph/graph/graphContainer"; // require vertex, graph
 export {Edge, EdgeComponent,} from "../graph/damedges/damedge";
+export {DerivedReferenceEdge} from "../edges/derived/DerivedReferenceEdge";
 export {GenericInput} from "../components/forEndUser/GenericInput"
 export {IRView} from "../ai/viewpointIR/IRView";
 // other exports
