@@ -1,0 +1,67 @@
+% Softgoal interdependency graph (NFR / GRL) for the harness.
+% Embeddable via \input; requires tikz with libraries positioning, shapes.geometric, arrows.meta
+% (all already loaded in main.tex). Styles are namespaced (sg, sgtop, op, pos, neg, dec) to avoid
+% clashing with the FTG/PM styles in main.tex.
+\tikzset{
+  sg/.style={draw, ellipse, fill=blue!6, font=\tiny, align=center, inner sep=1.4pt, minimum width=13mm},
+  sgtop/.style={draw, ellipse, fill=blue!14, font=\scriptsize, align=center, inner sep=2pt, thick, minimum width=20mm},
+  op/.style={draw, rounded corners=2pt, fill=yellow!14, font=\tiny, align=center, inner sep=2pt, minimum height=5.5mm},
+  hlp/.style={-{Stealth[length=1.6mm]}, green!55!black, semithick},
+  hrt/.style={-{Stealth[length=1.6mm]}, red!75!black, dashed, semithick},
+  dec/.style={-{Stealth[length=1.4mm]}, black!45},
+  lbl/.style={fill=white, inner sep=0.5pt, font=\tiny}
+}
+\begin{tikzpicture}[x=1mm, y=1mm]
+  % --- leaf softgoals (quality factors) ---
+  \node[sg] (cons)  at (0,0)    {Consistency};
+  \node[sg] (fresh) at (23,0)   {Freshness};
+  \node[sg] (trac)  at (46,0)   {Traceability};
+  \node[sg] (repr)  at (69,0)   {Reproducib.};
+  \node[sg] (tok)   at (92,0)   {Token\\economy};
+  \node[sg] (risk)  at (115,0)  {Risk\\containment};
+
+  % --- top softgoals ---
+  \node[sgtop] (kf) at (34,22) {Knowledge\\fidelity};
+  \node[sgtop] (pe) at (92,22) {Process\\efficiency};
+  \node[sgtop] (gov) at (115,22) {Governance};
+
+  % --- decomposition links (leaf -> top) ---
+  \draw[dec] (cons)  -- (kf);
+  \draw[dec] (fresh) -- (kf);
+  \draw[dec] (trac)  -- (kf);
+  \draw[dec] (repr)  -- (kf);
+  \draw[dec] (tok)   -- (pe);
+  \draw[dec] (risk)  -- (gov);
+
+  % --- operationalizations (document types) ---
+  \node[op] (pc)   at (8,-24)   {Persistent\\context};
+  \node[op] (spec) at (40,-24)  {Specification};
+  \node[op] (skill)at (80,-24)  {Skill};
+  \node[op] (disc) at (112,-24) {Discovery\\report};
+
+  % --- contribution links ---
+  % Persistent context: trade-off 1 (fidelity vs token) + freshness liability
+  \draw[hlp] (pc) -- (cons.south)  node[lbl,pos=0.35]{++};
+  \draw[hrt] (pc) to[bend right=14] (tok) node[lbl,pos=0.62]{$--$};
+  \draw[hrt] (pc) -- (fresh) node[lbl,pos=0.6]{$-$};
+  % Specification: trade-off 2 (consistency vs freshness)
+  \draw[hlp] (spec) -- (cons.south east) node[lbl,pos=0.55]{++};
+  \draw[hrt] (spec) -- (fresh) node[lbl,midway]{$-$};
+  % Skill: trade-off 3 (efficiency vs determinism/risk)
+  \draw[hlp] (skill) -- (tok) node[lbl,midway]{++};
+  \draw[hlp] (skill) -- (repr) node[lbl,pos=0.55]{$+$};
+  \draw[hrt] (skill) -- (risk) node[lbl,pos=0.6]{$-$};
+  % Discovery report: intended traceability vs realized (the debt gap) + risk containment
+  \draw[hlp] (disc) -- (risk) node[lbl,midway]{++};
+  \draw[hlp] (disc) to[bend right=10] (trac) node[lbl,pos=0.5]{$+$};
+  \draw[hrt] (disc) to[bend left=22] node[lbl,pos=0.5]{realized $\approx 0$} (trac);
+
+  % --- tension between the two top softgoals ---
+  \draw[{Stealth[length=1.6mm]}-{Stealth[length=1.6mm]}, red!75!black, thick] (kf) -- node[lbl]{conflict} (pe);
+
+  % --- legend ---
+  \node[font=\tiny, anchor=west, align=left] at (-2,-40)
+    {\textcolor{green!55!black}{$\rightarrow$} Help/Make ($+,++$)\quad
+     \textcolor{red!75!black}{$\rightarrow$} Hurt/Break ($-,--$, dashed)\quad
+     \textcolor{black!45}{$\rightarrow$} decomposition};
+\end{tikzpicture}
