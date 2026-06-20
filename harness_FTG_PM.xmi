@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xmi:XMI xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:ftgpm="http://jjodel.org/FTG+PM">
+
+  <!-- ============================================================ -->
+  <!-- FTG, type level. Languages (document types) and the          -->
+  <!-- Transformations that write and consume them.                 -->
+  <!-- inputs lists the transformations that consume a language.    -->
+  <!-- outputs lists the languages a transformation produces.       -->
+  <!-- ============================================================ -->
+
+  <!-- Languages -->
+  <ftgpm:Language xmi:id="L_brief"
+      inputs="T_discover T_implement"
+      definition="Prompt / task brief. Required: scope (named files), goal, constraints, hard stops. Transient, rarely persisted as a document and almost always only summarized in claude-code-log. Well formed when it names the exact files in scope and a verifiable done condition."/>
+
+  <ftgpm:Language xmi:id="L_claude"
+      inputs="T_read"
+      definition="CLAUDE.md, persistent context. Required: non-negotiable rules block, critical-zone patterns, conventions, key-file map, calibration date. Persistent: read at every session start and updated when a new pattern emerges. Well formed when each rule is actionable and traceable to a section number."/>
+
+  <ftgpm:Language xmi:id="L_log"
+      inputs="T_read"
+      definition="claude-code-log.md, operational record. Append only, one entry per task with fields: prompt summary, files touched, outcome, regressions, out-of-scope, layer impact report, prompt document name. Persistent. Well formed when the three self-assessment metrics are filled honestly."/>
+
+  <ftgpm:Language xmi:id="L_discovery"
+      inputs="T_spec T_implement"
+      definition="Discovery report. For visual bugs requires observed state, expected state, and a single mechanical acceptance criterion (section 5.1). Optional: consumer verification and an end-to-end trace. Well formed when the acceptance criterion can be checked without the screenshot."/>
+
+  <ftgpm:Language xmi:id="L_spec"
+      inputs="T_implement"
+      definition="Feature spec. Formal statement of expected behavior with an acceptance criterion, distinguishing correctness from aesthetics. Well formed when it yields a pass or fail test."/>
+
+  <ftgpm:Language xmi:id="L_langspec"
+      inputs="T_implement"
+      definition="Language spec (jjel/jjtl SPEC.md). Grammar, operator precedence, builtins, design decisions. Co-evolves with lexer, parser and grammar per the section 12.7 checklist. Well formed when the five syntax files agree."/>
+
+  <ftgpm:Language xmi:id="L_handover"
+      inputs="T_read"
+      definition="Handover note. Continuity context for the next session: what was done, what remains, known traps. Well formed when the next session can resume without re-discovery."/>
+
+  <ftgpm:Language xmi:id="L_design"
+      inputs="T_implement"
+      definition="Design system / redesign spec. Tokens, components, palettes, layout rules. Well formed when tokens exist in both light and dark files and no legacy token is reintroduced."/>
+
+  <ftgpm:Language xmi:id="L_governance"
+      inputs=""
+      definition="Governance and policy (README, code of conduct, PR template). Project-level rules outside the development loop. FINDING: no transformation in the modeled loop consumes it, so inputs is empty (an aspirational edge, see trace notes). Well formed when consistent with the current contribution flow."/>
+
+  <ftgpm:Language xmi:id="L_code"
+      inputs="T_migrate T_commit"
+      definition="Code as target language. The verified committed source. Well formed when typecheck and build pass and no committed behavior is degraded."/>
+
+  <ftgpm:Language xmi:id="L_migration"
+      inputs=""
+      definition="VersionFixer jsxString migration. Rewrites persisted jsxString for existing projects when default-view source changes (section 3.9). FINDING: consumed by the runtime VersionFixer outside the corpus, so inputs is empty (a terminal edge). Well formed when every saved project on the old marker is migrated."/>
+
+  <!-- Transformations. definition begins with the executor tag. -->
+  <ftgpm:Transformation xmi:id="T_author" auto="false" outputs="L_brief"
+      definition="[director] manual. Authors intent and the task brief that opens the loop. Generative, triggered by a new development goal."/>
+
+  <ftgpm:Transformation xmi:id="T_update_context" auto="false" outputs="L_claude"
+      definition="[director] manual. Updates CLAUDE.md when a new pattern, gotcha or convention emerges. Refining, triggered after acceptance."/>
+
+  <ftgpm:Transformation xmi:id="T_log" auto="true" outputs="L_log"
+      definition="[implementer] auto. Appends the per-task entry to claude-code-log at task end. Generative."/>
+
+  <ftgpm:Transformation xmi:id="T_discover" auto="true" outputs="L_discovery"
+      definition="[architect] auto. Investigates before action and writes the discovery report. Generative, triggered by a bug report or feature request."/>
+
+  <ftgpm:Transformation xmi:id="T_spec" auto="false" outputs="L_spec"
+      definition="[collaborative: director+architect] manual. Distills a discovery into a formal feature spec with an acceptance criterion. Refining."/>
+
+  <ftgpm:Transformation xmi:id="T_langspec" auto="true" outputs="L_langspec"
+      definition="[implementer] auto. Updates the language spec alongside a syntax change per the section 12.7 checklist. Refining."/>
+
+  <ftgpm:Transformation xmi:id="T_handover" auto="true" outputs="L_handover"
+      definition="[implementer] auto. Writes the handover note at the end of a workstream. Generative."/>
+
+  <ftgpm:Transformation xmi:id="T_design" auto="false" outputs="L_design"
+      definition="[collaborative: director+architect] manual. Authors or revises design system and redesign specs. Refining."/>
+
+  <ftgpm:Transformation xmi:id="T_governance" auto="false" outputs="L_governance"
+      definition="[director] manual. Authors or revises governance and policy documents. Refining, rare."/>
+
+  <ftgpm:Transformation xmi:id="T_implement" auto="true" outputs="L_code"
+      definition="[implementer] auto. Implements against the brief and spec, producing or editing code. Generative."/>
+
+  <ftgpm:Transformation xmi:id="T_migrate" auto="true" outputs="L_migration"
+      definition="[implementer] auto. Adds a VersionFixer migration when default-view source is touched. Generative, conditional."/>
+
+  <ftgpm:Transformation xmi:id="T_read" auto="true" outputs=""
+      definition="[architect] auto. Reads the persistent context (CLAUDE.md, claude-code-log, handover) at session start. Ingest, no document output."/>
+
+  <ftgpm:Transformation xmi:id="T_commit" auto="false" outputs=""
+      definition="[director] manual. Stages named files and commits after gating. No document output, writes the git record outside the corpus. Gating itself is not a transformation, it is Decision D_gate."/>
+
+  <!-- ============================================================ -->
+  <!-- PM, enactment level. Node graph typed by the FTG.            -->
+  <!-- controlFlow sequences nodes. dataFlow connects activities    -->
+  <!-- to the objects they produce (on the activity) or consume     -->
+  <!-- (on the object).                                             -->
+  <!-- ============================================================ -->
+
+  <ftgpm:Initial xmi:id="N_initial" controlFlow="A_author"/>
+
+  <ftgpm:Activity xmi:id="A_author" name="Author intent + task brief"
+      activityTypedBy="T_author" controlFlow="A_read" dataFlow="O_brief"/>
+
+  <ftgpm:Activity xmi:id="A_read" name="Read persistent context"
+      activityTypedBy="T_read" controlFlow="A_discover"/>
+
+  <ftgpm:Activity xmi:id="A_discover" name="Run discovery"
+      activityTypedBy="T_discover" controlFlow="D_spec" dataFlow="O_discovery"/>
+
+  <ftgpm:Decision xmi:id="D_spec" controlFlow="A_spec A_implement"/>
+
+  <ftgpm:Activity xmi:id="A_spec" name="Write feature spec"
+      activityTypedBy="T_spec" controlFlow="A_implement" dataFlow="O_spec"/>
+
+  <ftgpm:Activity xmi:id="A_implement" name="Implement against brief"
+      activityTypedBy="T_implement" controlFlow="D_view" dataFlow="O_code"/>
+
+  <ftgpm:Decision xmi:id="D_view" controlFlow="A_migrate A_log"/>
+
+  <ftgpm:Activity xmi:id="A_migrate" name="Add VersionFixer migration"
+      activityTypedBy="T_migrate" controlFlow="A_log" dataFlow="O_migration"/>
+
+  <ftgpm:Activity xmi:id="A_log" name="Append session log"
+      activityTypedBy="T_log" controlFlow="D_gate" dataFlow="O_log"/>
+
+  <ftgpm:Decision xmi:id="D_gate" controlFlow="A_update A_implement"/>
+
+  <ftgpm:Activity xmi:id="A_update" name="Update CLAUDE.md"
+      activityTypedBy="T_update_context" controlFlow="A_commit" dataFlow="O_claude"/>
+
+  <ftgpm:Activity xmi:id="A_commit" name="Stage + commit files"
+      activityTypedBy="T_commit" controlFlow="N_final"/>
+
+  <ftgpm:ActivityFinal xmi:id="N_final"/>
+
+  <!-- Objects. Persistent: O_claude, O_log (survive across iterations). -->
+  <ftgpm:Object xmi:id="O_brief" name="Prompt / task brief"
+      objectTypedBy="L_brief" dataFlow="A_discover A_implement"/>
+
+  <ftgpm:Object xmi:id="O_claude" name="CLAUDE.md (persistent)"
+      objectTypedBy="L_claude" dataFlow="A_read"/>
+
+  <ftgpm:Object xmi:id="O_log" name="claude-code-log.md (persistent)"
+      objectTypedBy="L_log" dataFlow="A_read"/>
+
+  <ftgpm:Object xmi:id="O_discovery" name="Discovery report"
+      objectTypedBy="L_discovery" dataFlow="A_spec A_implement"/>
+
+  <ftgpm:Object xmi:id="O_spec" name="Feature spec"
+      objectTypedBy="L_spec" dataFlow="A_implement"/>
+
+  <ftgpm:Object xmi:id="O_code" name="Code (target source)"
+      objectTypedBy="L_code" dataFlow="A_migrate A_commit"/>
+
+  <ftgpm:Object xmi:id="O_migration" name="jsxString migration"
+      objectTypedBy="L_migration"/>
+
+</xmi:XMI>

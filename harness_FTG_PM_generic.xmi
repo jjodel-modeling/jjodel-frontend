@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xmi:XMI xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:ftgpm="http://jjodel.org/FTG+PM">
+
+  <!-- ============================================================ -->
+  <!-- Reference harness model, vendor neutral.                     -->
+  <!-- Valid for any LLM or LLM-based coding agent.                 -->
+  <!-- Roles are functional: director (human), architect (a         -->
+  <!-- reasoning/design LLM), implementer (a coding LLM). The       -->
+  <!-- architect and implementer may be the same model instance or  -->
+  <!-- two; the distinction is functional, not a product name.      -->
+  <!-- ============================================================ -->
+
+  <!-- FTG, type level. Languages (document types) and the          -->
+  <!-- Transformations that write (outputs) and consume (inputs).   -->
+
+  <ftgpm:Language xmi:id="L_context"
+      inputs="T_read"
+      definition="Persistent agent context, the operating manual the agents read during work. Concrete forms: a rules or memory file (for example an agent rules file, an editor rules file, a system prompt, or a persisted memory store). Required: operating rules, critical patterns, conventions, a map of key artifacts, a calibration marker. Persistent: read at every session start, updated when a new pattern emerges. Well formed when each rule is actionable and addressable."/>
+
+  <ftgpm:Language xmi:id="L_log"
+      inputs="T_read"
+      definition="Operational task log. Append only, one entry per task: task summary, artifacts touched, outcome, regressions, scope adherence, pointer to the originating brief. Persistent. Well formed when the self-assessment fields are filled honestly."/>
+
+  <ftgpm:Language xmi:id="L_brief"
+      inputs="T_discover T_implement"
+      definition="Task brief or prompt artifact, the instruction that opens an iteration. Required: scope, goal, constraints, stop conditions. Often transient and under-persisted. Well formed when it names the artifacts in scope and a verifiable done condition."/>
+
+  <ftgpm:Language xmi:id="L_discovery"
+      inputs="T_spec T_implement"
+      definition="Investigation report, produced before action: observed state, expected state, and a single mechanical acceptance criterion. Well formed when the criterion is checkable independently of any screenshot or anecdote."/>
+
+  <ftgpm:Language xmi:id="L_spec"
+      inputs="T_implement"
+      definition="Feature spec. Formal expected behavior with an acceptance criterion, separating correctness from preference. Well formed when it yields a pass or fail test."/>
+
+  <ftgpm:Language xmi:id="L_domainspec"
+      inputs="T_implement"
+      definition="Domain or language spec, the authoritative description of a domain artifact that enters the loop as input (grammar, API, schema, protocol). Co-evolves with its implementation. Well formed when spec and implementation agree."/>
+
+  <ftgpm:Language xmi:id="L_handover"
+      inputs="T_read"
+      definition="Handover note, continuity context for the next session: done, remaining, traps. Well formed when the next session resumes without re-discovery."/>
+
+  <ftgpm:Language xmi:id="L_standards"
+      inputs="T_implement"
+      definition="Standards or design specification, cross-cutting rules (style, tokens, architecture conventions). Well formed when self-consistent and free of deprecated rules."/>
+
+  <ftgpm:Language xmi:id="L_governance"
+      inputs=""
+      definition="Governance and policy, project-level rules outside the build loop (contribution, conduct, review templates). FINDING: no transformation in the modeled loop consumes it, so inputs is empty (an aspirational edge). Well formed when consistent with the actual contribution flow."/>
+
+  <ftgpm:Language xmi:id="L_code"
+      inputs="T_migrate T_commit"
+      definition="Code as target language, the verified committed artifact. Well formed when build and checks pass and committed behavior is not degraded."/>
+
+  <ftgpm:Language xmi:id="L_migration"
+      inputs=""
+      definition="Persistence migration. When a source whose output is persisted in user data is changed, a migration rewrites existing persisted state. FINDING: consumed by the runtime outside the corpus, so inputs is empty (a terminal edge). Well formed when every persisted instance on the old schema is migrated."/>
+
+  <!-- Transformations. definition begins with the executor tag.     -->
+  <!-- auto = true for an agent-only step, false for a human or      -->
+  <!-- human-co-performed step.                                      -->
+  <ftgpm:Transformation xmi:id="T_author" auto="false" outputs="L_brief"
+      definition="[director] manual. Authors intent and the task brief that opens the loop. Generative, triggered by a new development goal."/>
+
+  <ftgpm:Transformation xmi:id="T_update_context" auto="false" outputs="L_context"
+      definition="[director] manual. Updates the persistent context when a new pattern, gotcha or convention emerges. Refining, triggered after acceptance."/>
+
+  <ftgpm:Transformation xmi:id="T_log" auto="true" outputs="L_log"
+      definition="[implementer] auto. Appends the per-task entry to the operational log at task end. Generative."/>
+
+  <ftgpm:Transformation xmi:id="T_discover" auto="true" outputs="L_discovery"
+      definition="[architect] auto. Investigates before action and writes the investigation report. Generative, triggered by a bug report or feature request."/>
+
+  <ftgpm:Transformation xmi:id="T_spec" auto="false" outputs="L_spec"
+      definition="[collaborative: director+architect] manual. Distills an investigation into a formal feature spec with an acceptance criterion. Refining."/>
+
+  <ftgpm:Transformation xmi:id="T_domainspec" auto="true" outputs="L_domainspec"
+      definition="[implementer] auto. Updates the domain or language spec alongside a change to the domain artifact. Refining."/>
+
+  <ftgpm:Transformation xmi:id="T_handover" auto="true" outputs="L_handover"
+      definition="[implementer] auto. Writes the handover note at the end of a workstream. Generative."/>
+
+  <ftgpm:Transformation xmi:id="T_standards" auto="false" outputs="L_standards"
+      definition="[collaborative: director+architect] manual. Authors or revises standards and design specifications. Refining."/>
+
+  <ftgpm:Transformation xmi:id="T_governance" auto="false" outputs="L_governance"
+      definition="[director] manual. Authors or revises governance and policy documents. Refining, rare."/>
+
+  <ftgpm:Transformation xmi:id="T_implement" auto="true" outputs="L_code"
+      definition="[implementer] auto. Implements against the brief and spec, producing or editing code. Generative."/>
+
+  <ftgpm:Transformation xmi:id="T_migrate" auto="true" outputs="L_migration"
+      definition="[implementer] auto. Writes a persistence migration when a persisted-schema source is touched. Generative, conditional."/>
+
+  <ftgpm:Transformation xmi:id="T_read" auto="true" outputs=""
+      definition="[architect] auto. Reads the persistent context (operating manual, operational log, handover) at session start. Ingest, no document output."/>
+
+  <ftgpm:Transformation xmi:id="T_commit" auto="false" outputs=""
+      definition="[director] manual. Stages named artifacts and commits after gating. No document output, writes the version record outside the corpus. Gating itself is not a transformation, it is Decision D_gate."/>
+
+  <!-- ============================================================ -->
+  <!-- PM, enactment level. Node graph typed by the FTG.            -->
+  <!-- ============================================================ -->
+
+  <ftgpm:Initial xmi:id="N_initial" controlFlow="A_author"/>
+
+  <ftgpm:Activity xmi:id="A_author" name="Author intent and task brief"
+      activityTypedBy="T_author" controlFlow="A_read" dataFlow="O_brief"/>
+
+  <ftgpm:Activity xmi:id="A_read" name="Read persistent context"
+      activityTypedBy="T_read" controlFlow="A_discover"/>
+
+  <ftgpm:Activity xmi:id="A_discover" name="Investigate before action"
+      activityTypedBy="T_discover" controlFlow="D_spec" dataFlow="O_discovery"/>
+
+  <ftgpm:Decision xmi:id="D_spec" controlFlow="A_spec A_implement"/>
+
+  <ftgpm:Activity xmi:id="A_spec" name="Write feature spec"
+      activityTypedBy="T_spec" controlFlow="A_implement" dataFlow="O_spec"/>
+
+  <ftgpm:Activity xmi:id="A_implement" name="Implement against brief"
+      activityTypedBy="T_implement" controlFlow="D_persist" dataFlow="O_code"/>
+
+  <ftgpm:Decision xmi:id="D_persist" controlFlow="A_migrate A_log"/>
+
+  <ftgpm:Activity xmi:id="A_migrate" name="Write persistence migration"
+      activityTypedBy="T_migrate" controlFlow="A_log" dataFlow="O_migration"/>
+
+  <ftgpm:Activity xmi:id="A_log" name="Append task log"
+      activityTypedBy="T_log" controlFlow="D_gate" dataFlow="O_log"/>
+
+  <ftgpm:Decision xmi:id="D_gate" controlFlow="A_update A_implement"/>
+
+  <ftgpm:Activity xmi:id="A_update" name="Update persistent context"
+      activityTypedBy="T_update_context" controlFlow="A_commit" dataFlow="O_context"/>
+
+  <ftgpm:Activity xmi:id="A_commit" name="Stage and commit"
+      activityTypedBy="T_commit" controlFlow="N_final"/>
+
+  <ftgpm:ActivityFinal xmi:id="N_final"/>
+
+  <!-- Objects. Persistent: O_context, O_log (survive across iterations). -->
+  <ftgpm:Object xmi:id="O_brief" name="Task brief"
+      objectTypedBy="L_brief" dataFlow="A_discover A_implement"/>
+
+  <ftgpm:Object xmi:id="O_context" name="Persistent context (persistent)"
+      objectTypedBy="L_context" dataFlow="A_read"/>
+
+  <ftgpm:Object xmi:id="O_log" name="Operational log (persistent)"
+      objectTypedBy="L_log" dataFlow="A_read"/>
+
+  <ftgpm:Object xmi:id="O_discovery" name="Investigation report"
+      objectTypedBy="L_discovery" dataFlow="A_spec A_implement"/>
+
+  <ftgpm:Object xmi:id="O_spec" name="Feature spec"
+      objectTypedBy="L_spec" dataFlow="A_implement"/>
+
+  <ftgpm:Object xmi:id="O_code" name="Code (target)"
+      objectTypedBy="L_code" dataFlow="A_migrate A_commit"/>
+
+  <ftgpm:Object xmi:id="O_migration" name="Persistence migration"
+      objectTypedBy="L_migration"/>
+
+</xmi:XMI>

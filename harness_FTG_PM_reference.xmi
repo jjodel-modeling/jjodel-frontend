@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xmi:XMI xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:ftgpm="http://jjodel.org/FTG+PM">
+
+  <!-- ============================================================ -->
+  <!-- Reference harness model. Domain neutral and vendor neutral.  -->
+  <!-- Independent of any codebase and of any LLM product.          -->
+  <!--                                                              -->
+  <!-- Reading: the FTG is the harness language catalogue (a        -->
+  <!-- product-line feature space). The PM is one enacted           -->
+  <!-- configuration of it. Languages marked CORE are essential;    -->
+  <!-- languages marked VARIATION are optional features a concrete  -->
+  <!-- harness may include or omit.                                 -->
+  <!--                                                              -->
+  <!-- Roles are functional: director (human), architect (a         -->
+  <!-- reasoning/design LLM), implementer (a coding LLM). The two   -->
+  <!-- agent roles may collapse into one model instance.            -->
+  <!--                                                              -->
+  <!-- The namespace below names the FTG+PM formalism, not the      -->
+  <!-- jjodel application; rebind it freely.                        -->
+  <!-- ============================================================ -->
+
+  <!-- FTG. Languages (document types) and their writing/consuming   -->
+  <!-- Transformations. inputs = consumers, outputs = products.      -->
+
+  <ftgpm:Language xmi:id="L_context"
+      inputs="T_read"
+      definition="CORE. Persistent agent context, the operating manual agents read during work (rules, conventions, critical patterns, key-artifact map, calibration marker). Persistent. Well formed when each rule is actionable and addressable."/>
+
+  <ftgpm:Language xmi:id="L_log"
+      inputs="T_read"
+      definition="CORE. Operational task log, append only, one entry per task (summary, artifacts touched, outcome, regressions, scope adherence, brief pointer). Persistent. Well formed when the self-assessment fields are honest."/>
+
+  <ftgpm:Language xmi:id="L_brief"
+      inputs="T_discover T_implement"
+      definition="CORE. Task brief, the instruction opening an iteration (scope, goal, constraints, stop conditions). Often transient and under-persisted. Well formed when it names the artifacts in scope and a verifiable done condition."/>
+
+  <ftgpm:Language xmi:id="L_discovery"
+      inputs="T_spec T_implement"
+      definition="CORE. Investigation report produced before action (observed state, expected state, single mechanical acceptance criterion). Well formed when the criterion is checkable independently of anecdote."/>
+
+  <ftgpm:Language xmi:id="L_code"
+      inputs="T_compensate T_commit"
+      definition="CORE. Target artifact, the verified committed output of the loop. Well formed when checks pass and committed behavior is not degraded."/>
+
+  <ftgpm:Language xmi:id="L_spec"
+      inputs="T_implement"
+      definition="VARIATION. Feature spec, formal expected behavior with an acceptance criterion. Used when a request needs a mechanical pass or fail. Well formed when it yields a test."/>
+
+  <ftgpm:Language xmi:id="L_compensation"
+      inputs=""
+      definition="VARIATION, guarded. Compensating artifact, written when an implementation crosses a sensitive boundary (a contract, schema, persisted state, public interface, or security surface) and existing state or consumers must be reconciled. FINDING pattern: typically terminal, consumed by a runtime or external consumer outside the corpus (empty inputs). Well formed when every affected instance or consumer is reconciled."/>
+
+  <ftgpm:Language xmi:id="L_domainspec"
+      inputs="T_implement"
+      definition="VARIATION. Domain or language spec, authoritative description of an input artifact (grammar, API, schema, protocol) that co-evolves with its implementation. Well formed when spec and implementation agree."/>
+
+  <ftgpm:Language xmi:id="L_handover"
+      inputs="T_read"
+      definition="VARIATION. Handover note, continuity context across sessions (done, remaining, traps). Well formed when the next session resumes without re-discovery."/>
+
+  <ftgpm:Language xmi:id="L_standards"
+      inputs="T_implement"
+      definition="VARIATION. Standards or design specification, cross-cutting conventions (style, structure, interfaces). Well formed when self-consistent and free of deprecated rules."/>
+
+  <ftgpm:Language xmi:id="L_governance"
+      inputs=""
+      definition="VARIATION. Governance and policy, project rules outside the build loop (contribution, conduct, review templates). FINDING pattern: usually not consumed by the loop (empty inputs, aspirational edge). Well formed when consistent with the actual contribution flow."/>
+
+  <!-- Transformations. definition begins with the executor tag.     -->
+  <!-- auto = true for an agent-only step, false for a human or      -->
+  <!-- human-co-performed step.                                      -->
+  <ftgpm:Transformation xmi:id="T_author" auto="false" outputs="L_brief"
+      definition="[director] manual. Authors intent and the task brief that opens the loop. Generative."/>
+
+  <ftgpm:Transformation xmi:id="T_update_context" auto="false" outputs="L_context"
+      definition="[director] manual. Updates the persistent context when a new pattern or convention emerges. Refining, triggered after acceptance."/>
+
+  <ftgpm:Transformation xmi:id="T_log" auto="true" outputs="L_log"
+      definition="[implementer] auto. Appends the per-task entry to the operational log at task end. Generative."/>
+
+  <ftgpm:Transformation xmi:id="T_discover" auto="true" outputs="L_discovery"
+      definition="[architect] auto. Investigates before action and writes the investigation report. Generative, triggered by a request or a defect."/>
+
+  <ftgpm:Transformation xmi:id="T_spec" auto="false" outputs="L_spec"
+      definition="[collaborative: director+architect] manual. Distills an investigation into a formal spec with an acceptance criterion. Refining."/>
+
+  <ftgpm:Transformation xmi:id="T_implement" auto="true" outputs="L_code"
+      definition="[implementer] auto. Implements against the brief and spec, producing or editing the target artifact. Generative."/>
+
+  <ftgpm:Transformation xmi:id="T_compensate" auto="true" outputs="L_compensation"
+      definition="[implementer] auto. Writes a compensating artifact when a sensitive boundary is crossed. Generative, conditional."/>
+
+  <ftgpm:Transformation xmi:id="T_read" auto="true" outputs=""
+      definition="[architect] auto. Reads the persistent context (operating manual, operational log, handover) at session start. Ingest, no document output."/>
+
+  <ftgpm:Transformation xmi:id="T_commit" auto="false" outputs=""
+      definition="[director] manual. Stages named artifacts and commits after gating. No document output, writes the version record outside the corpus. Gating itself is not a transformation, it is Decision D_gate."/>
+
+  <ftgpm:Transformation xmi:id="T_domainspec" auto="true" outputs="L_domainspec"
+      definition="[implementer] auto. Updates the domain or language spec alongside a change to the input artifact. Refining. Variation."/>
+
+  <ftgpm:Transformation xmi:id="T_handover" auto="true" outputs="L_handover"
+      definition="[implementer] auto. Writes the handover note at the end of a workstream. Generative. Variation."/>
+
+  <ftgpm:Transformation xmi:id="T_standards" auto="false" outputs="L_standards"
+      definition="[collaborative: director+architect] manual. Authors or revises standards and design specifications. Refining. Variation."/>
+
+  <ftgpm:Transformation xmi:id="T_governance" auto="false" outputs="L_governance"
+      definition="[director] manual. Authors or revises governance and policy documents. Refining, rare. Variation."/>
+
+  <!-- ============================================================ -->
+  <!-- PM. One enacted configuration of the catalogue.              -->
+  <!-- ============================================================ -->
+
+  <ftgpm:Initial xmi:id="N_initial" controlFlow="A_author"/>
+
+  <ftgpm:Activity xmi:id="A_author" name="Author intent and task brief"
+      activityTypedBy="T_author" controlFlow="A_read" dataFlow="O_brief"/>
+
+  <ftgpm:Activity xmi:id="A_read" name="Read persistent context"
+      activityTypedBy="T_read" controlFlow="A_discover"/>
+
+  <ftgpm:Activity xmi:id="A_discover" name="Investigate before action"
+      activityTypedBy="T_discover" controlFlow="D_spec" dataFlow="O_discovery"/>
+
+  <ftgpm:Decision xmi:id="D_spec" controlFlow="A_spec A_implement"/>
+
+  <ftgpm:Activity xmi:id="A_spec" name="Write feature spec"
+      activityTypedBy="T_spec" controlFlow="A_implement" dataFlow="O_spec"/>
+
+  <ftgpm:Activity xmi:id="A_implement" name="Implement against brief"
+      activityTypedBy="T_implement" controlFlow="D_guard" dataFlow="O_code"/>
+
+  <ftgpm:Decision xmi:id="D_guard" controlFlow="A_compensate A_log"/>
+
+  <ftgpm:Activity xmi:id="A_compensate" name="Apply compensating action"
+      activityTypedBy="T_compensate" controlFlow="A_log" dataFlow="O_compensation"/>
+
+  <ftgpm:Activity xmi:id="A_log" name="Append task log"
+      activityTypedBy="T_log" controlFlow="D_gate" dataFlow="O_log"/>
+
+  <ftgpm:Decision xmi:id="D_gate" controlFlow="A_update A_implement"/>
+
+  <ftgpm:Activity xmi:id="A_update" name="Update persistent context"
+      activityTypedBy="T_update_context" controlFlow="A_commit" dataFlow="O_context"/>
+
+  <ftgpm:Activity xmi:id="A_commit" name="Stage and commit"
+      activityTypedBy="T_commit" controlFlow="N_final"/>
+
+  <ftgpm:ActivityFinal xmi:id="N_final"/>
+
+  <!-- Objects. Persistent: O_context, O_log (survive across iterations). -->
+  <ftgpm:Object xmi:id="O_brief" name="Task brief"
+      objectTypedBy="L_brief" dataFlow="A_discover A_implement"/>
+
+  <ftgpm:Object xmi:id="O_context" name="Persistent context (persistent)"
+      objectTypedBy="L_context" dataFlow="A_read"/>
+
+  <ftgpm:Object xmi:id="O_log" name="Operational log (persistent)"
+      objectTypedBy="L_log" dataFlow="A_read"/>
+
+  <ftgpm:Object xmi:id="O_discovery" name="Investigation report"
+      objectTypedBy="L_discovery" dataFlow="A_spec A_implement"/>
+
+  <ftgpm:Object xmi:id="O_spec" name="Feature spec"
+      objectTypedBy="L_spec" dataFlow="A_implement"/>
+
+  <ftgpm:Object xmi:id="O_code" name="Target artifact"
+      objectTypedBy="L_code" dataFlow="A_compensate A_commit"/>
+
+  <ftgpm:Object xmi:id="O_compensation" name="Compensating artifact"
+      objectTypedBy="L_compensation"/>
+
+</xmi:XMI>
