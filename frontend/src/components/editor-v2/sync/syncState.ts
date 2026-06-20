@@ -140,6 +140,13 @@ export function clearCanvasEdgePairs(): void {
     canvasEdgePairs.clear();
 }
 
+// Clear a single (src→tgt) mark — symmetric to markCanvasEdgePair, same pair-key
+// format. Used by useM1ReferenceEdges when reconciling away a stale M1 edge so a
+// later legitimate re-mint of the same pair is not blocked by a leftover mark.
+export function clearCanvasEdgePair(src: string, tgt: string): void {
+    canvasEdgePairs.delete(`${src}→${tgt}`);
+}
+
 // ---------------------------------------------------------------------------
 // Suppressed singleton vertex IDs — tracks DVertex IDs that should NOT be
 // rendered as RF nodes because the user toggled "Show singleton instances" off.
