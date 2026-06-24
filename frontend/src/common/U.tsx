@@ -3271,7 +3271,7 @@ export class Uarr{
             }
         }
         if (filter) return ret.filter(e=> e !== toDelete);
-        for (let i = 0; i < ret.length) {
+        for (let i = 0; i < ret.length; i++) {
             if (ret[i] === toDelete) delete ret[i];
         }
         return ret;

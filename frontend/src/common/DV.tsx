@@ -602,11 +602,11 @@ end:`
 
     public static errorView(publicmsg: ReactNode, debughiddenmsg:any, errortype: string, data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: LViewElement|DViewElement): React.ReactNode {
         let visibleMessage = publicmsg && typeof publicmsg === "string" ? U.replaceAll(publicmsg, "Parse Error:", "").trim() : publicmsg;
-        console.debug("[View Error]", {publicmsg, debuginfo:debughiddenmsg});
+        console.log("[View Error]", {publicmsg, debuginfo:debughiddenmsg});
         return DefaultView.error(visibleMessage, errortype, data, node, v); }
     public static errorView_string(publicmsg: string, debughiddenmsg:any, errortype: string, data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: LViewElement|DViewElement): React.ReactNode {
         let visibleMessage = publicmsg && typeof publicmsg === "string" ? U.replaceAll(publicmsg, "Parse Error:", "").trim() : publicmsg;
-        console.debug("[View Error]", {publicmsg, debuginfo:debughiddenmsg});
+        console.log("[View Error]", {publicmsg, debuginfo:debughiddenmsg});
         return DefaultView.error_string(visibleMessage, errortype, data, node, v); }
 
     // {ancors.map( a => <EdgePoint view={"aaaaa"} initialSize={{x: node.w * a.x, y: node.h * a.y}}/>)}
@@ -1419,20 +1419,23 @@ export class DefaultView {
             const dropData = JSON.parse(dataStr);
             switch (dropData.type) {
                 case 'FEATURE_ATTRIBUTE':
-                    const a = data.addChild('attribute');
-                    try { (a)(); } catch(e) { }
+                    data.addAttribute();
                     break;
                 case 'FEATURE_REFERENCE':
-                    const r = data.addChild('reference');
-                    try { (r)(); } catch(e) { }
+                    data.addReference();
                     break;
                 case 'FEATURE_OPERATION':
-                    const o = data.addChild('operation');
-                    try { (o)(); } catch(e) { }
+                    data.addOperation();
+                    break;
+                case "ANNOTATION":
+                    data.addAnnotation();
+                    break;
+                case "FEATURE_GENERICS":
+                    data.addTypeDeclaration();
                     break;
             }
         } catch (err) {
-            console.error('Drop on class failed:', err);
+           Log.ee('Drop on class failed:', err);
         }
     }}
 >

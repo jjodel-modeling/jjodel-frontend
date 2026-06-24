@@ -3,7 +3,8 @@ import {
     Dictionary,
     GObject,
     LogicContext,
-    Info, DPointerTargetable, DOperation, ShortAttribETypes
+    Info, DPointerTargetable, DOperation, ShortAttribETypes, DModelElement, DtoL, LTypeDeclaration, DTypeDeclaration,
+    LOperation
 } from "../../joiner";
 import {
     DClassifier, LClassifier, Pointers, U, L, LModel, LClass, DClass, LEnumerator,
@@ -180,7 +181,7 @@ type String = DClassifier;
 
 
 export type GenericTypeName = string;
-export type TYPE =  Pointer<DClassifier> | GenericTypeName; // pointer or string like "T", because i can have stuff like K extends V
+export type TYPE =  Pointer<DClassifier> | Pointer<DTypeDeclaration>; // pointer or string like "T", because i can have stuff like K extends V
 @RuntimeAccessible("GenericType")
 export class GenericType {
     static cname = "GenericType";
@@ -194,8 +195,8 @@ export class GenericType {
     componentType?: GenericType;
 
 
-    static descc eGenericType!: DocString<"Variable type declaration name like T, K, V, declared in class and referenced here by string name">;
-    static descc __info_of__eGenericType: Info = {type: ShortAttribETypes.EString, txt: "Mutually exclusive with this.type, it specified a parametrized type.\n" +
+
+    static desc_feature: Info = {type: ShortAttribETypes.EString, txt: "Mutually exclusive with this.type, it specified a parametrized type.\n" +
             "The type must be declared in the class definition, and referenced here by name (string). example:" +
             "class Proxy<N>{" +
             "\tprivate originalData: N;\n;" +
@@ -209,9 +210,29 @@ export class GenericType {
         return undefined;
     }
 
-    public static desc: Info = {type: "GenericType", txt: "Type parameters used to extend a superclass or create an object whose class have generic typings."}
-    public static descArr: Info = {type: "GenericType[]", txt: GenericType.desc.txt }
+    public static desc_class: Info = {type: "GenericType[]", txt: "Type parameters used to extend a superclass with generic typings.\n" +
+            "like: class IntegerStack extends Array<Integer> { .. }"}
+    public static desc_object: Info = {type: "GenericType", txt: "Type parameters used to create an object whose class have generic typings."}
+    public static desc_value: Info = {type: "GenericType", txt: GenericType.desc_object.txt }
     public static descTypeParameters: Info = {type: "TypeDeclaration[]", txt: "Type parameters attached to the classifier, like in HashMap<K, V>"}
+
+    public static getterArr(v?: Partial<GenericType>[]): GenericType[] {
+        if (!v) return [];
+        if (!Array.isArray(v)) v = [v];
+        return v.map( e => GenericType.getter(e)).filter(e=>!!e);
+    }
+    public static setterArr<T extends DModelElement>(v: GenericType[] | undefined, c: LogicContext<T>, propkey: keyof T & string, thiss: DtoL<T>): boolean {
+        v = GenericType.getterArr(v);
+        let old  = GenericType.getterArr(c.data[propkey] as any);
+        let delta = old && v && Uobj.objectDelta(old, v, true, false);
+        if (delta && Object.keys(delta).length === 0) return true;
+        TRANSACTION((thiss as any).get_name(c)+"."+propkey, ()=> {
+            if (v) SetFieldAction.new(c.data, propkey, delta as any, "+=", false);
+            else SetFieldAction.new(c.data, propkey, undefined, '', false);
+        }, delta ? delta : old, delta ? undefined : (old ? v : null))
+        return true;
+    }
+
     public static getter(v?: Partial<GenericType>): GenericType | undefined{
         if (!v || !v.kind || typeof v.kind !== "string") return undefined;
         let ret = new GenericType(v.kind);
@@ -222,7 +243,6 @@ export class GenericType {
         ret.operands = (v.operands || []).map(e=> GenericType.getter(e)).filter(e=>!!e);
         ret.typeArgs = (v.typeArgs || []).map(e=> GenericType.getter(e)).filter(e=>!!e);
         ret.componentType = GenericType.getter(v.componentType);
-
         return ret;
     }
 
@@ -238,10 +258,11 @@ export class GenericType {
         return true;
     }
 
-    public static getter_typeParametersArr(v?: Partial<TypeDeclaration>[]): TypeDeclaration[] | undefined {
-        if (!v) return undefined;
+    public static getter_typeParametersArr(v?: Pointer<DTypeDeclaration>[]): LTypeDeclaration[] {
+        return L.fromArr(v || []);
+        /*if (!v) return undefined;
         if (!Array.isArray(v)) v = [v];
-        v.map(e=> GenericType.getter_typeParameters(e)).filter(e=>!!e);
+        v.map(e=> GenericType.getter_typeParameters(e)).filter(e=>!!e);*/
     }
 
     public static getter_typeParameters(v?: Partial<TypeDeclaration>): TypeDeclaration | undefined {
@@ -262,6 +283,19 @@ export class GenericType {
         return ret;
     }
 
+    public static setter_typeParameters(v: Pointer<DTypeDeclaration>[] | undefined, c: LogicContext<DClass | DOperation>, thiss: LClass | LOperation): boolean {
+        let old = c.data.typeParameters;
+        v = v ? Pointers.fromArr(v) : undefined;
+        let delta = old && v?.length && Uobj.objectDelta(old, v, true, false);
+        if (delta && Object.keys(delta).length === 0) return true;
+        TRANSACTION((thiss as any).get_name(c)+".typeParameters", ()=> {
+            if (v) SetFieldAction.new(c.data, "typeParameters", delta as any, "{}", false);
+            else SetFieldAction.new(c.data, "typeParameters", [], '', false);
+        }, delta ? delta : old, delta ? undefined : (old ? v : null))
+        return true;
+    }
+
+/*
     public static setter_typeParameters(v: Partial<TypeDeclaration>[] | undefined, c: LogicContext<DClass | DOperation>, thiss: LModelElement): boolean {
         let old = GenericType.getter_typeParametersArr(c.data.typeParameters);
         v = GenericType.getter_typeParametersArr(v);
@@ -273,7 +307,7 @@ export class GenericType {
         }, delta ? delta : old, delta ? undefined : (old ? v : null))
         return true;
     }
-
+*/
 
     constructor(
         kind: GenericType["kind"],

@@ -3,7 +3,7 @@ import {
     GObject,
     GraphPoint, DViewPoint, DViewElement, PointedBy,
     DProject, LViewElement,
-    DV, DPackage, DObject, DModel, LObject, Uarr,
+    DV, DPackage, DObject, DModel, LObject, Uarr, DClass,
 } from "../joiner";
 import {
     Defaults, DGraphElement,
@@ -648,11 +648,17 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         this.getByClassName(s, "DReference").forEach(r=> r.EKeys = r.EKeys || []);
         for (let k in s.idlookup) {
             let e = s.idlookup[k] as GObject;
-            if (!e?.className) continue;
-            if (e.className === 'DProject' && !e.tagNames) {
+            let cn = e?.className;
+            if (!cn) continue;
+            if (cn === 'DProject' && !e.tagNames) {
                 if (!e.collaboratorsMap) e.collaboratorsMap = {};
                 if (!e.collaborators) e.collaborators = [];
                 if (!e.onlineUsersID) e.onlineUsersID = [];
+                continue;
+            }
+            if ((cn === 'DClass' || cn === "DOperation") && !(e as DClass).typeParameters) {
+                e.typeParameters = [];
+                continue;
             }
         }
         return s;

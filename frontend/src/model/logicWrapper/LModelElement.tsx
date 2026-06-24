@@ -69,7 +69,7 @@ import {
     ShortAttribSuperTypes,
     store,
     TargetableProxyHandler,
-    TRANSACTION,
+    TRANSACTION, TYPE,
     U,
     Uarr,
     unArr,
@@ -91,7 +91,7 @@ import {
     ECoreReference,
     ECoreRoot
 } from "../../api/data";
-import type {AnnotationPointers, ValuePointers} from "./PointerDefinitions";
+import {AnnotationPointers, TypeDeclarationPointers, ValuePointers} from "./PointerDefinitions";
 import {Alias, transientProperties} from "../../joiner/classes";
 import React, {JSX} from "react";
 import {Dummy} from "../../common/Dummy";
@@ -999,9 +999,14 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
                     case "operation":
                         ret = this.get_class(c)?.addOperation;
                         break;
-                    case "parameter":
+                    case "parameter": case "argument":
                         ret = this.get_operation(c)?.addParameter;
                         break;
+                    case "type": case "typedeclaration": case "generics": case "generictype":
+                        let parent = this.get_operation(c) || this.get_class(c);
+                        ret = parent?.addTypeDeclaration;
+                        break;
+
                     case "object":
                         if (c.data.className === "DValue") {
                             ret = (this as any as LValue).get_addObject(c as any as LogicContext<DValue>);
@@ -1132,7 +1137,8 @@ export class DAnnotation extends DModelElement { // extends Mixin(DAnnotation0, 
 
     public static new(source?: DAnnotation["source"], details?: DAnnotation["details"], father?: Pointer, persist: boolean = true): DAnnotation {
         // if (!name) name = this.defaultname("annotation ", father);
-        return new Constructors(new DAnnotation('dwc'), father, persist, undefined).DPointerTargetable().DModelElement().DAnnotation(source, '', details).end();
+        return new Constructors(new DAnnotation('dwc'), father, persist, undefined).DPointerTargetable().DModelElement()
+            .DAnnotation(source, '', details).end();
     }
 
     public static new3(a:Partial<AnnotationPointers>, then?:((d:DAnnotation, c: Constructors)=>void), persist: boolean = true): DAnnotation{
@@ -1474,7 +1480,7 @@ class LTypedElement<Context extends LogicContext<DTypedElement> = any> extends L
     genericType?: GenericType; // eg: type<T extends BOUND1, T extends BOUND2, ....>
     get_genericType(c: Context): this["genericType"] { return GenericType.getter(c.data.genericType); }
     set_genericType(v: GenericType, c: Context): boolean { return GenericType.setter(v, c, this); }
-    __info_of__genericType = GenericType.desc;
+    __info_of__genericType = GenericType.desc_feature;
 
     __info_of__required: Info = {type: ShortAttribETypes.EBoolean, txt: "Derived feature, true if lowerBound >= 1"}
     __info_of__many: Info = {type: ShortAttribETypes.EBoolean, txt: "Derived feature, true if upperBound >= 1"}
@@ -2583,7 +2589,7 @@ export class DOperation extends DModelElement { // extends DTypedElement
     __isDOperation!: boolean; // to avoid duck typing mistaking it for DStructuralFeature
     // generic types
     genericType?: GenericType;
-    typeParameters!: TypeDeclaration[];
+    typeParameters: Pointer<DTypeDeclaration>[] = [];
 
 
     public static new(name?: DNamedElement["name"], type?: DOperation["type"], exceptions: DOperation["exceptions"] = [], father?: DOperation["father"], persist: boolean = true): DOperation {
@@ -2695,23 +2701,26 @@ export class LOperation<Context extends LogicContext<DOperation, LOperation> = a
     protected get_addParameter(context: Context): this["addParameter"] {
         return (name?: DParameter["name"], type?: DParameter["type"]) => LPointerTargetable.fromD(DParameter.new(name, type, context.data.id, true)); }
 
+    public addTypeDeclaration(name?: DTypeDeclaration["name"]): LTypeDeclaration { return this.cannotCall("addTypeDeclaration"); }
+    protected get_addTypeDeclaration(context: Context): this["addTypeDeclaration"] {
+        return (name?: DTypeDeclaration["name"]) => LPointerTargetable.fromD(DTypeDeclaration.new(name, context.data.id, true));
+    }
 
 
     // generic types
-    genericType?: GenericType;
     genericType?: GenericType; // eg: type<T extends BOUND1, T extends BOUND2, ....>
     get_genericType(c: Context): this["genericType"] { return GenericType.getter(c.data.genericType); }
     set_genericType(v: GenericType, c: Context): boolean { return GenericType.setter(v, c, this); }
-    __info_of__genericType = GenericType.desc;
+    __info_of__genericType = GenericType.desc_feature;
 
-    typeParameters!: TypeDeclaration[];
-    eTypeParameters!: TypeDeclaration[];
+    typeParameters!: LTypeDeclaration[];
+    eTypeParameters!: LTypeDeclaration[];
     __info_of__typeParameters: Info = GenericType.descTypeParameters;
     __info_of__eTypeParameters: Info = GenericType.descTypeParameters;
     get_typeParameters(c: Context): this["typeParameters"] { return LClass.singleton.get_typeParameters(c); }
-    set_typeParameters(v: this["typeParameters"], c: Context) {return LClass.singleton.set_typeParameters(v, c); }
+    set_typeParameters(v: Pointer<DTypeDeclaration>, c: Context) {return LClass.singleton.set_typeParameters(v, c); }
     get_eTypeParameters(c: Context): this["eTypeParameters"] { return LClass.singleton.get_eTypeParameters(c); }
-    set_eTypeParameters(v: this["eTypeParameters"], c: Context): boolean { return LClass.singleton.set_eTypeParameters(v, c); }
+    set_eTypeParameters(v: Pointer<DTypeDeclaration>, c: Context): boolean { return LClass.singleton.set_eTypeParameters(v, c); }
     /*get_addTypeParameter(c: Context) { return LClassifier.singleton.get_addTypeParameter(c); }
     get_removeTypeParameter(c: Context) { return LClassifier.singleton.get_removeTypeParameter(c); }*/
 
@@ -2884,7 +2893,7 @@ export class LParameter<Context extends LogicContext<DParameter> = any, C extend
     allowCrossReference!: boolean;
 
     genericType?: GenericType; // eg: type<T extends BOUND1, T extends BOUND2, ....>
-    __info_of__genericType = GenericType.desc;
+    __info_of__genericType = GenericType.desc_feature;
     get_genericType(c: Context): this["genericType"] { return GenericType.getter(c.data.genericType); }
     set_genericType(v: GenericType, c: Context): boolean { return GenericType.setter(v, c, this); }
 
@@ -2942,7 +2951,8 @@ export class ClassReferences{
 }
 
 @RuntimeAccessible('DClass')
-export class DClass extends DModelElement { // extends DClassifier
+export class DClass extends DModelElement {
+    // extends DClassifier
     // static _super = DClassifier;
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -2991,7 +3001,7 @@ export class DClass extends DModelElement { // extends DClassifier
     allowCrossReference!: boolean;//for extend
     eidFeature?: Pointer<DAttribute>; // pointing to isID=true attribute
     // generics
-    typeParameters!: TypeDeclaration[];
+    typeParameters: Pointer<DTypeDeclaration>[] = [];
     genericSuperTypes!: GenericType[];
 
 
@@ -3021,8 +3031,7 @@ export class DClass extends DModelElement { // extends DClassifier
 
 }
 
-(window as any).dc = DClassifier;
-(window as any).c = DClass;
+
 @Instantiable // (LObject)
 @Node
 @RuntimeAccessible('LClass')
@@ -3067,13 +3076,13 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
 
 
     // generics
-    typeParameters!: TypeDeclaration[];
+    typeParameters!: LTypeDeclaration[];
     __info_of__typeParameters: Info = GenericType.descTypeParameters;
     get_typeParameters(c: LogicContext<DClass | DOperation>): this["typeParameters"] { return GenericType.getter_typeParametersArr(c.data.typeParameters) || []; }
-    set_typeParameters(v: this["typeParameters"], c: LogicContext<DClass | DOperation>): boolean { return GenericType.setter_typeParameters(v, c, this); }
+    set_typeParameters(v: Pointer<DTypeDeclaration>[], c: LogicContext<DClass | DOperation>): boolean { return GenericType.setter_typeParameters(v, c, this); }
 
     get_eTypeParameters(c: LogicContext<DClass | DOperation>): this["typeParameters"] { return GenericType.getter_typeParametersArr(c.data.typeParameters) || []; }
-    set_eTypeParameters(v: this["typeParameters"], c: LogicContext<DClass | DOperation>): boolean { return GenericType.setter_typeParameters(v, c, this); }
+    set_eTypeParameters(v: Pointer<DTypeDeclaration>[], c: LogicContext<DClass | DOperation>): boolean { return GenericType.setter_typeParameters(v, c, this); }
 
     /*genericSuperTypes!: GenericType[];
     __info_of__genericSuperTypes: Info = {type: "GenericType[]", txt: "Describes the type arguments used to extend or implement superclasses." +
@@ -3090,9 +3099,9 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     }*/
 
     genericSuperTypes!: GenericType[]; // eg: type<T extends BOUND1, T extends BOUND2, ....>
-    __info_of__genericSuperTypes = GenericType.descs;
-    get_genericSuperTypes(c: Context): this["genericType"] { return GenericType.getter(c.data.genericSuperTypes); }
-    set_genericSuperTypes(v: this["genericType"], c: Context): boolean { todo for arr return GenericType.setter(v, c, this); }
+    __info_of__genericSuperTypes = GenericType.desc_class;
+    get_genericSuperTypes(c: Context): this["genericType"] { return GenericType.getterArr(c.data.genericSuperTypes); }
+    set_genericSuperTypes(v: this["genericType"], c: Context): boolean { return GenericType.setterArr(v, c, "genericSuperTypes", this); }
 
 
     genericType!: GenericType[]; // alias
@@ -3611,6 +3620,11 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     public addOperation(name?: DOperation["name"], type?: DOperation["type"]): LOperation { return this.cannotCall("addOperation"); }
     protected get_addOperation(context: Context): this["addOperation"] {
         return (name?: DOperation["name"], type?: DOperation["type"]) => LPointerTargetable.fromD(DOperation.new(name, type, [], context.data.id, true));
+    }
+
+    public addTypeDeclaration(name?: DTypeDeclaration["name"]): LTypeDeclaration { return this.cannotCall("addTypeDeclaration"); }
+    protected get_addTypeDeclaration(context: Context): this["addTypeDeclaration"] {
+        return (name?: DTypeDeclaration["name"]) => LPointerTargetable.fromD(DTypeDeclaration.new(name, context.data.id, true));
     }
 
 
@@ -4264,6 +4278,67 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
 }
 RuntimeAccessibleClass.set_extend(DClassifier, DClass);
 RuntimeAccessibleClass.set_extend(LClassifier, LClass);
+
+
+
+@RuntimeAccessible('DTypeDeclaration')
+export class DTypeDeclaration extends DClassifier { // extends DClassifier
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+    id!: Pointer<DTypeDeclaration, 1, 1, LTypeDeclaration>;
+    upper!: (GenericType | TYPE)[];
+    lower!: (GenericType | TYPE)[];
+    direction: "in" | "out" | "inout" = 'inout'; // also called variance: Input (contravariant) or an Output (covariant).
+    defaultType?: TYPE;
+
+    public static new(name?: DTypeDeclaration["name"], father?: Pointer, persist: boolean = true): DTypeDeclaration {
+        return new Constructors(new DTypeDeclaration('dwc'), father, persist, undefined).DPointerTargetable().DModelElement().DNamedElement(name)
+            .DTypeDeclaration().end();
+    }
+
+    public static new2(a:Partial<TypeDeclarationPointers>, then?:((d:DTypeDeclaration, c: Constructors)=>void), persist: boolean = true): DTypeDeclaration{
+        let name: string = a.name as any;
+        if (!name) {
+            name = this.defaultname("T", a.father, undefined, true);
+        }
+
+        return new Constructors(new DTypeDeclaration('dwc'), a.father, persist, undefined, a.id)
+            .DPointerTargetable().DModelElement().DNamedElement(name)
+            .DTypeDeclaration().end(then);
+    }
+}
+
+@Node
+@RuntimeAccessible('LTypeDeclaration')
+export class LTypeDeclaration<D extends DTypeDeclaration = DTypeDeclaration, Context extends LogicContext<DTypeDeclaration> = any, C extends Context = Context>  extends LClassifier { // extends DClassifier
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+    public __raw!: DTypeDeclaration;
+    id!: Pointer<DTypeDeclaration, 1, 1, LTypeDeclaration>;
+}
+RuntimeAccessibleClass.set_extend(DClassifier, DTypeDeclaration);
+RuntimeAccessibleClass.set_extend(LClassifier, LTypeDeclaration);
+
+
+@RuntimeAccessible('DPlaceholder')
+export class DPlaceholder extends DModelElement { // extends ?? actual dclass
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+}
+
+@Node
+@RuntimeAccessible('LPlaceholder')
+export class LPlaceholder<D extends DPlaceholder = DPlaceholder, Context extends LogicContext<DPlaceholder> = any, C extends Context = Context>  extends LModelElement { // extends DClassifier
+    static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
+    static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+    public __raw!: DPlaceholder;
+    id!: Pointer<DPlaceholder, 1, 1, LPlaceholder>;
+}
+RuntimeAccessibleClass.set_extend(DClassifier, DPlaceholder);
+RuntimeAccessibleClass.set_extend(LClassifier, LPlaceholder);
+
+
+
 @RuntimeAccessible('DDataType')
 export class DDataType extends DModelElement { // extends DClassifier
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
@@ -4431,7 +4506,7 @@ export class LReference<Context extends LogicContext<DReference> = any, C extend
     namespace!: string;
 
     genericType?: GenericType; // eg: type<T extends BOUND1, T extends BOUND2, ....>
-    __info_of__genericType = GenericType.desc;
+    __info_of__genericType = GenericType.desc_feature;
     get_genericType(c: Context): this["genericType"] { return GenericType.getter(c.data.genericType); }
     set_genericType(v: GenericType, c: Context): boolean { return GenericType.setter(v, c, this); }
 
@@ -4864,7 +4939,7 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
     allowCrossReference!:boolean;
 
     genericType?: GenericType; // eg: type<T extends BOUND1, T extends BOUND2, ....>
-    __info_of__genericType = GenericType.desc;
+    __info_of__genericType = GenericType.desc_feature;
     get_genericType(c: Context): this["genericType"] { return GenericType.getter(c.data.genericType); }
     set_genericType(v: GenericType, c: Context): boolean { return GenericType.setter(v, c, this); }
 
@@ -7114,6 +7189,7 @@ export class DValue extends DModelElement { // extends DModelElement, m1 value (
     allowCrossReference!: boolean;
     // IoT Section
     topic: string = '';
+    genericType?: GenericType;
 
     public static new(name?: DNamedElement["name"], instanceoff?: DValue["instanceof"], val?: DValue["values"],
                       father?: DValue["father"] | DObject, persist: boolean = true, isMirage: boolean = false): DValue {
@@ -7159,8 +7235,8 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     namespace!: string;
     fullname!:string;
     type!: LClassifier; // Classifiers describing PrimitiveTypes or the classes that can be pointed.
-    genericType?: GenericType; todo for dvalue? // eg: type<T extends BOUND1, T extends BOUND2, ....>
-    __info_of__genericType = GenericType.desc;
+    genericType?: GenericType; // eg: type<T extends BOUND1, T extends BOUND2, ....>
+    __info_of__genericType = GenericType.desc_value;
     get_genericType(c: Context): this["genericType"] { return GenericType.getter(c.data.genericType); }
     set_genericType(v: GenericType, c: Context): boolean { return GenericType.setter(v, c, this); }
 
@@ -8805,6 +8881,8 @@ export type WAnnotation = getWParams<LAnnotation, DAnnotation>;
 // export type WJavaObject = getWParams<LJavaObject, DJavaObject>;
 export type WMap = getWParams<LMap, DMap>;
 export type WFactory_useless_ = getWParams<LFactory_useless_, DFactory_useless_>;
+export type WTypeDeclaration = getWParams<LTypeDeclaration, DTypeDeclaration>;
+export type WPlaceholder = getWParams<LPlaceholder, DPlaceholder>;
 
 DModelElement.cname = 'DModelElement';
 LModelElement.cname = 'LModelElement';
@@ -8849,4 +8927,7 @@ DObject.cname = 'DObject';
 LObject.cname = 'LObject';
 DValue.cname = 'DValue';
 LValue.cname = 'LValue';
-
+DTypeDeclaration.cname = 'DTypeDeclaration';
+LTypeDeclaration.cname = 'LTypeDeclaration';
+DPlaceholder.cname = 'DPlaceholder';
+LPlaceholder.cname = 'LPlaceholder';

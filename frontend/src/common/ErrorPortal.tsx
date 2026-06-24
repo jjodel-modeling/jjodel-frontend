@@ -183,6 +183,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
                 </div>
             </div>
 
+            {React.isValidElement(message) ?message : null}
             {/* Modal portal */}
             <ErrorPortal
                 isOpen={isModalOpen}

@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { featureDefinitions, FeatureDefinition, getSubFeatures, hasSubFeatures } from './featureDefinitions';
+import { featureDefinitions, FeatureDefinition, getSubFeatures} from './featureDefinitions';
 import { useFeaturesPanelSafe } from '../../contexts/FeaturesPanelContext';
 import './features-palette.scss';
 
@@ -29,7 +29,7 @@ export const FeaturesPalette: React.FC<FeaturesPaletteProps> = ({ className = ''
 
     // Toggle expanded state for features with sub-features
     const handleFeatureClick = useCallback((feature: FeatureDefinition) => {
-        if (hasSubFeatures(feature.id)) {
+        if (getSubFeatures(feature.id)?.length > 0) {
             setExpandedFeatureId(prev => prev === feature.id ? null : feature.id);
         }
     }, []);
@@ -55,8 +55,11 @@ export const FeaturesPalette: React.FC<FeaturesPaletteProps> = ({ className = ''
 
     // Render a single feature item
     const renderFeatureItem = (feature: FeatureDefinition, isSubFeature: boolean = false) => {
-        const isExpandable = hasSubFeatures(feature.id);
+        let subfeatures = getSubFeatures(feature.id);
+        const isExpandable = subfeatures.length > 0;
         const isExpanded = expandedFeatureId === feature.id;
+
+        if (feature.id === "*") return null;
 
         return (
             <div
@@ -103,7 +106,7 @@ export const FeaturesPalette: React.FC<FeaturesPaletteProps> = ({ className = ''
                             {renderFeatureItem(feature)}
 
                             {/* Show sub-features when parent is expanded */}
-                            {expandedFeatureId === feature.id && (
+                            {(expandedFeatureId === feature.id || feature.id === "*") && (
                                 <div className="features-palette__sub-items">
                                     {getSubFeatures(feature.id).map(subFeature =>
                                         renderFeatureItem(subFeature, true)

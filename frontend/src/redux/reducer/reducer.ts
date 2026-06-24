@@ -152,7 +152,8 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                     moveOffset = (action.value || 1) * moveDirection;
                     break;
             }
-            switch (modifier.substring(0, 2)) {
+            let mod = modifier.substring(0, 2);
+            switch (mod) {
                 case '*=':
                     oldValue = current[key];
                     if (typeof oldValue !== 'number') {
@@ -169,16 +170,17 @@ function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: Parse
                     }
                     newVal = oldValue /= newVal;
                     break;
-                case '[]':
+                case '[]': // always equal to +=
+                case '{}': // if target is an array, forces to use it as an object delta.
                     // +=...5 and all less complex variations tested
                 case '+=':// +=...5    --> add at position 5 N elements (value must be array that will be flattened and inserted)
                     oldValue = current[key]; // todo check all oldvalue assignment to prevent double set
                     if (modifier.substring(2, 5) === '...') isMultiAddRemove = true;
                     if (isMultiAddRemove) index = +(modifier.substring(5)) || undefined;
                     else index = +(modifier.substring(2)) || undefined;
-                    switch (typeof oldValue){
+                    switch (typeof oldValue) {
                         case 'object':
-                            if (Array.isArray(oldValue)) isArrayAppend = true;
+                            if (mod !== "{}" && Array.isArray(oldValue)) isArrayAppend = true;
                             else isObjectMerge = true;
                             break;
                         default:

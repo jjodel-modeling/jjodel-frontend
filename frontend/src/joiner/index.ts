@@ -87,7 +87,7 @@ export type {Pointer, PtrString, getWParams, WUser, WProject, WtoD, WtoL, DtoW, 
 } from "./classes";
 export type { WAnnotation, WNamedElement, WFactory_useless_, WClass, WAttribute, WClassifier, WDataType, WMap, WModel,
     WModelElement, WEnumerator, WObject, WPackage, WOperation, WValue, WParameter, WReference, WTypedElement, WEnumLiteral, WStructuralFeature,
-    ValueDetail, SetValueAtPositionInfoType
+    ValueDetail, SetValueAtPositionInfoType, WTypeDeclaration, WPlaceholder
 } from "../model/logicWrapper/LModelElement";
 
 export type {GenericTypeName, TYPE} from "../model/logicWrapper/etype";
@@ -184,7 +184,9 @@ export {
     DPackage, LPackage,
     DTypedElement, DAnnotation, LAnnotation,
     EJavaObject,
-    DFactory_useless_, LFactory_useless_, DMap, LMap
+    DFactory_useless_, LFactory_useless_, DMap, LMap,
+    DPlaceholder, LPlaceholder,
+    DTypeDeclaration, LTypeDeclaration,
 } from "../model/logicWrapper/LModelElement";
 export {default as LTypedElement} from "../model/logicWrapper/LModelElement"
 export {GenericType} from "../model/logicWrapper/etype";

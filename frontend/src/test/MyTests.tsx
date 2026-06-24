@@ -87,7 +87,7 @@ describe('test generic type api', () => {
         let classes = U.toNamedArray([ {name: "List", id:"ListID"}, {name: "Human", id:"HumanID"}] as any)  as any;
         let enumerators = U.toNamedArray([] as any) as any;
         let obj = GenericType.parse("List<T>", classes, enumerators)
-        let s2 = GenericType.serialize(obj);
+        let s2 = GenericType.serializeJOM(obj);
 
         let s = "List<T>";
         expect(s2).toBe(s);

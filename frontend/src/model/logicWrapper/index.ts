@@ -17,8 +17,12 @@ export {
     DPackage, LPackage,
     DTypedElement, DAnnotation, LAnnotation,
     EJavaObject, DMap, LMap,
-    DFactory_useless_, LFactory_useless_} from "./LModelElement";
+    DFactory_useless_, LFactory_useless_,
+    DTypeDeclaration, LTypeDeclaration,
+    DPlaceholder, LPlaceholder,
+} from "./LModelElement";
 export {default as LTypedElement} from "./LModelElement"
 export type { WAnnotation, WNamedElement, WFactory_useless_, WClass, WAttribute, WClassifier, WDataType, WMap, WModel,
-    WModelElement, WEnumerator, WObject, WPackage, WOperation, WValue, WParameter, WReference, WTypedElement, WEnumLiteral, WStructuralFeature
+    WModelElement, WEnumerator, WObject, WPackage, WOperation, WValue, WParameter, WReference, WTypedElement, WEnumLiteral, WStructuralFeature,
+    WTypeDeclaration, WPlaceholder,
 } from "./LModelElement";

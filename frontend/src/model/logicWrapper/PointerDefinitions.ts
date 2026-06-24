@@ -1,4 +1,13 @@
-import {DStructuralFeature, LClass, LValue, LModel, RuntimeAccessible, DProject} from "../../joiner";
+import {
+    DStructuralFeature,
+    LClass,
+    LValue,
+    LModel,
+    RuntimeAccessible,
+    DProject,
+    DTypeDeclaration,
+    DPlaceholder
+} from "../../joiner";
 import type {
     Pointer, PrimitiveType, DModelElement, DGraphElement,
     DModel, DPackage, DClass, DEnumerator, DEnumLiteral, DOperation, DAttribute, DReference,
@@ -147,6 +156,21 @@ export class ValuePointers extends CommonStuff{
     edges!: Pointer<DEdge>[];
     values!: Pointer<DObject>[];
 
+}
+
+@RuntimeAccessible('TypeDeclarationPointers')
+export class TypeDeclarationPointers extends CommonStuff{
+    id!: Pointer<DTypeDeclaration>;
+    parent?: this["father"][];
+    father?: Pointer<DClass | DOperation>;
+    annotations?: Pointer<DAnnotation>[];
+}
+@RuntimeAccessible('PlaceholderPointers')
+export class PlaceholderPointers extends CommonStuff{
+    id!: Pointer<DPlaceholder>;
+    parent?: this["father"][];
+    father?: Pointer<DClass | DOperation>;
+    annotations?: Pointer<DAnnotation>[];
 }
 
 

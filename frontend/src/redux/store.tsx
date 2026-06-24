@@ -1,4 +1,4 @@
-import {type Language, transientProperties, Uobj} from '../joiner';
+import {DPlaceholder, DTypeDeclaration, type Language, transientProperties, Uobj} from '../joiner';
 import {
     Asterisk,
     Circle,
@@ -142,6 +142,8 @@ export class DState extends DPointerTargetable{
     classs: Pointer<DClass, 0, "N"> = [];
     operations: Pointer<DOperation, 0, "N"> = [];
     parameters: Pointer<DParameter, 0, "N"> = [];
+    typedeclarations: Pointer<DTypeDeclaration>[] = [];
+    placeholders: Pointer<DPlaceholder>[] = [];
     ecoreClasses: Pointer<DClass, 0, "N"> = [];
     returnTypes: Pointer<DClass, 0, "N"> = [];
     /// DClass section end
