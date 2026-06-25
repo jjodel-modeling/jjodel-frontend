@@ -2125,7 +2125,7 @@
     border: none!important;
 
     &__text {
-        cursor: default;
+        cursor: pointer;
         transition: border-color 0.15s;
 
         &:hover {

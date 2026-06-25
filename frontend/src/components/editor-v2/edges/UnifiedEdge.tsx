@@ -150,6 +150,7 @@ function UnifiedEdge(props: EdgeProps) {
 
     const { setEdges } = useReactFlow();
     const notation = useEditorContextSafe()?.notation ?? 'uml';
+    const selectEdge = useEditorContextSafe()?.selectEdge;
     const isERNotation = notation === 'er';
     const isSelfLoop = source === target;
 
@@ -589,6 +590,9 @@ function UnifiedEdge(props: EdgeProps) {
             </defs>
 
             {/* Invisible hit-test path */}
+            {/* onClick selects this edge directly, so mid-line selection does not
+                depend on React Flow's <g> click delegation. For inheritance this
+                only selects the edge id (selectEdge never fabricates a DReference). */}
             <path
                 d={path}
                 fill="none"
@@ -597,6 +601,7 @@ function UnifiedEdge(props: EdgeProps) {
                 style={{ pointerEvents: 'stroke' }}
                 onMouseEnter={() => setHovered(true)}
                 onMouseLeave={() => setHovered(false)}
+                onClick={(e) => { e.stopPropagation(); selectEdge?.(id); }}
             />
 
             {/* Visible edge path */}
@@ -644,7 +649,7 @@ function UnifiedEdge(props: EdgeProps) {
                             pointerEvents: 'all',
                         }}
                         onDoubleClick={(e) => { e.stopPropagation(); setEditing(true); }}
-                        onClick={(e) => { if (selected) { e.stopPropagation(); setEditing(true); } }}
+                        onClick={(e) => { e.stopPropagation(); if (selected) { setEditing(true); return; } selectEdge?.(id); }}
                     >
                         {editing ? (
                             <input

@@ -10,6 +10,8 @@ interface EditorContextValue {
     recalculateAnchors?: (edgeId: string) => void;
     /** Update Properties panel to show a child element (attr/op/literal) without changing graph selection. */
     selectChildElement?: (childModelElementId: string) => void;
+    /** Select a graph edge (e.g. a DReference) from a non-RF gesture, mirroring onEdgeClick. */
+    selectEdge?: (edgeId: string) => void;
 }
 
 export const EditorContext = createContext<EditorContextValue | null>(null);

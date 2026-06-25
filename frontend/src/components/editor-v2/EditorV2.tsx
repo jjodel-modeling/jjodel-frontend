@@ -2217,6 +2217,19 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         jjomSelection.onEdgeClick(event, edge);
     }, [setNodes, setEdges, jjomSelection]);
 
+    // Select an edge from a non-RF gesture (UnifiedEdge label / hit-path click).
+    // Mirrors onEdgeClick so the selection is identical to a native edge click,
+    // including the highlight/assign guard living inside jjomSelection.onEdgeClick.
+    const selectEdge = useCallback((edgeId: string) => {
+        selectedEdgeIdRef.current = edgeId;
+        setNodes(nds => nds.map(n => (n.selected ? { ...n, selected: false } : n)));
+        setEdges(eds => eds.map(e => ({ ...e, selected: e.id === edgeId })));
+        jjomSelection.onEdgeClick(
+            { stopPropagation() {} } as unknown as React.MouseEvent,
+            { id: edgeId } as unknown as Edge,
+        );
+    }, [setNodes, setEdges, jjomSelection]);
+
     const closeContextMenu = useCallback(() => {
         setContextMenu(null);
     }, []);
@@ -3158,7 +3171,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         });
     }, []);
 
-    const editorContextValue = useMemo(() => ({ takeSnapshot, notation, onEdgeDataChange: handleEdgeChange, recalculateAnchors, selectChildElement }), [takeSnapshot, notation, handleEdgeChange, recalculateAnchors, selectChildElement]);
+    const editorContextValue = useMemo(() => ({ takeSnapshot, notation, onEdgeDataChange: handleEdgeChange, recalculateAnchors, selectChildElement, selectEdge }), [takeSnapshot, notation, handleEdgeChange, recalculateAnchors, selectChildElement, selectEdge]);
 
     // Model info for PropertiesPanel (when nothing is selected)
     const modelInfoData = useMemo(() => {
