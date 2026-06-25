@@ -159,12 +159,24 @@ export class Dummy {
                         switch (dObj.className) {
                             default: Log.eDevv('unexpected pointer to type:' + dObj.className, {dObj, dDeleted, field}); break;
                             case 'DParameter': case 'DAttribute': lObj.type = 'Pointer_ESTRING'; break;
-                            case 'DReference': case 'DOperation':
+                            case 'DReference':
+                                // incoming reference to a deleted class → delete it at M2.
+                                // cascades to its M1 DValue slots via case 'instanceof' (else branch, preserved by 2c).
+                                lObj.delete();
+                                break;
+                            case 'DOperation':
                                 // would be nice to set dObj.extends[0] instead but i cannot tell if it was deleted too.
                                 // lData.father instead is safe as even if it's deleted it does not matter as it will delete the feature together
                                 lObj.type = lDeleted.father;
                                 break;
                         }
+                        break;
+
+                    case 'opposite':
+                        // B.Y: the dependent DReference points at the deleted reference via its
+                        // 'opposite' pointer. Clear it so it does not dangle. Same L-proxy setter
+                        // mechanism as case 'type'; only DReference owns an 'opposite' field.
+                        lObj.opposite = undefined;
                         break;
 
                     case 'subElements':
@@ -196,8 +208,11 @@ export class Dummy {
                         lObj[field] = newList;*/
                         break;
 
-                    case 'instanceof': // all elements being instance of a removed element are also removed
-                        lObj.delete();
+                    case 'instanceof': // orphan DObject instances (C.3); delete other instanceof dependents (DValue slots)
+                        if (dObj.className === 'DObject')
+                            SetFieldAction.new(dObj.id, 'instanceof', '', '', true);  // orphan: clear instanceof, do not delete
+                        else
+                            lObj.delete();
                         break;
                     case 'model':
                         // pkg.model --> deleted element should delete but i ignore because is already removed through children

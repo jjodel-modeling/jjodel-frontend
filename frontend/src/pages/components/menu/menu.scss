@@ -34,7 +34,7 @@
 
 /* Dropdown container */
 .dropdown {
-  position: absolute;
+  position: absolute!important;
   top: 36px;
   z-index: var(--z-dropdown, 1000);
   min-width: 220px;

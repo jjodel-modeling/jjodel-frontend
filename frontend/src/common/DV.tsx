@@ -1226,7 +1226,21 @@ export class DefaultView {
     </ContextMenu>
     <div className={'edges'}>
         {level > 1 && [
-            refEdges.map(se => <Edge
+            data.isMetamodel && refEdges.map(se => <Edge
+                data={se.start}
+                start={se.startVertex}
+                end={se.endVertex}
+                anchorStart={0}
+                anchorEnd={0}
+                key={se.id + '_with_label'}
+                id={se.id + '_with_label'}
+                isReference={true}
+                view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))}
+                label={se.start.name}
+                elabel={se.start.lowerBound === se.start.upperBound ? se.start.lowerBound : se.start.upperBound === -1 ? se.start.lowerBound + '..*' : se.start.lowerBound + '..' + se.start.upperBound}
+                slabel={''}
+            />),
+            !data.isMetamodel && refEdges.map(se => <DerivedReferenceEdge
                 data={se.start}
                 start={se.startVertex}
                 end={se.endVertex}
@@ -1250,17 +1264,31 @@ export class DefaultView {
             />)
         ]}
         {level === 1 && [
-            refEdges.map(se => <Edge 
-                data={se.start} 
-                start={se.startVertex} 
-                end={se.endVertex} 
-                anchorStart={0} 
-                anchorEnd={0} 
-                key={se.id + '_without_label'} 
-                id={se.id + '_without_label'} 
-                isReference={true} 
+            data.isMetamodel && refEdges.map(se => <Edge
+                data={se.start}
+                start={se.startVertex}
+                end={se.endVertex}
+                anchorStart={0}
+                anchorEnd={0}
+                key={se.id + '_without_label'}
+                id={se.id + '_without_label'}
+                isReference={true}
                 label={''}
-                view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))} 
+                view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))}
+                elabel={se.start.lowerBound === se.start.upperBound ? se.start.lowerBound : se.start.upperBound === -1 ? se.start.lowerBound + '..*' : se.start.lowerBound + '..' + se.start.upperBound}
+                slabel={''}
+            />),
+            !data.isMetamodel && refEdges.map(se => <DerivedReferenceEdge
+                data={se.start}
+                start={se.startVertex}
+                end={se.endVertex}
+                anchorStart={0}
+                anchorEnd={0}
+                key={se.id + '_without_label'}
+                id={se.id + '_without_label'}
+                isReference={true}
+                label={''}
+                view={'Edge' + (se.start.composition ? 'Composition' : (se.start.aggregation ? 'Aggregation' : 'Association'))}
                 elabel={se.start.lowerBound === se.start.upperBound ? se.start.lowerBound : se.start.upperBound === -1 ? se.start.lowerBound + '..*' : se.start.lowerBound + '..' + se.start.upperBound}
                 slabel={''}
             />),

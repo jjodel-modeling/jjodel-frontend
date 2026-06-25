@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { LProject } from '../../../joiner';
+import { DUser, LProject } from '../../../joiner';
 import { ProjectsApi } from '../../../api/persistance';
 
 /**
@@ -11,9 +11,9 @@ import { ProjectsApi } from '../../../api/persistance';
  * coordinates and the auto-populate regenerates nodes on the default grid.
  *
  * This hook bridges that gap: `scheduleLayoutSave()` debounces and coalesces
- * rapid drags into a single full project save, gated by the project's
- * `autosaveLayout` flag. It reuses the existing `ProjectsApi.save` path (full
- * state serialization) — no new persistence infrastructure.
+ * rapid drags into a single full project save, gated by the current user's
+ * `autosaveLayout` preference. It reuses the existing `ProjectsApi.save` path
+ * (full state serialization) — no new persistence infrastructure.
  *
  * A pending save in the debounce window is flushed on unmount, so a node moved
  * just before closing the metamodel tab is not lost.
@@ -30,9 +30,11 @@ export function useLayoutAutosave(): { scheduleLayoutSave: () => void } {
 
     const runSave = useCallback(async (): Promise<void> => {
         const project = LProject.getProject();
-        // Gate: respect autosaveLayout. Default-on; off only if the project
-        // explicitly disables it (undefined/true → autosave active).
-        if (!project || project.autosaveLayout === false) {
+        // Gate: respect the user-level autosaveLayout preference. Default-on;
+        // off only when the current user explicitly disables it (undefined/true
+        // → autosave active). The project is still required as the save target.
+        const user = DUser.getUser();
+        if (!project || user?.autosaveLayout === false) {
             pendingRef.current = false;
             return;
         }

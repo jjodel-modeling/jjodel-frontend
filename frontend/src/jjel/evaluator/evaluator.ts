@@ -471,15 +471,20 @@ export class JjelEvaluator {
                 switch (property) {
                     case 'superclass': {
                         // First direct parent (or null)
-                        const parent = obj.extends ?? obj.father ?? obj.extendedBy;
+                        const parent = obj.superTypes;
                         if (Array.isArray(parent)) return parent[0] ?? null;
                         return parent ?? null;
                     }
                     case 'superclasses': {
                         // All direct parents (array)
-                        const parents = obj.extends ?? obj.father ?? obj.extendedBy;
+                        const parents = obj.superTypes;
                         if (!parents) return [];
                         return Array.isArray(parents) ? parents : [parents];
+                    }
+                    case 'extends': {
+                        // Alias of superTypes (direct supertypes). Resolves the
+                        // doc/impl drift so the paper's `State.extends` resolves.
+                        return obj.superTypes ?? [];
                     }
                     case 'allSuperclasses': {
                         // Full hierarchy going up (recursive)
@@ -487,13 +492,13 @@ export class JjelEvaluator {
                     }
                     case 'subclass': {
                         // First direct child (or null)
-                        const children = obj.subclasses ?? obj.children ?? obj.extendedBy;
+                        const children = obj.subTypes;
                         if (Array.isArray(children)) return children[0] ?? null;
                         return children ?? null;
                     }
                     case 'subclasses': {
                         // All direct children (array)
-                        const children = obj.subclasses ?? obj.children ?? obj.extendedBy;
+                        const children = obj.subTypes;
                         if (!children) return [];
                         return Array.isArray(children) ? children : [children];
                     }
@@ -541,21 +546,21 @@ export class JjelEvaluator {
     /**
      * Get all superclasses recursively (for DClass inheritance)
      */
-    private getAllSuperclasses(cls: JjelObject, visited: Set<string> = new Set()): JjelValue[] {
+    private getAllSuperclasses(cls: JjelObject, visited: Set<JjelValue> = new Set()): JjelValue[] {
         const result: JjelValue[] = [];
 
-        // Get direct parents (could be single or array)
-        const directParents = cls.extends ?? cls.father ?? cls.extendedBy;
+        // Direct parents are the shared class shells in superTypes (Option C).
+        const directParents = cls.superTypes;
         if (!directParents) return result;
 
         const parents = Array.isArray(directParents) ? directParents : [directParents];
 
         for (const parent of parents) {
             if (parent && isJjelObject(parent)) {
-                // Use id to track visited to avoid cycles
-                const parentId = (parent.id as string) ?? String(parent);
-                if (!visited.has(parentId)) {
-                    visited.add(parentId);
+                // Dedup by object identity: class shells carry no `id`, and UML2
+                // inheritance is a diamond DAG, so identity is the only safe key.
+                if (!visited.has(parent)) {
+                    visited.add(parent);
                     result.push(parent);
                     // Recurse for ancestors
                     result.push(...this.getAllSuperclasses(parent, visited));
@@ -569,21 +574,21 @@ export class JjelEvaluator {
     /**
      * Get all subclasses recursively (for DClass inheritance)
      */
-    private getAllSubclasses(cls: JjelObject, visited: Set<string> = new Set()): JjelValue[] {
+    private getAllSubclasses(cls: JjelObject, visited: Set<JjelValue> = new Set()): JjelValue[] {
         const result: JjelValue[] = [];
 
-        // Get direct children (could be single or array)
-        const directChildren = cls.subclasses ?? cls.children ?? cls.extendedBy;
+        // Direct children are the shared class shells in subTypes (Option C).
+        const directChildren = cls.subTypes;
         if (!directChildren) return result;
 
         const children = Array.isArray(directChildren) ? directChildren : [directChildren];
 
         for (const child of children) {
             if (child && isJjelObject(child)) {
-                // Use id to track visited to avoid cycles
-                const childId = (child.id as string) ?? String(child);
-                if (!visited.has(childId)) {
-                    visited.add(childId);
+                // Dedup by object identity (see getAllSuperclasses): no `id` on
+                // shells, diamond DAG → identity is the only safe key.
+                if (!visited.has(child)) {
+                    visited.add(child);
                     result.push(child);
                     // Recurse for descendants
                     result.push(...this.getAllSubclasses(child, visited));

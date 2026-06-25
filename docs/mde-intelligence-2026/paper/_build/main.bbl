@@ -1,0 +1,107 @@
+%%% -*-BibTeX-*-
+%%% Do NOT edit. File created by BibTeX with style
+%%% ACM-Reference-Format-Journals [18-Jan-2012].
+
+\begin{thebibliography}{8}
+
+%%% ====================================================================
+%%% NOTE TO THE USER: you can override these defaults by providing
+%%% customized versions of any of these macros before the \bibliography
+%%% command.  Each of them MUST provide its own final punctuation,
+%%% except for \shownote{} and \showURL{}.  The latter two
+%%% do not use final punctuation, in order to avoid confusing it with
+%%% the Web address.
+%%%
+%%% To suppress output of a particular field, define its macro to expand
+%%% to an empty string, or better, \unskip, like this:
+%%%
+%%% \newcommand{\showURL}[1]{\unskip}   % LaTeX syntax
+%%%
+%%% \def \showURL #1{\unskip}           % plain TeX syntax
+%%%
+%%% ====================================================================
+
+\ifx \showCODEN    \undefined \def \showCODEN     #1{\unskip}     \fi
+\ifx \showISBNx    \undefined \def \showISBNx     #1{\unskip}     \fi
+\ifx \showISBNxiii \undefined \def \showISBNxiii  #1{\unskip}     \fi
+\ifx \showISSN     \undefined \def \showISSN      #1{\unskip}     \fi
+\ifx \showLCCN     \undefined \def \showLCCN      #1{\unskip}     \fi
+\ifx \shownote     \undefined \def \shownote      #1{#1}          \fi
+\ifx \showarticletitle \undefined \def \showarticletitle #1{#1}   \fi
+\ifx \showURL      \undefined \def \showURL       {\relax}        \fi
+% The following commands are used for tagged output and should be
+% invisible to TeX
+\providecommand\bibfield[2]{#2}
+\providecommand\bibinfo[2]{#2}
+\providecommand\natexlab[1]{#1}
+\providecommand\showeprint[2][]{arXiv:#2}
+
+\bibitem[Brooks(1987)]%
+        {brooks1987silverbullet}
+\bibfield{author}{\bibinfo{person}{Frederick~P. Brooks}.} \bibinfo{year}{1987}\natexlab{}.
+\newblock \bibinfo{booktitle}{\emph{No Silver Bullet: Essence and Accidents of Software Engineering}}.
+\newblock \bibinfo{publisher}{IEEE Computer}.
+\newblock
+\newblock
+\shownote{Essence versus accidental complexity; verify venue}.
+
+
+\bibitem[Cunningham(1992)]%
+        {cunningham1992wycash}
+\bibfield{author}{\bibinfo{person}{Ward Cunningham}.} \bibinfo{year}{1992}\natexlab{}.
+\newblock \showarticletitle{The {WyCash} Portfolio Management System}.
+\newblock \bibinfo{journal}{\emph{ACM SIGPLAN OOPS Messenger}} \bibinfo{volume}{4}, \bibinfo{number}{2} (\bibinfo{year}{1992}), \bibinfo{pages}{29--30}.
+\newblock
+
+
+\bibitem[Kruchten et~al\mbox{.}(2012)]%
+        {kruchten2012techdebt}
+\bibfield{author}{\bibinfo{person}{Philippe Kruchten}, \bibinfo{person}{Robert~L. Nord}, {and} \bibinfo{person}{Ipek Ozkaya}.} \bibinfo{year}{2012}\natexlab{}.
+\newblock \showarticletitle{Technical Debt: From Metaphor to Theory and Practice}.
+\newblock \bibinfo{journal}{\emph{IEEE Software}} \bibinfo{volume}{29}, \bibinfo{number}{6} (\bibinfo{year}{2012}), \bibinfo{pages}{18--21}.
+\newblock
+
+
+\bibitem[L{\'u}cio et~al\mbox{.}(2013)]%
+        {lucio2013ftgpm}
+\bibfield{author}{\bibinfo{person}{Levi L{\'u}cio}, \bibinfo{person}{Sadaf Mustafiz}, \bibinfo{person}{Joachim Denil}, \bibinfo{person}{Hans Vangheluwe}, {and} \bibinfo{person}{Maris Jukss}.} \bibinfo{year}{2013}\natexlab{}.
+\newblock \showarticletitle{{FTG+PM}: An Integrated Framework for Investigating Model Transformation Chains}. In \bibinfo{booktitle}{\emph{SDL 2013: Model-Driven Dependability Engineering}} \emph{(\bibinfo{series}{Lecture Notes in Computer Science}, Vol.~\bibinfo{volume}{7916})}. \bibinfo{publisher}{Springer}, \bibinfo{pages}{182--202}.
+\newblock
+
+
+\bibitem[Mustafiz et~al\mbox{.}(2020)]%
+        {mustafiz2020processes}
+\bibfield{author}{\bibinfo{person}{Sadaf Mustafiz}, \bibinfo{person}{Joachim Denil}, \bibinfo{person}{Levi L{\'u}cio}, {and} \bibinfo{person}{Hans Vangheluwe}.} \bibinfo{year}{2020}\natexlab{}.
+\newblock \showarticletitle{The {FTG+PM} Framework for Multi-Paradigm Modelling}.
+\newblock In \bibinfo{booktitle}{\emph{Multi-Paradigm Modelling Approaches for Cyber-Physical Systems}}. \bibinfo{publisher}{Springer}.
+\newblock
+\newblock
+\shownote{Book chapter; verify exact title, editors and pages}.
+
+
+\bibitem[Pesic and van~der Aalst(2006)]%
+        {pesic2006declare}
+\bibfield{author}{\bibinfo{person}{Maja Pesic} {and} \bibinfo{person}{Wil M.~P. van~der Aalst}.} \bibinfo{year}{2006}\natexlab{}.
+\newblock \showarticletitle{A Declarative Approach for Flexible Business Processes Management}. In \bibinfo{booktitle}{\emph{Business Process Management Workshops}} \emph{(\bibinfo{series}{Lecture Notes in Computer Science}, Vol.~\bibinfo{volume}{4103})}. \bibinfo{publisher}{Springer}, \bibinfo{pages}{169--180}.
+\newblock
+
+
+\bibitem[Templeton et~al\mbox{.}(2024)]%
+        {templeton2024monosemanticity}
+\bibfield{author}{\bibinfo{person}{Adly Templeton}, \bibinfo{person}{Tom Conerly}, \bibinfo{person}{Jonathan Marcus}, {et~al\mbox{.}}} \bibinfo{year}{2024}\natexlab{}.
+\newblock \bibinfo{booktitle}{\emph{Scaling Monosemanticity: Extracting Interpretable Features from {Claude 3 Sonnet}}}.
+\newblock \bibinfo{type}{Transformer Circuits Thread}. \bibinfo{institution}{Anthropic}.
+\newblock
+\newblock
+\shownote{Verify author list and URL}.
+
+
+\bibitem[van~der Aalst(2016)]%
+        {vanderaalst2016processmining}
+\bibfield{author}{\bibinfo{person}{Wil M.~P. van~der Aalst}.} \bibinfo{year}{2016}\natexlab{}.
+\newblock \bibinfo{booktitle}{\emph{Process Mining: Data Science in Action} (\bibinfo{edition}{2} ed.)}.
+\newblock \bibinfo{publisher}{Springer}.
+\newblock
+
+
+\end{thebibliography}

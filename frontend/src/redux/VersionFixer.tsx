@@ -983,6 +983,15 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         return s;
     }
 
+    // 2.224 -> 2.225: M1 reference edges in the classic editor now render through the new
+    // <DerivedReferenceEdge> component instead of the minting <Edge> factory (Option B, step 1).
+    // The change lives in the 'Model' default view jsxString (DefaultView.model() in common/DV.tsx).
+    // Pure version bump: the bump makes updateDefaultView regenerate UNTOUCHED default views
+    // (clonedCounter undefined) wholesale from source (DV.tsx, now emitting <DerivedReferenceEdge>
+    // for M1), so saved projects pick up the new template. User-customized (clonedCounter) Model
+    // views are intentionally left as-is (not wiped); they keep the prior minting <Edge> path.
+    private ['2.224 -> 2.225'](s: DState): DState { return s; }
+
 }
 
 

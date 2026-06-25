@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { connect } from 'react-redux';
-import { DState, DUser, LUser, SetRootFieldAction } from '../../../../joiner';
+import { DState, DUser, LUser, SetFieldAction, SetRootFieldAction } from '../../../../joiner';
 import { UsersApi } from '../../../../api/persistance';
 import { UpdateUserRequest } from '../../../../api/DTO/UpdateUserRequest';
 import Storage from '../../../../data/storage';
@@ -60,6 +60,10 @@ function ProfileSectionComponent({ user, advanced }: ProfileSectionProps): JSX.E
     const [affiliation, setAffiliation] = useState(user.affiliation || '');
     const [country, setCountry] = useState(user.country || '');
     const [newsletter, setNewsletter] = useState(user.newsletter || false);
+    // User-global layout-autosave preference. Default-on (only an explicit
+    // `false` disables it). Read from the same DUser field the autosave gate
+    // checks in useLayoutAutosave.
+    const [autosaveLayout, setAutosaveLayout] = useState(DUser.getUser()?.autosaveLayout !== false);
 
     // UI state
     const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
@@ -77,6 +81,30 @@ function ProfileSectionComponent({ user, advanced }: ProfileSectionProps): JSX.E
         setNewsletter(user.newsletter || false);
         setIsDirty(false);
     }, [user]);
+
+    // Re-sync the autosave toggle only when the user identity actually changes
+    // (e.g. account switch), NOT on every render. `user` is a fresh proxy each
+    // render (LUser.wrap → new Proxy), so depending on it here would re-run on
+    // every Redux update — including the one our own toggle dispatches — and
+    // overwrite the just-set local state, leaving the switch stuck. Key on the
+    // stable id instead, and read the value from the D-layer.
+    useEffect(() => {
+        setAutosaveLayout(DUser.getUser()?.autosaveLayout !== false);
+    }, [user.id]);
+
+    // Persist the layout-autosave preference immediately on toggle (like the
+    // Editor mode toggle below). Writes into Redux so the autosave gate sees it
+    // at runtime, and into the 'user' localStorage blob the app rehydrates from
+    // on reload. Deliberately avoids the L-proxy setter / UsersApi stub (which
+    // throws): see docs/discovery/2026-06-17_autosave_layout_toggle.md.
+    const handleAutosaveLayoutToggle = () => {
+        const next = !autosaveLayout;
+        setAutosaveLayout(next);
+        const duser = DUser.getUser();
+        if (!duser) return;
+        SetFieldAction.new(duser.id, 'autosaveLayout', next, '', false);
+        Storage.write('user', DUser.getUser());
+    };
 
     const handleChange = (field: string, value: string | boolean) => {
         setIsDirty(true);
@@ -388,6 +416,22 @@ function ProfileSectionComponent({ user, advanced }: ProfileSectionProps): JSX.E
                     <div className={`settings-toggle-switch ${advanced ? 'active' : ''}`}>
                         <div className="settings-toggle-thumb" />
                     </div>
+                </div>
+            </div>
+
+            <div
+                className="settings-toggle"
+                onClick={handleAutosaveLayoutToggle}
+            >
+                <div className="settings-toggle-content">
+                    <div className="settings-toggle-title">Autosave layout</div>
+                    <div className="settings-toggle-description">
+                        Automatically save node positions on the canvas when you move them.
+                        Applies to all your projects.
+                    </div>
+                </div>
+                <div className={`settings-toggle-switch ${autosaveLayout ? 'active' : ''}`}>
+                    <div className="settings-toggle-thumb" />
                 </div>
             </div>
 

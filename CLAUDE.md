@@ -286,6 +286,47 @@ windoww.store.getState().idlookup
 
 Application code should import the store directly rather than rely on the global.
 
+### 3.12 Identity slot ↔ instance name — slot→name is always a direct SetFieldAction
+
+The M1 identity binding links an instance's display name (`DObject.name`) to its
+`name : EString` slot. The two directions are wired asymmetrically, and that asymmetry
+is load-bearing:
+
+- **name → slot**: `set_name` (`joiner/classes.ts` `LPointerTargetable.set_name`, override
+  `LModelElement.tsx` `LObject.set_name`) writes both sides — `data.name` via
+  `SetFieldAction`, and the slot via the proxy assignment `nameattribute.value = val`
+  (which routes through `LValue.set_value` → `setValueAtPosition`).
+- **slot → name**: `LValue.setValueAtPosition` (around `LModelElement.tsx:7484`) propagates
+  the slot value onto `data.name` with a **direct `SetFieldAction` on `'name'`** — it does
+  **not** call `set_name`.
+
+**Invariant — never violate**: slot → name propagation must always be a direct
+`SetFieldAction` on `'name'`. It must **never** be routed through `set_name`. This is
+exactly why no sync loop exists: the name-side write is terminal, so the cycle
+`set_name → slot write → name write → set_name → …` cannot form. Any change that makes
+slot → name go through `set_name` (instead of the direct field write) reintroduces the
+loop. See `docs/discovery/2026-06-17_name_slot_sync.md` §10 for the full trace.
+
+### 3.13 L-layer proxies report the D-layer className
+
+An L-proxy's `.className` returns the **D-layer** class name (`'DValue'`, `'DObject'`,
+`'DClass'`, …) — **never** the L-name (`'LValue'`, `'LObject'`). A guard like
+`lproxy.className === 'LValue'` is therefore **always false** and silently disables whatever
+it protects, with no compile error and no type warning.
+
+```typescript
+if (slot.className === 'DValue') { ... }   // correct
+// NOT: slot.className === 'LValue'         // always false — silently dead
+```
+
+The convention is consistent across the codebase (e.g. `setValueAtPosition`'s
+`oldTarget?.className === "DObject"` on an `LObject.fromPointer(...)` result;
+`proxy.ts` returns the D-name). This typo cost the entire Direction-A identity-sync effort:
+the name → slot write was gated on `=== 'LValue'` and never ran. Residual dead occurrences of
+the same typo remain in the base `LPointerTargetable.set_name`/`get_name`
+(`classes.ts:2129`, `:2155`) — dead for instances (`LObject` overrides them), pending a
+consistency cleanup.
+
 ---
 
 ## 4. Scope & anti-refactoring

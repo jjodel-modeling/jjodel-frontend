@@ -23,9 +23,26 @@
 
 import { useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { DState, DVoidEdge, DEdge } from '../../../joiner';
+import { DState, DVoidEdge, DEdge, DeleteElementAction, TRANSACTION } from '../../../joiner';
 import { store } from '../../../joiner';
-import { hasCanvasEdgePair, markCanvasEdgePair } from '../sync/syncState';
+import { hasCanvasEdgePair, markCanvasEdgePair, clearCanvasEdgePair } from '../sync/syncState';
+
+/**
+ * True iff `se` is an M1 reference edge managed by this hook: className includes
+ * 'Edge', `model` resolves to a DReference, and BOTH endpoints are vertices over
+ * DObjects. The both-endpoints-over-DObject check is the M1 discriminator — the
+ * inverse of refEdgeReconcile.isM2ReferenceEdge (which requires a DClass start
+ * vertex), so M2 reference edges and inheritance edges (no `model`) never match.
+ */
+function isManagedM1RefEdge(se: any, lookup: any): boolean {
+    if (!se || typeof se.className !== 'string' || !se.className.includes('Edge')) return false;
+    if (typeof se.start !== 'string' || typeof se.end !== 'string') return false;
+    if (typeof se.model !== 'string' || lookup[se.model]?.className !== 'DReference') return false;
+    const sv = lookup[se.start], ev = lookup[se.end];
+    if (!sv || typeof sv.model !== 'string' || lookup[sv.model]?.className !== 'DObject') return false;
+    if (!ev || typeof ev.model !== 'string' || lookup[ev.model]?.className !== 'DObject') return false;
+    return true;
+}
 
 export function useM1ReferenceEdges(
     modelid: string | undefined,
@@ -71,6 +88,9 @@ export function useM1ReferenceEdges(
         // - existingKeys:  set of "srcVertex→tgtVertex" already present (idempotency)
         const vertexByModel = new Map<string, string>();
         const existingKeys = new Set<string>();
+        // M1 reference edges currently persisted in the graph — candidates for the
+        // reconcile/delete pass below (those whose backing slot tuple is gone).
+        const managedM1Edges: Array<{ id: string; start: string; end: string }> = [];
         for (const seId of (rawGraph.subElements ?? [])) {
             const se = lookup[seId] as any;
             if (!se) continue;
@@ -79,6 +99,9 @@ export function useM1ReferenceEdges(
             }
             if ((se.className === 'DVoidEdge' || se.className === 'DEdge') && se.start && se.end) {
                 existingKeys.add(`${se.start}→${se.end}`);
+                if (isManagedM1RefEdge(se, lookup)) {
+                    managedM1Edges.push({ id: seId, start: se.start, end: se.end });
+                }
             }
         }
 
@@ -86,6 +109,9 @@ export function useM1ReferenceEdges(
         // No outer TRANSACTION wrap: DVoidEdge.new2 has its own internal
         // TRANSACTION and nesting causes x/y coordinate loss
         // (see useJjomSync.ts:496-498).
+        // Every (srcV→tgtV) pair that has at least one live backing slot tuple.
+        // Used by the reconcile pass to tell live edges from stale ones.
+        const validPairs = new Set<string>();
         const toCreate: Array<{ refMetaId: string; srcV: string; tgtV: string; ek: string }> = [];
         for (const objId of (rawModel.objects ?? [])) {
             if (typeof objId !== 'string') continue;
@@ -103,6 +129,7 @@ export function useM1ReferenceEdges(
                     const tgtV = vertexByModel.get(tgtId);
                     if (!tgtV) continue;
                     const ek = `${srcV}→${tgtV}`;
+                    validPairs.add(ek); // this pair has a live backing slot tuple
                     if (existingKeys.has(ek) || hasCanvasEdgePair(ek)) continue;
                     toCreate.push({ refMetaId: dFeat.instanceof, srcV, tgtV, ek });
                     existingKeys.add(ek); // dedup within this batch
@@ -110,7 +137,12 @@ export function useM1ReferenceEdges(
             }
         }
 
-        if (toCreate.length === 0) return;
+        // Reconcile: managed M1 edges whose vertex pair has no live backing tuple
+        // are stale (slot deleted by the class-delete cascade or cleared/replaced).
+        // Pair-keyed to match the pair-keyed create above (one edge per vertex pair).
+        const toDelete = managedM1Edges.filter(e => !validPairs.has(`${e.start}→${e.end}`));
+
+        if (toCreate.length === 0 && toDelete.length === 0) return;
 
         if ((window as any).__m1RefEdgesDebug) {
             // eslint-disable-next-line no-console
@@ -128,6 +160,25 @@ export function useM1ReferenceEdges(
                 (d: DEdge) => { d.isReference = true; },
             );
             markCanvasEdgePair(srcV, tgtV);
+        }
+
+        if (toDelete.length > 0) {
+            if ((window as any).__m1RefEdgesDebug) {
+                // eslint-disable-next-line no-console
+                console.log('[useM1ReferenceEdges] removing', toDelete.length, 'stale DVoidEdge(s):', toDelete);
+            }
+            // Pure-delete batch (no creator) → safe in its own TRANSACTION: §3.3's
+            // no-wrap rule targets creation coordinate-loss, not deletion. Mirrors
+            // useJjomSync's stale-edge deletes (useJjomSync.ts:779). The DVoidEdge
+            // leaving graph.subElements drives the incremental sync to drop the RF
+            // edge live (useJjomSync.ts:1193-1198 / 1336-1346).
+            TRANSACTION('useM1ReferenceEdges: remove stale M1 reference edges', () => {
+                for (const e of toDelete) {
+                    const raw = lookup[e.id];
+                    if (raw) DeleteElementAction.new(raw);
+                    clearCanvasEdgePair(e.start, e.end);
+                }
+            });
         }
     }, [modelid, graphId, m1RefValuesSig]);
 }

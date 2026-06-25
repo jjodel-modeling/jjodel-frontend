@@ -2,7 +2,7 @@
  * StatusBarRightZone — shared right-zone items used by both the app StatusBar
  * and the JjTL editor status bar.
  *
- * Renders: Basic/Advanced toggle, Jjodie AI status, Notification bell, Version.
+ * Renders: Jjodie AI status, Notification bell, Version.
  *
  * @param variant 'light' (default, app StatusBar) | 'dark' (JjTL status bar)
  */
@@ -10,7 +10,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import type { DState } from '../joiner';
-import { useInterfaceMode } from '../hooks/useInterfaceMode';
 import { useSettingsModalSafe } from '../contexts/SettingsModalContext';
 import NotificationCenter, { useToastHistorySnapshot } from './NotificationCenter';
 import './StatusBarRightZone.scss';
@@ -23,7 +22,6 @@ interface StatusBarRightZoneProps {
 }
 
 const StatusBarRightZone: React.FC<StatusBarRightZoneProps> = ({ variant = 'light' }) => {
-    const { mode, toggleMode } = useInterfaceMode();
     const settingsModal = useSettingsModalSafe();
     const { unreadCount } = useToastHistorySnapshot();
     const [showNotifications, setShowNotifications] = useState(false);
@@ -62,17 +60,6 @@ const StatusBarRightZone: React.FC<StatusBarRightZoneProps> = ({ variant = 'ligh
 
     return (
         <div className={`sb-rz${isDark ? ' sb-rz--dark' : ''}`}>
-            {/* Basic / Advanced toggle */}
-            <button
-                className={`sb-rz__mode ${mode === 'advanced' ? 'sb-rz__mode--adv' : ''}`}
-                onClick={toggleMode}
-                title={`Switch to ${mode === 'basic' ? 'Advanced' : 'Basic'} mode`}
-            >
-                {mode === 'basic' ? 'Basic' : 'Advanced'}
-            </button>
-
-            <span className="sb-rz__sep" />
-
             {/* Jjodie AI status */}
             <button
                 className="sb-rz__jjodie"

@@ -292,12 +292,21 @@ export function syncDeleteVertex(vertexId: string): void {
             }
         }
 
-        // Delete the model element (DClass/DEnum)
+        // Delete the model element. For a DClass, route through the L-proxy
+        // .delete() cascade (Dummy.get_delete) so its owned references /
+        // attributes / operations are removed too — matching the classic
+        // editor and fixing the orphan-DReference bug. .delete() wraps its own
+        // TRANSACTION internally (Dummy.ts), so no outer wrapper here (mirrors
+        // syncRemoveAttribute). Non-class types stay on the raw path unchanged.
         const modelElement = vertexProxy?.model;
         if (modelElement) {
-            TRANSACTION('EditorV2 delete node', () => {
-                DeleteElementAction.new(modelElement.__raw ?? modelElement);
-            });
+            if (modelElement.className === 'DClass') {
+                modelElement.delete();
+            } else {
+                TRANSACTION('EditorV2 delete node', () => {
+                    DeleteElementAction.new(modelElement.__raw ?? modelElement);
+                });
+            }
         }
     } catch (err) {
         console.warn('[canvasToJjom] Failed to delete vertex:', err);
