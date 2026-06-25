@@ -492,7 +492,7 @@ function Toolbar({
                     <button
                         className="toolbar-zoom__level"
                         onClick={onResetZoom}
-                        title="Reset zoom"
+                        title="Reset zoom to 100%"
                     >
                         {zoomLevel}%
                     </button>

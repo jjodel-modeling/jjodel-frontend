@@ -2676,10 +2676,11 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             zoomIn: handleZoomIn,
             zoomOut: handleZoomOut,
             resetZoom: handleResetZoom,
+            setZoom: (z) => setViewport({ ...getViewport(), zoom: z }, { duration: 150 }),
         };
         registerZoomController('flow', controller);
         return () => unregisterZoomController('flow');
-    }, [getViewport, handleZoomIn, handleZoomOut, handleResetZoom, registerZoomController, unregisterZoomController]);
+    }, [getViewport, setViewport, handleZoomIn, handleZoomOut, handleResetZoom, registerZoomController, unregisterZoomController]);
 
     // Classic editor zoom controller registration via CustomEvent.
     // The bridge in DV.tsx jsxString cannot use hooks, so it dispatches
@@ -2714,6 +2715,13 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 resetZoom: () => {
                     TRANSACTION('Zoom reset', () => {
                         node.zoom = new GraphPoint(1, 1);
+                    });
+                },
+                setZoom: (z) => {
+                    const next = clamp(z);
+                    TRANSACTION('Zoom set', () => {
+                        SetFieldAction.new(node, 'zoom.x' as any, next, '');
+                        SetFieldAction.new(node, 'zoom.y' as any, next, '');
                     });
                 },
             };
@@ -2764,7 +2772,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         setZoomTick((t) => t + 1);
     }, [activeController]);
     const handleActiveResetZoom = useCallback(() => {
-        activeController?.resetZoom?.();
+        // Reset the active editor to 100% via an absolute setter — no fit-view,
+        // no recentering (resetZoom on the flow controller would fit-to-view).
+        activeController?.setZoom?.(1);
         setZoomTick((t) => t + 1);
     }, [activeController]);
     const handleToggleSnap = useCallback(() => setSnapEnabled((prev) => !prev), []);

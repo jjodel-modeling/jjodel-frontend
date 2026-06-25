@@ -9,6 +9,7 @@ export interface ZoomController {
     zoomIn: () => void;
     zoomOut: () => void;
     resetZoom?: () => void;
+    setZoom?: (value: number) => void;
 }
 
 export interface ActiveEditorAPI {

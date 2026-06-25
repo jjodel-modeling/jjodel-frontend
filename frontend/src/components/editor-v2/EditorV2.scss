@@ -545,11 +545,14 @@
         color: var(--text-secondary, #64748b);
         background: transparent;
         border: none;
+        border-radius: 6px; // match adjacent .toolbar-btn
         cursor: pointer;
         text-align: center;
         padding: 0 2px;
+        transition: all 0.15s;
 
         &:hover {
+            background: var(--surface-1, #ffffff); // match .toolbar-btn:hover
             color: var(--text-primary);
         }
     }
