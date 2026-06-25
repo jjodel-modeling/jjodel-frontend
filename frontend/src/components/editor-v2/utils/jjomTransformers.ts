@@ -29,6 +29,7 @@ import type {
     ReferenceKind,
 } from '../types';
 import { setEdgeRefId } from '../sync/syncState';
+import { displayTypeLabel } from '../types';
 
 // L-proxy types — using `any` for property access to avoid coupling to
 // the exact proxy shape which uses runtime magic getters.
@@ -50,7 +51,7 @@ function classVertexToRFNode(vertex: any): Node<ClassNodeData> {
             attrs.push({
                 id: attr.id ?? `attr_${attrs.length}`,
                 name: attr.name ?? 'unnamed',
-                type: attr.type?.name ?? 'EString',
+                type: displayTypeLabel(attr.type?.name ?? 'EString'),
                 defaultValue: attr.defaultValueLiteral || undefined,
                 lowerBound: attr.lowerBound ?? 0,
                 upperBound: attr.upperBound ?? 1,
@@ -90,7 +91,7 @@ function classVertexToRFNode(vertex: any): Node<ClassNodeData> {
                     params.push({
                         id: p.id ?? `param_${params.length}`,
                         name: p.name ?? 'unnamed',
-                        type: p.type?.name ?? 'EString',
+                        type: displayTypeLabel(p.type?.name ?? 'EString'),
                     });
                 }
             } catch { /* ignore */ }
@@ -98,7 +99,7 @@ function classVertexToRFNode(vertex: any): Node<ClassNodeData> {
             ops.push({
                 id: op.id ?? `op_${ops.length}`,
                 name: op.name ?? 'unnamed',
-                returnType: op.type?.name ?? 'void',
+                returnType: displayTypeLabel(op.type?.name ?? 'void'),
                 parameters: params,
             });
         }

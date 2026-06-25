@@ -34,9 +34,33 @@ export type EDataType =
     | 'ELong'
     | 'EDouble';
 
-export const E_DATA_TYPES: EDataType[] = [
-    'EString', 'EInt', 'EFloat', 'EBool', 'EDate', 'EChar', 'ELong', 'EDouble'
+// Single source of truth: canonical Ecore primitive name <-> Editor-v2 display label.
+// Order here defines the dropdown order. Only EBoolean is abbreviated; the rest are identity.
+// NB: named PRIMITIVE_TYPE_LABELS (not PRIMITIVE_TYPES) to avoid colliding with the existing
+// jjscript autocomplete export `PRIMITIVE_TYPES` (jjscript/autocomplete/types.ts).
+export const PRIMITIVE_TYPE_LABELS: ReadonlyArray<{ canonical: string; display: EDataType }> = [
+    { canonical: 'EString',  display: 'EString' },
+    { canonical: 'EInt',     display: 'EInt'    },
+    { canonical: 'EFloat',   display: 'EFloat'  },
+    { canonical: 'EBoolean', display: 'EBool'   },
+    { canonical: 'EDate',    display: 'EDate'   },
+    { canonical: 'EChar',    display: 'EChar'   },
+    { canonical: 'ELong',    display: 'ELong'   },
+    { canonical: 'EDouble',  display: 'EDouble' },
 ];
+
+export const E_DATA_TYPES: EDataType[] = PRIMITIVE_TYPE_LABELS.map(t => t.display);
+
+const CANONICAL_TO_DISPLAY: Record<string, EDataType> = Object.fromEntries(
+    PRIMITIVE_TYPE_LABELS.map(t => [t.canonical, t.display] as [string, EDataType])
+) as Record<string, EDataType>;
+
+/** Canonical Ecore primitive name (e.g. 'EBoolean') -> Editor-v2 display label (e.g. 'EBool').
+ *  Identity for names not in the table (enum names, class refs); 'EString' when undefined. */
+export function displayTypeLabel(canonical?: string): string {
+    if (!canonical) return 'EString';
+    return CANONICAL_TO_DISPLAY[canonical] ?? canonical;
+}
 
 // === Attributo ===
 export interface MetaAttribute {
