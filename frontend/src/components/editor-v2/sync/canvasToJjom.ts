@@ -28,7 +28,7 @@ import {
 } from '../../../joiner';
 import type { Node } from '@xyflow/react';
 import type { ClassNodeData } from '../types';
-import { markCanvasUpdated, markCanvasUpdatedBatch, markCanvasEdgePair } from './syncState';
+import { markCanvasUpdated, markCanvasUpdatedBatch, markCanvasEdgePair, clearCanvasEdgePair } from './syncState';
 import { captureAttributeOrphanValues } from '../hooks/useOrphanFeatures';
 
 // ---------------------------------------------------------------------------
@@ -340,13 +340,57 @@ export function syncDeleteEdge(edgeId: string, isInheritance: boolean): void {
                 DeleteElementAction.new(edgeProxy.__raw ?? edgeProxy);
             });
         } else {
-            // Delete the reference model element
-            const refModel = edgeProxy.model;
-            if (refModel) {
-                TRANSACTION('EditorV2 delete edge', () => {
-                    DeleteElementAction.new(refModel.__raw ?? refModel);
-                    DeleteElementAction.new(edgeProxy.__raw ?? edgeProxy);
-                });
+            // Reference edge: cascade-delete the M2 DReference, its M1 slots, and all backing edges.
+            const refModel: any = edgeProxy.model;
+            const lookup: any = store.getState().idlookup;
+            // Canonical DReference pointer = the clicked edge's stored `model` (the same pointer used
+            // by M1 edges' `model` and by slots' `instanceof`). Derive it from idlookup, NOT from
+            // (refModel.__raw ?? refModel).id, which may differ and made fromPointer() return null.
+            const refId: string = lookup[edgeId]?.model ?? (refModel?.__raw ?? refModel)?.id;
+            if (refModel && refId) {
+                // (a) Collect every persisted edge backed by this reference (clicked M2 edge + M1 instance
+                //     edges) BEFORE deleting, plus the M1 (src,tgt) vertex pairs to unguard. Cascade case
+                //     'model' is a no-op, so these edges survive the .delete() and must be removed explicitly.
+                const staleEdgeIds: string[] = [];
+                const m1Pairs: { src: string; tgt: string }[] = [];
+                for (const e of Object.values(lookup) as any[]) {
+                    if (!e || typeof e.model !== 'string' || e.model !== refId) continue;
+                    if (!String(e.className).includes('Edge')) continue;
+                    staleEdgeIds.push(e.id);
+                    const sv = lookup[e.start];
+                    if (sv && lookup[sv.model]?.className === 'DObject') {
+                        m1Pairs.push({ src: e.start, tgt: e.end });
+                    }
+                }
+
+                // (b) Cascade-delete the DReference via the canonical model-context proxy (fromPointer of the
+                //     canonical refId). .delete() cleans the M1 DValue slots (cascade case 'instanceof') and the
+                //     owner class's references[] (subcollection case). It runs its OWN async TRANSACTION and is
+                //     fire-and-forget (returns void). DO NOT wrap it, and DO NOT run any further mutation
+                //     synchronously after it (see (c)).
+                const lRef: any = LPointerTargetable.fromPointer(refId);
+                if (lRef && typeof lRef.delete === 'function') {
+                    lRef.delete();
+                } else if (typeof refModel.delete === 'function') {
+                    refModel.delete();
+                }
+
+                // (c)+(d) DEFERRED to a post-commit macrotask. Running this synchronously here would open a
+                //     TRANSACTION that overlaps .delete()'s still-open async TRANSACTION; their out-of-LIFO
+                //     END order silently drops .delete()'s actions at merge (the useJjomSync.ts:496-498 hazard).
+                //     setTimeout(0) is a macrotask: it runs only after the microtask queue drains, i.e. after
+                //     .delete() has fully committed. Then remove the orphaned edges and clear their pair guards.
+                setTimeout(() => {
+                    if (staleEdgeIds.length) {
+                        TRANSACTION('EditorV2 delete reference edges', () => {
+                            for (const eid of staleEdgeIds) {
+                                const ep: any = LPointerTargetable.fromPointer(eid);
+                                if (ep) DeleteElementAction.new(ep.__raw ?? ep);
+                            }
+                        });
+                    }
+                    for (const { src, tgt } of m1Pairs) clearCanvasEdgePair(src, tgt);
+                }, 0);
             }
         }
     } catch (err) {
