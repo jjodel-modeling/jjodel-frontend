@@ -583,6 +583,7 @@ end:`
     public static modelView(): string { return beautify(DefaultView.model()); }
     public static packageView(): string { return beautify(DefaultView.package()); }
     public static classView(): string { return beautify(DefaultView.class()); }
+    public static typeDeclarationView(): string { return beautify(DefaultView.typeDeclaration()); }
     public static attributeView(): string { return beautify(DefaultView.feature()); }
     public static referenceView(): string { return beautify(DefaultView.feature()); }
     public static enumeratorView(): string { return beautify(DefaultView.enum()); }
@@ -1389,9 +1390,12 @@ export class DefaultView {
 
     /* CLASS */
 
+public static typeDeclaration(): string {
+    return `<span>{data + ""}</span>`;
+}
 
     public static class(): string { return (`
-/* -- Jjodel Abstract Syntax Specification v2.2 -- */
+/* -- Jjodel Abstract Syntax Specification v2.3 -- */
 
 <View
     className={'root class highlight' + ' level-' + level}
@@ -1415,8 +1419,10 @@ export class DefaultView {
         e.currentTarget.classList.remove('drag-over');
         try {
             const dataStr = e.dataTransfer.getData('application/json');
+            console.log("dropped on class 1", {dataStr});
             if (!dataStr) return;
             const dropData = JSON.parse(dataStr);
+            console.log("dropped on class 2", {dropData, t:dropData.type});
             switch (dropData.type) {
                 case 'FEATURE_ATTRIBUTE':
                     data.addAttribute();
@@ -1470,6 +1476,8 @@ export class DefaultView {
         }}>
             <Input data={data} field={'name'} hidden={true} autosize={true} />
         </span>
+        {/* generics */}
+        {typeParameters.length > 0 ? [<span>&lt;</span>, typeParameters, <span>&gt;</span>] : null}
 
         {/* Inheritance icons */}
         {data.extends.some(a => a.model.id !== data.model.id) &&

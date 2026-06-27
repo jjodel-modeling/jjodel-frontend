@@ -4,13 +4,14 @@ import {
     GObject,
     LogicContext,
     Info, DPointerTargetable, DOperation, ShortAttribETypes, DModelElement, DtoL, LTypeDeclaration, DTypeDeclaration,
-    LOperation
+    LOperation, NamedArr
 } from "../../joiner";
 import {
     DClassifier, LClassifier, Pointers, U, L, LModel, LClass, DClass, LEnumerator,
     LModelElement,
     DEnumerator, EcoreParser, LValue, AttribETypes, RuntimeAccessible, Uobj, TRANSACTION, SetFieldAction,
 } from "../../joiner";
+import {DictArr} from "../../joiner/types";
 
 // ------------------------------------------------------------------
 // Recursive descent parser
@@ -22,14 +23,19 @@ class GenericTypeParser {
 
     constructor(
         private input: string,
-        private classes: LClass[] & Dictionary<string, LClass>,
-        private enums: LEnumerator[] & Dictionary<string, LEnumerator>) {}
+        private classes: NamedArr<LClass>,
+        private enums: NamedArr<LEnumerator>,
+        private typeDeclarations: NamedArr<(LTypeDeclaration | TypeDeclaration)>
+        ) {}
 
     parseRef(): GenericType {
         this.skipWS();
         const ref = this.parseIntersectionOrSingle();
         this.skipWS();
         return ref;
+    }
+    getPos(): number {
+        return this.pos;
     }
 
     // Intersection: A & B & C  (only when not inside a wildcard bound)
@@ -117,7 +123,7 @@ class GenericTypeParser {
         }
 
         // Heuristic: single uppercase letter (or common names) → typeParam, else raw
-        let ltarget = this.classes[name] || this.enums[name];
+        let ltarget = this.classes[name] || this.enums[name] || this.typeDeclarations[name];
         const isTypeParam = !!ltarget;
         if (isTypeParam) {
             return new GenericType("typeParam", undefined, ltarget.id);
@@ -258,11 +264,8 @@ export class GenericType {
         return true;
     }
 
-    public static getter_typeParametersArr(v?: Pointer<DTypeDeclaration>[]): LTypeDeclaration[] {
-        return L.fromArr(v || []);
-        /*if (!v) return undefined;
-        if (!Array.isArray(v)) v = [v];
-        v.map(e=> GenericType.getter_typeParameters(e)).filter(e=>!!e);*/
+    public static getter_typeParametersArr(v?: Pointer<DTypeDeclaration>[]): DictArr<LTypeDeclaration> {
+        return U.toNamedArray(L.fromArr(v || []).filter((e: L)=> !!e));
     }
 
     public static getter_typeParameters(v?: Partial<TypeDeclaration>): TypeDeclaration | undefined {
@@ -355,11 +358,16 @@ export class GenericType {
     }
 
     public static serializeEcore(type: EGenericType, m: LModel, asID = true){ return serializeGenericType(type, m, asID); }
-    public static serializeJOM(o0: GenericType | TYPE): string {
-        if (typeof o0 === "string") {
+    public static serializeJOM(o0: GenericType | TYPE | LClass): string {
+        let to = typeof o0;
+        if (to === "string") {
             if (Pointers.isPointer(o0)) return L.from(o0)?.name || "";
-            return o0;
+            return o0 as any;
         }
+        if (to === "object") {
+            if ((o0 as any)?.className) return L.from(o0 as LClass)?.name || "";
+        }
+
 
         let o = o0 as GenericType;
         switch (o.kind) {
@@ -419,14 +427,154 @@ export class GenericType {
     // Entry point: parse("Map<String, List<? extends Foo>>")
     // ------------------------------------------------------------------
     public static parse(s: string,
-                 classes: LClass[] & Dictionary<string, LClass>,
-                 enums: LEnumerator[] & Dictionary<string, LEnumerator>): GenericType {
+                        classes: NamedArr<LClass>,
+                        enums: NamedArr<LEnumerator>,
+                        typeDeclarations: NamedArr<(LTypeDeclaration | TypeDeclaration)>
+    ): GenericType {
         const trimmed = s.trim();
-        const parser = new GenericTypeParser(trimmed, classes, enums);
+        const parser = new GenericTypeParser(trimmed, classes, enums, typeDeclarations);
         return parser.parseRef();
+    }
+    public static parseDeclaration(s: string,
+                                   classes: NamedArr<LClass>,
+                                   enums: NamedArr<LEnumerator>,
+                                   typeDeclarations: NamedArr<(LTypeDeclaration | TypeDeclaration)>): TypeDeclaration {
+        const trimmed = s.trim();
+        const parser = new TypeParamDeclParser(trimmed, classes, enums, typeDeclarations);
+        return parser.parse();
     }
 }
 
+
+
+
+// ------------------------------------------------------------------
+// Syntax assumed:
+//   [direction] name [extends A] [super B] [= DefaultType]
+// e.g.
+//   "T"
+//   "in T"
+//   "out T extends Shape"
+//   "inout T extends Shape super Base = DefaultShape"
+//   "T = Shape"
+// ------------------------------------------------------------------
+
+class TypeParamDeclParser {
+    private pos: number = 0;
+
+    constructor(
+        private input: string,
+        private classes: NamedArr<LClass>,
+        private enums: NamedArr<LEnumerator>,
+        private typeDeclarations: NamedArr<(LTypeDeclaration | TypeDeclaration)>
+    ) {}
+
+    parse(): TypeDeclaration {
+        let ret = new TypeDeclaration();
+        this.skipWS();
+
+        // 1. optional direction keyword — must come before the name
+        ret.direction = this.parseDirection() as any;
+        this.skipWS();
+
+        // 2. type parameter name
+        ret.name = this.parseIdentifier();
+        if (!ret.name) throw new Error(
+            `Expected type parameter name at pos ${this.pos}`
+        );
+
+        if (!this.typeDeclarations[ret.name]) {
+            this.typeDeclarations.push(ret);
+            this.typeDeclarations[ret.name] = ret;
+        }
+        this.skipWS();
+
+        // 3. extends / super clauses in any order, each at most once
+
+        for (let i = 0; i < 2; i++) {
+            if (ret.upper.length === 0 && this.tryConsume("extends")) {
+                this.skipWS();
+                ret.upper = this.parseBoundList();
+                this.skipWS();
+            } else if (ret.lower.length === 0 && this.tryConsume("super")) {
+                this.skipWS();
+                ret.lower = this.parseBoundList();
+                this.skipWS();
+            } else {
+                break;
+            }
+        }
+
+        // 4. optional default type  "= SomeType"
+        if (this.tryConsume("=")) {
+            this.skipWS();
+            ret.defaultType = this.parseSingleBound();
+        }
+
+        return ret;
+    }
+
+    // Tries to consume "in" | "out" | "inout" as a direction keyword.
+    // Must be followed by whitespace and a valid identifier to avoid
+    // consuming a type parameter literally named "in" or "out".
+    private parseDirection(): TypeDeclaration["direction"] | undefined {
+        for (const candidate of ["inout", "in", "out"] as const) {
+            const slice = this.input.slice(this.pos, this.pos + candidate.length);
+            const after = this.input[this.pos + candidate.length];
+            if (slice === candidate && after !== undefined && /\s/.test(after)) {
+                // peek ahead: next non-whitespace must be a valid identifier start
+                // (the type parameter name) to confirm this is a direction keyword
+                const rest = this.input.slice(this.pos + candidate.length).trimStart();
+                if (/^[A-Za-z_$]/.test(rest)) {
+                    this.pos += candidate.length;
+                    return candidate;
+                }
+            }
+        }
+        return undefined;
+    }
+
+    private parseBoundList(): GenericType[] {
+        const bounds: GenericType[] = [this.parseSingleBound()];
+        this.skipWS();
+        while (this.tryConsume("&")) {
+            this.skipWS();
+            bounds.push(this.parseSingleBound());
+            this.skipWS();
+        }
+        return bounds;
+    }
+
+    private parseSingleBound(): GenericType {
+        const slice = this.input.slice(this.pos);
+        const inner = new GenericTypeParser(slice, this.classes, this.enums, this.typeDeclarations);
+        const ref   = inner.parseRef();
+        this.pos += inner.getPos();
+        return ref;
+    }
+
+    private tryConsume(word: string): boolean {
+        const slice = this.input.slice(this.pos, this.pos + word.length);
+        const after = this.input[this.pos + word.length];
+        if (slice === word && (after === undefined || /\W/.test(after))) {
+            this.pos += word.length;
+            return true;
+        }
+        return false;
+    }
+
+    private parseIdentifier(): string {
+        const match = /^[A-Za-z_$][A-Za-z0-9_$]*/.exec(this.input.slice(this.pos));
+        if (!match) return "";
+        this.pos += match[0].length;
+        return match[0];
+    }
+
+    private skipWS(): void {
+        while (this.pos < this.input.length && /\s/.test(this.input[this.pos]))
+            this.pos++;
+    }
+}
 // A type parameter declaration (the <T extends ...> part in a class or function header)
 
 
@@ -484,8 +632,6 @@ type = new GenericType("wildcard", undefined, undefined, undefined, [
     listType
 ]);
 
-// if
-// ? extends List<T> is allowed, then upper and lower must be recursively typed
 
 
 
@@ -644,7 +790,14 @@ export class TypeDeclaration {
     upper!: (GenericType | TYPE)[];
     lower!: (GenericType | TYPE)[];
     direction!: "in" | "out" | "inout"; // also called variance: Input (contravariant) or an Output (covariant).
-    defaultType?: Pointer<DClassifier> | TypeDeclaration;
+    defaultType?: GenericType | TYPE;
+    constructor() {
+        this.upper = [];
+        this.lower = [];
+        this.direction = "inout";
+        this.defaultType = undefined;
+        this.name = "T";
+    }
 }
 
 // ? type TypeDecl = EGenericType;

@@ -43,7 +43,6 @@ import {
     ModelPointers,
     MultiSelectOptGroup,
     MultiSelectOption,
-    NamedArr,
     NamedArray,
     Node,
     ObjectPointers,
@@ -69,7 +68,8 @@ import {
     ShortAttribSuperTypes,
     store,
     TargetableProxyHandler,
-    TRANSACTION, TYPE,
+    TRANSACTION,
+    TYPE,
     U,
     Uarr,
     unArr,
@@ -96,6 +96,7 @@ import {Alias, transientProperties} from "../../joiner/classes";
 import React, {JSX} from "react";
 import {Dummy} from "../../common/Dummy";
 import {TRANSACTION_MERGE} from "../../redux/action/action";
+import {DictArr} from "../../joiner/types";
 import {TypeDeclaration} from "./etype";
 
 type outactions = {clear:(()=>void)[], set:(()=>void)[], immediatefire?: boolean};
@@ -1145,7 +1146,9 @@ export class DAnnotation extends DModelElement { // extends Mixin(DAnnotation0, 
         let name: string = a.name as any;
         let source: string = a.source as any || "https://app.jjodel.io/2006/";
         if (!name) {
-            name = this.defaultname("annotation_", a.father, undefined, true);
+            name = this.defaultname("annotation_", a.father, undefined,
+                (l: L) => (l as LModelElement).annotations.map(a=> a.name)
+            );
         }
 
         return new Constructors(new DAnnotation('dwc'), a.father, persist, undefined, a.id)
@@ -2702,8 +2705,8 @@ export class LOperation<Context extends LogicContext<DOperation, LOperation> = a
         return (name?: DParameter["name"], type?: DParameter["type"]) => LPointerTargetable.fromD(DParameter.new(name, type, context.data.id, true)); }
 
     public addTypeDeclaration(name?: DTypeDeclaration["name"]): LTypeDeclaration { return this.cannotCall("addTypeDeclaration"); }
-    protected get_addTypeDeclaration(context: Context): this["addTypeDeclaration"] {
-        return (name?: DTypeDeclaration["name"]) => LPointerTargetable.fromD(DTypeDeclaration.new(name, context.data.id, true));
+    protected get_addTypeDeclaration(c: Context): this["addTypeDeclaration"] {
+        return (name?: DTypeDeclaration["name"]) => LPointerTargetable.fromD(DTypeDeclaration.new2({name, father:c.data.id}, (d) => {}, true));
     }
 
 
@@ -2718,9 +2721,9 @@ export class LOperation<Context extends LogicContext<DOperation, LOperation> = a
     __info_of__typeParameters: Info = GenericType.descTypeParameters;
     __info_of__eTypeParameters: Info = GenericType.descTypeParameters;
     get_typeParameters(c: Context): this["typeParameters"] { return LClass.singleton.get_typeParameters(c); }
-    set_typeParameters(v: Pointer<DTypeDeclaration>, c: Context) {return LClass.singleton.set_typeParameters(v, c); }
+    set_typeParameters(v: DOperation["typeParameters"], c: Context) {return LClass.singleton.set_typeParameters(v, c); }
     get_eTypeParameters(c: Context): this["eTypeParameters"] { return LClass.singleton.get_eTypeParameters(c); }
-    set_eTypeParameters(v: Pointer<DTypeDeclaration>, c: Context): boolean { return LClass.singleton.set_eTypeParameters(v, c); }
+    set_eTypeParameters(v: DOperation["typeParameters"], c: Context): boolean { return LClass.singleton.set_eTypeParameters(v, c); }
     /*get_addTypeParameter(c: Context) { return LClassifier.singleton.get_addTypeParameter(c); }
     get_removeTypeParameter(c: Context) { return LClassifier.singleton.get_removeTypeParameter(c); }*/
 
@@ -3076,13 +3079,18 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
 
 
     // generics
-    typeParameters!: LTypeDeclaration[];
+    typeParameterNames!: string[];
+    __info_of__typeParameterNames: Info = {type: ShortAttribETypes.EString, txt: "names in the collection this.typeParameters"};
+    get_typeParameterNames(c: LogicContext<DClass | DOperation>): this["typeParameterNames"]{ return this.get_typeParameters(c).map(e=>e.name).filter(e=>!!e); }
+    set_typeParametersNames(v: never, c: LogicContext<DClass | DOperation>): boolean { return this.cannotSet("typeParameterNames"); }
+
+    typeParameters!: DictArr<LTypeDeclaration>;
     __info_of__typeParameters: Info = GenericType.descTypeParameters;
     get_typeParameters(c: LogicContext<DClass | DOperation>): this["typeParameters"] { return GenericType.getter_typeParametersArr(c.data.typeParameters) || []; }
-    set_typeParameters(v: Pointer<DTypeDeclaration>[], c: LogicContext<DClass | DOperation>): boolean { return GenericType.setter_typeParameters(v, c, this); }
+    set_typeParameters(v: DClass["typeParameters"], c: LogicContext<DClass | DOperation>): boolean { return GenericType.setter_typeParameters(v, c, this); }
 
     get_eTypeParameters(c: LogicContext<DClass | DOperation>): this["typeParameters"] { return GenericType.getter_typeParametersArr(c.data.typeParameters) || []; }
-    set_eTypeParameters(v: Pointer<DTypeDeclaration>[], c: LogicContext<DClass | DOperation>): boolean { return GenericType.setter_typeParameters(v, c, this); }
+    set_eTypeParameters(v: DClass["typeParameters"], c: LogicContext<DClass | DOperation>): boolean { return GenericType.setter_typeParameters(v, c, this); }
 
     /*genericSuperTypes!: GenericType[];
     __info_of__genericSuperTypes: Info = {type: "GenericType[]", txt: "Describes the type arguments used to extend or implement superclasses." +
@@ -3608,23 +3616,23 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     protected get_partialdefaultname(context: Context): D["partialdefaultname"] { return context.data.partialdefaultname; }
 
     public addAttribute(name?: DAttribute["name"], type?: DAttribute["type"]): LAttribute { return this.cannotCall("addAttribute"); }
-    protected get_addAttribute(context: Context): this["addAttribute"] {
-        return (name?: DAttribute["name"], type?: DAttribute["type"]) => LPointerTargetable.fromD(DAttribute.new(name, type, context.data.id, true));
+    protected get_addAttribute(c: Context): this["addAttribute"] {
+        return (name?: DAttribute["name"], type?: DAttribute["type"]) => LPointerTargetable.fromD(DAttribute.new(name, type, c.data.id, true));
     }
 
     public addReference(name?: DReference["name"], type?: DReference["type"]): LReference { return this.cannotCall("addReference"); }
-    protected get_addReference(context: Context): this["addReference"] {
-        return (name?: DReference["name"], type?: DReference["type"]) => LPointerTargetable.fromD(DReference.new(name, type, context.data.id, true));
+    protected get_addReference(c: Context): this["addReference"] {
+        return (name?: DReference["name"], type?: DReference["type"]) => LPointerTargetable.fromD(DReference.new(name, type, c.data.id, true));
     }
 
     public addOperation(name?: DOperation["name"], type?: DOperation["type"]): LOperation { return this.cannotCall("addOperation"); }
-    protected get_addOperation(context: Context): this["addOperation"] {
-        return (name?: DOperation["name"], type?: DOperation["type"]) => LPointerTargetable.fromD(DOperation.new(name, type, [], context.data.id, true));
+    protected get_addOperation(c: Context): this["addOperation"] {
+        return (name?: DOperation["name"], type?: DOperation["type"]) => LPointerTargetable.fromD(DOperation.new(name, type, [], c.data.id, true));
     }
 
     public addTypeDeclaration(name?: DTypeDeclaration["name"]): LTypeDeclaration { return this.cannotCall("addTypeDeclaration"); }
-    protected get_addTypeDeclaration(context: Context): this["addTypeDeclaration"] {
-        return (name?: DTypeDeclaration["name"]) => LPointerTargetable.fromD(DTypeDeclaration.new(name, context.data.id, true));
+    protected get_addTypeDeclaration(c: Context): this["addTypeDeclaration"] {
+        return (name?: DTypeDeclaration["name"]) => LPointerTargetable.fromD(DTypeDeclaration.new2({name, father:c.data.id}, (d) => {}, true));
     }
 
 
@@ -4289,9 +4297,11 @@ export class DTypeDeclaration extends DClassifier { // extends DClassifier
     upper!: (GenericType | TYPE)[];
     lower!: (GenericType | TYPE)[];
     direction: "in" | "out" | "inout" = 'inout'; // also called variance: Input (contravariant) or an Output (covariant).
-    defaultType?: TYPE;
+    defaultType?: GenericType | TYPE;
+    isReified!: boolean;
 
     public static new(name?: DTypeDeclaration["name"], father?: Pointer, persist: boolean = true): DTypeDeclaration {
+        if (!name) name = "T";
         return new Constructors(new DTypeDeclaration('dwc'), father, persist, undefined).DPointerTargetable().DModelElement().DNamedElement(name)
             .DTypeDeclaration().end();
     }
@@ -4299,9 +4309,10 @@ export class DTypeDeclaration extends DClassifier { // extends DClassifier
     public static new2(a:Partial<TypeDeclarationPointers>, then?:((d:DTypeDeclaration, c: Constructors)=>void), persist: boolean = true): DTypeDeclaration{
         let name: string = a.name as any;
         if (!name) {
-            name = this.defaultname("T", a.father, undefined, true);
+            name = this.defaultname("T", a.father, undefined, (l: L) => (l as LClass).typeParameterNames, '');
         }
 
+        console.log("add typedecl", {name});
         return new Constructors(new DTypeDeclaration('dwc'), a.father, persist, undefined, a.id)
             .DPointerTargetable().DModelElement().DNamedElement(name)
             .DTypeDeclaration().end(then);
@@ -4315,6 +4326,133 @@ export class LTypeDeclaration<D extends DTypeDeclaration = DTypeDeclaration, Con
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public __raw!: DTypeDeclaration;
     id!: Pointer<DTypeDeclaration, 1, 1, LTypeDeclaration>;
+    upper!: (GenericType | LClass)[];
+    lower!: (GenericType | LClass)[];
+    direction: "in" | "out" | "inout" = 'inout'; // also called variance: Input (contravariant) or an Output (covariant).
+    defaultType!: GenericType | TYPE | null;
+    isReified!: boolean;
+    father!: LOperation | LClass;
+
+    protected get_father(c: Context): this["father"] { return super.get_father(c) as any; }
+    protected get_toString(c: Context): () => string { return () => this._toString(c); }
+    protected _toString(c: Context): string {
+        let def = this.get_defaultType(c);
+        let upper = this.get_upper(c);
+        let lower = this.get_lower(c);
+        let direction: string = this.get_direction(c);
+        let name = this.get_name(c);
+        if (direction === "inout" || !direction) direction = "";
+        else direction += " ";
+        if (!name && !def && !upper.length && !lower.length) return "";
+
+        let extendsStr = upper.map(e=>GenericType.serializeJOM(e)).filter(e=>!!e).join("&");
+        let superStr = lower.map(e=>GenericType.serializeJOM(e)).filter(e=>!!e).join("&");
+        if (superStr) superStr = " super " + superStr;
+        if (extendsStr) extendsStr = " extends "+extendsStr;
+        return `<${direction}${name}${extendsStr}${superStr}>`;
+    }
+
+    public parse(s: string): this { throw this.wrongAccessMessage("parse"); }
+    __info_of__parse: Info = {type: "(text)=>this", txt: "parses a java-like string which includes the constraints and the name of the type declaration and updates the object."}
+    protected get_parse(c: Context): (s: string) => this {
+        return (s: string) => {
+            let lm = this.get_model(c);
+            let td: TypeDeclaration = GenericType.parseDeclaration(s, lm.classes, lm.enums, this.get_father(c)?.typeDeclarations || []);
+            let d = c.data;
+            TRANSACTION("update type declaration", ()=> {
+                this.set_defaultType(td.defaultType);
+                this.set_lower(td.lower);
+                this.set_upper(td.upper);
+                this.set_direction(td.direction);
+                this.set_name(td.name);
+                // c.data.isReified = ??
+            }, s);
+            this.set_defaultType(td.defaultType);
+            return this;
+        }
+    }
+    private _filterUpperVal<
+        T extends boolean = true,
+        R = T extends true ? LClassifier | LTypeDeclaration : Pointer<DClassifier> | Pointer<DTypeDeclaration>
+    >(e: unknown, wrap: T = true as any): GenericType | R {
+        let te = typeof e;
+        if (te === "string" && Pointers.isPointer(e)) return L.from(e);
+        if (te !== "object") return null as any;
+        return e as GenericType;
+    }
+
+    get_lower(c: Context): this["lower"] { return this.get_upper(c, "lower"); }
+    set_lower(v: this["lower"], c: Context): boolean { return this.set_upper(v, c, "lower"); }
+    get_upper(c: Context, upper : "upper" | "lower" = "upper"): this["upper"] {
+        return (c.data[upper] || [] as any).map(e => this._filterUpperVal(e, true)).filter(e=>!!e) as this["upper"];
+    }
+    set_upper(v: this["upper"], c: Context, upper : "upper" | "lower" = "upper"): boolean {
+        let arr: DTypeDeclaration["upper"] =( Array.isArray(v) ? v : [v]) as any;
+        arr = arr.map(e=>this._filterUpperVal(e, false)).filter(e=> !!e);
+        let delta = Uobj.objectDelta(c.data[upper], arr);
+        if (Object.keys(delta).length === 0) return true;
+        TRANSACTION(this.get_name(c)+"."+upper, () => {
+            SetFieldAction.new(c.data, upper, arr, "", true);
+        })
+        return true;
+    }
+    get_defaultType(c: Context): this["defaultType"] { return c.data.defaultType || null; }
+    set_defaultType(v: DTypeDeclaration["defaultType"], c: Context): boolean {
+        let ptr  = Pointers.from(v);
+        if (c.data.defaultType === ptr) return true;
+        if (ptr) v = ptr;
+        else {
+            if (typeof v === "object") v = GenericType.getter(v);
+            else return true; // error: not a pointer, L or GenericType
+            let delta = Uobj.objectDelta(v, c.data.defaultType);
+            if (Object.keys(delta).length === 0) return true;
+        }
+
+        TRANSACTION(this.get_name(c)+".defaultType", () => {
+            SetFieldAction.new(c.data, "defaultType", v, "", true);
+        }, c.data.defaultType, v);
+        return true;
+    }
+
+
+    reified!: this["isReified"];
+    __info_of__reified: Info = {type: ShortAttribETypes.EBoolean, txt: "Alias for isReified."}
+    __info_of__isReified: Info = {type: ShortAttribETypes.EBoolean,
+        txt: "Tracks whether the type parameter's concrete type is erased at runtime (like Java) or preserved/reified at runtime (like C# or Kotlin)."}
+    get_reified(c: Context): this["reified"] { return this.get_isReified(c); }
+    set_reified(v: this["reified"], c: Context): boolean { return this.set_isReified(v, c); }
+    get_isReified(c: Context): this["isReified"] { return !!c.data.isReified; }
+    set_isReified(v: this["reified"], c: Context): boolean {
+        v = !!v;
+        if (!!c.data.isReified === v) return true;
+        TRANSACTION(this.get_name(c)+".isReified", () => {
+            SetFieldAction.new(c.data, "isReified", v, "", true);
+        }, c.data.isReified, v);
+        return true;
+    }
+
+    @Alias("direction") variance!: this["direction"];
+    @Alias("info_direction") __info_of__variance: Info = {type: ShortAttribETypes.EBoolean, txt: "Alias for this.direction"};
+    @Alias("get_direction") get_variance(c: Context): this["variance"] { return this.get_direction(c); }
+    @Alias("set_direction")  set_variance(v: DTypeDeclaration["variance"], c: Context): boolean { return this.set_direction(v, c); }
+    get_direction(c: Context): this["direction"] { return c.data.direction || "inout"; }
+    set_direction(v: DTypeDeclaration["direction"], c: Context): boolean {
+        if (typeof v !== "string") v = "inout";
+        else v = v.toLowerCase() as any;
+        switch (c.data.direction) {
+            case "in": case "out": case "inout": break;
+            case "+": case "contravariance": v = "in"; break;
+            case "-": case "covariance": v = "out"; break;
+            case "in-out": case "bidirectional": case "-+": case "-+": case "=": case "variance": case "bivariance": case "invariance":
+                v = "inout"; break;
+            default: v = "inout"; break;
+        }
+        if (c.data.direction === v) return true;
+        TRANSACTION(this.get_name(c)+".direction", () => {
+            SetFieldAction.new(c.data, "direction", v, "", false);
+        }, c.data.direction, v);
+        return true;
+    }
 }
 RuntimeAccessibleClass.set_extend(DClassifier, DTypeDeclaration);
 RuntimeAccessibleClass.set_extend(LClassifier, LTypeDeclaration);

@@ -148,6 +148,7 @@ import type {VersionFixer as TypeVersionFixer} from "../redux/VersionFixer";
 import type {ProjectsApi as TypeProjectsAPI, UsersApi} from "../api/persistance";
 import type {Collaborative as CollaborativeT} from "../components/collaborative/Collaborative";
 import {DPlaceholder} from "../model/logicWrapper/LModelElement";
+import {add} from "lodash";
 
 var windoww = window as any;
 
@@ -1430,7 +1431,11 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
     parent?: any;
     zoom!: GraphPoint;
 
-    static defaultname<L extends LModelElement = LModelElement>(startingPrefix: string | ((meta:L)=>string), father?: Pointer | DPointerTargetable | ((a:string)=>boolean), metaptr?: Pointer | null, isAnnotation: boolean = false): string {
+    static defaultname<L extends LModelElement = LModelElement>(startingPrefix: string | ((meta:L)=>string),
+                                                                father?: Pointer | DPointerTargetable | ((a:string)=>boolean),
+                                                                metaptr?: Pointer | null,
+                                                                getChildNames: ((father: LPointerTargetable) => string[]) | undefined = undefined,
+                                                                addNumber = '0'): string {
         let lfather: LModelElement;
         // startingPrefix = "model_", father = ((name: string) => !dmodelnames.includes(name))
         if (father) {
@@ -1441,12 +1446,12 @@ export class DPointerTargetable extends RuntimeAccessibleClass {
                     let meta = LPointerTargetable.from(metaptr as Pointer);
                     startingPrefix = startingPrefix(meta as L);
                 }
-                const childrenNames: (string)[] = isAnnotation ? lfather.annotations.map(a=>a.name) : lfather.childNames; // lfather.children.map(c => (c as LNamedElement)?.name);
-                return U.increaseEndingNumber(startingPrefix + '0', false, false, (newname) => childrenNames.indexOf(newname) >= 0);
+                 const childrenNames: (string)[] = getChildNames ? getChildNames(lfather) : lfather.childNames; // lfather.children.map(c => (c as LNamedElement)?.name);
+                return U.increaseEndingNumber(startingPrefix + addNumber, false, false, (newname) => childrenNames.indexOf(newname) >= 0);
             }
             else if (typeof father === 'function') {
                 let condition = father as any as ((a:string)=>boolean);
-                return U.increaseEndingNumber(startingPrefix + '0', false, false, condition);
+                return U.increaseEndingNumber(startingPrefix + addNumber, false, false, condition);
             }
         }
         return startingPrefix + "1"; }

@@ -86,7 +86,7 @@ describe('test generic type api', () => {
     test('should parse string to jpm typing structure', () => {
         let classes = U.toNamedArray([ {name: "List", id:"ListID"}, {name: "Human", id:"HumanID"}] as any)  as any;
         let enumerators = U.toNamedArray([] as any) as any;
-        let obj = GenericType.parse("List<T>", classes, enumerators)
+        let obj = GenericType.parse("List<T>", classes, enumerators, [] as any)
         let s2 = GenericType.serializeJOM(obj);
 
         let s = "List<T>";

@@ -1,4 +1,4 @@
-import {Pointer, DViewElement, DViewPoint, Dictionary, U, RuntimeAccessible, DClass} from '../joiner';
+import {Pointer, DViewElement, DViewPoint, Dictionary, U, RuntimeAccessible, DClass, DTypeDeclaration} from '../joiner';
 @RuntimeAccessible('Defaults')
 export class Defaults { /// TODO: this really needs to become dynamically generated, after view creations.
     static cname: string = 'Defaults';
@@ -24,6 +24,7 @@ export class Defaults { /// TODO: this really needs to become dynamically genera
         "Pointer_ViewSingleton",
         "Pointer_ViewFallback",
         "Pointer_ViewCollaborative",
+        "Pointer_ViewTypeParameter",
         // validation
         "Pointer_ViewCheckName",
         "Pointer_ViewOverlay",
@@ -73,6 +74,7 @@ export class Defaults { /// TODO: this really needs to become dynamically genera
     static Pointer_ViewCheckName: Pointer<DViewElement> = 'Pointer_ViewCheckName';
     static Pointer_ViewOverlay: Pointer<DViewElement> = 'Pointer_ViewOverlay';
     static Pointer_ViewLowerbound: Pointer<DViewElement> = 'Pointer_ViewLowerbound';
+    static Pointer_ViewTypeParameter: Pointer<DTypeDeclaration> = 'Pointer_ViewTypeParameter';
     // types
     static Pointer_EVOID: Pointer<DClass> = 'Pointer_EVOID';
     static Pointer_ECHAR: Pointer<DClass> = 'Pointer_ECHAR';

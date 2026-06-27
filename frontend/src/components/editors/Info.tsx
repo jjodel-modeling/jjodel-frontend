@@ -6,7 +6,7 @@ import {
     LGraphElement,
     LModel,
     LModelElement,
-    LObject, LPointerTargetable, LReference, LStructuralFeature, LValue,
+    LObject, LPointerTargetable, LReference, LStructuralFeature, LTypeDeclaration, LValue,
     LViewElement, MultiSelect, Pointer, Pointers,
     Select,
     Selectors, SetFieldAction, SetRootFieldAction, store, TRANSACTION, U, ValueDetail
@@ -134,7 +134,6 @@ class builder {
             </label>
         </>);
     }
-    
 
     static class(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
         let lclass: LClass = data as any;
@@ -708,6 +707,32 @@ class builder {
                 </select>
             </label>}
         </>)
+    }
+
+    static typeDeclaration(data: LTypeDeclaration, advanced: boolean, skipTitle: boolean = false): JSX.Element {
+        return (<>
+            {this.named(data, advanced, skipTitle)}
+            <label className={'input-container'}>
+                <b className={'me-2'}>Type:</b>
+                <Input data={data} type={"text"}
+                       getter={(data: LTypeDeclaration)=> data.toString()}
+                       setter={(v: any, data: LTypeDeclaration) => data.parse(v) } />
+            </label>
+            {advanced && <>
+                <label className={'input-container'}>
+                    <b className={'me-2'}>Direction:</b>
+                    <Select data={data} field={'direction'}>
+                        <option value={"inout"}>IN-OUT</option>
+                        <option value={"in"}>IN</option>
+                        <option value={"out"}>OUT</option>
+                    </Select>
+                </label>
+                <label className={'input-container'}>
+                    <b className={'me-2'}>is Reified:</b>
+                    <Input data={data} field={'isReified'} type={'switch'}/>
+                </label>
+            </>}
+        </>);
     }
 }
 

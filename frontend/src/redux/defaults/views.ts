@@ -17,7 +17,7 @@ import {
     GraphSize,
     CoordinateMode,
     U,
-    Defaults
+    Defaults, DTypeDeclaration
 } from '../../joiner';
 import DSL from "../../DSL/DSL";
 
@@ -162,6 +162,15 @@ border-radius: var(--radius);
         return view
     }
 
+    /* type declaration */
+    static typeDeclaration(vp: DViewElement): DViewElement {
+        const td = DViewElement.new2("Type Parameter", DV.typeDeclarationView(), vp, (view)=> {
+            view.appliableToClasses = [DTypeDeclaration.cname];
+            view.oclCondition = 'context DTypeDeclaration inv: true';
+            view.appliableTo = 'Field';
+        },false, Defaults.Pointer_ViewTypeParameter);
+        return td;
+    }
     /* Class */ 
 
     static class(vp: DViewElement): DViewElement {
@@ -280,6 +289,7 @@ border-radius: 6px;
     ret.operations = data?.operations || []
     ret.abstract = data?.abstract || false
     ret.interface = data?.interface || false
+    ret.typeParameters = data?.typeParameters || []
     ${udLevel}
     ${udGrid}
     ${udSnap}

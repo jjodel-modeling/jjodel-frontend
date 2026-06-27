@@ -150,6 +150,7 @@ export class DefaultNodeComponent<AllProps extends AllPropss = AllPropss, NodeSt
             case "DReference":
             case "DEnumLiteral":
             case "DValue":
+            case "DTypeDeclaration":
             case "DModelElement": componentfunction = Field; break;
             default:
                 Log.exDevv('invalid model class, add a case in the switch', {modelElement, view, dmodelMap, componentMap});
