@@ -110,7 +110,8 @@ export class DState extends DPointerTargetable{
     timestamp!: number;
     timestampdiff!: number;
 
-    debug: boolean = false;
+    advanced!: boolean;
+    debug!: boolean;
     logs: Pointer<DLog>[] = [];
     models: Pointer<DModel, 0, 'N'> = []; // Pointer<DModel, 0, 'N'>[] = [];
     m2models: Pointer<DModel, 0, 'N'> = [];
@@ -219,7 +220,6 @@ export class DState extends DPointerTargetable{
     /* IoT: Topic Table */
     topics: Dictionary<string, unknown> = {};
 
-    advanced: boolean = false;
     alert: string = '';
     dialog: string = '';
     dialog_response: string = '';
@@ -696,6 +696,7 @@ export class LState<Context extends LogicContext<DState> = any, C extends Contex
     // return type is wrong, but have to extend the static method of RuntimeAccessibleClass which is completely different and returns a class constructor.
     static get<T2 extends typeof RuntimeAccessibleClass & { logic?: typeof LPointerTargetable | undefined; }>(): T2 & LState { return LState.wrap(store.getState() as any) as any; }
     user!: LUser;
+    advanced!: boolean;
     debug!: boolean;
     room!: string;
     _lastSelected?: {modelElement?: LModelElement, node?: LGraphElement, view?: LViewElement};

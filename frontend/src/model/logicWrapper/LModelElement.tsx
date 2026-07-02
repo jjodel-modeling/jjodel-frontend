@@ -1,8 +1,34 @@
 import {
-    Abstract,
     Any,
+    Dictionary,
+    DocString,
+    DtoL,
+    LtoD,
+    Function2,
+    getWParams,
+    GObject,
+    Json,
+    NamedArr, NamedArray,
+    PrimitiveType,
+    orArr,
+    Pack,
+    Pack1,
+    PackArr,
+    Pointer,
+    ObjectPointers,
+    ObjectWithoutPointers,
+    OperationPointers,
+    PackagePointers,
+    ParameterPointers,
+    ReferencePointers,
     AttributePointers,
     ClassPointers,
+    EnumPointers,
+    LiteralPointers,
+    TYPE, Input,
+} from "../../joiner";
+import {
+    Abstract,
     Constructor,
     Constructors,
     D,
@@ -11,54 +37,31 @@ import {
     DEdge,
     Defaults as TDefaults,
     DeleteElementAction,
-    Dictionary,
-    DocString,
     DPointerTargetable,
     DState,
-    DtoL,
     ECoreObject,
     EcoreXmiTags,
-    EnumPointers,
-    Function2,
     GenericType,
-    getWParams,
-    GObject,
     GraphSize,
     Info,
     Instantiable,
-    Json,
     L,
     Leaf,
     LEdge,
     LEdgePoint,
     LGraph,
     LGraphElement,
-    LiteralPointers,
     Log,
     LogicContext,
     LPointerTargetable,
-    LtoD,
     LVertex,
     LVoidVertex,
     ModelPointers,
     MultiSelectOptGroup,
     MultiSelectOption,
-    NamedArray,
     Node,
-    ObjectPointers,
-    ObjectWithoutPointers,
-    OperationPointers,
-    orArr,
-    Pack,
-    Pack1,
-    PackagePointers,
-    PackArr,
-    ParameterPointers,
     PointedBy,
-    Pointer,
     Pointers,
-    PrimitiveType,
-    ReferencePointers,
     RuntimeAccessible,
     RuntimeAccessibleClass,
     Selectors,
@@ -69,7 +72,6 @@ import {
     store,
     TargetableProxyHandler,
     TRANSACTION,
-    TYPE,
     U,
     Uarr,
     unArr,
@@ -658,7 +660,7 @@ export class LModelElement<Context extends LogicContext<DModelElement> = any, D 
 
     protected get_namespace(context: Context): string {
         throw new Error("?? get namespace ?? todo");
-        return "";
+        return U.toIdentifier("");
     }
 
     protected get_subNodes(context: LogicContext<DClass>, includingthis: boolean = false): LGraphElement[] {
@@ -1324,6 +1326,31 @@ Exports to .ecore will append the name (if present) to the "source" uri.</div>}
     }
     protected get_details(c: Context): this["details"] { return LPointerTargetable.get_patching(c, "details"); }
     protected get_clearDetails(c: Context){ return LPointerTargetable.clearPatching(c, "details", "details", this); }
+
+    updateDetailKey(oldKey: string, newKey: string): boolean { return this.cannotCall("updateDetailKey"); }
+    get_updateDetailKey(c: Context) : this["updateDetailKey"] { return (oldKey: string, newKey: string) => {
+        newKey = newKey.trim();
+        if (oldKey !== newKey) { return false; }
+        let details = c.data.details;
+        let isDelete = !!newKey;
+        TRANSACTION((isDelete ? "delete " : "update ") + this.get_name(c) + ".details key", () => {
+            SetFieldAction.new(c.data.id, "details."+oldKey as any, undefined, "", false);
+            if (isDelete) return;
+            SetFieldAction.new(c.data.id, "details."+newKey as any, details[oldKey], "", false);
+        }, oldKey, newKey)
+        return true;
+    }}
+
+    updateDetailValue(oldKey: string, newKey: string): boolean { return this.cannotCall("updateDetailKey"); }
+    get_updateDetailValue(c: Context) : this["updateDetailKey"] { return (oldKey: string, newValue: string) => {
+        newValue = newValue.trim();
+        let details = c.data.details;
+        if (details[oldKey] !== newValue) { return false; }
+        TRANSACTION("update " + this.get_name(c) + ".details."+oldKey, () => {
+            SetFieldAction.new(c.data.id, "details."+oldKey as any, newValue, "", false);
+        }, details[oldKey], newValue)
+        return true;
+    }}
 }
 
 RuntimeAccessibleClass.set_extend(DModelElement, DAnnotation);
@@ -2010,11 +2037,11 @@ export class LClassifier<Context extends LogicContext<DClassifier> = any> extend
     typeString!: string;
 
     private get_typeEcoreString(c: Context) {
-        return EcoreParser.classTypePrefix + c.data.name;
+        return EcoreParser.classTypePrefix + this.get_name(c); todo with generics
     }
 
-    get_typeString(context: Context) {
-        return context.data.name;
+    get_typeString(c: Context) {
+        return this.get_name(c); todo with generics
     }
 }
 
@@ -2118,7 +2145,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
 
     protected get_name(c: Context): this['name'] {
         let l = c.proxyObject;
-        let ret: string = (l as GObject)['$name']?.value || c.data.name;
+        let ret: string = (l as GObject)['$name']?.value || U.toIdentifier(c.data.name);
         if (ret === 'default') {
             let model = this.get_model(c);
             if (model.__raw.packages[0] === c.data.id) return model.name;
@@ -2202,8 +2229,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         if (!state) state = store.getState();
         let dclasses = DPointerTargetable.fromPointer(context.data.classes, state).filter(e=>!!e);
         let lclasses: LClass[] & Dictionary<DocString<"$name">, LClass> = LPointerTargetable.fromD(dclasses) as any;
-        if (setNameKeys) for (let i = 0; i < dclasses.length; i++) lclasses["$"+dclasses[i].name] = lclasses[i];
-        return lclasses;
+        return setNameKeys ? U.toNamedArray(lclasses) : lclasses;
     }
     protected get_enums(context: Context): (LEnumerator[] & Dictionary<DocString<"$name">, LEnumerator>) { return this.get_enumerators(context); }
     protected get_enumerators(context: Context, state?: DState, setNameKeys: boolean = true): (LEnumerator[] & Dictionary<DocString<"$name">, LEnumerator>) {
@@ -2211,8 +2237,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         if (!state) state = store.getState();
         let denums = DPointerTargetable.fromPointer(context.data.enumerators, state).filter(e=>!!e);
         let lenums: LEnumerator[] & Dictionary<DocString<"$name">, LEnumerator> = LPointerTargetable.fromD(denums) as any;
-        if (setNameKeys) for (let i = 0; i < denums.length; i++) (lenums as GObject)["$"+denums[i].name] = lenums[i];
-        return lenums;
+        return setNameKeys ? U.toNamedArray(lenums) : lenums;
     }
     //private get_allClasses(context: Context): LClass[] & Dictionary<DocString<"$name">, LClass> { return this.get_allSubClasses(c); }
     private get_allSubClasses(context: Context): LClass[] & Dictionary<DocString<"$name">, LClass> {
@@ -2258,7 +2283,7 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
         }
         let darr: DPackage[] = Object.values(checked);
         let larr: LPackage[] & Dictionary<DocString<"$name">, LPackage> = LPointerTargetable.fromArr(darr, state);
-        U.toNamedArray(larr, darr);
+        U.toNamedArray(larr);
         return larr;
     }
 
@@ -2333,8 +2358,8 @@ export class LPackage<Context extends LogicContext<DPackage> = any, C extends Co
     }
 
     protected get_uri(context: Context): this["uri"] {
-        if (context.data.uri) return context.data.uri + "." + context.data.name;
-        return ('org.jjodelreact.') + (context.proxyObject.model?.name || "username") + "." + context.data.name;
+        if (context.data.uri) return context.data.uri + "." + U.toIdentifier(context.data.name);
+        return ('org.jjodelreact.') + (context.proxyObject.model?.name || "username") + "." + U.toIdentifier(context.data.name);
     }
     protected set_uri(val: this["uri"], c: Context): boolean {
         val = val || '';
@@ -2660,13 +2685,13 @@ export class LOperation<Context extends LogicContext<DOperation, LOperation> = a
         loopDetectionObj[c.data.id] = c.data;
         const json: Json = {};
         let params = deep ? c.proxyObject.parameters.map( par => par.generateEcoreJson(loopDetectionObj, deep, crossRef)) : [];
-        EcoreParser.write(json, ECoreOperation.namee, c.data.name);
+        EcoreParser.write(json, ECoreOperation.namee, c.proxyObject.name);
         EcoreParser.write(json, ECoreOperation.eType, c.proxyObject.type.typeEcoreString);
-        EcoreParser.write(json, ECoreOperation.lowerBound, '' + c.data.lowerBound);
-        EcoreParser.write(json, ECoreOperation.upperBound, '' + c.data.upperBound);
+        EcoreParser.write(json, ECoreOperation.lowerBound, '' + c.proxyObject.lowerBound);
+        EcoreParser.write(json, ECoreOperation.upperBound, '' + c.proxyObject.upperBound);
         EcoreParser.write(json, ECoreOperation.eexceptions, c.proxyObject.exceptions.map( (l: LClassifier) => l.typeEcoreString).join(' ')); // todo: not really sure it's this format
-        EcoreParser.write(json, ECoreOperation.ordered, '' + c.data.ordered);
-        EcoreParser.write(json, ECoreOperation.unique, '' + c.data.unique);
+        EcoreParser.write(json, ECoreOperation.ordered, '' + c.proxyObject.ordered);
+        EcoreParser.write(json, ECoreOperation.unique, '' + c.proxyObject.unique);
         // keep sub-elements last
         if (params.length) json[ECoreOperation.eParameters] = params;
         return json; }
@@ -2716,17 +2741,22 @@ export class LOperation<Context extends LogicContext<DOperation, LOperation> = a
     set_genericType(v: GenericType, c: Context): boolean { return GenericType.setter(v, c, this); }
     __info_of__genericType = GenericType.desc_feature;
 
-    typeParameters!: LTypeDeclaration[];
-    eTypeParameters!: LTypeDeclaration[];
+    typeParameters!: NamedArr<LTypeDeclaration>;
     __info_of__typeParameters: Info = GenericType.descTypeParameters;
-    __info_of__eTypeParameters: Info = GenericType.descTypeParameters;
-    get_typeParameters(c: Context): this["typeParameters"] { return LClass.singleton.get_typeParameters(c); }
-    set_typeParameters(v: DOperation["typeParameters"], c: Context) {return LClass.singleton.set_typeParameters(v, c); }
-    get_eTypeParameters(c: Context): this["eTypeParameters"] { return LClass.singleton.get_eTypeParameters(c); }
-    set_eTypeParameters(v: DOperation["typeParameters"], c: Context): boolean { return LClass.singleton.set_eTypeParameters(v, c); }
+    get_typeParameters(c: LogicContext<DClass | DOperation>): this["typeParameters"] { return LClass.singleton.get_typeParameters(c); }
+    set_typeParameters(v: DOperation["typeParameters"], c: LogicContext<DClass | DOperation>) { return LClass.singleton.set_typeParameters(v, c); }
     /*get_addTypeParameter(c: Context) { return LClassifier.singleton.get_addTypeParameter(c); }
     get_removeTypeParameter(c: Context) { return LClassifier.singleton.get_removeTypeParameter(c); }*/
 
+    @Alias("typeParameters") eTypeParameters!: this["typeParameters"];
+    @Alias __info_of__eTypeParameters: Info = {type: "TypeParameters[]", txt: "Alias for this.typeParameters"};
+    @Alias get_eTypeParameters(c: LogicContext<DClass | DOperation>): this["typeParameters"] { return this.get_typeParameters(c) }
+    @Alias set_eTypeParameters(v: DClass["typeParameters"], c: LogicContext<DClass | DOperation>): boolean { return this.set_typeParameters(v, c); }
+
+    @Alias("typeParameters") typeDeclarations!: this["typeParameters"];
+    @Alias __info_of__typeDeclarations: Info = {type: "TypeParameters[]", txt: "Alias for this.typeParameters"};
+    @Alias get_typeDeclarations(c: LogicContext<DClass | DOperation>): this["typeParameters"] { return this.get_typeParameters(c) }
+    @Alias set_typeDeclarations(v: DClass["typeParameters"], c: LogicContext<DClass | DOperation>): boolean { return this.set_typeParameters(v, c); }
 
     public execute(thiss: LObject, ...params: any): any { return this.cannotCall("execute"); }
     protected get_execute(context: Context): ((thiss: LObject, ...params: any[])=>any) {
@@ -3084,13 +3114,19 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     get_typeParameterNames(c: LogicContext<DClass | DOperation>): this["typeParameterNames"]{ return this.get_typeParameters(c).map(e=>e.name).filter(e=>!!e); }
     set_typeParametersNames(v: never, c: LogicContext<DClass | DOperation>): boolean { return this.cannotSet("typeParameterNames"); }
 
-    typeParameters!: DictArr<LTypeDeclaration>;
+    typeParameters!: NamedArr<LTypeDeclaration>;
     __info_of__typeParameters: Info = GenericType.descTypeParameters;
     get_typeParameters(c: LogicContext<DClass | DOperation>): this["typeParameters"] { return GenericType.getter_typeParametersArr(c.data.typeParameters) || []; }
     set_typeParameters(v: DClass["typeParameters"], c: LogicContext<DClass | DOperation>): boolean { return GenericType.setter_typeParameters(v, c, this); }
 
-    get_eTypeParameters(c: LogicContext<DClass | DOperation>): this["typeParameters"] { return GenericType.getter_typeParametersArr(c.data.typeParameters) || []; }
-    set_eTypeParameters(v: DClass["typeParameters"], c: LogicContext<DClass | DOperation>): boolean { return GenericType.setter_typeParameters(v, c, this); }
+    @Alias __info_of__eTypeParameters: Info = {type: "TypeParameters[]", txt: "Alias for this.typeParameters"};
+    @Alias get_eTypeParameters(c: LogicContext<DClass | DOperation>): this["typeParameters"] { return this.get_typeParameters(c) }
+    @Alias set_eTypeParameters(v: DClass["typeParameters"], c: LogicContext<DClass | DOperation>): boolean { return this.set_typeParameters(v, c); }
+
+    @Alias("typeParameters") typeDeclarations!: this["typeParameters"];
+    @Alias __info_of__typeDeclarations: Info = {type: "TypeParameters[]", txt: "Alias for this.typeParameters"};
+    @Alias get_typeDeclarations(c: LogicContext<DClass | DOperation>): this["typeParameters"] { return this.get_typeParameters(c) }
+    @Alias set_typeDeclarations(v: DClass["typeParameters"], c: LogicContext<DClass | DOperation>): boolean { return this.set_typeParameters(v, c); }
 
     /*genericSuperTypes!: GenericType[];
     __info_of__genericSuperTypes: Info = {type: "GenericType[]", txt: "Describes the type arguments used to extend or implement superclasses." +
@@ -4321,7 +4357,7 @@ export class DTypeDeclaration extends DClassifier { // extends DClassifier
 
 @Node
 @RuntimeAccessible('LTypeDeclaration')
-export class LTypeDeclaration<D extends DTypeDeclaration = DTypeDeclaration, Context extends LogicContext<DTypeDeclaration> = any, C extends Context = Context>  extends LClassifier { // extends DClassifier
+export class LTypeDeclaration<D extends DTypeDeclaration = DTypeDeclaration, Context extends LogicContext<DTypeDeclaration, LTypeDeclaration, WTypeDeclaration> = any, C extends Context = Context>  extends LClassifier { // extends DClassifier
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
     public __raw!: DTypeDeclaration;
@@ -4331,9 +4367,10 @@ export class LTypeDeclaration<D extends DTypeDeclaration = DTypeDeclaration, Con
     direction: "in" | "out" | "inout" = 'inout'; // also called variance: Input (contravariant) or an Output (covariant).
     defaultType!: GenericType | TYPE | null;
     isReified!: boolean;
+    // @ts-ignore
     father!: LOperation | LClass;
 
-    protected get_father(c: Context): this["father"] { return super.get_father(c) as any; }
+    protected get_father(c: Context): LTypeDeclaration["father"] { return super.get_father(c) as any; }
     protected get_toString(c: Context): () => string { return () => this._toString(c); }
     protected _toString(c: Context): string {
         let def = this.get_defaultType(c);
@@ -4347,9 +4384,10 @@ export class LTypeDeclaration<D extends DTypeDeclaration = DTypeDeclaration, Con
 
         let extendsStr = upper.map(e=>GenericType.serializeJOM(e)).filter(e=>!!e).join("&");
         let superStr = lower.map(e=>GenericType.serializeJOM(e)).filter(e=>!!e).join("&");
+        console.log("serialize tp", {upper, umap:upper.map(e=>GenericType.serializeJOM(e)), lower, lmap: lower.map(e=>GenericType.serializeJOM(e))})
         if (superStr) superStr = " super " + superStr;
         if (extendsStr) extendsStr = " extends "+extendsStr;
-        return `<${direction}${name}${extendsStr}${superStr}>`;
+        return `${direction}${name}${extendsStr}${superStr}`;
     }
 
     public parse(s: string): this { throw this.wrongAccessMessage("parse"); }
@@ -4357,17 +4395,18 @@ export class LTypeDeclaration<D extends DTypeDeclaration = DTypeDeclaration, Con
     protected get_parse(c: Context): (s: string) => this {
         return (s: string) => {
             let lm = this.get_model(c);
-            let td: TypeDeclaration = GenericType.parseDeclaration(s, lm.classes, lm.enums, this.get_father(c)?.typeDeclarations || []);
+            let td: TypeDeclaration = GenericType.parseDeclaration(s, lm.classes, lm.enums, this.get_father(c)?.typeDeclarations || [] as any, c.proxyObject);
             let d = c.data;
+            console.error("parseDeclaration", {s, td, d});
             TRANSACTION("update type declaration", ()=> {
-                this.set_defaultType(td.defaultType);
-                this.set_lower(td.lower);
-                this.set_upper(td.upper);
-                this.set_direction(td.direction);
-                this.set_name(td.name);
+                this.set_defaultType(td.defaultType, c);
+                this.set_lower(td.lower as any, c);
+                this.set_upper(td.upper as any, c);
+                this.set_direction(td.direction, c);
+                this.set_name(td.name, c);
                 // c.data.isReified = ??
+                this.set_defaultType(td.defaultType, c);
             }, s);
-            this.set_defaultType(td.defaultType);
             return this;
         }
     }
@@ -4397,20 +4436,22 @@ export class LTypeDeclaration<D extends DTypeDeclaration = DTypeDeclaration, Con
         return true;
     }
     get_defaultType(c: Context): this["defaultType"] { return c.data.defaultType || null; }
-    set_defaultType(v: DTypeDeclaration["defaultType"], c: Context): boolean {
-        let ptr  = Pointers.from(v);
+    set_defaultType(v: DTypeDeclaration["defaultType"] | undefined, c: Context): boolean {
+        let ptr = Pointers.from(v as any);
         if (c.data.defaultType === ptr) return true;
+        let old = c.data.defaultType;
         if (ptr) v = ptr;
         else {
-            if (typeof v === "object") v = GenericType.getter(v);
-            else return true; // error: not a pointer, L or GenericType
-            let delta = Uobj.objectDelta(v, c.data.defaultType);
-            if (Object.keys(delta).length === 0) return true;
+            if (!v) v = undefined;
+            else if (typeof v === "object") v = GenericType.getter(v) || undefined;
+            else return true; // error: not a pointer, L, GenericType or null (delete old value)
+            let delta = v && old ? Uobj.objectDelta(v as GObject, old) : undefined;
+            if (delta && Object.keys(delta).length === 0) return true;
         }
 
         TRANSACTION(this.get_name(c)+".defaultType", () => {
-            SetFieldAction.new(c.data, "defaultType", v, "", true);
-        }, c.data.defaultType, v);
+            SetFieldAction.new(c.data, "defaultType", v as GenericType | Pointer<any>, "", true);
+        }, old, v);
         return true;
     }
 
@@ -4434,12 +4475,12 @@ export class LTypeDeclaration<D extends DTypeDeclaration = DTypeDeclaration, Con
     @Alias("direction") variance!: this["direction"];
     @Alias("info_direction") __info_of__variance: Info = {type: ShortAttribETypes.EBoolean, txt: "Alias for this.direction"};
     @Alias("get_direction") get_variance(c: Context): this["variance"] { return this.get_direction(c); }
-    @Alias("set_direction")  set_variance(v: DTypeDeclaration["variance"], c: Context): boolean { return this.set_direction(v, c); }
+    @Alias("set_direction")  set_variance(v: DTypeDeclaration["direction"], c: Context): boolean { return this.set_direction(v, c); }
     get_direction(c: Context): this["direction"] { return c.data.direction || "inout"; }
     set_direction(v: DTypeDeclaration["direction"], c: Context): boolean {
         if (typeof v !== "string") v = "inout";
         else v = v.toLowerCase() as any;
-        switch (c.data.direction) {
+        switch (v as string) {
             case "in": case "out": case "inout": break;
             case "+": case "contravariance": v = "in"; break;
             case "-": case "covariance": v = "out"; break;
@@ -5333,7 +5374,7 @@ export class LEnumLiteral<Context extends LogicContext<DEnumLiteral> = any, C ex
         return true;
     }
 
-    protected get_literal(c: Context): this["literal"] { return c.data.literal || (c.data.name||'').split('_').join(' '); }
+    protected get_literal(c: Context): this["literal"] { return U.toIdentifier(c.data.literal || (c.data.name||'').split('_').join(' '); }
     protected set_literal(val: this["literal"], c: Context): boolean {
         let defaultVal = (c.data.name||'').split('_').join(' ');
         if (val === c.data.literal) return true;
@@ -5478,7 +5519,7 @@ export class LEnumerator<Context extends LogicContext<DEnumerator> = any, C exte
         let larr: LEnumLiteral[] = context.data.literals.map((pointer) => {
             return LPointerTargetable.from(pointer)
         }).filter(e=>!!e) as any;
-        return U.toNamedArray(larr, larr.map(l=> l?.__raw));
+        return U.toNamedArray(larr);
     }
 
     protected set_literals(val: PackArr<this["literals"]>, context: Context): boolean {
@@ -5712,9 +5753,8 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     instances!: LModel[];
     dependencies!: LModel[]; // points to other models of the same level
     allDependencies!: LModel[];
-    __info_of__dependencies: Info = {type: 'LModel[]',
-        txt:'Include other models as prerequisite for this model, it is as if this model is "extending" other models.'};
-    __info_of__allDependencies: Info = {type: 'LModel[]', txt:'Same as dependencies, but it solves recursively the dependencies of his dependencies.'};
+    __info_of__dependencies: Info = Info.dependencies;
+    __info_of__allDependencies: Info = Info.allDependencies;
 
     // Model
     instanceof?: LModel;
@@ -5744,12 +5784,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     allSubValues!: LValue[];
     allCrossSubValues!: LValue[];
     suggestedEdges!: {extend: EdgeStarter[], reference:EdgeStarter[], packageDependencies: EdgeStarter[]}; //, model: EdgeStarter[], package:EdgeStarter[], class:EdgeStarter[]};
-    __info_of__suggestedEdges: Info = {type: 'Dictionary<"extend" | "reference" | "packageDependencies" | DmodelName, EdgeStarter[]>', txt: "A map to access all possible kind of edges based on model data." +
-            "<br/>extend and reference are the most commonly used for horizontal references (outside the containment tree schema)." +
-            "<br/>packageDependencies links packages using classes from other packages." +
-            // "<br/>other keys are the names of container data types (mode, package, class, object...) from them to their childrens rendered as Nodes (vertical tree schema)." +
-            // todo: implement the commented part as LGrahElement.vertexs.map(v=>{start:v.parentnode.isVertex ? v.parentnode.id : undefined, end:v.id}).filter(e=>e.start) instead. it's a thing of graph more than model.
-            "<br/> EdgeStarter is a collection of data useful to start a &lt;Edge /&gt; in JSX."}
+    __info_of__suggestedEdges: Info = Info.suggestedEdges;
 
 
     protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}, deep: boolean = true, crossRef: boolean = true): Json {
@@ -5817,12 +5852,12 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     }
 
     prefix!: LPackage["prefix"];
-    __info_of__prefix: Info = {type: "string", txt: "Shortcut for model.package.prefix (default package\'s prefix)."}
+    __info_of__prefix: Info = Info.prefix
     protected get_prefix(c: Context): this["prefix"] { return this.defaultToPackage_get(c, "prefix"); }
     protected set_prefix(val: this["prefix"], c: Context): boolean { return this.defaultToPackage_set(c, "prefix", val); }
 
     uri!: LPackage["uri"];
-    __info_of__uri: Info = {type: "string", txt: "Shortcut for model.package.uri (default package\'s uri)."}
+    __info_of__uri: Info = Info.uri
     protected get_uri(c: Context): this["uri"] { return this.defaultToPackage_get(c, "uri"); }
     protected set_uri(val: this["uri"], c: Context): boolean { return this.defaultToPackage_set(c, "uri", val); }
 
@@ -5836,7 +5871,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     protected set_enumerators(val: this["enumerators"], c: Context): boolean { return this.defaultToPackage_set(c, "enumerators", val); }
 
     subpackages!: LPackage["subpackages"];
-    __info_of__subpackages: Info = {type: "LPackage[]", txt: "Shortcut for model.package.subpackages (default package\'s subpackages)."}
+    __info_of__subpackages: Info = Info.subpackages;
     protected get_subpackages(c: Context): this["subpackages"] { return this.defaultToPackage_get(c, "subpackages"); }
     protected set_subpackages(val: this["subpackages"], c: Context): boolean { return this.defaultToPackage_set(c, "subpackages", val); }
 
@@ -5962,10 +5997,8 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     // public otherObjectsSetup(){ LModel.otherObjectsTemp = undefined; LModel.otherObectsAccessedKeys = []; }
     otherObjects!: (excludeInstances: orArr<(string | LClass | Pointer)>, excludeSubclasses?: boolean)=>LObject[];
     otherInstances!: (excludeInstances: orArr<(string | LClass | Pointer)>, excludeSubclasses?: boolean)=>LObject[];
-    __info_of__otherObjects: Info = {type:"(...excludeInstances: (string|LClass|Pointer)[], excludeSubclasses: boolean = false)=>LObject[]", txt:<div>Alias for this.otherInstances.</div>};
-    __info_of__otherInstances: Info = {type:"(...excludeInstances: (string|LClass|Pointer)[], excludeSubclasses: boolean = false)=>LObject[]", txt:<div>Read this.instancesOf documentation first.
-            <br/>Retrieves all the objects not obtained between previous calls of this.instancesOf and the last call of this method.
-            <br/>Meaning calling it twice without any instancesOf in between, it will return all objects.</div>};
+    __info_of__otherObjects: Info = Info.otherObjects;
+    __info_of__otherInstances: Info = Info.otherInstances;
 
     public get_otherObjects(c: Context): (excludeInstances: orArr<(string | LClass | Pointer)>, excludeSubclasses?: boolean)=>LObject[]{
         return this.get_otherInstances(c); }
@@ -6017,11 +6050,7 @@ export class LModel<Context extends LogicContext<DModel> = any, C extends Contex
     }
 
     public instancesOf(instancetypes0: orArr<(string | LClass | Pointer)>, includeSubclasses: boolean = false): LObject[]{ return this.cannotCall("instancesOf"); }
-    public __info_of__instancesOf: Info = {type: "(instancetypes: orArr<(string | LClass | Pointer)>, includeSubclasses: boolean = false) => LObject[]",
-        txt:<div>Retrieves all objects instancing a target class.
-            <br/>The first parameter is the targeted class, which can be his name, pointer or object.
-            <br/>The second parameter tells if instances of his subclasses needs to be retreieved as well.</div>
-    }
+    public __info_of__instancesOf: Info = Info.instancesOf;
     // M1
     /// DANGER: after each usage need to call .otherInstances() or the data is cached and not updated.
     public get_instancesOf(c:Context): (this["instancesOf"]){
@@ -6056,17 +6085,11 @@ instanceof === null  --> shapeless object
 instanceof === undefined or missing  --> auto-detect and assign the type
  */
     addObject(json: GObject, instanceoff: Pack1<LClass> | DocString<"ClassName"> | undefined | null = undefined, forceCreation: boolean = false): ReturnType<LValue["addObject"]>{ return this.cannotCall("LValue.addObject"); }
-    __info_of__addObject: Info = {type: "(json: object, instanceof?: LClass) => LObject",
-        txt: "Appends an object instancing \"instanceof\" to the model.\n<br>Setting his own properties, and DValues according to the content of the parameter object."}
+    __info_of__addObject: Info = Info.addObject
     get_addObject(c: Context): ReturnType<LValue["get_addObject"]> { return (LValue.singleton as LValue).get_addObject.call(this, c); }
 
     instantiableClasses(o?: GObject, loose: boolean = false, eligibleClasses?: LClass[], favoriteMatch?: LClass, allowNotInstantiables: boolean = true):LClass[] { return this.cannotCall("instantiableClasses"); }
-    __info_of__instantiableClasses: Info = {type: "(o?: object, loose?: boolean) => LClass[]",
-        txt: "List of all classes which can be used to instantiate an object." +
-            "\n<br>Abstract and Interface classes are excluded." +
-            "\n<br>If the parameter \"o\" is specified, it will filter only the instances conforming to the object schema." +
-            "\n<br>Results are sorted from tightest fit to loosest fit." +
-            "\n<br>loose parameter set to true makes return instead a list of matching scores of all subclasses.", hidden: true}
+    __info_of__instantiableClasses: Info = Info.instantiableClasses;
     // M1
 
     get_instantiableClasses(c: Context): this["instantiableClasses"] {
@@ -6464,9 +6487,10 @@ instanceof === undefined or missing  --> auto-detect and assign the type
             continue;
         }
         // console.log("gao", {darr:[...darr], larr});
-        darr = darr.filter(d=>!!d);
-        // console.log("gao", {darr, larr});
-        U.toNamedArray(larr, darr);
+        // darr = darr.filter(d=> !!d);
+        larr = larr.filter(l => !!l);
+        if (windoww.debugi) console.log("gao", {darr, larr});
+        U.toNamedArray(larr);
         return larr;
     }
 
@@ -6692,9 +6716,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     features!: LValue[];
     isRoot!: boolean;
     readonly partial!: boolean;
-    __info_of__partial: Info = {type:'boolean | undefined', txt: 'whether the object is allowed to have extra features other than the ones specified by the metamodel.\n' +
-            'shapeless objects are always partial.\n' +
-            'undefined means the property is inherited by his metamodel class, a boolean value means it overrides it.'}
+    __info_of__partial: Info = Info.partial;
 
 
     protected set_eid(v: any, c: Context): true {
@@ -6731,7 +6753,7 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     __info_of__eid: Info = {type: "LValue | null", txt: "if present, gets the value of the feature with isID == true"}
 
     protected get_name(c: Context): this['name'] {
-        return (c.proxyObject as GObject)['$name']?.value || c.data.name || this.get_instanceof(c)?.name;
+        return U.toIdentifier((c.proxyObject as GObject)['$name']?.value || c.data.name) as this["name"] || this.get_instanceof(c)?.name;
     }
 
     composed!:boolean;
@@ -8309,7 +8331,9 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     get_type(context: Context): LStructuralFeature["type"] { return this.get_fromlfeature(context.proxyObject.instanceof, "type"); }
     // protected get_fullname(context: Context): LStructuralFeature["fullname"] { return this.get_fromlfeature(context.proxyObject.instanceof, "fullname"); }
     protected get_namespace(context: Context): LStructuralFeature["namespace"] { return this.get_fromlfeature(context.proxyObject.instanceof, "namespace"); }
-    protected get_name(context: Context): LStructuralFeature["name"] { return context.data.instanceof ? this.get_fromlfeature(context.proxyObject.instanceof, "name") : context.data.name || ''; }
+    protected get_name(context: Context): LStructuralFeature["name"] {
+        return context.data.instanceof ? this.get_fromlfeature(context.proxyObject.instanceof, "name") : U.toIdentifier(context.data.name) as any || '';
+    }
 
     protected get_instanceof(context: Context): this["instanceof"] {
         const pointer = context.data.instanceof;

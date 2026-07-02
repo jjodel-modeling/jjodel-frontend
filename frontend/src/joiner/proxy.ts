@@ -28,6 +28,7 @@ import {
     SetRootFieldAction,
     U
 } from "../joiner";
+import {ProxyCache} from "./ProxyCache";
 
 type NotAConcatenation = null;
 type ERROR = "_Type_Error_";
@@ -277,7 +278,9 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
         let ret;
         let isError = false;
         // console.error('_proxy get PRE:', {targetObj, propKey, proxyitself, arguments});
-        try { ret = this.get0(targetObj, propKey, proxyitself); } catch(e) {
+        try {
+            ret = this.get0(targetObj, propKey, proxyitself);
+        } catch(e) {
             // Log.eDevv('failed to get property', {targetObj, propKey, e}); // Silenced - too noisy
             ret = e;
             isError = true;
@@ -363,7 +366,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
                     if (k in keptChildKeys) continue;
                     delete ret[k];
                 }
-                console.log("hasvalues 2", {has:"values" in ret, ret:{...ret}, finalret:ret, pointerKeys} );
+
                 // replace non-containing pointers (type) with names
                 if (propKey !== '__json') for (let k of pointerKeys) {
                     if (!(k in ret)) continue;
@@ -400,6 +403,7 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
                 return this.d.className;
             case 'parent': propKey = 'father'; break;
         }
+
         if (propKey[0] === "_" && propKey.indexOf("__info_of__")===0) {
             return (this.l as GObject)[propKey];
         }
@@ -409,8 +413,17 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
             : new LogicContext(proxyitself as any, targetObj);
         // check if exist directly in D.key, L.key or through a get_key
         if (propKey in this.l || propKey in this.d || (this.l as GObject)[this.g + (propKey as string)]) {
-            // todo: il LogicContext passato come parametro risulta nell'autocompletion editor automaticamente generato, come passo un parametro senza passargli il parametro? uso arguments senza dichiararlo?
-            if (typeof propKey !== 'symbol' && this.g + propKey in this.lg) return this.lg[this.g + propKey](logicContext);
+
+            // normal getter method call
+            if (typeof propKey !== 'symbol' && this.g + propKey in this.lg) {
+                let cache = ProxyCache.get(propKey, this.d as any, this.lg["__info_of__"+propKey]);
+                if (cache?.success) return cache.value;
+                const ret = this.lg[this.g + propKey](logicContext);
+                if (cache) {
+                    // if (propKey === "name") ProxyCache.updateName(this.d, ret); else
+                    ProxyCache.set(ret, cache);
+                }
+            }
 
 
 

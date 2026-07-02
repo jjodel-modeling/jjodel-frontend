@@ -328,7 +328,7 @@ class JjodieRagServiceClass {
         // Check if already indexed with same hash
         const existingInfo = this.indexedProjects.get(projectId);
         if (existingInfo && existingInfo.projectHash === projectHash) {
-            console.log('[JjodieRagService] Project already indexed, skipping');
+            // console.log('[JjodieRagService] Project already indexed, skipping');
             return;
         }
 
@@ -345,7 +345,7 @@ class JjodieRagServiceClass {
             // Convert project to documents
             const documents = this.projectToDocuments(project);
 
-            console.log(`[JjodieRagService] Indexing ${documents.length} documents for project ${projectId}`);
+            // console.log(`[JjodieRagService] Indexing ${documents.length} documents for project ${projectId}`);
 
             // Index each document
             for (const doc of documents) {
@@ -362,7 +362,7 @@ class JjodieRagServiceClass {
 
             this.currentProjectId = projectId;
 
-            console.log(`[JjodieRagService] Project indexed successfully`);
+            // console.log(`[JjodieRagService] Project indexed successfully`);
         } catch (error) {
             console.error('[JjodieRagService] Failed to index project:', error);
         }

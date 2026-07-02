@@ -340,7 +340,6 @@ export class MeasurableComponent extends Component<MeasurableAllProps, Measurabl
         for (evtkey in jquievent) { this.makeEvent(options, type, evtkey); }
         let defaultOptions = this.defaultOptions[type];
         U.objectMergeInPlace(options, defaultOptions);
-        console.log("$measurable", {$measurable, type});
         ($measurable as GObject)[type](options);
     }
     shouldComponentUpdate(nextProps: Readonly<MeasurableAllProps>, nextState: Readonly<MeasurableState>, nextContext: any): boolean {

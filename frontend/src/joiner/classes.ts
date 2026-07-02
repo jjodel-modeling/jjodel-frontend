@@ -268,8 +268,9 @@ export abstract class RuntimeAccessibleClass extends AbstractMixedClass {
             else return undefined as any;
         }
         if (!data) return data;
-        // @ts-ignore
-        if (!data.className) return undefined;
+        let cnamePrefix = data?.className?.[0];
+        if (cnamePrefix === "L") return data as any;
+        if (cnamePrefix !== "D") return undefined as any;
         // console.log('ProxyWrapping:', {data, baseObjInLookup, path});
         let TargetableProxyHandler = windoww.TargetableProxyHandler as typeof TypeTargetableProxyHandler;
         return new Proxy(data, new TargetableProxyHandler(data, baseObjInLookup, path)) as L;
@@ -708,7 +709,10 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
 
     DState(): this {
         let thiss: DState = this.thiss as any;
-        thiss.debug = !!localStorage.getItem('debug');
+        let host = location.hostname;
+        let isLocal = host === "localhost";
+        thiss.debug = isLocal;
+        thiss.advanced = isLocal;
         thiss.languages = windoww.DV.defaultLanguages();
         return this;
     }
@@ -2140,6 +2144,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     }
 
     name!:string;
+    __info_of__name: Info.namee;
     protected get_name(c: Context): this["name"] {
         let nameattribute = (c.proxyObject as any).$name;
         let ret: string = undefined as any;
@@ -2147,11 +2152,12 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
             ret = nameattribute.value;
         }
         if (ret === undefined) ret = c.data.name || c.data.className;
-        return ret;
+        return U.toIdentifier(ret || "");
     }
 
     protected set_name(val: this["name"], c: Context): boolean {
-        let name = val;
+        let name: string = val || "";
+
         if (c.data.name === name) return true;
         const father: LPointerTargetable = (c.proxyObject as LModelElement).father;
         if (father) {
@@ -2236,15 +2242,7 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
     get_clearState(c: Context): ()=>void { return LPointerTargetable.clearPatching(c, "_state", "State", this); }
 
     _state!: GObject;
-    __info_of___state = {type:"GObject", txt: `<div>A space where the user can store informations for their operations/views.<br/>
-Example: The Validation viewpoint uses it to store validation messages through onDataUpdate events, check them for live examples.<br/>
-values are set in a http patch approach, <code>this.state = {varname: "value"}<br/>
-will set this.state.varname without changing other pre-existing values.<br/>
-as such <code>this.state = {}</code> does nothing. to remove a single entry use<br/>
-To remove a single entry, use <code>this.state = {varname: undefined}</code>.<br/>
-To empty the whole state, use <code>this.clearState()</code>.<br/>
-WARNING! do not set proxies in the state, set pointers instead.<br/>
-<a href='https://github.com/MDEGroup/jjodel/wiki/L%E2%80%90Object-state'>Learn more on the wiki</a></div>`};
+    __info_of___state = Info.state;
 
     // get__state(c: Context): any { return this.wrongAccessMessage('_state',', use obj.state instead.'); }
     // set__state(val: this["_state"], c: Context): boolean { return this.cannotSet('_state', 'use obj.state instead.'); }
@@ -2797,6 +2795,7 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
     __isLUser!: true;
     avatar!: ReactNode;
     index!: number;
+    __info_of__name: Info.name;
     __info_of__index: Info = {type: ShortAttribETypes.EInt, txt: "Index of the order of joining the collaborative session."}
     get_index(c: Context): this["index"] {
         const project = LProject.getProject();
@@ -3092,6 +3091,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     collaboratorsMap!: Dictionary<DocString<"socket id">, Pointer<DUser>>;
     onlineUsers!: number;
     name!: string;
+    __info_of__name: Info.name;
     metamodels!: LModel[];
     models!: LModel[];
     graphs!: LGraph[];

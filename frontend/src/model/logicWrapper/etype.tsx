@@ -119,16 +119,19 @@ class GenericTypeParser {
                 }
             }
             this.consume(">");
+            // eg: Shape<Geom2D>, List<?>
             return new GenericType("parameterized", name, undefined, args);
         }
 
         // Heuristic: single uppercase letter (or common names) → typeParam, else raw
         let ltarget = this.classes[name] || this.enums[name] || this.typeDeclarations[name];
-        const isTypeParam = !!ltarget;
+        const isTypeParam = ltarget?.className === "DTypeDeclaration";
         if (isTypeParam) {
+            // raw T, K, V ... same as "raw" but target is LTypeDelement
             return new GenericType("typeParam", undefined, ltarget.id);
         }
-        return new GenericType("raw", name);
+        // eg: Shape, Map    same as "typeParam" but target is LClass
+        return new GenericType("raw", ltarget?.id || name);
     }
 
     // Parse a & b & c  — used for wildcard bounds (no nested intersection recursion)
@@ -365,7 +368,8 @@ export class GenericType {
             return o0 as any;
         }
         if (to === "object") {
-            if ((o0 as any)?.className) return L.from(o0 as LClass)?.name || "";
+            let cnamePrefix = (o0 as any)?.className?.[0];
+            if (cnamePrefix === "D" || cnamePrefix === "L") return L.from(o0 as LClass)?.name || "";
         }
 
 
@@ -377,6 +381,7 @@ export class GenericType {
             }
 
             case "parameterized": {
+                console.log("serialize gt", {o, cl:o.classifier, args:o.typeArgs});
                 if (!o.classifier) throw new Error("parameterized GenericType missing classifier");
                 const base = GenericType.classifierName(o.classifier);
                 if (o.typeArgs.length === 0) return base;
@@ -438,10 +443,11 @@ export class GenericType {
     public static parseDeclaration(s: string,
                                    classes: NamedArr<LClass>,
                                    enums: NamedArr<LEnumerator>,
-                                   typeDeclarations: NamedArr<(LTypeDeclaration | TypeDeclaration)>): TypeDeclaration {
+                                   typeDeclarations: NamedArr<(LTypeDeclaration | TypeDeclaration)>,
+                                   base?: LTypeDeclaration): TypeDeclaration {
         const trimmed = s.trim();
         const parser = new TypeParamDeclParser(trimmed, classes, enums, typeDeclarations);
-        return parser.parse();
+        return parser.parse(base);
     }
 }
 
@@ -469,8 +475,10 @@ class TypeParamDeclParser {
         private typeDeclarations: NamedArr<(LTypeDeclaration | TypeDeclaration)>
     ) {}
 
-    parse(): TypeDeclaration {
+    parse(base?: LTypeDeclaration): TypeDeclaration {
         let ret = new TypeDeclaration();
+        // baseobj or at least id is required for making pointers of subelements recursively pointing to this declaration.
+        if (base) { ret.id = base.id; }
         this.skipWS();
 
         // 1. optional direction keyword — must come before the name
@@ -486,6 +494,8 @@ class TypeParamDeclParser {
         if (!this.typeDeclarations[ret.name]) {
             this.typeDeclarations.push(ret);
             this.typeDeclarations[ret.name] = ret;
+            // save old name so references can stioll point to it with old name?
+            if (base && !this.typeDeclarations[base.name]) this.typeDeclarations[base.name] = ret;
         }
         this.skipWS();
 
@@ -547,8 +557,9 @@ class TypeParamDeclParser {
 
     private parseSingleBound(): GenericType {
         const slice = this.input.slice(this.pos);
+        console.log("parse single bound", {slice, input:this.input, this:this, cl:this.classes, e:this.enums, td: this.typeDeclarations});
         const inner = new GenericTypeParser(slice, this.classes, this.enums, this.typeDeclarations);
-        const ref   = inner.parseRef();
+        const ref = inner.parseRef();
         this.pos += inner.getPos();
         return ref;
     }
@@ -786,6 +797,7 @@ export class ETypeParameter { // K extends ...
     ebounds!: EBound[];
 }
 export class TypeDeclaration {
+    id?: Pointer<DTypeDeclaration>
     name!: string;
     upper!: (GenericType | TYPE)[];
     lower!: (GenericType | TYPE)[];

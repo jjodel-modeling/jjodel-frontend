@@ -107,7 +107,7 @@ export function Jodie(): JSX.Element {
                     // Index project content
                     await JjodieRagService.indexProject(project);
                     lastIndexedProjectRef.current = project.id;
-                    console.log('[Jodie] Project indexed for RAG:', project.id);
+                    // console.log('[Jodie] Project indexed for RAG:', project.id);
                 }
             } catch (error) {
                 console.warn('[Jodie] RAG initialization/indexing failed:', error);

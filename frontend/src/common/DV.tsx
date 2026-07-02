@@ -1477,7 +1477,7 @@ public static typeDeclaration(): string {
             <Input data={data} field={'name'} hidden={true} autosize={true} />
         </span>
         {/* generics */}
-        {typeParameters.length > 0 ? [<span>&lt;</span>, typeParameters, <span>&gt;</span>] : null}
+        <span>{typeParameters.length > 0 ? [<span>&lt;</span>, [typeParameters.separator(", ")], <span>&gt;</span>] : null}</span>
 
         {/* Inheritance icons */}
         {data.extends.some(a => a.model.id !== data.model.id) &&

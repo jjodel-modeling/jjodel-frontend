@@ -2,7 +2,7 @@ import {
     Any,
     DAttribute, DClass, DEnumerator, Dictionary, DModel, DocString, DReference,
     DState,
-    Input, LAttribute, LClass, LClassifier, LEnumerator,
+    Input, LAnnotation, LAttribute, LClass, LClassifier, LEnumerator,
     LGraphElement,
     LModel,
     LModelElement,
@@ -714,9 +714,13 @@ class builder {
             {this.named(data, advanced, skipTitle)}
             <label className={'input-container'}>
                 <b className={'me-2'}>Type:</b>
-                <Input data={data} type={"text"}
-                       getter={(data: LTypeDeclaration)=> data.toString()}
-                       setter={(v: any, data: LTypeDeclaration) => data.parse(v) } />
+                <Input type={"text"}
+                       data={data}
+                       getter={(l)=> l.toString()}
+                       setter={(v: any, l: LTypeDeclaration) => {
+                           console.error("parse setter");
+                           l.parse(v)
+                       } } />
             </label>
             {advanced && <>
                 <label className={'input-container'}>
@@ -734,6 +738,26 @@ class builder {
             </>}
         </>);
     }
+
+    static annotation(data: LAnnotation, advanced: boolean, skipTitle: boolean = false): JSX.Element {
+        /* todo:
+        data.contents
+        data.annotations;
+        data.references;
+        data.rawContents;*/
+        if (!advanced) return null as any;
+        let details = data.details;
+        return (<>
+            {this.named(data, advanced, skipTitle)}
+            <h3>Details:</h3>
+            {Object.keys(details).map(k => <div className={"row"} key={k}>
+                <Input type="text" getter={()=> k} setter={ v=> data.updateDetailKey(k, v as string)} />
+                <span> = </span>
+                <Input type="text" getter={()=> k} setter={ v=> data.updateDetailKey(k, v as string)} />
+            </div>)}
+        </>);
+    }
+
 }
 
 // Helper to get element type info
@@ -1063,6 +1087,12 @@ function InfoComponent(props: AllProps) {
             jsx = builder.object(data, topics, advanced, mode); break;
         case 'DValue':
             jsx = builder.value(data, topics, advanced, mode); break;
+        case "DTypeDeclaration":
+            jsx = builder.typeDeclaration(data as LTypeDeclaration, advanced); break;
+        case "Dannotation":
+            jsx = builder.annotation(data as LAnnotation, advanced); break;
+        case "DPlaceholder":
+            jsx = <span>Placeholder structure editor</span>; break;
         default: jsx = <Empty />; break;
     } else jsx = <Empty />;
 

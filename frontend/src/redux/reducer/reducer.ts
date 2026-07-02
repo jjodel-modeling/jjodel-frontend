@@ -70,6 +70,7 @@ import DSL from "../../DSL/DSL";
 import {SaveManager} from "../../components/topbar/SaveManager";
 import Api from "../../api/api";
 import {doM2T, parseT2M} from "../../components/forEndUser/MTM";
+import {ProxyCache} from "../../joiner/ProxyCache";
 
 let windoww = window as any;
 let U: typeof UType = windoww.U;
@@ -622,10 +623,12 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
 
     const ret = _reducer(oldState, action);
     if (ret === oldState) return oldState;
-    if (!ret) return ret;
-    ret.idlookup.__proto__ = DPointerTargetable.pendingCreation as any;
     // client synchronization stuff
     if (Collaborative.online) Collaborative.send(action);
+    if (!ret) return postReducer(ret);
+}
+function postReducer(ret: DState, oldState: DState): DState {
+    ret.idlookup.__proto__ = DPointerTargetable.pendingCreation as any;
 
     function filterSet<T extends any>(r: T[]): Set<T>{
         if (!Array.isArray(r)) r = [];
@@ -1098,8 +1101,8 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
         }
     }
 
+    ProxyCache.update(ret, oldState);
     return ret;
-
 }
 
 function doUndoRedo(oldState: DState, action: Action, isUndo:'undo'|'redo'): DState {

@@ -249,6 +249,14 @@ export class U {
         }
     }
 
+    public static toIdentifier(s: string | undefined, replacement = "_", allowUnicode: boolean = false): string {
+        if (typeof s !== "string") return "";
+        return s.trim()
+            // replace special/punctuation/whitespace sequences with _
+            .replace(allowUnicode ? /[<>:;,!?'"(){}\[\]@#%^&*+=|\\\/`~.\-\s]+/g : /[^A-Za-z0-9_$]+/g, replacement)
+            .replace(/^([0-9])/, replacement + "$1");
+    }
+
     private static clickedOutsideCallback(e: any & ClickEvent){
         let target = e.target as Element;
         let clickedAncestors = U.ancestorArray(target, undefined, true);
@@ -2079,18 +2087,17 @@ export class U {
         // or err.toString --> "Error: message" dunno if stack is printed too i tested with a fake error.
     }
 
-    static toNamedArray<D extends DPointerTargetable, L extends LPointerTargetable>(larr:L[], darr?:D[]): NamedArr<L>{
-        if (!darr || darr.length !== larr.length) darr = larr.map(l=>l.__raw as D);
-
-        for (let i = 0; i < larr.length; i++) if (darr[i] && larr[i]) (larr as GObject)["$"+(darr[i] as GObject).name] = larr[i];
-        /*for (let index of Object.getOwnPropertyNames(larr)) { // ownPropertyNames skips "first, last, separator" created by extending array prototype
-            if (index === "length") continue;
-            let d = darr[index as any as number];
-            let l = larr[index as any as number];
-            if (!d || !l) continue;
-            (larr as any)["$" + (d as any).name] = l;
-        }*/
-        return larr as any;
+    static toNamedArray<D extends DPointerTargetable, L extends LPointerTargetable>(larr:L[], names?: string[] | D[] ): NamedArr<L> {
+        // let names: any = null;
+        if (!names || names.length !== names.length) names = larr.map(l=> l.eid);
+        let ret: NamedArr<L> = larr as any;
+        for (let i = 0; i < larr.length; i++) {
+            let name = (names[i] as unknown as LNamedElement)?.name || names[i];
+            if (typeof name !== "string") continue;
+            if (!ret[name]) ret[name] = larr[i];
+            if (!ret["$"+name]) ret["$"+name] = larr[i];
+        }
+        return ret
     }
     public static isPromise(value: any): value is Promise<any> {
         return (
@@ -3693,7 +3700,7 @@ export class Keystrokes {
         let keydown = (e: KeyDownEvent) => {
             // skip events happened in graph
             let curr = e.target;
-            console.log('keydown', {key: e.key, selector, e, curr, ct:e.currentTarget});
+            // console.log('keydown', {key: e.key, selector, e, curr, ct:e.currentTarget});
             switch (e.key) {
                 case Keystrokes.escape:
                     if (store.getState()?.isEdgePending?.source) SetRootFieldAction.new('isEdgePending', { user: '',  source: '' });
@@ -3712,7 +3719,7 @@ export class Keystrokes {
             if (e.shiftKey) { root = root[Keystrokes.shift] || {}; $elems.addClass('key-shift'); }
             if (e.ctrlKey) { root = root[Keystrokes.control] || {}; $elems.addClass('key-ctrl'); }
             let f = root[e.key];
-            console.log("execute keystrokes", {e, src, root, optimizedKeyPaths, up:{$elems, keydown, optimizedKeyPaths, arr}});
+            // console.log("execute keystrokes", {e, src, root, optimizedKeyPaths, up:{$elems, keydown, optimizedKeyPaths, arr}});
             Log.exDev(f && typeof f !== 'function','found keystroke with invalid func',
                 {key: e.key, shift:e.shiftKey, alt: e.altKey, ctrl: e.ctrlKey, f, root, e})
             f?.();
