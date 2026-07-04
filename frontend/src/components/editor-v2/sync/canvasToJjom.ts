@@ -30,6 +30,7 @@ import type { Node } from '@xyflow/react';
 import type { ClassNodeData } from '../types';
 import { markCanvasUpdated, markCanvasUpdatedBatch, markCanvasEdgePair, clearCanvasEdgePair } from './syncState';
 import { captureAttributeOrphanValues } from '../hooks/useOrphanFeatures';
+import { sweepAllM1ReferenceGraphs } from './m1EdgeSweep';
 
 // ---------------------------------------------------------------------------
 // Position sync
@@ -302,6 +303,14 @@ export function syncDeleteVertex(vertexId: string): void {
         if (modelElement) {
             if (modelElement.className === 'DClass') {
                 modelElement.delete();
+                // Deferred structural sweep: the class cascade deletes owned and
+                // incoming references (case 'type') and their M1 slots, but M1
+                // instance edges live in OTHER graphs and may lack a resolvable
+                // `model` back-pointer → unreachable via pointedBy. Delayed
+                // beyond the 0-tick so the cascade's nested async TRANSACTIONs
+                // have committed and the sweep observes the slots already gone
+                // (same rationale as syncDeleteEdge's deferred sweep).
+                setTimeout(() => { sweepAllM1ReferenceGraphs(); }, 60);
             } else {
                 TRANSACTION('EditorV2 delete node', () => {
                     DeleteElementAction.new(modelElement.__raw ?? modelElement);
@@ -391,6 +400,19 @@ export function syncDeleteEdge(edgeId: string, isInheritance: boolean): void {
                     }
                     for (const { src, tgt } of m1Pairs) clearCanvasEdgePair(src, tgt);
                 }, 0);
+
+                // (e) Structural sweep: M1 edges created WITHOUT a resolvable
+                //     `model` back-pointer (resolveReferenceIdByName can fail)
+                //     escape both the enumeration above and the .delete()
+                //     cascade (no pointedBy entry). The sweep reclaims them by
+                //     backing-slot structure, even when no M1 canvas is mounted.
+                //     Delayed beyond the 0-tick: the cascade's nested async
+                //     TRANSACTIONs (per-slot lObj.delete()) can settle across
+                //     later macrotasks, and the sweep must observe the slots
+                //     already gone to classify the pairs as stale. Mounted M1
+                //     canvases are additionally covered reactively by
+                //     useM1ReferenceEdges' reconcile pass.
+                setTimeout(() => { sweepAllM1ReferenceGraphs(); }, 60);
             }
         }
     } catch (err) {

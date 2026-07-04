@@ -223,6 +223,19 @@ export class Dummy {
                             /* Node is deleted in nodes.delete() * /
                             break;
                         }*/
+                        // Co-evolution (2026-07-04): a graph EDGE whose `model` points at the
+                        // deleted element (e.g. DVoidEdge over a DReference, M2 or M1) must die
+                        // with it — at EVERY entry point (canvas, panel, class cascade, script).
+                        // This was the "zombie edge" gap: case 'model' was a no-op, so only
+                        // syncDeleteEdge's manual enumeration cleaned edges, and only for the
+                        // direct canvas path. Vertices and other model-pointing dependents keep
+                        // the historical no-op (their flows delete them explicitly).
+                        // See docs/discovery/2026-06-21_reference_delete_m1_cascade.md (Q2/Q4)
+                        // and coevolution-tests/m2-reference-delete.test.ts.
+                        if (typeof dObj.className === 'string' && dObj.className.includes('Edge')) {
+                            lObj.delete();
+                        }
+                        break;
                     case 'father': // obj.father -> deleted element. should be deleted but is already removed through deleted.children
                         break;
                 }
