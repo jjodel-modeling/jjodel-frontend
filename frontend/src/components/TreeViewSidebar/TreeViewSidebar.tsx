@@ -54,6 +54,13 @@ export const TreeViewSidebar: React.FC<TreeViewSidebarProps> = ({ className }) =
     const dragStartX = useRef(0);
     const dragStartWidth = useRef(DEFAULT_WIDTH);
 
+    // Ephemeral search-open state (default closed, never persisted). Collapsing
+    // the sidebar / closing the overlay also closes the search.
+    const [searchOpen, setSearchOpen] = useState(false);
+    useEffect(() => {
+        if (!isOpen) setSearchOpen(false);
+    }, [isOpen]);
+
     // Handle toggle
     const handleToggle = useCallback(() => {
         const newState = !isOpen;
@@ -151,19 +158,29 @@ export const TreeViewSidebar: React.FC<TreeViewSidebarProps> = ({ className }) =
                             <i className="bi bi-diagram-2" />
                             <span>Tree View</span>
                         </div>
-                        <button
-                            className="tree-view-overlay__close"
-                            onClick={() => {
-                                setIsOpen(false);
-                                localStorage.setItem(STORAGE_KEY_OPEN, 'false');
-                            }}
-                            aria-label="Close Tree View"
-                        >
-                            <i className="bi bi-x-lg" />
-                        </button>
+                        <div className="tree-view-overlay__actions">
+                            <button
+                                className={`tree-view-search-toggle ${searchOpen ? 'is-active' : ''}`}
+                                onClick={() => setSearchOpen(v => !v)}
+                                aria-label="Filter tree"
+                                aria-pressed={searchOpen}
+                            >
+                                <i className="bi bi-search" />
+                            </button>
+                            <button
+                                className="tree-view-overlay__close"
+                                onClick={() => {
+                                    setIsOpen(false);
+                                    localStorage.setItem(STORAGE_KEY_OPEN, 'false');
+                                }}
+                                aria-label="Close Tree View"
+                            >
+                                <i className="bi bi-x-lg" />
+                            </button>
+                        </div>
                     </div>
                     <div className="tree-view-overlay__body">
-                        <TreeViewContent onSelect={handleOverlaySelect} />
+                        <TreeViewContent searchOpen={searchOpen} onSearchClose={() => setSearchOpen(false)} onSelect={handleOverlaySelect} />
                     </div>
                 </div>
             </div>
@@ -209,11 +226,19 @@ export const TreeViewSidebar: React.FC<TreeViewSidebarProps> = ({ className }) =
                     <div className="tree-view-sidebar__header">
                         <i className="bi bi-diagram-2" />
                         <span>Tree View</span>
+                        <button
+                            className={`tree-view-search-toggle ${searchOpen ? 'is-active' : ''}`}
+                            onClick={() => setSearchOpen(v => !v)}
+                            aria-label="Filter tree"
+                            aria-pressed={searchOpen}
+                        >
+                            <i className="bi bi-search" />
+                        </button>
                     </div>
 
                     {/* Tree content */}
                     <div className="tree-view-sidebar__body">
-                        <TreeViewContent />
+                        <TreeViewContent searchOpen={searchOpen} onSearchClose={() => setSearchOpen(false)} />
                     </div>
                 </>
             )}

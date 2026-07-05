@@ -340,6 +340,138 @@ $color-subview: #94a3b8;    // Slate - Sub-views
     padding: 4px 8px;
 }
 
+// ─── Header search toggle (shared by sidebar + overlay headers) ──────────────
+// Borderless 24px icon button; theme-aware tokens so dark mode adapts on its own.
+// `.is-active` uses the design-system active-indicator cyan.
+.tree-view-search-toggle {
+    flex: none;
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    border-radius: $radius-sm;
+    background: transparent;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    i {
+        font-size: 13px;
+        color: inherit;
+    }
+
+    &:hover {
+        background-color: var(--color-bg-tertiary);
+        color: var(--color-text-primary);
+    }
+
+    &.is-active,
+    &.is-active:hover {
+        color: var(--accent-cyan, #0ea5e9);
+    }
+}
+
+// Sidebar header: push the toggle to the far right and beat the header's own
+// `i` rule (which otherwise pins the icon to 14px / $color-accent).
+.tree-view-sidebar__header .tree-view-search-toggle {
+    margin-left: auto;
+
+    i {
+        font-size: 13px;
+        color: inherit;
+    }
+}
+
+// Overlay header: cluster the search toggle next to the close button.
+.tree-view-overlay__actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+// ─── Search bar (sticky, compact filter row) ─────────────────────────────────
+// Single 28px row — lens · input · match count · clear, all inline. No border or
+// radius on the input: the row is delimited only by its border-bottom. Sticks to
+// the top of the scroll container (.tree-view-sidebar__body /
+// .tree-view-overlay__body) with a full opaque background so rows scroll under
+// it. Negative horizontal margin cancels the .tree-view-content 8px side padding
+// so the bar and its separator span the full panel width.
+.tree-search {
+    position: sticky;
+    top: -4px;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height:41px;
+    padding: 0 8px 0 12px;
+    margin: -10px -8px 0 -8px;
+    background-color: $color-bg-primary;
+    border-bottom: 1px solid var(--color-border-secondary);
+    border-left: 1px solid var(--color-border-secondary);
+
+
+    > i.bi-search {
+        flex: none;
+        font-size: 12px;
+        color: var(--color-text-tertiary);
+    }
+
+    &__input {
+        flex: 1;
+        min-width: 0;
+        padding: 0;
+        border: none;
+        outline: none;
+        background: transparent;
+        font-size: 11px!important;
+        color: var(--color-text-primary);
+        height: 28px!important;
+
+        &::placeholder {
+            color: var(--color-text-tertiary);
+        }
+    }
+
+    &__count {
+        flex: none;
+        font-size: 10px;
+        font-variant-numeric: tabular-nums;
+        color: var(--color-text-tertiary);
+    }
+
+    &__clear {
+        flex: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        padding: 0;
+        border: none;
+        background: none;
+        color: var(--color-text-tertiary);
+        cursor: pointer;
+
+        i { font-size: 13px; }
+
+        &:hover { color: var(--color-text-primary); }
+    }
+}
+
+// Matched substring inside node names — subtle tint, no default browser yellow.
+.tree-row__name mark,
+.tree-feature__name mark {
+    background-color: var(--color-accent-subtle);
+    color: inherit;
+    font-weight: 600;
+    border-radius: 2px;
+    padding: 0 1px;
+}
+
 .tree-view-empty {
     display: flex;
     flex-direction: column;
@@ -839,6 +971,11 @@ $color-highlight-unknown: #f59e0b; // Amber - unknown action
     .tree-view-overlay__header {
         border-color: #333;
         color: #888;
+    }
+
+    .tree-search {
+        // border-bottom uses the theme-aware --color-border-secondary token.
+        background-color: #1e1e1e;
     }
 
     .tree-view-sidebar__toggle {
@@ -1881,6 +2018,11 @@ html[data-theme="dark"] {
     .tree-pill {
         background-color: rgba(255, 255, 255, 0.05);
         color: #94a3b8;
+    }
+
+    .tree-row__name mark,
+    .tree-feature__name mark {
+        background-color: rgba(255, 255, 255, 0.14);
     }
 
     .tree-edge-marker,
