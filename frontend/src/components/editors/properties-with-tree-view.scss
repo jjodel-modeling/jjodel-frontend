@@ -196,6 +196,7 @@ $radius-md: 6px;
     margin-left: 4px;
     margin-right: 4px;
     padding: 0;
+    position: relative; // anchor for the attention pulse dot (--tree side)
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -228,6 +229,21 @@ $radius-md: 6px;
 .collapsed-panel-toggle--tree {
     margin-right: 8px;
     margin-left: auto;
+}
+
+// Attention pulse dot on the collapsed tree toggle (2026-07-05 decoupling).
+// Signals that an event would previously have force-opened the tree; there is
+// no auto-open anymore. Reuses the shared `pulseDot` keyframes (see below).
+.collapsed-panel-toggle__pulse {
+    position: absolute;
+    top: 1px;
+    right: 1px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent-cyan, #0ea5e9);
+    animation: pulseDot 1.5s ease-in-out infinite;
+    pointer-events: none;
 }
 
 // Modifier: quando Properties è in rail e Tree è espanso, il Tree deve

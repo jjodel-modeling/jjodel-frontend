@@ -21,12 +21,16 @@ interface TreeViewPanelContextType {
     hide: () => void;
     /** Toggle panel state */
     toggle: () => void;
-    /** Expand with highlight effect (for programmatic calls) */
+    /** Attention call for programmatic/automated triggers: highlight when the
+     *  panel is visible, otherwise a pulse on the collapsed toggle. Never opens. */
     showWithHighlight: () => void;
     /** Whether panel is currently highlighted (animation active) */
     isHighlighted: boolean;
     /** Whether script is currently executing */
     isScriptExecuting: boolean;
+    /** Brief attention signal for the collapsed tree toggle (auto-clears ~2.5s).
+     *  Set instead of force-opening the panel when an event arrives while collapsed. */
+    attentionPulse: boolean;
 
     // Element highlighting
     /** Currently highlighted element ID */
@@ -75,6 +79,9 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const [isHighlighted, setIsHighlighted] = useState(false);
     const [isScriptExecuting, setIsScriptExecuting] = useState(false);
+    // Attention pulse: brief visual signal on the collapsed tree toggle, used in
+    // place of force-opening the panel when it is collapsed (2026-07-05 decoupling).
+    const [attentionPulse, setAttentionPulse] = useState(false);
 
     // Active editor type (drives panel visibility matrix)
     const [activeEditorType, setActiveEditorType] = useState<EditorType>(null);
@@ -84,9 +91,8 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
     const [highlightedAction, setHighlightedAction] = useState<ElementAction | null>(null);
     const [expandedNodeIds, setExpandedNodeIds] = useState<Set<string>>(new Set());
 
-    // Track if we auto-opened the panel (to potentially auto-close after)
-    const autoOpenedRef = useRef(false);
     const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const attentionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Persist visibility state
     useEffect(() => {
@@ -106,21 +112,32 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
         setIsVisible(prev => !prev);
     }, []);
 
-    // Show with highlight effect (for programmatic/automated calls)
-    const showWithHighlight = useCallback(() => {
-        const wasAlreadyVisible = isVisible;
-        setIsVisible(true);
-
-        if (!wasAlreadyVisible) {
-            autoOpenedRef.current = true;
+    // Fire a brief attention pulse on the collapsed tree toggle (~2.5s).
+    // Replaces force-opening the panel: visibility belongs to the user.
+    const signalAttention = useCallback(() => {
+        if (attentionTimeoutRef.current) {
+            clearTimeout(attentionTimeoutRef.current);
         }
+        setAttentionPulse(true);
+        attentionTimeoutRef.current = setTimeout(() => {
+            setAttentionPulse(false);
+        }, 2500);
+    }, []);
 
-        // Trigger highlight animation
-        setIsHighlighted(true);
-        setTimeout(() => {
-            setIsHighlighted(false);
-        }, 1200);
-    }, [isVisible]);
+    // Programmatic/automated attention call. Never force-opens the panel:
+    // if the tree is visible, plays the highlight animation as before; if it
+    // is collapsed, signals attention on the collapsed toggle (pulse dot).
+    const showWithHighlight = useCallback(() => {
+        if (isVisible) {
+            // Trigger highlight animation
+            setIsHighlighted(true);
+            setTimeout(() => {
+                setIsHighlighted(false);
+            }, 1200);
+        } else {
+            signalAttention();
+        }
+    }, [isVisible, signalAttention]);
 
     // Element highlighting functions
     const highlightElement = useCallback((elementId: string, action: ElementAction = 'unknown', duration = 2000) => {
@@ -179,10 +196,9 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
         const handler = (e: Event) => {
             const { editorType } = (e as CustomEvent).detail;
             setActiveEditorType(editorType);
-            // Auto-open tree view for modeling editors; don't force-close for others
-            if (editorType === 'model' || editorType === 'metamodel') {
-                setIsVisible(true);
-            }
+            // 2026-07-05 decoupling: editor changes no longer force-open the tree.
+            // Panel visibility is the user's preference; only the active editor type
+            // is tracked here (still drives the Dock visibility matrix downstream).
         };
         window.addEventListener(JjodelEvents.EDITOR_TYPE_CHANGE, handler);
         return () => window.removeEventListener(JjodelEvents.EDITOR_TYPE_CHANGE, handler);
@@ -203,10 +219,8 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
          * When a command is about to execute
          */
         const handleExecuting = (event: Event) => {
-            // Panel should already be open, but ensure it is
-            if (!isVisible) {
-                show();
-            }
+            // 2026-07-05 decoupling: no longer force-opens the panel. When the tree
+            // is already visible, the executing badge/highlight still render as before.
         };
 
         /**
@@ -244,6 +258,13 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
 
             if (!elementId) return;
 
+            // When the tree is collapsed, don't force it open: just pulse the
+            // collapsed toggle. No expand/highlight/scroll while not visible.
+            if (!isVisible) {
+                signalAttention();
+                return;
+            }
+
             const action = eventAction || (command ? getActionFromCommand(command) : 'unknown');
             // console.log(`[TreeView] Element modified: ${elementId} (${action})`);
 
@@ -277,13 +298,16 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
             window.removeEventListener(JjScriptEvents.METAMODEL_CREATED, handleMetamodelCreated);
             window.removeEventListener(JjScriptEvents.ELEMENT_MODIFIED, handleElementModified);
         };
-    }, [isVisible, show, showWithHighlight, expandNode, highlightElement]);
+    }, [isVisible, showWithHighlight, expandNode, highlightElement, signalAttention]);
 
     // Cleanup on unmount
     useEffect(() => {
         return () => {
             if (highlightTimeoutRef.current) {
                 clearTimeout(highlightTimeoutRef.current);
+            }
+            if (attentionTimeoutRef.current) {
+                clearTimeout(attentionTimeoutRef.current);
             }
         };
     }, []);
@@ -297,6 +321,7 @@ export const TreeViewPanelProvider: React.FC<{ children: React.ReactNode }> = ({
             showWithHighlight,
             isHighlighted,
             isScriptExecuting,
+            attentionPulse,
             // Element highlighting
             highlightedElementId,
             highlightedAction,

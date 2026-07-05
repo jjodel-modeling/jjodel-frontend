@@ -17,7 +17,7 @@ import { JjodelEvents } from '../../events/registry';
  * - Right: Tree View of the metamodel hierarchy (FIXED 260px)
  *
  * The Tree View can be toggled on/off with a button in the header.
- * Auto-expands when JjScript execution starts.
+ * When collapsed, a pulse dot signals JjScript activity instead of auto-opening.
  */
 
 // Tree panel resizable (2026-05-13): range 200-500px, default 260 preserva il
@@ -105,43 +105,26 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
 
     // When a view/viewpoint is selected in the Tree View, Info.tsx renders ViewData
     // (with Monaco editors for Template/Style) inside the fluid Properties column.
-    // The 260px Tree View would starve it of width, so we auto-collapse the tree
-    // while a view is selected. This override is transient: when _lastSelected.view
-    // becomes falsy again, the user's manual isTreeViewVisible preference is restored
-    // without being mutated.
+    // 2026-07-05 decoupling: the tree is no longer auto-collapsed for views — panel
+    // visibility belongs to the user. `viewSelected` now only widens the Properties
+    // column (maxWidth: 'none' below) so ViewData's Monaco editors aren't clamped.
     const viewSelected = useSelector((state: any) => !!state._lastSelected?.view);
 
-    // Get tree view state from context. `show`/`hide` ci servono per il soft
-    // auto-collapse one-shot del tree quando `viewSelected` transiziona falsy→truthy.
+    // Get tree view state from context. `show` riapre il tree dalla rail
+    // collassata; `attentionPulse` pilota il pulse dot sul toggle collassato.
     const {
         isVisible: isTreeViewVisible,
         show: showTree,
-        hide: hideTree,
         toggle: toggleTreeView,
         isHighlighted,
         isScriptExecuting,
+        attentionPulse,
     } = useTreeViewPanel();
-
-    // Soft auto-collapse del tree + cross-panel auto-open del Properties,
-    // fusi in UN solo useEffect transition-based. Fira SOLO sulla transizione
-    // `viewSelected` falsy→truthy, NON ogni volta che lo state cambia.
-    // `isPropertiesVisible` NON è nelle deps per evitare il bug F1 latente
-    // (riapertura continua di Properties dopo l'utente lo chiude manualmente).
-    const prevViewSelectedRef = useRef<boolean>(!!viewSelected);
-    useEffect(() => {
-        const isViewSelected = !!viewSelected;
-        const wasViewSelected = prevViewSelectedRef.current;
-        if (isViewSelected && !wasViewSelected) {
-            hideTree();                    // soft: l'utente può riaprire dalla rail
-            setIsPropertiesVisible(true);  // cross-panel auto-open
-        }
-        prevViewSelectedRef.current = isViewSelected;
-    }, [viewSelected, hideTree]);
 
     // Effective visibility (rail-based collapse model 2026-05-13): un pannello
     // "showXxx = true" significa espanso, "false" significa rail collassata.
-    // Niente derived viewSelected-based override: la transizione è ora gestita
-    // dal useEffect transition-based sopra (one-shot, non continuous).
+    // 2026-07-05 decoupling: nessun override viewSelected-based — la visibilità
+    // dei pannelli segue esclusivamente la preferenza dell'utente.
     const showPropertiesPanel = isPropertiesVisible;
     const showTreePanel = isTreeViewVisible;
     const showResizeHandle = showPropertiesPanel && showTreePanel;
@@ -277,7 +260,7 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                     </div>
                 </div>
             ) : (
-                <CollapsedPanelToggle side="tree" onClick={showTree} />
+                <CollapsedPanelToggle side="tree" onClick={showTree} pulse={attentionPulse} />
             )}
 
         </div>
@@ -292,9 +275,12 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
 interface CollapsedPanelToggleProps {
     side: 'properties' | 'tree';
     onClick: () => void;
+    // Attention pulse dot: shown when an event would previously have force-opened
+    // the panel while collapsed (2026-07-05 decoupling). Only wired on the tree side.
+    pulse?: boolean;
 }
 
-const CollapsedPanelToggle: React.FC<CollapsedPanelToggleProps> = ({ side, onClick }) => {
+const CollapsedPanelToggle: React.FC<CollapsedPanelToggleProps> = ({ side, onClick, pulse }) => {
     const iconClass = side === 'properties' ? 'bi-chevron-left' : 'bi-chevron-right';
     const label = side === 'properties' ? 'Show properties' : 'Show tree';
     return (
@@ -305,6 +291,7 @@ const CollapsedPanelToggle: React.FC<CollapsedPanelToggleProps> = ({ side, onCli
             aria-label={label}
         >
             <i className={`bi ${iconClass}`} aria-hidden="true" />
+            {pulse && <span className="collapsed-panel-toggle__pulse" aria-hidden="true" />}
         </button>
     );
 };
