@@ -2191,13 +2191,27 @@ export class JjtlExecutor {
         if ((value as any).__ref_result) return value;
 
         if (Array.isArray(value)) {
-            if (value.length > 0 && value.every(el =>
+            const jjtlTargets = value.filter(el =>
                 el && typeof el === 'object' && el.__createdBy === 'JjTL'
-            )) {
+            );
+            const nullCount = value.filter(el => el == null).length;
+            const nonTargetNonNull = value.length - jjtlTargets.length - nullCount;
+
+            // Wrap when the array has at least one JjTL target and every other
+            // element is a fail-open null (dropped by resolveValue for a target
+            // type without a matching rule). An array that mixes targets with
+            // non-null, non-target values keeps the original passthrough.
+            if (jjtlTargets.length > 0 && nonTargetNonNull === 0) {
+                if (nullCount > 0) {
+                    this.warnings.push(
+                        `Partially resolved reference array: kept ${jjtlTargets.length} resolved ` +
+                        `target(s), dropped ${nullCount} unresolved element(s) (target type without a matching rule).`
+                    );
+                }
                 // Deduplicate by __sourceId — duplicate entries can arise when
                 // the raw DValue.values array has the same Pointer twice.
                 const seen = new Set<string>();
-                const unique = value.filter(el => {
+                const unique = jjtlTargets.filter(el => {
                     const key = el.__sourceId || el.id || el.name;
                     if (!key) return true;
                     if (seen.has(key)) return false;

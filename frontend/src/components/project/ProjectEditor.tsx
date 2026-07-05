@@ -1246,7 +1246,11 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         // reference values from plain strings during cross-type resolution.
         // Jjodel Pointer IDs follow the pattern "Pointer<digits>_<context>_<digits>".
         const wrapIfRef = (val: any): any => {
-            if (typeof val === 'string' && val.startsWith('Pointer')) return { __ref: val };
+            if (typeof val === 'string' && val.startsWith('Pointer')) {
+                const target = (store.getState() as any).idlookup?.[val];
+                if (target?.className === 'DEnumLiteral') return target.name;
+                return { __ref: val };
+            }
             return val;
         };
 
@@ -1761,7 +1765,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                     try {
                                         const feature = (lObject as any)['$' + attrName];
                                         if (feature) {
-                                            feature.value = attrValue;
+                                            if (Array.isArray(attrValue)) feature.values = attrValue;
+                                            else feature.value = attrValue;
                                             // console.log(`[ProjectEditor] ✅ Set ${pending.objectName}.${attrName} = ${JSON.stringify(attrValue)}`);
                                         } else {
                                             console.warn(`[ProjectEditor] ❌ Feature "$${attrName}" not found on "${pending.objectName}"`);
