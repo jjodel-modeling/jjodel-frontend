@@ -1414,8 +1414,10 @@ function buildLSingletons(alld: Dictionary<string, typeof DPointerTargetable>, a
 }
 
 const originalFocus = HTMLElement.prototype.focus;
+let documentEventsIntervalId: ReturnType<typeof setInterval> | undefined;
 function setDocumentEvents(){
     // do not use types (imported as classes) here or it will change import order
+    if (documentEventsIntervalId !== undefined) clearInterval(documentEventsIntervalId);
 
     // https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/focus
     HTMLElement.prototype.focus = function (options?: GObject) {
@@ -1426,14 +1428,14 @@ function setDocumentEvents(){
     };
 
     setTimeout(
-        ()=> $(document).on("mouseup",
+        ()=> $(document).off("mouseup.jjodelDocEvents").on("mouseup.jjodelDocEvents",
             (e: MouseUpEvent) => {
                 statehistory.globalcanundostate = true;
                 RuntimeAccessibleClass.get<typeof GraphDragManager>("GraphDragManager").stopPanning(e);
             })
         , 1);
     // document.body.addEventListener("mousedown", fixResizables, false);
-    setInterval(()=>{ COMMIT(undefined, false) }, windoww.U.UpdatingTimer);
+    documentEventsIntervalId = setInterval(()=>{ COMMIT(undefined, false) }, windoww.U.UpdatingTimer);
 }
 function fixResizables(e: MouseEvent){
     /*let parents = U.ancestorArray(e.target as HTMLElement);
