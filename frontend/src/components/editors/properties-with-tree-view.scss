@@ -141,6 +141,40 @@ $radius-md: 6px;
     }
 }
 
+// Pin button (2026-07-05 fase 2): freezes Properties content on the captured selection.
+// Speculare al toggle button dell'header; `is-active` usa il cyan come active-indicator
+// (design system §7.1 — mai come background). $color-highlight = #0ea5e9 già nel file.
+.properties-panel-pin-btn {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    color: $color-text-tertiary;
+    transition: all $transition-fast;
+
+    &:hover {
+        background-color: $color-bg-tertiary;
+        color: $color-text-primary;
+    }
+
+    &.is-active {
+        color: $color-highlight;
+
+        &:hover {
+            color: $color-highlight;
+        }
+    }
+
+    i {
+        font-size: 12px;
+    }
+}
+
 .properties-panel-body {
     flex: 1;
     display: flex;
@@ -752,6 +786,24 @@ $radius-md: 6px;
         &:hover {
             background-color: #333;
             color: #e0e0e0;
+        }
+    }
+
+    // Pin button — dark mode (2026-07-05 fase 2). Active state keeps the cyan indicator.
+    .properties-panel-pin-btn {
+        color: #888;
+
+        &:hover {
+            background-color: #333;
+            color: #e0e0e0;
+        }
+
+        &.is-active {
+            color: $color-highlight;
+
+            &:hover {
+                color: $color-highlight;
+            }
         }
     }
 

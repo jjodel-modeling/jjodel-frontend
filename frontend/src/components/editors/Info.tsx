@@ -188,7 +188,7 @@ function TypeSelect(props: { data: LModelElement }) {
 }
 
 // Contents list for Metamodel — classes, enums, packages
-function MetamodelContents(props: { data: LModel }) {
+function MetamodelContents(props: { data: LModel; onInternalNavigate?: (sel: { node: string; view: string; modelElement: string }) => void }) {
     const { data } = props;
     const d = data.__raw;
     const classes = data.classes || [];
@@ -201,6 +201,8 @@ function MetamodelContents(props: { data: LModel }) {
             view: '',
             modelElement: elementId,
         });
+        // Pin: clicking a class/enum/package in CONTENTS is internal navigation → re-target the pin.
+        props.onInternalNavigate?.({ node: '', view: '', modelElement: elementId });
     };
 
     const parentId = d.id as any;
@@ -318,7 +320,7 @@ class builder {
         </>);
     }
 
-    static model(data: LModelElement, advanced: boolean, skipTitle: boolean = false): JSX.Element {
+    static model(data: LModelElement, advanced: boolean, skipTitle: boolean = false, onInternalNavigate?: (sel: { node: string; view: string; modelElement: string }) => void): JSX.Element {
         let l = data as LModel;
         let d = l.__raw;
         let multiselectArr = d.dependencies;
@@ -366,7 +368,7 @@ class builder {
             </CollapsibleSection>
 
             {l.isMetamodel && <CollapsibleSection title="CONTENTS">
-                <MetamodelContents data={l} />
+                <MetamodelContents data={l} onInternalNavigate={onInternalNavigate} />
             </CollapsibleSection>}
         </>);
     }
@@ -1190,6 +1192,9 @@ function InfoComponent(props: AllProps) {
                 view: '',
                 modelElement: '',
             });
+            // Pin: closing the view editor is internal navigation → re-target the pin to the
+            // (now empty) selection so a pinned panel stays pinned on Empty (decision 2026-07-05).
+            props.onInternalNavigate?.({ node: '', view: '', modelElement: '' });
         };
         return (
             <section className="properties-tab properties-panel">
@@ -1217,7 +1222,7 @@ function InfoComponent(props: AllProps) {
     // Build jsx with skipTitle for new design
     if (data) switch (ddata?.className) {
         case 'DModel':
-            jsx = builder.model(data, advanced, useNewDesign); break;
+            jsx = builder.model(data, advanced, useNewDesign, props.onInternalNavigate); break;
         case 'DPackage':
             jsx = builder.package(data, advanced, useNewDesign); break;
         case 'DClass':
@@ -1280,6 +1285,8 @@ function InfoComponent(props: AllProps) {
                 view: '',
                 modelElement: elementId,
             });
+            // Pin: breadcrumb navigation is internal → re-target the pin to the reached element.
+            props.onInternalNavigate?.({ node: '', view: '', modelElement: elementId });
         };
 
         return (
@@ -1364,6 +1371,12 @@ interface OwnProps {
     mode: 'popup' | 'tab' | 'inline'; // popup: used in context menu, tab: used in sidebar
     style?: React.CSSProperties;
     localData?: LModelElement; // used in inline mode
+    // Pin (2026-07-05 fase 2): when present, Info resolves its selection from this frozen
+    // triple instead of state._lastSelected (transparent source swap). onInternalNavigate
+    // re-targets the pin when the user navigates inside the panel (breadcrumb / contents /
+    // view close). Both optional — untouched consumers (popup/inline/non-tab) are unaffected.
+    overrideSelected?: { node?: string; view?: string; modelElement?: string };
+    onInternalNavigate?: (sel: { node: string; view: string; modelElement: string }) => void;
 }
 
 interface StateProps {
@@ -1381,9 +1394,13 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
-    const nodeID = state._lastSelected?.node;
-    const viewID = state._lastSelected?.view;
-    const dataID = state._lastSelected?.modelElement;
+    // Pin (2026-07-05 fase 2): when overrideSelected is present, freeze the panel on that
+    // triple instead of following state._lastSelected. Same resolution path either way, so
+    // whatever the current selection would render, the pin renders identically.
+    const sel = ownProps.overrideSelected;
+    const nodeID = sel ? sel.node : state._lastSelected?.node;
+    const viewID = sel ? sel.view : state._lastSelected?.view;
+    const dataID = sel ? sel.modelElement : state._lastSelected?.modelElement;
     if (nodeID) ret.node = LGraphElement.fromPointer(nodeID);
     if (viewID) ret.view = LViewElement.fromPointer(viewID);
     if (dataID) ret.data = LModelElement.fromPointer(dataID);

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useStore } from 'react-redux';
 import { Info } from './Info';
 import { NodeEditor } from './NodeEditor';
 import { TreeViewContent } from '../TreeViewSidebar/TreeViewContent';
@@ -121,6 +121,56 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
         attentionPulse,
     } = useTreeViewPanel();
 
+    // ─── Pin (2026-07-05 fase 2): freeze Properties content on a captured selection triple
+    // so the user can browse tree/canvas without losing editing context. Ephemeral (no
+    // localStorage). Full design: docs/discovery/2026-07-05_properties-pin.md.
+    const [pinnedSelected, setPinnedSelected] = useState<{ node: string; view: string; modelElement: string } | null>(null);
+
+    // Store handle for imperative reads. The current selection is captured at pin time
+    // via store.getState() (not useSelector) so the container is NOT re-subscribed to every
+    // selection change — only the pinned Info needs to react to the selection (2026-07-05).
+    const store = useStore();
+
+    // Dangling guard (semantica punto 5): the pinned element may be deleted while pinned.
+    // Resolve its primary id against idlookup; when it disappears, auto-unpin. A pin on an
+    // empty selection is intentional (decision 2026-07-05), not dangling.
+    const pinnedResolvable = useSelector((state: any) => {
+        if (!pinnedSelected) return false;
+        const id = pinnedSelected.modelElement || pinnedSelected.view || pinnedSelected.node;
+        if (!id) return true;
+        return !!state.idlookup?.[id];
+    });
+
+    useEffect(() => {
+        if (pinnedSelected && !pinnedResolvable) setPinnedSelected(null);
+    }, [pinnedSelected, pinnedResolvable]);
+
+    const togglePin = useCallback(() => {
+        setPinnedSelected(prev => {
+            if (prev) return null;
+            // Read the live selection imperatively at click time (no subscription).
+            const sel = (store.getState() as any)._lastSelected;
+            return {
+                node: sel?.node || '',
+                view: sel?.view || '',
+                modelElement: sel?.modelElement || '',
+            };
+        });
+    }, [store]);
+
+    // Internal navigation inside Info (breadcrumb / contents / view close) re-targets the pin
+    // (semantica punto 3). Only wired when pinned, so unpinned navigation follows normally.
+    const handleInternalNavigate = useCallback((sel: { node: string; view: string; modelElement: string }) => {
+        setPinnedSelected(sel);
+    }, []);
+
+    const isPinned = !!pinnedSelected;
+    // Inline gate (decision 2026-07-05): never pass a stale id in the frame between the delete
+    // and the auto-unpin effect — pass overrideSelected only while still resolvable.
+    const effectivePin = pinnedSelected && pinnedResolvable ? pinnedSelected : undefined;
+    // maxWidth follows the pinned view when pinned, else the live selection.
+    const effectiveViewSelected = isPinned ? !!pinnedSelected?.view : viewSelected;
+
     // Effective visibility (rail-based collapse model 2026-05-13): un pannello
     // "showXxx = true" significa espanso, "false" significa rail collassata.
     // 2026-07-05 decoupling: nessun override viewSelected-based — la visibilità
@@ -178,11 +228,20 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
             {showPropertiesPanel ? (
                 <div
                     className="properties-panel-container"
-                    style={viewSelected ? { maxWidth: 'none' } : undefined}
+                    style={effectiveViewSelected ? { maxWidth: 'none' } : undefined}
                 >
                     <div className="properties-panel-header">
                         <i className="bi bi-sliders" />
                         <span>PROPERTIES</span>
+                        <button
+                            className={`properties-panel-pin-btn${isPinned ? ' is-active' : ''}`}
+                            onClick={togglePin}
+                            aria-label={isPinned ? 'Unpin properties panel' : 'Pin properties panel'}
+                            aria-pressed={isPinned}
+                            title={isPinned ? 'Unpin — follow selection' : 'Pin — freeze content'}
+                        >
+                            <i className={`bi ${isPinned ? 'bi-pin-angle-fill' : 'bi-pin-angle'}`} />
+                        </button>
                         <button
                             className="properties-panel-toggle-btn"
                             onClick={toggleProperties}
@@ -192,7 +251,11 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                         </button>
                     </div>
                     <div className="properties-panel-body">
-                        <Info mode={mode} />
+                        <Info
+                            mode={mode}
+                            overrideSelected={effectivePin}
+                            onInternalNavigate={isPinned ? handleInternalNavigate : undefined}
+                        />
 
                         {/* NODE section — Expert mode only */}
                         {advanced && (
