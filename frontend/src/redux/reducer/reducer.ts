@@ -76,6 +76,9 @@ import {doM2T, parseT2M} from "../../components/forEndUser/MTM";
 let windoww = window as any;
 let U: typeof UType = windoww.U;
 
+// Cap on the undo/redo history length per stack, to bound memory growth.
+const MAX_HISTORY = 100;
+
 
 
 function deepCopyButOnlyFollowingPath(oldStateDoNotModify: DState, action: ParsedAction, prevAction: ParsedAction, newVal: any): DState | false{
@@ -1258,6 +1261,8 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
                 let user = (action as Action).sender;
                 statehistory[user].undoable.push(delta);
                 statehistory.all.undoable.push(delta);
+                if (statehistory[user].undoable.length > MAX_HISTORY) statehistory[user].undoable.shift();
+                if (statehistory.all.undoable.length > MAX_HISTORY) statehistory.all.undoable.shift();
                 if (debugMerge) {
                     if (shouldMerge) (ret as any).notMergeCounter = (delta as any).notMergeCounter = 1+((ret as any).notMergeCounter || 0)
                     else (ret as any).notMergeCounter = 0;
@@ -1331,6 +1336,8 @@ function undo(state: DState, action: UndoAction | RedoAction, delta: GObject | u
     let key: 'redoable'|'undoable' = isundo ? 'redoable' : 'undoable';
     statehistory[user][key].push(delta2);
     statehistory.all[key].push(delta2);
+    if (statehistory[user][key].length > MAX_HISTORY) statehistory[user][key].shift();
+    if (statehistory.all[key].length > MAX_HISTORY) statehistory.all[key].shift();
     return undonestate as GObject<DState>;
 }
 /*
