@@ -12,6 +12,7 @@ import { JjScriptEvents } from '../../events/registry';
 import './ScriptBlock.scss';
 import { ExecutionErrorDialog } from './ExecutionErrorDialog';
 import {parseError, ExecutionPauseInfo, ExecutionSummary, JjScriptError, ExecutionErrorInfo} from '../executor/errors';
+import { validateScriptIntegrity } from '../executor/scriptValidator';
 import { AIDisclaimer } from '../../components/common/AIDisclaimer';
 import {TransformationAST} from "../../jjtl";
 import {ExecutionContext} from "../../jjtl/executor";
@@ -256,6 +257,35 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
         if (!onExecute || commands.length === 0) return;
         if (!hasValidTarget && availableTargets.length > 0) {
             console.warn('[ScriptBlock] No target selected');
+            return;
+        }
+
+        // Integrity guard: refuse a truncated/malformed script before running ANY command.
+        // Shares the executor's parser, so it never rejects a script that would execute
+        // cleanly; it only fails fast (0 commands executed) instead of leaving a half-built
+        // model, e.g. when AI-generated output was cut off mid-script. No events are emitted
+        // and no execution state is entered — the run simply never starts.
+        const integrity = validateScriptIntegrity(code);
+        if (!integrity.valid && integrity.issue) {
+            const { line, command, reason } = integrity.issue;
+            setShowErrorDialog(false);
+            setExecutionErrorInfo({
+                lineNumber: line,
+                command,
+                error: `Script appears truncated or malformed at line ${line} (${reason}) — nothing was executed.`,
+                executedSoFar: 0,
+                totalCommands: commands.length,
+                elapsedMs: 0,
+            });
+            setExecutionStats({
+                totalCommands: commands.length,
+                executedCommands: 0,
+                skippedLines: 0,
+                errors: 1,
+                duration: 0,
+            });
+            setExecutionState('error');
+            setShowCompleteModal(true);
             return;
         }
 
