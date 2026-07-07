@@ -7,6 +7,7 @@ import { ExecutionContext } from '../types';
 import { resolveElementInMetamodel, resolveElement } from './resolvers';
 import { getProject, getTargetMetamodel } from './utils';
 import { ElementDependency } from './dependencies';
+import { findInstanceByName, resolveTargetModel } from './commands/instance';
 import { LModel, LProject } from '../../joiner';
 
 // ============================================
@@ -62,11 +63,17 @@ export async function waitForDependencies(
 
     const targetMetamodel = getTargetMetamodel(context, project);
 
+    // In an M1 model editor, dependency targets are DObject instances living in
+    // `model.objects` — invisible to the M2-only resolvers below. Resolve them with the
+    // SAME lookup the M1 command handlers use (findInstanceByName), so the poll exits at
+    // once when the instance already exists instead of burning the full MAX_WAIT_MS.
+    const m1Model = context.level === 'M1' ? resolveTargetModel(context, project) : null;
+
     const startTime = Date.now();
     let elapsed = 0;
 
     while (elapsed < MAX_WAIT_MS) {
-        const unresolved = findUnresolved(requiredDeps, project, targetMetamodel);
+        const unresolved = findUnresolved(requiredDeps, project, targetMetamodel, m1Model);
 
         if (unresolved.length === 0) {
             return { allResolved: true, unresolved: [], waitedMs: elapsed };
@@ -78,7 +85,7 @@ export async function waitForDependencies(
     }
 
     // Final check after timeout
-    const finalUnresolved = findUnresolved(requiredDeps, project, targetMetamodel);
+    const finalUnresolved = findUnresolved(requiredDeps, project, targetMetamodel, m1Model);
     return {
         allResolved: finalUnresolved.length === 0,
         unresolved: finalUnresolved,
@@ -96,9 +103,17 @@ export async function waitForDependencies(
 function findUnresolved(
     deps: ElementDependency[],
     project: LProject,
-    targetMetamodel: LModel | null
+    targetMetamodel: LModel | null,
+    m1Model: LModel | null
 ): ElementDependency[] {
     return deps.filter(dep => {
+        // M1: resolve instance targets against `model.objects` with the same lookup the
+        // handler uses. Mirrors executeSetInstance's `args.target.segments.join('::') ||
+        // args.target.raw` derivation of the instance name.
+        if (m1Model) {
+            const instanceName = dep.name.segments.join('::') || dep.name.raw;
+            if (findInstanceByName(m1Model, instanceName)) return false; // resolved
+        }
         // Try scoped resolution first (matching what the command handlers do)
         if (targetMetamodel) {
             const found = resolveElementInMetamodel(dep.name, targetMetamodel);
