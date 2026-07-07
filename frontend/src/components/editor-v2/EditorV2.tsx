@@ -35,7 +35,7 @@ import { useActiveEditor, CLASSIC_ZOOM_MIN, CLASSIC_ZOOM_MAX, type ZoomControlle
 import ContextMenu, { type ContextMenuItem } from './ContextMenu';
 import { useHistory } from './hooks/useHistory';
 import { useAlignment } from './hooks/useAlignment';
-import { useAutoAnchor, computeAnchorsWithHysteresis, getNodeRect } from './hooks/useAutoAnchor';
+import { useAutoAnchor, computeAnchorsWithHysteresis, getNodeRect, computeGeometricAnchorsForAllEdges } from './hooks/useAutoAnchor';
 import { EditorContext } from './contexts/EditorContext';
 import { HighlightProvider, type HighlightState } from './contexts/HighlightContext';
 import { getNextFreeHandleIndex, computePortDistribution } from './utils/portDistribution';
@@ -2795,8 +2795,44 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         }
         if (updates.length > 0) syncPositionBatchToJjom(updates);
 
-        // Re-distribute port handles and fit the view
-        setEdges(eds => applyDistribution(eds));
+        // Recalc non-pinned edge sides on the FINAL ELK geometry, then re-index.
+        // applyDistribution alone only re-indexes handles and inherits the side that
+        // was chosen at first build on the stale grid positions (Step 2bis), which ELK
+        // then contradicts → U-turns. Reading rects from layoutedNodes (which carry the
+        // new positions and preserve measured sizes) sidesteps the async setNodes above.
+        // Side choice is geometry-only + deconfliction (no occupancy / same-side U).
+        const layoutRects = new Map(layoutedNodes.map(n => [n.id, getNodeRect(n)]));
+        setEdges(eds => {
+            const recalcable = eds.filter(e => {
+                const d = e.data as { sourceAnchor?: AnchorConfig; targetAnchor?: AnchorConfig } | undefined;
+                // Leave manually pinned anchors untouched (mirrors hysteresis :314).
+                return d?.sourceAnchor?.mode !== 'pinned' && d?.targetAnchor?.mode !== 'pinned';
+            });
+            const anchorMap = computeGeometricAnchorsForAllEdges(recalcable, layoutRects);
+            const recomputed = eds.map(edge => {
+                const a = anchorMap.get(edge.id);
+                if (!a) return edge; // pinned (filtered out) or unresolved → untouched
+                const newSrcSide = a.sourceHandle;
+                const newTgtSide = a.targetHandle;
+                const curSrcSide = edge.sourceHandle?.split('-')[0];
+                const curTgtSide = edge.targetHandle?.split('-')[0];
+                const sidesChanged = curSrcSide !== newSrcSide || curTgtSide !== newTgtSide;
+                return {
+                    ...edge,
+                    sourceHandle: `${newSrcSide}-0`,
+                    targetHandle: `${newTgtSide}-0`,
+                    data: {
+                        ...edge.data,
+                        sourceAnchor: { mode: 'auto', side: newSrcSide } as AnchorConfig,
+                        targetAnchor: { mode: 'auto', side: newTgtSide } as AnchorConfig,
+                        // R2: a side flip invalidates manual waypoints (indexed against the
+                        // old path shape) — clear them, mirroring the drag path (:3016).
+                        ...(sidesChanged ? { waypoints: [] } : {}),
+                    },
+                };
+            });
+            return applyDistribution(recomputed);
+        });
         requestAnimationFrame(() => fitView({ padding: 0.2, maxZoom: 1, duration: 300 }));
     }, [getNodes, getEdges, setNodes, setEdges, fitView, applyDistribution]);
     autoLayoutRef.current = handleAutoLayout;

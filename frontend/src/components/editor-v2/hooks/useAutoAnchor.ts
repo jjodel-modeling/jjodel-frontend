@@ -610,6 +610,45 @@ function computeBestAnchorsWithContext(
 }
 
 /**
+ * Pure core of getOptimalAnchorsForAllEdges: geometry-only side selection
+ * (computeBestAnchors — dominant axis, no occupancy, no same-side U candidate)
+ * plus bidirectional deconfliction, driven by an explicit nodeRects map instead
+ * of the live React Flow node list.
+ *
+ * This is the load / auto-layout path: side choice must follow the post-layout
+ * geometry, so passing freshly-computed rects (e.g. the ELK output, before the
+ * async setNodes has propagated) yields correct sides without reading stale state.
+ * Inheritance keeps top/bottom (computeBestAnchors) and is skipped by deconfliction.
+ */
+function computeGeometricAnchorsForAllEdges(
+    edges: { id: string; source: string; target: string; type?: string }[],
+    nodeRects: Map<string, NodeRect>,
+): Map<string, { sourceHandle: string; targetHandle: string }> {
+    // First pass: geometry-only best anchors per edge
+    const edgesWithAnchors = edges.map(edge => {
+        const sourceRect = nodeRects.get(edge.source);
+        const targetRect = nodeRects.get(edge.target);
+        if (!sourceRect || !targetRect) {
+            return { ...edge, sourceHandle: 'right', targetHandle: 'left' };
+        }
+        const isSelfReference = edge.source === edge.target;
+        const edgeType = edge.type === 'inheritance' ? 'inheritance' : 'reference';
+        const anchors = computeBestAnchors(sourceRect, targetRect, isSelfReference, edgeType);
+        return { ...edge, ...anchors };
+    });
+
+    // Second pass: bidirectional deconfliction (shared facing channel per pair)
+    const deconflicted = deconflictBidirectionalEdges(edgesWithAnchors, nodeRects);
+
+    const result = new Map<string, { sourceHandle: string; targetHandle: string }>();
+    for (const edge of edgesWithAnchors) {
+        const adjusted = deconflicted.get(edge.id);
+        result.set(edge.id, adjusted ?? { sourceHandle: edge.sourceHandle, targetHandle: edge.targetHandle });
+    }
+    return result;
+}
+
+/**
  * Hook that provides a function to compute optimal anchor positions for edges.
  *
  * @returns A function that takes source and target node IDs and returns optimal handles
@@ -656,45 +695,13 @@ export function useAutoAnchor() {
         (
             edges: { id: string; source: string; target: string; type?: string }[]
         ): Map<string, { sourceHandle: string; targetHandle: string }> => {
-            // Build node rects map
+            // Build node rects map from the live node list, then delegate to the
+            // pure geometry-only core (shared with the auto-layout recalc path).
             const nodeRects = new Map<string, NodeRect>();
             for (const node of nodes) {
                 nodeRects.set(node.id, getNodeRect(node));
             }
-
-            // First pass: compute best anchors for each edge individually
-            const edgesWithAnchors = edges.map(edge => {
-                const sourceNode = nodes.find(n => n.id === edge.source);
-                const targetNode = nodes.find(n => n.id === edge.target);
-
-                if (!sourceNode || !targetNode) {
-                    return { ...edge, sourceHandle: 'right', targetHandle: 'left' };
-                }
-
-                const sourceRect = getNodeRect(sourceNode);
-                const targetRect = getNodeRect(targetNode);
-                const isSelfReference = edge.source === edge.target;
-                const edgeType = edge.type === 'inheritance' ? 'inheritance' : 'reference';
-                const anchors = computeBestAnchors(sourceRect, targetRect, isSelfReference, edgeType);
-
-                return { ...edge, ...anchors };
-            });
-
-            // Second pass: apply bidirectional deconfliction
-            const deconflicted = deconflictBidirectionalEdges(edgesWithAnchors, nodeRects);
-
-            // Build result map
-            const result = new Map<string, { sourceHandle: string; targetHandle: string }>();
-            for (const edge of edgesWithAnchors) {
-                const adjusted = deconflicted.get(edge.id);
-                if (adjusted) {
-                    result.set(edge.id, adjusted);
-                } else {
-                    result.set(edge.id, { sourceHandle: edge.sourceHandle, targetHandle: edge.targetHandle });
-                }
-            }
-
-            return result;
+            return computeGeometricAnchorsForAllEdges(edges, nodeRects);
         },
         [nodes]
     );
@@ -702,5 +709,5 @@ export function useAutoAnchor() {
     return { getOptimalAnchors, getOptimalAnchorsForAllEdges };
 }
 
-export { computeBestAnchors, getNodeRect, computeAnchorsWithHysteresis, getAnchorConfig };
+export { computeBestAnchors, getNodeRect, computeAnchorsWithHysteresis, getAnchorConfig, computeGeometricAnchorsForAllEdges };
 export type { NodeRect, Side, MinimalEdgeWithData, AnchorResult };
