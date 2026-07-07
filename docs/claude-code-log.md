@@ -1,5 +1,25 @@
 # Claude Code Session Log
 
+## 2026-07-07 — fix: handle registry executor JjScript (decoupling identity/name) (commit 88f1f097c)
+**Prompt**: 2026-07-07 00:54 Fase 2 — registry handle→id di sessione, resolver unificato (registry-first, fallback findInstanceByName per preesistenti).
+**Files touched**: `frontend/src/jjscript/executor/commands/instance.ts` (`resolveInstanceHandle` + registrazione handle in create + guardia handle duplicato + unregister su delete + rename handle + `generateInstanceName` reserved-aware; export findInstanceByName/resolveTargetModel), `frontend/src/jjscript/executor/handleRegistry.ts` (NEW: Map handle→id, reset su `EXECUTION_START`), `frontend/src/jjscript/__tests__/handleRegistry.test.ts` (NEW, 8 test).
+**Outcome**: ✅ completed — verifica visiva di Alfonso: script UART completo senza "Element not found", 4 Port distinte tutte con name="clk". `set x.name` innocuo, duplicati esprimibili/indirizzabili, race da commit differito eliminata (risoluzione per id via `fromPointer`). build exit 0; tsc 33=baseline; 8/8 registry test + jjscript suite verde (context-binding pre-esistente rossa: monaco/window).
+**Regressions**: no (Alfonso confermato; path M2/preesistenti invariato via fallback).
+**Out-of-scope changes**: no (i 3 file del task; TEMP-DISCOVERY in executor.ts/ScriptBlock.tsx NON committata; file bundle-spread/altre sessioni non toccati). Nota: i 2 `export` di instance.ts (richiesti dal waiter Fase 2a) sono confluiti in questo commit, committato prima del waiter per buildability.
+**Layer Impact Report**: not-required (executor; nessun file §3.1 sync/D-L toccato).
+**Notes**: registry per-run (reset su `EXECUTION_START`). Fase 2b timing (waiter adotta `resolveInstanceHandle` per azzerare il 500ms post-set-name) e policy unicità nomi (`validateNameUniqueness`) fuori scope.
+**Prompt document name**: 2026-07-07 00:54 — Fase 2 handle registry executor JjScript
+
+## 2026-07-07 — fix: waiter M1 executor JjScript (commit bf0df51ea)
+**Prompt**: 2026-07-06 20:43 Fase 2a — il waiter delle dipendenze risolve le istanze M1 via `findInstanceByName` invece dei resolver M2-only.
+**Files touched**: `frontend/src/jjscript/executor/elementWaiter.ts`, `frontend/src/jjscript/__tests__/elementWaiter.test.ts` (NEW). (Gli export in instance.ts richiesti dal waiter sono nel commit registry 88f1f097c, committato prima per buildability.)
+**Outcome**: ✅ completed — verifica visiva di Alfonso (script UART completo). `wait` dei `set` M1 da ~500ms a ~0 quando l'istanza esiste; `MAX_WAIT_MS=500`/`POLL_INTERVAL_MS` invariati come safety net per target realmente mancanti. 7 test (esistente→0ms, mancante→cap, gating M2, path M2 invariato). build exit 0; tsc 33=baseline.
+**Regressions**: no (Alfonso confermato; path M2 invariato).
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required (executor pre-check; nessun file §3.1 toccato).
+**Notes**: Fase 2b (waiter adotta `resolveInstanceHandle`) è follow-up separato.
+**Prompt document name**: 2026-07-06 20:43 — Fase 2a waiter M1 executor JjScript
+
 ## 2026-07-07 — docs/discovery: cattura doppia S1(post-fix)+S6, fix S1 già committato (Fase 2 v2)
 **Prompt**: `2026-07-07 00:45` — Fase 2 v2 (dichiara "sostituisce il prompt 2026-07-06 20:44 mai eseguito"). **Premessa falsa**: la Fase 2 v1 ERA stata eseguita e committata questa sessione (`7dcd7397f` doc cattura + `80b3e2d58` fix S1). HARD STOP + AskUserQuestion → Alfonso ha scelto **"build on top"**: tenere il fix S1 committato, aggiungere solo la cattura doppia + analisi S6.
 **Files touched**: `docs/discovery/2026-07-07-family-member-capture.md` (NEW: cattura layout D post-fix + layout H S6 + 4 risposte), this log. **Nessun file sorgente modificato in questo task** (il fix S1 era già committato in `80b3e2d58`). Harness di cattura temporaneo (`_capture2.test.ts`) creato, usato e **rimosso**.
@@ -10,6 +30,16 @@
 **Notes**: HARD STOP: il fix S6 è un prompt separato (Opzione B raccomandata). S1 resta in attesa del gate visivo di Alfonso (dalla v1). Insight S6: byPairStable è corretto per lati **frontali** (rank uguale → lane parallele) ma sbagliato per **same-side** (serve rank invertito su un lato per annidare le U); è l'invariante "rank coerente con la topologia della coppia di lati". Fuori scope: S2 label, S3 lane router Phase B, S4 side escape, merge eOpposite.
 **Prompt document name**: 2026-07-07 00:45 — Fase 2 v2 cattura doppia S1+S6
 
+## 2026-07-07 — docs: discovery decoupling identity/name istanze M1 (Fase 1, read-only)
+**Prompt**: 2026-07-07 00:32 discovery identità/name executor JjScript M1 (Fase 1 read-only, no fix). Evidenza UART: `set x.name` re-keya l'istanza → comandi successivi "Element not found", con distanza dal rename non deterministica (1…188 comandi); requisito dominio: più istanze con lo stesso `name` (4 Port name="clk").
+**Files touched**: `docs/discovery/2026-07-07-identity-name-decoupling.md` (NEW report), this log. **No source modified.**
+**Outcome**: ✅ completed (read-only). 3 Explore agent paralleli (id lifecycle / name-getter+race / consumer-per-nome+persistenza) + verifica personale del fatto load-bearing. **Root cause lookup**: l'handle di script = attributo `name` (`findInstanceByName` matcha `o.name`; `get_name` = `$name.value || data.name || instanceof.name`, LModelElement.tsx:5804). **Root cause race** (identificata): NON è cache — `LModel.get_objects` (5404) ricalcola dallo store ad ogni accesso; è il COMMIT a essere differito a `setTimeout(0)` (CompositeAction, action.ts:349) con `U.liveStateChanges=false` (U.tsx:177) → i comandi async risolvono su microtask prima che il timer dreni → non determinismo. **Fatto abilitante**: `DObject.id` stabile/immutabile dalla creazione (`Constructors.makeID`, classes.ts:587) risolvibile subito via `pendingCreation`+`fromPointer` — nessun remap; §9.1 ("temporary IDs") è fuorviante. **Reference/persistenza/JjEL già id-based** (XMI `xmiIdMap` su id; refs `values=[...id]`). **Raccomandazione: Opzione A** — registry `handle→id` locale all'executor (fallback `findInstanceByName` per preesistenti); elimina i 3 difetti, zero zona critica, diff ~40-60 righe in `jjscript/executor/` + test. **Opzione B** (identità runtime-wide) fuori scope (tocca sync/persistenza/UI → LIR).
+**Regressions**: no (nessun sorgente modificato).
+**Out-of-scope changes**: no (solo report + log; strumentazione TEMP-DISCOVERY e fix Fase 2a preesistenti nel working tree lasciati intatti).
+**Layer Impact Report**: not-required (read-only; `useJjomSync`/`useM1ReferenceEdges`/`canvasToJjom` SOLO letti/mappati — confermato id-based, non toccati).
+**Notes**: HARD STOP dopo il report. Fase 2 (Opzione A) solo dopo review in chat e go-ahead. Opzione A non tocca zona critica → nessun LIR richiesto per il fix.
+**Prompt document name**: 2026-07-07 00:32 — discovery decoupling identity/name istanze M1 Fase 1
+
 ## 2026-07-06 — feat/fix(editor-v2): bundle spread per ordine geometrico (S1) — ⚠️ attesa gate visivo
 **Prompt**: `2026-07-06 20:44` — Fase 2 scoped (go-ahead solo per questo scope). Step A: riproduzione formale del bundle Family↔Member (8 ref = 4 containment + 4 eOpposite) + specifica osservato/atteso/criterio. Step B: fix S1 — `applyBundleSpread` deve offsettare il corridoio per l'ordine geometrico fisico (frazioni `computeSidePositions`) invece che per l'indice handle. Checkpoint dopo A; HARD STOP dopo B (verifica visiva ad Alfonso).
 **Files touched**: `frontend/src/components/editor-v2/edges/bundleSpread.ts` (NEW, modulo puro), `frontend/src/components/editor-v2/edges/UnifiedEdge.tsx` (rimosso il vecchio `applyBundleSpread`/`getHandleIndex`/`BUNDLE_SPREAD_PX`, import dal nuovo modulo, `bundleCenter` memo), `frontend/src/components/editor-v2/edges/__tests__/bundleSpread.test.ts` (NEW), `docs/discovery/2026-07-06-family-member-capture.md` (NEW, output Step A), this log. Strumentazione di cattura temporanea (`_s1_capture.test.ts`) creata, usata e **rimossa** (nessuna strumentazione committata; UnifiedEdge probe export creato e ripristinato).
@@ -19,6 +49,16 @@
 **Layer Impact Report**: not-required (nessun file §3.1 sync/D-L/JjOM/VersionFixer/persistence toccato; `applyBundleSpread` è geometria pura a valle, consumata solo da `UnifiedEdge`; `computeSidePositions`/`portDistribution`/`computeManhattanPath` SOLO letti/importati, non modificati).
 **Notes**: GAIN 0.6 ≈ 8px di spaziazione lane per bundle da 8 su lato 120px (comparabile ai 6px/lane del vecchio step). Insight: il sort baricentrico + pair-stable era già corretto a monte (Stadio 3); l'unico difetto era `applyBundleSpread` che lo scavalcava a valle offsettando per indice+direzione. Il fix NON tocca l'ordine degli anchor: allinea solo il corridoio all'ordine fisico già calcolato. La `directionSign` è stata rimossa (reintroduceva inversioni); la separazione delle direzioni è ora implicita nell'ordine fisico. Fuori scope confermato: S2 label de-overlap, S3 lane router Phase B, S4 side escape, leva (c) merge eOpposite. Al go-ahead: 2 commit separati — `docs: add S1 capture spec for Family-Member bundle` (solo il doc di cattura) + `fix: align bundle spread offset with geometric anchor order` (bundleSpread.ts + UnifiedEdge.tsx + test + log).
 **Prompt document name**: 2026-07-06 20:44 — Fase 2 riproduzione + fix S1 bundle spread
+
+## 2026-07-06 — docs: discovery timing executor JjScript (Fase 1, read-only)
+**Prompt**: 2026-07-06 18:01 discovery timeout/pipeline executor JjScript M1 (Fase 1 read-only, no fix). Sintomo: ~189 comandi `create instance`+`set` in 519s (~2.7s/comando).
+**Files touched**: `docs/discovery/2026-07-06-jjscript-executor-timing.md` (NEW report), this log. Strumentazione `// TEMP-DISCOVERY` (NON committata) in `frontend/src/jjscript/executor/executor.ts` + `frontend/src/jjscript/components/ScriptBlock.tsx`.
+**Outcome**: ✅ completed (read-only). Localizzato l'executor (`frontend/src/jjscript/executor/`, non jjtl). Timeout: `elementWaiter.ts` `MAX_WAIT_MS=500`/`POLL_INTERVAL_MS=30` (T1/T2), `ScriptBlock.tsx` `BATCH_DELAY_MS=20` (T3). **Bug confermato staticamente**: ogni `set` M1 paga i 500ms pieni perché il pre-check `waitForDependencies` risolve il target con `resolveElement`/`resolveElementInMetamodel` (resolvers.ts, M2-only: guardano `classes/attributes/...` MAI `model.objects`), mentre l'handler M1 reale usa `findInstanceByName` (instance.ts:101, guarda `model.objects`) → dead-poll su qualcosa che esiste già. `create instance` = 0 dipendenze → 0 attesa. Waiter ≈ 47s su ~95 set: NON spiega i 519s → residuo ~2.5s/comando = apply+re-render (ipotesi O(n²) via `useJjomSync` Step 4, da misurare). Strumentazione emette 2 righe `[JjScript-TIMING]` per comando (parse/wait/apply/total dall'executor; iter dal loop UI → settle).
+**Regressions**: no (nessun sorgente modificato oltre strumentazione TEMP non committata; nessun cambio di logica).
+**Out-of-scope changes**: no (report + log; i due file jjscript hanno SOLO righe TEMP-DISCOVERY marcate, da rimuovere pre-commit).
+**Layer Impact Report**: not-required (read-only; `useJjomSync`/`useM1ReferenceEdges`/`syncState` SOLO letti/mappati, non toccati — §6 del report).
+**Notes**: HARD STOP dopo Step 4. Fase 2 (fix) solo dopo analisi numeri in chat. Se la Fase 2 toccherà il sync, servirà un Layer Impact Report.
+**Prompt document name**: 2026-07-06 18:01 — discovery timing executor JjScript Fase 1
 
 ## 2026-07-06 — docs/discovery: anchor ordering & Manhattan routing (Fase 1, read-only)
 **Prompt**: `2026-07-06 13:36` — discovery read-only sull'ordinamento anchor per minimizzare gli incroci nel routing Manhattan (caso `Family`/`Member`, 8 reference = 4 containment + 4 eOpposite). 7 domande + "Punti di aggancio" Fase 2 + "Rischi" da LIR. HARD STOP dopo il documento; nessuna modifica a sorgente.
