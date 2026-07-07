@@ -36,6 +36,7 @@ import ContextMenu, { type ContextMenuItem } from './ContextMenu';
 import { useHistory } from './hooks/useHistory';
 import { useAlignment } from './hooks/useAlignment';
 import { useAutoAnchor, computeAnchorsWithHysteresis, getNodeRect, computeGeometricAnchorsForAllEdges } from './hooks/useAutoAnchor';
+import { reduceReLayout, countReferenceEdges, INITIAL_RELAYOUT_STATE, type ReLayoutState, type ReLayoutEvent } from './utils/reLayoutWatcher';
 import { EditorContext } from './contexts/EditorContext';
 import { HighlightProvider, type HighlightState } from './contexts/HighlightContext';
 import { getNextFreeHandleIndex, computePortDistribution } from './utils/portDistribution';
@@ -334,6 +335,10 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const setEdgesRef = useRef(setEdges);
     setEdgesRef.current = setEdges;
     const autoLayoutRef = useRef<(() => Promise<void>) | null>(null);
+    // Re-run auto-layout ONCE when the asynchronously-materialized M1 edges arrive after
+    // the first (edge-less) layout. Set below; armed only on the justCreated path. See
+    // docs/discovery/2026-07-07-s4b-recalc-bypass.md (H2).
+    const armReLayoutRef = useRef<(() => void) | null>(null);
     const { isJjomMode, graphId, justCreatedGraphRef } = useJjomSync(modelid, setNodes, setEdges, () => {
         // Delay slightly so RF has measured nodes before fitting
         setTimeout(async () => {
@@ -342,6 +347,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 justCreatedGraphRef.current = false;
                 if (autoLayoutRef.current) {
                     await autoLayoutRef.current();
+                    // The M1 reference edges materialize asynchronously AFTER this first
+                    // layout; watch for them and re-run the layout once when they land.
+                    armReLayoutRef.current?.();
                     return; // autoLayout already does fitView + distribution
                 }
             }
@@ -2837,6 +2845,54 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     }, [getNodes, getEdges, setNodes, setEdges, fitView, applyDistribution]);
     autoLayoutRef.current = handleAutoLayout;
 
+    // ── Re-run auto-layout once late M1 edges materialize (S4b) ──────────────
+    // handleAutoLayout runs ~50ms after mount, before the async M1 reference edges reach
+    // RF state, so ELK lays out an edge-less graph. This watcher (armed only on the
+    // justCreated path, in the onInit callback above) waits for the reference edges to
+    // arrive, debounces to collect the incremental-sync bundle, then re-runs the SAME
+    // handleAutoLayout exactly once. A manual drag or the window timeout disarms it.
+    // Pure transitions live in utils/reLayoutWatcher (unit-tested); timers live here.
+    const RELAYOUT_WINDOW_MS = 3000;
+    const RELAYOUT_DEBOUNCE_MS = 150;
+    const reLayoutStateRef = useRef<ReLayoutState>(INITIAL_RELAYOUT_STATE);
+    const reLayoutWindowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const reLayoutDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const clearReLayoutTimers = useCallback(() => {
+        if (reLayoutWindowTimerRef.current) { clearTimeout(reLayoutWindowTimerRef.current); reLayoutWindowTimerRef.current = null; }
+        if (reLayoutDebounceTimerRef.current) { clearTimeout(reLayoutDebounceTimerRef.current); reLayoutDebounceTimerRef.current = null; }
+    }, []);
+    const dispatchReLayout = useCallback((event: ReLayoutEvent) => {
+        const { state, effect } = reduceReLayout(reLayoutStateRef.current, event);
+        reLayoutStateRef.current = state;
+        switch (effect) {
+            case 'arm_window':
+                if (reLayoutWindowTimerRef.current) clearTimeout(reLayoutWindowTimerRef.current);
+                reLayoutWindowTimerRef.current = setTimeout(() => dispatchReLayout({ type: 'WINDOW_TIMEOUT' }), RELAYOUT_WINDOW_MS);
+                break;
+            case 'start_debounce':
+                if (reLayoutDebounceTimerRef.current) clearTimeout(reLayoutDebounceTimerRef.current);
+                reLayoutDebounceTimerRef.current = setTimeout(() => dispatchReLayout({ type: 'DEBOUNCE_FIRE' }), RELAYOUT_DEBOUNCE_MS);
+                break;
+            case 'rerun':
+                clearReLayoutTimers();
+                autoLayoutRef.current?.();
+                break;
+            case 'cleanup':
+                clearReLayoutTimers();
+                break;
+            default:
+                break;
+        }
+    }, [clearReLayoutTimers]);
+    // Arm entry (called from the onInit justCreated path via armReLayoutRef).
+    armReLayoutRef.current = () => dispatchReLayout({ type: 'ARM', refEdgeCount: countReferenceEdges(getEdges()) });
+    // Feed edge-count changes to the watcher; a no-op unless armed.
+    useEffect(() => {
+        dispatchReLayout({ type: 'EDGES', refEdgeCount: countReferenceEdges(edges) });
+    }, [edges, dispatchReLayout]);
+    // Clear pending timers on unmount.
+    useEffect(() => clearReLayoutTimers, [clearReLayoutTimers]);
+
     // Properties panel handlers
     const handleNodeChange = useCallback(
         (nodeId: string, data: any) => {
@@ -2936,6 +2992,13 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             isProcessingNodesChangeRef.current = true;
 
             try {
+
+            // A manual node drag (active or on release) invalidates the pending auto-layout
+            // re-run: the user has taken control of the layout. Programmatic setNodes (ELK)
+            // does not emit position changes with a `dragging` flag, so this is user-only.
+            if (changes.some((c) => c.type === 'position' && (c as any).dragging !== undefined)) {
+                dispatchReLayout({ type: 'DRAG' });
+            }
 
             const hasDragEnd = changes.some(
                 (c) => c.type === 'position' && c.dragging === false
@@ -3147,7 +3210,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 isProcessingNodesChangeRef.current = false;
             }
         },
-        [onNodesChange, takeSnapshot, setEdges, getNodes, applyDistribution, isJjomMode, scheduleLayoutSave]
+        [onNodesChange, takeSnapshot, setEdges, getNodes, applyDistribution, isJjomMode, scheduleLayoutSave, dispatchReLayout]
     );
 
     // Recalculate anchors for a specific edge (called by SegmentHandles after drag).
