@@ -7,6 +7,16 @@ import {AIProvider, TAIProvider, ChatMessage, ChatImage, ChatDocument, AI, AICon
 import { PromptService } from './PromptService';
 import { PromptContext } from '../types/prompts';
 
+/**
+ * Output-token ceiling for full chat completions (the Jodie chat, which is also how
+ * JjScript is generated). Sized to comfortably cover large generated scripts
+ * (~500 commands ≈ ~8000 tokens) so the model is not cut off mid-script, which would
+ * otherwise emit a truncated JjScript. Kept within the output cap of the current
+ * default models. Applies to every provider's chat path (NOT the max_tokens:10 used by
+ * the connection-test calls).
+ */
+const CHAT_MAX_OUTPUT_TOKENS = 8192;
+
 export class AIProviderService {
     /**
      * Send a message to the specified AI provider
@@ -143,6 +153,9 @@ export class AIProviderService {
         }
 
         const data = await response.json();
+        if (data.choices?.[0]?.finish_reason === 'length') {
+            console.warn(`[AIProviderService] ${providerLabel} response hit the token limit (finish_reason=length) — output was truncated and may be incomplete. Raise CHAT_MAX_OUTPUT_TOKENS if this recurs.`);
+        }
         return data.choices[0].message.content;
     }
 
@@ -186,7 +199,7 @@ export class AIProviderService {
             },
             body: JSON.stringify({
                 model,
-                max_tokens: 4096,
+                max_tokens: CHAT_MAX_OUTPUT_TOKENS,
                 system: systemPrompt,
                 messages,
             }),
@@ -198,6 +211,9 @@ export class AIProviderService {
         }
 
         const data = await response.json();
+        if (data.stop_reason === 'max_tokens') {
+            console.warn('[AIProviderService] Claude response hit max_tokens — output was truncated and may be incomplete (e.g. a cut-off JjScript). Raise CHAT_MAX_OUTPUT_TOKENS if this recurs.');
+        }
         return data.content[0].text;
     }
 
@@ -280,7 +296,7 @@ export class AIProviderService {
             apiKey,
             model,
             messages,
-            { max_tokens: 2000 },
+            { max_tokens: CHAT_MAX_OUTPUT_TOKENS },
             'OpenAI'
         );
     }
@@ -335,7 +351,7 @@ export class AIProviderService {
             apiKey,
             model,
             messages,
-            { max_tokens: 2000 },
+            { max_tokens: CHAT_MAX_OUTPUT_TOKENS },
             'DeepSeek'
         );
     }
@@ -394,7 +410,7 @@ export class AIProviderService {
             body: JSON.stringify({
                 contents,
                 generationConfig: {
-                    maxOutputTokens: 2000,
+                    maxOutputTokens: CHAT_MAX_OUTPUT_TOKENS,
                 },
             }),
         });
@@ -405,6 +421,9 @@ export class AIProviderService {
         }
 
         const data = await response.json();
+        if (data.candidates?.[0]?.finishReason === 'MAX_TOKENS') {
+            console.warn('[AIProviderService] Gemini response hit MAX_TOKENS — output was truncated and may be incomplete. Raise CHAT_MAX_OUTPUT_TOKENS if this recurs.');
+        }
         return data.candidates[0].content.parts[0].text;
     }
 
@@ -483,7 +502,7 @@ export class AIProviderService {
             apiKey,
             model,
             messages,
-            { max_tokens: 2000 },
+            { max_tokens: CHAT_MAX_OUTPUT_TOKENS },
             'Mistral'
         );
     }
@@ -536,7 +555,7 @@ export class AIProviderService {
             apiKey,
             model,
             messages,
-            { max_tokens: 2000 },
+            { max_tokens: CHAT_MAX_OUTPUT_TOKENS },
             'Groq'
         );
     }
@@ -567,7 +586,7 @@ export class AIProviderService {
             apiKey,
             model,
             messages,
-            { max_tokens: 2000 },
+            { max_tokens: CHAT_MAX_OUTPUT_TOKENS },
             'Kimi'
         );
     }
@@ -600,7 +619,7 @@ export class AIProviderService {
             '',
             model,
             messages,
-            { stream: false },
+            { stream: false, max_tokens: CHAT_MAX_OUTPUT_TOKENS },
             'Ollama'
         );
     }
@@ -640,7 +659,7 @@ export class AIProviderService {
             apiKey,
             model,
             messages,
-            { max_tokens: 2000 },
+            { max_tokens: CHAT_MAX_OUTPUT_TOKENS },
             'Custom'
         );
     }
