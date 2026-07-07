@@ -96,8 +96,9 @@ interface EndpointEdge {
 
 /**
  * A single active endpoint on one side of a node: the (handleId, role) pair an
- * edge attaches to, tagged with the kind of edge using it. `edgeType` drives the
- * a2-strict layout — inheritance is pinned to the center, references fill the rest.
+ * edge attaches to, tagged with the kind of edge using it. `edgeType` is retained
+ * as informational metadata; since S7 it no longer changes positioning —
+ * inheritance and references share one geometry-aware order in computeSidePositions.
  */
 export interface SideEndpoint {
     handleId: string;            // e.g. 'top-0'
@@ -126,7 +127,7 @@ export interface SideEndpoint {
  * An endpoint is keyed by `${handleId}:${role}`; its edgeType is read from the
  * edges using it. Per portDistribution bucketing a given (handleId, role) maps to
  * one homogeneous PortGroup, so the type is unambiguous; should a mix ever be seen,
- * inheritance wins (it is the endpoint that must stay centered).
+ * inheritance wins (kept deterministic, though edgeType no longer affects position).
  */
 export function computeSideEndpoints(
     edges: EndpointEdge[],
@@ -153,29 +154,27 @@ export function computeSideEndpoints(
 }
 
 /**
- * Cross-role global ordering for one side (strategy a2-strict).
+ * Cross-role global ordering for one side.
  *
- * All endpoints on a side — source and target, reference and inheritance — are
- * placed in a single pass so the side reads as one balanced strip instead of two
- * role-segregated halves:
+ * All endpoints on a side — source and target, reference and inheritance alike —
+ * are placed in a single geometry-aware pass, so the side reads as one balanced
+ * strip instead of two role-segregated halves:
  *
- * - inheritance is pinned to the center: a single edge sits at 50%; several form a
- *   symmetric cluster around 50% with step 1/(N+1);
- * - references take the remaining space, the outermost grid slots first, symmetric
- *   about the center.
+ * - every endpoint is ordered by byGeometry (the opposite/parent centroid along the
+ *   side axis) and distributed uniformly at (k+1)/(N+1);
+ * - inheritance no longer owns the center (S7): it takes its geometric slot like any
+ *   reference. A side carrying only inheritance still yields 0.5 (N=1), but when
+ *   references share the side the generalization sorts by its parent's centroid, so
+ *   its lateral tree bus stops crossing references between the center and the parent.
  *
- * With no inheritance the side degrades to a plain uniform distribution
- * (k+1)/(N+1) — the dense bidirectional case (e.g. Families.ecore Member.left,
- * 4 source + 4 target = 8 collision-free endpoints).
+ * The dense bidirectional case (e.g. Families.ecore Member.left, 4 source + 4 target
+ * = 8 endpoints) is the same uniform distribution.
  *
- * Collision-freedom holds in every case: when the reference count is even the
- * cluster lands on the central grid slots and references on the outer ones (disjoint);
- * when it is odd the pinned cluster sits at half-step offsets that never coincide
- * with the integer grid the references use.
+ * Collision-freedom is by construction: N endpoints on N distinct uniform slots.
  *
- * Determinism: within each kind, endpoints are ordered by (role, handle index) —
- * source before target, then ascending index — preserving the anti-crossing spatial
- * sort that portDistribution already encoded in the handle indices.
+ * Determinism: byGeometry falls back to a pair-stable edge-id tiebreak, then to
+ * (role, handle index), so equal or absent centroids stay deterministic — preserving
+ * the anti-crossing spatial sort that portDistribution encoded in the handle indices.
  *
  * Returns a map keyed by `${handleId}:${role}` (top-0/source and top-0/target are
  * distinct ReactFlow entities and may sit at different positions). Inactive handles
@@ -201,8 +200,8 @@ export function computeSidePositions(
         return useY ? p.centerY : p.centerX;
     };
 
-    // Role-primary order: deterministic fallback for inheritance (centered,
-    // geometry-independent) and for degenerate inputs that carry no edge id.
+    // Role-primary order: deterministic fallback for degenerate inputs that carry
+    // no geometry (missing centroid) or no edge id.
     const bySortKey = (a: SideEndpoint, b: SideEndpoint) => {
         const ra = a.role === 'source' ? 0 : 1;
         const rb = b.role === 'source' ? 0 : 1;
@@ -219,14 +218,15 @@ export function computeSidePositions(
     // edge across the two facing sides, producing the diagonal jog (defects 2 & 3).
     // A non-self-loop edge contributes at most one endpoint per side, so the ids are
     // distinct here; when an id is absent (degenerate input) we fall back to
-    // bySortKey, leaving the no-geometry useTreeLayout path unchanged.
+    // bySortKey (the degenerate no-position fallback).
     const byPairStable = (a: SideEndpoint, b: SideEndpoint) => {
         if (a.edgeId && b.edgeId && a.edgeId !== b.edgeId) return a.edgeId < b.edgeId ? -1 : 1;
         return bySortKey(a, b);
     };
 
-    // Geometry-aware order for references: opposite-centroid first, then the
-    // pair-stable tiebreak. A missing or equal centroid falls to byPairStable.
+    // Geometry-aware order for every endpoint (references and inheritance):
+    // opposite/parent centroid first, then the pair-stable tiebreak. A missing or
+    // equal centroid falls to byPairStable.
     const byGeometry = (a: SideEndpoint, b: SideEndpoint) => {
         const ca = oppositeCoord(a);
         const cb = oppositeCoord(b);
@@ -234,38 +234,18 @@ export function computeSidePositions(
         return byPairStable(a, b);
     };
 
-    // Inheritance stays on bySortKey (centered, geometry-independent) so the
-    // tree-branch path and the rendered handle agree without threading positions
-    // through useTreeLayout.
-    const inh = endpoints.filter(e => e.edgeType === 'inheritance').sort(bySortKey);
-    const ref = endpoints.filter(e => e.edgeType !== 'inheritance').sort(byGeometry);
-    const M = inh.length;
-    const R = ref.length;
-    const step = 1 / (N + 1);
     const key = (e: SideEndpoint) => `${e.handleId}:${e.role}`;
 
-    // References.
-    let refPositions: number[];
-    if (M === 0) {
-        // No inheritance: plain uniform distribution across the whole side.
-        refPositions = ref.map((_, k) => (k + 1) / (N + 1));
-    } else {
-        // Inheritance owns the center: references take the R outermost grid slots
-        // (farthest from 0.5 first; lower position wins ties), then read ascending.
-        const grid = Array.from({ length: N }, (_, k) => (k + 1) / (N + 1));
-        const outerFirst = [...grid].sort((a, b) => {
-            const da = Math.abs(a - 0.5);
-            const db = Math.abs(b - 0.5);
-            return da !== db ? db - da : a - b;
-        });
-        refPositions = outerFirst.slice(0, R).sort((a, b) => a - b);
-    }
-    ref.forEach((e, k) => result.set(key(e), refPositions[k]));
-
-    // Inheritance: centered cluster pinned at 50%.
-    inh.forEach((e, i) => {
-        result.set(key(e), 0.5 + (i - (M - 1) / 2) * step);
-    });
+    // S7: inheritance and references share ONE geometry-aware order (byGeometry:
+    // opposite/parent centroid → pair-stable edge id → role/index fallback) with a
+    // uniform (k+1)/(N+1) distribution. Inheritance no longer owns the center — a
+    // side with only inheritance still lands at 0.5 (N=1), but when references share
+    // the side the generalization takes its geometric slot by the parent's centroid,
+    // so its lateral tree bus no longer crosses references between the center and the
+    // parent. Collision-free by construction (N distinct slots). With no positions the
+    // order degrades to byPairStable → bySortKey, unchanged from before.
+    const ordered = [...endpoints].sort(byGeometry);
+    ordered.forEach((e, k) => result.set(key(e), (k + 1) / (N + 1)));
 
     return result;
 }
@@ -276,7 +256,10 @@ export function computeSidePositions(
  * Single source of truth shared by DynamicHandles (rendering) and useTreeLayout
  * (inheritance branch landing point): both build the side's endpoints with
  * computeSideEndpoints and position them with computeSidePositions, so a branch
- * lands exactly where the handle is drawn.
+ * lands exactly where the handle is drawn. Since S7 the ordering is geometry-aware
+ * for inheritance too, so callers MUST pass the same `nodePositions` map
+ * DynamicHandles uses — otherwise the branch and the handle resolve to different
+ * fractions and diverge.
  */
 export function computeHandlePositionForNode(params: {
     edges: EndpointEdge[];
@@ -287,10 +270,14 @@ export function computeHandlePositionForNode(params: {
     nodeHeight: number;
     handleId: string;
     role: 'source' | 'target';
+    /** Centroid map for the geometry-aware ordering — must be the SAME map
+     *  DynamicHandles feeds computeSidePositions, or the tree branch lands at a
+     *  different fraction than the drawn handle (S7 threading). */
+    nodePositions?: Map<string, NodePosition>;
 }): { x: number; y: number } {
-    const { edges, nodeId, nodeX, nodeY, nodeWidth, nodeHeight, handleId, role } = params;
+    const { edges, nodeId, nodeX, nodeY, nodeWidth, nodeHeight, handleId, role, nodePositions } = params;
     const { side } = parseHandleId(handleId);
-    const positions = computeSidePositions(computeSideEndpoints(edges, nodeId, side));
+    const positions = computeSidePositions(computeSideEndpoints(edges, nodeId, side), nodePositions);
     const percent = positions.get(`${handleId}:${role}`) ?? 0.5;
 
     // top/bottom: percent maps to X; left/right: percent maps to Y

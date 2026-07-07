@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeSidePositions, computeSideEndpoints, type SideEndpoint } from '../handlePosition';
+import { computeSidePositions, computeSideEndpoints, computeHandlePositionForNode, type SideEndpoint } from '../handlePosition';
 
 // Centroid helper: NodePosition is { centerX, centerY }.
 const pos = (centerX: number, centerY: number) => ({ centerX, centerY });
@@ -77,17 +77,31 @@ describe('computeSidePositions — geometry-aware ordering (Option A)', () => {
         expect(geom.get('right-0:source')).toBeCloseTo(1 / 3);
     });
 
-    // Case 3 — inheritance pinned to center, geometry-independent.
-    it('inheritance is centered (0.5) and identical with/without positions', () => {
+    // Case 3 — S7: inheritance participates in the geometric order. When a reference
+    // shares the side, inheritance is NOT centered — it takes its slot by the parent's
+    // centroid (previously it was pinned to 0.5; that invariant is intentionally gone).
+    it('inheritance sorts geometrically by parent centroid when a reference shares the side', () => {
         const endpoints: SideEndpoint[] = [
-            { handleId: 'top-0', role: 'target', edgeType: 'inheritance', oppositeNodeId: 'Parent' },
-            { handleId: 'top-1', role: 'target', edgeType: 'reference', oppositeNodeId: 'Ref' },
+            { handleId: 'top-0', role: 'target', edgeType: 'inheritance', oppositeNodeId: 'Parent' }, // x=100 (left)
+            { handleId: 'top-1', role: 'target', edgeType: 'reference', oppositeNodeId: 'Ref' },      // x=800 (right)
         ];
         const positions = new Map([['Parent', pos(100, 0)], ['Ref', pos(800, 0)]]);
         const r = computeSidePositions(endpoints, positions);
-        expect(r.get('top-0:target')).toBeCloseTo(0.5); // M=1 → centered
-        const f = computeSidePositions(endpoints);
-        expect(r.get('top-0:target')).toEqual(f.get('top-0:target')); // geometry-independent
+        // Parent (100) left of Ref (800) → inheritance leftmost, reference to its right.
+        expect(r.get('top-0:target')).toBeCloseTo(1 / 3);
+        expect(r.get('top-1:target')).toBeCloseTo(2 / 3);
+        expect(r.get('top-0:target')!).toBeLessThan(r.get('top-1:target')!);
+    });
+
+    // Case 3b — S7: a side carrying ONLY inheritance still lands at the center
+    // (N=1 → 0.5), with or without positions. The lone-generalization look is preserved.
+    it('lone inheritance is centered (0.5), with and without positions', () => {
+        const endpoints: SideEndpoint[] = [
+            { handleId: 'top-0', role: 'target', edgeType: 'inheritance', oppositeNodeId: 'Parent' },
+        ];
+        const positions = new Map([['Parent', pos(100, 0)]]);
+        expect(computeSidePositions(endpoints, positions).get('top-0:target')).toBeCloseTo(0.5);
+        expect(computeSidePositions(endpoints).get('top-0:target')).toBeCloseTo(0.5);
     });
 
     // Case 4 — tie on opposite centroid and NO edge id present → degenerate role
@@ -190,5 +204,76 @@ describe('computeSidePositions — pair-stable alignment (edge id tiebreak)', ()
         const r = computeSidePositions(endpoints, positions);
         expect(r.get('left-1:source')!).toBeLessThan(r.get('left-0:source')!); // High above Low
         expect(r.get('left-1:source')).toBeCloseTo(1 / 3);
+    });
+});
+
+describe('computeSidePositions — S7 inheritance geometry (hospital P/D)', () => {
+    // Case P — Patient.top: inheritance→Person (far left) + containment→Container (mid-left).
+    // Ascending centroid X Person(230) < Container(510) → inheritance leftmost, containment
+    // to its right → the leftward tree bus no longer crosses the containment vertical.
+    it('Case P: inheritance takes the leftmost slot, containment to its right (0 crossings)', () => {
+        const endpoints: SideEndpoint[] = [
+            { handleId: 'top-0', role: 'source', edgeType: 'inheritance', oppositeNodeId: 'Person', edgeId: 'inh-p' },
+            { handleId: 'top-0', role: 'target', edgeType: 'reference', oppositeNodeId: 'Container', edgeId: 'contain' },
+        ];
+        const positions = new Map([['Person', pos(230, 0)], ['Container', pos(510, 0)]]);
+        const r = computeSidePositions(endpoints, positions);
+        expect(r.get('top-0:source')).toBeCloseTo(1 / 3); // inheritance leftmost
+        expect(r.get('top-0:target')).toBeCloseTo(2 / 3); // containment right of it
+        expect(r.get('top-0:source')!).toBeLessThan(r.get('top-0:target')!);
+    });
+
+    // Case D — Doctor.top: doctor→Visit, inheritance→Person, prescribedBy→Prescription.
+    // Ascending centroid X Person(230) < Visit(700) < Prescription(1300) →
+    // order inheritance, doctor, prescribedBy; inheritance leftmost → 0 crossings.
+    it('Case D: order is inheritance, doctor, prescribedBy (inheritance leftmost)', () => {
+        const endpoints: SideEndpoint[] = [
+            { handleId: 'top-0', role: 'target', edgeType: 'reference', oppositeNodeId: 'Visit', edgeId: 'doctor' },
+            { handleId: 'top-0', role: 'source', edgeType: 'inheritance', oppositeNodeId: 'Person', edgeId: 'inh-d' },
+            { handleId: 'top-1', role: 'target', edgeType: 'reference', oppositeNodeId: 'Prescription', edgeId: 'presc' },
+        ];
+        const positions = new Map([['Person', pos(230, 0)], ['Visit', pos(700, 0)], ['Prescription', pos(1300, 0)]]);
+        const r = computeSidePositions(endpoints, positions);
+        expect(r.get('top-0:source')).toBeCloseTo(1 / 4); // inheritance leftmost
+        expect(r.get('top-0:target')).toBeCloseTo(2 / 4); // doctor->Visit
+        expect(r.get('top-1:target')).toBeCloseTo(3 / 4); // prescribedBy->Prescription
+    });
+});
+
+describe('computeHandlePositionForNode — S7 nodePositions threading (R4: branch == handle)', () => {
+    // Child "C" top side: inheritance→Parent (opposite on the RIGHT) + reference→Other
+    // (opposite on the LEFT). Geometry ⇒ inheritance to the right (2/3); the no-position
+    // fallback (edge-id order 'a-inh' < 'b-ref') ⇒ inheritance to the left (1/3). The two
+    // disagree, so this fixture proves threading is load-bearing.
+    const edges = [
+        { id: 'a-inh', source: 'C', target: 'Parent', type: 'inheritance', sourceHandle: 'top-0', targetHandle: 'bottom-0' },
+        { id: 'b-ref', source: 'Other', target: 'C', type: 'reference', sourceHandle: 'bottom-0', targetHandle: 'top-0' },
+    ];
+    const nodePositions = new Map([
+        ['C', pos(500, 500)],
+        ['Parent', pos(900, 100)], // inheritance opposite on the RIGHT
+        ['Other', pos(100, 100)],  // reference opposite on the LEFT
+    ]);
+    const nodeX = 410, nodeW = 180, nodeY = 500, nodeH = 80;
+
+    it('with nodePositions the branch lands on the geometric slot the handle is drawn at', () => {
+        const handleFrac = computeSidePositions(
+            computeSideEndpoints(edges as any, 'C', 'top'), nodePositions,
+        ).get('top-0:source')!;
+        expect(handleFrac).toBeCloseTo(2 / 3); // geometry: inheritance to the right
+
+        const withPos = computeHandlePositionForNode({
+            edges: edges as any, nodeId: 'C', nodeX, nodeY, nodeWidth: nodeW, nodeHeight: nodeH,
+            handleId: 'top-0', role: 'source', nodePositions,
+        });
+        expect(withPos.x).toBeCloseTo(nodeX + handleFrac * nodeW); // branch == handle
+    });
+
+    it('without nodePositions the branch diverges to the fallback slot (why threading matters)', () => {
+        const noPos = computeHandlePositionForNode({
+            edges: edges as any, nodeId: 'C', nodeX, nodeY, nodeWidth: nodeW, nodeHeight: nodeH,
+            handleId: 'top-0', role: 'source',
+        });
+        expect(noPos.x).toBeCloseTo(nodeX + (1 / 3) * nodeW); // edge-id fallback slot, not geometric
     });
 });

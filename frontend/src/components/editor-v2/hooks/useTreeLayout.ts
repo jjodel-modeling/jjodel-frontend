@@ -1,5 +1,5 @@
 import { useMemo, useEffect } from 'react';
-import { useNodes, useEdges } from '@xyflow/react';
+import { useNodes, useEdges, useStoreApi } from '@xyflow/react';
 import {
     computeTreeConnectorPath,
     registerEdgePath,
@@ -58,6 +58,7 @@ export function useTreeLayout(
 ): TreeLayoutResult {
     const allNodes = useNodes();
     const allEdges = useEdges();
+    const storeApi = useStoreApi();
 
     // Tree group detection — find all inheritance edges targeting the same parent
     const group = useMemo(() => {
@@ -102,6 +103,17 @@ export function useTreeLayout(
         const nodeMap = new Map(allNodes.map(n => [n.id, n]));
         const branches: TreeBranch[] = [];
 
+        // Centroid map for the geometry-aware inheritance ordering (S7). Built the
+        // SAME way DynamicHandles does (nodeLookup + positionAbsolute) so the branch
+        // landing and the rendered handle resolve to the identical fraction.
+        const nodePositions = new Map<string, { centerX: number; centerY: number }>();
+        for (const [id, n] of storeApi.getState().nodeLookup) {
+            const p = n.internals?.positionAbsolute ?? n.position;
+            const nw = n.measured?.width ?? 180;
+            const nh = n.measured?.height ?? 80;
+            nodePositions.set(id, { centerX: p.x + nw / 2, centerY: p.y + nh / 2 });
+        }
+
         for (const edge of group) {
             const childNode = nodeMap.get(edge.source);
             if (!childNode) continue;
@@ -127,13 +139,14 @@ export function useTreeLayout(
                 nodeHeight: h,
                 handleId: childHandleId,
                 role: 'source',
+                nodePositions,
             });
 
             branches.push({ childX: handlePos.x, childY, edgeId: edge.id });
         }
 
         return computeTreeConnectorPath(targetX, targetY, branches, [], treeExcludeIds);
-    }, [isGrouped, group, allNodes, allEdges, targetX, targetY, sourceSide, treeExcludeIds]);
+    }, [isGrouped, group, allNodes, allEdges, storeApi, targetX, targetY, sourceSide, treeExcludeIds]);
 
     // Register tree geometry paths for crossing detection.
     // All segments use treeGroupId = target (parent node ID) so that
