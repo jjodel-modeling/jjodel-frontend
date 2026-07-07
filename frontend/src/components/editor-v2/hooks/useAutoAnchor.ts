@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useNodes } from '@xyflow/react';
 import type { AnchorConfig, AnchorSide } from '../types';
+import { MAX_HANDLES_PER_SIDE } from '../utils/portDistribution';
 
 const SIDES = ['top', 'right', 'bottom', 'left'] as const;
 type Side = (typeof SIDES)[number];
@@ -555,6 +556,27 @@ function computeBestAnchorsWithContext(
         }
     }
 
+    // Frontal side pair by dominant axis (vertical-dominant on ties, matching
+    // computeOptimalHandles / deconfliction). The same-side U is only a legitimate
+    // escape once this frontal side is physically full; below saturation the
+    // occupancy penalty alone must not be allowed to flip an edge onto a U — that
+    // produced the observed wrap-around (side-selection case B).
+    let frontalSrc: Side;
+    let frontalTgt: Side;
+    if (Math.abs(dy) >= Math.abs(dx)) {
+        if (dy >= 0) { frontalSrc = 'bottom'; frontalTgt = 'top'; }
+        else { frontalSrc = 'top'; frontalTgt = 'bottom'; }
+    } else {
+        if (dx > 0) { frontalSrc = 'right'; frontalTgt = 'left'; }
+        else { frontalSrc = 'left'; frontalTgt = 'right'; }
+    }
+    // Saturated when the frontal side already holds more than a full side's worth
+    // of edges at either endpoint — i.e. this edge would overflow it. Exactly
+    // MAX_HANDLES_PER_SIDE still fits, so it is NOT saturated (strict >).
+    const frontalSaturated =
+        sourceSideInfo[frontalSrc].count > MAX_HANDLES_PER_SIDE ||
+        targetSideInfo[frontalTgt].count > MAX_HANDLES_PER_SIDE;
+
     // Score each candidate pair — geometric fitness vs occupancy
     const candidates: Array<{ sourceSide: Side; targetSide: Side }> = [
         // Opposing pairs (Z-shape routing)
@@ -562,10 +584,16 @@ function computeBestAnchorsWithContext(
         { sourceSide: 'left', targetSide: 'right' },
         { sourceSide: 'bottom', targetSide: 'top' },
         { sourceSide: 'top', targetSide: 'bottom' },
-        // Same-side pairs (U-shape routing — used when opposing axis is occupied)
-        { sourceSide: 'right', targetSide: 'right' },
-        { sourceSide: 'left', targetSide: 'left' },
     ];
+    if (frontalSaturated) {
+        // Same-side pairs (U-shape routing) — admitted only when the frontal side
+        // is over capacity, so a crowded-but-not-full frontal side keeps the edge
+        // on a Z-shape (or a top/bottom spread) instead of wrapping into a U.
+        candidates.push(
+            { sourceSide: 'right', targetSide: 'right' },
+            { sourceSide: 'left', targetSide: 'left' },
+        );
+    }
 
     const dist = Math.sqrt(dx * dx + dy * dy);
     const nx = dist > 0 ? dx / dist : 0;

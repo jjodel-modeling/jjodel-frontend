@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { computeGeometricAnchorsForAllEdges, type NodeRect } from '../useAutoAnchor';
+import {
+    computeGeometricAnchorsForAllEdges,
+    computeAnchorsWithHysteresis,
+    type NodeRect,
+    type MinimalEdgeWithData,
+} from '../useAutoAnchor';
 
 /** Build a NodeRect from top-left position and size. */
 function rect(x: number, y: number, width = 180, height = 80): NodeRect {
@@ -19,8 +24,8 @@ describe('computeGeometricAnchorsForAllEdges — geometry-only side recalc (Step
             ['M1', rect(600, 500)],
         ]);
         const edges = [
-            { id: 'father', source: 'Family', target: 'M0', type: 'instanceRef' },
-            { id: 'mother', source: 'Family', target: 'M1', type: 'instanceRef' },
+            { id: 'father', source: 'Family', target: 'M0', type: 'reference' },
+            { id: 'mother', source: 'Family', target: 'M1', type: 'reference' },
         ];
 
         const result = computeGeometricAnchorsForAllEdges(edges, rects);
@@ -38,7 +43,7 @@ describe('computeGeometricAnchorsForAllEdges — geometry-only side recalc (Step
             ['B', rect(0, 400)],
         ]);
         const result = computeGeometricAnchorsForAllEdges(
-            [{ id: 'e', source: 'A', target: 'B', type: 'instanceRef' }],
+            [{ id: 'e', source: 'A', target: 'B', type: 'reference' }],
             rects,
         );
         expect(side(result.get('e')!.sourceHandle)).toBe('bottom');
@@ -53,8 +58,8 @@ describe('computeGeometricAnchorsForAllEdges — geometry-only side recalc (Step
         ]);
         const result = computeGeometricAnchorsForAllEdges(
             [
-                { id: 'fwd', source: 'A', target: 'B', type: 'instanceRef' },
-                { id: 'bwd', source: 'B', target: 'A', type: 'instanceRef' },
+                { id: 'fwd', source: 'A', target: 'B', type: 'reference' },
+                { id: 'bwd', source: 'B', target: 'A', type: 'reference' },
             ],
             rects,
         );
@@ -83,10 +88,77 @@ describe('computeGeometricAnchorsForAllEdges — geometry-only side recalc (Step
     it('missing node rect falls back to right/left without throwing', () => {
         const rects = new Map<string, NodeRect>([['A', rect(0, 0)]]);
         const result = computeGeometricAnchorsForAllEdges(
-            [{ id: 'e', source: 'A', target: 'ghost', type: 'instanceRef' }],
+            [{ id: 'e', source: 'A', target: 'ghost', type: 'reference' }],
             rects,
         );
         expect(side(result.get('e')!.sourceHandle)).toBe('right');
         expect(side(result.get('e')!.targetHandle)).toBe('left');
+    });
+});
+
+describe('computeBestAnchorsWithContext — same-side U gate on frontal saturation (Step C)', () => {
+    const isU = (r: { sourceHandle: string; targetHandle: string }) =>
+        side(r.sourceHandle) === side(r.targetHandle);
+
+    it('(a) 4 references out of one node onto right, none saturated → no same-side U', () => {
+        // Family with 4 references, all currently on right-0, all targets to the right.
+        // Frontal (right) occupancy = 4 = MAX_HANDLES_PER_SIDE → NOT over capacity, so the
+        // U candidate must not be admitted: no edge may end up same-side.
+        const rects = new Map<string, NodeRect>([
+            ['Family', rect(0, 200)],
+            ['M0', rect(600, 0)],
+            ['M1', rect(600, 150)],
+            ['M2', rect(600, 300)],
+            ['M3', rect(600, 450)],
+        ]);
+        const edges: MinimalEdgeWithData[] = ['M0', 'M1', 'M2', 'M3'].map((t, i) => ({
+            id: `e${i}`, source: 'Family', target: t, type: 'reference',
+            sourceHandle: 'right-0', targetHandle: 'left-0',
+        }));
+
+        const res = computeAnchorsWithHysteresis(edges, rects, edges);
+
+        for (const e of edges) {
+            expect(isU(res.get(e.id)!)).toBe(false);
+        }
+    });
+
+    // A dense hub: `rightCount` references leave on the right, and top+bottom are each
+    // filled to capacity, so a horizontal target's only uncrowded escape is the U.
+    // Whether the U is *offered* depends solely on the right side being over capacity.
+    function denseHub(rightCount: number) {
+        const rects = new Map<string, NodeRect>([
+            ['H', rect(500, 300)],
+            ['T', rect(1000, 320)],
+        ]);
+        const edges: MinimalEdgeWithData[] = [
+            { id: 'HT', source: 'H', target: 'T', type: 'reference', sourceHandle: 'right-0', targetHandle: 'left-0' },
+        ];
+        for (let i = 0; i < rightCount; i++) {
+            rects.set(`R${i}`, rect(1000, 200 + i * 40));
+            edges.push({ id: `hr${i}`, source: 'H', target: `R${i}`, type: 'reference', sourceHandle: 'right-0', targetHandle: 'left-0' });
+        }
+        for (let i = 0; i < 4; i++) {
+            rects.set(`B${i}`, rect(400 + i * 40, 900));
+            edges.push({ id: `hb${i}`, source: 'H', target: `B${i}`, type: 'reference', sourceHandle: 'bottom-0', targetHandle: 'top-0' });
+            rects.set(`U${i}`, rect(400 + i * 40, -400));
+            edges.push({ id: `hu${i}`, source: 'H', target: `U${i}`, type: 'reference', sourceHandle: 'top-0', targetHandle: 'bottom-0' });
+        }
+        return { rects, edges };
+    }
+
+    it('(b) frontal side over capacity (>MAX) → same-side U is admitted and chosen', () => {
+        // 5 refs already on H-right + the HT edge itself = 6 > 4: right is over capacity.
+        // With top/bottom also full, the least-penalised option is the same-side U.
+        const { rects, edges } = denseHub(5);
+        const res = computeAnchorsWithHysteresis(edges, rects, edges);
+        expect(isU(res.get('HT')!)).toBe(true);
+    });
+
+    it('(b-boundary) same hub with frontal exactly at capacity → U withheld', () => {
+        // 3 refs on H-right + HT = 4 = MAX: not over capacity, U stays out of the running.
+        const { rects, edges } = denseHub(3);
+        const res = computeAnchorsWithHysteresis(edges, rects, edges);
+        expect(isU(res.get('HT')!)).toBe(false);
     });
 });
