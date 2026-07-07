@@ -372,9 +372,12 @@ function computeAnchorsWithHysteresis(
             // Reference with both auto sides: compute best with occupancy scoring
             // so edges from the same node prefer different sides.
             const edgeContext = contextEdges || edges as unknown as EdgeContext[];
+            // Pass the edge's real (normalised) type and its id so the pair scan inside
+            // excludes this very edge — otherwise an M1 'instanceRef' edge self-matches
+            // the different-type rule (the :498 self-match, fixed here).
             const best = computeBestAnchorsWithContext(
                 sourceRect, targetRect, edge.source, edge.target,
-                'reference', edgeContext,
+                edgeType, edgeContext, edge.id,
             );
 
             // Dead-zone hysteresis: in the ambiguous 30°–60° angle range,
@@ -453,6 +456,7 @@ const SIDE_PREFERENCE: Record<Side, number> = {
 
 /** Minimal edge shape for occupancy context */
 interface EdgeContext {
+    id?: string;
     source: string;
     target: string;
     sourceHandle?: string | null;
@@ -476,6 +480,7 @@ function computeBestAnchorsWithContext(
     targetId: string,
     edgeType: 'inheritance' | 'reference' | undefined,
     existingEdges: EdgeContext[],
+    currentEdgeId?: string,
 ): { sourceHandle: string; targetHandle: string } {
     // Self-reference: fixed handles
     if (sourceId === targetId) {
@@ -490,8 +495,15 @@ function computeBestAnchorsWithContext(
     // Different-type same-pair rule: when an inheritance already exists between
     // these two nodes, the association must use same-side routing (right→right or left→left)
     // to create a clean U-shape instead of wrapping around both nodes.
+    //
+    // The edge being routed MUST be excluded from the pair scan (by id, mirroring the
+    // outer hasDifferentTypeOnPair guard). Otherwise an M1 edge whose real type
+    // ('instanceRef'/'composition') differs from the caller-passed edgeType ('reference')
+    // self-matches and takes this same-side early-return, bypassing the frontal-saturation
+    // gate — the :498 self-match. Only a genuine OTHER edge of a different type counts.
     const hasDifferentTypeBetweenPair = existingEdges.some(
-        e => ((e.source === sourceId && e.target === targetId) ||
+        e => (currentEdgeId === undefined || e.id !== currentEdgeId) &&
+             ((e.source === sourceId && e.target === targetId) ||
               (e.source === targetId && e.target === sourceId)) &&
              (e.type || 'reference') !== (edgeType || 'reference')
     );

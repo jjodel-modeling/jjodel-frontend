@@ -162,3 +162,38 @@ describe('computeBestAnchorsWithContext — same-side U gate on frontal saturati
         expect(isU(res.get('HT')!)).toBe(false);
     });
 });
+
+describe('computeBestAnchorsWithContext — :498 self-match fix (S4b Step B)', () => {
+    const isU = (r: { sourceHandle: string; targetHandle: string }) =>
+        side(r.sourceHandle) === side(r.targetHandle);
+
+    it('a lone M1 instanceRef edge does NOT self-match the different-type rule', () => {
+        // Real type 'instanceRef' differs from the caller-passed 'reference'; before the
+        // fix the edge matched itself as a "different-type pair" and took the same-side
+        // early-return. With self excluded by id, it reaches the normal scoring → Z-shape.
+        const rects = new Map<string, NodeRect>([
+            ['A', rect(0, 0)],
+            ['B', rect(600, 0)],
+        ]);
+        const edges: MinimalEdgeWithData[] = [
+            { id: 'e', source: 'A', target: 'B', type: 'instanceRef', sourceHandle: 'right-0', targetHandle: 'left-0' },
+        ];
+        const res = computeAnchorsWithHysteresis(edges, rects, edges);
+        expect(isU(res.get('e')!)).toBe(false);
+    });
+
+    it('a genuine inheritance+reference pair still routes the reference same-side (invariant)', () => {
+        // With a real different-type edge (inheritance) on the same pair, the reference
+        // edge must keep the same-side U convention.
+        const rects = new Map<string, NodeRect>([
+            ['A', rect(0, 0)],
+            ['B', rect(600, 0)],
+        ]);
+        const edges: MinimalEdgeWithData[] = [
+            { id: 'inh', source: 'A', target: 'B', type: 'inheritance', sourceHandle: 'top-0', targetHandle: 'bottom-0' },
+            { id: 'ref', source: 'A', target: 'B', type: 'instanceRef', sourceHandle: 'right-0', targetHandle: 'right-0' },
+        ];
+        const res = computeAnchorsWithHysteresis(edges, rects, edges);
+        expect(isU(res.get('ref')!)).toBe(true);
+    });
+});
