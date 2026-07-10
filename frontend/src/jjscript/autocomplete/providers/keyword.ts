@@ -171,7 +171,7 @@ export class KeywordProvider implements SuggestionProvider {
                 );
             case 'delete':
                 return KEYWORDS.filter(k =>
-                    ['cascade', 'force'].includes(k.name)
+                    ['cascade', 'force', 'in'].includes(k.name)
                 );
             case 'rename':
                 return KEYWORDS.filter(k =>
@@ -215,7 +215,7 @@ export class KeywordProvider implements SuggestionProvider {
                 keywords = ['in', 'type', 'extends', 'default'];
                 break;
             case 'delete':
-                keywords = ['cascade', 'force'];
+                keywords = ['cascade', 'force', 'in'];
                 break;
             case 'rename':
                 keywords = ['to'];

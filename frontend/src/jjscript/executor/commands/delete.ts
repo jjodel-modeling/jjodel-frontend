@@ -15,7 +15,6 @@ import { executeDeleteInstance } from './instance';
 
 import {
     DeleteElementAction,
-    TRANSACTION,
     LProject
 } from '../../../joiner';
 
@@ -61,6 +60,25 @@ export async function executeDelete(
             };
         }
 
+        // Type guard: when an explicit element type was given, ensure the
+        // resolved element's D-layer className matches. A bare/ambiguous target
+        // (e.g. "delete attribute name") can resolve project-wide to the first
+        // element of that name — possibly the wrong kind — so reject a mismatch
+        // instead of deleting the wrong element. L-proxy .className returns the
+        // D-name (DAttribute, DClass, …), so substring matching is correct (CLAUDE.md §3.13).
+        if (args.elementType && !matchesElementType(element, args.elementType)) {
+            return {
+                success: false,
+                command: 'delete',
+                message: `'${qualifiedNameToString(target)}' is not a ${args.elementType} (found ${element.className})`,
+                errors: [{
+                    code: 'TYPE_MISMATCH',
+                    message: `Resolved element is ${element.className}, expected ${args.elementType}`,
+                    suggestion: 'Check the element name or use a qualified name like Class.attribute'
+                }]
+            };
+        }
+
         // Check for dependencies if not forcing
         if (!force) {
             const dependencies = checkDependencies(element, project);
@@ -79,39 +97,31 @@ export async function executeDelete(
             }
         }
 
-        // Perform deletion
-        return new Promise((resolve) => {
-            try {
-                TRANSACTION('JjScript: Delete element', () => {
-                    const elementId = element.id || element;
-                    const elementName = element.name || qualifiedNameToString(target);
-
-                    // If cascade, delete all children first
-                    if (cascade) {
-                        deleteChildren(element);
-                    }
-
-                    // Delete the element
-                    DeleteElementAction.new(element);
-
-                    resolve({
-                        success: true,
-                        command: 'delete',
-                        message: `Deleted '${elementName}'${cascade ? ' and its children' : ''}`,
-                        data: { id: elementId, name: elementName },
-                        affectedElements: [elementId],
-                        undoable: true
-                    });
-                });
-            } catch (error) {
-                resolve({
-                    success: false,
-                    command: 'delete',
-                    message: `Failed to delete: ${(error as Error).message}`,
-                    errors: [{ code: 'DELETE_ERROR', message: (error as Error).message }]
-                });
-            }
-        });
+        // Perform deletion via L-proxy delete(): fires Dummy.get_delete cascade
+        // (children, father's collection, pointedBy cleanup, M1 DValues, and
+        // canvas DVertex nodes via lDeleted.nodes + case 'model' edges).
+        // It wraps its own TRANSACTION internally — no outer wrapper (see
+        // canvasToJjom.syncRemoveAttribute for the canonical pattern).
+        try {
+            const elementId = element.id;
+            const elementName = element.name || qualifiedNameToString(target);
+            element.delete();
+            return {
+                success: true,
+                command: 'delete',
+                message: `Deleted '${elementName}'`,
+                data: { id: elementId, name: elementName },
+                affectedElements: [elementId],
+                undoable: true
+            };
+        } catch (error) {
+            return {
+                success: false,
+                command: 'delete',
+                message: `Failed to delete: ${(error as Error).message}`,
+                errors: [{ code: 'DELETE_ERROR', message: (error as Error).message }]
+            };
+        }
 
     } catch (error) {
         const err = error as Error;
@@ -127,6 +137,22 @@ export async function executeDelete(
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
+
+// Substring tokens matched against an L-proxy's D-layer className
+// (DAttribute, DClass, …). See CLAUDE.md §3.13: .className returns the
+// D-name, never the L-name, so substring matching — not equality — is correct.
+const TYPE_TOKENS: Record<string, string> = {
+    class: 'Class', interface: 'Class', attribute: 'Attribute',
+    reference: 'Reference', operation: 'Operation', package: 'Package',
+    enum: 'Enum', enumeration: 'Enum', literal: 'Literal', parameter: 'Parameter'
+};
+
+function matchesElementType(element: any, elementType: string): boolean {
+    const token = TYPE_TOKENS[elementType.toLowerCase()];
+    if (!token) return true; // unknown type string: do not block
+    const className = element?.className || '';
+    return className.includes(token);
+}
 
 function checkDependencies(element: any, project: LProject): string[] {
     const dependencies: string[] = [];
@@ -151,6 +177,8 @@ function checkDependencies(element: any, project: LProject): string[] {
     return dependencies;
 }
 
+// TODO: cleanup — superseded by element.delete() cascade (Dummy.get_delete
+// iterates lDeleted.children). Retained per CLAUDE.md §2; no longer called.
 function deleteChildren(element: any): void {
     try {
         // Delete children based on element type

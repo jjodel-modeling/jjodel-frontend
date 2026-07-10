@@ -176,7 +176,7 @@ Deletes a model element.
 
 SYNTAX:
   delete <target> [cascade] [force]
-  delete <type> <target> [cascade] [force]
+  delete <type> <target> [in <container>] [cascade] [force]
 
 The element type (class, attribute, etc.) is optional and can be used
 for clarity or to resolve ambiguity.
@@ -190,6 +190,7 @@ EXAMPLES:
   delete class Person
   delete Person cascade
   delete attribute name force
+  delete attribute name in Person
   delete MyPackage::OldClass force
 `,
         rename: `

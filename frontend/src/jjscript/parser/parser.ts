@@ -458,7 +458,19 @@ export class Parser {
             }
         }
 
-        const target = this.parseQualifiedNameToken();
+        let target = this.parseQualifiedNameToken();
+
+        // Check for "in <parent>" clause (e.g., "delete attribute name in MyClass")
+        // This creates a qualified target: MyClass.name — same pattern as parseRenameCommand
+        if (this.matchKeyword('in')) {
+            const parent = this.parseQualifiedNameToken();
+            const elementName = target.segments[target.segments.length - 1];
+            target = {
+                segments: parent.segments,
+                member: elementName,
+                raw: `${parent.raw}.${elementName}`
+            };
+        }
 
         let cascade = false;
         let force = false;
