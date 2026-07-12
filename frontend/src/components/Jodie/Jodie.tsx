@@ -16,8 +16,6 @@ import {
     TAIProvider, AIConfig, AI, JodieConfig,
     ConsoleMode, CodeFlavor, CodeEntry, isChatEntry
 } from '../../types/jodie';
-import { evaluateJjelInJodie } from './jodieJjelContext';
-import { AIProviderService } from '../../services/AIProviderService';
 import { useSettingsModalSafe } from '../../contexts/SettingsModalContext';
 import { JjodieEvents, AIEvents, JjScriptEvents, JjodelEvents } from '../../events/registry';
 import { JjodieContextService, ActiveArtifact } from '../../services/JjodieContext';
@@ -27,12 +25,21 @@ import {DUser, L, LUser, LProject, store} from '../../joiner';
 import DockManager from '../abstract/DockManager';
 import TabDataMaker from '../abstract/tabs/TabDataMaker';
 import { JjScriptService } from '../../jjscript';
+import { consoleLanguageRegistry } from './console/languageRegistry';
+import type { ConsoleContext } from './console/types';
 import './JodieWindow.css';
 
 // Generate unique message ID
 function generateMessageId(): string {
     return `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
+
+// Console language providers, resolved once from the shared registry (the three
+// built-ins are registered at module load). Routing decisions below are
+// unchanged; only the entry-point dispatch goes through the registry now.
+const jjodieProvider = consoleLanguageRegistry.get('jjodie')!;
+const jjscriptProvider = consoleLanguageRegistry.get('jjscript')!;
+const jjelProvider = consoleLanguageRegistry.get('jjel')!;
 
 // localStorage keys for the console mode switcher (Chat / Code).
 const CONSOLE_MODE_KEY = 'jjodel.console.mode';
@@ -304,25 +311,15 @@ export function Jodie(): JSX.Element {
 
     // Submit a JjEL expression from the Code-mode input. Synchronous evaluator:
     // append the input + result (or error) as a single CodeEntry to the unified history.
-    const handleSubmitCode = useCallback((rawInput: string) => {
+    const handleSubmitCode = useCallback(async (rawInput: string) => {
         const input = rawInput.trim();
         if (!input) return;
-        const outcome = codeFlavor === 'jjel'
-            ? evaluateJjelInJodie(input)
-            : { ok: false as const, text: 'JS flavor is not yet available.', warnings: [] };
-        const entry: CodeEntry = {
-            id: generateMessageId(),
-            kind: 'code',
-            flavor: codeFlavor,
-            input,
-            output: outcome.ok
-                ? { ok: true, value: outcome.text }
-                : { ok: false, error: outcome.text },
-            timestamp: Date.now(),
-            warnings: outcome.warnings.length > 0 ? outcome.warnings : undefined,
-            rawValue: outcome.ok ? outcome.value : undefined,
-        };
-        setChatState(prev => ({ ...prev, messages: [...prev.messages, entry] }));
+        // Route Code-mode input through the jjel provider (behavior-preserving:
+        // same CodeEntry as the inline path). Async only because the provider
+        // interface is Promise-based; the JjEL evaluation itself is synchronous.
+        const ctx: ConsoleContext = { makeId: generateMessageId, codeFlavor };
+        const { entries } = await jjelProvider.run(input, ctx);
+        setChatState(prev => ({ ...prev, messages: [...prev.messages, ...entries] }));
     }, [codeFlavor]);
 
     // Promotion: from a Jjodie chat reply with a code block, switch to Code mode
@@ -390,27 +387,16 @@ export function Jodie(): JSX.Element {
             }));
 
             try {
-                // Execute JjScript command
-                const result = await JjScriptService.execute(content);
-
-                // Format result as chat message
-                const responseContent = JjScriptService.formatResultForChat(result);
-
-                const assistantMessage: ChatMessage = {
-                    id: generateMessageId(),
-                    kind: 'chat',
-                    role: 'assistant',
-                    content: responseContent,
-                    timestamp: Date.now(),
-                    jjscriptResult: {
-                        success: result.success,
-                        command: result.command,
-                    },
-                };
+                // Route JjScript execution through the jjscript provider
+                // (behavior-preserving: same assistant ChatMessage carrying
+                // jjscriptResult:{success,command}). Errors propagate to the
+                // catch below, which builds the "JjScript Error" message.
+                const ctx: ConsoleContext = { makeId: generateMessageId };
+                const { entries } = await jjscriptProvider.run(content, ctx);
 
                 setChatState(prev => ({
                     ...prev,
-                    messages: [...prev.messages, assistantMessage],
+                    messages: [...prev.messages, ...entries],
                     isWaiting: false,
                 }));
             } catch (error) {
@@ -498,43 +484,27 @@ export function Jodie(): JSX.Element {
 
         try {
             // Get conversation history (excluding the message we just added).
-            // Filter out CodeEntry items: AIProviderService consumes ChatMessage[] only.
+            // Filter out CodeEntry items: the jjodie provider forwards ChatMessage[] only.
             const history = chatState.messages.filter(isChatEntry);
 
-            // Get RAG-augmented context based on query
-            let augmentedContext = projectContext;
-            if (ragInitialized) {
-                try {
-                    const ragContext = await JjodieRagService.getAugmentedContext(content);
-                    if (ragContext) {
-                        // Combine structural context with RAG-retrieved context
-                        augmentedContext = projectContext
-                            ? `${projectContext}\n\n---\n\n**Relevant Information:**\n${ragContext}`
-                            : `**Relevant Information:**\n${ragContext}`;
-                    }
-                } catch (ragError) {
-                    console.warn('[Jodie] RAG context retrieval failed:', ragError);
-                }
-            }
-
-            // Call AI provider with augmented context, images and documents.
-            // Pass per-feature model (falls back to provider's AIConfig.model inside chat()).
-            const chatModel = AIConfig.getPreferredModel('chat');
-            const response = await AIProviderService.chat(content, providerToUse, history, augmentedContext, images, documents, chatModel);
-
-            // Add assistant message
-            const assistantMessage: ChatMessage = {
-                id: generateMessageId(),
-                kind: 'chat',
-                role: 'assistant',
-                content: response,
-                timestamp: Date.now(),
-                provider: providerToUse,
+            // Route the LLM call through the jjodie provider (behavior-preserving:
+            // same RAG augmentation, per-feature model, and assistant ChatMessage).
+            // chat() errors propagate to the catch below, which preserves the
+            // hasUnread semantics (only the success path sets hasUnread).
+            const ctx: ConsoleContext = {
+                makeId: generateMessageId,
+                activeProvider: providerToUse,
+                history,
+                projectContext,
+                ragInitialized,
+                images,
+                documents,
             };
+            const { entries } = await jjodieProvider.run(content, ctx);
 
             setChatState(prev => ({
                 ...prev,
-                messages: [...prev.messages, assistantMessage],
+                messages: [...prev.messages, ...entries],
                 isWaiting: false,
                 hasUnread: !prev.isOpen,
             }));
