@@ -804,6 +804,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
                 this.setExternalPtr(thiss.father, "values", "+=");
             }
         }
+        thiss.eidFeature = "__recalculating__";
         instanceoff && this.setWithSideEffect( "instanceof", instanceoff);
         return this; }
 
@@ -997,6 +998,7 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
         thiss.final = false;
         thiss.allowCrossReference = false;
         thiss.typeParameters = [];
+        thiss.eidFeature = "__recalculating__";
         this.setExternalPtr(thiss.father, "classes", "+=");
         this.setExternalRootProperty('ClassNameChanged.'+thiss.id, thiss.name, '', false);
 
@@ -2143,8 +2145,11 @@ export class LPointerTargetable<Context extends LogicContext<DPointerTargetable>
         return dependencies;
     }
 
+    // fallback, eid exists only on lobjects
+    protected get_eid(c: Context): any { return this.get_name(c); }
+
     name!:string;
-    __info_of__name: Info.namee;
+    __info_of__name: Info = Info.namee;
     protected get_name(c: Context): this["name"] {
         let nameattribute = (c.proxyObject as any).$name;
         let ret: string = undefined as any;
@@ -2795,7 +2800,7 @@ export class LUser<Context extends LogicContext<DUser> = any, D extends DUser = 
     __isLUser!: true;
     avatar!: ReactNode;
     index!: number;
-    __info_of__name: Info.name;
+    __info_of__name: Info = Info.namee;
     __info_of__index: Info = {type: ShortAttribETypes.EInt, txt: "Index of the order of joining the collaborative session."}
     get_index(c: Context): this["index"] {
         const project = LProject.getProject();
@@ -3091,7 +3096,7 @@ export class LProject<Context extends LogicContext<DProject> = any, D extends DP
     collaboratorsMap!: Dictionary<DocString<"socket id">, Pointer<DUser>>;
     onlineUsers!: number;
     name!: string;
-    __info_of__name: Info.name;
+    __info_of__name: Info = Info.namee;
     metamodels!: LModel[];
     models!: LModel[];
     graphs!: LGraph[];

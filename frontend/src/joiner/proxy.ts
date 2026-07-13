@@ -417,21 +417,11 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
             // normal getter method call
             if (typeof propKey !== 'symbol' && this.g + propKey in this.lg) {
                 let cache = ProxyCache.get(propKey, this.d as any, this.lg["__info_of__"+propKey]);
+                if ((window as any).debugp) console.warn("getter proxy cache " + propKey, {cache:{...cache}, i:this.lg["__info_of__"+propKey]});
                 if (cache?.success) return cache.value;
                 const ret = this.lg[this.g + propKey](logicContext);
-                if (cache) {
-                    // if (propKey === "name") ProxyCache.updateName(this.d, ret); else
-                    ProxyCache.set(ret, cache);
-                }
-            }
-
-
-
-            // if specific custom getter exist
-            if (typeof propKey !== 'symbol' && this.g + propKey in this.lg) {
-                let getterMethod: Function = this.lg[this.g + propKey]; // || this.defaultGetter;
-                // console.log("gets method", {getterMethod, lg:this.lg, thiss: this});
-                if (getterMethod) return getterMethod(logicContext);
+                if (cache) ProxyCache.set(ret, cache, propKey, this.d as any);
+                return ret;
             }
 
         }
@@ -440,8 +430,15 @@ export class TargetableProxyHandler<ME extends GObject = DModelElement, LE exten
 
 
         // if custom generic getter exist
-        // @ts-ignore
-        if (this.lg._defaultGetter) return this.lg._defaultGetter(logicContext, propKey);
+        if (this.lg._defaultGetter) {
+            let cache = ProxyCache.get(propKey, this.d as any, this.lg["__info_of__"+propKey]);
+            if ((window as any).debugp) console.warn("default getter proxy cache " + propKey, {cache:{...cache}});
+            if (cache?.success) return cache.value;
+            // @ts-ignore
+            const ret = this.lg._defaultGetter(logicContext, propKey);
+            if (cache) ProxyCache.set(ret, cache, propKey, this.d as any);
+            return ret;
+        }
 
         // if property do not exist, try a concatenation
         /*let concatenationTentative = null;

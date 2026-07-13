@@ -393,7 +393,7 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
     // own properties
     isValidation!: boolean; // only for root views (ex viewpoints) to group views semantically.
     name!: string;
-    __info_of__name: Info = {isGlobal: true, type: ShortAttribETypes.EString, txt:<div>Name of the view</div>}
+    __info_of__name: Info = {isGlobal: true, type: ShortAttribETypes.EString, txt:<div>Name of the view</div>, dependencies: [""]}
     isOverlay!:boolean;
     __info_of__isOverlay: Info = {isGlobal:true, type: ShortAttribETypes.EBoolean, txt:<div>If not exclusive, the view is meant to add a functional outline of tools to a primary View, or css.
             <br/>A non-exclusive view cannot be applied alone and needs an exclusive view to render the main graphical content.</div>};

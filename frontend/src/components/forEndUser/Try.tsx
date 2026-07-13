@@ -132,7 +132,7 @@ class TryComponent extends React.Component<AllProps, State> {
     }
 
     componentDidCatch(error: Error, info?: React.ErrorInfo): void {
-        console.error("uncatched error didcatch:", {info});
+        console.error("uncatched error didcatch:", {error: {...error, stack: (error?.stack || "").split("\n")}, info, istack: (info?.componentStack || "").split("\n")});
         // this is called after error propagation and a full render cycle is complete, i use it to trigger a rerender with more accurate infos.
         this.setState({error, info, stateUpdateTime: this.props.stateUpdateTime});
     }
@@ -164,14 +164,14 @@ class TryComponent extends React.Component<AllProps, State> {
     }
 
     catch(error: GObject<Error>, info?: React.ErrorInfo): ReactNode{
-        console.error("uncatched error:", {state:{...this.state}});
+        // Log.ee("uncatched error:", {state:{...this.state}, error, stack: (error?.stack || "").split("\n"), info: (info ?(info?.componentStack || "").split("\n"): null)});
         if (this.props.catch) {
             try {
                 if (typeof this.props.catch === "function") return this.props.catch(error, info);
                 if (React.isValidElement(this.props.catch)) return this.props.catch;
             }
-            catch (e) {
-                console.error("uncatched error. !! with invalid catch func !!", {catcherFuncError:e});
+            catch (e: any) {
+                console.error("uncatched error. !! with invalid catch func !!", {catcherFuncError:e, stack: (e?.stack || "").split("\n")});
             }
         }
         error.id = Constructors.makeID();
@@ -200,7 +200,7 @@ class TryComponent extends React.Component<AllProps, State> {
                 <li>- {mailto && [<a href={mailto}>Mail the developers</a>, " or"]} <a href={gitissue} target="_blank" rel="noreferrer">open an issue</a></li>
             </ul>
         </div>
-        return DefaultView.error(visibleMessage, "unhandled", undefined, undefined, undefined, (e)=> this.reset(e));
+        return DefaultView.error(visibleMessage, "unhandled", undefined, undefined, undefined, (e)=> this.reset(e), error, info);
     }
 
     decompress() {

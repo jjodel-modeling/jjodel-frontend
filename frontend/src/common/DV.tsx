@@ -1796,7 +1796,8 @@ public static typeDeclaration(): string {
 
 
     public static error(msg: undefined | ReactNode, errortype: string | "SYNTAX" | "RUNTIME",
-                        data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: LViewElement|DViewElement, clickRetry?: (e:any)=>any): React.ReactNode {
+                        data?: DModelElement | undefined, node?: DGraphElement | undefined, v?: LViewElement|DViewElement,
+                        clickRetry?: (e:any)=>any, error?: GObject<Error>, info?: React.ErrorInfo): React.ReactNode {
 
         let dname: string | undefined = data && ((data as any).name || data.className.substring(1));
         if (dname && dname.length >= 10) dname = dname.substring(0, 7) + '…';
@@ -1811,7 +1812,9 @@ public static typeDeclaration(): string {
             e.target.classList.add('opened');
         }
 
-        console.error("view error:", {msg, errortype, data, node, v});
+        let elog = error ? {...error, stack: (error?.stack || "").split("\n")} : null;
+        let ilog = info ? {...info, componentStack:(info?.componentStack || "").split("\n")} : null;
+        console.error((v ? "view error:" : "unhandled error:"), {msg, errortype, data, node, v, error:elog, info: ilog});
         switch (notificationType) {
             case 'classic':
                 // Use ErrorDisplay which manages both badge and modal with state

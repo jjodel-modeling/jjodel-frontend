@@ -302,7 +302,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     __info_of__zoom: Info = {type:GraphPoint.cname, label:"zoom", txt:"Scales the graph and all subelements by a factor."};
     get_ownZoom(c: Context): GraphPoint {
         let zoom: GraphPoint;
-        let isGraph = (true as any) || c.data.className.indexOf('Graph');
+        let isGraph = (true as any) || c.data.className.includes('Graph');
         if (isGraph) { zoom = (c.data as DGraph).zoom; }
         else { return this.get_graph(c)?.ownZoom || new GraphPoint(1, 1); }
         return new GraphPoint(zoom?.x||1, zoom?.y||1); // NB: do not use (??1), zero is not a valid value for zoom.
@@ -372,7 +372,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
         let current = c.proxyObject;
         let next = current.father;
         let ret: LGraph[] = [];
-        while(next) {
+        while (next) {
             if (RuntimeAccessibleClass.extends(next.className, DGraph.cname)) ret.push(next as LGraph);
             if (current.id === next.id) break;
             current = next;

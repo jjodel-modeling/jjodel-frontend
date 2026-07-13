@@ -91,6 +91,7 @@ export const statehistory: {
 export class DState extends DPointerTargetable{
     static subclasses: (typeof RuntimeAccessibleClass | string)[] = [];
     static _extends: (typeof RuntimeAccessibleClass | string)[] = [];
+    public static current: DState;
     static new(): DState {
         let ds = new DState('dwc');
         new Constructors(ds, undefined, false, undefined)

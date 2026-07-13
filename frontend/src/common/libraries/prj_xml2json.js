@@ -65,6 +65,9 @@ var X = {
       else if (xml.nodeType==9) { // document.node
          o = X.toObj(xml.documentElement);
       }
+      else if (xml.nodeType==8) { // comment
+         return {};
+      }
       else console.error("unhandled xml node type: " + xml.nodeType, {xml, nodetype:xml.nodeType});
       return o;
    },

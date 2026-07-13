@@ -53,6 +53,17 @@ import {Await, NavigateFunction} from "react-router-dom";
 
 // console.warn('ts loading U log');
 
+type ConsoleMethod = "log" | "warn" | "error" | "info" | "debug" | "trace";
+
+const CONSOLE_METHODS: ConsoleMethod[] = [
+    "log",
+    "warn",
+    "error",
+    "info",
+    "debug",
+    "trace",
+] as const;
+
 @RuntimeAccessible('Color')
 export class Color {
     r: number;
@@ -1698,6 +1709,54 @@ export class U {
         return defaultVal;
     }
 
+
+    private static _consoleMemory : {method: ConsoleMethod, args: unknown[]}[] = [];
+    private static _consoleOriginals: Partial<Record<ConsoleMethod, (...args: unknown[]) => void>> = {};
+    private static _isConsoleSuspended: boolean = false;
+    // Replaces console methods with placeholders that just memorize args.
+    static consoleSuspend(memorizes: boolean = true) {
+        if (U._isConsoleSuspended) return;
+        U._isConsoleSuspended = true;
+        for (const method of CONSOLE_METHODS) {
+            U._consoleOriginals[method] = console[method];
+            console[method] = memorizes ?
+                ((...args: unknown[]) => { U._consoleMemory.push({ method, args }); })
+            : (()=> {});
+        }
+    }
+
+    // Restore original logger functions, and calls them with original parameters.
+    static consoleResume(printMemory: boolean = true) {
+        if (!U._isConsoleSuspended) return;
+        for (const method of CONSOLE_METHODS) {
+            console[method] = U._consoleOriginals[method]!;
+        }
+        if (printMemory) for (const { method, args } of U._consoleMemory) {
+            console[method](...args);
+        }
+        U._consoleMemory = [];
+        U._isConsoleSuspended = false;
+    }
+
+    static measure(f: ()=>void, times: number = 100): number {
+        if (typeof f !== "function") return -1;
+        if (typeof times !== "number" || isNaN(times)) return -1;
+        U.consoleSuspend(true);
+        let start = Date.now();
+        let i: number = 0;
+        while (i++ < times) {
+            try { f(); }
+            catch (e: any) {
+                i = times + 1 ; // stops with overflow counter (signals error)
+                console.error("Measure error:", e);
+            }
+        }
+        let end = Date.now();
+        U.consoleResume(true);
+        if (i > times + 1) return -1;
+        return end - start;
+    }
+
     static arrayDifference<T>(starting: T[], final: T[], filter: boolean = false): {added: T[], removed: T[], starting: T[], final: T[]} {
         return Uarr.arrayDifference(starting, final, filter);
     }
@@ -2089,7 +2148,7 @@ export class U {
 
     static toNamedArray<D extends DPointerTargetable, L extends LPointerTargetable>(larr:L[], names?: string[] | D[] ): NamedArr<L> {
         // let names: any = null;
-        if (!names || names.length !== names.length) names = larr.map(l=> l.eid);
+        if (!names || names.length !== names.length) names = larr.map(l=> (l as any).eid);
         let ret: NamedArr<L> = larr as any;
         for (let i = 0; i < larr.length; i++) {
             let name = (names[i] as unknown as LNamedElement)?.name || names[i];
@@ -3266,7 +3325,7 @@ export class Uarr{
         return arr1.filter( e => arr2.indexOf(e) >= 0);
     }
 
-    static arraySubtract1<T>(arr1: T[], arr2: T[], inPlace: boolean, filter = true, equals?: (e1:T, e2:T) => boolean): any[]{
+    static arraySubtract1<T>(arr1: T[], arr2: T[], inPlace: boolean, filter = false, equals?: (e1:T, e2:T) => boolean): any[]{
         const ret: any[] = inPlace ? arr1 : [...arr1];
         let toDelete = Symbol("to_delete");
         for (let e1 of arr2) {
@@ -3277,11 +3336,8 @@ export class Uarr{
                 ret[i] = toDelete;
             }
         }
-        if (filter) return ret.filter(e=> e !== toDelete);
-        for (let i = 0; i < ret.length; i++) {
-            if (ret[i] === toDelete) delete ret[i];
-        }
-        return ret;
+        if (filter) return ret.filter(e=> !!e);
+        return ret.filter(e=> e !== toDelete);
     }
 
     static arraySubtract(arr1: any[], arr2: any[], inPlace: boolean): any[]{

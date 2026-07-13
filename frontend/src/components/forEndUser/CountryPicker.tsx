@@ -286,13 +286,10 @@ function CountryPickerComponent(props: AllProps) {
             ];
 
         
-        return (<>
-            <option value="" disabled selected>Select a country</option>
-            {options.map(option => (
-                data[field].value === option.value ? <option selected>{option.value}</option> : <option>{option.value}</option>
-            ))}
-            
-        </>);
+        return (
+            <optgroup label={"Select a country"}>
+                {options.map(option => <option>{option.value}</option>)}
+            </optgroup>)
     }
 
     const otherprops: GObject = {...props};

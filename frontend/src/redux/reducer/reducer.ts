@@ -603,16 +603,19 @@ export function reducer(oldState: DState = initialState, action: Action, liveCha
     if (!safeMode) {
         let ret = unsafereducer(oldState, action);
         DO_AFTER_TRANSACTION_NOT_FOR_USERS(ret);
+        DState.current = ret;
         return ret;
     }
 
     try {
         let ret = unsafereducer(oldState, action);
         DO_AFTER_TRANSACTION_NOT_FOR_USERS(ret);
+        DState.current = ret;
         return ret;
     }
-    catch (e) {
-        console.error('unhandled error in reducer', {e, oldState, action});
+    catch (e: any) {
+        console.error('unhandled error in reducer', {e, oldState, action, stack: (e?.stack || "").split("\n")});
+        DState.current = oldState;
         return oldState;
     }
 }
@@ -625,10 +628,12 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
     if (ret === oldState) return oldState;
     // client synchronization stuff
     if (Collaborative.online) Collaborative.send(action);
-    if (!ret) return postReducer(ret);
+    if (!ret) return ret;
+    return postReducer(ret, oldState);
 }
 function postReducer(ret: DState, oldState: DState): DState {
     ret.idlookup.__proto__ = DPointerTargetable.pendingCreation as any;
+    ret.clonedCounter = (ret.clonedCounter || 0) +1;
 
     function filterSet<T extends any>(r: T[]): Set<T>{
         if (!Array.isArray(r)) r = [];

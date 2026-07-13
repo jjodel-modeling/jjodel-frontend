@@ -269,7 +269,10 @@ function ToolBarComponent(props: AllProps) {
     });*/
 
     const isRootable = (c: LClass) => {
-        return !(c.referencedBy.filter(a => a !== undefined).some(a => a.composition) || c.extendsChain.map(a => a.referencedBy.filter(b => b !== undefined)).flat().some(a => a.composition)) && !c.abstract;
+        return !(c.referencedBy.filter(a => a !== undefined).some(a => a.composition)
+            ||
+            !c.abstract && c.extendsChain.flatMap(a => a.referencedBy.filter(b => b !== undefined))
+                .some(a => a.composition));
     }
 
     const htmlref: React.MutableRefObject<null | HTMLDivElement> = useRef(null);
@@ -361,6 +364,8 @@ function ToolBarComponent(props: AllProps) {
             }
         } else {
             const classes = metamodel?.crossClasses || [];
+            console.error("classes toolbar", {classes, metamodel});
+
             const model: LModel = LModel.fromPointer(props.model);
             const lobj: LObject | undefined = data.className === "DObject" ? data as LObject : undefined;
             const lfeat: LValue | undefined = data.className === "DValue" ? data as LValue : undefined;

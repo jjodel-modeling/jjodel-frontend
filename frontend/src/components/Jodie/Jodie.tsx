@@ -19,11 +19,13 @@ import { AIProviderService } from '../../services/AIProviderService';
 import { useSettingsModal } from '../../contexts/SettingsModalContext';
 import { JjodieContextService } from '../../services/JjodieContext';
 import { JjodieRagService } from '../../services/JjodieRagService';
-import {DUser, L, LUser, LProject, store} from '../../joiner';
+import {DUser, L, LUser, LProject, store, DState} from '../../joiner';
 import DockManager from '../abstract/DockManager';
 import TabDataMaker from '../abstract/tabs/TabDataMaker';
 import { JjScriptService } from '../../jjscript';
 import './JodieWindow.css';
+
+let oldState: DState | null = null;
 
 // Generate unique message ID
 function generateMessageId(): string {
@@ -92,6 +94,9 @@ export function Jodie(): JSX.Element {
     // Initialize RAG and index project content
     useEffect(() => {
         const initializeAndIndex = async () => {
+            const newState = store.getState();
+            if (oldState === newState) return; // do not update while idle.
+            oldState = newState;
             try {
                 // Initialize RAG system
                 if (!ragInitialized) {

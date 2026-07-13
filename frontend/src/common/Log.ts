@@ -228,6 +228,8 @@ export class Log{
                 case "Warning: Each child in a list should have a unique \"key\" prop.%s%s See https://reactjs.org/link/warning-keys for more information.%s":
                     warn(...e, {args: e});
                     return;
+                case "Warning: Invalid value for prop %s on <%s> tag. Either remove it from the element, or pass a string or number value to keep it in the DOM. For details, see https://reactjs.org/link/attribute-behavior %s":
+                    return;
                 default:
                     break;
             }

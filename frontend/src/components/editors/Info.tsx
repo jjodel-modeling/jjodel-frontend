@@ -572,7 +572,7 @@ class builder {
         }
         const featureType: LClassifier = feature?.type;
         let isAttribute = false, isEnumerator = false, isReference = false, isShapeless = false, isComposition = false;
-        
+
         // Detect if a reference is also a composition
         switch (feature?.className){
             case DReference.cname:
@@ -664,9 +664,9 @@ class builder {
                 </label>);
 
         return(<>
-            {tab ? 
+            {tab ?
                 <>
-                    <h1>{data.name}</h1> 
+                    <h1>{data.name}</h1>
                     <label className={'d-flex'}>
                     <label className={'ms-1 my-auto'}>Values</label>
                     <CommandBar style={{marginLeft: 'auto', marginTop: '6px'}}>
@@ -677,15 +677,15 @@ class builder {
                     </button>*/}
                     </label>
                 </>
-            : 
+            :
                 <>
                     <label className={'d-flex'}>
                     <label className={'ms-1 my-auto'}>{data.name}</label>
                     <CommandBar style={{marginLeft: 'auto', marginTop: '0px'}}>
-                        {!isComposition && <Btn icon={'add'} 
-                            action={add} 
-                            tip={`Add a ${data.name} value`} 
-                            disabled={filteredValues.length >= upperBound} 
+                        {!isComposition && <Btn icon={'add'}
+                            action={add}
+                            tip={`Add a ${data.name} value`}
+                            disabled={filteredValues.length >= upperBound}
                             style={{color: 'black'}}
                         />}
                     </CommandBar>
@@ -1095,6 +1095,7 @@ function InfoComponent(props: AllProps) {
             jsx = <span>Placeholder structure editor</span>; break;
         default: jsx = <Empty />; break;
     } else jsx = <Empty />;
+
 
     // Tab mode: Always show the Properties panel structure
     if (tab) {

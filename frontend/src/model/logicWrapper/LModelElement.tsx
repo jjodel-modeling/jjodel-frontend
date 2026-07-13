@@ -2036,12 +2036,12 @@ export class LClassifier<Context extends LogicContext<DClassifier> = any> extend
     typeEcoreString!: string;
     typeString!: string;
 
-    private get_typeEcoreString(c: Context) {
-        return EcoreParser.classTypePrefix + this.get_name(c); todo with generics
+    protected get_typeEcoreString(c: Context): this["typeEcoreString"] {
+        return EcoreParser.classTypePrefix + this.get_name(c);
     }
 
-    get_typeString(c: Context) {
-        return this.get_name(c); todo with generics
+    get_typeString(c: Context): this["typeString"]  {
+        return this.get_name(c);
     }
 }
 
@@ -3032,7 +3032,7 @@ export class DClass extends DModelElement {
     sealed!: Pointer<DClass>[];
     final!: boolean;
     allowCrossReference!: boolean;//for extend
-    eidFeature?: Pointer<DAttribute>; // pointing to isID=true attribute
+    eidFeature?: Pointer<DAttribute> | null; // pointing to isID=true attribute
     // generics
     typeParameters: Pointer<DTypeDeclaration>[] = [];
     genericSuperTypes!: GenericType[];
@@ -3151,6 +3151,13 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     genericType!: GenericType[]; // alias
     get_genericTypes(c: Context): this["genericType"] { return this.get_genericSuperTypes(c); }
     set_genericTypes(v: this["genericType"], c: Context): boolean { return this.set_genericSuperTypes(v, c); }
+
+    protected get_typeEcoreString(c: Context): string { return super.get_typeEcoreString(c); }
+
+    get_typeString(c: Context): this["typeString"]  {
+        if (!c.data.typeParameters?.length) return super.get_typeString(c);
+        return "<" + this.get_typeParameters(c).map(e => e.toString()).join(", ") + ">";
+    }
 
     instanceClassName!: string;
     __info_of__instanceClassName: Info = {type: ShortAttribETypes.EString, txt: "The name of a java class mapped to this eClassifier. Unlike instanceTypeName generic typings are not allowed."};
@@ -3333,9 +3340,8 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     }
 
     protected get_eidFeature(c: Context): LAttribute | null {
-        let eid: Pointer | undefined = c.data.eidFeature;
-
-        if (eid !== "__recalculating__") return L.fromPointer(eid) || null;
+        let eid: Pointer | undefined | null = c.data.eidFeature;
+        if (eid !== "__recalculating__") return L.fromPointer(eid||"") || null;
         // recompute
         let allDistances: {dist: number, l: LAttribute, c?: LClass}[] = [];
         let allAttrs = this.get_allAttributes(c);
@@ -3348,9 +3354,8 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
         allDistances.sort((e1, e2) => e1.dist - e2.dist);
         console.log("allDistances", {allDistances, allAttrs});
         eid = allDistances[0]?.l?.id;
-        // todo: trigger the same setting eidFeature = __recalculating__ after setting a feature to isID = true or false. for class and all his subclasses.
         TRANSACTION_MERGE("cache update: eidFeature", ()=> {
-            SetFieldAction.new(c.data.id, "eidFeature", eid, '', true);
+            SetFieldAction.new(c.data.id, "eidFeature", eid || null, '', true);
         });
         return L.from(eid) || null;
     }
@@ -4003,6 +4008,10 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
             this._fixExtendInstances(c, list);
             for (let id in deduplicate) {
                 SetFieldAction.new(id as Pointer<LClass>, 'eidFeature', "__recalculating__" as any as Pointer, "", true);
+                let d = D.fromPointer(id) as DClass;
+                for (let m1Ptr of d.instances) {
+                    SetFieldAction.new(m1Ptr as Pointer<DObject>, 'eidFeature', "__recalculating__" as any as Pointer, "", true);
+                }
             }
             // finalize
             SetFieldAction.new(c.data, 'extends', list, "", true);
@@ -5220,6 +5229,7 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
                 if (!id || deduplicate[id]) continue;
                 deduplicate[id] = sc;
                 SetFieldAction.new(sc.id, "eidFeature",  "__recalculating__" as Pointer, '', true);
+                for (let m1 of sc.instances) SetFieldAction.new(m1.id, "eidFeature",  "__recalculating__" as Pointer, '', true);
             }
         }, c.data.isID, val)
         return true;
@@ -5374,7 +5384,7 @@ export class LEnumLiteral<Context extends LogicContext<DEnumLiteral> = any, C ex
         return true;
     }
 
-    protected get_literal(c: Context): this["literal"] { return U.toIdentifier(c.data.literal || (c.data.name||'').split('_').join(' '); }
+    protected get_literal(c: Context): this["literal"] { return U.toIdentifier(c.data.literal) || this.get_name(c) || ''; }
     protected set_literal(val: this["literal"], c: Context): boolean {
         let defaultVal = (c.data.name||'').split('_').join(' ');
         if (val === c.data.literal) return true;
@@ -6657,6 +6667,7 @@ export class DObject extends DModelElement { // extends DNamedElement, m1 class 
     // personal
     instanceof?: Pointer<DClass>; // actually nullable now, but takes too much type refactoring. be careful to check if it's present
     features: Pointer<DValue>[] = [];
+    eidFeature?: Pointer<DValue>;
 
     partial!: boolean | undefined;
     public static new(instanceoff?: DObject["instanceof"], father?: DObject["father"], fatherType?: typeof DModel | typeof DValue, name?: DNamedElement["name"], persist: boolean = true): DObject {
@@ -6719,21 +6730,13 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
     __info_of__partial: Info = Info.partial;
 
 
+    eid!: string; // ecore id based on m2attribute.isID or m2reference.Ekeys, then serialized.
+    __info_of__eid: Info = Info.eid
     protected set_eid(v: any, c: Context): true {
         let eid = this.get_eidFeature(c);
         if (!eid) return true;
         TRANSACTION(this.get_name(c) + ".eid = " + v, () => eid.values = v);
         return true;
-    }
-    protected get_eidFeature(c: Context): LValue | null {
-        let meta: LClass | undefined = this.get_instanceof(c);
-        if (!meta) return null;
-        let eid: Pointer<DAttribute> | undefined = meta.eidFeature?.id;
-        if (!eid) return null;
-        for (let f of this.get_features(c)) {
-            if (f.instanceof?.id === eid) return f;
-        }
-        return null;
     }
     protected get_eid(c: Context): string {
         let eidFeature = this.get_eidFeature(c);
@@ -6745,15 +6748,32 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         return eid === null || eid === undefined ? defaultRet() : "" + eid;
     }
 
-    protected get_idFeature(c: Context): LValue | null { return this.get_idFeature(c); }
     protected eidFeature!: LValue | null;
-    __info_of__eidFeature: Info = {type: "LValue | null", txt: "if present, gets the structural feature with isID == true"}
-
-    eid!: string; // ecore id based on m2attribute.isID or m2reference.Ekeys, then serialized.
-    __info_of__eid: Info = {type: "LValue | null", txt: "if present, gets the value of the feature with isID == true"}
+    __info_of__eidFeature: Info = Info.eidFeature
+    protected get_eidFeature(c: Context): LValue | null {
+        if (c.data.eidFeature !== "__recalculating__") return L.fromPointer(c.data.eidFeature) || null;
+        let ret = this._get_eidFeature(c);
+        let ptr = ret?.id || null;
+        TRANSACTION_MERGE("cache update: eidFeature", ()=> {
+            SetFieldAction.new(c.data, "eidFeature", ptr, "", true);
+        }, ptr);
+        return ret;
+    }
+    protected _get_eidFeature(c: Context): LValue | null {
+        let meta: LClass | undefined = this.get_instanceof(c);
+        if (!meta) return null;
+        let eid: Pointer<DAttribute> | undefined = meta.eidFeature?.id;
+        if (!eid) return null;
+        for (let f of this.get_features(c)) {
+            if (f.instanceof?.id === eid) return f;
+        }
+        return null;
+    }
+    protected set_eidFeature(v: never, c: Context): true { return this.cannotSet("eidFeature"); }
+    protected get_idFeature(c: Context): LValue | null { return this.get_eidFeature(c); }
 
     protected get_name(c: Context): this['name'] {
-        return U.toIdentifier((c.proxyObject as GObject)['$name']?.value || c.data.name) as this["name"] || this.get_instanceof(c)?.name;
+        return U.toIdentifier((c.proxyObject as GObject)['$name']?.value || c.data.name) as this["name"] || this.get_instanceof(c)?.name || "";
     }
 
     composed!:boolean;
@@ -8332,7 +8352,9 @@ export class LValue<Context extends LogicContext<DValue> = any, C extends Contex
     // protected get_fullname(context: Context): LStructuralFeature["fullname"] { return this.get_fromlfeature(context.proxyObject.instanceof, "fullname"); }
     protected get_namespace(context: Context): LStructuralFeature["namespace"] { return this.get_fromlfeature(context.proxyObject.instanceof, "namespace"); }
     protected get_name(context: Context): LStructuralFeature["name"] {
-        return context.data.instanceof ? this.get_fromlfeature(context.proxyObject.instanceof, "name") : U.toIdentifier(context.data.name) as any || '';
+        let thiss = LValue.singleton as any as this;
+        // if i use "this" crashes? it's called wrongly somewhere with apply/call?
+        return context.data.instanceof ? thiss.get_fromlfeature(context.proxyObject.instanceof, "name") : U.toIdentifier(context.data.name) as any || '';
     }
 
     protected get_instanceof(context: Context): this["instanceof"] {

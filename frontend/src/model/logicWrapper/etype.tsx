@@ -225,6 +225,18 @@ export class GenericType {
     public static desc_value: Info = {type: "GenericType", txt: GenericType.desc_object.txt }
     public static descTypeParameters: Info = {type: "TypeDeclaration[]", txt: "Type parameters attached to the classifier, like in HashMap<K, V>"}
 
+
+    static serializeETypeParameter(...a: Parameters<typeof serializeETypeParameter>): ReturnType<typeof serializeETypeParameter> {
+        return serializeETypeParameter(...a);
+    }
+
+    static serializeGenericType(...a: Parameters<typeof serializeGenericType>): ReturnType<typeof serializeGenericType> {
+        return serializeGenericType(...a);
+    }
+
+    // use lTypeDeclaration.toString instead
+    static serializeJTypeParameter(arr: LTypeDeclaration[], m: LModel, asID: boolean = true ): string | null {return null as any; }
+
     public static getterArr(v?: Partial<GenericType>[]): GenericType[] {
         if (!v) return [];
         if (!Array.isArray(v)) v = [v];
@@ -346,6 +358,7 @@ export class GenericType {
         }
         return defaultRet;
     }
+    static serializeTypeDeclaration(l: LTypeDeclaration): string { return l.toString(); }
     // ------------------------------------------------------------------
     // SERIALIZE
     // Produces a human-readable string like:

@@ -651,13 +651,27 @@ everytime you put hands into a D-Object shape or valid values, you should docume
             let cn = e?.className;
             if (!cn) continue;
             if (cn === 'DProject' && !e.tagNames) {
-                if (!e.collaboratorsMap) e.collaboratorsMap = {};
-                if (!e.collaborators) e.collaborators = [];
-                if (!e.onlineUsersID) e.onlineUsersID = [];
+                let d: DProject = e as any;
+                if (!d.collaboratorsMap) d.collaboratorsMap = {};
+                if (!d.collaborators) d.collaborators = [];
+                if (!d.onlineUsersID) d.onlineUsersID = [];
                 continue;
             }
-            if ((cn === 'DClass' || cn === "DOperation") && !(e as DClass).typeParameters) {
-                e.typeParameters = [];
+        }
+        return s;
+    }
+    private ['2.211 -> 2.212'](s: DState): DState {
+        this.getByClassName(s, "DReference").forEach(r=> r.EKeys = r.EKeys || []);
+        for (let k in s.idlookup) {
+            let e = s.idlookup[k] as GObject;
+            let cn = e?.className;
+            if (!cn) continue;
+            if ((cn === 'DClass' || cn === "DOperation") && !e.typeParameters) {
+                (e as DClass).typeParameters = [];
+                continue;
+            }
+            if ((cn === 'DClass' || cn === "DObject") && !(e as DClass).eidFeature) {
+                (e as DClass | DObject).eidFeature = "__recalculating__";
                 continue;
             }
         }
