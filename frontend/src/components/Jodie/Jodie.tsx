@@ -42,18 +42,10 @@ const jjodieProvider = consoleLanguageRegistry.get('jjodie')!;
 const jjscriptProvider = consoleLanguageRegistry.get('jjscript')!;
 const jjelProvider = consoleLanguageRegistry.get('jjel')!;
 
-// localStorage keys for the console mode switcher.
-const CONSOLE_MODE_KEY = 'jjodel.console.mode';
+// localStorage key for the code-flavor switcher. The console mode itself is no
+// longer persisted (2b.3): it boots to 'jjodie' and is sticky only in-memory;
+// any legacy 'jjodel.console.mode' value in localStorage is ignored (not cleaned).
 const CONSOLE_CODE_FLAVOR_KEY = 'jjodel.console.codeFlavor';
-
-// Legacy persisted values were 'chat'/'code'; map them to the new provider-mode
-// ids. Unknown values fall back to the Jjodie home. The key itself is preserved
-// (removal is a later step).
-function normalizeConsoleMode(raw: string): ConsoleMode {
-    if (raw === 'chat') return 'jjodie';
-    if (raw === 'code') return 'jjel';
-    return (CONSOLE_MODES as string[]).includes(raw) ? (raw as ConsoleMode) : 'jjodie';
-}
 
 // Static content for the `/help` console entry (Jjodie mode).
 const CONSOLE_HELP_TEXT = [
@@ -111,12 +103,9 @@ export function Jodie(): JSX.Element {
     // Pending input prefill (from "Ask Jjodie" link in notifications popover)
     const [pendingPrefill, setPendingPrefill] = useState<{ prompt: string; nonce: number } | null>(null);
 
-    // Console mode (Chat / Code) and code flavor (JjEL / JS), persisted in localStorage.
-    // JS flavor is reserved for a later phase; rendered but disabled in the UI.
-    const [persistedConsoleMode, setConsoleMode] = useLocalStorageString<ConsoleMode>(CONSOLE_MODE_KEY, 'jjodie');
-    // Normalize on read so a legacy persisted value ('chat'/'code') resolves to a
-    // valid provider-mode id on the very first render.
-    const consoleMode = normalizeConsoleMode(persistedConsoleMode);
+    // Console mode boots to Jjodie and is sticky only in-memory (no persistence, 2b.3).
+    const [consoleMode, setConsoleMode] = useState<ConsoleMode>('jjodie');
+    // Code flavor (JjEL / JS) is still persisted; JS is reserved for a later phase.
     const [codeFlavor, setCodeFlavor] = useLocalStorageString<CodeFlavor>(CONSOLE_CODE_FLAVOR_KEY, 'jjel');
 
     // Root ref used by the Cmd+J listener to detect "focus is inside Jjodie".
@@ -331,13 +320,6 @@ export function Jodie(): JSX.Element {
         const next = CONSOLE_MODES[(idx + 1) % CONSOLE_MODES.length];
         setMode(next, via);
     }, [consoleMode, setMode]);
-
-    // Boot migration: rewrite a legacy persisted value ('chat'/'code') to its
-    // provider-mode id once, so the stored key is normalized. Key preserved (2b.3).
-    useEffect(() => {
-        if (persistedConsoleMode !== consoleMode) setConsoleMode(consoleMode);
-        // Run once on mount; consoleMode is derived from the persisted value.
-    }, []);
 
     // Cmd+J / Ctrl+J and Ctrl+. cycle the console mode (jjodie → jjscript → jjel).
     // Skip when focus is in another editable surface (Monaco or any input/textarea
