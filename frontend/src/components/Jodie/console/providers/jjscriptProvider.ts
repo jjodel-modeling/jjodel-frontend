@@ -11,7 +11,7 @@
  */
 import type { LanguageProvider, ConsoleContext, ConsoleResult } from '../types';
 import type { ChatMessage } from '../../../../types/jodie';
-import { JjScriptService } from '../../../../jjscript';
+import { JjScriptService, parse } from '../../../../jjscript';
 
 export const jjscriptProvider: LanguageProvider = {
     id: 'jjscript',
@@ -36,5 +36,12 @@ export const jjscriptProvider: LanguageProvider = {
         };
 
         return { entries: [assistantMessage] };
+    },
+    detect(input: string): boolean {
+        // Strict parse: true only when the whole input is a complete JjScript
+        // command (trailing natural-language tokens → false, so the offer never
+        // steals a plain sentence from the LLM). Empty/whitespace → false.
+        if (!input.trim()) return false;
+        return parse(input, { strict: true }).success;
     },
 };

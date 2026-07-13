@@ -35,6 +35,8 @@ interface ChatInputProps {
     onSubmitCode: (input: string) => void;
     /** Slash `/help` in Jjodie mode: parent appends a static help entry. */
     onHelpRequested?: () => void;
+    /** Unknown `/…` in Jjodie mode: parent appends a static "unknown command" entry (no LLM). */
+    onUnknownCommand?: (raw: string) => void;
     /** Unified history; ChatInput filters by mode (and flavor in code) for the up/down nav. */
     entries: ConsoleEntry[];
     /** Clear the entries of the active mode. Triggered by the `/clear` slash command. */
@@ -119,6 +121,7 @@ export function ChatInput({
     codeFlavor,
     onSubmitCode,
     onHelpRequested,
+    onUnknownCommand,
     entries,
     onClearRequested,
 }: ChatInputProps): JSX.Element {
@@ -293,16 +296,27 @@ export function ChatInput({
             return;
         }
 
-        // Jjodie-mode `/` meta-commands: switch mode or show help, intercepted
-        // before the JjScript `/`-prefix gate. Same reset shape as `/clear`; not
-        // sent, not appended to history. Only in Jjodie mode — JjScript and JjEL
-        // keep `/` literal.
-        if (consoleMode === 'jjodie' &&
-            (trimmed === '/js' || trimmed === '/jjel' || trimmed === '/ask' || trimmed === '/help')) {
+        // `/` meta-commands: switch mode or show help, in ALL modes. The `/`
+        // authority is per-component, not per-mode — the escape hatch must work
+        // from the formal modes too (e.g. `/ask` from jjscript → back to Jjodie).
+        // Same reset shape as `/clear`; not sent, not appended to history.
+        if (trimmed === '/js' || trimmed === '/jjel' || trimmed === '/ask' || trimmed === '/help') {
             if (trimmed === '/js') onConsoleModeChange('jjscript', 'slash');
             else if (trimmed === '/jjel') onConsoleModeChange('jjel', 'slash');
             else if (trimmed === '/ask') onConsoleModeChange('jjodie', 'slash');
             else onHelpRequested?.();
+            setMessage('');
+            setHistoryIndex(-1);
+            setSavedMessage('');
+            if (textareaRef.current) textareaRef.current.style.height = 'auto';
+            return;
+        }
+
+        // Jjodie only: an unknown `/…` is a typo, not a message → static hint,
+        // no LLM call. In JjScript/JjEL a leading `/` falls through to the
+        // provider (which strips the prefix or reports a parse error).
+        if (consoleMode === 'jjodie' && trimmed.startsWith('/')) {
+            onUnknownCommand?.(trimmed);
             setMessage('');
             setHistoryIndex(-1);
             setSavedMessage('');
@@ -406,10 +420,14 @@ export function ChatInput({
                 handleSubmit();
                 return;
             }
-            // Jjodie-mode `/` meta-commands bypass the provider/disabled gate too,
-            // so they fire even with no provider configured (handleSubmit intercepts).
-            if (consoleMode === 'jjodie' &&
-                (trimmed === '/js' || trimmed === '/jjel' || trimmed === '/ask' || trimmed === '/help')) {
+            // `/` meta-commands (all modes) and unknown `/…` in Jjodie bypass the
+            // provider/disabled gate so they fire even with no provider configured
+            // (handleSubmit intercepts them).
+            if (trimmed === '/js' || trimmed === '/jjel' || trimmed === '/ask' || trimmed === '/help') {
+                handleSubmit();
+                return;
+            }
+            if (consoleMode === 'jjodie' && trimmed.startsWith('/')) {
                 handleSubmit();
                 return;
             }

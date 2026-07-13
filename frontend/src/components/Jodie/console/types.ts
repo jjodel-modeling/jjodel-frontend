@@ -60,4 +60,11 @@ export interface LanguageProvider {
     id: LanguageProviderId;
     displayName: string;
     run(input: string, ctx: ConsoleContext): Promise<ConsoleResult>;
+    /**
+     * Optional strict detector: returns true iff `input` parses completely as
+     * this language. Used in Jjodie mode to OFFER execution (not run silently)
+     * instead of routing the input to the LLM. A provider without `detect` does
+     * not participate in detection.
+     */
+    detect?(input: string): boolean;
 }

@@ -63,7 +63,7 @@ export class Parser {
     /**
      * Parse input string into AST
      */
-    parse(input: string): ParseResult {
+    parse(input: string, opts?: { strict?: boolean }): ParseResult {
         // Tokenize
         this.tokens = tokenize(input);
         this.current = 0;
@@ -86,6 +86,17 @@ export class Parser {
 
         try {
             const ast = this.parseCommand();
+            if (opts?.strict) {
+                // Strict mode (used by detect()): require the whole input to be
+                // consumed, so trailing natural-language tokens don't parse clean.
+                while (this.check('NEWLINE')) this.advance();
+                if (!this.isAtEnd() && !this.check('EOF')) {
+                    this.errors.push({
+                        message: 'Unexpected trailing input',
+                        position: this.currentPosition()
+                    });
+                }
+            }
             return {
                 success: this.errors.length === 0,
                 ast: this.errors.length === 0 ? ast : undefined,
@@ -1326,7 +1337,7 @@ export class Parser {
 // CONVENIENCE FUNCTION
 // ============================================
 
-export function parse(input: string): ParseResult {
+export function parse(input: string, opts?: { strict?: boolean }): ParseResult {
     const parser = new Parser();
-    return parser.parse(input);
+    return parser.parse(input, opts);
 }

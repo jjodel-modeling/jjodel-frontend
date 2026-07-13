@@ -409,6 +409,20 @@ export function Jodie(): JSX.Element {
         setChatState(prev => ({ ...prev, messages: [...prev.messages, helpMessage] }));
     }, []);
 
+    // Unknown `/…` in Jjodie mode: append a static hint instead of sending the
+    // typo to the LLM (no provider call).
+    const handleUnknownCommand = useCallback((raw: string) => {
+        const cmd = raw.trim().split(/\s+/)[0];
+        const entry: ChatMessage = {
+            id: generateMessageId(),
+            kind: 'chat',
+            role: 'assistant',
+            content: `Unknown command: ${cmd}. Type /help to see available commands.`,
+            timestamp: Date.now(),
+        };
+        setChatState(prev => ({ ...prev, messages: [...prev.messages, entry] }));
+    }, []);
+
     // Open the chat window
     const handleOpen = useCallback(() => {
         setChatState(prev => ({
@@ -702,6 +716,7 @@ export function Jodie(): JSX.Element {
                     onCodeFlavorChange={setCodeFlavor}
                     onSubmitCode={handleSubmitCode}
                     onHelpRequested={handleHelpRequested}
+                    onUnknownCommand={handleUnknownCommand}
                     onTestInCode={handleTestInCode}
                     onAskJjodie={handleAskJjodie}
                     onClearCurrentMode={handleClearCurrentMode}

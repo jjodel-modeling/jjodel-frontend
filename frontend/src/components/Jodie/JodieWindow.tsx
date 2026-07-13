@@ -40,6 +40,8 @@ interface JodieWindowProps {
     onSubmitCode: (input: string) => void;
     /** Slash `/help` in Jjodie mode: parent appends a static help entry. */
     onHelpRequested?: () => void;
+    /** Unknown `/…` in Jjodie mode: parent appends a static "unknown command" entry. */
+    onUnknownCommand?: (raw: string) => void;
     /** Promotion: switch to Code mode and prefill the input with an extracted snippet. */
     onTestInCode: (code: string, language: string | null) => void;
     /** Promotion: switch to Chat mode and prefill the input with a template describing a failed code entry. */
@@ -113,6 +115,7 @@ export function JodieWindow({
     onCodeFlavorChange,
     onSubmitCode,
     onHelpRequested,
+    onUnknownCommand,
     onTestInCode,
     onAskJjodie,
     onClearCurrentMode,
@@ -456,6 +459,7 @@ export function JodieWindow({
                 codeFlavor={codeFlavor}
                 onSubmitCode={onSubmitCode}
                 onHelpRequested={onHelpRequested}
+                onUnknownCommand={onUnknownCommand}
                 entries={messages}
                 onClearRequested={onClearCurrentMode}
             />

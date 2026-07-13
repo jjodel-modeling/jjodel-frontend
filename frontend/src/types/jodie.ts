@@ -864,7 +864,15 @@ export interface ChatMessage {
     jjscriptResult?: {         // JjScript command result metadata
         success: boolean;
         command: string;
+        input?: string;        // original typed input, for the one-shot "Ask Jjodie" on a parse error
     };
+    /**
+     * Jjodie-mode offer: set when the typed input parsed as a complete JjScript
+     * command. Rendered as an offer card ([Esegui] / [Chiedi a Jjodie]) instead
+     * of being run silently or sent to the LLM. `consumed` disables the buttons
+     * after a tap.
+     */
+    jjscriptOffer?: { input: string; consumed?: boolean };
 }
 
 // ============================================
