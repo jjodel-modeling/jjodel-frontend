@@ -682,6 +682,17 @@ function ClassNode({ id, data, selected, width, height }: NodeProps<ClassNodeTyp
                                         onPointerMove={onGhostPointerMove}
                                         onPointerUp={onGhostPointerUp}
                                         onDoubleClick={() => onGhostReset(gt.refName)}
+                                        // Right-click opens a single "Delete reference" item.
+                                        // preventDefault blocks the native menu; stopPropagation
+                                        // blocks the parent Class node's onNodeContextMenu bubble.
+                                        onContextMenu={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            if (!gt.refId) return;
+                                            window.dispatchEvent(new CustomEvent(JjodelEvents.CHILD_CONTEXT_MENU, {
+                                                detail: { childId: gt.refId, childKind: 'ref', nodeId: id, x: e.clientX, y: e.clientY }
+                                            }));
+                                        }}
                                     >
                                         <span className="ghost-target-stub__name">{gt.targetName}</span>
                                         <span className="ghost-target-stub__mm">{gt.targetMetamodel}</span>

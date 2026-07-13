@@ -7,7 +7,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { JodieHeader } from './JodieHeader';
 import { ChatMessages } from './ChatMessages';
 import { ChatInput } from './ChatInput';
-import {TAIProvider, ChatImage, ChatDocument, JodieConfig, ConsoleEntry, ConsoleMode, CodeFlavor, CodeEntry} from '../../types/jodie';
+import {TAIProvider, ChatImage, ChatDocument, JodieConfig, ConsoleEntry, ConsoleMode, ConsoleModeSwitchVia, CodeFlavor, CodeEntry} from '../../types/jodie';
 import { AIDisclaimer } from '../common/AIDisclaimer';
 import { AIEvents, JjScriptEvents } from '../../events/registry';
 
@@ -32,12 +32,14 @@ interface JodieWindowProps {
     isVisible?: boolean;
     /** Active console mode (Chat or Code). Controlled by parent. */
     consoleMode: ConsoleMode;
-    onConsoleModeChange: (m: ConsoleMode) => void;
+    onConsoleModeChange: (m: ConsoleMode, via?: ConsoleModeSwitchVia) => void;
     /** Active code flavor (JjEL today; JS reserved for a later phase). */
     codeFlavor: CodeFlavor;
     onCodeFlavorChange: (f: CodeFlavor) => void;
     /** Submit handler for Code mode: parent evaluates and appends a CodeEntry. */
     onSubmitCode: (input: string) => void;
+    /** Slash `/help` in Jjodie mode: parent appends a static help entry. */
+    onHelpRequested?: () => void;
     /** Promotion: switch to Code mode and prefill the input with an extracted snippet. */
     onTestInCode: (code: string, language: string | null) => void;
     /** Promotion: switch to Chat mode and prefill the input with a template describing a failed code entry. */
@@ -110,6 +112,7 @@ export function JodieWindow({
     codeFlavor,
     onCodeFlavorChange,
     onSubmitCode,
+    onHelpRequested,
     onTestInCode,
     onAskJjodie,
     onClearCurrentMode,
@@ -452,6 +455,7 @@ export function JodieWindow({
                 onConsoleModeChange={onConsoleModeChange}
                 codeFlavor={codeFlavor}
                 onSubmitCode={onSubmitCode}
+                onHelpRequested={onHelpRequested}
                 entries={messages}
                 onClearRequested={onClearCurrentMode}
             />

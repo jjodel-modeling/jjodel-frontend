@@ -595,15 +595,22 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
     private setPtr(property: string, value: any, checkPointerValidity?: DState) {
         (this.thiss as GObject)[property] = value;
         if (!value) return;
+        // RT5 (fix 2026-07-05): il pointedBy va registrato SOLO per valori che sono davvero
+        // Pointer. Prima, quando checkPointerValidity era undefined, il check era saltato del
+        // tutto: ogni valore primitivo truthy (es. DValue.values = ["42"] da import XMI M1)
+        // generava una SetFieldAction su idlookup.<primitiva>.pointedBy → "Invalid action
+        // path" nel reducer per OGNI attributo importato, con abort del batch headless.
         if (Array.isArray(value)) for (let v of value) {
-            if (!value) continue;
+            if (!v) continue;
             if (typeof v === "object") v = v.id;
-            if (!v || checkPointerValidity && !Pointers.isPointer(v, checkPointerValidity)) continue;
+            if (!v || !Pointers.isPointer(v, checkPointerValidity)) continue;
             this.thiss._persistCallbacks.push(SetFieldAction.create(v, "pointedBy", PointedBy.fromID(this.thiss.id, property as any), '+='));
         }
         else {
             if (typeof value === "object") value = value.id;
-            value && this.thiss._persistCallbacks.push(SetFieldAction.create(value, "pointedBy", PointedBy.fromID(this.thiss.id, property as any), '+='));
+            if (value && Pointers.isPointer(value, checkPointerValidity)) {
+                this.thiss._persistCallbacks.push(SetFieldAction.create(value, "pointedBy", PointedBy.fromID(this.thiss.id, property as any), '+='));
+            }
         }
         // todo: in delete if the element was not persistent, just do nothing.
     }

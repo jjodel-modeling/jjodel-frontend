@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { ProviderModelSelector } from '../common/ProviderModelSelector';
-import { TAIProvider, AIProvider, ConsoleMode, CodeFlavor } from '../../types/jodie';
+import { TAIProvider, AIProvider, ConsoleMode, ConsoleModeSwitchVia, CodeFlavor, CONSOLE_MODES, CONSOLE_MODE_LABELS } from '../../types/jodie';
 import { DUser, L, LUser, LProject, LModel, store } from '../../joiner';
 import { Selectors } from '../../redux/selectors/selectors';
 import { JjodelEvents } from '../../events/registry';
@@ -27,9 +27,9 @@ interface JodieHeaderProps {
     onToggleFullscreen?: () => void;
     /** Reset window to default position and size */
     onResetPosition?: () => void;
-    /** Active console mode (Chat / Code). */
+    /** Active console mode (Jjodie / JjScript / JjEL). */
     consoleMode: ConsoleMode;
-    onConsoleModeChange: (m: ConsoleMode) => void;
+    onConsoleModeChange: (m: ConsoleMode, via?: ConsoleModeSwitchVia) => void;
     /** Active code flavor (JjEL / JS). JS is disabled in stage 1. */
     codeFlavor: CodeFlavor;
     onCodeFlavorChange: (f: CodeFlavor) => void;
@@ -186,28 +186,22 @@ export function JodieHeader({
                     />
                 </div>
 
-                {/* Console mode switch (Chat / Code). Right of the title block. */}
+                {/* Console mode switcher — segmented pill, always visible.
+                    All three options shown → active highlight moves, no layout shift. */}
                 <div className="jodie-mode-switch" role="tablist" aria-label="Console mode">
-                    <button
-                        type="button"
-                        role="tab"
-                        aria-selected={consoleMode === 'chat'}
-                        className={`jodie-mode-switch__opt${consoleMode === 'chat' ? ' jodie-mode-switch__opt--active' : ''}`}
-                        onClick={() => onConsoleModeChange('chat')}
-                        title="Chat with Jjodie (Cmd+J)"
-                    >
-                        Chat
-                    </button>
-                    <button
-                        type="button"
-                        role="tab"
-                        aria-selected={consoleMode === 'code'}
-                        className={`jodie-mode-switch__opt${consoleMode === 'code' ? ' jodie-mode-switch__opt--active' : ''}`}
-                        onClick={() => onConsoleModeChange('code')}
-                        title="Evaluate code against the model (Cmd+J)"
-                    >
-                        Console
-                    </button>
+                    {CONSOLE_MODES.map(m => (
+                        <button
+                            key={m}
+                            type="button"
+                            role="tab"
+                            aria-selected={consoleMode === m}
+                            className={`jodie-mode-switch__opt${consoleMode === m ? ' jodie-mode-switch__opt--active' : ''}`}
+                            onClick={() => onConsoleModeChange(m, 'pill')}
+                            title={`Switch to ${CONSOLE_MODE_LABELS[m]} (Cmd+J / Ctrl+.)`}
+                        >
+                            {CONSOLE_MODE_LABELS[m]}
+                        </button>
+                    ))}
                 </div>
             </div>
 
@@ -244,8 +238,8 @@ export function JodieHeader({
                     <button
                         className="jodie-header-btn"
                         onClick={onClearCurrentMode}
-                        title={consoleMode === 'code' ? 'Clear console history' : 'Clear chat history'}
-                        aria-label={consoleMode === 'code' ? 'Clear console history' : 'Clear chat history'}
+                        title={consoleMode === 'jjel' ? 'Clear console history' : 'Clear chat history'}
+                        aria-label={consoleMode === 'jjel' ? 'Clear console history' : 'Clear chat history'}
                     >
                         <i className="bi bi-eraser" />
                     </button>
@@ -287,32 +281,8 @@ export function JodieHeader({
             </div>
         </div>
 
-        {consoleMode === 'code' && (
+        {consoleMode === 'jjel' && (
             <div className="jodie-code-subrow">
-                <div className="jodie-flavor-switch" role="tablist" aria-label="Code flavor">
-                    <button
-                        type="button"
-                        role="tab"
-                        aria-selected={codeFlavor === 'jjel'}
-                        className={`jodie-flavor-switch__opt${codeFlavor === 'jjel' ? ' jodie-flavor-switch__opt--active' : ''}`}
-                        onClick={() => onCodeFlavorChange('jjel')}
-                        title="Evaluate JjEL expressions"
-                    >
-                        JjEL
-                    </button>
-                    <button
-                        type="button"
-                        role="tab"
-                        aria-selected={false}
-                        aria-disabled={true}
-                        disabled
-                        className="jodie-flavor-switch__opt jodie-flavor-switch__opt--disabled"
-                        title="JS flavor is coming next"
-                    >
-                        JS
-                        <span className="jodie-flavor-switch__badge">coming next</span>
-                    </button>
-                </div>
                 <div className="jodie-code-scope" title="Variables available in JjEL expressions">
                     scope: self, model, classes
                 </div>

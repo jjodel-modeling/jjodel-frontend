@@ -64,6 +64,7 @@ import {
     syncReferenceEdge,
     syncDeleteVertex,
     syncDeleteEdge,
+    syncDeleteReferenceById,
     syncCreateClass,
     syncCreateEnum,
     syncCreatePackage,
@@ -229,7 +230,7 @@ interface ContextMenuState {
     nodeId?: string;
     edgeId?: string;
     childId?: string;
-    childKind?: 'attr' | 'op';
+    childKind?: 'attr' | 'op' | 'ref';
     isMultiSelect?: boolean;
     selectedCount?: number;
 }
@@ -2348,6 +2349,40 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         }
 
         // Child element context menu (attribute/operation)
+        // Cross-metamodel ghost-target chip: a single "Delete reference" item that
+        // reuses the canonical refId-keyed cascade (syncDeleteReferenceById). The chip
+        // has no RF edge, so childId is the DReference id directly.
+        if (contextMenu?.nodeId && contextMenu.childId && contextMenu.childKind === 'ref') {
+            const refId = contextMenu.childId;
+            const nodeId = contextMenu.nodeId;
+            return [
+                {
+                    label: 'Delete reference',
+                    icon: 'bi-trash',
+                    danger: true,
+                    onClick: () => {
+                        takeSnapshot();
+                        // Optimistically drop the ghost-target chip + its reference row so the
+                        // chip/connector vanish instantly; the model delete re-derives the node
+                        // without them on the next sync (mirrors the attribute-delete path).
+                        setNodes(nds => nds.map(n => {
+                            if (n.id !== nodeId) return n;
+                            const data = n.data as ClassNodeData;
+                            return {
+                                ...n,
+                                data: {
+                                    ...data,
+                                    ghostTargets: (data.ghostTargets || []).filter(g => g.refId !== refId),
+                                    references: (data.references || []).filter(r => r.id !== refId),
+                                },
+                            };
+                        }));
+                        syncDeleteReferenceById(refId);
+                    },
+                },
+            ];
+        }
+
         if (contextMenu?.nodeId && contextMenu.childId) {
             const childLabel = contextMenu.childKind === 'attr' ? 'Attribute' : 'Operation';
             return [

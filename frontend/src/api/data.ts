@@ -266,6 +266,12 @@ export class EcoreParser{
 
             // the correct one
             replacePrimitiveMap[longetype] = dClassType;
+            // RT1 (round-trip): EMF serializza i reflection EClass in DUE forme equivalenti:
+            // platform:/plugin/...Ecore.ecore#//X (DefaultEClasses, riga sopra) e
+            // http://www.eclipse.org/emf/2002/Ecore#//X. Accettale entrambe, altrimenti
+            // il re-import di un export Jjodel (o di .ecore generati da altri tool) fallisce
+            // con "LinkAllNames() can't find type target".
+            replacePrimitiveMap['ecore:EClass http://www.eclipse.org/emf/2002/Ecore#//' + shortkey] = dClassType;
             // fallbacks for missing type instead of crash
             if (!replacePrimitiveMap[shortkey]) replacePrimitiveMap[shortkey] = dClassType;
             if (!replacePrimitiveMap[shortetype]) replacePrimitiveMap[shortetype] = dClassType;

@@ -14,7 +14,8 @@ import {
     ChatDocument,
     ChatState,
     TAIProvider, AIConfig, AI, JodieConfig,
-    ConsoleMode, CodeFlavor, CodeEntry, isChatEntry
+    ConsoleMode, CodeFlavor, CodeEntry, isChatEntry,
+    CONSOLE_MODES, ConsoleModeSwitchVia
 } from '../../types/jodie';
 import { useSettingsModalSafe } from '../../contexts/SettingsModalContext';
 import { JjodieEvents, AIEvents, JjScriptEvents, JjodelEvents } from '../../events/registry';
@@ -41,9 +42,31 @@ const jjodieProvider = consoleLanguageRegistry.get('jjodie')!;
 const jjscriptProvider = consoleLanguageRegistry.get('jjscript')!;
 const jjelProvider = consoleLanguageRegistry.get('jjel')!;
 
-// localStorage keys for the console mode switcher (Chat / Code).
+// localStorage keys for the console mode switcher.
 const CONSOLE_MODE_KEY = 'jjodel.console.mode';
 const CONSOLE_CODE_FLAVOR_KEY = 'jjodel.console.codeFlavor';
+
+// Legacy persisted values were 'chat'/'code'; map them to the new provider-mode
+// ids. Unknown values fall back to the Jjodie home. The key itself is preserved
+// (removal is a later step).
+function normalizeConsoleMode(raw: string): ConsoleMode {
+    if (raw === 'chat') return 'jjodie';
+    if (raw === 'code') return 'jjel';
+    return (CONSOLE_MODES as string[]).includes(raw) ? (raw as ConsoleMode) : 'jjodie';
+}
+
+// Static content for the `/help` console entry (Jjodie mode).
+const CONSOLE_HELP_TEXT = [
+    '**Jjodie console — modes**',
+    '',
+    '- **Jjodie** — ask in natural language; keyword-first commands still run as JjScript.',
+    '- **JjScript** — every line runs as a JjScript command against the model.',
+    '- **JjEL** — evaluate JjEL expressions against the model.',
+    '',
+    '**Switch modes:** `Cmd/Ctrl+J` or `Ctrl+.` cycle · click the mode chip to pick.',
+    '',
+    '**Slash commands (Jjodie mode):** `/ask` `/js` `/jjel` `/help` · `/clear` clears the current mode.',
+].join('\n');
 
 // Persisted, string-typed local state. Local to Jodie: not exported.
 function useLocalStorageString<T extends string>(key: string, defaultValue: T): [T, (v: T) => void] {
@@ -90,7 +113,10 @@ export function Jodie(): JSX.Element {
 
     // Console mode (Chat / Code) and code flavor (JjEL / JS), persisted in localStorage.
     // JS flavor is reserved for a later phase; rendered but disabled in the UI.
-    const [consoleMode, setConsoleMode] = useLocalStorageString<ConsoleMode>(CONSOLE_MODE_KEY, 'chat');
+    const [persistedConsoleMode, setConsoleMode] = useLocalStorageString<ConsoleMode>(CONSOLE_MODE_KEY, 'jjodie');
+    // Normalize on read so a legacy persisted value ('chat'/'code') resolves to a
+    // valid provider-mode id on the very first render.
+    const consoleMode = normalizeConsoleMode(persistedConsoleMode);
     const [codeFlavor, setCodeFlavor] = useLocalStorageString<CodeFlavor>(CONSOLE_CODE_FLAVOR_KEY, 'jjel');
 
     // Root ref used by the Cmd+J listener to detect "focus is inside Jjodie".
@@ -287,13 +313,40 @@ export function Jodie(): JSX.Element {
         return () => clearInterval(interval);
     }, [ragInitialized]);
 
-    // Cmd+J / Ctrl+J: toggle Chat <-> Code console mode.
+    // Central mode-change funnel. Every user-facing switch (cycle, picker, slash)
+    // goes through here so it announces itself on the bus — groundwork for 2b.3,
+    // no consumer yet. Programmatic promotions use setConsoleMode directly.
+    const setMode = useCallback((next: ConsoleMode, via?: ConsoleModeSwitchVia) => {
+        if (consoleMode !== next) {
+            window.dispatchEvent(new CustomEvent(JjodieEvents.CONSOLE_MODE_CHANGE, {
+                detail: { from: consoleMode, to: next, via },
+            }));
+        }
+        setConsoleMode(next);
+    }, [consoleMode, setConsoleMode]);
+
+    // Cycle jjodie → jjscript → jjel → jjodie.
+    const cycleMode = useCallback((via: ConsoleModeSwitchVia) => {
+        const idx = CONSOLE_MODES.indexOf(consoleMode);
+        const next = CONSOLE_MODES[(idx + 1) % CONSOLE_MODES.length];
+        setMode(next, via);
+    }, [consoleMode, setMode]);
+
+    // Boot migration: rewrite a legacy persisted value ('chat'/'code') to its
+    // provider-mode id once, so the stored key is normalized. Key preserved (2b.3).
+    useEffect(() => {
+        if (persistedConsoleMode !== consoleMode) setConsoleMode(consoleMode);
+        // Run once on mount; consoleMode is derived from the persisted value.
+    }, []);
+
+    // Cmd+J / Ctrl+J and Ctrl+. cycle the console mode (jjodie → jjscript → jjel).
     // Skip when focus is in another editable surface (Monaco or any input/textarea
     // outside Jjodie); always handle when focus is inside Jjodie or nowhere editable.
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
-            const isToggle = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'j';
-            if (!isToggle) return;
+            const isCmdJ = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'j';
+            const isCtrlDot = e.ctrlKey && !e.metaKey && (e.key === '.' || e.code === 'Period');
+            if (!isCmdJ && !isCtrlDot) return;
 
             const target = e.target as HTMLElement | null;
             const focusInJjodie = !!jodieRootRef.current && !!target && jodieRootRef.current.contains(target);
@@ -301,13 +354,13 @@ export function Jodie(): JSX.Element {
             if (isEditable && !focusInJjodie) return;
 
             e.preventDefault();
-            setConsoleMode(consoleMode === 'chat' ? 'code' : 'chat');
+            cycleMode(isCtrlDot ? 'ctrl-dot' : 'cmdj');
             // Make sure the window is open so the user sees the switch take effect.
             setChatState(prev => prev.isOpen ? prev : { ...prev, isOpen: true, hasUnread: false });
         };
         document.addEventListener('keydown', handler);
         return () => document.removeEventListener('keydown', handler);
-    }, [consoleMode, setConsoleMode]);
+    }, [cycleMode]);
 
     // Submit a JjEL expression from the Code-mode input. Synchronous evaluator:
     // append the input + result (or error) as a single CodeEntry to the unified history.
@@ -328,7 +381,7 @@ export function Jodie(): JSX.Element {
         // TODO stadio 3: when JS flavor is enabled, route 'js'/'javascript' tags to flavor 'js'.
         // For now everything goes to JjEL; JS-tagged snippets may show JjEL syntax errors,
         // which the user can refine in place.
-        setConsoleMode('code');
+        setConsoleMode('jjel');
         setCodeFlavor('jjel');
         setPendingPrefill({ prompt: code, nonce: Date.now() });
     }, [setConsoleMode, setCodeFlavor]);
@@ -339,9 +392,22 @@ export function Jodie(): JSX.Element {
         if (entry.output.ok) return;
         const langLabel = entry.flavor === 'jjel' ? 'JjEL' : 'JS';
         const template = `This ${langLabel} expression failed:\n\n\`${entry.input}\`\n\nError: ${entry.output.error}\n\n`;
-        setConsoleMode('chat');
+        setConsoleMode('jjodie');
         setPendingPrefill({ prompt: template, nonce: Date.now() });
     }, [setConsoleMode]);
+
+    // Slash `/help` in Jjodie mode: append a static system entry describing the
+    // modes, shortcuts and slash commands.
+    const handleHelpRequested = useCallback(() => {
+        const helpMessage: ChatMessage = {
+            id: generateMessageId(),
+            kind: 'chat',
+            role: 'assistant',
+            content: CONSOLE_HELP_TEXT,
+            timestamp: Date.now(),
+        };
+        setChatState(prev => ({ ...prev, messages: [...prev.messages, helpMessage] }));
+    }, []);
 
     // Open the chat window
     const handleOpen = useCallback(() => {
@@ -368,8 +434,9 @@ export function Jodie(): JSX.Element {
 
     // Send message
     const handleSendMessage = useCallback(async (content: string, images?: ChatImage[], documents?: ChatDocument[]) => {
-        // Check if this is a JjScript command
-        if (JjScriptService.isJjScriptCommand(content)) {
+        // Explicit JjScript mode routes ALL input to the jjscript provider; in
+        // Jjodie mode isJjScriptCommand keeps deciding jjscript-vs-LLM (unchanged).
+        if (consoleMode === 'jjscript' || JjScriptService.isJjScriptCommand(content)) {
             // Add user message
             const userMessage: ChatMessage = {
                 id: generateMessageId(),
@@ -525,7 +592,7 @@ export function Jodie(): JSX.Element {
                 isWaiting: false,
             }));
         }
-    }, [activeProvider, chatState.messages, state.idlookup.clonedCounter, projectContext, userName]);
+    }, [activeProvider, chatState.messages, consoleMode, state.idlookup.clonedCounter, projectContext, userName]);
 
     // Open settings - open unified settings modal at Providers section
     const handleOpenSettings = useCallback(() => {
@@ -563,7 +630,7 @@ export function Jodie(): JSX.Element {
     const handleClearCurrentMode = useCallback(() => {
         setChatState(prev => {
             const next = prev.messages.filter(e =>
-                consoleMode === 'code' ? e.kind !== 'code' : e.kind === 'code'
+                consoleMode === 'jjel' ? e.kind !== 'code' : e.kind === 'code'
             );
             if (next.length === prev.messages.length) return prev;
             return { ...prev, messages: next };
@@ -572,7 +639,7 @@ export function Jodie(): JSX.Element {
 
     const canClearCurrentMode = useMemo(
         () => chatState.messages.some(e =>
-            consoleMode === 'code' ? e.kind === 'code' : e.kind !== 'code'
+            consoleMode === 'jjel' ? e.kind === 'code' : e.kind !== 'code'
         ),
         [chatState.messages, consoleMode]
     );
@@ -630,10 +697,11 @@ export function Jodie(): JSX.Element {
                     onStop={handleStop}
                     isVisible={windowVisible}
                     consoleMode={consoleMode}
-                    onConsoleModeChange={setConsoleMode}
+                    onConsoleModeChange={setMode}
                     codeFlavor={codeFlavor}
                     onCodeFlavorChange={setCodeFlavor}
                     onSubmitCode={handleSubmitCode}
+                    onHelpRequested={handleHelpRequested}
                     onTestInCode={handleTestInCode}
                     onAskJjodie={handleAskJjodie}
                     onClearCurrentMode={handleClearCurrentMode}

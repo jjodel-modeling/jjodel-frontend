@@ -15,7 +15,9 @@ import { executeDeleteInstance } from './instance';
 
 import {
     DeleteElementAction,
-    LProject
+    LProject,
+    LPointerTargetable,
+    store
 } from '../../../joiner';
 
 // ============================================
@@ -97,14 +99,19 @@ export async function executeDelete(
             }
         }
 
-        // Perform deletion via L-proxy delete(): fires Dummy.get_delete cascade
-        // (children, father's collection, pointedBy cleanup, M1 DValues, and
-        // canvas DVertex nodes via lDeleted.nodes + case 'model' edges).
-        // It wraps its own TRANSACTION internally — no outer wrapper (see
-        // canvasToJjom.syncRemoveAttribute for the canonical pattern).
+        // Perform deletion. Drop the editor-v2 canvas vertices for this element
+        // FIRST: Dummy.get_delete reaches vertices only via LClass.nodes — a
+        // classic-editor-only transient map that is empty for editor-v2 — so a
+        // class cascade alone leaves the DVertex dangling in graph.subElements
+        // and useJjomSync never removes the live ReactFlow node (it only clears
+        // on reopen). See deleteCanvasVerticesForModel.
+        // Then element.delete() fires the model cascade (children, father's
+        // collection, pointedBy cleanup, M1 DValues). Each .delete() wraps its
+        // own TRANSACTION — no outer wrapper (see canvasToJjom.syncRemoveAttribute).
         try {
             const elementId = element.id;
             const elementName = element.name || qualifiedNameToString(target);
+            deleteCanvasVerticesForModel(elementId);
             element.delete();
             return {
                 success: true,
@@ -152,6 +159,63 @@ function matchesElementType(element: any, elementType: string): boolean {
     if (!token) return true; // unknown type string: do not block
     const className = element?.className || '';
     return className.includes(token);
+}
+
+/**
+ * Delete the editor-v2 canvas DVertices that render `modelId`, plus their
+ * connected edges, via the L-proxy .delete() cascade.
+ *
+ * Why this is needed: Dummy.get_delete reaches a class's canvas vertices only
+ * through LClass.nodes — a classic-editor-only transient map (LModelElement
+ * get_nodes, filtered by a live .html DOM ref) that is always empty for
+ * editor-v2 — and `case 'model'` in the cascade is a no-op for non-Edge
+ * dependents. So deleting a DClass never deletes its editor-v2 DVertex: the
+ * vertex id lingers in graph.subElements as a dangling pointer, and
+ * useJjomSync's incremental removal (which keys off subElements) never drops
+ * the live ReactFlow node — it only disappears on reopen.
+ *
+ * Deleting each vertex through its own .delete() fires the vertex cascade
+ * (Dummy case 'subElements'), removing its id from graph.subElements, which
+ * drives useJjomSync's live node removal. Connected edges are deleted the same
+ * way so no floating arrows remain. Each .delete() wraps its own TRANSACTION —
+ * no outer wrapper (mirrors canvasToJjom.syncDeleteVertex / syncRemoveAttribute).
+ *
+ * The reverse lookup is by `model === modelId`, so for non-vertex targets
+ * (e.g. an attribute) it finds nothing and is a no-op.
+ */
+function deleteCanvasVerticesForModel(modelId: string): void {
+    try {
+        const idlookup: any = store.getState().idlookup;
+        const vertexIds: string[] = [];
+        for (const id in idlookup) {
+            const ge = idlookup[id];
+            if (ge?.className === 'DVertex' && ge.model === modelId) vertexIds.push(id);
+        }
+
+        const deletedEdgeIds = new Set<string>();
+        for (const vertexId of vertexIds) {
+            const vertexProxy: any = LPointerTargetable.fromPointer(vertexId);
+            if (!vertexProxy) continue;
+
+            // Delete connected edges first, else they remain as floating arrows
+            // (their source/target vertex is gone) — mirrors syncDeleteVertex.
+            const graphProxy: any = vertexProxy.graph;
+            const allEdges: any[] = graphProxy?.edges ?? [];
+            for (const edge of allEdges) {
+                const startId = edge?.start?.id ?? edge?.__raw?.start;
+                const endId = edge?.end?.id ?? edge?.__raw?.end;
+                const edgeId = edge?.id ?? edge?.__raw?.id;
+                if ((startId === vertexId || endId === vertexId) && edgeId && !deletedEdgeIds.has(edgeId)) {
+                    deletedEdgeIds.add(edgeId);
+                    edge?.delete?.();
+                }
+            }
+
+            vertexProxy.delete();
+        }
+    } catch (err) {
+        console.warn('[JjScript delete] Failed to delete canvas vertices:', err);
+    }
 }
 
 function checkDependencies(element: any, project: LProject): string[] {

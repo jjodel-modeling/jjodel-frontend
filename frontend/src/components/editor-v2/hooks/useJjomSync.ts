@@ -41,6 +41,7 @@ import {
     clearEdgeRefIds,
     hasCanvasEdgePair,
     markCanvasEdgePair,
+    clearCanvasEdgePair,
     clearCanvasEdgePairs,
     isSingletonSuppressed,
 } from '../sync/syncState';
@@ -386,6 +387,48 @@ export function useJjomSync(
         return h;
     });
 
+    // ── Selector: hash of (classId, extends[]) pairs across all M2 classes.
+    //    Makes the auto-populate effect re-fire on a DClass.extends change
+    //    (JjScript `B extends A` / `remove extends from B`), which none of the
+    //    other deps detect: `modelClassCount` is unchanged by an extends write
+    //    and `elementSnapshots` does not hash `extends`. Without this dep the
+    //    effect would miss the LIVE half of the D-first inheritance sync — see
+    //    docs/discovery/discovery_2026-07-11_dfirst_live_sync_dead.md §3.1.
+    //
+    //    Traversal mirrors `modelRefTypeSig` above (top-level packages →
+    //    classes → extends; no subpackages) and the hash formula is identical,
+    //    operating on string pointers in array order (no sort — mirror of the
+    //    refTypeSig style). `classId` is mixed per class so a retarget
+    //    (A extends B ⇒ A extends C) is disambiguated; identical (classId,
+    //    extends) sets produce identical numbers, so the selector is idempotent
+    //    across runs (HS-IDEMPOT).
+    const modelExtendsSig = useSelector((state: DState) => {
+        if (!modelid) return 0;
+        const rawModel = state.idlookup?.[modelid] as any;
+        if (!rawModel) return 0;
+        let h = 0;
+        const mix = (s: string) => {
+            for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+        };
+        for (const pkgId of (rawModel.packages ?? [])) {
+            const pkg = state.idlookup?.[pkgId] as any;
+            if (!pkg) continue;
+            for (const clsId of (pkg.classes ?? [])) {
+                if (typeof clsId !== 'string') continue;
+                const cls = state.idlookup?.[clsId] as any;
+                if (!cls) continue;
+                mix(clsId);
+                for (const supId of (cls.extends ?? [])) {
+                    if (typeof supId !== 'string') continue;
+                    mix('→');
+                    mix(supId);
+                }
+                h = (h * 31 + 7) | 0;
+            }
+        }
+        return h;
+    });
+
     // ── Auto-create / populate v2-flow graph ─────────────────────────
     const creatingGraphRef = useRef(false);
     const justCreatedGraphRef = useRef(false);
@@ -454,6 +497,12 @@ export function useJjomSync(
         // M1 instance edges (Step 4 / useM1ReferenceEdges territory) and
         // inheritance edges are excluded by `isM2ReferenceEdge` (HS-M1-CONTAMINATION).
         const existingRefEdgesByRefId = new Map<string, RefEdgeSnapshot[]>();
+        // Persisted inheritance (isExtend) edges keyed by their start vertex.
+        // Used by Step 3 to reconcile-delete edges whose backing DClass.extends
+        // no longer references the end vertex's class (D-first extends removal /
+        // retarget). Parallel to existingRefEdgesByRefId but for inheritance —
+        // it does NOT feed the M2 reference reconcile. See discovery 2026-07-11 §5.3.
+        const existingExtendEdgesByStartVertex = new Map<string, Array<{ edgeId: string; startVertex: string; endVertex: string }>>();
 
         // Reference edges use a composite key (refId:src→tgt) so multiple
         // refs between the same src/tgt pair (e.g. Family→Member: father,
@@ -494,6 +543,19 @@ export function useJjomSync(
                         const list = existingRefEdgesByRefId.get(refId);
                         if (list) list.push(entry);
                         else existingRefEdgesByRefId.set(refId, [entry]);
+                    }
+                    // Collect persisted inheritance (isExtend) edges for Step 3's
+                    // reconcile-delete. Keyed by start vertex. Excluded from the M2
+                    // reference reconcile pool above (isM2ReferenceEdge is false for
+                    // inheritance: model === undefined), so HS-M1-CONTAMINATION and
+                    // the reference reconcile stay untouched. See discovery
+                    // 2026-07-11 §5.3.
+                    if (se.isExtend === true) {
+                        const startV = se.start as string;
+                        const extEntry = { edgeId: seId, startVertex: startV, endVertex: se.end as string };
+                        const extList = existingExtendEdgesByStartVertex.get(startV);
+                        if (extList) extList.push(extEntry);
+                        else existingExtendEdgesByStartVertex.set(startV, [extEntry]);
                     }
                 }
             }
@@ -609,13 +671,38 @@ export function useJjomSync(
             missingObjectsCount++;
         }
 
+        // Count stale inheritance edges (D-first extends removal / retarget):
+        // persisted isExtend edges whose end vertex's class is no longer in the
+        // start class's `extends`. Mirrors staleCrossMMEdgeCount below — without
+        // this a PURE `remove extends` produces zero missing elements, so the
+        // early-exit would skip Step 3 and the orphan edge would linger (zombie).
+        // See discovery 2026-07-11 §5.3.
+        let staleInheritanceEdgeCount = 0;
+        for (const entry of classifierEntries) {
+            if (entry.raw.className !== 'DClass') continue;
+            const sV = vertexIdByModelId.get(entry.id);
+            if (!sV) continue;
+            const persisted = existingExtendEdgesByStartVertex.get(sV) ?? [];
+            if (persisted.length === 0) continue;
+            const currentSupIds = new Set(
+                (entry.raw.extends ?? []).filter((s: any) => typeof s === 'string') as string[]
+            );
+            for (const pe of persisted) {
+                const endV = idlookup[pe.endVertex] as any;
+                const endClassId = typeof endV?.model === 'string' ? endV.model as string : undefined;
+                if (!(endClassId && currentSupIds.has(endClassId))) staleInheritanceEdgeCount++;
+            }
+        }
+
         // Nothing to do? Early exit.
         // staleCrossMMEdgeCount keeps Step 3 reachable when a cross-MM retarget
         // left a stale edge to delete (no missing element would otherwise fire).
+        // staleInheritanceEdgeCount does the same for a D-first extends removal.
         if (!needsNewGraph && missingClassifiers.length === 0
             && missingObjectsCount === 0
             && missingEdgeCount === 0 && missingM1EdgeCount === 0
-            && staleCrossMMEdgeCount === 0) return;
+            && staleCrossMMEdgeCount === 0
+            && staleInheritanceEdgeCount === 0) return;
 
         // ── Create missing elements ─────────────────────────────────────
         // Each DVertex.new / DVoidEdge.new2 has its own internal TRANSACTION,
@@ -712,6 +799,52 @@ export function useJjomSync(
 
             for (const entry of classifierEntries) {
                 if (entry.raw.className !== 'DClass') continue;
+
+                // Extends (inheritance) — reconcile-DELETE stale edges first.
+                // For each persisted isExtend edge starting at this class's vertex,
+                // if the end vertex's class is no longer in this class's `extends`
+                // (D-first `remove extends` or retarget), the edge is stale → delete
+                // it. Done BEFORE the ADD loop so a retarget (A→B ⇒ A→C) drops the
+                // old edge and re-adds the new one in a single pass. Delete idiom
+                // mirrors the cross-MM stale-edge cleanup below (:779-793): a
+                // TRANSACTION whose body has only DeleteElementAction (no `.new()`
+                // creator, so §3.3's coordinate-loss hazard does not apply);
+                // DeleteElementAction cascades via pointedBy (edgesIn/edgesOut
+                // reciprocals). See discovery 2026-07-11 §5.3.
+                const extSrcVertex = vertexIdByModelId.get(entry.id);
+                if (extSrcVertex) {
+                    const persistedExtendEdges = existingExtendEdgesByStartVertex.get(extSrcVertex) ?? [];
+                    if (persistedExtendEdges.length > 0) {
+                        const currentSupIds = new Set(
+                            (entry.raw.extends ?? []).filter((s: any) => typeof s === 'string') as string[]
+                        );
+                        const staleExtendEdges = persistedExtendEdges.filter(pe => {
+                            const endV = idlookup[pe.endVertex] as any;
+                            const endClassId = typeof endV?.model === 'string' ? endV.model as string : undefined;
+                            return !(endClassId && currentSupIds.has(endClassId));
+                        });
+                        if (staleExtendEdges.length > 0) {
+                            TRANSACTION('Delete stale inheritance edge (extends removed)', () => {
+                                for (const pe of staleExtendEdges) {
+                                    const staleRaw = idlookup[pe.edgeId];
+                                    if (staleRaw) DeleteElementAction.new(staleRaw);
+                                }
+                            });
+                            const removedExtendIds = new Set(staleExtendEdges.map(pe => pe.edgeId));
+                            for (const rid of removedExtendIds) rfEdgeCache.current.delete(rid);
+                            setEdges(prev => prev.filter(e => !removedExtendIds.has(e.id)));
+                            for (const pe of staleExtendEdges) {
+                                // Free the pair marker so a later legitimate re-add of the
+                                // same inheritance is not blocked by a stale mark, and drop
+                                // the edge key so an ADD in this same pass (retarget) can
+                                // recreate the edge. clearCanvasEdgePair is symmetric to the
+                                // markCanvasEdgePair set at ADD time below.
+                                clearCanvasEdgePair(pe.startVertex, pe.endVertex);
+                                existingEdgeKeys.delete(`${pe.startVertex}→${pe.endVertex}`);
+                            }
+                        }
+                    }
+                }
 
                 // Extends (inheritance)
                 for (const supId of (entry.raw.extends ?? [])) {
@@ -939,7 +1072,7 @@ export function useJjomSync(
             // before the effect can run again (avoids stale snapshots).
             setTimeout(() => { creatingGraphRef.current = false; }, 150);
         }
-    }, [modelid, hasGraph, subElementIds.length, modelClassCount, modelRefCount, modelRefTypeSig, modelObjectCount]);
+    }, [modelid, hasGraph, subElementIds.length, modelClassCount, modelRefCount, modelRefTypeSig, modelExtendsSig, modelObjectCount]);
 
     // ── Selector 2: Per-element D-object references ────────────────────
     // For each ID in subElements, select state.idlookup[id].

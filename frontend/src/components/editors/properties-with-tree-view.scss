@@ -45,12 +45,12 @@ $radius-md: 6px;
 // ============================================
 
 .properties-panel-container {
-    // Rail layout finalization 2026-05-13: flex:1 1 0 + min-width:0 permettono
-    // al pannello di espandersi sullo spazio liberato dalla rail/dock shrink.
-    // Rimossi min-width 300px e max-width 450px del modello F1: con il rail
-    // model, le rail/dock-shrink coprono i casi limite — il cap 450px
-    // produceva un vuoto residuo a destra (vedi acceptance #2/#3/#4).
-    flex: 1 1 0;
+    // Fixed-widths model 2026-07-06: larghezza propria e fissa (400-700, default
+    // 440), settata inline dal componente via width/min/max-width. `flex:0 0 auto`
+    // impedisce sia grow che shrink → il pannello NON dipende più dallo stato del
+    // tree (R1). `position: relative` àncora il resize handle sul bordo sinistro.
+    flex: 0 0 auto;
+    position: relative;
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -84,6 +84,43 @@ $radius-md: 6px;
     // Empty state: no scrollbar needed
     .properties-panel--empty {
         overflow: hidden;
+    }
+}
+
+// Resize handle: bordo SINISTRO del Properties container (2026-07-06). Speculare
+// al tree handle ma con la hit-zone che si estende VERSO DESTRA (left:0, non -3px)
+// per non pescare l'`ew-resize` del `.dock-divider` rc-dock adiacente. z-index 11
+// (> tree handle 10, > divider) così cattura lui il drag nell'area di confine.
+// Trascinare a sinistra allarga Properties → il tab cresce, il canvas cede spazio.
+.properties-panel-resize-handle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;     // niente protrusione a sinistra: evita la hit-zone del divider
+    width: 6px;  // hit zone verso l'interno del pannello
+    cursor: col-resize;
+    z-index: 11;
+    background: transparent;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;     // linea 1px sul bordo sinistro, sovrapposta al border-left del container
+        width: 1px;
+        background-color: $color-border;
+        transition: background-color $transition-fast;
+        pointer-events: none;
+    }
+
+    &:hover::before,
+    &:active::before {
+        background-color: $color-highlight;
+    }
+
+    @media (hover: none) {
+        display: none;
     }
 }
 
@@ -213,12 +250,13 @@ $radius-md: 6px;
 }
 
 // ============================================
-// COLLAPSED PANEL TOGGLE (2026-05-13)
-// Button compatto 24×24 in alto, sostituisce la rail full-height del
-// rail-fix. Allineato verticalmente con gli header dei pannelli espansi
-// adiacenti via `align-self: flex-start` + margin-top 8px.
-// Modifier --tree usa `margin-left: auto` come safety net visiva quando
-// entrambi sono iconified prima che il body attribute venga settato.
+// COLLAPSED PANEL TOGGLE (2026-05-13, ingombro deterministico 2026-07-06)
+// Button compatto 24×24 flottante in alto. INGOMBRO REALE = 24 + 2 + 2 = 28px
+// (margin-box), che DEVE combaciare con COLLAPSED_PANEL_TOGGLE_WIDTH nel
+// componente (formula di larghezza del tab). Margini simmetrici: niente più
+// `--properties`/`--tree` con `margin-left:auto` (rompeva il determinismo del
+// both-collapsed = 56px). Allineato agli header espansi via
+// `align-self: flex-start` + margin-top 8px.
 // ============================================
 
 .collapsed-panel-toggle {
@@ -227,8 +265,8 @@ $radius-md: 6px;
     height: 24px;
     align-self: flex-start;
     margin-top: 8px;
-    margin-left: 4px;
-    margin-right: 4px;
+    margin-left: 2px;
+    margin-right: 2px;
     padding: 0;
     position: relative; // anchor for the attention pulse dot (--tree side)
     display: inline-flex;
@@ -256,14 +294,9 @@ $radius-md: 6px;
     }
 }
 
-.collapsed-panel-toggle--properties {
-    margin-left: 8px;
-}
-
-.collapsed-panel-toggle--tree {
-    margin-right: 8px;
-    margin-left: auto;
-}
+// Modifier --properties / --tree: nessun override di margine (2026-07-06). I due
+// toggle hanno ingombro simmetrico e deterministico (28px), affiancati nel
+// both-collapsed (28+28=56). Le classi restano nel JSX per targeting semantico.
 
 // Attention pulse dot on the collapsed tree toggle (2026-07-05 decoupling).
 // Signals that an event would previously have force-opened the tree; there is
@@ -280,16 +313,12 @@ $radius-md: 6px;
     pointer-events: none;
 }
 
-// Modifier: quando Properties è in rail e Tree è espanso, il Tree deve
-// espandersi a riempire lo spazio (default flex:0 0 auto + width inline).
-// Il JSX salta lo style inline width/minWidth/maxWidth quando il modifier
-// è attivo (vedi PropertiesWithTreeView.tsx, condizione onlyTreeExpanded).
-.properties-with-tree-view.tree-only-expanded .tree-view-panel-container {
-    flex: 1 1 0;
-    width: auto;
-    min-width: 0;
-    max-width: none;
-}
+// R2 both-collapsed (2026-07-06 addendum): NON si renderizzano più toggle in-panel
+// quando entrambi i pannelli sono chiusi. Il tab va a 0px (vedi abstract/style.scss,
+// body[data-properties-tree-both-collapsed]) e i due controlli diventano il cluster
+// flottante `.properties-tree-floating-cluster` (portal su <body>, in fondo a questo
+// file). La vecchia regola `:has()` di strip trasparente è quindi superflua (il
+// pannello a 0 non è visibile) ed è stata rimossa.
 
 // ============================================
 // TREE VIEW PANEL (RIGHT) - FIXED WIDTH
@@ -297,7 +326,7 @@ $radius-md: 6px;
 
 .tree-view-panel-container {
     flex: 0 0 auto; // Width controlled by JS inline style (resizable via drag handle)
-    min-width: 0;   // permette al flex di shrinkare quando il modifier tree-only-expanded attiva flex:1
+    min-width: 0;   // larghezza fissa via inline width/min/max (fixed-widths 2026-07-06)
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -432,6 +461,8 @@ $radius-md: 6px;
     height: 41px;
     transition: background $transition-fast;
 
+
+
     > i {
         font-size: 14px;
         color: $color-accent;
@@ -534,6 +565,10 @@ $radius-md: 6px;
     overflow-y: auto;
     overflow-x: hidden;
     padding: 4px 0;
+
+
+    top:0px;
+    z-index: 100;
 
     // Smooth content appearance
     animation: fadeInContent 300ms ease 100ms both;
@@ -823,4 +858,80 @@ $radius-md: 6px;
             color: #6b7280;
         }
     }
+}
+
+// ============================================
+// FLOATING REOPEN CLUSTER (2026-07-06 addendum)
+// Reso via createPortal su <body> quando entrambi i pannelli sono chiusi e c'è un
+// editor model/metamodel attivo. Due icon button verticali (Properties/Tree) in
+// alto a destra, sotto la toolbar del canvas. z-index 900: sopra il canvas, sotto
+// la context-menu editor-v2 (1000) e sotto modal/context-menu app (9999+).
+// I valori top/right sono tarabili (clearance navbar+toolbar+canvas-toolbar).
+// ============================================
+.properties-tree-floating-cluster {
+    position: fixed;
+    top: 150px;   // ~ sotto navbar(60)+toolbar(50)+canvas-toolbar(40); tunable
+    right: 16px;
+    z-index: 900;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 4px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+
+    &__btn {
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        color: $color-accent; // slate #475569
+        transition: background-color 120ms ease, color 120ms ease;
+
+        &:hover {
+            background-color: $color-bg-tertiary; // slate-100
+            color: $color-text-primary;
+        }
+
+        &:focus-visible {
+            outline: 1px solid $color-highlight;
+            outline-offset: -1px;
+        }
+
+        i.bi {
+            font-size: 15px;
+            line-height: 1;
+        }
+    }
+}
+
+// Dark: palette float del canvas (coerente con le context-menu portalizzate).
+[data-theme="dark"] .properties-tree-floating-cluster {
+    background: #1e293b;
+    border-color: #334155;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+
+    .properties-tree-floating-cluster__btn {
+        color: #cbd5e1;
+
+        &:hover {
+            background-color: #334155;
+            color: #e2e8f0;
+        }
+    }
+}
+
+// Kill-switch: mai in canvas-only né sulla tab Documentation (il gate JS su
+// activeEditorType model/metamodel non copre questi due stati, che non sono
+// editor-type). Vedi abstract/style.scss per data-layout-mode / data-active-tab.
+body[data-layout-mode="canvas-only"] .properties-tree-floating-cluster,
+body[data-active-tab="documentation"] .properties-tree-floating-cluster {
+    display: none !important;
 }

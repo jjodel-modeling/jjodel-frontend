@@ -260,26 +260,13 @@ function DockComponent(props: AllProps) {
         };
     }, []);
 
-    // PropertiesWithTreeView rail-only mode (2026-05-13): quando entrambi i
-    // sub-panel sono in rail, settiamo body[data-properties-tree-rail-only='true']
-    // per shrinkare il dock tab a 56px (vedi style.scss). Semantica diversa dal
-    // pattern rimosso in F1.5: shrink invece di hide, tab resta visibile mostrando
-    // le due rail.
-    useEffect(() => {
-        const onEnter = () => {
-            document.body.dataset.propertiesTreeRailOnly = 'true';
-        };
-        const onExit = () => {
-            delete document.body.dataset.propertiesTreeRailOnly;
-        };
-        window.addEventListener(JjodelEvents.PROPERTIES_TREE_RAIL_ONLY_ENTER, onEnter);
-        window.addEventListener(JjodelEvents.PROPERTIES_TREE_RAIL_ONLY_EXIT, onExit);
-        return () => {
-            window.removeEventListener(JjodelEvents.PROPERTIES_TREE_RAIL_ONLY_ENTER, onEnter);
-            window.removeEventListener(JjodelEvents.PROPERTIES_TREE_RAIL_ONLY_EXIT, onExit);
-            delete document.body.dataset.propertiesTreeRailOnly;
-        };
-    }, []);
+    // PropertiesWithTreeView width-lock (2026-07-06): il tab a larghezza fissa è
+    // ora pilotato DIRETTAMENTE da PropertiesWithTreeView, che scrive su
+    // document.body la custom property `--properties-tree-tab-width` e il
+    // data-attr `data-properties-tree-width-lock` (consumati in abstract/style.scss).
+    // Nessun listener qui: gli effect dei figli girano prima di quelli del Dock,
+    // quindi un canale a evento perderebbe il dispatch iniziale. Rimosso il vecchio
+    // listener rail-only (PROPERTIES_TREE_RAIL_ONLY_ENTER/EXIT).
 
     const groups = {
         'models': {floatable: true, maximizable: false},

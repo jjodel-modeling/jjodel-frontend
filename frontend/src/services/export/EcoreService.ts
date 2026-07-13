@@ -62,6 +62,11 @@ export class EcoreService {
 
     private static readonly ECORE_NSURI = 'http://www.eclipse.org/emf/2002/Ecore';
 
+    /** RT2: Eclipse serializza i reflection EClass (EObject, ...) nella forma platform:/plugin,
+     *  non nella forma nsURI http (usata invece per gli EDataType primitivi). L'importer
+     *  (data.ts DefaultEClasses) risolve nativamente la forma platform. */
+    private static readonly ECORE_PLATFORM_URI = 'platform:/plugin/org.eclipse.emf.ecore/model/Ecore.ecore';
+
     /** Ecore.ecore reflection EClass names — emitted as cross-doc `ecore:EClass <ECORE_NSURI>#//<Name>`. */
     private static readonly ECORE_REFLECTION_CLASSES = new Set<string>([
         'EObject', 'EClass', 'EClassifier', 'EPackage', 'ENamedElement',
@@ -99,10 +104,14 @@ export class EcoreService {
 
         if (packages.length === 1) {
             // Single-package: <ecore:EPackage> as document root.
+            // RT4: nsURI/nsPrefix vengono emessi SOLO se presenti nel modello (o forniti via
+            // options). Inventarli (`http://jjodel.org/...`) rompeva la round-trip fidelity;
+            // EMF accetta EPackage senza nsURI e l'import M1 risolve comunque il metamodello
+            // via fallback sul nome del package (getMetamodelByNsURI).
             const pkg = packages[0];
             const name = pkg.name || metamodel.name;
-            const nsURI = options.nsURI || pkg.__raw.uri || `http://jjodel.org/${metamodel.name}`;
-            const nsPrefix = options.nsPrefix || pkg.prefix || metamodel.name.toLowerCase();
+            const nsURI = options.nsURI || pkg.__raw.uri || '';
+            const nsPrefix = options.nsPrefix || pkg.prefix || '';
             xmlParts.push(this.renderEPackageBody(pkg, name, nsURI, nsPrefix, indent, newline, '', true));
         } else {
             // Multi-package: <xmi:XMI> root with N <ecore:EPackage> children.
@@ -114,8 +123,8 @@ export class EcoreService {
             xmlParts.push(`${indent}xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore">`);
             for (const pkg of packages) {
                 const name = pkg.name || metamodel.name;
-                const nsURI = pkg.__raw.uri || `http://jjodel.org/${metamodel.name}/${name}`;
-                const nsPrefix = pkg.prefix || (pkg.name || metamodel.name).toLowerCase();
+                const nsURI = pkg.__raw.uri || ''; // RT4: no invented nsURI
+                const nsPrefix = pkg.prefix || '';
                 xmlParts.push(this.renderEPackageBody(pkg, name, nsURI, nsPrefix, indent, newline, indent, false));
             }
             xmlParts.push('</xmi:XMI>');
@@ -149,11 +158,18 @@ export class EcoreService {
             parts.push(`${pkgIndent}${indent}xmlns:xmi="http://www.omg.org/XMI"`);
             parts.push(`${pkgIndent}${indent}xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"`);
             parts.push(`${pkgIndent}${indent}xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"`);
-            parts.push(`${pkgIndent}${indent}name="${this.escapeXml(name)}"`);
-            parts.push(`${pkgIndent}${indent}nsURI="${this.escapeXml(nsURI)}"`);
-            parts.push(`${pkgIndent}${indent}nsPrefix="${this.escapeXml(nsPrefix)}">`);
+            // RT4: nsURI/nsPrefix condizionali — assenti nel modello ⇒ assenti nel file.
+            const rootTail: string[] = [`name="${this.escapeXml(name)}"`];
+            if (nsURI) rootTail.push(`nsURI="${this.escapeXml(nsURI)}"`);
+            if (nsPrefix) rootTail.push(`nsPrefix="${this.escapeXml(nsPrefix)}"`);
+            for (let ti = 0; ti < rootTail.length; ti++) {
+                parts.push(`${pkgIndent}${indent}${rootTail[ti]}${ti === rootTail.length - 1 ? '>' : ''}`);
+            }
         } else {
-            parts.push(`${pkgIndent}<ecore:EPackage name="${this.escapeXml(name)}" nsURI="${this.escapeXml(nsURI)}" nsPrefix="${this.escapeXml(nsPrefix)}">`);
+            const attrs = [`name="${this.escapeXml(name)}"`];
+            if (nsURI) attrs.push(`nsURI="${this.escapeXml(nsURI)}"`);
+            if (nsPrefix) attrs.push(`nsPrefix="${this.escapeXml(nsPrefix)}"`);
+            parts.push(`${pkgIndent}<ecore:EPackage ${attrs.join(' ')}>`);
         }
 
         const classes = pkg.classes || [];
@@ -457,15 +473,20 @@ export class EcoreService {
         parts.push(`${indent}<eClassifiers ${enumAttrs.join(' ')}>`);
 
         const literals = enumType.literals || [];
-        literals.forEach((literal, index) => {
-            const ordinal = literal.ordinal !== undefined ? literal.ordinal : index;
+        literals.forEach((literal) => {
             // BL4: name = identifier (Java); literal = display label opzionale. EMF non emette
             // literal quando coincide col name. Usa __raw.literal per evitare la derivazione
             // del getter L (che ritorna name.replace('_',' ') quando literal è vuoto).
             const litName = literal.name;
             const litRaw = literal.__raw?.literal;
             const litAttr = litRaw && litRaw !== litName ? ` literal="${this.escapeXml(litRaw)}"` : '';
-            parts.push(`${indent}${indent}<eLiterals name="${this.escapeXml(litName)}" value="${ordinal}"${litAttr}/>`);
+            // RT3: value = D-layer __raw.value (il getter L `ordinal` deriva la POSIZIONE, non
+            // il value EMF, e ritorna -1 fuori dall'app). L'importer usa -Infinity come
+            // sentinella per "value assente nel .ecore": in quel caso non emettere l'attributo,
+            // come fa Eclipse. Emesso anche quando è 0 (esplicito nel D-layer).
+            const litValue = literal.__raw?.value;
+            const valAttr = Number.isFinite(litValue) ? ` value="${litValue}"` : '';
+            parts.push(`${indent}${indent}<eLiterals name="${this.escapeXml(litName)}"${valAttr}${litAttr}/>`);
         });
 
         parts.push(`${indent}</eClassifiers>`);
@@ -735,7 +756,9 @@ export class EcoreService {
         }
         const name = target.name || '';
         if (this.ECORE_REFLECTION_CLASSES.has(name)) {
-            return `ecore:EClass ${this.ECORE_NSURI}#//${name}`;
+            // RT2: forma platform (come Eclipse) — la forma http non è risolta da tutti gli
+            // importer (incluso il nostro prima di RT1) e rompeva il re-import.
+            return `ecore:EClass ${this.ECORE_PLATFORM_URI}#//${name}`;
         }
         if (this.ECORE_REFLECTION_DATATYPES.has(name)) {
             return `ecore:EDataType ${this.ECORE_NSURI}#//${name}`;

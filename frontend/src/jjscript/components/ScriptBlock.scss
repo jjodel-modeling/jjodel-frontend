@@ -507,6 +507,11 @@ $script-running: #3b82f6;
     }
 }
 
+// Thin terminal outcome strip ("N comandi applicati") — 11px label per design system.
+.script-block__success--strip {
+    font-size: 11px;
+}
+
 // AI Disclaimer removed from ScriptBlock — shown globally in JodieWindow
 
 // ============================================
@@ -546,6 +551,9 @@ $script-running: #3b82f6;
 
 // ============================================
 // EXECUTION COMPLETE MODAL
+// TODO: cleanup — the completion modal was replaced by the inline outcome strip
+// (.script-block__success / .script-block__error). These rules are now unused; kept
+// per preservation policy until confirmed no other consumer references them.
 // ============================================
 
 .execution-complete-overlay {

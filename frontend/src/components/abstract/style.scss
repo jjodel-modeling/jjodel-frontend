@@ -1107,6 +1107,66 @@ body[data-layout-mode="sidebar"] {
   }
 }
 
+/* Properties+Tree width-lock (2026-07-06) — larghezze fisse e indipendenti.
+   PropertiesWithTreeView setta su <body> la custom property
+   `--properties-tree-tab-width` (= somma delle parti visibili) + il data-attr di
+   attivazione; lo spazio liberato va al canvas. POSIZIONE CRITICA: qui, DOPO le
+   regole responsive (split/sidebar/default, che deve battere in source order per
+   scendere sotto i loro min-width) e PRIMA delle hide-rule
+   documentation/summary/transformation/viewpoint/canvas-only (che così vincono su
+   di lei → in dashboard/viewpoint/transformation/canvas-only il pannello resta
+   nascosto). Sostituisce la vecchia regola rail-only 56px (rimossa più sotto). */
+body[data-properties-tree-width-lock="true"] {
+  .dock-hbox > .dock-panel:last-child,
+  .dock-hbox > .dock-box:last-child {
+    flex: 0 0 var(--properties-tree-tab-width) !important;
+    width: var(--properties-tree-tab-width) !important;
+    min-width: var(--properties-tree-tab-width) !important;
+    max-width: var(--properties-tree-tab-width) !important;
+    transition: width 200ms ease, flex-basis 200ms ease;
+  }
+}
+
+/* Drag dei resize handle interni → transition del tab spenta per un follow
+   istantaneo (attr settato/rimosso da PropertiesWithTreeView su mousedown/up).
+   `!important` batte la transition della width-lock a prescindere dall'ordine. */
+body[data-properties-tree-dragging] {
+  .dock-hbox > .dock-panel:last-child,
+  .dock-hbox > .dock-box:last-child {
+    transition: none !important;
+  }
+}
+
+/* Properties+Tree both-collapsed (2026-07-06 addendum) — tab a 0px: il canvas
+   prende tutto lo spazio, i toggle diventano un cluster flottante (portal su
+   <body>, vedi properties-with-tree-view.scss). Pattern hide come canvas-only +
+   `.dock-divider` nascosto così non resta la riga verticale. Settato da
+   PropertiesWithTreeView via body[data-properties-tree-both-collapsed]. Posta dopo
+   la width-lock (ne sovrascrive la width var, che qui vale comunque 0) e prima
+   delle hide-rule (con cui è ridondante quando attive). */
+body[data-properties-tree-both-collapsed="true"] {
+  .dock-hbox > .dock-panel:last-child,
+  .dock-hbox > .dock-box:last-child {
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    overflow: hidden !important;
+  }
+
+  .dock-hbox > .dock-panel:first-child,
+  .dock-hbox > .dock-box:first-child {
+    flex: 1 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .dock-hbox > .dock-divider {
+    display: none !important;
+  }
+}
+
 /* Documentation Tab - hide properties panel (not needed for docs view) */
 body[data-active-tab="documentation"] {
   .dock-hbox > .dock-panel:last-child,
@@ -1200,22 +1260,6 @@ body[data-editor-type="viewpoint"] {
     flex: 1 !important;
     width: 100% !important;
     max-width: 100% !important;
-  }
-}
-
-/* Properties+Tree both in rail mode (2026-05-13) — shrink dock tab to 56px.
-   Distinto da `data-editor-type="summary"` (hide pattern): qui il tab resta
-   visibile mostrando le due rail 28+28=56px, lo spazio liberato va agli
-   altri pannelli del Dock. Settato/rimosso da Dock.tsx in risposta agli
-   eventi PROPERTIES_TREE_RAIL_ONLY_ENTER/EXIT. */
-body[data-properties-tree-rail-only="true"] {
-  .dock-hbox > .dock-panel:last-child,
-  .dock-hbox > .dock-box:last-child {
-    flex: 0 0 56px !important;
-    width: 56px !important;
-    min-width: 56px !important;
-    max-width: 56px !important;
-    transition: width 200ms ease, flex-basis 200ms ease;
   }
 }
 

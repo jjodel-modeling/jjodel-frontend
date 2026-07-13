@@ -868,11 +868,26 @@ export interface ChatMessage {
 }
 
 // ============================================
-// CONSOLE MODE (Chat / Code)
+// CONSOLE MODE (Jjodie / JjScript / JjEL)
 // ============================================
 
-export type ConsoleMode = 'chat' | 'code';
+// One console mode per language provider (id ↔ mode, 1:1). Legacy persisted
+// values ('chat'/'code') are normalized on boot in Jodie.tsx.
+export type ConsoleMode = 'jjodie' | 'jjscript' | 'jjel';
 export type CodeFlavor = 'jjel' | 'js';
+
+/** Cycle/selection order used by the chip picker and the Cmd+J / Ctrl+. cycle. */
+export const CONSOLE_MODES: ConsoleMode[] = ['jjodie', 'jjscript', 'jjel'];
+
+/** Human-facing label per mode (chip + picker). */
+export const CONSOLE_MODE_LABELS: Record<ConsoleMode, string> = {
+    jjodie: 'Jjodie',
+    jjscript: 'JjScript',
+    jjel: 'JjEL',
+};
+
+/** Origin of a console mode switch — groundwork for the announced switch event. */
+export type ConsoleModeSwitchVia = 'cmdj' | 'ctrl-dot' | 'pill' | 'slash' | 'backtick';
 
 /** REPL-style entry produced when the console runs in Code mode. */
 export interface CodeEntry {

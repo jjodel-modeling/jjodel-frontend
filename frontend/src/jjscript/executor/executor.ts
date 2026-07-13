@@ -62,8 +62,11 @@ export class JjScriptExecutor {
      * Execute a JjScript command string
      */
     async execute(input: string): Promise<ExecutionResult> {
+        const _tParseStart = performance.now(); // TEMP-DISCOVERY
         // Parse the input
         const parseResult = parse(input);
+        (this as any)._tParseMs = performance.now() - _tParseStart; // TEMP-DISCOVERY
+        (this as any)._tLastInput = input; // TEMP-DISCOVERY
 
         if (!parseResult.success || !parseResult.ast) {
             return {
@@ -90,12 +93,17 @@ export class JjScriptExecutor {
     async executeAST(ast: CommandNode, contextOverride?: ExecutionContext): Promise<ExecutionResult> {
         const context = contextOverride || this.context;
         const startTime = Date.now();
+        const _tTotalStart = performance.now(); // TEMP-DISCOVERY
+        let _waitMs = 0; // TEMP-DISCOVERY
+        let _applyMs = 0; // TEMP-DISCOVERY
 
         try {
             // PRE-CHECK: Wait for dependencies before executing
             const dependencies = extractDependencies(ast);
             if (dependencies.length > 0) {
+                const _tWaitStart = performance.now(); // TEMP-DISCOVERY
                 const waitResult = await waitForDependencies(dependencies, context);
+                _waitMs = performance.now() - _tWaitStart; // TEMP-DISCOVERY
                 if (!waitResult.allResolved) {
                     const missing = waitResult.unresolved.map(d => `${d.name.raw} (${d.role})`).join(', ');
                     console.warn(`[JjScript] Unresolved dependencies after ${waitResult.waitedMs}ms: ${missing}`);
@@ -107,6 +115,7 @@ export class JjScriptExecutor {
 
             let result: ExecutionResult;
 
+            const _tApplyStart = performance.now(); // TEMP-DISCOVERY
             switch (ast.command) {
                 case 'create':
                     result = await executeCreate(ast.args as any, context);
@@ -180,8 +189,14 @@ export class JjScriptExecutor {
                     };
             }
 
+            _applyMs = performance.now() - _tApplyStart; // TEMP-DISCOVERY
+
             // Record in main history (always on this.context, not override)
             this.recordHistory(ast, result);
+
+            // TEMP-DISCOVERY: per-command executor breakdown (parse in execute(), wait = pre-check poll, apply = synchronous handler/dispatch)
+            const _parseMs = (this as any)._tParseMs ?? 0; // TEMP-DISCOVERY
+            console.log(`[JjScript-TIMING] cmd=${ast.command} parse=${_parseMs.toFixed(1)} wait=${_waitMs.toFixed(1)} apply=${_applyMs.toFixed(1)} total=${(_parseMs + (performance.now() - _tTotalStart)).toFixed(1)} in="${((this as any)._tLastInput ?? '').slice(0, 60)}"`); // TEMP-DISCOVERY
 
             return result;
         } catch (error) {

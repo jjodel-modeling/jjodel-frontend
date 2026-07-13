@@ -132,20 +132,27 @@ export class XMIService {
             throw new Error('Metamodel has no packages');
         }
 
-        const nsURI = pkg.uri || `http://jjodel.org/${metamodel.name}`;
-        const nsPrefix = pkg.prefix || metamodel.name.toLowerCase();
+        // RT6: il namespace di default DEVE combaciare con ciò che importM1FromXML risolve
+        // via getMetamodelByNsURI: nsURI del package se presente, altrimenti il NOME del
+        // package (stesso fallback dell'import). Niente URI inventate.
+        const nsURI = pkg.__raw.uri || pkg.__raw.name || metamodel.name;
+
+        // RT7: side-table del round-trip (Phase B.7): se il modello fu importato da XMI,
+        // DModel.metadata.xmiIdMap contiene DObject.id → xmi:id originale. Usala per
+        // riemettere gli xmi:id originali; fallback = Pointer id di Jjodel.
+        const xmiIdMap: Record<string, string> = (model.__raw as any)?.metadata?.xmiIdMap || {};
+        const mapId = (ptr: string): string => xmiIdMap[ptr] || ptr;
 
         const xmlParts: string[] = [];
 
         // XML Declaration
         xmlParts.push('<?xml version="1.0" encoding="UTF-8"?>');
 
-        // XMI Root
+        // XMI Root — xmlns di DEFAULT (richiesto dall'import) + xmi/xsi.
         xmlParts.push(`<xmi:XMI xmi:version="2.0"`);
         xmlParts.push(`${indent}xmlns:xmi="http://www.omg.org/XMI"`);
         xmlParts.push(`${indent}xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"`);
-        xmlParts.push(`${indent}xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"`);
-        xmlParts.push(`${indent}xmlns:${nsPrefix}="${this.escapeXml(nsURI)}">`);
+        xmlParts.push(`${indent}xmlns="${this.escapeXml(nsURI)}">`);
 
         // Embedded Metamodel (optional but default)
         if (includeMetamodel) {
@@ -169,9 +176,27 @@ export class XMIService {
         xmlParts.push('');
         xmlParts.push(`${indent}<!-- Model Instances -->`);
 
-        const objects = model.objects || [];
+        // RT8: model.objects contiene TUTTI gli oggetti (anche i figli containment,
+        // registrati lì per la materializzazione canvas). Esportare solo le RADICI,
+        // altrimenti ogni figlio appare due volte (nested + top-level) e il re-import
+        // duplica gli oggetti.
+        const objects = (model.objects || []).filter((o: LObject | null) => !!o);
+        const contained = new Set<string>();
         for (const obj of objects) {
-            xmlParts.push(this.exportObject(obj, metamodel, nsPrefix, indent, newline));
+            for (const feature of obj.features || []) {
+                const metaFeature = feature?.instanceof as LReference | undefined;
+                if (!metaFeature || (metaFeature as any).className !== 'DReference') continue;
+                if (!((metaFeature as any).composition || (metaFeature as any).containment)) continue;
+                for (const v of (feature.__raw?.values || [])) {
+                    if (typeof v === 'string') contained.add(v);
+                }
+            }
+        }
+        const seen = new Set<string>();
+        for (const obj of objects) {
+            if (contained.has(obj.id) || seen.has(obj.id)) continue;
+            seen.add(obj.id);
+            xmlParts.push(this.exportObject(obj, metamodel, mapId, indent, newline));
         }
 
         // Close XMI
@@ -199,94 +224,107 @@ export class XMIService {
     }
 
     /**
-     * Export single object instance
+     * Serialize one feature slot (DValue) into either a tag attribute or a
+     * containment child list. Shared by root and nested export.
+     *
+     * RT9: i valori vengono letti dal D-layer (feature.__raw.values), non dal
+     * getter L `values` (che mappa i pointer in proxy LObject/LEnumLiteral e
+     * renderebbe String(v) = garbage). Enum → nome del literal; reference →
+     * xmi:id mappato (RT7); attribute → stringa.
+     */
+    private static serializeFeatures(
+        obj: LObject,
+        mapId: (ptr: string) => string,
+        attrs: string[],
+        containedChildren: Array<{ refName: string; objects: LObject[] }>,
+    ): void {
+        const state = store.getState();
+        const features = obj.features || [];
+        for (const feature of features) {
+            if (!feature) continue;
+            const metaFeature = feature.instanceof as LAttribute | LReference;
+            const featureName = metaFeature?.name || (feature as any).name || 'unknown';
+            const rawValues: any[] = (feature.__raw?.values || []) as any[];
+            if (rawValues.length === 0) continue;
+
+            const isReference = metaFeature && (metaFeature as any).className === 'DReference';
+            if (!isReference) {
+                // Attribute: primitives or DEnumLiteral pointers → literal name.
+                const rendered = rawValues.map((v) => {
+                    if (typeof v === 'string') {
+                        const target = state.idlookup[v];
+                        if (target && target.className === 'DEnumLiteral') return this.escapeXml(target.name || '');
+                    }
+                    return this.escapeXml(String(v));
+                });
+                attrs.push(`${featureName}="${rendered.join(' ')}"`);
+                continue;
+            }
+
+            const refMeta = metaFeature as LReference;
+            if ((refMeta as any).composition || (refMeta as any).containment) {
+                const childObjects = rawValues
+                    .map((v) => this.resolveObject(v))
+                    .filter((o) => o !== null) as LObject[];
+                if (childObjects.length > 0) {
+                    containedChildren.push({ refName: featureName, objects: childObjects });
+                }
+            } else {
+                const refs = rawValues
+                    .filter((v) => typeof v === 'string' && !!v)
+                    .map((v) => this.escapeXml(mapId(v as string)));
+                if (refs.length > 0) attrs.push(`${featureName}="${refs.join(' ')}"`);
+            }
+        }
+    }
+
+    /**
+     * Export single root object instance.
+     * RT6: tag NON prefissato — la radice vive nel namespace di default, che è
+     * quello che importM1FromXML risolve (il prefix veniva comunque scartato).
      */
     private static exportObject(
         obj: LObject,
         metamodel: LModel,
-        nsPrefix: string,
+        mapId: (ptr: string) => string,
         indent: string,
         newline: string
     ): string {
         const parts: string[] = [];
         const i = indent;
 
-        // Get class name from instanceof
         const metaclass = obj.instanceof as LClass;
         const className = metaclass?.name || 'Object';
 
-        // Opening tag with xmi:id
-        const attrs: string[] = [`xmi:id="${this.escapeXml(obj.id)}"`];
-
-        // Get feature values
-        const features = obj.features || [];
+        const attrs: string[] = [`xmi:id="${this.escapeXml(mapId(obj.id))}"`];
         const containedChildren: Array<{ refName: string; objects: LObject[] }> = [];
+        this.serializeFeatures(obj, mapId, attrs, containedChildren);
 
-        for (const feature of features) {
-            const metaFeature = feature.instanceof as LAttribute | LReference;
-            const featureName = metaFeature?.name || feature.name || 'unknown';
-            const values = feature.values || [];
-
-            if (!metaFeature || metaFeature.className === 'DAttribute') {
-                // Simple attribute - add to tag attributes
-                if (values.length === 1) {
-                    attrs.push(`${featureName}="${this.escapeXml(String(values[0]))}"`);
-                } else if (values.length > 1) {
-                    // Multi-valued attribute
-                    attrs.push(`${featureName}="${values.map(v => this.escapeXml(String(v))).join(' ')}"`);
-                }
-            } else {
-                // Reference - could be containment or non-containment
-                const refMeta = metaFeature as LReference;
-                if (refMeta.composition || refMeta.containment) {
-                    // Contained objects - will be nested
-                    const childObjects = values
-                        .map(v => this.resolveObject(v))
-                        .filter(o => o !== null) as LObject[];
-                    if (childObjects.length > 0) {
-                        containedChildren.push({ refName: featureName, objects: childObjects });
-                    }
-                } else {
-                    // Non-containment reference - use xmi:idref or href
-                    if (values.length > 0) {
-                        const refs = values.map(v => {
-                            if (typeof v === 'string') return v; // Already a pointer/id
-                            const resolved = this.resolveObject(v);
-                            return resolved?.id || String(v);
-                        });
-                        attrs.push(`${featureName}="${refs.join(' ')}"`);
-                    }
-                }
-            }
-        }
-
-        // Build the element
         if (containedChildren.length > 0) {
-            parts.push(`${i}<${nsPrefix}:${className} ${attrs.join(' ')}>`);
-
-            // Nested contained objects
+            parts.push(`${i}<${className} ${attrs.join(' ')}>`);
             for (const { refName, objects } of containedChildren) {
                 for (const child of objects) {
-                    parts.push(this.exportNestedObject(child, refName, metamodel, nsPrefix, indent, newline, 2));
+                    parts.push(this.exportNestedObject(child, refName, metamodel, mapId, indent, newline, 2));
                 }
             }
-
-            parts.push(`${i}</${nsPrefix}:${className}>`);
+            parts.push(`${i}</${className}>`);
         } else {
-            parts.push(`${i}<${nsPrefix}:${className} ${attrs.join(' ')}/>`);
+            parts.push(`${i}<${className} ${attrs.join(' ')}/>`);
         }
 
         return parts.join(newline);
     }
 
     /**
-     * Export nested contained object
+     * Export nested contained object.
+     * RT6: xsi:type NON prefissato (classe del metamodello di default), stessa
+     * forma degli XMI EMF single-metamodel e ciò che resolveDClass gestisce.
      */
     private static exportNestedObject(
         obj: LObject,
         refName: string,
         metamodel: LModel,
-        nsPrefix: string,
+        mapId: (ptr: string) => string,
         indent: string,
         newline: string,
         level: number
@@ -298,53 +336,19 @@ export class XMIService {
         const className = metaclass?.name || 'Object';
 
         const attrs: string[] = [
-            `xsi:type="${nsPrefix}:${className}"`,
-            `xmi:id="${this.escapeXml(obj.id)}"`,
+            `xsi:type="${this.escapeXml(className)}"`,
+            `xmi:id="${this.escapeXml(mapId(obj.id))}"`,
         ];
-
-        // Add simple attributes
-        const features = obj.features || [];
         const containedChildren: Array<{ refName: string; objects: LObject[] }> = [];
-
-        for (const feature of features) {
-            const metaFeature = feature.instanceof as LAttribute | LReference;
-            const featureName = metaFeature?.name || feature.name || 'unknown';
-            const values = feature.values || [];
-
-            if (!metaFeature || metaFeature.className === 'DAttribute') {
-                if (values.length === 1) {
-                    attrs.push(`${featureName}="${this.escapeXml(String(values[0]))}"`);
-                } else if (values.length > 1) {
-                    attrs.push(`${featureName}="${values.map(v => this.escapeXml(String(v))).join(' ')}"`);
-                }
-            } else {
-                const refMeta = metaFeature as LReference;
-                if (refMeta.composition || refMeta.containment) {
-                    const childObjects = values
-                        .map(v => this.resolveObject(v))
-                        .filter(o => o !== null) as LObject[];
-                    if (childObjects.length > 0) {
-                        containedChildren.push({ refName: featureName, objects: childObjects });
-                    }
-                } else if (values.length > 0) {
-                    const refs = values.map(v => {
-                        const resolved = this.resolveObject(v);
-                        return resolved?.id || String(v);
-                    });
-                    attrs.push(`${featureName}="${refs.join(' ')}"`);
-                }
-            }
-        }
+        this.serializeFeatures(obj, mapId, attrs, containedChildren);
 
         if (containedChildren.length > 0) {
             parts.push(`${i}<${refName} ${attrs.join(' ')}>`);
-
             for (const { refName: childRefName, objects } of containedChildren) {
                 for (const child of objects) {
-                    parts.push(this.exportNestedObject(child, childRefName, metamodel, nsPrefix, indent, newline, level + 1));
+                    parts.push(this.exportNestedObject(child, childRefName, metamodel, mapId, indent, newline, level + 1));
                 }
             }
-
             parts.push(`${i}</${refName}>`);
         } else {
             parts.push(`${i}<${refName} ${attrs.join(' ')}/>`);
@@ -615,6 +619,15 @@ export class XMIService {
                 // Wrapper path: each non-dash key under <xmi:XMI> is a root instance (or array thereof).
                 for (const key of Object.keys(rootContent)) {
                     if (key.startsWith('-')) continue;
+                    // RT10: elementi di sistema sotto il wrapper (xmi:Documentation con
+                    // l'embedded metamodel, xmi:Extension, xsi:*) non sono istanze radice:
+                    // vanno saltati, non risolti come classi del metamodello.
+                    if (key.startsWith('xmi:') || key.startsWith('xsi:')) {
+                        const msg = `System element <${key}> under <xmi:XMI> skipped (not a model instance)`;
+                        console.warn('[XMI import]', msg);
+                        warnings.push(msg);
+                        continue;
+                    }
                     const val = rootContent[key];
                     const tag = key.indexOf(':') > 0 ? key.substring(key.indexOf(':') + 1) : key;
 

@@ -5,7 +5,7 @@
 
 import React, { useState, useRef, useEffect, KeyboardEvent, ClipboardEvent, useCallback, useMemo } from 'react';
 import {
-    ChatImage, ChatDocument, JodieConfig, ConsoleMode, CodeFlavor,
+    ChatImage, ChatDocument, JodieConfig, ConsoleMode, ConsoleModeSwitchVia, CodeFlavor,
     ConsoleEntry, ChatMessage, CodeEntry,
 } from '../../types/jodie';
 import { AIEvents } from '../../events/registry';
@@ -25,14 +25,16 @@ interface ChatInputProps {
     onStop?: () => void;
     /** Open the AI Settings modal (used by the no-provider warning state). */
     onOpenSettings?: () => void;
-    /** Active console mode (Chat / Code). Drives placeholder, font, prompt glyph and submit behavior. */
+    /** Active console mode (Jjodie / JjScript / JjEL). Drives placeholder, font, prompt glyph and submit behavior. */
     consoleMode: ConsoleMode;
-    /** Switch to a different mode (used by the backtick-on-empty-input shortcut). */
-    onConsoleModeChange: (m: ConsoleMode) => void;
-    /** Active flavor in Code mode (today: 'jjel'). */
+    /** Switch to a different mode (backtick shortcut, `/` meta-commands). */
+    onConsoleModeChange: (m: ConsoleMode, via?: ConsoleModeSwitchVia) => void;
+    /** Active flavor in JjEL mode (today: 'jjel'). */
     codeFlavor: CodeFlavor;
-    /** Submit handler for Code mode: parent evaluates and appends a CodeEntry. */
+    /** Submit handler for JjEL (code) mode: parent evaluates and appends a CodeEntry. */
     onSubmitCode: (input: string) => void;
+    /** Slash `/help` in Jjodie mode: parent appends a static help entry. */
+    onHelpRequested?: () => void;
     /** Unified history; ChatInput filters by mode (and flavor in code) for the up/down nav. */
     entries: ConsoleEntry[];
     /** Clear the entries of the active mode. Triggered by the `/clear` slash command. */
@@ -116,10 +118,14 @@ export function ChatInput({
     onConsoleModeChange,
     codeFlavor,
     onSubmitCode,
+    onHelpRequested,
     entries,
     onClearRequested,
 }: ChatInputProps): JSX.Element {
-    const isCode = consoleMode === 'code';
+    // JjEL mode is the "code" bucket (local REPL, autocomplete, CodeEntry history).
+    const isCode = consoleMode === 'jjel';
+    // Jjodie is the only mode that talks to an AI provider and takes attachments.
+    const isJjodie = consoleMode === 'jjodie';
     const [message, setMessage] = useState('');
     const [images, setImages] = useState<ChatImage[]>([]);
     const [documents, setDocuments] = useState<ChatDocument[]>([]);
@@ -287,6 +293,23 @@ export function ChatInput({
             return;
         }
 
+        // Jjodie-mode `/` meta-commands: switch mode or show help, intercepted
+        // before the JjScript `/`-prefix gate. Same reset shape as `/clear`; not
+        // sent, not appended to history. Only in Jjodie mode — JjScript and JjEL
+        // keep `/` literal.
+        if (consoleMode === 'jjodie' &&
+            (trimmed === '/js' || trimmed === '/jjel' || trimmed === '/ask' || trimmed === '/help')) {
+            if (trimmed === '/js') onConsoleModeChange('jjscript', 'slash');
+            else if (trimmed === '/jjel') onConsoleModeChange('jjel', 'slash');
+            else if (trimmed === '/ask') onConsoleModeChange('jjodie', 'slash');
+            else onHelpRequested?.();
+            setMessage('');
+            setHistoryIndex(-1);
+            setSavedMessage('');
+            if (textareaRef.current) textareaRef.current.style.height = 'auto';
+            return;
+        }
+
         if (isCode) {
             if (!trimmed) return;
             onSubmitCode(trimmed);
@@ -325,7 +348,7 @@ export function ChatInput({
                 textareaRef.current.style.height = 'auto';
             }
         }
-    }, [message, images, documents, disabled, onSend, isCode, onSubmitCode, onClearRequested]);
+    }, [message, images, documents, disabled, onSend, isCode, consoleMode, onConsoleModeChange, onHelpRequested, onSubmitCode, onClearRequested]);
 
     const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
         // Regola C: any printable character or Backspace counts as the user
@@ -336,10 +359,10 @@ export function ChatInput({
             suppressUntilNextCharRef.current = false;
         }
 
-        // Backtick on an empty Chat input switches to Code mode (and swallows the char).
+        // Backtick on an empty non-JjEL input switches to JjEL mode (and swallows the char).
         if (!isCode && e.key === '`' && message === '') {
             e.preventDefault();
-            onConsoleModeChange('code');
+            onConsoleModeChange('jjel', 'backtick');
             return;
         }
 
@@ -383,11 +406,23 @@ export function ChatInput({
                 handleSubmit();
                 return;
             }
+            // Jjodie-mode `/` meta-commands bypass the provider/disabled gate too,
+            // so they fire even with no provider configured (handleSubmit intercepts).
+            if (consoleMode === 'jjodie' &&
+                (trimmed === '/js' || trimmed === '/jjel' || trimmed === '/ask' || trimmed === '/help')) {
+                handleSubmit();
+                return;
+            }
             if (isCode) {
                 if (trimmed) handleSubmit();
                 return;
             }
-            // Chat: only submit when the send button would actually send (state === 'ready').
+            // JjScript runs locally: submit on content, no provider needed.
+            if (!isJjodie) {
+                if (!disabled && trimmed) handleSubmit();
+                return;
+            }
+            // Jjodie: only submit when the send button would actually send (state === 'ready').
             // Other states (empty, sending, no-provider) ignore Enter.
             const hasAttachments = images.length > 0 || documents.length > 0;
             if (hasProvider && !disabled && (trimmed || hasAttachments)) {
@@ -572,24 +607,27 @@ export function ChatInput({
     const hasContent = message.trim() || images.length > 0 || documents.length > 0;
 
     // Build placeholder text
-    const getPlaceholder = () => {
-        if (placeholder) return placeholder;
-        if (isCode) return codeFlavor === 'jjel' ? 'JjEL expression...' : 'JS expression...';
-        if (supportsVision && supportsPDF) return 'Message, paste image, or attach PDF...';
-        if (supportsVision) return 'Message or paste an image...';
-        if (supportsPDF) return 'Message or attach a PDF...';
-        return 'Ask Jjodie about metamodeling...';
-    };
+    // No placeholder: the persistent `<mode>>` prompt (and, in Jjodie, the attach
+    // button on the right) already convey what to do. An externally-supplied
+    // `placeholder` prop still wins if set.
+    const getPlaceholder = () => placeholder ?? '';
 
     // Send button: 4 mutually-exclusive states.
-    // In Code mode, the provider check is irrelevant: JjEL evaluates locally.
+    // The provider check is only relevant in Jjodie mode: JjEL and JjScript run
+    // locally against the model.
     const sendBtnState: SendBtnState = useMemo(() => {
+        // JjEL evaluates synchronously — no provider, no waiting state.
         if (isCode) return message.trim() ? 'ready' : 'empty';
+        // JjScript runs locally (no provider) but is async, so honor the waiting state.
+        if (!isJjodie) {
+            if (disabled) return 'sending';
+            return hasContent ? 'ready' : 'empty';
+        }
         if (!hasProvider) return 'no-provider';
         if (disabled) return 'sending';
         if (!hasContent) return 'empty';
         return 'ready';
-    }, [hasProvider, disabled, hasContent, isCode, message]);
+    }, [hasProvider, disabled, hasContent, isCode, isJjodie, message]);
 
     // TODO: real abort wired to AbortController in AIProviderService — currently UI-only
     const handleStopClick = useCallback(() => {
@@ -643,8 +681,8 @@ export function ChatInput({
 
     return (
         <div className={`jodie-input-container${isCode ? ' jodie-input-container--code' : ''}`}>
-            {/* Attachment previews (chat mode only) */}
-            {!isCode && (images.length > 0 || documents.length > 0) && (
+            {/* Attachment previews (Jjodie mode only) */}
+            {isJjodie && (images.length > 0 || documents.length > 0) && (
                 <div className="jodie-attachment-previews">
                     {/* Image previews */}
                     {images.map(img => (
@@ -685,22 +723,8 @@ export function ChatInput({
             )}
 
             <div className="jodie-input-row">
-                {/* Attachment button (chat mode + provider supports it) */}
-                {!isCode && supportsAttachments && (
-                    <button
-                        className="jodie-attach-btn"
-                        onClick={openFilePicker}
-                        disabled={disabled}
-                        title={supportsPDF ? 'Attach image or PDF' : 'Attach image'}
-                    >
-                        <i className={supportsPDF ? 'bi bi-paperclip' : 'bi bi-image'} />
-                    </button>
-                )}
-
                 <div className={`jodie-composer${isCode ? ' jodie-composer--code' : ''}`}>
-                    {isCode && (
-                        <span className="jodie-code-prompt" aria-hidden="true">›</span>
-                    )}
+                    <span className="jodie-code-prompt" aria-hidden="true">{`${consoleMode}>`}</span>
                     <textarea
                         ref={textareaRef}
                         className={`jodie-input${isCode ? ' jodie-input--code' : ''}`}
@@ -718,6 +742,18 @@ export function ChatInput({
                         rows={1}
                     />
 
+                    {/* Attachment button — right side, before the send button
+                        (Jjodie mode + provider supports images/PDF). */}
+                    {isJjodie && supportsAttachments && (
+                        <button
+                            className="jodie-attach-btn"
+                            onClick={openFilePicker}
+                            disabled={disabled}
+                            title={supportsPDF ? 'Attach image or PDF' : 'Attach image'}
+                        >
+                            <i className={supportsPDF ? 'bi bi-paperclip' : 'bi bi-image'} />
+                        </button>
+                    )}
                     <button
                         className={`jodie-send-btn ${sendBtnConfig.modifier}`}
                         onClick={sendBtnConfig.onClick}
