@@ -46,6 +46,12 @@ interface JodieWindowProps {
     onTestInCode: (code: string, language: string | null) => void;
     /** Promotion: switch to Chat mode and prefill the input with a template describing a failed code entry. */
     onAskJjodie: (entry: CodeEntry) => void;
+    /** Offer card [Esegui]: run the offered input as JjScript. */
+    onOfferExecute?: (messageId: string, input: string) => void;
+    /** Offer card [Chiedi a Jjodie]: send the offered input to the LLM. */
+    onOfferAsk?: (messageId: string, input: string) => void;
+    /** Parse-error card [Chiedi a Jjodie] (D6): one-shot LLM for the input, no mode change. */
+    onAskFromError?: (input: string) => void;
     /** Clear all entries of the active console mode (Chat or Code). Optional for backward compat. */
     onClearCurrentMode?: () => void;
     /** True iff the active console mode has at least one entry. Drives the Clear button hint state. */
@@ -118,6 +124,9 @@ export function JodieWindow({
     onUnknownCommand,
     onTestInCode,
     onAskJjodie,
+    onOfferExecute,
+    onOfferAsk,
+    onAskFromError,
     onClearCurrentMode,
     canClearCurrentMode,
 }: JodieWindowProps): JSX.Element {
@@ -444,6 +453,9 @@ export function JodieWindow({
                 onJjScriptExecuted={onJjScriptExecuted}
                 onTestInCode={onTestInCode}
                 onAskJjodie={onAskJjodie}
+                onOfferExecute={onOfferExecute}
+                onOfferAsk={onOfferAsk}
+                onAskFromError={onAskFromError}
             />
 
             <ChatInput

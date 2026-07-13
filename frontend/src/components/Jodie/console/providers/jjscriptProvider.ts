@@ -32,6 +32,7 @@ export const jjscriptProvider: LanguageProvider = {
             jjscriptResult: {
                 success: result.success,
                 command: result.command,
+                input,
             },
         };
 

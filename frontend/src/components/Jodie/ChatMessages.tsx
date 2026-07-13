@@ -23,6 +23,12 @@ interface ChatMessagesProps {
     onTestInCode?: (code: string, language: string | null) => void;
     /** Promotion: switch to Chat mode and prefill the input with a template describing a failed code entry. */
     onAskJjodie?: (entry: CodeEntry) => void;
+    /** Offer card [Esegui]: run the offered input as JjScript. */
+    onOfferExecute?: (messageId: string, input: string) => void;
+    /** Offer card [Chiedi a Jjodie]: send the offered input to the LLM. */
+    onOfferAsk?: (messageId: string, input: string) => void;
+    /** Parse-error card [Chiedi a Jjodie] (D6): one-shot LLM for the input, no mode change. */
+    onAskFromError?: (input: string) => void;
 }
 
 type ExtractedCodeBlock = { language: string | null; content: string };
@@ -48,7 +54,7 @@ function getInitials(name: string): string {
     return name.split(' ').map(n => n[0] || '').join('').toUpperCase().slice(0, 2) || 'U';
 }
 
-function MessageBubble({ message, onJjScriptExecute, onTestInCode }: { message: ChatMessage; onJjScriptExecute?: (commands: string[]) => Promise<ScriptLineResult[]>; onTestInCode?: (code: string, language: string | null) => void }): JSX.Element {
+function MessageBubble({ message, onJjScriptExecute, onTestInCode, onOfferExecute, onOfferAsk, onAskFromError }: { message: ChatMessage; onJjScriptExecute?: (commands: string[]) => Promise<ScriptLineResult[]>; onTestInCode?: (code: string, language: string | null) => void; onOfferExecute?: (messageId: string, input: string) => void; onOfferAsk?: (messageId: string, input: string) => void; onAskFromError?: (input: string) => void }): JSX.Element {
     const isUser = message.role === 'user';
     const providerInfo = message.provider ? AI[message.provider] : null;
     const displayName = message.userName || 'You';
@@ -61,6 +67,46 @@ function MessageBubble({ message, onJjScriptExecute, onTestInCode }: { message: 
     // Promotion is shown only on real assistant replies (not user messages, not
     // JjScript success/error feedback) and only when the reply contains a fenced code block.
     const promoteCodeBlock = !isUser && !isJjScript ? extractFirstCodeBlock(message.content) : null;
+
+    // Offer card: the input parsed as a complete JjScript command in Jjodie mode.
+    // Rendered instead of a normal bubble; nothing runs until a button is tapped.
+    if (message.jjscriptOffer) {
+        const offer = message.jjscriptOffer;
+        return (
+            <div className="jodie-message jodie-message-assistant">
+                <div className="jodie-message-avatar jodie-jjscript-avatar jodie-jjscript-success">
+                    <i className="bi bi-terminal" />
+                </div>
+                <div className="jodie-message-content">
+                    <div className="jodie-offer">
+                        <div className="jodie-offer__title">Sembra un comando JjScript</div>
+                        <code className="jodie-offer__preview">{offer.input}</code>
+                        <div className="jodie-offer__actions">
+                            <button
+                                className="jodie-promote-btn"
+                                disabled={!!offer.consumed}
+                                onClick={() => onOfferExecute?.(message.id, offer.input)}
+                            >
+                                <i className="bi bi-play-fill" />
+                                <span>Esegui</span>
+                            </button>
+                            <button
+                                className="jodie-promote-btn"
+                                disabled={!!offer.consumed}
+                                onClick={() => onOfferAsk?.(message.id, offer.input)}
+                            >
+                                <i className="bi bi-robot" />
+                                <span>Chiedi a Jjodie</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div className="jodie-message-meta">
+                        <span className="jodie-message-time">{formatTimestamp(message.timestamp)}</span>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className={`jodie-message ${isUser ? 'jodie-message-user' : 'jodie-message-assistant'}`}>
@@ -131,6 +177,16 @@ function MessageBubble({ message, onJjScriptExecute, onTestInCode }: { message: 
                     >
                         <i className="bi bi-arrow-right-square" />
                         <span>Test in console mode</span>
+                    </button>
+                )}
+                {isJjScript && !jjScriptSuccess && message.jjscriptResult?.input && onAskFromError && (
+                    <button
+                        className="jodie-promote-btn"
+                        onClick={() => onAskFromError(message.jjscriptResult!.input!)}
+                        title="Send this input to Jjodie (AI) instead"
+                    >
+                        <i className="bi bi-robot" />
+                        <span>Chiedi a Jjodie</span>
                     </button>
                 )}
                 <div className="jodie-message-meta">
@@ -246,7 +302,7 @@ function TypingIndicator(): JSX.Element {
     );
 }
 
-export function ChatMessages({ messages, isWaiting, onJjScriptExecuted, onTestInCode, onAskJjodie }: ChatMessagesProps): JSX.Element {
+export function ChatMessages({ messages, isWaiting, onJjScriptExecuted, onTestInCode, onAskJjodie, onOfferExecute, onOfferAsk, onAskFromError }: ChatMessagesProps): JSX.Element {
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // Auto-scroll to bottom when new messages arrive
@@ -392,6 +448,9 @@ export function ChatMessages({ messages, isWaiting, onJjScriptExecuted, onTestIn
                                 message={entry as ChatMessage}
                                 onJjScriptExecute={handleJjScriptExecute}
                                 onTestInCode={onTestInCode}
+                                onOfferExecute={onOfferExecute}
+                                onOfferAsk={onOfferAsk}
+                                onAskFromError={onAskFromError}
                             />
                         )
                     ))}

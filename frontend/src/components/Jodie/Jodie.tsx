@@ -25,7 +25,6 @@ import { JjodieRagService } from '../../services/JjodieRagService';
 import {DUser, L, LUser, LProject, store} from '../../joiner';
 import DockManager from '../abstract/DockManager';
 import TabDataMaker from '../abstract/tabs/TabDataMaker';
-import { JjScriptService } from '../../jjscript';
 import { consoleLanguageRegistry } from './console/languageRegistry';
 import type { ConsoleContext } from './console/types';
 import './JodieWindow.css';
@@ -430,9 +429,8 @@ export function Jodie(): JSX.Element {
 
     // Send message
     const handleSendMessage = useCallback(async (content: string, images?: ChatImage[], documents?: ChatDocument[]) => {
-        // Explicit JjScript mode routes ALL input to the jjscript provider; in
-        // Jjodie mode isJjScriptCommand keeps deciding jjscript-vs-LLM (unchanged).
-        if (consoleMode === 'jjscript' || JjScriptService.isJjScriptCommand(content)) {
+        // Explicit JjScript mode routes ALL input to the jjscript provider.
+        if (consoleMode === 'jjscript') {
             // Add user message
             const userMessage: ChatMessage = {
                 id: generateMessageId(),
@@ -472,6 +470,7 @@ export function Jodie(): JSX.Element {
                     jjscriptResult: {
                         success: false,
                         command: 'unknown',
+                        input: content,
                     },
                 };
 
@@ -481,6 +480,22 @@ export function Jodie(): JSX.Element {
                     isWaiting: false,
                 }));
             }
+            return;
+        }
+
+        // Jjodie mode: if the input parses as a complete JjScript command, OFFER
+        // to run it — never execute and never call the LLM until the user taps a
+        // button. Deterministic (strict parse), not silent.
+        if (jjscriptProvider.detect?.(content)) {
+            const offerMessage: ChatMessage = {
+                id: generateMessageId(),
+                kind: 'chat',
+                role: 'assistant',
+                content: '',
+                timestamp: Date.now(),
+                jjscriptOffer: { input: content },
+            };
+            setChatState(prev => ({ ...prev, messages: [...prev.messages, offerMessage] }));
             return;
         }
 
@@ -589,6 +604,79 @@ export function Jodie(): JSX.Element {
             }));
         }
     }, [activeProvider, chatState.messages, consoleMode, state.idlookup.clonedCounter, projectContext, userName]);
+
+    // Shared one-shot "Ask Jjodie": send `input` to the LLM and append the reply,
+    // WITHOUT changing mode. Used by the offer card's [Chiedi a Jjodie] and by the
+    // [Chiedi a Jjodie] button on a JjScript parse-error card (D6). No auto-switch in v1.
+    const askJjodie = useCallback(async (input: string) => {
+        setChatState(prev => ({ ...prev, isWaiting: true }));
+        try {
+            const history = chatState.messages.filter(isChatEntry);
+            const ctx: ConsoleContext = {
+                makeId: generateMessageId,
+                activeProvider,
+                history,
+                projectContext,
+                ragInitialized,
+            };
+            const { entries } = await jjodieProvider.run(input, ctx);
+            setChatState(prev => ({
+                ...prev,
+                messages: [...prev.messages, ...entries],
+                isWaiting: false,
+                hasUnread: !prev.isOpen,
+            }));
+        } catch (error) {
+            const errorMessage: ChatMessage = {
+                id: generateMessageId(),
+                kind: 'chat',
+                role: 'assistant',
+                content: `Sorry, I encountered an error: ${(error as Error).message}. Please check your API key in Settings.`,
+                timestamp: Date.now(),
+                provider: activeProvider,
+            };
+            setChatState(prev => ({ ...prev, messages: [...prev.messages, errorMessage], isWaiting: false }));
+        }
+    }, [activeProvider, chatState.messages, projectContext, ragInitialized]);
+
+    // Disable an offer entry's buttons after a tap (marks it consumed by id).
+    const markOfferConsumed = useCallback((messageId: string) => {
+        setChatState(prev => ({
+            ...prev,
+            messages: prev.messages.map(m =>
+                isChatEntry(m) && m.id === messageId && m.jjscriptOffer
+                    ? { ...m, jjscriptOffer: { ...m.jjscriptOffer, consumed: true } }
+                    : m
+            ),
+        }));
+    }, []);
+
+    // Offer card [Esegui]: run the offered input as JjScript, append the result card.
+    const handleOfferExecute = useCallback(async (messageId: string, input: string) => {
+        markOfferConsumed(messageId);
+        setChatState(prev => ({ ...prev, isWaiting: true }));
+        try {
+            const ctx: ConsoleContext = { makeId: generateMessageId };
+            const { entries } = await jjscriptProvider.run(input, ctx);
+            setChatState(prev => ({ ...prev, messages: [...prev.messages, ...entries], isWaiting: false }));
+        } catch (error) {
+            const errorMessage: ChatMessage = {
+                id: generateMessageId(),
+                kind: 'chat',
+                role: 'assistant',
+                content: `**JjScript Error:** ${(error as Error).message}`,
+                timestamp: Date.now(),
+                jjscriptResult: { success: false, command: 'unknown', input },
+            };
+            setChatState(prev => ({ ...prev, messages: [...prev.messages, errorMessage], isWaiting: false }));
+        }
+    }, [markOfferConsumed]);
+
+    // Offer card [Chiedi a Jjodie]: send the offered input to the LLM instead.
+    const handleOfferAsk = useCallback((messageId: string, input: string) => {
+        markOfferConsumed(messageId);
+        askJjodie(input);
+    }, [markOfferConsumed, askJjodie]);
 
     // Open settings - open unified settings modal at Providers section
     const handleOpenSettings = useCallback(() => {
@@ -701,6 +789,9 @@ export function Jodie(): JSX.Element {
                     onUnknownCommand={handleUnknownCommand}
                     onTestInCode={handleTestInCode}
                     onAskJjodie={handleAskJjodie}
+                    onOfferExecute={handleOfferExecute}
+                    onOfferAsk={handleOfferAsk}
+                    onAskFromError={askJjodie}
                     onClearCurrentMode={handleClearCurrentMode}
                     canClearCurrentMode={canClearCurrentMode}
                 />

@@ -2689,6 +2689,59 @@ body[data-notification-visible="true"] .jodie-minimized {
     color: #e2e8f0;
 }
 
+/* Disabled promote-btn (offer already consumed). */
+.jodie-promote-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+/* Offer card (Jjodie mode): "Sembra un comando JjScript" + [Esegui] / [Chiedi a Jjodie] */
+.jodie-offer {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+}
+
+.jodie-offer__title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #334155;
+}
+
+.jodie-offer__preview {
+    font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+    font-size: 12px;
+    color: #0f172a;
+    background: #eef2f7;
+    border-radius: 6px;
+    padding: 4px 8px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.jodie-offer__actions {
+    display: flex;
+    gap: 8px;
+}
+
+[data-theme="dark"] .jodie-offer {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .jodie-offer__title {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .jodie-offer__preview {
+    background: rgba(0, 0, 0, 0.3);
+    color: #f1f5f9;
+}
+
 /* ========================================
    JjEL Value Inspector — two-level layout (headline / extra)
    New BEM child classes used by the rewritten JjelValueInspector.
