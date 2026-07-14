@@ -100,6 +100,7 @@
     "build_2": "ts-node esbuild.config.ts",
     "serve_2": "node dist/main.bundle.js",
     "___________________________________misc_utilities___________________________": "",
+    "gen:agents": "node ../scripts/generate-agents.mjs",
     "pushmde": "git push mdegroup",
     "nv": "nvm install 16.13.0",
     "eject__dangerous__": "react-scripts eject",
