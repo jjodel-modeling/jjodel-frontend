@@ -1,5 +1,15 @@
 # Claude Code Session Log
 
+## 2026-07-15 — docs(claude): dedup JjEL/JjTL chapters to their SPEC.md (Phase 2 · Step 1 · Family A)
+**Prompt**: Phase 2 Step 1 Family A — dedup §11 (JjEL) and §12 (JjTL) to their SPEC.md, verifying coverage section-by-section before deleting; keep §12.7 verbatim; keep any load-bearing content genuinely absent from the SPEC (when in doubt, keep). Reproject AGENTS.md via `npm run gen:agents`.
+**Files touched**: CLAUDE.md (§11/§12 bodies → SPEC pointers), AGENTS.md (regenerated), docs/claude-code-log.md (this entry).
+**Outcome**: ✅ completed — CLAUDE.md 1093→944 lines. §11.1–11.6 and §12.1–12.5 replaced by SPEC pointers, coverage verified per-section (jjel/SPEC §3–8, incl. `forall` set-theoretic §5.1 and EvaluationContext.child in jjtl/SPEC §7.3; jjtl/SPEC §3/§4/§7.1, the 4-strategy property resolution enumerated verbatim at §3.3). Kept inline & reported: §12.7 verbatim (mandatory 5-file checklist, absent from SPEC), §12.6 (JjEL/JjTL/JjScript boundaries + symbol ownership — not consolidated in any SPEC; jjel/SPEC §1 compares against OCL/EOL/JS, a different axis), §12.8 (dotted-source-attr parse limitation + pluralization heuristic — absent from SPEC).
+**Regressions**: no (docs-only; no TypeScript touched; typecheck baseline 33 unaffected). gen:agents idempotent; AGENTS.md changed only in §11/§12 (2 ins / 152 del).
+**Out-of-scope changes**: no (only CLAUDE.md dedup + reprojected AGENTS.md + this log entry). No line-number references touched; §7/§16/§17 untouched.
+**Layer Impact Report**: not-required (docs only).
+**Notes**: Approved by Alfonso ("dedup rimuove il duplicato, non l'unico" — don't trim §12.6/§12.8). Applied via a deterministic heading-anchored script (anchors on heading text, no line-number edits). Future task (out of Step 1): promote the unique §12.6/§12.8 residuals INTO the SPECs (limitations → jjtl/SPEC limitations; symbol-ownership → a shared language reference) so §11/§12 later collapse to pure pointers. Log entry isolated via §6.1 (WP1 + other pending prior-session log entries left unbundled).
+**Prompt document name**: 2026-07-15 phase2-step1-familyA-dedup-jjel-jjtl
+
 ## 2026-07-14 — chore(docs): generate AGENTS.md from CLAUDE.md (single source)
 **Prompt**: Phase 2 · Step 0 — build the AGENTS.md generator. AGENTS.md becomes a generated projection of CLAUDE.md (one source, zero drift). Locked decisions: fixed banner; two name substitutions (`Claude Code`→`Codex`, `CLAUDE.md`→`AGENTS.md`); shared log (NO `Codex-log`); data-driven §0 via `docs/_agents/runtime-codex.md` stub (empty ⇒ no §0); tree-aware walk emitting a sibling AGENTS.md per projectable CLAUDE.md, skipping empty/marker-only files. `CLAUDE.md` content NOT touched (that is Step 1).
 **Files touched**: `scripts/generate-agents.mjs` (new), `docs/_agents/runtime-codex.md` (new stub), `frontend/package.json` (`gen:agents` script), `AGENTS.md` (regenerated), `docs/claude-code-log.md` (this entry).
