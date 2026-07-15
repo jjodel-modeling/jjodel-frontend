@@ -1,5 +1,15 @@
 # Claude Code Session Log
 
+## 2026-07-15 — docs(claude): remove internal duplications (windoww, raw.uri) (Phase 2 · Step 1 · Family C)
+**Prompt**: Phase 2 Step 1 Family C — dedup two facts each stated twice in CLAUDE.md. windoww global store (§3.11 & §15.4): keep §15.4 canonical, §3.11 → cross-ref. pkg.__raw.uri Ecore round-trip (§3.7 & §14): keep §14 canonical, §3.7 → cross-ref keeping its unique L-vs-D distinction. Do NOT touch §3.1⇄§19.1 (Step 4). Reproject AGENTS.md.
+**Files touched**: CLAUDE.md (§3.11 → §15.4 pointer; §3.7 Ecore sentence → §14 pointer, L-vs-D distinction kept), AGENTS.md (regenerated), docs/claude-code-log.md (this entry).
+**Outcome**: ✅ completed — §3.11 body → one-line cross-ref to §15.4 (console example preserved inline); §3.7's duplicated Ecore-export sentence → cross-ref to §14, keeping the L-layer (`pkg.uri` = `data.uri + "." + data.name`) vs D-layer (`pkg.__raw.uri` raw) distinction + "coexist / don't unify". §14/§15.4/§3.1/§19.1 untouched.
+**Regressions**: no (docs-only; no TypeScript; typecheck baseline 33 unaffected). gen:agents idempotent; AGENTS.md changed only in §3.7/§3.11 (2 ins / 9 del).
+**Out-of-scope changes**: no (CLAUDE.md dedup + reprojected AGENTS.md + this log entry). No line-number references touched; §3.1⇄§19.1 deferred to Step 4.
+**Layer Impact Report**: not-required (docs only).
+**Notes**: Completes Phase 2 Step 1 (Families A/B/C = commits 3049073b4, 67ec9207f, + this one). Applied via the Edit tool (small precise replacements). Log entry isolated via §6.1 (WP1 + prior-session log entries left unbundled). Out of scope / pending: §7/§16 dedup, §17 dev-command fix (awaiting command), subtree/skill moves + jjscript/SPEC.md (Step 2/3), §18/§19 reduction + line-number softening (Step 4), and the SPEC-enrichment follow-up (promote §12.6/§12.8 residuals into the SPECs).
+**Prompt document name**: 2026-07-15 phase2-step1-familyC-internal-duplications
+
 ## 2026-07-15 — docs(claude): consolidate the four overlapping blocklists into one canonical list (Phase 2 · Step 1 · Family B)
 **Prompt**: Phase 2 Step 1 Family B — the NON-NEGOTIABLE block, §1, §4.2, §20.1 restate overlapping rules; consolidate into ONE canonical list. Build the union first (rule → source blocks), lose nothing, replace §1/§4.2/§20.1 with pointers, keep surrounding non-blocklist prose. Reproject AGENTS.md.
 **Files touched**: CLAUDE.md (NON-NEGOTIABLE → grouped 28-rule canonical; §1/§4.2/§20.1 → pointers), AGENTS.md (regenerated), docs/claude-code-log.md (this entry).

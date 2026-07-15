@@ -246,7 +246,7 @@ Canonical implementation: `frontend/src/components/import/buildImportSummary.ts`
 L-layer `pkg.uri` is computed as `data.uri + "." + data.name` (concatenation).
 D-layer `pkg.__raw.uri` is the direct field as parsed.
 
-For Ecore export and any code that needs **byte-identical nsURI**, use `pkg.__raw.uri`. For user-facing display or JjScript queries, `pkg.uri` is fine.
+For byte-identical nsURI, use `pkg.__raw.uri` — the Ecore round-trip discipline lives in §14. For user-facing display or JjScript queries, `pkg.uri` is fine.
 
 Both patterns coexist by design. Do not "unify" them.
 
@@ -294,14 +294,7 @@ STEP 4 of `portDistribution.ts` unions source/target buckets per `(nodeId, side)
 
 ### 3.11 Runtime store access
 
-The Redux store is exposed globally for DevTools and debugging as **`windoww.store`** (with a double `w`). This is intentional — it avoids collision with React DevTools' `window.store`.
-
-Console-side debugging:
-```typescript
-windoww.store.getState().idlookup
-```
-
-Application code should import the store directly rather than rely on the global.
+See §15.4 for the `windoww.store` (double-`w`) global — exposed for console/DevTools debugging; application code imports the store directly. Console: `windoww.store.getState().idlookup`.
 
 ### 3.12 Identity slot ↔ instance name — slot→name is always a direct SetFieldAction
 
