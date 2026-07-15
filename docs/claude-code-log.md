@@ -1,5 +1,15 @@
 # Claude Code Session Log
 
+## 2026-07-15 — docs(claude): consolidate the four overlapping blocklists into one canonical list (Phase 2 · Step 1 · Family B)
+**Prompt**: Phase 2 Step 1 Family B — the NON-NEGOTIABLE block, §1, §4.2, §20.1 restate overlapping rules; consolidate into ONE canonical list. Build the union first (rule → source blocks), lose nothing, replace §1/§4.2/§20.1 with pointers, keep surrounding non-blocklist prose. Reproject AGENTS.md.
+**Files touched**: CLAUDE.md (NON-NEGOTIABLE → grouped 28-rule canonical; §1/§4.2/§20.1 → pointers), AGENTS.md (regenerated), docs/claude-code-log.md (this entry).
+**Outcome**: ✅ completed — union mapping built and shown (28 distinct rules: 10 shared N↔§1, 18 unique to §1/§4.2/§20.1); Alfonso chose the grouped-canonical shape. NON-NEGOTIABLE expanded 10→28 rules across 5 groups (Scope & preservation / Critical zone §3 / Workflow & hard-stops / Technical anti-patterns / Style & design-system), each rule its own line for 1:1 audit. §1/§4.2/§20.1 → one-line pointers. Completeness audit passed: all 18 previously-unique rules present; §4.1/§4.3/§20 intro/§20.2 preserved.
+**Regressions**: no (docs-only; no TypeScript; typecheck baseline 33 unaffected). gen:agents idempotent; AGENTS.md changed only in the four blocklist regions (52 ins / 42 del).
+**Out-of-scope changes**: no (CLAUDE.md consolidation + reprojected AGENTS.md + this log entry). No line-number references touched; §7/§16/§17 untouched.
+**Layer Impact Report**: not-required (docs only).
+**Notes**: Applied via a deterministic text-anchored script (indexOf splice, unique-anchor guarded, throws on miss). NON-NEGOTIABLE renumbered 1→28 (nothing references the rules by number — verified). Kept rules unmerged (not the tighter createM1/require/addChild single-line form) for auditability, with Alfonso's OK to compress later if desired. Log entry isolated via §6.1.
+**Prompt document name**: 2026-07-15 phase2-step1-familyB-consolidate-blocklists
+
 ## 2026-07-15 — docs(claude): dedup JjEL/JjTL chapters to their SPEC.md (Phase 2 · Step 1 · Family A)
 **Prompt**: Phase 2 Step 1 Family A — dedup §11 (JjEL) and §12 (JjTL) to their SPEC.md, verifying coverage section-by-section before deleting; keep §12.7 verbatim; keep any load-bearing content genuinely absent from the SPEC (when in doubt, keep). Reproject AGENTS.md via `npm run gen:agents`.
 **Files touched**: CLAUDE.md (§11/§12 bodies → SPEC pointers), AGENTS.md (regenerated), docs/claude-code-log.md (this entry).

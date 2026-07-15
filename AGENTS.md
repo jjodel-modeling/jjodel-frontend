@@ -10,38 +10,65 @@
 ═══════════════════════════════════════════════════════════════════
 NON-NEGOTIABLE RULES — re-read before every task
 ═══════════════════════════════════════════════════════════════════
- 1. Touch only files explicitly listed in the prompt.
- 2. Never rename identifiers (CSS classes, vars, functions, props,
-    exported names) unless the prompt explicitly asks.
+Canonical list — §1, §4.2 and §20.1 point here; rules are not
+restated there.
+
+— Scope & preservation —
+ 1. Touch only files explicitly listed in the prompt. A broader
+    change "would be better" → ask first; never do it silently.
+ 2. Never rename existing identifiers (CSS classes, vars, functions,
+    props, components, exported names) unless the prompt asks.
  3. Committed behavior is verified. Never degrade it. In doubt: STOP.
- 4. Never wrap useJjomSync-adjacent code in TRANSACTION.
- 5. Every new DVoidEdge.new2 for an M1 ref needs a hasCanvasEdgePair
+ 4. No new dependencies / external libraries (no new package.json
+    entries) without approval.
+ 5. No core changes without approval.
+ 6. Don't over-engineer simple features.
+ 7. Don't reorder imports of files not being modified.
+ 8. Don't "clean up" adjacent code, comments, or whitespace.
+ 9. Don't remove "apparently unused" code (use `// TODO: cleanup`).
+10. Don't reformat blocks not directly involved in the change.
+11. Don't modify exported TypeScript interfaces except to add
+    optional properties.
+
+— Critical zone (§3) —
+12. Never wrap useJjomSync-adjacent code in TRANSACTION.
+13. Every new DVoidEdge.new2 for an M1 ref needs a hasCanvasEdgePair
     guard mirroring useJjomSync Step 4.
- 6. Touching default-view source (DV.tsx, defaultViewTemplate.ts) →
+14. Touching default-view source (DV.tsx, defaultViewTemplate.ts) →
     add a VersionFixer migration that rewrites jsxString.
- 7. Discovery before action: grep paths from the prompt; never
-    assume a path is correct.
- 8. Read docs/claude-code-log.md (last 5–10 entries) at session
+
+— Workflow & hard-stops —
+15. Discovery before action: grep paths from the prompt; never
+    assume a path is correct. A cited path that doesn't exist → STOP.
+16. Read docs/claude-code-log.md (last 5–10 entries) at session
     start. Update it at task end.
- 9. Never `git add .`. Always `git add <specific-file>`.
-10. Hard stop before commit: show diff, wait for approval.
+17. Never `git add .` / `git add -A`. Always `git add <specific-file>`.
+18. Hard stop before commit: show diff, wait for approval.
+19. A task touching more than 5 files → pause, list them, get
+    confirmation.
+20. A change that propagates to a layer not named in the prompt
+    (D-layer, L-layer, sync, view, JjOM) → pause and report.
+
+— Technical anti-patterns —
+21. Don't use createM1() to create target models (auto names).
+22. Don't use require() in the frontend (returns {}; use ES module
+    imports).
+23. Don't use model.addChild() in canvasToJjom (nested TRANSACTION;
+    use .new() directly).
+24. Don't reintroduce removed Editor V3 components or events (§10).
+25. No hardcoded 'jjodel:...' event strings — use events/registry.ts.
+
+— Style & design-system —
+26. No emojis in code (OK in chat responses).
+27. Don't reintroduce legacy CSS tokens (--accent, --bg-1..5,
+    --secondary, --terziary, --radius, --color).
+28. No CSS variables in component files — always in styles/tokens/.
 ═══════════════════════════════════════════════════════════════════
 ```
 
 ## 1. Hard stops — pause and ask
 
-Before any of the following, STOP and write a short message to the user. Do not proceed by guessing.
-
-- About to rename an existing identifier that the prompt did not name.
-- About to modify a file not listed in the prompt.
-- About to wrap code inside `useJjomSync.ts` (or any file adjacent to the sync layer) in a TRANSACTION.
-- About to create a `DVoidEdge.new2` for an M1 reference without the `hasCanvasEdgePair` guard.
-- About to modify any default-view source file (`DV.tsx`, `defaultViewTemplate.ts`) without adding a corresponding `VersionFixer` migration.
-- About to run `git add .` or `git add -A`.
-- About to commit anything without showing the diff to the user first.
-- The prompt cites a file path that does not exist after `grep`/`find`.
-- A task touches more than 5 files: pause, list them, get confirmation.
-- During an edit you discover the change propagates to a layer not mentioned in the prompt (D-layer, L-layer, sync, view, JjOM). Pause and report.
+The hard-stop conditions are consolidated in the canonical **NON-NEGOTIABLE RULES** block at the top of this file (the *Workflow & hard-stops* group, plus any rule whose violation you are "about to" commit). Re-read that block before every task; when about to cross one of those lines, STOP and write a short message instead of guessing.
 
 ---
 
@@ -327,15 +354,7 @@ Modify only the files named in the prompt. If a strictly necessary additional ed
 
 ### 4.2 Do-not list (blocklist)
 
-- ❌ Rename existing identifiers (CSS classes, vars, functions, components, props) unless the prompt asks
-- ❌ Reorder imports of files not being modified
-- ❌ "Clean up" adjacent code, comments, or whitespace
-- ❌ Remove "apparently unused" code (use `// TODO: cleanup` instead)
-- ❌ Reformat blocks not directly involved in the change
-- ❌ Modify TypeScript interfaces other than adding optional properties
-- ❌ Introduce new dependencies (no new `package.json` entries) without approval
-- ❌ Reintroduce removed Editor V3 components or events (see §10)
-- ❌ Reintroduce legacy CSS tokens — see §7
+These anti-refactoring rules are consolidated in the canonical **NON-NEGOTIABLE RULES** block at the top of this file (*Scope & preservation* group, with the V3 and legacy-CSS-token items under *Technical anti-patterns* and *Style & design-system*).
 
 ### 4.3 Verify identifier names before introducing new ones
 
@@ -856,16 +875,7 @@ frontend/src/
 
 ### 20.1 Do NOT
 
-- ❌ Emojis in code (OK in chat responses)
-- ❌ New external libraries without discussion
-- ❌ Core changes without approval
-- ❌ Over-engineering for simple features
-- ❌ `createM1()` to create target models — generates automatic names
-- ❌ `require()` in the frontend — returns `{}` (use ES module imports)
-- ❌ `model.addChild()` in `canvasToJjom` — causes nested TRANSACTION (use `.new()` directly)
-- ❌ Reintroduce legacy CSS tokens (`--accent`, `--bg-1..5`, `--secondary`, `--terziary`, `--radius`, `--color`)
-- ❌ CSS variables in component files — always in `styles/tokens/`
-- ❌ Hardcoded `'jjodel:...'` event strings — use `events/registry.ts`
+These anti-patterns are consolidated in the canonical **NON-NEGOTIABLE RULES** block at the top of this file (*Technical anti-patterns* and *Style & design-system* groups; the core-change, over-engineering and dependency items live under *Scope & preservation*).
 
 ### 20.2 Best practices
 
