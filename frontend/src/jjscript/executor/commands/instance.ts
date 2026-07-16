@@ -33,7 +33,6 @@ import { qualifiedNameToString, literalValueToString } from '../../parser/gramma
 import {
     DObject,
     DModel,
-    DeleteElementAction,
     SetFieldAction,
     TRANSACTION,
     LPointerTargetable,
@@ -367,20 +366,41 @@ export async function executeDeleteInstance(
         };
     }
 
+    // Singleton pre-check: the canonical cascade refuses singleton instances
+    // silently (LObject.get_delete → Log.ww), which would make the success
+    // result below lie. Reads the SAME flag as the canonical guard
+    // (isSingleton via instanceof) — no divergent logic.
+    const metaClass: any = (lObject as any).instanceof;
+    if (metaClass?.isSingleton) {
+        return {
+            success: false,
+            command: 'delete',
+            message: `Cannot delete: ${metaClass?.name ?? 'the metaclass'} is a singleton`,
+            errors: [{
+                code: 'SINGLETON_INSTANCE',
+                message: `Instance '${instanceName}' is the singleton of '${metaClass?.name ?? 'its class'}'. Remove the singleton flag in the metamodel first.`
+            }]
+        };
+    }
+
     return new Promise((resolve) => {
         try {
-            TRANSACTION('JjScript: Delete instance', () => {
-                DeleteElementAction.new((lObject as any).__raw ?? lObject);
-                // Free the handle so it can be reused later in the same run.
-                unregisterHandle(instanceName);
-                resolve({
-                    success: true,
-                    command: 'delete',
-                    message: `Deleted instance '${instanceName}'`,
-                    data: { id: lObject.id, name: instanceName, type: 'instance' },
-                    affectedElements: [lObject.id],
-                    undoable: true
-                });
+            // Canonical cascade delete (Dummy.get_delete): cleans the incoming
+            // reference slots via pointedBy (case 'values'), the instance's own
+            // DValue features (children), model.objects and its graph vertices.
+            // The previous raw DeleteElementAction removed only the idlookup
+            // entry and left all of those dangling. .delete() opens its own
+            // TRANSACTION, so no outer wrapper here (canvasToJjom idiom).
+            (lObject as any).delete();
+            // Free the handle so it can be reused later in the same run.
+            unregisterHandle(instanceName);
+            resolve({
+                success: true,
+                command: 'delete',
+                message: `Deleted instance '${instanceName}'`,
+                data: { id: lObject.id, name: instanceName, type: 'instance' },
+                affectedElements: [lObject.id],
+                undoable: true
             });
         } catch (error) {
             resolve({

@@ -266,6 +266,20 @@ export function syncDeleteVertex(vertexId: string): void {
         const vertexProxy: any = LPointerTargetable.fromPointer(vertexId);
         if (!vertexProxy) return;
 
+        const modelElement: any = vertexProxy.model;
+
+        // A singleton instance is REFUSED by the canonical delete guard
+        // (LObject.get_delete). Bail out BEFORE the connected-edge cleanup
+        // below: deleting the edges first and then having the cascade refuse
+        // would leave the instance alive but stripped of its canvas links.
+        // Same flag as the guard (isSingleton via instanceof), no duplicated
+        // logic: .delete() is still called so the guard itself emits the
+        // canonical user-facing warning and stops.
+        if (modelElement?.className === 'DObject' && modelElement?.instanceof?.isSingleton) {
+            modelElement.delete(); // guard refusal: warning only, no actions fired
+            return;
+        }
+
         // Find and delete all connected DEdges in the same graph first.
         // Without this, orphan edges remain in graph.subElements and the
         // sync re-adds them as floating arrows.
@@ -297,13 +311,11 @@ export function syncDeleteVertex(vertexId: string): void {
             }
         }
 
-        // Delete the model element. For a DClass, route through the L-proxy
-        // .delete() cascade (Dummy.get_delete) so its owned references /
-        // attributes / operations are removed too — matching the classic
-        // editor and fixing the orphan-DReference bug. .delete() wraps its own
-        // TRANSACTION internally (Dummy.ts), so no outer wrapper here (mirrors
-        // syncRemoveAttribute). Non-class types stay on the raw path unchanged.
-        const modelElement = vertexProxy?.model;
+        // Delete the model element. DClass and DObject route through the
+        // L-proxy .delete() cascade (Dummy.get_delete) — matching the classic
+        // editor. .delete() wraps its own TRANSACTION internally (Dummy.ts),
+        // so no outer wrapper here (mirrors syncRemoveAttribute). Other
+        // types stay on the raw path unchanged.
         if (modelElement) {
             if (modelElement.className === 'DClass') {
                 modelElement.delete();
@@ -315,6 +327,19 @@ export function syncDeleteVertex(vertexId: string): void {
                 // have committed and the sweep observes the slots already gone
                 // (same rationale as syncDeleteEdge's deferred sweep).
                 setTimeout(() => { sweepAllM1ReferenceGraphs(); }, 60);
+            } else if (modelElement.className === 'DObject') {
+                // M1 instances: the canonical cascade cleans the incoming
+                // reference slots via pointedBy (case 'values'), the instance's
+                // own DValue features (children), model.objects (father safety
+                // net) and every DVertex across graphs (nodes) — the raw path
+                // left all of these dangling (see docs/discovery/
+                // discovery_2026-07-16_instance_delete_dangling_refs.md).
+                // No deferred sweep here: its structural predicate skips
+                // endpoint-dead edges, so it would be a no-op for this
+                // scenario; residual cross-graph zombie edges are render-
+                // filtered (jjomEdgeToRFEdge nulls on dead endpoints) — same
+                // known pollution class as ghost vertices.
+                modelElement.delete();
             } else {
                 TRANSACTION('EditorV2 delete node', () => {
                     DeleteElementAction.new(modelElement.__raw ?? modelElement);
