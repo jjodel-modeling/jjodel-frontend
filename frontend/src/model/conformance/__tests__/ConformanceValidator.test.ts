@@ -331,3 +331,162 @@ describe('shape-live (raw values / enum objects)', () => {
         expect(types(run([o1, o2], [C]))).not.toContain('duplicate_id_value');
     });
 });
+
+// ==================================================================
+// CHECK 4 & 5 — reference multiplicity reads untruncated __raw.values
+// (the L-proxy feat.values caps to upperBound / can pad to lowerBound,
+//  so the same WP1 raw read used by CHECK 9 must apply here too)
+// ==================================================================
+describe('CHECK 4 & 5 — reference multiplicity (raw values)', () => {
+    const B = klass({ id: 'B', name: 'B' });
+    const bObj = (id: string) => obj({ id, name: id, instanceof: B });
+
+    // A has a reference r:B with multiplicity lb..ub. proxyLen simulates the
+    // L-proxy truncation/padding of feat.values; __raw.values holds the real links
+    // (pointer id strings, as the D-layer stores them).
+    function aWith(rawIds: string[], proxyLen: number, lb: number, ub: number) {
+        const r = ref({ id: 'r', name: 'r', type: B, lowerBound: lb, upperBound: ub });
+        const A = klass({ id: 'A', name: 'A', allReferences: [r] });
+        const a0 = obj({ id: 'A_0', name: 'A_0', instanceof: A,
+            features: [val('r', { values: rawIds.slice(0, proxyLen), __raw: { values: rawIds } })] });
+        return { A, a0 };
+    }
+
+    it('flags 4 links against upperBound 3 from __raw (proxy truncates to 3)', () => {
+        const { A, a0 } = aWith(['b0', 'b1', 'b2', 'b3'], 3, 2, 3);
+        const res = run([a0, bObj('b0'), bObj('b1'), bObj('b2'), bObj('b3')], [A, B]);
+        expect(types(res)).toContain('multiplicity_upper_exceeded');
+        expect(res.status).toBe('errors');
+    });
+
+    it('warns on 1 link against lowerBound 2 from __raw', () => {
+        const { A, a0 } = aWith(['b0'], 1, 2, 3);
+        const res = run([a0, bObj('b0')], [A, B]);
+        expect(types(res)).toContain('multiplicity_below_min');
+    });
+
+    it('is silent for a conformant count (2 links within 2..3)', () => {
+        const { A, a0 } = aWith(['b0', 'b1'], 2, 2, 3);
+        const res = run([a0, bObj('b0'), bObj('b1')], [A, B]);
+        expect(types(res)).not.toContain('multiplicity_upper_exceeded');
+        expect(types(res)).not.toContain('multiplicity_below_min');
+    });
+
+    it('CHECK 6 sees links beyond upperBound (4th link dangling when its target is missing)', () => {
+        const { A, a0 } = aWith(['b0', 'b1', 'b2', 'b3'], 3, 2, 3);
+        // b3 intentionally NOT in the model — with the old truncated read it would
+        // be invisible (proxy stops at 3); the raw read must still flag it dangling.
+        const res = run([a0, bObj('b0'), bObj('b1'), bObj('b2')], [A, B]);
+        expect(types(res)).toContain('dangling_reference');
+    });
+});
+
+// ==================================================================
+// CHECK 3 — type_mismatch reads the raw stored value
+// (the L-proxy feat.value coerces per-type before delivering — a string
+//  on EInt arrives as a number, a string on EBoolean as a boolean — so
+//  the check must judge __raw.values, the form the D-layer stores)
+// ==================================================================
+describe('CHECK 3 — type_mismatch (raw values)', () => {
+    function itemWith(typeName: string, feature: AnyObj) {
+        const a = attr({ id: 'a', name: 'index', type: { name: typeName } });
+        const C = klass({ id: 'C', name: 'C2', allAttributes: [a] });
+        const o = obj({ id: 'o', name: 'i', instanceof: C, features: [val('a', feature)] });
+        return run([o], [C]);
+    }
+
+    it('flags a raw string on EInt even when the proxy delivers the coerced number', () => {
+        // Live-battery row #3: __raw holds 'aaa', the proxy value is the coerced 0.
+        const res = itemWith('EInt', { value: 0, __raw: { values: ['aaa'] } });
+        expect(types(res)).toContain('type_mismatch');
+        expect(res.status).toBe('warnings');
+        const v = res.violations.find((x: AnyObj) => x.violationType === 'type_mismatch')!;
+        expect(v.message).toContain('EInt');
+        expect(v.message).toContain('aaa');
+    });
+
+    it('accepts a valid integer on EInt in both stored forms (widget string, raw number)', () => {
+        expect(types(itemWith('EInt', { __raw: { values: ['42'] } }))).not.toContain('type_mismatch');
+        expect(types(itemWith('EInt', { __raw: { values: [42] } }))).not.toContain('type_mismatch');
+    });
+
+    it('flags a non-integer numeric on EInt', () => {
+        expect(types(itemWith('EInt', { __raw: { values: ['3.7'] } }))).toContain('type_mismatch');
+    });
+
+    it('accepts numerics on EDouble, flags a non-numeric string', () => {
+        expect(types(itemWith('EDouble', { __raw: { values: ['3.7'] } }))).not.toContain('type_mismatch');
+        expect(types(itemWith('EDouble', { __raw: { values: ['aaa'] } }))).toContain('type_mismatch');
+    });
+
+    it('accepts booleans on EBoolean in both stored forms, flags an arbitrary string', () => {
+        expect(types(itemWith('EBoolean', { __raw: { values: [true] } }))).not.toContain('type_mismatch');
+        expect(types(itemWith('EBoolean', { __raw: { values: ['false'] } }))).not.toContain('type_mismatch');
+        expect(types(itemWith('EBoolean', { __raw: { values: ['aaa'] } }))).toContain('type_mismatch');
+    });
+
+    it('accepts any value on EString', () => {
+        expect(types(itemWith('EString', { __raw: { values: ['whatever 123'] } }))).not.toContain('type_mismatch');
+    });
+
+    it('is silent on null/absent values (CHECK 2 territory)', () => {
+        expect(types(itemWith('EInt', { __raw: { values: [null] } }))).not.toContain('type_mismatch');
+        expect(types(itemWith('EInt', { __raw: { values: [] } }))).not.toContain('type_mismatch');
+    });
+
+    it('still works on flat fixtures without __raw (fallback chain)', () => {
+        expect(types(itemWith('EInt', { value: 'aaa' }))).toContain('type_mismatch');
+        expect(types(itemWith('EInt', { value: '42' }))).not.toContain('type_mismatch');
+    });
+});
+
+// ==================================================================
+// CHECK 2 — missing_required_attr judges presence on raw values
+// (the L-proxy f.value fabricates presence: an empty required EInt
+//  slot is padded to lowerBound and numbercast to 0, an empty EChar
+//  becomes 'A', the name:EString slot falls back to initialName —
+//  presence must be judged on the stored form; 0/false ARE values)
+// ==================================================================
+describe('CHECK 2 — missing_required_attr (raw presence)', () => {
+    function requiredWith(typeName: string, feature: AnyObj | null) {
+        const a = attr({ id: 'a', name: 'index', lowerBound: 1, type: { name: typeName } });
+        const C = klass({ id: 'C', name: 'C2', allAttributes: [a] });
+        const o = obj({ id: 'o', name: 'i', instanceof: C, features: feature ? [val('a', feature)] : [] });
+        return run([o], [C]);
+    }
+
+    it('flags an empty required EInt even when the proxy delivers the padded/coerced 0', () => {
+        // The blind case: __raw.values is empty, proxy value is the fabricated 0.
+        const res = requiredWith('EInt', { value: 0, __raw: { values: [] } });
+        expect(types(res)).toContain('missing_required_attr');
+        expect(res.status).toBe('errors');
+    });
+
+    it('accepts a required EInt whose stored value is 0 (0 is a value, not an absence)', () => {
+        expect(types(requiredWith('EInt', { __raw: { values: [0] } }))).not.toContain('missing_required_attr');
+        expect(types(requiredWith('EInt', { __raw: { values: ['0'] } }))).not.toContain('missing_required_attr');
+    });
+
+    it('accepts a required EBoolean whose stored value is false', () => {
+        expect(types(requiredWith('EBoolean', { __raw: { values: [false] } }))).not.toContain('missing_required_attr');
+    });
+
+    it('flags a required EString whose stored values are all empty strings', () => {
+        expect(types(requiredWith('EString', { __raw: { values: [''] } }))).toContain('missing_required_attr');
+        expect(types(requiredWith('EString', { __raw: { values: ['x'] } }))).not.toContain('missing_required_attr');
+    });
+
+    it('judges the name slot on raw too (no initialName fallback masking)', () => {
+        // Simulate the identity-slot fallback: proxy value carries the owner's
+        // initialName while the stored slot is empty — must still flag missing.
+        const a = attr({ id: 'n', name: 'name', lowerBound: 1, type: { name: 'EString' } });
+        const C = klass({ id: 'C', name: 'Person', allAttributes: [a] });
+        const o = obj({ id: 'o', name: 'p', instanceof: C,
+            features: [val('n', { value: 'fallbackName', __raw: { values: [''] } })] });
+        expect(types(run([o], [C]))).toContain('missing_required_attr');
+    });
+
+    it('still flags a wholly absent feature (no slot at all)', () => {
+        expect(types(requiredWith('EInt', null))).toContain('missing_required_attr');
+    });
+});

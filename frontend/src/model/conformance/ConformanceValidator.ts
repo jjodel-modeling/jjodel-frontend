@@ -130,9 +130,22 @@ export function validateConformance(
                 if (lb <= 0) continue;
 
                 const feats = featuresByMetaId.get(attr.id) || [];
+                // Judge presence on the RAW stored values: the L-proxy `f.value` fabricates
+                // presence — an EMPTY numeric slot is padded to lowerBound and numbercast to 0,
+                // an empty EChar becomes 'A', and the identity name:EString slot falls back to
+                // the owner's initialName (get_values, LModelElement.tsx ~:7163/:7333/:7315) —
+                // so a required-but-empty slot looked "present". Same raw-read fallback chain
+                // as the other checks. Presence semantics: at least one raw value that is not
+                // null/undefined/'' — 0 and false ARE values, not absences; the name slot gets
+                // no special fallback.
                 const hasValue = feats.some(f => {
-                    const val = f.value;
-                    return val !== null && val !== undefined && val !== '';
+                    const rawVals = (f as any).__raw?.values;
+                    const vals = Array.isArray(rawVals)
+                        ? rawVals
+                        : (Array.isArray(f.values)
+                            ? f.values
+                            : (f.value !== null && f.value !== undefined ? [f.value] : []));
+                    return vals.some((v: any) => v !== null && v !== undefined && v !== '');
                 });
 
                 if (!hasValue) {
@@ -150,33 +163,53 @@ export function validateConformance(
             // CHECK 3: wrong_attr_type — type compatibility
             for (const attr of allAttrs) {
                 if (!attr) continue;
+                const typeName = attr.type?.name?.toLowerCase() || '';
+                if (!typeName) continue;
                 const feats = featuresByMetaId.get(attr.id) || [];
                 for (const feat of feats) {
-                    const val = feat.value;
-                    if (val === null || val === undefined || val === '') continue;
+                    // Read the STORED value from the raw slot: the L-proxy `feat.value` coerces
+                    // per-type before delivering (get_values mappers, LModelElement.tsx ~:7178) —
+                    // a string on EInt arrives as a number (numbercasting → 0/NaN), a string on
+                    // EBoolean arrives as a boolean (fromBoolString → default true) — so a
+                    // typeof-based check on the proxy value can never fail. The D-layer stores
+                    // widget input verbatim (setValueAtPosition: "loose checks ... will cast on
+                    // get"), so type-checking must judge the raw form. Same raw-read fallback
+                    // chain as CHECKs 9/4/5 (keeps the flat-fixture tests working).
+                    const rawVals = (feat as any).__raw?.values;
+                    const vals = Array.isArray(rawVals)
+                        ? rawVals
+                        : (Array.isArray(feat.values)
+                            ? feat.values
+                            : (feat.value !== null && feat.value !== undefined ? [feat.value] : []));
+                    for (const val of vals) {
+                        // null/absent/empty is CHECK 2's territory — never a type violation
+                        if (val === null || val === undefined || val === '') continue;
 
-                    const typeName = attr.type?.name?.toLowerCase() || '';
-                    if (!typeName) continue;
+                        // Explicit predicates on the stored form. The value widget writes DOM
+                        // strings verbatim (Input.tsx serializeValue), so numeric strings are
+                        // valid numbers; real numbers/booleans can arrive from imports/scripts.
+                        let typeOk = true;
+                        if (typeName === 'eint' || typeName === 'int' || typeName === 'integer') {
+                            typeOk = (typeof val === 'number' && Number.isInteger(val))
+                                || (typeof val === 'string' && val.trim() !== '' && Number.isInteger(Number(val)));
+                        } else if (typeName === 'eboolean' || typeName === 'boolean' || typeName === 'bool') {
+                            typeOk = typeof val === 'boolean' || val === 'true' || val === 'false';
+                        } else if (typeName === 'efloat' || typeName === 'edouble' || typeName === 'float' || typeName === 'double') {
+                            typeOk = (typeof val === 'number' && !isNaN(val))
+                                || (typeof val === 'string' && val.trim() !== '' && !isNaN(Number(val)));
+                        }
+                        // EString is always compatible
 
-                    let typeOk = true;
-                    if (typeName === 'eint' || typeName === 'int' || typeName === 'integer') {
-                        typeOk = typeof val === 'number' || (typeof val === 'string' && !isNaN(Number(val)) && val.trim() !== '');
-                    } else if (typeName === 'eboolean' || typeName === 'boolean' || typeName === 'bool') {
-                        typeOk = typeof val === 'boolean' || val === 'true' || val === 'false';
-                    } else if (typeName === 'efloat' || typeName === 'edouble' || typeName === 'float' || typeName === 'double') {
-                        typeOk = typeof val === 'number' || (typeof val === 'string' && !isNaN(parseFloat(val)));
-                    }
-                    // EString is always compatible
-
-                    if (!typeOk) {
-                        violations.push({
-                            objectId: objId,
-                            objectName: objName,
-                            violationType: 'type_mismatch',
-                            severity: 'warning',
-                            message: `Object "${objName || objId}": attribute "${attr.name}" expects ${typeName} but got "${typeof val}"`,
-                            metamodelElementName: attr.name,
-                        });
+                        if (!typeOk) {
+                            violations.push({
+                                objectId: objId,
+                                objectName: objName,
+                                violationType: 'type_mismatch',
+                                severity: 'warning',
+                                message: `Object "${objName || objId}": attribute "${attr.name}" expects ${attr.type?.name} but got "${String(val)}"`,
+                                metamodelElementName: attr.name,
+                            });
+                        }
                     }
                 }
             }
@@ -291,24 +324,31 @@ export function validateConformance(
                 if (!ref) continue;
                 const feats = featuresByMetaId.get(ref.id) || [];
 
-                // Count actual values across all feature instances for this reference
+                // Count actual links across all feature instances for this reference.
+                // Read the UNTRUNCATED, UNPADDED raw slot: the L-proxy `feat.values` caps the
+                // array to upperBound (which silently no-ops the upper-bound CHECK 4) and can
+                // pad up to lowerBound (which masks the lower-bound CHECK 5). Mirror the WP1
+                // raw read used by CHECK 9 (and ConformanceGuard.ts:52-68): prefer
+                // `feat.__raw.values`, else fall back to `feat.values` / `feat.value` (keeps
+                // the flat-fixture tests working). Raw reference values are pointer id strings;
+                // the proxy fallback yields resolved LObject proxies — collect the id from
+                // either form. referencedIds is reused by CHECK 8 (target type) and CHECK 6
+                // (dangling), so reading raw here also lets those see links beyond upperBound.
                 let valueCount = 0;
                 const referencedIds: string[] = [];
 
                 for (const feat of feats) {
-                    const vals = feat.values;
-                    if (Array.isArray(vals)) {
-                        valueCount += vals.length;
-                        for (const v of vals) {
-                            if (v && typeof v === 'object' && 'id' in v) {
-                                referencedIds.push((v as LObject).id);
-                            }
-                        }
-                    } else if (feat.value !== null && feat.value !== undefined) {
+                    const rawVals = (feat as any).__raw?.values;
+                    const vals = Array.isArray(rawVals)
+                        ? rawVals
+                        : (Array.isArray(feat.values)
+                            ? feat.values
+                            : (feat.value !== null && feat.value !== undefined ? [feat.value] : []));
+                    for (const v of vals) {
+                        if (v === null || v === undefined || v === '') continue;
                         valueCount++;
-                        if (feat.value && typeof feat.value === 'object' && 'id' in (feat.value as object)) {
-                            referencedIds.push((feat.value as LObject).id);
-                        }
+                        if (typeof v === 'string') referencedIds.push(v);
+                        else if (typeof v === 'object' && 'id' in (v as object)) referencedIds.push((v as LObject).id);
                     }
                 }
 
