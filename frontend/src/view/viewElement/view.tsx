@@ -201,6 +201,9 @@ export class DViewElement extends DPointerTargetable {
     preRenderFunc!: string;
 
     jsxString!: string; // l'html template
+    // ViewpointIR (EditorV2 interpreter contract, spike 2026-07-17). Optional and additive:
+    // undefined for classic views; serialization is generic, no VersionFixer needed (spec IR sez. 8).
+    ir?: GObject;
     usageDeclarations?: string;
 
     longestLabel?: DocString<"function">;
@@ -470,6 +473,11 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         if (Defaults.check(c.data.id)) return true; // cannot delete or "demote" to decorations the main views, to make sure there is always at least 1 appliable view.
         return SetFieldAction.new(c.data, "isExclusiveView", !!val, '', false);
     }
+
+    ir?: GObject;
+    __info_of__ir: Info = {type: 'GObject | undefined', txt: <div>ViewpointIR of the view (EditorV2 interpreter contract). Undefined for classic views.</div>};
+    get_ir(c: Context): this["ir"] { return c.data.ir; }
+    set_ir(val: this["ir"], c: Context): boolean { return SetFieldAction.new(c.data, "ir", val as any, '', false); }
 
     constants!: GObject;
     __info_of__constants: Info = {todo:true, isGlobal: true, type: "Function():Object", label:"constants declaration",

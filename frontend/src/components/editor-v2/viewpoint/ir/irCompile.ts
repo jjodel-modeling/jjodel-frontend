@@ -1,0 +1,261 @@
+/**
+ * irCompile — compiles a VertexViewIR into a CompiledView once per view.
+ *
+ * The interpreter never walks the IR tree at render time: PathExprs become
+ * accessor closures over ReadCtx, Predicates become boolean closures,
+ * Conditionals become value functions. The dependency set (feature names read
+ * by the view's PathExprs, self only) is extracted statically for subscription
+ * signatures. Cache key: (view id, structural hash of the ir).
+ */
+
+import type {
+    CompiledAccessor,
+    CompiledBadge,
+    CompiledConditional,
+    CompiledFieldCompartment,
+    CompiledLabel,
+    CompiledPredicate,
+    CompiledView,
+    Conditional,
+    Literal,
+    PathExpr,
+    Predicate,
+    VertexViewIR,
+} from './irTypes';
+import type { ReadCtx } from './irReadCtx';
+
+/** Constructs forbidden in PathExpr (spec v1.1 §PathExpr). */
+const FORBIDDEN_PATH = /\?\.|\?\?|[?:()]/;
+/** One step: $feature | value | values | values[N] */
+const STEP_RE = /^(\$[A-Za-z_][A-Za-z0-9_]*|value|values(\[\d+\])?)$/;
+
+interface ParsedPath {
+    /** [{feature, accessor}] chain; v1 spike evaluates only the first hop (self). */
+    steps: { feature?: string; take: 'value' | 'values' | number }[];
+    featureNames: string[];
+}
+
+function parsePathExpr(expr: PathExpr): ParsedPath {
+    if (FORBIDDEN_PATH.test(expr)) {
+        throw new Error(`[ir] forbidden construct in PathExpr: ${expr}`);
+    }
+    const tokens = expr.split('.').map(t => t.trim()).filter(Boolean);
+    const steps: ParsedPath['steps'] = [];
+    const featureNames: string[] = [];
+    let current: { feature?: string; take: 'value' | 'values' | number } | null = null;
+    for (const tok of tokens) {
+        if (!STEP_RE.test(tok)) throw new Error(`[ir] invalid PathExpr step "${tok}" in ${expr}`);
+        if (tok.startsWith('$')) {
+            if (current) steps.push(current);
+            const feature = tok.slice(1);
+            featureNames.push(feature);
+            current = { feature, take: 'value' };
+        } else if (tok === 'value') {
+            if (!current) throw new Error(`[ir] dangling .value in ${expr}`);
+            current.take = 'value';
+        } else { // values or values[N]
+            if (!current) throw new Error(`[ir] dangling .values in ${expr}`);
+            const m = tok.match(/^values\[(\d+)\]$/);
+            current.take = m ? parseInt(m[1], 10) : 'values';
+        }
+    }
+    if (current) steps.push(current);
+    if (steps.length === 0) throw new Error(`[ir] empty PathExpr: ${expr}`);
+    return { steps, featureNames };
+}
+
+/**
+ * Compile a PathExpr into an accessor closure.
+ * KNOWN LIMIT (v1.1, to be fixed in spec v1.2 dependency-set work): only
+ * single-hop self paths are fully reactive; multi-hop navigation reads the
+ * target eagerly but changes on the *navigated* object do not invalidate self.
+ */
+function compilePath(expr: PathExpr): { fn: CompiledAccessor; featureNames: string[] } {
+    const { steps, featureNames } = parsePathExpr(expr);
+    const fn: CompiledAccessor = (ctx: ReadCtx, elementId: string) => {
+        let currentId = elementId;
+        let out: unknown = undefined;
+        for (let i = 0; i < steps.length; i++) {
+            const step = steps[i];
+            if (!step.feature) return undefined;
+            if (step.take === 'values') out = ctx.getValues(currentId, step.feature);
+            else if (typeof step.take === 'number') out = ctx.getValues(currentId, step.feature)[step.take];
+            else out = ctx.getValue(currentId, step.feature);
+            const isLast = i === steps.length - 1;
+            if (!isLast) {
+                // navigation hop: the value must be a pointer to another element
+                if (typeof out !== 'string') return undefined;
+                currentId = out;
+            }
+        }
+        return out;
+    };
+    return { fn, featureNames };
+}
+
+function isLiteral(x: PathExpr | Literal): x is Literal {
+    return typeof x === 'object' && x !== null && 'kind' in x;
+}
+
+function compileOperand(x: PathExpr | Literal, deps: Set<string>): CompiledAccessor {
+    if (isLiteral(x)) {
+        const v = x.value;
+        return () => v;
+    }
+    const { fn, featureNames } = compilePath(x);
+    featureNames.forEach(f => deps.add(f));
+    return fn;
+}
+
+function compilePredicate(p: Predicate | undefined, deps: Set<string>): CompiledPredicate {
+    if (!p) return () => true;
+    switch (p.op) {
+        case 'literal': { const v = p.value; return () => v; }
+        case 'and': {
+            const parts = p.args.map(a => compilePredicate(a, deps));
+            return (ctx, id) => parts.every(f => f(ctx, id));
+        }
+        case 'or': {
+            const parts = p.args.map(a => compilePredicate(a, deps));
+            return (ctx, id) => parts.some(f => f(ctx, id));
+        }
+        case 'not': {
+            const inner = compilePredicate(p.arg, deps);
+            return (ctx, id) => !inner(ctx, id);
+        }
+        case 'exists': {
+            const acc = compileOperand(p.path, deps);
+            return (ctx, id) => { const v = acc(ctx, id); return v !== undefined && v !== null && v !== ''; };
+        }
+        case 'empty': {
+            const { fn, featureNames } = compilePath(p.path);
+            featureNames.forEach(f => deps.add(f));
+            return (ctx, id) => {
+                const v = fn(ctx, id);
+                if (Array.isArray(v)) return v.length === 0;
+                return v === undefined || v === null || v === '';
+            };
+        }
+        case 'isKind': {
+            const cls = p.class;
+            if (p.path) {
+                const acc = compileOperand(p.path, deps);
+                return (ctx, id) => {
+                    const target = acc(ctx, id);
+                    return typeof target === 'string' ? ctx.isKindOf(target, cls) : false;
+                };
+            }
+            return (ctx, id) => ctx.isKindOf(id, cls);
+        }
+        default: {
+            const { op } = p as any;
+            const left = compileOperand((p as any).left, deps);
+            const right = compileOperand((p as any).right, deps);
+            return (ctx, id) => {
+                const l = left(ctx, id) as any;
+                const r = right(ctx, id) as any;
+                switch (op) {
+                    case 'eq': return l === r || String(l) === String(r);
+                    case 'neq': return !(l === r || String(l) === String(r));
+                    case 'lt': return Number(l) < Number(r);
+                    case 'lte': return Number(l) <= Number(r);
+                    case 'gt': return Number(l) > Number(r);
+                    case 'gte': return Number(l) >= Number(r);
+                    default: return false;
+                }
+            };
+        }
+    }
+}
+
+function compileConditional<T>(c: Conditional<T> | undefined, fallback: T, deps: Set<string>): CompiledConditional<T> {
+    if (c === undefined) return () => fallback;
+    if (typeof c !== 'object' || c === null || (!('when' in (c as any)) && !('rules' in (c as any)))) {
+        const v = c as T;
+        return () => v;
+    }
+    if ('when' in (c as any)) {
+        const cc = c as { when: Predicate; then: T; else?: T };
+        const pred = compilePredicate(cc.when, deps);
+        const elseV = cc.else !== undefined ? cc.else : fallback;
+        return (ctx, id) => (pred(ctx, id) ? cc.then : elseV);
+    }
+    const cr = c as { rules: { when: Predicate; then: T }[]; default?: T };
+    const compiled = cr.rules.map(r => ({ pred: compilePredicate(r.when, deps), then: r.then }));
+    const defV = cr.default !== undefined ? cr.default : fallback;
+    return (ctx, id) => {
+        for (const r of compiled) if (r.pred(ctx, id)) return r.then;
+        return defV;
+    };
+}
+
+/** Cheap structural hash for the compile cache (djb2 over JSON). */
+function irHash(ir: VertexViewIR): string {
+    const s = JSON.stringify(ir);
+    let h = 5381;
+    for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+    return String(h);
+}
+
+const compileCache = new Map<string, CompiledView>();
+
+export function compileView(viewId: string, ir: VertexViewIR): CompiledView {
+    const key = `${viewId}:${irHash(ir)}`;
+    const cached = compileCache.get(key);
+    if (cached) return cached;
+
+    const deps = new Set<string>();
+    const predicate = compilePredicate(ir.predicate, deps);
+    const form = compileConditional(ir.shape.form, 'rect' as const, deps);
+    const fill = ir.shape.fill !== undefined ? compileConditional(ir.shape.fill, '', deps) : null;
+    const border = ir.shape.border ?? null;
+
+    const labels: CompiledLabel[] = (ir.shape.labels ?? []).map(l => {
+        let text: CompiledAccessor;
+        if (l.source.from === 'path') {
+            const { fn, featureNames } = compilePath(l.source.expr);
+            featureNames.forEach(f => deps.add(f));
+            text = fn;
+        } else {
+            const t = l.source.text;
+            text = () => t;
+        }
+        return { position: l.position, text, visible: compileConditional(l.visible, true, deps) };
+    });
+
+    const badges: CompiledBadge[] = (ir.shape.badges ?? []).map(b => ({
+        icon: compileConditional(b.icon, '', deps),
+        position: b.position,
+        visible: compileConditional(b.visible, true, deps),
+        tooltip: b.tooltip,
+    }));
+
+    const fieldCompartments: CompiledFieldCompartment[] = (ir.fieldCompartments ?? []).map(fc => ({
+        id: fc.id,
+        source: fc.source.from,
+        segments: fc.rowFormat.segments,
+        visible: compileConditional(fc.visible, true, deps),
+        separator: fc.separator !== false,
+    }));
+
+    const compiled: CompiledView = {
+        viewId,
+        ir,
+        priority: typeof ir.priority === 'number' ? ir.priority : 0,
+        predicate,
+        dependencySet: Array.from(deps),
+        form,
+        fill,
+        border,
+        labels,
+        badges,
+        fieldCompartments,
+    };
+    compileCache.set(key, compiled);
+    return compiled;
+}
+
+/** Test/dev helper: drop all cached compilations (e.g. after demo re-install). */
+export function clearCompileCache(): void {
+    compileCache.clear();
+}
