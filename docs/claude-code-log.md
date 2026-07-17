@@ -1,5 +1,15 @@
 # Claude Code Session Log
 
+## 2026-07-17 — feat: IR interpreter spike in EditorV2 (vertex M1 rendering, Fase 1)
+**Prompt**: Fase 1 spike interprete IR (prompt KB 2026-07-17 16:49) — campo `ir` su DViewElement, modulo compile/resolve/render per view IR di kind vertex (oggetti M1/ObjectNode), fixture demo console, ReadCtx a doppio backend (lproxy default / draw). Zero editing/edge/graphVertex/migration. Eseguito in sessione Cowork cloud autonoma su branch `cloud/ir-editorv2` (i commit dello spike locale di Alfonso non sono sul remoto: re-implementazione dal prompt).
+**Files touched**: frontend/src/view/viewElement/view.tsx (campo `ir` opzionale + accessor L), frontend/src/components/editor-v2/viewpoint/ir/{irTypes,irCompile,irReadCtx,irResolve,irStyle,irDemoFixture}.ts, IRNodeContent.tsx (nuovi), frontend/src/components/editor-v2/nodes/ObjectNode.tsx (innesto ramo IR), docs/discovery/discovery_2026-07-17_ir_interpreter_spike_seams.md (nuovo), docs/claude-code-log.md (this entry).
+**Outcome**: ✅ completed — 2 commit (3348c4593 modulo senza wiring UI, 4b7b2a561 innesto ObjectNode). Risoluzione IR-nativa (priority > specificità exact/inherited > ordine dichiarazione), compile-to-closures con cache (viewid, hash), dependency set self-only, CSS per view in tag #ir-views-css dedicato, fixture parametrizzata window.__jjodelInstallIRDemo(metaclassName, boolAttrName) idempotente con fallback jsxString default.
+**Regressions**: unknown (typecheck 14 = baseline invariata, 0 nei file toccati; build verde; verifica visiva di Alfonso NON eseguita — checklist a 5 punti del prompt rimandata ai test finali della consegna cloud).
+**Out-of-scope changes**: no (soli file dell'elenco DOVE del prompt).
+**Layer Impact Report**: not-required (nessun file §3.1 toccato; lettura pura di idlookup, nessun write path).
+**Notes**: Wrapper .mm-node/NodeResizer/DynamicHandles/highlight invariati sul ramo IR (contratto handle agnostico, report §4-bis). Limite noto: reattività predicati/label solo su feature di self; cross-oggetto in spec v1.2. Fixture importata side-effect da ObjectNode (dev-only, da spostare dietro flag in fase di hardening).
+**Prompt document name**: 2026-07-17 16:49 fase1-spike-ir-interpreter-vertex
+
 ## 2026-07-15 — feat(conformance): complete WP1 checks on raw shapes + realistic tests (Phase 2 · WP1 commit 2)
 **Prompt**: Phase 2 WP1 completion. Phase 0 anti-dup gate found Part 2 (CHECK 9/10 raw-shape) + Part 3 (shape-live tests) already applied by a prior session (uncommitted, 27/27 green); Alfonso approved committing them now (commit 2). Part 1 (isID toggle persistence) is a separate critical-zone (proxy.ts) bug — deferred pending Alfonso's runtime probe.
 **Files touched**: frontend/src/model/conformance/ConformanceValidator.ts, ConformanceTypes.ts, __tests__/ConformanceValidator.test.ts (new), docs/claude-code-log.md (this entry).
