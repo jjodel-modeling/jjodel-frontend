@@ -28,6 +28,9 @@ import { syncNodeLabel, syncUpdateFeatureValue } from '../sync/canvasToJjom';
 import type { ObjectNodeData } from '../types';
 import { NodeProblemIndicator } from '../problems/NodeProblemIndicator';
 import { useIsHighlighted } from '../problems/useNodeProblems';
+import { useIRView } from '../viewpoint/ir/irResolve';
+import IRNodeContent from '../viewpoint/ir/IRNodeContent';
+import '../viewpoint/ir/irDemoFixture'; // dev-only: registers window.__jjodelInstallIRDemo
 
 export type ObjectNodeType = Node<ObjectNodeData, 'objectNode'>;
 
@@ -35,6 +38,10 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
     const { setNodes } = useReactFlow();
     const editorContext = useEditorContextSafe();
     const hlClass = useNodeHighlightClass(id);
+
+    // IR view resolution (spike 2026-07-17): non-null only when the active
+    // viewpoint declares an applicable IR view for this object's metaclass.
+    const irResolution = useIRView(id, data.instanceOfClassId);
 
     // Live metaclass name + singleton flag from Redux (reacts to metamodel changes)
     const liveMetaclassInfo = useSelector((state: any) => {
@@ -337,6 +344,38 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
     const existingAttrs = data.features?.filter(f => f.featureKind === 'attribute') ?? [];
     const hasFeatures = existingAttrs.length > 0 || missingAttributes.length > 0;
     const isOrphan = !data.instanceOfClassId;
+
+    if (irResolution) {
+        // IR render path: wrapper, resizer, handles and highlight class stay
+        // identical (handle contract is node-type-agnostic); only the content
+        // is produced by the interpreter. Read-only in the spike.
+        return (
+            <div
+                className={`mm-node mm-object ${selected ? 'selected' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass} ir-view-${irResolution.compiled.viewId}`}
+                data-viewid={irResolution.compiled.viewId}
+            >
+                <NodeResizer
+                    isVisible={selected}
+                    minWidth={140}
+                    minHeight={40}
+                    lineClassName="node-resize-line"
+                    handleClassName="node-resize-handle"
+                />
+                <DynamicHandles nodeId={id} />
+                {isSingleton && (
+                    <span className="singleton-badge">
+                        <i className="bi bi-diamond-fill" />
+                    </span>
+                )}
+                <NodeProblemIndicator nodeId={id} />
+                <IRNodeContent
+                    compiled={irResolution.compiled}
+                    objectId={irResolution.objectId}
+                    readCtx={irResolution.readCtx}
+                />
+            </div>
+        );
+    }
 
     return (
         <div className={`mm-node mm-object ${selected ? 'selected' : ''} ${isOrphan ? 'mm-object--orphan' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass}`}>
