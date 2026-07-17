@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Button } from '../../components/common/Button';
+import { isModelCompatibleWithSource } from './sourceConformance';
 import '../../components/CreateProjectDialog/create-project-dialog.scss';
 import './execute-transformation-dialog.scss';
 
@@ -24,6 +25,8 @@ export interface ExecuteTransformationDialogProps {
     onExecute: (sourceModelId: string, outputModelName: string) => Promise<void>;
     transformationName: string;
     sourceMetamodelName: string;
+    /** Identity of the source metamodel; when present, conformance is matched by ID (name is fallback) */
+    sourceMetamodelId?: string;
     targetMetamodelName: string;
     /** All available models in the project */
     availableModels: ModelOption[];
@@ -37,6 +40,7 @@ export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogPr
     onExecute,
     transformationName,
     sourceMetamodelName,
+    sourceMetamodelId,
     targetMetamodelName,
     availableModels,
     existingModelNames,
@@ -67,38 +71,11 @@ export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogPr
             // });
         }
 
-        const filtered = availableModels.filter(model => {
-            // Try to get metamodel ID from various possible fields
-            const mmId = model.metamodelId
-                || model.conformsTo
-                || (typeof model.metamodel === 'string' ? model.metamodel : model.metamodel?.id)
-                || '';
-
-            // Try to get metamodel name from various possible fields
-            const mmName = model.metamodelName
-                || (typeof model.metamodel === 'object' ? model.metamodel?.name : '')
-                || '';
-
-            // Match by name (primary) or by ID if name is empty
-            const matchesByName = mmName && mmName === sourceMetamodelName;
-            const matchesById = mmId && mmId === sourceMetamodelName; // In case sourceMetamodelName is actually an ID
-
-            const matches = matchesByName || matchesById;
-
-            // Debug: log each model's matching result
-            if (isOpen) {
-                // console.log(`[ExecuteTransformationDialog] Model "${model.name}":`, {
-                //     metamodelId: mmId || '(empty)',
-                //     metamodelName: mmName || '(empty)',
-                //     lookingFor: sourceMetamodelName,
-                //     matchesByName,
-                //     matchesById,
-                //     matches,
-                // });
-            }
-
-            return matches;
-        });
+        // Identity-first conformance: match by metamodel ID when available, with a
+        // name fallback for legacy transformations persisted without a sourceMetamodelId.
+        const filtered = availableModels.filter(model =>
+            isModelCompatibleWithSource(model, sourceMetamodelId, sourceMetamodelName)
+        );
 
         if (isOpen) {
             // console.log('[ExecuteTransformationDialog] Result:', {
@@ -108,7 +85,7 @@ export const ExecuteTransformationDialog: React.FC<ExecuteTransformationDialogPr
         }
 
         return filtered;
-    }, [availableModels, sourceMetamodelName, isOpen]);
+    }, [availableModels, sourceMetamodelId, sourceMetamodelName, isOpen]);
 
     // Generate default output name
     const generateDefaultOutputName = (): string => {

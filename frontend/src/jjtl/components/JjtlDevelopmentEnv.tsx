@@ -35,6 +35,8 @@ export interface JjtlDevelopmentEnvProps {
     /** Getter function to fetch fresh target metamodel data (for Suggested Mappings) */
     getTargetMetamodel?: () => MetamodelElement[];
     sourceMetamodelName?: string;
+    /** Identity of the source metamodel; forwarded to the execute dialog for ID-based conformance */
+    sourceMetamodelId?: string;
     targetMetamodelName?: string;
     /** Available models for transformation execution */
     availableModels?: ModelOption[];
@@ -72,6 +74,7 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
     getSourceMetamodel,
     getTargetMetamodel,
     sourceMetamodelName = 'Source',
+    sourceMetamodelId,
     targetMetamodelName = 'Target',
     availableModels = [],
     existingModelNames = [],
@@ -892,6 +895,7 @@ export const JjtlDevelopmentEnv: React.FC<JjtlDevelopmentEnvProps> = ({
                 onExecute={handleExecuteTransformation}
                 transformationName={ast?.name || 'Untitled'}
                 sourceMetamodelName={sourceMetamodelName}
+                sourceMetamodelId={sourceMetamodelId}
                 targetMetamodelName={targetMetamodelName}
                 availableModels={availableModels}
                 existingModelNames={existingModelNames}

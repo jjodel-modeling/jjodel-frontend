@@ -8,6 +8,7 @@ import { isProjectOverviewPage } from '../../utils/navigationUtils';
 import { LPointerTargetable, LViewPoint } from '../../joiner';
 import { activateViewpoint } from '../../utils/lastViewpoint';
 import { JjodelEvents } from '../../events/registry';
+import { ValidationPill } from './problems/ValidationPill';
 
 interface ToolbarProps {
     snapEnabled: boolean;
@@ -44,6 +45,8 @@ interface ToolbarProps {
     onDistributeH?: () => void;
     onDistributeV?: () => void;
     isMetamodel?: boolean;
+    /** Open model id — drives the conformance validation pill (undefined ⇒ no pill). */
+    modelId?: string;
     editorMode?: 'flow' | 'classic' | 'split';
     hasViewpoint?: boolean;
     onEditorModeChange?: (mode: 'flow' | 'classic' | 'split') => void;
@@ -163,6 +166,7 @@ function Toolbar({
     onDistributeH,
     onDistributeV,
     isMetamodel = false,
+    modelId,
     editorMode,
     hasViewpoint = false,
     onEditorModeChange,
@@ -438,6 +442,9 @@ function Toolbar({
 
             {/* ── Spacer ── */}
             <div className="toolbar-spacer" />
+
+            {/* ── Conformance validation pill (silent when conformant; never for metamodels) ── */}
+            {modelId && <ValidationPill modelId={modelId} />}
 
             {/* ── Editor mode toggle (always visible; disabled without an active viewpoint) ── */}
             <div

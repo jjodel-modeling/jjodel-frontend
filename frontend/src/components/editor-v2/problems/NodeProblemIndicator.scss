@@ -28,7 +28,40 @@
     &--error   { background: #dc2626; }
     &--resolved {
         background: #22c55e;
+        // Hold green as a "fixed!" confirmation, then fade out so the removal is
+        // smooth rather than an abrupt disappearance. Duration MUST match
+        // RESOLVED_TTL_MS in registry.ts (5000ms) so the dot reaches opacity 0
+        // exactly when the registry drops the entry.
+        animation: node-problem-resolve-out 5s ease-in forwards;
         &::before { display: none; }
+    }
+
+    // Numbered badge variant: shown when the node aggregates >1 violation.
+    // Grows to 16px, adds a white ring and centers the count. Still absolute —
+    // no card layout shift.
+    &--counted {
+        top: -7px;
+        right: -7px;
+        width: 16px;
+        height: 16px;
+        border: 2px solid white;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+        font-size: 9px;
+        font-weight: 700;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+    }
+
+    // While the overlay is open on this node the registry pauses the removal
+    // timer — pause the fade-out too so a resolved dot stays visible under an
+    // open popover instead of fading to nothing.
+    &--paused {
+        animation-play-state: paused;
     }
 
     &--paused::before {
@@ -47,6 +80,12 @@
 @keyframes node-problem-pulse {
     0%   { transform: scale(1);   opacity: 0.7; }
     100% { transform: scale(3);   opacity: 0;   }
+}
+
+// Resolved dot: stay solid green for most of the TTL, then fade + shrink away.
+@keyframes node-problem-resolve-out {
+    0%, 75% { opacity: 1; transform: scale(1);   }
+    100%    { opacity: 0; transform: scale(0.4);  }
 }
 
 // Highlight ring applied to a node when the problem overlay targets it as the

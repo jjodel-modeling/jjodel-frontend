@@ -1,0 +1,49 @@
+// Toolbar conformance summary pill (WP2-UI). Compact, stable geometry so its
+// appear/disappear consumes flex-spacer width only and never reflows the
+// toolbar's right-pinned controls. Colors are the shared conformance palette
+// (error #ef4444, warning #f59e0b, unknown #94a3b8) — kept inline here because
+// this is a component-scoped indicator, not a design-system token.
+
+.validation-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 20px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    user-select: none;
+
+    &__group {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+    }
+
+    i {
+        font-size: 11px;
+        line-height: 1;
+    }
+
+    &__count {
+        font-variant-numeric: tabular-nums;
+    }
+
+    &--errors {
+        color: #ef4444;
+        background: rgba(239, 68, 68, 0.10);
+    }
+
+    &--warnings {
+        color: #f59e0b;
+        background: rgba(245, 158, 11, 0.12);
+    }
+
+    &--unknown {
+        color: #94a3b8;
+        background: rgba(148, 163, 184, 0.14);
+    }
+}

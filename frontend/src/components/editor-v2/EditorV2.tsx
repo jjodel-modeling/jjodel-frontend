@@ -55,6 +55,7 @@ import { useClassRemoval } from './hooks/useClassRemoval';
 import { useConformanceGuard } from '../../model/conformance/useConformanceGuard';
 import { useOrphanFeatures } from './hooks/useOrphanFeatures';
 import { UniquenessProblemSync } from './problems/UniquenessProblemSync';
+import { ConformanceProblemSync } from './problems/ConformanceProblemSync';
 import { getSyncMode, markDropCreated, suppressSingleton, unsuppressSingleton, clearSuppressedSingletons, getSuppressedSingletonIds, getEdgeRefId } from './sync/syncState';
 import {
     syncPositionToJjom,
@@ -3455,6 +3456,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         <EditorContext.Provider value={editorContextValue}>
             <div className={`editor-v2 theme-${theme} notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}${showBackground ? '' : ' hide-background'}${highlightModeActive ? ' highlight-mode' : ''}`} tabIndex={0} onKeyDown={onKeyDown}>
                 <UniquenessProblemSync modelid={modelid} />
+                <ConformanceProblemSync modelid={modelid} graphId={graphId} />
                 <PalettePanel
                     editorMode={modeInfo.mode}
                     rootableClasses={modeInfo.rootableClasses}
@@ -3495,6 +3497,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         onDistributeH={() => withSnapshot(distributeHorizontally)}
                         onDistributeV={() => withSnapshot(distributeVertically)}
                         isMetamodel={!isModelMode}
+                        modelId={modelid}
                         editorMode={editorMode}
                         hasViewpoint={hasViewpoint}
                         onEditorModeChange={onEditorModeChange}
