@@ -32,6 +32,7 @@ import PalettePanel from './panels/PalettePanel';
 // PropertiesPanel removed — properties editing is handled by the dock-based Info panel
 import Toolbar from './Toolbar';
 import { useIRContainment, useIRInteractionPlan } from './viewpoint/ir/useIRContainment';
+import { applyIRPaletteFilter } from './viewpoint/ir/irInteraction';
 import IRContainmentHulls from './viewpoint/ir/IRContainmentHulls';
 import { clearSyntheticEdgeSelection, setIREdgeAnchorOverride, setSyntheticEdgeSelected } from './viewpoint/ir/irEdgeInteraction';
 import { useActiveEditor, CLASSIC_ZOOM_MIN, CLASSIC_ZOOM_MAX, type ZoomController } from './ActiveEditorContext';
@@ -1227,6 +1228,13 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // metaclasses the active IR viewpoint declares views for. Null = no IR
     // viewpoint → unrestricted palette (current behavior).
     const irInteractionPlan = useIRInteractionPlan();
+
+    // Palette intersection with the rootable classes, with normative fallback
+    // (spec v1.2 sez. 6): empty intersection → full palette + notice.
+    const irPalette = useMemo(
+        () => applyIRPaletteFilter(modeInfo.rootableClasses, irInteractionPlan),
+        [modeInfo.rootableClasses, irInteractionPlan],
+    );
 
     // Handle new connections: save the valid connection, then show edge type popup on drop
     const onConnect = useCallback(
@@ -3571,9 +3579,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 <ConformanceProblemSync modelid={modelid} graphId={graphId} />
                 <PalettePanel
                     editorMode={modeInfo.mode}
-                    rootableClasses={irInteractionPlan?.paletteMetaclasses
-                        ? modeInfo.rootableClasses.filter(c => irInteractionPlan.paletteMetaclasses!.includes(c.name))
-                        : modeInfo.rootableClasses}
+                    rootableClasses={irPalette.classes}
+                    irPaletteFallback={irPalette.fallback}
                     allClasses={modeInfo.allClasses}
                     selectedDObjectId={lastSelectedModelElement ?? null}
                 />

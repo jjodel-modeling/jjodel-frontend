@@ -69,9 +69,12 @@ interface PalettePanelProps {
      *  Null when nothing M1 is selected (or `_lastSelected` points to a DClass/DPackage/DModel
      *  in deselect-default state — filtered out via the `className === 'DObject'` check). */
     selectedDObjectId?: string | null;
+    /** True when the IR palette filter fell back to the full rootable list because the
+     *  active viewpoint declares no views for creatable root classes (spec v1.2 sez. 6). */
+    irPaletteFallback?: boolean;
 }
 
-function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClasses = [], selectedDObjectId = null }: PalettePanelProps) {
+function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClasses = [], selectedDObjectId = null, irPaletteFallback = false }: PalettePanelProps) {
     const onDragStart = useCallback((event: React.DragEvent, type: string, metaclassId?: string) => {
         event.dataTransfer.setData('application/reactflow', type);
         if (metaclassId) {
@@ -120,6 +123,11 @@ function PalettePanel({ editorMode = 'metamodel', rootableClasses = [], allClass
                 {/* Instances — root instance creation (kept as drag-to-canvas) */}
                 <div className="palette-instances">
                     <div className="palette-instances__title">Instances</div>
+                    {irPaletteFallback && (
+                        <div className="palette-notice">
+                            Active viewpoint declares no views for creatable root classes. Showing all.
+                        </div>
+                    )}
                     {rootableClasses.length === 0 ? (
                         <div className="palette-empty">No rootable classes found</div>
                     ) : (

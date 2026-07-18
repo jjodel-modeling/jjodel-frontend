@@ -110,6 +110,8 @@ interface InteractionSpec {
 
 Il default "assente = derivato" è normativo: un viewpoint senza `interaction` è pienamente editabile con i gesti derivati dalla struttura. `interaction` esplicito serve a restringere o rietichettare. Dettagli finali dopo la micro-discovery write path (Fase 3).
 
+**Fallback della palette derivata (normativo)**: se l'insieme derivato dalle view, intersecato con le metaclassi instanziabili alla radice, è vuoto, l'interprete mostra la palette completa (tutte le rootable) con una notice; il filtro derivato è un aiuto di focusing, non una restrizione. Solo `interaction.palette` esplicita può restringere la palette fino a vuoto.
+
 ## 7. Edge (delta sulla v1.1)
 
 `EdgeCap`/`EdgeSpec` come v1.1 sez. 5.7 con questi delta:

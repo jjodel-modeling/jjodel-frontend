@@ -22,7 +22,7 @@ import {
     liftEndpoint,
 } from '../irContainment';
 import { assignGeometricHandles, decorateReferenceEdges, synthesizeObjectAsEdges } from '../irEdgeViews';
-import { deriveIRInteraction } from '../irInteraction';
+import { applyIRPaletteFilter, deriveIRInteraction } from '../irInteraction';
 import type { EdgeViewIR, GraphVertexViewIR, VertexViewIR } from '../irTypes';
 
 /** Build a minimal D-layer world: metamodel classes + objects with slots. */
@@ -512,6 +512,36 @@ describe('irInteraction (Fase 3)', () => {
         const plan = deriveIRInteraction(index);
         expect(plan.paletteMetaclasses).toBeNull();
         expect(plan.connectRules).toEqual([]);
+    });
+});
+
+describe('applyIRPaletteFilter (palette fallback, spec v1.2 sez. 6)', () => {
+    const rootable = [{ name: 'State' }, { name: 'Region' }];
+    const planFor = (metaclasses: string[]) => ({
+        paletteMetaclasses: metaclasses,
+        connectRules: [],
+        dropContainers: [],
+    });
+
+    it('non-empty intersection stays filtered, no fallback', () => {
+        const res = applyIRPaletteFilter(rootable, planFor(['State', 'Transition']));
+        expect(res.classes).toEqual([{ name: 'State' }]);
+        expect(res.fallback).toBe(false);
+    });
+    it('empty intersection falls back to the full rootable palette with notice flag', () => {
+        const res = applyIRPaletteFilter(rootable, planFor(['Transition']));
+        expect(res.classes).toEqual(rootable);
+        expect(res.fallback).toBe(true);
+    });
+    it('null plan or null paletteMetaclasses is a pass-through without fallback', () => {
+        expect(applyIRPaletteFilter(rootable, null)).toEqual({ classes: rootable, fallback: false });
+        const noRestriction = { paletteMetaclasses: null, connectRules: [], dropContainers: [] };
+        expect(applyIRPaletteFilter(rootable, noRestriction)).toEqual({ classes: rootable, fallback: false });
+    });
+    it('no rootable classes at all → empty palette, no fallback notice', () => {
+        const res = applyIRPaletteFilter([], planFor(['Transition']));
+        expect(res.classes).toEqual([]);
+        expect(res.fallback).toBe(false);
     });
 });
 

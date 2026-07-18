@@ -836,6 +836,17 @@
         }
     }
 
+    // IR palette fallback notice (spec v1.2 sez. 6): shown only when the active
+    // viewpoint declares no views for creatable root classes.
+    .palette-notice {
+        font-size: 11px;
+        color: var(--text-muted);
+        font-style: italic;
+        line-height: 1.4;
+        padding: 0 2px;
+        margin-bottom: 8px;
+    }
+
     // Info cards container (Children + References)
     .palette-info-cards {
         display: flex;

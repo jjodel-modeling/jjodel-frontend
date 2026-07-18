@@ -71,3 +71,22 @@ export function deriveIRInteraction(index: IRViewpointIndex): IRInteractionPlan 
         dropContainers: Array.from(dropContainers),
     };
 }
+
+/**
+ * Palette filter with normative fallback (spec v1.2 sez. 6): intersect the
+ * rootable classes with the IR-declared palette metaclasses. If the
+ * intersection is empty, the full rootable palette is returned with
+ * `fallback: true` — the derived filter is a focusing aid, not a restriction;
+ * only an explicit `interaction.palette` may restrict down to empty.
+ * `fallback` stays false when there are no rootable classes at all (nothing
+ * to show either way — the empty state is not a fallback).
+ */
+export function applyIRPaletteFilter<T extends { name: string }>(
+    rootable: T[],
+    plan: IRInteractionPlan | null,
+): { classes: T[]; fallback: boolean } {
+    if (!plan?.paletteMetaclasses) return { classes: rootable, fallback: false };
+    const filtered = rootable.filter(c => plan.paletteMetaclasses!.includes(c.name));
+    if (filtered.length > 0) return { classes: filtered, fallback: false };
+    return { classes: rootable, fallback: rootable.length > 0 };
+}
