@@ -1,5 +1,15 @@
 # Claude Code Session Log
 
+## 2026-07-18 — feat: IR-as-contract pipeline Fasi 0-5a su branch cloud/ir-editorv2 (sessione autonoma)
+**Prompt**: esecuzione autonoma del piano a fasi della sessione 2026-07-17_2 (Cowork cloud, mandato di Alfonso "concludi il lavoro senza il mio intervento"). Branch dedicato `cloud/ir-editorv2` da `alfonso-frontend-jjtl` (b7d6e82ef).
+**Files touched**: vedi i singoli commit 3348c4593..HEAD (spike ir/, benchmark harness, spec v1.2, containment+collapse, edge views, edit-in-place+interaction, VersionFixer 2.226 + view.tsx carry-over, shutdown classic + 6 file rimossi).
+**Outcome**: ✅ Fasi 0, 1, 2a, 2b, 2c, 3, 4, 5a completate; ⚠️ Fase 5 finale (delete graph/) STAGED, non eseguita: la consumer map (GraphDataElements, store, LModelElement, editors/views) conferma che serve il de-entanglement (b) con discovery dedicata.
+**Regressions**: unknown (typecheck 14 = baseline; build verde a ogni commit; 846/846 test passati, 9 suite failure identiche al commit base = known failures; smoke Playwright end-to-end su build: flow rendering post-shutdown, viewpoint Default senza classic, fixture IR attiva con badge condizionali. Verifica visiva umana NON eseguita — checklist nel report di consegna).
+**Out-of-scope changes**: no (per fase; scope auto-definito dal piano approvato in sessione).
+**Layer Impact Report**: produced (VersionFixer 2.225->2.226 + updateDefaultView carry-over: nel report di consegna, da leggere PRIMA del merge).
+**Notes**: benchmark baseline (docs/benchmarks/): mount flow 500 nodi 163s (run scarico), mutazione singola ~16s settle, attivazione viewpoint ~11min block, 986/1000 edge. Il branch sostituisce i commit locali non pushati dello spike di Alfonso.
+**Prompt document name**: 2026-07-18 sessione-autonoma-cloud-ir-editorv2
+
 ## 2026-07-17 — feat: IR interpreter spike in EditorV2 (vertex M1 rendering, Fase 1)
 **Prompt**: Fase 1 spike interprete IR (prompt KB 2026-07-17 16:49) — campo `ir` su DViewElement, modulo compile/resolve/render per view IR di kind vertex (oggetti M1/ObjectNode), fixture demo console, ReadCtx a doppio backend (lproxy default / draw). Zero editing/edge/graphVertex/migration. Eseguito in sessione Cowork cloud autonoma su branch `cloud/ir-editorv2` (i commit dello spike locale di Alfonso non sono sul remoto: re-implementazione dal prompt).
 **Files touched**: frontend/src/view/viewElement/view.tsx (campo `ir` opzionale + accessor L), frontend/src/components/editor-v2/viewpoint/ir/{irTypes,irCompile,irReadCtx,irResolve,irStyle,irDemoFixture}.ts, IRNodeContent.tsx (nuovi), frontend/src/components/editor-v2/nodes/ObjectNode.tsx (innesto ramo IR), docs/discovery/discovery_2026-07-17_ir_interpreter_spike_seams.md (nuovo), docs/claude-code-log.md (this entry).
