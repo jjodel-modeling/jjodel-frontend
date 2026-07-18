@@ -78,6 +78,18 @@ function applyEdgeStyle(e: Edge, cv: CompiledEdgeView, ctx: ReadCtx, evalId: str
  * centers + first free index per (node, side, role) among the edges already
  * assigned — the id format `${side}-${index}` is the DynamicHandles contract.
  */
+/** First free handle index for (node, side, role) among already-assigned edges. */
+export function freeHandleIndex(nodeId: string, side: string, role: 'source' | 'target', assigned: Edge[]): number {
+    let count = 0;
+    for (const e of assigned) {
+        const h = role === 'source'
+            ? (e.source === nodeId ? e.sourceHandle : undefined)
+            : (e.target === nodeId ? e.targetHandle : undefined);
+        if (h && h.startsWith(side + '-')) count++;
+    }
+    return count;
+}
+
 export function assignGeometricHandles(edge: Edge, nodesById: Map<string, Node>, assigned: Edge[]): Edge {
     const s = nodesById.get(edge.source);
     const t = nodesById.get(edge.target);
@@ -96,20 +108,10 @@ export function assignGeometricHandles(edge: Edge, nodesById: Map<string, Node>,
         sourceSide = dy >= 0 ? 'bottom' : 'top';
         targetSide = dy >= 0 ? 'top' : 'bottom';
     }
-    const freeIndex = (nodeId: string, side: string, role: 'source' | 'target'): number => {
-        let count = 0;
-        for (const e of assigned) {
-            const h = role === 'source'
-                ? (e.source === nodeId ? e.sourceHandle : undefined)
-                : (e.target === nodeId ? e.targetHandle : undefined);
-            if (h && h.startsWith(side + '-')) count++;
-        }
-        return count;
-    };
     return {
         ...edge,
-        sourceHandle: `${sourceSide}-${freeIndex(edge.source, sourceSide, 'source')}`,
-        targetHandle: `${targetSide}-${freeIndex(edge.target, targetSide, 'target')}`,
+        sourceHandle: `${sourceSide}-${freeHandleIndex(edge.source, sourceSide, 'source', assigned)}`,
+        targetHandle: `${targetSide}-${freeHandleIndex(edge.target, targetSide, 'target', assigned)}`,
     };
 }
 
@@ -165,8 +167,8 @@ export function synthesizeObjectAsEdges(
     index: IRViewpointIndex,
     readCtx: ReadCtx,
     idlookup: Idlookup,
-    /** Session anchor overrides (user-chosen handles), keyed by edge-object id. */
-    anchorOverrides?: Map<string, { sourceHandle?: string; targetHandle?: string }>,
+    /** Session anchor overrides (user-chosen handles or side pins), keyed by edge-object id. */
+    anchorOverrides?: Map<string, { sourceHandle?: string; targetHandle?: string; sourceSide?: string; targetSide?: string }>,
 ): ObjectAsEdgeResult {
     if (index.objectAsEdgeByMetaclass.size === 0) return { nodes, edges, edgeObjects: new Set() };
     const edgeObjects = new Set<string>();
@@ -229,10 +231,14 @@ export function synthesizeObjectAsEdges(
         const objectId = (e.data as any)?.irObjectId as string | undefined;
         const override = objectId ? anchorOverrides?.get(objectId) : undefined;
         if (override) {
+            const srcHandle = override.sourceHandle
+                ?? (override.sourceSide ? `${override.sourceSide}-${freeHandleIndex(e.source, override.sourceSide, 'source', placed)}` : undefined);
+            const tgtHandle = override.targetHandle
+                ?? (override.targetSide ? `${override.targetSide}-${freeHandleIndex(e.target, override.targetSide, 'target', placed)}` : undefined);
             withHandles = {
                 ...withHandles,
-                sourceHandle: override.sourceHandle ?? withHandles.sourceHandle,
-                targetHandle: override.targetHandle ?? withHandles.targetHandle,
+                sourceHandle: srcHandle ?? withHandles.sourceHandle,
+                targetHandle: tgtHandle ?? withHandles.targetHandle,
             };
         }
         placed.push(withHandles);

@@ -3048,6 +3048,21 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
     const handleEdgeChange = useCallback(
         (edgeId: string, data: Partial<Edge>) => {
+            // Synthetic IR edge (object-as-edge): the id does not exist in the
+            // base edge state. The anchor pins coming from EndpointHandles
+            // (sourceAnchor/targetAnchor in data.data) become session anchor
+            // overrides consumed by the synthesis pass.
+            if (edgeId.startsWith('irobj_')) {
+                const objectId = edgeId.slice('irobj_'.length);
+                const d: any = (data as any).data ?? {};
+                const override: { sourceSide?: string; targetSide?: string } = {};
+                if (d.sourceAnchor?.side) override.sourceSide = d.sourceAnchor.side;
+                if (d.targetAnchor?.side) override.targetSide = d.targetAnchor.side;
+                if (override.sourceSide || override.targetSide) {
+                    setIREdgeAnchorOverride(objectId, override);
+                }
+                return;
+            }
             takeSnapshot();
             setEdges((eds) => {
                 const updated = eds.map((e) => (e.id === edgeId ? { ...e, ...data } : e));

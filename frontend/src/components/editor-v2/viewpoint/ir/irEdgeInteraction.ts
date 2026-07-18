@@ -16,8 +16,12 @@
 import { useSyncExternalStore } from 'react';
 
 export interface IRAnchorOverride {
+    /** Explicit handle ids (RF reconnect drop on a specific handle). */
     sourceHandle?: string;
     targetHandle?: string;
+    /** Side pins (EndpointHandles anchor drag) — the synthesis pass resolves the free index. */
+    sourceSide?: string;
+    targetSide?: string;
 }
 
 const anchorOverrides = new Map<string, IRAnchorOverride>();
