@@ -23,8 +23,10 @@ La risoluzione della view per un elemento è dichiarata nello schema, non eredit
 **Regola d'ordine deterministica** per le view candidate (stessa metaclasse o antenata, predicato che passa):
 
 1. `priority` esplicita (maggiore vince; assente = 0);
-2. specificità di metaclasse: match esatto (la metaclasse dell'oggetto è dichiarata in `metaclasses`) > match per ereditarietà (una antenata è dichiarata); a parità di antenata, distanza minore vince;
+2. specificità di metaclasse: match esatto (la metaclasse dell'oggetto è dichiarata in `metaclasses`) > match per ereditarietà (una antenata è dichiarata) > wildcard (`metaclasses: '*'`); a parità di antenata, distanza minore vince;
 3. ordine di dichiarazione della view nel viewpoint.
+
+Il **wildcard** `metaclasses: '*'` esiste per le default view (erede della semantica per-livello delle classic default: si applicano a ogni oggetto del livello). Ha sempre specificità minima: qualunque view dichiarata per metaclasse la batte a parità di priority.
 
 **Vincoli dell'interprete**:
 - risoluzione indicizzata per metaclasse: costruzione dell'indice all'attivazione del viewpoint, dispatch O(#view candidate), mai O(model);
@@ -46,7 +48,7 @@ Come v1.1 sez. 4 (`ViewpointIR`, `ViewIR` unione discriminata sui 5 kind, `ViewC
 interface ViewCommon {
   irVersion: string;
   id?: string;
-  metaclasses: MetaclassRef[];
+  metaclasses: MetaclassRef[] | '*';   // '*' = wildcard delle default view (specificità minima, sez. 2)
   predicate?: Predicate;
   priority?: number;            // primo criterio della regola di risoluzione (sez. 2)
   exclusive?: boolean;          // default true

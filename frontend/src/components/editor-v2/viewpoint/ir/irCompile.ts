@@ -216,6 +216,16 @@ export function compileView(viewId: string, ir: VertexViewIR): CompiledView {
             const { fn, featureNames } = compilePath(l.source.expr);
             featureNames.forEach(f => deps.add(f));
             text = fn;
+        } else if (l.source.from === 'intrinsic') {
+            const prop = l.source.prop;
+            text = (ctx, id) => {
+                switch (prop) {
+                    case 'name': return ctx.getName(id) ?? '';
+                    case 'metaclassName': return ctx.getMetaclassName(id) ?? '';
+                    case 'qualifiedName': return `${ctx.getName(id) ?? ''} : ${ctx.getMetaclassName(id) ?? ''}`;
+                    default: return '';
+                }
+            };
         } else {
             const t = l.source.text;
             text = () => t;

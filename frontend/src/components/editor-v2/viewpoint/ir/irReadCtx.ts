@@ -12,15 +12,15 @@
  * Element ids passed to ReadCtx are DObject ids (model layer), NOT vertex ids.
  */
 
-import { LPointerTargetable } from '../../../../joiner';
-
-export const IR_READ_BACKEND: 'lproxy' | 'draw' = 'lproxy';
+export const IR_READ_BACKEND: 'lproxy' | 'draw' = 'lproxy';  // consumed by irReadCtxLproxy.makeReadCtx
 
 export interface ReadCtx {
     /** Single value of a feature (attribute slot) by name; undefined if absent. */
     getValue(elementId: string, featureName: string): unknown;
     /** All values of a feature slot by name; [] if absent. */
     getValues(elementId: string, featureName: string): unknown[];
+    /** Element display name (D-layer name, initialName fallback); null if unresolvable. */
+    getName(elementId: string): string | null;
     /** Metaclass (DClass) name of the element; null if unresolvable. */
     getMetaclassName(elementId: string): string | null;
     /** True if the element's metaclass is `className` or inherits from it. */
@@ -84,6 +84,10 @@ export function makeDrawReadCtx(idlookup: Idlookup): ReadCtx {
             const vals = dValue?.values;
             return Array.isArray(vals) ? vals : [];
         },
+        getName(elementId) {
+            const d = idlookup[elementId];
+            return d?.name ?? d?.initialName ?? null;
+        },
         getMetaclassName(elementId) {
             const cid = metaclassIdOf(idlookup, elementId);
             return cid ? (idlookup[cid]?.name ?? null) : null;
@@ -96,41 +100,3 @@ export function makeDrawReadCtx(idlookup: Idlookup): ReadCtx {
     };
 }
 
-/**
- * L-proxy backend ('lproxy'): reads through LObject/LValue proxies.
- * Semantic note (spike Fase A finding): the proxy coerces and truncates to
- * upperBound, so single-value reads may differ from raw D-layer reads.
- * Falls back to the draw backend when the proxy throws on stale data.
- */
-export function makeLproxyReadCtx(idlookup: Idlookup): ReadCtx {
-    const draw = makeDrawReadCtx(idlookup);
-    return {
-        getValue(elementId, featureName) {
-            try {
-                const lObj = LPointerTargetable.fromPointer(elementId as any) as any;
-                const slot = lObj?.['$' + featureName];
-                if (slot === undefined) return undefined;
-                return slot.value;
-            } catch {
-                return draw.getValue(elementId, featureName);
-            }
-        },
-        getValues(elementId, featureName) {
-            try {
-                const lObj = LPointerTargetable.fromPointer(elementId as any) as any;
-                const slot = lObj?.['$' + featureName];
-                const vals = slot?.values;
-                return Array.isArray(vals) ? vals : draw.getValues(elementId, featureName);
-            } catch {
-                return draw.getValues(elementId, featureName);
-            }
-        },
-        // Metaclass identity is structural, not value-coerced: the draw path is canonical.
-        getMetaclassName: draw.getMetaclassName,
-        isKindOf: draw.isKindOf,
-    };
-}
-
-export function makeReadCtx(idlookup: Idlookup): ReadCtx {
-    return IR_READ_BACKEND === 'lproxy' ? makeLproxyReadCtx(idlookup) : makeDrawReadCtx(idlookup);
-}

@@ -39,9 +39,22 @@ export type ShapeForm = 'rect' | 'rounded' | 'ellipse';
 export type LabelPosition = 'top' | 'center' | 'inside' | 'bottom';
 export type BadgePosition = 'tl' | 'tr' | 'bl' | 'br';
 
+/**
+ * Text source of a label. 'intrinsic' reads element-level properties that are
+ * not feature slots (spec v1.2: needed by default views — DObject.name is the
+ * identity, not necessarily a $name feature):
+ *   name          → element display name
+ *   metaclassName → name of the instantiated metaclass
+ *   qualifiedName → "name : MetaclassName" (UML instance notation)
+ */
+export type TextSource =
+    | { from: 'path'; expr: PathExpr }
+    | { from: 'literal'; text: string }
+    | { from: 'intrinsic'; prop: 'name' | 'metaclassName' | 'qualifiedName' };
+
 export interface LabelSpec {
     position: LabelPosition;
-    source: { from: 'path'; expr: PathExpr } | { from: 'literal'; text: string };
+    source: TextSource;
     visible?: Conditional<boolean>;
 }
 
@@ -67,9 +80,10 @@ export interface FieldCompartmentSpec {
 }
 
 export interface VertexViewIR {
-    irVersion: string;               // "ir-1.0"
+    irVersion: string;               // "ir-1.0" | "ir-1.2"
     kind: 'vertex';
-    metaclasses: string[];           // metamodel metaclass names
+    /** Metamodel metaclass names, or '*' (default-view wildcard: minimum specificity). */
+    metaclasses: string[] | '*';
     predicate?: Predicate;
     priority?: number;
     exclusive?: boolean;             // spike: only exclusive views are rendered; decorative ones are ignored
