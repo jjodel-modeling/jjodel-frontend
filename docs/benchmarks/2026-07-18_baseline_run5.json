@@ -1,0 +1,24 @@
+{
+  "date": "2026-07-18T01:11:32.392Z",
+  "app": "http://localhost:3001/",
+  "model": "bench.xmi",
+  "project": "Bench_mrpo8v26",
+  "t_import_ecore_ms": 125,
+  "t_import_xmi_ms": 2327,
+  "commits_import_xmi": 7,
+  "t_mount_flow_nodes_ms": 771086,
+  "t_edges_settle_ms": 771086,
+  "t_responsive_after_open_ms": 802397,
+  "rf_nodes": 501,
+  "rf_edges": 986,
+  "commits_open_flow": 1514,
+  "edit_flow": {
+    "ms": 16066
+  },
+  "commits_edit_flow": 21,
+  "classic_toggle_found": 1,
+  "t_viewpoint_activation_block_ms": 648845,
+  "t_mount_classic_ms": 651531,
+  "classic_nodes": 4444,
+  "commits_mount_classic": 5
+}
