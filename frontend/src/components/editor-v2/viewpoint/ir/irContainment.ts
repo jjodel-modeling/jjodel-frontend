@@ -20,6 +20,7 @@ import type { Edge, Node } from '@xyflow/react';
 import type { ReadCtx } from './irReadCtx';
 import type { IRViewpointIndex } from './irResolveCore';
 import { resolveIRView } from './irResolveCore';
+import { assignGeometricHandles } from './irEdgeViews';
 
 type Idlookup = Record<string, any>;
 
@@ -160,8 +161,9 @@ export function decorateNodes(nodes: Node[], model: ContainmentModel, hidden: Se
  * - both endpoints lift to the same vertex (or an endpoint has no rendered
  *   ancestor) → edge suppressed.
  */
-export function decorateEdges(edges: Edge[], model: ContainmentModel, hidden: Set<string>): Edge[] {
+export function decorateEdges(edges: Edge[], model: ContainmentModel, hidden: Set<string>, nodes?: Node[]): Edge[] {
     if (hidden.size === 0) return edges;
+    const nodesById = nodes ? new Map(nodes.map(n => [n.id, n] as const)) : null;
     const out: Edge[] = [];
     const liftedPairs = new Set<string>();
     let changed = false;
@@ -182,7 +184,7 @@ export function decorateEdges(edges: Edge[], model: ContainmentModel, hidden: Se
         const pairKey = `${liftedSrcVertex}→${liftedTgtVertex}`;
         if (liftedPairs.has(pairKey)) continue;                      // dedupe lifted bundles
         liftedPairs.add(pairKey);
-        out.push({
+        let lifted: Edge = {
             ...e,
             id: `${e.id}__irlift`,
             source: liftedSrcVertex,
@@ -190,7 +192,10 @@ export function decorateEdges(edges: Edge[], model: ContainmentModel, hidden: Se
             sourceHandle: undefined,
             targetHandle: undefined,
             data: { ...(e.data ?? {}), irLifted: true },
-        });
+        };
+        // Orthogonal entry on the lifted endpoints (same contract as synthetic edges).
+        if (nodesById) lifted = assignGeometricHandles(lifted, nodesById, out);
+        out.push(lifted);
     }
     return changed ? out : edges;
 }

@@ -78,7 +78,7 @@ export function useIRContainment(nodes: Node[], edges: Edge[]): IRContainmentDec
             }
             const hidden = computeHidden(model, getCollapsedSet());
             outNodes = decorateNodes(outNodes, model, hidden);
-            outEdges = decorateEdges(outEdges, model, hidden);
+            outEdges = decorateEdges(outEdges, model, hidden, outNodes);
         }
 
         // Edge-view passes (Fase 2c)

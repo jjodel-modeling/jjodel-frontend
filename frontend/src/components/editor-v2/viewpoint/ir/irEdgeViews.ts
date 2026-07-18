@@ -71,6 +71,48 @@ function applyEdgeStyle(e: Edge, cv: CompiledEdgeView, ctx: ReadCtx, evalId: str
     };
 }
 
+/**
+ * Geometric handle assignment for decoration-created edges (synthetic
+ * object-as-edge, lifted collapse edges): without handles the Manhattan router
+ * cannot enter the nodes orthogonally. Dominant-axis side pick from node
+ * centers + first free index per (node, side, role) among the edges already
+ * assigned — the id format `${side}-${index}` is the DynamicHandles contract.
+ */
+export function assignGeometricHandles(edge: Edge, nodesById: Map<string, Node>, assigned: Edge[]): Edge {
+    const s = nodesById.get(edge.source);
+    const t = nodesById.get(edge.target);
+    if (!s || !t) return edge;
+    const center = (n: Node) => ({
+        x: n.position.x + ((n.measured?.width ?? (n.width as number) ?? 160) / 2),
+        y: n.position.y + ((n.measured?.height ?? (n.height as number) ?? 60) / 2),
+    });
+    const sc = center(s), tc = center(t);
+    const dx = tc.x - sc.x, dy = tc.y - sc.y;
+    let sourceSide: string, targetSide: string;
+    if (Math.abs(dx) >= Math.abs(dy)) {
+        sourceSide = dx >= 0 ? 'right' : 'left';
+        targetSide = dx >= 0 ? 'left' : 'right';
+    } else {
+        sourceSide = dy >= 0 ? 'bottom' : 'top';
+        targetSide = dy >= 0 ? 'top' : 'bottom';
+    }
+    const freeIndex = (nodeId: string, side: string, role: 'source' | 'target'): number => {
+        let count = 0;
+        for (const e of assigned) {
+            const h = role === 'source'
+                ? (e.source === nodeId ? e.sourceHandle : undefined)
+                : (e.target === nodeId ? e.targetHandle : undefined);
+            if (h && h.startsWith(side + '-')) count++;
+        }
+        return count;
+    };
+    return {
+        ...edge,
+        sourceHandle: `${sourceSide}-${freeIndex(edge.source, sourceSide, 'source')}`,
+        targetHandle: `${targetSide}-${freeIndex(edge.target, targetSide, 'target')}`,
+    };
+}
+
 /** Pass 1: style M1 reference edges from resolved edge views. */
 export function decorateReferenceEdges(
     edges: Edge[],
@@ -163,5 +205,13 @@ export function synthesizeObjectAsEdges(
     const outNodes = nodes.map(n => (edgeObjectVertices.has(n.id) && !n.hidden ? { ...n, hidden: true } : n));
     // Suppress the hidden object's own reference edges (they duplicate the synthetic edge).
     const outEdges = edges.filter(e => !edgeObjectVertices.has(e.source) && !edgeObjectVertices.has(e.target));
-    return { nodes: outNodes, edges: [...outEdges, ...synthetic], edgeObjects };
+    // Orthogonal entry: give synthetic edges geometric handles (side + free index).
+    const nodesById = new Map(outNodes.map(n => [n.id, n] as const));
+    const placed: Edge[] = [...outEdges];
+    const syntheticWithHandles = synthetic.map(e => {
+        const withHandles = assignGeometricHandles(e, nodesById, placed);
+        placed.push(withHandles);
+        return withHandles;
+    });
+    return { nodes: outNodes, edges: [...outEdges, ...syntheticWithHandles], edgeObjects };
 }

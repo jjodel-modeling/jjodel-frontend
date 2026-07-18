@@ -21,7 +21,7 @@ import {
     decorateNodes,
     liftEndpoint,
 } from '../irContainment';
-import { decorateReferenceEdges, synthesizeObjectAsEdges } from '../irEdgeViews';
+import { assignGeometricHandles, decorateReferenceEdges, synthesizeObjectAsEdges } from '../irEdgeViews';
 import { deriveIRInteraction } from '../irInteraction';
 import type { EdgeViewIR, GraphVertexViewIR, VertexViewIR } from '../irTypes';
 
@@ -426,6 +426,42 @@ describe('irEdgeViews (Fase 2c)', () => {
         const syn = res.edges.find(e => e.id === 'irobj_t1')!;
         expect(syn.source).toBe('V1');
         expect(syn.target).toBe('V2');
+    });
+    it('assigns geometric handles: dominant axis sides, free index per (node, side, role)', () => {
+        const nodesById = new Map<string, any>([
+            ['A', { id: 'A', position: { x: 0, y: 0 }, measured: { width: 100, height: 50 } }],
+            ['B', { id: 'B', position: { x: 400, y: 0 }, measured: { width: 100, height: 50 } }],
+            ['C', { id: 'C', position: { x: 0, y: 400 }, measured: { width: 100, height: 50 } }],
+        ]);
+        const e1 = assignGeometricHandles({ id: 'e1', source: 'A', target: 'B' } as any, nodesById, []);
+        expect(e1.sourceHandle).toBe('right-0');
+        expect(e1.targetHandle).toBe('left-0');
+        const e2 = assignGeometricHandles({ id: 'e2', source: 'A', target: 'C' } as any, nodesById, [e1]);
+        expect(e2.sourceHandle).toBe('bottom-0');
+        expect(e2.targetHandle).toBe('top-0');
+        // same side reused → next free index
+        const e3 = assignGeometricHandles({ id: 'e3', source: 'A', target: 'B' } as any, nodesById, [e1, e2]);
+        expect(e3.sourceHandle).toBe('right-1');
+        expect(e3.targetHandle).toBe('left-1');
+    });
+    it('synthetic edges carry geometric handles', () => {
+        const { idlookup, nodes, edges } = edgeWorld();
+        // spread the endpoint nodes horizontally so sides are deterministic
+        (nodes as any[]).find(n => n.id === 'V1').position = { x: 0, y: 0 };
+        (nodes as any[]).find(n => n.id === 'V2').position = { x: 500, y: 0 };
+        const transView: EdgeViewIR = {
+            irVersion: 'ir-1.2', kind: 'edge', metaclasses: ['Transition'],
+            edge: { source: '$src.value', target: '$tgt.value' },
+        };
+        const state = { viewpoint: 'VP', viewelements: ['V_transH'], idlookup: { ...idlookup, V_transH: { id: 'V_transH', viewpoint: 'VP', ir: transView } } as Record<string, any> };
+        const ctx = makeDrawReadCtx(state.idlookup);
+        const index = getIRIndex(state, 'sig_edge_handles')!;
+        const objByVertex = new Map([['V1', 's1'], ['V2', 's2'], ['Vt', 't1']]);
+        const vertexByObj = new Map([['s1', 'V1'], ['s2', 'V2'], ['t1', 'Vt']]);
+        const res = synthesizeObjectAsEdges(nodes as any, edges as any, objByVertex, vertexByObj, index, ctx, state.idlookup);
+        const syn = res.edges.find(e => e.id === 'irobj_t1')!;
+        expect(syn.sourceHandle).toBe('right-0');
+        expect(syn.targetHandle).toBe('left-0');
     });
     it('unresolvable endpoint keeps the object rendered as a node (explicit fallback)', () => {
         const { idlookup, nodes, edges } = edgeWorld();
