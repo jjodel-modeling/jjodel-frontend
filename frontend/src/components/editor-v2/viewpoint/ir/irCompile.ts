@@ -191,8 +191,9 @@ function compileConditional<T>(c: Conditional<T> | undefined, fallback: T, deps:
     };
 }
 
-/** Cheap structural hash for the compile cache (djb2 over JSON). */
-function irHash(ir: AnyViewIR): string {
+/** Cheap structural hash for the compile cache (djb2 over JSON). Also reused by
+ * irDefaults.isMigratedDefaultView for the factory-equality comparison. */
+export function irHash(ir: AnyViewIR): string {
     const s = JSON.stringify(ir);
     let h = 5381;
     for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;

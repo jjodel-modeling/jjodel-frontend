@@ -12,7 +12,7 @@ import { describe, it, expect } from 'vitest';
 import { compileView, clearCompileCache } from '../irCompile';
 import { makeDrawReadCtx, classAncestryNames } from '../irReadCtx';
 import { getIRIndex, resolveIRView } from '../irResolveCore';
-import { defaultObjectViewIR } from '../irDefaults';
+import { defaultObjectViewIR, isMigratedDefaultView, IR_DEFAULT_OBJECT_VIEW_ID } from '../irDefaults';
 import {
     buildContainmentModel,
     computeHidden,
@@ -566,5 +566,48 @@ describe('irDefaults (Fase 2a)', () => {
         const ctx = makeDrawReadCtx(state.idlookup);
         const index = getIRIndex(state, 'sig_def_2')!;
         expect(resolveIRView('s1', 'C_State', index, ctx, state.idlookup)!.viewId).toBe('V_custom');
+    });
+});
+
+describe('isMigratedDefaultView (delegation, spec v1.2 sez. 11)', () => {
+    it('marker + factory-identical structure → delegated to native rendering', () => {
+        clearCompileCache();
+        const ir = { ...defaultObjectViewIR(), migratedFrom: 'classic-default' } as VertexViewIR;
+        const cv = compileView('V_mig_eq', ir);
+        expect(isMigratedDefaultView(cv)).toBe(true);
+    });
+    it('marker + permuted key order → still delegated (canonical comparison)', () => {
+        // Persistence round-trips may reorder keys; equality must not depend on it.
+        const base = defaultObjectViewIR();
+        const permuted = {
+            migratedFrom: 'classic-default',
+            fieldCompartments: base.fieldCompartments,
+            shape: base.shape,
+            label: base.label,
+            exclusive: base.exclusive,
+            priority: base.priority,
+            metaclasses: base.metaclasses,
+            kind: base.kind,
+            irVersion: base.irVersion,
+        } as unknown as VertexViewIR;
+        const cv = compileView('V_mig_perm', permuted);
+        expect(isMigratedDefaultView(cv)).toBe(true);
+    });
+    it('marker + edited structure (label position changed) → interpreter, no delegation', () => {
+        const edited = { ...defaultObjectViewIR(), migratedFrom: 'classic-default' } as VertexViewIR;
+        edited.shape = {
+            ...edited.shape,
+            labels: [{ position: 'center', source: { from: 'intrinsic', prop: 'qualifiedName' } }],
+        };
+        const cv = compileView('V_mig_edit', edited);
+        expect(isMigratedDefaultView(cv)).toBe(false);
+    });
+    it('factory-identical structure without marker → interpreter, no delegation', () => {
+        const cv = compileView('V_nomark', defaultObjectViewIR());
+        expect(isMigratedDefaultView(cv)).toBe(false);
+    });
+    it('IR_DEFAULT_OBJECT_VIEW_ID (built-in default wildcard) → delegated regardless of marker', () => {
+        const cv = compileView(IR_DEFAULT_OBJECT_VIEW_ID, defaultObjectViewIR());
+        expect(isMigratedDefaultView(cv)).toBe(true);
     });
 });

@@ -186,6 +186,8 @@ Per la Fase 4 (migration inversa, VersionFixer):
 - `updateDefaultView` e la catena VersionFixer 2.222→2.225 (che oggi riscrivono VERSO il classic) vengono neutralizzate PRIMA dello spegnimento del classic;
 - `irVersion` per-view guida le migrazioni future dello schema IR stesso.
 
+**Delega delle default migrate (normativo, emendamento 2026-07-18)**: le view con `migratedFrom: 'classic-default'` che restano strutturalmente identiche alla factory `defaultObjectViewIR()` rendono col rendering astratto nativo di EditorV2 (delega: parità con "nessun viewpoint" garantita per costruzione). Un edit successivo le fa divergere dalla factory e tornano all'interprete come view custom, con stile proprio. Lo stesso vale per la default wildcard built-in (`IR_DEFAULT_OBJECT_VIEW_ID`). L'interprete rende solo le view IR non-default.
+
 ## 12. Persistenza (invariata, con nota ReadCtx)
 
 Come v1.1 sez. 8 (`ir?` additivo, serializzazione generica, IR master, identità = id del DViewElement). Nota di implementazione: gli accessor compilati leggono attraverso l'interfaccia stretta `ReadCtx` con due backend intercambiabili (proxy L / D-diretto, default proxy L). Lo switch resta swappabile finché il benchmark comparativo (Fase 4) non decide; la differenza semantica (il proxy coerce/tronca a upperBound) è documentata nel modulo.

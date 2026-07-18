@@ -29,6 +29,7 @@ import type { ObjectNodeData } from '../types';
 import { NodeProblemIndicator } from '../problems/NodeProblemIndicator';
 import { useIsHighlighted } from '../problems/useNodeProblems';
 import { useIRView } from '../viewpoint/ir/irResolve';
+import { isMigratedDefaultView } from '../viewpoint/ir/irDefaults';
 import IRNodeContent from '../viewpoint/ir/IRNodeContent';
 import { containmentChildren } from '../viewpoint/ir/irContainment';
 import { isCollapsed, toggleCollapsed, useCollapseVersion } from '../viewpoint/ir/irCollapseState';
@@ -44,6 +45,11 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
     // IR view resolution (spike 2026-07-17): non-null only when the active
     // viewpoint declares an applicable IR view for this object's metaclass.
     const irResolution = useIRView(id, data.instanceOfClassId);
+    // Delegation (spec v1.2 sez. 11 amendment): migrated classic-default views
+    // render through the native branch below — parity with "no viewpoint" by
+    // construction. The view stays in the resolution index; only who renders
+    // it changes.
+    const irDelegated = irResolution !== null && isMigratedDefaultView(irResolution.compiled);
     // Containment collapse state (Fase 2b) — cheap, unconditional (rules of hooks)
     useCollapseVersion();
     const irChildCount = useSelector((state: any) => {
@@ -353,7 +359,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
     const hasFeatures = existingAttrs.length > 0 || missingAttributes.length > 0;
     const isOrphan = !data.instanceOfClassId;
 
-    if (irResolution) {
+    if (irResolution && !irDelegated) {
         // IR render path: wrapper, resizer, handles and highlight class stay
         // identical (handle contract is node-type-agnostic); only the content
         // is produced by the interpreter. Read-only in the spike.
