@@ -21,7 +21,8 @@ import {
     decorateNodes,
     liftEndpoint,
 } from '../irContainment';
-import type { GraphVertexViewIR, VertexViewIR } from '../irTypes';
+import { decorateReferenceEdges, synthesizeObjectAsEdges } from '../irEdgeViews';
+import type { EdgeViewIR, GraphVertexViewIR, VertexViewIR } from '../irTypes';
 
 /** Build a minimal D-layer world: metamodel classes + objects with slots. */
 function world() {
@@ -314,6 +315,108 @@ describe('irContainment (Fase 2b)', () => {
         const hidden = computeHidden(model, new Set());
         expect(decorateNodes(nodes as any, model, hidden)).toBe(nodes);
         expect(decorateEdges(edges as any, model, hidden)).toBe(edges);
+    });
+});
+
+/**
+ * Edge-view world (Fase 2c): StateMachine with object-as-edge Transitions.
+ *   states s1, s2; transition t1 { src -> s1, tgt -> s2 }
+ *   M1 reference edges from t1's refs: t1→s1, t1→s2; plus a plain next edge s1→s2.
+ */
+function edgeWorld() {
+    const idlookup: Record<string, any> = {
+        C_State: { id: 'C_State', name: 'State', extends: [] },
+        C_Trans: { id: 'C_Trans', name: 'Transition', extends: [] },
+        R_src: { id: 'R_src', name: 'src', className: 'DReference', composition: false },
+        R_tgt: { id: 'R_tgt', name: 'tgt', className: 'DReference', composition: false },
+        R_next: { id: 'R_next', name: 'next', className: 'DReference', composition: false },
+        s1: { id: 's1', name: 'S1', instanceof: 'C_State', features: ['v_next'] },
+        v_next: { id: 'v_next', instanceof: 'R_next', values: ['s2'] },
+        s2: { id: 's2', name: 'S2', instanceof: 'C_State', features: [] },
+        t1: { id: 't1', name: 'go', instanceof: 'C_Trans', features: ['v_src', 'v_tgt'] },
+        v_src: { id: 'v_src', instanceof: 'R_src', values: ['s1'] },
+        v_tgt: { id: 'v_tgt', instanceof: 'R_tgt', values: ['s2'] },
+        V1: { id: 'V1', model: 's1' }, V2: { id: 'V2', model: 's2' }, Vt: { id: 'Vt', model: 't1' },
+    };
+    const nodes: any[] = ['V1', 'V2', 'Vt'].map(id => ({ id, type: 'objectNode', position: { x: 0, y: 0 }, data: {} }));
+    const edges: any[] = [
+        { id: 'e_t_s1', source: 'Vt', target: 'V1', type: 'instanceRef', data: { referenceName: 'src' } },
+        { id: 'e_t_s2', source: 'Vt', target: 'V2', type: 'instanceRef', data: { referenceName: 'tgt' } },
+        { id: 'e_next', source: 'V1', target: 'V2', type: 'instanceRef', data: { referenceName: 'next' } },
+    ];
+    return { idlookup, nodes, edges };
+}
+
+describe('irEdgeViews (Fase 2c)', () => {
+    it('styles reference-as-edge M1 edges (color, dash, label, markers)', () => {
+        const { idlookup, edges } = edgeWorld();
+        const nextView: EdgeViewIR = {
+            irVersion: 'ir-1.2', kind: 'edge', metaclasses: ['State'], reference: 'next',
+            edge: {
+                line: { color: '#0ea5e9', width: 2, style: 'dashed' },
+                terminations: { targetEnd: 'closedArrow' },
+                labels: { center: { from: 'literal', text: 'next' } },
+            },
+        };
+        const state = { viewpoint: 'VP', viewelements: ['V_next'], idlookup: { ...idlookup, V_next: { id: 'V_next', viewpoint: 'VP', ir: nextView } } };
+        const ctx = makeDrawReadCtx(state.idlookup);
+        const index = getIRIndex(state, 'sig_edge_1')!;
+        const objByVertex = new Map([['V1', 's1'], ['V2', 's2'], ['Vt', 't1']]);
+        const de = decorateReferenceEdges(edges as any, objByVertex, index, ctx, state.idlookup);
+        const next = de.find(e => e.id === 'e_next')!;
+        expect((next.style as any).stroke).toBe('#0ea5e9');
+        expect((next.style as any).strokeDasharray).toBe('6 4');
+        expect(next.label).toBe('next');
+        expect((next.data as any).irEdgeViewId).toBe('V_next');
+        // src/tgt edges do not match (reference name differs)
+        expect((de.find(e => e.id === 'e_t_s1') as any).data.irEdgeViewId).toBeUndefined();
+    });
+    it('synthesizes object-as-edge, hides the object node, suppresses its ref edges', () => {
+        const { idlookup, nodes, edges } = edgeWorld();
+        const transView: EdgeViewIR = {
+            irVersion: 'ir-1.2', kind: 'edge', metaclasses: ['Transition'],
+            edge: {
+                source: '$src.value', target: '$tgt.value',
+                line: { color: '#334155' },
+                labels: { center: { from: 'intrinsic', prop: 'name' } },
+            },
+        };
+        const state = { viewpoint: 'VP', viewelements: ['V_trans'], idlookup: { ...idlookup, V_trans: { id: 'V_trans', viewpoint: 'VP', ir: transView } } };
+        const ctx = makeDrawReadCtx(state.idlookup);
+        const index = getIRIndex(state, 'sig_edge_2')!;
+        const objByVertex = new Map([['V1', 's1'], ['V2', 's2'], ['Vt', 't1']]);
+        const vertexByObj = new Map([['s1', 'V1'], ['s2', 'V2'], ['t1', 'Vt']]);
+        const res = synthesizeObjectAsEdges(nodes as any, edges as any, objByVertex, vertexByObj, index, ctx, state.idlookup);
+        expect(res.edgeObjects).toEqual(new Set(['t1']));
+        const vt = res.nodes.find(n => n.id === 'Vt')!;
+        expect(vt.hidden).toBe(true);
+        const ids = res.edges.map(e => e.id);
+        expect(ids).not.toContain('e_t_s1');
+        expect(ids).not.toContain('e_t_s2');
+        expect(ids).toContain('e_next');
+        const syn = res.edges.find(e => e.id === 'irobj_t1')!;
+        expect(syn.source).toBe('V1');
+        expect(syn.target).toBe('V2');
+        expect(syn.label).toBe('go');
+        expect((syn.data as any).irObjectAsEdge).toBe(true);
+    });
+    it('unresolvable endpoint keeps the object rendered as a node (explicit fallback)', () => {
+        const { idlookup, nodes, edges } = edgeWorld();
+        // break the tgt slot
+        idlookup.v_tgt = { id: 'v_tgt', instanceof: 'R_tgt', values: [] };
+        const transView: EdgeViewIR = {
+            irVersion: 'ir-1.2', kind: 'edge', metaclasses: ['Transition'],
+            edge: { source: '$src.value', target: '$tgt.value' },
+        };
+        const state = { viewpoint: 'VP', viewelements: ['V_trans2'], idlookup: { ...idlookup, V_trans2: { id: 'V_trans2', viewpoint: 'VP', ir: transView } } };
+        const ctx = makeDrawReadCtx(state.idlookup);
+        const index = getIRIndex(state, 'sig_edge_3')!;
+        const objByVertex = new Map([['V1', 's1'], ['V2', 's2'], ['Vt', 't1']]);
+        const vertexByObj = new Map([['s1', 'V1'], ['s2', 'V2'], ['t1', 'Vt']]);
+        const res = synthesizeObjectAsEdges(nodes as any, edges as any, objByVertex, vertexByObj, index, ctx, state.idlookup);
+        expect(res.edgeObjects.size).toBe(0);
+        expect(res.nodes).toBe(nodes);
+        expect(res.edges).toBe(edges);
     });
 });
 

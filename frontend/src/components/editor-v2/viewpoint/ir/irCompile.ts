@@ -22,6 +22,7 @@ import type {
     Literal,
     PathExpr,
     Predicate,
+    NodeViewIR,
 } from './irTypes';
 import type { ReadCtx } from './irReadCtx';
 
@@ -200,7 +201,7 @@ function irHash(ir: AnyViewIR): string {
 
 const compileCache = new Map<string, CompiledView>();
 
-export function compileView(viewId: string, ir: AnyViewIR): CompiledView {
+export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
     const key = `${viewId}:${irHash(ir)}`;
     const cached = compileCache.get(key);
     if (cached) return cached;
@@ -285,7 +286,78 @@ export function compileView(viewId: string, ir: AnyViewIR): CompiledView {
     return compiled;
 }
 
+// ---- edge views (Fase 2c) --------------------------------------------------
+
+import type { CompiledEdgeView, EdgeViewIR, TextSource } from './irTypes';
+
+function compileTextSource(src: TextSource | undefined, deps: Set<string>): CompiledAccessor | null {
+    if (!src) return null;
+    if (src.from === 'path') {
+        const { fn, featureNames } = compilePath(src.expr);
+        featureNames.forEach(f => deps.add(f));
+        return fn;
+    }
+    if (src.from === 'intrinsic') {
+        const prop = src.prop;
+        return (ctx, id) => {
+            switch (prop) {
+                case 'name': return ctx.getName(id) ?? '';
+                case 'metaclassName': return ctx.getMetaclassName(id) ?? '';
+                case 'qualifiedName': return `${ctx.getName(id) ?? ''} : ${ctx.getMetaclassName(id) ?? ''}`;
+                default: return '';
+            }
+        };
+    }
+    const t = src.text;
+    return () => t;
+}
+
+const edgeCompileCache = new Map<string, CompiledEdgeView>();
+
+export function compileEdgeView(viewId: string, ir: EdgeViewIR): CompiledEdgeView {
+    const key = `${viewId}:${irHash(ir as never)}`;
+    const cached = edgeCompileCache.get(key);
+    if (cached) return cached;
+
+    const deps = new Set<string>();
+    const predicate = compilePredicate(ir.predicate, deps);
+    const e = ir.edge ?? {};
+    const compileExpr = (expr: string | undefined): CompiledAccessor | null => {
+        if (!expr) return null;
+        const { fn, featureNames } = compilePath(expr);
+        featureNames.forEach(f => deps.add(f));
+        return fn;
+    };
+    const sourceExpr = compileExpr(e.source);
+    const targetExpr = compileExpr(e.target);
+    const compiled: CompiledEdgeView = {
+        viewId,
+        ir,
+        priority: typeof ir.priority === 'number' ? ir.priority : 0,
+        predicate,
+        dependencySet: [],
+        reference: ir.reference ?? null,
+        isObjectAsEdge: !!(sourceExpr && targetExpr),
+        sourceExpr,
+        targetExpr,
+        lineColor: e.line?.color !== undefined ? compileConditional(e.line.color, '', deps) : null,
+        lineWidth: e.line?.width !== undefined ? compileConditional(e.line.width, 1, deps) : null,
+        lineStyle: e.line?.style !== undefined ? compileConditional(e.line.style, 'solid' as const, deps) : null,
+        terminations: {
+            sourceEnd: e.terminations?.sourceEnd ?? 'none',
+            targetEnd: e.terminations?.targetEnd ?? 'openArrow',
+        },
+        routing: e.routing ?? null,
+        labelText: compileTextSource(e.labels?.center, deps),
+        labelPlacement: e.labels?.placement ?? 'auto',
+    };
+    compiled.dependencySet = Array.from(deps);
+    edgeCompileCache.set(key, compiled);
+    return compiled;
+}
+
 /** Test/dev helper: drop all cached compilations (e.g. after demo re-install). */
 export function clearCompileCache(): void {
     compileCache.clear();
+    edgeCompileCache.clear();
 }

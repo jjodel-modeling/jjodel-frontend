@@ -21,6 +21,7 @@ import {
     decorateNodes,
     type ContainmentModel,
 } from './irContainment';
+import { decorateReferenceEdges, synthesizeObjectAsEdges } from './irEdgeViews';
 import { getCollapsedSet, useCollapseVersion } from './irCollapseState';
 
 const EMPTY_MODEL: ContainmentModel = {
@@ -50,18 +51,30 @@ export function useIRContainment(nodes: Node[], edges: Edge[]): IRContainmentDec
         if (!index) return { nodes, edges, model: EMPTY_MODEL, names: EMPTY_NAMES };
         const readCtx = makeReadCtx(state.idlookup);
         const model = buildContainmentModel(nodes, state.idlookup, index, readCtx);
-        if (model.containers.size === 0) return { nodes, edges, model, names: EMPTY_NAMES };
+
+        let outNodes = nodes;
+        let outEdges = edges;
         const names = new Map<string, string>();
-        for (const objectId of model.containers.keys()) {
-            names.set(objectId, readCtx.getName(objectId) ?? '');
+
+        // Containment pass (Fase 2b)
+        if (model.containers.size > 0) {
+            for (const objectId of model.containers.keys()) {
+                names.set(objectId, readCtx.getName(objectId) ?? '');
+            }
+            const hidden = computeHidden(model, getCollapsedSet());
+            outNodes = decorateNodes(outNodes, model, hidden);
+            outEdges = decorateEdges(outEdges, model, hidden);
         }
-        const hidden = computeHidden(model, getCollapsedSet());
-        return {
-            nodes: decorateNodes(nodes, model, hidden),
-            edges: decorateEdges(edges, model, hidden),
-            model,
-            names,
-        };
+
+        // Edge-view passes (Fase 2c)
+        outEdges = decorateReferenceEdges(outEdges, model.objByVertex, index, readCtx, state.idlookup);
+        const oae = synthesizeObjectAsEdges(
+            outNodes, outEdges, model.objByVertex, model.vertexByObj, index, readCtx, state.idlookup,
+        );
+        outNodes = oae.nodes;
+        outEdges = oae.edges;
+
+        return { nodes: outNodes, edges: outEdges, model, names };
         // collapseVersion is the invalidation signal for getCollapsedSet()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [nodes, edges, irSig, collapseVersion]);

@@ -132,7 +132,72 @@ export interface GraphVertexViewIR {
     };
 }
 
-export type AnyViewIR = VertexViewIR | GraphVertexViewIR;
+export type EdgeTermination =
+    | 'none'
+    | 'openArrow'
+    | 'closedArrow'
+    | 'hollowTriangle'
+    | 'filledDiamond'
+    | 'hollowDiamond';
+
+/**
+ * Edge view (spec v1.2 sez. 7). Two substrates:
+ * - reference-as-edge: styles the RF edges derived from M1 references.
+ *   `metaclasses` = metaclass of the SOURCE object; `reference` restricts to a
+ *   named reference (absent = any reference of that source).
+ * - object-as-edge: the metaclass instance IS the edge (Transition pattern).
+ *   `metaclasses` = the edge-object metaclass; `edge.source`/`edge.target` are
+ *   PathExprs on the object resolving to the endpoint objects; the object's
+ *   node is hidden and a synthetic edge is drawn.
+ */
+export interface EdgeViewIR {
+    irVersion: string;
+    kind: 'edge';
+    metaclasses: string[] | '*';
+    reference?: string;
+    predicate?: Predicate;
+    priority?: number;
+    exclusive?: boolean;
+    label?: string;
+    edge: {
+        source?: PathExpr;           // object-as-edge only
+        target?: PathExpr;           // object-as-edge only
+        line?: {
+            color?: Conditional<string>;
+            width?: Conditional<number>;
+            style?: Conditional<'solid' | 'dashed' | 'dotted'>;
+        };
+        terminations?: { sourceEnd?: EdgeTermination; targetEnd?: EdgeTermination };
+        /** Routing hint; the flow substrate renders Manhattan (UnifiedEdge) — hint recorded in data. */
+        routing?: 'orthogonal' | 'straight' | 'curved';
+        labels?: {
+            center?: TextSource;
+            placement?: 'auto' | 'above' | 'below';
+        };
+    };
+}
+
+export type NodeViewIR = VertexViewIR | GraphVertexViewIR;
+export type AnyViewIR = NodeViewIR | EdgeViewIR;
+
+export interface CompiledEdgeView {
+    viewId: string;
+    ir: EdgeViewIR;
+    priority: number;
+    predicate: CompiledPredicate;
+    dependencySet: string[];
+    reference: string | null;
+    isObjectAsEdge: boolean;
+    sourceExpr: CompiledAccessor | null;   // object-as-edge
+    targetExpr: CompiledAccessor | null;   // object-as-edge
+    lineColor: CompiledConditional<string> | null;
+    lineWidth: CompiledConditional<number> | null;
+    lineStyle: CompiledConditional<'solid' | 'dashed' | 'dotted'> | null;
+    terminations: { sourceEnd: EdgeTermination; targetEnd: EdgeTermination };
+    routing: 'orthogonal' | 'straight' | 'curved' | null;
+    labelText: CompiledAccessor | null;
+    labelPlacement: 'auto' | 'above' | 'below';
+}
 
 /** Result of compiling a VertexViewIR / GraphVertexViewIR (see irCompile.ts). */
 export interface CompiledView {

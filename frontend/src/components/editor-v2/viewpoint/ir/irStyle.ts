@@ -8,7 +8,7 @@
  * applied inline by IRNodeContent; only static parts live here.
  */
 
-import type { AnyViewIR } from './irTypes';
+import type { NodeViewIR } from './irTypes';
 
 const STYLE_TAG_ID = 'ir-views-css';
 
@@ -56,7 +56,7 @@ function ensureStyleTag(): HTMLStyleElement | null {
 const viewCssNodes = new Map<string, Text>();
 
 /** Static (non-conditional) CSS derived from the view's shape spec. */
-function staticCssFor(viewId: string, ir: AnyViewIR): string {
+function staticCssFor(viewId: string, ir: NodeViewIR): string {
     const rules: string[] = [];
     const border = ir.shape.border;
     if (border) {
@@ -74,7 +74,7 @@ function cssEscape(id: string): string {
     return id.replace(/[^a-zA-Z0-9_-]/g, '\\$&');
 }
 
-export function ensureViewCss(viewId: string, ir: AnyViewIR): void {
+export function ensureViewCss(viewId: string, ir: NodeViewIR): void {
     const tag = ensureStyleTag();
     if (!tag || viewCssNodes.has(viewId)) return;
     const css = staticCssFor(viewId, ir);
