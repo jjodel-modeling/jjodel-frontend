@@ -132,8 +132,16 @@ export function synthesizeObjectAsEdges(
             srcTarget = cv.sourceExpr(readCtx, objectId);
             tgtTarget = cv.targetExpr(readCtx, objectId);
         } catch { continue; }
-        const srcVertex = typeof srcTarget === 'string' ? vertexByObj.get(srcTarget) : undefined;
-        const tgtVertex = typeof tgtTarget === 'string' ? vertexByObj.get(tgtTarget) : undefined;
+        // Endpoint normalization: the draw backend yields pointer strings, the
+        // L-proxy backend resolves reference slots to proxy objects — accept
+        // both (bug found in snippet collaudo 2026-07-18).
+        const toId = (x: unknown): string | null =>
+            typeof x === 'string' ? x
+            : (x && typeof x === 'object' && typeof (x as any).id === 'string' ? (x as any).id : null);
+        const srcId = toId(srcTarget);
+        const tgtId = toId(tgtTarget);
+        const srcVertex = srcId ? vertexByObj.get(srcId) : undefined;
+        const tgtVertex = tgtId ? vertexByObj.get(tgtId) : undefined;
         if (!srcVertex || !tgtVertex) continue; // fallback: keep the node rendered
         edgeObjects.add(objectId);
         const base: Edge = {

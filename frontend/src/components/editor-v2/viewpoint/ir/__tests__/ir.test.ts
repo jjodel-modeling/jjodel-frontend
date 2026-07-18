@@ -61,7 +61,8 @@ describe('irReadCtx (draw backend)', () => {
         expect(ctx.getValue('s1', 'name')).toBe('idle');
         expect(ctx.getValues('s1', 'tags')).toEqual(['a', 'b']);
         expect(ctx.getValue('s1', 'missing')).toBeUndefined();
-        expect(ctx.getName('s1')).toBe('obj_s1');
+        expect(ctx.getName('s1')).toBe('idle');   // identity slot wins over D-layer name
+        expect(ctx.getName('s3')).toBe('obj_s3'); // no name slot → D-layer name
         expect(ctx.getMetaclassName('s2')).toBe('FinalState');
     });
     it('isKindOf walks the extends chain transitively', () => {
@@ -96,7 +97,7 @@ describe('irCompile', () => {
         }));
         expect(cv.labels[0].text(ctx, 's1')).toBe('idle');
         expect(cv.labels[1].text(ctx, 's1')).toBe('fixed');
-        expect(cv.labels[2].text(ctx, 's1')).toBe('obj_s1 : State');
+        expect(cv.labels[2].text(ctx, 's1')).toBe('idle : State');
         expect(cv.dependencySet).toContain('name');
     });
     it('rejects forbidden PathExpr constructs by skipping compile (throw)', () => {
@@ -401,6 +402,31 @@ describe('irEdgeViews (Fase 2c)', () => {
         expect(syn.label).toBe('go');
         expect((syn.data as any).irObjectAsEdge).toBe(true);
     });
+    it('accepts proxy-object endpoints (lproxy backend resolves reference slots to objects)', () => {
+        const { idlookup, nodes, edges } = edgeWorld();
+        const transView: EdgeViewIR = {
+            irVersion: 'ir-1.2', kind: 'edge', metaclasses: ['Transition'],
+            edge: { source: '$src.value', target: '$tgt.value' },
+        };
+        const state = { viewpoint: 'VP', viewelements: ['V_transP'], idlookup: { ...idlookup, V_transP: { id: 'V_transP', viewpoint: 'VP', ir: transView } } as Record<string, any> };
+        const base = makeDrawReadCtx(state.idlookup);
+        // Simulate the lproxy backend: reference slot values come back as proxy objects with .id
+        const proxyCtx = {
+            ...base,
+            getValue: (elementId: string, featureName: string) => {
+                const v = base.getValue(elementId, featureName);
+                return typeof v === 'string' && state.idlookup[v] ? { id: v, __mockProxy: true } : v;
+            },
+        };
+        const index = getIRIndex(state, 'sig_edge_proxy')!;
+        const objByVertex = new Map([['V1', 's1'], ['V2', 's2'], ['Vt', 't1']]);
+        const vertexByObj = new Map([['s1', 'V1'], ['s2', 'V2'], ['t1', 'Vt']]);
+        const res = synthesizeObjectAsEdges(nodes as any, edges as any, objByVertex, vertexByObj, index, proxyCtx as any, state.idlookup);
+        expect(res.edgeObjects).toEqual(new Set(['t1']));
+        const syn = res.edges.find(e => e.id === 'irobj_t1')!;
+        expect(syn.source).toBe('V1');
+        expect(syn.target).toBe('V2');
+    });
     it('unresolvable endpoint keeps the object rendered as a node (explicit fallback)', () => {
         const { idlookup, nodes, edges } = edgeWorld();
         // break the tgt slot
@@ -462,7 +488,7 @@ describe('irDefaults (Fase 2a)', () => {
         const index = getIRIndex(state, 'sig_def_1')!;
         const cv = resolveIRView('s1', 'C_State', index, ctx, state.idlookup)!;
         expect(cv.viewId).toBe('V_def');
-        expect(cv.labels[0].text(ctx, 's1')).toBe('obj_s1 : State');
+        expect(cv.labels[0].text(ctx, 's1')).toBe('idle : State');
         expect(cv.fieldCompartments[0].source).toBe('attributes');
     });
     it('any metaclass-declared view beats the default at equal priority', () => {

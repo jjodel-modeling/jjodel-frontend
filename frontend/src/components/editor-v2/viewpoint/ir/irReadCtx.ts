@@ -73,18 +73,24 @@ function metaclassIdOf(idlookup: Idlookup, elementId: string): string | null {
 
 /** D-layer direct backend ('draw'): raw values, no proxy coercion. */
 export function makeDrawReadCtx(idlookup: Idlookup): ReadCtx {
+    const getValue = (elementId: string, featureName: string): unknown => {
+        const dValue = findFeatureRaw(idlookup, elementId, featureName);
+        const vals = dValue?.values;
+        return Array.isArray(vals) ? vals[0] : undefined;
+    };
     return {
-        getValue(elementId, featureName) {
-            const dValue = findFeatureRaw(idlookup, elementId, featureName);
-            const vals = dValue?.values;
-            return Array.isArray(vals) ? vals[0] : undefined;
-        },
+        getValue,
         getValues(elementId, featureName) {
             const dValue = findFeatureRaw(idlookup, elementId, featureName);
             const vals = dValue?.values;
             return Array.isArray(vals) ? vals : [];
         },
         getName(elementId) {
+            // Identity-binding parity: prefer the 'name' slot value when present
+            // (XMI import populates the slot without propagating onto DObject.name),
+            // then the D-layer name, then initialName.
+            const slotValue = getValue(elementId, 'name');
+            if (typeof slotValue === 'string' && slotValue) return slotValue;
             const d = idlookup[elementId];
             return d?.name ?? d?.initialName ?? null;
         },
