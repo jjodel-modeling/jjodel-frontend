@@ -39,8 +39,8 @@ function writeEditorPrefs(modelid: string, partial: EditorPrefs): void {
 interface EditorSwitchProps {
     /** Model ID passed to the editor. */
     modelid: string;
-    /** Classic editor JSX, forwarded to EditorV2 as `classicSlot` when a viewpoint is active. */
-    children: ReactNode;
+    /** Legacy classic editor JSX. Ignored since the classic shutdown (Fase 5a). */
+    children?: ReactNode;
     /** Metamodels never enter the toggle/split flow — they always render the flow editor only. */
     isMetamodel?: boolean;
 }
@@ -120,16 +120,20 @@ export function EditorSwitch({ modelid, children, isMetamodel }: EditorSwitchPro
         );
     }
 
+    // Classic shutdown (Fase 5a, decisione B 2026-07-17): the classic/split
+    // modes are no longer reachable — EditorV2 renders the flow editor for
+    // every model; concrete syntax comes from the IR interpreter behind the
+    // active viewpoint. classicSlot/editorMode wiring intentionally dropped;
+    // the localStorage mode preference is ignored (flow is the only mode).
+    // TODO: cleanup — remove the mode state machinery above and the
+    // classic/split branches in EditorV2 once the removal layer lands.
     return (
         <ActiveEditorProvider>
             <div className="editor-switch-container">
                 <div className="editor-switch-stage">
                     <EditorV2
                         modelid={modelid}
-                        classicSlot={children}
-                        editorMode={editorMode}
                         hasViewpoint
-                        onEditorModeChange={handleEditorModeChange}
                     />
                 </div>
             </div>

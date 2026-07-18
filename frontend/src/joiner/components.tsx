@@ -11,7 +11,7 @@ import { Polygon, Circle, Cross, Decagon,
     Square, Star, SimpleStar, DecoratedStar, Trapezoid, Triangle
 } from  "../graph/vertex/Shapes";
 import {DefaultNode, DefaultNodeComponent} from "../graph/defaultNode/DefaultNode"; // require graphelement
-import {GraphsContainer, GraphsContainerComponent} from "../graph/graph/graphContainer"; // require vertex, graph
+// GraphsContainer removed (classic shutdown Fase 5a — graph/graph/graphContainer.tsx deleted, no external consumers)
 import {Edge, EdgeComponent} from "../graph/damedges/damedge";
 import {GenericInput} from "../components/forEndUser/GenericInput"
 import {U} from "./index";
@@ -26,7 +26,6 @@ export { Polygon, Circle, Cross, Decagon,
 } from  "../graph/vertex/Shapes";
 
 export {DefaultNode, DefaultNodeComponent} from "../graph/defaultNode/DefaultNode"; // require graphelement
-export {GraphsContainer, GraphsContainerComponent} from "../graph/graph/graphContainer"; // require vertex, graph
 export {Edge, EdgeComponent,} from "../graph/damedges/damedge";
 export {DerivedReferenceEdge} from "../edges/derived/DerivedReferenceEdge";
 export {GenericInput} from "../components/forEndUser/GenericInput"

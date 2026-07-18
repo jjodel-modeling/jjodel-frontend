@@ -304,9 +304,7 @@ w.$s = $s;
 export {} from './components';
 export {
     TextArea, Select, Input, Edit, Edge, // Image,
-    GraphsContainerComponent,
     Overlap as OverlapComponent,
-    GraphsContainer,
     GraphElement,
     Vertex, VoidVertex, EdgePoint,
     Graph, GraphVertex,

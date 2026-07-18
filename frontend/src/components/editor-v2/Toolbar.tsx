@@ -446,45 +446,10 @@ function Toolbar({
             {/* ── Conformance validation pill (silent when conformant; never for metamodels) ── */}
             {modelId && <ValidationPill modelId={modelId} />}
 
-            {/* ── Editor mode toggle (always visible; disabled without an active viewpoint) ── */}
-            <div
-                className={`editor-mode-toggle${modeToggleDisabled ? ' disabled' : ''}`}
-                role="group"
-                aria-label="Editor mode"
-                aria-disabled={modeToggleDisabled || undefined}
-                title={modeToggleDisabled ? 'Select a viewpoint to enable classic / split modes' : undefined}
-            >
-                <button
-                    type="button"
-                    className={`editor-mode-btn ${activeEditorMode === 'flow' ? 'active' : ''}`}
-                    onClick={() => onEditorModeChange?.('flow')}
-                    disabled={modeToggleDisabled}
-                    title="Abstract syntax only"
-                    aria-pressed={activeEditorMode === 'flow'}
-                >
-                    <i className="bi bi-diagram-3" />
-                </button>
-                <button
-                    type="button"
-                    className={`editor-mode-btn ${activeEditorMode === 'classic' ? 'active' : ''}`}
-                    onClick={() => onEditorModeChange?.('classic')}
-                    disabled={modeToggleDisabled}
-                    title="Concrete syntax only"
-                    aria-pressed={activeEditorMode === 'classic'}
-                >
-                    <i className="bi bi-eye" />
-                </button>
-                <button
-                    type="button"
-                    className={`editor-mode-btn ${activeEditorMode === 'split' ? 'active' : ''}`}
-                    onClick={() => onEditorModeChange?.('split')}
-                    disabled={modeToggleDisabled}
-                    title="Split: Abstract + concrete syntax"
-                    aria-pressed={activeEditorMode === 'split'}
-                >
-                    <i className="bi bi-layout-split" />
-                </button>
-            </div>
+            {/* Classic shutdown (Fase 5a): the flow/classic/split mode toggle is
+                gone — concrete syntax renders via the IR interpreter behind the
+                active viewpoint. TODO: cleanup — remove editorMode/hasViewpoint/
+                onEditorModeChange plumbing once the removal layer lands. */}
 
             {/* ── Zoom controls (right-aligned) ── */}
             {onZoomOut && onZoomIn && onResetZoom && zoomLevel !== undefined && (
