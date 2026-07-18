@@ -232,7 +232,10 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
             const t = l.source.text;
             text = () => t;
         }
-        return { position: l.position, text, visible: compileConditional(l.visible, true, deps) };
+        const editsName = l.source.from === 'intrinsic'
+            && (l.source.prop === 'name' || l.source.prop === 'qualifiedName')
+            && l.editable !== false;
+        return { position: l.position, text, visible: compileConditional(l.visible, true, deps), editsName };
     });
 
     const badges: CompiledBadge[] = (ir.shape.badges ?? []).map(b => ({

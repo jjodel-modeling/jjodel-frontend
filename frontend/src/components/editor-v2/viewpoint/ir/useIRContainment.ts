@@ -22,6 +22,7 @@ import {
     type ContainmentModel,
 } from './irContainment';
 import { decorateReferenceEdges, synthesizeObjectAsEdges } from './irEdgeViews';
+import { deriveIRInteraction, type IRInteractionPlan } from './irInteraction';
 import { getCollapsedSet, useCollapseVersion } from './irCollapseState';
 
 const EMPTY_MODEL: ContainmentModel = {
@@ -38,6 +39,20 @@ export interface IRContainmentDecoration {
     edges: Edge[];
     model: ContainmentModel;
     names: Map<string, string>;
+}
+
+/**
+ * Interaction plan of the active IR viewpoint (Fase 3, spec v1.2 sez. 6).
+ * Null when the active viewpoint is not IR — consumers fall back to the
+ * unrestricted (model-derived) gestures.
+ */
+export function useIRInteractionPlan(): IRInteractionPlan | null {
+    const irSig = useSelector((state: any) => computeIRSignature(state));
+    return useMemo(() => {
+        if (!irSig) return null;
+        const index = getIRIndex(store.getState(), irSig);
+        return index ? deriveIRInteraction(index) : null;
+    }, [irSig]);
 }
 
 export function useIRContainment(nodes: Node[], edges: Edge[]): IRContainmentDecoration {

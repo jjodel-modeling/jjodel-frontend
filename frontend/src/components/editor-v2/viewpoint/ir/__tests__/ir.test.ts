@@ -22,6 +22,7 @@ import {
     liftEndpoint,
 } from '../irContainment';
 import { decorateReferenceEdges, synthesizeObjectAsEdges } from '../irEdgeViews';
+import { deriveIRInteraction } from '../irInteraction';
 import type { EdgeViewIR, GraphVertexViewIR, VertexViewIR } from '../irTypes';
 
 /** Build a minimal D-layer world: metamodel classes + objects with slots. */
@@ -417,6 +418,38 @@ describe('irEdgeViews (Fase 2c)', () => {
         expect(res.edgeObjects.size).toBe(0);
         expect(res.nodes).toBe(nodes);
         expect(res.edges).toBe(edges);
+    });
+});
+
+describe('irInteraction (Fase 3)', () => {
+    it('derives palette, connect rules and drop containers from the index', () => {
+        const { idlookup } = edgeWorld();
+        const stateViews = {
+            viewpoint: 'VP',
+            viewelements: ['V_state', 'V_region', 'V_trans'],
+            idlookup: {
+                ...idlookup,
+                C_Region: { id: 'C_Region', name: 'Region', extends: [] },
+                V_state: { id: 'V_state', viewpoint: 'VP', ir: { irVersion: 'ir-1.2', kind: 'vertex', metaclasses: ['State'], shape: { form: 'rect' } } },
+                V_region: { id: 'V_region', viewpoint: 'VP', ir: { irVersion: 'ir-1.2', kind: 'graphVertex', metaclasses: ['Region'], shape: { form: 'rect' }, containment: {} } },
+                V_trans: { id: 'V_trans', viewpoint: 'VP', ir: { irVersion: 'ir-1.2', kind: 'edge', metaclasses: ['Transition'], edge: { source: '$src.value', target: '$tgt.value' } } },
+            },
+        };
+        const index = getIRIndex(stateViews, 'sig_plan_1')!;
+        const plan = deriveIRInteraction(index);
+        expect(new Set(plan.paletteMetaclasses!)).toEqual(new Set(['State', 'Region', 'Transition']));
+        expect(plan.dropContainers).toEqual(['Region']);
+        expect(plan.connectRules).toEqual([
+            { edgeMetaclass: 'Transition', sourceFeature: 'src', targetFeature: 'tgt' },
+        ]);
+    });
+    it('wildcard-only viewpoints impose no palette restriction', () => {
+        const { idlookup } = world();
+        const state = stateWith([{ id: 'V_def', ir: defaultObjectViewIR() }], idlookup);
+        const index = getIRIndex(state, 'sig_plan_2')!;
+        const plan = deriveIRInteraction(index);
+        expect(plan.paletteMetaclasses).toBeNull();
+        expect(plan.connectRules).toEqual([]);
     });
 });
 

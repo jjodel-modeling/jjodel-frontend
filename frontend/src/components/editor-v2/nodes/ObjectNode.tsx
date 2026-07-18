@@ -379,6 +379,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                 <IRNodeContent
                     compiled={irResolution.compiled}
                     objectId={irResolution.objectId}
+                    vertexId={id}
                     readCtx={irResolution.readCtx}
                 />
                 {/* graphVertex containment (Fase 2b): collapse/expand chip */}

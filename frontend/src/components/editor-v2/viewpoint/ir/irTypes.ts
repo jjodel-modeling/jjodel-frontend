@@ -56,6 +56,8 @@ export interface LabelSpec {
     position: LabelPosition;
     source: TextSource;
     visible?: Conditional<boolean>;
+    /** spec v1.2 sez. 5 — absent = default: intrinsic name labels are editable. */
+    editable?: boolean | { widget: 'text' | 'textarea' | 'select' | 'checkbox' | 'color' };
 }
 
 export interface BadgeSpec {
@@ -68,7 +70,7 @@ export interface BadgeSpec {
 export type FieldSegment =
     | { kind: 'name' }
     | { kind: 'type' }
-    | { kind: 'value' }
+    | { kind: 'value'; editable?: boolean | { widget: 'text' | 'textarea' | 'select' | 'checkbox' | 'color' } }
     | { kind: 'literal'; text: string };
 
 export interface FieldCompartmentSpec {
@@ -231,6 +233,8 @@ export interface CompiledLabel {
     position: LabelPosition;
     text: CompiledAccessor;
     visible: CompiledConditional<boolean>;
+    /** True when double-click edits the element name (intrinsic name/qualifiedName, editable !== false). */
+    editsName: boolean;
 }
 
 export interface CompiledBadge {

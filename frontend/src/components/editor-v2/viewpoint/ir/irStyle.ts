@@ -38,6 +38,9 @@ const BASE_CSS = `
 .ir-hull__toggle:hover { color: #0ea5e9; }
 .ir-collapse-chip { display: inline-flex; align-items: center; gap: 4px; border: none; background: rgba(51,65,85,0.08); border-radius: 8px; cursor: pointer; font-size: 10px; color: #334155; padding: 2px 6px; margin-left: 6px; line-height: 1.4; }
 .ir-collapse-chip:hover { background: rgba(14,165,233,0.12); }
+.ir-node-content .ir-label__input, .ir-node-content .ir-row__input { font-size: 11px; border: 1px solid #334155; border-radius: 3px; padding: 0 4px; min-width: 40px; width: 90%; outline: none; }
+.ir-node-content .ir-row__value--editable { cursor: text; }
+.ir-node-content .ir-row__value--editable:hover { background: rgba(14,165,233,0.08); border-radius: 3px; }
 `;
 
 function ensureStyleTag(): HTMLStyleElement | null {

@@ -31,7 +31,7 @@ import UnifiedEdge from './edges/UnifiedEdge';
 import PalettePanel from './panels/PalettePanel';
 // PropertiesPanel removed — properties editing is handled by the dock-based Info panel
 import Toolbar from './Toolbar';
-import { useIRContainment } from './viewpoint/ir/useIRContainment';
+import { useIRContainment, useIRInteractionPlan } from './viewpoint/ir/useIRContainment';
 import IRContainmentHulls from './viewpoint/ir/IRContainmentHulls';
 import { useActiveEditor, CLASSIC_ZOOM_MIN, CLASSIC_ZOOM_MAX, type ZoomController } from './ActiveEditorContext';
 import ContextMenu, { type ContextMenuItem } from './ContextMenu';
@@ -1207,6 +1207,11 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // the active viewpoint has IR graphVertex views. Pass-through (same array
     // references) otherwise — zero cost for non-IR sessions.
     const irContainment = useIRContainment(stableNodes, stableEdges);
+
+    // IR-derived interaction plan (Fase 3): restricts the M1 palette to the
+    // metaclasses the active IR viewpoint declares views for. Null = no IR
+    // viewpoint → unrestricted palette (current behavior).
+    const irInteractionPlan = useIRInteractionPlan();
 
     // Handle new connections: save the valid connection, then show edge type popup on drop
     const onConnect = useCallback(
@@ -3474,7 +3479,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 <ConformanceProblemSync modelid={modelid} graphId={graphId} />
                 <PalettePanel
                     editorMode={modeInfo.mode}
-                    rootableClasses={modeInfo.rootableClasses}
+                    rootableClasses={irInteractionPlan?.paletteMetaclasses
+                        ? modeInfo.rootableClasses.filter(c => irInteractionPlan.paletteMetaclasses!.includes(c.name))
+                        : modeInfo.rootableClasses}
                     allClasses={modeInfo.allClasses}
                     selectedDObjectId={lastSelectedModelElement ?? null}
                 />
