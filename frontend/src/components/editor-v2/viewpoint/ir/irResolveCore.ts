@@ -8,7 +8,7 @@
 
 import { compileView } from './irCompile';
 import { classAncestryNames, type ReadCtx } from './irReadCtx';
-import type { CompiledView, VertexViewIR } from './irTypes';
+import type { AnyViewIR, CompiledView } from './irTypes';
 import { ensureViewCss, removeViewCss } from './irStyle';
 
 export interface IndexEntry {
@@ -73,8 +73,8 @@ export function getIRIndex(state: any, signature: string): IRViewpointIndex | nu
     for (const vid of list) {
         const d = lookup?.[vid];
         if (!d || d.viewpoint !== vp) continue;
-        const ir = (d as any).ir as VertexViewIR | undefined;
-        if (!ir || typeof ir !== 'object' || ir.kind !== 'vertex') continue;
+        const ir = (d as any).ir as AnyViewIR | undefined;
+        if (!ir || typeof ir !== 'object' || (ir.kind !== 'vertex' && ir.kind !== 'graphVertex')) continue;
         if (ir.exclusive === false) continue; // spike: decorative views ignored
         let compiled: CompiledView;
         try {

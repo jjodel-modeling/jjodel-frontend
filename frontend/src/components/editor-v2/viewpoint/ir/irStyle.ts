@@ -8,7 +8,7 @@
  * applied inline by IRNodeContent; only static parts live here.
  */
 
-import type { VertexViewIR } from './irTypes';
+import type { AnyViewIR } from './irTypes';
 
 const STYLE_TAG_ID = 'ir-views-css';
 
@@ -32,6 +32,12 @@ const BASE_CSS = `
 .ir-shape--rect { border-radius: 0; }
 .ir-shape--rounded { border-radius: 10px; }
 .ir-shape--ellipse { border-radius: 50%; justify-content: center; }
+.ir-hull { border: 1.5px dashed rgba(51,65,85,0.45); border-radius: 12px; background: rgba(51,65,85,0.03); }
+.ir-hull__header { display: flex; align-items: center; justify-content: space-between; padding: 0 8px; font-size: 11px; font-weight: 600; color: #334155; }
+.ir-hull__toggle { border: none; background: transparent; cursor: pointer; font-size: 11px; color: #334155; padding: 2px 4px; line-height: 1; }
+.ir-hull__toggle:hover { color: #0ea5e9; }
+.ir-collapse-chip { display: inline-flex; align-items: center; gap: 4px; border: none; background: rgba(51,65,85,0.08); border-radius: 8px; cursor: pointer; font-size: 10px; color: #334155; padding: 2px 6px; margin-left: 6px; line-height: 1.4; }
+.ir-collapse-chip:hover { background: rgba(14,165,233,0.12); }
 `;
 
 function ensureStyleTag(): HTMLStyleElement | null {
@@ -50,7 +56,7 @@ function ensureStyleTag(): HTMLStyleElement | null {
 const viewCssNodes = new Map<string, Text>();
 
 /** Static (non-conditional) CSS derived from the view's shape spec. */
-function staticCssFor(viewId: string, ir: VertexViewIR): string {
+function staticCssFor(viewId: string, ir: AnyViewIR): string {
     const rules: string[] = [];
     const border = ir.shape.border;
     if (border) {
@@ -68,7 +74,7 @@ function cssEscape(id: string): string {
     return id.replace(/[^a-zA-Z0-9_-]/g, '\\$&');
 }
 
-export function ensureViewCss(viewId: string, ir: VertexViewIR): void {
+export function ensureViewCss(viewId: string, ir: AnyViewIR): void {
     const tag = ensureStyleTag();
     if (!tag || viewCssNodes.has(viewId)) return;
     const css = staticCssFor(viewId, ir);

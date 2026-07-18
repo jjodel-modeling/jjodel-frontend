@@ -31,6 +31,8 @@ import UnifiedEdge from './edges/UnifiedEdge';
 import PalettePanel from './panels/PalettePanel';
 // PropertiesPanel removed — properties editing is handled by the dock-based Info panel
 import Toolbar from './Toolbar';
+import { useIRContainment } from './viewpoint/ir/useIRContainment';
+import IRContainmentHulls from './viewpoint/ir/IRContainmentHulls';
 import { useActiveEditor, CLASSIC_ZOOM_MIN, CLASSIC_ZOOM_MAX, type ZoomController } from './ActiveEditorContext';
 import ContextMenu, { type ContextMenuItem } from './ContextMenu';
 import { useHistory } from './hooks/useHistory';
@@ -1200,6 +1202,11 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         }
         return prev;
     }, [edges]);
+
+    // IR containment decoration (Fase 2b): hidden subtrees + lifted edges when
+    // the active viewpoint has IR graphVertex views. Pass-through (same array
+    // references) otherwise — zero cost for non-IR sessions.
+    const irContainment = useIRContainment(stableNodes, stableEdges);
 
     // Handle new connections: save the valid connection, then show edge type popup on drop
     const onConnect = useCallback(
@@ -3367,8 +3374,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const flowCanvas = (
         <HighlightProvider value={highlightState}>
             <ReactFlow
-                nodes={stableNodes}
-                edges={stableEdges}
+                nodes={irContainment.nodes}
+                edges={irContainment.edges}
                 onNodesChange={handleNodesChange}
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
@@ -3416,6 +3423,14 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     </defs>
                     <rect width="100%" height="100%" fill="url(#dot-grid-pattern)" />
                 </svg>
+                {/* IR containment hulls (Fase 2b): visual containment for IR graphVertex views */}
+                {irContainment.model.containers.size > 0 && (
+                    <IRContainmentHulls
+                        nodes={irContainment.nodes}
+                        model={irContainment.model}
+                        names={irContainment.names}
+                    />
+                )}
                 {/* Zoom controls moved to toolbar */}
                 <MiniMap
                     style={{ position: 'absolute', margin: 0, right: '20px', bottom: '100px', borderRadius: '4px', opacity: 0.8 }}

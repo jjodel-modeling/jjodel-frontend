@@ -9,9 +9,11 @@
  */
 
 import type {
+    AnyViewIR,
     CompiledAccessor,
     CompiledBadge,
     CompiledConditional,
+    CompiledContainment,
     CompiledFieldCompartment,
     CompiledLabel,
     CompiledPredicate,
@@ -20,7 +22,6 @@ import type {
     Literal,
     PathExpr,
     Predicate,
-    VertexViewIR,
 } from './irTypes';
 import type { ReadCtx } from './irReadCtx';
 
@@ -190,7 +191,7 @@ function compileConditional<T>(c: Conditional<T> | undefined, fallback: T, deps:
 }
 
 /** Cheap structural hash for the compile cache (djb2 over JSON). */
-function irHash(ir: VertexViewIR): string {
+function irHash(ir: AnyViewIR): string {
     const s = JSON.stringify(ir);
     let h = 5381;
     for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
@@ -199,7 +200,7 @@ function irHash(ir: VertexViewIR): string {
 
 const compileCache = new Map<string, CompiledView>();
 
-export function compileView(viewId: string, ir: VertexViewIR): CompiledView {
+export function compileView(viewId: string, ir: AnyViewIR): CompiledView {
     const key = `${viewId}:${irHash(ir)}`;
     const cached = compileCache.get(key);
     if (cached) return cached;
@@ -248,9 +249,28 @@ export function compileView(viewId: string, ir: VertexViewIR): CompiledView {
         separator: fc.separator !== false,
     }));
 
+    let containment: CompiledContainment | null = null;
+    if (ir.kind === 'graphVertex') {
+        const c = ir.containment ?? {};
+        containment = {
+            childFilter: compilePredicate(c.childFilter, deps),
+            collapsible: c.collapsible !== false,
+            collapsedForm: c.collapsed?.form !== undefined ? compileConditional(c.collapsed.form, 'rounded' as const, deps) : null,
+            collapsedFill: c.collapsed?.fill !== undefined ? compileConditional(c.collapsed.fill, '', deps) : null,
+            collapsedBadge: c.collapsed?.badge ? {
+                icon: compileConditional(c.collapsed.badge.icon, '', deps),
+                position: c.collapsed.badge.position,
+                visible: compileConditional(c.collapsed.badge.visible, true, deps),
+                tooltip: c.collapsed.badge.tooltip,
+            } : null,
+        };
+    }
+
     const compiled: CompiledView = {
         viewId,
         ir,
+        kind: ir.kind,
+        containment,
         priority: typeof ir.priority === 'number' ? ir.priority : 0,
         predicate,
         dependencySet: Array.from(deps),

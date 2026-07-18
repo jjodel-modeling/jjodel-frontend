@@ -13,7 +13,15 @@ import { compileView, clearCompileCache } from '../irCompile';
 import { makeDrawReadCtx, classAncestryNames } from '../irReadCtx';
 import { getIRIndex, resolveIRView } from '../irResolveCore';
 import { defaultObjectViewIR } from '../irDefaults';
-import type { VertexViewIR } from '../irTypes';
+import {
+    buildContainmentModel,
+    computeHidden,
+    containmentChildren,
+    decorateEdges,
+    decorateNodes,
+    liftEndpoint,
+} from '../irContainment';
+import type { GraphVertexViewIR, VertexViewIR } from '../irTypes';
 
 /** Build a minimal D-layer world: metamodel classes + objects with slots. */
 function world() {
@@ -211,6 +219,101 @@ describe('irResolveCore ordering (spec v1.2 sez. 2)', () => {
         const index = getIRIndex(state, 'sig_broken_1')!;
         expect(index.viewIds).toEqual(['V_ok']);
         expect(resolveIRView('s1', 'C_State', index, ctx, state.idlookup)!.viewId).toBe('V_ok');
+    });
+});
+
+/**
+ * Containment world: Region contains States (composition ref), transitions
+ * between states as edges.
+ *   r1 (Region) ⊃ { s_a, s_b }   r2 (Region) ⊃ { s_c }
+ *   edges: s_a→s_b (internal), s_a→s_c (cross-region), ext→s_b (from outside)
+ */
+function containmentWorld() {
+    const idlookup: Record<string, any> = {
+        C_Region: { id: 'C_Region', name: 'Region', extends: [] },
+        C_State: { id: 'C_State', name: 'State', extends: [] },
+        R_states: { id: 'R_states', name: 'states', className: 'DReference', composition: true },
+        R_next: { id: 'R_next', name: 'next', className: 'DReference', composition: false },
+        r1: { id: 'r1', name: 'region1', instanceof: 'C_Region', features: ['vr1'] },
+        vr1: { id: 'vr1', instanceof: 'R_states', values: ['s_a', 's_b'] },
+        r2: { id: 'r2', name: 'region2', instanceof: 'C_Region', features: ['vr2'] },
+        vr2: { id: 'vr2', instanceof: 'R_states', values: ['s_c'] },
+        s_a: { id: 's_a', name: 'A', instanceof: 'C_State', features: [] },
+        s_b: { id: 's_b', name: 'B', instanceof: 'C_State', features: [] },
+        s_c: { id: 's_c', name: 'C', instanceof: 'C_State', features: [] },
+        ext: { id: 'ext', name: 'EXT', instanceof: 'C_State', features: [] },
+        // vertices (vertexId → { model: objectId })
+        Vr1: { id: 'Vr1', model: 'r1' }, Vr2: { id: 'Vr2', model: 'r2' },
+        Va: { id: 'Va', model: 's_a' }, Vb: { id: 'Vb', model: 's_b' },
+        Vc: { id: 'Vc', model: 's_c' }, Vx: { id: 'Vx', model: 'ext' },
+    };
+    const nodes: any[] = ['Vr1', 'Vr2', 'Va', 'Vb', 'Vc', 'Vx'].map(id => ({
+        id, type: 'objectNode', position: { x: 0, y: 0 }, data: {},
+    }));
+    const edges: any[] = [
+        { id: 'e_ab', source: 'Va', target: 'Vb' },
+        { id: 'e_ac', source: 'Va', target: 'Vc' },
+        { id: 'e_xb', source: 'Vx', target: 'Vb' },
+    ];
+    const regionView: GraphVertexViewIR = {
+        irVersion: 'ir-1.2', kind: 'graphVertex', metaclasses: ['Region'],
+        shape: { form: 'rect' },
+        containment: { collapsible: true },
+    };
+    const state = { viewpoint: 'VP', viewelements: ['V_region'], idlookup: { ...idlookup, V_region: { id: 'V_region', viewpoint: 'VP', ir: regionView } } };
+    const ctx = makeDrawReadCtx(state.idlookup);
+    const index = getIRIndex(state, 'sig_cont_' + Math.abs(JSON.stringify(idlookup).length))!;
+    const model = buildContainmentModel(nodes as any, state.idlookup, index, ctx);
+    return { idlookup: state.idlookup, nodes, edges, model };
+}
+
+describe('irContainment (Fase 2b)', () => {
+    it('builds the containment model from composition references', () => {
+        const { idlookup, model } = containmentWorld();
+        expect(containmentChildren(idlookup, 'r1')).toEqual(['s_a', 's_b']);
+        expect(model.containers.has('r1')).toBe(true);
+        expect(model.containers.has('r2')).toBe(true);
+        expect(model.containers.has('s_a')).toBe(false);
+        expect(model.parentOf.get('s_c')).toBe('r2');
+    });
+    it('computeHidden hides whole subtrees of collapsed containers only', () => {
+        const { model } = containmentWorld();
+        expect(computeHidden(model, new Set()).size).toBe(0);
+        const hidden = computeHidden(model, new Set(['r1']));
+        expect(hidden).toEqual(new Set(['s_a', 's_b']));
+    });
+    it('liftEndpoint returns self when visible, nearest rendered ancestor when hidden', () => {
+        const { model } = containmentWorld();
+        const hidden = computeHidden(model, new Set(['r1']));
+        expect(liftEndpoint('s_c', model, hidden)).toBe('s_c');
+        expect(liftEndpoint('s_a', model, hidden)).toBe('r1');
+    });
+    it('decorateNodes hides collapsed subtrees; decorateEdges lifts and suppresses', () => {
+        const { nodes, edges, model } = containmentWorld();
+        const hidden = computeHidden(model, new Set(['r1']));
+        const dn = decorateNodes(nodes as any, model, hidden);
+        const hiddenIds = dn.filter(n => n.hidden).map(n => n.id).sort();
+        expect(hiddenIds).toEqual(['Va', 'Vb']);
+
+        const de = decorateEdges(edges as any, model, hidden);
+        const ids = de.map(e => e.id).sort();
+        // e_ab internal to collapsed r1 → suppressed
+        expect(ids).not.toContain('e_ab');
+        // e_ac lifts source to region1's vertex
+        const lifted = de.find(e => e.id === 'e_ac__irlift')!;
+        expect(lifted.source).toBe('Vr1');
+        expect(lifted.target).toBe('Vc');
+        expect((lifted.data as any).irLifted).toBe(true);
+        // e_xb lifts target to region1's vertex
+        const liftedXb = de.find(e => e.id === 'e_xb__irlift')!;
+        expect(liftedXb.source).toBe('Vx');
+        expect(liftedXb.target).toBe('Vr1');
+    });
+    it('is a pass-through when nothing is collapsed', () => {
+        const { nodes, edges, model } = containmentWorld();
+        const hidden = computeHidden(model, new Set());
+        expect(decorateNodes(nodes as any, model, hidden)).toBe(nodes);
+        expect(decorateEdges(edges as any, model, hidden)).toBe(edges);
     });
 });
 

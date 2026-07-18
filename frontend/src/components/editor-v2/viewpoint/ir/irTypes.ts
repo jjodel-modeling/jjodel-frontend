@@ -79,6 +79,14 @@ export interface FieldCompartmentSpec {
     separator?: boolean;
 }
 
+export interface ShapeSpec {
+    form: Conditional<ShapeForm>;
+    fill?: Conditional<string>;
+    border?: { color: string; width: number; style: 'solid' | 'dashed' | 'dotted' };
+    labels?: LabelSpec[];
+    badges?: BadgeSpec[];
+}
+
 export interface VertexViewIR {
     irVersion: string;               // "ir-1.0" | "ir-1.2"
     kind: 'vertex';
@@ -88,20 +96,52 @@ export interface VertexViewIR {
     priority?: number;
     exclusive?: boolean;             // spike: only exclusive views are rendered; decorative ones are ignored
     label?: string;
-    shape: {
-        form: Conditional<ShapeForm>;
-        fill?: Conditional<string>;
-        border?: { color: string; width: number; style: 'solid' | 'dashed' | 'dotted' };
-        labels?: LabelSpec[];
-        badges?: BadgeSpec[];
-    };
+    shape: ShapeSpec;
     fieldCompartments?: FieldCompartmentSpec[];
 }
 
-/** Result of compiling a VertexViewIR (see irCompile.ts). */
+/**
+ * graphVertex view (spec v1.2 sez. 8): shape + containment.
+ * Fase 2b renders containment as a hull (container drawn as a bounding box
+ * around its children, absolute coordinates unchanged); true RF reparenting is
+ * deferred because it changes the coordinate semantics of the canvas→JjOM
+ * write-back (critical zone). Collapse semantics (lift-to-ancestor) are fixed
+ * by the interpreter, not per-view.
+ */
+export interface GraphVertexViewIR {
+    irVersion: string;
+    kind: 'graphVertex';
+    metaclasses: string[] | '*';
+    predicate?: Predicate;
+    priority?: number;
+    exclusive?: boolean;
+    label?: string;
+    shape: ShapeSpec;
+    fieldCompartments?: FieldCompartmentSpec[];
+    containment: {
+        /** Which contained children render inside the hull; absent = all containment-reference children. */
+        childFilter?: Predicate;
+        collapsible?: boolean;
+        collapsed?: {
+            /** Shape override when collapsed (partial; merged over `shape`). */
+            form?: Conditional<ShapeForm>;
+            fill?: Conditional<string>;
+            /** Badge shown when collapsed (defaults to a child-count badge). */
+            badge?: BadgeSpec;
+        };
+    };
+}
+
+export type AnyViewIR = VertexViewIR | GraphVertexViewIR;
+
+/** Result of compiling a VertexViewIR / GraphVertexViewIR (see irCompile.ts). */
 export interface CompiledView {
     viewId: string;
-    ir: VertexViewIR;
+    ir: AnyViewIR;
+    /** Discriminator copied from ir.kind. */
+    kind: 'vertex' | 'graphVertex';
+    /** graphVertex only: compiled containment info. */
+    containment: CompiledContainment | null;
     /** Explicit priority (0 when absent) — first key of the resolution order. */
     priority: number;
     /** Compiled predicate; always callable (returns true when no predicate declared). */
@@ -141,4 +181,12 @@ export interface CompiledFieldCompartment {
     segments: FieldSegment[];
     visible: CompiledConditional<boolean>;
     separator: boolean;
+}
+
+export interface CompiledContainment {
+    childFilter: CompiledPredicate;      // always callable (true when absent)
+    collapsible: boolean;
+    collapsedForm: CompiledConditional<ShapeForm> | null;
+    collapsedFill: CompiledConditional<string> | null;
+    collapsedBadge: CompiledBadge | null;
 }

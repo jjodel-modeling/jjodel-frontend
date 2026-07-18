@@ -30,6 +30,8 @@ import { NodeProblemIndicator } from '../problems/NodeProblemIndicator';
 import { useIsHighlighted } from '../problems/useNodeProblems';
 import { useIRView } from '../viewpoint/ir/irResolve';
 import IRNodeContent from '../viewpoint/ir/IRNodeContent';
+import { containmentChildren } from '../viewpoint/ir/irContainment';
+import { isCollapsed, toggleCollapsed, useCollapseVersion } from '../viewpoint/ir/irCollapseState';
 import '../viewpoint/ir/irDemoFixture'; // dev-only: registers window.__jjodelInstallIRDemo
 
 export type ObjectNodeType = Node<ObjectNodeData, 'objectNode'>;
@@ -42,6 +44,12 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
     // IR view resolution (spike 2026-07-17): non-null only when the active
     // viewpoint declares an applicable IR view for this object's metaclass.
     const irResolution = useIRView(id, data.instanceOfClassId);
+    // Containment collapse state (Fase 2b) — cheap, unconditional (rules of hooks)
+    useCollapseVersion();
+    const irChildCount = useSelector((state: any) => {
+        if (!irResolution || irResolution.compiled.kind !== 'graphVertex') return 0;
+        return containmentChildren(state.idlookup ?? {}, irResolution.objectId).length;
+    });
 
     // Live metaclass name + singleton flag from Redux (reacts to metamodel changes)
     const liveMetaclassInfo = useSelector((state: any) => {
@@ -373,6 +381,21 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                     objectId={irResolution.objectId}
                     readCtx={irResolution.readCtx}
                 />
+                {/* graphVertex containment (Fase 2b): collapse/expand chip */}
+                {irResolution.compiled.kind === 'graphVertex'
+                    && irResolution.compiled.containment?.collapsible
+                    && irChildCount > 0 && (
+                    <button
+                        type="button"
+                        className="ir-collapse-chip"
+                        style={{ position: 'absolute', bottom: 2, right: 4, zIndex: 3 }}
+                        title={isCollapsed(irResolution.objectId) ? 'Expand contained elements' : 'Collapse contained elements'}
+                        onClick={(e) => { e.stopPropagation(); toggleCollapsed(irResolution.objectId); }}
+                    >
+                        <i className={`bi ${isCollapsed(irResolution.objectId) ? 'bi-chevron-expand' : 'bi-chevron-contract'}`} />
+                        {isCollapsed(irResolution.objectId) ? String(irChildCount) : null}
+                    </button>
+                )}
             </div>
         );
     }
