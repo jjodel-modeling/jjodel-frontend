@@ -3055,10 +3055,11 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             if (edgeId.startsWith('irobj_')) {
                 const objectId = edgeId.slice('irobj_'.length);
                 const d: any = (data as any).data ?? {};
-                const override: { sourceSide?: string; targetSide?: string } = {};
+                const override: { sourceSide?: string; targetSide?: string; waypoints?: unknown[] } = {};
                 if (d.sourceAnchor?.side) override.sourceSide = d.sourceAnchor.side;
                 if (d.targetAnchor?.side) override.targetSide = d.targetAnchor.side;
-                if (override.sourceSide || override.targetSide) {
+                if (Array.isArray(d.waypoints)) override.waypoints = d.waypoints;
+                if (override.sourceSide || override.targetSide || override.waypoints) {
                     setIREdgeAnchorOverride(objectId, override);
                 }
                 return;

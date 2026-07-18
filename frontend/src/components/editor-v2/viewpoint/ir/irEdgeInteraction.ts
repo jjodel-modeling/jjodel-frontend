@@ -22,6 +22,8 @@ export interface IRAnchorOverride {
     /** Side pins (EndpointHandles anchor drag) — the synthesis pass resolves the free index. */
     sourceSide?: string;
     targetSide?: string;
+    /** Manhattan waypoints (SegmentHandles segment drag), re-applied to edge data. */
+    waypoints?: unknown[];
 }
 
 const anchorOverrides = new Map<string, IRAnchorOverride>();

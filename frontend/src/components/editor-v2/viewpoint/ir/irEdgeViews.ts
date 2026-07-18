@@ -167,8 +167,8 @@ export function synthesizeObjectAsEdges(
     index: IRViewpointIndex,
     readCtx: ReadCtx,
     idlookup: Idlookup,
-    /** Session anchor overrides (user-chosen handles or side pins), keyed by edge-object id. */
-    anchorOverrides?: Map<string, { sourceHandle?: string; targetHandle?: string; sourceSide?: string; targetSide?: string }>,
+    /** Session anchor overrides (user-chosen handles, side pins, waypoints), keyed by edge-object id. */
+    anchorOverrides?: Map<string, { sourceHandle?: string; targetHandle?: string; sourceSide?: string; targetSide?: string; waypoints?: unknown[] }>,
 ): ObjectAsEdgeResult {
     if (index.objectAsEdgeByMetaclass.size === 0) return { nodes, edges, edgeObjects: new Set() };
     const edgeObjects = new Set<string>();
@@ -239,6 +239,9 @@ export function synthesizeObjectAsEdges(
                 ...withHandles,
                 sourceHandle: srcHandle ?? withHandles.sourceHandle,
                 targetHandle: tgtHandle ?? withHandles.targetHandle,
+                data: override.waypoints
+                    ? { ...(withHandles.data ?? {}), waypoints: override.waypoints }
+                    : withHandles.data,
             };
         }
         placed.push(withHandles);
