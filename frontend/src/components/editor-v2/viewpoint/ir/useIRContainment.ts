@@ -24,6 +24,7 @@ import {
 import { decorateReferenceEdges, synthesizeObjectAsEdges } from './irEdgeViews';
 import { deriveIRInteraction, type IRInteractionPlan } from './irInteraction';
 import { getCollapsedSet, useCollapseVersion } from './irCollapseState';
+import { getIREdgeAnchorOverride, isSyntheticEdgeSelected, useEdgeInteractionVersion } from './irEdgeInteraction';
 
 const EMPTY_MODEL: ContainmentModel = {
     containers: new Map(),
@@ -57,7 +58,39 @@ export function useIRInteractionPlan(): IRInteractionPlan | null {
 
 export function useIRContainment(nodes: Node[], edges: Edge[]): IRContainmentDecoration {
     const collapseVersion = useCollapseVersion();
+    const edgeInteractionVersion = useEdgeInteractionVersion();
     const irSig = useSelector((state: any) => computeIRSignature(state));
+
+    // Reactivity for synthetic edges (spec v1.2 sez. 9, partial): snapshot of
+    // the endpoint slots of every object whose metaclass has an object-as-edge
+    // view, so editing src/tgt (Properties panel or reconnect) re-routes the
+    // synthetic edge immediately. Exact-name metaclass match (no ancestry walk
+    // in the hot selector); empty string when the viewpoint has no such views.
+    const oaeSlotsSig = useSelector((state: any) => {
+        const sig = computeIRSignature(state);
+        if (!sig) return '';
+        const index = getIRIndex(state, sig);
+        if (!index || index.objectAsEdgeByMetaclass.size === 0) return '';
+        const featNames = new Set<string>();
+        for (const entries of index.objectAsEdgeByMetaclass.values()) {
+            for (const e of entries) e.compiled.dependencySet.forEach(f => featNames.add(f));
+        }
+        const lookup = state.idlookup;
+        const parts: string[] = [];
+        for (const oid of state.objects ?? []) {
+            const o = lookup?.[oid];
+            const mc = o && lookup?.[o.instanceof];
+            if (!mc || !index.objectAsEdgeByMetaclass.has(mc.name)) continue;
+            for (const fid of o.features ?? []) {
+                const dv = lookup?.[fid];
+                const f = dv && lookup?.[dv.instanceof];
+                if (f && featNames.has(f.name) && Array.isArray(dv.values)) {
+                    parts.push(`${fid}=${JSON.stringify(dv.values)}`);
+                }
+            }
+        }
+        return parts.join('|');
+    });
 
     return useMemo(() => {
         if (!irSig) return { nodes, edges, model: EMPTY_MODEL, names: EMPTY_NAMES };
@@ -83,14 +116,24 @@ export function useIRContainment(nodes: Node[], edges: Edge[]): IRContainmentDec
 
         // Edge-view passes (Fase 2c)
         outEdges = decorateReferenceEdges(outEdges, model.objByVertex, index, readCtx, state.idlookup);
+        const overrides = new Map<string, { sourceHandle?: string; targetHandle?: string }>();
+        for (const [, objectId] of model.objByVertex) {
+            const ov = getIREdgeAnchorOverride(objectId);
+            if (ov) overrides.set(objectId, ov);
+        }
         const oae = synthesizeObjectAsEdges(
-            outNodes, outEdges, model.objByVertex, model.vertexByObj, index, readCtx, state.idlookup,
+            outNodes, outEdges, model.objByVertex, model.vertexByObj, index, readCtx, state.idlookup, overrides,
         );
         outNodes = oae.nodes;
-        outEdges = oae.edges;
+        // Re-apply RF selection to synthetic edges (tracked in irEdgeInteraction:
+        // selection changes for irobj_* ids cannot land in the base edge state).
+        outEdges = oae.edges.map(e =>
+            (e.data as any)?.irObjectAsEdge && isSyntheticEdgeSelected(e.id) ? { ...e, selected: true } : e);
 
         return { nodes: outNodes, edges: outEdges, model, names };
-        // collapseVersion is the invalidation signal for getCollapsedSet()
+        // collapseVersion / edgeInteractionVersion / oaeSlotsSig are the
+        // invalidation signals for collapse state, anchors+selection, and
+        // object-as-edge endpoint slots respectively.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [nodes, edges, irSig, collapseVersion]);
+    }, [nodes, edges, irSig, collapseVersion, edgeInteractionVersion, oaeSlotsSig]);
 }

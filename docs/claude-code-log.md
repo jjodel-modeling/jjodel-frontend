@@ -1,5 +1,15 @@
 # Claude Code Session Log
 
+## 2026-07-18 — fix: object-as-edge interaction parity (sessione di test con Alfonso)
+**Prompt**: giro di test manuale di Alfonso sul branch cloud/ir-editorv2: (a) edge sintetico non selezionabile e senza anchor modificabili; (b) in precedenza endpoint non risolti col backend lproxy e ingresso non ortogonale.
+**Files touched**: viewpoint/ir/{irEdgeViews,irReadCtx,irContainment,useIRContainment,irEdgeInteraction(new)}.ts, __tests__/ir.test.ts, EditorV2.tsx (onEdgesChange/onEdgeClick/selectEdge/onPaneClick/handleReconnect).
+**Outcome**: ✅ 3 commit (e0414a452 endpoint proxy + nome da identity slot; 7b9aeb14f handle geometrici ortogonali per edge sintetici e lifted; questo: selezione sintetica fuori dal base state + reconnect che riscrive gli slot src/tgt via proxy L + override anchor di sessione + reattività slot object-as-edge).
+**Regressions**: no per quanto verificabile (26/26 unit test, typecheck 14 = baseline, build verde, verifica Playwright end-to-end: selezione, rewire slot -> re-route live).
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required (scritture via proxy L dal layer componenti, stesso pattern del property panel; nessun file §3.1 toccato).
+**Notes**: selezione e anchor override degli edge sintetici sono ephemeral di sessione (come il collapse); persistenza eventualmente in Fase successiva.
+**Prompt document name**: 2026-07-18 test-session-fixes
+
 ## 2026-07-18 — feat: IR-as-contract pipeline Fasi 0-5a su branch cloud/ir-editorv2 (sessione autonoma)
 **Prompt**: esecuzione autonoma del piano a fasi della sessione 2026-07-17_2 (Cowork cloud, mandato di Alfonso "concludi il lavoro senza il mio intervento"). Branch dedicato `cloud/ir-editorv2` da `alfonso-frontend-jjtl` (b7d6e82ef).
 **Files touched**: vedi i singoli commit 3348c4593..HEAD (spike ir/, benchmark harness, spec v1.2, containment+collapse, edge views, edit-in-place+interaction, VersionFixer 2.226 + view.tsx carry-over, shutdown classic + 6 file rimossi).

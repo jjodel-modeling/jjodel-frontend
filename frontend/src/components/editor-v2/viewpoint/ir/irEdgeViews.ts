@@ -150,6 +150,13 @@ export interface ObjectAsEdgeResult {
  * Endpoint expressions that do not resolve leave the object rendered as a node
  * (explicit fallback per spec sez. 10 — never a silent disappearance).
  */
+/** First feature name of an object-as-edge PathExpr ("$src.value" → "src"). */
+function firstFeatureOf(expr: string | undefined): string | null {
+    if (!expr) return null;
+    const m = expr.match(/^\$([A-Za-z_][A-Za-z0-9_]*)/);
+    return m ? m[1] : null;
+}
+
 export function synthesizeObjectAsEdges(
     nodes: Node[],
     edges: Edge[],
@@ -158,6 +165,8 @@ export function synthesizeObjectAsEdges(
     index: IRViewpointIndex,
     readCtx: ReadCtx,
     idlookup: Idlookup,
+    /** Session anchor overrides (user-chosen handles), keyed by edge-object id. */
+    anchorOverrides?: Map<string, { sourceHandle?: string; targetHandle?: string }>,
 ): ObjectAsEdgeResult {
     if (index.objectAsEdgeByMetaclass.size === 0) return { nodes, edges, edgeObjects: new Set() };
     const edgeObjects = new Set<string>();
@@ -191,7 +200,13 @@ export function synthesizeObjectAsEdges(
             source: srcVertex,
             target: tgtVertex,
             type: 'instanceRef',
-            data: { irObjectAsEdge: true, irObjectId: objectId },
+            data: {
+                irObjectAsEdge: true,
+                irObjectId: objectId,
+                // Feature names the reconnect gesture writes (EditorV2.handleReconnect)
+                irSourceFeature: firstFeatureOf(cv.ir.edge?.source),
+                irTargetFeature: firstFeatureOf(cv.ir.edge?.target),
+            },
         };
         synthetic.push(applyEdgeStyle(base, cv, readCtx, objectId));
     }
@@ -205,11 +220,21 @@ export function synthesizeObjectAsEdges(
     const outNodes = nodes.map(n => (edgeObjectVertices.has(n.id) && !n.hidden ? { ...n, hidden: true } : n));
     // Suppress the hidden object's own reference edges (they duplicate the synthetic edge).
     const outEdges = edges.filter(e => !edgeObjectVertices.has(e.source) && !edgeObjectVertices.has(e.target));
-    // Orthogonal entry: give synthetic edges geometric handles (side + free index).
+    // Orthogonal entry: give synthetic edges geometric handles (side + free
+    // index); user-chosen anchors (reconnect gesture) override the geometry.
     const nodesById = new Map(outNodes.map(n => [n.id, n] as const));
     const placed: Edge[] = [...outEdges];
     const syntheticWithHandles = synthetic.map(e => {
-        const withHandles = assignGeometricHandles(e, nodesById, placed);
+        let withHandles = assignGeometricHandles(e, nodesById, placed);
+        const objectId = (e.data as any)?.irObjectId as string | undefined;
+        const override = objectId ? anchorOverrides?.get(objectId) : undefined;
+        if (override) {
+            withHandles = {
+                ...withHandles,
+                sourceHandle: override.sourceHandle ?? withHandles.sourceHandle,
+                targetHandle: override.targetHandle ?? withHandles.targetHandle,
+            };
+        }
         placed.push(withHandles);
         return withHandles;
     });

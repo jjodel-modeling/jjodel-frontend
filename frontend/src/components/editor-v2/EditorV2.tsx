@@ -33,6 +33,7 @@ import PalettePanel from './panels/PalettePanel';
 import Toolbar from './Toolbar';
 import { useIRContainment, useIRInteractionPlan } from './viewpoint/ir/useIRContainment';
 import IRContainmentHulls from './viewpoint/ir/IRContainmentHulls';
+import { clearSyntheticEdgeSelection, setIREdgeAnchorOverride, setSyntheticEdgeSelected } from './viewpoint/ir/irEdgeInteraction';
 import { useActiveEditor, CLASSIC_ZOOM_MIN, CLASSIC_ZOOM_MAX, type ZoomController } from './ActiveEditorContext';
 import ContextMenu, { type ContextMenuItem } from './ContextMenu';
 import { useHistory } from './hooks/useHistory';
@@ -322,8 +323,22 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // then deduplicates the result before committing to state.
     const onEdgesChange = useCallback(
         (changes: EdgeChange[]) => {
+            // Synthetic IR edges (object-as-edge, ids irobj_*) exist only in the
+            // decorated array: their selection changes are tracked in the IR
+            // interaction store (re-applied by the decoration pass), everything
+            // else about them is ignored here.
+            const baseChanges: EdgeChange[] = [];
+            for (const ch of changes) {
+                const id = (ch as any).id as string | undefined;
+                if (id && id.startsWith('irobj_')) {
+                    if (ch.type === 'select') setSyntheticEdgeSelected(id, (ch as any).selected);
+                    continue;
+                }
+                baseChanges.push(ch);
+            }
+            if (baseChanges.length === 0) return;
             setEdgesRaw((currentEdges) => {
-                const updated = applyEdgeChanges(changes, currentEdges);
+                const updated = applyEdgeChanges(baseChanges, currentEdges);
                 return deduplicateEdges(updated);
             });
         },
@@ -1613,6 +1628,44 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // Handle edge reconnection (drag endpoint to a new target/source)
     const handleReconnect = useCallback(
         (oldEdge: Edge, newConnection: Connection) => {
+            // Synthetic IR edge (object-as-edge): the gesture edits the edge-object.
+            // - endpoint moved to another node → rewrite the src/tgt reference slot
+            //   through the L proxy (canonical write path, same family as the
+            //   Properties panel); the slots-snapshot subscription re-routes.
+            // - same nodes, different handle → session anchor override.
+            if ((oldEdge.data as any)?.irObjectAsEdge) {
+                const objectId = (oldEdge.data as any).irObjectId as string;
+                try {
+                    const sourceMoved = newConnection.source !== oldEdge.source;
+                    const targetMoved = newConnection.target !== oldEdge.target;
+                    if (sourceMoved || targetMoved) {
+                        const movedEnd: 'source' | 'target' = sourceMoved ? 'source' : 'target';
+                        const newVertexId = movedEnd === 'source' ? newConnection.source : newConnection.target;
+                        if (!newVertexId) return;
+                        const featName = movedEnd === 'source'
+                            ? (oldEdge.data as any).irSourceFeature
+                            : (oldEdge.data as any).irTargetFeature;
+                        if (!featName) return;
+                        const droppedVertex: any = LPointerTargetable.fromPointer(newVertexId);
+                        const newObjId: string | undefined = droppedVertex?.model?.id;
+                        if (!newObjId) return;
+                        const rawObj = (store.getState() as any).idlookup[newObjId];
+                        if (!rawObj || rawObj.className !== 'DObject') return;   // only M1 objects
+                        const lObj: any = LPointerTargetable.fromPointer(objectId);
+                        const slot = lObj?.['$' + featName];
+                        if (!slot) return;
+                        slot.value = newObjId;
+                    }
+                    setIREdgeAnchorOverride(objectId, {
+                        sourceHandle: newConnection.sourceHandle ?? undefined,
+                        targetHandle: newConnection.targetHandle ?? undefined,
+                    });
+                } catch (err) {
+                    console.warn('[ir object-as-edge] reconnect aborted', err);
+                }
+                return;
+            }
+
             // Re-target di una reference M2: cambia DReference.type alla nuova classe.
             // Stessa mutazione del property panel (lRef.type = classId); il sync re-instrada.
             // Non muta gli edge ReactFlow.
@@ -2223,6 +2276,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
     const onPaneClick = useCallback(() => {
         selectedEdgeIdRef.current = null;  // Clear edge selection
+        clearSyntheticEdgeSelection();     // IR object-as-edge selection lives outside the base state
         setNodes(nds => nds.map(n => (n.selected ? { ...n, selected: false } : n)));
         setEdges(eds => eds.map(e => (e.selected ? { ...e, selected: false } : e)));
         setContextMenu(null);
@@ -2233,6 +2287,19 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // (SegmentHandles/EndpointHandles) are always available after click.
     const onEdgeClick = useCallback((event: React.MouseEvent, edge: Edge) => {
         event.stopPropagation();
+        // Synthetic IR edge (object-as-edge): selection lives in the IR
+        // interaction store (the id does not exist in the base edge state);
+        // the decoration pass re-applies the flag so RF shows the selected
+        // styling and the reconnect anchors.
+        if (edge.id.startsWith('irobj_')) {
+            selectedEdgeIdRef.current = edge.id;
+            setNodes(nds => nds.map(n => (n.selected ? { ...n, selected: false } : n)));
+            setEdges(eds => eds.map(e => (e.selected ? { ...e, selected: false } : e)));
+            clearSyntheticEdgeSelection();
+            setSyntheticEdgeSelected(edge.id, true);
+            return;
+        }
+        clearSyntheticEdgeSelection();
         selectedEdgeIdRef.current = edge.id;  // Preserve selection through Redux patches
         setNodes(nds => nds.map(n => (n.selected ? { ...n, selected: false } : n)));
         setEdges(eds => eds.map(e => ({ ...e, selected: e.id === edge.id })));
@@ -2245,6 +2312,15 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const selectEdge = useCallback((edgeId: string) => {
         selectedEdgeIdRef.current = edgeId;
         setNodes(nds => nds.map(n => (n.selected ? { ...n, selected: false } : n)));
+        // Synthetic IR edge: selection tracked in the IR interaction store
+        // (id absent from the base edge state); see onEdgeClick.
+        if (edgeId.startsWith('irobj_')) {
+            setEdges(eds => eds.map(e => (e.selected ? { ...e, selected: false } : e)));
+            clearSyntheticEdgeSelection();
+            setSyntheticEdgeSelected(edgeId, true);
+            return;
+        }
+        clearSyntheticEdgeSelection();
         setEdges(eds => eds.map(e => ({ ...e, selected: e.id === edgeId })));
         jjomSelection.onEdgeClick(
             { stopPropagation() {} } as unknown as React.MouseEvent,
