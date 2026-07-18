@@ -18,6 +18,7 @@ import {DEFAULT_VIEW_JSX_STRING, LEGACY_PLACEHOLDER_MARKER, V2_2_TO_V2_3_DETECT_
     DEFAULT_VIEW_JSX_V2_3_LEGACY, V2_3_TO_V3_DETECT_MARKER,
     CLASSIC_OBJECT_VIEW_JSX, CLASSIC_VALUE_VIEW_JSX, CLASSIC_SINGLETON_VIEW_JSX,
     CLASSIC_OBJECT_VIEW_MARKER, CLASSIC_VALUE_VIEW_MARKER, CLASSIC_SINGLETON_VIEW_MARKER} from "../utils/defaultViewTemplate";
+import {defaultObjectViewIR} from "../components/editor-v2/viewpoint/ir/irDefaults";
 
 /*
                                     TODO for every update: check the VersionFixer.help() function
@@ -991,6 +992,52 @@ everytime you put hands into a D-Object shape or valid values, you should docume
     // for M1), so saved projects pick up the new template. User-customized (clonedCounter) Model
     // views are intentionally left as-is (not wiped); they keep the prior minting <Edge> path.
     private ['2.224 -> 2.225'](s: DState): DState { return s; }
+
+    // 2.225 → 2.226: INVERSE migration (classic deprecation, IR contract — spec v1.2 sez. 11).
+    // Classic default M1 views (marker-matched) receive the IR default view
+    // (`ir` field, migratedFrom: 'classic-default'): EditorV2 renders them via the
+    // IR interpreter, the jsxString stays as classic fallback until Fase 5.
+    // CLASSIC_VALUE views have no IR equivalent (values are rows inside object
+    // nodes in the flow) and custom non-default jsxStrings get the explicit
+    // legacy mark `irLegacyClassic` (rendered as abstract nodes, never silently
+    // dropped). Idempotent: records already carrying `ir` or the mark are skipped.
+    // NOTE: LViewElement.updateDefaultView preserves `ir`/`irLegacyClassic` across
+    // the version-bump regeneration (see view.tsx) — without that carry-over this
+    // migration would be wiped by the same load that applies it.
+    private ['2.225 -> 2.226'](s: DState): DState {
+        let migratedToIR = 0;
+        let markedLegacy = 0;
+        const isKnownDefault = (jsx: string): boolean =>
+            jsx === DEFAULT_VIEW_JSX_STRING
+            || jsx === DEFAULT_VIEW_JSX_V2_3_LEGACY
+            || jsx.includes(V2_3_TO_V3_DETECT_MARKER)
+            || jsx.includes(V2_2_TO_V2_3_DETECT_MARKER)
+            || jsx.includes(LEGACY_PLACEHOLDER_MARKER)
+            || jsx.includes('jjodel-default-view');
+        for (let k in s.idlookup) {
+            let e = s.idlookup[k] as any;
+            if (!e || typeof e !== 'object') continue;
+            if (e.className !== 'DViewElement') continue;
+            if (typeof e.jsxString !== 'string' || !e.jsxString) continue;
+            if (e.ir !== undefined || e.irLegacyClassic) continue; // idempotent
+
+            const jsx: string = e.jsxString;
+            if (jsx.includes(CLASSIC_OBJECT_VIEW_MARKER) || jsx.includes(CLASSIC_SINGLETON_VIEW_MARKER)) {
+                e.ir = { ...defaultObjectViewIR(), migratedFrom: 'classic-default' };
+                migratedToIR++;
+            } else if (jsx.includes(CLASSIC_VALUE_VIEW_MARKER)) {
+                e.irLegacyClassic = true;
+                markedLegacy++;
+            } else if (!isKnownDefault(jsx)) {
+                e.irLegacyClassic = true;
+                markedLegacy++;
+            }
+        }
+        if (migratedToIR > 0 || markedLegacy > 0) {
+            console.log(`[VersionFixer 2.225 -> 2.226] IR inverse migration: ${migratedToIR} default view(s) -> IR, ${markedLegacy} marked legacy-classic.`);
+        }
+        return s;
+    }
 
 }
 
