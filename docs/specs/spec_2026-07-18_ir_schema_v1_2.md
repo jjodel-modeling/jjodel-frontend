@@ -135,6 +135,8 @@ interface EdgeSpec {
 ```
 
 - **Waypoints**: `edge.data.waypoints` degli edge RF diventano persistiti (oggi `canvasToJjom` non li scrive: gap #6 del report). Il campo di persistenza è lato DEdge/DVertex esistente, non nello schema IR; `persistWaypoints: false` opta fuori per view che vogliono routing sempre derivato.
+
+  > **Perimetro di `persistWaypoints` (chiarimento, emendamento 2026-07-19)**: il flag governa l'intero layout override dell'edge, waypoints e pin di lato degli endpoint. `persistWaypoints: false` significa routing sempre derivato: nessun override di layout viene persistito per le view che lo dichiarano; gli override restano al più stato di sessione.
 - **Policy endpoint non renderizzati (normativa, semantica fissa dell'interprete, non campo per-view)**:
   - endpoint nascosto (es. dentro un graphVertex collassato) → **lift-to-ancestor**: l'edge si aggancia al primo antenato renderizzato (semantica UML del collasso);
   - entrambi gli endpoint nascosti sotto lo stesso antenato → soppressione dell'edge;

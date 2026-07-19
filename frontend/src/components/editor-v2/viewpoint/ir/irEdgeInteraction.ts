@@ -46,6 +46,56 @@ export function getIREdgeAnchorOverride(objectId: string): IRAnchorOverride | un
     return anchorOverrides.get(objectId);
 }
 
+/** Persistable subset of an override (DVertex.irEdgeLayout shape). */
+export interface IRPersistedEdgeLayout {
+    sourceSide?: 'top' | 'right' | 'bottom' | 'left';
+    targetSide?: 'top' | 'right' | 'bottom' | 'left';
+    waypoints?: { segmentIndex: number; offset: number }[];
+}
+
+const PERSISTABLE_SIDES = new Set(['top', 'right', 'bottom', 'left']);
+
+/**
+ * Derive the persistable layout (sides + waypoints) from a session override.
+ * Explicit handle ids ("right-2") reduce to their side — the free index is
+ * session-relative and must never be persisted. Handle wins over the side pin,
+ * mirroring the synthesis precedence (synthesizeObjectAsEdges). Returns null
+ * when nothing persistable remains.
+ */
+export function irEdgeLayoutFromOverride(o: IRAnchorOverride): IRPersistedEdgeLayout | null {
+    const sideOf = (handle?: string, side?: string): IRPersistedEdgeLayout['sourceSide'] => {
+        const s = handle ? handle.split('-')[0] : side;
+        return s && PERSISTABLE_SIDES.has(s) ? (s as IRPersistedEdgeLayout['sourceSide']) : undefined;
+    };
+    const layout: IRPersistedEdgeLayout = {};
+    const src = sideOf(o.sourceHandle, o.sourceSide);
+    const tgt = sideOf(o.targetHandle, o.targetSide);
+    if (src) layout.sourceSide = src;
+    if (tgt) layout.targetSide = tgt;
+    if (Array.isArray(o.waypoints)) {
+        const wps = (o.waypoints as any[])
+            .filter(wp => wp && typeof wp.segmentIndex === 'number' && typeof wp.offset === 'number')
+            .map(wp => ({ segmentIndex: wp.segmentIndex as number, offset: wp.offset as number }));
+        if (wps.length) layout.waypoints = wps;
+    }
+    return layout.sourceSide || layout.targetSide || layout.waypoints ? layout : null;
+}
+
+/**
+ * One-time hydration seed from persisted DVertex.irEdgeLayout: only objectIds
+ * without a session override are seeded (session wins); bumps once when
+ * anything changed. The once-per-graph guard is the caller's responsibility.
+ */
+export function hydrateIREdgeAnchorOverrides(entries: Array<[string, IRAnchorOverride]>): void {
+    let changed = false;
+    for (const [objectId, override] of entries) {
+        if (anchorOverrides.has(objectId)) continue;
+        anchorOverrides.set(objectId, { ...override });
+        changed = true;
+    }
+    if (changed) bump();
+}
+
 export function setSyntheticEdgeSelected(edgeId: string, selected: boolean): void {
     const had = selectedSynthetic.has(edgeId);
     if (selected === had) return;

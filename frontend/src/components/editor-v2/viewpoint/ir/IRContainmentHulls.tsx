@@ -11,7 +11,9 @@
 
 import { ViewportPortal, type Node } from '@xyflow/react';
 import type { ContainmentModel } from './irContainment';
-import { toggleCollapsed, useCollapseVersion } from './irCollapseState';
+import { isCollapsed, toggleCollapsed, useCollapseVersion } from './irCollapseState';
+import { syncIRCollapsedToJjom } from '../../sync/canvasToJjom';
+import { useLayoutAutosave } from '../../hooks/useLayoutAutosave';
 
 const HULL_PADDING = 24;
 const HULL_HEADER = 22;
@@ -23,10 +25,12 @@ export interface IRContainmentHullsProps {
     names: Map<string, string>;
 }
 
-interface HullRect { objectId: string; x: number; y: number; w: number; h: number; name: string; collapsible: boolean; }
+interface HullRect { objectId: string; vertexId: string; x: number; y: number; w: number; h: number; name: string; collapsible: boolean; }
 
 function IRContainmentHulls({ nodes, model, names }: IRContainmentHullsProps) {
     useCollapseVersion(); // re-render on toggle
+    // Debounced project save after a persisted collapse toggle (discovery 2026-07-19)
+    const { scheduleLayoutSave } = useLayoutAutosave();
 
     if (model.containers.size === 0) return null;
 
@@ -56,6 +60,7 @@ function IRContainmentHulls({ nodes, model, names }: IRContainmentHullsProps) {
         }
         hulls.push({
             objectId,
+            vertexId: info.vertexId,
             x: minX - HULL_PADDING,
             y: minY - HULL_PADDING - HULL_HEADER,
             w: maxX - minX + 2 * HULL_PADDING,
@@ -88,7 +93,14 @@ function IRContainmentHulls({ nodes, model, names }: IRContainmentHullsProps) {
                                 type="button"
                                 className="ir-hull__toggle"
                                 title="Collapse"
-                                onClick={(e) => { e.stopPropagation(); toggleCollapsed(hull.objectId); }}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleCollapsed(hull.objectId);
+                                    // Persist the new collapse state on the container's DVertex
+                                    // (session store stays the runtime source; discovery 2026-07-19).
+                                    syncIRCollapsedToJjom(hull.vertexId, isCollapsed(hull.objectId));
+                                    scheduleLayoutSave();
+                                }}
                             >
                                 <i className="bi bi-chevron-contract" />
                             </button>

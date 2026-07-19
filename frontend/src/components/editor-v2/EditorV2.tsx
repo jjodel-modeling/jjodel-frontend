@@ -34,7 +34,10 @@ import Toolbar from './Toolbar';
 import { useIRContainment, useIRInteractionPlan } from './viewpoint/ir/useIRContainment';
 import { applyIRPaletteFilter } from './viewpoint/ir/irInteraction';
 import IRContainmentHulls from './viewpoint/ir/IRContainmentHulls';
-import { clearSyntheticEdgeSelection, setIREdgeAnchorOverride, setSyntheticEdgeSelected } from './viewpoint/ir/irEdgeInteraction';
+import { clearSyntheticEdgeSelection, getIREdgeAnchorOverride, hydrateIREdgeAnchorOverrides, irEdgeLayoutFromOverride, setIREdgeAnchorOverride, setSyntheticEdgeSelected, type IRAnchorOverride } from './viewpoint/ir/irEdgeInteraction';
+import { hydrateCollapsed } from './viewpoint/ir/irCollapseState';
+import { computeIRSignature, getIRIndex, resolveObjectAsEdgeView } from './viewpoint/ir/irResolveCore';
+import { makeReadCtx } from './viewpoint/ir/irReadCtxLproxy';
 import { useActiveEditor, CLASSIC_ZOOM_MIN, CLASSIC_ZOOM_MAX, type ZoomController } from './ActiveEditorContext';
 import ContextMenu, { type ContextMenuItem } from './ContextMenu';
 import { useHistory } from './hooks/useHistory';
@@ -65,6 +68,7 @@ import {
     syncPositionToJjom,
     syncPositionBatchToJjom,
     syncSizeToJjom,
+    syncIREdgeLayoutToJjom,
     syncInheritanceEdge,
     syncReferenceEdge,
     syncDeleteVertex,
@@ -119,6 +123,50 @@ const edgeTypes: EdgeTypes = {
     composition: UnifiedEdge,       // M1: containment edge
     instanceRef: UnifiedEdge,       // M1: non-containment reference
 };
+
+// ---------------------------------------------------------------------------
+// IR layout persistence (discovery 2026-07-19)
+// ---------------------------------------------------------------------------
+
+// Graphs whose persisted DVertex overrides (irEdgeLayout / irCollapsed) have
+// already been seeded into the IR session stores. Once per graph per session:
+// re-seeding would override session gestures (e.g. re-collapse a container the
+// user expanded). The session stores stay the runtime source of truth.
+const irLayoutHydratedGraphs = new Set<string>();
+
+/** vertexId of the graph's DVertex carrying the given M1 object, or null. */
+function irVertexIdForObject(graphId: string | null, objectId: string): string | null {
+    if (!graphId) return null;
+    const lookup: any = (store.getState() as any).idlookup ?? {};
+    const subs: string[] = lookup[graphId]?.subElements ?? [];
+    for (const vid of subs) {
+        const v = lookup[vid];
+        if (v?.className === 'DVertex' && v.model === objectId) return vid;
+    }
+    return null;
+}
+
+/**
+ * persistWaypoints gate (spec v1.2 sez. 7, extended reading 2026-07-19): false
+ * on the resolved object-as-edge view keeps the whole layout override
+ * (waypoints AND side pins) session-only. Default true (no IR index / no
+ * resolved view / resolution error → persist).
+ */
+function isIREdgeLayoutPersistable(objectId: string, state?: DState): boolean {
+    try {
+        const s: any = state ?? store.getState();
+        const sig = computeIRSignature(s);
+        if (!sig) return true;
+        const index = getIRIndex(s, sig);
+        if (!index) return true;
+        const metaclassId = s.idlookup?.[objectId]?.instanceof;
+        if (typeof metaclassId !== 'string') return true;
+        const cv = resolveObjectAsEdgeView(objectId, metaclassId, index, makeReadCtx(s.idlookup), s.idlookup);
+        return cv?.persistWaypoints !== false;
+    } catch {
+        return true;
+    }
+}
 
 // Initial nodes for metamodel demonstration
 const initialNodes: Node[] = [
@@ -1224,6 +1272,50 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // references) otherwise — zero cost for non-IR sessions.
     const irContainment = useIRContainment(stableNodes, stableEdges);
 
+    // Persist the merged session override of a synthetic edge on the hidden
+    // edge-object's DVertex (gesture end; ghostOffsets pattern, discovery
+    // 2026-07-19). Skipped when the resolved view opts out via persistWaypoints.
+    const persistIREdgeLayout = useCallback((objectId: string) => {
+        const merged = getIREdgeAnchorOverride(objectId);
+        if (!merged) return;
+        const layout = irEdgeLayoutFromOverride(merged);
+        if (!layout || !isIREdgeLayoutPersistable(objectId)) return;
+        const vertexId = irVertexIdForObject(graphId, objectId);
+        if (!vertexId) return;
+        syncIREdgeLayoutToJjom(vertexId, layout);
+        scheduleLayoutSave();
+    }, [graphId, scheduleLayoutSave]);
+
+    // One-time hydration of the IR session stores from the persisted DVertex
+    // fields (discovery 2026-07-19 §5). Deferred until an IR viewpoint is
+    // active (the persistWaypoints gate needs the resolved index; without an IR
+    // viewpoint the overrides are unused anyway). Session wins: only missing
+    // keys are seeded, and the per-graph guard prevents any re-seed.
+    useEffect(() => {
+        if (!graphId || irLayoutHydratedGraphs.has(graphId)) return;
+        const state: any = store.getState();
+        if (!computeIRSignature(state)) return;
+        irLayoutHydratedGraphs.add(graphId);
+        const lookup = state.idlookup ?? {};
+        const subs: string[] = lookup[graphId]?.subElements ?? [];
+        const layoutEntries: Array<[string, IRAnchorOverride]> = [];
+        const collapsedIds: string[] = [];
+        for (const vid of subs) {
+            const v = lookup[vid];
+            if (!v || v.className !== 'DVertex' || typeof v.model !== 'string') continue;
+            if (v.irEdgeLayout && isIREdgeLayoutPersistable(v.model, state)) {
+                layoutEntries.push([v.model, {
+                    sourceSide: v.irEdgeLayout.sourceSide,
+                    targetSide: v.irEdgeLayout.targetSide,
+                    waypoints: v.irEdgeLayout.waypoints,
+                }]);
+            }
+            if (v.irCollapsed === true) collapsedIds.push(v.model);
+        }
+        if (layoutEntries.length) hydrateIREdgeAnchorOverrides(layoutEntries);
+        if (collapsedIds.length) hydrateCollapsed(collapsedIds);
+    }, [graphId, irContainment]);
+
     // IR-derived interaction plan (Fase 3): restricts the M1 palette to the
     // metaclasses the active IR viewpoint declares views for. Null = no IR
     // viewpoint → unrestricted palette (current behavior).
@@ -1668,6 +1760,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         sourceHandle: newConnection.sourceHandle ?? undefined,
                         targetHandle: newConnection.targetHandle ?? undefined,
                     });
+                    persistIREdgeLayout(objectId);
                 } catch (err) {
                     console.warn('[ir object-as-edge] reconnect aborted', err);
                 }
@@ -1705,7 +1798,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 console.warn('[reference re-target] reconnect aborted', err);
             }
         },
-        []
+        [persistIREdgeLayout]
     );
 
     const handleReconnectStart = useCallback(() => {
@@ -3069,6 +3162,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 if (Array.isArray(d.waypoints)) override.waypoints = d.waypoints;
                 if (override.sourceSide || override.targetSide || override.waypoints) {
                     setIREdgeAnchorOverride(objectId, override);
+                    persistIREdgeLayout(objectId);
                 }
                 return;
             }
@@ -3078,7 +3172,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 return applyDistribution(updated);
             });
         },
-        [setEdges, takeSnapshot, applyDistribution]
+        [setEdges, takeSnapshot, applyDistribution, persistIREdgeLayout]
     );
 
     // Convert edge to inheritance

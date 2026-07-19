@@ -354,6 +354,7 @@ export function compileEdgeView(viewId: string, ir: EdgeViewIR): CompiledEdgeVie
         routing: e.routing ?? null,
         labelText: compileTextSource(e.labels?.center, deps),
         labelPlacement: e.labels?.placement ?? 'auto',
+        persistWaypoints: e.persistWaypoints ?? true,
     };
     compiled.dependencySet = Array.from(deps);
     edgeCompileCache.set(key, compiled);

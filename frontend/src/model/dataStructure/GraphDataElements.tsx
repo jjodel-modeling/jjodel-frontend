@@ -1687,6 +1687,15 @@ export class DVertex extends DGraphElement { // DVoidVertex
     ghostOffsets?: { [refId: string]: { dx: number; dy: number } };
     // Persisted per-parent drag offset of cross-MM ghost-parent chips, keyed by super-type DClass id.
     ghostParentOffsets?: { [classId: string]: { dx: number; dy: number } };
+    // Persisted IR object-as-edge layout overrides (side pins + Manhattan waypoints),
+    // carried by the hidden edge-object's vertex. undefined = fully derived routing.
+    irEdgeLayout?: {
+        sourceSide?: 'top' | 'right' | 'bottom' | 'left';
+        targetSide?: 'top' | 'right' | 'bottom' | 'left';
+        waypoints?: { segmentIndex: number; offset: number }[];
+    };
+    // Persisted collapse state of an IR graphVertex container. undefined = expanded.
+    irCollapsed?: boolean;
     // size!: GraphSize; // virtual, gets extracted from this. x and y are stored directly here as it extends GraphSize
     // personal attributes
     __isDVertex!: true;

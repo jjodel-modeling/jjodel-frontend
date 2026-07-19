@@ -9,7 +9,9 @@
  * All fixtures are plain D-layer shapes (idlookup records); no store, no React.
  */
 import { describe, it, expect } from 'vitest';
-import { compileView, clearCompileCache } from '../irCompile';
+import { compileView, compileEdgeView, clearCompileCache } from '../irCompile';
+import { getIREdgeAnchorOverride, hydrateIREdgeAnchorOverrides, irEdgeLayoutFromOverride, setIREdgeAnchorOverride } from '../irEdgeInteraction';
+import { getCollapsedSet, hydrateCollapsed } from '../irCollapseState';
 import { makeDrawReadCtx, classAncestryNames } from '../irReadCtx';
 import { getIRIndex, resolveIRView } from '../irResolveCore';
 import { defaultObjectViewIR, isMigratedDefaultView, IR_DEFAULT_OBJECT_VIEW_ID } from '../irDefaults';
@@ -609,5 +611,49 @@ describe('isMigratedDefaultView (delegation, spec v1.2 sez. 11)', () => {
     it('IR_DEFAULT_OBJECT_VIEW_ID (built-in default wildcard) → delegated regardless of marker', () => {
         const cv = compileView(IR_DEFAULT_OBJECT_VIEW_ID, defaultObjectViewIR());
         expect(isMigratedDefaultView(cv)).toBe(true);
+    });
+});
+
+describe('layout persistence (discovery 2026-07-19)', () => {
+    const edgeIR = (over: Partial<EdgeViewIR['edge']>): EdgeViewIR => ({
+        irVersion: 'ir-1.2', kind: 'edge', metaclasses: ['Transition'],
+        edge: { source: '$src.value', target: '$tgt.value', ...over },
+    });
+    it('compileEdgeView: persistWaypoints defaults to true when absent', () => {
+        const cv = compileEdgeView('V_pw_default', edgeIR({}));
+        expect(cv.persistWaypoints).toBe(true);
+    });
+    it('compileEdgeView: persistWaypoints false compiles the opt-out', () => {
+        const cv = compileEdgeView('V_pw_false', edgeIR({ persistWaypoints: false }));
+        expect(cv.persistWaypoints).toBe(false);
+    });
+    it('irEdgeLayoutFromOverride: explicit handle wins over the side pin and its session-relative index is stripped', () => {
+        const layout = irEdgeLayoutFromOverride({
+            sourceHandle: 'right-2', sourceSide: 'left', targetSide: 'top',
+        });
+        expect(layout).toEqual({ sourceSide: 'right', targetSide: 'top' });
+    });
+    it('irEdgeLayoutFromOverride: filters malformed waypoints; null when nothing persistable remains', () => {
+        const layout = irEdgeLayoutFromOverride({
+            waypoints: [{ segmentIndex: 1, offset: 24 }, { bogus: true }, null] as unknown[],
+        });
+        expect(layout).toEqual({ waypoints: [{ segmentIndex: 1, offset: 24 }] });
+        expect(irEdgeLayoutFromOverride({})).toBeNull();
+        expect(irEdgeLayoutFromOverride({ sourceHandle: 'nonsense' })).toBeNull();
+    });
+    it('hydration precedence: session override wins, missing keys are seeded', () => {
+        setIREdgeAnchorOverride('hydr_objA', { sourceSide: 'left' });
+        hydrateIREdgeAnchorOverrides([
+            ['hydr_objA', { sourceSide: 'right', waypoints: [{ segmentIndex: 0, offset: 10 }] }],
+            ['hydr_objB', { targetSide: 'bottom' }],
+        ]);
+        expect(getIREdgeAnchorOverride('hydr_objA')).toEqual({ sourceSide: 'left' });
+        expect(getIREdgeAnchorOverride('hydr_objB')).toEqual({ targetSide: 'bottom' });
+    });
+    it('hydrateCollapsed: additive seed, idempotent on already-collapsed ids', () => {
+        hydrateCollapsed(['hydr_cont1']);
+        hydrateCollapsed(['hydr_cont1', 'hydr_cont2']);
+        expect(getCollapsedSet().has('hydr_cont1')).toBe(true);
+        expect(getCollapsedSet().has('hydr_cont2')).toBe(true);
     });
 });

@@ -31,6 +31,22 @@ export function getCollapsedSet(): Set<string> {
     return collapsed;
 }
 
+/**
+ * One-time hydration seed from persisted DVertex.irCollapsed: adds the given
+ * container objectIds to the collapsed set; bumps once when anything changed.
+ * The once-per-graph guard is the caller's responsibility (re-seeding would
+ * re-collapse a container the user expanded in session).
+ */
+export function hydrateCollapsed(objectIds: string[]): void {
+    let changed = false;
+    for (const id of objectIds) {
+        if (collapsed.has(id)) continue;
+        collapsed.add(id);
+        changed = true;
+    }
+    if (changed) bump();
+}
+
 export function getCollapseVersion(): number {
     return version;
 }

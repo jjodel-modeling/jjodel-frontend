@@ -24,7 +24,8 @@ import DynamicHandles from '../components/DynamicHandles';
 import InlineEnumSelect from '../components/InlineEnumSelect';
 import { useEditorContextSafe } from '../contexts/EditorContext';
 import { useNodeHighlightClass } from '../contexts/HighlightContext';
-import { syncNodeLabel, syncUpdateFeatureValue } from '../sync/canvasToJjom';
+import { syncNodeLabel, syncUpdateFeatureValue, syncIRCollapsedToJjom } from '../sync/canvasToJjom';
+import { useLayoutAutosave } from '../hooks/useLayoutAutosave';
 import type { ObjectNodeData } from '../types';
 import { NodeProblemIndicator } from '../problems/NodeProblemIndicator';
 import { useIsHighlighted } from '../problems/useNodeProblems';
@@ -52,6 +53,8 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
     const irDelegated = irResolution !== null && isMigratedDefaultView(irResolution.compiled);
     // Containment collapse state (Fase 2b) — cheap, unconditional (rules of hooks)
     useCollapseVersion();
+    // Debounced project save after a persisted collapse toggle (discovery 2026-07-19)
+    const { scheduleLayoutSave } = useLayoutAutosave();
     const irChildCount = useSelector((state: any) => {
         if (!irResolution || irResolution.compiled.kind !== 'graphVertex') return 0;
         return containmentChildren(state.idlookup ?? {}, irResolution.objectId).length;
@@ -397,7 +400,14 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                         className="ir-collapse-chip"
                         style={{ position: 'absolute', bottom: 2, right: 4, zIndex: 3 }}
                         title={isCollapsed(irResolution.objectId) ? 'Expand contained elements' : 'Collapse contained elements'}
-                        onClick={(e) => { e.stopPropagation(); toggleCollapsed(irResolution.objectId); }}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            toggleCollapsed(irResolution.objectId);
+                            // Persist the new collapse state on the container's DVertex
+                            // (session store stays the runtime source; discovery 2026-07-19).
+                            syncIRCollapsedToJjom(id, isCollapsed(irResolution.objectId));
+                            scheduleLayoutSave();
+                        }}
                     >
                         <i className={`bi ${isCollapsed(irResolution.objectId) ? 'bi-chevron-expand' : 'bi-chevron-contract'}`} />
                         {isCollapsed(irResolution.objectId) ? String(irChildCount) : null}

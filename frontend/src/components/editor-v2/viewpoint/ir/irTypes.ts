@@ -176,6 +176,9 @@ export interface EdgeViewIR {
             center?: TextSource;
             placement?: 'auto' | 'above' | 'below';
         };
+        /** spec v1.2 sez. 7 (extended reading, 2026-07-19): default true; false =
+         *  the whole layout override (waypoints AND side pins) stays session-only. */
+        persistWaypoints?: boolean;
     };
 }
 
@@ -199,6 +202,8 @@ export interface CompiledEdgeView {
     routing: 'orthogonal' | 'straight' | 'curved' | null;
     labelText: CompiledAccessor | null;
     labelPlacement: 'auto' | 'above' | 'below';
+    /** persistWaypoints ?? true — gates persistence/hydration of layout overrides. */
+    persistWaypoints: boolean;
 }
 
 /** Result of compiling a VertexViewIR / GraphVertexViewIR (see irCompile.ts). */

@@ -78,6 +78,38 @@ export function syncSizeToJjom(vertexId: string, w: number, h: number): void {
 }
 
 // ---------------------------------------------------------------------------
+// IR layout persistence (synthetic object-as-edge + graphVertex collapse)
+// ---------------------------------------------------------------------------
+
+/**
+ * Persist the IR object-as-edge layout override (side pins + waypoints) on the
+ * hidden edge-object's DVertex. Written whole at gesture end (ghostOffsets
+ * pattern); no markCanvasUpdated — the field is not read by the position
+ * transformers (discovery 2026-07-19).
+ */
+export function syncIREdgeLayoutToJjom(
+    vertexId: string,
+    layout: {
+        sourceSide?: 'top' | 'right' | 'bottom' | 'left';
+        targetSide?: 'top' | 'right' | 'bottom' | 'left';
+        waypoints?: { segmentIndex: number; offset: number }[];
+    },
+): void {
+    TRANSACTION('EditorV2 IR edge layout', () => {
+        SetFieldAction.new(vertexId as any, 'irEdgeLayout' as any, layout, undefined, false);
+    });
+}
+
+/**
+ * Persist the collapse state of an IR graphVertex container on its DVertex.
+ */
+export function syncIRCollapsedToJjom(vertexId: string, collapsed: boolean): void {
+    TRANSACTION('EditorV2 IR collapse', () => {
+        SetFieldAction.new(vertexId as any, 'irCollapsed' as any, collapsed, undefined, false);
+    });
+}
+
+// ---------------------------------------------------------------------------
 // Edge creation
 // ---------------------------------------------------------------------------
 
