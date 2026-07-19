@@ -3,7 +3,6 @@ import React, {JSX, ReactElement, ReactNode} from "react";
 import withReactContent from "sweetalert2-react-content";
 import Swal from "sweetalert2";
 import type { InputOwnProps, SelectOwnProps } from '../components/forEndUser/Input';
-import type {AllPropss} from "../graph/vertex/Vertex";
 import {
     GraphElementOwnProps,
     GObject,
@@ -17,10 +16,8 @@ import {
     LPointerTargetable,
     U,
     Log,
-    GraphElementComponent,
     windoww,
     RuntimeAccessible,
-    EdgeComponent,
     RuntimeAccessibleClass,
     EdgeOwnProps,
     DGraphElement,
@@ -100,183 +97,7 @@ export class UX{
         return ret;
     }
 
-    static injectProp(parentComponent: GraphElementComponent, e: ReactNode, gvidmap_useless: Dictionary<DocString<'VertexID'>, boolean>,
-                      parentnodeid: string, index: number, indices: number[], injectOffset?: LGraph): ReactNode {
-        let re: ReactElement | null = UX.ReactNodeAsElement(e);
-
-        //console.log('UX inject type', {type: (re?.type as any).WrappedComponent?.name || re?.type, parentComponent, type0:re?.type, e});
-        // injectOffset&&console.log("inject offset props 1:", {e, re, injectOffset});
-        if (!re) return e;
-        // @ts-ignore this
-        // const parentComponent = this;
-        let type = (re.type as any).WrappedComponent?.cname || re.type;
-        if (type && (typeof type == "object" || typeof type == "function")) type = (type as any).cname;
-        if (type && type[type.length - 1] === '2') type = type.substring(0, type.length - 1); // vite is adding a "2" at the end of all my classes?
-        // console.log("inject props type", {type, re, retype:re.type, rtn: (re.type as any).WrappedComponent?.name});
-
-        let injectProps: GraphElementOwnProps = {} as any;
-        /* if (false && injectOffset) {
-            const style = {...(re.props?.style || {})};
-            let offset = injectOffset.offset;
-            let scale = injectOffset.zoom;
-            style.position = "absolute";
-            style.left = offset.x;
-            style.top = offset.y;
-            style.transform = "scale(" + scale.x + "," + scale.y + ")"
-            injectProps.style = style;
-            // console.log("inject offset props:", {re, injectProps});
-        }*/
-        //  fix the injection somehow. override Edge() Vertex() Asterisk() ...
-        // const windoww = window as any;
-        // console.log('ux.injectingProp pre ', {type: (re.type as any).WrappedComponent?.name || re.type}, {mycomponents: windoww.mycomponents, re, props:re.props});
-        // add "view" (view id) prop as default to sub-elements of any depth to inherit the view of the parent unless the user forced another view to apply
-        let rprops: GObject = re.props as any;
-
-
-        // console.log('renderView in inject', {type, re, parentComponent, parentnodeid});
-        switch (type) {
-            default:
-                // console.count('ux.injectingProp case default: ' + type);
-                if (indices.length <= 2 && (parentComponent?.props?.childStyle)) {
-                    // if first non-component child of a GraphElement with a clipPath shape, i assign clip path to it.
-                    // console.log('injecting to first child (A):', {re, indices, il: indices.length, pc: parentComponent, injectProps, cs:parentComponent.props.childStyle});
-                    let istyle: GObject = injectProps.style = {...(injectProps.style || {})};
-                    injectProps.style = injectProps.style ? {...injectProps.style} : {};
-                    U.objectMergeInPlace(injectProps.style, parentComponent.props.childStyle);
-                } else return re;
-                break;
-            /*
-            case windoww.Components.Input.name:
-            case windoww.Components.Textarea.name:
-                const objid =  re.props.obj?.id || re.props.obj || parentComponent.props.data.id;
-                const ret = React.cloneElement(re, {key: UX.getKey(re) || parentComponent.props.view.id + '_' + parentComponent.props.data.id + '_' + re.props.field, obj: objid, obj2: objid});
-                //console.log('relement Input set props',
-                //    {'re.props.obj.id': re.props.obj?.id, 're.props.obj': re.props.obj, 'thiss.props.data.id': thiss.props.data.id, thiss, re, objid, ret, 'ret.props': ret.props});
-                return ret;*/
-            // case windoww.Components.GraphElement.name:
-            case 'Control':
-            case 'Slider':
-            case 'Toggle':
-            case 'Zoom':
-            case 'Panel':
-            case 'Panell':
-            case 'MetaElementPicker':
-            case 'ControlComponent':
-            case 'ZoomComponent':
-            case 'MetaElementPickerComponent':
-            case 'PanelComponent':
-            case 'PanellComponent':
-            case 'SliderComponent':
-            case 'Toggle_Obsolete':
-            case 'ToggleComponent_Obsolete':
-                injectProps.nodeid = parentComponent.props.nodeid;
-                injectProps.graphid = parentComponent.props.graphid;
-                (injectProps as any).dataid = parentComponent.props.dataid;
-                break;
-            case 'T2M':
-            case 'T2M_API':
-            case 'T2M_Component':
-            case 'M2T':
-            case 'M2T_API':
-            case 'M2T_Component':
-                injectProps.nodeid = parentComponent.props.nodeid;
-                injectProps.graphid = parentComponent.props.graphid;
-                (injectProps as any).dataid = parentComponent.props.dataid;
-                break;
-            case 'Grid': case 'GridComponent':
-                injectProps.nodeid = parentComponent.props.nodeid;
-                injectProps.graphid = parentComponent.props.graphid;
-                break;
-            case 'ContextualEntry':
-            case 'ContextMenuC':
-            case 'ContextMenu':
-                injectProps.nodeid = parentComponent.props.nodeid;
-                (injectProps as any).viewid = parentComponent.props.viewid;
-                (injectProps as any).path = ''; // those are at root level, no nesting
-                break;
-            case 'Scrollable': case 'ScrollableComponent': case 'World': case 'Camera': case 'Pan': case 'Layer': case 'Viewport': case 'ViewPort': // all aliases of Scrollable
-            case 'Measurable': case 'MeasurableComponent': case 'Transformable': case 'Interactive': case 'Scalable': case 'Resizable': case 'Draggable': // all aliases of Measurable
-            case 'Rotatable':
-            // case windoww.Components.ScrollableComponent.cname:
-                injectProps.graphid = parentComponent.props.graphid;
-                break;
-            case 'InputComponent': case 'InputConnected': case 'Input': case 'TextArea':
-                // todo: can i do a injector that if the user provides a ModelElement list raw <div>{this.children}</div> it wraps them in DefaultNode?
-                const injectProps2: InputOwnProps | SelectOwnProps = {} as any;
-                const parentnodeid = parentComponent.props.node?.id;
-                injectProps2.data = rprops.data || (typeof parentComponent.props.data === "string" ? parentComponent.props.data : parentComponent.props.data?.id);
-                // !IMPORTANT! this key does not remove the responsability of adding keys to <GraphElement>s. this is assigning the key to the first returned element by component A,
-                // but react needs to distinguish component A from other components, and he still doesn't have a key. in fact this is useless as this component can only have 1 child
-                injectProps2.key = UX.getKey(re) || (parentnodeid + "_input_"+index);
-                return React.cloneElement(re, injectProps2);
-            case windoww.Components.GraphElementComponent.cname:
-            // case windoww.Components.DefaultNode.name:
-            case windoww.Components.DefaultNodeComponent.cname:
-            // case windoww.Components.Graph.name:
-            // case windoww.Components.GraphComponent.cname:
-            case "Graph": case "GraphComponent":
-            // case windoww.Components.Field.name:
-            // case windoww.Components.FieldComponent.cname:
-            // case windoww.Components.Vertex.name:
-            case EdgeComponent.cname:
-            case windoww.Components.VertexComponent.cname:
-                // console.log('renderView in inject node', {type, re, parentComponent});
-                injectProps.parentViewId = parentComponent.props.view.id || (parentComponent.props.view as any); // re.props.view ||  thiss.props.view
-                injectProps.parentnodeid = parentComponent.props.node?.id;
-                injectProps.graphid = parentComponent.props.graphid;
-                const dataid = (typeof rprops.data === "string" ? rprops.data : rprops.data?.id) || "shapeless";
-                if (type.includes('Edge') && !type.includes('EdgePoint') && dataid !== 'shapeless' && !('data' in rprops) && !('dataid' in rprops)) (injectProps as any).dataid = dataid;
-                // const vidmap = GraphElementRaw.graphVertexID_counter;
-                // if (!vidmap[injectProps.graphid]) vidmap[injectProps.graphid] = {};
-                // const gvidmap = vidmap[injectProps.graphid];
-                // const validVertexIdCondition = (id: string): boolean => gvidmap_useless[id];
-                // todo: come butto dei sotto-vertici dentro un vertice contenitore? o dentro un sotto-grafo? senza modificare il jsx ma solo draggando? React-portals?
-                let idbasename: string;
-
-                if (rprops.initialSize?.id) { idbasename = rprops.initialSize?.id; } else
-                if (rprops.nodeid) { idbasename = rprops.nodeid; } else
-                if (rprops.id) { idbasename = rprops.id; } else
-                if (UX.getKey(re)) {
-                    idbasename = injectProps.parentnodeid + "_" +UX.getKey(re);
-                    // console.log("keyid: ", {idbasename});
-                }
-                else switch (type) {
-                    default:
-                        idbasename = injectProps.parentnodeid + "_" + dataid + "N";
-                        break;
-                    case windoww.Components.EdgePoint.cname:
-                        idbasename = injectProps.parentnodeid + "_" + (dataid || rprops.startingSize?.id || indices.join("_")) + "EP";
-                        break;
-                    case EdgeComponent.cname: case "Edge":
-                        //console.log('injecting props ' + type + " without key", {re, pc: parentComponent, injectProps, ownProps: rprops});
-                        let edgeProps: EdgeOwnProps = rprops as any;
-                        let edgestart_id: Pointer<DGraphElement> | Pointer<DModelElement> = (edgeProps.start as any)?.id || edgeProps.start;
-                        let edgeend_id: Pointer<DGraphElement> | Pointer<DModelElement> = (edgeProps.end as any)?.id || edgeProps.end;
-                        idbasename = injectProps.parentnodeid + "_" + edgestart_id + "-" + edgeend_id + (edgeProps.isReference ? 'R' : (edgeProps.isExtend ? 'X' : 'E'));
-                }
-                if (idbasename.indexOf(windoww.Pointers.prefix) !== 0) idbasename = 'Pointer'+idbasename;
-                if (!windoww.Pointers.isPointer(idbasename)) {
-                    Log.eDevv('generated invalid id in inject props', {type, idbasename, is: rprops.initialSize, rprops});
-                }
-
-                // (injectProps.parentnodeid)+"_"+(dataid)+indices.join("_");//injectProps.graphid + '_' + dataid;
-                // console.log("setting nodeid", {injectProps, props:rprops, re});
-                // Log.exDev(!injectProps.graphid || !dataid, 'vertex is missing mandatory props.', {graphid: injectProps.graphid, dataid, props: rprops});
-                Log.exDev(!injectProps.graphid, 'vertex is missing mandatory props (graphid).', {graphid: injectProps.graphid, dataid, props: rprops});
-                if (false && indices.length === 2) {
-                    // if first component child, of a component? like (DefaultNode -> Vertex)?
-                    // console.log('injecting to first child (B):', {re, pc: parentComponent, injectProps});
-                    if (parentComponent?.props.style?.clipPath) injectProps.style = {...(injectProps.style || {}), clipPath: parentComponent?.props.style?.clipPath||''}
-                }
-                injectProps.nodeid = idbasename; // U.increaseEndingNumber(idbasename, false, false, validVertexIdCondition);
-                injectProps.htmlindex = indices[indices.length - 1]; // rprops.node ? rprops.node.htmlindex : indices[indices.length - 1];
-                injectProps.key = UX.getKey(re) || injectProps.nodeid;
-                // console.log("cloning jsx:", re, injectProps);
-                Log.ex((injectProps.nodeid === injectProps.graphid||injectProps.nodeid === injectProps.parentnodeid) && type !== "GraphComponent", "User manually assigned a invalid node id. please remove or change prop \"nodeid\"", {type: (re.type as any).WrappedComponent?.cname || re.type}, {mycomponents: windoww.mycomponents, re, props:rprops});
-        }
-        //console.log('injecting props ' + type, {id: injectProps.nodeid, re, pc: parentComponent, injectProps});
-        return React.cloneElement(re, injectProps); //, injectProps.children||[]);
-    }
+    // injectProp removed (de-entanglement stage 5): its only caller was the classic graphElement.tsx renderer.
 
     static ReactNodeAsElement(e: React.ReactNode): React.ReactElement | null {
         return e && (e as ReactElement).type ? e as ReactElement : null;
@@ -389,7 +210,7 @@ export class UX{
             s = UX.injectPropsToString_addstuff(s, argStartIndex, propsToInjectAtRoot, 'root');
 
             // used in GC_propsAdder as a string to be eval-ed
-            (window as any)._assignnodeid = function _assignnodeid(props: AllPropss, index:number): string {
+            (window as any)._assignnodeid = function _assignnodeid(props: GObject, index:number): string {
                 const tnv = transientProperties.node[props.nodeid].viewScores[props.viewid];
                 if (!tnv.nodeidcounter) tnv.nodeidcounter = {};
                 if (tnv.nodeidcounter[index] === undefined) tnv.nodeidcounter[index] = 0;

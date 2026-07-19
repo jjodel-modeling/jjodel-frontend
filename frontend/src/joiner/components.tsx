@@ -2,31 +2,14 @@ import type { Dictionary } from "./types";
 
 // export {Graph, GraphComponent} from "../graph/graph/graph"; // require graphelement
 // export {Graph} from "../graph/vertex/Vertex"; // require graphelement
-// imports graphelements
-import {GraphElement, GraphElementComponent} from "../graph/graphElement/graphElement";
-import {Graph, Vertex, VoidVertex, GraphVertex, Field, EdgePoint, VertexComponent} from "../graph/vertex/Vertex"; // require overlap, graphelement
-import { Polygon, Circle, Cross, Decagon,
-    Asterisk, Ellipse, Enneagon, Hexagon, Nonagon,
-    Octagon, Heptagon, Pentagon, Rectangle, Septagon,
-    Square, Star, SimpleStar, DecoratedStar, Trapezoid, Triangle
-} from  "../graph/vertex/Shapes";
-import {DefaultNode, DefaultNodeComponent} from "../graph/defaultNode/DefaultNode"; // require graphelement
+// classic graphelement imports removed (de-entanglement stage 4 — the classic
+// component classes are no longer registered; the dictionaries below survive as
+// pure {cname} metadata for the view-properties dropdowns)
 // GraphsContainer removed (classic shutdown Fase 5a — graph/graph/graphContainer.tsx deleted, no external consumers)
-import {Edge, EdgeComponent} from "../graph/damedges/damedge";
 import {GenericInput} from "../components/forEndUser/GenericInput"
 import {U} from "./index";
 import { Control } from "../components/forEndUser/Control";
-// exports graphelements
-export {GraphElement, GraphElementComponent} from "../graph/graphElement/graphElement";
-export {Graph, Vertex, VoidVertex, GraphVertex, Field, EdgePoint, VertexComponent} from "../graph/vertex/Vertex"; // require overlap, graphelement
-export { Polygon, Circle, Cross, Decagon,
-    Asterisk, Ellipse, Enneagon, Hexagon, Nonagon,
-    Octagon, Heptagon, Pentagon, Rectangle, Septagon,
-    Square, Star, SimpleStar, DecoratedStar, Trapezoid, Triangle
-} from  "../graph/vertex/Shapes";
-
-export {DefaultNode, DefaultNodeComponent} from "../graph/defaultNode/DefaultNode"; // require graphelement
-export {Edge, EdgeComponent,} from "../graph/damedges/damedge";
+// classic graphelement exports removed (de-entanglement stage 4)
 export {DerivedReferenceEdge} from "../edges/derived/DerivedReferenceEdge";
 export {GenericInput} from "../components/forEndUser/GenericInput"
 export {IRView} from "../ai/viewpointIR/IRView";
@@ -57,37 +40,42 @@ export {Overlap} from "../components/forEndUser/Overlap";
 export {ControlPanel} from '../components/forEndUser/ControlPanel';
 export {Control, Slider, Toggle_Obsolete, Toggle_Obsolete as Toggle, Zoom, Panel, Panell, MetaElementPicker, /*ContextualEntry*/} from '../components/forEndUser/Control';
 
-type dict = Dictionary<string, typeof GraphElement | typeof Edge>;
+// de-entanglement stage 4: the classic component classes are gone from the
+// barrel. The dictionaries survive as pure {cname} metadata because
+// editors/views/data/InfoData.tsx and editors/viewpoint/properties/ViewProperties.tsx
+// read Object.keys(...) and .cname to populate the view-component dropdowns.
+// The cname strings below are copied verbatim from the deleted classes.
+export interface ClassicComponentMeta { cname: string; }
+type dict = Dictionary<string, ClassicComponentMeta>;
 
 
 export const Graphs = {
-    Graph: Graph, GraphVertex: GraphVertex,
+    Graph: {cname: 'Graph'}, GraphVertex: {cname: 'GraphVertex'},
 }
 export const Edges = {
-    Edge: Edge,
-    EdgePoint: EdgePoint,
+    Edge: {cname: 'Edge'},
+    EdgePoint: {cname: 'EdgePoint'},
 }
 export const Fields = {
-    Field: Field,
-    // GraphElement: GraphElement,
+    Field: {cname: 'Field'},
+    // GraphElement
 }
 export const Vertexes = {
-    Vertex: Vertex,
-    // VoidVertex: VoidVertex,
-    Circle: Circle,
-    Polygon: Polygon,
-    Cross: Cross,
-    Asterisk: Asterisk,
-    //Star: Star,
-    SimpleStar: SimpleStar, DecoratedStar: DecoratedStar,
-    Triangle: Triangle, Square: Square, Pentagon: Pentagon,
-    Hexagon: Hexagon, Heptagon: Heptagon, Octagon: Octagon,
-    Enneagon: Enneagon, Decagon: Decagon,
-    // Nonagon: Nonagon, Septagon: Septagon,
-    // Diamond: Diamond, Rhombus: Rhombus,
-    Ellipse: Ellipse,
-    Rectangle: Rectangle,
-    Trapezoid: Trapezoid
+    Vertex: {cname: 'Vertex'},
+    // VoidVertex
+    Circle: {cname: 'Ellipse/Circle'},
+    Polygon: {cname: 'N-Polygon'},
+    Cross: {cname: 'N-Cross'},
+    Asterisk: {cname: 'Cross/Asterisk'},
+    //Star
+    SimpleStar: {cname: 'N-SimpleStar'}, DecoratedStar: {cname: 'N-DecoratedStar'},
+    Triangle: {cname: 'Polygon/Triangle'}, Square: {cname: 'Rectangle/Square'}, Pentagon: {cname: 'Polygon/Pentagon'},
+    Hexagon: {cname: 'Polygon/Hexagon'}, Heptagon: {cname: 'Polygon/Heptagon'}, Octagon: {cname: 'Polygon/Octagon'},
+    Enneagon: {cname: 'Polygon/Nonagon'}, Decagon: {cname: 'Polygon/Decagon'},
+    // Nonagon, Septagon, Diamond, Rhombus
+    Ellipse: {cname: 'Ellipse'},
+    Rectangle: {cname: 'Rectangle (alias for default <Vertex />)'},
+    Trapezoid: {cname: 'Trapezoid'}
 }
 export const GraphElements: dict = {...Graphs, ...Vertexes, ...Fields, ...Edges}; // T & {vertexes: T, edges: T, graphs: T, fields: T} = {} as any;
 for (let key in GraphElements) if (!(GraphElements as any)[key]) { throw new Error("wrong initialization fo components"); }

@@ -8,7 +8,9 @@ export class Debug {
     private static lightModeInput: HTMLInputElement;
 
     // manually activated: counts how many times each node is rendered in a component.
+    // note (de-entanglement stage 5): windoww.GraphElementComponent no longer exists; guarded to keep the console tool safe.
     static getComponentMap(){
+        if (!windoww.GraphElementComponent) { console.warn('[Debug] classic GraphElementComponent registry removed (de-entanglement stage 5)'); return {}; }
         let nodes = Object.values(windoww.GraphElementComponent.all).map((a:any)=>a.props.node).filter(a=>!!a);
         let nodeids = [...new Set(nodes.map(a=>a.id).filter(a=>!!a))];
         let allids: GObject = {};
@@ -46,7 +48,8 @@ export class Debug {
         Debug.lightModeInput.checked = b;
     }
     public static refresh(): void {
-        for (let key in windoww.GraphElementComponent.all) {
+        // guarded (de-entanglement stage 5): classic registry removed
+        for (let key in (windoww.GraphElementComponent?.all || {})) {
             windoww.GraphElementComponent.all[key].forceUpdate();
         }
         // console.log(windoww.GraphElementComponent.all);

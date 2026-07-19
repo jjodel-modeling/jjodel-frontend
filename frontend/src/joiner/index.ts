@@ -303,24 +303,13 @@ w.$s = $s;
 */
 export {} from './components';
 export {
-    TextArea, Select, Input, Edit, Edge, // Image,
+    TextArea, Select, Input, Edit, // Image,
     Overlap as OverlapComponent,
-    GraphElement,
-    Vertex, VoidVertex, EdgePoint,
-    Graph, GraphVertex,
-    Field,
-    DefaultNode,
-    GraphElementComponent,
-    VertexComponent,
-    DefaultNodeComponent,
+    // classic components purged (de-entanglement stage 4): GraphElement(Component), Vertex(Component), VoidVertex,
+    // EdgePoint, Graph, GraphVertex, Field, DefaultNode(Component), Edge(Component), shapes
     // DockLayoutComponent,
     //ColorScheme,
-    EdgeComponent,
     DataOutputComponent, GenericInput,
-    Polygon, Circle, Cross, Decagon,
-    Asterisk, Ellipse, Enneagon, Hexagon, Nonagon,
-    Octagon, Heptagon, Pentagon, Rectangle, Septagon,
-    Square, Star, SimpleStar, DecoratedStar, Trapezoid, Triangle,
     View, Try, ControlPanel, CountryPicker,
     GraphElements, Graphs, Vertexes, Edges, Fields,
     MeasurableComponent, Measurable, Draggable, Rotatable, Resizable, ContextMenu, ContextualEntry,

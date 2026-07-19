@@ -20,7 +20,6 @@ import {
     Constructors,
     DPointerTargetable
 } from "../../../joiner";
-import {DefaultNode} from "../../../joiner";
 import ContextMenu from "../../contextMenu/ContextMenu";
 import { FeaturesPalette, getFeatureByDragType } from "../../FeaturesPalette";
 import { CanvasExportService, ExportFormat } from "../../../services/CanvasExportService";
