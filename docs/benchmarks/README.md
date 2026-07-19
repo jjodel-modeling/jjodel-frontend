@@ -80,3 +80,46 @@ Note di lettura:
    gli elementi DOM `[id^=Pointer]` del GraphContainer (nodi + field).
 
 File: `2026-07-18_baseline_run{1,4,5}.json` in questa cartella.
+
+## Risultati 2026-07-19 (500 Task / 1000 link — MacBook Air M3)
+
+Ambiente: MacBook Air M3 (24 GB, macOS 26.2), Node v23.3.0, HEAD `1f6045f4f`
+(branch `alfonso-frontend-jjtl`), stesso harness e stessa procedura (build di
+produzione + `vite preview`, Chromium headless). Macchina scarica (solo un dev
+server vite idle su :3000, ~0% CPU). Baseline hardware reale; NON confrontare
+i tempi assoluti con la tabella cloud sopra (macchina diversa) — il confronto
+valido resta same-machine.
+
+| Metrica | run1 | run2 | run3 |
+| --- | --- | --- | --- |
+| import ecore | 90 ms | 73 ms | 109 ms |
+| import xmi (502 oggetti) | 837 ms | 819 ms | 787 ms |
+| mount flow (500 nodi) | 18.0 s | 17.6 s | 19.2 s |
+| edge settle | 148 s | 119 s | 119 s |
+| responsive dopo open | 178 s | 122 s | 144 s |
+| edge RF renderizzati | 986/1000 | 986 | 986 |
+| commit React durante open | 1538 | 1556 | 1546 |
+| mutazione singola (store settle) | 8.9 s | **6.0 s** | 8.9 s |
+| commit React per la mutazione | 22 | 22 | 20 |
+| attivazione viewpoint Default (block) | — | — | — |
+| mount classic (dal click) | — | — | — |
+
+Note di lettura:
+
+1. **Il toggle classic non è stato trovato in nessun run** su questo HEAD
+   (`classic_toggle_found: 0`): il selettore viewpoint c'è e il viewpoint
+   Default viene attivato dall'harness, ma il pulsante "Concrete syntax only"
+   non compare, quindi `t_viewpoint_activation_block_ms` e `t_mount_classic_ms`
+   non sono misurabili (l'harness registra il blocco solo dentro il ramo
+   toggle). Nel cloud lo stesso era accaduto in run1; solo run5 lo catturò.
+2. **Nessuno scenario "viewpoint IR attivo" è documentato in questo harness**:
+   non eseguito (richiederebbe un'estensione dedicata, fuori scope qui).
+3. Mount nodi ~9× più veloce del cloud run1, ma **l'edge settle resta ~2 min**
+   anche su M3: il trickle degli edge post-mount non è dominato dalla CPU
+   contesa del container. Idem la firma dell'amplificatore sulla mutazione
+   singola: ~6–9 s di settle con ~20–22 commit React.
+4. 986/1000 edge come nel cloud: i 14 link mancanti sono stabili cross-machine
+   (stesso bug noto, non investigato qui).
+
+File: `2026-07-19_baseline_m3_run{1,2,3}.json` in questa cartella (con blocco
+`env` annotato a mano dopo il run).
