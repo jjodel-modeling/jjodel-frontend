@@ -202,7 +202,7 @@ export {Action, CreateElementAction, DeleteElementAction, SetFieldAction, SetRoo
     TRANSACTION, ABORT, /*BEGIN, END*/} from "../redux/action/action";
 
 export {DState, LState, ModelStore, ViewPointState, statehistory} from "../redux/store";
-export {GraphDragManager} from "../graph/graphElement/GraphDragHandler";
+export {GraphDragManager} from "../redux/GraphDragHandler";
 export {Selectors} from "../redux/selectors/selectors";
 // export var Selectors = windoww.Selectors as (GObjectt & typeof SelType);
 export {reducer, stateInitializer} from "../redux/reducer/reducer";

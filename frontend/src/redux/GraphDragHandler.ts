@@ -1,9 +1,9 @@
-///<reference path='../../joiner/index.ts' />
+///<reference path='../joiner/index.ts' />
 
-import type {LGraph} from "../../joiner";
-//import type {RuntimeAccessible, RuntimeAccessibleClass, Point as PointType} from "../../joiner";
-import type {Point as PointType} from "../../joiner";
-import {RuntimeAccessible, RuntimeAccessibleClass} from "../../joiner";
+import type {LGraph} from "../joiner";
+//import type {RuntimeAccessible, RuntimeAccessibleClass, Point as PointType} from "../joiner";
+import type {Point as PointType} from "../joiner";
+import {RuntimeAccessible, RuntimeAccessibleClass} from "../joiner";
 import React from "react";
 
 // @static
