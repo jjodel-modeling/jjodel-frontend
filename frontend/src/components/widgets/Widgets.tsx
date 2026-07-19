@@ -7,7 +7,6 @@ import { SetRootFieldAction } from '../../joiner';
 import { MapStateToProps } from 'react-redux';
 import { InputMapStateToProps } from '../forEndUser/Input';
 import { DState } from '../../joiner';
-import { VertexOwnProps, VertexStateProps } from '../../graph/graphElement/sharedTypes/sharedTypes';
 
 
 

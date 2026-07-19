@@ -17,8 +17,6 @@ import {
     DClass,
     DModel,
     UX,
-    EdgeOwnProps,
-    EdgeStateProps,
     GraphElementComponent,
     ViewEClassMatch,
     NodeTransientProperties,
