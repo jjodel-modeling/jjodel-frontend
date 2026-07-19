@@ -17,7 +17,6 @@ import {
     DClass,
     DModel,
     UX,
-    GraphElementComponent,
     ViewEClassMatch,
     NodeTransientProperties,
     ViewTransientProperties,
@@ -64,6 +63,7 @@ import {SimpleTree} from "../../common/SimpleTree";
 import {transientProperties, Selectors} from "../../joiner";
 import {OclEngine} from "@stekoe/ocl.js";
 import { contextFixedKeys } from '../../common/sharedTypes';
+import { displayError } from '../../common/jsxErrorView';
 import Storage from "../../data/storage";
 import {AuthApi, ProjectsApi} from "../../api/persistance";
 import DSL from "../../DSL/DSL";
@@ -1014,7 +1014,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
                     e = eeval;
                 }*/
                 console.error('error jsxparse', {vid, e, paramStr, body});
-                tv.JSXFunction = (context) => GraphElementComponent.displayError(e, 'JSX Syntax', dv);
+                tv.JSXFunction = (context) => displayError(e, 'JSX Syntax', dv);
             }
         }
 
@@ -1076,7 +1076,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
                 console.error('error measurable parse '+key, {vid, e, paramStr, body:str});
                 (transientProperties.view[vid] as any)[key] = undefined;
                 // display error in jsx
-                transientProperties.view[vid].JSXFunction = (context) => GraphElementComponent.displayError(e, 'Measurable ' + key + ' Syntax', dv);
+                transientProperties.view[vid].JSXFunction = (context) => displayError(e, 'Measurable ' + key + ' Syntax', dv);
                 break;
             }
         }

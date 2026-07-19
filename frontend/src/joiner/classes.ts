@@ -133,8 +133,9 @@ import {
     statehistory,
     store,
     TRANSACTION,
-    U, GraphElementComponent
+    U
 } from "./index";
+import {graphComponentRegistry} from "../common/graphComponentRegistry";
 import type {Grammar, ParserOptions, Parser} from "nearley";
 import type nearley from "nearley";
 import type {CtxMenuAllProps} from "../components/forEndUser/ContextMenu";
@@ -4188,11 +4189,11 @@ export const transientProperties = {
                 if (tn.viewScores[vid]?.jsxOutput) delete tn.viewScores[vid]?.jsxOutput;
             }
         }
-        GraphElementComponent.map[nid]?.forceUpdate();
+        graphComponentRegistry[nid]?.forceUpdate();
     },
     updateNodeViewCombinationOnly(nid: Pointer<DGraphElement>, vid: Pointer<DViewElement>, force_deleteCache: boolean = true): void {
         if (force_deleteCache && transientProperties.node[nid]?.viewScores[vid]?.jsxOutput) delete transientProperties.node[nid]?.viewScores[vid]?.jsxOutput;
-        GraphElementComponent.map[nid]?.forceUpdate();
+        graphComponentRegistry[nid]?.forceUpdate();
     }
 };
 (window as any).transient = (window as any).transientProperties = transientProperties;

@@ -28,6 +28,7 @@ import {
     transientProperties, JSXT, DViewElement
 } from "../joiner";
 import {ScrollableComponent} from "../components/forEndUser/Measurable";
+import {displayError} from "./jsxErrorView";
 import {
     Control,
     MetaElementPicker,
@@ -439,7 +440,7 @@ export class UX{
         let jsxCompiled: DocString<ReactNode>;
         let e: any;
         try { jsxCompiled = JSXT.fromString(jsxString, {factory: 'React.createElement'}); }
-        catch (ee: any) { e = ee; jsxCompiled = GraphElementComponent.displayError(e, "JSX Syntax", v, undefined, undefined, true) as any; }
+        catch (ee: any) { e = ee; jsxCompiled = displayError(e, "JSX Syntax", v, undefined, undefined, true) as any; }
         return jsxCompiled;
     }
     static stopEvt(e: GObject<React.SyntheticEvent>): void{
