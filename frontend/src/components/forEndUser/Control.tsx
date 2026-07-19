@@ -15,7 +15,7 @@ import { JSXElementConstructor, MouseEventHandler, ReactElement, ReactNode, Reac
 import "./control.scss";
 import { useStateIfMounted } from "use-state-if-mounted";
 import { Tooltip } from "./Tooltip";
-import { VertexOwnProps } from "../../graph/graphElement/sharedTypes/sharedTypes";
+import { VertexOwnProps } from "../../common/sharedTypes";
 import { VscDebugRestart, VscDebugStepInto, VscDebugStop } from "react-icons/vsc";
 
 

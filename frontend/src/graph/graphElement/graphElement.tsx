@@ -2,7 +2,7 @@ import React, {Component, Dispatch, PureComponent, ReactElement, ReactNode,} fro
 import {createPortal} from "react-dom";
 import {connect} from "react-redux";
 // import './graphElement.scss';
-import type {EdgeOwnProps} from "./sharedTypes/sharedTypes";
+import type {EdgeOwnProps} from "../../common/sharedTypes";
 import {
     GraphSize,
     LGraph,
@@ -26,7 +26,7 @@ import {
     DataTransientProperties, L, GraphVertex, Graph, Vertex, Uobj, DEdgePoint, DVertex, DGraphVertex,
     LVertex, Defaults
 } from "../../joiner";
-import {DefaultUsageDeclarations} from "./sharedTypes/sharedTypes";
+import {DefaultUsageDeclarations} from "../../common/sharedTypes";
 
 import {EdgeStateProps, LGraphElement, store, VertexComponent,
     CreateElementAction, DClass, Debug,

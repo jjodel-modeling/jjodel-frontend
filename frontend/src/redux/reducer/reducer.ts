@@ -63,7 +63,7 @@ import Collaborative from "../../components/collaborative/Collaborative";
 import {SimpleTree} from "../../common/SimpleTree";
 import {transientProperties, Selectors} from "../../joiner";
 import {OclEngine} from "@stekoe/ocl.js";
-import { contextFixedKeys } from '../../graph/graphElement/sharedTypes/sharedTypes';
+import { contextFixedKeys } from '../../common/sharedTypes';
 import Storage from "../../data/storage";
 import {AuthApi, ProjectsApi} from "../../api/persistance";
 import DSL from "../../DSL/DSL";

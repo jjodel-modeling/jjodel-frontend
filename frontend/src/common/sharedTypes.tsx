@@ -11,9 +11,9 @@ import type {
     LModelElement,
     LViewElement,
     Pointer, PrimitiveType
-} from "../../../joiner";
-import {Dictionary, LClass, LEdge, LUser, LViewPoint, LVoidVertex, RuntimeAccessible} from "../../../joiner";
-import {GObject, InitialVertexSize, orArr} from "../../../joiner/types";
+} from "../joiner";
+import {Dictionary, LClass, LEdge, LUser, LViewPoint, LVoidVertex, RuntimeAccessible} from "../joiner";
+import {GObject, InitialVertexSize, orArr} from "../joiner/types";
 
 export class GraphElementStatee {/*
     constructor(preRenderFunc: string | undefined, evalContext: GObject, templatefunc: () => React.ReactNode) {

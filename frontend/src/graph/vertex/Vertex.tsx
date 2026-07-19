@@ -36,7 +36,7 @@ import 'jqueryui';
 import 'jqueryui/jquery-ui.css';
 import { lightModeAllowedElements } from '../graphElement/graphElement';
 import ContextMenu from "../../components/contextMenu/ContextMenu";
-import {VertexOwnProps, VertexStateProps} from '../graphElement/sharedTypes/sharedTypes';
+import {VertexOwnProps, VertexStateProps} from '../../common/sharedTypes';
 import { rafThrottle, cancelThrottle, flushThrottle } from '../../utils/DragThrottle';
 import { PerformanceMetrics } from '../../utils/PerformanceMetrics';
 
