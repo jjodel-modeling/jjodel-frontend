@@ -4,6 +4,7 @@
 **Tipo**: FASE 1 — discovery READ-ONLY. Nessuna modifica al codice. Hard stop a fine report.
 **Repo**: jjodel-frontend, branch `alfonso-frontend-jjtl`
 **Prompt**: mappa completa di (a) cosa dipende dal classic editor, (b) quanto del meccanismo viewpoint è editor-agnostico vs classic-bound, (c) quanto lavoro serve per portare il rendering viewpoint-driven dentro EditorV2.
+**Rev 2026-07-17 (seconda passata)**: integrate le 4 estensioni decise in chat di progetto — §3.2-bis (algoritmo di risoluzione multi-match per i nodi), §3.6-bis (edge con endpoint non renderizzati), §4-bis (registrazione nodeTypes React Flow), §4-ter (hotspot performance del render path). Sezioni preesistenti invariate salvo questa nota.
 
 **Verdetto in una riga**: la rimozione del classic NON è un delete di `graph/` — gli entanglement veri stanno nel core (reducer, barrel joiner, DV.tsx/defaultViewTemplate.ts che sono critical-zone, VersionFixer che riscrive i progetti salvati VERSO template classic-only); ma il meccanismo viewpoint ha un taglio pulito **tra risoluzione e rendering**: scoring delle view e compilazione dei template sono già editor-agnostici e ospitabili da EditorV2, mentre scope runtime, prop-injection e tutto il machinery edge sono classic-bound e vanno sostituiti, non riusati. L'aggancio viewpoint esistente in EditorV2 (`ViewpointRenderer` + `data.jsxString`) è oggi **codice morto**: nessun transformer popola `jsxString`.
 
@@ -12,6 +13,8 @@
 ## 0. Metodo e file analizzati
 
 Discovery condotta con 5 esplorazioni parallele (una per area) + verifica a campione delle citazioni load-bearing (reducer.ts:68/:1441, ClassNode.tsx:423/:434, types.ts:125, EditorSwitch.tsx:56/:111/:129, view.tsx:271/:901, VersionFixer.tsx:936-938/:972/:993, DV.tsx:32/:1707-1715, LModelElement.tsx:5178, jjomTransformers.ts:499-501 — tutte confermate sul working tree).
+
+**Rev (seconda passata)**: 4 esplorazioni parallele aggiuntive, una per integrazione, con seconda tornata di verifiche a campione (selectors.ts:417-437 `getFinalScore` e classes.ts:4071-4095 `NodeTransientProperties.sort` verbatim; graphElement.tsx:1408-1411 ramo EdgeFallbackCard; damedge.tsx:119-126 error stub; LModelElement.tsx:5233+ `SkipExtendNodeHidden`; EditorV2.tsx:99-105/:112-117/:3387-3388 nodeTypes/edgeTypes; DynamicHandles.tsx:221 handle id; action.ts:349 dispatch async; useM1ReferenceEdges.ts:19-21 commento di costo; EditorV2.tsx:1145-1150 stabilizer; selectors.ts:594 commento OCL — tutte confermate). File aggiuntivi letti: `utils/edgeExpressionEval.ts`, `utils/LazyOCL.ts`, `redux/store.tsx`, `common/Defaults.ts`, `components/editor-v2/components/DynamicHandles.tsx`, `components/editor-v2/utils/edgeUtils.ts`, `components/editor-v2/utils/reLayoutWatcher.ts`, `components/editor-v2/components/InlineTypeSelect.tsx`, `components/editor-v2/panels/PalettePanel.tsx`, `components/editor-v2/repro/ReproHarness.tsx`, `redux/action/action.ts`, `graph/vertex/Vertex.tsx` (throttle), `edges/derived/DerivedReferenceEdge.tsx`.
 
 File letti/analizzati (path da `frontend/src/` salvo diversa indicazione):
 
@@ -143,6 +146,47 @@ Pipeline in `redux/selectors/selectors.ts`: `getAppliedViewsNew({data,node,pv,ni
 
 **Classificazione: logica AGNOSTICA, storage+invocazione CLASSIC-BOUND.** Chiamabile da EditorV2 con `node: undefined` e un `nid` sintetico stabile.
 
+### 3.2-bis Algoritmo di risoluzione multi-match per i nodi (integrazione rev.)
+
+Cosa succede quando più view matchano lo stesso elemento (Vertex/Field/Graph — per gli edge vedi §3.6/§3.6-bis). Pipeline: `mapViewStuff` → `getScores` → `getAppliedViewsNew` → `updateScores` (componenti di score) → `NodeTransientProperties.sort` (score finale + ranking + split main/stack).
+
+**Componenti di score per coppia (view, elemento)** — `updateScores` (`selectors.ts:495-606`), memorizzati in `ViewScore` (`classes.ts:4021-4044`):
+
+| Componente | Valori | Sede |
+|---|---|---|
+| `viewPointMatch` | `VP_Explicit=2` (viewpoint attivo), `VP_Default=1` (`Pointer_ViewPointDefault`), `VP_Decorative=1` (viewpoint terzo NON esclusivo), `VP_MISMATCH=-∞` (viewpoint terzo esclusivo → short-circuit :562-565) | `selectors.ts:553-559`; costanti `classes.ts:4015-4018` |
+| `metaclassScore` | `EXACT_MATCH=2`, `INHERITANCE_MATCH=1.5` (sottoclasse), `IMPLICIT_MATCH=1` (nessuna `appliableToClasses`), `MISMATCH=-∞` | `matchesMetaClassTarget` `selectors.ts:356-373` (chiamata :571); costanti `classes.ts:4009-4014` |
+| `jsScore` | numero positivo o `true`; errore/valore non valido → `MISMATCH_JS=false`; condizione assente → `true` | `updateJSScore` `selectors.ts:718-750` (chiamata :583) |
+| `OCLScore` | `true` se `oclCondition` assente (`ocl.tsx:130`); altrimenti booleano OCL; fallimento → `false` | `OCL.test` `ocl.tsx:127-144` (chiamata :596) |
+
+**Formula finale** — `getFinalScore` (`selectors.ts:417-437`, verificata verbatim):
+
+```
+finalScore = viewPointMatch × metaclassScore × pvScore × explicitprio + bonus
+```
+
+- Qualunque componente in mismatch → return `MISMATCH` (-∞) subito (:418-420; il confronto `OCLScore === MISMATCH_JS` a :420 funziona perché `MISMATCH_JS` e `MISMATCH_OCL` sono entrambi `false`, `classes.ts:4010-4011`).
+- `pvScore` = boost per-subview del parent: `parentView.subViews[vid]` se la view è nel dizionario `subViews` del parent, altrimenti `1` (:421-422).
+- **Precedenza di `explicitprio`** (:424-429): (1) valore **numerico** ritornato dalla `jsCondition` vince su tutto; (2) altrimenti `explicitApplicationPriority` se settata (`view.tsx:224`, default `undefined` — `classes.ts:1113`); (3) altrimenti euristica automatica `(jsCondition.length||1) + (oclCondition.length||1)` — cioè **la lunghezza testuale dei predicati fa da priorità implicita** (più specifico ≈ più lungo ≈ vince).
+- `defualtViewMalus` (:433): nonostante il nome è un **bonus additivo +0.1 per le view NON di default** — `dview.id.indexOf('View') >= 0 ? 0 : 0.1`. Le view built-in hanno id contenenti `"View"` (`Pointer_ViewModel`, `Pointer_ViewFallback`, … — `common/Defaults.ts:47-67`) → bonus 0; le view utente hanno id random senza `"View"` → +0.1, quindi a parità di parte moltiplicativa **la view utente batte la default**.
+
+**Ordinamento e split** — `NodeTransientProperties.sort` (`classes.ts:4071-4095`, verificata verbatim): le view con `finalScore <= 0`/`-∞`/`undefined` sono scartate (:4082); le rimanenti sono divise per `dview.isExclusiveView` in `mainViews` vs `decorativeViews` (:4083); entrambi gli array ordinati **decrescenti per score puro** con comparatore `(s1, s2) => s2.score - s1.score` (:4085-4086) — **nessun tiebreak esplicito**. Risultato: `mainView = mainViews[0]` (:4091), `validMainViews` (tutti gli esclusivi ordinati, :4092), `stackViews` (tutti i decorativi ordinati, :4093).
+
+**mainView / stackViews / decorators al render** (`graphElement.tsx:1299-1370`): solo la **mainView** produce l'output del nodo — è posta ultima in `allviews` (:1300), le view di stack sono renderizzate prima e accumulate in `decoratorViewsOutput` (:1362-1365), iniettato nel contesto della main come `context.decorators` (:1401). Le decorative NON emettono output autonomo: affiorano solo se il template della main usa `{decorators}`.
+
+**`isExclusiveView` — doppia semantica** (default `true` per ogni view nuova, `classes.ts:1114`):
+- **sulla view**: classificatore main/decorator (`classes.ts:4083`) — esclusiva compete per la singola `mainView`, non esclusiva va nello stack. NON blocca lo stacking né esclude view a priorità inferiore.
+- **sul viewpoint** (`DViewPoint`, mappato a `'syntax'` in `viewpoint.ts:19`): gate cross-viewpoint (`selectors.ts:558-559`) — una view di un viewpoint terzo non-esclusivo matcha comunque come decorativa (`VP_Decorative`); di un viewpoint terzo esclusivo è rigettata (`VP_MISMATCH`). È il meccanismo che isola i viewpoint "sintassi" tra loro lasciando applicare i viewpoint overlay.
+- Guardia: le default view non possono essere demote da esclusive (`view.tsx:469-472`).
+
+**Fallback sulla default view — nessun ramo speciale**: il fallback è una **view reale che matcha sempre tramite lo scoring ordinario**. `Pointer_ViewFallback` è creata in `redux/store.tsx:466-482` senza `appliableToClasses`/predicati → `IMPLICIT_MATCH(1)` (`selectors.ts:358`), `jsScore=true` (:746), OCL `true` (`ocl.tsx:130`), `explicitprio=2` (euristica su stringhe vuote), viewpoint default → score ≈ 2–4 sempre positivo, sempre in `mainViews`. Qualunque view genuinamente matchante la sorpassa (le default per-metaclasse vincono via `EXACT_MATCH(2)` — es. `views.ts:43-54`); quando niente altro matcha, è l'unica esclusiva superstite → `mainView`. Cinture di sicurezza hardcoded in `mapViewStuff`: `graphElement.tsx:186` (view esplicita non trovata) e `:207-209` (guardia finale `if (!ret.view)`); la fallback riceve la classe `graph-centered` (:1464-1465). Commento che documenta il contratto: `classes.ts:4087-4089`.
+
+**Determinismo**: iterazione su `Object.values(state.viewelements)` (`selectors.ts:525/:531`, `getAllViewElements` :89-95) e `Object.keys(tn.viewScores)` (`classes.ts:4075`) → ordine di inserzione deterministico; sort V8 stabile → i pareggi si risolvono per **ordine di creazione delle view**, riproducibile ma senza chiave semantica. **Unica fonte di non-determinismo temporale**: la cache OCL `utils/LazyOCL.ts` — TTL 2 secondi con `Date.now()` (:49, :114-115, :152, :164) e `getDataVersion` che deliberatamente hasha `className` invece di `clonedCounter` (:60-77) → un edit al modello che cambia l'esito di una `oclCondition` può non ribaltare il match della view fino alla scadenza del TTL. La selezione OCL-driven è quindi time-sensitive, non strettamente data-driven.
+
+**Cache e invalidazione**: risultati in `transientProperties.node[nid]` (`viewScores`/`mainView`/`validMainViews`/`stackViews`/`needSorting` — `classes.ts:4047-4056`); re-sort solo se `needsorting || !tn.stackViews` (`selectors.ts:620-621`). Invalidazione nel reducer (righe correnti, lievemente driftate rispetto a §3.2): view creata :656-661, cancellata :669-676, `VIEWS_RECOMPILE_ocl` :804-817 (reset `OCLScore=NOT_EVALUATED_YET` su TUTTI i nodi), `VIEWS_RECOMPILE_preconditions` :824-832 (idem per `metaclassScore`), `VIEWS_RECOMPILE_jsCondition` :964-992, recompile totale :691-731 (`resetAllNodes` :724-730 cancella ogni `transientProperties.node[nid]`). La cache LazyOCL NON è toccata da questi path (si auto-scade sul TTL; `invalidateDataCache` :260-270 esiste ma non è chiamata da qui).
+
+**Rilevanza per un interprete nuovo**: l'intero algoritmo è puro (dati D + costanti) salvo il node-cheat OCL — replicabile fuori dal classic. I punti semantici da decidere esplicitamente in una reimplementazione: l'euristica lunghezza-predicati come priorità implicita, il bonus +0.1 id-based, il tiebreak per ordine di creazione, e la doppia semantica di `isExclusiveView`.
+
 ### 3.3 Pipeline di valutazione template
 
 - **Compile (agnostico, già condiviso)**: `reducer.ts:1007-1009` su `VIEWS_RECOMPILE_jsxString` (:995): `DSL.parser` (`DSL/DSL.ts:2`, espande tag custom tipo `<Children includes/excludes/>`) → `UX.parseAndInject` (`UX.tsx:438-444`, in realtà sottile: solo `JSXT.fromString` JSX→`React.createElement`, con fallback `displayError`) → `new Function(paramStr, body)`. Una funzione compilata **per view** in `transientProperties.view[vid].JSXFunction`, riusabile da qualunque renderer.
@@ -169,6 +213,37 @@ Pipeline in `redux/selectors/selectors.ts`: `getAppliedViewsNew({data,node,pv,ni
 - Overlay L2 (`EdgeOverlay.tsx`): filtro per viewpoint attivo agnostico (:189-192/:205-206, `findApplicableEdgeView` :540, `safeEval` degli endpoint :233-234), ma risoluzione dei rect sui nodi classic (`getNodeRect`/`LGraphElement.getNodeId` :237-238/:590-605) e mount solo in `ModelTab.tsx:47`.
 - Edge nativi: la view guida `bendingMode`/`edgeGapMode`/segmenti in `GraphDataElements.tsx:2375/:2463`; creazione `DEdge` in `graphElement.tsx:302-339` con anchor classic.
 - **EditorV2 non consulta MAI le view per gli edge**: disegna da riferimenti JjOM via `UnifiedEdge.tsx` + `useM1ReferenceEdges.ts` + `refEdgeReconcile.ts`; `isEdge`/`edgeSource`/`edgeTarget`/`bendingMode`/anchor ignorati. Tutto il machinery edge-view è classic-only senza percorso di riuso.
+
+### 3.6-bis Edge con endpoint non renderizzati — comportamento effettivo (integrazione rev.)
+
+I due canali edge del classic gestiscono l'endpoint mancante in modi **strutturalmente diversi**. Comportamento documentato dal codice, non atteso.
+
+**Canale 1 — L2 overlay (edge view-driven)**: la decisione è **spaccata tra due file con due criteri diversi**.
+- Il **fallback** è deciso da `graphElement.tsx:1408-1411` sulla **risoluzione delle espressioni**: `evalEdgeExpression` (`utils/edgeExpressionEval.ts:64`, successo solo se il valore "sembra un LObject" — `:99-102`; navigazione dati pura, non guarda MAI se l'endpoint è renderizzato). Entrambe risolvono → `null` (nessuna card, l'arco spetta all'overlay); **0 o 1 risolte → `EdgeFallbackCard`** (che mostra `S1 → ?`, lati irrisolti come `'?'` — `EdgeFallbackCard.tsx:56-57/:64-72`).
+- L'**arco** è deciso da `EdgeOverlay.tsx` sulla **risoluzione dei rect**: per ogni DObject candidato, view applicabile (:230-231), `safeEval` dei due endpoint (:233-235), poi `getNodeRect` × 2 (:237-239) — ogni fallimento è un `continue` **silenzioso** (log solo con `window.__edgeOverlayDebug`, :120-130). `getNodeRect` (:595-645): Path 1 dal L-layer (`LGraphElement.getNodeId` :605 → nodo store con coordinate finite — **il mount DOM NON è richiesto**), Path 2 fallback DOM `querySelector('[data-nodeid]')` :634-635.
+- **Conseguenze**: (i) endpoint che risolve come LObject ma **senza nodo grafo nello store** → niente card (le espressioni risolvono) E niente arco (rect nullo) → **sparizione silenziosa: il gap tra i due criteri**. (ii) endpoint con nodo store e coordinate finite ma non montato nel DOM → **l'arco viene comunque disegnato** verso un endpoint invisibile. (iii) il filtro viewpoint (:202-206) opera sulle **edge view** (`e.viewpoint !== activeVpId` → view scartata → arco soppresso), non sugli endpoint: un endpoint nascosto dal viewpoint ricade nel caso (i). (iv) **nessuna risalita ad antenato** in tutto il canale: solo `continue`/`null`/card (`findApplicableEdgeView` :556-586 risale la priorità di *classifier* per la selezione della view, non gli antenati dell'endpoint).
+
+**Canale 2 — edge nativi (suggestedEdges → `<Edge>`/`<DerivedReferenceEdge>`)**: gate alla **fase di suggestion** su `.html` vivo.
+- **M1**: `impl_get_suggestedEdgesM1` (`LModelElement.tsx:5196-5205`) — sorgente senza `.html` → `continue outer` (salta TUTTI gli edge uscenti del DValue); target senza `.html` → `continue inner` (salta quel singolo edge). Silenzioso, nessuna card, nessuna risalita. (Il template M1 default tiene i DValue reference DOM-vivi apposta — commento `defaultViewTemplate.ts:126-130`, cfr. `__ref-anchors` §2.3.)
+- **M2 reference**: `:5217-5228` — endpoint scartato con `console.warn('[EdgeDebug] … not rendered yet')` (:5219-5225). Soppressione silenziosa + warning dev.
+- **M2 `extends` — l'UNICA risalita ad antenato del codebase**: `SkipExtendNodeHidden`/`_recstep` (`LModelElement.tsx:5233-5265`, consumo :5275-5277): se il nodo della superclasse non è renderizzato, ricorre negli `extends` della superclasse (nonni, ecc.) fino ai primi nodi renderizzati (`filternode` :5268-5274 richiede `c.rendered`, esclude edge/edgepoint/graph puri e nodi fuori grafo); documentata a :5232 ("if A extends B1, B2; B1 extends C1, C2; and node B1 is hidden … display edge from A~C1, A~C2, A~B2"). Il nodo di partenza deve comunque essere renderizzato (:5244-5247).
+- **Filtro consumer**: `views.ts:110-111` scarta gli EdgeStarter con `vertexOverlaps` o `!sameGraph` — di nuovo silenzioso.
+- **Guardie al render**: `damedge.tsx:248/:267` → `__skipRender` silenzioso se i pointer non risolvono; ma un edge già mintato il cui endpoint si smonta a runtime produce un **error stub rosso visibile** `errorMsg('Missing edge start/end')` (`damedge.tsx:119-126`, `errorMsg` :98-107 — artefatto DIVERSO dalla `EdgeFallbackCard` L2). `DerivedReferenceEdge` invece ritorna `null` su ogni failure (endpoint :85, view :88, graph :92, routing :117-118). La geometria (`GraphDataElements.tsx:1015-1028/:2334-2336`) assume endpoint risolti e posizionati — nessun fallback interno. `rendered` ≡ presenza DOM: `get_rendered = !!get_html` (:227).
+- **Helper di risalita generale esistente ma NON cablato**: `firstRenderedNode` (`GraphDataElements.tsx:231-236`, cammina `[this, this.father, …]` fino al primo `rendered`) è referenziato solo da un `// todo` in `EdgeStarter` (`LModelElement.tsx:4768`).
+
+**Container collassati**: il grafo classic **non ha alcun concetto di collapse** (grep `collaps` in `graph/` e `edgeOverlay/` = zero hit; le occorrenze sono confinate a editor-v2, pannelli e SCSS). L'analogo è lo slider di dettaglio `level` in `DV.tsx` (gate a :1228/:1266/:1308/:1312/:1577): un level basso semplicemente non renderizza i figli → l'endpoint ricade nei casi "non renderizzato" sopra.
+
+**Tabella semantica cross-canale** (ciò che un interprete nuovo deve replicare o ridefinire esplicitamente):
+
+| Situazione | Canale 1 (L2 overlay) | Canale 2 (nativi) |
+|---|---|---|
+| Espressione endpoint non risolve a LObject | **EdgeFallbackCard** (`graphElement.tsx:1411`) | n/a (i nativi usano relazioni del modello, non espressioni) |
+| Endpoint risolve ma NON ha nodo grafo nello store | né card né arco → **sparizione silenziosa** (`EdgeOverlay.tsx:239`) | EdgeStarter mai creato → **silenzioso** (`LModelElement.tsx:5197/:5203`) |
+| Nodo store con coordinate finite, non montato nel DOM | **arco disegnato comunque** (Path 1, `EdgeOverlay.tsx:619-631`) | non suggerito (serve `.html`) → **silenzioso** |
+| Endpoint filtrato dal viewpoint attivo | edge view scartata → arco soppresso (:205-206); endpoint nascosto → riga 2 | perde `.html` → **silenzioso** |
+| Container/level nasconde l'endpoint | riga 2 | **silenzioso**, TRANNE `extends` → **risale alla superclasse renderizzata** |
+| Edge mintato, endpoint si smonta al render | (overlay salta) | **error stub rosso** (`damedge.tsx:119-126`) |
+| Risalita ad antenato visibile | **nessuna** | **solo M2 `extends`** (`SkipExtendNodeHidden`) |
 
 ### 3.7 TABELLA DI CLASSIFICAZIONE (deliverable Area C)
 
@@ -210,6 +285,84 @@ Pipeline in `redux/selectors/selectors.ts`: `getAppliedViewsNew({data,node,pv,ni
 - **Flusso dati**: `useJjomSync(modelid, setNodes, setEdges, …)` (`EditorV2.tsx:344`) → `jjomVertexToRFNode`/`jjomEdgeToRFEdge`. Il transformer legge solo sintassi astratta dal proxy L; zero riferimenti a view/viewpoint in `jjomTransformers.ts`. **L'informazione "quale view del viewpoint attivo si applica" non arriva mai nella pipeline flow.** Il viewpoint attivo (`state.viewpoint`) è usato solo per chrome UI: selettore in `Toolbar.tsx:190`, pill Abstract/Concrete (:435-439), abilitazione toggle (:181/:455).
 - **La "sintassi concreta" in EditorV2 oggi = il classic montato come `classicSlot`** (`EditorSwitch.tsx:129` → `EditorV2.tsx:3509-3546`, rami classic/split con divider e `splitPercent`).
 - **Se il flow diventasse l'unico renderer**, diventano morti o da rilavorare: quasi tutto `EditorSwitch.tsx` (resta solo il ramo flow :111-121 + il restore del viewpoint :79-94), il reset-mode su cambio viewpoint (:96-109); in `ActiveEditorContext.tsx` l'intero concetto `'flow'|'classic'`, il registry `ZoomController` per-id e `ClassicZoomBridge` (:5-98); in `EditorV2.tsx` i rami classic/split (:3509-3546), il wiring `classicSlot`/`onClassicDrop`, i bridge zoom classic (:2729-2796), le prop `classicSlot/editorMode/hasViewpoint/onEditorModeChange` (:260-270/:3502-3503/:3593); in `Toolbar.tsx` il gruppo mode-toggle (:171-181/:449-456) e la pill (:435-439) da ripensare. In positivo: è esattamente il percorso che obbligherebbe a cablare risoluzione+scope (il ramo morto di ClassNode diventerebbe il render path vivo).
+
+### 4-bis Registrazione dei custom node React Flow (integrazione rev.)
+
+**Punto di registrazione**: mappe letterali **module-level** (identità stabile tra i render — pattern raccomandato da React Flow, nessun churn di ri-registrazione), NON `useMemo` né interne al componente. `EditorV2.tsx:99-105` (verificato verbatim):
+
+```ts
+const nodeTypes: NodeTypes = {
+    classNode: ClassNode,
+    enumNode: EnumNode,
+    packageNode: PackageNode,
+    objectNode: ObjectNode,         // M1: instance of a metaclass
+};
+```
+
+`edgeTypes` a `:112-117` (`reference`/`inheritance`/`composition`/`instanceRef`, tutti → `UnifiedEdge`). Passate a `<ReactFlow>` a `:3387-3388`. Seconda registrazione indipendente solo di test: `repro/ReproHarness.tsx:8-9`. **Nessuna indirezione registry/factory**: la mappa letterale è l'unico meccanismo (grep per `registerNode`/`nodeFactory`/`nodeRegistry` = zero; il simbolo `NodeTypes` in `joiner/types.ts:233` è un union L-proxy JjOM, non React Flow). Aggiungere un tipo = una chiave nel literal.
+
+**Assegnazione del `type`**: hard-coded nei transformer (`jjomTransformers.ts` — `classNode` :162, `enumNode` :203, `packageNode` :226 con `style:{zIndex:-1,width,height}` :228-232, `objectNode` :330); dispatcher `jjomVertexToRFNode` :345-363, `switch` su `className` del modello JjOM (`DClass`/`DEnumerator`/`DPackage`/`DObject`; `default → null` = nodo droppato).
+
+**Siti che branciano sulle stringhe di tipo** (la misura dell'invasività — un tipo nuovo è assente da ognuno di questi `=== 'xNode'` e cade nel ramo default se non aggiornato):
+
+| Sito | Cosa fa col tipo |
+|---|---|
+| `EditorV2.tsx:1261` | connect handler M1: solo object→object crea reference edge M1 |
+| `EditorV2.tsx:1659-1660` | dimensioni default al drop (packageNode 200×120 vs 140×40) |
+| `EditorV2.tsx:1669-1744` / `:1752-1808` | i due switch di drop (JjOM-mode / standalone) sui 4 tipi (+`classNode:abstract`) |
+| `EditorV2.tsx:1873-2036` | path di delete: i `classNode` instradati sulla co-evoluzione |
+| `EditorV2.tsx:2284`, `:625` | creazione nodi `objectNode` (composition child / altro path M1) |
+| `EditorV2.tsx:2437`, `:2481`, `:2626` | context menu: submenu composizione (object), "Add reference" (class), "Create View" (class/enum) |
+| `EditorV2.tsx:2565-2583` | context menu: classe CSS e label per tipo |
+| `EditorV2.tsx:3424-3427` | colore MiniMap per tipo |
+| `useJjomSync.ts:191-194` | gate `isVertexClassName` (`className.includes('Vertex')`, usato a :1273/:1356): decide quali D-object diventano nodi RF — un nodo backed da un vertex JjOM nuovo deve soddisfarlo |
+| `canvasToJjom.ts:1552` | undo/redo: remap attribute-id solo per `classNode` |
+| `edgeUtils.ts:1205`, `:1423` | `packageNode` escluso dagli ostacoli di routing (due scan) |
+| `InlineTypeSelect.tsx:25` | dropdown tipi attributo: raccoglie i label dagli `enumNode` |
+| `PalettePanel.tsx:18-21`, `:132` | catalogo palette (i `type` diventano il `rawType` del drag) |
+
+`portDistribution.ts` è node-type-agnostico (brancia sul tipo di **edge**, :81).
+
+**Assunzioni sui dati**: interfacce in `types.ts` — `ClassNodeData` :118-129 (incl. `jsxString?: string` :125 e index signature :128), `EnumNodeData` :131-135, `PackageNodeData` :137-140 (solo `label`), `ObjectNodeData` :196-203 + `FeatureValueRow` :205-214. `ClassNode` (~900 righe, unico a destrutturare `width`/`height` misurati da `NodeProps`, :32) assume `attributes`/`operations`/`ghostParents`/`ghostTargets` e legge `data.jsxString` :423; `ObjectNode` (547 righe) ha accoppiamento Redux vivo (legge `state.idlookup` per metaclasse e feature, :40-45/:54-120); `EnumNode` (233) e `PackageNode` (98) minimi. Comune a tutti e quattro: root `<div className="mm-node …">` + `<NodeResizer>` + `<DynamicHandles nodeId={id}/>` + `useNodeHighlightClass`.
+
+**Contratto degli handle — il punto meno invasivo**: NESSUN nodo renderizza `<Handle>` fissi (grep: `<Handle` solo dentro `DynamicHandles.tsx`); tutti montano `<DynamicHandles nodeId={id}/>` (`ClassNode.tsx:433/:488`, `ObjectNode.tsx:351`, `EnumNode.tsx:166`, `PackageNode.tsx:72`). `DynamicHandles` (315 righe) è **node-type-agnostico**: prende solo `nodeId`, legge `useEdges()`, genera per lato `MAX_HANDLES_PER_SIDE`(=4) coppie source+target con id stabili `` `${side}-${index}` `` (:221, verificato); dipende da `.mm-node` come ancestor DOM (:123) e da `.react-flow__node[data-id]` per la misura (:194). I transformer emettono già id conformi (`computeOptimalHandles` `jjomTransformers.ts:374-420`). **Un nodo nuovo non deve replicare alcun markup di handle**: basta wrapper `.mm-node` + `<DynamicHandles/>` e gli edge si attaccano.
+
+**Costo fattuale di un tipo nuovo `'xNode'`** (vs l'innesto attuale nello stub): (1) 1 riga nella mappa `nodeTypes`; (2) componente `nodes/XNode.tsx` + interfaccia `XNodeData` in `types.ts`; (3) se backed da JjOM: transformer + `case` nel dispatcher + compatibilità col gate `isVertexClassName`; (4) se creabile dall'utente: palette + i due switch di drop; (5) i 14 branch-site sopra degradano al default (colore minimap default, nessuna voce contestuale, trattato come ostacolo di routing) finché non si aggiunge il caso. Lo stub attuale evita TUTTO questo overload-ando `ClassNodeData.jsxString` e ritornando presto dentro `ClassNode.tsx:422-437` — riusa registrazione, transformer, drop path e ogni branch di `classNode`.
+
+### 4-ter Hotspot di performance nel render path (integrazione rev.)
+
+Solo lettura del codice, nessun profiling. Classificazione: **[COMMENTATO]** = commento/throttle/memo con motivazione perf esplicita nel codice; **[SOSPETTO]** = evidenza strutturale da verificare con benchmark.
+
+**Amplificatore globale (entrambi gli editor)** — `redux/action/action.ts:349` (verificato verbatim): ogni dispatch è `setTimeout(()=>storee.dispatch({...this}), 0)` — un dispatch async per singolo field-change, fuori dal batching React; l'ottimizzazione `batchedUpdates` è presente ma commentata (:351-355). **[COMMENTATO]**. Ogni costo per-dispatch sottostante va moltiplicato per questa granularità.
+
+**Classic**:
+
+| Sito | Cosa succede | Classe |
+|---|---|---|
+| `graphElement.tsx:369/:380` → `mapViewStuff` :164 → `updateScores` `selectors.ts:495-606` | Ogni nodo `connect()`-ed ri-esegue `mapStateToProps` a OGNI dispatch → loop su TUTTE le view per nodo (`getAllViewElements` :525), con eval della `jsCondition` compilata per (nodo,view) (:583→:718-750) e OCL su data change (:592-596). O(nodi × view) per dispatch. Commenti espliciti: `:594` *"OCL is computationally heavy, so i decided it is now a requirement to update the model to reevaluate ocl"* (verificato verbatim); `:581-582` sulla scelta di rieseguire jsCondition sempre. | **[COMMENTATO]** |
+| `reducer.ts:807-816`, `:824-831`, `:1023-1031` | Invalidazioni all-nodes (reset OCL/preconditions/`jsxChanged` su ogni nodo per view cambiata). Decisione documentata di SALTARE un'invalidazione su rename perché *"too computationally heavy"* (`:1099-1100`). | invalidazioni **[SOSPETTO]**; skip **[COMMENTATO]** |
+| `EdgeOverlay.tsx:155-280` | Il body del `useSelector` gira a ogni dispatch: due passate complete su `idlookup` (:195-208, :222-262), `findApplicableEdgeView` + 2×`safeEval` + 2×`getNodeRect` per DObject; commit gated da `selectorResultEqual` ma lo scan è incondizionato. Layer di memoizzazione documentato (:19-35, :110-113, per-edge `React.memo` :349-374). Fallback DOM `querySelector`+`getComputedStyle` dentro il loop (:633-644) **[SOSPETTO]**. | **[COMMENTATO]** (memo presente, costo riconosciuto) |
+| `GraphDataElements.tsx:2398-2422` (`get_segments`) | Il getter L-proxy ricalcola `computeRouting` **a ogni accesso, senza cache** (verificato: nessuna cache nel getter); `get_d` (:2369-2377) lo rilegge e aggiunge `roundManhattanCorners`; `damedge.tsx:160-196` lo legge a ogni render dell'edge. | **[SOSPETTO]** |
+| `GraphDataElements.tsx:689-693` (`get_text`) | `html.innerText` → reflow; commento esplicito :690-691. | **[COMMENTATO]** |
+| `graphElement.tsx:104-133` + `:440` | `computeUsageDeclarations` esegue la `UDFunction` per view dentro `shouldComponentUpdate` a ogni update del nodo. | **[SOSPETTO]** |
+| `graphElement.tsx:1264-1295` | Viewport culling già presente (placeholder per vertici off-screen, `shouldEnableCulling(50)`). | **[COMMENTATO]** (ottimizzazione esistente) |
+| `Vertex.tsx:179-192`, `:254-267` | Drag/resize già `rafThrottle` ~30fps (*"OPTIMIZATION: Throttle drag updates to ~30fps to reduce TRANSACTION calls"*). | **[COMMENTATO]** |
+
+**Flow (editor-v2)**:
+
+| Sito | Cosa succede | Classe |
+|---|---|---|
+| `useM1ReferenceEdges.ts:63-85` | Selector `m1RefValuesSig`: O(oggetti × feature × valori) a ogni dispatch — **auto-documentato** :19-21 (verificato verbatim: *"If profiling surfaces this as hot, consider WeakMap memoization"*). | **[COMMENTATO]** |
+| `useJjomSync.ts:1081-1164` | Selector `elementSnapshots`: hash rolling di tutti i figli di ogni elemento a ogni dispatch (commento :1093-1096); + 5 selector di firma full-walk (:306-432) che alimentano i deps dell'effect strutturale :1075. L'effect stesso (:436-1075) è O(model) multi-pass a ogni firing — l'header (:6-8) dichiara O(1) incrementale ma vale per il re-transform, non per questi scan. | firma/hash **[COMMENTATO]**; full-walk selectors ed effect **[SOSPETTO]** |
+| `ObjectNode.tsx:53-67`, `:90-120` | Due `useSelector` PER NODO oggetto (feature vive + attributi metaclasse) → O(nodi × feature) aggregato a ogni dispatch. | **[SOSPETTO]** |
+| `jjomTransformers.ts:49-145`, `:260-277` | Traversata completa dei proxy L per vertex a ogni transform; bypass esplicito del proxy per le coordinate (`vertex.__raw ?? vertex`, *"LProxy gotcha"* :150-154/:196-199/:217-220) — unico segnale in-code del costo dei getter proxy (nessun commento perf nel joiner stesso; il più vicino, `classes.ts:2897`, è una nota di correttezza). | traversata **[SOSPETTO]**; bypass `__raw` **[COMMENTATO]** come rationale |
+| `EditorV2.tsx:1157-1202` | `stableNodes`/`stableEdges`: confronto O(n) per render per stabilizzare le reference — aggiunto esplicitamente contro il feedback loop causato dal dispatch async (rationale :1145-1150, verificato verbatim, cita `action.ts:349`). | **[COMMENTATO]** |
+| `EditorV2.tsx:1018-1130` | Catena distribution+measure: double-`requestAnimationFrame` + safety net 100ms + `querySelector`/`updateNodeInternals` per nodo su cambio topologia (rationale :1069-1072); gated da fingerprint `topologyKey` :1025-1030. | **[COMMENTATO]** |
+| `EditorV2.tsx:396-405` | Selector `liveRefNameSig` per-dispatch sui nomi dei riferimenti degli edge. | **[SOSPETTO]** |
+| `UnifiedEdge.tsx:119-171` | **Nessun `React.memo`** (come `ClassNode`/`ObjectNode`: funzioni nude in `nodeTypes`); si sottoscrive a `useNodes()`/`useEdges()` INTERI → ogni edge ri-renderizza a ogni cambio di qualunque nodo/edge; `bundleCenter` fa `allNodes.find` → O(edge × nodi) durante il drag. La pipeline di path è invece `useMemo`-izzata (:143-179). | mancato memo/subscription **[SOSPETTO]**; pipeline path ok |
+| Coalescing esistente | `useJjomSync.ts:241-262` flush via rAF; `reLayoutWatcher.ts:43-87` debounce del re-layout; conformance debounced 500ms. | **[COMMENTATO]** |
+
+**Sintesi fattuale**: il costo strutturale del classic è il re-scoring per-nodo × tutte-le-view a ogni dispatch (il path più annotato del codebase), amplificato dal dispatch async per-field; i costi del flow sono gli scan di firma per-dispatch negli hook di sync e l'assenza di boundary `React.memo` su nodi ed edge. Nessuno dei due editor ha misure di profiling registrate nel repo: tutte le voci [SOSPETTO] richiedono benchmark prima di qualunque conclusione.
 
 ---
 
