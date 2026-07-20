@@ -16,6 +16,54 @@ interface DynamicHandlesProps {
     nodeId: string;
 }
 
+// ─── Module-level coalescer for updateNodeInternals (leva 3) ───
+// Each DynamicHandles instance used to schedule its own double-rAF and issue its
+// own single-node updateNodeInternals call: N handle reassignments landing in one
+// commit produced N separate React Flow store notifications, each paying the full
+// subscriber fan-out (discovery 2026-07-20_trickle_leve_2_3). The coalescer
+// batches every node scheduled in the same pre-paint window into ONE
+// updateNodeInternals(Map) call while preserving the double-rAF
+// measure-after-paint contract: the batch CLOSES when the first rAF fires
+// (pre-paint), so a node scheduled after that point belongs to a later paint and
+// opens a new batch with its own double-rAF. Keyed by store instance so multiple
+// mounted flows never mix.
+type RFStoreApi = ReturnType<typeof useStoreApi>;
+const openMeasureBatches = new Map<RFStoreApi, Set<string>>();
+
+function scheduleNodeInternalsUpdate(storeApi: RFStoreApi, nodeId: string): void {
+    const open = openMeasureBatches.get(storeApi);
+    if (open) {
+        open.add(nodeId);
+        return;
+    }
+    const batch = new Set<string>([nodeId]);
+    openMeasureBatches.set(storeApi, batch);
+    // Double-rAF: first rAF fires before next paint, second fires after that
+    // paint completes — guaranteeing CSS is resolved before measuring (same
+    // timing contract as the previous per-node implementation).
+    requestAnimationFrame(() => {
+        // Close the batch pre-paint: later schedules target a later paint.
+        if (openMeasureBatches.get(storeApi) === batch) openMeasureBatches.delete(storeApi);
+        requestAnimationFrame(() => {
+            const state = storeApi.getState();
+            const domNode = state.domNode;
+            if (!domNode) return;
+            // One DOM pass for the whole batch instead of one querySelector per node.
+            const elementsById = new Map<string, Element>();
+            domNode.querySelectorAll('.react-flow__node').forEach((el) => {
+                const id = el.getAttribute('data-id');
+                if (id) elementsById.set(id, el);
+            });
+            const updates = new Map();
+            for (const id of batch) {
+                const nodeElement = elementsById.get(id);
+                if (nodeElement) updates.set(id, { id, nodeElement, force: true });
+            }
+            if (updates.size > 0) state.updateNodeInternals(updates);
+        });
+    });
+}
+
 /** Distance in px from node edge within which a side is considered "hovered". */
 const HOVER_THRESHOLD = 15;
 
@@ -175,30 +223,19 @@ function DynamicHandles({ nodeId }: DynamicHandlesProps) {
     // the synchronous cascade where updateNodeInternals → dimension changes →
     // re-render → updateNodeInternals could exceed React's update depth limit.
     //
-    // Double-rAF ensures the browser has PAINTED the new CSS positions before
-    // we measure via getBoundingClientRect. The timing chain is:
+    // Double-rAF (inside scheduleNodeInternalsUpdate) ensures the browser has
+    // PAINTED the new CSS positions before we measure via getBoundingClientRect.
+    // The timing chain is:
     //   setEdges → StoreUpdater useEffect → zustand update → useEdges() →
     //   DynamicHandles re-render → CSS committed → paint → rAF → rAF → measure
     // Without this delay, getBoundingClientRect returns stale positions (50%)
     // because the measurement fires before the browser resolves CSS percentages.
+    // All nodes scheduled in the same pre-paint window are measured in a single
+    // batched updateNodeInternals call (see coalescer above).
     useEffect(() => {
         if (activeHandlesKey !== lastCommittedKeyRef.current) {
             lastCommittedKeyRef.current = activeHandlesKey;
-            // Double-rAF: first rAF fires before next paint, second fires
-            // after that paint completes — guaranteeing CSS is resolved.
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    const state = storeApi.getState();
-                    const domNode = state.domNode;
-                    if (!domNode) return;
-                    const nodeElement = domNode.querySelector(`.react-flow__node[data-id="${nodeId}"]`);
-                    if (nodeElement) {
-                        const updates = new Map();
-                        updates.set(nodeId, { id: nodeId, nodeElement, force: true });
-                        state.updateNodeInternals(updates);
-                    }
-                });
-            });
+            scheduleNodeInternalsUpdate(storeApi, nodeId);
         }
     }, [activeHandlesKey, nodeId, storeApi]);
 
