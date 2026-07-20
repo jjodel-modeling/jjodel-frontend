@@ -10,7 +10,8 @@ import {GenericInput} from "../components/forEndUser/GenericInput"
 import {U} from "./index";
 import { Control } from "../components/forEndUser/Control";
 // classic graphelement exports removed (de-entanglement stage 4)
-export {DerivedReferenceEdge} from "../edges/derived/DerivedReferenceEdge";
+// DerivedReferenceEdge removed (de-entanglement stage 6 — died with the DV templates;
+// its <DerivedReferenceEdge> occurrences in DV.tsx are string-level jsxString sources, never eval'd)
 export {GenericInput} from "../components/forEndUser/GenericInput"
 export {IRView} from "../ai/viewpointIR/IRView";
 // other exports
