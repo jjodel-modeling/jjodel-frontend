@@ -50,6 +50,16 @@ interface PortGroup {
     otherNodeIds: string[];
 }
 
+// Dev-only overflow diagnostics for the STEP 3 clamp. `import.meta.env` is not
+// wired into this repo's tsc types (tsconfig `types: []`, no vite/client ref), so
+// DEV is read through an any-cast; Vite still statically resolves it to false in
+// production builds, so the warn is stripped there.
+const IS_DEV: boolean = (import.meta as any).env?.DEV ?? false;
+
+// Throttle: nodes already warned about handle-pool overflow this session, so the
+// STEP 3 clamp emits at most one console.warn per node (see clamp below).
+const overflowWarnedNodes = new Set<string>();
+
 /**
  * Core port distribution algorithm.
  * Single source of truth — used by both edge handle assignment and DynamicHandles rendering.
@@ -163,7 +173,25 @@ function computePortDistribution(
         const side = key.split(':')[1];
 
         groups.forEach((group, index) => {
-            const handleId = `${side}-${index}`;
+            // Clamp the handle index to the DOM pool capacity. DynamicHandles renders
+            // only side-0 .. side-(MAX_HANDLES_PER_SIDE-1); an index past that points
+            // to a handle React Flow never measured, so the edge is dropped silently
+            // in production. Excess edges share the last handle (visual overlap on the
+            // anchor) instead of vanishing. Identity for index < MAX_HANDLES_PER_SIDE.
+            const handleId = `${side}-${Math.min(index, MAX_HANDLES_PER_SIDE - 1)}`;
+
+            if (IS_DEV && index >= MAX_HANDLES_PER_SIDE) {
+                const nodeId = key.split(':')[0];
+                if (!overflowWarnedNodes.has(nodeId)) {
+                    overflowWarnedNodes.add(nodeId);
+                    // eslint-disable-next-line no-console
+                    console.warn(
+                        `[portDistribution] handle overflow: node "${nodeId}" side "${side}" has ` +
+                        `${groups.length} edges > pool capacity ${MAX_HANDLES_PER_SIDE}; ` +
+                        `excess share ${side}-${MAX_HANDLES_PER_SIDE - 1}.`,
+                    );
+                }
+            }
 
             for (const edgeId of group.edgeIds) {
                 const existing = edgeHandleAccum.get(edgeId) || {};
