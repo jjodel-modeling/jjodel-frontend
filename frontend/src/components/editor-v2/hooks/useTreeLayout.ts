@@ -1,5 +1,5 @@
-import { useMemo, useEffect } from 'react';
-import { useNodes, useEdges, useStoreApi } from '@xyflow/react';
+import { useMemo, useEffect, useCallback } from 'react';
+import { useStore, useEdges, useStoreApi, type Node, type ReactFlowState } from '@xyflow/react';
 import {
     computeTreeConnectorPath,
     registerEdgePath,
@@ -13,6 +13,10 @@ import {
     type TreeBranch,
 } from '../utils/edgeUtils';
 import { computeHandlePositionForNode } from '../utils/handlePosition';
+
+// Stable empty array returned by the nodes selector for non-inheritance edges,
+// so their subscription never fires (Object.is-equal on every store notification).
+const EMPTY_NODES: Node[] = [];
 
 export interface TreeGeometry {
     trunkPath: string;
@@ -56,7 +60,14 @@ export function useTreeLayout(
     selected: boolean | undefined,
     isInheritance: boolean,
 ): TreeLayoutResult {
-    const allNodes = useNodes();
+    // Nodes subscription gated on isInheritance: tree geometry consumes allNodes
+    // only for grouped inheritance edges. Every other edge gets the stable
+    // EMPTY_NODES constant and never re-renders on node changes (leva 2,
+    // discovery 2026-07-20_trickle_leve_2_3). All consumers below are gated on
+    // isGrouped, which is always false when isInheritance is false.
+    const allNodes = useStore(
+        useCallback((s: ReactFlowState) => (isInheritance ? (s.nodes as Node[]) : EMPTY_NODES), [isInheritance])
+    );
     const allEdges = useEdges();
     const storeApi = useStoreApi();
 

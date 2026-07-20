@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react';
-import { EdgeLabelRenderer, useReactFlow, useNodes } from '@xyflow/react';
+import { EdgeLabelRenderer, useReactFlow } from '@xyflow/react';
 import { projectToPerimeter, getNodeRect, type Side } from '../utils/edgeUtils';
 import type { AnchorConfig, AnchorSide } from '../types';
 import { useEditorContextSafe } from '../contexts/EditorContext';
@@ -63,8 +63,7 @@ function DraggableEndpoint({ edgeId, endpoint, x, y, nodeId }: {
     y: number;
     nodeId: string;
 }) {
-    const { getEdges, screenToFlowPosition } = useReactFlow();
-    const allNodes = useNodes();
+    const { getEdges, getNode, screenToFlowPosition } = useReactFlow();
     const editorCtx = useEditorContextSafe();
 
     const handleRef = useRef<HTMLDivElement>(null);
@@ -79,7 +78,8 @@ function DraggableEndpoint({ edgeId, endpoint, x, y, nodeId }: {
         e.stopPropagation();
 
         // Look up the node and compute its rect once at drag start
-        const node = allNodes.find(n => n.id === nodeId);
+        // (imperative store read — no per-node subscription needed here)
+        const node = getNode(nodeId);
         if (!node) return;
         const rect = getNodeRect(node);
 
@@ -160,7 +160,7 @@ function DraggableEndpoint({ edgeId, endpoint, x, y, nodeId }: {
 
         document.addEventListener('mousemove', onMouseMove);
         document.addEventListener('mouseup', onMouseUp);
-    }, [edgeId, endpoint, nodeId, allNodes, screenToFlowPosition, getEdges, editorCtx]);
+    }, [edgeId, endpoint, nodeId, getNode, screenToFlowPosition, getEdges, editorCtx]);
 
     return (
         <>

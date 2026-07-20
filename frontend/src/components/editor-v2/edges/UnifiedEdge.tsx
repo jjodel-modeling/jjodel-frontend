@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import {
     EdgeLabelRenderer,
     useReactFlow,
-    useNodes,
+    useInternalNode,
     useEdges,
     type EdgeProps,
 } from '@xyflow/react';
@@ -89,7 +89,7 @@ function UnifiedEdge(props: EdgeProps) {
     const waypoints = edgeData?.waypoints || [];
     const autoEdit = edgeData?.autoEdit as boolean | undefined;
 
-    const { setEdges } = useReactFlow();
+    const { setEdges, getNodes } = useReactFlow();
     const notation = useEditorContextSafe()?.notation ?? 'uml';
     const selectEdge = useEditorContextSafe()?.selectEdge;
     const showEdgeLabels = useEditorContextSafe()?.showEdgeLabels ?? false;
@@ -117,7 +117,13 @@ function UnifiedEdge(props: EdgeProps) {
         }
     }, [autoEdit, id, setEdges]);
 
-    const allNodes = useNodes();
+    // Targeted node subscriptions: this edge re-renders only when ITS endpoints'
+    // internals change, not on every node measure/move on the canvas. A broad
+    // useNodes() here re-rendered every rendered edge on every updateNodeInternals
+    // notification — the per-commit amplification behind the edge-settle trickle
+    // (discovery 2026-07-20_trickle_leve_2_3, leva 2).
+    const sourceNode = useInternalNode(source);
+    const targetNode = useInternalNode(target);
     const allEdges = useEdges();
 
     // ─── Sides from handle IDs ───
@@ -160,16 +166,14 @@ function UnifiedEdge(props: EdgeProps) {
     // axis. Null until both nodes are measured → applyBundleSpread leaves the
     // corridor at its midpoint that frame.
     const bundleCenter = useMemo(() => {
-        const s = allNodes.find(n => n.id === source);
-        const t = allNodes.find(n => n.id === target);
-        if (!s || !t) return null;
-        const sr = getNodeRect(s);
-        const tr = getNodeRect(t);
+        if (!sourceNode || !targetNode) return null;
+        const sr = getNodeRect(sourceNode);
+        const tr = getNodeRect(targetNode);
         return {
             x: (sr.x + sr.width / 2 + tr.x + tr.width / 2) / 2,
             y: (sr.y + sr.height / 2 + tr.y + tr.height / 2) / 2,
         };
-    }, [allNodes, source, target]);
+    }, [sourceNode, targetNode]);
 
     // Bundle spread: only applied when the user hasn't customized the routing
     // (waypoints empty) and the edge is not inheritance (which uses tree layout).
@@ -193,25 +197,26 @@ function UnifiedEdge(props: EdgeProps) {
 
     // ─── Detect crossings with other edges ───
     // Scope detection to the current React Flow canvas by passing the active node IDs.
-    // `useNodes()` returns only the nodes of this flow instance, so this Set is
-    // implicitly tab-local — no need to inspect global Redux state.
-    const activeNodeIds = useMemo(() => new Set(allNodes.map(n => n.id)), [allNodes]);
+    // `getNodes()` reads the flow instance's store imperatively (tab-local, always
+    // current) — no subscription, so membership is fresh at every recompute without
+    // re-rendering this edge on unrelated node changes. Recompute triggers: own
+    // path (spreadPoints) and any edges-array change (allEdges).
     const crossings = useMemo(
-        () => getEdgeCrossings(id, spreadPoints, activeNodeIds),
+        () => getEdgeCrossings(id, spreadPoints, new Set(getNodes().map(n => n.id))),
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [id, spreadPoints, activeNodeIds, allEdges]
+        [id, spreadPoints, allEdges]
     );
 
     // ─── Self-loop corner geometry (source === target) ───
     // Computed once and shared by the path and the label/cardinality positioning.
-    // Falls back to the legacy curl for the frame before the node is in allNodes.
+    // Falls back to the legacy curl for the frame before the node is measured.
     const selfLoopGeom = useMemo((): {
         path: string;
         labelPoint: { x: number; y: number } | null;
         cardinalityPoint: { x: number; y: number } | null;
     } | null => {
         if (!isSelfLoop) return null;
-        const node = allNodes.find(n => n.id === source);
+        const node = sourceNode;
         if (!node) {
             return {
                 path: computeSelfLoopPath(sourceX, sourceY, targetX, targetY),
@@ -230,7 +235,7 @@ function UnifiedEdge(props: EdgeProps) {
             labelPoint: loop.labelPoint,
             cardinalityPoint: loop.cardinalityPoint,
         };
-    }, [isSelfLoop, allNodes, allEdges, source, id, sourceX, sourceY, targetX, targetY]);
+    }, [isSelfLoop, sourceNode, allEdges, source, id, sourceX, sourceY, targetX, targetY]);
 
     // ─── Final path with rounding and bridge arcs ───
     const path = useMemo(() => {
