@@ -628,6 +628,16 @@ export class XMIService {
                     // l'embedded metamodel, xmi:Extension, xsi:*) non sono istanze radice:
                     // vanno saltati, non risolti come classi del metamodello.
                     if (key.startsWith('xmi:') || key.startsWith('xsi:')) {
+                        // xmi:Documentation is the embedded-metamodel block that Jjodel's own
+                        // exporter emits (see export path ~line 165). The M1 path resolves the
+                        // metamodel from xmlns and never consumes it, so skipping it is expected
+                        // and benign — log it as info instead of a warning, otherwise re-importing
+                        // a self-produced file always reports "with warnings". Other xmi:*/xsi:*
+                        // elements (xmi:Extension, UML profiles) remain surfaced as warnings.
+                        if (key === 'xmi:Documentation') {
+                            console.info('[XMI import]', `System element <${key}> under <xmi:XMI> skipped (embedded metamodel, not a model instance)`);
+                            continue;
+                        }
                         const msg = `System element <${key}> under <xmi:XMI> skipped (not a model instance)`;
                         console.warn('[XMI import]', msg);
                         warnings.push(msg);
@@ -695,7 +705,7 @@ export class XMIService {
             });
 
             const lModel: LModel = LPointerTargetable.fromD(dModel) as LModel;
-            return { success: true, model: lModel, errors, warnings, pattern: isWrapper ? 'wrapper' : 'single-root' };
+            return { success: true, model: lModel, metamodel, errors, warnings, pattern: isWrapper ? 'wrapper' : 'single-root' };
 
         } catch (error) {
             return {
