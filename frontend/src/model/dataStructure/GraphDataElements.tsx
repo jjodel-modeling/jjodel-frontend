@@ -61,11 +61,11 @@ import type {Tooltip} from "../../components/forEndUser/Tooltip";
 import {JSX} from "react";
 import type {SVGPathElementt, SVGPathSegment} from '../../common/libraries/pathdata';
 import {EdgeGapMode, InitialVertexSize, InitialVertexSizeFunc} from "../../joiner/types";
-import {computePoints} from "../../edges/routing/classic/points";
-import {snapSegmentsToBorders} from "../../edges/routing/classic/snap";
-import {computeHeadPosition} from "../../edges/routing/classic/markers";
-import {computeRouting} from "../../edges/routing/classic/segments";
-import {roundManhattanCorners as roundManhattanCornersImpl} from "../../edges/routing/classic/round";
+import {computePoints} from "../../edges/routing/manhattan/points";
+import {snapSegmentsToBorders} from "../../edges/routing/manhattan/snap";
+import {computeHeadPosition} from "../../edges/routing/manhattan/markers";
+import {computeRouting} from "../../edges/routing/manhattan/segments";
+import {roundManhattanCorners as roundManhattanCornersImpl} from "../../edges/routing/manhattan/round";
 import {graphComponentRegistry} from "../../common/graphComponentRegistry";
 
 
@@ -2306,7 +2306,7 @@ replaced by startPoint
         });
         return true;
     }
-    // get_label_impl: extracted to edges/routing/classic/labels.ts (computeLabel — internal)
+    // get_label_impl: extracted to edges/routing/manhattan/labels.ts (computeLabel — internal)
 /*
     private get_label_impl_old(d: DVoidEdge, l: LVoidEdge, nodes:this["allNodes"], index: number, longestlabelindex?: number): PrimitiveType {
         if (d.longestLabel !== undefined && index === longestlabelindex) return this.get_longestLabel_impl(d, l, nodes, index);
@@ -2390,7 +2390,7 @@ replaced by startPoint
     // kept unchanged; degenerate or collinear corners emit a plain `L`. Defensive gate: only a pure
     // absolute M/L polyline is rounded — any other SVG command returns `d` untouched (get_d is shared
     // by bezier and non-orthogonal edges).
-    // Thin delegate to the shared pure implementation in edges/routing/classic/round.ts, so the
+    // Thin delegate to the shared pure implementation in edges/routing/manhattan/round.ts, so the
     // native classic edges and the isEdge EdgeOverlay round corners with one body and one radius.
     // Call sites and visibility are unchanged. The bare identifier resolves to the imported alias
     // (a static is not in lexical scope), but the alias makes the delegation unambiguous.
@@ -2437,7 +2437,7 @@ replaced by startPoint
     // gapModes .duplicate() it; cut modes reassign it to the border intersection). Since the visible merged
     // `d` renders each leg from its end.pt, moving only this leg's start/end would leave the previous
     // corner behind and the leg would go diagonal — so we also translate the neighbours' touching points.
-    // No edit to edges/routing/classic; offsets are optional → no VersionFixer migration.
+    // No edit to edges/routing/manhattan; offsets are optional → no VersionFixer migration.
     private applySegmentOffsets(routed: this["segments"], c: Context): this["segments"] {
         const offsets = c.data.segmentOffsets;
         const legs = routed && routed.segments;
@@ -2482,7 +2482,7 @@ replaced by startPoint
         }
         return routed;
     }
-    // setLabels: extracted to edges/routing/classic/labels.ts
+    // setLabels: extracted to edges/routing/manhattan/labels.ts
 
     private snapSegmentsToNodeBorders(c: Context, v: LViewElement, ret: EdgeSegment[], fillSegments: EdgeSegment[]){
         snapSegmentsToBorders(v, ret, fillSegments);

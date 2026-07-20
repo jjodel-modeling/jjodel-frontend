@@ -9,14 +9,14 @@ import {
     Selectors,
     GObject,
 } from '../../joiner';
-import { computeRouting, roundManhattanCorners } from '../routing/classic';
-import type { RoutingInput } from '../routing/classic/types';
+import { computeRouting, roundManhattanCorners } from '../routing/manhattan';
+import type { RoutingInput } from '../routing/manhattan/types';
 import { EdgeHead } from '../../common/DV';
 
 // DerivedReferenceEdge — Option B, step 1/3.
 //
 // Renders an M1 reference edge in the classic editor by calling the pure routing engine
-// (`computeRouting`, `frontend/src/edges/routing/classic/`) directly, WITHOUT minting a DEdge and
+// (`computeRouting`, `frontend/src/edges/routing/manhattan/`) directly, WITHOUT minting a DEdge and
 // WITHOUT idlookup residency. It replaces the minting `<Edge>` factory for M1 references at the two
 // `refEdges.map(...)` sites in `DefaultView.model()` (common/DV.tsx); M2 (metamodel) reference edges
 // keep the native `<Edge>` path. Discoveries: docs/discovery/2026-06-15_isedge_B_integration_seam.md
