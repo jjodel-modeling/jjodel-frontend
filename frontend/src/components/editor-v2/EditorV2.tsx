@@ -1156,9 +1156,16 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 const state = storeApi.getState();
                 const domNode = state.domNode;
                 if (!domNode) return;
+                // One DOM pass for all nodes instead of one full-DOM
+                // querySelector per node (leva 4, micro-fix).
+                const elementsById = new Map<string, Element>();
+                domNode.querySelectorAll('.react-flow__node').forEach((el: Element) => {
+                    const did = el.getAttribute('data-id');
+                    if (did) elementsById.set(did, el);
+                });
                 const updates = new Map();
                 for (const nodeId of nodeIdList) {
-                    const nodeElement = domNode.querySelector(`.react-flow__node[data-id="${nodeId}"]`);
+                    const nodeElement = elementsById.get(nodeId);
                     if (nodeElement) {
                         updates.set(nodeId, { id: nodeId, nodeElement, force: true });
                     }
