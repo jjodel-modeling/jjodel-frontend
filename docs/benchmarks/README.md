@@ -53,7 +53,7 @@ same-machine (questa baseline vs l'interprete IR in Fase 4, stesso harness).
 | import xmi (502 oggetti) | 1.6 s | 1.8 s | 2.3 s |
 | mount flow (500 nodi) | **163 s** | 530 s | 771 s |
 | responsive dopo open | 195 s | 561 s | — |
-| edge RF renderizzati | 986/1000 | 986 | 986 |
+| edge RF renderizzati | 986/1500 | 986 | 986 |
 | commit React durante open | 582 | 1508 | 1514 |
 | mutazione singola (store settle) | — | 18.3 s | **16.1 s** |
 | commit React per la mutazione | — | 23 | 21 |
@@ -74,8 +74,13 @@ Note di lettura:
 3. **L'attivazione del viewpoint Default blocca il main thread ~11 min** su
    500 oggetti (ricompilazioni VIEWS_RECOMPILE_* + scoring). Anche questo è
    baseline: la risoluzione indicizzata IR non passa da quel percorso.
-4. 986 edge su 1000: 14 link mancanti al settle (coerente col bug noto "edge
-   non tracciabile nel flow", candidati in discovery §5.3; non investigato qui).
+4. 986 edge su **1500** (non su 1000): 978/1000 next + 8/500 tasks (containment
+   Board→Task). I 514 mancanti NON sono il bug "edge non tracciabile nel flow"
+   ma overflow dell'indice handle oltre `MAX_HANDLES_PER_SIDE=4` con drop
+   silenzioso di React Flow — root cause confermata in
+   `docs/discovery/discovery_2026-07-19_edge_mancanti_986_1000.md`. Risolto dal
+   clamp in `portDistribution.ts` (2026-07-20):
+   `2026-07-20_baseline_m3_postfix-clamp.json` misura 1500/1500.
 5. `rf_nodes = 501` include il ghost/stub node; `classic_nodes = 4444` conta
    gli elementi DOM `[id^=Pointer]` del GraphContainer (nodi + field).
 
@@ -97,7 +102,7 @@ valido resta same-machine.
 | mount flow (500 nodi) | 18.0 s | 17.6 s | 19.2 s |
 | edge settle | 148 s | 119 s | 119 s |
 | responsive dopo open | 178 s | 122 s | 144 s |
-| edge RF renderizzati | 986/1000 | 986 | 986 |
+| edge RF renderizzati | 986/1500 | 986 | 986 |
 | commit React durante open | 1538 | 1556 | 1546 |
 | mutazione singola (store settle) | 8.9 s | **6.0 s** | 8.9 s |
 | commit React per la mutazione | 22 | 22 | 20 |
@@ -118,8 +123,12 @@ Note di lettura:
    anche su M3: il trickle degli edge post-mount non è dominato dalla CPU
    contesa del container. Idem la firma dell'amplificatore sulla mutazione
    singola: ~6–9 s di settle con ~20–22 commit React.
-4. 986/1000 edge come nel cloud: i 14 link mancanti sono stabili cross-machine
-   (stesso bug noto, non investigato qui).
+4. 986/**1500** edge come nel cloud (978/1000 next + 8/500 tasks): i 514
+   mancanti sono stabili cross-machine perché l'overflow degli handle è
+   deterministico (geometria ELK + ordinamento bucket + drop). Non è il bug
+   "edge non tracciabile nel flow"; root cause in
+   `docs/discovery/discovery_2026-07-19_edge_mancanti_986_1000.md`, risolta dal
+   clamp (2026-07-20, `2026-07-20_baseline_m3_postfix-clamp.json` = 1500/1500).
 
 File: `2026-07-19_baseline_m3_run{1,2,3}.json` in questa cartella (con blocco
 `env` annotato a mano dopo il run).

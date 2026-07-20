@@ -1,0 +1,28 @@
+{
+  "date": "2026-07-20T14:08:50.914Z",
+  "app": "http://localhost:3001/",
+  "model": "bench.xmi",
+  "project": "Bench_mrtavxvh",
+  "t_import_ecore_ms": 83,
+  "t_import_xmi_ms": 642,
+  "commits_import_xmi": 7,
+  "t_mount_flow_nodes_ms": 7332,
+  "t_edges_settle_ms": 42796,
+  "t_responsive_after_open_ms": 42796,
+  "rf_nodes": 501,
+  "rf_edges": 1500,
+  "commits_open_flow": 1564,
+  "edit_flow": {
+    "ms": 5442
+  },
+  "commits_edit_flow": 22,
+  "classic_toggle_found": 0,
+  "env": {
+    "machine": "MacBook Air M3, 24 GB RAM, macOS 26.2",
+    "node": "v23.3.0",
+    "branch": "alfonso-frontend-jjtl",
+    "head": "c68ccd1df + working tree (portDistribution STEP 3 handle-index clamp)",
+    "browser": "Chrome for Testing (playwright chromium-1228, headless)",
+    "note": "build di produzione servita da vite preview :3001; dev server vite idle su :3000 durante il run. Stesso harness/fixtures (bench.ecore + bench.xmi seed 42) di 2026-07-20_baseline_m3_postfix-labels. Fix sotto test: computePortDistribution STEP 3 clampa l'indice handle a MAX_HANDLES_PER_SIDE-1 (gli edge oltre il 4o per bucket condividono l'ultimo handle invece di puntare a un handle inesistente e sparire). Effetto: rf_edges 986 -> 1500 (1500/1500: 1000 next + 500 tasks; +52% subscription), come previsto dal discovery 2026-07-19. Costo per l'aumento di edge, vs postfix-labels stesso harness: mount 6734 -> 7332ms (+9%), edge settle 38148 -> 42796ms (+12%), edit_flow 4616 -> 5442ms (+18%), commits_open_flow 1599 -> 1564 (~invariato). La guardia dev (console.warn overflow, one-per-node) e' inerte qui: IS_DEV=false in produzione. Nessun toggle classic su questo model tab (classic_toggle_found=0), come nei baseline M3."
+  }
+}
