@@ -25,6 +25,16 @@ import { decorateReferenceEdges, synthesizeObjectAsEdges } from './irEdgeViews';
 import { deriveIRInteraction, type IRInteractionPlan } from './irInteraction';
 import { getCollapsedSet, useCollapseVersion } from './irCollapseState';
 import { getIREdgeAnchorOverride, isSyntheticEdgeSelected, useEdgeInteractionVersion } from './irEdgeInteraction';
+import {
+    crossDepsSignature,
+    getEdgeObjectKeys,
+    publishCrossDeps,
+    publishEdgeObjectKeys,
+    resetCrossDepsEpoch,
+    resolveCrossDeps,
+    warnCappedCrossDeps,
+    warnUnresolvedCrossDeps,
+} from './irCrossDeps';
 
 const EMPTY_MODEL: ContainmentModel = {
     containers: new Map(),
@@ -89,10 +99,22 @@ export function useIRContainment(nodes: Node[], edges: Edge[]): IRContainmentDec
                 }
             }
         }
+        // Cross-object deps of edge objects published by the last decoration pass
+        // (spec v1.2 sez. 9): a change on a navigated endpoint's feature (e.g. an
+        // edge label reading the source State's name) invalidates the decoration.
+        for (const oid of getEdgeObjectKeys()) {
+            const cs = crossDepsSignature(lookup, oid);
+            if (cs) parts.push(`X${oid}${cs}`);
+        }
         return parts.join('|');
     });
 
     return useMemo(() => {
+        // Drop the cross-dep registry on a viewpoint (irSig) change before any
+        // observer re-publishes. This memo (EditorV2's) renders before the
+        // ObjectNodes, so clearing here and letting everyone re-publish in the
+        // same commit avoids leaking the previous viewpoint's deps.
+        resetCrossDepsEpoch(irSig);
         if (!irSig) return { nodes, edges, model: EMPTY_MODEL, names: EMPTY_NAMES };
         const state: any = store.getState();
         const index = getIRIndex(state, irSig);
@@ -129,6 +151,19 @@ export function useIRContainment(nodes: Node[], edges: Edge[]): IRContainmentDec
         // selection changes for irobj_* ids cannot land in the base edge state).
         outEdges = oae.edges.map(e =>
             (e.data as any)?.irObjectAsEdge && isSyntheticEdgeSelected(e.id) ? { ...e, selected: true } : e);
+
+        // Publish edge-object cross deps for the next oaeSlotsSig pass (two-phase,
+        // spec v1.2 sez. 9). Endpoint slots stay observed by the scan above; this
+        // adds the NAVIGATED targets (e.g. an edge label's `$source.value.$name.value`).
+        const edgeKeys: string[] = [];
+        for (const dep of oae.edgeObjectDeps) {
+            const cross = resolveCrossDeps(state.idlookup, dep.objectId, dep.crossPaths);
+            publishCrossDeps(dep.objectId, cross.fids);
+            edgeKeys.push(dep.objectId);
+            if (cross.unresolved.length) warnUnresolvedCrossDeps(cross.unresolved, dep.viewId);
+            if (cross.capped) warnCappedCrossDeps(dep.viewId);
+        }
+        publishEdgeObjectKeys(edgeKeys);
 
         return { nodes: outNodes, edges: outEdges, model, names };
         // collapseVersion / edgeInteractionVersion / oaeSlotsSig are the

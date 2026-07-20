@@ -14,6 +14,7 @@ import type {
     CompiledBadge,
     CompiledConditional,
     CompiledContainment,
+    CompiledCrossPath,
     CompiledFieldCompartment,
     CompiledLabel,
     CompiledPredicate,
@@ -67,6 +68,35 @@ function parsePathExpr(expr: PathExpr): ParsedPath {
 }
 
 /**
+ * Multi-hop cross-object paths collected during a single compileView /
+ * compileEdgeView pass (spec v1.2 sez. 9). Module-scoped because compilePath is
+ * reached through several nested helpers (compileOperand, compilePredicate,
+ * compileTextSource): threading a second accumulator through all of them would
+ * touch every signature. Compile is synchronous and non-reentrant (compileView
+ * never calls compileView/compileEdgeView), so a fresh array is installed at the
+ * start of each top-level compile and harvested at the end; the previous sink is
+ * saved/restored defensively.
+ */
+let crossPathSink: CompiledCrossPath[] | null = null;
+
+function crossPathKey(cp: CompiledCrossPath): string {
+    const hops = cp.hops.map(h => `${h.feature}:${String(h.take)}`).join('>');
+    return `${hops}#${cp.terminal.feature}:${String(cp.terminal.take)}`;
+}
+
+/** Dedupe cross paths harvested from a compile pass (same path in two labels). */
+function dedupeCrossPaths(list: CompiledCrossPath[]): CompiledCrossPath[] {
+    if (list.length <= 1) return list.slice();
+    const seen = new Set<string>();
+    const out: CompiledCrossPath[] = [];
+    for (const cp of list) {
+        const k = crossPathKey(cp);
+        if (!seen.has(k)) { seen.add(k); out.push(cp); }
+    }
+    return out;
+}
+
+/**
  * Compile a PathExpr into an accessor closure.
  * KNOWN LIMIT (v1.1, to be fixed in spec v1.2 dependency-set work): only
  * single-hop self paths are fully reactive; multi-hop navigation reads the
@@ -92,6 +122,16 @@ function compilePath(expr: PathExpr): { fn: CompiledAccessor; featureNames: stri
         }
         return out;
     };
+    // spec v1.2 sez. 9: a multi-hop path navigates to another object; record the
+    // hop chain + terminal feature so the render can register cross-object deps.
+    // Single-hop (self) paths produce nothing — already covered by the self
+    // subscription. `take` on hops mirrors the accessor above (only 'value' and
+    // values[N] navigate; a whole-array 'values' hop dead-ends, same as `fn`).
+    if (steps.length >= 2 && steps.every(s => typeof s.feature === 'string') && crossPathSink) {
+        const hops = steps.slice(0, -1).map(s => ({ feature: s.feature as string, take: s.take }));
+        const term = steps[steps.length - 1];
+        crossPathSink.push({ hops, terminal: { feature: term.feature as string, take: term.take } });
+    }
     return { fn, featureNames };
 }
 
@@ -208,6 +248,8 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
     if (cached) return cached;
 
     const deps = new Set<string>();
+    const prevSink = crossPathSink;
+    crossPathSink = [];
     const predicate = compilePredicate(ir.predicate, deps);
     const form = compileConditional(ir.shape.form, 'rect' as const, deps);
     const fill = ir.shape.fill !== undefined ? compileConditional(ir.shape.fill, '', deps) : null;
@@ -271,6 +313,9 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
         };
     }
 
+    const crossPaths = dedupeCrossPaths(crossPathSink ?? []);
+    crossPathSink = prevSink;
+
     const compiled: CompiledView = {
         viewId,
         ir,
@@ -279,6 +324,7 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
         priority: typeof ir.priority === 'number' ? ir.priority : 0,
         predicate,
         dependencySet: Array.from(deps),
+        crossPaths,
         form,
         fill,
         border,
@@ -324,6 +370,8 @@ export function compileEdgeView(viewId: string, ir: EdgeViewIR): CompiledEdgeVie
     if (cached) return cached;
 
     const deps = new Set<string>();
+    const prevSink = crossPathSink;
+    crossPathSink = [];
     const predicate = compilePredicate(ir.predicate, deps);
     const e = ir.edge ?? {};
     const compileExpr = (expr: string | undefined): CompiledAccessor | null => {
@@ -340,6 +388,7 @@ export function compileEdgeView(viewId: string, ir: EdgeViewIR): CompiledEdgeVie
         priority: typeof ir.priority === 'number' ? ir.priority : 0,
         predicate,
         dependencySet: [],
+        crossPaths: [],
         reference: ir.reference ?? null,
         isObjectAsEdge: !!(sourceExpr && targetExpr),
         sourceExpr,
@@ -357,6 +406,8 @@ export function compileEdgeView(viewId: string, ir: EdgeViewIR): CompiledEdgeVie
         persistWaypoints: e.persistWaypoints ?? true,
     };
     compiled.dependencySet = Array.from(deps);
+    compiled.crossPaths = dedupeCrossPaths(crossPathSink ?? []);
+    crossPathSink = prevSink;
     edgeCompileCache.set(key, compiled);
     return compiled;
 }

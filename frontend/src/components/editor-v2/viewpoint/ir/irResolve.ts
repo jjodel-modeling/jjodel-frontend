@@ -8,13 +8,21 @@
  * resolver and this one coexist without overlap, decision 2026-07-17).
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { store } from '../../../../joiner';
 import { type ReadCtx } from './irReadCtx';
 import { makeReadCtx } from './irReadCtxLproxy';
 import type { CompiledView } from './irTypes';
 import { computeIRSignature, getIRIndex, resolveIRView } from './irResolveCore';
+import {
+    clearCrossDeps,
+    crossDepsSignature,
+    publishCrossDeps,
+    resolveCrossDeps,
+    warnCappedCrossDeps,
+    warnUnresolvedCrossDeps,
+} from './irCrossDeps';
 
 export { computeIRSignature, getIRIndex, resolveIRView } from './irResolveCore';
 export type { IRViewpointIndex } from './irResolveCore';
@@ -53,21 +61,34 @@ export function useIRView(vertexId: string, instanceOfClassId: string | null | u
                 if (dv && Array.isArray(dv.values)) snap.push(`${fid}=${JSON.stringify(dv.values)}`);
             }
         }
-        return snap.join(';');
+        // Cross-object deps published by this node's previous render (spec v1.2
+        // sez. 9): appending their value snapshot makes a change on a navigated
+        // target's feature invalidate exactly this node.
+        const crossSig = crossDepsSignature(lookup, vertexId);
+        return crossSig ? `${snap.join(';')};X${crossSig}` : snap.join(';');
     });
 
+    // Drop this node's published cross-object deps when it unmounts.
+    useEffect(() => () => clearCrossDeps(vertexId), [vertexId]);
+
     return useMemo(() => {
-        if (!signature || !instanceOfClassId) return null;
+        if (!signature || !instanceOfClassId) { clearCrossDeps(vertexId); return null; }
         const state: any = store.getState();
         const irSig = computeIRSignature(state);
         const index = getIRIndex(state, irSig);
-        if (!index) return null;
+        if (!index) { clearCrossDeps(vertexId); return null; }
         const lookup = state.idlookup;
         const objectId = lookup?.[vertexId]?.model;
-        if (typeof objectId !== 'string') return null;
+        if (typeof objectId !== 'string') { clearCrossDeps(vertexId); return null; }
         const readCtx = makeReadCtx(lookup);
         const compiled = resolveIRView(objectId, instanceOfClassId, index, readCtx, lookup);
-        if (!compiled) return null;
+        if (!compiled) { clearCrossDeps(vertexId); return null; }
+        // Two-phase publish: resolve the cross-object deps of the resolved view
+        // against the current state and register them for the next selector pass.
+        const cross = resolveCrossDeps(lookup, objectId, compiled.crossPaths);
+        publishCrossDeps(vertexId, cross.fids);
+        if (cross.unresolved.length) warnUnresolvedCrossDeps(cross.unresolved, compiled.viewId);
+        if (cross.capped) warnCappedCrossDeps(compiled.viewId);
         return { compiled, objectId, readCtx };
     }, [signature, vertexId, instanceOfClassId]);
 }

@@ -22,7 +22,7 @@
 import { MarkerType, type Edge, type EdgeMarker, type Node } from '@xyflow/react';
 import type { CSSProperties } from 'react';
 import type { ReadCtx } from './irReadCtx';
-import type { CompiledEdgeView, EdgeTermination } from './irTypes';
+import type { CompiledCrossPath, CompiledEdgeView, EdgeTermination } from './irTypes';
 import { resolveEdgeView, resolveObjectAsEdgeView, type IRViewpointIndex } from './irResolveCore';
 
 type Idlookup = Record<string, any>;
@@ -145,6 +145,10 @@ export interface ObjectAsEdgeResult {
     edges: Edge[];
     /** objectIds rendered as edges (nodes hidden) */
     edgeObjects: Set<string>;
+    /** Per edge-object, the resolved view id + its cross-object paths (spec v1.2
+     *  sez. 9): the containment memo publishes these so edge labels re-render when
+     *  a navigated endpoint's feature changes. */
+    edgeObjectDeps: { objectId: string; viewId: string; crossPaths: CompiledCrossPath[] }[];
 }
 
 /**
@@ -170,8 +174,9 @@ export function synthesizeObjectAsEdges(
     /** Session anchor overrides (user-chosen handles, side pins, waypoints), keyed by edge-object id. */
     anchorOverrides?: Map<string, { sourceHandle?: string; targetHandle?: string; sourceSide?: string; targetSide?: string; waypoints?: unknown[] }>,
 ): ObjectAsEdgeResult {
-    if (index.objectAsEdgeByMetaclass.size === 0) return { nodes, edges, edgeObjects: new Set() };
+    if (index.objectAsEdgeByMetaclass.size === 0) return { nodes, edges, edgeObjects: new Set(), edgeObjectDeps: [] };
     const edgeObjects = new Set<string>();
+    const edgeObjectDeps: ObjectAsEdgeResult['edgeObjectDeps'] = [];
     const synthetic: Edge[] = [];
     for (const n of nodes) {
         const objectId = objByVertex.get(n.id);
@@ -197,6 +202,7 @@ export function synthesizeObjectAsEdges(
         const tgtVertex = tgtId ? vertexByObj.get(tgtId) : undefined;
         if (!srcVertex || !tgtVertex) continue; // fallback: keep the node rendered
         edgeObjects.add(objectId);
+        if (cv.crossPaths.length > 0) edgeObjectDeps.push({ objectId, viewId: cv.viewId, crossPaths: cv.crossPaths });
         const base: Edge = {
             id: `irobj_${objectId}`,
             source: srcVertex,
@@ -212,7 +218,7 @@ export function synthesizeObjectAsEdges(
         };
         synthetic.push(applyEdgeStyle(base, cv, readCtx, objectId));
     }
-    if (edgeObjects.size === 0) return { nodes, edges, edgeObjects };
+    if (edgeObjects.size === 0) return { nodes, edges, edgeObjects, edgeObjectDeps };
 
     const edgeObjectVertices = new Set<string>();
     for (const o of edgeObjects) {
@@ -247,5 +253,5 @@ export function synthesizeObjectAsEdges(
         placed.push(withHandles);
         return withHandles;
     });
-    return { nodes: outNodes, edges: [...outEdges, ...syntheticWithHandles], edgeObjects };
+    return { nodes: outNodes, edges: [...outEdges, ...syntheticWithHandles], edgeObjects, edgeObjectDeps };
 }

@@ -185,12 +185,35 @@ export interface EdgeViewIR {
 export type NodeViewIR = VertexViewIR | GraphVertexViewIR;
 export type AnyViewIR = NodeViewIR | EdgeViewIR;
 
+/**
+ * One compiled step of a PathExpr: the feature read and how its value is taken.
+ * `take`: 'value' = single slot value, 'values' = the whole array, N = values[N].
+ */
+export interface CompiledPathStep {
+    feature: string;
+    take: 'value' | 'values' | number;
+}
+
+/**
+ * A multi-hop PathExpr decomposed for cross-object dependency tracking
+ * (spec v1.2 sez. 9). `hops` are the navigation steps (each resolves a pointer
+ * to the next element); `terminal` is the last step (the feature actually read
+ * on the final navigated object). Single-hop self paths produce NO
+ * CompiledCrossPath — the self subscription already covers them.
+ */
+export interface CompiledCrossPath {
+    hops: CompiledPathStep[];      // length >= 1: the navigation prefix
+    terminal: CompiledPathStep;    // the feature read on the last hop's target
+}
+
 export interface CompiledEdgeView {
     viewId: string;
     ir: EdgeViewIR;
     priority: number;
     predicate: CompiledPredicate;
     dependencySet: string[];
+    /** Multi-hop paths read by this edge view (spec v1.2 sez. 9); [] when none. */
+    crossPaths: CompiledCrossPath[];
     reference: string | null;
     isObjectAsEdge: boolean;
     sourceExpr: CompiledAccessor | null;   // object-as-edge
@@ -218,8 +241,10 @@ export interface CompiledView {
     priority: number;
     /** Compiled predicate; always callable (returns true when no predicate declared). */
     predicate: CompiledPredicate;
-    /** Feature names read by every PathExpr in this view (self only; cross-object paths are a known v1 limit). */
+    /** Feature names read by every PathExpr in this view (flat; includes hop and terminal names). */
     dependencySet: string[];
+    /** Multi-hop paths read by this view (spec v1.2 sez. 9); [] when the view reads only self. */
+    crossPaths: CompiledCrossPath[];
     form: CompiledConditional<ShapeForm>;
     fill: CompiledConditional<string> | null;
     border: { color: string; width: number; style: string } | null;

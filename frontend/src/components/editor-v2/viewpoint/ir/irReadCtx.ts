@@ -29,8 +29,10 @@ export interface ReadCtx {
 
 type Idlookup = Record<string, any>;
 
-/** Walk the element's DValue features on the D-layer, match by DAttribute/DReference name. */
-function findFeatureRaw(idlookup: Idlookup, elementId: string, featureName: string): any | null {
+/** Walk the element's DValue features on the D-layer, match by DAttribute/DReference name.
+ *  Exported for irCrossDeps: cross-object dep concretization needs the DValue id
+ *  and its pointer values with draw semantics (no L-proxy upperBound coercion). */
+export function findFeatureRaw(idlookup: Idlookup, elementId: string, featureName: string): any | null {
     const dObject = idlookup[elementId];
     if (!dObject?.features) return null;
     for (const fid of dObject.features) {
