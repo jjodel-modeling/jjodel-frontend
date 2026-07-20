@@ -1,5 +1,15 @@
 # Claude Code Session Log
 
+## 2026-07-20 — docs: discovery wiring connect gesture + containment drop (viewpoint IR)
+**Prompt**: Fase 1 read-only del cantiere wiring interaction plan IR (`2026-07-20_prompt_discovery_wiring_connect_containment_ir.md`): domande A1-A6 (connect → object-as-edge), B1-B4 (containment drop), C1-C3 (trasversali), validazione ipotesi H1-H4 e verdetto sulle condizioni della Fase 2 condizionata. Esecuzione cloud autonoma su delega di Alfonso.
+**Files touched**: docs/discovery/discovery_2026-07-20_wiring_connect_containment_ir.md (new), docs/claude-code-log.md (questa entry). Nessun sorgente toccato.
+**Outcome**: ✅ completed — matching connect rule fattibile in puro (dati sufficienti in MetaclassInfo); sequenza D→L sincrona già comportamento committato in 3 path; synthesis richiede il vertex nell'array nodes (ordine anti-flicker derivato); `getCompatibleContainmentRefs`/`isDropCompatible` esistono committate ma MAI cablate (commento di testa aspirazionale); hull non è superficie di drop (pointerEvents none), target = bbox nodo container; gate rootable da ramificare + palette IR da estendere ai child droppabili (D4), altrimenti il gesto non è esercitabile sul test bed. Condizioni Fase 2: entrambe verdi.
+**Regressions**: no — task read-only.
+**Out-of-scope changes**: no.
+**Layer Impact Report**: not-required — nessun file sync/D-L toccato (canvasToJjom solo letto).
+**Note**: H4 rivista (feedback cursore a costo basso via onDragOver, si fa in v1). Decisioni proposte sotto delega D1-D5 nel report, ratificabili al rientro.
+**Nome del documento prompt**: 2026-07-20 18:30
+
 ## 2026-07-20 — fix(editor-v2): clamp dell'indice handle alla capacità del pool (edge mancanti 986→1500)
 **Prompt**: fix chirurgico in CRITICAL ZONE sequenziato DOPO il fix EdgeLabelRenderer (verificato: settle 118-148s→38.1s, rf_edges 986). Clamp in `portDistribution.ts` STEP 3 dell'indice handle a `MAX_HANDLES_PER_SIDE-1` così gli edge oltre il 4o per bucket (nodo,lato,ruolo) condividono l'ultimo handle invece di puntare a un handle inesistente ed essere scartati silenziosamente da React Flow. Fonte di verità: `discovery_2026-07-19_edge_mancanti_986_1000.md`. LIR prodotto nella chat di progetto. Guard di sviluppo (OQ3) approvato; policy round-robin (OQ1) esclusa.
 **Files touched**: frontend/src/components/editor-v2/utils/portDistribution.ts (clamp riga STEP 3 + const IS_DEV any-cast + Set overflowWarnedNodes + console.warn dev throttled one-per-node), docs/benchmarks/2026-07-20_baseline_m3_postfix-clamp.json (new, con env annotato a mano), docs/benchmarks/README.md (correzione denominatore 986/1000→986/1500 nelle 2 tabelle + 2 note OQ4: la causa non è "edge non tracciabile" ma overflow handle), docs/claude-code-log.md (questa entry).
