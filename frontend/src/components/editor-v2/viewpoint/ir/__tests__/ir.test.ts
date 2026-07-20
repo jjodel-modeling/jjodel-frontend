@@ -24,7 +24,7 @@ import {
     liftEndpoint,
 } from '../irContainment';
 import { assignGeometricHandles, decorateReferenceEdges, synthesizeObjectAsEdges } from '../irEdgeViews';
-import { applyIRPaletteFilter, deriveIRInteraction } from '../irInteraction';
+import { applyIRPaletteFilter, deriveDroppableChildMetaclasses, deriveIRInteraction, matchConnectRules } from '../irInteraction';
 import type { EdgeViewIR, GraphVertexViewIR, VertexViewIR } from '../irTypes';
 
 /** Build a minimal D-layer world: metamodel classes + objects with slots. */
@@ -514,6 +514,79 @@ describe('irInteraction (Fase 3)', () => {
         const plan = deriveIRInteraction(index);
         expect(plan.paletteMetaclasses).toBeNull();
         expect(plan.connectRules).toEqual([]);
+    });
+});
+
+describe('matchConnectRules (wiring connect gesture, discovery 2026-07-20)', () => {
+    // Minimal MetaclassInfo-shaped fixtures (only the fields the matcher reads).
+    const ref = (name: string, targetClassId: string) =>
+        ({ id: `R_${name}`, name, targetClassId, targetClassName: '', containment: false }) as any;
+    const cls = (id: string, name: string, opts: { isAbstract?: boolean; references?: any[]; concreteSubclasses?: any[] } = {}) =>
+        ({ id, name, isAbstract: !!opts.isAbstract, attributes: [], references: opts.references ?? [], concreteSubclasses: opts.concreteSubclasses ?? [] }) as any;
+
+    const state = cls('C_State', 'State');
+    const finalState = cls('C_Final', 'FinalState');
+    const abstractNode = cls('C_Node', 'Node', { isAbstract: true, concreteSubclasses: [state, finalState] });
+    const transition = cls('C_Trans', 'Transition', {
+        references: [ref('src', 'C_Node'), ref('tgt', 'C_Node')],
+    });
+    const allClasses = [state, finalState, abstractNode, transition];
+    const planWith = (rules: any[]) => ({ paletteMetaclasses: null, connectRules: rules, dropContainers: [] });
+    const rule = { edgeMetaclass: 'Transition', sourceFeature: 'src', targetFeature: 'tgt' };
+
+    it('matches when both endpoints conform via concrete descendants of the declared target', () => {
+        const out = matchConnectRules(planWith([rule]), 'C_State', 'C_Final', allClasses);
+        expect(out).toHaveLength(1);
+        expect(out[0].edgeClass.name).toBe('Transition');
+        expect(out[0].sourceRef.name).toBe('src');
+        expect(out[0].targetRef.name).toBe('tgt');
+    });
+    it('matches on direct target id and rejects a non-conforming endpoint', () => {
+        const directRule = { edgeMetaclass: 'Transition', sourceFeature: 'src', targetFeature: 'tgt' };
+        const trans2 = cls('C_Trans2', 'Transition', { references: [ref('src', 'C_State'), ref('tgt', 'C_State')] });
+        const world = [state, finalState, trans2];
+        expect(matchConnectRules(planWith([directRule]), 'C_State', 'C_State', world)).toHaveLength(1);
+        expect(matchConnectRules(planWith([directRule]), 'C_State', 'C_Final', world)).toHaveLength(0);
+    });
+    it('skips malformed rules: unknown metaclass, missing feature, null features, abstract edge class', () => {
+        const rules = [
+            { edgeMetaclass: 'Ghost', sourceFeature: 'src', targetFeature: 'tgt' },
+            { edgeMetaclass: 'Transition', sourceFeature: 'nope', targetFeature: 'tgt' },
+            { edgeMetaclass: 'Transition', sourceFeature: null, targetFeature: 'tgt' },
+            { edgeMetaclass: 'Node', sourceFeature: 'src', targetFeature: 'tgt' },
+        ];
+        expect(matchConnectRules(planWith(rules), 'C_State', 'C_State', allClasses)).toHaveLength(0);
+    });
+    it('null plan or empty rules → empty result', () => {
+        expect(matchConnectRules(null, 'C_State', 'C_State', allClasses)).toEqual([]);
+        expect(matchConnectRules(planWith([]), 'C_State', 'C_State', allClasses)).toEqual([]);
+    });
+});
+
+describe('deriveDroppableChildMetaclasses (palette extension D4, discovery 2026-07-20)', () => {
+    const cref = (name: string, targetClassId: string, containment: boolean) =>
+        ({ id: `R_${name}`, name, targetClassId, targetClassName: '', containment }) as any;
+    const mcls = (id: string, name: string, opts: { isAbstract?: boolean; references?: any[]; concreteSubclasses?: any[] } = {}) =>
+        ({ id, name, isAbstract: !!opts.isAbstract, attributes: [], references: opts.references ?? [], concreteSubclasses: opts.concreteSubclasses ?? [] }) as any;
+
+    const state = mcls('C_State', 'State');
+    const finalState = mcls('C_Final', 'FinalState');
+    const abstractNode = mcls('C_Node', 'Node', { isAbstract: true, concreteSubclasses: [state, finalState] });
+    const transition = mcls('C_Trans', 'Transition');
+    const machine = mcls('C_Machine', 'Machine', {
+        references: [cref('states', 'C_Node', true), cref('transitions', 'C_Trans', true), cref('linked', 'C_State', false)],
+    });
+    const allClasses = [state, finalState, abstractNode, transition, machine];
+    const planWith = (dropContainers: string[]) => ({ paletteMetaclasses: null, connectRules: [], dropContainers });
+
+    it('collects concrete targets and descendants of containment refs, skipping abstract and non-containment', () => {
+        const out = deriveDroppableChildMetaclasses(planWith(['Machine']), allClasses);
+        expect(out).toEqual(new Set(['State', 'FinalState', 'Transition']));
+    });
+    it('unknown container or empty dropContainers → empty set', () => {
+        expect(deriveDroppableChildMetaclasses(planWith(['Ghost']), allClasses).size).toBe(0);
+        expect(deriveDroppableChildMetaclasses(planWith([]), allClasses).size).toBe(0);
+        expect(deriveDroppableChildMetaclasses(null, allClasses).size).toBe(0);
     });
 });
 

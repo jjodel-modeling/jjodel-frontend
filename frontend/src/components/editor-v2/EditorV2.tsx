@@ -32,10 +32,10 @@ import PalettePanel from './panels/PalettePanel';
 // PropertiesPanel removed — properties editing is handled by the dock-based Info panel
 import Toolbar from './Toolbar';
 import { useIRContainment, useIRInteractionPlan } from './viewpoint/ir/useIRContainment';
-import { applyIRPaletteFilter } from './viewpoint/ir/irInteraction';
+import { applyIRPaletteFilter, deriveDroppableChildMetaclasses, matchConnectRules, type IRConnectRuleMatch, type IRInteractionPlan } from './viewpoint/ir/irInteraction';
 import IRContainmentHulls from './viewpoint/ir/IRContainmentHulls';
 import { clearSyntheticEdgeSelection, getIREdgeAnchorOverride, hydrateIREdgeAnchorOverrides, irEdgeLayoutFromOverride, setIREdgeAnchorOverride, setSyntheticEdgeSelected, type IRAnchorOverride } from './viewpoint/ir/irEdgeInteraction';
-import { hydrateCollapsed } from './viewpoint/ir/irCollapseState';
+import { hydrateCollapsed, isCollapsed } from './viewpoint/ir/irCollapseState';
 import { computeIRSignature, getIRIndex, resolveObjectAsEdgeView } from './viewpoint/ir/irResolveCore';
 import { makeReadCtx } from './viewpoint/ir/irReadCtxLproxy';
 import { useActiveEditor, CLASSIC_ZOOM_MIN, CLASSIC_ZOOM_MAX, type ZoomController } from './ActiveEditorContext';
@@ -91,7 +91,7 @@ import {
 } from './sync/canvasToJjom';
 import { computeElkLayout } from './utils/elkLayout';
 import { rafThrottle, cancelThrottle } from '../../utils/DragThrottle';
-import { getCompositionChildOptions, getCompatibleReferences, type CompatibleReference } from './utils/compositionCompat';
+import { getCompositionChildOptions, getCompatibleReferences, getCompatibleContainmentRefs, isDropCompatible, type CompatibleReference } from './utils/compositionCompat';
 import { LPointerTargetable, store, DState, SetRootFieldAction, DVertex, GraphSize, GraphPoint, SetFieldAction, TRANSACTION } from '../../joiner';
 import { jjomVertexToRFNode } from './utils/jjomTransformers';
 import { useTheme } from '../../services/ThemeService';
@@ -794,8 +794,13 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         connection: Connection;
         position: { x: number; y: number };
         compatibleRefs: CompatibleReference[];
+        /** IR connect rules applicable to this pair (object-as-edge creation entries). */
+        objectEdgeMatches?: IRConnectRuleMatch[];
     } | null>(null);
     const handleM1ReferenceSelectedRef = useRef<(ref: MetaclassReference, conn?: Connection) => void>(() => {});
+    const handleObjectEdgeSelectedRef = useRef<(match: IRConnectRuleMatch, conn?: Connection) => void>(() => {});
+    // Mirror of the IR interaction plan for stable-dep callbacks (same pattern as modeInfoRef).
+    const irPlanRef = useRef<IRInteractionPlan | null>(null);
 
     // Theme state — follows global ThemeService (synced with Navbar/Settings)
     const [theme] = useTheme();
@@ -1320,13 +1325,28 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // metaclasses the active IR viewpoint declares views for. Null = no IR
     // viewpoint → unrestricted palette (current behavior).
     const irInteractionPlan = useIRInteractionPlan();
+    irPlanRef.current = irInteractionPlan;
 
     // Palette intersection with the rootable classes, with normative fallback
     // (spec v1.2 sez. 6): empty intersection → full palette + notice.
-    const irPalette = useMemo(
-        () => applyIRPaletteFilter(modeInfo.rootableClasses, irInteractionPlan),
-        [modeInfo.rootableClasses, irInteractionPlan],
-    );
+    // With an IR plan declaring drop containers, the candidate list also
+    // includes the concrete metaclasses droppable inside them (decision D4,
+    // discovery 2026-07-20): contained-only classes get a palette entry whose
+    // drop is gated to compatible containers by onDrop/onDragOver.
+    const irPalette = useMemo(() => {
+        let candidates = modeInfo.rootableClasses;
+        if (irInteractionPlan && irInteractionPlan.dropContainers.length > 0 && modeInfo.mode === 'model') {
+            const droppable = deriveDroppableChildMetaclasses(irInteractionPlan, modeInfo.allClasses);
+            if (droppable.size > 0) {
+                const present = new Set(candidates.map(c => c.id));
+                const extra = modeInfo.allClasses.filter(
+                    c => !present.has(c.id) && !c.isAbstract && droppable.has(c.name),
+                );
+                if (extra.length > 0) candidates = [...candidates, ...extra];
+            }
+        }
+        return applyIRPaletteFilter(candidates, irInteractionPlan);
+    }, [modeInfo.rootableClasses, modeInfo.allClasses, modeInfo.mode, irInteractionPlan]);
 
     // Handle new connections: save the valid connection, then show edge type popup on drop
     const onConnect = useCallback(
@@ -1427,13 +1447,22 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                             })),
                         });
 
-                        if (compatibleRefs.length === 0) {
+                        // IR connect rules applicable to this metaclass pair
+                        // (object-as-edge creation; wiring cantiere 2026-07-20).
+                        const connectMatches = matchConnectRules(
+                            irPlanRef.current,
+                            sourceData.instanceOfClassId,
+                            targetData.instanceOfClassId,
+                            mi.allClasses,
+                        );
+
+                        if (compatibleRefs.length === 0 && connectMatches.length === 0) {
                             // eslint-disable-next-line no-console
                             console.log('[BUG-DIAG-DROP] M1 branch → 0 compatible refs, exit silently');
                             return; // no compatible refs — ignore
                         }
 
-                        if (compatibleRefs.length === 1) {
+                        if (compatibleRefs.length === 1 && connectMatches.length === 0) {
                             // Auto-select: skip popup, create edge directly
                             // eslint-disable-next-line no-console
                             console.log('[BUG-DIAG-DROP] M1 branch → auto-select single ref:', compatibleRefs[0].ref.name);
@@ -1441,13 +1470,20 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                             return;
                         }
 
-                        // Multiple options: show picker popup
+                        if (compatibleRefs.length === 0 && connectMatches.length === 1) {
+                            // Auto-create: single applicable IR rule, no direct reference
+                            handleObjectEdgeSelectedRef.current(connectMatches[0], connection);
+                            return;
+                        }
+
+                        // Multiple options: show picker popup (references + IR object-as-edge entries)
                         // eslint-disable-next-line no-console
                         console.log('[BUG-DIAG-DROP] M1 branch → show picker popup');
                         setPendingM1Connection({
                             connection,
                             position: { x: clientX, y: clientY },
                             compatibleRefs,
+                            objectEdgeMatches: connectMatches,
                         });
                     } else {
                         // eslint-disable-next-line no-console
@@ -1725,6 +1761,122 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     );
     handleM1ReferenceSelectedRef.current = handleM1ReferenceSelected;
 
+    // Create an object-as-edge instance from the connect gesture (IR connect
+    // rule; wiring cantiere 2026-07-20). Sequence per discovery
+    // 2026-07-20_wiring_connect_containment_ir: create the edge-object, write
+    // both endpoint slots through the canonical write path, THEN add the RF
+    // node — at its first render the IR decoration already resolves the
+    // endpoints, hides the vertex and synthesizes the edge (no fallback flash).
+    const handleObjectEdgeSelected = useCallback(
+        (match: IRConnectRuleMatch, connectionOverride?: Connection) => {
+            const conn = connectionOverride ?? pendingM1Connection?.connection;
+            setPendingM1Connection(null);
+            if (!conn || !conn.source || !conn.target || !graphId) return;
+
+            // Endpoint DObject ids from the vertex ids (same resolution as guardLink prep)
+            const srcObjectId: string | undefined = (LPointerTargetable.fromPointer(conn.source) as any)?.model?.id;
+            const tgtObjectId: string | undefined = (LPointerTargetable.fromPointer(conn.target) as any)?.model?.id;
+            if (!srcObjectId || !tgtObjectId) return;
+
+            takeSnapshot();
+
+            // Hidden vertex position: midpoint between the two endpoint nodes
+            const currentNodes = getNodes();
+            const sn = currentNodes.find(n => n.id === conn.source);
+            const tn = currentNodes.find(n => n.id === conn.target);
+            const midX = ((sn?.position.x ?? 0) + (tn?.position.x ?? 0)) / 2;
+            const midY = ((sn?.position.y ?? 0) + (tn?.position.y ?? 0)) / 2;
+
+            const vertexId = syncCreateObject(graphId, match.edgeClass.id, midX, midY);
+            if (!vertexId) {
+                console.warn('[EditorV2] Failed to create object-as-edge instance');
+                return;
+            }
+            markDropCreated(vertexId);
+
+            // The creation TRANSACTION commits in a microtask (CLAUDE.md §9.2):
+            // the endpoint slot proxies are not writable synchronously here
+            // (verified E2E 2026-07-20). Defer the slot writes until the slots
+            // resolve (bounded retry), then add the RF node LAST so its first
+            // render already synthesizes the edge (no fallback flash).
+            // Write shape: `.values = [...meaningful, id]` like
+            // syncCreateReferenceLink — on an EMPTY reference slot `.value =`
+            // is a silent no-op (verified with an in-browser probe 2026-07-20).
+            const writeSlot = (lObject: any, featName: string, objId: string) => {
+                const slot = lObject['$' + featName];
+                if (!slot) return;
+                const meaningful = (slot.__raw?.values ?? []).filter((v: any) => v != null && v !== '');
+                slot.values = [...meaningful, objId];
+            };
+            const writeSlotsAndMount = (attempt: number) => {
+                const lObject = (LPointerTargetable.fromPointer(vertexId) as any)?.model;
+                const ready = lObject
+                    && (lObject as any)['$' + match.sourceRef.name]
+                    && (lObject as any)['$' + match.targetRef.name];
+                if (!ready) {
+                    if (attempt < 40) setTimeout(() => writeSlotsAndMount(attempt + 1), 25);
+                    else console.warn('[EditorV2] object-as-edge: endpoint slots unavailable, node left as fallback');
+                    if (attempt < 40) return;
+                } else {
+                    writeSlot(lObject, match.sourceRef.name, srcObjectId);
+                    writeSlot(lObject, match.targetRef.name, tgtObjectId);
+                }
+                const createdName = (LPointerTargetable.fromPointer(vertexId) as any)?.model?.name ?? match.edgeClass.name;
+                const newNode: Node = {
+                    id: vertexId,
+                    type: 'objectNode',
+                    position: { x: midX, y: midY },
+                    data: {
+                        label: createdName,
+                        instanceOfClassName: match.edgeClass.name,
+                        instanceOfClassId: match.edgeClass.id,
+                        features: [],
+                    } as ObjectNodeData,
+                };
+                setNodes(nds => nds.some(n => n.id === vertexId) ? nds : [...nds, newNode]);
+            };
+            setTimeout(() => writeSlotsAndMount(0), 0);
+        },
+        [pendingM1Connection, graphId, getNodes, setNodes, takeSnapshot]
+    );
+    handleObjectEdgeSelectedRef.current = handleObjectEdgeSelected;
+
+    // IR containment drop (wiring cantiere 2026-07-20): pending drop waiting
+    // for the user to pick one of several compatible composition references.
+    const [pendingContainmentDrop, setPendingContainmentDrop] = useState<{
+        position: { x: number; y: number };
+        flowPosition: { x: number; y: number };
+        containerNodeId: string;
+        childClass: MetaclassInfo;
+        compatibleRefs: CompatibleReference[];
+    } | null>(null);
+
+    // Hit-test: smallest visible IR drop-container node whose bbox contains the
+    // flow position. Hulls are pointer-transparent and drawn only when children
+    // exist (discovery 2026-07-20 B1): the reliable target is the container
+    // node's bbox. Collapsed containers are not targets in v1 (decision D3).
+    const findIRDropContainerAt = useCallback((flowPos: { x: number; y: number }): Node | null => {
+        const plan = irPlanRef.current;
+        if (!plan || plan.dropContainers.length === 0) return null;
+        const lookup = (store.getState() as any).idlookup ?? {};
+        let best: Node | null = null;
+        let bestArea = Infinity;
+        for (const n of getNodes()) {
+            if (n.type !== 'objectNode' || n.hidden) continue;
+            const data = n.data as ObjectNodeData;
+            if (!plan.dropContainers.includes(data.instanceOfClassName)) continue;
+            const w = (n.measured?.width ?? n.width ?? 160) as number;
+            const h = (n.measured?.height ?? n.height ?? 60) as number;
+            if (flowPos.x < n.position.x || flowPos.x > n.position.x + w) continue;
+            if (flowPos.y < n.position.y || flowPos.y > n.position.y + h) continue;
+            const objectId = lookup[n.id]?.model;
+            if (typeof objectId === 'string' && isCollapsed(objectId)) continue;
+            const area = w * h;
+            if (area < bestArea) { best = n; bestArea = area; }
+        }
+        return best;
+    }, [getNodes]);
+
     // Handle edge reconnection (drag endpoint to a new target/source)
     const handleReconnect = useCallback(
         (oldEdge: Edge, newConnection: Connection) => {
@@ -1844,6 +1996,36 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     const metaclass = mi.allClasses.find(c => c.id === metaclassId);
                     if (!metaclass) return;
                     const className = metaclass.name;
+
+                    // IR containment drop (wiring cantiere 2026-07-20): a drop
+                    // landing on a compatible container node creates the child
+                    // INSIDE the container (composition), for rootable and
+                    // non-rootable classes alike. Falls through to the canvas
+                    // semantics when no compatible container is under the cursor.
+                    const cursorFlow = { x: position.x + defaultNodeWidth / 2, y: position.y + defaultNodeHeight / 2 };
+                    const containerNode = findIRDropContainerAt(cursorFlow);
+                    if (containerNode) {
+                        const containerData = containerNode.data as ObjectNodeData;
+                        const containerMeta = mi.allClasses.find(c => c.id === containerData.instanceOfClassId);
+                        const compatRefs = containerMeta
+                            ? getCompatibleContainmentRefs(containerMeta, metaclassId, mi.allClasses)
+                            : [];
+                        if (compatRefs.length === 1) {
+                            performContainmentDrop(containerNode, metaclass, compatRefs[0].ref.name, position);
+                            return;
+                        }
+                        if (compatRefs.length > 1) {
+                            setPendingContainmentDrop({
+                                position: { x: event.clientX, y: event.clientY },
+                                flowPosition: position,
+                                containerNodeId: containerNode.id,
+                                childClass: metaclass,
+                                compatibleRefs: compatRefs.map(c => ({ ref: c.ref, isContainment: true })),
+                            });
+                            return;
+                        }
+                        // incompatible container under the cursor → canvas semantics below
+                    }
 
                     // Only rootable classes can be placed on the canvas
                     const isRootable = mi.rootableClasses.some(c => c.id === metaclassId);
@@ -1988,12 +2170,24 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         const draggedId = getDraggedMetaclassId();
         if (mi.mode === 'model' && draggedId) {
             const isRootable = mi.rootableClasses.some(c => c.id === draggedId);
-            event.dataTransfer.dropEffect = isRootable ? 'move' : 'none';
+            if (isRootable) {
+                event.dataTransfer.dropEffect = 'move';
+                return;
+            }
+            // Non-rootable: droppable only over a compatible IR container
+            // (containment drop feedback, decision D5, discovery 2026-07-20).
+            const flowPos = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+            const containerNode = findIRDropContainerAt(flowPos);
+            const containerMeta = containerNode
+                ? mi.allClasses.find(c => c.id === (containerNode.data as ObjectNodeData).instanceOfClassId)
+                : undefined;
+            const compatible = !!containerMeta && isDropCompatible(containerMeta, draggedId, mi.allClasses);
+            event.dataTransfer.dropEffect = compatible ? 'move' : 'none';
             return;
         }
 
         event.dataTransfer.dropEffect = 'move';
-    }, []);
+    }, [screenToFlowPosition, findIRDropContainerAt]);
 
     // Drop handler for the classic editor wrapper (used in 'classic' and 'split' modes).
     // Reads the metaclassId from dataTransfer (set by PalettePanel under
@@ -2450,7 +2644,22 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     }, []);
 
     // Shared helper: create a composition child on a parent node
-    const createCompositionChild = (parentNode: Node, childClass: MetaclassInfo, refName: string) => {
+    // Containment drop entry point (wiring cantiere 2026-07-20): upper-bound
+    // guard (parity with the context menu path), snapshot, then the same
+    // creation path as the context menu with the drop position.
+    const performContainmentDrop = (parentNode: Node, childClass: MetaclassInfo, refName: string, atPosition: { x: number; y: number }) => {
+        const dVertex = LPointerTargetable.fromPointer(parentNode.id) as any;
+        const parentObjectId: string = dVertex?.model?.id ?? dVertex?.__raw?.model ?? parentNode.id;
+        const guardResult = guardLink(parentObjectId, refName);
+        if (!guardResult.allowed) {
+            console.warn('[EditorV2] Containment drop refused (upper bound):', guardResult.message);
+            return;
+        }
+        takeSnapshot();
+        createCompositionChild(parentNode, childClass, refName, atPosition);
+    };
+
+    const createCompositionChild = (parentNode: Node, childClass: MetaclassInfo, refName: string, atPosition?: { x: number; y: number }) => {
         if (!graphId) return;
         // Count existing composition children to stack vertically
         const currentEdges = getEdges();
@@ -2459,8 +2668,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         ).length;
 
         const parentW = parentNode.measured?.width ?? 140;
-        const childX = parentNode.position.x + parentW + 80;
-        const childY = parentNode.position.y + existingChildCount * 80;
+        const childX = atPosition?.x ?? parentNode.position.x + parentW + 80;
+        const childY = atPosition?.y ?? parentNode.position.y + existingChildCount * 80;
 
         // Pass undefined so DObject.new owns the name → data.name === initialName.
         // Read it back for the node label (see discovery §11/§12).
@@ -3661,6 +3870,30 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     options={pendingM1Connection.compatibleRefs}
                     onSelect={(ref) => handleM1ReferenceSelected(ref)}
                     onCancel={() => setPendingM1Connection(null)}
+                    objectEdgeOptions={(pendingM1Connection.objectEdgeMatches ?? []).map((m, i) => ({
+                        key: `${m.edgeClass.id}_${i}`,
+                        label: `New ${m.edgeClass.name}`,
+                    }))}
+                    onSelectObjectEdge={(key) => {
+                        const matches = pendingM1Connection.objectEdgeMatches ?? [];
+                        const idx = matches.findIndex((m, i) => `${m.edgeClass.id}_${i}` === key);
+                        if (idx >= 0) handleObjectEdgeSelected(matches[idx]);
+                    }}
+                />
+            )}
+
+            {pendingContainmentDrop && (
+                <M1ReferencePopup
+                    position={pendingContainmentDrop.position}
+                    containerRef={editorContainerRef}
+                    options={pendingContainmentDrop.compatibleRefs}
+                    onSelect={(ref) => {
+                        const p = pendingContainmentDrop;
+                        setPendingContainmentDrop(null);
+                        const parentNode = getNodes().find(n => n.id === p.containerNodeId);
+                        if (parentNode) performContainmentDrop(parentNode, p.childClass, ref.name, p.flowPosition);
+                    }}
+                    onCancel={() => setPendingContainmentDrop(null)}
                 />
             )}
         </HighlightProvider>

@@ -24,7 +24,24 @@ function ReferenceIcon({ className }: { className?: string }) {
     );
 }
 
+function ObjectEdgeIcon({ className }: { className?: string }) {
+    return (
+        <svg width="16" height="16" viewBox="0 0 16 16" className={className}>
+            <line x1="1" y1="8" x2="5" y2="8" stroke="currentColor" strokeWidth="1.5" />
+            <rect x="5.5" y="5.5" width="5" height="5" fill="none" stroke="currentColor" strokeWidth="1.2" />
+            <line x1="11" y1="8" x2="12" y2="8" stroke="currentColor" strokeWidth="1.5" />
+            <polyline points="10,5 13,8 10,11" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" transform="translate(1,0)" />
+        </svg>
+    );
+}
+
 // --- Main Component ---
+
+/** Object-as-edge creation option (IR connect rule); `key` identifies the match at the caller. */
+export interface ObjectEdgeOption {
+    key: string;
+    label: string;
+}
 
 interface M1ReferencePopupProps {
     /** Screen coordinates (clientX/clientY) of the drop point */
@@ -35,9 +52,12 @@ interface M1ReferencePopupProps {
     options: CompatibleReference[];
     onSelect: (ref: MetaclassReference) => void;
     onCancel: () => void;
+    /** Optional object-as-edge creation entries (IR connect rules), rendered after the references. */
+    objectEdgeOptions?: ObjectEdgeOption[];
+    onSelectObjectEdge?: (key: string) => void;
 }
 
-export function M1ReferencePopup({ position, containerRef, options, onSelect, onCancel }: M1ReferencePopupProps) {
+export function M1ReferencePopup({ position, containerRef, options, onSelect, onCancel, objectEdgeOptions, onSelectObjectEdge }: M1ReferencePopupProps) {
     const popupRef = useRef<HTMLDivElement>(null);
 
     const getPopupStyle = useCallback((): React.CSSProperties => {
@@ -49,7 +69,8 @@ export function M1ReferencePopup({ position, containerRef, options, onSelect, on
         let top = position.y - containerRect.top + 8;
 
         const popupWidth = 210;
-        const popupHeight = 32 + options.length * 34; // header + rows
+        const rowCount = options.length + (objectEdgeOptions?.length ?? 0);
+        const popupHeight = 32 + rowCount * 34; // header + rows
 
         if (left + popupWidth > containerRect.width) {
             left = position.x - containerRect.left - popupWidth - 8;
@@ -67,7 +88,7 @@ export function M1ReferencePopup({ position, containerRef, options, onSelect, on
             top: `${top}px`,
             zIndex: 1000,
         };
-    }, [position, containerRef, options.length]);
+    }, [position, containerRef, options.length, objectEdgeOptions?.length]);
 
     // Close on Escape
     useEffect(() => {
@@ -143,6 +164,18 @@ export function M1ReferencePopup({ position, containerRef, options, onSelect, on
                             : {ref.targetClassName}
                         </span>
                     </span>
+                </button>
+            ))}
+            {(objectEdgeOptions ?? []).map(opt => (
+                <button
+                    key={opt.key}
+                    className="edge-type-popup__option"
+                    onClick={() => onSelectObjectEdge?.(opt.key)}
+                    role="menuitem"
+                    tabIndex={0}
+                >
+                    <ObjectEdgeIcon className="edge-type-popup__icon" />
+                    <span className="edge-type-popup__label">{opt.label}</span>
                 </button>
             ))}
         </div>

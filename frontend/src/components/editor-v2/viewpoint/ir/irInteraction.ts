@@ -17,11 +17,22 @@
  */
 
 import type { IRViewpointIndex } from './irResolveCore';
+import type { MetaclassInfo, MetaclassReference } from '../../hooks/useEditorMode';
 
 export interface IRConnectRule {
     edgeMetaclass: string;
     sourceFeature: string | null;
     targetFeature: string | null;
+}
+
+/** A connect rule applicable to a concrete (source, target) metaclass pair. */
+export interface IRConnectRuleMatch {
+    rule: IRConnectRule;
+    /** Concrete metaclass of the edge-object to instantiate. */
+    edgeClass: MetaclassInfo;
+    /** Resolved source/target references of the edge metaclass (non-null names). */
+    sourceRef: MetaclassReference;
+    targetRef: MetaclassReference;
 }
 
 export interface IRInteractionPlan {
@@ -81,6 +92,77 @@ export function deriveIRInteraction(index: IRViewpointIndex): IRInteractionPlan 
  * `fallback` stays false when there are no rootable classes at all (nothing
  * to show either way — the empty state is not a fallback).
  */
+/** True when `classId` conforms to the reference's declared target (direct or concrete descendant). */
+function conformsToRefTarget(ref: MetaclassReference, classId: string, classById: Map<string, MetaclassInfo>): boolean {
+    if (ref.targetClassId === classId) return true;
+    const declared = classById.get(ref.targetClassId);
+    return !!declared && declared.concreteSubclasses.some(sub => sub.id === classId);
+}
+
+/**
+ * Connect rules applicable to a gesture from an instance of `sourceClassId` to
+ * an instance of `targetClassId` (wiring cantiere 2026-07-20). A rule matches
+ * when its edge metaclass resolves to a concrete class whose source/target
+ * references (by name) accept the two endpoint metaclasses, with the same
+ * conformance used by getCompatibleReferences (direct match or concrete
+ * descendant). Malformed rules (unknown metaclass, missing feature) are
+ * skipped. Cross-MM targets absent from `allClasses` do not match (declared
+ * v1 limit, same as getCompatibleContainmentRefs).
+ */
+export function matchConnectRules(
+    plan: IRInteractionPlan | null,
+    sourceClassId: string,
+    targetClassId: string,
+    allClasses: MetaclassInfo[],
+): IRConnectRuleMatch[] {
+    if (!plan || plan.connectRules.length === 0) return [];
+    const classById = new Map(allClasses.map(c => [c.id, c]));
+    const classByName = new Map(allClasses.map(c => [c.name, c]));
+    const out: IRConnectRuleMatch[] = [];
+    for (const rule of plan.connectRules) {
+        if (!rule.sourceFeature || !rule.targetFeature) continue;
+        const edgeClass = classByName.get(rule.edgeMetaclass);
+        if (!edgeClass || edgeClass.isAbstract) continue;
+        const sourceRef = edgeClass.references.find(r => r.name === rule.sourceFeature);
+        const targetRef = edgeClass.references.find(r => r.name === rule.targetFeature);
+        if (!sourceRef || !targetRef) continue;
+        if (!conformsToRefTarget(sourceRef, sourceClassId, classById)) continue;
+        if (!conformsToRefTarget(targetRef, targetClassId, classById)) continue;
+        out.push({ rule, edgeClass, sourceRef, targetRef });
+    }
+    return out;
+}
+
+/**
+ * Names of the concrete metaclasses droppable inside the plan's drop
+ * containers (containment-reference targets + their concrete descendants).
+ * Used to extend the IR palette beyond the rootable classes (decision D4,
+ * discovery 2026-07-20): without it, contained-only classes (e.g. State in a
+ * Machine) have no palette entry and the containment drop gesture cannot be
+ * exercised. Cross-MM targets absent from `allClasses` are skipped (v1 limit).
+ */
+export function deriveDroppableChildMetaclasses(
+    plan: IRInteractionPlan | null,
+    allClasses: MetaclassInfo[],
+): Set<string> {
+    const out = new Set<string>();
+    if (!plan || plan.dropContainers.length === 0) return out;
+    const classById = new Map(allClasses.map(c => [c.id, c]));
+    const classByName = new Map(allClasses.map(c => [c.name, c]));
+    for (const containerName of plan.dropContainers) {
+        const container = classByName.get(containerName);
+        if (!container) continue;
+        for (const ref of container.references) {
+            if (!ref.containment) continue;
+            const target = classById.get(ref.targetClassId);
+            if (!target) continue;
+            if (!target.isAbstract) out.add(target.name);
+            for (const sub of target.concreteSubclasses) out.add(sub.name);
+        }
+    }
+    return out;
+}
+
 export function applyIRPaletteFilter<T extends { name: string }>(
     rootable: T[],
     plan: IRInteractionPlan | null,
