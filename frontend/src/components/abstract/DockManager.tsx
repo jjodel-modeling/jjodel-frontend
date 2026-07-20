@@ -308,6 +308,7 @@ class DockManager {
             getSourceMetamodel: getSourceMetamodel,
             getTargetMetamodel: getTargetMetamodel,
             sourceMetamodelName: transformation.sourceMetamodelName || 'Source',
+            sourceMetamodelId: transformation.sourceMetamodelId,
             targetMetamodelName: transformation.targetMetamodelName || 'Target',
             availableModels: availableModels || [],
             existingModelNames: existingModelNames || [],

@@ -555,6 +555,27 @@
     border-bottom-left-radius: var(--radius-sm);
 }
 
+/*
+ * Code-only assistant messages: the reply is nothing but a single code block — either
+ * the pre-run markdown code block (.md-code-block) or the post-run JjScript runner
+ * (.md-jjscript-wrapper) — with no rendered prose. There the shared bubble box
+ * (background + padding + rounded corners) draws a second frame concentric to the code
+ * block's own border, i.e. a visible double border. Strip the bubble's box in that case
+ * so the code block's border is the only frame. Covers pre-run and post-run identically.
+ *
+ * "No prose" = the markdown renderer emitted none of its block-level prose elements (see
+ * MarkdownRenderer.tsx component overrides). Inline prose (.md-strong/.md-em/.md-link/
+ * .md-del/.md-inline-code) only ever appears inside .md-paragraph/.md-heading, so this
+ * list is exhaustive. Mixed text+code and text-only messages keep the shared bubble
+ * intact (the shared style above is untouched). Higher specificity (0,4,0) than the dark
+ * override below (0,3,0), so background:transparent wins in dark mode too.
+ */
+.jodie-message-assistant .jodie-message-bubble:has(.md-code-block, .md-jjscript-wrapper):not(:has(.md-paragraph, .md-heading, .md-list, .md-blockquote, .md-table-wrapper, .md-hr)) {
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+}
+
 .jodie-message-text {
     white-space: pre-wrap;
 }
@@ -2278,20 +2299,36 @@ body[data-notification-visible="true"] .jodie-minimized {
    CODE INPUT PROMPT (in ChatInput composer)
    ======================================== */
 
-.jodie-composer--code {
-    align-items: center;
-}
-
 .jodie-code-prompt {
     display: inline-flex;
     align-items: center;
-    padding: 0 6px 0 4px;
-    color: #0ea5e9;
+    /* 8px top/bottom matches the textarea's vertical padding so the prompt sits
+       on the input's baseline; every composer uses align-items:flex-end, so the
+       prompt is aligned the same way in all three modes. */
+    padding: 8px 6px 8px 4px;
+    color: #94a3b8;
     font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
-    font-size: 16px;
-    font-weight: 600;
+    font-size: 13px;
+    font-weight: 400;
+    white-space: nowrap;
     user-select: none;
-    line-height: 1;
+    line-height: 1.5;
+}
+
+/* Attach button lives inside the composer (right, before send) — size it to
+   match the 32px send button so the composer height doesn't change. */
+.jodie-composer .jodie-attach-btn {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+}
+
+/* Typed text matches the mode prompt (same mono font, size, colour, line-height)
+   so `<mode>> text` reads as one continuous, aligned line in every mode. */
+.jodie-composer .jodie-input {
+    font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+    font-size: 13px;
+    color: #94a3b8;
 }
 
 .jodie-input--code {
@@ -2650,6 +2687,59 @@ body[data-notification-visible="true"] .jodie-minimized {
     background: rgba(255, 255, 255, 0.08);
     border-color: rgba(255, 255, 255, 0.18);
     color: #e2e8f0;
+}
+
+/* Disabled promote-btn (offer already consumed). */
+.jodie-promote-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+/* Offer card (Jjodie mode): "Sembra un comando JjScript" + [Esegui] / [Chiedi a Jjodie] */
+.jodie-offer {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+}
+
+.jodie-offer__title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #334155;
+}
+
+.jodie-offer__preview {
+    font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+    font-size: 12px;
+    color: #0f172a;
+    background: #eef2f7;
+    border-radius: 6px;
+    padding: 4px 8px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.jodie-offer__actions {
+    display: flex;
+    gap: 8px;
+}
+
+[data-theme="dark"] .jodie-offer {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .jodie-offer__title {
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .jodie-offer__preview {
+    background: rgba(0, 0, 0, 0.3);
+    color: #f1f5f9;
 }
 
 /* ========================================

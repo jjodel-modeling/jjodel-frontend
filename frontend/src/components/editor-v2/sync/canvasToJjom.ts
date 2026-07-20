@@ -28,8 +28,9 @@ import {
 } from '../../../joiner';
 import type { Node } from '@xyflow/react';
 import type { ClassNodeData } from '../types';
-import { markCanvasUpdated, markCanvasUpdatedBatch, markCanvasEdgePair } from './syncState';
+import { markCanvasUpdated, markCanvasUpdatedBatch, markCanvasEdgePair, clearCanvasEdgePair } from './syncState';
 import { captureAttributeOrphanValues } from '../hooks/useOrphanFeatures';
+import { sweepAllM1ReferenceGraphs } from './m1EdgeSweep';
 
 // ---------------------------------------------------------------------------
 // Position sync
@@ -77,6 +78,38 @@ export function syncSizeToJjom(vertexId: string, w: number, h: number): void {
 }
 
 // ---------------------------------------------------------------------------
+// IR layout persistence (synthetic object-as-edge + graphVertex collapse)
+// ---------------------------------------------------------------------------
+
+/**
+ * Persist the IR object-as-edge layout override (side pins + waypoints) on the
+ * hidden edge-object's DVertex. Written whole at gesture end (ghostOffsets
+ * pattern); no markCanvasUpdated — the field is not read by the position
+ * transformers (discovery 2026-07-19).
+ */
+export function syncIREdgeLayoutToJjom(
+    vertexId: string,
+    layout: {
+        sourceSide?: 'top' | 'right' | 'bottom' | 'left';
+        targetSide?: 'top' | 'right' | 'bottom' | 'left';
+        waypoints?: { segmentIndex: number; offset: number }[];
+    },
+): void {
+    TRANSACTION('EditorV2 IR edge layout', () => {
+        SetFieldAction.new(vertexId as any, 'irEdgeLayout' as any, layout, undefined, false);
+    });
+}
+
+/**
+ * Persist the collapse state of an IR graphVertex container on its DVertex.
+ */
+export function syncIRCollapsedToJjom(vertexId: string, collapsed: boolean): void {
+    TRANSACTION('EditorV2 IR collapse', () => {
+        SetFieldAction.new(vertexId as any, 'irCollapsed' as any, collapsed, undefined, false);
+    });
+}
+
+// ---------------------------------------------------------------------------
 // Edge creation
 // ---------------------------------------------------------------------------
 
@@ -115,8 +148,12 @@ export function syncInheritanceEdge(
         // DVoidEdge.new2 internally calls Constructors.persist() which creates
         // its own TRANSACTION. Nesting it inside an outer TRANSACTION causes
         // the edge to not be properly added to the graph's subElements.
-        // The auto-populate effect's dependencies (modelClassCount, subElementIds.length)
-        // do NOT include the extends array, so the effect won't fire between the two.
+        // The auto-populate effect now DOES observe the extends array (via the
+        // modelExtendsSig dependency added 2026-07-11), so it CAN fire between
+        // this TRANSACTION and the DVoidEdge.new2 below. The duplicate is
+        // prevented by markCanvasEdgePair (called before the create, ~line 128),
+        // which the effect's Step 3 inheritance ADD guard (hasCanvasEdgePair)
+        // honors. See docs/discovery/discovery_2026-07-11_dfirst_live_sync_dead.md §5.2.
         TRANSACTION('EditorV2 create inheritance edge', () => {
             sourceClass.extends = [...currentExtends, targetClass.id];
         });
@@ -261,6 +298,20 @@ export function syncDeleteVertex(vertexId: string): void {
         const vertexProxy: any = LPointerTargetable.fromPointer(vertexId);
         if (!vertexProxy) return;
 
+        const modelElement: any = vertexProxy.model;
+
+        // A singleton instance is REFUSED by the canonical delete guard
+        // (LObject.get_delete). Bail out BEFORE the connected-edge cleanup
+        // below: deleting the edges first and then having the cascade refuse
+        // would leave the instance alive but stripped of its canvas links.
+        // Same flag as the guard (isSingleton via instanceof), no duplicated
+        // logic: .delete() is still called so the guard itself emits the
+        // canonical user-facing warning and stops.
+        if (modelElement?.className === 'DObject' && modelElement?.instanceof?.isSingleton) {
+            modelElement.delete(); // guard refusal: warning only, no actions fired
+            return;
+        }
+
         // Find and delete all connected DEdges in the same graph first.
         // Without this, orphan edges remain in graph.subElements and the
         // sync re-adds them as floating arrows.
@@ -292,15 +343,34 @@ export function syncDeleteVertex(vertexId: string): void {
             }
         }
 
-        // Delete the model element. For a DClass, route through the L-proxy
-        // .delete() cascade (Dummy.get_delete) so its owned references /
-        // attributes / operations are removed too — matching the classic
-        // editor and fixing the orphan-DReference bug. .delete() wraps its own
-        // TRANSACTION internally (Dummy.ts), so no outer wrapper here (mirrors
-        // syncRemoveAttribute). Non-class types stay on the raw path unchanged.
-        const modelElement = vertexProxy?.model;
+        // Delete the model element. DClass and DObject route through the
+        // L-proxy .delete() cascade (Dummy.get_delete) — matching the classic
+        // editor. .delete() wraps its own TRANSACTION internally (Dummy.ts),
+        // so no outer wrapper here (mirrors syncRemoveAttribute). Other
+        // types stay on the raw path unchanged.
         if (modelElement) {
             if (modelElement.className === 'DClass') {
+                modelElement.delete();
+                // Deferred structural sweep: the class cascade deletes owned and
+                // incoming references (case 'type') and their M1 slots, but M1
+                // instance edges live in OTHER graphs and may lack a resolvable
+                // `model` back-pointer → unreachable via pointedBy. Delayed
+                // beyond the 0-tick so the cascade's nested async TRANSACTIONs
+                // have committed and the sweep observes the slots already gone
+                // (same rationale as syncDeleteEdge's deferred sweep).
+                setTimeout(() => { sweepAllM1ReferenceGraphs(); }, 60);
+            } else if (modelElement.className === 'DObject') {
+                // M1 instances: the canonical cascade cleans the incoming
+                // reference slots via pointedBy (case 'values'), the instance's
+                // own DValue features (children), model.objects (father safety
+                // net) and every DVertex across graphs (nodes) — the raw path
+                // left all of these dangling (see docs/discovery/
+                // discovery_2026-07-16_instance_delete_dangling_refs.md).
+                // No deferred sweep here: its structural predicate skips
+                // endpoint-dead edges, so it would be a no-op for this
+                // scenario; residual cross-graph zombie edges are render-
+                // filtered (jjomEdgeToRFEdge nulls on dead endpoints) — same
+                // known pollution class as ghost vertices.
                 modelElement.delete();
             } else {
                 TRANSACTION('EditorV2 delete node', () => {
@@ -310,6 +380,85 @@ export function syncDeleteVertex(vertexId: string): void {
         }
     } catch (err) {
         console.warn('[canvasToJjom] Failed to delete vertex:', err);
+    }
+}
+
+/**
+ * Cascade-delete a DReference by its canonical id, driving the hardened
+ * co-evolution path: `.delete()` cleans the M1 DValue slots (Dummy cascade case
+ * 'instanceof') and the owner class's references[] and Edge dependents (case
+ * 'model'); the deferred pass removes the persisted M1/M2 backing edges and
+ * clears their pair guards; the sweep reclaims model-less M1 reference edges.
+ *
+ * Keyed purely on `refId` so it serves BOTH the edge context menu (via
+ * syncDeleteEdge, which derives refId from the clicked edge) AND the cross-MM
+ * ghost-target chip, which holds refId but has NO RF edge (the edge is
+ * suppressed in jjomEdgeToRFEdge). `fallbackRefProxy` preserves syncDeleteEdge's
+ * prior behavior: if fromPointer(refId) cannot resolve a deletable proxy, fall
+ * back to the edge's `model` proxy. The chip path passes none.
+ */
+export function syncDeleteReferenceById(refId: string, fallbackRefProxy?: any): void {
+    try {
+        if (!refId) return;
+        const lookup: any = store.getState().idlookup;
+
+        // (a) Collect every persisted edge backed by this reference (M2 edge + M1 instance
+        //     edges) BEFORE deleting, plus the M1 (src,tgt) vertex pairs to unguard. Cascade
+        //     case 'model' does not remove these, so they must be removed explicitly.
+        const staleEdgeIds: string[] = [];
+        const m1Pairs: { src: string; tgt: string }[] = [];
+        for (const e of Object.values(lookup) as any[]) {
+            if (!e || typeof e.model !== 'string' || e.model !== refId) continue;
+            if (!String(e.className).includes('Edge')) continue;
+            staleEdgeIds.push(e.id);
+            const sv = lookup[e.start];
+            if (sv && lookup[sv.model]?.className === 'DObject') {
+                m1Pairs.push({ src: e.start, tgt: e.end });
+            }
+        }
+
+        // (b) Cascade-delete the DReference via the canonical model-context proxy (fromPointer of
+        //     the canonical refId). It runs its OWN async TRANSACTION and is fire-and-forget
+        //     (returns void). DO NOT wrap it, and DO NOT run any further mutation synchronously
+        //     after it (see (c)). If nothing is deletable, bail before scheduling edge cleanup.
+        const lRef: any = LPointerTargetable.fromPointer(refId);
+        if (lRef && typeof lRef.delete === 'function') {
+            lRef.delete();
+        } else if (fallbackRefProxy && typeof fallbackRefProxy.delete === 'function') {
+            fallbackRefProxy.delete();
+        } else {
+            return;
+        }
+
+        // (c)+(d) DEFERRED to a post-commit macrotask. Running this synchronously here would open a
+        //     TRANSACTION that overlaps .delete()'s still-open async TRANSACTION; their out-of-LIFO
+        //     END order silently drops .delete()'s actions at merge (the useJjomSync.ts:496-498 hazard).
+        //     setTimeout(0) is a macrotask: it runs only after the microtask queue drains, i.e. after
+        //     .delete() has fully committed. Then remove the orphaned edges and clear their pair guards.
+        setTimeout(() => {
+            if (staleEdgeIds.length) {
+                TRANSACTION('EditorV2 delete reference edges', () => {
+                    for (const eid of staleEdgeIds) {
+                        const ep: any = LPointerTargetable.fromPointer(eid);
+                        if (ep) DeleteElementAction.new(ep.__raw ?? ep);
+                    }
+                });
+            }
+            for (const { src, tgt } of m1Pairs) clearCanvasEdgePair(src, tgt);
+        }, 0);
+
+        // (e) Structural sweep: M1 edges created WITHOUT a resolvable `model`
+        //     back-pointer (resolveReferenceIdByName can fail) escape both the
+        //     enumeration above and the .delete() cascade (no pointedBy entry).
+        //     The sweep reclaims them by backing-slot structure, even when no M1
+        //     canvas is mounted. Delayed beyond the 0-tick: the cascade's nested
+        //     async TRANSACTIONs (per-slot lObj.delete()) can settle across later
+        //     macrotasks, and the sweep must observe the slots already gone to
+        //     classify the pairs as stale. Mounted M1 canvases are additionally
+        //     covered reactively by useM1ReferenceEdges' reconcile pass.
+        setTimeout(() => { sweepAllM1ReferenceGraphs(); }, 60);
+    } catch (err) {
+        console.warn('[canvasToJjom] Failed to delete reference:', err);
     }
 }
 
@@ -340,13 +489,18 @@ export function syncDeleteEdge(edgeId: string, isInheritance: boolean): void {
                 DeleteElementAction.new(edgeProxy.__raw ?? edgeProxy);
             });
         } else {
-            // Delete the reference model element
-            const refModel = edgeProxy.model;
-            if (refModel) {
-                TRANSACTION('EditorV2 delete edge', () => {
-                    DeleteElementAction.new(refModel.__raw ?? refModel);
-                    DeleteElementAction.new(edgeProxy.__raw ?? edgeProxy);
-                });
+            // Reference edge: cascade-delete the M2 DReference, its M1 slots, and all backing edges.
+            const refModel: any = edgeProxy.model;
+            const lookup: any = store.getState().idlookup;
+            // Canonical DReference pointer = the clicked edge's stored `model` (the same pointer used
+            // by M1 edges' `model` and by slots' `instanceof`). Derive it from idlookup, NOT from
+            // (refModel.__raw ?? refModel).id, which may differ and made fromPointer() return null.
+            const refId: string = lookup[edgeId]?.model ?? (refModel?.__raw ?? refModel)?.id;
+            if (refModel && refId) {
+                // Delegate to the shared refId-keyed cascade (single source of truth with the
+                // ghost-target chip's "Delete reference"). refModel is passed as the fallback
+                // proxy, preserving the prior behavior when fromPointer(refId) cannot resolve.
+                syncDeleteReferenceById(refId, refModel);
             }
         }
     } catch (err) {

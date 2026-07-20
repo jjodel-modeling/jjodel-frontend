@@ -38,7 +38,22 @@ export type ViolationSeverity = 'error' | 'warning';
 export interface ConformanceViolation {
     objectId: string;
     objectName?: string;
-    violationType: GuardViolationType | 'orphan_object' | 'missing_required_attr' | 'multiplicity_below_min' | 'dangling_reference';
+    violationType:
+        | GuardViolationType
+        | 'orphan_object'
+        | 'missing_required_attr'
+        | 'multiplicity_below_min'
+        | 'dangling_reference'
+        // Livello 0 structural checks (WP1) — additive; existing values above are unchanged (tooltip API)
+        | 'abstract_instantiation'
+        | 'reference_target_type_mismatch'
+        | 'attr_multiplicity_upper_exceeded'
+        | 'attr_multiplicity_below_min'
+        | 'invalid_enum_literal'
+        | 'duplicate_id_value'
+        // Fail-visible meta-check (WP1): a per-check catch fired, so that check could not be
+        // evaluated. Emitted as 'warning' so status is never 'conformant' with a skipped check.
+        | 'check_failed';
     severity: ViolationSeverity;
     message: string;
     metamodelElementName?: string;

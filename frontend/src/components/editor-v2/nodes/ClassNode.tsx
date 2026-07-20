@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
+import { useSelector } from 'react-redux';
 import { NodeResizer, useReactFlow, type NodeProps, type Node } from '@xyflow/react';
 import ViewpointRenderer from '../viewpoint/ViewpointRenderer';
 import DynamicHandles from '../components/DynamicHandles';
@@ -32,6 +33,12 @@ function ClassNode({ id, data, selected, width, height }: NodeProps<ClassNodeTyp
     const { setNodes, getViewport } = useReactFlow();
     const editorContext = useEditorContextSafe();
     const hlClass = useNodeHighlightClass(id);
+    // Currently-selected model element (canonical selection channel, mirrors
+    // EditorV2.tsx). Used to mark the cross-MM ghost stub as selected when its
+    // DReference is the selected element — independent of ReactFlow node selection.
+    const selectedModelElement = useSelector(
+        (s: any) => s?._lastSelected?.modelElement as string | undefined
+    );
 
     const attributes = data.attributes ?? [];
     const operations = data.operations ?? [];
@@ -76,6 +83,9 @@ function ClassNode({ id, data, selected, width, height }: NodeProps<ClassNodeTyp
         }
     );
     const ghostDragRef = useRef<{ refName: string; startX: number; startY: number; baseDx: number; baseDy: number } | null>(null);
+    // True once a chip drag has moved past the click threshold, so a real
+    // reposition drag does not also fire a select on the trailing click.
+    const ghostMovedRef = useRef(false);
 
     // Persist the by-refName offsets to the source DVertex as a by-refId map.
     // Mirrors syncPositionToJjom (canvasToJjom.ts): TRANSACTION + SetFieldAction.
@@ -90,6 +100,7 @@ function ClassNode({ id, data, selected, width, height }: NodeProps<ClassNodeTyp
 
     const onGhostPointerDown = useCallback((e: React.PointerEvent, refName: string) => {
         e.stopPropagation();   // do not let the press start a node drag / pan
+        ghostMovedRef.current = false;   // reset click-vs-drag tracking
         try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* noop */ }
         const cur = ghostOffsets[refName] ?? { dx: 0, dy: 0 };
         ghostDragRef.current = { refName, startX: e.clientX, startY: e.clientY, baseDx: cur.dx, baseDy: cur.dy };
@@ -98,6 +109,8 @@ function ClassNode({ id, data, selected, width, height }: NodeProps<ClassNodeTyp
     const onGhostPointerMove = useCallback((e: React.PointerEvent) => {
         const d = ghostDragRef.current;
         if (!d) return;
+        // Screen-px travel from the press: past ~4px this is a drag, not a click.
+        if (Math.hypot(e.clientX - d.startX, e.clientY - d.startY) > 4) ghostMovedRef.current = true;
         const zoom = getViewport().zoom || 1;   // screen px -> flow px
         const dx = d.baseDx + (e.clientX - d.startX) / zoom;
         const dy = d.baseDy + (e.clientY - d.startY) / zoom;
@@ -640,6 +653,22 @@ function ClassNode({ id, data, selected, width, height }: NodeProps<ClassNodeTyp
                                 <div
                                     className="ghost-target-stub__draggable nodrag"
                                     style={{ transform: `translate(${endX}px, ${endY}px)` }}
+                                    // Stop the press from reaching ReactFlow so a stub tap on the
+                                    // label area does not select the parent node (the chip already
+                                    // stops its own pointerdown for the reposition drag).
+                                    onPointerDown={(e) => e.stopPropagation()}
+                                    onClick={(e) => {
+                                        // Stop first: a tap must not bubble to onNodeClick / RF
+                                        // node-selection, so the parent class shows no ring.
+                                        // selectChildElement sets _lastSelected.modelElement = refId
+                                        // independently (its own rAF), so the reference stays
+                                        // selected and the panel is unaffected.
+                                        e.stopPropagation();
+                                        // A real reposition drag ends with a click — ignore it.
+                                        if (ghostMovedRef.current) { ghostMovedRef.current = false; return; }
+                                        if (!gt.refId) return;
+                                        editorContext?.selectChildElement?.(gt.refId);
+                                    }}
                                 >
                                     <span className="ghost-target-stub__label">{gt.refName} {gt.cardinality}</span>
                                     <div
@@ -647,12 +676,23 @@ function ClassNode({ id, data, selected, width, height }: NodeProps<ClassNodeTyp
                                             if (el) ghostChipRefs.current.set(gt.refName, el);
                                             else ghostChipRefs.current.delete(gt.refName);
                                         }}
-                                        className="ghost-target-stub__chip"
+                                        className={`ghost-target-stub__chip${gt.refId && gt.refId === selectedModelElement ? ' ghost-target-stub__chip--selected' : ''}`}
                                         title={gt.targetFullname}
                                         onPointerDown={(e) => onGhostPointerDown(e, gt.refName)}
                                         onPointerMove={onGhostPointerMove}
                                         onPointerUp={onGhostPointerUp}
                                         onDoubleClick={() => onGhostReset(gt.refName)}
+                                        // Right-click opens a single "Delete reference" item.
+                                        // preventDefault blocks the native menu; stopPropagation
+                                        // blocks the parent Class node's onNodeContextMenu bubble.
+                                        onContextMenu={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            if (!gt.refId) return;
+                                            window.dispatchEvent(new CustomEvent(JjodelEvents.CHILD_CONTEXT_MENU, {
+                                                detail: { childId: gt.refId, childKind: 'ref', nodeId: id, x: e.clientX, y: e.clientY }
+                                            }));
+                                        }}
                                     >
                                         <span className="ghost-target-stub__name">{gt.targetName}</span>
                                         <span className="ghost-target-stub__mm">{gt.targetMetamodel}</span>

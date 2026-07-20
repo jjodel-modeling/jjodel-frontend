@@ -18,44 +18,6 @@ export class JjScriptService {
     private static maxHistorySize = 50;
 
     /**
-     * Check if a message is a JjScript command
-     * Commands start with a known command word or / prefix
-     */
-    static isJjScriptCommand(message: string): boolean {
-        if (!message || message.trim() === '') return false;
-
-        const trimmed = message.trim();
-
-        // Check for / prefix (explicit command mode)
-        if (trimmed.startsWith('/')) {
-            const withoutPrefix = trimmed.substring(1).trim();
-            return this.startsWithCommand(withoutPrefix);
-        }
-
-        // Check if starts with a command word directly
-        return this.startsWithCommand(trimmed);
-    }
-
-    /**
-     * Check if text starts with a known command
-     */
-    private static startsWithCommand(text: string): boolean {
-        const commands = [
-            'create', 'delete', 'rename', 'set', 'add', 'remove',
-            'move', 'copy', 'list', 'show', 'help', 'undo', 'redo',
-            'validate', 'clear', 'eval'
-        ];
-
-        const firstWord = text.split(/\s+/)[0]?.toLowerCase();
-
-        // JjEL expression triggers (forall, exists, with) are also valid commands
-        const jjelTriggers = ['forall', 'exists', 'with'];
-        if (jjelTriggers.includes(firstWord)) return true;
-
-        return commands.includes(firstWord);
-    }
-
-    /**
      * Execute a JjScript command
      */
     static async execute(input: string): Promise<ExecutionResult> {

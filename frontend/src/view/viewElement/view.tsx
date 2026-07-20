@@ -201,6 +201,13 @@ export class DViewElement extends DPointerTargetable {
     preRenderFunc!: string;
 
     jsxString!: string; // l'html template
+    // ViewpointIR (EditorV2 interpreter contract, spike 2026-07-17). Optional and additive:
+    // undefined for classic views; serialization is generic, no VersionFixer needed (spec IR sez. 8).
+    ir?: GObject;
+    // Explicit legacy mark for classic-only custom views (inverse migration
+    // VersionFixer 2.225 -> 2.226, spec v1.2 sez. 11): rendered as abstract
+    // nodes with a visible status, never silently dropped.
+    irLegacyClassic?: boolean;
     usageDeclarations?: string;
 
     longestLabel?: DocString<"function">;
@@ -470,6 +477,11 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         if (Defaults.check(c.data.id)) return true; // cannot delete or "demote" to decorations the main views, to make sure there is always at least 1 appliable view.
         return SetFieldAction.new(c.data, "isExclusiveView", !!val, '', false);
     }
+
+    ir?: GObject;
+    __info_of__ir: Info = {type: 'GObject | undefined', txt: <div>ViewpointIR of the view (EditorV2 interpreter contract). Undefined for classic views.</div>};
+    get_ir(c: Context): this["ir"] { return c.data.ir; }
+    set_ir(val: this["ir"], c: Context): boolean { return SetFieldAction.new(c.data, "ir", val as any, '', false); }
 
     constants!: GObject;
     __info_of__constants: Info = {todo:true, isGlobal: true, type: "Function():Object", label:"constants declaration",
@@ -1744,6 +1756,11 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         newView.css_MUST_RECOMPILE = true;
         newView.pointedBy = PointedBy.merge(newView, v);
         newView.subViews = {...newView.subViews, ...v.subViews};
+        // Preserve the IR contract fields across default-view regeneration
+        // (VersionFixer 2.225 -> 2.226 inverse migration; spec v1.2 sez. 11):
+        // without this carry-over the version bump would wipe the migrated `ir`.
+        if ((v as any).ir !== undefined) (newView as any).ir = (v as any).ir;
+        if ((v as any).irLegacyClassic) (newView as any).irLegacyClassic = true;
         s.idlookup[v.id] = newView;
         // When called with explicit state (e.g. from VersionFixer during project load),
         // skip dispatching to the live Redux store — the state object will be loaded

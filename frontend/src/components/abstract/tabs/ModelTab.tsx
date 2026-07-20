@@ -16,10 +16,8 @@ import {
     Constructors,
     SetRootFieldAction,
 } from "../../../joiner";
-import {DefaultNode} from "../../../joiner";
 import ContextMenu from "../../contextMenu/ContextMenu";
 import { EditorSwitch } from "./EditorSwitch";
-import { EdgeOverlay } from "../../edgeOverlay/EdgeOverlay";
 
 
 function ModelTabComponent(props: AllProps) {
@@ -38,18 +36,11 @@ function ModelTabComponent(props: AllProps) {
         </div>);
     }
     let graphid = graph.id;
+    // Classic shutdown (Fase 5a): the classic canvas (EdgeOverlay + DefaultNode)
+    // is no longer mounted — EditorSwitch renders the flow editor only.
     return(<div className={'w-100 h-100'} style={{overflow: 'hidden'}}>
         <ContextMenu graph={graphid}/>
-        <EditorSwitch modelid={model.id}>
-            <div className={'d-flex h-100'} style={{overflow:'hidden'}} onClick={e => { if (!U.isProjectModified) U.isProjectModified = U.userHasInteracted = true; }}>
-                <Try>
-                    <div className={"GraphContainer h-100 w-100"} style={{position:"relative"}}>
-                        <EdgeOverlay graphid={graphid} />
-                        {graph && <DefaultNode data={model} nodeid={graphid} graphid={graphid} />}
-                    </div>
-                </Try>
-            </div>
-        </EditorSwitch>
+        <EditorSwitch modelid={model.id} />
     </div>);
 }
 interface OwnProps {

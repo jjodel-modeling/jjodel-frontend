@@ -545,11 +545,14 @@
         color: var(--text-secondary, #64748b);
         background: transparent;
         border: none;
+        border-radius: 6px; // match adjacent .toolbar-btn
         cursor: pointer;
         text-align: center;
         padding: 0 2px;
+        transition: all 0.15s;
 
         &:hover {
+            background: var(--surface-1, #ffffff); // match .toolbar-btn:hover
             color: var(--text-primary);
         }
     }
@@ -833,6 +836,17 @@
         }
     }
 
+    // IR palette fallback notice (spec v1.2 sez. 6): shown only when the active
+    // viewpoint declares no views for creatable root classes.
+    .palette-notice {
+        font-size: 11px;
+        color: var(--text-muted);
+        font-style: italic;
+        line-height: 1.4;
+        padding: 0 2px;
+        margin-bottom: 8px;
+    }
+
     // Info cards container (Children + References)
     .palette-info-cards {
         display: flex;
@@ -1088,6 +1102,21 @@
 .react-flow__node.selected .mm-anchor.mm-anchor--connected {
     opacity: 1 !important;
     pointer-events: all !important;
+}
+
+// While the cursor is over a cross-MM ghost stub, do NOT reveal the parent
+// node's grey idle anchors. The stub is a DOM descendant of .react-flow__node,
+// so hovering it would otherwise trigger the node :hover reveal above. Both the
+// connected anchors and the side-hover ghost handle are suppressed; the cyan
+// stub connector (drawn in the stub SVG, not a .mm-anchor) is unaffected, and
+// node-border hover still reveals anchors for creating new connections.
+// Scoped to :not(.connecting) so an active connection drag is never degraded.
+.react-flow:not(.connecting) .react-flow__node:has(.ghost-target-stub__draggable:hover) {
+    .mm-anchor.mm-anchor--connected,
+    .mm-anchor.mm-anchor--ghost-visible {
+        opacity: 0 !important;
+        pointer-events: none !important;
+    }
 }
 
 .mm-anchor.mm-anchor--connected:hover {
@@ -1445,13 +1474,16 @@
 
     // Draggable unit: label + chip move together via an inline transform set in
     // ClassNode. Positioning context for the absolutely-placed label above it.
-    // pointer-events stays none so only the chip (below) is the drag handle.
     &__draggable {
         position: relative;
         display: flex;
         flex-direction: column;
         align-items: center;
-        pointer-events: none;
+        // Hittable so a click on the unit (label or chip) selects the reference.
+        // The label (pointer-events:none) passes its clicks through to this
+        // wrapper; the chip keeps its own pointer-events:auto + drag handlers.
+        pointer-events: auto;
+        cursor: pointer;
         will-change: transform;
     }
 
@@ -1507,6 +1539,14 @@
     &__mm {
         font-size: 11px;
         color: var(--color-text-secondary);
+    }
+
+    // Selected reference: solid cyan border + soft cyan ring (accent = #0ea5e9).
+    // Keeps the unselected dashed look; cyan as an active indicator only.
+    &__chip--selected {
+        border-style: solid;
+        border-color: var(--color-accent);
+        box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.25);
     }
 }
 
@@ -2125,7 +2165,7 @@
     border: none!important;
 
     &__text {
-        cursor: default;
+        cursor: pointer;
         transition: border-color 0.15s;
 
         &:hover {

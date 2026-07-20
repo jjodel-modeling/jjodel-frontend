@@ -1246,7 +1246,11 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         // reference values from plain strings during cross-type resolution.
         // Jjodel Pointer IDs follow the pattern "Pointer<digits>_<context>_<digits>".
         const wrapIfRef = (val: any): any => {
-            if (typeof val === 'string' && val.startsWith('Pointer')) return { __ref: val };
+            if (typeof val === 'string' && val.startsWith('Pointer')) {
+                const target = (store.getState() as any).idlookup?.[val];
+                if (target?.className === 'DEnumLiteral') return target.name;
+                return { __ref: val };
+            }
             return val;
         };
 
@@ -1575,6 +1579,10 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                         const targetClasses: LClass[] = targetMetamodel.classes || [];
                         // console.log('[ProjectEditor] Target classes:', targetClasses.map(c => c.name));
 
+                        // Deduplicate D-layer object names so name-based lookup in STEP 8/8b
+                        // stays reliable when two instances share the same bound name (F5).
+                        const usedObjectNames = new Set<string>();
+
                         result.targetModel.instances.forEach((instances: any[], className: string) => {
                             // console.log(`[ProjectEditor] Creating ${instances.length} instances of "${className}"`);
 
@@ -1596,7 +1604,15 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             for (const instanceData of instances) {
                                 // console.log(`[ProjectEditor] instanceData from executor:`, instanceData);
 
-                                const objectName = instanceData.name || `${className}_${instancesCreated}`;
+                                let objectName = instanceData.name || `${className}_${instancesCreated}`;
+                                if (usedObjectNames.has(objectName)) {
+                                    const originalName = objectName;
+                                    let dedupeSuffix = 2;
+                                    while (usedObjectNames.has(`${originalName}_${dedupeSuffix}`)) dedupeSuffix++;
+                                    objectName = `${originalName}_${dedupeSuffix}`;
+                                    console.warn(`[ProjectEditor] Duplicate object name "${originalName}" in transformation output; using "${objectName}" for the D-layer object to keep name-based lookup reliable.`);
+                                }
+                                usedObjectNames.add(objectName);
                                 const objTimingLabel = `[TIMING] DObject.new #${instancesCreated} (${className})`;
                                 console.time(objTimingLabel);
                                 const dObject = DObject.new(targetClass.id, dModel.id, DModel, objectName, true);
@@ -1621,7 +1637,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                 // properties (id, name, className) and domain attributes with the
                                 // same names.
                                 const domainAttrNames = new Set(
-                                    (targetClass.attributes || []).map((a: any) => a.name).filter(Boolean)
+                                    (targetClass.allAttributes || []).map((a: any) => a.name).filter(Boolean)
                                 );
                                 const attrs: Record<string, any> = {};
                                 for (const [attrName, attrValue] of Object.entries(instanceData)) {
@@ -1719,7 +1735,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                 }
 
                 // STEP 8: Set attributes after delay — use LModel proxy to find objects by name
-                if (pendingAttributeSets.length > 0 && createdModelId) {
+                if ((pendingAttributeSets.length > 0 || pendingReferenceSets.length > 0) && createdModelId) {
                     const modelId = createdModelId;
                     // console.log(`[ProjectEditor] STEP 8: Will set attributes for ${pendingAttributeSets.length} objects via LModel proxy`);
 
@@ -1749,7 +1765,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                     try {
                                         const feature = (lObject as any)['$' + attrName];
                                         if (feature) {
-                                            feature.value = attrValue;
+                                            if (Array.isArray(attrValue)) feature.values = attrValue;
+                                            else feature.value = attrValue;
                                             // console.log(`[ProjectEditor] ✅ Set ${pending.objectName}.${attrName} = ${JSON.stringify(attrValue)}`);
                                         } else {
                                             console.warn(`[ProjectEditor] ❌ Feature "$${attrName}" not found on "${pending.objectName}"`);

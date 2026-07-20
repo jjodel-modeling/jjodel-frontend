@@ -18,7 +18,6 @@ import {
     Geom,
     getWParams,
     GObject,
-    GraphElementComponent,
     GraphPoint,
     GraphSize,
     Info,
@@ -62,13 +61,12 @@ import type {Tooltip} from "../../components/forEndUser/Tooltip";
 import {JSX} from "react";
 import type {SVGPathElementt, SVGPathSegment} from '../../common/libraries/pathdata';
 import {EdgeGapMode, InitialVertexSize, InitialVertexSizeFunc} from "../../joiner/types";
-import {svgLetterSize} from "../../edges/routing/classic/stride";
 import {computePoints} from "../../edges/routing/classic/points";
 import {snapSegmentsToBorders} from "../../edges/routing/classic/snap";
-import {setLabels} from "../../edges/routing/classic/labels";
 import {computeHeadPosition} from "../../edges/routing/classic/markers";
 import {computeRouting} from "../../edges/routing/classic/segments";
 import {roundManhattanCorners as roundManhattanCornersImpl} from "../../edges/routing/classic/round";
+import {graphComponentRegistry} from "../../common/graphComponentRegistry";
 
 
 //console.warn('ts loading graphDataElement');
@@ -180,7 +178,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     htmlSize!: Size; // size and position in global document coordinates.
     htmlPosition!: Point;
     view!: LViewElement;
-    component!: GraphElementComponent;
+    component!: GObject;
     favoriteNode!: boolean;
     vertex?: LVoidVertex;
     __info_of__vertex: Info = {type: "LVoidVertex", txt: "the foremost vertex containing this graphElement, or undefiened."}
@@ -470,7 +468,7 @@ export class LGraphElement<Context extends LogicContext<DGraphElement> = any, C 
     get_sizeold(context: Context): this["size"] { return new GraphSize(context.data.x, context.data.y, context.data.w, context.data.h); }
     get_component(context: Context): this["component"] {
         // switch(context.data.className) { case DEdgePoint.name: return GraphElementComponent.map[context.data.father]; }
-        return GraphElementComponent.map[context.data.id]; }
+        return graphComponentRegistry[context.data.id]; }
     // get_view(context: Context): this["view"] { return this.get_component(context).props.view; }
     get_view(context: Context): this["view"] {
         return transientProperties.node[context.data.id]?.mainView?.r || LPointerTargetable.fromPointer(context.data.view) || this.get_component(context)?.props.view?.r;
@@ -1687,6 +1685,15 @@ export class DVertex extends DGraphElement { // DVoidVertex
     ghostOffsets?: { [refId: string]: { dx: number; dy: number } };
     // Persisted per-parent drag offset of cross-MM ghost-parent chips, keyed by super-type DClass id.
     ghostParentOffsets?: { [classId: string]: { dx: number; dy: number } };
+    // Persisted IR object-as-edge layout overrides (side pins + Manhattan waypoints),
+    // carried by the hidden edge-object's vertex. undefined = fully derived routing.
+    irEdgeLayout?: {
+        sourceSide?: 'top' | 'right' | 'bottom' | 'left';
+        targetSide?: 'top' | 'right' | 'bottom' | 'left';
+        waypoints?: { segmentIndex: number; offset: number }[];
+    };
+    // Persisted collapse state of an IR graphVertex container. undefined = expanded.
+    irCollapsed?: boolean;
     // size!: GraphSize; // virtual, gets extracted from this. x and y are stored directly here as it extends GraphSize
     // personal attributes
     __isDVertex!: true;
@@ -2621,7 +2628,7 @@ replaced by startPoint
             // console.log("gcursorpos", {cursorPos:cursorPos.toString(), gcursorpos:gcursorpos.toString(), g});
             DVoidEdge.isFollowingCoords = gcursorpos;
 
-            let component: GraphElementComponent = GraphElementComponent.map[(LVoidEdge.startFollow || LVoidEdge.endFollow) as string];
+            let component: GObject = graphComponentRegistry[(LVoidEdge.startFollow || LVoidEdge.endFollow) as string];
             LVoidEdge.canForceUpdate = false;
             let timer = setTimeout(()=>{LVoidEdge.canForceUpdate = true; }, 5000);
             let tn = transientProperties.node[c.data.id];

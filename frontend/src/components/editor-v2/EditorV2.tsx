@@ -31,11 +31,19 @@ import UnifiedEdge from './edges/UnifiedEdge';
 import PalettePanel from './panels/PalettePanel';
 // PropertiesPanel removed — properties editing is handled by the dock-based Info panel
 import Toolbar from './Toolbar';
+import { useIRContainment, useIRInteractionPlan } from './viewpoint/ir/useIRContainment';
+import { applyIRPaletteFilter } from './viewpoint/ir/irInteraction';
+import IRContainmentHulls from './viewpoint/ir/IRContainmentHulls';
+import { clearSyntheticEdgeSelection, getIREdgeAnchorOverride, hydrateIREdgeAnchorOverrides, irEdgeLayoutFromOverride, setIREdgeAnchorOverride, setSyntheticEdgeSelected, type IRAnchorOverride } from './viewpoint/ir/irEdgeInteraction';
+import { hydrateCollapsed } from './viewpoint/ir/irCollapseState';
+import { computeIRSignature, getIRIndex, resolveObjectAsEdgeView } from './viewpoint/ir/irResolveCore';
+import { makeReadCtx } from './viewpoint/ir/irReadCtxLproxy';
 import { useActiveEditor, CLASSIC_ZOOM_MIN, CLASSIC_ZOOM_MAX, type ZoomController } from './ActiveEditorContext';
 import ContextMenu, { type ContextMenuItem } from './ContextMenu';
 import { useHistory } from './hooks/useHistory';
 import { useAlignment } from './hooks/useAlignment';
-import { useAutoAnchor, computeAnchorsWithHysteresis, getNodeRect } from './hooks/useAutoAnchor';
+import { useAutoAnchor, computeAnchorsWithHysteresis, getNodeRect, computeGeometricAnchorsForAllEdges } from './hooks/useAutoAnchor';
+import { reduceReLayout, countReferenceEdges, INITIAL_RELAYOUT_STATE, type ReLayoutState, type ReLayoutEvent } from './utils/reLayoutWatcher';
 import { EditorContext } from './contexts/EditorContext';
 import { HighlightProvider, type HighlightState } from './contexts/HighlightContext';
 import { getNextFreeHandleIndex, computePortDistribution } from './utils/portDistribution';
@@ -54,15 +62,18 @@ import { useClassRemoval } from './hooks/useClassRemoval';
 import { useConformanceGuard } from '../../model/conformance/useConformanceGuard';
 import { useOrphanFeatures } from './hooks/useOrphanFeatures';
 import { UniquenessProblemSync } from './problems/UniquenessProblemSync';
+import { ConformanceProblemSync } from './problems/ConformanceProblemSync';
 import { getSyncMode, markDropCreated, suppressSingleton, unsuppressSingleton, clearSuppressedSingletons, getSuppressedSingletonIds, getEdgeRefId } from './sync/syncState';
 import {
     syncPositionToJjom,
     syncPositionBatchToJjom,
     syncSizeToJjom,
+    syncIREdgeLayoutToJjom,
     syncInheritanceEdge,
     syncReferenceEdge,
     syncDeleteVertex,
     syncDeleteEdge,
+    syncDeleteReferenceById,
     syncCreateClass,
     syncCreateEnum,
     syncCreatePackage,
@@ -112,6 +123,50 @@ const edgeTypes: EdgeTypes = {
     composition: UnifiedEdge,       // M1: containment edge
     instanceRef: UnifiedEdge,       // M1: non-containment reference
 };
+
+// ---------------------------------------------------------------------------
+// IR layout persistence (discovery 2026-07-19)
+// ---------------------------------------------------------------------------
+
+// Graphs whose persisted DVertex overrides (irEdgeLayout / irCollapsed) have
+// already been seeded into the IR session stores. Once per graph per session:
+// re-seeding would override session gestures (e.g. re-collapse a container the
+// user expanded). The session stores stay the runtime source of truth.
+const irLayoutHydratedGraphs = new Set<string>();
+
+/** vertexId of the graph's DVertex carrying the given M1 object, or null. */
+function irVertexIdForObject(graphId: string | null, objectId: string): string | null {
+    if (!graphId) return null;
+    const lookup: any = (store.getState() as any).idlookup ?? {};
+    const subs: string[] = lookup[graphId]?.subElements ?? [];
+    for (const vid of subs) {
+        const v = lookup[vid];
+        if (v?.className === 'DVertex' && v.model === objectId) return vid;
+    }
+    return null;
+}
+
+/**
+ * persistWaypoints gate (spec v1.2 sez. 7, extended reading 2026-07-19): false
+ * on the resolved object-as-edge view keeps the whole layout override
+ * (waypoints AND side pins) session-only. Default true (no IR index / no
+ * resolved view / resolution error → persist).
+ */
+function isIREdgeLayoutPersistable(objectId: string, state?: DState): boolean {
+    try {
+        const s: any = state ?? store.getState();
+        const sig = computeIRSignature(s);
+        if (!sig) return true;
+        const index = getIRIndex(s, sig);
+        if (!index) return true;
+        const metaclassId = s.idlookup?.[objectId]?.instanceof;
+        if (typeof metaclassId !== 'string') return true;
+        const cv = resolveObjectAsEdgeView(objectId, metaclassId, index, makeReadCtx(s.idlookup), s.idlookup);
+        return cv?.persistWaypoints !== false;
+    } catch {
+        return true;
+    }
+}
 
 // Initial nodes for metamodel demonstration
 const initialNodes: Node[] = [
@@ -228,7 +283,7 @@ interface ContextMenuState {
     nodeId?: string;
     edgeId?: string;
     childId?: string;
-    childKind?: 'attr' | 'op';
+    childKind?: 'attr' | 'op' | 'ref';
     isMultiSelect?: boolean;
     selectedCount?: number;
 }
@@ -317,8 +372,22 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // then deduplicates the result before committing to state.
     const onEdgesChange = useCallback(
         (changes: EdgeChange[]) => {
+            // Synthetic IR edges (object-as-edge, ids irobj_*) exist only in the
+            // decorated array: their selection changes are tracked in the IR
+            // interaction store (re-applied by the decoration pass), everything
+            // else about them is ignored here.
+            const baseChanges: EdgeChange[] = [];
+            for (const ch of changes) {
+                const id = (ch as any).id as string | undefined;
+                if (id && id.startsWith('irobj_')) {
+                    if (ch.type === 'select') setSyntheticEdgeSelected(id, (ch as any).selected);
+                    continue;
+                }
+                baseChanges.push(ch);
+            }
+            if (baseChanges.length === 0) return;
             setEdgesRaw((currentEdges) => {
-                const updated = applyEdgeChanges(changes, currentEdges);
+                const updated = applyEdgeChanges(baseChanges, currentEdges);
                 return deduplicateEdges(updated);
             });
         },
@@ -334,6 +403,10 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const setEdgesRef = useRef(setEdges);
     setEdgesRef.current = setEdges;
     const autoLayoutRef = useRef<(() => Promise<void>) | null>(null);
+    // Re-run auto-layout ONCE when the asynchronously-materialized M1 edges arrive after
+    // the first (edge-less) layout. Set below; armed only on the justCreated path. See
+    // docs/discovery/2026-07-07-s4b-recalc-bypass.md (H2).
+    const armReLayoutRef = useRef<(() => void) | null>(null);
     const { isJjomMode, graphId, justCreatedGraphRef } = useJjomSync(modelid, setNodes, setEdges, () => {
         // Delay slightly so RF has measured nodes before fitting
         setTimeout(async () => {
@@ -342,6 +415,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 justCreatedGraphRef.current = false;
                 if (autoLayoutRef.current) {
                     await autoLayoutRef.current();
+                    // The M1 reference edges materialize asynchronously AFTER this first
+                    // layout; watch for them and re-run the layout once when they land.
+                    armReLayoutRef.current?.();
                     return; // autoLayout already does fitView + distribution
                 }
             }
@@ -1191,6 +1267,67 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         return prev;
     }, [edges]);
 
+    // IR containment decoration (Fase 2b): hidden subtrees + lifted edges when
+    // the active viewpoint has IR graphVertex views. Pass-through (same array
+    // references) otherwise — zero cost for non-IR sessions.
+    const irContainment = useIRContainment(stableNodes, stableEdges);
+
+    // Persist the merged session override of a synthetic edge on the hidden
+    // edge-object's DVertex (gesture end; ghostOffsets pattern, discovery
+    // 2026-07-19). Skipped when the resolved view opts out via persistWaypoints.
+    const persistIREdgeLayout = useCallback((objectId: string) => {
+        const merged = getIREdgeAnchorOverride(objectId);
+        if (!merged) return;
+        const layout = irEdgeLayoutFromOverride(merged);
+        if (!layout || !isIREdgeLayoutPersistable(objectId)) return;
+        const vertexId = irVertexIdForObject(graphId, objectId);
+        if (!vertexId) return;
+        syncIREdgeLayoutToJjom(vertexId, layout);
+        scheduleLayoutSave();
+    }, [graphId, scheduleLayoutSave]);
+
+    // One-time hydration of the IR session stores from the persisted DVertex
+    // fields (discovery 2026-07-19 §5). Deferred until an IR viewpoint is
+    // active (the persistWaypoints gate needs the resolved index; without an IR
+    // viewpoint the overrides are unused anyway). Session wins: only missing
+    // keys are seeded, and the per-graph guard prevents any re-seed.
+    useEffect(() => {
+        if (!graphId || irLayoutHydratedGraphs.has(graphId)) return;
+        const state: any = store.getState();
+        if (!computeIRSignature(state)) return;
+        irLayoutHydratedGraphs.add(graphId);
+        const lookup = state.idlookup ?? {};
+        const subs: string[] = lookup[graphId]?.subElements ?? [];
+        const layoutEntries: Array<[string, IRAnchorOverride]> = [];
+        const collapsedIds: string[] = [];
+        for (const vid of subs) {
+            const v = lookup[vid];
+            if (!v || v.className !== 'DVertex' || typeof v.model !== 'string') continue;
+            if (v.irEdgeLayout && isIREdgeLayoutPersistable(v.model, state)) {
+                layoutEntries.push([v.model, {
+                    sourceSide: v.irEdgeLayout.sourceSide,
+                    targetSide: v.irEdgeLayout.targetSide,
+                    waypoints: v.irEdgeLayout.waypoints,
+                }]);
+            }
+            if (v.irCollapsed === true) collapsedIds.push(v.model);
+        }
+        if (layoutEntries.length) hydrateIREdgeAnchorOverrides(layoutEntries);
+        if (collapsedIds.length) hydrateCollapsed(collapsedIds);
+    }, [graphId, irContainment]);
+
+    // IR-derived interaction plan (Fase 3): restricts the M1 palette to the
+    // metaclasses the active IR viewpoint declares views for. Null = no IR
+    // viewpoint → unrestricted palette (current behavior).
+    const irInteractionPlan = useIRInteractionPlan();
+
+    // Palette intersection with the rootable classes, with normative fallback
+    // (spec v1.2 sez. 6): empty intersection → full palette + notice.
+    const irPalette = useMemo(
+        () => applyIRPaletteFilter(modeInfo.rootableClasses, irInteractionPlan),
+        [modeInfo.rootableClasses, irInteractionPlan],
+    );
+
     // Handle new connections: save the valid connection, then show edge type popup on drop
     const onConnect = useCallback(
         (connection: Connection) => {
@@ -1591,6 +1728,45 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // Handle edge reconnection (drag endpoint to a new target/source)
     const handleReconnect = useCallback(
         (oldEdge: Edge, newConnection: Connection) => {
+            // Synthetic IR edge (object-as-edge): the gesture edits the edge-object.
+            // - endpoint moved to another node → rewrite the src/tgt reference slot
+            //   through the L proxy (canonical write path, same family as the
+            //   Properties panel); the slots-snapshot subscription re-routes.
+            // - same nodes, different handle → session anchor override.
+            if ((oldEdge.data as any)?.irObjectAsEdge) {
+                const objectId = (oldEdge.data as any).irObjectId as string;
+                try {
+                    const sourceMoved = newConnection.source !== oldEdge.source;
+                    const targetMoved = newConnection.target !== oldEdge.target;
+                    if (sourceMoved || targetMoved) {
+                        const movedEnd: 'source' | 'target' = sourceMoved ? 'source' : 'target';
+                        const newVertexId = movedEnd === 'source' ? newConnection.source : newConnection.target;
+                        if (!newVertexId) return;
+                        const featName = movedEnd === 'source'
+                            ? (oldEdge.data as any).irSourceFeature
+                            : (oldEdge.data as any).irTargetFeature;
+                        if (!featName) return;
+                        const droppedVertex: any = LPointerTargetable.fromPointer(newVertexId);
+                        const newObjId: string | undefined = droppedVertex?.model?.id;
+                        if (!newObjId) return;
+                        const rawObj = (store.getState() as any).idlookup[newObjId];
+                        if (!rawObj || rawObj.className !== 'DObject') return;   // only M1 objects
+                        const lObj: any = LPointerTargetable.fromPointer(objectId);
+                        const slot = lObj?.['$' + featName];
+                        if (!slot) return;
+                        slot.value = newObjId;
+                    }
+                    setIREdgeAnchorOverride(objectId, {
+                        sourceHandle: newConnection.sourceHandle ?? undefined,
+                        targetHandle: newConnection.targetHandle ?? undefined,
+                    });
+                    persistIREdgeLayout(objectId);
+                } catch (err) {
+                    console.warn('[ir object-as-edge] reconnect aborted', err);
+                }
+                return;
+            }
+
             // Re-target di una reference M2: cambia DReference.type alla nuova classe.
             // Stessa mutazione del property panel (lRef.type = classId); il sync re-instrada.
             // Non muta gli edge ReactFlow.
@@ -1622,7 +1798,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 console.warn('[reference re-target] reconnect aborted', err);
             }
         },
-        []
+        [persistIREdgeLayout]
     );
 
     const handleReconnectStart = useCallback(() => {
@@ -2201,6 +2377,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
     const onPaneClick = useCallback(() => {
         selectedEdgeIdRef.current = null;  // Clear edge selection
+        clearSyntheticEdgeSelection();     // IR object-as-edge selection lives outside the base state
         setNodes(nds => nds.map(n => (n.selected ? { ...n, selected: false } : n)));
         setEdges(eds => eds.map(e => (e.selected ? { ...e, selected: false } : e)));
         setContextMenu(null);
@@ -2211,10 +2388,45 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // (SegmentHandles/EndpointHandles) are always available after click.
     const onEdgeClick = useCallback((event: React.MouseEvent, edge: Edge) => {
         event.stopPropagation();
+        // Synthetic IR edge (object-as-edge): selection lives in the IR
+        // interaction store (the id does not exist in the base edge state);
+        // the decoration pass re-applies the flag so RF shows the selected
+        // styling and the reconnect anchors.
+        if (edge.id.startsWith('irobj_')) {
+            selectedEdgeIdRef.current = edge.id;
+            setNodes(nds => nds.map(n => (n.selected ? { ...n, selected: false } : n)));
+            setEdges(eds => eds.map(e => (e.selected ? { ...e, selected: false } : e)));
+            clearSyntheticEdgeSelection();
+            setSyntheticEdgeSelected(edge.id, true);
+            return;
+        }
+        clearSyntheticEdgeSelection();
         selectedEdgeIdRef.current = edge.id;  // Preserve selection through Redux patches
         setNodes(nds => nds.map(n => (n.selected ? { ...n, selected: false } : n)));
         setEdges(eds => eds.map(e => ({ ...e, selected: e.id === edge.id })));
         jjomSelection.onEdgeClick(event, edge);
+    }, [setNodes, setEdges, jjomSelection]);
+
+    // Select an edge from a non-RF gesture (UnifiedEdge label / hit-path click).
+    // Mirrors onEdgeClick so the selection is identical to a native edge click,
+    // including the highlight/assign guard living inside jjomSelection.onEdgeClick.
+    const selectEdge = useCallback((edgeId: string) => {
+        selectedEdgeIdRef.current = edgeId;
+        setNodes(nds => nds.map(n => (n.selected ? { ...n, selected: false } : n)));
+        // Synthetic IR edge: selection tracked in the IR interaction store
+        // (id absent from the base edge state); see onEdgeClick.
+        if (edgeId.startsWith('irobj_')) {
+            setEdges(eds => eds.map(e => (e.selected ? { ...e, selected: false } : e)));
+            clearSyntheticEdgeSelection();
+            setSyntheticEdgeSelected(edgeId, true);
+            return;
+        }
+        clearSyntheticEdgeSelection();
+        setEdges(eds => eds.map(e => ({ ...e, selected: e.id === edgeId })));
+        jjomSelection.onEdgeClick(
+            { stopPropagation() {} } as unknown as React.MouseEvent,
+            { id: edgeId } as unknown as Edge,
+        );
     }, [setNodes, setEdges, jjomSelection]);
 
     const closeContextMenu = useCallback(() => {
@@ -2327,6 +2539,40 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         }
 
         // Child element context menu (attribute/operation)
+        // Cross-metamodel ghost-target chip: a single "Delete reference" item that
+        // reuses the canonical refId-keyed cascade (syncDeleteReferenceById). The chip
+        // has no RF edge, so childId is the DReference id directly.
+        if (contextMenu?.nodeId && contextMenu.childId && contextMenu.childKind === 'ref') {
+            const refId = contextMenu.childId;
+            const nodeId = contextMenu.nodeId;
+            return [
+                {
+                    label: 'Delete reference',
+                    icon: 'bi-trash',
+                    danger: true,
+                    onClick: () => {
+                        takeSnapshot();
+                        // Optimistically drop the ghost-target chip + its reference row so the
+                        // chip/connector vanish instantly; the model delete re-derives the node
+                        // without them on the next sync (mirrors the attribute-delete path).
+                        setNodes(nds => nds.map(n => {
+                            if (n.id !== nodeId) return n;
+                            const data = n.data as ClassNodeData;
+                            return {
+                                ...n,
+                                data: {
+                                    ...data,
+                                    ghostTargets: (data.ghostTargets || []).filter(g => g.refId !== refId),
+                                    references: (data.references || []).filter(r => r.id !== refId),
+                                },
+                            };
+                        }));
+                        syncDeleteReferenceById(refId);
+                    },
+                },
+            ];
+        }
+
         if (contextMenu?.nodeId && contextMenu.childId) {
             const childLabel = contextMenu.childKind === 'attr' ? 'Attribute' : 'Operation';
             return [
@@ -2663,10 +2909,11 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             zoomIn: handleZoomIn,
             zoomOut: handleZoomOut,
             resetZoom: handleResetZoom,
+            setZoom: (z) => setViewport({ ...getViewport(), zoom: z }, { duration: 150 }),
         };
         registerZoomController('flow', controller);
         return () => unregisterZoomController('flow');
-    }, [getViewport, handleZoomIn, handleZoomOut, handleResetZoom, registerZoomController, unregisterZoomController]);
+    }, [getViewport, setViewport, handleZoomIn, handleZoomOut, handleResetZoom, registerZoomController, unregisterZoomController]);
 
     // Classic editor zoom controller registration via CustomEvent.
     // The bridge in DV.tsx jsxString cannot use hooks, so it dispatches
@@ -2701,6 +2948,13 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 resetZoom: () => {
                     TRANSACTION('Zoom reset', () => {
                         node.zoom = new GraphPoint(1, 1);
+                    });
+                },
+                setZoom: (z) => {
+                    const next = clamp(z);
+                    TRANSACTION('Zoom set', () => {
+                        SetFieldAction.new(node, 'zoom.x' as any, next, '');
+                        SetFieldAction.new(node, 'zoom.y' as any, next, '');
                     });
                 },
             };
@@ -2751,7 +3005,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         setZoomTick((t) => t + 1);
     }, [activeController]);
     const handleActiveResetZoom = useCallback(() => {
-        activeController?.resetZoom?.();
+        // Reset the active editor to 100% via an absolute setter — no fit-view,
+        // no recentering (resetZoom on the flow controller would fit-to-view).
+        activeController?.setZoom?.(1);
         setZoomTick((t) => t + 1);
     }, [activeController]);
     const handleToggleSnap = useCallback(() => setSnapEnabled((prev) => !prev), []);
@@ -2772,11 +3028,95 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         }
         if (updates.length > 0) syncPositionBatchToJjom(updates);
 
-        // Re-distribute port handles and fit the view
-        setEdges(eds => applyDistribution(eds));
+        // Recalc non-pinned edge sides on the FINAL ELK geometry, then re-index.
+        // applyDistribution alone only re-indexes handles and inherits the side that
+        // was chosen at first build on the stale grid positions (Step 2bis), which ELK
+        // then contradicts → U-turns. Reading rects from layoutedNodes (which carry the
+        // new positions and preserve measured sizes) sidesteps the async setNodes above.
+        // Side choice is geometry-only + deconfliction (no occupancy / same-side U).
+        const layoutRects = new Map(layoutedNodes.map(n => [n.id, getNodeRect(n)]));
+        setEdges(eds => {
+            const recalcable = eds.filter(e => {
+                const d = e.data as { sourceAnchor?: AnchorConfig; targetAnchor?: AnchorConfig } | undefined;
+                // Leave manually pinned anchors untouched (mirrors hysteresis :314).
+                return d?.sourceAnchor?.mode !== 'pinned' && d?.targetAnchor?.mode !== 'pinned';
+            });
+            const anchorMap = computeGeometricAnchorsForAllEdges(recalcable, layoutRects);
+            const recomputed = eds.map(edge => {
+                const a = anchorMap.get(edge.id);
+                if (!a) return edge; // pinned (filtered out) or unresolved → untouched
+                const newSrcSide = a.sourceHandle;
+                const newTgtSide = a.targetHandle;
+                const curSrcSide = edge.sourceHandle?.split('-')[0];
+                const curTgtSide = edge.targetHandle?.split('-')[0];
+                const sidesChanged = curSrcSide !== newSrcSide || curTgtSide !== newTgtSide;
+                return {
+                    ...edge,
+                    sourceHandle: `${newSrcSide}-0`,
+                    targetHandle: `${newTgtSide}-0`,
+                    data: {
+                        ...edge.data,
+                        sourceAnchor: { mode: 'auto', side: newSrcSide } as AnchorConfig,
+                        targetAnchor: { mode: 'auto', side: newTgtSide } as AnchorConfig,
+                        // R2: a side flip invalidates manual waypoints (indexed against the
+                        // old path shape) — clear them, mirroring the drag path (:3016).
+                        ...(sidesChanged ? { waypoints: [] } : {}),
+                    },
+                };
+            });
+            return applyDistribution(recomputed);
+        });
         requestAnimationFrame(() => fitView({ padding: 0.2, maxZoom: 1, duration: 300 }));
     }, [getNodes, getEdges, setNodes, setEdges, fitView, applyDistribution]);
     autoLayoutRef.current = handleAutoLayout;
+
+    // ── Re-run auto-layout once late M1 edges materialize (S4b) ──────────────
+    // handleAutoLayout runs ~50ms after mount, before the async M1 reference edges reach
+    // RF state, so ELK lays out an edge-less graph. This watcher (armed only on the
+    // justCreated path, in the onInit callback above) waits for the reference edges to
+    // arrive, debounces to collect the incremental-sync bundle, then re-runs the SAME
+    // handleAutoLayout exactly once. A manual drag or the window timeout disarms it.
+    // Pure transitions live in utils/reLayoutWatcher (unit-tested); timers live here.
+    const RELAYOUT_WINDOW_MS = 3000;
+    const RELAYOUT_DEBOUNCE_MS = 150;
+    const reLayoutStateRef = useRef<ReLayoutState>(INITIAL_RELAYOUT_STATE);
+    const reLayoutWindowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const reLayoutDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const clearReLayoutTimers = useCallback(() => {
+        if (reLayoutWindowTimerRef.current) { clearTimeout(reLayoutWindowTimerRef.current); reLayoutWindowTimerRef.current = null; }
+        if (reLayoutDebounceTimerRef.current) { clearTimeout(reLayoutDebounceTimerRef.current); reLayoutDebounceTimerRef.current = null; }
+    }, []);
+    const dispatchReLayout = useCallback((event: ReLayoutEvent) => {
+        const { state, effect } = reduceReLayout(reLayoutStateRef.current, event);
+        reLayoutStateRef.current = state;
+        switch (effect) {
+            case 'arm_window':
+                if (reLayoutWindowTimerRef.current) clearTimeout(reLayoutWindowTimerRef.current);
+                reLayoutWindowTimerRef.current = setTimeout(() => dispatchReLayout({ type: 'WINDOW_TIMEOUT' }), RELAYOUT_WINDOW_MS);
+                break;
+            case 'start_debounce':
+                if (reLayoutDebounceTimerRef.current) clearTimeout(reLayoutDebounceTimerRef.current);
+                reLayoutDebounceTimerRef.current = setTimeout(() => dispatchReLayout({ type: 'DEBOUNCE_FIRE' }), RELAYOUT_DEBOUNCE_MS);
+                break;
+            case 'rerun':
+                clearReLayoutTimers();
+                autoLayoutRef.current?.();
+                break;
+            case 'cleanup':
+                clearReLayoutTimers();
+                break;
+            default:
+                break;
+        }
+    }, [clearReLayoutTimers]);
+    // Arm entry (called from the onInit justCreated path via armReLayoutRef).
+    armReLayoutRef.current = () => dispatchReLayout({ type: 'ARM', refEdgeCount: countReferenceEdges(getEdges()) });
+    // Feed edge-count changes to the watcher; a no-op unless armed.
+    useEffect(() => {
+        dispatchReLayout({ type: 'EDGES', refEdgeCount: countReferenceEdges(edges) });
+    }, [edges, dispatchReLayout]);
+    // Clear pending timers on unmount.
+    useEffect(() => clearReLayoutTimers, [clearReLayoutTimers]);
 
     // Properties panel handlers
     const handleNodeChange = useCallback(
@@ -2809,13 +3149,30 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
     const handleEdgeChange = useCallback(
         (edgeId: string, data: Partial<Edge>) => {
+            // Synthetic IR edge (object-as-edge): the id does not exist in the
+            // base edge state. The anchor pins coming from EndpointHandles
+            // (sourceAnchor/targetAnchor in data.data) become session anchor
+            // overrides consumed by the synthesis pass.
+            if (edgeId.startsWith('irobj_')) {
+                const objectId = edgeId.slice('irobj_'.length);
+                const d: any = (data as any).data ?? {};
+                const override: { sourceSide?: string; targetSide?: string; waypoints?: unknown[] } = {};
+                if (d.sourceAnchor?.side) override.sourceSide = d.sourceAnchor.side;
+                if (d.targetAnchor?.side) override.targetSide = d.targetAnchor.side;
+                if (Array.isArray(d.waypoints)) override.waypoints = d.waypoints;
+                if (override.sourceSide || override.targetSide || override.waypoints) {
+                    setIREdgeAnchorOverride(objectId, override);
+                    persistIREdgeLayout(objectId);
+                }
+                return;
+            }
             takeSnapshot();
             setEdges((eds) => {
                 const updated = eds.map((e) => (e.id === edgeId ? { ...e, ...data } : e));
                 return applyDistribution(updated);
             });
         },
-        [setEdges, takeSnapshot, applyDistribution]
+        [setEdges, takeSnapshot, applyDistribution, persistIREdgeLayout]
     );
 
     // Convert edge to inheritance
@@ -2877,6 +3234,13 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             isProcessingNodesChangeRef.current = true;
 
             try {
+
+            // A manual node drag (active or on release) invalidates the pending auto-layout
+            // re-run: the user has taken control of the layout. Programmatic setNodes (ELK)
+            // does not emit position changes with a `dragging` flag, so this is user-only.
+            if (changes.some((c) => c.type === 'position' && (c as any).dragging !== undefined)) {
+                dispatchReLayout({ type: 'DRAG' });
+            }
 
             const hasDragEnd = changes.some(
                 (c) => c.type === 'position' && c.dragging === false
@@ -3088,7 +3452,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 isProcessingNodesChangeRef.current = false;
             }
         },
-        [onNodesChange, takeSnapshot, setEdges, getNodes, applyDistribution, isJjomMode, scheduleLayoutSave]
+        [onNodesChange, takeSnapshot, setEdges, getNodes, applyDistribution, isJjomMode, scheduleLayoutSave, dispatchReLayout]
     );
 
     // Recalculate anchors for a specific edge (called by SegmentHandles after drag).
@@ -3158,7 +3522,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         });
     }, []);
 
-    const editorContextValue = useMemo(() => ({ takeSnapshot, notation, onEdgeDataChange: handleEdgeChange, recalculateAnchors, selectChildElement }), [takeSnapshot, notation, handleEdgeChange, recalculateAnchors, selectChildElement]);
+    const editorContextValue = useMemo(() => ({ takeSnapshot, notation, onEdgeDataChange: handleEdgeChange, recalculateAnchors, selectChildElement, selectEdge }), [takeSnapshot, notation, handleEdgeChange, recalculateAnchors, selectChildElement, selectEdge]);
 
     // Model info for PropertiesPanel (when nothing is selected)
     const modelInfoData = useMemo(() => {
@@ -3209,8 +3573,8 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const flowCanvas = (
         <HighlightProvider value={highlightState}>
             <ReactFlow
-                nodes={stableNodes}
-                edges={stableEdges}
+                nodes={irContainment.nodes}
+                edges={irContainment.edges}
                 onNodesChange={handleNodesChange}
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
@@ -3258,6 +3622,14 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     </defs>
                     <rect width="100%" height="100%" fill="url(#dot-grid-pattern)" />
                 </svg>
+                {/* IR containment hulls (Fase 2b): visual containment for IR graphVertex views */}
+                {irContainment.model.containers.size > 0 && (
+                    <IRContainmentHulls
+                        nodes={irContainment.nodes}
+                        model={irContainment.model}
+                        names={irContainment.names}
+                    />
+                )}
                 {/* Zoom controls moved to toolbar */}
                 <MiniMap
                     style={{ position: 'absolute', margin: 0, right: '20px', bottom: '100px', borderRadius: '4px', opacity: 0.8 }}
@@ -3298,9 +3670,11 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         <EditorContext.Provider value={editorContextValue}>
             <div className={`editor-v2 theme-${theme} notation-${notation}${colorScheme !== 'default' ? ` scheme-${colorScheme}` : ''}${showEdgeLabels ? ' show-edge-labels' : ''}${showBackground ? '' : ' hide-background'}${highlightModeActive ? ' highlight-mode' : ''}`} tabIndex={0} onKeyDown={onKeyDown}>
                 <UniquenessProblemSync modelid={modelid} />
+                <ConformanceProblemSync modelid={modelid} graphId={graphId} />
                 <PalettePanel
                     editorMode={modeInfo.mode}
-                    rootableClasses={modeInfo.rootableClasses}
+                    rootableClasses={irPalette.classes}
+                    irPaletteFallback={irPalette.fallback}
                     allClasses={modeInfo.allClasses}
                     selectedDObjectId={lastSelectedModelElement ?? null}
                 />
@@ -3338,6 +3712,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         onDistributeH={() => withSnapshot(distributeHorizontally)}
                         onDistributeV={() => withSnapshot(distributeVertically)}
                         isMetamodel={!isModelMode}
+                        modelId={modelid}
                         editorMode={editorMode}
                         hasViewpoint={hasViewpoint}
                         onEditorModeChange={onEditorModeChange}

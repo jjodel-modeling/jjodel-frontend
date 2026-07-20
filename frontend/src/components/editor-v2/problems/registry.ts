@@ -25,12 +25,20 @@
  */
 
 export type NodeProblemSeverity = 'warning' | 'error';
-export type NodeProblemKind = 'duplicate-name';
+export type NodeProblemKind = 'duplicate-name' | 'conformance';
 
 export interface NodeProblemAction {
     label: string;
     type: 'focus-node' | 'scroll-to-node' | 'custom';
     targetNodeId?: string;
+}
+
+// Per-violation detail carried by 'conformance' problems, so the overlay can
+// render one row per violation and the indicator can show an aggregate count.
+export interface ConformanceProblemDetail {
+    violationType: string;
+    severity: NodeProblemSeverity;
+    message: string;
 }
 
 export interface NodeProblem {
@@ -42,6 +50,9 @@ export interface NodeProblem {
     description: string;
     relatedNodeIds: string[];
     action?: NodeProblemAction;
+    // Present only for kind === 'conformance': the aggregated violation list for
+    // this object. Drives the popover rows and the per-node count badge.
+    conformance?: ConformanceProblemDetail[];
     createdAt: number;
     resolvedAt?: number;
 }

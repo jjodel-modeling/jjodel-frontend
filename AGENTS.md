@@ -1,3 +1,5 @@
+<!-- GENERATED FROM CLAUDE.md — DO NOT EDIT. Run `npm run gen:agents` to regenerate. -->
+
 # AGENTS.md — Jjodel Project Reference
 
 > Operational reference for Codex. Captures what cannot be inferred from reading the code: conventions, critical patterns, language boundaries, gotchas. Everything else lives in `docs/` or the source.
@@ -8,40 +10,65 @@
 ═══════════════════════════════════════════════════════════════════
 NON-NEGOTIABLE RULES — re-read before every task
 ═══════════════════════════════════════════════════════════════════
- 1. Touch only files explicitly listed in the prompt.
- 2. Never rename identifiers (CSS classes, vars, functions, props,
-    exported names) unless the prompt explicitly asks.
+Canonical list — §1, §4.2 and §20.1 point here; rules are not
+restated there.
+
+— Scope & preservation —
+ 1. Touch only files explicitly listed in the prompt. A broader
+    change "would be better" → ask first; never do it silently.
+ 2. Never rename existing identifiers (CSS classes, vars, functions,
+    props, components, exported names) unless the prompt asks.
  3. Committed behavior is verified. Never degrade it. In doubt: STOP.
- 4. Never wrap useJjomSync-adjacent code in TRANSACTION.
- 5. Every new DVoidEdge.new2 for an M1 ref needs a hasCanvasEdgePair
+ 4. No new dependencies / external libraries (no new package.json
+    entries) without approval.
+ 5. No core changes without approval.
+ 6. Don't over-engineer simple features.
+ 7. Don't reorder imports of files not being modified.
+ 8. Don't "clean up" adjacent code, comments, or whitespace.
+ 9. Don't remove "apparently unused" code (use `// TODO: cleanup`).
+10. Don't reformat blocks not directly involved in the change.
+11. Don't modify exported TypeScript interfaces except to add
+    optional properties.
+
+— Critical zone (§3) —
+12. Never wrap useJjomSync-adjacent code in TRANSACTION.
+13. Every new DVoidEdge.new2 for an M1 ref needs a hasCanvasEdgePair
     guard mirroring useJjomSync Step 4.
- 6. Touching default-view source (DV.tsx, defaultViewTemplate.ts) →
+14. Touching default-view source (DV.tsx, defaultViewTemplate.ts) →
     add a VersionFixer migration that rewrites jsxString.
- 7. Discovery before action: grep paths from the prompt; never
-    assume a path is correct.
- 8. Read docs/Codex-log.md (last 5–10 entries) at session
+
+— Workflow & hard-stops —
+15. Discovery before action: grep paths from the prompt; never
+    assume a path is correct. A cited path that doesn't exist → STOP.
+16. Read docs/claude-code-log.md (last 5–10 entries) at session
     start. Update it at task end.
- 9. Never `git add .`. Always `git add <specific-file>`.
-10. Hard stop before commit: show diff, wait for approval.
+17. Never `git add .` / `git add -A`. Always `git add <specific-file>`.
+18. Hard stop before commit: show diff, wait for approval.
+19. A task touching more than 5 files → pause, list them, get
+    confirmation.
+20. A change that propagates to a layer not named in the prompt
+    (D-layer, L-layer, sync, view, JjOM) → pause and report.
+
+— Technical anti-patterns —
+21. Don't use createM1() to create target models (auto names).
+22. Don't use require() in the frontend (returns {}; use ES module
+    imports).
+23. Don't use model.addChild() in canvasToJjom (nested TRANSACTION;
+    use .new() directly).
+24. Don't reintroduce removed Editor V3 components or events (§10).
+25. No hardcoded 'jjodel:...' event strings — use events/registry.ts.
+
+— Style & design-system —
+26. No emojis in code (OK in chat responses).
+27. Don't reintroduce legacy CSS tokens (--accent, --bg-1..5,
+    --secondary, --terziary, --radius, --color).
+28. No CSS variables in component files — always in styles/tokens/.
 ═══════════════════════════════════════════════════════════════════
 ```
 
----
-
 ## 1. Hard stops — pause and ask
 
-Before any of the following, STOP and write a short message to the user. Do not proceed by guessing.
-
-- About to rename an existing identifier that the prompt did not name.
-- About to modify a file not listed in the prompt.
-- About to wrap code inside `useJjomSync.ts` (or any file adjacent to the sync layer) in a TRANSACTION.
-- About to create a `DVoidEdge.new2` for an M1 reference without the `hasCanvasEdgePair` guard.
-- About to modify any default-view source file (`DV.tsx`, `defaultViewTemplate.ts`) without adding a corresponding `VersionFixer` migration.
-- About to run `git add .` or `git add -A`.
-- About to commit anything without showing the diff to the user first.
-- The prompt cites a file path that does not exist after `grep`/`find`.
-- A task touches more than 5 files: pause, list them, get confirmation.
-- During an edit you discover the change propagates to a layer not mentioned in the prompt (D-layer, L-layer, sync, view, JjOM). Pause and report.
+The hard-stop conditions are consolidated in the canonical **NON-NEGOTIABLE RULES** block at the top of this file (the *Workflow & hard-stops* group, plus any rule whose violation you are "about to" commit). Re-read that block before every task; when about to cross one of those lines, STOP and write a short message instead of guessing.
 
 ---
 
@@ -80,6 +107,8 @@ Committed behavior represents verified state. A modification never degrades it.
 | `frontend/src/redux/VersionFixer.tsx` | Schema migrations for persisted project state. |
 | `frontend/src/utils/defaultViewTemplate.ts` | `DEFAULT_VIEW_JSX_STRING` + detect markers. |
 | `frontend/src/common/DV.tsx` | Default view runtime definitions. |
+
+**Cross-reference**: when modifying `portDistribution.ts`, also read `handlePosition.ts` and `DynamicHandles.tsx` — they together form the rendering pipeline for handle positions. A change in `portDistribution.ts` alone may be insufficient (or inert) for visual bugs; see the §3.10 note and §5.1 `Visual bugs: specify before diagnosing` for the methodology.
 
 ### 3.2 Layer Impact Report — mandatory for sync/D-L tasks
 
@@ -217,7 +246,7 @@ Canonical implementation: `frontend/src/components/import/buildImportSummary.ts`
 L-layer `pkg.uri` is computed as `data.uri + "." + data.name` (concatenation).
 D-layer `pkg.__raw.uri` is the direct field as parsed.
 
-For Ecore export and any code that needs **byte-identical nsURI**, use `pkg.__raw.uri`. For user-facing display or JjScript queries, `pkg.uri` is fine.
+For byte-identical nsURI, use `pkg.__raw.uri` — the Ecore round-trip discipline lives in §14. For user-facing display or JjScript queries, `pkg.uri` is fine.
 
 Both patterns coexist by design. Do not "unify" them.
 
@@ -250,6 +279,8 @@ Whenever you modify a default-view source file, you must:
 
 ### 3.10 Role-aware bucket keys in portDistribution
 
+> **Note (2026-05-27)**: the role-keyed bucketing described in this section governs `portDistribution.ts`'s `edgeHandles` output, which assigns handleIds. The actual positioning of anchors on the screen is currently driven by `handlePosition.ts:computeSidePositions` and `DynamicHandles.tsx`, **not** by `portDistribution.ts`'s `nodeHandles` field (which is discarded by `EditorV2.tsx:792`). The overflow-protection trade-off described below is still relevant for handleId assignment, but its visual implications depend on `computeSidePositions`. Re-evaluate this section after the anchor ordering fix (tracked in `docs/discovery/2026-05-27_anchor_ordering_inversion.md`) is merged.
+
 When a pair of nodes can have fan-in and fan-out simultaneously (e.g., bidirectional references between two classes), bucket keys for port distribution must include the role:
 
 ```typescript
@@ -263,14 +294,48 @@ STEP 4 of `portDistribution.ts` unions source/target buckets per `(nodeId, side)
 
 ### 3.11 Runtime store access
 
-The Redux store is exposed globally for DevTools and debugging as **`windoww.store`** (with a double `w`). This is intentional — it avoids collision with React DevTools' `window.store`.
+See §15.4 for the `windoww.store` (double-`w`) global — exposed for console/DevTools debugging; application code imports the store directly. Console: `windoww.store.getState().idlookup`.
 
-Console-side debugging:
+### 3.12 Identity slot ↔ instance name — slot→name is always a direct SetFieldAction
+
+The M1 identity binding links an instance's display name (`DObject.name`) to its
+`name : EString` slot. The two directions are wired asymmetrically, and that asymmetry
+is load-bearing:
+
+- **name → slot**: `set_name` (`joiner/classes.ts` `LPointerTargetable.set_name`, override
+  `LModelElement.tsx` `LObject.set_name`) writes both sides — `data.name` via
+  `SetFieldAction`, and the slot via the proxy assignment `nameattribute.value = val`
+  (which routes through `LValue.set_value` → `setValueAtPosition`).
+- **slot → name**: `LValue.setValueAtPosition` (around `LModelElement.tsx:7484`) propagates
+  the slot value onto `data.name` with a **direct `SetFieldAction` on `'name'`** — it does
+  **not** call `set_name`.
+
+**Invariant — never violate**: slot → name propagation must always be a direct
+`SetFieldAction` on `'name'`. It must **never** be routed through `set_name`. This is
+exactly why no sync loop exists: the name-side write is terminal, so the cycle
+`set_name → slot write → name write → set_name → …` cannot form. Any change that makes
+slot → name go through `set_name` (instead of the direct field write) reintroduces the
+loop. See `docs/discovery/2026-06-17_name_slot_sync.md` §10 for the full trace.
+
+### 3.13 L-layer proxies report the D-layer className
+
+An L-proxy's `.className` returns the **D-layer** class name (`'DValue'`, `'DObject'`,
+`'DClass'`, …) — **never** the L-name (`'LValue'`, `'LObject'`). A guard like
+`lproxy.className === 'LValue'` is therefore **always false** and silently disables whatever
+it protects, with no compile error and no type warning.
+
 ```typescript
-windoww.store.getState().idlookup
+if (slot.className === 'DValue') { ... }   // correct
+// NOT: slot.className === 'LValue'         // always false — silently dead
 ```
 
-Application code should import the store directly rather than rely on the global.
+The convention is consistent across the codebase (e.g. `setValueAtPosition`'s
+`oldTarget?.className === "DObject"` on an `LObject.fromPointer(...)` result;
+`proxy.ts` returns the D-name). This typo cost the entire Direction-A identity-sync effort:
+the name → slot write was gated on `=== 'LValue'` and never ran. Residual dead occurrences of
+the same typo remain in the base `LPointerTargetable.set_name`/`get_name`
+(`classes.ts:2129`, `:2155`) — dead for instances (`LObject` overrides them), pending a
+consistency cleanup.
 
 ---
 
@@ -282,15 +347,7 @@ Modify only the files named in the prompt. If a strictly necessary additional ed
 
 ### 4.2 Do-not list (blocklist)
 
-- ❌ Rename existing identifiers (CSS classes, vars, functions, components, props) unless the prompt asks
-- ❌ Reorder imports of files not being modified
-- ❌ "Clean up" adjacent code, comments, or whitespace
-- ❌ Remove "apparently unused" code (use `// TODO: cleanup` instead)
-- ❌ Reformat blocks not directly involved in the change
-- ❌ Modify TypeScript interfaces other than adding optional properties
-- ❌ Introduce new dependencies (no new `package.json` entries) without approval
-- ❌ Reintroduce removed Editor V3 components or events (see §10)
-- ❌ Reintroduce legacy CSS tokens — see §7
+These anti-refactoring rules are consolidated in the canonical **NON-NEGOTIABLE RULES** block at the top of this file (*Scope & preservation* group, with the V3 and legacy-CSS-token items under *Technical anti-patterns* and *Style & design-system*).
 
 ### 4.3 Verify identifier names before introducing new ones
 
@@ -318,7 +375,34 @@ The prompt may cite paths that are wrong, outdated, or refer to a different bran
 
 **Always at session start**
 1. Read `AGENTS.md` (this file) — start with the NON-NEGOTIABLE RULES block.
-2. Read `docs/Codex-log.md` — last 5–10 entries for recent context.
+2. Read `docs/claude-code-log.md` — last 5–10 entries for recent context.
+
+### 5.1 Visual bugs: specify before diagnosing
+
+When a bug is reported via screenshot or visual description (e.g. "the edges cross", "the labels overlap", "the node is misaligned"), the first step is **always** to extract a formal specification from the reporter before choosing a diagnostic path. A word like "cross", "overlap", "wrong position" covers multiple distinct failure modes; each maps to a different module and a different fix.
+
+**Required before diagnostic work starts**
+1. **What is observed**: describe what is currently rendered. Use concrete numbers (coordinates, sizes, indices) wherever the DOM/Redux state can supply them — never rely solely on the screenshot.
+2. **What is expected**: describe the target rendering with the same level of precision. Distinguish *aesthetic* preferences ("could be cleaner") from *correctness* failures ("element A is below element B but should be above").
+3. **Acceptance criterion**: a single sentence that can be mechanically checked. Examples: "two anchors on the left side with distinct Y coordinates, the source above the target", "edge labels do not overlap edge paths within ±5px".
+
+If the reporter cannot provide (1) and (2) at this level of precision, **ask before searching the codebase**. Discovery without a formal acceptance criterion produces hypotheses that match the analyst's preconceptions, not the bug.
+
+**Sub-rule: verify consumers before assuming an output is load-bearing**
+
+When the diagnostic hypothesis points at "module X produces value Y, and Y looks wrong", **verify that Y is actually consumed downstream** before fixing it. A non-trivial fraction of analytics-shaped code in this codebase has outputs that are computed and then discarded by the consumer (dead writes). Modifying a dead output produces no observable effect and burns hours of debugging.
+
+Minimum verification: a global `grep` for the name of the output field, traced to every consumer site, with a confirmation that the consumer actually reads the field (not just receives the containing object). Where uncertain, add a temporary `console.log` to confirm the consumer path before writing the fix.
+
+**Sub-rule: do not validate sorts by reading the comparator**
+
+A comparator that "looks correct" by inspection can still produce inverted output when chained with downstream code that reinterprets the order (e.g. a positioner that maps index 0 to the bottom instead of the top). The only valid validation of a sort is **executing it on real input** and comparing the output to the acceptance criterion, ideally as a unit test.
+
+Discovery sessions on sorting bugs must include at least one end-to-end trace from input to rendered output, with concrete numbers at each step. Reading the comparator code in isolation is necessary but not sufficient.
+
+**Sub-rule: do not trust fixtures from memory across sessions**
+
+When a previous session's discovery describes a specific bad state ("the two anchors collide at coordinate (X, Y)"), that description is a hypothesis about a past version of the code, not a fact about the current version. Before building a fix on top of it, **reproduce the bad state on the current code**: run the scenario, capture the DOM/Redux state, confirm the numbers match. If the bad state cannot be reproduced, the underlying bug may have changed or never existed in the form described.
 
 ---
 
@@ -327,15 +411,15 @@ The prompt may cite paths that are wrong, outdated, or refer to a different bran
 ### 6.1 Staging
 
 - Always `git add <specific-file>`. Never `git add .` or `git add -A`.
-- For sparse changes in dense log files (e.g., `docs/Codex-log.md`), `git add -p` tends to present one giant hunk. Use this pattern instead:
+- For sparse changes in dense log files (e.g., `docs/claude-code-log.md`), `git add -p` tends to present one giant hunk. Use this pattern instead:
   ```bash
-  cp docs/Codex-log.md /tmp/log-backup.md
-  git checkout HEAD -- docs/Codex-log.md
+  cp docs/claude-code-log.md /tmp/log-backup.md
+  git checkout HEAD -- docs/claude-code-log.md
   # paste only the entries you want to commit into the file
-  git add docs/Codex-log.md
+  git add docs/claude-code-log.md
   git commit
   # restore the working state
-  cp /tmp/log-backup.md docs/Codex-log.md
+  cp /tmp/log-backup.md docs/claude-code-log.md
   ```
 
 ### 6.2 Commit messages
@@ -348,7 +432,11 @@ The prompt may cite paths that are wrong, outdated, or refer to a different bran
 
 - Show the diff to the user. Wait for explicit approval.
 - Never use `--no-verify` or skip pre-commit hooks.
-- After commit: update `docs/Codex-log.md`.
+- After commit: update `docs/claude-code-log.md`.
+
+### 6.4 Incident log
+
+- **Scope violation 2026-05-25**: bundled identity-binding files into anchorpoint fix commit `729c5ce07` despite explicit 3-file scope. Mitigated via opzione 1 (post-hoc log entry) since branch was already pushed. **Lesson**: when prompt says "stage solo N file", verify with `git status` + `git diff --cached` before commit.
 
 ---
 
@@ -522,165 +610,15 @@ Three `// TODO: sidebar` bookmarks remain in code for future sidebar approach.
 
 Expression evaluation engine, used by both JjTL and JjScript. Standalone language with its own lexer/parser/evaluator/type system.
 
-**Full spec**: `frontend/src/jjel/SPEC.md`
-
-### 11.1 Directory structure
-
-```
-frontend/src/jjel/
-├── autocomplete/   (providers + util)
-├── evaluator/      (with builtins/)
-├── lexer/
-├── metadata/
-├── parser/
-├── types/
-├── util/
-├── __tests__/
-├── index.ts
-└── SPEC.md
-```
-
-### 11.2 Core constructs
-
-| Construct | Syntax | Example |
-|-----------|--------|---------|
-| Member access | `obj.prop` | `source.name` |
-| Null-safe | `obj?.prop` | `source?.owner` |
-| Method call | `obj.method()` | `name.toUpper()` |
-| Null coalesce | `a ?? b` | `name ?? "default"` |
-| Conditional | `if c then a else b` | |
-| Type check | `x is Type` | `value is String` |
-| Implication | `a implies b` | |
-| Lambda | `x => expr` | `x => x.name` |
-| ForAll (set comp.) | `forall x in S [such that \| P] [: proj]` | `forall a in attrs \| a.isPublic : a.name` |
-| Exists | `exists x in S (such that \|) pred` | |
-| With...do | `with expr do body` | `with parent do name.camelCase()` |
-| Array literal / index | `[a,b,c]` / `arr[i]` | |
-| Line comment | `-- comment` | |
-
-### 11.3 Operator precedence (low → high)
-
-1. `if/then/else`, `forall`, `exists`, `with...do`
-2. `??`
-3. `implies` (right-associative)
-4. `or`
-5. `and`
-6. `==`, `!=`
-7. `<`, `>`, `<=`, `>=`
-8. `is`
-9. `+`, `-` (`+` also string concat)
-10. `*`, `/`, `%`
-11. `not`, `-` unary
-12. `.`, `?.`, `()`, `[index]`
-
-### 11.4 Design decisions
-
-- `forall` in JjEL has **set-theoretic** semantics (returns a set, not a boolean).
-- `do` keyword exists **only** in `with...do`.
-- Lambda uses `=>` (not `:`) to avoid conflict with forall projection.
-- Implicit context: Console uses the selected node; JjTL uses the matched source element.
-- Truthiness: `null`, `false`, `0`, `""`, `[]` are falsy.
-
-### 11.5 Built-ins
-
-100+ methods, in 4 modules under `evaluator/builtins/`: `strings.ts`, `collections.ts`, `numbers.ts`, `dates.ts`. See the spec for the full list.
-
-### 11.6 EvaluationContext
-
-Scoped binding with parent-child:
-```typescript
-const child = parentCtx.child({ myVar: someValue });
-// child inherits parent bindings + adds myVar
-```
-Used by the JjTL executor to pass forall variables into nested scopes.
+**Full reference**: `frontend/src/jjel/SPEC.md` — core constructs, grammar and operator precedence, design decisions (incl. `forall`'s set-theoretic semantics), the 100+ built-in methods, evaluation rules, and contexts of use. Single source; not duplicated here.
 
 ---
 
 ## 12. JjTL — Transformation Language
 
-**Full spec**: `frontend/src/jjtl/SPEC.md`
+**Full reference**: `frontend/src/jjtl/SPEC.md` — syntax and grammar, AST-bridge mappings, the execution model (incl. the 4-strategy property resolution), trace model, JjEL integration, and known bugs/gaps. Single source; not duplicated here. Only the subsections **not** in the SPEC are kept below.
 **Design document**: `___JjTL__1_.pdf` (rationale + comparative analysis with ATL, ETL, QVT-R, QVT-O)
 **Roadmap**: `docs/jjtl/JJTL-DEVELOPMENT-PLAN.md`
-
-### 12.1 Directory structure
-
-```
-frontend/src/jjtl/
-├── analyzer/
-├── components/
-├── editor/
-├── executor/
-├── hooks/
-├── lexer/
-├── parser/
-├── services/
-├── styles/
-├── types/
-├── utils/
-├── views/
-├── __tests__/
-├── index.ts
-├── README.md
-└── SPEC.md
-```
-
-### 12.2 Essential syntax
-
-```jjtl
-transformation NomeTransformazione
-from SourceMetamodel
-to   TargetMetamodel
-
-SourceClass -> TargetClass {
-    sourceAttr -> targetAttr                          -- direct copy
-    sourceAttr -> targetAttr : true=1, false=0        -- value mapping
-    sourceAttr -> targetAttr : sourceAttr + "_suffix" -- JjEL expression
-    -> Arc { place -> source.map() }                  -- inline object creation
-
-    forall a in attributes such that not a.multiValued -> Column {
-        -> name : a.name.snakeCase()
-        -> type : a.type
-    }
-}
-```
-
-### 12.3 AST Bridge — critical architecture
-
-JjTL has **no** expression evaluator of its own. All expressions are delegated to JjEL via `astBridge.ts`:
-
-```
-JjTL Parser → JjTL AST → astBridge.toJjelAst() → JjEL AST → JjelEvaluator.evaluate()
-```
-
-Mappings in `astBridge.ts`:
-- `FunctionCall` → `MethodCall` (if callee is MemberAccess) else `Identifier`
-- `NullSafeFunctionCall` → `NullSafeMethodCall`
-- `BinaryExpression` → `Binary` with operator normalization: `=` → `==`, `<>` → `!=`
-- `UnaryExpression` → `Unary`
-- `ConditionalExpression` → `IfThenElse`
-- `JjelExpression` wrapper → unwrap inner expression
-
-### 12.4 Execution flow (`JjtlExecutor`)
-
-1. Parse JjTL code → AST
-2. **Deep-copy** of the source model (prevents mutation)
-3. Extract source instances (supports both flat array and `{classes, instances}`)
-4. For each class mapping: filter instances, create target, apply attribute mappings, run ForAll
-5. Output: `ExecutionResult` with `targetModel.instances: Map<string, any[]>`
-
-**ForAll execution**: evaluate collection → iterate → apply `such that` filter via JjEL → create child context with the forall variable → execute object creation per element → store under pluralized name (`Column` → `columns`).
-
-**Framework integration**: the executor produces pure data with no framework dependencies. `ProjectEditor` takes the `ExecutionResult` and creates `DModel` + `DGraph` via framework API, using the deferred attribute pattern (see §9.2).
-
-### 12.5 evaluatePropertyPath — 4 fallback strategies
-
-The executor resolves property names in order:
-1. Direct access `source[path]` for instance properties
-2. Context lookup `ctx.get(path)` for variables
-3. JjEL eval `jjelEval(path, record)` for complex expressions
-4. Manual traversal (split by `.`) for paths like `source.owner.name`
-
-**Critical**: `contextToRecord()` must include **all** properties of the source instance, not only hardcoded variables.
 
 ### 12.6 Language boundaries — JjEL / JjTL / JjScript
 
@@ -818,13 +756,20 @@ settingsModal?.openSettings('providers');
 ## 17. Development commands
 
 ```bash
-npm run dev          # Vite dev server
-npm run test         # test suite
-npm run test:watch
-npm run typecheck    # tsc --noEmit
-npm run build
-npm run lint
+npm start            # Vite dev server
+npm run build        # vite build (production bundle)
+npm run typecheck    # tsc --noEmit (real type gate; vite/esbuild does not type-check)
+npm run test         # vitest run
+npm run test:watch   # vitest (watch mode)
+npm run dev          # docker-compose dev stack, not the dev server (use npm start)
 ```
+
+No `lint` script: ESLint is not installed, so do not run it. No coverage script.
+
+Verification gates before commit:
+- `npm run build` must pass (exit 0, only the pre-existing chunk-size warning).
+- `npm run typecheck` has a known non-zero baseline (filename casing plus a few genuine type errors). Your change must not increase the count.
+- `npm run test` where the touched area has tests. The suite has known failures; do not treat a red suite as caused by your change without checking.
 
 ---
 
@@ -923,16 +868,7 @@ frontend/src/
 
 ### 20.1 Do NOT
 
-- ❌ Emojis in code (OK in chat responses)
-- ❌ New external libraries without discussion
-- ❌ Core changes without approval
-- ❌ Over-engineering for simple features
-- ❌ `createM1()` to create target models — generates automatic names
-- ❌ `require()` in the frontend — returns `{}` (use ES module imports)
-- ❌ `model.addChild()` in `canvasToJjom` — causes nested TRANSACTION (use `.new()` directly)
-- ❌ Reintroduce legacy CSS tokens (`--accent`, `--bg-1..5`, `--secondary`, `--terziary`, `--radius`, `--color`)
-- ❌ CSS variables in component files — always in `styles/tokens/`
-- ❌ Hardcoded `'jjodel:...'` event strings — use `events/registry.ts`
+These anti-patterns are consolidated in the canonical **NON-NEGOTIABLE RULES** block at the top of this file (*Technical anti-patterns* and *Style & design-system* groups; the core-change, over-engineering and dependency items live under *Scope & preservation*).
 
 ### 20.2 Best practices
 
@@ -948,13 +884,13 @@ frontend/src/
 
 ## 21. Prompt log
 
-Codex maintains `docs/Codex-log.md` as an append-only operational log.
+Codex maintains `docs/claude-code-log.md` as an append-only operational log.
 
 ### 21.1 Lifecycle
 
 - **At session start**: read the last 5–10 entries for context.
 - **At task end**: append a new entry.
-- **When the active file exceeds 20 entries**: move older ones to `docs/Codex-log-archive.md` keeping only the last 20 active.
+- **When the active file exceeds 20 entries**: move older ones to `docs/claude-code-log-archive.md` keeping only the last 20 active.
 - The log does **not** replace commit messages.
 
 ### 21.2 Entry format

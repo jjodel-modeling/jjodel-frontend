@@ -11,11 +11,6 @@
  *
  *   // Parse without executing
  *   const parseResult = parse('create class Person');
- *
- *   // Check if message is a JjScript command
- *   if (JjScriptService.isJjScriptCommand(message)) {
- *       const result = await JjScriptService.execute(message);
- *   }
  */
 
 // Types

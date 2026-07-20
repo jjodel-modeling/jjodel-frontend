@@ -2,7 +2,7 @@ import React, {Component, Dispatch, PureComponent, ReactElement, ReactNode,} fro
 import {createPortal} from "react-dom";
 import {connect} from "react-redux";
 // import './graphElement.scss';
-import type {EdgeOwnProps} from "./sharedTypes/sharedTypes";
+import type {EdgeOwnProps} from "../../common/sharedTypes";
 import {
     GraphSize,
     LGraph,
@@ -26,7 +26,9 @@ import {
     DataTransientProperties, L, GraphVertex, Graph, Vertex, Uobj, DEdgePoint, DVertex, DGraphVertex,
     LVertex, Defaults
 } from "../../joiner";
-import {DefaultUsageDeclarations} from "./sharedTypes/sharedTypes";
+import {DefaultUsageDeclarations} from "../../common/sharedTypes";
+import {displayError} from "../../common/jsxErrorView";
+import {graphComponentRegistry} from "../../common/graphComponentRegistry";
 
 import {EdgeStateProps, LGraphElement, store, VertexComponent,
     CreateElementAction, DClass, Debug,
@@ -147,7 +149,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     extends Component<AllProps, GraphElementState>{
     public static cname: string;
     static all: Dictionary<number, GraphElementComponent> = {};
-    public static map: Dictionary<Pointer<DGraphElement>, GraphElementComponent> = {};
+    public static map: Dictionary<Pointer<DGraphElement>, GraphElementComponent> = graphComponentRegistry as any;
     static defaultProps: Partial<GraphElementOwnProps> = GraphElementOwnProps.new();
     static maxid: number = 0;
     id: number;
@@ -412,7 +414,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
         let skipDeepKeys = {pointedBy:true, clonedCounter: true};// clonedCounter is checked manually before looping object keys
         // let skipPropKeys = {...skipDeepKeys, usageDeclarations: true, node:true, data:true, initialSize: true};
         // if node and data in props must be ignored and not checked for changes. but they are checked if present in usageDeclarations
-        let component = nextProps.node.component;
+        let component = nextProps.node.component as any as GraphElementComponent;
         const nid = nextProps.nodeid;
 
         let subViewUpdated = false;
@@ -688,55 +690,7 @@ export class GraphElementComponent<AllProps extends AllPropss = AllPropss, Graph
     }
 
     public static displayError(e: Error, where: string, view: DViewElement, data?: DModelElement, node?: DGraphElement, asString:boolean = false, printData?: GObject): React.ReactNode {
-        // const view: LViewElement = this.props.view; //data._transient.currentView;
-        let errormsg = (where === "preRenderFunc" ? "Pre-Render " : "") +(e.message||"\n").split("\n")[0];
-        if (e.message.indexOf("Unexpected token .") >= 0 || view.jsxString.indexOf('?.') >= 0 || view.jsxString.indexOf('??') >= 0) {
-            errormsg += '\n\nReminder: nullish operators ".?" and "??" are not supported.'; }
-        else if (view.jsxString.indexOf('?.') >= 0) { errormsg += '\n\nReminder: ?. operator and empty tags <></> are not supported.'; }
-        else if (e.message.indexOf("Unexpected token '<'") !== -1) { errormsg += '\n\nDid you forgot to close a html </tag>?'; }
-        try {
-            let ee = e.stack || "";
-            let stackerrorlast = ee.split("\n")[1];
-
-            let icol = stackerrorlast.lastIndexOf(":");
-            let jsxString = view.jsxString;
-            // let col = stackerrorlast.substring(icol+1);
-            let irow = stackerrorlast.lastIndexOf(":", icol-1);
-            const offset = {row:-2, col:1};
-            let stackerrorlinenum: GObject = {
-                row: Number.parseInt(stackerrorlast.substring(irow+1, icol)) + offset.row,
-                col: Number.parseInt(stackerrorlast.substring(icol+1)) + offset.col };
-            let linesPre = 1;
-            let linesPost = 1;
-            let jsxlines = jsxString.split("\n");
-            let culpritlinesPre: string[] = jsxlines.slice(stackerrorlinenum.row-linesPre-1, stackerrorlinenum.row - 1);
-            let culpritline: string = jsxlines[stackerrorlinenum.row - 1]; // stack start counting lines from 1
-            let culpritlinesPost: string[] = jsxlines.slice(stackerrorlinenum.row, stackerrorlinenum.row + linesPost);
-            console.debug("[JSX Parse Error]", {e, node, jsxlines, culpritlinesPre, culpritline, culpritlinesPost, stackerrorlinenum, icol, irow, stackerrorlast});
-
-            if (stackerrorlinenum.col - offset.col > culpritline?.length && stackerrorlinenum.row === 1) stackerrorlinenum.col = 0;
-            let caretCursor = "▓" // ⵊ ꕯ 𝙸 Ꮖ
-            if (culpritline && stackerrorlinenum.col - offset.col <= culpritline?.length && stackerrorlast.indexOf("main.chunk.js") === -1) {
-                let rowPre = culpritline.substring(0, stackerrorlinenum.col);
-                let rowPost = culpritline.substring(stackerrorlinenum.col);
-                let jsxcode =
-                    <div style={{fontFamily: "monospaced sans-serif", color:"#444"}}>
-                        { culpritlinesPre.map(l => <div>{l}</div>) }
-                        <div>{rowPre} <b style={{color:"red"}}> {caretCursor} </b> {rowPost}</div>
-                        { culpritlinesPost.map(l => <div>{l}</div>) }
-                    </div>;
-                errormsg += " @ line " + stackerrorlinenum.row + ", col:" + stackerrorlinenum.col;
-                if (asString) return DV.errorView_string('<div>'+errormsg+'\n'+jsxcode+'</div>', {where:"in "+where+"()", e, template:view.jsxString, view: view}, where, data, node, view);
-                return DV.errorView(<div>{errormsg}{jsxcode}</div>, {where:"in "+where+"()", e, template:view.jsxString, view: view}, where, data, node, view);
-            } else {
-                // it means it is likely accessing a minified.js src code, sending generic error without source mapping
-            }
-        } catch(e2) {
-            Log.eDevv("internal error in error view", {e, e2, where} );
-            return null;
-        }
-        if (asString) return DV.errorView_string('<div>'+errormsg+'</div>', {where:"in "+where+"()", e, template: view.jsxString, view: view}, where, data, node, view);
-        return DV.errorView(<div>{errormsg}</div>, {where:"in "+where+"()", e, template: view.jsxString, view: view, ...(printData || {})}, where, data, node, view);
+        return displayError(e, where, view, data, node, asString, printData);
     }
 
     protected getTemplate3(vid: Pointer<DViewElement>, v: LViewElement, context: GObject): ReactNode {

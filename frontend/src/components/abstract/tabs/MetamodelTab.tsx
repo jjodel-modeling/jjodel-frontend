@@ -180,24 +180,10 @@ function MetamodelTabComponent(props: AllProps) {
         </div>}
 
 
-        <EditorSwitch modelid={model.id} isMetamodel>
-            <div className={'d-flex h-100'} style={{overflow:'hidden'}} onClick={e => { if (!U.isProjectModified) U.isProjectModified = U.userHasInteracted = true; }}>
-                {/* Fixed Features Palette - always visible */}
-                <FeaturesPalette />
-                <Try>
-                    <div
-                        ref={canvasRef}
-                        className={"GraphContainer h-100 w-100"}
-                        style={{position: "relative"}}
-                        onDragOver={handleDragOver}
-                        onDrop={handleDrop}
-                    >
-                        {graph && <DefaultNode data={model} nodeid={graphid} graphid={graphid}/> ||
-                            <div>Error: missing DGraph prop</div>}
-                    </div>
-                </Try>
-            </div>
-        </EditorSwitch>
+        {/* Classic shutdown (Fase 5a): the M2 classicSlot was already dead
+            (hasViewpoint is always false for metamodels — children were
+            discarded); the dead subtree is now removed explicitly. */}
+        <EditorSwitch modelid={model.id} isMetamodel />
     </div>);
 
 }

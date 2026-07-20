@@ -8,6 +8,7 @@ import { isProjectOverviewPage } from '../../utils/navigationUtils';
 import { LPointerTargetable, LViewPoint } from '../../joiner';
 import { activateViewpoint } from '../../utils/lastViewpoint';
 import { JjodelEvents } from '../../events/registry';
+import { ValidationPill } from './problems/ValidationPill';
 
 interface ToolbarProps {
     snapEnabled: boolean;
@@ -44,6 +45,8 @@ interface ToolbarProps {
     onDistributeH?: () => void;
     onDistributeV?: () => void;
     isMetamodel?: boolean;
+    /** Open model id — drives the conformance validation pill (undefined ⇒ no pill). */
+    modelId?: string;
     editorMode?: 'flow' | 'classic' | 'split';
     hasViewpoint?: boolean;
     onEditorModeChange?: (mode: 'flow' | 'classic' | 'split') => void;
@@ -163,6 +166,7 @@ function Toolbar({
     onDistributeH,
     onDistributeV,
     isMetamodel = false,
+    modelId,
     editorMode,
     hasViewpoint = false,
     onEditorModeChange,
@@ -439,45 +443,13 @@ function Toolbar({
             {/* ── Spacer ── */}
             <div className="toolbar-spacer" />
 
-            {/* ── Editor mode toggle (always visible; disabled without an active viewpoint) ── */}
-            <div
-                className={`editor-mode-toggle${modeToggleDisabled ? ' disabled' : ''}`}
-                role="group"
-                aria-label="Editor mode"
-                aria-disabled={modeToggleDisabled || undefined}
-                title={modeToggleDisabled ? 'Select a viewpoint to enable classic / split modes' : undefined}
-            >
-                <button
-                    type="button"
-                    className={`editor-mode-btn ${activeEditorMode === 'flow' ? 'active' : ''}`}
-                    onClick={() => onEditorModeChange?.('flow')}
-                    disabled={modeToggleDisabled}
-                    title="Abstract syntax only"
-                    aria-pressed={activeEditorMode === 'flow'}
-                >
-                    <i className="bi bi-diagram-3" />
-                </button>
-                <button
-                    type="button"
-                    className={`editor-mode-btn ${activeEditorMode === 'classic' ? 'active' : ''}`}
-                    onClick={() => onEditorModeChange?.('classic')}
-                    disabled={modeToggleDisabled}
-                    title="Concrete syntax only"
-                    aria-pressed={activeEditorMode === 'classic'}
-                >
-                    <i className="bi bi-eye" />
-                </button>
-                <button
-                    type="button"
-                    className={`editor-mode-btn ${activeEditorMode === 'split' ? 'active' : ''}`}
-                    onClick={() => onEditorModeChange?.('split')}
-                    disabled={modeToggleDisabled}
-                    title="Split: Abstract + concrete syntax"
-                    aria-pressed={activeEditorMode === 'split'}
-                >
-                    <i className="bi bi-layout-split" />
-                </button>
-            </div>
+            {/* ── Conformance validation pill (silent when conformant; never for metamodels) ── */}
+            {modelId && <ValidationPill modelId={modelId} />}
+
+            {/* Classic shutdown (Fase 5a): the flow/classic/split mode toggle is
+                gone — concrete syntax renders via the IR interpreter behind the
+                active viewpoint. TODO: cleanup — remove editorMode/hasViewpoint/
+                onEditorModeChange plumbing once the removal layer lands. */}
 
             {/* ── Zoom controls (right-aligned) ── */}
             {onZoomOut && onZoomIn && onResetZoom && zoomLevel !== undefined && (
@@ -492,7 +464,7 @@ function Toolbar({
                     <button
                         className="toolbar-zoom__level"
                         onClick={onResetZoom}
-                        title="Reset zoom"
+                        title="Reset zoom to 100%"
                     >
                         {zoomLevel}%
                     </button>

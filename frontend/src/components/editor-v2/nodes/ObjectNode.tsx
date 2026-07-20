@@ -24,10 +24,17 @@ import DynamicHandles from '../components/DynamicHandles';
 import InlineEnumSelect from '../components/InlineEnumSelect';
 import { useEditorContextSafe } from '../contexts/EditorContext';
 import { useNodeHighlightClass } from '../contexts/HighlightContext';
-import { syncNodeLabel, syncUpdateFeatureValue } from '../sync/canvasToJjom';
+import { syncNodeLabel, syncUpdateFeatureValue, syncIRCollapsedToJjom } from '../sync/canvasToJjom';
+import { useLayoutAutosave } from '../hooks/useLayoutAutosave';
 import type { ObjectNodeData } from '../types';
 import { NodeProblemIndicator } from '../problems/NodeProblemIndicator';
 import { useIsHighlighted } from '../problems/useNodeProblems';
+import { useIRView } from '../viewpoint/ir/irResolve';
+import { isMigratedDefaultView } from '../viewpoint/ir/irDefaults';
+import IRNodeContent from '../viewpoint/ir/IRNodeContent';
+import { containmentChildren } from '../viewpoint/ir/irContainment';
+import { isCollapsed, toggleCollapsed, useCollapseVersion } from '../viewpoint/ir/irCollapseState';
+import '../viewpoint/ir/irDemoFixture'; // dev-only: registers window.__jjodelInstallIRDemo
 
 export type ObjectNodeType = Node<ObjectNodeData, 'objectNode'>;
 
@@ -35,6 +42,23 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
     const { setNodes } = useReactFlow();
     const editorContext = useEditorContextSafe();
     const hlClass = useNodeHighlightClass(id);
+
+    // IR view resolution (spike 2026-07-17): non-null only when the active
+    // viewpoint declares an applicable IR view for this object's metaclass.
+    const irResolution = useIRView(id, data.instanceOfClassId);
+    // Delegation (spec v1.2 sez. 11 amendment): migrated classic-default views
+    // render through the native branch below — parity with "no viewpoint" by
+    // construction. The view stays in the resolution index; only who renders
+    // it changes.
+    const irDelegated = irResolution !== null && isMigratedDefaultView(irResolution.compiled);
+    // Containment collapse state (Fase 2b) — cheap, unconditional (rules of hooks)
+    useCollapseVersion();
+    // Debounced project save after a persisted collapse toggle (discovery 2026-07-19)
+    const { scheduleLayoutSave } = useLayoutAutosave();
+    const irChildCount = useSelector((state: any) => {
+        if (!irResolution || irResolution.compiled.kind !== 'graphVertex') return 0;
+        return containmentChildren(state.idlookup ?? {}, irResolution.objectId).length;
+    });
 
     // Live metaclass name + singleton flag from Redux (reacts to metamodel changes)
     const liveMetaclassInfo = useSelector((state: any) => {
@@ -337,6 +361,61 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
     const existingAttrs = data.features?.filter(f => f.featureKind === 'attribute') ?? [];
     const hasFeatures = existingAttrs.length > 0 || missingAttributes.length > 0;
     const isOrphan = !data.instanceOfClassId;
+
+    if (irResolution && !irDelegated) {
+        // IR render path: wrapper, resizer, handles and highlight class stay
+        // identical (handle contract is node-type-agnostic); only the content
+        // is produced by the interpreter. Read-only in the spike.
+        return (
+            <div
+                className={`mm-node mm-object ${selected ? 'selected' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass} ir-view-${irResolution.compiled.viewId}`}
+                data-viewid={irResolution.compiled.viewId}
+            >
+                <NodeResizer
+                    isVisible={selected}
+                    minWidth={140}
+                    minHeight={40}
+                    lineClassName="node-resize-line"
+                    handleClassName="node-resize-handle"
+                />
+                <DynamicHandles nodeId={id} />
+                {isSingleton && (
+                    <span className="singleton-badge">
+                        <i className="bi bi-diamond-fill" />
+                    </span>
+                )}
+                <NodeProblemIndicator nodeId={id} />
+                <IRNodeContent
+                    compiled={irResolution.compiled}
+                    objectId={irResolution.objectId}
+                    vertexId={id}
+                    readCtx={irResolution.readCtx}
+                />
+                {/* graphVertex containment (Fase 2b): collapse/expand chip */}
+                {irResolution.compiled.kind === 'graphVertex'
+                    && irResolution.compiled.containment?.collapsible
+                    && irChildCount > 0 && (
+                    <button
+                        type="button"
+                        className="ir-collapse-chip"
+                        style={{ position: 'absolute', bottom: 2, right: 4, zIndex: 3 }}
+                        title={isCollapsed(irResolution.objectId) ? 'Expand contained elements' : 'Collapse contained elements'}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            toggleCollapsed(irResolution.objectId);
+                            // Persist the new collapse state on the container's DVertex
+                            // (session store stays the runtime source; discovery 2026-07-19).
+                            syncIRCollapsedToJjom(id, isCollapsed(irResolution.objectId));
+                            scheduleLayoutSave();
+                        }}
+                    >
+                        <i className={`bi ${isCollapsed(irResolution.objectId) ? 'bi-chevron-expand' : 'bi-chevron-contract'}`} />
+                        {isCollapsed(irResolution.objectId) ? String(irChildCount) : null}
+                    </button>
+                )}
+            </div>
+        );
+    }
 
     return (
         <div className={`mm-node mm-object ${selected ? 'selected' : ''} ${isOrphan ? 'mm-object--orphan' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass}`}>

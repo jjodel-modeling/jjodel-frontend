@@ -203,6 +203,20 @@ describe('Parser: delete', () => {
         const a = args<DeleteArgs>('delete domain::OldClass');
         expect(a.target.segments).toEqual(['domain', 'OldClass']);
     });
+
+    it('should parse "delete attribute name in A" with container', () => {
+        const a = args<DeleteArgs>('delete attribute name in A');
+        expect(a.command).toBe('delete');
+        expect(a.elementType).toBe('attribute');
+        expect(a.target.segments).toEqual(['A']);
+        expect(a.target.member).toBe('name');
+    });
+
+    it('should parse "delete attribute A.name" (qualified, unchanged)', () => {
+        const a = args<DeleteArgs>('delete attribute A.name');
+        expect(a.target.segments).toEqual(['A']);
+        expect(a.target.member).toBe('name');
+    });
 });
 
 // ─── RENAME ──────────────────────────────────────────────────

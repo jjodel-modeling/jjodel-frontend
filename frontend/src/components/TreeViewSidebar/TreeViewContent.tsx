@@ -202,6 +202,234 @@ function toggleInArray(arr: ReadonlyArray<string>, key: string, expand: boolean)
     return next;
 }
 
+// ─── Search filtering (ephemeral, local-only — never persisted) ──────────────
+//
+// Pure functions that prune the Tree*Data structures already built by
+// mapStateToProps. Semantics mirror `filterElements` in MetamodelTreeView:
+//   - a node matches when its name contains the query (case-insensitive);
+//   - a node survives if it matches or has a surviving descendant;
+//   - a directly-matching node keeps its whole subtree; a node that survives
+//     only through descendants keeps the pruned children.
+// `matchCount` counts nodes that match DIRECTLY (not ancestors dragged in).
+// `firstMatchId` is the id of the first directly-matching node in pre-order,
+// used by Enter-to-scroll. `q` is expected pre-lowercased by the caller.
+
+interface PrunedList<T> { items: T[]; matchCount: number; firstMatchId: string | null; }
+interface PrunedNode<T> { item: T; matchCount: number; firstMatchId: string | null; }
+
+function nameMatches(name: string, q: string): boolean {
+    return (name || '').toLowerCase().includes(q);
+}
+
+function filterStructuralFeatures(features: TreeStructuralFeatureData[], q: string): PrunedList<TreeStructuralFeatureData> {
+    const items: TreeStructuralFeatureData[] = [];
+    let matchCount = 0;
+    let firstMatchId: string | null = null;
+    for (const f of features) {
+        if (nameMatches(f.name, q)) {
+            items.push(f);
+            matchCount++;
+            if (!firstMatchId) firstMatchId = f.id;
+        }
+    }
+    return { items, matchCount, firstMatchId };
+}
+
+function filterClass(cls: TreeClassData, q: string): PrunedNode<TreeClassData> | null {
+    const selfMatch = nameMatches(cls.name, q);
+    const attrRes = filterStructuralFeatures(cls.attributes, q);
+    const refRes = filterStructuralFeatures(cls.references, q);
+    const childMatchCount = attrRes.matchCount + refRes.matchCount;
+    if (selfMatch) {
+        return { item: cls, matchCount: 1 + childMatchCount, firstMatchId: cls.id };
+    }
+    if (childMatchCount > 0) {
+        return {
+            item: { ...cls, attributes: attrRes.items, references: refRes.items },
+            matchCount: childMatchCount,
+            firstMatchId: attrRes.firstMatchId ?? refRes.firstMatchId,
+        };
+    }
+    return null;
+}
+
+function filterPackage(pkg: TreePackageData, q: string): PrunedNode<TreePackageData> | null {
+    const selfMatch = nameMatches(pkg.name, q);
+    const subResults: PrunedNode<TreePackageData>[] = [];
+    for (const sub of pkg.subPackages) {
+        const r = filterPackage(sub, q);
+        if (r) subResults.push(r);
+    }
+    const classResults: PrunedNode<TreeClassData>[] = [];
+    for (const c of pkg.classes) {
+        const r = filterClass(c, q);
+        if (r) classResults.push(r);
+    }
+    let childMatchCount = 0;
+    let firstMatchId: string | null = null;
+    for (const r of subResults) { childMatchCount += r.matchCount; if (!firstMatchId) firstMatchId = r.firstMatchId; }
+    for (const r of classResults) { childMatchCount += r.matchCount; if (!firstMatchId) firstMatchId = r.firstMatchId; }
+    if (selfMatch) {
+        return { item: pkg, matchCount: 1 + childMatchCount, firstMatchId: pkg.id };
+    }
+    if (subResults.length > 0 || classResults.length > 0) {
+        return {
+            item: { ...pkg, subPackages: subResults.map(r => r.item), classes: classResults.map(r => r.item) },
+            matchCount: childMatchCount,
+            firstMatchId,
+        };
+    }
+    return null;
+}
+
+function filterModel(model: TreeModelData, q: string): PrunedNode<TreeModelData> | null {
+    const selfMatch = nameMatches(model.name, q);
+    const instances: TreeFeatureData[] = [];
+    let instMatch = 0;
+    let firstMatchId: string | null = null;
+    for (const inst of model.instances) {
+        if (nameMatches(inst.name, q)) {
+            instances.push(inst);
+            instMatch++;
+            if (!firstMatchId) firstMatchId = inst.id;
+        }
+    }
+    if (selfMatch) {
+        return { item: model, matchCount: 1 + instMatch, firstMatchId: model.id };
+    }
+    if (instMatch > 0) {
+        return { item: { ...model, instances }, matchCount: instMatch, firstMatchId };
+    }
+    return null;
+}
+
+function filterMetamodel(mm: TreeMetamodelData, q: string): PrunedNode<TreeMetamodelData> | null {
+    const selfMatch = nameMatches(mm.name, q);
+    const pkgResults: PrunedNode<TreePackageData>[] = [];
+    for (const pkg of mm.rootPackages) {
+        const r = filterPackage(pkg, q);
+        if (r) pkgResults.push(r);
+    }
+    const modelResults: PrunedNode<TreeModelData>[] = [];
+    for (const model of mm.childModels) {
+        const r = filterModel(model, q);
+        if (r) modelResults.push(r);
+    }
+    let childMatchCount = 0;
+    let firstMatchId: string | null = null;
+    for (const r of pkgResults) { childMatchCount += r.matchCount; if (!firstMatchId) firstMatchId = r.firstMatchId; }
+    for (const r of modelResults) { childMatchCount += r.matchCount; if (!firstMatchId) firstMatchId = r.firstMatchId; }
+    if (selfMatch) {
+        return { item: mm, matchCount: 1 + childMatchCount, firstMatchId: mm.id };
+    }
+    if (pkgResults.length > 0 || modelResults.length > 0) {
+        return {
+            item: { ...mm, rootPackages: pkgResults.map(r => r.item), childModels: modelResults.map(r => r.item) },
+            matchCount: childMatchCount,
+            firstMatchId,
+        };
+    }
+    return null;
+}
+
+function filterSubViews(subs: TreeSubViewData[], q: string): PrunedList<TreeSubViewData> {
+    const items: TreeSubViewData[] = [];
+    let matchCount = 0;
+    let firstMatchId: string | null = null;
+    for (const sv of subs) {
+        const selfMatch = nameMatches(sv.name, q);
+        const childRes = filterSubViews(sv.children, q);
+        if (selfMatch) {
+            items.push(sv);
+            matchCount += 1 + childRes.matchCount;
+            if (!firstMatchId) firstMatchId = sv.id;
+        } else if (childRes.items.length > 0) {
+            items.push({ ...sv, children: childRes.items });
+            matchCount += childRes.matchCount;
+            if (!firstMatchId) firstMatchId = childRes.firstMatchId;
+        }
+    }
+    return { items, matchCount, firstMatchId };
+}
+
+function filterViewpoint(vp: TreeViewpointData, q: string): PrunedNode<TreeViewpointData> | null {
+    const selfMatch = nameMatches(vp.name, q);
+    const subRes = filterSubViews(vp.subViews, q);
+    if (selfMatch) {
+        return { item: vp, matchCount: 1 + subRes.matchCount, firstMatchId: vp.id };
+    }
+    if (subRes.items.length > 0) {
+        return { item: { ...vp, subViews: subRes.items }, matchCount: subRes.matchCount, firstMatchId: subRes.firstMatchId };
+    }
+    return null;
+}
+
+function filterMetamodels(list: TreeMetamodelData[], q: string): PrunedList<TreeMetamodelData> {
+    const items: TreeMetamodelData[] = [];
+    let matchCount = 0;
+    let firstMatchId: string | null = null;
+    for (const mm of list) {
+        const r = filterMetamodel(mm, q);
+        if (r) { items.push(r.item); matchCount += r.matchCount; if (!firstMatchId) firstMatchId = r.firstMatchId; }
+    }
+    return { items, matchCount, firstMatchId };
+}
+
+function filterModels(list: TreeModelData[], q: string): PrunedList<TreeModelData> {
+    const items: TreeModelData[] = [];
+    let matchCount = 0;
+    let firstMatchId: string | null = null;
+    for (const model of list) {
+        const r = filterModel(model, q);
+        if (r) { items.push(r.item); matchCount += r.matchCount; if (!firstMatchId) firstMatchId = r.firstMatchId; }
+    }
+    return { items, matchCount, firstMatchId };
+}
+
+function filterViewpoints(list: TreeViewpointData[], q: string): PrunedList<TreeViewpointData> {
+    const items: TreeViewpointData[] = [];
+    let matchCount = 0;
+    let firstMatchId: string | null = null;
+    for (const vp of list) {
+        const r = filterViewpoint(vp, q);
+        if (r) { items.push(r.item); matchCount += r.matchCount; if (!firstMatchId) firstMatchId = r.firstMatchId; }
+    }
+    return { items, matchCount, firstMatchId };
+}
+
+function filterTransformations(list: TreeTransformationData[], q: string): PrunedList<TreeTransformationData> {
+    const items: TreeTransformationData[] = [];
+    let matchCount = 0;
+    let firstMatchId: string | null = null;
+    for (const t of list) {
+        if (nameMatches(t.name, q)) {
+            items.push(t);
+            matchCount++;
+            if (!firstMatchId) firstMatchId = t.id;
+        }
+    }
+    return { items, matchCount, firstMatchId };
+}
+
+/**
+ * Render a name with a <mark> around the first case-insensitive occurrence of
+ * `query`. Returns the bare name when no query or no match. `query` is the
+ * trimmed, original-case search string (matching is case-insensitive).
+ */
+function renderHighlightedName(name: string, query?: string): ReactNode {
+    if (!query) return name;
+    const idx = (name || '').toLowerCase().indexOf(query.toLowerCase());
+    if (idx === -1) return name;
+    const end = idx + query.length;
+    return (
+        <>
+            {name.slice(0, idx)}
+            <mark>{name.slice(idx, end)}</mark>
+            {name.slice(end)}
+        </>
+    );
+}
+
 // ─── Classifier context menu (Add View to Workbench) ────────────────────────
 
 /**
@@ -340,6 +568,7 @@ interface EntityRowProps {
     actions?: ReactNode;           // hover-reveal slot (e.g. add/duplicate/delete buttons)
     nameOverride?: ReactNode;      // custom name renderer (e.g. inline rename input)
     activeIndicator?: 'viewpoint' | 'model' | null; // pulsing dot — entity-typed
+    highlightQuery?: string;       // search substring to <mark> in the name
 }
 
 const EntityRow = memo(function EntityRow(props: EntityRowProps): ReactElement {
@@ -347,7 +576,7 @@ const EntityRow = memo(function EntityRow(props: EntityRowProps): ReactElement {
         badge, badgeClassName, name, nameClassName, pillText, expandKey, isLeaf,
         expanded, onToggle, extraIcon, selected,
         onClick, onContextMenu, depth, dataElementId, highlightAction, isHighlighted, showNewBadge,
-        actions, nameOverride, activeIndicator,
+        actions, nameOverride, activeIndicator, highlightQuery,
     } = props;
 
     const hasChevron = !!expandKey && !isLeaf;
@@ -397,7 +626,7 @@ const EntityRow = memo(function EntityRow(props: EntityRowProps): ReactElement {
             <div className="tree-row__content" onClick={onClick}>
                 <span className={`tree-node__icon ${badgeClassName || ''}`}>{badge}</span>
                 {nameOverride !== undefined ? nameOverride : (
-                    <span className={`tree-row__name ${nameClassName || ''}`.trim()}>{name || 'unnamed'}</span>
+                    <span className={`tree-row__name ${nameClassName || ''}`.trim()}>{renderHighlightedName(name || 'unnamed', highlightQuery)}</span>
                 )}
                 {pillText && <span className="tree-pill">{pillText}</span>}
                 {extraIcon === 'bezier2' && (
@@ -443,11 +672,13 @@ const FeatureRow = memo(function FeatureRow({
     selected,
     onSelect,
     depth,
+    highlightQuery,
 }: {
     instance: TreeFeatureData;
     selected: boolean;
     onSelect?: () => void;
     depth: number;
+    highlightQuery?: string;
 }): ReactElement {
     const handleClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
@@ -466,7 +697,7 @@ const FeatureRow = memo(function FeatureRow({
         <div className="tree-row tree-row--feature" data-element-id={instance.id} style={{ paddingLeft: `${depth * TREE_INDENT_STEP}px` }}>
             <span className="tree-node__toggle is-leaf" aria-hidden />
             <div className={`tree-row__content ${selected ? 'tree-row__content--selected' : ''}`} onClick={handleClick}>
-                <span className="tree-feature__name">{instance.name}</span>
+                <span className="tree-feature__name">{renderHighlightedName(instance.name, highlightQuery)}</span>
                 <span className="tree-feature__type">: {instance.metaclassName}</span>
             </div>
         </div>
@@ -478,11 +709,13 @@ const StructuralFeatureRow = memo(function StructuralFeatureRow({
     kind,
     selected,
     depth,
+    highlightQuery,
 }: {
     feature: TreeStructuralFeatureData;
     kind: 'attribute' | 'reference';
     selected: boolean;
     depth: number;
+    highlightQuery?: string;
 }): ReactElement {
     const handleClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
@@ -509,7 +742,7 @@ const StructuralFeatureRow = memo(function StructuralFeatureRow({
                 dataElementId={feature.id}
                 nameOverride={(
                     <>
-                        <span className="tree-feature__name">{feature.name}</span>
+                        <span className="tree-feature__name">{renderHighlightedName(feature.name, highlightQuery)}</span>
                         <span className="tree-feature__type">: {feature.typeName} [{feature.multiplicity}]</span>
                     </>
                 )}
@@ -528,6 +761,7 @@ const ClassNode = memo(function ClassNode({
     onToggle,
     highlightedElementId,
     highlightedAction,
+    highlightQuery,
 }: {
     cls: TreeClassData;
     selectedId?: string;
@@ -536,6 +770,7 @@ const ClassNode = memo(function ClassNode({
     onToggle: () => void;
     highlightedElementId?: string | null;
     highlightedAction?: ElementAction | null;
+    highlightQuery?: string;
 }): ReactElement {
     const isSelected = selectedId === cls.id;
     const isHighlighted = highlightedElementId === cls.id;
@@ -572,6 +807,7 @@ const ClassNode = memo(function ClassNode({
                 highlightAction={highlightedAction}
                 showNewBadge={isHighlighted && highlightedAction === 'create'}
                 expandKey={cls.id}
+                highlightQuery={highlightQuery}
             />
             {popup}
             {isExpanded && hasStructuralFeatures && (
@@ -583,6 +819,7 @@ const ClassNode = memo(function ClassNode({
                             kind="attribute"
                             selected={selectedId === attr.id}
                             depth={depth + 1}
+                            highlightQuery={highlightQuery}
                         />
                     ))}
                     {cls.references.map(ref => (
@@ -592,6 +829,7 @@ const ClassNode = memo(function ClassNode({
                             kind="reference"
                             selected={selectedId === ref.id}
                             depth={depth + 1}
+                            highlightQuery={highlightQuery}
                         />
                     ))}
                 </div>
@@ -612,6 +850,7 @@ const PackageNode = memo(function PackageNode({
     onToggleFn,
     highlightedElementId,
     highlightedAction,
+    highlightQuery,
 }: {
     pkg: TreePackageData;
     selectedId?: string;
@@ -623,6 +862,7 @@ const PackageNode = memo(function PackageNode({
     onToggleFn: (key: string) => void;
     highlightedElementId?: string | null;
     highlightedAction?: ElementAction | null;
+    highlightQuery?: string;
 }): ReactElement {
     const isSelected = selectedId === pkg.id;
     const isHighlighted = highlightedElementId === pkg.id;
@@ -654,6 +894,7 @@ const PackageNode = memo(function PackageNode({
                 isHighlighted={isHighlighted}
                 highlightAction={highlightedAction}
                 showNewBadge={isHighlighted && highlightedAction === 'create'}
+                highlightQuery={highlightQuery}
             />
             {popup}
             {isExpanded && (
@@ -670,6 +911,7 @@ const PackageNode = memo(function PackageNode({
                             onToggleFn={onToggleFn}
                             highlightedElementId={highlightedElementId}
                             highlightedAction={highlightedAction}
+                            highlightQuery={highlightQuery}
                         />
                     ))}
                     {pkg.classes.map(c => (
@@ -682,6 +924,7 @@ const PackageNode = memo(function PackageNode({
                             onToggle={() => onToggleFn(c.id)}
                             highlightedElementId={highlightedElementId}
                             highlightedAction={highlightedAction}
+                            highlightQuery={highlightQuery}
                         />
                     ))}
                 </div>
@@ -699,6 +942,7 @@ const ModelNode = memo(function ModelNode({
     isExpanded,
     onToggle,
     onSelect,
+    highlightQuery,
 }: {
     model: TreeModelData;
     selectedId?: string;
@@ -706,6 +950,7 @@ const ModelNode = memo(function ModelNode({
     isExpanded: boolean;
     onToggle: () => void;
     onSelect?: () => void;
+    highlightQuery?: string;
 }): ReactElement {
     const isSelected = selectedId === model.id;
 
@@ -737,6 +982,7 @@ const ModelNode = memo(function ModelNode({
                 onClick={handleClick}
                 depth={depth}
                 dataElementId={model.id}
+                highlightQuery={highlightQuery}
             />
             {isExpanded && canExpand && (
                 <div className="tree-children">
@@ -747,6 +993,7 @@ const ModelNode = memo(function ModelNode({
                             selected={selectedId === inst.id}
                             onSelect={onSelect}
                             depth={depth + 1}
+                            highlightQuery={highlightQuery}
                         />
                     ))}
                 </div>
@@ -768,6 +1015,7 @@ const MetamodelNode = memo(function MetamodelNode({
     onSelect,
     highlightedElementId,
     highlightedAction,
+    highlightQuery,
 }: {
     mm: TreeMetamodelData;
     selectedId?: string;
@@ -779,6 +1027,7 @@ const MetamodelNode = memo(function MetamodelNode({
     onSelect?: () => void;
     highlightedElementId?: string | null;
     highlightedAction?: ElementAction | null;
+    highlightQuery?: string;
 }): ReactElement {
     const isSelected = selectedId === mm.id;
     const isHighlighted = highlightedElementId === mm.id;
@@ -814,6 +1063,7 @@ const MetamodelNode = memo(function MetamodelNode({
                 isHighlighted={isHighlighted}
                 highlightAction={highlightedAction}
                 showNewBadge={isHighlighted && highlightedAction === 'create'}
+                highlightQuery={highlightQuery}
             />
             {popup}
             {isExpanded && (
@@ -830,6 +1080,7 @@ const MetamodelNode = memo(function MetamodelNode({
                             onToggleFn={onToggleFn}
                             highlightedElementId={highlightedElementId}
                             highlightedAction={highlightedAction}
+                            highlightQuery={highlightQuery}
                         />
                     ))}
                     <SectionNode
@@ -849,6 +1100,7 @@ const MetamodelNode = memo(function MetamodelNode({
                                 isExpanded={isExpandedFn(model.id)}
                                 onToggle={() => onToggleFn(model.id)}
                                 onSelect={onSelect}
+                                highlightQuery={highlightQuery}
                             />
                         ))}
                     </SectionNode>
@@ -875,6 +1127,7 @@ const SubViewItem = memo(function SubViewItem({
     isExpandedFn,
     onToggleFn,
     onSelect,
+    highlightQuery,
     renamingViewId,
     renameValue,
     setRenameValue,
@@ -887,6 +1140,7 @@ const SubViewItem = memo(function SubViewItem({
     isExpandedFn: (key: string) => boolean;
     onToggleFn: (key: string) => void;
     onSelect?: () => void;
+    highlightQuery?: string;
 } & SubViewItemRenameProps): ReactElement {
     const hasChildren = view.children.length > 0;
     const expanded = isExpandedFn(view.id);
@@ -969,6 +1223,7 @@ const SubViewItem = memo(function SubViewItem({
                 depth={depth}
                 dataElementId={view.id}
                 actions={actions}
+                highlightQuery={highlightQuery}
             />
             {expanded && hasChildren && (
                 <div className="tree-children">
@@ -980,6 +1235,7 @@ const SubViewItem = memo(function SubViewItem({
                             isExpandedFn={isExpandedFn}
                             onToggleFn={onToggleFn}
                             onSelect={onSelect}
+                            highlightQuery={highlightQuery}
                             renamingViewId={renamingViewId}
                             renameValue={renameValue}
                             setRenameValue={setRenameValue}
@@ -1005,6 +1261,7 @@ const ViewpointNode = memo(function ViewpointNode({
     onToggleFn,
     onSelect,
     activeViewpointId,
+    highlightQuery,
     startRenameView,
     renamingViewId,
     renameValue,
@@ -1019,6 +1276,7 @@ const ViewpointNode = memo(function ViewpointNode({
     onToggleFn: (key: string) => void;
     onSelect?: () => void;
     activeViewpointId?: string;
+    highlightQuery?: string;
 } & ViewpointRenameProps): ReactElement {
     const hasSubViews = vp.subViews.length > 0;
     const expanded = isExpandedFn(vp.id);
@@ -1077,6 +1335,7 @@ const ViewpointNode = memo(function ViewpointNode({
                 dataElementId={vp.id}
                 activeIndicator={isActive ? 'viewpoint' : null}
                 actions={actions}
+                highlightQuery={highlightQuery}
             />
             {expanded && hasSubViews && (
                 <div className="tree-children">
@@ -1088,6 +1347,7 @@ const ViewpointNode = memo(function ViewpointNode({
                             isExpandedFn={isExpandedFn}
                             onToggleFn={onToggleFn}
                             onSelect={onSelect}
+                            highlightQuery={highlightQuery}
                             renamingViewId={renamingViewId}
                             renameValue={renameValue}
                             setRenameValue={setRenameValue}
@@ -1111,6 +1371,7 @@ const TransformationItem = memo(function TransformationItem({
     isExpandedFn,
     onToggleFn,
     onSelect,
+    highlightQuery,
 }: {
     transformation: TreeTransformationData;
     selectedId?: string;
@@ -1118,6 +1379,7 @@ const TransformationItem = memo(function TransformationItem({
     isExpandedFn: (key: string) => boolean;
     onToggleFn: (key: string) => void;
     onSelect?: () => void;
+    highlightQuery?: string;
 }): ReactElement {
     const expanded = isExpandedFn(transformation.id);
     const hasRules = (transformation.rules?.length || 0) > 0;
@@ -1152,6 +1414,7 @@ const TransformationItem = memo(function TransformationItem({
                 onClick={handleClick}
                 depth={depth}
                 dataElementId={transformation.id}
+                highlightQuery={highlightQuery}
             />
             {expanded && hasChildren && (
                 <div className="tree-children">
@@ -1207,6 +1470,10 @@ const DocumentationEmptyState = memo(function DocumentationEmptyState({
 
 interface TreeViewContentProps {
     onSelect?: () => void;
+    /** Controlled by TreeViewSidebar's header toggle. When false the search row is hidden. */
+    searchOpen?: boolean;
+    /** Called on empty-field Esc to close the search row (clears the filter). */
+    onSearchClose?: () => void;
 }
 
 interface OwnProps extends TreeViewContentProps {}
@@ -1229,10 +1496,40 @@ function TreeViewContentComponent(props: AllProps) {
     const {
         metamodels, standaloneModels, viewpoints, selectedElementId,
         activeViewpointId, projectId, expandedTreeNodes, onSelect,
+        searchOpen, onSearchClose,
     } = props;
 
     const containerRef = useRef<HTMLDivElement>(null);
     const { highlightedElementId, highlightedAction } = useTreeViewPanel();
+
+    // ─── Search (ephemeral local state — NEVER persisted to Redux) ───────────
+    // The auto-expansion during a search is an in-memory override that vanishes
+    // when the query is cleared; it must never write DProject.expandedTreeNodes.
+    const [searchQuery, setSearchQuery] = useState('');
+    // Explicit user collapses DURING a search (ephemeral, not persisted).
+    const [searchCollapsed, setSearchCollapsed] = useState<Set<string>>(new Set());
+    const searchActive = searchQuery.trim().length > 0;
+    const trimmedQuery = searchQuery.trim();
+
+    // Reset ephemeral collapses whenever the query changes.
+    useEffect(() => {
+        setSearchCollapsed(new Set());
+    }, [searchQuery]);
+
+    const searchInputRef = useRef<HTMLInputElement>(null);
+
+    // `searchOpen` is a CONTROLLED prop (TreeViewSidebar toggles it via its header
+    // lens). When a consumer does NOT pass it (uncontrolled — e.g.
+    // PropertiesWithTreeView, which has no header toggle), default to visible so
+    // that panel keeps its filter row rather than losing it silently.
+    const showSearchRow = searchOpen ?? true;
+
+    // Opening the search autofocuses the field; closing it clears the query,
+    // which restores the persisted expansion state (searchActive → false).
+    useEffect(() => {
+        if (searchOpen) searchInputRef.current?.focus();
+        else if (searchOpen === false) setSearchQuery('');
+    }, [searchOpen]);
 
     // ─── Inline rename state for View nodes ─────────────────────────────────
     // `isFirstRename` distingue il primo rename post-creazione (Esc/blur-empty
@@ -1322,18 +1619,34 @@ function TreeViewContentComponent(props: AllProps) {
         return () => window.removeEventListener(SystemEvents.TREEVIEW_SCROLL, handleScrollToElement);
     }, []);
 
-    // Expand/collapse helpers — derived from expandedTreeNodes prop
+    // Expand/collapse helpers — derived from expandedTreeNodes prop.
+    // During a search, expansion is driven by the ephemeral `searchCollapsed`
+    // override (everything expanded unless the user explicitly collapsed it),
+    // never by the persisted array.
     const isExpandedFn = useCallback(
-        (key: string) => isExpandedFromArray(expandedTreeNodes, key),
-        [expandedTreeNodes]
+        (key: string) => searchActive
+            ? !searchCollapsed.has(key)
+            : isExpandedFromArray(expandedTreeNodes, key),
+        [searchActive, searchCollapsed, expandedTreeNodes]
     );
 
     const onToggleFn = useCallback((key: string) => {
+        // During a search: mutate only the ephemeral override. Do NOT dispatch
+        // a Redux action — the persisted expansion state must stay untouched.
+        if (searchActive) {
+            setSearchCollapsed(prev => {
+                const next = new Set(prev);
+                if (next.has(key)) next.delete(key);
+                else next.add(key);
+                return next;
+            });
+            return;
+        }
         if (!projectId) return;
         const currentlyExpanded = isExpandedFromArray(expandedTreeNodes, key);
         const next = toggleInArray(expandedTreeNodes, key, !currentlyExpanded);
         SetFieldAction.new(projectId, 'expandedTreeNodes', next, '', false);
-    }, [projectId, expandedTreeNodes]);
+    }, [searchActive, projectId, expandedTreeNodes]);
 
     // Cleanup orphaned ids — runs whenever live ids change. Dispatch is gated on
     // length-difference, which prevents the SetFieldAction → re-render loop:
@@ -1379,18 +1692,81 @@ function TreeViewContentComponent(props: AllProps) {
         }
     }, [projectId, expandedTreeNodes, metamodels, standaloneModels, viewpoints]);
 
-    // Group viewpoints by type
+    // Search filtering — prune the in-memory Tree*Data. No debounce (data is
+    // already in memory). Only the RENDER consumes these; the orphan-cleanup
+    // effect and hasContent stay on the unfiltered props.
+    const {
+        displayMetamodels, displayStandaloneModels, displayViewpoints,
+        displayTransformations, matchCount, firstMatchId,
+    } = useMemo(() => {
+        const q = searchQuery.trim().toLowerCase();
+        if (!q) {
+            return {
+                displayMetamodels: metamodels,
+                displayStandaloneModels: standaloneModels,
+                displayViewpoints: viewpoints,
+                displayTransformations: transformations,
+                matchCount: 0,
+                firstMatchId: null as string | null,
+            };
+        }
+        const mm = filterMetamodels(metamodels, q);
+        const sm = filterModels(standaloneModels, q);
+        const vp = filterViewpoints(viewpoints, q);
+        const tr = filterTransformations(transformations, q);
+        return {
+            displayMetamodels: mm.items,
+            displayStandaloneModels: sm.items,
+            displayViewpoints: vp.items,
+            displayTransformations: tr.items,
+            matchCount: mm.matchCount + sm.matchCount + vp.matchCount + tr.matchCount,
+            firstMatchId: mm.firstMatchId ?? sm.firstMatchId ?? vp.firstMatchId ?? tr.firstMatchId,
+        };
+    }, [metamodels, standaloneModels, viewpoints, transformations, searchQuery]);
+
+    const noMatches = searchActive &&
+        displayMetamodels.length === 0 &&
+        displayStandaloneModels.length === 0 &&
+        displayViewpoints.length === 0 &&
+        displayTransformations.length === 0;
+
+    // Substring to <mark> in node names (only while a search is active).
+    const highlightQuery = searchActive ? trimmedQuery : undefined;
+
+    const handleSearchKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Escape') {
+            // While the field is focused, own the Esc so the laptop overlay's
+            // window-level listener doesn't also fire: first Esc (with text)
+            // clears the query, a second (empty-field) Esc closes the search row.
+            // Only once the search is closed does an Esc reach the window listener
+            // and close the overlay.
+            e.stopPropagation();
+            if (searchQuery.trim().length > 0) {
+                setSearchQuery('');
+            } else {
+                onSearchClose?.();
+            }
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (firstMatchId && containerRef.current) {
+                const target = containerRef.current.querySelector(`[data-element-id="${firstMatchId}"]`);
+                target?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+            }
+        }
+    }, [searchQuery, firstMatchId, onSearchClose]);
+
+    // Group viewpoints by type (filtered set during search)
     const { syntaxVps, validationVps, otherVps } = useMemo(() => {
         const syntax: TreeViewpointData[] = [];
         const validation: TreeViewpointData[] = [];
         const other: TreeViewpointData[] = [];
-        for (const vp of viewpoints) {
+        for (const vp of displayViewpoints) {
             if (vp.vpType === 'syntax') syntax.push(vp);
             else if (vp.vpType === 'validation') validation.push(vp);
             else other.push(vp);
         }
         return { syntaxVps: syntax, validationVps: validation, otherVps: other };
-    }, [viewpoints]);
+    }, [displayViewpoints]);
 
     const hasContent =
         metamodels.length > 0 ||
@@ -1419,6 +1795,34 @@ function TreeViewContentComponent(props: AllProps) {
 
     return (
         <div ref={containerRef} className="tree-view-content">
+            {showSearchRow && (
+                <div className="tree-search">
+                    <i className="bi bi-search" aria-hidden />
+                    <input
+                        ref={searchInputRef}
+                        className="tree-search__input"
+                        type="text"
+                        placeholder="Filter..."
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        onKeyDown={handleSearchKeyDown}
+                        aria-label="Filter tree"
+                    />
+                    {searchActive && <span className="tree-search__count">{matchCount}</span>}
+                    {searchActive && (
+                        <button className="tree-search__clear" onClick={() => setSearchQuery('')} aria-label="Clear">
+                            <i className="bi bi-x" />
+                        </button>
+                    )}
+                </div>
+            )}
+
+            {noMatches ? (
+                <div className="tree-view-empty tree-view-empty--search">
+                    <i className="bi bi-search" />
+                    <p>No matches</p>
+                </div>
+            ) : (
             <SectionNode
                 sectionKey={SECTION_KEYS.MEGAMODEL}
                 label="Megamodel"
@@ -1426,16 +1830,17 @@ function TreeViewContentComponent(props: AllProps) {
                 onToggle={() => onToggleFn(SECTION_KEYS.MEGAMODEL)}
                 depth={0}
             >
-                {/* METAMODELS */}
+                {/* METAMODELS — hidden during search when nothing matches */}
+                {(!searchActive || displayMetamodels.length > 0 || displayStandaloneModels.length > 0) && (
                 <SectionNode
                     sectionKey={SECTION_KEYS.METAMODELS}
                     label="Metamodels"
-                    counter={metamodels.length}
+                    counter={displayMetamodels.length}
                     expanded={metamodelsExpanded}
                     onToggle={() => onToggleFn(SECTION_KEYS.METAMODELS)}
                     depth={1}
                 >
-                    {metamodels.map(mm => (
+                    {displayMetamodels.map(mm => (
                         <MetamodelNode
                             key={mm.id}
                             mm={mm}
@@ -1448,9 +1853,10 @@ function TreeViewContentComponent(props: AllProps) {
                             onSelect={onSelect}
                             highlightedElementId={highlightedElementId}
                             highlightedAction={highlightedAction}
+                            highlightQuery={highlightQuery}
                         />
                     ))}
-                    {standaloneModels.map(model => (
+                    {displayStandaloneModels.map(model => (
                         <ModelNode
                             key={model.id}
                             model={model}
@@ -1459,15 +1865,18 @@ function TreeViewContentComponent(props: AllProps) {
                             isExpanded={isExpandedFn(model.id)}
                             onToggle={() => onToggleFn(model.id)}
                             onSelect={onSelect}
+                            highlightQuery={highlightQuery}
                         />
                     ))}
                 </SectionNode>
+                )}
 
-                {/* VIEWPOINTS */}
+                {/* VIEWPOINTS — hidden during search when nothing matches */}
+                {(!searchActive || displayViewpoints.length > 0) && (
                 <SectionNode
                     sectionKey={SECTION_KEYS.VIEWPOINTS}
                     label="Viewpoints"
-                    counter={viewpoints.length}
+                    counter={displayViewpoints.length}
                     expanded={viewpointsExpanded}
                     onToggle={() => onToggleFn(SECTION_KEYS.VIEWPOINTS)}
                     depth={1}
@@ -1490,6 +1899,7 @@ function TreeViewContentComponent(props: AllProps) {
                                     onToggleFn={onToggleFn}
                                     onSelect={onSelect}
                                     activeViewpointId={activeViewpointId}
+                                    highlightQuery={highlightQuery}
                                     startRenameView={startRenameView}
                                     renamingViewId={renamingViewId}
                                     renameValue={renameValue}
@@ -1519,6 +1929,7 @@ function TreeViewContentComponent(props: AllProps) {
                                     onToggleFn={onToggleFn}
                                     onSelect={onSelect}
                                     activeViewpointId={activeViewpointId}
+                                    highlightQuery={highlightQuery}
                                     startRenameView={startRenameView}
                                     renamingViewId={renamingViewId}
                                     renameValue={renameValue}
@@ -1539,6 +1950,7 @@ function TreeViewContentComponent(props: AllProps) {
                             onToggleFn={onToggleFn}
                             onSelect={onSelect}
                             activeViewpointId={activeViewpointId}
+                            highlightQuery={highlightQuery}
                             startRenameView={startRenameView}
                             renamingViewId={renamingViewId}
                             renameValue={renameValue}
@@ -1549,8 +1961,10 @@ function TreeViewContentComponent(props: AllProps) {
                         />
                     ))}
                 </SectionNode>
+                )}
 
-                {/* DOCUMENTATION */}
+                {/* DOCUMENTATION — hidden during search (no searchable content) */}
+                {!searchActive && (
                 <SectionNode
                     sectionKey={SECTION_KEYS.DOCUMENTATION}
                     label="Documentation"
@@ -1560,9 +1974,10 @@ function TreeViewContentComponent(props: AllProps) {
                 >
                     <DocumentationEmptyState depth={2} />
                 </SectionNode>
+                )}
 
                 {/* TRANSFORMATIONS — kept under megamodel for visibility */}
-                {transformations.length > 0 && transformations.map(t => (
+                {displayTransformations.length > 0 && displayTransformations.map(t => (
                     <TransformationItem
                         key={t.id}
                         transformation={t}
@@ -1571,9 +1986,11 @@ function TreeViewContentComponent(props: AllProps) {
                         isExpandedFn={isExpandedFn}
                         onToggleFn={onToggleFn}
                         onSelect={onSelect}
+                        highlightQuery={highlightQuery}
                     />
                 ))}
             </SectionNode>
+            )}
         </div>
     );
 }

@@ -1,13 +1,11 @@
 import {type Language, transientProperties, Uobj} from '../joiner';
 import {
-    Asterisk,
-    Circle,
     Constructors,
     CoordinateMode,
-    CreateElementAction, Cross, D,
+    CreateElementAction, D,
     DAttribute,
     DClass,
-    DClassifier, Decagon, DecoratedStar, DEdge,
+    DClassifier, DEdge,
     DEdgePoint,
     Defaults,
     DEnumerator,
@@ -33,13 +31,12 @@ import {
     DVertex,
     DViewElement,
     DViewPoint,
-    DVoidEdge, Edge,
+    DVoidEdge,
     EdgeBendingMode,
-    EdgeHead, EdgePoint, Ellipse,
-    Enneagon, Field,
-    GObject, Graph, GraphElement,
+    EdgeHead,
+    GObject,
     GraphPoint,
-    GraphSize, GraphVertex, Heptagon, Hexagon, L,
+    GraphSize, L,
     LGraphElement,
     LModelElement,
     LObject, Log,
@@ -53,19 +50,17 @@ import {
     LUser,
     LValue,
     LViewElement,
-    LViewPoint, Nonagon, Octagon,
-    Pentagon,
+    LViewPoint,
     Pointer,
-    Pointers, Polygon, Rectangle,
+    Pointers,
     RuntimeAccessible,
-    RuntimeAccessibleClass, Selectors, Septagon, SetFieldAction,
+    RuntimeAccessibleClass, Selectors, SetFieldAction,
     SetRootFieldAction,
-    ShortAttribETypes, SimpleStar, Square, Star,
-    store, TRANSACTION, Trapezoid, Triangle, U, UserHistory, Vertex, VoidVertex,
+    ShortAttribETypes,
+    store, TRANSACTION, U, UserHistory,
 } from '../joiner';
 import {DV} from "../common/DV";
 import {DefaultEClasses, ShortDefaultEClasses} from "../common/U";
-import { GraphElements, Graphs, Vertexes, Edges, Fields } from '../joiner';
 import DefaultViews from "./defaults/views";
 import tinycolor, {Instance} from "tinycolor2";
 import {ReactNode} from "react";

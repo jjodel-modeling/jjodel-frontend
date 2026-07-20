@@ -17,9 +17,6 @@ import {
     DClass,
     DModel,
     UX,
-    EdgeOwnProps,
-    EdgeStateProps,
-    GraphElementComponent,
     ViewEClassMatch,
     NodeTransientProperties,
     ViewTransientProperties,
@@ -65,7 +62,8 @@ import Collaborative from "../../components/collaborative/Collaborative";
 import {SimpleTree} from "../../common/SimpleTree";
 import {transientProperties, Selectors} from "../../joiner";
 import {OclEngine} from "@stekoe/ocl.js";
-import { contextFixedKeys } from '../../graph/graphElement/sharedTypes/sharedTypes';
+import { contextFixedKeys } from '../../common/sharedTypes';
+import { displayError } from '../../common/jsxErrorView';
 import Storage from "../../data/storage";
 import {AuthApi, ProjectsApi} from "../../api/persistance";
 import DSL from "../../DSL/DSL";
@@ -75,6 +73,9 @@ import {doM2T, parseT2M} from "../../components/forEndUser/MTM";
 
 let windoww = window as any;
 let U: typeof UType = windoww.U;
+
+// Cap on the undo/redo history length per stack, to bound memory growth.
+const MAX_HISTORY = 100;
 
 
 
@@ -1013,7 +1014,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
                     e = eeval;
                 }*/
                 console.error('error jsxparse', {vid, e, paramStr, body});
-                tv.JSXFunction = (context) => GraphElementComponent.displayError(e, 'JSX Syntax', dv);
+                tv.JSXFunction = (context) => displayError(e, 'JSX Syntax', dv);
             }
         }
 
@@ -1075,7 +1076,7 @@ function unsafereducer(oldState: DState = initialState, action: Action): DState 
                 console.error('error measurable parse '+key, {vid, e, paramStr, body:str});
                 (transientProperties.view[vid] as any)[key] = undefined;
                 // display error in jsx
-                transientProperties.view[vid].JSXFunction = (context) => GraphElementComponent.displayError(e, 'Measurable ' + key + ' Syntax', dv);
+                transientProperties.view[vid].JSXFunction = (context) => displayError(e, 'Measurable ' + key + ' Syntax', dv);
                 break;
             }
         }
@@ -1258,6 +1259,8 @@ export function _reducer/*<S extends StateNoFunc, A extends Action>*/(oldState: 
                 let user = (action as Action).sender;
                 statehistory[user].undoable.push(delta);
                 statehistory.all.undoable.push(delta);
+                if (statehistory[user].undoable.length > MAX_HISTORY) statehistory[user].undoable.shift();
+                if (statehistory.all.undoable.length > MAX_HISTORY) statehistory.all.undoable.shift();
                 if (debugMerge) {
                     if (shouldMerge) (ret as any).notMergeCounter = (delta as any).notMergeCounter = 1+((ret as any).notMergeCounter || 0)
                     else (ret as any).notMergeCounter = 0;
@@ -1331,6 +1334,8 @@ function undo(state: DState, action: UndoAction | RedoAction, delta: GObject | u
     let key: 'redoable'|'undoable' = isundo ? 'redoable' : 'undoable';
     statehistory[user][key].push(delta2);
     statehistory.all[key].push(delta2);
+    if (statehistory[user][key].length > MAX_HISTORY) statehistory[user][key].shift();
+    if (statehistory.all[key].length > MAX_HISTORY) statehistory.all[key].shift();
     return undonestate as GObject<DState>;
 }
 /*
@@ -1414,8 +1419,10 @@ function buildLSingletons(alld: Dictionary<string, typeof DPointerTargetable>, a
 }
 
 const originalFocus = HTMLElement.prototype.focus;
+let documentEventsIntervalId: ReturnType<typeof setInterval> | undefined;
 function setDocumentEvents(){
     // do not use types (imported as classes) here or it will change import order
+    if (documentEventsIntervalId !== undefined) clearInterval(documentEventsIntervalId);
 
     // https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/focus
     HTMLElement.prototype.focus = function (options?: GObject) {
@@ -1426,14 +1433,14 @@ function setDocumentEvents(){
     };
 
     setTimeout(
-        ()=> $(document).on("mouseup",
+        ()=> $(document).off("mouseup.jjodelDocEvents").on("mouseup.jjodelDocEvents",
             (e: MouseUpEvent) => {
                 statehistory.globalcanundostate = true;
                 RuntimeAccessibleClass.get<typeof GraphDragManager>("GraphDragManager").stopPanning(e);
             })
         , 1);
     // document.body.addEventListener("mousedown", fixResizables, false);
-    setInterval(()=>{ COMMIT(undefined, false) }, windoww.U.UpdatingTimer);
+    documentEventsIntervalId = setInterval(()=>{ COMMIT(undefined, false) }, windoww.U.UpdatingTimer);
 }
 function fixResizables(e: MouseEvent){
     /*let parents = U.ancestorArray(e.target as HTMLElement);

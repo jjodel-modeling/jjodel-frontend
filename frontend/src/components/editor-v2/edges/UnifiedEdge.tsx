@@ -29,78 +29,19 @@ import {
     buildFinalPath,
 } from '../utils/edgeUtils';
 import { MAX_HANDLES_PER_SIDE } from '../utils/portDistribution';
+import { applyBundleSpread } from './bundleSpread';
 import { useEditorContextSafe } from '../contexts/EditorContext';
 import { useEdgeHighlightClass } from '../contexts/HighlightContext';
 import { useTreeLayout } from '../hooks/useTreeLayout';
 import { SegmentHandles } from './SegmentHandles';
 import { EndpointHandles } from './EndpointHandles';
 
-// Bundle spread: when multiple edges connect the same node pair, shift the
-// middle corridor of each path perpendicular to its longitudinal direction,
-// and stack the labels along the same axis, to avoid path/label collapse.
-// Spread offset is derived from the handle index extracted from
-// sourceHandleId/targetHandleId (format: "${side}-${index}").
-const BUNDLE_SPREAD_PX = 12;
+// Bundle spread lives in ./bundleSpread (pure, testable). It fans the middle
+// corridor of parallel same-pair edges by physical anchor order (see that module).
 const LABEL_SPREAD_PX = 18;
 const ROLE_LINE_GAP = 10; // px, perpendicular nudge so the role text is off the line
 const ROLE_LINE_GAP_PX = 10; // px, perpendicular nudge so the role text is off the line
 const ROLE_LINE_GAP_PY = 10; // px, perpendicular nudge so the role text is off the line
-
-
-
-function getHandleIndex(handleId: string | null | undefined): number {
-    if (!handleId) return 0;
-    const m = handleId.match(/-(\d+)$/);
-    return m ? parseInt(m[1], 10) : 0;
-}
-
-/**
- * Shift the middle corridor of a 4-point Manhattan Z-shape path perpendicular
- * to its longitudinal axis, by an amount derived from the bundle handle indices.
- * Returns the points unchanged when the path is not a Z-shape (L-shape with 3
- * points, U-detour with 6 points, self-loop, etc.) — those cases keep the
- * original routing.
- */
-function applyBundleSpread(
-    points: { x: number; y: number }[],
-    sourceHandleId: string | null | undefined,
-    targetHandleId: string | null | undefined,
-    source: string,
-    target: string,
-): { x: number; y: number }[] {
-    if (points.length !== 4) return points;
-
-    const sourceIndex = getHandleIndex(sourceHandleId);
-    const targetIndex = getHandleIndex(targetHandleId);
-    const directionSign = source < target ? 1 : -1;
-    // Sum of indices is invariant under (source, target) swap; multiplying
-    // by directionSign breaks the symmetry so mirrored edges land on
-    // opposite sides of the central corridor.
-    const bundleSpread = directionSign * (sourceIndex + targetIndex + 1) * BUNDLE_SPREAD_PX / 2;
-
-    const p1 = points[1];
-    const p2 = points[2];
-    const isMiddleVertical = Math.abs(p1.x - p2.x) < 1;
-    const isMiddleHorizontal = Math.abs(p1.y - p2.y) < 1;
-
-    if (isMiddleVertical) {
-        return [
-            points[0],
-            { x: p1.x + bundleSpread, y: p1.y },
-            { x: p2.x + bundleSpread, y: p2.y },
-            points[3],
-        ];
-    }
-    if (isMiddleHorizontal) {
-        return [
-            points[0],
-            { x: p1.x, y: p1.y + bundleSpread },
-            { x: p2.x, y: p2.y + bundleSpread },
-            points[3],
-        ];
-    }
-    return points;
-}
 
 // ═══════════════════════════════════════════════════════════════
 // UnifiedEdge — single component for all edge types
@@ -150,6 +91,7 @@ function UnifiedEdge(props: EdgeProps) {
 
     const { setEdges } = useReactFlow();
     const notation = useEditorContextSafe()?.notation ?? 'uml';
+    const selectEdge = useEditorContextSafe()?.selectEdge;
     const isERNotation = notation === 'er';
     const isSelfLoop = source === target;
 
@@ -211,13 +153,30 @@ function UnifiedEdge(props: EdgeProps) {
     );
     const adjustedPath = useMemo(() => pointsToPath(adjustedPoints), [adjustedPoints]);
 
+    // Bundle center: midpoint between the two node centers. A single reference
+    // shared by every edge of the pair, so applyBundleSpread orders each edge's
+    // corridor by its physical anchor position (mean endpoint) around a common
+    // axis. Null until both nodes are measured → applyBundleSpread leaves the
+    // corridor at its midpoint that frame.
+    const bundleCenter = useMemo(() => {
+        const s = allNodes.find(n => n.id === source);
+        const t = allNodes.find(n => n.id === target);
+        if (!s || !t) return null;
+        const sr = getNodeRect(s);
+        const tr = getNodeRect(t);
+        return {
+            x: (sr.x + sr.width / 2 + tr.x + tr.width / 2) / 2,
+            y: (sr.y + sr.height / 2 + tr.y + tr.height / 2) / 2,
+        };
+    }, [allNodes, source, target]);
+
     // Bundle spread: only applied when the user hasn't customized the routing
     // (waypoints empty) and the edge is not inheritance (which uses tree layout).
     // For self-loop / L-shape / U-detour, applyBundleSpread returns input unchanged.
     const spreadPoints = useMemo(() => {
         if (isInheritance || isSelfLoop || waypoints.length > 0) return adjustedPoints;
-        return applyBundleSpread(adjustedPoints, sourceHandleId, targetHandleId, source, target);
-    }, [adjustedPoints, sourceHandleId, targetHandleId, source, target, isInheritance, isSelfLoop, waypoints]);
+        return applyBundleSpread(adjustedPoints, bundleCenter);
+    }, [adjustedPoints, bundleCenter, isInheritance, isSelfLoop, waypoints]);
     const spreadPath = useMemo(() => pointsToPath(spreadPoints), [spreadPoints]);
 
     // ─── Register path for crossing detection ───
@@ -589,6 +548,9 @@ function UnifiedEdge(props: EdgeProps) {
             </defs>
 
             {/* Invisible hit-test path */}
+            {/* onClick selects this edge directly, so mid-line selection does not
+                depend on React Flow's <g> click delegation. For inheritance this
+                only selects the edge id (selectEdge never fabricates a DReference). */}
             <path
                 d={path}
                 fill="none"
@@ -597,6 +559,7 @@ function UnifiedEdge(props: EdgeProps) {
                 style={{ pointerEvents: 'stroke' }}
                 onMouseEnter={() => setHovered(true)}
                 onMouseLeave={() => setHovered(false)}
+                onClick={(e) => { e.stopPropagation(); selectEdge?.(id); }}
             />
 
             {/* Visible edge path */}
@@ -644,7 +607,7 @@ function UnifiedEdge(props: EdgeProps) {
                             pointerEvents: 'all',
                         }}
                         onDoubleClick={(e) => { e.stopPropagation(); setEditing(true); }}
-                        onClick={(e) => { if (selected) { e.stopPropagation(); setEditing(true); } }}
+                        onClick={(e) => { e.stopPropagation(); if (selected) { setEditing(true); return; } selectEdge?.(id); }}
                     >
                         {editing ? (
                             <input

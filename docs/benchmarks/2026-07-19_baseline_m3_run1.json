@@ -1,0 +1,29 @@
+{
+  "date": "2026-07-19T21:10:29.784Z",
+  "app": "http://localhost:3001/",
+  "model": "bench.xmi",
+  "project": "Bench_mrsaicuv",
+  "t_import_ecore_ms": 90,
+  "t_import_xmi_ms": 837,
+  "commits_import_xmi": 7,
+  "t_mount_flow_nodes_ms": 17996,
+  "t_edges_settle_ms": 148292,
+  "t_responsive_after_open_ms": 178280,
+  "rf_nodes": 501,
+  "rf_edges": 986,
+  "commits_open_flow": 1538,
+  "edit_flow": {
+    "ms": 8931
+  },
+  "commits_edit_flow": 22,
+  "classic_toggle_found": 0,
+  "env": {
+    "machine": "MacBook Air M3, 24 GB RAM, macOS 26.2",
+    "node": "v23.3.0",
+    "branch": "alfonso-frontend-jjtl",
+    "head": "1f6045f4f",
+    "browser": "Chrome for Testing 149.0.7827.55 (playwright chromium-1228, headless)",
+    "playwright-core": "1.61.1",
+    "note": "build di produzione servita da vite preview :3001; dev server vite idle su :3000 durante i run (~0% CPU)"
+  }
+}

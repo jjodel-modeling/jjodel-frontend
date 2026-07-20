@@ -99,7 +99,7 @@ export type {LoggerCategoryState, LoggerType} from "../common/Log";
 
 export {windoww, EdgeBendingMode, EdgeGapMode, EMeasurableEvents, GenericProps} from './types';
 export {GraphElementStatee, GraphElementDispatchProps, GraphElementReduxStateProps, GraphElementOwnProps,
-    EdgeStateProps, EdgeOwnProps, VertexOwnProps, BasicReactOwnProps} from "../graph/graphElement/sharedTypes/sharedTypes";
+    EdgeStateProps, EdgeOwnProps, VertexOwnProps, BasicReactOwnProps} from "../common/sharedTypes";
 
 export {Constructors, JsType, RuntimeAccessibleClass, DPointerTargetable,
     LPointerTargetable, WPointerTargetable, MyError, RuntimeAccessible,
@@ -202,7 +202,7 @@ export {Action, CreateElementAction, DeleteElementAction, SetFieldAction, SetRoo
     TRANSACTION, ABORT, /*BEGIN, END*/} from "../redux/action/action";
 
 export {DState, LState, ModelStore, ViewPointState, statehistory} from "../redux/store";
-export {GraphDragManager} from "../graph/graphElement/GraphDragHandler";
+export {GraphDragManager} from "../redux/GraphDragHandler";
 export {Selectors} from "../redux/selectors/selectors";
 // export var Selectors = windoww.Selectors as (GObjectt & typeof SelType);
 export {reducer, stateInitializer} from "../redux/reducer/reducer";
@@ -304,9 +304,7 @@ w.$s = $s;
 export {} from './components';
 export {
     TextArea, Select, Input, Edit, Edge, // Image,
-    GraphsContainerComponent,
     Overlap as OverlapComponent,
-    GraphsContainer,
     GraphElement,
     Vertex, VoidVertex, EdgePoint,
     Graph, GraphVertex,

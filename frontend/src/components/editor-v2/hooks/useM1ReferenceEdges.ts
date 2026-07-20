@@ -29,15 +29,25 @@ import { hasCanvasEdgePair, markCanvasEdgePair, clearCanvasEdgePair } from '../s
 
 /**
  * True iff `se` is an M1 reference edge managed by this hook: className includes
- * 'Edge', `model` resolves to a DReference, and BOTH endpoints are vertices over
- * DObjects. The both-endpoints-over-DObject check is the M1 discriminator — the
- * inverse of refEdgeReconcile.isM2ReferenceEdge (which requires a DClass start
- * vertex), so M2 reference edges and inheritance edges (no `model`) never match.
+ * 'Edge' and BOTH endpoints are vertices over DObjects. The
+ * both-endpoints-over-DObject check is the M1 discriminator — the inverse of
+ * refEdgeReconcile.isM2ReferenceEdge (which requires a DClass start vertex),
+ * so M2 reference edges and inheritance edges (no `model`) never match.
+ *
+ * `model` hygiene is NOT required (2026-07-04): an edge whose `model` is
+ * missing (resolveReferenceIdByName failed at creation) or dangling (its
+ * DReference was deleted — the zombie-edge family) must still be managed,
+ * otherwise it can never be reclaimed by the reconcile pass. Only a `model`
+ * that RESOLVES to a non-DReference disqualifies the edge (it belongs to a
+ * different mechanism). Mirrors m1EdgeSweep.isStructuralM1RefEdge.
  */
 function isManagedM1RefEdge(se: any, lookup: any): boolean {
     if (!se || typeof se.className !== 'string' || !se.className.includes('Edge')) return false;
     if (typeof se.start !== 'string' || typeof se.end !== 'string') return false;
-    if (typeof se.model !== 'string' || lookup[se.model]?.className !== 'DReference') return false;
+    if (typeof se.model === 'string' && se.model) {
+        const m = lookup[se.model];
+        if (m && m.className !== 'DReference') return false;
+    }
     const sv = lookup[se.start], ev = lookup[se.end];
     if (!sv || typeof sv.model !== 'string' || lookup[sv.model]?.className !== 'DObject') return false;
     if (!ev || typeof ev.model !== 'string' || lookup[ev.model]?.className !== 'DObject') return false;
@@ -75,7 +85,12 @@ export function useM1ReferenceEdges(
     });
 
     useEffect(() => {
-        if (!modelid || !graphId || !m1RefValuesSig) return;
+        // NB (2026-07-04): do NOT bail out on an empty signature. When the
+        // last backing slot disappears (reference deleted at M2) the signature
+        // becomes '' — exactly the moment the reconcile pass below must run to
+        // reap the now-stale edges. The signature stays in the dependency
+        // array for reactivity; emptiness is a valid state, not a no-op.
+        if (!modelid || !graphId) return;
 
         const state = store.getState();
         const lookup = state.idlookup as any;

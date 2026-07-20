@@ -7,7 +7,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { JodieHeader } from './JodieHeader';
 import { ChatMessages } from './ChatMessages';
 import { ChatInput } from './ChatInput';
-import {TAIProvider, ChatImage, ChatDocument, JodieConfig, ConsoleEntry, ConsoleMode, CodeFlavor, CodeEntry} from '../../types/jodie';
+import {TAIProvider, ChatImage, ChatDocument, JodieConfig, ConsoleEntry, ConsoleMode, ConsoleModeSwitchVia, CodeFlavor, CodeEntry} from '../../types/jodie';
 import { AIDisclaimer } from '../common/AIDisclaimer';
 import { AIEvents, JjScriptEvents } from '../../events/registry';
 
@@ -32,16 +32,26 @@ interface JodieWindowProps {
     isVisible?: boolean;
     /** Active console mode (Chat or Code). Controlled by parent. */
     consoleMode: ConsoleMode;
-    onConsoleModeChange: (m: ConsoleMode) => void;
+    onConsoleModeChange: (m: ConsoleMode, via?: ConsoleModeSwitchVia) => void;
     /** Active code flavor (JjEL today; JS reserved for a later phase). */
     codeFlavor: CodeFlavor;
     onCodeFlavorChange: (f: CodeFlavor) => void;
     /** Submit handler for Code mode: parent evaluates and appends a CodeEntry. */
     onSubmitCode: (input: string) => void;
+    /** Slash `/help` in Jjodie mode: parent appends a static help entry. */
+    onHelpRequested?: () => void;
+    /** Unknown `/…` in Jjodie mode: parent appends a static "unknown command" entry. */
+    onUnknownCommand?: (raw: string) => void;
     /** Promotion: switch to Code mode and prefill the input with an extracted snippet. */
     onTestInCode: (code: string, language: string | null) => void;
     /** Promotion: switch to Chat mode and prefill the input with a template describing a failed code entry. */
     onAskJjodie: (entry: CodeEntry) => void;
+    /** Offer card [Esegui]: run the offered input as JjScript. */
+    onOfferExecute?: (messageId: string, input: string) => void;
+    /** Offer card [Chiedi a Jjodie]: send the offered input to the LLM. */
+    onOfferAsk?: (messageId: string, input: string) => void;
+    /** Parse-error card [Chiedi a Jjodie] (D6): one-shot LLM for the input, no mode change. */
+    onAskFromError?: (input: string) => void;
     /** Clear all entries of the active console mode (Chat or Code). Optional for backward compat. */
     onClearCurrentMode?: () => void;
     /** True iff the active console mode has at least one entry. Drives the Clear button hint state. */
@@ -110,8 +120,13 @@ export function JodieWindow({
     codeFlavor,
     onCodeFlavorChange,
     onSubmitCode,
+    onHelpRequested,
+    onUnknownCommand,
     onTestInCode,
     onAskJjodie,
+    onOfferExecute,
+    onOfferAsk,
+    onAskFromError,
     onClearCurrentMode,
     canClearCurrentMode,
 }: JodieWindowProps): JSX.Element {
@@ -438,6 +453,9 @@ export function JodieWindow({
                 onJjScriptExecuted={onJjScriptExecuted}
                 onTestInCode={onTestInCode}
                 onAskJjodie={onAskJjodie}
+                onOfferExecute={onOfferExecute}
+                onOfferAsk={onOfferAsk}
+                onAskFromError={onAskFromError}
             />
 
             <ChatInput
@@ -452,6 +470,8 @@ export function JodieWindow({
                 onConsoleModeChange={onConsoleModeChange}
                 codeFlavor={codeFlavor}
                 onSubmitCode={onSubmitCode}
+                onHelpRequested={onHelpRequested}
+                onUnknownCommand={onUnknownCommand}
                 entries={messages}
                 onClearRequested={onClearCurrentMode}
             />

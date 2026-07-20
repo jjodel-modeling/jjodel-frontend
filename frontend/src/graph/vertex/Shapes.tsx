@@ -1,4 +1,4 @@
-import type { VertexOwnProps } from "../graphElement/sharedTypes/sharedTypes";
+import type { VertexOwnProps } from "../../common/sharedTypes";
 import type {radian} from "../../joiner/types";
 import React, {ReactElement, ReactNode} from "react";
 import {GObject, Point, U, Geom} from "../../joiner";

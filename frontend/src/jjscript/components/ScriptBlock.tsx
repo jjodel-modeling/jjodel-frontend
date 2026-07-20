@@ -12,6 +12,7 @@ import { JjScriptEvents } from '../../events/registry';
 import './ScriptBlock.scss';
 import { ExecutionErrorDialog } from './ExecutionErrorDialog';
 import {parseError, ExecutionPauseInfo, ExecutionSummary, JjScriptError, ExecutionErrorInfo} from '../executor/errors';
+import { validateScriptIntegrity } from '../executor/scriptValidator';
 import { AIDisclaimer } from '../../components/common/AIDisclaimer';
 import {TransformationAST} from "../../jjtl";
 import {ExecutionContext} from "../../jjtl/executor";
@@ -73,6 +74,17 @@ interface LineState {
     status: 'pending' | 'running' | 'success' | 'error' | 'skipped';
     result?: ScriptLineResult;
 }
+
+/**
+ * Terminal outcome shown as a thin inline strip below the code content (replaces the
+ * former completion modal). Persists as component state per-message: scrolling back
+ * through the chat shows the last outcome. The Skip/recovery ExecutionErrorDialog is
+ * unchanged and owns the interactive error flow; this strip is the passive summary.
+ */
+type ScriptOutcome =
+    | { kind: 'success'; count: number }
+    | { kind: 'runtime-error'; line: number; message: string }
+    | { kind: 'syntax-error'; line: number; message: string };
 
 export class ExecutionStats {
     totalCommands: number = 0;
@@ -140,8 +152,13 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
     const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
     const [localTargetId, setLocalTargetId] = useState(selectedTargetId || '');
 
-    // Execution completion modal state
-    const [showCompleteModal, setShowCompleteModal] = useState(false);
+    // Terminal outcome for the inline result strip (idle -> running -> success | error).
+    const [outcome, setOutcome] = useState<ScriptOutcome | null>(null);
+
+    // Execution completion stats. The completion modal that read these was replaced by the
+    // inline outcome strip; the fields are still populated because they are a plausible seam
+    // for the upcoming snapshot/breakpoint prompts (execution summary + per-run stats).
+    // TODO: cleanup — remove executionStats/executionErrorInfo if the later prompts don't consume them.
     const [executionStats, setExecutionStats] = useState<ExecutionStats | null>(null);
     const [executionErrorInfo, setExecutionErrorInfo] = useState<ExecutionErrorInfo | null>(null);
 
@@ -211,6 +228,29 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
             .filter(l => l && !l.startsWith('//') && !l.startsWith('#') && !l.toLowerCase().startsWith('target '));
     }, [code]);
 
+    // Map each raw (0-based) script line to its index in `commands`, or null for non-executable
+    // lines (blank, `//`/`#` comments, `target …`). Uses the exact predicate of the `commands`
+    // filter above, so the two stay in lock-step. Drives the gutter markers and code-line
+    // highlighting so ✓/✗ land on the right rows even when comments/blank lines are interleaved.
+    const lineToCommandIndex = useMemo(() => {
+        const map: (number | null)[] = [];
+        let cmd = 0;
+        for (const raw of displayCode.split('\n')) {
+            const l = raw.trim();
+            const isCommand = !!l && !l.startsWith('//') && !l.startsWith('#') && !l.toLowerCase().startsWith('target ');
+            if (isCommand) { map.push(cmd); cmd++; }
+            else map.push(null);
+        }
+        return map;
+    }, [displayCode]);
+
+    // Real 1-based script line for a command index (where its ✓/✗ marker is drawn). Falls back
+    // to command-index+1 if the command is not found (defensive; should not happen).
+    const getScriptLine = useCallback((commandIndex: number): number => {
+        const idx = lineToCommandIndex.findIndex(x => x === commandIndex);
+        return idx >= 0 ? idx + 1 : commandIndex + 1;
+    }, [lineToCommandIndex]);
+
     const lineCount = displayCode.split('\n').length;
 
     // Initialize line states
@@ -224,6 +264,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
         );
         setCurrentLineIndex(-1);
         setExecutionState('idle');
+        setOutcome(null);
     }, [commands]);
 
     // Copy handler
@@ -259,6 +300,35 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
             return;
         }
 
+        // Integrity guard: refuse a truncated/malformed script before running ANY command.
+        // Shares the executor's parser, so it never rejects a script that would execute
+        // cleanly; it only fails fast (0 commands executed) instead of leaving a half-built
+        // model, e.g. when AI-generated output was cut off mid-script. No events are emitted
+        // and no execution state is entered — the run simply never starts.
+        const integrity = validateScriptIntegrity(code);
+        if (!integrity.valid && integrity.issue) {
+            const { line, command, reason } = integrity.issue;
+            setShowErrorDialog(false);
+            setExecutionErrorInfo({
+                lineNumber: line,
+                command,
+                error: `Script appears truncated or malformed at line ${line} (${reason}) — nothing was executed.`,
+                executedSoFar: 0,
+                totalCommands: commands.length,
+                elapsedMs: 0,
+            });
+            setExecutionStats({
+                totalCommands: commands.length,
+                executedCommands: 0,
+                skippedLines: 0,
+                errors: 1,
+                duration: 0,
+            });
+            setExecutionState('error');
+            setOutcome({ kind: 'syntax-error', line, message: reason });
+            return;
+        }
+
         // Emit execution start event for Tree View auto-expand
         window.dispatchEvent(new CustomEvent(JjScriptEvents.EXECUTION_START, {
             detail: {
@@ -273,6 +343,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
         startTimeRef.current = Date.now();
         setExecutionState('running');
         setExecutionErrorInfo(null);
+        setOutcome(null);
 
         // Reset new error dialog state
         setShowErrorDialog(false);
@@ -307,6 +378,8 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
 
         for (let i = startIndex; i < commands.length; i++) {
             if (abortRef.current) break;
+
+            const _iterStart = performance.now(); // TEMP-DISCOVERY
 
             setCurrentLineIndex(i);
             setLineStates(prev =>
@@ -353,6 +426,11 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                     // Store error in list for final summary
                     setErrorsList(prev => [...prev, { line: i + 1, command: commands[i], error: parsedError }]);
 
+                    // Persistent inline outcome strip (the Skip/recovery dialog below is preserved
+                    // and owns the interactive flow; this strip is the passive summary that remains
+                    // after the dialog is dismissed).
+                    setOutcome({ kind: 'runtime-error', line: getScriptLine(i), message: parsedError.message });
+
                     // Show error dialog with Skip option
                     setExecutionState('paused');
                     setShowErrorDialog(true);
@@ -372,6 +450,9 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 if (i < commands.length - 1 && !abortRef.current) {
                     await sleep(BATCH_DELAY_MS);
                 }
+
+                // TEMP-DISCOVERY: full per-command wall-clock (onExecute apply + async React re-render/settle absorbed during sleep + BATCH_DELAY_MS). settle ≈ iter − executor.total − BATCH_DELAY_MS.
+                console.log(`[JjScript-TIMING] line=${i + 1} iter=${(performance.now() - _iterStart).toFixed(1)} cmd="${commands[i].slice(0, 60)}"`); // TEMP-DISCOVERY
             } catch (err) {
                 errorCount++;
                 const errorMessage = err instanceof Error ? err.message : 'Unknown error';
@@ -410,6 +491,9 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 // Store error in list for final summary
                 setErrorsList(prev => [...prev, { line: i + 1, command: commands[i], error: parsedError }]);
 
+                // Persistent inline outcome strip (dialog preserved, see !success branch above).
+                setOutcome({ kind: 'runtime-error', line: getScriptLine(i), message: parsedError.message });
+
                 // Show error dialog with Skip option
                 setExecutionState('paused');
                 setShowErrorDialog(true);
@@ -439,7 +523,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
         setExecutionStats(stats);
         setExecutionState('completed');
         setCurrentLineIndex(-1);
-        setShowCompleteModal(true);
+        setOutcome({ kind: 'success', count: executedCount });
 
         // Dispatch event for auto-expand of Features panel
         if (executedCount > 0) {
@@ -456,7 +540,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 totalCommands: commands.length,
             }
         }));
-    }, [code, commands, onExecute, executionState, currentLineIndex, hasValidTarget, availableTargets.length, resolvedTarget]);
+    }, [code, commands, onExecute, executionState, currentLineIndex, hasValidTarget, availableTargets.length, resolvedTarget, getScriptLine]);
 
     // Step through commands one by one
     const handleStep = useCallback(async () => {
@@ -486,6 +570,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
             setExecutionState('stepping');
             startTimeRef.current = Date.now(); // Start timing
             setExecutionErrorInfo(null);
+            setOutcome(null);
 
             // Reset new error dialog state
             setShowErrorDialog(false);
@@ -510,7 +595,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
             // console.log('[ScriptBlock] Setting execution stats (handleStep start):', stats);
             setExecutionStats(stats);
             setExecutionState('completed');
-            setShowCompleteModal(true);
+            setOutcome({ kind: 'success', count: commands.length });
             return;
         }
 
@@ -560,7 +645,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 setExecutionStats(stats);
                 setExecutionState('completed');
                 setCurrentLineIndex(-1);
-                setShowCompleteModal(true);
+                setOutcome({ kind: 'success', count: nextIndex + 1 });
 
                 // Dispatch event for last step
                 window.dispatchEvent(new CustomEvent(JjScriptEvents.METAMODEL_CREATED, {
@@ -598,7 +683,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 // console.log('[ScriptBlock] Setting execution stats (handleStep error):', stats);
                 setExecutionStats(stats);
                 setExecutionState('error');
-                setShowCompleteModal(true);
+                setOutcome({ kind: 'runtime-error', line: getScriptLine(nextIndex), message: result.message || 'Unknown error' });
 
                 // Emit execution end event with error
                 window.dispatchEvent(new CustomEvent(JjScriptEvents.EXECUTION_END, {
@@ -648,7 +733,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
             // console.log('[ScriptBlock] Setting execution stats (handleStep catch):', stats);
             setExecutionStats(stats);
             setExecutionState('error');
-            setShowCompleteModal(true);
+            setOutcome({ kind: 'runtime-error', line: getScriptLine(nextIndex), message: errorMessage });
 
             // Emit execution end event with error
             window.dispatchEvent(new CustomEvent(JjScriptEvents.EXECUTION_END, {
@@ -660,13 +745,14 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 }
             }));
         }
-    }, [code, commands, currentLineIndex, executionState, onExecute, hasValidTarget, availableTargets.length, resolvedTarget]);
+    }, [code, commands, currentLineIndex, executionState, onExecute, hasValidTarget, availableTargets.length, resolvedTarget, getScriptLine]);
 
     // Stop execution
     const handleStop = useCallback(() => {
         abortRef.current = true;
         setExecutionState('idle');
         setCurrentLineIndex(-1);
+        setOutcome(null);
         setLineStates(prev => prev.map(ls => ({ ...ls, status: 'pending', result: undefined })));
 
         // Emit execution end event (cancelled)
@@ -680,6 +766,10 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
     // Skip current error and continue execution
     const handleSkipAndContinue = useCallback(async () => {
         if (!pauseInfo || !onExecute) return;
+
+        // Once the interactive Skip/recovery flow takes over, its dialog summary is the
+        // outcome UX — clear the passive strip so the two don't disagree.
+        setOutcome(null);
 
         const skipLineIndex = pauseInfo.lineNumber - 1; // Convert to 0-based
 
@@ -867,6 +957,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
     const runCommandsFromIndex = useCallback(async (startIdx: number, skipSet: Set<number>) => {
         if (!onExecute) return;
         setExecutionState('running');
+        setOutcome(null);
         let executedCount = lineStates.filter(ls => ls.status === 'success').length;
         const localErrors = [...errorsList];
 
@@ -1138,8 +1229,11 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
         return (
             <div className="script-block__line-numbers">
                 {lines.map((_, idx) => {
-                    const lineState = lineStates[idx];
-                    const isCurrentLine = idx === currentLineIndex;
+                    // Non-command rows (blank, comment, `target …`) map to null → always show the
+                    // plain line number, never a ✓/✗ marker.
+                    const cmdIdx = lineToCommandIndex[idx];
+                    const lineState = cmdIdx !== null ? lineStates[cmdIdx] : undefined;
+                    const isCurrentLine = cmdIdx !== null && cmdIdx === currentLineIndex;
                     return (
                         <div
                             key={idx}
@@ -1261,13 +1355,25 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                     {allowExecution && onExecute && (
                         <>
                             {executionState === 'running' || executionState === 'stepping' ? (
-                                <button
-                                    className="script-block__btn script-block__btn--stop"
-                                    onClick={handleStop}
-                                    title="Stop"
-                                >
-                                    <i className="bi bi-stop-fill" />
-                                </button>
+                                <>
+                                    {/* Run stays in place, disabled, with a spinner replacing the
+                                        play icon — no header layout shift. Stop preserves abort. */}
+                                    <button
+                                        className="script-block__btn script-block__btn--run"
+                                        disabled
+                                        title="Running…"
+                                    >
+                                        <span className="script-block__spinner" />
+                                        <span>Run</span>
+                                    </button>
+                                    <button
+                                        className="script-block__btn script-block__btn--stop"
+                                        onClick={handleStop}
+                                        title="Stop"
+                                    >
+                                        <i className="bi bi-stop-fill" />
+                                    </button>
+                                </>
                             ) : (
                                 <>
                                     <button
@@ -1317,9 +1423,9 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                             showLineNumbers={false}
                             wrapLines={true}
                             lineProps={(lineNumber) => {
-                                const idx = lineNumber - 1;
-                                const lineState = lineStates[idx];
-                                const isCurrentLine = idx === currentLineIndex;
+                                const cmdIdx = lineToCommandIndex[lineNumber - 1];
+                                const lineState = cmdIdx !== null ? lineStates[cmdIdx] : undefined;
+                                const isCurrentLine = cmdIdx !== null && cmdIdx === currentLineIndex;
                                 return {
                                     className: `code-line ${isCurrentLine ? 'code-line--current' : ''} ${lineState ? `code-line--${lineState.status}` : ''}`,
                                 };
@@ -1331,21 +1437,23 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 </div>
             )}
 
-            {/* Error/Result message */}
-            {executionState === 'error' && lineStates.some(ls => ls.status === 'error') && (
+            {/* Outcome strip — thin inline result below the code content (replaces the former
+                completion modal). Persists per-message; the Skip/recovery dialog below owns the
+                interactive error flow. */}
+            {outcome?.kind === 'success' && (
+                <div className="script-block__success script-block__success--strip">
+                    <i className="bi bi-check-circle" />
+                    <span>{outcome.count} comandi applicati</span>
+                </div>
+            )}
+            {(outcome?.kind === 'runtime-error' || outcome?.kind === 'syntax-error') && (
                 <div className="script-block__error">
                     <i className="bi bi-exclamation-triangle" />
                     <span>
-                        {lineStates.find(ls => ls.status === 'error')?.result?.message || 'Execution failed'}
+                        {outcome.kind === 'syntax-error'
+                            ? `Errore di sintassi alla riga ${outcome.line}: ${outcome.message}`
+                            : `Errore alla riga ${outcome.line}: ${outcome.message}`}
                     </span>
-                </div>
-            )}
-
-            {/* Success message */}
-            {executionState === 'completed' && (
-                <div className="script-block__success">
-                    <i className="bi bi-check-circle" />
-                    <span>All {commands.length} commands executed successfully</span>
                 </div>
             )}
 
@@ -1360,79 +1468,8 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                 onRecoveryAction={handleRecoveryAction}
             />
 
-            {/* Legacy Execution Complete Modal (for non-error completion) */}
-            {showCompleteModal && executionStats && !showErrorDialog && (
-                <div className="execution-complete-overlay" onClick={() => setShowCompleteModal(false)}>
-                    <div className={`execution-complete-modal ${executionStats.errors > 0 ? 'has-error' : ''}`} onClick={e => e.stopPropagation()}>
-                        <div className={`modal-icon ${executionStats.errors === 0 ? 'success' : 'error'}`}>
-                            {executionStats.errors === 0 ? (
-                                <i className="bi bi-check-circle-fill" />
-                            ) : (
-                                <i className="bi bi-exclamation-circle-fill" />
-                            )}
-                        </div>
-
-                        <h2>{executionStats.errors === 0 ? 'Execution Complete' : 'Execution Failed'}</h2>
-
-                        {/* Error details section */}
-                        {executionStats.errors > 0 && executionErrorInfo && (
-                            <div className="error-details">
-                                <div className="error-row">
-                                    <span className="error-label">Line:</span>
-                                    <span className="error-value">{executionErrorInfo.lineNumber}</span>
-                                </div>
-                                <div className="error-row">
-                                    <span className="error-label">Command:</span>
-                                    <code className="error-command">{executionErrorInfo.command}</code>
-                                </div>
-                                <div className="error-row">
-                                    <span className="error-label">Error:</span>
-                                    <span className="error-message">{(executionErrorInfo.error as JjScriptError)?.message || executionErrorInfo.error.toString()}</span>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Error hint */}
-                        {executionStats.errors > 0 && executionErrorInfo && (
-                            <div className="error-hint">
-                                <i className="bi bi-lightbulb" />
-                                <span>Check the command syntax and ensure all referenced elements exist.</span>
-                            </div>
-                        )}
-
-                        <div className="execution-stats">
-                            <div className="stat">
-                                <span className="stat-value">{executionStats.executedCommands ?? 0}</span>
-                                <span className="stat-label">commands executed</span>
-                            </div>
-                            {(executionStats.skippedLines ?? 0) > 0 && (
-                                <div className="stat">
-                                    <span className="stat-value">{executionStats.skippedLines ?? 0}</span>
-                                    <span className="stat-label">lines skipped</span>
-                                </div>
-                            )}
-                            {(executionStats.errors ?? 0) > 0 && (
-                                <div className="stat error">
-                                    <span className="stat-value">{executionStats.errors ?? 0}</span>
-                                    <span className="stat-label">errors</span>
-                                </div>
-                            )}
-                            <div className="stat">
-                                <span className="stat-value">
-                                    {executionStats.duration != null && !isNaN(executionStats.duration)
-                                        ? `${(executionStats.duration / 1000).toFixed(2)}s`
-                                        : '0.00s'}
-                                </span>
-                                <span className="stat-label">duration</span>
-                            </div>
-                        </div>
-
-                        <button className="modal-close-btn" onClick={() => setShowCompleteModal(false)}>
-                            Close
-                        </button>
-                    </div>
-                </div>
-            )}
+            {/* Completion modal removed — the terminal outcome is now the inline strip above.
+                The Skip/recovery ExecutionErrorDialog remains the interactive error surface. */}
         </div>
     );
 };

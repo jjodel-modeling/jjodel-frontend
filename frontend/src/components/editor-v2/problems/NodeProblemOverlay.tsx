@@ -189,6 +189,7 @@ export function NodeProblemOverlay({ problems, anchorEl, onClose }: Props) {
             <div className="node-problem-overlay__problems">
                 {problems.map(p => {
                     const isResolved = p.resolvedAt !== undefined;
+                    const isConformance = p.kind === 'conformance' && !!p.conformance?.length;
                     const actionLabel = p.action
                         ? (p.action.targetNodeId && !isNodeInViewport(p.action.targetNodeId)
                             ? 'Scroll to duplicate'
@@ -199,7 +200,28 @@ export function NodeProblemOverlay({ problems, anchorEl, onClose }: Props) {
                             <div className="node-problem-overlay__title">
                                 {isResolved ? 'Resolved' : p.title}
                             </div>
-                            <div className="node-problem-overlay__description">{p.description}</div>
+                            {isConformance && !isResolved ? (
+                                <div className="node-problem-overlay__conf-list">
+                                    {p.conformance!.map((v, i) => (
+                                        <div
+                                            key={i}
+                                            className="node-problem-overlay__conf-row"
+                                            data-severity={v.severity}
+                                        >
+                                            <i
+                                                className={`bi ${v.severity === 'error' ? 'bi-x-circle-fill' : 'bi-exclamation-triangle-fill'} node-problem-overlay__conf-icon`}
+                                                aria-hidden
+                                            />
+                                            <div className="node-problem-overlay__conf-body">
+                                                <span className="node-problem-overlay__conf-message">{v.message}</span>
+                                                <code className="node-problem-overlay__conf-type">{v.violationType}</code>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="node-problem-overlay__description">{p.description}</div>
+                            )}
                             {p.action && !isResolved && actionLabel && (
                                 <button
                                     className="node-problem-overlay__action"

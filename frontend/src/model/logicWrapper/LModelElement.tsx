@@ -2790,6 +2790,7 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     allReferences!: LReference[];
     allOperations!: LOperation[]; // includes inherited and shadowed features
     allChildren!: (LStructuralFeature|LOperation)[];
+    allFeatures!: LStructuralFeature[]; // allAttributes ++ allReferences, includes inherited. No operations.
 
 
 
@@ -2992,6 +2993,9 @@ export class LClass<D extends DClass = DClass, Context extends LogicContext<DCla
     }
     protected get_allReferences(context: Context): this['allReferences'] {
         return U.arrayMergeInPlace<any>(this.get_ownReferences(context), this.get_inheritedReferences(context));
+    }
+    protected get_allFeatures(context: Context): this['allFeatures'] {
+        return U.arrayMergeInPlace<any>(this.get_allAttributes(context), this.get_allReferences(context));
     }
     protected get_allOperations(context: Context): this['allOperations'] {
         return U.arrayMergeInPlace<any>(this.get_ownOperations(context), this.get_inheritedOperations(context));

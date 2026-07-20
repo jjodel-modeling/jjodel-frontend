@@ -33,7 +33,6 @@ import { qualifiedNameToString, literalValueToString } from '../../parser/gramma
 import {
     DObject,
     DModel,
-    DeleteElementAction,
     SetFieldAction,
     TRANSACTION,
     LPointerTargetable,
@@ -41,6 +40,14 @@ import {
     LProject,
     LClass,
 } from '../../../joiner';
+import {
+    registerHandle,
+    getHandleId,
+    hasHandle,
+    unregisterHandle,
+    renameHandle,
+    getReservedHandles,
+} from '../handleRegistry';
 
 // ============================================
 // SHARED HELPERS
@@ -50,7 +57,7 @@ import {
  * Resolve the M1 target model from the execution context.
  * Returns null with an error message if the context is not properly set up.
  */
-function resolveTargetModel(context: ExecutionContext, project: LProject): LModel | null {
+export function resolveTargetModel(context: ExecutionContext, project: LProject): LModel | null {
     if (!context.modelId) return null;
     const models = (project as any).models || [];
     const model = models.find((m: LModel) => m.id === context.modelId && !m.isMetamodel);
@@ -98,20 +105,44 @@ function findMetaclassByName(metamodel: LModel, className: string): LClass | nul
 /**
  * Find an instance by name in the target M1 model.
  */
-function findInstanceByName(model: LModel, instanceName: string): any | null {
+export function findInstanceByName(model: LModel, instanceName: string): any | null {
     const objects = (model as any).objects ?? [];
     return objects.find((o: any) => o?.name === instanceName) ?? null;
 }
 
 /**
+ * Resolve an M1 instance for a script command. The session handle registry WINS: if
+ * `handle` was created in this run, resolve its DObject by id — immediate and
+ * independent of the (mutable, asynchronously-committed) `name` attribute. Only when the
+ * handle is not a script-local one do we fall back to name-based lookup, for instances
+ * that pre-existed the script. Stale entries (object deleted underneath us) self-heal.
+ *
+ * Exported so the dependency waiter can adopt the same resolution in a follow-up.
+ */
+export function resolveInstanceHandle(model: LModel, handle: string): any | null {
+    const id = getHandleId(handle);
+    if (id) {
+        const obj = LPointerTargetable.fromPointer(id) as any;
+        if (obj && obj.id) return obj; // registry wins: id-based, race-free
+        unregisterHandle(handle);      // stale (deleted) → clean up, fall through
+    }
+    return findInstanceByName(model, handle);
+}
+
+/**
  * Generate a unique default name for a new instance.
  * Strategy: <ClassName>, <ClassName>2, <ClassName>3, ... — same as the visual editor.
+ *
+ * `reserved` carries the handles already created in this run: the model's committed
+ * `objects` list lags behind (deferred store commit), so without it two consecutive
+ * auto-named creates in a batch would both pick `<ClassName>`.
  */
-function generateInstanceName(className: string, model: LModel): string {
+function generateInstanceName(className: string, model: LModel, reserved: Set<string>): string {
     const objects = (model as any).objects ?? [];
     const taken = new Set<string>(
         objects.map((o: any) => o?.name).filter((n: any) => typeof n === 'string')
     );
+    for (const h of reserved) taken.add(h);
     if (!taken.has(className)) return className;
     let i = 2;
     while (taken.has(`${className}${i}`)) i++;
@@ -219,7 +250,22 @@ export async function executeCreateInstance(
         };
     }
 
-    const instanceName = explicitInstanceName ?? generateInstanceName(className, targetModel);
+    const instanceName = explicitInstanceName ?? generateInstanceName(className, targetModel, getReservedHandles());
+
+    // An explicit handle can only be claimed once per script run. Auto-generated names
+    // are chosen free of the reserved set above, so this only triggers on a genuine
+    // duplicate explicit handle.
+    if (hasHandle(instanceName)) {
+        return {
+            success: false,
+            command: 'create',
+            message: `Handle '${instanceName}' already used in this script`,
+            errors: [{
+                code: 'HANDLE_IN_USE',
+                message: `The instance handle '${instanceName}' is already bound in this run. Use a different handle; the 'name' attribute can still be set to any (even duplicate) value afterwards.`
+            }]
+        };
+    }
 
     try {
         // DObject.new(instanceof, father, fatherType, name, persist)
@@ -251,6 +297,9 @@ export async function executeCreateInstance(
                 errors: [{ code: 'CREATE_INSTANCE_ERROR', message: 'DObject.new returned null' }]
             };
         }
+
+        // Bind the creation handle to the stable DObject id for the rest of the run.
+        registerHandle(instanceName, dObject.id);
 
         return {
             success: true,
@@ -304,7 +353,7 @@ export async function executeDeleteInstance(
     }
 
     const instanceName = args.target.segments.join('::') || args.target.raw; // instance name from segments; raw may carry a dotted '.property' member (P0b)
-    const lObject = findInstanceByName(targetModel, instanceName);
+    const lObject = resolveInstanceHandle(targetModel, instanceName);
     if (!lObject) {
         return {
             success: false,
@@ -317,18 +366,41 @@ export async function executeDeleteInstance(
         };
     }
 
+    // Singleton pre-check: the canonical cascade refuses singleton instances
+    // silently (LObject.get_delete → Log.ww), which would make the success
+    // result below lie. Reads the SAME flag as the canonical guard
+    // (isSingleton via instanceof) — no divergent logic.
+    const metaClass: any = (lObject as any).instanceof;
+    if (metaClass?.isSingleton) {
+        return {
+            success: false,
+            command: 'delete',
+            message: `Cannot delete: ${metaClass?.name ?? 'the metaclass'} is a singleton`,
+            errors: [{
+                code: 'SINGLETON_INSTANCE',
+                message: `Instance '${instanceName}' is the singleton of '${metaClass?.name ?? 'its class'}'. Remove the singleton flag in the metamodel first.`
+            }]
+        };
+    }
+
     return new Promise((resolve) => {
         try {
-            TRANSACTION('JjScript: Delete instance', () => {
-                DeleteElementAction.new((lObject as any).__raw ?? lObject);
-                resolve({
-                    success: true,
-                    command: 'delete',
-                    message: `Deleted instance '${instanceName}'`,
-                    data: { id: lObject.id, name: instanceName, type: 'instance' },
-                    affectedElements: [lObject.id],
-                    undoable: true
-                });
+            // Canonical cascade delete (Dummy.get_delete): cleans the incoming
+            // reference slots via pointedBy (case 'values'), the instance's own
+            // DValue features (children), model.objects and its graph vertices.
+            // The previous raw DeleteElementAction removed only the idlookup
+            // entry and left all of those dangling. .delete() opens its own
+            // TRANSACTION, so no outer wrapper here (canvasToJjom idiom).
+            (lObject as any).delete();
+            // Free the handle so it can be reused later in the same run.
+            unregisterHandle(instanceName);
+            resolve({
+                success: true,
+                command: 'delete',
+                message: `Deleted instance '${instanceName}'`,
+                data: { id: lObject.id, name: instanceName, type: 'instance' },
+                affectedElements: [lObject.id],
+                undoable: true
             });
         } catch (error) {
             resolve({
@@ -370,7 +442,7 @@ export async function executeRenameInstance(
     }
 
     const instanceName = args.target.segments.join('::') || args.target.raw; // instance name from segments; raw may carry a dotted '.property' member (P0b)
-    const lObject = findInstanceByName(targetModel, instanceName);
+    const lObject = resolveInstanceHandle(targetModel, instanceName);
     if (!lObject) {
         return {
             success: false,
@@ -404,6 +476,9 @@ export async function executeRenameInstance(
                 // writes data.name only, so initialName must be updated explicitly.
                 // See docs/discovery/2026-06-12_create_instance_name_regression.md.
                 SetFieldAction.new(lObject, 'initialName', args.newName);
+                // Move the script handle to the new name, keeping the same id. No-op if
+                // the target was resolved via the pre-existing fallback (not a handle).
+                renameHandle(instanceName, args.newName);
                 resolve({
                     success: true,
                     command: 'rename',
@@ -453,7 +528,7 @@ export async function executeSetInstance(
     }
 
     const instanceName = args.target.segments.join('::') || args.target.raw; // instance name from segments; raw may carry a dotted '.property' member (P0b)
-    const lObject = findInstanceByName(targetModel, instanceName);
+    const lObject = resolveInstanceHandle(targetModel, instanceName);
     if (!lObject) {
         return {
             success: false,
@@ -598,7 +673,7 @@ export async function executeSetInstance(
         targetInstanceName = (args.value as QualifiedName).raw;
     }
 
-    const targetInstance = findInstanceByName(targetModel, targetInstanceName);
+    const targetInstance = resolveInstanceHandle(targetModel, targetInstanceName);
     if (!targetInstance) {
         return {
             success: false,

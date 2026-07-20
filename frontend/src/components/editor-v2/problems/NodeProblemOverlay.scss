@@ -65,6 +65,54 @@
         color: #475569;
     }
 
+    // Conformance kind: one row per violation (severity icon + message + type chip).
+    &__conf-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 2px;
+    }
+
+    &__conf-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+
+        &[data-severity='error'] .node-problem-overlay__conf-icon { color: #dc2626; }
+        &[data-severity='warning'] .node-problem-overlay__conf-icon { color: #f59e0b; }
+    }
+
+    &__conf-icon {
+        flex: 0 0 auto;
+        margin-top: 1px;
+        font-size: 12px;
+        line-height: 1.35;
+    }
+
+    &__conf-body {
+        flex: 1;
+        min-width: 0;
+    }
+
+    &__conf-message {
+        display: block;
+        font-size: 12px;
+        line-height: 1.4;
+        color: #475569;
+    }
+
+    &__conf-type {
+        display: inline-block;
+        margin-top: 3px;
+        padding: 1px 6px;
+        border-radius: 4px;
+        background: #f1f5f9;
+        color: #64748b;
+        font-family: 'IBM Plex Mono', Monaco, Consolas, monospace;
+        font-size: 10px;
+        line-height: 1.4;
+    }
+
     &__action {
         margin-top: 4px;
         align-self: flex-start;

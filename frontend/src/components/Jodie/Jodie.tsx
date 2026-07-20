@@ -14,10 +14,9 @@ import {
     ChatDocument,
     ChatState,
     TAIProvider, AIConfig, AI, JodieConfig,
-    ConsoleMode, CodeFlavor, CodeEntry, isChatEntry
+    ConsoleMode, CodeFlavor, CodeEntry, isChatEntry,
+    CONSOLE_MODES, ConsoleModeSwitchVia
 } from '../../types/jodie';
-import { evaluateJjelInJodie } from './jodieJjelContext';
-import { AIProviderService } from '../../services/AIProviderService';
 import { useSettingsModalSafe } from '../../contexts/SettingsModalContext';
 import { JjodieEvents, AIEvents, JjScriptEvents, JjodelEvents } from '../../events/registry';
 import { JjodieContextService, ActiveArtifact } from '../../services/JjodieContext';
@@ -26,7 +25,8 @@ import { JjodieRagService } from '../../services/JjodieRagService';
 import {DUser, L, LUser, LProject, store} from '../../joiner';
 import DockManager from '../abstract/DockManager';
 import TabDataMaker from '../abstract/tabs/TabDataMaker';
-import { JjScriptService } from '../../jjscript';
+import { consoleLanguageRegistry } from './console/languageRegistry';
+import type { ConsoleContext } from './console/types';
 import './JodieWindow.css';
 
 // Generate unique message ID
@@ -34,9 +34,30 @@ function generateMessageId(): string {
     return `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
-// localStorage keys for the console mode switcher (Chat / Code).
-const CONSOLE_MODE_KEY = 'jjodel.console.mode';
+// Console language providers, resolved once from the shared registry (the three
+// built-ins are registered at module load). Routing decisions below are
+// unchanged; only the entry-point dispatch goes through the registry now.
+const jjodieProvider = consoleLanguageRegistry.get('jjodie')!;
+const jjscriptProvider = consoleLanguageRegistry.get('jjscript')!;
+const jjelProvider = consoleLanguageRegistry.get('jjel')!;
+
+// localStorage key for the code-flavor switcher. The console mode itself is no
+// longer persisted (2b.3): it boots to 'jjodie' and is sticky only in-memory;
+// any legacy 'jjodel.console.mode' value in localStorage is ignored (not cleaned).
 const CONSOLE_CODE_FLAVOR_KEY = 'jjodel.console.codeFlavor';
+
+// Static content for the `/help` console entry (Jjodie mode).
+const CONSOLE_HELP_TEXT = [
+    '**Jjodie console — modes**',
+    '',
+    '- **Jjodie** — ask in natural language; keyword-first commands still run as JjScript.',
+    '- **JjScript** — every line runs as a JjScript command against the model.',
+    '- **JjEL** — evaluate JjEL expressions against the model.',
+    '',
+    '**Switch modes:** `Cmd/Ctrl+J` or `Ctrl+.` cycle · click the mode chip to pick.',
+    '',
+    '**Slash commands (Jjodie mode):** `/ask` `/js` `/jjel` `/help` · `/clear` clears the current mode.',
+].join('\n');
 
 // Persisted, string-typed local state. Local to Jodie: not exported.
 function useLocalStorageString<T extends string>(key: string, defaultValue: T): [T, (v: T) => void] {
@@ -81,9 +102,9 @@ export function Jodie(): JSX.Element {
     // Pending input prefill (from "Ask Jjodie" link in notifications popover)
     const [pendingPrefill, setPendingPrefill] = useState<{ prompt: string; nonce: number } | null>(null);
 
-    // Console mode (Chat / Code) and code flavor (JjEL / JS), persisted in localStorage.
-    // JS flavor is reserved for a later phase; rendered but disabled in the UI.
-    const [consoleMode, setConsoleMode] = useLocalStorageString<ConsoleMode>(CONSOLE_MODE_KEY, 'chat');
+    // Console mode boots to Jjodie and is sticky only in-memory (no persistence, 2b.3).
+    const [consoleMode, setConsoleMode] = useState<ConsoleMode>('jjodie');
+    // Code flavor (JjEL / JS) is still persisted; JS is reserved for a later phase.
     const [codeFlavor, setCodeFlavor] = useLocalStorageString<CodeFlavor>(CONSOLE_CODE_FLAVOR_KEY, 'jjel');
 
     // Root ref used by the Cmd+J listener to detect "focus is inside Jjodie".
@@ -280,13 +301,33 @@ export function Jodie(): JSX.Element {
         return () => clearInterval(interval);
     }, [ragInitialized]);
 
-    // Cmd+J / Ctrl+J: toggle Chat <-> Code console mode.
+    // Central mode-change funnel. Every user-facing switch (cycle, picker, slash)
+    // goes through here so it announces itself on the bus — groundwork for 2b.3,
+    // no consumer yet. Programmatic promotions use setConsoleMode directly.
+    const setMode = useCallback((next: ConsoleMode, via?: ConsoleModeSwitchVia) => {
+        if (consoleMode !== next) {
+            window.dispatchEvent(new CustomEvent(JjodieEvents.CONSOLE_MODE_CHANGE, {
+                detail: { from: consoleMode, to: next, via },
+            }));
+        }
+        setConsoleMode(next);
+    }, [consoleMode, setConsoleMode]);
+
+    // Cycle jjodie → jjscript → jjel → jjodie.
+    const cycleMode = useCallback((via: ConsoleModeSwitchVia) => {
+        const idx = CONSOLE_MODES.indexOf(consoleMode);
+        const next = CONSOLE_MODES[(idx + 1) % CONSOLE_MODES.length];
+        setMode(next, via);
+    }, [consoleMode, setMode]);
+
+    // Cmd+J / Ctrl+J and Ctrl+. cycle the console mode (jjodie → jjscript → jjel).
     // Skip when focus is in another editable surface (Monaco or any input/textarea
     // outside Jjodie); always handle when focus is inside Jjodie or nowhere editable.
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
-            const isToggle = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'j';
-            if (!isToggle) return;
+            const isCmdJ = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'j';
+            const isCtrlDot = e.ctrlKey && !e.metaKey && (e.key === '.' || e.code === 'Period');
+            if (!isCmdJ && !isCtrlDot) return;
 
             const target = e.target as HTMLElement | null;
             const focusInJjodie = !!jodieRootRef.current && !!target && jodieRootRef.current.contains(target);
@@ -294,35 +335,25 @@ export function Jodie(): JSX.Element {
             if (isEditable && !focusInJjodie) return;
 
             e.preventDefault();
-            setConsoleMode(consoleMode === 'chat' ? 'code' : 'chat');
+            cycleMode(isCtrlDot ? 'ctrl-dot' : 'cmdj');
             // Make sure the window is open so the user sees the switch take effect.
             setChatState(prev => prev.isOpen ? prev : { ...prev, isOpen: true, hasUnread: false });
         };
         document.addEventListener('keydown', handler);
         return () => document.removeEventListener('keydown', handler);
-    }, [consoleMode, setConsoleMode]);
+    }, [cycleMode]);
 
     // Submit a JjEL expression from the Code-mode input. Synchronous evaluator:
     // append the input + result (or error) as a single CodeEntry to the unified history.
-    const handleSubmitCode = useCallback((rawInput: string) => {
+    const handleSubmitCode = useCallback(async (rawInput: string) => {
         const input = rawInput.trim();
         if (!input) return;
-        const outcome = codeFlavor === 'jjel'
-            ? evaluateJjelInJodie(input)
-            : { ok: false as const, text: 'JS flavor is not yet available.', warnings: [] };
-        const entry: CodeEntry = {
-            id: generateMessageId(),
-            kind: 'code',
-            flavor: codeFlavor,
-            input,
-            output: outcome.ok
-                ? { ok: true, value: outcome.text }
-                : { ok: false, error: outcome.text },
-            timestamp: Date.now(),
-            warnings: outcome.warnings.length > 0 ? outcome.warnings : undefined,
-            rawValue: outcome.ok ? outcome.value : undefined,
-        };
-        setChatState(prev => ({ ...prev, messages: [...prev.messages, entry] }));
+        // Route Code-mode input through the jjel provider (behavior-preserving:
+        // same CodeEntry as the inline path). Async only because the provider
+        // interface is Promise-based; the JjEL evaluation itself is synchronous.
+        const ctx: ConsoleContext = { makeId: generateMessageId, codeFlavor };
+        const { entries } = await jjelProvider.run(input, ctx);
+        setChatState(prev => ({ ...prev, messages: [...prev.messages, ...entries] }));
     }, [codeFlavor]);
 
     // Promotion: from a Jjodie chat reply with a code block, switch to Code mode
@@ -331,7 +362,7 @@ export function Jodie(): JSX.Element {
         // TODO stadio 3: when JS flavor is enabled, route 'js'/'javascript' tags to flavor 'js'.
         // For now everything goes to JjEL; JS-tagged snippets may show JjEL syntax errors,
         // which the user can refine in place.
-        setConsoleMode('code');
+        setConsoleMode('jjel');
         setCodeFlavor('jjel');
         setPendingPrefill({ prompt: code, nonce: Date.now() });
     }, [setConsoleMode, setCodeFlavor]);
@@ -342,9 +373,36 @@ export function Jodie(): JSX.Element {
         if (entry.output.ok) return;
         const langLabel = entry.flavor === 'jjel' ? 'JjEL' : 'JS';
         const template = `This ${langLabel} expression failed:\n\n\`${entry.input}\`\n\nError: ${entry.output.error}\n\n`;
-        setConsoleMode('chat');
+        setConsoleMode('jjodie');
         setPendingPrefill({ prompt: template, nonce: Date.now() });
     }, [setConsoleMode]);
+
+    // Slash `/help` in Jjodie mode: append a static system entry describing the
+    // modes, shortcuts and slash commands.
+    const handleHelpRequested = useCallback(() => {
+        const helpMessage: ChatMessage = {
+            id: generateMessageId(),
+            kind: 'chat',
+            role: 'assistant',
+            content: CONSOLE_HELP_TEXT,
+            timestamp: Date.now(),
+        };
+        setChatState(prev => ({ ...prev, messages: [...prev.messages, helpMessage] }));
+    }, []);
+
+    // Unknown `/…` in Jjodie mode: append a static hint instead of sending the
+    // typo to the LLM (no provider call).
+    const handleUnknownCommand = useCallback((raw: string) => {
+        const cmd = raw.trim().split(/\s+/)[0];
+        const entry: ChatMessage = {
+            id: generateMessageId(),
+            kind: 'chat',
+            role: 'assistant',
+            content: `Unknown command: ${cmd}. Type /help to see available commands.`,
+            timestamp: Date.now(),
+        };
+        setChatState(prev => ({ ...prev, messages: [...prev.messages, entry] }));
+    }, []);
 
     // Open the chat window
     const handleOpen = useCallback(() => {
@@ -371,8 +429,8 @@ export function Jodie(): JSX.Element {
 
     // Send message
     const handleSendMessage = useCallback(async (content: string, images?: ChatImage[], documents?: ChatDocument[]) => {
-        // Check if this is a JjScript command
-        if (JjScriptService.isJjScriptCommand(content)) {
+        // Explicit JjScript mode routes ALL input to the jjscript provider.
+        if (consoleMode === 'jjscript') {
             // Add user message
             const userMessage: ChatMessage = {
                 id: generateMessageId(),
@@ -390,27 +448,16 @@ export function Jodie(): JSX.Element {
             }));
 
             try {
-                // Execute JjScript command
-                const result = await JjScriptService.execute(content);
-
-                // Format result as chat message
-                const responseContent = JjScriptService.formatResultForChat(result);
-
-                const assistantMessage: ChatMessage = {
-                    id: generateMessageId(),
-                    kind: 'chat',
-                    role: 'assistant',
-                    content: responseContent,
-                    timestamp: Date.now(),
-                    jjscriptResult: {
-                        success: result.success,
-                        command: result.command,
-                    },
-                };
+                // Route JjScript execution through the jjscript provider
+                // (behavior-preserving: same assistant ChatMessage carrying
+                // jjscriptResult:{success,command}). Errors propagate to the
+                // catch below, which builds the "JjScript Error" message.
+                const ctx: ConsoleContext = { makeId: generateMessageId };
+                const { entries } = await jjscriptProvider.run(content, ctx);
 
                 setChatState(prev => ({
                     ...prev,
-                    messages: [...prev.messages, assistantMessage],
+                    messages: [...prev.messages, ...entries],
                     isWaiting: false,
                 }));
             } catch (error) {
@@ -423,6 +470,7 @@ export function Jodie(): JSX.Element {
                     jjscriptResult: {
                         success: false,
                         command: 'unknown',
+                        input: content,
                     },
                 };
 
@@ -432,6 +480,22 @@ export function Jodie(): JSX.Element {
                     isWaiting: false,
                 }));
             }
+            return;
+        }
+
+        // Jjodie mode: if the input parses as a complete JjScript command, OFFER
+        // to run it — never execute and never call the LLM until the user taps a
+        // button. Deterministic (strict parse), not silent.
+        if (jjscriptProvider.detect?.(content)) {
+            const offerMessage: ChatMessage = {
+                id: generateMessageId(),
+                kind: 'chat',
+                role: 'assistant',
+                content: '',
+                timestamp: Date.now(),
+                jjscriptOffer: { input: content },
+            };
+            setChatState(prev => ({ ...prev, messages: [...prev.messages, offerMessage] }));
             return;
         }
 
@@ -498,43 +562,27 @@ export function Jodie(): JSX.Element {
 
         try {
             // Get conversation history (excluding the message we just added).
-            // Filter out CodeEntry items: AIProviderService consumes ChatMessage[] only.
+            // Filter out CodeEntry items: the jjodie provider forwards ChatMessage[] only.
             const history = chatState.messages.filter(isChatEntry);
 
-            // Get RAG-augmented context based on query
-            let augmentedContext = projectContext;
-            if (ragInitialized) {
-                try {
-                    const ragContext = await JjodieRagService.getAugmentedContext(content);
-                    if (ragContext) {
-                        // Combine structural context with RAG-retrieved context
-                        augmentedContext = projectContext
-                            ? `${projectContext}\n\n---\n\n**Relevant Information:**\n${ragContext}`
-                            : `**Relevant Information:**\n${ragContext}`;
-                    }
-                } catch (ragError) {
-                    console.warn('[Jodie] RAG context retrieval failed:', ragError);
-                }
-            }
-
-            // Call AI provider with augmented context, images and documents.
-            // Pass per-feature model (falls back to provider's AIConfig.model inside chat()).
-            const chatModel = AIConfig.getPreferredModel('chat');
-            const response = await AIProviderService.chat(content, providerToUse, history, augmentedContext, images, documents, chatModel);
-
-            // Add assistant message
-            const assistantMessage: ChatMessage = {
-                id: generateMessageId(),
-                kind: 'chat',
-                role: 'assistant',
-                content: response,
-                timestamp: Date.now(),
-                provider: providerToUse,
+            // Route the LLM call through the jjodie provider (behavior-preserving:
+            // same RAG augmentation, per-feature model, and assistant ChatMessage).
+            // chat() errors propagate to the catch below, which preserves the
+            // hasUnread semantics (only the success path sets hasUnread).
+            const ctx: ConsoleContext = {
+                makeId: generateMessageId,
+                activeProvider: providerToUse,
+                history,
+                projectContext,
+                ragInitialized,
+                images,
+                documents,
             };
+            const { entries } = await jjodieProvider.run(content, ctx);
 
             setChatState(prev => ({
                 ...prev,
-                messages: [...prev.messages, assistantMessage],
+                messages: [...prev.messages, ...entries],
                 isWaiting: false,
                 hasUnread: !prev.isOpen,
             }));
@@ -555,7 +603,80 @@ export function Jodie(): JSX.Element {
                 isWaiting: false,
             }));
         }
-    }, [activeProvider, chatState.messages, state.idlookup.clonedCounter, projectContext, userName]);
+    }, [activeProvider, chatState.messages, consoleMode, state.idlookup.clonedCounter, projectContext, userName]);
+
+    // Shared one-shot "Ask Jjodie": send `input` to the LLM and append the reply,
+    // WITHOUT changing mode. Used by the offer card's [Chiedi a Jjodie] and by the
+    // [Chiedi a Jjodie] button on a JjScript parse-error card (D6). No auto-switch in v1.
+    const askJjodie = useCallback(async (input: string) => {
+        setChatState(prev => ({ ...prev, isWaiting: true }));
+        try {
+            const history = chatState.messages.filter(isChatEntry);
+            const ctx: ConsoleContext = {
+                makeId: generateMessageId,
+                activeProvider,
+                history,
+                projectContext,
+                ragInitialized,
+            };
+            const { entries } = await jjodieProvider.run(input, ctx);
+            setChatState(prev => ({
+                ...prev,
+                messages: [...prev.messages, ...entries],
+                isWaiting: false,
+                hasUnread: !prev.isOpen,
+            }));
+        } catch (error) {
+            const errorMessage: ChatMessage = {
+                id: generateMessageId(),
+                kind: 'chat',
+                role: 'assistant',
+                content: `Sorry, I encountered an error: ${(error as Error).message}. Please check your API key in Settings.`,
+                timestamp: Date.now(),
+                provider: activeProvider,
+            };
+            setChatState(prev => ({ ...prev, messages: [...prev.messages, errorMessage], isWaiting: false }));
+        }
+    }, [activeProvider, chatState.messages, projectContext, ragInitialized]);
+
+    // Disable an offer entry's buttons after a tap (marks it consumed by id).
+    const markOfferConsumed = useCallback((messageId: string) => {
+        setChatState(prev => ({
+            ...prev,
+            messages: prev.messages.map(m =>
+                isChatEntry(m) && m.id === messageId && m.jjscriptOffer
+                    ? { ...m, jjscriptOffer: { ...m.jjscriptOffer, consumed: true } }
+                    : m
+            ),
+        }));
+    }, []);
+
+    // Offer card [Esegui]: run the offered input as JjScript, append the result card.
+    const handleOfferExecute = useCallback(async (messageId: string, input: string) => {
+        markOfferConsumed(messageId);
+        setChatState(prev => ({ ...prev, isWaiting: true }));
+        try {
+            const ctx: ConsoleContext = { makeId: generateMessageId };
+            const { entries } = await jjscriptProvider.run(input, ctx);
+            setChatState(prev => ({ ...prev, messages: [...prev.messages, ...entries], isWaiting: false }));
+        } catch (error) {
+            const errorMessage: ChatMessage = {
+                id: generateMessageId(),
+                kind: 'chat',
+                role: 'assistant',
+                content: `**JjScript Error:** ${(error as Error).message}`,
+                timestamp: Date.now(),
+                jjscriptResult: { success: false, command: 'unknown', input },
+            };
+            setChatState(prev => ({ ...prev, messages: [...prev.messages, errorMessage], isWaiting: false }));
+        }
+    }, [markOfferConsumed]);
+
+    // Offer card [Chiedi a Jjodie]: send the offered input to the LLM instead.
+    const handleOfferAsk = useCallback((messageId: string, input: string) => {
+        markOfferConsumed(messageId);
+        askJjodie(input);
+    }, [markOfferConsumed, askJjodie]);
 
     // Open settings - open unified settings modal at Providers section
     const handleOpenSettings = useCallback(() => {
@@ -593,7 +714,7 @@ export function Jodie(): JSX.Element {
     const handleClearCurrentMode = useCallback(() => {
         setChatState(prev => {
             const next = prev.messages.filter(e =>
-                consoleMode === 'code' ? e.kind !== 'code' : e.kind === 'code'
+                consoleMode === 'jjel' ? e.kind !== 'code' : e.kind === 'code'
             );
             if (next.length === prev.messages.length) return prev;
             return { ...prev, messages: next };
@@ -602,7 +723,7 @@ export function Jodie(): JSX.Element {
 
     const canClearCurrentMode = useMemo(
         () => chatState.messages.some(e =>
-            consoleMode === 'code' ? e.kind === 'code' : e.kind !== 'code'
+            consoleMode === 'jjel' ? e.kind === 'code' : e.kind !== 'code'
         ),
         [chatState.messages, consoleMode]
     );
@@ -660,12 +781,17 @@ export function Jodie(): JSX.Element {
                     onStop={handleStop}
                     isVisible={windowVisible}
                     consoleMode={consoleMode}
-                    onConsoleModeChange={setConsoleMode}
+                    onConsoleModeChange={setMode}
                     codeFlavor={codeFlavor}
                     onCodeFlavorChange={setCodeFlavor}
                     onSubmitCode={handleSubmitCode}
+                    onHelpRequested={handleHelpRequested}
+                    onUnknownCommand={handleUnknownCommand}
                     onTestInCode={handleTestInCode}
                     onAskJjodie={handleAskJjodie}
+                    onOfferExecute={handleOfferExecute}
+                    onOfferAsk={handleOfferAsk}
+                    onAskFromError={askJjodie}
                     onClearCurrentMode={handleClearCurrentMode}
                     canClearCurrentMode={canClearCurrentMode}
                 />

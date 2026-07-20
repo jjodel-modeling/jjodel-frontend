@@ -15,8 +15,9 @@ import { executeDeleteInstance } from './instance';
 
 import {
     DeleteElementAction,
-    TRANSACTION,
-    LProject
+    LProject,
+    LPointerTargetable,
+    store
 } from '../../../joiner';
 
 // ============================================
@@ -61,6 +62,25 @@ export async function executeDelete(
             };
         }
 
+        // Type guard: when an explicit element type was given, ensure the
+        // resolved element's D-layer className matches. A bare/ambiguous target
+        // (e.g. "delete attribute name") can resolve project-wide to the first
+        // element of that name — possibly the wrong kind — so reject a mismatch
+        // instead of deleting the wrong element. L-proxy .className returns the
+        // D-name (DAttribute, DClass, …), so substring matching is correct (CLAUDE.md §3.13).
+        if (args.elementType && !matchesElementType(element, args.elementType)) {
+            return {
+                success: false,
+                command: 'delete',
+                message: `'${qualifiedNameToString(target)}' is not a ${args.elementType} (found ${element.className})`,
+                errors: [{
+                    code: 'TYPE_MISMATCH',
+                    message: `Resolved element is ${element.className}, expected ${args.elementType}`,
+                    suggestion: 'Check the element name or use a qualified name like Class.attribute'
+                }]
+            };
+        }
+
         // Check for dependencies if not forcing
         if (!force) {
             const dependencies = checkDependencies(element, project);
@@ -79,39 +99,36 @@ export async function executeDelete(
             }
         }
 
-        // Perform deletion
-        return new Promise((resolve) => {
-            try {
-                TRANSACTION('JjScript: Delete element', () => {
-                    const elementId = element.id || element;
-                    const elementName = element.name || qualifiedNameToString(target);
-
-                    // If cascade, delete all children first
-                    if (cascade) {
-                        deleteChildren(element);
-                    }
-
-                    // Delete the element
-                    DeleteElementAction.new(element);
-
-                    resolve({
-                        success: true,
-                        command: 'delete',
-                        message: `Deleted '${elementName}'${cascade ? ' and its children' : ''}`,
-                        data: { id: elementId, name: elementName },
-                        affectedElements: [elementId],
-                        undoable: true
-                    });
-                });
-            } catch (error) {
-                resolve({
-                    success: false,
-                    command: 'delete',
-                    message: `Failed to delete: ${(error as Error).message}`,
-                    errors: [{ code: 'DELETE_ERROR', message: (error as Error).message }]
-                });
-            }
-        });
+        // Perform deletion. Drop the editor-v2 canvas vertices for this element
+        // FIRST: Dummy.get_delete reaches vertices only via LClass.nodes — a
+        // classic-editor-only transient map that is empty for editor-v2 — so a
+        // class cascade alone leaves the DVertex dangling in graph.subElements
+        // and useJjomSync never removes the live ReactFlow node (it only clears
+        // on reopen). See deleteCanvasVerticesForModel.
+        // Then element.delete() fires the model cascade (children, father's
+        // collection, pointedBy cleanup, M1 DValues). Each .delete() wraps its
+        // own TRANSACTION — no outer wrapper (see canvasToJjom.syncRemoveAttribute).
+        try {
+            const elementId = element.id;
+            const elementName = element.name || qualifiedNameToString(target);
+            deleteCanvasVerticesForModel(elementId);
+            element.delete();
+            return {
+                success: true,
+                command: 'delete',
+                message: `Deleted '${elementName}'`,
+                data: { id: elementId, name: elementName },
+                affectedElements: [elementId],
+                undoable: true
+            };
+        } catch (error) {
+            return {
+                success: false,
+                command: 'delete',
+                message: `Failed to delete: ${(error as Error).message}`,
+                errors: [{ code: 'DELETE_ERROR', message: (error as Error).message }]
+            };
+        }
 
     } catch (error) {
         const err = error as Error;
@@ -127,6 +144,79 @@ export async function executeDelete(
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
+
+// Substring tokens matched against an L-proxy's D-layer className
+// (DAttribute, DClass, …). See CLAUDE.md §3.13: .className returns the
+// D-name, never the L-name, so substring matching — not equality — is correct.
+const TYPE_TOKENS: Record<string, string> = {
+    class: 'Class', interface: 'Class', attribute: 'Attribute',
+    reference: 'Reference', operation: 'Operation', package: 'Package',
+    enum: 'Enum', enumeration: 'Enum', literal: 'Literal', parameter: 'Parameter'
+};
+
+function matchesElementType(element: any, elementType: string): boolean {
+    const token = TYPE_TOKENS[elementType.toLowerCase()];
+    if (!token) return true; // unknown type string: do not block
+    const className = element?.className || '';
+    return className.includes(token);
+}
+
+/**
+ * Delete the editor-v2 canvas DVertices that render `modelId`, plus their
+ * connected edges, via the L-proxy .delete() cascade.
+ *
+ * Why this is needed: Dummy.get_delete reaches a class's canvas vertices only
+ * through LClass.nodes — a classic-editor-only transient map (LModelElement
+ * get_nodes, filtered by a live .html DOM ref) that is always empty for
+ * editor-v2 — and `case 'model'` in the cascade is a no-op for non-Edge
+ * dependents. So deleting a DClass never deletes its editor-v2 DVertex: the
+ * vertex id lingers in graph.subElements as a dangling pointer, and
+ * useJjomSync's incremental removal (which keys off subElements) never drops
+ * the live ReactFlow node — it only disappears on reopen.
+ *
+ * Deleting each vertex through its own .delete() fires the vertex cascade
+ * (Dummy case 'subElements'), removing its id from graph.subElements, which
+ * drives useJjomSync's live node removal. Connected edges are deleted the same
+ * way so no floating arrows remain. Each .delete() wraps its own TRANSACTION —
+ * no outer wrapper (mirrors canvasToJjom.syncDeleteVertex / syncRemoveAttribute).
+ *
+ * The reverse lookup is by `model === modelId`, so for non-vertex targets
+ * (e.g. an attribute) it finds nothing and is a no-op.
+ */
+function deleteCanvasVerticesForModel(modelId: string): void {
+    try {
+        const idlookup: any = store.getState().idlookup;
+        const vertexIds: string[] = [];
+        for (const id in idlookup) {
+            const ge = idlookup[id];
+            if (ge?.className === 'DVertex' && ge.model === modelId) vertexIds.push(id);
+        }
+
+        const deletedEdgeIds = new Set<string>();
+        for (const vertexId of vertexIds) {
+            const vertexProxy: any = LPointerTargetable.fromPointer(vertexId);
+            if (!vertexProxy) continue;
+
+            // Delete connected edges first, else they remain as floating arrows
+            // (their source/target vertex is gone) — mirrors syncDeleteVertex.
+            const graphProxy: any = vertexProxy.graph;
+            const allEdges: any[] = graphProxy?.edges ?? [];
+            for (const edge of allEdges) {
+                const startId = edge?.start?.id ?? edge?.__raw?.start;
+                const endId = edge?.end?.id ?? edge?.__raw?.end;
+                const edgeId = edge?.id ?? edge?.__raw?.id;
+                if ((startId === vertexId || endId === vertexId) && edgeId && !deletedEdgeIds.has(edgeId)) {
+                    deletedEdgeIds.add(edgeId);
+                    edge?.delete?.();
+                }
+            }
+
+            vertexProxy.delete();
+        }
+    } catch (err) {
+        console.warn('[JjScript delete] Failed to delete canvas vertices:', err);
+    }
+}
 
 function checkDependencies(element: any, project: LProject): string[] {
     const dependencies: string[] = [];
@@ -151,6 +241,8 @@ function checkDependencies(element: any, project: LProject): string[] {
     return dependencies;
 }
 
+// TODO: cleanup — superseded by element.delete() cascade (Dummy.get_delete
+// iterates lDeleted.children). Retained per CLAUDE.md §2; no longer called.
 function deleteChildren(element: any): void {
     try {
         // Delete children based on element type

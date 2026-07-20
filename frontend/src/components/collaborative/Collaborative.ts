@@ -109,7 +109,6 @@ export class Collaborative {
         if (!Collaborative.filterSender(action)) return;
         ca.fromCollaborative = true;
         if (!ca.actions) {
-            firedActionsNCA.push(ca);
             if (receivedAction.type === CreateElementAction.type && !Constructors.pending[receivedAction.value.id]) {
                 let a = receivedAction;
                 // console.log('set2 pending', {a, p:Constructors.pending[a.value.id], dict:{...Constructors.pending}});
@@ -119,7 +118,6 @@ export class Collaborative {
             fire(ca, session);
             return;
         }
-        firedActionsCA.push(ca);
         for (let a of ca.actions) if (a.type === CreateElementAction.type && !Constructors.pending[a.value.id]) {
             // console.log('set2 pending', {a, p:Constructors.pending[a.value.id], dict:{...Constructors.pending}});
             Constructors.pending[a.value.id] = a.value;
@@ -148,12 +146,5 @@ function fire(receivedAction: Action, session: number): void {
         COMMIT(receivedAction);
     }, true, 50, 0.5);
 }
-
-let firedActionsNCA: Action[] = [];
-let firedActionsCA: Action[] = [];
-let firedActions: Action[] = [];
-(window as any).firedActionsNCA = firedActionsNCA; // just for tmp debug, delete this
-(window as any).firedActionsCA = firedActionsCA; // just for tmp debug, delete this
-(window as any).firedActions = firedActions; // just for tmp debug, delete this
 
 export default Collaborative;
