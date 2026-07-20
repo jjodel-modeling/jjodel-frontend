@@ -210,3 +210,42 @@ describe('Ecore I/O — mapToEcoreType canonical guard (W2 collision fix)', () =
         expect(source).toMatch(/if\s*\(\s*isCanonical\s*&&\s*typeMap\[typeName\]\s*\)/);
     });
 });
+
+// FIX 2026-07-20 — riuso slot conformity nell'import XMI M1 (no righe attributo duplicate).
+// Come per W2, il round-trip runtime non è testabile in vitest node env (Monaco → window not
+// defined): coverage strutturale sui tre siti di popolamento + helper. Verifica funzionale
+// eseguita via preview build + Playwright (uno slot per feature, valori corretti).
+describe('XMI M1 import — riuso conformity slot (fix duplicati DValue)', () => {
+    const XMI_SERVICE = path.resolve(__dirname, '../XMIService.ts');
+    const source = fs.readFileSync(XMI_SERVICE, 'utf8');
+
+    it('helper getConformitySlot esiste e legge pendingCreation con fallback store', () => {
+        expect(source).toMatch(/private static getConformitySlot\(/);
+        expect(source).toContain('DPointerTargetable.pendingCreation');
+        expect(source).toContain('ctx.conformitySlots');
+    });
+
+    it('processAttribute riusa lo slot (values replace + clear isMirage) prima di DValue.new', () => {
+        const m = source.match(/private static processAttribute[\s\S]+?\n    \}/);
+        expect(m).not.toBeNull();
+        expect(m![0]).toMatch(/getConformitySlot\(dObject,\s*metaFeature\.id/);
+        expect(m![0]).toMatch(/SetFieldAction\.new\(conformitySlot\.id,\s*'values',\s*values as any,\s*'',\s*false\)/);
+        expect(m![0]).toMatch(/SetFieldAction\.new\(conformitySlot\.id,\s*'isMirage',\s*false/);
+    });
+
+    it('processContainment riusa lo slot come containment DValue e non pusha in values', () => {
+        const m = source.match(/private static processContainment[\s\S]+?\n    \}/);
+        expect(m).not.toBeNull();
+        expect(m![0]).toMatch(/getConformitySlot\(parentDObject,\s*containmentMeta\.id/);
+        // il push diretto post-persist duplicava ogni child pointer (CreateElementAction by
+        // reference + SetFieldAction '+=' del Constructors.DObject)
+        expect(m![0]).not.toContain('(containmentDValue.values as Pointer<DObject>[]).push');
+    });
+
+    it('populateReferenceValue riusa lo slot con append per-target (Format B multi-entry)', () => {
+        const m = source.match(/private static populateReferenceValue[\s\S]+?\n    \}/);
+        expect(m).not.toBeNull();
+        expect(m![0]).toMatch(/getConformitySlot\(sourceDObject,\s*feature\.id/);
+        expect(m![0]).toMatch(/SetFieldAction\.new\(conformitySlot\.id,\s*'values',\s*target,\s*'\+=',\s*true\)/);
+    });
+});

@@ -16,6 +16,7 @@ import {
     LReference,
     DPackage,
     LPackage,
+    DPointerTargetable,
     LPointerTargetable,
     Pointer,
     SetFieldAction,
@@ -82,6 +83,8 @@ export interface XMIImportResult {
 // • nsPrefixMap  — XML prefix → namespace URI, built once from root xmlns:* attrs and used to resolve xsi:type targets.
 // • pendingRefs  — accumulated in pass 1, drained in pass 2 by resolveReferences.
 // • knownMetamodelURIs — set of nsURIs that map to a loaded metamodel; used to classify unknown prefixes as xmi:Extension/profile.
+// • conformitySlots — per-DObject cache of the empty DValue slots minted by _forceConformity
+//   at DObject.new time (keyed by meta-feature pointer); consumed by getConformitySlot.
 type XMIImportContext = {
     dModel: DModel;
     metamodel: LModel;
@@ -89,6 +92,7 @@ type XMIImportContext = {
     nsPrefixMap: Map<string, string>;
     pendingRefs: PendingRef[];
     knownMetamodelURIs: Set<string>;
+    conformitySlots: Map<Pointer<DObject>, Map<string, DValue>>;
     summary: { dobjects: number; attrs: number; warnings: number; refsResolved: number; refsFailed: number };
     warnings: string[];
 };
@@ -608,6 +612,7 @@ export class XMIService {
                 nsPrefixMap,
                 pendingRefs: [],
                 knownMetamodelURIs,
+                conformitySlots: new Map<Pointer<DObject>, Map<string, DValue>>(),
                 summary: { dobjects: 0, attrs: 0, warnings: 0, refsResolved: 0, refsFailed: 0 },
                 warnings,
             };
@@ -728,6 +733,37 @@ export class XMIService {
         return null;
     }
 
+    // FIX 2026-07-20 (docs/discovery/discovery_2026-07-19_dvalue_duplicati_import_xmi.md):
+    // every DObject.new with `instanceoff` gets one empty DValue slot per metaclass feature,
+    // minted by LObject._forceConformity during Constructors.persist. The import must populate
+    // THOSE slots instead of creating new DValues, or each feature present in the XMI ends up
+    // with two slots (one empty, one populated) that both render and both persist in saves.
+    // Timing: during the synchronous import walk the enclosing TRANSACTION has not committed
+    // yet (END fires in a microtask), so the conformity slots are not in the store; they are
+    // found in DPointerTargetable.pendingCreation, with the committed store as fallback.
+    // The per-object feature→slot map is cached in ctx.conformitySlots.
+    private static getConformitySlot(dObject: DObject, featureId: string, ctx: XMIImportContext): DValue | null {
+        let slotsByFeature = ctx.conformitySlots.get(dObject.id);
+        if (!slotsByFeature) {
+            slotsByFeature = new Map<string, DValue>();
+            const pending = DPointerTargetable.pendingCreation;
+            for (const id in pending) {
+                const e = pending[id] as DValue;
+                if (e?.className === 'DValue' && e.father === dObject.id && e.instanceof
+                    && !slotsByFeature.has(e.instanceof)) slotsByFeature.set(e.instanceof, e);
+            }
+            const state = store.getState();
+            const storedObj = state.idlookup[dObject.id] as DObject | undefined;
+            if (storedObj?.features) for (const fid of storedObj.features) {
+                const v = state.idlookup[fid as string] as DValue | undefined;
+                if (v?.className === 'DValue' && v.instanceof
+                    && !slotsByFeature.has(v.instanceof)) slotsByFeature.set(v.instanceof, v);
+            }
+            ctx.conformitySlots.set(dObject.id, slotsByFeature);
+        }
+        return slotsByFeature.get(featureId) || null;
+    }
+
     // B.2: recursive walker. For a given DObject + its corresponding JSON node, populate
     // primitive-attribute DValues and recurse into containment children. Pattern is the
     // single-pass nested traversal (B.2 has no non-containment references → no two-pass
@@ -823,8 +859,17 @@ export class XMIService {
             values = [rawValue];
         }
 
-        const dValue: DValue = DValue.new(undefined, metaFeature.id as any, values, dObject.id, true, false);
-        (dObject.features as Pointer<DValue>[]).push(dValue.id);
+        // Reuse the conformity slot when present (see getConformitySlot). Plain replace on
+        // `values` + clearing isMirage mirrors the identity-slot population pattern in
+        // LModelElement.tsx set_name (Direction A). Fallback (no slot) keeps the B.1 behavior.
+        const conformitySlot = XMIService.getConformitySlot(dObject, metaFeature.id, ctx);
+        if (conformitySlot) {
+            SetFieldAction.new(conformitySlot.id, 'values', values as any, '', false);
+            SetFieldAction.new(conformitySlot.id, 'isMirage', false, '', false);
+        } else {
+            const dValue: DValue = DValue.new(undefined, metaFeature.id as any, values, dObject.id, true, false);
+            (dObject.features as Pointer<DValue>[]).push(dValue.id);
+        }
         ctx.summary.attrs++;
     }
 
@@ -919,9 +964,17 @@ export class XMIService {
             return;
         }
 
-        // Create the containment DValue ONCE for this feature on the parent.
-        const containmentDValue: DValue = DValue.new(undefined, containmentMeta.id as any, [], parentDObject.id, true, false);
-        (parentDObject.features as Pointer<DValue>[]).push(containmentDValue.id);
+        // Reuse the conformity slot as the containment DValue when present (see
+        // getConformitySlot); otherwise create it ONCE for this feature on the parent.
+        const conformitySlot = XMIService.getConformitySlot(parentDObject, containmentMeta.id, ctx);
+        let containmentDValue: DValue;
+        if (conformitySlot) {
+            containmentDValue = conformitySlot;
+            SetFieldAction.new(containmentDValue.id, 'isMirage', false, '', false);
+        } else {
+            containmentDValue = DValue.new(undefined, containmentMeta.id as any, [], parentDObject.id, true, false);
+            (parentDObject.features as Pointer<DValue>[]).push(containmentDValue.id);
+        }
 
         const items = Array.isArray(childVal) ? childVal : [childVal];
         for (const childItem of items) {
@@ -949,7 +1002,12 @@ export class XMIService {
             }
 
             const child: DObject = DObject.new(childClass.id, containmentDValue.id, DValue, undefined, true);
-            (containmentDValue.values as Pointer<DObject>[]).push(child.id);
+            // FIX 2026-07-20: no direct push into containmentDValue.values. Constructors.DObject
+            // already queues the SetFieldAction "values" '+=' on the father slot; since
+            // CreateElementAction carries the pending DValue BY REFERENCE and the batch commits
+            // after this synchronous walk, a direct push here gets serialized into the created
+            // element AND re-appended by the '+=' action, duplicating every child pointer
+            // (verified dynamically: pets = [c1, c2, c1, c2] pre-fix).
             (ctx.dModel.objects as Pointer<DObject>[]).push(child.id);
             ctx.summary.dobjects++;
 
@@ -1098,7 +1156,7 @@ export class XMIService {
             }
 
             if (resolved.length > 0) {
-                XMIService.populateReferenceValue(sourceDObject, feature, resolved);
+                XMIService.populateReferenceValue(sourceDObject, feature, resolved, ctx);
             }
         }
     }
@@ -1112,7 +1170,20 @@ export class XMIService {
         sourceDObject: DObject,
         feature: LReference,
         targets: Pointer<DObject>[],
+        ctx: XMIImportContext,
     ): void {
+        // Reuse the conformity slot when present (see getConformitySlot). Targets are APPENDED
+        // one by one with the proven '+=' single-value pattern (LModelElement.tsx set_name,
+        // Direction A) rather than replacing the array: XMI "Format B" references arrive as one
+        // pendingRefs entry PER nested element, so a replace would keep only the last target.
+        const conformitySlot = XMIService.getConformitySlot(sourceDObject, feature.id, ctx);
+        if (conformitySlot) {
+            for (const target of targets) {
+                SetFieldAction.new(conformitySlot.id, 'values', target, '+=', true);
+            }
+            SetFieldAction.new(conformitySlot.id, 'isMirage', false, '', false);
+            return;
+        }
         const dValue: DValue = DValue.new(undefined, feature.id as any, targets as any, sourceDObject.id, true, false);
         (sourceDObject.features as Pointer<DValue>[]).push(dValue.id);
     }
