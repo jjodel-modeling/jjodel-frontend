@@ -92,6 +92,7 @@ function UnifiedEdge(props: EdgeProps) {
     const { setEdges } = useReactFlow();
     const notation = useEditorContextSafe()?.notation ?? 'uml';
     const selectEdge = useEditorContextSafe()?.selectEdge;
+    const showEdgeLabels = useEditorContextSafe()?.showEdgeLabels ?? false;
     const isERNotation = notation === 'er';
     const isSelfLoop = source === target;
 
@@ -481,6 +482,27 @@ function UnifiedEdge(props: EdgeProps) {
         ? `inheritance-edge ${selected ? 'selected' : ''} ${hlClass}`
         : `reference-edge ${kind} ${selected ? 'selected' : ''} ${hlClass}`;
 
+    // ─── Whether the label portal needs to mount at all ───
+    // EdgeLabelRenderer registers a React Flow store subscription that runs a
+    // full-DOM querySelector on every store notification — the dominant per-commit
+    // cost at scale. Mount it only when at least one of its three children would
+    // produce visible/interactive content, so an edge with no visible label pays
+    // nothing. `hovered`/`selected`/`editing` and `showEdgeLabels` all re-render
+    // this edge, so the portal appears the moment its label becomes visible:
+    //   - M1 labels are hidden until edge hover/selection (or the global toggle),
+    //     so they mount only then;
+    //   - M2 reference labels mount when they carry text (or during rename);
+    //   - the cardinality badge and the ER-notation ISA label mount when shown.
+    const refLabelVisible = !isInheritance && (
+        editing ||
+        (isM1Edge
+            ? (hovered || selected || showEdgeLabels)
+            : (!!labelText && labelText !== 'newRef'))
+    );
+    const cardinalityVisible = showCardinality && !!cardinality;
+    const isaLabelVisible = isInheritance && isERNotation;
+    const showLabelPortal = refLabelVisible || cardinalityVisible || isaLabelVisible;
+
     return (
         <>
             <defs>
@@ -595,6 +617,7 @@ function UnifiedEdge(props: EdgeProps) {
                 />
             )}
 
+            {showLabelPortal && (
             <EdgeLabelRenderer>
                 {/* Reference label — positioned on longest segment with smart offset */}
                 {/* M1 edges: label hidden by default, shown on hover via CSS */}
@@ -653,6 +676,7 @@ function UnifiedEdge(props: EdgeProps) {
                     </div>
                 )}
             </EdgeLabelRenderer>
+            )}
         </>
     );
 }

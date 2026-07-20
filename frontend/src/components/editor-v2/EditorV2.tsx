@@ -3522,7 +3522,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         });
     }, []);
 
-    const editorContextValue = useMemo(() => ({ takeSnapshot, notation, onEdgeDataChange: handleEdgeChange, recalculateAnchors, selectChildElement, selectEdge }), [takeSnapshot, notation, handleEdgeChange, recalculateAnchors, selectChildElement, selectEdge]);
+    const editorContextValue = useMemo(() => ({ takeSnapshot, notation, onEdgeDataChange: handleEdgeChange, recalculateAnchors, selectChildElement, selectEdge, showEdgeLabels }), [takeSnapshot, notation, handleEdgeChange, recalculateAnchors, selectChildElement, selectEdge, showEdgeLabels]);
 
     // Model info for PropertiesPanel (when nothing is selected)
     const modelInfoData = useMemo(() => {

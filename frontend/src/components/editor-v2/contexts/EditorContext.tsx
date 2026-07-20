@@ -12,6 +12,8 @@ interface EditorContextValue {
     selectChildElement?: (childModelElementId: string) => void;
     /** Select a graph edge (e.g. a DReference) from a non-RF gesture, mirroring onEdgeClick. */
     selectEdge?: (edgeId: string) => void;
+    /** Whether the "Show edge labels" toggle is on (forces M1 edge labels visible without hover). */
+    showEdgeLabels?: boolean;
 }
 
 export const EditorContext = createContext<EditorContextValue | null>(null);
