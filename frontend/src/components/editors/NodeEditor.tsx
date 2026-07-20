@@ -646,48 +646,8 @@ function NodeEditorComponent(props: AllProps) {
                 </Section>
             )}
 
-            {/* Section: Edge Anchors (for edges) */}
-            {isEdge && asEdge && (
-                <Section title="EDGE ANCHORS" icon="pin-angle" defaultOpen={false}>
-                    <div className="node-editor__edge-anchors">
-                        <label className="node-editor__field-row">
-                            <span className="node-editor__field-label">Start anchor</span>
-                            <label className="node-editor__field-inputs">
-                                {asEdge.anchorStart && typeof asEdge.anchorStart === 'object' ? (
-                                    <SizeInput data={asEdge} field="anchorStart" />
-                                ) : (
-                                    <GenericInput data={asEdge} field="anchorStart" />
-                                )}
-                                <button
-                                    className="node-editor__btn-icon"
-                                    onClick={() => (asEdge.anchorStart = undefined as any)}
-                                    title="Clear anchor"
-                                >
-                                    <i className="bi bi-x-lg" />
-                                </button>
-                            </label>
-                        </label>
-
-                        <label className="node-editor__field-row">
-                            <span className="node-editor__field-label">End anchor</span>
-                            <div className="node-editor__field-inputs">
-                                {asEdge.anchorEnd && typeof asEdge.anchorEnd === 'object' ? (
-                                    <SizeInput data={asEdge} field="anchorEnd" />
-                                ) : (
-                                    <GenericInput data={asEdge} field="anchorEnd" />
-                                )}
-                                <button
-                                    className="node-editor__btn-icon"
-                                    onClick={() => (asEdge.anchorEnd = undefined as any)}
-                                    title="Clear anchor"
-                                >
-                                    <i className="bi bi-x-lg" />
-                                </button>
-                            </div>
-                        </label>
-                    </div>
-                </Section>
-            )}
+            {/* Edge Anchors section removed (de-entanglement stage 6 — anchorStart/anchorEnd are
+                classic-era DEdge fields; they stay orphaned in saved projects, no VersionFixer) */}
 
             {/* Section: Anchors (for vertices) */}
             {(isVertex || isGraph) && (
