@@ -1,0 +1,44 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  flex-wrap: wrap;
+}
+
+.control {
+  min-width: 150px;
+}
+
+.index {
+  width: 96px;
+}
+
+.preview {
+  font-family: var(--font-family-mono, 'IBM Plex Mono', Monaco, Consolas, monospace);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  background-color: var(--color-bg-secondary);
+  border: var(--input-border-width) solid var(--input-border-color);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-1) var(--spacing-2);
+  word-break: break-all;
+}
+
+.previewEmpty {
+  color: var(--color-text-tertiary);
+  font-style: italic;
+}
+
+.hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  padding: var(--spacing-2);
+  border: 1px dashed var(--color-border-primary);
+  border-radius: var(--radius-md);
+}

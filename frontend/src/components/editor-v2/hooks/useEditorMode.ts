@@ -45,6 +45,10 @@ export interface MetaclassInfo {
     name: string;
     isAbstract: boolean;
     attributes: MetaclassAttribute[];
+    /** Own + inherited attributes (folded up the extends chain), for feature-path authoring.
+     *  Optional so external MetaclassInfo literals need not supply it (rule 11);
+     *  resolveM1Info always populates it. */
+    allAttributes?: MetaclassAttribute[];
     /** All references (including composition and non-composition) */
     references: MetaclassReference[];
     /** Pre-computed: concrete (non-abstract) subclasses, recursively */
@@ -202,6 +206,20 @@ export function useEditorMode(
 }
 
 // ---------------------------------------------------------------------------
+// Non-hook accessor
+// ---------------------------------------------------------------------------
+
+/**
+ * Non-hook accessor for M1 metaclass metadata — the same pure computation as
+ * useEditorMode, without React. Pure over store.getState() + L-proxies. For
+ * consumers that need MetaclassInfo outside a component render (e.g. IR
+ * viewpoint authoring). Pass the metamodel id when known to skip re-resolution.
+ */
+export function getMetaclassInfo(modelId: string, knownMetamodelId?: string): EditorModeInfo {
+    return resolveM1Info(modelId, knownMetamodelId);
+}
+
+// ---------------------------------------------------------------------------
 // Resolution
 // ---------------------------------------------------------------------------
 
@@ -352,6 +370,22 @@ function resolveM1Info(modelId: string, knownMetamodelId?: string): EditorModeIn
                 }
             } catch { /* proxy can throw */ }
 
+            // Gather own + inherited attributes. `allAttributes` is an existing L-getter
+            // (LModelElement.get_allAttributes) that walks the inheritance chain — the twin
+            // of `allReferences` used below; fall back to own attributes if unavailable.
+            const allAttributes: MetaclassAttribute[] = [];
+            try {
+                for (const attr of ((cls as any).allAttributes ?? cls.attributes ?? [])) {
+                    allAttributes.push({
+                        id: attr.id ?? '',
+                        name: attr.name ?? 'unnamed',
+                        type: attr.type?.name ?? 'EString',
+                        lowerBound: attr.lowerBound ?? 0,
+                        upperBound: attr.upperBound ?? 1,
+                    });
+                }
+            } catch { /* proxy can throw */ }
+
             // Gather references
             const references: MetaclassReference[] = [];
             try {
@@ -385,6 +419,7 @@ function resolveM1Info(modelId: string, knownMetamodelId?: string): EditorModeIn
                 name: cls.name ?? 'Unnamed',
                 isAbstract: !!(cls.abstract || cls.interface),
                 attributes,
+                allAttributes,
                 references,
                 concreteSubclasses: [],  // filled in second pass
             };

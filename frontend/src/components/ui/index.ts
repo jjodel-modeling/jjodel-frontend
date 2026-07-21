@@ -37,6 +37,15 @@ export type { FieldProps } from './Field';
 export { NumberInput } from './NumberInput';
 export type { NumberInputProps } from './NumberInput';
 
+export { Checkbox } from './Checkbox';
+export type { CheckboxProps } from './Checkbox';
+
+export { ColorPicker } from './ColorPicker';
+export type { ColorPickerProps } from './ColorPicker';
+
+export { PathBuilder, pathExprFromSelection } from './PathBuilder';
+export type { PathBuilderProps, PathBuilderFeatures, PathSelection } from './PathBuilder';
+
 // Layout Components
 export { FormSection } from './FormSection';
 export type { FormSectionProps } from './FormSection';
