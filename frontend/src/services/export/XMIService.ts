@@ -655,7 +655,10 @@ export class XMIService {
                     const items = Array.isArray(val) ? val : [val];
                     for (const item of items) {
                         const dObject: DObject = DObject.new(metaClass.id, dModel.id, DModel, undefined, true);
-                        (dModel.objects as Pointer<DObject>[]).push(dObject.id);
+                        // FIX 2026-07-21: no direct push into dModel.objects. Constructors.DObject
+                        // (father = DModel) already queues SetFieldAction "objects" '+=' at commit;
+                        // an explicit push here duplicates every root (mirrors the child-pointer fix
+                        // in the containment branch below). Verified: dModel.objects had each root twice.
                         ctx.summary.dobjects++;
                         pending.push({ dObject, itemJson: item, metaClass });
                     }
@@ -676,7 +679,8 @@ export class XMIService {
                 }
 
                 const dObject: DObject = DObject.new(metaClass.id, dModel.id, DModel, undefined, true);
-                (dModel.objects as Pointer<DObject>[]).push(dObject.id);
+                // FIX 2026-07-21: no direct push into dModel.objects (see multi-root branch above) —
+                // Constructors.DObject already registers the root via SetFieldAction "objects" '+='.
                 ctx.summary.dobjects++;
                 pending.push({ dObject, itemJson: rootContent, metaClass });
             }
