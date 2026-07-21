@@ -1039,6 +1039,134 @@ everytime you put hands into a D-Object shape or valid values, you should docume
         return s;
     }
 
+    // 2.226 → 2.227: bonifica dei salvataggi con slot DValue duplicati dagli import XMI
+    // pre-fix 4811db8. FASE A dedup slot per (DObject, meta-feature): superstite = slot
+    // valorizzato non-mirage (Opzione A), merge dei value dei loser (reference Format B),
+    // riordino delle features SOLO sugli oggetti bonificati. FASE B dedup radici duplicate
+    // in DModel.objects (residuo prodotto anche post-fix, finché il push diretto restava in
+    // XMIService) e pointer figli duplicati nei containment. FASE C pulizia dei riferimenti
+    // pendenti agli id rimossi (instances, s.values, pointedBy, DGraphElement.model) e
+    // reparent loser→survivor. Idempotente (secondo run no-op); no-op sui progetti puliti.
+    // Logica dimostrata in __tests__/versionfixer_2227_migration.test.ts (12/12).
+    private ['2.226 -> 2.227'](s: DState): DState {
+        const idlookup: any = s.idlookup;
+        if (!idlookup || typeof idlookup !== 'object') return s;
+
+        const dedupKeepFirst = (arr: any[]): any[] => {
+            if (!Array.isArray(arr)) return arr;
+            const seen = new Set<any>();
+            const out: any[] = [];
+            for (const x of arr) { if (seen.has(x)) continue; seen.add(x); out.push(x); }
+            return out;
+        };
+        const isPointerArray = (vals: any[]): boolean =>
+            Array.isArray(vals) && vals.length > 1
+            && vals.every(v => typeof v === 'string' && idlookup[v] && idlookup[v].className === 'DObject');
+
+        const removed = new Set<string>();
+        const reparent = new Map<string, string>();
+        let dedupSlots = 0, mergedVals = 0, dupRoots = 0, dupChildPtrs = 0, reordered = 0;
+
+        // FASE A — dedup slot per (DObject, meta-feature); merge Format B; reorder touched.
+        for (const k in idlookup) {
+            const e = idlookup[k];
+            if (!e || typeof e !== 'object' || e.className !== 'DObject' || !Array.isArray(e.features)) continue;
+
+            // A1: dedup features by id (a valued slot id can appear twice — Firma 1).
+            e.features = dedupKeepFirst(e.features);
+
+            // A2: group resolvable slots by instanceof (skip undefined = schema-less).
+            const groups = new Map<string, string[]>();
+            for (const fid of e.features) {
+                const dv = idlookup[fid];
+                if (!dv || dv.className !== 'DValue') continue;
+                const inst = dv.instanceof;
+                if (typeof inst !== 'string') continue;
+                const arr = groups.get(inst) ?? [];
+                arr.push(fid);
+                groups.set(inst, arr);
+            }
+
+            let touched = false;
+            for (const [, fids] of groups) {
+                if (fids.length <= 1) continue;
+                const slots = fids.map(f => idlookup[f]).filter(Boolean);
+                const survivor = slots.find(v => v.isMirage === false && Array.isArray(v.values) && v.values.length > 0)
+                    ?? slots.find(v => v.isMirage === false)
+                    ?? slots[0];
+                for (const loser of slots) {
+                    if (loser === survivor) continue;
+                    if (Array.isArray(loser.values)) {
+                        if (!Array.isArray(survivor.values)) survivor.values = [];
+                        for (const v of loser.values) if (!survivor.values.includes(v)) { survivor.values.push(v); mergedVals++; }
+                    }
+                    reparent.set(loser.id, survivor.id);
+                    removed.add(loser.id);
+                    delete idlookup[loser.id];
+                    dedupSlots++;
+                }
+                if (survivor.isMirage && Array.isArray(survivor.values) && survivor.values.length > 0) survivor.isMirage = false;
+                touched = true;
+            }
+            if (touched) e.features = e.features.filter((f: string) => !removed.has(f));
+
+            // Opzione A + riordino: only on bonified objects, order features by the metaclass
+            // feature order (cosmetic: IR raw-order renderer; zero referential risk).
+            if (touched) {
+                const meta = e.instanceof ? idlookup[e.instanceof] : null;
+                const order: string[] | null = meta && Array.isArray(meta.features) ? meta.features : null;
+                if (order && order.length) {
+                    const rank = (fid: string): number => {
+                        const inst = idlookup[fid]?.instanceof;
+                        const i = typeof inst === 'string' ? order.indexOf(inst) : -1;
+                        return i < 0 ? Number.MAX_SAFE_INTEGER : i;
+                    };
+                    const before = e.features.join(',');
+                    e.features = [...e.features].sort((a: string, b: string) => rank(a) - rank(b));
+                    if (e.features.join(',') !== before) reordered++;
+                }
+            }
+        }
+
+        // FASE B — dedup duplicate pointers (independent of FASE A; runs on post-fix saves too).
+        for (const k in idlookup) {
+            const e = idlookup[k];
+            if (!e || typeof e !== 'object') continue;
+            if (e.className === 'DModel' && Array.isArray(e.objects)) {
+                const b = e.objects.length; e.objects = dedupKeepFirst(e.objects); dupRoots += b - e.objects.length;
+            }
+            if (e.className === 'DValue' && isPointerArray(e.values)) {
+                const b = e.values.length; e.values = dedupKeepFirst(e.values); dupChildPtrs += b - e.values.length;
+            }
+        }
+
+        // FASE C — purge references to removed ids (single pass).
+        if (removed.size > 0) {
+            if (Array.isArray((s as any).values)) (s as any).values = (s as any).values.filter((id: string) => !removed.has(id));
+            for (const k in idlookup) {
+                const e = idlookup[k];
+                if (!e || typeof e !== 'object') continue;
+                if (Array.isArray(e.instances)) e.instances = e.instances.filter((id: string) => !removed.has(id));
+                if (e.model && removed.has(e.model)) e.model = undefined;
+                if (typeof e.father === 'string' && reparent.has(e.father)) e.father = reparent.get(e.father);
+                if (Array.isArray(e.pointedBy)) {
+                    e.pointedBy = e.pointedBy.filter((p: any) => {
+                        const src = p && typeof p.source === 'string' ? p.source : '';
+                        const seg = src.split('.')[1]; // "idlookup.<id>.<field>"
+                        return !removed.has(seg);
+                    });
+                }
+            }
+        }
+
+        if (dedupSlots || dupRoots || dupChildPtrs || reordered) {
+            console.log(`[VersionFixer 2.226 -> 2.227] bonifica: ${dedupSlots} slot duplicati rimossi, `
+                + `${mergedVals} value migrati (Format B), ${dupRoots} radici dedup, `
+                + `${dupChildPtrs} pointer figli dedup, ${reordered} oggetti riordinati.`);
+        }
+        return s;
+    }
+
 }
 
 
