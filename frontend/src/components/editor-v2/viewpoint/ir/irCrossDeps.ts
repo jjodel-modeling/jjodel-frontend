@@ -28,7 +28,7 @@
  * the rendered value (decision 2026-07-20).
  */
 
-import { findFeatureRaw } from './irReadCtx';
+import { findFeatureRaw, navigateRefHop } from './irReadCtx';
 import type { CompiledCrossPath } from './irTypes';
 
 type Idlookup = Record<string, any>;
@@ -45,23 +45,17 @@ export interface CrossDepResult {
     capped: boolean;
 }
 
-/** Normalize a pointer value to an element id (draw yields strings; be defensive). */
-function toId(x: unknown): string | null {
-    if (typeof x === 'string') return x;
-    if (x && typeof x === 'object' && typeof (x as any).id === 'string') return (x as any).id;
-    return null;
-}
-
 /**
  * Walk each crossPath from `objectId` and return the DValue ids to observe.
  * Pure: reads only `idlookup`, no store, no proxy, no side effects.
  *
  * Level 0 is the observer's own slot (self) — NOT observed here, the self
  * subscription already covers it — but IS navigated. Levels >= 1 are cross-object:
- * their (currentObject, feature) pair is concretized to a fid. Navigation mirrors
- * the compiled accessor exactly: 'value' -> values[0], values[N] -> values[N];
- * a whole-array 'values' intermediate hop dead-ends (the accessor returns
- * undefined for a non-string navigation value).
+ * their (currentObject, feature) pair is concretized to a fid. Navigation goes
+ * through the shared `navigateRefHop` helper — the SAME code the compiled render
+ * accessor uses via ReadCtx.getRef — so render and reactivity cannot diverge
+ * (discovery 2026-07-21): 'value' -> values[0], values[N] -> values[N];
+ * a whole-array 'values' intermediate hop dead-ends.
  */
 export function resolveCrossDeps(
     idlookup: Idlookup,
@@ -92,10 +86,10 @@ export function resolveCrossDeps(
                     if (dv && typeof dv.id === 'string') fids.add(dv.id);
                     else unresolved.push({ objectId: cur, feature: step.feature });
                 }
-                if (!isTerminal && dv && Array.isArray(dv.values)) {
-                    if (step.take === 'value') { const t = toId(dv.values[0]); if (t) next.push(t); }
-                    else if (typeof step.take === 'number') { const t = toId(dv.values[step.take]); if (t) next.push(t); }
-                    // whole-array 'values' intermediate hop: no navigation (dead-end).
+                if (!isTerminal) {
+                    // navigate via the shared helper (same semantics as the render accessor).
+                    const t = navigateRefHop(idlookup, cur, step.feature, step.take);
+                    if (t) next.push(t);
                 }
             }
             if (isTerminal) break;

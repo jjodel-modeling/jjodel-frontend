@@ -39,10 +39,13 @@ export function makeLproxyReadCtx(idlookup: Idlookup): ReadCtx {
                 return draw.getValues(elementId, featureName);
             }
         },
-        // Identity and metaclass are structural, not value-coerced: the draw path is canonical.
+        // Identity, metaclass and reference navigation are structural, not
+        // value-coerced: the draw path is canonical (lproxy .value on a reference
+        // yields a name/proxy, not the pointer id needed to navigate).
         getName: draw.getName,
         getMetaclassName: draw.getMetaclassName,
         isKindOf: draw.isKindOf,
+        getRef: draw.getRef,
     };
 }
 

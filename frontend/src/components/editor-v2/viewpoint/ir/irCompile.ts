@@ -110,15 +110,21 @@ function compilePath(expr: PathExpr): { fn: CompiledAccessor; featureNames: stri
         for (let i = 0; i < steps.length; i++) {
             const step = steps[i];
             if (!step.feature) return undefined;
+            const isLast = i === steps.length - 1;
+            if (!isLast) {
+                // navigation hop: resolve the reference to the target element id with
+                // draw semantics on both backends (lproxy .value yields a name/proxy,
+                // not a pointer). Shared with resolveCrossDeps via ReadCtx.getRef ->
+                // navigateRefHop, so render and reactivity navigate identically.
+                const nextId = ctx.getRef(currentId, step.feature, step.take);
+                if (nextId == null) return undefined;
+                currentId = nextId;
+                continue;
+            }
+            // terminal step: read with the active backend (preserves lproxy coercion).
             if (step.take === 'values') out = ctx.getValues(currentId, step.feature);
             else if (typeof step.take === 'number') out = ctx.getValues(currentId, step.feature)[step.take];
             else out = ctx.getValue(currentId, step.feature);
-            const isLast = i === steps.length - 1;
-            if (!isLast) {
-                // navigation hop: the value must be a pointer to another element
-                if (typeof out !== 'string') return undefined;
-                currentId = out;
-            }
         }
         return out;
     };

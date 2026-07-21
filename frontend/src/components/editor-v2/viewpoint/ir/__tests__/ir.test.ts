@@ -12,7 +12,7 @@ import { describe, it, expect } from 'vitest';
 import { compileView, compileEdgeView, clearCompileCache } from '../irCompile';
 import { getIREdgeAnchorOverride, hydrateIREdgeAnchorOverrides, irEdgeLayoutFromOverride, setIREdgeAnchorOverride } from '../irEdgeInteraction';
 import { getCollapsedSet, hydrateCollapsed } from '../irCollapseState';
-import { makeDrawReadCtx, classAncestryNames } from '../irReadCtx';
+import { makeDrawReadCtx, classAncestryNames, navigateRefHop } from '../irReadCtx';
 import { getIRIndex, resolveIRView } from '../irResolveCore';
 import { defaultObjectViewIR, isMigratedDefaultView, IR_DEFAULT_OBJECT_VIEW_ID } from '../irDefaults';
 import {
@@ -156,6 +156,108 @@ describe('irCompile', () => {
             shape: { form: 'rect', labels: [{ position: 'top', source: { from: 'path', expr: '$name.value' } }] },
         }));
         expect(new Set(cv.dependencySet)).toEqual(new Set(['isInitial', 'name']));
+    });
+});
+
+/**
+ * Multi-hop cross-object navigation (spec v1.2 sez. 9). The render accessor and the
+ * cross-dep concretization both navigate non-terminal hops through navigateRefHop /
+ * ReadCtx.getRef with DRAW semantics (pointer id), so a reference hop resolves the
+ * same on both backends. Under lproxy, `.value` on a reference yields a name/proxy
+ * (not a pointer id): the discriminating tests below SIMULATE that backend by
+ * overriding getValue on a draw ctx — the real lproxy backend imports the joiner and
+ * cannot load in node unit tests (same reason the endpoint test "accepts proxy-object
+ * endpoints" simulates it). A plain draw ctx would NOT catch the bug (draw already
+ * navigates by id today), so these tests exercise the lproxy-like semantics.
+ */
+describe('IR multi-hop cross-object navigation (spec v1.2 sez. 9)', () => {
+    /** tr1 (Transition) --src--> st1 (State){ name='Idle', isInitial=true }; --many--> [st1, st2]; --none--> []. */
+    function crossWorld() {
+        const idlookup: Record<string, any> = {
+            C_State: { id: 'C_State', name: 'State', extends: [] },
+            C_Trans: { id: 'C_Trans', name: 'Transition', extends: [] },
+            A_name: { id: 'A_name', name: 'name' },
+            A_isInitial: { id: 'A_isInitial', name: 'isInitial' },
+            R_src: { id: 'R_src', name: 'src', className: 'DReference', composition: false },
+            R_many: { id: 'R_many', name: 'many', className: 'DReference', composition: false },
+            R_none: { id: 'R_none', name: 'none', className: 'DReference', composition: false },
+            st1: { id: 'st1', name: 'S1', instanceof: 'C_State', features: ['vn', 'vi'] },
+            vn: { id: 'vn', instanceof: 'A_name', values: ['Idle'] },
+            vi: { id: 'vi', instanceof: 'A_isInitial', values: [true] },
+            st2: { id: 'st2', name: 'S2', instanceof: 'C_State', features: [] },
+            tr1: { id: 'tr1', name: 'go', instanceof: 'C_Trans', features: ['v_src', 'v_many', 'v_none'] },
+            v_src: { id: 'v_src', instanceof: 'R_src', values: ['st1'] },
+            v_many: { id: 'v_many', instanceof: 'R_many', values: ['st1', 'st2'] },
+            v_none: { id: 'v_none', instanceof: 'R_none', values: [] },
+        };
+        return idlookup;
+    }
+    /** Draw ctx with getValue overridden to mimic lproxy: a reference slot's `.value`
+     *  comes back as a proxy object (with .id), NOT the pointer string. getRef stays
+     *  delegated to draw (exactly makeLproxyReadCtx's contract). */
+    function lproxyLike(idlookup: Record<string, any>) {
+        const base = makeDrawReadCtx(idlookup);
+        return {
+            ...base,
+            getValue: (elementId: string, featureName: string) => {
+                const v = base.getValue(elementId, featureName);
+                return typeof v === 'string' && idlookup[v] ? { id: v, __mockProxy: true } : v;
+            },
+        };
+    }
+
+    it('navigateRefHop resolves a reference to the target pointer id (draw semantics)', () => {
+        const idlookup = crossWorld();
+        expect(navigateRefHop(idlookup, 'tr1', 'src', 'value')).toBe('st1');
+        expect(navigateRefHop(idlookup, 'tr1', 'many', 0)).toBe('st1');
+        expect(navigateRefHop(idlookup, 'tr1', 'many', 1)).toBe('st2');
+        expect(navigateRefHop(idlookup, 'tr1', 'many', 'values')).toBeNull(); // whole-array intermediate hop dead-ends
+        expect(navigateRefHop(idlookup, 'tr1', 'none', 'value')).toBeNull();  // empty reference
+        expect(navigateRefHop(idlookup, 'tr1', 'missing', 'value')).toBeNull(); // absent feature
+    });
+    it('getRef returns the pointer id on both backends: draw AND lproxy-like (not the proxy .value)', () => {
+        const idlookup = crossWorld();
+        const draw = makeDrawReadCtx(idlookup);
+        expect(draw.getRef('tr1', 'src', 'value')).toBe('st1');
+        expect(draw.getRef('tr1', 'none', 'value')).toBeNull();
+        const lp = lproxyLike(idlookup);
+        expect(lp.getValue('tr1', 'src')).toEqual({ id: 'st1', __mockProxy: true }); // lproxy lies here...
+        expect(lp.getRef('tr1', 'src', 'value')).toBe('st1');                         // ...but getRef gives the id
+    });
+    it('renders a multi-hop label on the lproxy-like backend (was empty before the fix)', () => {
+        clearCompileCache();
+        const ctx = lproxyLike(crossWorld());
+        const cv = compileView('V_cross_lab', vertexIR({
+            shape: { form: 'rect', labels: [{ position: 'center', source: { from: 'path', expr: '$src.value.$name.value' } }] },
+        }));
+        expect(cv.labels[0].text(ctx as any, 'tr1')).toBe('Idle'); // tr1 --src--> st1, read name
+    });
+    it('evaluates a multi-hop predicate on the lproxy-like backend (F4: multi-hop predicates were undefined before)', () => {
+        clearCompileCache();
+        const ctx = lproxyLike(crossWorld());
+        const cv = compileView('V_cross_pred', vertexIR({
+            predicate: { op: 'eq', left: '$src.value.$isInitial.value', right: { kind: 'boolean', value: true } },
+        }));
+        expect(cv.predicate(ctx as any, 'tr1')).toBe(true);
+    });
+    it('a multi-hop label over an empty reference degrades to undefined, not a crash', () => {
+        clearCompileCache();
+        const ctx = lproxyLike(crossWorld());
+        const cv = compileView('V_cross_none', vertexIR({
+            shape: { form: 'rect', labels: [{ position: 'center', source: { from: 'path', expr: '$none.value.$name.value' } }] },
+        }));
+        expect(cv.labels[0].text(ctx as any, 'tr1')).toBeUndefined();
+    });
+    it('single-hop labels are unchanged (never enter the navigation branch)', () => {
+        clearCompileCache();
+        const idlookup = crossWorld();
+        const draw = makeDrawReadCtx(idlookup);
+        const ctx = lproxyLike(idlookup);
+        const cv = compileView('V_single', vertexIR({
+            shape: { form: 'rect', labels: [{ position: 'center', source: { from: 'path', expr: '$name.value' } }] },
+        }));
+        expect(cv.labels[0].text(draw, 'st1')).toBe('Idle');
+        expect(cv.labels[0].text(ctx as any, 'st1')).toBe('Idle'); // lproxy-like identical for a single-hop attribute
     });
 });
 

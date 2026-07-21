@@ -25,6 +25,10 @@ export interface ReadCtx {
     getMetaclassName(elementId: string): string | null;
     /** True if the element's metaclass is `className` or inherits from it. */
     isKindOf(elementId: string, className: string): boolean;
+    /** Resolve a reference feature to the target element id with draw semantics
+     *  (no proxy coercion), honoring `take`. Used to navigate non-terminal PathExpr
+     *  hops identically on both backends; null when the hop dead-ends. */
+    getRef(elementId: string, featureName: string, take: 'value' | 'values' | number): string | null;
 }
 
 type Idlookup = Record<string, any>;
@@ -45,6 +49,36 @@ export function findFeatureRaw(idlookup: Idlookup, elementId: string, featureNam
         if (dFeature?.name === featureName) return dValue;
     }
     return null;
+}
+
+/** Normalize a pointer slot value to an element id (draw yields strings; defensive on proxy objects). */
+function pointerToId(x: unknown): string | null {
+    if (typeof x === 'string') return x;
+    if (x && typeof x === 'object' && typeof (x as any).id === 'string') return (x as any).id;
+    return null;
+}
+
+/**
+ * Navigate one non-terminal PathExpr hop: resolve `feature` on `currentId` to the
+ * target element id with draw semantics (findFeatureRaw -> pointer value), honoring
+ * `take`. Single source of truth for hop navigation, shared by the compiled render
+ * accessor (via ReadCtx.getRef) and the cross-dep concretization (resolveCrossDeps),
+ * so render and reactivity cannot diverge (discovery 2026-07-21). Contract: 'value'
+ * -> values[0], N -> values[N]; a whole-array 'values' intermediate hop dead-ends;
+ * missing slot / non-array / empty values -> null.
+ */
+export function navigateRefHop(
+    idlookup: Idlookup,
+    currentId: string,
+    feature: string,
+    take: 'value' | 'values' | number,
+): string | null {
+    const dValue = findFeatureRaw(idlookup, currentId, feature);
+    const vals = dValue?.values;
+    if (!Array.isArray(vals)) return null;
+    if (take === 'value') return pointerToId(vals[0]);
+    if (typeof take === 'number') return pointerToId(vals[take]);
+    return null; // whole-array 'values' intermediate hop: no navigation
 }
 
 /** Ancestor walk over DClass.extends (transitive, cycle-safe). */
@@ -104,6 +138,9 @@ export function makeDrawReadCtx(idlookup: Idlookup): ReadCtx {
             const cid = metaclassIdOf(idlookup, elementId);
             if (!cid) return false;
             return classAncestryNames(idlookup, cid).includes(className);
+        },
+        getRef(elementId, featureName, take) {
+            return navigateRefHop(idlookup, elementId, featureName, take);
         },
     };
 }

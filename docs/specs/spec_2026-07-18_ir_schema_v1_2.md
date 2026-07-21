@@ -167,7 +167,7 @@ Per ogni view compilata, l'interprete deriva staticamente dai PathExpr l'insieme
 - **self**: nomi di feature letti sul primo hop → subscription sullo snapshot dell'elemento (implementato nello spike);
 - **cross-oggetto** (multi-hop): coppie (hop, feature) → subscription sugli oggetti navigati. NON implementato nello spike (limite noto); richiesto per Fase 2b/2c (i predicati dei graphVertex e gli endpoint edge navigano). L'interprete DEVE invalidare il render di un elemento quando cambia una feature nel suo dependency set, e NON DEVE re-renderizzare per feature fuori dal set.
 
-Il dependency set è derivato, mai dichiarato nello schema.
+Il dependency set è derivato, mai dichiarato nello schema. La navigazione multi-hop (sia il render sia la concretizzazione del dependency set) è draw-semantic per costruzione, via l'helper unico `navigateRefHop` / `ReadCtx.getRef`: vedi la nota in sez. 12.
 
 ## 10. Fallback espliciti (contratto dell'interprete)
 
@@ -193,6 +193,8 @@ Per la Fase 4 (migration inversa, VersionFixer):
 ## 12. Persistenza (invariata, con nota ReadCtx)
 
 Come v1.1 sez. 8 (`ir?` additivo, serializzazione generica, IR master, identità = id del DViewElement). Nota di implementazione: gli accessor compilati leggono attraverso l'interfaccia stretta `ReadCtx` con due backend intercambiabili (proxy L / D-diretto, default proxy L). Lo switch resta swappabile finché il benchmark comparativo (Fase 4) non decide; la differenza semantica (il proxy coerce/tronca a upperBound) è documentata nel modulo.
+
+**Emendamento 2026-07-21 (fix render multi-hop)**: la navigazione degli hop non-terminali di un PathExpr è draw-semantic (risolta per pointer id) su entrambi i backend, tramite l'helper unico `navigateRefHop` esposto come `ReadCtx.getRef`; solo il valore dello step terminale passa dal backend attivo (preservando la coercizione del proxy L dove presente). Il proxy L, letto con `.value` su una reference, restituisce nome/proxy e non il pointer id: senza questa risoluzione la navigazione multi-hop degradava a vuoto. Lo stesso helper alimenta la concretizzazione dei dependency set cross-oggetto (sez. 9), così render e reattività non divergono sulla semantica di navigazione.
 
 ## 13. Fuori dalla v1.2
 
