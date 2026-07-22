@@ -24,8 +24,9 @@ import {Btn, CommandBar} from '../../commandbar/CommandBar';
 import HelpButton from '../../HelpButton';
 import "./nestedView.scss";
 import {ComponentsTab} from "./data/ComponentsTab";
+import {VertexAuthoringPanel} from "../../editor-v2/viewpoint/authoring/VertexAuthoringPanel";
 
-type TabId = 'apply-to' | 'template' | 'style' | 'events' | 'options' | 'components';
+type TabId = 'apply-to' | 'template' | 'style' | 'events' | 'options' | 'components' | 'ir';
 
 interface TabDescriptor {
     id: TabId;
@@ -62,6 +63,15 @@ function ViewDataComponent(props: AllProps) {
             render: () => (
                 <Try>
                     <TemplateData viewID={view.id} readonly={readOnly} />
+                </Try>
+            ),
+        }] : []),
+        ...((view as any).ir?.kind === 'vertex' ? [{
+            id: 'ir' as TabId,
+            label: 'IR',
+            render: () => (
+                <Try>
+                    <VertexAuthoringPanel view={view} />
                 </Try>
             ),
         }] : []),
