@@ -1,0 +1,56 @@
+.node {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.kindSelect {
+  min-width: 200px;
+}
+
+/* Nested groups (and/or/not children) get a thin left rail on the 8px grid so
+   deep trees stay legible. No depth limit — user trees stay small. */
+.nested {
+  border-left: 2px solid var(--color-border-primary);
+  padding-left: var(--spacing-3);
+  margin-left: var(--spacing-1);
+}
+
+.operands {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.operand {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.operandBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.operandLabel {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+
+.operandMode {
+  max-width: 140px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  flex-wrap: wrap;
+}
+
+.control {
+  min-width: 150px;
+}

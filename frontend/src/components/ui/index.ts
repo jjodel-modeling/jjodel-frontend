@@ -49,6 +49,12 @@ export type { PathBuilderProps, PathBuilderFeatures, PathSelection } from './Pat
 export { ListEditor } from './ListEditor';
 export type { ListEditorProps } from './ListEditor';
 
+export { PredicateBuilder, PREDICATE_KIND_OPTIONS, forPredicateKind, isLiteralOperand, attributeTypeToLiteralKind } from './PredicateBuilder';
+export type { PredicateBuilderProps, PredicateKind } from './PredicateBuilder';
+
+export { ConditionalEditor, isConditionalValue } from './ConditionalEditor';
+export type { ConditionalEditorProps } from './ConditionalEditor';
+
 // Layout Components
 export { FormSection } from './FormSection';
 export type { FormSectionProps } from './FormSection';
