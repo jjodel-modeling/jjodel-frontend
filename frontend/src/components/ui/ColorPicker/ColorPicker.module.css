@@ -19,12 +19,28 @@
 .swatch {
   width: 36px;
   height: 32px;
-  padding: 2px;
+  padding: 0;
   flex-shrink: 0;
   border: var(--input-border-width) solid var(--input-border-color);
   border-radius: var(--radius-md);
   background-color: var(--color-bg-primary);
   cursor: pointer;
+}
+
+/* Fill the swatch edge-to-edge: strip the native color-well padding/border so
+   the selected color reaches the outer border (keeps border + radius intact). */
+.swatch::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.swatch::-webkit-color-swatch {
+  border: none;
+  border-radius: calc(var(--radius-md) - var(--input-border-width));
+}
+
+.swatch::-moz-color-swatch {
+  border: none;
+  border-radius: calc(var(--radius-md) - var(--input-border-width));
 }
 
 .swatch:disabled {
