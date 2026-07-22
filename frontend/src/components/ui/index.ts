@@ -46,6 +46,9 @@ export type { ColorPickerProps } from './ColorPicker';
 export { PathBuilder, pathExprFromSelection } from './PathBuilder';
 export type { PathBuilderProps, PathBuilderFeatures, PathSelection } from './PathBuilder';
 
+export { ListEditor } from './ListEditor';
+export type { ListEditorProps } from './ListEditor';
+
 // Layout Components
 export { FormSection } from './FormSection';
 export type { FormSectionProps } from './FormSection';

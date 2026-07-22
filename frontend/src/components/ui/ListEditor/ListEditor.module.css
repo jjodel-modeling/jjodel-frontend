@@ -1,0 +1,99 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.empty {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  font-style: italic;
+  padding: var(--spacing-1) 0;
+}
+
+.entry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  border: var(--input-border-width) solid var(--input-border-color);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-2);
+  background-color: var(--color-bg-secondary);
+}
+
+.entryHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-2);
+}
+
+.entryLabel {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+.iconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: var(--input-border-width) solid var(--input-border-color);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.iconBtn:hover:not(:disabled) {
+  border-color: var(--input-border-color-hover);
+  color: var(--color-text-primary);
+}
+
+.iconBtn:disabled {
+  cursor: var(--disabled-cursor);
+  opacity: var(--disabled-opacity);
+}
+
+.iconBtnDanger:hover:not(:disabled) {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.entryBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.addBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  align-self: flex-start;
+  padding: var(--spacing-1) var(--spacing-2);
+  border: 1px dashed var(--color-border-primary);
+  border-radius: var(--radius-md);
+  background-color: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.addBtn:hover {
+  border-color: var(--input-border-color-hover);
+  color: var(--color-text-primary);
+}

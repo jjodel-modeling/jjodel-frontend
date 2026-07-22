@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { LProject, type LViewElement } from '../../../../joiner';
-import { Input, Select, NumberInput, ColorPicker, ErrorText, type PathBuilderFeatures } from '../../../ui';
+import { Input, Select, NumberInput, ColorPicker, ErrorText, Button, HelpText, type PathBuilderFeatures } from '../../../ui';
 import { getMetaclassInfo } from '../../hooks/useEditorMode';
 import { validateIR } from '../ir/irValidate';
 import { defaultObjectViewIR } from '../ir/irDefaults';
-import type { VertexViewIR, TextSource, ShapeForm, LabelPosition, LabelSpec } from '../ir/irTypes';
-import { TextSourceEditor } from './TextSourceEditor';
+import type { VertexViewIR, ShapeForm } from '../ir/irTypes';
+import { LabelListEditor } from './LabelListEditor';
+import { FieldCompartmentListEditor } from './FieldCompartmentListEditor';
+import { BadgeListEditor } from './BadgeListEditor';
 
 export interface VertexAuthoringPanelProps {
     view: LViewElement;
@@ -16,19 +18,12 @@ const FORM_OPTIONS = [
     { value: 'rounded', label: 'Rounded' },
     { value: 'ellipse', label: 'Ellipse' },
 ];
-const POSITION_OPTIONS = [
-    { value: 'top', label: 'Top' },
-    { value: 'center', label: 'Center' },
-    { value: 'inside', label: 'Inside' },
-    { value: 'bottom', label: 'Bottom' },
-];
 const BORDER_STYLE_OPTIONS = [
     { value: 'solid', label: 'Solid' },
     { value: 'dashed', label: 'Dashed' },
     { value: 'dotted', label: 'Dotted' },
 ];
 
-const DEFAULT_LABEL: LabelSpec = { position: 'top', source: { from: 'intrinsic', prop: 'name' } };
 const DEFAULT_BORDER = { color: '#334155', width: 1, style: 'solid' as const };
 const COMMIT_DEBOUNCE_MS = 300;
 const FEATURES_HINT = 'imposta una metaclasse per abilitare i path sulle feature';
@@ -56,6 +51,8 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
 
     const [draft, setDraft] = useState<VertexViewIR>(seed);
     const [error, setError] = useState<string | null>(null);
+    // Basic/Advanced tab is pure local UI state — it never touches view.ir or the draft.
+    const [tab, setTab] = useState<'basic' | 'advanced'>('basic');
     const dirtyRef = useRef(false);
 
     // Reset the draft when the selected view changes (no commit on reset).
@@ -116,17 +113,13 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
     const form = shape.form;
     const fill = shape.fill;
     const labels = shape.labels ?? [];
-    const primary = labels[0] ?? DEFAULT_LABEL;
+    const badges = shape.badges ?? [];
+    const fieldCompartments = draft.fieldCompartments ?? [];
     const border = shape.border ?? DEFAULT_BORDER;
 
     // --- immutable patch helpers ---
     const patchShape = (partial: Partial<VertexViewIR['shape']>) =>
         patch({ ...draft, shape: { ...draft.shape, ...partial } });
-    const patchPrimaryLabel = (partial: Partial<LabelSpec>) => {
-        const next = [...(draft.shape.labels ?? [])];
-        next[0] = { ...(next[0] ?? DEFAULT_LABEL), ...partial };
-        patch({ ...draft, shape: { ...draft.shape, labels: next } });
-    };
     const patchBorder = (partial: Partial<NonNullable<VertexViewIR['shape']['border']>>) => {
         const base = draft.shape.border ?? DEFAULT_BORDER;
         patchShape({ border: { ...base, ...partial } });
@@ -138,54 +131,78 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
 
     return (
         <section className="properties-tab properties-panel">
-            <div className="jj-field-label" style={{ marginTop: 4 }}>IR View — shape &amp; primary label</div>
+            <div className="jj-field-label" style={{ marginTop: 4 }}>IR View authoring</div>
+
+            {/* Basic / Advanced tabs — segmented control (pure local UI state). */}
+            <div className="jj-field" style={{ display: 'flex', gap: 'var(--spacing-1)', marginBottom: 8 }}>
+                <Button variant={tab === 'basic' ? 'primary' : 'ghost'} size="sm" onClick={() => setTab('basic')}>Basic</Button>
+                <Button variant={tab === 'advanced' ? 'primary' : 'ghost'} size="sm" onClick={() => setTab('advanced')}>Advanced</Button>
+            </div>
 
             {error && <ErrorText>{error}</ErrorText>}
 
-            {/* View label (IR label field, distinct from the DViewElement name) */}
-            <div className="jj-field">
-                <label className="jj-field-label">Label</label>
-                <Input value={draft.label ?? ''} onChange={(e) => patch({ ...draft, label: e.target.value })} />
-            </div>
+            {tab === 'basic' && (
+                <>
+                    {/* View label (IR label field, distinct from the DViewElement name) */}
+                    <div className="jj-field">
+                        <label className="jj-field-label">Label</label>
+                        <Input value={draft.label ?? ''} onChange={(e) => patch({ ...draft, label: e.target.value })} />
+                    </div>
 
-            {/* Shape form */}
-            <div className="jj-field">
-                <label className="jj-field-label">Shape</label>
-                {isConditional(form)
-                    ? conditionalPlaceholder
-                    : <Select options={FORM_OPTIONS} value={form as string} onChange={(e) => patchShape({ form: e.target.value as ShapeForm })} />}
-            </div>
+                    {/* Shape form */}
+                    <div className="jj-field">
+                        <label className="jj-field-label">Shape</label>
+                        {isConditional(form)
+                            ? conditionalPlaceholder
+                            : <Select options={FORM_OPTIONS} value={form as string} onChange={(e) => patchShape({ form: e.target.value as ShapeForm })} />}
+                    </div>
 
-            {/* Fill */}
-            <div className="jj-field">
-                <label className="jj-field-label">Fill</label>
-                {isConditional(fill)
-                    ? conditionalPlaceholder
-                    : <ColorPicker value={(fill as string) ?? ''} onChange={(hex) => patchShape({ fill: hex })} />}
-            </div>
+                    {/* Fill */}
+                    <div className="jj-field">
+                        <label className="jj-field-label">Fill</label>
+                        {isConditional(fill)
+                            ? conditionalPlaceholder
+                            : <ColorPicker value={(fill as string) ?? ''} onChange={(hex) => patchShape({ fill: hex })} />}
+                    </div>
 
-            {/* Border (always scalar in the schema) */}
-            <div className="jj-field">
-                <label className="jj-field-label">Border</label>
-                <ColorPicker value={border.color} onChange={(hex) => patchBorder({ color: hex })} />
-                <NumberInput value={border.width} min={0} onChange={(w) => patchBorder({ width: w })} />
-                <Select options={BORDER_STYLE_OPTIONS} value={border.style} onChange={(e) => patchBorder({ style: e.target.value as 'solid' | 'dashed' | 'dotted' })} />
-            </div>
+                    {/* Border (always scalar in the schema) */}
+                    <div className="jj-field">
+                        <label className="jj-field-label">Border</label>
+                        <ColorPicker value={border.color} onChange={(hex) => patchBorder({ color: hex })} />
+                        <NumberInput value={border.width} min={0} onChange={(w) => patchBorder({ width: w })} />
+                        <Select options={BORDER_STYLE_OPTIONS} value={border.style} onChange={(e) => patchBorder({ style: e.target.value as 'solid' | 'dashed' | 'dotted' })} />
+                    </div>
 
-            {/* Primary label — position + source */}
-            <div className="jj-field">
-                <label className="jj-field-label">Primary label — position</label>
-                <Select options={POSITION_OPTIONS} value={primary.position} onChange={(e) => patchPrimaryLabel({ position: e.target.value as LabelPosition })} />
-            </div>
-            <div className="jj-field">
-                <label className="jj-field-label">Primary label — source</label>
-                <TextSourceEditor
-                    source={primary.source}
-                    features={features}
-                    disabledHint={FEATURES_HINT}
-                    onChange={(src: TextSource) => patchPrimaryLabel({ source: src })}
-                />
-            </div>
+                    {/* Labels — full list (includes the former primary label at index 0) */}
+                    <div className="jj-field-label" style={{ marginTop: 8 }}>Labels</div>
+                    <LabelListEditor
+                        labels={labels}
+                        features={features}
+                        featuresHint={FEATURES_HINT}
+                        onChange={(next) => patchShape({ labels: next })}
+                    />
+
+                    {/* Field compartments */}
+                    <div className="jj-field-label" style={{ marginTop: 8 }}>Field compartments</div>
+                    <FieldCompartmentListEditor
+                        compartments={fieldCompartments}
+                        onChange={(next) => patch({ ...draft, fieldCompartments: next })}
+                    />
+
+                    {/* Badges */}
+                    <div className="jj-field-label" style={{ marginTop: 8 }}>Badges</div>
+                    <BadgeListEditor
+                        badges={badges}
+                        onChange={(next) => patchShape({ badges: next })}
+                    />
+                </>
+            )}
+
+            {tab === 'advanced' && (
+                <div className="jj-field" style={{ marginTop: 8 }}>
+                    <HelpText>Il builder per le regole condizionali (when/then/else, rules) su forma, fill, badge, label e compartimenti arriva nella Fase B2b.</HelpText>
+                </div>
+            )}
         </section>
     );
 };
