@@ -4,8 +4,9 @@
  * One class `.ir-view-<viewid>` per view, injected once when the view enters
  * the active index and removed when it leaves. Dedicated <style id="ir-views-css">
  * tag; the existing injector in Dashboard.tsx (#views-css-injector-d) is not
- * touched. Conditional style parts (form, fill) are resolved per instance and
- * applied inline by IRNodeContent; only static parts live here.
+ * touched. Conditional style parts (form, fill, border) are resolved per
+ * instance and applied inline by IRNodeContent; per-view static parts would
+ * live here (none emitted today).
  */
 
 import type { NodeViewIR } from './irTypes';
@@ -29,9 +30,22 @@ const BASE_CSS = `
 .ir-node-content .ir-compartment--no-separator { border-top: none; }
 .ir-node-content .ir-compartment .ir-row { font-size: 11px; line-height: 1.4; display: flex; gap: 4px; min-width: 0; }
 .ir-node-content .ir-compartment .ir-row > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ir-shape--rect { border-radius: 0; }
-.ir-shape--rounded { border-radius: 10px; }
-.ir-shape--ellipse { border-radius: 50%; justify-content: center; }
+/* Box painting for IR nodes lives on .ir-node-content (Fase B): authored
+   border/fill are applied inline by IRNodeContent, shape radius via
+   ir-shape--<form> here. The base .mm-node box is neutralized for IR nodes only
+   (bridge below, scoped by :has(> .ir-node-content) — native nodes lack that
+   child) so a single element paints and clips. border-color: transparent (not
+   border: none) keeps the 1px geometry and avoids layout shift. The explicit
+   .selected/.drop-target neutralizers outrank EditorV2.scss (0,2,0) by
+   specificity. Box values replicate the .mm-node base with the same tokens. */
+.mm-node:has(> .ir-node-content) { background: transparent; border-color: transparent; box-shadow: none; }
+.mm-node.selected:has(> .ir-node-content),
+.mm-node.drop-target:has(> .ir-node-content) { border-color: transparent; box-shadow: none; }
+.ir-node-content { box-sizing: border-box; background: var(--node-bg); border: 1px solid var(--border-default); border-radius: 4px; box-shadow: 0 1px 3px var(--node-shadow), 0 4px 12px var(--node-shadow-deep, rgba(0, 0, 0, 0.08)); overflow: hidden; }
+.ir-node-content.ir-shape--rounded { border-radius: 10px; }
+.ir-node-content.ir-shape--ellipse { border-radius: 50%; justify-content: center; }
+.mm-node.selected > .ir-node-content { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+.mm-node.drop-target > .ir-node-content { outline: 2px solid var(--color-accent); }
 .ir-hull { border: 1.5px dashed rgba(51,65,85,0.45); border-radius: 12px; background: rgba(51,65,85,0.03); }
 .ir-hull__header { display: flex; align-items: center; justify-content: space-between; padding: 0 8px; font-size: 11px; font-weight: 600; color: #334155; }
 .ir-hull__toggle { border: none; background: transparent; cursor: pointer; font-size: 11px; color: #334155; padding: 2px 4px; line-height: 1; }
@@ -58,16 +72,13 @@ function ensureStyleTag(): HTMLStyleElement | null {
 /** view id → its <style> text node, for targeted removal */
 const viewCssNodes = new Map<string, Text>();
 
-/** Static (non-conditional) CSS derived from the view's shape spec. */
+/** Static (non-conditional) CSS derived from the view's shape spec.
+ *  Fase B: border and fill are painted inline on .ir-node-content by
+ *  IRNodeContent, so no static parts are emitted today. Kept (with
+ *  ensureViewCss / viewCssNodes) as the hook for future per-view static parts. */
 function staticCssFor(viewId: string, ir: NodeViewIR): string {
     const rules: string[] = [];
-    const border = ir.shape.border;
-    if (border) {
-        rules.push(`border: ${border.width}px ${border.style} ${border.color};`);
-    }
-    if (typeof ir.shape.fill === 'string') {
-        rules.push(`background: ${ir.shape.fill};`);
-    }
+    // No static parts today: authored border/fill are applied inline (see IRNodeContent).
     if (rules.length === 0) return '';
     return `\n.ir-view-${cssEscape(viewId)} { ${rules.join(' ')} }`;
 }

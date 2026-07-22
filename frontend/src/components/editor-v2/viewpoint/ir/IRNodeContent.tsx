@@ -97,6 +97,11 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
 
     const inlineStyle: React.CSSProperties = {};
     if (fill) inlineStyle.background = fill;
+    // Fase B: authored border painted inline on .ir-node-content (per-field
+    // fallback). When compiled.border is null the CSS box border applies —
+    // covers demo/migrated views without an authored border.
+    const b = compiled.border;
+    if (b) inlineStyle.border = `${b.width ?? 1}px ${b.style ?? 'solid'} ${b.color ?? 'var(--border-default)'}`;
 
     return (
         <div
