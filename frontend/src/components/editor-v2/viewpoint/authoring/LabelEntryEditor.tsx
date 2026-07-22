@@ -1,5 +1,5 @@
 import React from 'react';
-import { Select, Checkbox, type PathBuilderFeatures } from '../../../ui';
+import { Select, Checkbox, ConditionalEditor, type PathBuilderFeatures } from '../../../ui';
 import { TextSourceEditor } from './TextSourceEditor';
 import type { LabelSpec, LabelPosition, TextSource } from '../ir/irTypes';
 
@@ -21,23 +21,13 @@ const CHIP: React.CSSProperties = {
     borderRadius: 'var(--radius-sm)',
 };
 
-/** A value is a Conditional<T> when it is an object carrying when/rules. */
-function isConditional(x: unknown): boolean {
-    return x !== null && typeof x === 'object' && ('when' in (x as any) || 'rules' in (x as any));
-}
-
-/** Describe a Conditional<boolean> visibility as a read-only chip label, or null when absent. */
-function describeVisible(visible: LabelSpec['visible']): string | null {
-    if (visible === undefined) return null;
-    if (isConditional(visible)) return 'conditional (Advanced, phase B2b)';
-    return visible ? 'always visible' : 'never visible';
-}
-
 export interface LabelEntryEditorProps {
     label: LabelSpec;
     /** Feature descriptors for the target metaclass; null = PathBuilder disabled. */
     features: PathBuilderFeatures | null;
     featuresHint?: string;
+    /** All project class names — for the `isKind` selector in the conditional editor. */
+    classNames: string[];
     onChange: (label: LabelSpec) => void;
 }
 
@@ -53,11 +43,11 @@ export const LabelEntryEditor: React.FC<LabelEntryEditorProps> = ({
     label,
     features,
     featuresHint,
+    classNames,
     onChange,
 }) => {
     const editable = label.editable;
     const editableIsWidget = editable !== null && typeof editable === 'object';
-    const visibleChip = describeVisible(label.visible);
 
     return (
         <>
@@ -91,12 +81,18 @@ export const LabelEntryEditor: React.FC<LabelEntryEditorProps> = ({
                     />}
             </div>
 
-            {visibleChip && (
-                <div className="jj-field">
-                    <label className="jj-field-label">Visible</label>
-                    <span style={CHIP}>{visibleChip}</span>
-                </div>
-            )}
+            <div className="jj-field">
+                <label className="jj-field-label">Visible</label>
+                <ConditionalEditor
+                    value={label.visible}
+                    onChange={(next) => onChange({ ...label, visible: next })}
+                    renderValue={(v, onCh) => <Checkbox checked={v} onChange={onCh} label="visible" />}
+                    defaultValue={true}
+                    features={features}
+                    featuresHint={featuresHint}
+                    classNames={classNames}
+                />
+            </div>
         </>
     );
 };

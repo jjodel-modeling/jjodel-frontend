@@ -11,6 +11,8 @@ export interface LabelListEditorProps {
     /** Feature descriptors for the target metaclass; null = PathBuilder disabled. */
     features: PathBuilderFeatures | null;
     featuresHint?: string;
+    /** All project class names — for the `isKind` selector in conditional editors. */
+    classNames: string[];
     onChange: (labels: LabelSpec[]) => void;
 }
 
@@ -24,6 +26,7 @@ export const LabelListEditor: React.FC<LabelListEditorProps> = ({
     labels,
     features,
     featuresHint,
+    classNames,
     onChange,
 }) => {
     const replace = (index: number, label: LabelSpec) => {
@@ -58,6 +61,7 @@ export const LabelListEditor: React.FC<LabelListEditorProps> = ({
                     label={label}
                     features={features}
                     featuresHint={featuresHint}
+                    classNames={classNames}
                     onChange={(l) => replace(index, l)}
                 />
             )}

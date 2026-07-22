@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { LProject, type LViewElement } from '../../../../joiner';
-import { Input, Select, NumberInput, ColorPicker, ErrorText, Button, HelpText, type PathBuilderFeatures } from '../../../ui';
+import { Input, Select, NumberInput, ColorPicker, ErrorText, Button, HelpText, ConditionalEditor, type PathBuilderFeatures } from '../../../ui';
 import { getMetaclassInfo } from '../../hooks/useEditorMode';
 import { validateIR } from '../ir/irValidate';
 import { defaultObjectViewIR } from '../ir/irDefaults';
@@ -30,11 +30,6 @@ const FEATURES_HINT = 'imposta una metaclasse per abilitare i path sulle feature
 
 /** Lossless deep clone for plain IR objects (pure JSON: no functions/dates). */
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
-
-/** A field value is a Conditional<T> when it is an object carrying when/rules. */
-function isConditional(x: unknown): boolean {
-    return x !== null && typeof x === 'object' && ('when' in (x as any) || 'rules' in (x as any));
-}
 
 /**
  * VertexAuthoringPanel — authors the IR of a selected vertex view.
@@ -109,6 +104,22 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [JSON.stringify(draft.metaclasses)]);
 
+    // All class names across every project metamodel (deduped) — offered to the
+    // PredicateBuilder `isKind` selector inside each ConditionalEditor. Distinct
+    // from `features` (target-metaclass features only). The project class set does
+    // not change during a panel editing session, so it is computed once.
+    const classNames = useMemo<string[]>(() => {
+        const metamodels = LProject.getProject()?.metamodels ?? [];
+        const names = new Set<string>();
+        for (const mm of metamodels) {
+            let info;
+            try { info = getMetaclassInfo((mm as any).id, (mm as any).id); } catch { continue; }
+            for (const c of info.allClasses) names.add(c.name);
+        }
+        return Array.from(names);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     const shape = draft.shape;
     const form = shape.form;
     const fill = shape.fill;
@@ -124,10 +135,6 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
         const base = draft.shape.border ?? DEFAULT_BORDER;
         patchShape({ border: { ...base, ...partial } });
     };
-
-    const conditionalPlaceholder = (
-        <Input value="conditional (Advanced, next slice)" readOnly disabled />
-    );
 
     return (
         <section className="properties-tab properties-panel">
@@ -152,17 +159,29 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                     {/* Shape form */}
                     <div className="jj-field">
                         <label className="jj-field-label">Shape</label>
-                        {isConditional(form)
-                            ? conditionalPlaceholder
-                            : <Select options={FORM_OPTIONS} value={form as string} onChange={(e) => patchShape({ form: e.target.value as ShapeForm })} />}
+                        <ConditionalEditor<ShapeForm>
+                            value={form}
+                            onChange={(next) => patchShape({ form: next })}
+                            renderValue={(v, onCh) => <Select options={FORM_OPTIONS} value={v} onChange={(e) => onCh(e.target.value as ShapeForm)} />}
+                            defaultValue={'rect'}
+                            features={features}
+                            featuresHint={FEATURES_HINT}
+                            classNames={classNames}
+                        />
                     </div>
 
                     {/* Fill */}
                     <div className="jj-field">
                         <label className="jj-field-label">Fill</label>
-                        {isConditional(fill)
-                            ? conditionalPlaceholder
-                            : <ColorPicker value={(fill as string) ?? ''} onChange={(hex) => patchShape({ fill: hex })} />}
+                        <ConditionalEditor
+                            value={fill}
+                            onChange={(next) => patchShape({ fill: next })}
+                            renderValue={(v, onCh) => <ColorPicker value={v} onChange={onCh} />}
+                            defaultValue={''}
+                            features={features}
+                            featuresHint={FEATURES_HINT}
+                            classNames={classNames}
+                        />
                     </div>
 
                     {/* Border (always scalar in the schema) */}
@@ -179,6 +198,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                         labels={labels}
                         features={features}
                         featuresHint={FEATURES_HINT}
+                        classNames={classNames}
                         onChange={(next) => patchShape({ labels: next })}
                     />
 
@@ -186,6 +206,9 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                     <div className="jj-field-label" style={{ marginTop: 8 }}>Field compartments</div>
                     <FieldCompartmentListEditor
                         compartments={fieldCompartments}
+                        features={features}
+                        featuresHint={FEATURES_HINT}
+                        classNames={classNames}
                         onChange={(next) => patch({ ...draft, fieldCompartments: next })}
                     />
 
@@ -193,6 +216,9 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                     <div className="jj-field-label" style={{ marginTop: 8 }}>Badges</div>
                     <BadgeListEditor
                         badges={badges}
+                        features={features}
+                        featuresHint={FEATURES_HINT}
+                        classNames={classNames}
                         onChange={(next) => patchShape({ badges: next })}
                     />
                 </>
@@ -200,7 +226,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
 
             {tab === 'advanced' && (
                 <div className="jj-field" style={{ marginTop: 8 }}>
-                    <HelpText>Il builder per le regole condizionali (when/then/else, rules) su forma, fill, badge, label e compartimenti arriva nella Fase B2b.</HelpText>
+                    <HelpText>Le regole multiple (rules, più branch when/then in sequenza con default) e altre funzionalità avanzate non ancora supportate arriveranno qui in futuro. I campi condizionali singoli (when/then/else) si editano ora direttamente in Basic, accanto a ciascun campo.</HelpText>
                 </div>
             )}
         </section>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ListEditor, Input, Select, Checkbox } from '../../../ui';
+import { ListEditor, Input, Select, Checkbox, ConditionalEditor, type PathBuilderFeatures } from '../../../ui';
 import { FieldSegmentEditor } from './FieldSegmentEditor';
 import type { FieldCompartmentSpec, FieldSegment } from '../ir/irTypes';
 
@@ -7,27 +7,6 @@ const SOURCE_OPTIONS = [
     { value: 'attributes', label: 'Attributes' },
     { value: 'references', label: 'References' },
 ];
-
-/** Read-only chip for values not editable in Basic (preserved verbatim). */
-const CHIP: React.CSSProperties = {
-    display: 'inline-block',
-    fontSize: 'var(--font-size-sm)',
-    color: 'var(--color-text-tertiary)',
-    fontStyle: 'italic',
-    padding: '2px 6px',
-    border: '1px dashed var(--color-border-primary)',
-    borderRadius: 'var(--radius-sm)',
-};
-
-function isConditional(x: unknown): boolean {
-    return x !== null && typeof x === 'object' && ('when' in (x as any) || 'rules' in (x as any));
-}
-
-function describeVisible(visible: FieldCompartmentSpec['visible']): string | null {
-    if (visible === undefined) return null;
-    if (isConditional(visible)) return 'conditional (Advanced, phase B2b)';
-    return visible ? 'always visible' : 'never visible';
-}
 
 /** New compartment default (prompt B2a): attributes source with a single name segment. */
 const newCompartment = (): FieldCompartmentSpec => ({
@@ -40,6 +19,11 @@ const newSegment = (): FieldSegment => ({ kind: 'literal', text: '' });
 
 export interface FieldCompartmentListEditorProps {
     compartments: FieldCompartmentSpec[];
+    /** Feature descriptors for the target metaclass; null = PathBuilder disabled. */
+    features: PathBuilderFeatures | null;
+    featuresHint?: string;
+    /** All project class names — for the `isKind` selector in the conditional editor. */
+    classNames: string[];
     onChange: (compartments: FieldCompartmentSpec[]) => void;
 }
 
@@ -53,6 +37,9 @@ export interface FieldCompartmentListEditorProps {
  */
 export const FieldCompartmentListEditor: React.FC<FieldCompartmentListEditorProps> = ({
     compartments,
+    features,
+    featuresHint,
+    classNames,
     onChange,
 }) => {
     const replace = (index: number, comp: FieldCompartmentSpec) => {
@@ -86,7 +73,6 @@ export const FieldCompartmentListEditor: React.FC<FieldCompartmentListEditorProp
                 const segments = comp.rowFormat.segments;
                 const setSegments = (segs: FieldSegment[]) =>
                     replace(index, { ...comp, rowFormat: { ...comp.rowFormat, segments: segs } });
-                const visibleChip = describeVisible(comp.visible);
 
                 const removeSegment = (si: number) => {
                     const n = [...segments];
@@ -147,12 +133,18 @@ export const FieldCompartmentListEditor: React.FC<FieldCompartmentListEditorProp
                             />
                         </div>
 
-                        {visibleChip && (
-                            <div className="jj-field">
-                                <label className="jj-field-label">Visible</label>
-                                <span style={CHIP}>{visibleChip}</span>
-                            </div>
-                        )}
+                        <div className="jj-field">
+                            <label className="jj-field-label">Visible</label>
+                            <ConditionalEditor
+                                value={comp.visible}
+                                onChange={(next) => replace(index, { ...comp, visible: next })}
+                                renderValue={(v, onCh) => <Checkbox checked={v} onChange={onCh} label="visible" />}
+                                defaultValue={true}
+                                features={features}
+                                featuresHint={featuresHint}
+                                classNames={classNames}
+                            />
+                        </div>
                     </>
                 );
             }}
