@@ -147,6 +147,85 @@ Far ri-eseguire il memo quando cambia il **set di feature** della classe target,
 
 ---
 
-## 6. Conclusione
+## 6. Conclusione (parziale — vedi §7, superata in parte)
 
-Fonte della lista: **un unico `useMemo` in `VertexAuthoringPanel.tsx:84-106`** con dependency `[JSON.stringify(draft.metaclasses)]`. La lista è **runtime e live nella fonte** (`getMetaclassInfo`, no cache) ma **congelata dalla dep insufficiente**: si aggiorna solo al variare del nome classe o al remount, mai all'aggiunta di feature alla classe. Il `.ir` non c'entra con l'enumerazione (contiene solo nomi classe). L'ereditarietà è corretta. È un **bug puro**, fuori critical-zone; fix minimo = rendere la dep sensibile alla feature-signature della classe target, in un solo file. **Hard stop: nessuna Fase 2 senza go-ahead.**
+Fonte della lista: **un unico `useMemo` in `VertexAuthoringPanel.tsx:84-106`** con dependency `[JSON.stringify(draft.metaclasses)]`. La lista è **runtime e live nella fonte** (`getMetaclassInfo`, no cache) ma **congelata dalla dep insufficiente**. Il `.ir` non c'entra con l'enumerazione (contiene solo nomi classe). L'ereditarietà è corretta.
+
+> **Nota**: questa conclusione prevedeva che un **remount** (cambio tab / riselezione view) ripopolasse il picker. La Domanda aperta A è stata verificata da Alfonso ed è risultata **FALSA**: il picker **non** si ripopola nemmeno dopo remount. Il memo è quindi solo un amplificatore secondario, **non la radice**. Vedi §7.
+
+---
+
+## 7. Aggiornamento — il remount NON ripopola: la radice è a monte del memo
+
+**Osservazione di Alfonso (2026-07-23)**: dopo aver aggiunto le feature alla classe, cambiando tab o riselezionando la view il picker **resta stale**. Questo falsifica la previsione di §3.3/Domanda A.
+
+### 7.1 Cosa esclude (verificato in codice)
+
+Il `useMemo` di `VertexAuthoringPanel` **non è la radice**, perché un remount lo fa ripartire e ci ho verificato che la sua fonte è viva ad ogni chiamata:
+
+- **Nessuna cache di proxy.** `LPointerTargetable.wrap` (`classes.ts:255-277`) crea **un nuovo `Proxy` ad ogni chiamata** su `data = DPointerTargetable.from(id, state)`, cioè una lettura **live** di `idlookup[id]` (`classes.ts:260`, `1496`). Non esiste un registry di proxy che restituisca un target congelato.
+- **Nessuna memoizzazione del getter.** L'handler `get` del proxy (`proxy.ts:399-410`) invoca `get_<prop>(logicContext)` **ad ogni accesso**, senza cache del risultato.
+- **`context.data` è l'`idlookup[id]` letto al wrap.** `LogicContext.data = data` (`proxy.ts:55`); `get_ownAttributes` legge `context.data.attributes` (`LModelElement.tsx:2941`), l'array di puntatori di containment della classe.
+
+Conseguenza logica: se un `getMetaclassInfo` fresco (post-remount) restituisce ancora solo `name`+`isInitial`, allora **lo stato del store che quel percorso legge contiene davvero solo `name`+`isInitial`**, oppure **il percorso risolve una classe diversa** da quella che Alfonso ha editato. Il bug è nei **dati/risoluzione del D-layer**, non in React.
+
+### 7.2 Ipotesi superstiti (discriminabili solo a runtime — §5.1)
+
+1. **H-metamodel/classe-fantasma.** Il memo (`VertexAuthoringPanel.tsx:88-104`) itera **tutti** i `LProject.getProject().metamodels` e restituisce le feature del **primo** metamodello che contiene una classe di nome `targetName` (`find(c => c.name === targetName)`). Se il progetto ha più metamodelli, un metamodello duplicato/stantìo, o due `DClass` con `name === 'State'` in `idlookup`, il picker può risolvere una `State` **diversa** (frozen a name+isInitial) da quella che le istanze usano (`instanceof`). Sopravvive al remount perché il duplicato persiste in `idlookup`. Coerente con: istanze corrette (legate alla `State` reale), taglio temporale netto (il duplicato fu forkato quando esistevano solo quelle 2 feature).
+
+2. **H-forward-collection.** `get_ownAttributes` legge la **forward-collection** `class.attributes` (`context.data.attributes`). Per §3.6, le forward-collection possono divergere dai back-link `father`. Se il percorso con cui Alfonso aggiunge le feature scrive il back-link (`attr.father = classId`) ma **non** fa `class.attributes += attr` (o lo scrive su una `State` diversa), la forward-collection resta senza le nuove feature → `getMetaclassInfo` le perde, mentre editor M2 e istanze (che leggono per back-link/slot per-istanza) le mostrano. **Da verificare**: se anche il pannello proprietà della **classe** M2 (non delle istanze) elenca correttamente le nuove feature, allora la forward-collection è sana e H-forward-collection cade → resta H-fantasma.
+
+3. **H-troncamento silenzioso.** `getMetaclassInfo` costruisce `allAttributes` in un `try/catch` che **inghiotte** l'errore (`useEditorMode.ts:377-387`, `361-371`). Se `cls.allAttributes` lancia a metà iterazione, `allAttributes` resta **troncato** alle feature precedenti al punto di rottura. `LAttribute.fromArr(...).filter(!!c)` scarta anche i puntatori **dangling** senza lanciare: puntatori a `DAttribute` non ancora in `idlookup` sparirebbero silenziosamente → lista parziale. Di solito transitorio; permanente solo se i puntatori restano dangling.
+
+### 7.3 Diagnostica per Alfonso (console — `windoww.store`, §3.11)
+
+Da incollare nella console DevTools con il progetto aperto e la classe già editata (feature aggiunte). Discriminano le tre ipotesi:
+
+```js
+const s = windoww.store.getState().idlookup;
+
+// (1) Quante DClass 'State' esistono? (H-fantasma se > 1)
+const states = Object.values(s).filter(e => e && e.className === 'DClass' && e.name === 'State');
+console.log('n. classi State:', states.length,
+  states.map(c => ({ id: c.id, attrsPtr: c.attributes, father: c.father })));
+
+// (2) Per ogni State, la forward-collection risolta a nomi (H-forward-collection)
+states.forEach(c => console.log(c.id, '→',
+  (c.attributes || []).map(p => s[p]?.name ?? '‹dangling '+p+'›')));
+
+// (3) A quale/i classId puntano le istanze? (confronta con (1))
+const instClassIds = [...new Set(Object.values(s)
+  .filter(e => e && e.className === 'DObject' && s[e.instanceof]?.name === 'State')
+  .map(e => e.instanceof))];
+console.log('instanceof usati dalle istanze:', instClassIds);
+
+// (4) Cosa vede il getter del picker (se LPointerTargetable è in scope)
+try { states.forEach(c =>
+  console.log('allAttributes L:', c.id, LPointerTargetable.fromPointer(c.id).allAttributes.map(a => a.name))
+); } catch (e) { console.log('LPointerTargetable non in scope:', e.message); }
+
+// (5) Quanti metamodelli nel progetto (H-fantasma variante multi-mm)
+try { console.log('metamodels:', LProject.getProject().metamodels.map(m => m.id)); } catch(e){}
+```
+
+**Lettura**:
+- `(1) > 1` **oppure** `(3)` contiene un id assente da `(1)` (o `(1)` ne ha uno in più) → **H-fantasma**: il picker risolve per nome una `State` diversa da quella delle istanze. Fix: risolvere la metaclasse per **id** (dalla vista/`appliableToClasses`), non per nome, e/o deduplicare.
+- `(1) == 1` ma in `(2)` mancano `isFinal`/`attr_0`/`attr_1` → **H-forward-collection**: la forward `class.attributes` non contiene le nuove feature. Fix a monte nel percorso di aggiunta feature (fuori dal picker).
+- `(1) == 1`, `(2)` completo, ma `(4)` parziale → **H-troncamento** nel `try/catch` di `getMetaclassInfo`.
+- `(2)` mostra `‹dangling›` per le nuove feature → puntatori non risolti (variante di H-troncamento/persistenza).
+
+### 7.4 Impatto sulle 5 risposte
+
+- **Domanda 1** invariata (legge M2 live, non il `.ir`).
+- **Domanda 2**: la lista è runtime, ma **non basta** invalidare la dep del memo: la fonte stessa (`getMetaclassInfo`) restituisce stale post-remount. Il fix del memo è **necessario ma non sufficiente**.
+- **Domanda 5 (fix)**: rivista. Il fix del solo `VertexAuthoringPanel.tsx` (dep del memo) **non chiude il bug** se la radice è H-fantasma o H-forward-collection. Prima di stimare il fix va eseguita la diagnostica §7.3. In particolare, se H-fantasma: passare al memo il **pointer della metaclasse** (già disponibile in `appliableToClasses`, cfr. `EnableIRPanel.resolveMetaclassNames`) e risolvere per **id** invece che per **nome** — questo tocca `VertexAuthoringPanel.tsx` e potenzialmente il modo in cui `draft.metaclasses` è tipizzato (oggi `string[]` di **nomi**, `irTypes.ts:96`), quindi possibile impatto su schema IR / resolver (`irResolve.ts`) → **da valutare, non banale**.
+
+### 7.5 Prossimo passo
+
+**Hard stop confermato.** Serve l'output della diagnostica §7.3 di Alfonso per scegliere fra H-fantasma / H-forward-collection / H-troncamento **sul codice attuale** (§5.1: riprodurre lo stato cattivo, non fidarsi di ipotesi). Solo dopo si definisce il fix minimo e i file toccati (che potrebbero includere il D-layer o il resolver IR, quindi possibile Layer Impact Report in Fase 2).
+
+---
+
+## 8. Conclusione aggiornata
+
+Il picker legge le feature **live** dalla classe M2 (`getMetaclassInfo`, nessuna cache di proxy né di getter), non dal `.ir`. Il `useMemo` di `VertexAuthoringPanel.tsx:84-106` con dep `[JSON.stringify(draft.metaclasses)]` **congela** la lista entro la sessione montata ed è un difetto reale, **ma non la radice**: Alfonso ha verificato che il remount **non** ripopola, quindi `getMetaclassInfo` restituisce stale anche su lettura fresca. La radice è a monte, nei **dati/risoluzione del D-layer**: la classe risolta per **nome** potrebbe essere un **duplicato/fantasma** diverso da quella delle istanze (H-fantasma, la più probabile), oppure la forward-collection `class.attributes` è priva delle nuove feature (H-forward-collection), oppure un `try/catch` tronca la lista (H-troncamento). Discriminazione solo a runtime via §7.3. **Bug puro** in ogni caso; il fix del solo memo è insufficiente. **Hard stop: nessuna Fase 2 senza go-ahead e senza l'output della diagnostica.**
