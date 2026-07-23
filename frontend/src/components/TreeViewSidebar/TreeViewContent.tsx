@@ -559,6 +559,7 @@ interface EntityRowProps {
     extraIcon?: 'bezier2' | 'stack' | null;
     selected?: boolean;
     onClick?: (e: React.MouseEvent) => void;
+    onDoubleClick?: (e: React.MouseEvent) => void;
     onContextMenu?: (e: React.MouseEvent) => void;
     depth: number;
     dataElementId?: string;
@@ -575,7 +576,7 @@ const EntityRow = memo(function EntityRow(props: EntityRowProps): ReactElement {
     const {
         badge, badgeClassName, name, nameClassName, pillText, expandKey, isLeaf,
         expanded, onToggle, extraIcon, selected,
-        onClick, onContextMenu, depth, dataElementId, highlightAction, isHighlighted, showNewBadge,
+        onClick, onDoubleClick, onContextMenu, depth, dataElementId, highlightAction, isHighlighted, showNewBadge,
         actions, nameOverride, activeIndicator, highlightQuery,
     } = props;
 
@@ -623,7 +624,7 @@ const EntityRow = memo(function EntityRow(props: EntityRowProps): ReactElement {
                 <span className="tree-node__toggle is-leaf" aria-hidden />
             )}
 
-            <div className="tree-row__content" onClick={onClick}>
+            <div className="tree-row__content" onClick={onClick} onDoubleClick={onDoubleClick}>
                 <span className={`tree-node__icon ${badgeClassName || ''}`}>{badge}</span>
                 {nameOverride !== undefined ? nameOverride : (
                     <span className={`tree-row__name ${nameClassName || ''}`.trim()}>{renderHighlightedName(name || 'unnamed', highlightQuery)}</span>
@@ -1165,6 +1166,20 @@ const SubViewItem = memo(function SubViewItem({
         onSelect?.();
     }, [view.id, onSelect]);
 
+    // Double click on a view row auto-pins the Properties panel on it (2026-07-23).
+    // The triple is built explicitly from view.id: Action.fire dispatches through
+    // setTimeout(0), so the store still holds the PREVIOUS selection at this point and
+    // reading _lastSelected here would pin the wrong element.
+    // Guarded on isRenaming: the inline rename input lives inside .tree-row__content, so a
+    // double click to select a word while renaming would otherwise pin the view.
+    const handleDoubleClick = useCallback((e: React.MouseEvent) => {
+        if (isRenaming) return;
+        e.stopPropagation();
+        window.dispatchEvent(new CustomEvent(JjodelEvents.PROPERTIES_PIN_VIEW, {
+            detail: { selected: { node: '', view: view.id, modelElement: '' } },
+        }));
+    }, [view.id, isRenaming]);
+
     const handleDuplicate = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
         // LViewElement.duplicate(deep: boolean = true): wraps in TRANSACTION,
@@ -1220,6 +1235,7 @@ const SubViewItem = memo(function SubViewItem({
                 expanded={expanded}
                 onToggle={() => onToggleFn(view.id)}
                 onClick={handleClick}
+                onDoubleClick={handleDoubleClick}
                 depth={depth}
                 dataElementId={view.id}
                 actions={actions}

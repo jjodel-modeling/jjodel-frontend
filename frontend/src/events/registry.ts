@@ -33,6 +33,7 @@ export const JjodelEvents = {
   OPEN_POLYMETRIC: 'jjodel:open-polymetric',
   OPEN_MEGAMODEL: 'jjodel:openMegamodel',
   MEGAMODEL_OPEN_ARTIFACT: 'jjodel:megamodel:open-artifact',
+  PROPERTIES_PIN_VIEW: 'jjodel:properties-pin-view',
   // Project
   NEW_PROJECT: 'jjodel:new-project',
   OPEN_TRANSFORMATION: 'jjodel:openTransformation',

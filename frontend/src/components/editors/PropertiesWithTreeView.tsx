@@ -279,6 +279,30 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
         };
     }, [mode, showPropertiesPanel, showTreePanel, propsWidth, width]);
 
+    // Double click on a view row in the tree pins the panel on it (2026-07-23). Toggle
+    // semantics, mirroring the pin button: double clicking the view that is ALREADY pinned
+    // unpins it; a different view re-targets the pin.
+    // The triple travels in the event detail — never read from the store here, the tree's
+    // own selection dispatch is async (Action.fire → setTimeout 0) and would be stale.
+    // Reuses setPinnedSelected as-is, so pinnedResolvable / auto-unpin keep applying.
+    useEffect(() => {
+        const handlePinView = (e: Event) => {
+            const selected = (e as CustomEvent).detail?.selected;
+            if (!selected) return;
+            if (pinnedSelected && pinnedSelected.view === selected.view) {
+                setPinnedSelected(null);   // same view again → release the pin, follow live again
+                return;
+            }
+            setPinnedSelected(selected);
+            // A pin nobody can see is useless: bring the panel back from its collapsed rail.
+            setIsPropertiesVisible(true);
+        };
+        window.addEventListener(JjodelEvents.PROPERTIES_PIN_VIEW, handlePinView);
+        return () => {
+            window.removeEventListener(JjodelEvents.PROPERTIES_PIN_VIEW, handlePinView);
+        };
+    }, [pinnedSelected]);
+
     // Listen for external toggle events (e.g., from keyboard shortcut)
     useEffect(() => {
         const handleExternalToggle = () => {
