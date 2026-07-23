@@ -1,12 +1,6 @@
 import "./require-polyfill";
 import "./jquery-global";
 
-// THROWAWAY (Phase 2a): boot-anchor for the dev probe so window.__seedIRViewProbe
-// registers reliably at startup, instead of depending on the deep barrel re-export
-// chain (joiner -> ExecuteOnRead -> components -> IRView -> side-effect import).
-// Dev-only gate lives inside __irviewProbe.ts. Remove this line with the probe.
-import "./ai/viewpointIR/__irviewProbe";
-
 import React from 'react';
 import ReactDOM from 'react-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';

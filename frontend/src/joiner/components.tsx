@@ -13,7 +13,6 @@ import { Control } from "../components/forEndUser/Control";
 // DerivedReferenceEdge removed (de-entanglement stage 6 — died with the DV templates;
 // its <DerivedReferenceEdge> occurrences in DV.tsx are string-level jsxString sources, never eval'd)
 export {GenericInput} from "../components/forEndUser/GenericInput"
-export {IRView} from "../ai/viewpointIR/IRView";
 // other exports
 //export {DockLayoutComponent} from "../components/abstract/DockLayoutComponent";
 
