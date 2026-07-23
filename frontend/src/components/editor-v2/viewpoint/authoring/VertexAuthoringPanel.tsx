@@ -8,6 +8,7 @@ import type { VertexViewIR, ShapeForm } from '../ir/irTypes';
 import { LabelListEditor } from './LabelListEditor';
 import { FieldCompartmentListEditor } from './FieldCompartmentListEditor';
 import { BadgeListEditor } from './BadgeListEditor';
+import { MatchingSection } from './MatchingSection';
 
 export interface VertexAuthoringPanelProps {
     view: LViewElement;
@@ -225,9 +226,18 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
             )}
 
             {tab === 'advanced' && (
-                <div className="jj-field" style={{ marginTop: 8 }}>
-                    <HelpText>Le regole multiple (rules, più branch when/then in sequenza con default) e altre funzionalità avanzate non ancora supportate arriveranno qui in futuro. I campi condizionali singoli (when/then/else) si editano ora direttamente in Basic, accanto a ciascun campo.</HelpText>
-                </div>
+                <>
+                    <MatchingSection
+                        draft={draft}
+                        patch={patch}
+                        features={features}
+                        featuresHint={FEATURES_HINT}
+                        classNames={classNames}
+                    />
+                    <div className="jj-field" style={{ marginTop: 8 }}>
+                        <HelpText>Le regole multiple (rules, più branch when/then in sequenza con default) e altre funzionalità avanzate non ancora supportate arriveranno qui in futuro. I campi condizionali singoli (when/then/else) si editano ora direttamente in Basic, accanto a ciascun campo.</HelpText>
+                    </div>
+                </>
             )}
         </section>
     );
