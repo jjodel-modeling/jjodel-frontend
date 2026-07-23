@@ -34,6 +34,7 @@ import { isMigratedDefaultView } from '../viewpoint/ir/irDefaults';
 import IRNodeContent from '../viewpoint/ir/IRNodeContent';
 import { containmentChildren } from '../viewpoint/ir/irContainment';
 import { isCollapsed, toggleCollapsed, useCollapseVersion } from '../viewpoint/ir/irCollapseState';
+import { isNodeResizable } from './nodeSizing';
 import '../viewpoint/ir/irDemoFixture'; // dev-only: registers window.__jjodelInstallIRDemo
 
 export type ObjectNodeType = Node<ObjectNodeData, 'objectNode'>;
@@ -371,13 +372,15 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                 className={`mm-node mm-object ${selected ? 'selected' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass} ir-view-${irResolution.compiled.viewId}`}
                 data-viewid={irResolution.compiled.viewId}
             >
-                <NodeResizer
-                    isVisible={selected}
-                    minWidth={140}
-                    minHeight={40}
-                    lineClassName="node-resize-line"
-                    handleClassName="node-resize-handle"
-                />
+                {isNodeResizable('objectNode') && (
+                    <NodeResizer
+                        isVisible={selected}
+                        minWidth={140}
+                        minHeight={40}
+                        lineClassName="node-resize-line"
+                        handleClassName="node-resize-handle"
+                    />
+                )}
                 <DynamicHandles nodeId={id} />
                 {isSingleton && (
                     <span className="singleton-badge">
@@ -419,13 +422,15 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
 
     return (
         <div className={`mm-node mm-object ${selected ? 'selected' : ''} ${isOrphan ? 'mm-object--orphan' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass}`}>
-            <NodeResizer
-                isVisible={selected}
-                minWidth={140}
-                minHeight={40}
-                lineClassName="node-resize-line"
-                handleClassName="node-resize-handle"
-            />
+            {isNodeResizable('objectNode') && (
+                <NodeResizer
+                    isVisible={selected}
+                    minWidth={140}
+                    minHeight={40}
+                    lineClassName="node-resize-line"
+                    handleClassName="node-resize-handle"
+                />
+            )}
 
             <DynamicHandles nodeId={id} />
 
