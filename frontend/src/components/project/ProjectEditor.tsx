@@ -37,7 +37,8 @@ import { execute as executeTransformation, ExecutionResult } from '../../jjtl/ex
 import { convertMetamodelToJjtl, findMetamodelById } from '../../jjtl/utils/metamodelConverter';
 import { EnvGenWizardModal, EnvGenPersistence } from '../envgen';
 import type { EnvGenConfigSummary } from '../envgen';
-import { loadMegamodel, getSerializedMegamodel } from '../../model/megamodelPersistence';
+import { loadMegamodel, getSerializedMegamodel, buildMegamodelExportJson } from '../../model/megamodelPersistence';
+import type { ProjectArtifacts } from '../../model/megamodelInference';
 import { setRuntimeMegamodel, clearRuntimeMegamodel, getRuntimeMegamodel } from '../../model/megamodelRuntime';
 import MegamodelView, { type ArtifactStats } from '../megamodel/MegamodelView';
 import { Badge } from '../common/Badge';
@@ -66,6 +67,49 @@ const getEngineVersion = (): string => {
     const state = store.getState();
     return `v${state.version?.n || '2.0'}`;
 };
+
+/**
+ * Convert the project's L-proxy artifacts into the POJO inventory consumed by
+ * megamodel inference and the megamodel JSON export. Cross-metamodel "uses"
+ * detection: a class references or extends a class living in another metamodel
+ * (same detection as the editor's ghostTargets / ghostParents overlays).
+ * Shared by the runtime-megamodel useEffect and handleExportMegamodelJSON so
+ * both see an identical inventory.
+ */
+const buildProjectArtifacts = (
+    metamodels: LModel[],
+    models: LModel[],
+    transformations: JjtlTransformation[],
+): ProjectArtifacts => ({
+    metamodels: metamodels.map(mm => {
+        const usesMetamodelIds = new Set<string>();
+        try {
+            for (const cls of ((mm.classes || []) as any[])) {
+                for (const ref of (cls.references || [])) {
+                    const t = ref?.type;
+                    if (t?.model && t.model.id !== mm.id) usesMetamodelIds.add(t.model.id);
+                }
+                for (const sup of (cls.extends || [])) {
+                    if (sup?.model && sup.model.id !== mm.id) usesMetamodelIds.add(sup.model.id);
+                }
+            }
+        } catch { /* L-proxy access can throw on stale data */ }
+        return { id: mm.id, name: mm.name || '', usesMetamodelIds: [...usesMetamodelIds] };
+    }),
+    models: models.map(m => {
+        const rawInstanceof = (m.__raw as any)['instanceof'];
+        const instanceofMetamodelId = typeof rawInstanceof === 'string' ? rawInstanceof : undefined;
+        const rawState = (m.__raw as any)['_state'];
+        const generatedBy = rawState?.generatedBy ?? undefined;
+        return { id: m.id, name: m.name || '', instanceofMetamodelId, generatedBy };
+    }),
+    transformations: transformations.map(t => ({
+        id: t.id,
+        name: t.name || '',
+        sourceMetamodelId: t.sourceMetamodelId,
+        targetMetamodelId: t.targetMetamodelId,
+    })),
+});
 
 // ============================================
 // SectionHeader — Standardized section header
@@ -418,39 +462,7 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         const projectId = project.id;
         if (!projectId) return;
 
-        const artifacts = {
-            metamodels: metamodels.map(mm => {
-                // Cross-metamodel dependencies: a class in this metamodel references or
-                // extends a class living in another metamodel (same detection as the
-                // editor's ghostTargets / ghostParents overlays). Drives 'uses' edges.
-                const usesMetamodelIds = new Set<string>();
-                try {
-                    for (const cls of ((mm.classes || []) as any[])) {
-                        for (const ref of (cls.references || [])) {
-                            const t = ref?.type;
-                            if (t?.model && t.model.id !== mm.id) usesMetamodelIds.add(t.model.id);
-                        }
-                        for (const sup of (cls.extends || [])) {
-                            if (sup?.model && sup.model.id !== mm.id) usesMetamodelIds.add(sup.model.id);
-                        }
-                    }
-                } catch { /* L-proxy access can throw on stale data */ }
-                return { id: mm.id, name: mm.name || '', usesMetamodelIds: [...usesMetamodelIds] };
-            }),
-            models: models.map(m => {
-                const rawInstanceof = (m.__raw as any)['instanceof'];
-                const instanceofMetamodelId = typeof rawInstanceof === 'string' ? rawInstanceof : undefined;
-                const rawState = (m.__raw as any)['_state'];
-                const generatedBy = rawState?.generatedBy ?? undefined;
-                return { id: m.id, name: m.name || '', instanceofMetamodelId, generatedBy };
-            }),
-            transformations: transformations.map(t => ({
-                id: t.id,
-                name: t.name || '',
-                sourceMetamodelId: t.sourceMetamodelId,
-                targetMetamodelId: t.targetMetamodelId,
-            })),
-        };
+        const artifacts = buildProjectArtifacts(metamodels, models, transformations);
 
         const serialized = getSerializedMegamodel(projectId);
         const megamodel = loadMegamodel(serialized, artifacts);
@@ -786,6 +798,68 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
             U.alert('e', 'Export Failed', 'Could not export the model as JSON.');
         }
         closeMenu();
+    };
+
+    // Export the entire project megamodel (artifact inventory + relationships) as JSON.
+    const handleExportMegamodelJSON = () => {
+        try {
+            const artifacts = buildProjectArtifacts(metamodels, models, transformations);
+            const doc = buildMegamodelExportJson({
+                project: { id: project.id, name: project.name || 'project' },
+                artifacts,
+                viewpoints: viewpoints.map(vp => ({ id: vp.id || vp.name, name: vp.name || 'Unnamed' })),
+                megamodel: getRuntimeMegamodel(project.id),
+                jjodelVersion: getEngineVersion(),
+            });
+            const filename = `${project.name || 'project'}-megamodel.json`;
+            U.download(filename, JSON.stringify(doc, null, 2));
+            U.alert('i', 'Exported', `Megamodel exported: ${filename}`);
+        } catch (error) {
+            console.error('Export megamodel JSON error:', error);
+            U.alert('e', 'Export Failed', 'Could not export the megamodel as JSON.');
+        }
+    };
+
+    // Full megamodel export: the megamodel graph PLUS the complete semantic JSON
+    // documents of every metamodel, model and transformation (same structure as
+    // the per-artifact JSON exports).
+    const handleExportMegamodelFullJSON = () => {
+        try {
+            const artifacts = buildProjectArtifacts(metamodels, models, transformations);
+
+            // Per-artifact build is guarded so one broken artifact (e.g. a model
+            // with no metamodel) does not abort the whole export.
+            const buildArtifactDoc = (entity: LModel, kind: 'metamodel' | 'model'): Record<string, unknown> => {
+                try {
+                    return kind === 'metamodel'
+                        ? JsonModelService.buildMetamodelDocument(entity)
+                        : JsonModelService.buildModelDocument(entity);
+                } catch (e) {
+                    return { id: entity.id, name: entity.name || '', error: (e as Error)?.message ?? String(e) };
+                }
+            };
+
+            const definitions = {
+                metamodels: metamodels.map(mm => buildArtifactDoc(mm, 'metamodel')),
+                models: models.map(m => buildArtifactDoc(m, 'model')),
+                transformations: transformations.map(t => ({ ...t })),
+            };
+
+            const doc = buildMegamodelExportJson({
+                project: { id: project.id, name: project.name || 'project' },
+                artifacts,
+                viewpoints: viewpoints.map(vp => ({ id: vp.id || vp.name, name: vp.name || 'Unnamed' })),
+                megamodel: getRuntimeMegamodel(project.id),
+                jjodelVersion: getEngineVersion(),
+                definitions,
+            });
+            const filename = `${project.name || 'project'}-megamodel-full.json`;
+            U.download(filename, JSON.stringify(doc, null, 2));
+            U.alert('i', 'Exported', `Full megamodel exported: ${filename}`);
+        } catch (error) {
+            console.error('Export full megamodel JSON error:', error);
+            U.alert('e', 'Export Failed', 'Could not export the full megamodel as JSON.');
+        }
     };
 
     // TODO: dead code. Trigger for hidden .jmm file input; menu entry removed.
@@ -2727,6 +2801,8 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                             handleNewModelClick();
                             setShowMegamodelModal(false);
                         }}
+                        onExport={handleExportMegamodelJSON}
+                        onExportFull={handleExportMegamodelFullJSON}
                     />
                 );
             })()}

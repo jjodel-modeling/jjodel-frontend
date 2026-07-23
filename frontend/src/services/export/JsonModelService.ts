@@ -81,11 +81,12 @@ export class JsonModelService {
     // ============================================
 
     /**
-     * Export a metamodel to a semantic JSON string. Foreign metamodels
-     * referenced by super-types / reference types are embedded fully under
-     * `externalMetamodels`.
+     * Build the semantic metamodel document (`jjodel-metamodel`) as a plain
+     * object, so it can be embedded into other documents (e.g. the full
+     * megamodel export). Foreign metamodels referenced by super-types /
+     * reference types are embedded fully under `externalMetamodels`.
      */
-    static exportMetamodelToJSON(metamodel: LModel): string {
+    static buildMetamodelDocument(metamodel: LModel): Record<string, unknown> {
         const ctx: BuildContext = { visited: new Set([metamodel.id]), queue: [] };
         const packages = this.buildPackages(metamodel, metamodel.id, ctx);
         const externalMetamodels = this.drainExternals(ctx);
@@ -97,8 +98,14 @@ export class JsonModelService {
             packages,
         };
         if (externalMetamodels.length > 0) doc.externalMetamodels = externalMetamodels;
+        return doc;
+    }
 
-        return JSON.stringify(doc, null, 2);
+    /**
+     * Export a metamodel to a semantic JSON string.
+     */
+    static exportMetamodelToJSON(metamodel: LModel): string {
+        return JSON.stringify(this.buildMetamodelDocument(metamodel), null, 2);
     }
 
     // ============================================
@@ -106,12 +113,12 @@ export class JsonModelService {
     // ============================================
 
     /**
-     * Export a model to a semantic JSON string. The model's metamodel is
-     * embedded in full (self-contained, like the XMI exporter). Additional
-     * metamodels whose classes are instantiated / referenced are embedded
-     * under `externalMetamodels`.
+     * Build the semantic model document (`jjodel-model`) as a plain object.
+     * The model's metamodel is embedded in full (self-contained, like the XMI
+     * exporter). Additional metamodels whose classes are instantiated /
+     * referenced are embedded under `externalMetamodels`.
      */
-    static exportModelToJSON(model: LModel): string {
+    static buildModelDocument(model: LModel): Record<string, unknown> {
         const metamodel = model.instanceof as LModel;
         if (!metamodel) {
             throw new Error('Model has no metamodel reference (instanceof)');
@@ -135,8 +142,14 @@ export class JsonModelService {
             objects,
         };
         if (externalMetamodels.length > 0) doc.externalMetamodels = externalMetamodels;
+        return doc;
+    }
 
-        return JSON.stringify(doc, null, 2);
+    /**
+     * Export a model to a semantic JSON string.
+     */
+    static exportModelToJSON(model: LModel): string {
+        return JSON.stringify(this.buildModelDocument(model), null, 2);
     }
 
     // ============================================

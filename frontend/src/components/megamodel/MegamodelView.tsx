@@ -46,6 +46,10 @@ export interface MegamodelViewProps {
     onCreateMetamodel?: () => void;
     onCreateModel?: () => void;
     onImport?: () => void;
+    /** Export the whole project megamodel (artifacts + relationships) to JSON. */
+    onExport?: () => void;
+    /** Full export: megamodel + embedded JSON documents of every artifact. */
+    onExportFull?: () => void;
 }
 
 // ─── Artifact → MmNode mapping ───────────────────────────────────────────────
@@ -334,7 +338,7 @@ interface ContextMenuState {
 const MegamodelView: React.FC<MegamodelViewProps> = ({
     megamodel, projectId, viewpoints, artifactStats, onClose, onOpenNode,
     onDeleteNode, onRenameNode, onDuplicateNode, onRunTransformation,
-    onCreateMetamodel, onCreateModel, onImport,
+    onCreateMetamodel, onCreateModel, onImport, onExport, onExportFull,
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const [nodes, setNodes] = useState<MmNode[]>([]);
@@ -970,6 +974,20 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
                             <i className="bi bi-arrows-fullscreen" />
                         </button>
                     </>
+                )}
+                {onExport && (
+                    <button className="mm-view__btn" onClick={onExport} title="Export megamodel as JSON">
+                        <i className="bi bi-filetype-json" />
+                    </button>
+                )}
+                {onExportFull && (
+                    <button
+                        className="mm-view__btn"
+                        onClick={onExportFull}
+                        title="Export full megamodel as JSON (with all metamodel / model / transformation definitions)"
+                    >
+                        <i className="bi bi-collection" />
+                    </button>
                 )}
                 <button className="mm-view__close" onClick={onClose} title="Close (Esc)">
                     <i className="bi bi-x-lg" />
