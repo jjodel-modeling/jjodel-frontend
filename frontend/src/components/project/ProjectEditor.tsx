@@ -29,7 +29,7 @@ import { getPublicProjectUrl, copyToClipboard } from '../../utils/shareUtils';
 import ShareProjectModal from './ShareProjectModal';
 import UnsavedChangesDialog from './UnsavedChangesDialog';
 import DocumentationSection from './DocumentationSection';
-import { EcoreService, XMIService } from '../../services/export';
+import { EcoreService, XMIService, JsonModelService } from '../../services/export';
 import { NewTransformationDialog, TransformationsList } from '../../jjtl/components';
 import { NewViewpointDialog } from './NewViewpointDialog';
 import { JjtlTransformation, createTransformation, TransformationAST } from '../../jjtl/types';
@@ -759,6 +759,31 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         } catch (error) {
             console.error('Export Ecore error:', error);
             U.alert('e', 'Export Failed', 'Could not export as Ecore format.');
+        }
+        closeMenu();
+    };
+
+    // Export metamodel as semantic JSON (.json). Foreign metamodels referenced
+    // by super-types / reference types are embedded self-contained.
+    const handleExportMetamodelJSON = (mm: LModel) => {
+        try {
+            JsonModelService.exportToFile(mm, 'metamodel');
+            U.alert('i', 'Exported', `Metamodel exported as JSON: ${mm.name}.json`);
+        } catch (error) {
+            console.error('Export metamodel JSON error:', error);
+            U.alert('e', 'Export Failed', 'Could not export the metamodel as JSON.');
+        }
+        closeMenu();
+    };
+
+    // Export model as semantic JSON (.json) with its metamodel(s) embedded.
+    const handleExportModelJSON = (model: LModel) => {
+        try {
+            JsonModelService.exportToFile(model, 'model');
+            U.alert('i', 'Exported', `Model exported as JSON: ${model.name}.json`);
+        } catch (error) {
+            console.error('Export model JSON error:', error);
+            U.alert('e', 'Export Failed', 'Could not export the model as JSON.');
         }
         closeMenu();
     };
@@ -2228,6 +2253,13 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                                 <i className="bi bi-file-earmark-code" />
                                                 Export Ecore (.ecore)
                                             </button>
+                                            <button
+                                                className="context-menu__item"
+                                                onClick={() => handleExportMetamodelJSON(mm)}
+                                            >
+                                                <i className="bi bi-filetype-json" />
+                                                Export JSON (.json)
+                                            </button>
                                             <div className="context-menu__divider" />
                                             <button
                                                 className="context-menu__item"
@@ -2411,6 +2443,13 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
                                             >
                                                 <i className="bi bi-file-earmark-code" />
                                                 Export XMI (.xmi)
+                                            </button>
+                                            <button
+                                                className="context-menu__item"
+                                                onClick={() => handleExportModelJSON(model)}
+                                            >
+                                                <i className="bi bi-filetype-json" />
+                                                Export JSON (.json)
                                             </button>
                                             <div className="context-menu__divider" />
                                             <button
