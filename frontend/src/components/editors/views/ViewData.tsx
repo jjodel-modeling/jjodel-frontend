@@ -25,6 +25,7 @@ import HelpButton from '../../HelpButton';
 import "./nestedView.scss";
 import {ComponentsTab} from "./data/ComponentsTab";
 import {VertexAuthoringPanel} from "../../editor-v2/viewpoint/authoring/VertexAuthoringPanel";
+import {EnableIRPanel} from "../../editor-v2/viewpoint/authoring/EnableIRPanel";
 
 type TabId = 'apply-to' | 'template' | 'style' | 'events' | 'options' | 'components' | 'ir';
 
@@ -44,6 +45,12 @@ function ViewDataComponent(props: AllProps) {
 
     const isVP: boolean = view.className === DViewPoint.cname;
     const isV: boolean = !isVP;
+
+    // IR tab visibility: vertex-IR views get the authoring panel; plain non-edge
+    // views without an IR yet get the enable entry-point. Edge views, edge-IR views
+    // and viewpoints get no IR tab.
+    const ir = (view as any).ir;
+    const showIRTab = (ir?.kind === 'vertex') || (isV && !ir && view.isEdge !== true);
 
     // Build the tab list. Each `render` closure captures the current view/readonly
     // so the children stay in sync with Redux updates.
@@ -66,12 +73,14 @@ function ViewDataComponent(props: AllProps) {
                 </Try>
             ),
         }] : []),
-        ...((view as any).ir?.kind === 'vertex' ? [{
+        ...(showIRTab ? [{
             id: 'ir' as TabId,
             label: 'IR',
             render: () => (
                 <Try>
-                    <VertexAuthoringPanel view={view} />
+                    {ir?.kind === 'vertex'
+                        ? <VertexAuthoringPanel view={view} />
+                        : <EnableIRPanel view={view} />}
                 </Try>
             ),
         }] : []),
