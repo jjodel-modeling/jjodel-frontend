@@ -15,7 +15,6 @@ import {
 } from '../sync/canvasToJjom';
 import type { ClassNodeData } from '../types';
 import { createAttribute, createOperation } from '../types';
-import { isNodeResizable } from './nodeSizing';
 import { JjodelEvents } from '../../../events/registry';
 import { TRANSACTION, SetFieldAction } from '../../../joiner';
 
@@ -424,15 +423,13 @@ function ClassNode({ id, data, selected, width, height }: NodeProps<ClassNodeTyp
     if (data.jsxString) {
         return (
             <div className={`mm-node mm-class viewpoint-wrapper ${selected ? 'selected' : ''} ${hlClass}`}>
-                {isNodeResizable('classNode') && (
-                    <NodeResizer
-                        isVisible={selected}
-                        minWidth={120}
-                        minHeight={60}
-                        lineClassName="node-resize-line"
-                        handleClassName="node-resize-handle"
-                    />
-                )}
+                <NodeResizer
+                    isVisible={selected}
+                    minWidth={120}
+                    minHeight={60}
+                    lineClassName="node-resize-line"
+                    handleClassName="node-resize-handle"
+                />
                 <DynamicHandles nodeId={id} />
                 <ViewpointRenderer jsxString={data.jsxString} context={data} />
             </div>
@@ -480,15 +477,13 @@ function ClassNode({ id, data, selected, width, height }: NodeProps<ClassNodeTyp
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
         >
-            {isNodeResizable('classNode') && (
-                <NodeResizer
-                    isVisible={selected}
-                    minWidth={140}
-                    minHeight={40}
-                    lineClassName="node-resize-line"
-                    handleClassName="node-resize-handle"
-                />
-            )}
+            <NodeResizer
+                isVisible={selected}
+                minWidth={140}
+                minHeight={40}
+                lineClassName="node-resize-line"
+                handleClassName="node-resize-handle"
+            />
 
             <DynamicHandles nodeId={id} />
 

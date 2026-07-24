@@ -6,7 +6,6 @@ import type { EnumNodeData } from '../types';
 import { createLiteral } from '../types';
 import { useEditorContextSafe } from '../contexts/EditorContext';
 import { useNodeHighlightClass } from '../contexts/HighlightContext';
-import { isNodeResizable } from './nodeSizing';
 
 export type EnumNodeType = Node<EnumNodeData, 'enumNode'>;
 
@@ -156,15 +155,13 @@ function EnumNode({ id, data, selected }: NodeProps<EnumNodeType>) {
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
         >
-            {isNodeResizable('enumNode') && (
-                <NodeResizer
-                    isVisible={selected}
-                    minWidth={120}
-                    minHeight={40}
-                    lineClassName="node-resize-line"
-                    handleClassName="node-resize-handle"
-                />
-            )}
+            <NodeResizer
+                isVisible={selected}
+                minWidth={120}
+                minHeight={40}
+                lineClassName="node-resize-line"
+                handleClassName="node-resize-handle"
+            />
 
             <DynamicHandles nodeId={id} />
 
