@@ -234,39 +234,16 @@ Il picker legge le feature **live** dalla classe M2 (`getMetaclassInfo`, nessuna
 
 ---
 
-## 9. Esito diagnostica console (2026-07-23) — H-fantasma CONFERMATA (variante multi-metamodello)
+## 9. Esito diagnostica console (2026-07-23) — H-fantasma confermata: due metamodelli
 
-### 9.1 Output §7.3 (eseguito da Alfonso)
+Output della diagnostica §7.3 (eseguita da Alfonso):
+- `n. classi State: 2` → `...742933795_USER_193` con attributes `[name, isInitial]`; `...825150387_USER_195` con `[isFinal, isInitial, attr_0, attr_1]`.
+- `instanceof usati dalle istanze: [...193, ...195]` → le istanze del modello sono agganciate a ENTRAMBE le State.
+- `allAttributes L`: `...193` → `[name, isInitial]`; `...195` → `[isFinal, isInitial, attr_0, attr_1, name]`.
+- `metamodels: [...USER_185, ...USER_185]` → DUE metamodelli con lo stesso suffisso canonico `USER_185`; i timestamp li datano a ~23h di distanza (`...742933793` vs `...825130993`).
 
-- `n. classi State: 2` → `…193` con `attributes = [name, isInitial]`; `…195` con `attributes = [isFinal, isInitial, attr_0, attr_1]`.
-- `instanceof usati dalle istanze: [ …193, …195 ]` → le istanze del modello sono agganciate a **entrambe** le `State`.
-- `allAttributes L`: `…193` → `[name, isInitial]`; `…195` → `[isFinal, isInitial, attr_0, attr_1, name]`.
-- `metamodels: [ …USER_185, …USER_185 ]` → **due** metamodelli con lo stesso id logico `USER_185`; i Pointer li datano a ~23h di distanza (`…933793` vs `…825130`).
+Verdetto: H-fantasma confermata, variante multi-metamodello. Non due DClass nello stesso metamodello, ma due metamodelli quasi-duplicati (stesso `USER_185`), ciascuno con la sua `State`. Il memo `find(c => c.name === 'State')` itera i metamodelli e prende la `State` del primo (`...193`, la vecchia: name+isInitial); le feature nuove stanno sulla `State` del secondo (`...195`). H-forward-collection e H-troncamento cadono: la forward-collection di `...195` è completa e il getter la legge intera.
 
-### 9.2 Verdetto
+Causa prossima (picker): risoluzione della metaclasse per NOME invece che per ID; con duplicati pesca la State del metamodello sbagliato. Fix difensivo isolato a `VertexAuthoringPanel.tsx` (risolvere per id/pointer via `appliableToClasses`), da valutare rispetto allo schema `.ir` (oggi nomi).
 
-**H-fantasma confermata, variante multi-metamodello.** Non due `DClass` nello stesso metamodello, ma **due metamodelli quasi-duplicati** (stesso `USER_185`), ciascuno con la propria `State`. Le ipotesi alternative cadono:
-- **H-forward-collection — smentita**: la forward-collection di `…195` è completa (`allAttributes L …195` = 5 feature); il getter la legge intera.
-- **H-troncamento — smentita**: nessun troncamento, il getter restituisce tutte le feature di `…195`.
-
-### 9.3 Causa prossima (picker)
-
-`VertexAuthoringPanel.tsx:88-104` risolve la metaclasse **per nome** (`info.allClasses.find(c => c.name === targetName)`) iterando i metamodelli e restituendo la `State` del **primo** che ne contiene una → `…193` (la vecchia: `name`+`isInitial`). Le feature nuove stanno sulla `State` del secondo metamodello (`…195`), mai raggiunta. Questo, non il congelamento del `useMemo` (§3.2), è ciò che rende il picker sistematicamente stale anche dopo remount.
-
-### 9.4 Causa radice (bug separato, a monte)
-
-Il progetto contiene **due metamodelli duplicati** con lo stesso id logico `USER_185`, con le istanze del modello **splittate** fra le due `State` (`instanceof` = `[…193, …195]`). È un **modello internamente incoerente**. Il fix del picker cura il **sintomo**, non sana il modello. Da investigare come **filone dedicato**: percorso di duplicazione (`load-project` / `import` / migrazione `VersionFixer`). **Non investigato in questa discovery** (fuori scope del picker; hard stop di Alfonso in attesa di strategia).
-
-### 9.5 Q5 — fix minimo (rivisto dopo il verdetto)
-
-- **Picker (sintomo)** — file: **solo** `frontend/src/components/editor-v2/viewpoint/authoring/VertexAuthoringPanel.tsx` (memo 84-106). **Fuori critical-zone (§3.1).** Risolvere la metaclasse per **id/pointer** (da `view.appliableToClasses`, che contiene i pointer id delle classi M2) invece che per **nome**, così si aggancia una `State` deterministica e non "la prima del primo metamodello".
-  - **Caveat 1 — schema IR memorizza nomi**: `ir.metaclasses` è `string[]` di **nomi** (`irTypes.ts:96`; `EnableIRPanel.resolveMetaclassNames` converte i pointer in nomi al seed). Per risolvere per id il picker deve leggere `view.appliableToClasses` (pointer) invece di `draft.metaclasses` (nomi). È un cambio locale al pannello, ma cambia la **fonte** della risoluzione.
-  - **Caveat 2 — correttezza limitata dalla duplicazione**: la correttezza dell'id-fix dipende da **quale** `State` punta `appliableToClasses`. Se la view fu abilitata quando esisteva solo `…193`, `appliableToClasses` punta a `…193` → il picker mostrerebbe **ancora** `name`+`isInitial` pur risolvendo per id. L'id-fix è **più corretto** del name-fix (deterministico, non "primo metamodello"), ma **non garantisce** le feature "giuste" finché il modello resta duplicato.
-- **Duplicazione (radice)** — filone separato, non tocca il picker; possibile impatto **critical-zone** (`VersionFixer` / load / import) → Layer Impact Report in quella Fase.
-
-### 9.6 Prossimi passi / decisioni per Alfonso
-
-1. **Fix difensivo del picker** (id-resolution in `VertexAuthoringPanel.tsx`): farlo ora o dopo aver deciso sulla duplicazione? È a basso rischio e fuori critical-zone, ma con i due caveat sopra è un palliativo.
-2. **Filone dedicato sulla duplicazione metamodelli**: aprire una discovery separata sul percorso `load-project` / `import` / `VersionFixer` che produce due `USER_185`. Questo è il bug che sana il modello.
-
-**Hard stop invariato sul picker** finché non è decisa la strategia sulla duplicazione.
+Causa radice (bug separato, a monte): il progetto contiene due metamodelli duplicati (`USER_185`) con le istanze splittate fra le due `State`. Modello internamente incoerente. Il fix del picker cura il sintomo, non sana il modello. Da investigare come filone dedicato (candidati: confine di versione codice / migrazione VersionFixer all'apertura, re-import, doppio tab; il ciclo save+refresh su progetto fresh NON riproduce). Hard stop invariato sul picker finché non è decisa la strategia sulla duplicazione.
