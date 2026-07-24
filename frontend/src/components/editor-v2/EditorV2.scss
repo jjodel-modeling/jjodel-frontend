@@ -1631,6 +1631,23 @@
 }
 
 // ============================================
+// Ghost-frame fix (2026-07-24)
+// ============================================
+// Make each default node card fill its React Flow wrapper, so the selection
+// frame + resize handles (position:absolute, anchored to `.react-flow__node`)
+// never outrun the card after a manual vertical resize. Before any resize the
+// wrapper height is auto, so `height: 100%` resolves to auto and the card keeps
+// hugging its content (no-op); it only engages once a resize gives the wrapper
+// an explicit height. packageNode is excluded (own style width/height + nested
+// children); the class viewpoint custom-render branch (`.viewpoint-wrapper`,
+// transparent/borderless) is left untouched.
+.mm-object,
+.mm-enum,
+.mm-class:not(.viewpoint-wrapper) {
+    height: 100%;
+}
+
+// ============================================
 // MM-OBJECT (Object Instance Node — M1)
 // ============================================
 
