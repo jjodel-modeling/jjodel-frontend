@@ -7,6 +7,7 @@ import {
     useNodesState,
     useEdgesState,
     useReactFlow,
+    useUpdateNodeInternals,
     ReactFlowProvider,
     useStoreApi,
     useStore,
@@ -565,6 +566,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const jjomSelection = useJjomSelection(modelid, isJjomMode, highlightModeActive, assignHighlight);
 
     const { screenToFlowPosition, getNodes, getEdges, zoomIn, zoomOut, fitView, getViewport, setViewport } = useReactFlow();
+    const updateNodeInternals = useUpdateNodeInternals();
     const storeApi = useStoreApi();
     fitViewRef.current = () => fitView({ padding: 0.2, maxZoom: 1 });
 
@@ -2341,6 +2343,25 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         [getNodes, setNodes, takeSnapshot]
     );
 
+    // Reset a manually-resized node back to its content-driven size. A NodeResizer
+    // drag writes explicit width/height on the node (top-level, via applyNodeChanges);
+    // object/class/enum have no transformer style size, so dropping those keys lets
+    // the card hug its content again (the `.mm-node { height:100% }` rule goes inert
+    // once the wrapper has no explicit height). After React Flow re-measures the now
+    // unsized node, refresh its handle bounds so connected edges follow the new size.
+    const resetNodeSize = useCallback(
+        (nodeId: string) => {
+            takeSnapshot();
+            setNodes((nds) => nds.map((n) => {
+                if (n.id !== nodeId) return n;
+                const { width, height, measured, ...rest } = n as any;
+                return rest as Node;
+            }));
+            requestAnimationFrame(() => requestAnimationFrame(() => updateNodeInternals(nodeId)));
+        },
+        [setNodes, takeSnapshot, updateNodeInternals]
+    );
+
     // Duplicate all selected nodes
     const duplicateSelected = useCallback(() => {
         const selected = getNodes().filter((n) => n.selected);
@@ -2838,6 +2859,12 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             const node = getNodes().find(n => n.id === contextMenu.nodeId);
             const items: ContextMenuItem[] = [];
 
+            // "Reset size" only for content-hug node types that were actually
+            // resized by hand (width/height set only by a NodeResizer drag).
+            const canResetSize = !!node
+                && (node.type === 'objectNode' || node.type === 'classNode' || node.type === 'enumNode')
+                && ((node as any).width != null || (node as any).height != null);
+
             // M1: composition children for object nodes (uses compositionCompat utility)
             if (isModelMode && node?.type === 'objectNode') {
                 const objData = node.data as ObjectNodeData;
@@ -2955,6 +2982,11 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                     tooltip: classicTooltip,
                 },
                 { divider: true },
+                ...(canResetSize ? [{
+                    label: 'Reset size',
+                    icon: 'bi-aspect-ratio',
+                    onClick: () => resetNodeSize(contextMenu.nodeId!),
+                }] : []),
                 {
                     label: 'Disable auto-sizing',
                     icon: 'bi-arrows-angle-expand',
