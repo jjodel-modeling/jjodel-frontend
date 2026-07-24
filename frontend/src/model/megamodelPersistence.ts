@@ -118,3 +118,75 @@ export function extractMegamodelFromProjectJson(
     if (candidate.megamodelVersion !== '1.0') return undefined
     return candidate as unknown as MegamodelSerialized
 }
+
+// ============================================================
+// Standalone megamodel JSON export
+// ============================================================
+
+/** A viewpoint node in the megamodel export (lightweight, name only). */
+export interface MegamodelExportViewpoint {
+    id: string
+    name: string
+}
+
+/**
+ * Full JSON documents of every artifact, embedded in a "full" megamodel export.
+ * Metamodels / models use the semantic JsonModelService structure
+ * (`jjodel-metamodel` / `jjodel-model`); transformations use their own object.
+ */
+export interface MegamodelExportDefinitions {
+    metamodels: Record<string, unknown>[]
+    models: Record<string, unknown>[]
+    transformations: Record<string, unknown>[]
+}
+
+/** Everything needed to serialize the whole project megamodel to JSON. */
+export interface MegamodelExportInput {
+    project: { id: string; name: string }
+    /** Artifact inventory (metamodels / models / transformations) as POJOs. */
+    artifacts: ProjectArtifacts
+    /** Viewpoints shown as megamodel nodes. */
+    viewpoints?: MegamodelExportViewpoint[]
+    /** Runtime megamodel (derived + user-defined edges). */
+    megamodel?: Megamodel
+    /** Engine version string for metadata, e.g. "v3.0". */
+    jjodelVersion?: string
+    /** Full embedded artifact documents — present only in a "full" export. */
+    definitions?: MegamodelExportDefinitions
+}
+
+/**
+ * Builds a standalone, self-contained JSON document describing the ENTIRE
+ * project megamodel: the full artifact inventory (nodes) plus every
+ * relationship (edges, derived + user-defined). When `definitions` is
+ * provided (full export), the complete JSON documents of every metamodel,
+ * model and transformation are embedded too. Pure — POJO in, POJO out; the
+ * L-proxy → POJO conversion happens in the caller.
+ */
+export function buildMegamodelExportJson(
+    input: MegamodelExportInput,
+): Record<string, unknown> {
+    const { project, artifacts, viewpoints = [], megamodel, jjodelVersion, definitions } = input
+
+    const metadata: Record<string, unknown> = {
+        project: { id: project.id, name: project.name },
+        exportedAt: new Date().toISOString(),
+    }
+    if (jjodelVersion) metadata.jjodelVersion = jjodelVersion
+
+    const result: Record<string, unknown> = {
+        format: 'jjodel-megamodel',
+        formatVersion: '1.0',
+        megamodelVersion: '1.0',
+        metadata,
+        artifacts: {
+            metamodels: artifacts.metamodels,
+            models: artifacts.models,
+            transformations: artifacts.transformations,
+            viewpoints,
+        },
+        edges: megamodel?.edges ?? [],
+    }
+    if (definitions) result.definitions = definitions
+    return result
+}
