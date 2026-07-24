@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { LProject, type LViewElement } from '../../../../joiner';
+import { LProject, LPointerTargetable, DClass, type LViewElement } from '../../../../joiner';
 import { Input, Select, NumberInput, ColorPicker, ErrorText, Button, HelpText, ConditionalEditor, type PathBuilderFeatures } from '../../../ui';
-import { getMetaclassInfo } from '../../hooks/useEditorMode';
+import { getMetaclassInfo, type MetaclassInfo } from '../../hooks/useEditorMode';
 import { validateIR } from '../ir/irValidate';
 import { defaultObjectViewIR } from '../ir/irDefaults';
 import type { VertexViewIR, ShapeForm } from '../ir/irTypes';
@@ -80,30 +80,77 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
     };
 
     // Resolve the PathBuilder feature set from the view's target metaclass.
-    // Source: LProject metamodels (same as InfoData) — no M1 model id needed.
-    const features = useMemo<PathBuilderFeatures | null>(() => {
+    //
+    // Resolution is by IDENTITY, not by name. The view pins a specific class via
+    // appliableToClasses (a class pointer); a project may hold duplicate metamodels
+    // whose classes share a name, and a name-only lookup returns the class of the
+    // first metamodel iterated — potentially a different class than the one this
+    // view targets, with a stale/partial feature set (discovery 2026-07-23 §9: two
+    // `USER_185` metamodels, each with its own `State`). We first pin the exact
+    // class pointer from appliableToClasses and read its features from that
+    // metaclass; in parallel we count how many metamodels declare a class of this
+    // name, to surface the ambiguity to the author (metamodelsWithClass > 1).
+    const featureInfo = useMemo<{
+        features: PathBuilderFeatures | null;
+        metamodelsWithClass: number;
+        targetName: string | null;
+    }>(() => {
         const mcs = draft.metaclasses;
-        if (mcs === '*' || !Array.isArray(mcs) || mcs.length === 0) return null;
+        if (mcs === '*' || !Array.isArray(mcs) || mcs.length === 0) {
+            return { features: null, metamodelsWithClass: 0, targetName: null };
+        }
         const targetName = mcs[0];
+
+        // Preferred identity: the class pointer this view is applied to whose name
+        // matches the IR target. appliableToClasses mixes D-level type names with
+        // M2 class pointers (cf. EnableIRPanel); only real DClass entries qualify.
+        let targetId: string | null = null;
+        for (const entry of (((view as any).appliableToClasses ?? []) as string[])) {
+            try {
+                const l = LPointerTargetable.fromPointer(entry) as any;
+                if (l && l.className === DClass.cname && l.name === targetName) { targetId = l.id; break; }
+            } catch { /* malformed / unresolvable entry — skip */ }
+        }
+
         const metamodels = LProject.getProject()?.metamodels ?? [];
+        let metamodelsWithClass = 0;
+        let byId: MetaclassInfo | null = null;
+        let byNameFallback: MetaclassInfo | null = null;
         for (const mm of metamodels) {
             let info;
             try { info = getMetaclassInfo((mm as any).id, (mm as any).id); } catch { continue; }
-            const target = info.allClasses.find((c) => c.name === targetName);
-            if (target) {
-                return {
-                    attributes: (target.allAttributes ?? target.attributes ?? []).map((a) => ({
-                        name: a.name, type: a.type, upperBound: a.upperBound,
-                    })),
-                    references: (target.references ?? []).map((r) => ({
-                        name: r.name, targetClassName: r.targetClassName, upperBound: r.upperBound,
-                    })),
-                };
+            const named = info.allClasses.find((c) => c.name === targetName);
+            if (!named) continue;
+            metamodelsWithClass++;
+            if (!byNameFallback) byNameFallback = named;
+            // Prefer the exact class the view points at, wherever it lives.
+            if (targetId) {
+                const exact = info.allClasses.find((c) => c.id === targetId);
+                if (exact) byId = exact;
             }
         }
-        return null;
+
+        // Identity match wins; fall back to the first name match (legacy behaviour)
+        // only when appliableToClasses cannot pin an id (e.g. metaclasses edited to
+        // a name not in the view's Apply-to set).
+        const target = byId ?? byNameFallback;
+        if (!target) return { features: null, metamodelsWithClass, targetName };
+        return {
+            features: {
+                attributes: (target.allAttributes ?? target.attributes ?? []).map((a) => ({
+                    name: a.name, type: a.type, upperBound: a.upperBound,
+                })),
+                references: (target.references ?? []).map((r) => ({
+                    name: r.name, targetClassName: r.targetClassName, upperBound: r.upperBound,
+                })),
+            },
+            metamodelsWithClass,
+            targetName,
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [JSON.stringify(draft.metaclasses)]);
+    }, [JSON.stringify(draft.metaclasses), JSON.stringify((view as any).appliableToClasses ?? []), view.id]);
+
+    const features = featureInfo.features;
 
     // All class names across every project metamodel (deduped) — offered to the
     // PredicateBuilder `isKind` selector inside each ConditionalEditor. Distinct
@@ -148,6 +195,16 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
             </div>
 
             {error && <ErrorText>{error}</ErrorText>}
+
+            {/* Active ambiguity warning: the target class name is declared in more
+                than one project metamodel. The picker binds to the class this view
+                is applied to (by id), but the duplication usually signals an
+                incoherent model (duplicate metamodels) worth the author's attention. */}
+            {featureInfo.metamodelsWithClass > 1 && (
+                <ErrorText>
+                    {`La metaclasse «${featureInfo.targetName}» è dichiarata in ${featureInfo.metamodelsWithClass} metamodelli del progetto: il picker usa quella a cui è applicata questa view. Verifica che i metamodelli non siano duplicati.`}
+                </ErrorText>
+            )}
 
             {tab === 'basic' && (
                 <>
