@@ -1,5 +1,15 @@
 # Claude Code Session Log
 
+## 2026-07-23 — docs: discovery ir feature picker stale
+**Prompt**: discovery read-only (Fase 1) — perché il dropdown "Select feature..." del pannello authoring IR elenca feature stale/parziali invece delle feature live della classe M2 target. Trovare la fonte esatta e il punto di divergenza; nessuna correzione.
+**Files touched**: `docs/discovery/discovery_2026-07-23_ir_feature_picker_stale.md` (NUOVO), `docs/claude-code-log.md` (questa entry).
+**Outcome**: ⚠️ partial — 1a analisi: unico `useMemo` in `VertexAuthoringPanel.tsx:84-106` con dep `[JSON.stringify(draft.metaclasses)]`; `PathBuilder` stateless; il `.ir` non enumera feature (`metaclasses: string[]|'*'`, ipotesi "legge dal seed" smentita); ereditarietà corretta. PREVISIONE (remount ripopola) FALSIFICATA da Alfonso: il picker resta stale anche dopo cambio tab/riselezione view → il memo NON è la radice. Verificato in codice: nessuna cache di proxy (`wrap` crea Proxy nuovo su `idlookup[id]` live) né di getter, quindi un `getMetaclassInfo` fresco legge lo store corrente. Radice a monte nel D-layer: classe risolta per NOME possibile duplicato/fantasma diverso da quello delle istanze (H-fantasma, più probabile), o forward-collection `class.attributes` stale (H-forward-collection, §3.6), o troncamento nel `try/catch` di `getMetaclassInfo`. Report §7 con diagnostica console per discriminare.
+**Regressions**: no (read-only, nessuna modifica al codice sorgente).
+**Out-of-scope changes**: no — solo il report + questa entry di log.
+**Layer Impact Report**: not-required (discovery read-only; nessun file critical-zone §3.1 modificato). N.B.: il fix in Fase 2 potrebbe toccare D-layer/resolver IR → LIR probabile allora.
+**Note**: bloccato su output diagnostica §7.3 di Alfonso (conteggio DClass 'State' in `idlookup`, forward-collection risolta, instanceof delle istanze). Il fix del solo memo è insufficiente. Hard stop: nessuna Fase 2 senza go-ahead e senza diagnostica.
+**Prompt document name**: 2026-07-23 ir_feature_picker_stale
+
 ## 2026-07-21 — fix(redux): landing migration VersionFixer 2.226->2.227 (bonifica slot DValue, CRITICAL ZONE)
 **Prompt**: landing in critical zone del metodo migration `2.226 -> 2.227` (go-ahead esplicito di Alfonso, LIR prodotto nel prompt). Inline della funzione già provata (`versionfixer_2227_migration.test.ts`) come metodo `['2.226 -> 2.227']` in `VersionFixer.tsx`, subito dopo `['2.225 -> 2.226']`.
 **Files touched**: `frontend/src/redux/VersionFixer.tsx` (nuovo metodo `['2.226 -> 2.227']`), `docs/claude-code-log.md` (questa entry).
