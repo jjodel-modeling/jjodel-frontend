@@ -17,6 +17,7 @@ import { makeReadCtx } from './irReadCtxLproxy';
 import {
     buildContainmentModel,
     computeHidden,
+    computeRowHiddenChildren,
     decorateEdges,
     decorateNodes,
     type ContainmentModel,
@@ -126,12 +127,23 @@ export function useIRContainment(nodes: Node[], edges: Edge[]): IRContainmentDec
         let outEdges = edges;
         const names = new Map<string, string>();
 
-        // Containment pass (Fase 2b)
-        if (model.containers.size > 0) {
+        // Row-dispatch suppression (Fase R2): containment children rendered as inline
+        // rows in a vertex view's `children` compartment are hidden as top-level nodes
+        // (hidden:true, never removed). rowRenderedChildren is the SSOT shared with
+        // IRNodeContent (which renders exactly this set). Fast path: empty when no view
+        // declares a children compartment (Machine/State etc. pay nothing).
+        const rowHidden = computeRowHiddenChildren(nodes, state.idlookup, index, readCtx);
+
+        // Containment (collapse) + row-suppression pass. Unioning the two hidden sets
+        // lets decorateEdges lift/suppress dangling edges to row children with no new
+        // logic. A child both inside a collapsed hull and a row of another node is
+        // handled by the union — no special precedence.
+        if (model.containers.size > 0 || rowHidden.size > 0) {
             for (const objectId of model.containers.keys()) {
                 names.set(objectId, readCtx.getName(objectId) ?? '');
             }
             const hidden = computeHidden(model, getCollapsedSet());
+            for (const r of rowHidden) hidden.add(r);
             outNodes = decorateNodes(outNodes, model, hidden);
             outEdges = decorateEdges(outEdges, model, hidden, outNodes);
         }

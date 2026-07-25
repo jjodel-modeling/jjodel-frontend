@@ -75,7 +75,15 @@ export type FieldSegment =
 
 export interface FieldCompartmentSpec {
     id: string;
-    source: { from: 'attributes' } | { from: 'references' };
+    /**
+     * `attributes`/`references` = self's own slots (slot-mode rows).
+     * `children` (Fase R2) = containment children of the self, each rendered by the
+     * row view resolved for its concrete metaclass (dispatch-mode); `filter` is an
+     * optional predicate over the child (absent = all containment children). For a
+     * `children` source `rowFormat` is ignored (the row format comes from the child's
+     * row view) but stays required by the contract.
+     */
+    source: { from: 'attributes' } | { from: 'references' } | { from: 'children'; filter?: Predicate };
     rowFormat: { segments: FieldSegment[] };
     visible?: Conditional<boolean>;
     separator?: boolean;
@@ -315,8 +323,10 @@ export interface CompiledBadge {
 
 export interface CompiledFieldCompartment {
     id: string;
-    source: 'attributes' | 'references';
+    source: 'attributes' | 'references' | 'children';
     segments: FieldSegment[];
+    /** children source only: compiled child filter (absent = all containment children). */
+    childFilter?: CompiledPredicate;
     visible: CompiledConditional<boolean>;
     separator: boolean;
 }

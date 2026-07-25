@@ -17,10 +17,15 @@
  */
 
 import { irHash } from './irCompile';
-import type { CompiledView, VertexViewIR } from './irTypes';
+import type { CompiledView, RowViewIR, VertexViewIR } from './irTypes';
 
 /** Stable id for the migrated default view (Fase 4 idempotency). */
 export const IR_DEFAULT_OBJECT_VIEW_ID = 'Pointer_IRDefaultObjectView';
+
+/** Stable id for the built-in default row view (Fase R2). Used as the compile-cache
+ *  key so `compileRowView(IR_DEFAULT_ROW_VIEW_ID, defaultRowViewIR())` is memoized by
+ *  rowCompileCache (R1) — compiled once, never persisted as a DViewElement. */
+export const IR_DEFAULT_ROW_VIEW_ID = 'Pointer_IRDefaultRowView';
 
 export function defaultObjectViewIR(): VertexViewIR {
     return {
@@ -44,6 +49,22 @@ export function defaultObjectViewIR(): VertexViewIR {
                 separator: true,
             },
         ],
+    };
+}
+
+/**
+ * Built-in default row view (Fase R2): the runtime fallback used by IRRow when no
+ * row view of the active viewpoint matches a containment child (cascade tail after
+ * exact > inherited > wildcard row). Renders the child's intrinsic name. Compiled at
+ * runtime (via compileRowView + IR_DEFAULT_ROW_VIEW_ID cache key); MAI persisted as a
+ * DViewElement.
+ */
+export function defaultRowViewIR(): RowViewIR {
+    return {
+        irVersion: 'ir-1.0',
+        kind: 'row',
+        metaclasses: '*',
+        template: [{ from: 'intrinsic', prop: 'name' }],
     };
 }
 

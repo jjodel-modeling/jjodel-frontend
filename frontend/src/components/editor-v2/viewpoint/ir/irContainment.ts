@@ -18,6 +18,7 @@
 
 import type { Edge, Node } from '@xyflow/react';
 import type { ReadCtx } from './irReadCtx';
+import type { CompiledView } from './irTypes';
 import type { IRViewpointIndex } from './irResolveCore';
 import { resolveIRView } from './irResolveCore';
 import { assignGeometricHandles } from './irEdgeViews';
@@ -60,6 +61,81 @@ export function containmentChildren(idlookup: Idlookup, objectId: string): strin
         }
     }
     return out;
+}
+
+/**
+ * Fase R2 SSOT: the containment children of `selfId` rendered as inline rows, given
+ * the self's already-resolved CompiledView. Shared verbatim by the renderer
+ * (IRNodeContent iterates these) AND the presentation pass (computeRowHiddenChildren
+ * hides these) — never computed twice (spec R2 P3).
+ *
+ * Empty when the view has no `children`-source compartment. Otherwise the
+ * containmentChildren of `selfId` (D-layer order), each kept when it passes at least
+ * one children compartment's compiled `childFilter` (absent filter = all children).
+ * Multiple children compartments union without duplicates, first-occurrence order
+ * preserved (iteration is a single pass over containmentChildren).
+ */
+export function rowRenderedChildren(
+    compiled: CompiledView,
+    readCtx: ReadCtx,
+    selfId: string,
+    idlookup: Idlookup,
+): string[] {
+    const compartments = compiled.fieldCompartments.filter(fc => fc.source === 'children');
+    if (compartments.length === 0) return [];
+    const children = containmentChildren(idlookup, selfId);
+    if (children.length === 0) return [];
+    const out: string[] = [];
+    for (const childId of children) {
+        let included = false;
+        for (const fc of compartments) {
+            let ok = true;
+            if (fc.childFilter) {
+                try { ok = fc.childFilter(readCtx, childId); } catch { ok = false; }
+            }
+            if (ok) { included = true; break; }
+        }
+        if (included) out.push(childId);
+    }
+    return out;
+}
+
+/** True when any resolved view of the index declares a `children`-source compartment
+ *  (Fase R2 fast path: skip the per-node row scan entirely for viewpoints without one). */
+function indexHasRowCompartments(index: IRViewpointIndex): boolean {
+    const has = (cv: CompiledView) => cv.fieldCompartments.some(fc => fc.source === 'children');
+    for (const entries of index.byMetaclass.values()) {
+        for (const e of entries) if (has(e.compiled)) return true;
+    }
+    for (const e of index.wildcard) if (has(e.compiled)) return true;
+    return false;
+}
+
+/**
+ * Objects hidden because they are rendered as inline rows in some vertex view's
+ * `children` compartment (Fase R2). SSOT via rowRenderedChildren, shared with the
+ * renderer. Fast path: empty set (no per-node work) when no view declares a children
+ * compartment. Only vertex views host row compartments (graphVertex uses hulls).
+ */
+export function computeRowHiddenChildren(
+    nodes: Node[],
+    idlookup: Idlookup,
+    index: IRViewpointIndex | null,
+    readCtx: ReadCtx,
+): Set<string> {
+    const hidden = new Set<string>();
+    if (!index || !indexHasRowCompartments(index)) return hidden;
+    for (const n of nodes) {
+        if (n.type !== 'objectNode') continue;
+        const objectId = idlookup[n.id]?.model;
+        if (typeof objectId !== 'string') continue;
+        const metaclassId = idlookup[objectId]?.instanceof;
+        if (typeof metaclassId !== 'string') continue;
+        const cv = resolveIRView(objectId, metaclassId, index, readCtx, idlookup);
+        if (!cv || cv.kind !== 'vertex') continue;
+        for (const childId of rowRenderedChildren(cv, readCtx, objectId, idlookup)) hidden.add(childId);
+    }
+    return hidden;
 }
 
 /**

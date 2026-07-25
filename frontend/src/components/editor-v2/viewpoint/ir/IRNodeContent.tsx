@@ -14,6 +14,9 @@ import { useSelector } from 'react-redux';
 import { syncNodeLabel, syncUpdateFeatureValue } from '../../sync/canvasToJjom';
 import type { CompiledView } from './irTypes';
 import type { ReadCtx } from './irReadCtx';
+import { makeReadCtx } from './irReadCtxLproxy';
+import { rowRenderedChildren } from './irContainment';
+import IRRow from './IRRow';
 
 export interface IRNodeContentProps {
     compiled: CompiledView;
@@ -75,6 +78,24 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
         }
         return { attributes, references };
     }, [compartmentSig]);
+
+    // Row-dispatch (Fase R2): child object ids rendered as inline rows for a
+    // `children`-source compartment. SAME rowRenderedChildren as the presentation
+    // pass (SSOT — computeRowHiddenChildren hides exactly this set). A string
+    // signature keeps the host stable when only a child's content changes (each IRRow
+    // owns its subscription). Empty for views without a children compartment (fast path).
+    const rowChildSig = useSelector((state: any) => {
+        if (!compiled.fieldCompartments.some(fc => fc.source === 'children')) return '';
+        const lookup = state.idlookup;
+        return rowRenderedChildren(compiled, makeReadCtx(lookup), objectId, lookup).join(',');
+    });
+    const rowChildIds = useMemo(() => (rowChildSig ? rowChildSig.split(',') : []), [rowChildSig]);
+    // Render the row set once even if several children compartments are declared:
+    // rowRenderedChildren already unions them, so it is emitted at the first one only.
+    const firstChildrenCompartment = useMemo(
+        () => compiled.fieldCompartments.find(fc => fc.source === 'children'),
+        [compiled],
+    );
 
     const commitRowEdit = useCallback(() => {
         if (editingRow) {
@@ -153,6 +174,23 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
             })}
             {compiled.fieldCompartments.map(fc => {
                 if (!fc.visible(readCtx, objectId)) return null;
+                if (fc.source === 'children') {
+                    // R2 dispatch: rows are the (filtered) containment children, each
+                    // rendered by its own resolved row view (IRRow). The slot-mode path
+                    // below (attributes/references) is untouched — the two row semantics
+                    // stay separate.
+                    if (fc !== firstChildrenCompartment || rowChildIds.length === 0) return null;
+                    return (
+                        <div
+                            key={fc.id}
+                            className={`ir-compartment${fc.separator ? '' : ' ir-compartment--no-separator'}`}
+                        >
+                            {rowChildIds.map(childId => (
+                                <IRRow key={childId} childObjectId={childId} />
+                            ))}
+                        </div>
+                    );
+                }
                 const source = fc.source === 'references' ? rows.references : rows.attributes;
                 if (source.length === 0) return null;
                 return (

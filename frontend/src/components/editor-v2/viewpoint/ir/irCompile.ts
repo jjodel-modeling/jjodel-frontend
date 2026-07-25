@@ -300,6 +300,13 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
         id: fc.id,
         source: fc.source.from,
         segments: fc.rowFormat.segments,
+        // children source (Fase R2): compile the optional child filter with the same
+        // predicate compiler as the containment childFilter. attributes/references
+        // compile exactly as before (no childFilter). Empty rowFormat.segments is fine
+        // for children (ignored at render — the format comes from the child's row view).
+        ...(fc.source.from === 'children' && fc.source.filter
+            ? { childFilter: compilePredicate(fc.source.filter, deps) }
+            : {}),
         visible: compileConditional(fc.visible, true, deps),
         separator: fc.separator !== false,
     }));

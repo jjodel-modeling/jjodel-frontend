@@ -9,12 +9,12 @@
  * All fixtures are plain D-layer shapes (idlookup records); no store, no React.
  */
 import { describe, it, expect } from 'vitest';
-import { compileView, compileEdgeView, clearCompileCache } from '../irCompile';
+import { compileView, compileEdgeView, compileRowView, clearCompileCache } from '../irCompile';
 import { getIREdgeAnchorOverride, hydrateIREdgeAnchorOverrides, irEdgeLayoutFromOverride, setIREdgeAnchorOverride } from '../irEdgeInteraction';
 import { getCollapsedSet, hydrateCollapsed } from '../irCollapseState';
 import { makeDrawReadCtx, classAncestryNames, navigateRefHop } from '../irReadCtx';
 import { getIRIndex, resolveIRView, resolveRowView } from '../irResolveCore';
-import { defaultObjectViewIR, isMigratedDefaultView, IR_DEFAULT_OBJECT_VIEW_ID } from '../irDefaults';
+import { defaultObjectViewIR, defaultRowViewIR, isMigratedDefaultView, IR_DEFAULT_OBJECT_VIEW_ID } from '../irDefaults';
 import {
     buildContainmentModel,
     computeHidden,
@@ -22,6 +22,7 @@ import {
     decorateEdges,
     decorateNodes,
     liftEndpoint,
+    rowRenderedChildren,
 } from '../irContainment';
 import { assignGeometricHandles, decorateReferenceEdges, synthesizeObjectAsEdges } from '../irEdgeViews';
 import { applyIRPaletteFilter, deriveDroppableChildMetaclasses, deriveIRInteraction, matchConnectRules } from '../irInteraction';
@@ -923,5 +924,94 @@ describe('layout persistence (discovery 2026-07-19)', () => {
         hydrateCollapsed(['hydr_cont1', 'hydr_cont2']);
         expect(getCollapsedSet().has('hydr_cont1')).toBe(true);
         expect(getCollapsedSet().has('hydr_cont2')).toBe(true);
+    });
+});
+
+describe('rowRenderedChildren + children compartment (Fase R2)', () => {
+    /** Class/Feature/Attribute/Operation metamodel; Person owns [name, surname (Attribute), greet (Operation)]. */
+    function classWorld() {
+        const idlookup: Record<string, any> = {
+            C_Named: { id: 'C_Named', name: 'NamedElement', extends: [] },
+            C_Class: { id: 'C_Class', name: 'Class', extends: ['C_Named'] },
+            C_Feature: { id: 'C_Feature', name: 'Feature', extends: ['C_Named'] },
+            C_Attr: { id: 'C_Attr', name: 'Attribute', extends: ['C_Feature'] },
+            C_Op: { id: 'C_Op', name: 'Operation', extends: ['C_Feature'] },
+            R_owned: { id: 'R_owned', name: 'ownedFeatures', className: 'DReference', composition: true },
+            person: { id: 'person', name: 'Person', instanceof: 'C_Class', features: ['v_owned'] },
+            v_owned: { id: 'v_owned', instanceof: 'R_owned', values: ['a_name', 'a_surname', 'op_greet'] },
+            a_name: { id: 'a_name', name: 'name', instanceof: 'C_Attr', features: [] },
+            a_surname: { id: 'a_surname', name: 'surname', instanceof: 'C_Attr', features: [] },
+            op_greet: { id: 'op_greet', name: 'greet', instanceof: 'C_Op', features: [] },
+        };
+        return { idlookup, ctx: makeDrawReadCtx(idlookup) };
+    }
+    const classIR = (compartments: any[]): VertexViewIR => ({
+        irVersion: 'ir-1.0', kind: 'vertex', metaclasses: ['Class'],
+        shape: { form: 'rect' }, fieldCompartments: compartments,
+    });
+
+    it('returns [] for a view without a children compartment', () => {
+        clearCompileCache();
+        const { idlookup, ctx } = classWorld();
+        const cv = compileView('v_slot', classIR([{ id: 'a', source: { from: 'attributes' }, rowFormat: { segments: [{ kind: 'name' }] } }]));
+        expect(rowRenderedChildren(cv, ctx, 'person', idlookup)).toEqual([]);
+    });
+
+    it('no filter → all containment children in slot order; childFilter undefined', () => {
+        clearCompileCache();
+        const { idlookup, ctx } = classWorld();
+        const cv = compileView('v_all', classIR([{ id: 'f', source: { from: 'children' }, rowFormat: { segments: [] } }]));
+        expect(cv.fieldCompartments[0].source).toBe('children');
+        expect(cv.fieldCompartments[0].childFilter).toBeUndefined();
+        expect(rowRenderedChildren(cv, ctx, 'person', idlookup)).toEqual(['a_name', 'a_surname', 'op_greet']);
+    });
+
+    it('isKind filter on the subtype includes only matching children (Operation excluded)', () => {
+        clearCompileCache();
+        const { idlookup, ctx } = classWorld();
+        const cv = compileView('v_attr', classIR([
+            { id: 'f', source: { from: 'children', filter: { op: 'isKind', class: 'Attribute' } }, rowFormat: { segments: [] } },
+        ]));
+        expect(typeof cv.fieldCompartments[0].childFilter).toBe('function');
+        expect(rowRenderedChildren(cv, ctx, 'person', idlookup)).toEqual(['a_name', 'a_surname']);
+    });
+
+    it('isKind filter on a superclass includes subtypes (Attribute AND Operation are Features)', () => {
+        clearCompileCache();
+        const { idlookup, ctx } = classWorld();
+        const cv = compileView('v_feat', classIR([
+            { id: 'f', source: { from: 'children', filter: { op: 'isKind', class: 'Feature' } }, rowFormat: { segments: [] } },
+        ]));
+        expect(rowRenderedChildren(cv, ctx, 'person', idlookup)).toEqual(['a_name', 'a_surname', 'op_greet']);
+    });
+
+    it('two children compartments union without duplicates, first-occurrence (containment) order', () => {
+        clearCompileCache();
+        const { idlookup, ctx } = classWorld();
+        const cv = compileView('v_two', classIR([
+            { id: 'attrs', source: { from: 'children', filter: { op: 'isKind', class: 'Attribute' } }, rowFormat: { segments: [] } },
+            { id: 'ops', source: { from: 'children', filter: { op: 'isKind', class: 'Operation' } }, rowFormat: { segments: [] } },
+        ]));
+        expect(rowRenderedChildren(cv, ctx, 'person', idlookup)).toEqual(['a_name', 'a_surname', 'op_greet']);
+    });
+
+    it('empty rowFormat.segments compiles for a children compartment (no throw)', () => {
+        clearCompileCache();
+        expect(() => compileView('v_empty', classIR([{ id: 'f', source: { from: 'children' }, rowFormat: { segments: [] } }]))).not.toThrow();
+    });
+
+    it('fallback: a child with no matching row view resolves null → default row view renders the name', () => {
+        clearCompileCache();
+        const { idlookup, ctx } = classWorld();
+        const state = { viewpoint: 'VP', viewelements: ['V_row_attr'], idlookup: {
+            ...idlookup,
+            V_row_attr: { id: 'V_row_attr', viewpoint: 'VP', ir: { irVersion: 'ir-1.0', kind: 'row', metaclasses: ['Attribute'], template: [{ from: 'intrinsic', prop: 'name' }] } },
+        } };
+        const index = getIRIndex(state, 'sig_r2_fallback')!;
+        expect(resolveRowView('a_name', 'C_Attr', index, ctx, state.idlookup)!.viewId).toBe('V_row_attr'); // exact row view
+        expect(resolveRowView('op_greet', 'C_Op', index, ctx, state.idlookup)).toBeNull();                 // no match → caller falls back
+        const def = compileRowView('def_row', defaultRowViewIR());
+        expect(def.template).toHaveLength(1);
+        expect(def.template[0](ctx, 'op_greet')).toBe('greet'); // intrinsic name fallback
     });
 });
