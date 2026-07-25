@@ -43,7 +43,33 @@ const BASE_CSS = `
 .mm-node.drop-target:has(> .ir-node-content) { border-color: transparent; box-shadow: none; }
 .ir-node-content { box-sizing: border-box; background: var(--node-bg); border: 1px solid var(--border-default); border-radius: 4px; box-shadow: 0 1px 3px var(--node-shadow), 0 4px 12px var(--node-shadow-deep, rgba(0, 0, 0, 0.08)); overflow: hidden; }
 .ir-node-content.ir-shape--rounded { border-radius: 10px; }
-.ir-node-content.ir-shape--ellipse { border-radius: 50%; justify-content: center; }
+/* Fase 2 (2026-07-24): geometric shape nodes (ellipse) free-resize below the
+   label down to SHAPE_MIN_SIZE (the resizer floor). Neutralize every intrinsic
+   min so nothing above the resizer floor blocks the shrink — both on the shape
+   element and on the .mm-node/.mm-object wrapper (140/40 floor in EditorV2.scss),
+   scoped to the ellipse via :has (same pattern as the wrapper neutralizers above).
+   The wrapper must also fill the RF box on BOTH axes: EditorV2.scss's ghost-frame
+   fix gives .mm-object only height:100% (cards content-hug horizontally), so
+   without width:100% here the ellipse wrapper shrink-to-fits the nowrap label and
+   width never drops below it. Before any resize, 100% resolves to auto (content-
+   hug); it engages once the resizer sets an explicit size. The label already
+   clips (.ir-label: overflow/ellipsis/nowrap). */
+.ir-node-content.ir-shape--ellipse { border-radius: 50%; justify-content: center; min-width: 0; min-height: 0; }
+.mm-node:has(> .ir-node-content.ir-shape--ellipse) { min-width: 0; min-height: 0; width: 100%; height: 100%; }
+/* circle: ellipse locked to a 1:1 aspect ratio (round even before any resize;
+   the resizer keepAspectRatio (ObjectNode) keeps it round on drag). */
+.ir-node-content.ir-shape--circle { border-radius: 50%; justify-content: center; aspect-ratio: 1 / 1; min-width: 0; min-height: 0; }
+.mm-node:has(> .ir-node-content.ir-shape--circle) { min-width: 0; min-height: 0; width: 100%; height: 100%; }
+/* diamond: the rhombus is drawn by an SVG layer (IRNodeContent) that carries
+   the resolved fill/border; the rectangular box of .ir-node-content is
+   suppressed here so no square shows behind it (inline box also skipped for
+   diamond in IRNodeContent). overflow:visible keeps the apices' stroke uncut.
+   Content (label/compartments) sits above the SVG via z-index; badges (z 2) and
+   the collapse-chip (z 3) stay above both. */
+.ir-node-content.ir-shape--diamond { background: transparent; border-color: transparent; box-shadow: none; overflow: visible; justify-content: center; align-items: center; min-width: 0; min-height: 0; }
+.ir-node-content.ir-shape--diamond > .ir-diamond-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 0; }
+.ir-node-content.ir-shape--diamond > :not(.ir-diamond-svg) { position: relative; z-index: 1; }
+.mm-node:has(> .ir-node-content.ir-shape--diamond) { min-width: 0; min-height: 0; width: 100%; height: 100%; }
 .mm-node.selected > .ir-node-content { outline: 2px solid var(--color-accent); outline-offset: 1px; }
 .mm-node.drop-target > .ir-node-content { outline: 2px solid var(--color-accent); }
 .ir-hull { border: 1.5px dashed rgba(51,65,85,0.45); border-radius: 12px; background: rgba(51,65,85,0.03); }

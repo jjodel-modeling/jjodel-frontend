@@ -21,6 +21,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { NodeResizer, useReactFlow, type NodeProps, type Node } from '@xyflow/react';
 import DynamicHandles from '../components/DynamicHandles';
+import { isNodeResizable, SHAPE_MIN_SIZE } from './nodeSizing';
 import InlineEnumSelect from '../components/InlineEnumSelect';
 import { useEditorContextSafe } from '../contexts/EditorContext';
 import { useNodeHighlightClass } from '../contexts/HighlightContext';
@@ -366,18 +367,26 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
         // IR render path: wrapper, resizer, handles and highlight class stay
         // identical (handle contract is node-type-agnostic); only the content
         // is produced by the interpreter. Read-only in the spike.
+        // Resize affordance (Fase 2, emendamento 2026-07-24): only IR views that
+        // resolve to a geometric shape (ellipse) mount the resizer and may shrink
+        // below the label down to SHAPE_MIN_SIZE. Box-like forms stay content-hug.
+        const shapeForm = irResolution.compiled.form(irResolution.readCtx, irResolution.objectId);
+        const hasGeometricShape = shapeForm === 'ellipse' || shapeForm === 'circle' || shapeForm === 'diamond';
         return (
             <div
                 className={`mm-node mm-object ${selected ? 'selected' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass} ir-view-${irResolution.compiled.viewId}`}
                 data-viewid={irResolution.compiled.viewId}
             >
-                <NodeResizer
-                    isVisible={selected}
-                    minWidth={140}
-                    minHeight={40}
-                    lineClassName="node-resize-line"
-                    handleClassName="node-resize-handle"
-                />
+                {isNodeResizable('objectNode', hasGeometricShape) && (
+                    <NodeResizer
+                        isVisible={selected}
+                        minWidth={SHAPE_MIN_SIZE}
+                        minHeight={SHAPE_MIN_SIZE}
+                        keepAspectRatio={shapeForm === 'circle'}
+                        lineClassName="node-resize-line"
+                        handleClassName="node-resize-handle"
+                    />
+                )}
                 <DynamicHandles nodeId={id} />
                 {isSingleton && (
                     <span className="singleton-badge">
@@ -419,13 +428,15 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
 
     return (
         <div className={`mm-node mm-object ${selected ? 'selected' : ''} ${isOrphan ? 'mm-object--orphan' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass}`}>
-            <NodeResizer
-                isVisible={selected}
-                minWidth={140}
-                minHeight={40}
-                lineClassName="node-resize-line"
-                handleClassName="node-resize-handle"
-            />
+            {isNodeResizable('objectNode') && (
+                <NodeResizer
+                    isVisible={selected}
+                    minWidth={140}
+                    minHeight={40}
+                    lineClassName="node-resize-line"
+                    handleClassName="node-resize-handle"
+                />
+            )}
 
             <DynamicHandles nodeId={id} />
 

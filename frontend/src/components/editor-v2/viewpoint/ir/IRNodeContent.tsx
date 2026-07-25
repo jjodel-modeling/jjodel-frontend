@@ -116,19 +116,44 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
         else if (e.key === 'Escape') { setEditingRow(null); setEditingLabel(null); }
     }, []);
 
+    const isDiamond = form === 'diamond';
     const inlineStyle: React.CSSProperties = {};
-    if (fill) inlineStyle.background = fill;
+    // Diamond paints fill/border in its SVG layer (below). The inline box would
+    // win over the CSS box suppression (irStyle.ts) and show a square behind the
+    // rhombus, so it is not emitted for diamond.
+    if (fill && !isDiamond) inlineStyle.background = fill;
     // Fase B: authored border painted inline on .ir-node-content (per-field
     // fallback). When compiled.border is null the CSS box border applies —
     // covers demo/migrated views without an authored border.
     const b = compiled.border;
-    if (b) inlineStyle.border = `${b.width ?? 1}px ${b.style ?? 'solid'} ${b.color ?? 'var(--border-default)'}`;
+    if (b && !isDiamond) inlineStyle.border = `${b.width ?? 1}px ${b.style ?? 'solid'} ${b.color ?? 'var(--border-default)'}`;
+
+    // Diamond SVG paints: the same resolved fill/border, with the box-base
+    // fallbacks (irStyle.ts:44) when nothing is authored. The polygon stretches
+    // to any aspect ratio; non-scaling-stroke keeps the border a constant width.
+    const DIAMOND_DASH: Record<string, string | undefined> = { solid: undefined, dashed: '6 4', dotted: '1 4' };
+    const svgFill = fill || 'var(--node-bg)';
+    const svgStroke = compiled.border?.color ?? 'var(--border-default)';
+    const svgStrokeWidth = compiled.border?.width ?? 1;
+    const svgDash = DIAMOND_DASH[compiled.border?.style ?? 'solid'];
 
     return (
         <div
             className={`ir-node-content ir-shape--${form}`}
             style={inlineStyle}
         >
+            {isDiamond && (
+                <svg className="ir-diamond-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                    <polygon
+                        points="50,0 100,50 50,100 0,50"
+                        vectorEffect="non-scaling-stroke"
+                        fill={svgFill}
+                        stroke={svgStroke}
+                        strokeWidth={svgStrokeWidth}
+                        strokeDasharray={svgDash}
+                    />
+                </svg>
+            )}
             {compiled.badges.map((b, i) => {
                 if (!b.visible(readCtx, objectId)) return null;
                 const icon = b.icon(readCtx, objectId);

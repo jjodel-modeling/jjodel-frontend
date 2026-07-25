@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import { NodeResizer, useReactFlow, type NodeProps, type Node } from '@xyflow/react';
 import ViewpointRenderer from '../viewpoint/ViewpointRenderer';
 import DynamicHandles from '../components/DynamicHandles';
+import { isNodeResizable } from './nodeSizing';
 import InlineTypeSelect from '../components/InlineTypeSelect';
 import { useEditorContextSafe } from '../contexts/EditorContext';
 import { useNodeHighlightClass } from '../contexts/HighlightContext';
@@ -423,13 +424,15 @@ function ClassNode({ id, data, selected, width, height }: NodeProps<ClassNodeTyp
     if (data.jsxString) {
         return (
             <div className={`mm-node mm-class viewpoint-wrapper ${selected ? 'selected' : ''} ${hlClass}`}>
-                <NodeResizer
-                    isVisible={selected}
-                    minWidth={120}
-                    minHeight={60}
-                    lineClassName="node-resize-line"
-                    handleClassName="node-resize-handle"
-                />
+                {isNodeResizable('classNode') && (
+                    <NodeResizer
+                        isVisible={selected}
+                        minWidth={120}
+                        minHeight={60}
+                        lineClassName="node-resize-line"
+                        handleClassName="node-resize-handle"
+                    />
+                )}
                 <DynamicHandles nodeId={id} />
                 <ViewpointRenderer jsxString={data.jsxString} context={data} />
             </div>
@@ -477,13 +480,15 @@ function ClassNode({ id, data, selected, width, height }: NodeProps<ClassNodeTyp
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
         >
-            <NodeResizer
-                isVisible={selected}
-                minWidth={140}
-                minHeight={40}
-                lineClassName="node-resize-line"
-                handleClassName="node-resize-handle"
-            />
+            {isNodeResizable('classNode') && (
+                <NodeResizer
+                    isVisible={selected}
+                    minWidth={140}
+                    minHeight={40}
+                    lineClassName="node-resize-line"
+                    handleClassName="node-resize-handle"
+                />
+            )}
 
             <DynamicHandles nodeId={id} />
 

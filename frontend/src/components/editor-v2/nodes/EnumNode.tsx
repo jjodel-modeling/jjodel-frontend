@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { NodeResizer, useReactFlow, type NodeProps, type Node } from '@xyflow/react';
 import DynamicHandles from '../components/DynamicHandles';
+import { isNodeResizable } from './nodeSizing';
 import { syncNodeLabel, syncAddEnumLiteral, syncUpdateEnumLiteral } from '../sync/canvasToJjom';
 import type { EnumNodeData } from '../types';
 import { createLiteral } from '../types';
@@ -155,13 +156,15 @@ function EnumNode({ id, data, selected }: NodeProps<EnumNodeType>) {
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
         >
-            <NodeResizer
-                isVisible={selected}
-                minWidth={120}
-                minHeight={40}
-                lineClassName="node-resize-line"
-                handleClassName="node-resize-handle"
-            />
+            {isNodeResizable('enumNode') && (
+                <NodeResizer
+                    isVisible={selected}
+                    minWidth={120}
+                    minHeight={40}
+                    lineClassName="node-resize-line"
+                    handleClassName="node-resize-handle"
+                />
+            )}
 
             <DynamicHandles nodeId={id} />
 

@@ -18,6 +18,8 @@ const FORM_OPTIONS = [
     { value: 'rect', label: 'Rectangle' },
     { value: 'rounded', label: 'Rounded' },
     { value: 'ellipse', label: 'Ellipse' },
+    { value: 'circle', label: 'Circle' },
+    { value: 'diamond', label: 'Diamond' },
 ];
 const BORDER_STYLE_OPTIONS = [
     { value: 'solid', label: 'Solid' },
