@@ -25,6 +25,7 @@ import HelpButton from '../../HelpButton';
 import "./nestedView.scss";
 import {ComponentsTab} from "./data/ComponentsTab";
 import {VertexAuthoringPanel} from "../../editor-v2/viewpoint/authoring/VertexAuthoringPanel";
+import {RowAuthoringPanel} from "../../editor-v2/viewpoint/authoring/RowAuthoringPanel";
 import {EnableIRPanel} from "../../editor-v2/viewpoint/authoring/EnableIRPanel";
 import {HelpText} from "../../ui";
 
@@ -51,7 +52,7 @@ function ViewDataComponent(props: AllProps) {
     // views without an IR yet get the enable entry-point. Edge views, edge-IR views
     // and viewpoints get no IR tab.
     const ir = (view as any).ir;
-    // vertex-IR → authoring panel; row-IR → read-only placeholder (R1, authoring in R2);
+    // vertex-IR → authoring panel; row-IR → row authoring panel (R3);
     // plain non-edge views without an IR yet → enable entry-point. Edge/graphVertex-IR
     // views and viewpoints get no IR tab (unchanged).
     const showIRTab = (ir?.kind === 'vertex') || (ir?.kind === 'row') || (isV && !ir && view.isEdge !== true);
@@ -84,14 +85,16 @@ function ViewDataComponent(props: AllProps) {
                 <Try>
                     {ir?.kind === 'vertex'
                         ? <VertexAuthoringPanel view={view} />
-                        : ir
-                            ? (
-                                <section className="properties-tab properties-panel">
-                                    <div className="jj-field-label" style={{ marginTop: 4 }}>IR authoring</div>
-                                    <HelpText>View IR di kind "{ir.kind}": authoring non ancora disponibile.</HelpText>
-                                </section>
-                            )
-                            : <EnableIRPanel view={view} />}
+                        : ir?.kind === 'row'
+                            ? <RowAuthoringPanel view={view} />
+                            : ir
+                                ? (
+                                    <section className="properties-tab properties-panel">
+                                        <div className="jj-field-label" style={{ marginTop: 4 }}>IR authoring</div>
+                                        <HelpText>View IR di kind "{ir.kind}": authoring non ancora disponibile.</HelpText>
+                                    </section>
+                                )
+                                : <EnableIRPanel view={view} />}
                 </Try>
             ),
         }] : []),

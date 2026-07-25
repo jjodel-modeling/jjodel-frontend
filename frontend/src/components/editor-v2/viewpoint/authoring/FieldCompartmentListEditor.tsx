@@ -1,12 +1,73 @@
 import React from 'react';
-import { ListEditor, Input, Select, Checkbox, ConditionalEditor, type PathBuilderFeatures } from '../../../ui';
+import { ListEditor, Input, Select, Checkbox, HelpText, ConditionalEditor, forPredicateKind, type PathBuilderFeatures } from '../../../ui';
 import { FieldSegmentEditor } from './FieldSegmentEditor';
-import type { FieldCompartmentSpec, FieldSegment } from '../ir/irTypes';
+import type { FieldCompartmentSpec, FieldSegment, Predicate } from '../ir/irTypes';
 
 const SOURCE_OPTIONS = [
     { value: 'attributes', label: 'Attributes' },
     { value: 'references', label: 'References' },
+    { value: 'children', label: 'Children (row dispatch)' },
 ];
+
+/** The source kinds this editor can author in Basic. A persisted source with any
+ *  other `from` (a future schema extension, a hand-edited view) is preserved
+ *  verbatim: no handler rewrites it. */
+const KNOWN_SOURCES: readonly string[] = ['attributes', 'references', 'children'];
+
+// --- pure preserve-verbatim helpers (exported for unit tests) ---
+// These encode the whole "what is representable in Basic vs preserved verbatim"
+// decision. The render uses them directly, so a test on them tests the real path.
+
+/** True iff `from` is a source this editor can author. Unknown = read-only badge. */
+export const isKnownCompartmentSource = (from: string): boolean => KNOWN_SOURCES.includes(from);
+
+export type ChildFilterKind = 'none' | 'basic-iskind' | 'advanced';
+/**
+ * Classify a `children` source filter for the Basic editor:
+ *  - 'none'         → no filter (all containment children);
+ *  - 'basic-iskind' → exactly `{op:'isKind', class}` (editable inline);
+ *  - 'advanced'     → any other predicate, incl. isKind carrying a `path`
+ *                     (read-only chip, preserved verbatim — never rewritten).
+ */
+export function classifyChildFilter(filter: Predicate | undefined): ChildFilterKind {
+    if (filter === undefined) return 'none';
+    if (filter.op === 'isKind' && filter.path === undefined) return 'basic-iskind';
+    return 'advanced';
+}
+
+/**
+ * Rebuild a compartment's `source` for an explicit user pick on the source Select.
+ * Only ever called from the Select onChange (a deliberate user action), never on
+ * mount/re-render — so it never rewrites a source implicitly. Switching to
+ * `children` starts with no filter; other fields (id, rowFormat, visible) are kept.
+ */
+export function withCompartmentSource(comp: FieldCompartmentSpec, from: string): FieldCompartmentSpec {
+    if (from === 'children') return { ...comp, source: { from: 'children' } };
+    if (from === 'references') return { ...comp, source: { from: 'references' } };
+    return { ...comp, source: { from: 'attributes' } };
+}
+
+/**
+ * Rebuild a `children` compartment's filter. `undefined` drops the `filter` KEY
+ * (source becomes the bare `{from:'children'}`), mirroring the rest/spread removal
+ * used for the top-level predicate — so an unchecked filter round-trips byte-identical
+ * to a children source authored without any filter.
+ */
+export function withChildFilter(comp: FieldCompartmentSpec, next: Predicate | undefined): FieldCompartmentSpec {
+    return { ...comp, source: next === undefined ? { from: 'children' } : { from: 'children', filter: next } };
+}
+
+/** Read-only chip for values not representable in Basic (preserved verbatim). Same
+ *  visual convention as LabelEntryEditor's CHIP — inline style, no new CSS class. */
+const CHIP: React.CSSProperties = {
+    display: 'inline-block',
+    fontSize: 'var(--font-size-sm)',
+    color: 'var(--color-text-tertiary)',
+    fontStyle: 'italic',
+    padding: '2px 6px',
+    border: '1px dashed var(--color-border-primary)',
+    borderRadius: 'var(--radius-sm)',
+};
 
 /** New compartment default (prompt B2a): attributes source with a single name segment. */
 const newCompartment = (): FieldCompartmentSpec => ({
@@ -92,6 +153,22 @@ export const FieldCompartmentListEditor: React.FC<FieldCompartmentListEditorProp
                     setSegments(n);
                 };
 
+                // --- source (attributes | references | children) ---
+                // Runtime string compare (not the union type) so a persisted unknown
+                // `from` falls through to the read-only badge instead of being coerced.
+                const sourceFrom = comp.source.from as string;
+                const isKnownSource = isKnownCompartmentSource(sourceFrom);
+                const isSlotSource = sourceFrom === 'attributes' || sourceFrom === 'references';
+                // Only fired by an explicit user pick on the Select — never on mount/re-render.
+                const changeSource = (from: string) => replace(index, withCompartmentSource(comp, from));
+
+                // --- children filter (isKind Basic case; anything else preserved verbatim) ---
+                const childFilter = comp.source.from === 'children' ? comp.source.filter : undefined;
+                const childFilterKind = classifyChildFilter(childFilter);
+                const isBasicIsKind = childFilterKind === 'basic-iskind';
+                const isAdvancedFilter = childFilterKind === 'advanced';
+                const setChildFilter = (next: Predicate | undefined) => replace(index, withChildFilter(comp, next));
+
                 return (
                     <>
                         <div className="jj-field">
@@ -101,28 +178,63 @@ export const FieldCompartmentListEditor: React.FC<FieldCompartmentListEditorProp
 
                         <div className="jj-field">
                             <label className="jj-field-label">Source</label>
-                            <Select
-                                options={SOURCE_OPTIONS}
-                                value={comp.source.from}
-                                onChange={(e) => replace(index, { ...comp, source: { from: e.target.value as 'attributes' | 'references' } })}
-                            />
+                            {isKnownSource ? (
+                                <Select
+                                    options={SOURCE_OPTIONS}
+                                    value={comp.source.from}
+                                    onChange={(e) => changeSource(e.target.value)}
+                                />
+                            ) : (
+                                <span style={CHIP}>{`sorgente non supportata: ${sourceFrom} (preservata)`}</span>
+                            )}
                         </div>
 
-                        <div className="jj-field">
-                            <label className="jj-field-label">Row segments</label>
-                            <ListEditor<FieldSegment>
-                                items={segments}
-                                onRemove={removeSegment}
-                                onMove={moveSegment}
-                                onAdd={() => setSegments([...segments, newSegment()])}
-                                addLabel="Add segment"
-                                emptyHint="No segments."
-                                itemLabel={(seg, si) => `Segment #${si + 1} — ${seg.kind}`}
-                                renderItem={(seg, si) => (
-                                    <FieldSegmentEditor segment={seg} onChange={(s) => replaceSegment(si, s)} />
+                        {comp.source.from === 'children' && (
+                            <div className="jj-field">
+                                <label className="jj-field-label">Filtro children</label>
+                                {isAdvancedFilter ? (
+                                    <span style={CHIP}>predicate avanzato (preservato)</span>
+                                ) : (
+                                    <>
+                                        <Checkbox
+                                            checked={isBasicIsKind}
+                                            onChange={(checked) => setChildFilter(checked ? forPredicateKind('isKind', classNames) : undefined)}
+                                            label="filtra per metaclasse (isKind)"
+                                        />
+                                        {isBasicIsKind && childFilter && childFilter.op === 'isKind' && (
+                                            <Select
+                                                options={classNames.map((n) => ({ value: n, label: n }))}
+                                                value={childFilter.class}
+                                                onChange={(e) => setChildFilter({ op: 'isKind', class: e.target.value })}
+                                            />
+                                        )}
+                                    </>
                                 )}
-                            />
-                        </div>
+                            </div>
+                        )}
+
+                        {isSlotSource ? (
+                            <div className="jj-field">
+                                <label className="jj-field-label">Row segments</label>
+                                <ListEditor<FieldSegment>
+                                    items={segments}
+                                    onRemove={removeSegment}
+                                    onMove={moveSegment}
+                                    onAdd={() => setSegments([...segments, newSegment()])}
+                                    addLabel="Add segment"
+                                    emptyHint="No segments."
+                                    itemLabel={(seg, si) => `Segment #${si + 1} — ${seg.kind}`}
+                                    renderItem={(seg, si) => (
+                                        <FieldSegmentEditor segment={seg} onChange={(s) => replaceSegment(si, s)} />
+                                    )}
+                                />
+                            </div>
+                        ) : comp.source.from === 'children' ? (
+                            <div className="jj-field">
+                                <label className="jj-field-label">Row segments</label>
+                                <HelpText>Le righe sono rese dalla row view di ciascun child (dispatch per metaclasse); il formato si definisce nelle view di kind "row", non qui.</HelpText>
+                            </div>
+                        ) : null}
 
                         <div className="jj-field">
                             <label className="jj-field-label">Separator</label>

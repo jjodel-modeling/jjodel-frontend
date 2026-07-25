@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
 import { DClass, LPointerTargetable, type LViewElement } from '../../../../joiner';
-import { Button, HelpText, ErrorText } from '../../../ui';
+import { Button, HelpText, ErrorText, Select } from '../../../ui';
 import { defaultObjectViewIR } from '../ir/irDefaults';
 import { validateIR } from '../ir/irValidate';
-import type { VertexViewIR } from '../ir/irTypes';
+import type { RowViewIR, VertexViewIR } from '../ir/irTypes';
+
+const KIND_OPTIONS = [
+    { value: 'vertex', label: 'Vertex (node)' },
+    { value: 'row', label: 'Row (inline)' },
+];
 
 export interface EnableIRPanelProps {
     view: LViewElement;
@@ -49,6 +54,9 @@ function resolveMetaclassNames(view: LViewElement): string[] {
  */
 export const EnableIRPanel: React.FC<EnableIRPanelProps> = ({ view }) => {
     const [error, setError] = useState<string | null>(null);
+    // Kind of IR to seed. 'vertex' reproduces the pre-R3 behaviour exactly; 'row'
+    // seeds a minimal inline row view authored from RowAuthoringPanel afterwards.
+    const [kind, setKind] = useState<'vertex' | 'row'>('vertex');
 
     // Guard (Fase R1): never overwrite an existing ir. A view may already carry an ir
     // of a kind this panel cannot author yet (e.g. 'row'); seeding the vertex default
@@ -67,11 +75,20 @@ export const EnableIRPanel: React.FC<EnableIRPanelProps> = ({ view }) => {
     const names = resolveMetaclassNames(view);
 
     const enable = () => {
-        const seed: VertexViewIR = {
+        // Row seed is intentionally minimal (metaclasses empty, single intrinsic-name
+        // segment): the author sets the metaclass and template from RowAuthoringPanel.
+        const rowSeed: RowViewIR = {
+            irVersion: 'ir-1.0',
+            kind: 'row',
+            metaclasses: [],
+            template: [{ from: 'intrinsic', prop: 'name' }],
+        };
+        const vertexSeed: VertexViewIR = {
             ...defaultObjectViewIR(),
             metaclasses: names.length > 0 ? [...names] : '*',
             ...(view.name ? { label: view.name } : {}),
         };
+        const seed = kind === 'row' ? rowSeed : vertexSeed;
         const v = validateIR(view.id, seed);
         if (!v.ok) { setError(v.error); return; }
         setError(null);
@@ -88,7 +105,18 @@ export const EnableIRPanel: React.FC<EnableIRPanelProps> = ({ view }) => {
             {error && <ErrorText>{error}</ErrorText>}
 
             <div className="jj-field" style={{ marginTop: 8 }}>
-                {names.length > 0 ? (
+                <label className="jj-field-label">Kind</label>
+                <Select
+                    options={KIND_OPTIONS}
+                    value={kind}
+                    onChange={(e) => setKind(e.target.value as 'vertex' | 'row')}
+                />
+            </div>
+
+            <div className="jj-field" style={{ marginTop: 8 }}>
+                {kind === 'row' ? (
+                    <HelpText>La row view partirà senza metaclasse: impostala (e il template) subito dopo dal pannello di authoring.</HelpText>
+                ) : names.length > 0 ? (
                     <HelpText>La view partirà applicata a: {names.join(', ')}.</HelpText>
                 ) : (
                     <HelpText>La view partirà applicata a tutte le metaclassi (*); potrai restringerla subito dopo dal tab Advanced.</HelpText>
