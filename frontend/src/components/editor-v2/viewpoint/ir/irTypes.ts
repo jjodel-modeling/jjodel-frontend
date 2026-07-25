@@ -182,8 +182,27 @@ export interface EdgeViewIR {
     };
 }
 
+/**
+ * Row view (Fase R1, spec delta 2026-07-25): renders a containment child as an
+ * inline text row inside a fieldCompartment. A row view NEVER renders on the canvas
+ * (no shape/badge/resize) and a node view NEVER renders as a row — the two resolve in
+ * separate buckets (rowByMetaclass/rowWildcard). `template` segments are TextSources
+ * rooted on the row's own object. R1 lands schema + resolver context only; the
+ * compartment dispatch (source `children`) and the renderer arrive in R2.
+ */
+export interface RowViewIR {
+    irVersion: string;               // "ir-1.0" — no bump
+    kind: 'row';
+    metaclasses: string[] | '*';
+    predicate?: Predicate;
+    priority?: number;
+    label?: string;
+    template: TextSource[];
+    visible?: Conditional<boolean>;
+}
+
 export type NodeViewIR = VertexViewIR | GraphVertexViewIR;
-export type AnyViewIR = NodeViewIR | EdgeViewIR;
+export type AnyViewIR = NodeViewIR | EdgeViewIR | RowViewIR;
 
 /**
  * One compiled step of a PathExpr: the feature read and how its value is taken.
@@ -227,6 +246,26 @@ export interface CompiledEdgeView {
     labelPlacement: 'auto' | 'above' | 'below';
     /** persistWaypoints ?? true — gates persistence/hydration of layout overrides. */
     persistWaypoints: boolean;
+}
+
+/** Result of compiling a RowViewIR (see irCompile.ts). A row view is inline text:
+ *  the compiled `template` is the per-segment accessor list; `visible` gates the row. */
+export interface CompiledRowView {
+    viewId: string;
+    ir: RowViewIR;
+    /** Discriminator copied from ir.kind. */
+    kind: 'row';
+    /** Explicit priority (0 when absent) — first key of the resolution order. */
+    priority: number;
+    /** Compiled predicate; always callable (returns true when no predicate declared). */
+    predicate: CompiledPredicate;
+    /** Feature names read by every PathExpr in this view (self only). */
+    dependencySet: string[];
+    /** Multi-hop paths read by this view (spec v1.2 sez. 9); [] when self-only. */
+    crossPaths: CompiledCrossPath[];
+    /** One accessor per template segment, rooted on the row's object. */
+    template: CompiledAccessor[];
+    visible: CompiledConditional<boolean>;
 }
 
 /** Result of compiling a VertexViewIR / GraphVertexViewIR (see irCompile.ts). */

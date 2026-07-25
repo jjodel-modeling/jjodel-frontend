@@ -6,9 +6,9 @@
  * > declaration order). See irResolve.ts for the React hook wiring.
  */
 
-import { compileEdgeView, compileView } from './irCompile';
+import { compileEdgeView, compileRowView, compileView } from './irCompile';
 import { classAncestryNames, type ReadCtx } from './irReadCtx';
-import type { AnyViewIR, CompiledEdgeView, CompiledView, EdgeViewIR } from './irTypes';
+import type { AnyViewIR, CompiledEdgeView, CompiledRowView, CompiledView, EdgeViewIR, RowViewIR } from './irTypes';
 import { ensureViewCss, removeViewCss } from './irStyle';
 
 export interface IndexEntry {
@@ -19,6 +19,26 @@ export interface IndexEntry {
 export interface EdgeIndexEntry {
     compiled: CompiledEdgeView;
     declarationIndex: number;
+}
+
+export interface RowIndexEntry {
+    compiled: CompiledRowView;
+    declarationIndex: number;
+}
+
+/**
+ * Shared candidate ordering (spec v1.2 sez. 2): priority desc, then specificity
+ * desc, then declaration order asc. Extracted (Fase R1) from the three resolvers so
+ * vertex, reference-edge, object-as-edge and row all order identically — same
+ * semantics and tie-breaks as the previous inline sorts.
+ */
+function compareCandidates(
+    a: { entry: { compiled: { priority: number }; declarationIndex: number }; specificity: number },
+    b: { entry: { compiled: { priority: number }; declarationIndex: number }; specificity: number },
+): number {
+    return (b.entry.compiled.priority - a.entry.compiled.priority)
+        || (b.specificity - a.specificity)
+        || (a.entry.declarationIndex - b.entry.declarationIndex);
 }
 
 export interface IRViewpointIndex {
@@ -32,6 +52,9 @@ export interface IRViewpointIndex {
     edgeWildcard: EdgeIndexEntry[];
     /** object-as-edge views, keyed by the edge-object metaclass name */
     objectAsEdgeByMetaclass: Map<string, EdgeIndexEntry[]>;
+    /** row views (compartment dispatch context, Fase R1), keyed by metaclass name (+ wildcard) */
+    rowByMetaclass: Map<string, RowIndexEntry[]>;
+    rowWildcard: RowIndexEntry[];
     /** all IR view ids, for style lifecycle */
     viewIds: string[];
 }
@@ -80,6 +103,8 @@ export function getIRIndex(state: any, signature: string): IRViewpointIndex | nu
     const edgeByMetaclass = new Map<string, EdgeIndexEntry[]>();
     const edgeWildcard: EdgeIndexEntry[] = [];
     const objectAsEdgeByMetaclass = new Map<string, EdgeIndexEntry[]>();
+    const rowByMetaclass = new Map<string, RowIndexEntry[]>();
+    const rowWildcard: RowIndexEntry[] = [];
     const viewIds: string[] = [];
     let declarationIndex = 0;
     const list: string[] = state.viewelements ?? [];
@@ -112,6 +137,28 @@ export function getIRIndex(state: any, signature: string): IRViewpointIndex | nu
                     const arr = edgeByMetaclass.get(mc) ?? [];
                     arr.push(entry);
                     edgeByMetaclass.set(mc, arr);
+                }
+            }
+            viewIds.push(vid);
+            continue;
+        }
+        if (ir.kind === 'row') {
+            let compiledR: CompiledRowView;
+            try {
+                compiledR = compileRowView(vid, ir as RowViewIR);
+            } catch (e) {
+                // A malformed row ir must never take the canvas down: skip the view.
+                console.warn('[ir] row compile failed for view', vid, e);
+                continue;
+            }
+            const entry: RowIndexEntry = { compiled: compiledR, declarationIndex: declarationIndex++ };
+            if (ir.metaclasses === '*') {
+                rowWildcard.push(entry);
+            } else {
+                for (const mc of ir.metaclasses ?? []) {
+                    const arr = rowByMetaclass.get(mc) ?? [];
+                    arr.push(entry);
+                    rowByMetaclass.set(mc, arr);
                 }
             }
             viewIds.push(vid);
@@ -152,7 +199,8 @@ export function getIRIndex(state: any, signature: string): IRViewpointIndex | nu
 
     const idx: IRViewpointIndex = {
         viewpointId: vp, byMetaclass, wildcard,
-        edgeByMetaclass, edgeWildcard, objectAsEdgeByMetaclass, viewIds,
+        edgeByMetaclass, edgeWildcard, objectAsEdgeByMetaclass,
+        rowByMetaclass, rowWildcard, viewIds,
     };
     indexCache.set(signature, idx);
     return idx;
@@ -185,11 +233,7 @@ export function resolveIRView(
     for (const e of index.wildcard) { if (!seen.has(e)) { seen.add(e); candidates.push({ entry: e, specificity: 0 }); } }
     if (candidates.length === 0) return null;
 
-    candidates.sort((a, b) =>
-        (b.entry.compiled.priority - a.entry.compiled.priority)
-        || (b.specificity - a.specificity)
-        || (a.entry.declarationIndex - b.entry.declarationIndex)
-    );
+    candidates.sort(compareCandidates);
 
     for (const c of candidates) {
         try {
@@ -236,11 +280,7 @@ export function resolveEdgeView(
     for (let i = 1; i < ancestry.length; i++) push(index.edgeByMetaclass.get(ancestry[i]), 1);
     push(index.edgeWildcard, 0);
     if (candidates.length === 0) return null;
-    candidates.sort((a, b) =>
-        (b.entry.compiled.priority - a.entry.compiled.priority)
-        || (b.specificity - a.specificity)
-        || (a.entry.declarationIndex - b.entry.declarationIndex)
-    );
+    candidates.sort(compareCandidates);
     for (const c of candidates) {
         try {
             if (c.entry.compiled.predicate(readCtx, sourceObjectId)) return c.entry.compiled;
@@ -270,15 +310,53 @@ export function resolveObjectAsEdgeView(
         }
     }
     if (candidates.length === 0) return null;
-    candidates.sort((a, b) =>
-        (b.entry.compiled.priority - a.entry.compiled.priority)
-        || (b.specificity - a.specificity)
-        || (a.entry.declarationIndex - b.entry.declarationIndex)
-    );
+    candidates.sort(compareCandidates);
     for (const c of candidates) {
         try {
             if (c.entry.compiled.predicate(readCtx, objectId)) return c.entry.compiled;
         } catch { /* no match */ }
+    }
+    return null;
+}
+
+/**
+ * Resolve the row view for a containment child given its metaclass id (Fase R1).
+ * Same ordering as vertices (priority > specificity exact/inherited/wildcard >
+ * declaration order, shared compareCandidates) but over the dedicated row buckets:
+ * a vertex view is never a row candidate and vice versa. Returns null when no row
+ * view of the active viewpoint applies. Consumed by the R2 compartment dispatch.
+ */
+export function resolveRowView(
+    objectId: string,
+    metaclassId: string,
+    index: IRViewpointIndex,
+    readCtx: ReadCtx,
+    idlookup: Record<string, any>,
+): CompiledRowView | null {
+    const ancestry = classAncestryNames(idlookup, metaclassId); // [self, ...ancestors]
+    if (ancestry.length === 0) return null;
+    const selfName = ancestry[0];
+
+    type Candidate = { entry: RowIndexEntry; specificity: number };
+    const candidates: Candidate[] = [];
+    const seen = new Set<RowIndexEntry>();
+    const exact = index.rowByMetaclass.get(selfName);
+    if (exact) for (const e of exact) { if (!seen.has(e)) { seen.add(e); candidates.push({ entry: e, specificity: 2 }); } }
+    for (let i = 1; i < ancestry.length; i++) {
+        const inh = index.rowByMetaclass.get(ancestry[i]);
+        if (inh) for (const e of inh) { if (!seen.has(e)) { seen.add(e); candidates.push({ entry: e, specificity: 1 }); } }
+    }
+    for (const e of index.rowWildcard) { if (!seen.has(e)) { seen.add(e); candidates.push({ entry: e, specificity: 0 }); } }
+    if (candidates.length === 0) return null;
+
+    candidates.sort(compareCandidates);
+
+    for (const c of candidates) {
+        try {
+            if (c.entry.compiled.predicate(readCtx, objectId)) return c.entry.compiled;
+        } catch {
+            // predicate failure = no match, never a crash
+        }
     }
     return null;
 }

@@ -10,12 +10,13 @@
  * is a cache hit.
  */
 
-import { compileView, compileEdgeView } from './irCompile';
-import type { AnyViewIR, EdgeViewIR } from './irTypes';
+import { compileView, compileEdgeView, compileRowView } from './irCompile';
+import type { AnyViewIR, EdgeViewIR, RowViewIR } from './irTypes';
 
 export function validateIR(viewId: string, ir: AnyViewIR): { ok: true } | { ok: false; error: string } {
     try {
         if (ir.kind === 'edge') compileEdgeView(viewId, ir as EdgeViewIR);
+        else if (ir.kind === 'row') compileRowView(viewId, ir as RowViewIR);
         else compileView(viewId, ir);
         return { ok: true };
     } catch (e) {

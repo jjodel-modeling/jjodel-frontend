@@ -18,12 +18,14 @@ import type {
     CompiledFieldCompartment,
     CompiledLabel,
     CompiledPredicate,
+    CompiledRowView,
     CompiledView,
     Conditional,
     Literal,
     PathExpr,
     Predicate,
     NodeViewIR,
+    RowViewIR,
 } from './irTypes';
 import type { ReadCtx } from './irReadCtx';
 
@@ -418,8 +420,53 @@ export function compileEdgeView(viewId: string, ir: EdgeViewIR): CompiledEdgeVie
     return compiled;
 }
 
+// ---- row views (Fase R1) ---------------------------------------------------
+
+const rowCompileCache = new Map<string, CompiledRowView>();
+
+/**
+ * Compile a RowViewIR into a CompiledRowView once per view (Fase R1). Inline text
+ * only: `template` segments reuse the TextSource compiler (labels/edge labels) and
+ * `visible` the conditional compiler — no shape, no containment. A non-array or empty
+ * `template` is a structural error (a row must render at least one segment); a
+ * forbidden PathExpr in a segment throws through compileTextSource. Both surface via
+ * validateIR. Cache key: (view id, structural hash of the ir).
+ */
+export function compileRowView(viewId: string, ir: RowViewIR): CompiledRowView {
+    if (!Array.isArray(ir.template) || ir.template.length === 0) {
+        throw new Error('[ir] row view requires a non-empty template');
+    }
+    const key = `${viewId}:${irHash(ir)}`;
+    const cached = rowCompileCache.get(key);
+    if (cached) return cached;
+
+    const deps = new Set<string>();
+    const prevSink = crossPathSink;
+    crossPathSink = [];
+    const predicate = compilePredicate(ir.predicate, deps);
+    const template: CompiledAccessor[] = ir.template.map(seg => compileTextSource(seg, deps) ?? (() => ''));
+    const visible = compileConditional(ir.visible, true, deps);
+    const crossPaths = dedupeCrossPaths(crossPathSink ?? []);
+    crossPathSink = prevSink;
+
+    const compiled: CompiledRowView = {
+        viewId,
+        ir,
+        kind: 'row',
+        priority: typeof ir.priority === 'number' ? ir.priority : 0,
+        predicate,
+        dependencySet: Array.from(deps),
+        crossPaths,
+        template,
+        visible,
+    };
+    rowCompileCache.set(key, compiled);
+    return compiled;
+}
+
 /** Test/dev helper: drop all cached compilations (e.g. after demo re-install). */
 export function clearCompileCache(): void {
     compileCache.clear();
     edgeCompileCache.clear();
+    rowCompileCache.clear();
 }

@@ -13,7 +13,7 @@ import { compileView, compileEdgeView, clearCompileCache } from '../irCompile';
 import { getIREdgeAnchorOverride, hydrateIREdgeAnchorOverrides, irEdgeLayoutFromOverride, setIREdgeAnchorOverride } from '../irEdgeInteraction';
 import { getCollapsedSet, hydrateCollapsed } from '../irCollapseState';
 import { makeDrawReadCtx, classAncestryNames, navigateRefHop } from '../irReadCtx';
-import { getIRIndex, resolveIRView } from '../irResolveCore';
+import { getIRIndex, resolveIRView, resolveRowView } from '../irResolveCore';
 import { defaultObjectViewIR, isMigratedDefaultView, IR_DEFAULT_OBJECT_VIEW_ID } from '../irDefaults';
 import {
     buildContainmentModel,
@@ -25,7 +25,7 @@ import {
 } from '../irContainment';
 import { assignGeometricHandles, decorateReferenceEdges, synthesizeObjectAsEdges } from '../irEdgeViews';
 import { applyIRPaletteFilter, deriveDroppableChildMetaclasses, deriveIRInteraction, matchConnectRules } from '../irInteraction';
-import type { EdgeViewIR, GraphVertexViewIR, VertexViewIR } from '../irTypes';
+import type { EdgeViewIR, GraphVertexViewIR, RowViewIR, VertexViewIR } from '../irTypes';
 
 /** Build a minimal D-layer world: metamodel classes + objects with slots. */
 function world() {
@@ -326,6 +326,99 @@ describe('irResolveCore ordering (spec v1.2 sez. 2)', () => {
         const index = getIRIndex(state, 'sig_broken_1')!;
         expect(index.viewIds).toEqual(['V_ok']);
         expect(resolveIRView('s1', 'C_State', index, ctx, state.idlookup)!.viewId).toBe('V_ok');
+    });
+});
+
+function rowIR(over: Partial<RowViewIR>): RowViewIR {
+    return {
+        irVersion: 'ir-1.0', kind: 'row', metaclasses: ['State'],
+        template: [{ from: 'intrinsic', prop: 'name' }], ...over,
+    } as RowViewIR;
+}
+
+describe('irResolveCore row context (Fase R1)', () => {
+    /** DState slice over the world() metamodel, sharing viewpoint 'VP', mixing ir kinds. */
+    function stateWithIrs(irs: { id: string; ir: any }[]) {
+        const { idlookup } = world();
+        const lookup: Record<string, any> = { ...idlookup };
+        const viewelements: string[] = [];
+        for (const v of irs) { lookup[v.id] = { id: v.id, viewpoint: 'VP', ir: v.ir }; viewelements.push(v.id); }
+        return { viewpoint: 'VP', viewelements, idlookup: lookup };
+    }
+
+    it('routes row views into the row buckets, never into vertex buckets (and vice versa)', () => {
+        const state = stateWithIrs([
+            { id: 'V_row_state', ir: rowIR({ metaclasses: ['State'] }) },
+            { id: 'V_row_wild', ir: rowIR({ metaclasses: '*' }) },
+            { id: 'V_vertex', ir: vertexIR({ metaclasses: ['State'] }) },
+        ]);
+        const index = getIRIndex(state, 'sig_row_buckets')!;
+        expect(index.rowByMetaclass.get('State')!.map(e => e.compiled.viewId)).toEqual(['V_row_state']);
+        expect(index.rowWildcard.map(e => e.compiled.viewId)).toEqual(['V_row_wild']);
+        expect(index.byMetaclass.get('State')!.map(e => e.compiled.viewId)).toEqual(['V_vertex']);
+        // cross-context isolation: no row id leaks into vertex buckets, no vertex into row
+        expect(index.byMetaclass.get('State')!.some(e => e.compiled.viewId.startsWith('V_row'))).toBe(false);
+        expect(index.rowByMetaclass.get('State')!.some(e => e.compiled.viewId === 'V_vertex')).toBe(false);
+        // a row resolves only via resolveRowView, a vertex only via resolveIRView
+        const ctx = makeDrawReadCtx(state.idlookup);
+        expect(resolveRowView('s1', 'C_State', index, ctx, state.idlookup)!.viewId).toBe('V_row_state');
+        expect(resolveIRView('s1', 'C_State', index, ctx, state.idlookup)!.viewId).toBe('V_vertex');
+    });
+
+    it('ignores an unknown kind without throwing (gate drops it silently)', () => {
+        const state = stateWithIrs([
+            { id: 'V_banana', ir: { irVersion: 'ir-1.0', kind: 'banana', metaclasses: ['State'] } },
+            { id: 'V_row', ir: rowIR({ metaclasses: ['State'] }) },
+        ]);
+        const index = getIRIndex(state, 'sig_row_unknown')!;
+        expect(index.viewIds).toEqual(['V_row']);   // banana dropped, no throw
+        expect(index.rowByMetaclass.get('State')!.map(e => e.compiled.viewId)).toEqual(['V_row']);
+    });
+
+    it('resolves rows with the vertex cascade: exact > inherited > wildcard', () => {
+        const state = stateWithIrs([
+            { id: 'V_row_named', ir: rowIR({ metaclasses: ['Named'] }) },
+            { id: 'V_row_final', ir: rowIR({ metaclasses: ['FinalState'] }) },
+            { id: 'V_row_wild', ir: rowIR({ metaclasses: '*' }) },
+        ]);
+        const ctx = makeDrawReadCtx(state.idlookup);
+        const index = getIRIndex(state, 'sig_row_cascade')!;
+        expect(resolveRowView('s2', 'C_Final', index, ctx, state.idlookup)!.viewId).toBe('V_row_final'); // exact
+        expect(resolveRowView('s1', 'C_State', index, ctx, state.idlookup)!.viewId).toBe('V_row_named'); // inherited beats wildcard
+    });
+
+    it('priority beats specificity; declaration order breaks total ties; false predicate falls through', () => {
+        const s1 = stateWithIrs([
+            { id: 'V_row_named_hi', ir: rowIR({ metaclasses: ['Named'], priority: 10 }) },
+            { id: 'V_row_final_lo', ir: rowIR({ metaclasses: ['FinalState'], priority: 0 }) },
+        ]);
+        const i1 = getIRIndex(s1, 'sig_row_prio')!;
+        // s2 FinalState: inherited Named at priority 10 beats exact FinalState at 0
+        expect(resolveRowView('s2', 'C_Final', i1, makeDrawReadCtx(s1.idlookup), s1.idlookup)!.viewId).toBe('V_row_named_hi');
+
+        const s2 = stateWithIrs([
+            { id: 'V_row_a', ir: rowIR({ metaclasses: ['State'] }) },
+            { id: 'V_row_b', ir: rowIR({ metaclasses: ['State'] }) },
+        ]);
+        const i2 = getIRIndex(s2, 'sig_row_declorder')!;
+        expect(resolveRowView('s1', 'C_State', i2, makeDrawReadCtx(s2.idlookup), s2.idlookup)!.viewId).toBe('V_row_a');
+
+        const s3 = stateWithIrs([
+            { id: 'V_row_gated', ir: rowIR({ metaclasses: ['State'], priority: 5,
+                predicate: { op: 'eq', left: '$isInitial.value', right: { kind: 'boolean', value: true } } }) },
+            { id: 'V_row_fallback', ir: rowIR({ metaclasses: '*' }) },
+        ]);
+        const i3 = getIRIndex(s3, 'sig_row_pred')!;
+        const ctx3 = makeDrawReadCtx(s3.idlookup);
+        expect(resolveRowView('s1', 'C_State', i3, ctx3, s3.idlookup)!.viewId).toBe('V_row_gated');    // predicate true
+        expect(resolveRowView('s3', 'C_State', i3, ctx3, s3.idlookup)!.viewId).toBe('V_row_fallback'); // predicate false → wildcard
+    });
+
+    it('returns null when the viewpoint has no row view for the object (vertex-only)', () => {
+        const state = stateWithIrs([{ id: 'V_vertex_only', ir: vertexIR({ metaclasses: ['State'] }) }]);
+        const ctx = makeDrawReadCtx(state.idlookup);
+        const index = getIRIndex(state, 'sig_row_none')!;
+        expect(resolveRowView('s1', 'C_State', index, ctx, state.idlookup)).toBeNull();
     });
 });
 

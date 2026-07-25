@@ -49,6 +49,21 @@ function resolveMetaclassNames(view: LViewElement): string[] {
  */
 export const EnableIRPanel: React.FC<EnableIRPanelProps> = ({ view }) => {
     const [error, setError] = useState<string | null>(null);
+
+    // Guard (Fase R1): never overwrite an existing ir. A view may already carry an ir
+    // of a kind this panel cannot author yet (e.g. 'row'); seeding the vertex default
+    // here would silently corrupt it. ViewData routes non-vertex ir to a read-only
+    // placeholder, but guard here too so the panel is safe wherever it is mounted.
+    const existingIr = (view as any).ir;
+    if (existingIr) {
+        return (
+            <section className="properties-tab properties-panel">
+                <div className="jj-field-label" style={{ marginTop: 4 }}>IR authoring</div>
+                <HelpText>Questa view ha già una rappresentazione IR di kind "{existingIr.kind}". L'authoring per questo kind non è ancora disponibile: la view non verrà modificata.</HelpText>
+            </section>
+        );
+    }
+
     const names = resolveMetaclassNames(view);
 
     const enable = () => {

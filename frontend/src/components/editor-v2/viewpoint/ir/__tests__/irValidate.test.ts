@@ -6,7 +6,7 @@ import { describe, it, expect } from 'vitest';
 import { validateIR } from '../irValidate';
 import { clearCompileCache } from '../irCompile';
 import { defaultObjectViewIR } from '../irDefaults';
-import type { VertexViewIR } from '../irTypes';
+import type { RowViewIR, VertexViewIR } from '../irTypes';
 
 describe('validateIR', () => {
     it('accepts a valid IR (defaultObjectViewIR)', () => {
@@ -26,6 +26,38 @@ describe('validateIR', () => {
             },
         };
         const r = validateIR('v-bad', bad);
+        expect(r.ok).toBe(false);
+        if (!r.ok) expect(r.error.length).toBeGreaterThan(0);
+    });
+
+    it('accepts a well-formed RowViewIR (intrinsic/literal/path template)', () => {
+        clearCompileCache();
+        const row: RowViewIR = {
+            irVersion: 'ir-1.0', kind: 'row', metaclasses: ['Attribute'],
+            template: [
+                { from: 'intrinsic', prop: 'name' },
+                { from: 'literal', text: ' : ' },
+                { from: 'path', expr: '$type.value' },
+            ],
+        };
+        expect(validateIR('r-ok', row)).toEqual({ ok: true });
+    });
+
+    it('rejects a RowViewIR with an empty template', () => {
+        clearCompileCache();
+        const row: RowViewIR = { irVersion: 'ir-1.0', kind: 'row', metaclasses: '*', template: [] };
+        const r = validateIR('r-empty', row);
+        expect(r.ok).toBe(false);
+        if (!r.ok) expect(r.error.length).toBeGreaterThan(0);
+    });
+
+    it('rejects a RowViewIR whose template has a forbidden PathExpr', () => {
+        clearCompileCache();
+        const row: RowViewIR = {
+            irVersion: 'ir-1.0', kind: 'row', metaclasses: '*',
+            template: [{ from: 'path', expr: '$a?.b' }],
+        };
+        const r = validateIR('r-bad', row);
         expect(r.ok).toBe(false);
         if (!r.ok) expect(r.error.length).toBeGreaterThan(0);
     });
