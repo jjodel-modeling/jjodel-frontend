@@ -4,10 +4,10 @@
  * Two passes over the RF edge/node arrays:
  *
  * 1. Reference-as-edge styling: M1 edges (type 'instanceRef'/'composition')
- *    whose SOURCE object resolves an edge view get stroke/markers/label from
- *    the compiled view. Terminations map to RF markers (hollowTriangle and
- *    diamonds approximate to closed/open arrows on this substrate — flow
- *    renders Manhattan via UnifiedEdge; the routing hint is recorded in data).
+ *    whose SOURCE object resolves an edge view get stroke/terminations/label
+ *    from the compiled view, emitted in DOMAIN vocabulary onto e.data (E0, spec
+ *    addendum D1). UnifiedEdge's gated branch (data.irEdgeViewId present) consumes
+ *    them; the routing hint is recorded but inert (D3, Manhattan frozen).
  *
  * 2. Object-as-edge synthesis (Transition pattern): objects whose resolved
  *    edge view has source/target PathExprs are hidden as nodes and drawn as a
@@ -19,10 +19,9 @@
  * Pure module (no joiner/react): unit-tested in ir.test.ts.
  */
 
-import { MarkerType, type Edge, type EdgeMarker, type Node } from '@xyflow/react';
-import type { CSSProperties } from 'react';
+import { type Edge, type Node } from '@xyflow/react';
 import type { ReadCtx } from './irReadCtx';
-import type { CompiledCrossPath, CompiledEdgeView, EdgeTermination } from './irTypes';
+import type { CompiledCrossPath, CompiledEdgeView } from './irTypes';
 import { resolveEdgeView, resolveObjectAsEdgeView, type IRViewpointIndex } from './irResolveCore';
 
 type Idlookup = Record<string, any>;
@@ -33,40 +32,36 @@ const DASH: Record<string, string | undefined> = {
     dotted: '2 3',
 };
 
-function markerFor(t: EdgeTermination, color?: string): EdgeMarker | undefined {
-    switch (t) {
-        case 'none': return undefined;
-        case 'openArrow': return { type: MarkerType.Arrow, width: 18, height: 18, color };
-        case 'closedArrow': return { type: MarkerType.ArrowClosed, width: 18, height: 18, color };
-        // Substrate approximations (documented): RF has no triangle/diamond markers.
-        case 'hollowTriangle': return { type: MarkerType.ArrowClosed, width: 22, height: 22, color };
-        case 'filledDiamond': return { type: MarkerType.ArrowClosed, width: 16, height: 16, color };
-        case 'hollowDiamond': return { type: MarkerType.Arrow, width: 16, height: 16, color };
-        default: return undefined;
-    }
-}
-
 function applyEdgeStyle(e: Edge, cv: CompiledEdgeView, ctx: ReadCtx, evalId: string): Edge {
     const color = cv.lineColor ? String(cv.lineColor(ctx, evalId) || '') : '';
     const width = cv.lineWidth ? Number(cv.lineWidth(ctx, evalId)) || 1 : undefined;
     const lineStyle = cv.lineStyle ? cv.lineStyle(ctx, evalId) : 'solid';
-    const style: CSSProperties = { ...(e.style ?? {}) };
-    if (color) style.stroke = color;
-    if (width !== undefined) style.strokeWidth = width;
     const dash = DASH[lineStyle];
-    if (dash) style.strokeDasharray = dash;
-    const label = cv.labelText ? String(cv.labelText(ctx, evalId) ?? '') : (e.label as string | undefined);
+    // IR-authored label: undefined when the view declares none (leave the edge's own label).
+    const labelText = cv.labelText ? String(cv.labelText(ctx, evalId) ?? '') : undefined;
     return {
         ...e,
-        style,
-        markerStart: markerFor(cv.terminations.sourceEnd, color || undefined) ?? e.markerStart,
-        markerEnd: markerFor(cv.terminations.targetEnd, color || undefined) ?? e.markerEnd,
-        label,
+        // Keep seeding the RF label (UnifiedEdge's labelText state reads props.label).
+        label: labelText !== undefined ? labelText : e.label,
+        // E0 (spec addendum D1): the edge style is emitted in DOMAIN vocabulary onto
+        // e.data, where UnifiedEdge's gated branch (data.irEdgeViewId present) consumes
+        // it. The previous e.style / RF markerStart/markerEnd writes were dead — UnifiedEdge
+        // renders its own <path>/<marker>s and never read them. Absent ir* keys leave the
+        // classic rendering untouched. Terminations stay in the EdgeTermination vocabulary
+        // (mapped to markers by UnifiedEdge, not to RF MarkerType here). routing stays inert
+        // (D3, Manhattan frozen): irRoutingHint recorded but not consumed.
         data: {
             ...(e.data ?? {}),
             irEdgeViewId: cv.viewId,
             irRoutingHint: cv.routing ?? undefined,
             irLabelPlacement: cv.labelPlacement,
+            irStroke: color || undefined,
+            irStrokeWidth: width,
+            irStrokeDasharray: dash,
+            irSourceTermination: cv.terminations.sourceEnd,
+            irTargetTermination: cv.terminations.targetEnd,
+            irLabelText: labelText,
+            irLabelAlwaysVisible: labelText !== undefined,
         },
     };
 }
@@ -127,7 +122,10 @@ export function decorateReferenceEdges(
     let changed = false;
     const out = edges.map(e => {
         if (e.type !== 'instanceRef' && e.type !== 'composition') return e;
-        const srcObj = objByVertex.get(e.source);
+        // D2 (pre-lift matching): a lifted edge (decorateEdges) remaps source/target to the
+        // rendered ancestor; resolve the reference view on the ORIGINAL source object, carried
+        // on data.irSourceObjectId, falling back to the current vertex's object when not lifted.
+        const srcObj = (e.data as any)?.irSourceObjectId ?? objByVertex.get(e.source);
         if (!srcObj) return e;
         const metaclassId = idlookup[srcObj]?.instanceof;
         if (typeof metaclassId !== 'string') return e;

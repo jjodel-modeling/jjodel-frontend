@@ -267,7 +267,9 @@ export function decorateEdges(edges: Edge[], model: ContainmentModel, hidden: Se
             target: liftedTgtVertex,
             sourceHandle: undefined,
             targetHandle: undefined,
-            data: { ...(e.data ?? {}), irLifted: true },
+            // D2 (pre-lift matching): preserve the ORIGINAL endpoint object ids so the edge-view
+            // resolver (decorateReferenceEdges) matches on the semantic source, not the ancestor.
+            data: { ...(e.data ?? {}), irLifted: true, irSourceObjectId: srcObj, irTargetObjectId: tgtObj },
         };
         // Orthogonal entry on the lifted endpoints (same contract as synthetic edges).
         if (nodesById) lifted = assignGeometricHandles(lifted, nodesById, out);

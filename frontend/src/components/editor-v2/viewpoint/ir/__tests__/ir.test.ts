@@ -564,8 +564,12 @@ describe('irEdgeViews (Fase 2c)', () => {
         const objByVertex = new Map([['V1', 's1'], ['V2', 's2'], ['Vt', 't1']]);
         const de = decorateReferenceEdges(edges as any, objByVertex, index, ctx, state.idlookup);
         const next = de.find(e => e.id === 'e_next')!;
-        expect((next.style as any).stroke).toBe('#0ea5e9');
-        expect((next.style as any).strokeDasharray).toBe('6 4');
+        // E0 (D1): style is emitted in domain vocabulary onto e.data (consumed by UnifiedEdge),
+        // no longer on e.style / RF markers.
+        expect((next.data as any).irStroke).toBe('#0ea5e9');
+        expect((next.data as any).irStrokeWidth).toBe(2);
+        expect((next.data as any).irStrokeDasharray).toBe('6 4');
+        expect((next.data as any).irTargetTermination).toBe('closedArrow');
         expect(next.label).toBe('next');
         expect((next.data as any).irEdgeViewId).toBe('V_next');
         // src/tgt edges do not match (reference name differs)

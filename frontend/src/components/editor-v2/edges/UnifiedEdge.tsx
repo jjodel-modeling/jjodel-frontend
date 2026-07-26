@@ -89,6 +89,20 @@ function UnifiedEdge(props: EdgeProps) {
     const waypoints = edgeData?.waypoints || [];
     const autoEdit = edgeData?.autoEdit as boolean | undefined;
 
+    // E0 (spec addendum D1): gated consumption of IR-authored edge style. When
+    // data.irEdgeViewId is present the edge is styled by a resolved IR edge view
+    // (irEdgeViews.applyEdgeStyle); absent = classic rendering, byte-identical. All
+    // ir* fields live on e.data, read via the untyped data bag (same convention as
+    // irObjectAsEdge et al.).
+    const irData = (data ?? {}) as Record<string, any>;
+    const isIREdge = !!irData.irEdgeViewId;
+    const irStroke = irData.irStroke as string | undefined;
+    const irStrokeWidth = irData.irStrokeWidth as number | undefined;
+    const irStrokeDasharray = irData.irStrokeDasharray as string | undefined;
+    const irSourceTermination = irData.irSourceTermination as string | undefined;
+    const irTargetTermination = irData.irTargetTermination as string | undefined;
+    const irLabelAlwaysVisible = !!irData.irLabelAlwaysVisible;
+
     const { setEdges, getNodes } = useReactFlow();
     const notation = useEditorContextSafe()?.notation ?? 'uml';
     const selectEdge = useEditorContextSafe()?.selectEdge;
@@ -335,6 +349,28 @@ function UnifiedEdge(props: EdgeProps) {
     const markerEmptyId = `diamond-empty-${id}`;
     const markerArrowId = `arrow-${id}`;
     const markerTriangleId = `inheritance-triangle-${id}`;
+    // E0/E0b: IR-only markers, one per EdgeTermination. Namespaced ids, verified
+    // collision-free. Kept separate from the classic markers so IR edges can inherit
+    // line.color (E0b) without ever touching the shared classic <marker> defs — an IR
+    // edge never references a classic marker.
+    const markerIROpenArrowId = `ir-arrow-open-${id}`;
+    const markerIRClosedArrowId = `ir-arrow-closed-${id}`;
+    const markerIRHollowTriangleId = `ir-triangle-hollow-${id}`;
+    const markerIRFilledDiamondId = `ir-diamond-filled-${id}`;
+    const markerIRHollowDiamondId = `ir-diamond-hollow-${id}`;
+    // Map an EdgeTermination to its IR-only per-edge marker (all defined below,
+    // gated on isIREdge, and colored inline from irStroke).
+    const irMarkerUrl = (t: string | undefined): string | undefined => {
+        switch (t) {
+            case 'openArrow': return `url(#${markerIROpenArrowId})`;
+            case 'closedArrow': return `url(#${markerIRClosedArrowId})`;
+            case 'hollowTriangle': return `url(#${markerIRHollowTriangleId})`;
+            case 'filledDiamond': return `url(#${markerIRFilledDiamondId})`;
+            case 'hollowDiamond': return `url(#${markerIRHollowDiamondId})`;
+            case 'none':
+            default: return undefined;
+        }
+    };
 
     // ═══════════════════════════════════════════════════════
     // CASE 1: Primary inheritance in tree group → render tree
@@ -473,15 +509,35 @@ function UnifiedEdge(props: EdgeProps) {
     // CASE 3: Standard single edge (all references + single inheritance)
     // ═══════════════════════════════════════════════════════
 
-    // Determine which markers to use
-    const markerStart = isInheritance ? undefined
+    // Determine which markers to use. IR edges (E0) derive both ends from the
+    // authored EdgeTerminations; classic edges keep their kind-driven markers.
+    const markerStart = isIREdge ? irMarkerUrl(irSourceTermination)
+        : isInheritance ? undefined
         : showDiamonds && kind === 'composition' ? `url(#${markerFilledId})`
         : showDiamonds && kind === 'aggregation' ? `url(#${markerEmptyId})`
         : undefined;
 
-    const markerEnd = isInheritance
+    const markerEnd = isIREdge ? irMarkerUrl(irTargetTermination)
+        : isInheritance
         ? (isERNotation ? undefined : `url(#${markerTriangleId})`)
         : `url(#${markerArrowId})`;
+
+    // E0: IR line style applied inline on the visible path (overrides the CSS class
+    // stroke; the class stays for structural styling). Absent when not an IR edge.
+    const irPathStyle: React.CSSProperties | undefined = isIREdge
+        ? {
+            ...(irStroke ? { stroke: irStroke } : {}),
+            ...(irStrokeWidth !== undefined ? { strokeWidth: irStrokeWidth } : {}),
+            ...(irStrokeDasharray ? { strokeDasharray: irStrokeDasharray } : {}),
+        }
+        : undefined;
+
+    // E0b: IR terminations inherit line.color (irStroke). Inline styles override the
+    // marker CSS class color only when a color is authored; when irStroke is absent the
+    // class default (grey) shows, matching the classic markers. Filled shapes tint both
+    // fill and stroke; hollow shapes tint only the outline, keeping the hollow interior.
+    const irMarkerFillStyle: React.CSSProperties | undefined = irStroke ? { fill: irStroke, stroke: irStroke } : undefined;
+    const irMarkerStrokeStyle: React.CSSProperties | undefined = irStroke ? { stroke: irStroke } : undefined;
 
     const edgeClassName = isInheritance
         ? `inheritance-edge ${selected ? 'selected' : ''} ${hlClass}`
@@ -500,6 +556,7 @@ function UnifiedEdge(props: EdgeProps) {
     //   - the cardinality badge and the ER-notation ISA label mount when shown.
     const refLabelVisible = !isInheritance && (
         editing ||
+        (isIREdge && irLabelAlwaysVisible) ||   // D6: an IR-authored edge label is always visible
         (isM1Edge
             ? (hovered || selected || showEdgeLabels)
             : (!!labelText && labelText !== 'newRef'))
@@ -572,6 +629,72 @@ function UnifiedEdge(props: EdgeProps) {
                         />
                     </marker>
                 )}
+
+                {/* IR terminations (E0/E0b): one per EdgeTermination, drawn only for
+                    IR-styled edges. Geometry mirrors the classic markers; the inline style
+                    tints them with the authored line.color (irStroke) when present. */}
+                {isIREdge && (
+                    <>
+                        {/* Open arrow — matches the classic target arrow geometry */}
+                        <marker
+                            id={markerIROpenArrowId}
+                            viewBox="0 0 10 10"
+                            refX="10"
+                            refY="5"
+                            markerWidth="8"
+                            markerHeight="8"
+                            orient="auto"
+                        >
+                            <path d="M 0 0 L 10 5 L 0 10" className="reference-marker arrow" style={irMarkerStrokeStyle} />
+                        </marker>
+                        <marker
+                            id={markerIRClosedArrowId}
+                            viewBox="0 0 10 10"
+                            refX="10"
+                            refY="5"
+                            markerWidth="8"
+                            markerHeight="8"
+                            orient="auto"
+                        >
+                            <path d="M 0 0 L 10 5 L 0 10 Z" className="reference-marker filled" style={irMarkerFillStyle} />
+                        </marker>
+                        <marker
+                            id={markerIRHollowTriangleId}
+                            viewBox="0 0 12 10"
+                            refX="7"
+                            refY="5"
+                            markerWidth="12"
+                            markerHeight="10"
+                            orient="auto"
+                        >
+                            <path d="M 0 0 L 12 5 L 0 10 Z" className="inheritance-marker" style={irMarkerStrokeStyle} />
+                        </marker>
+                        {/* Filled diamond — matches the classic composition source marker */}
+                        <marker
+                            id={markerIRFilledDiamondId}
+                            viewBox="0 0 12 8"
+                            refX="0"
+                            refY="4"
+                            markerWidth="12"
+                            markerHeight="8"
+                            orient="auto"
+                        >
+                            <path d="M 0 4 L 6 0 L 12 4 L 6 8 Z" className="reference-marker filled" style={irMarkerFillStyle} />
+                        </marker>
+                        {/* Hollow diamond — matches the classic aggregation source marker */}
+                        <marker
+                            id={markerIRHollowDiamondId}
+                            viewBox="0 0 12 8"
+                            refX="0"
+                            refY="4"
+                            markerWidth="12"
+                            markerHeight="8"
+                            orient="auto"
+                        >
+                            <path d="M 0 4 L 6 0 L 12 4 L 6 8 Z" className="reference-marker hollow" style={irMarkerStrokeStyle} />
+                        </marker>
+                    </>
+                )}
             </defs>
 
             {/* Invisible hit-test path */}
@@ -594,6 +717,7 @@ function UnifiedEdge(props: EdgeProps) {
                 d={path}
                 fill="none"
                 className={edgeClassName}
+                style={irPathStyle}
                 markerStart={markerStart}
                 markerEnd={markerEnd}
             />
@@ -628,7 +752,7 @@ function UnifiedEdge(props: EdgeProps) {
                 {/* M1 edges: label hidden by default, shown on hover via CSS */}
                 {!isInheritance && (
                     <div
-                        className={`edge-label ${selected ? 'selected' : ''} ${isM1Edge ? `edge-label--m1-hover${hovered || selected ? ' edge-label--m1-visible' : ''}` : ''} ${hlClass}`}
+                        className={`edge-label ${selected ? 'selected' : ''} ${isM1Edge ? `edge-label--m1-hover${hovered || selected || (isIREdge && irLabelAlwaysVisible) ? ' edge-label--m1-visible' : ''}` : ''} ${hlClass}`}
                         style={{
                             position: 'absolute',
                             transform: `translate(-50%, -50%) translate(${10+ labelPos.x + labelOffset.x}px, ${labelPos.y + labelOffset.y}px)`,
@@ -648,7 +772,7 @@ function UnifiedEdge(props: EdgeProps) {
                                 onClick={(e) => e.stopPropagation()}
                             />
                         ) : (
-                            labelText && labelText !== 'newRef' && <span className="edge-label__text">{labelText}</span>
+                            labelText && labelText !== 'newRef' && <span className="edge-label__text" style={isIREdge && irStroke ? { color: irStroke } : undefined}>{labelText}</span>
                         )}
                     </div>
                 )}
