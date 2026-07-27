@@ -10,6 +10,7 @@ import { LabelListEditor } from './LabelListEditor';
 import { FieldCompartmentListEditor } from './FieldCompartmentListEditor';
 import { BadgeListEditor } from './BadgeListEditor';
 import { MatchingSection } from './MatchingSection';
+import { JjodelEvents } from '../../../../events/registry';
 
 export interface VertexAuthoringPanelProps {
     view: LViewElement;
@@ -178,6 +179,9 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
     const badges = shape.badges ?? [];
     const fieldCompartments = draft.fieldCompartments ?? [];
     const border = shape.border ?? DEFAULT_BORDER;
+    // Resolved resizable state (mirrors the checkbox default): explicit flag ?? per-form default.
+    // Gates the "Propaga dimensione" button — propagating a size to a non-resizable view has no effect.
+    const canResize = draft.resizable ?? defaultResizableForForm(typeof form === 'string' ? form : undefined);
 
     // --- immutable patch helpers ---
     const patchShape = (partial: Partial<VertexViewIR['shape']>) =>
@@ -262,6 +266,16 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                             label="Resizable"
                         />
                         <HelpText>Forza le maniglie di resize. Deseleziona per bloccarlo. Non impostato: segue la forma.</HelpText>
+                        <Button
+                            variant="secondary"
+                            disabled={!canResize}
+                            title="Applica la dimensione dell'istanza selezionata a tutte le istanze di questa view"
+                            onClick={() => window.dispatchEvent(
+                                new CustomEvent(JjodelEvents.PROPAGATE_VIEW_SIZE, { detail: { viewId: view.id } })
+                            )}
+                        >
+                            <i className="bi bi-arrows-fullscreen" /> Propaga dimensione
+                        </Button>
                     </div>
 
                     {/* Labels — full list (includes the former primary label at index 0) */}

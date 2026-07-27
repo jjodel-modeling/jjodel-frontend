@@ -37,7 +37,7 @@ import { applyIRPaletteFilter, deriveDroppableChildMetaclasses, matchConnectRule
 import IRContainmentHulls from './viewpoint/ir/IRContainmentHulls';
 import { clearSyntheticEdgeSelection, getIREdgeAnchorOverride, hydrateIREdgeAnchorOverrides, irEdgeLayoutFromOverride, setIREdgeAnchorOverride, setSyntheticEdgeSelected, type IRAnchorOverride } from './viewpoint/ir/irEdgeInteraction';
 import { hydrateCollapsed, isCollapsed } from './viewpoint/ir/irCollapseState';
-import { computeIRSignature, getIRIndex, resolveObjectAsEdgeView } from './viewpoint/ir/irResolveCore';
+import { computeIRSignature, getIRIndex, resolveObjectAsEdgeView, resolveIRView } from './viewpoint/ir/irResolveCore';
 import { makeReadCtx } from './viewpoint/ir/irReadCtxLproxy';
 import { useActiveEditor, CLASSIC_ZOOM_MIN, CLASSIC_ZOOM_MAX, type ZoomController } from './ActiveEditorContext';
 import ContextMenu, { type ContextMenuItem } from './ContextMenu';
@@ -69,6 +69,7 @@ import {
     syncPositionToJjom,
     syncPositionBatchToJjom,
     syncSizeToJjom,
+    syncSizeBatchToJjom,
     syncIREdgeLayoutToJjom,
     syncInheritanceEdge,
     syncReferenceEdge,
@@ -103,6 +104,7 @@ import { createViewInWorkbench, resolveParentViewpoint } from '../../utils/lastV
 // ElementPropertiesDrawer import removed — bottom drawer disabled (see BottomDrawer removal)
 
 import { JjodelEvents } from '../../events/registry';
+import { toast } from '../Toast/toastDispatch';
 import './EditorV2.scss';
 
 // Register custom node types (M2 + M1)
@@ -940,6 +942,65 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
     // Auto-anchor for optimal edge routing
     const { getOptimalAnchors } = useAutoAnchor();
+
+    // Propagate the selected instance's size to all instances of an IR view.
+    // Fired by the "Propaga dimensione" button in VertexAuthoringPanel (which only
+    // knows view.id, not the canvas): source and targets are resolved here.
+    // Object nodes do NOT read w/h back from the DVertex (discovery 2026-07-27), so
+    // the size is applied to the live RF nodes; syncSizeBatchToJjom persists it in
+    // the D-layer for edge geometry and parity with manual resize.
+    useEffect(() => {
+        const handlePropagateSize = (event: Event) => {
+            const { viewId } = (event as CustomEvent).detail || {};
+            if (!viewId) return;
+
+            const state: any = store.getState();
+            const lookup = state.idlookup;
+            const index = getIRIndex(state, computeIRSignature(state));
+            if (!index || !lookup) return;
+            const readCtx = makeReadCtx(lookup);
+
+            const resolvesToView = (n: Node): boolean => {
+                if (n.type !== 'objectNode') return false;
+                const objectId = lookup?.[n.id]?.model;
+                const classId = (n.data as any)?.instanceOfClassId;
+                if (typeof objectId !== 'string' || !classId) return false;
+                return resolveIRView(objectId, classId, index, readCtx, lookup)?.viewId === viewId;
+            };
+
+            // Targets = every object node resolving to this view. None → the view is
+            // not rendered in this editor, stay silent (no spurious cross-editor warn).
+            const targets = getNodes().filter(resolvesToView);
+            if (targets.length === 0) return;
+
+            // Source = the single SELECTED instance of this view. 0 or >1 → no-op + warn.
+            const sources = targets.filter(n => n.selected);
+            if (sources.length !== 1) {
+                toast.warning('Seleziona una sola istanza di questa view come sorgente della dimensione.');
+                return;
+            }
+            const src = sources[0];
+            const w = src.measured?.width ?? (src as any).width;
+            const h = src.measured?.height ?? (src as any).height;
+            if (w == null || h == null) {
+                toast.warning('La dimensione della sorgente non e\' disponibile.');
+                return;
+            }
+
+            const targetIds = new Set(targets.map(n => n.id));
+            takeSnapshot();
+            // In-session render: size applied top-level on the RF node (measured reset
+            // forces re-measure), the same channel the NodeResizer uses.
+            setNodes(nds => nds.map(n =>
+                targetIds.has(n.id) ? { ...n, width: w, height: h, measured: undefined } : n
+            ));
+            // D-layer persistence (single TRANSACTION).
+            syncSizeBatchToJjom([...targetIds].map(id => ({ vertexId: id, w, h })));
+            scheduleLayoutSave();
+        };
+        window.addEventListener(JjodelEvents.PROPAGATE_VIEW_SIZE, handlePropagateSize);
+        return () => window.removeEventListener(JjodelEvents.PROPAGATE_VIEW_SIZE, handlePropagateSize);
+    }, [getNodes, setNodes, scheduleLayoutSave, takeSnapshot]);
 
 
     // Helper: build node positions map for spatial port ordering

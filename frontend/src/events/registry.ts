@@ -17,6 +17,7 @@ export const JjodelEvents = {
   // Canvas
   CANVAS_ELEMENT_SELECTED: 'jjodel:canvas-element-selected',
   SELECT_NODE: 'jjodel:selectNode',
+  PROPAGATE_VIEW_SIZE: 'jjodel:propagate-view-size',
   SELECT_VIEW_IN_WORKBENCH: 'jjodel:selectViewInWorkbench',
   POLYMETRIC_NODE_SELECTED: 'jjodel:polymetric-node-selected',
   CHILD_CONTEXT_MENU: 'jjodel:child-context-menu',

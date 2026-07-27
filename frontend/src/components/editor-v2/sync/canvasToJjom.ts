@@ -77,6 +77,21 @@ export function syncSizeToJjom(vertexId: string, w: number, h: number): void {
     });
 }
 
+/**
+ * Write the same or per-vertex size to multiple vertices at once
+ * (e.g. propagate one instance's dimensions to all instances of a view).
+ */
+export function syncSizeBatchToJjom(sizes: Array<{ vertexId: string; w: number; h: number }>): void {
+    if (sizes.length === 0) return;
+    markCanvasUpdatedBatch(sizes.map(s => s.vertexId));
+    TRANSACTION('EditorV2 propagate size', () => {
+        for (const { vertexId, w, h } of sizes) {
+            SetFieldAction.new(vertexId as any, 'w' as any, w, undefined, false);
+            SetFieldAction.new(vertexId as any, 'h' as any, h, undefined, false);
+        }
+    });
+}
+
 // ---------------------------------------------------------------------------
 // IR layout persistence (synthetic object-as-edge + graphVertex collapse)
 // ---------------------------------------------------------------------------
