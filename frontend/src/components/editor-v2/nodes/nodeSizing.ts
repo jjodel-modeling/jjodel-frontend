@@ -3,6 +3,8 @@
 // redux/defaults/views.ts: quei flag NON sono cablati fino a editor-v2 (niente
 // plumbing R6, decisione D4). Quando il sizing passera' nell'IR, QUESTA mappa e'
 // il punto unico da sostituire.
+import type { ShapeForm } from '../viewpoint/ir/irTypes';
+
 export interface NodeSizing { adaptWidth: boolean; adaptHeight: boolean; }
 
 export const NODE_SIZING_DEFAULTS: Record<string, NodeSizing> = {
@@ -24,4 +26,11 @@ export function isNodeResizable(type: string | undefined, hasGeometricShape = fa
     const s = type ? NODE_SIZING_DEFAULTS[type] : undefined;
     if (!s) return true;
     return !s.adaptWidth || !s.adaptHeight;
+}
+
+// Forme geometriche ridimensionabili di default (unico punto di verita', usato da
+// ObjectNode e dal VertexAuthoringPanel per evitare drift). rect/rounded NON sono
+// qui: diventano resizable solo col flag esplicito `resizable` sulla VertexViewIR.
+export function defaultResizableForForm(form: ShapeForm | undefined): boolean {
+    return form === 'ellipse' || form === 'circle' || form === 'diamond';
 }

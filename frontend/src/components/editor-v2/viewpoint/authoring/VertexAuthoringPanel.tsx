@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { LProject, LPointerTargetable, DClass, type LViewElement } from '../../../../joiner';
-import { Input, Select, NumberInput, ColorPicker, ErrorText, Button, HelpText, ConditionalEditor, type PathBuilderFeatures } from '../../../ui';
+import { Input, Select, NumberInput, ColorPicker, ErrorText, Button, HelpText, ConditionalEditor, Checkbox, type PathBuilderFeatures } from '../../../ui';
 import { getMetaclassInfo, type MetaclassInfo } from '../../hooks/useEditorMode';
 import { validateIR } from '../ir/irValidate';
 import { defaultObjectViewIR } from '../ir/irDefaults';
 import type { VertexViewIR, ShapeForm } from '../ir/irTypes';
+import { defaultResizableForForm } from '../../nodes/nodeSizing';
 import { LabelListEditor } from './LabelListEditor';
 import { FieldCompartmentListEditor } from './FieldCompartmentListEditor';
 import { BadgeListEditor } from './BadgeListEditor';
@@ -250,6 +251,17 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                         <ColorPicker value={border.color} onChange={(hex) => patchBorder({ color: hex })} />
                         <NumberInput value={border.width} min={0} onChange={(w) => patchBorder({ width: w })} />
                         <Select options={BORDER_STYLE_OPTIONS} value={border.style} onChange={(e) => patchBorder({ style: e.target.value as 'solid' | 'dashed' | 'dotted' })} />
+                    </div>
+
+                    {/* Resizable — top-level flag (like `label`, not a shape.* field). Mirrors
+                        the runtime gate: shown state = explicit flag ?? per-form default. */}
+                    <div className="jj-field">
+                        <Checkbox
+                            checked={draft.resizable ?? defaultResizableForForm(typeof form === 'string' ? form : undefined)}
+                            onChange={(checked) => patch({ ...draft, resizable: checked })}
+                            label="Resizable"
+                        />
+                        <HelpText>Forza le maniglie di resize. Deseleziona per bloccarlo. Non impostato: segue la forma.</HelpText>
                     </div>
 
                     {/* Labels — full list (includes the former primary label at index 0) */}

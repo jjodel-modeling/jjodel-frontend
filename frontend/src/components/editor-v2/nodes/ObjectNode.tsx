@@ -21,7 +21,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { NodeResizer, useReactFlow, type NodeProps, type Node } from '@xyflow/react';
 import DynamicHandles from '../components/DynamicHandles';
-import { isNodeResizable, SHAPE_MIN_SIZE } from './nodeSizing';
+import { isNodeResizable, SHAPE_MIN_SIZE, defaultResizableForForm } from './nodeSizing';
 import InlineEnumSelect from '../components/InlineEnumSelect';
 import { useEditorContextSafe } from '../contexts/EditorContext';
 import { useNodeHighlightClass } from '../contexts/HighlightContext';
@@ -32,6 +32,7 @@ import { NodeProblemIndicator } from '../problems/NodeProblemIndicator';
 import { useIsHighlighted } from '../problems/useNodeProblems';
 import { useIRView } from '../viewpoint/ir/irResolve';
 import { isMigratedDefaultView } from '../viewpoint/ir/irDefaults';
+import type { VertexViewIR } from '../viewpoint/ir/irTypes';
 import IRNodeContent from '../viewpoint/ir/IRNodeContent';
 import { containmentChildren } from '../viewpoint/ir/irContainment';
 import { isCollapsed, toggleCollapsed, useCollapseVersion } from '../viewpoint/ir/irCollapseState';
@@ -367,17 +368,23 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
         // IR render path: wrapper, resizer, handles and highlight class stay
         // identical (handle contract is node-type-agnostic); only the content
         // is produced by the interpreter. Read-only in the spike.
-        // Resize affordance (Fase 2, emendamento 2026-07-24): only IR views that
-        // resolve to a geometric shape (ellipse) mount the resizer and may shrink
-        // below the label down to SHAPE_MIN_SIZE. Box-like forms stay content-hug.
+        // Resize affordance (Fase 2): a geometric shape (ellipse/circle/diamond)
+        // mounts the resizer by default and may shrink below the label down to
+        // SHAPE_MIN_SIZE; box-like forms stay content-hug UNLESS the view sets
+        // `resizable` (emendamento 2026-07-27). The explicit flag wins over the
+        // per-form default; `resizable: false` blocks resize on any shape (false is
+        // not nullish → it wins the ??). `ir-resizable` marks the wrapper so the
+        // scoped CSS neutralizer (irStyle.ts) lets rect/rounded shrink to the floor.
         const shapeForm = irResolution.compiled.form(irResolution.readCtx, irResolution.objectId);
-        const hasGeometricShape = shapeForm === 'ellipse' || shapeForm === 'circle' || shapeForm === 'diamond';
+        const hasGeometricShape = defaultResizableForForm(shapeForm);
+        const resolvedResizable = (irResolution.compiled.ir as VertexViewIR).resizable;
+        const canResize = resolvedResizable ?? hasGeometricShape;
         return (
             <div
-                className={`mm-node mm-object ${selected ? 'selected' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass} ir-view-${irResolution.compiled.viewId}`}
+                className={`mm-node mm-object ${selected ? 'selected' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass} ir-view-${irResolution.compiled.viewId}${canResize ? ' ir-resizable' : ''}`}
                 data-viewid={irResolution.compiled.viewId}
             >
-                {isNodeResizable('objectNode', hasGeometricShape) && (
+                {isNodeResizable('objectNode', canResize) && (
                     <NodeResizer
                         isVisible={selected}
                         minWidth={SHAPE_MIN_SIZE}

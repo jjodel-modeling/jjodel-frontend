@@ -129,6 +129,7 @@ export interface VertexViewIR {
     priority?: number;
     exclusive?: boolean;             // spike: only exclusive views are rendered; decorative ones are ignored
     label?: string;
+    resizable?: boolean;             // v1: override esplicito del gate resize (undefined = default per forma)
     shape: ShapeSpec;
     fieldCompartments?: FieldCompartmentSpec[];
 }
