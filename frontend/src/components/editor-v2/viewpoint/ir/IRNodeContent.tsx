@@ -12,11 +12,34 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { syncNodeLabel, syncUpdateFeatureValue } from '../../sync/canvasToJjom';
-import type { CompiledView } from './irTypes';
+import type { CompiledView, CompiledTextStyle } from './irTypes';
 import type { ReadCtx } from './irReadCtx';
 import { makeReadCtx } from './irReadCtxLproxy';
 import { rowRenderedChildren } from './irContainment';
 import IRRow from './IRRow';
+
+/** FontFamilyToken -> design-system CSS var. */
+const FONT_FAMILY_VAR: Record<string, string> = { sans: 'var(--font-sans)', mono: 'var(--font-mono)' };
+/** FontWeightToken -> numeric CSS weight. */
+const FONT_WEIGHT_NUM: Record<string, number> = { normal: 400, medium: 500, semibold: 600, bold: 700 };
+
+/**
+ * Resolve a CompiledTextStyle into an inline style for the current element
+ * (ir-1.3 TS1). Only authored axes with a non-empty resolved value are emitted,
+ * so an absent axis — or a conditional axis whose branch does not match — inherits
+ * the surface's CSS default (irStyle.ts BASE_CSS). An authored axis is always
+ * emitted (even when its value equals a CSS default) so it overrides the class rule.
+ */
+function resolveTextStyle(cs: CompiledTextStyle | undefined, ctx: ReadCtx, id: string): React.CSSProperties | undefined {
+    if (!cs) return undefined;
+    const s: React.CSSProperties = {};
+    if (cs.fontFamily) { const v = cs.fontFamily(ctx, id); if (v) s.fontFamily = FONT_FAMILY_VAR[v]; }
+    if (cs.fontSize) { const v = cs.fontSize(ctx, id); if (v && v > 0) s.fontSize = `${v}px`; }
+    if (cs.fontWeight) { const v = cs.fontWeight(ctx, id); if (v) s.fontWeight = FONT_WEIGHT_NUM[v]; }
+    if (cs.fontStyle) { const v = cs.fontStyle(ctx, id); if (v) s.fontStyle = v; }
+    if (cs.color) { const v = cs.color(ctx, id); if (v) s.color = v; }
+    return Object.keys(s).length ? s : undefined;
+}
 
 export interface IRNodeContentProps {
     compiled: CompiledView;
@@ -188,6 +211,7 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
                     <span
                         key={`label_${i}`}
                         className={`ir-label ir-label--${l.position}`}
+                        style={resolveTextStyle(l.style, readCtx, objectId)}
                         onDoubleClick={l.editsName ? () => {
                             setEditingLabel(i);
                             setEditValue(readCtx.getName(objectId) ?? '');

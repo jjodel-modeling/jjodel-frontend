@@ -17,12 +17,16 @@ import type {
     CompiledCrossPath,
     CompiledFieldCompartment,
     CompiledLabel,
+    CompiledTextStyle,
     CompiledPredicate,
     CompiledRowView,
     CompiledView,
     Conditional,
+    FontFamilyToken,
+    FontWeightToken,
     Literal,
     PathExpr,
+    TextStyle,
     Predicate,
     NodeViewIR,
     RowViewIR,
@@ -239,6 +243,24 @@ function compileConditional<T>(c: Conditional<T> | undefined, fallback: T, deps:
     };
 }
 
+/**
+ * Compile a TextStyle (ir-1.3 TS1): each authored axis becomes a value function
+ * via compileConditional (the same helper as fill/line.color); an absent axis
+ * stays undefined so the render emits no override. The '' / 0 fallback marks
+ * "no override" when a conditional axis has no matching branch (mirrors the fill
+ * '' convention). Predicates inside axis conditionals extend `deps` automatically.
+ */
+function compileTextStyle(style: TextStyle | undefined, deps: Set<string>): CompiledTextStyle | undefined {
+    if (!style) return undefined;
+    const out: CompiledTextStyle = {};
+    if (style.fontFamily !== undefined) out.fontFamily = compileConditional<FontFamilyToken | ''>(style.fontFamily, '', deps);
+    if (style.fontSize !== undefined) out.fontSize = compileConditional<number>(style.fontSize, 0, deps);
+    if (style.fontWeight !== undefined) out.fontWeight = compileConditional<FontWeightToken | ''>(style.fontWeight, '', deps);
+    if (style.fontStyle !== undefined) out.fontStyle = compileConditional<'normal' | 'italic' | ''>(style.fontStyle, '', deps);
+    if (style.color !== undefined) out.color = compileConditional<string>(style.color, '', deps);
+    return out;
+}
+
 /** Cheap structural hash for the compile cache (djb2 over JSON). Also reused by
  * irDefaults.isMigratedDefaultView for the factory-equality comparison. */
 export function irHash(ir: AnyViewIR): string {
@@ -286,7 +308,7 @@ export function compileView(viewId: string, ir: NodeViewIR): CompiledView {
         const editsName = l.source.from === 'intrinsic'
             && (l.source.prop === 'name' || l.source.prop === 'qualifiedName')
             && l.editable !== false;
-        return { position: l.position, text, visible: compileConditional(l.visible, true, deps), editsName };
+        return { position: l.position, text, visible: compileConditional(l.visible, true, deps), editsName, style: compileTextStyle(l.style, deps) };
     });
 
     const badges: CompiledBadge[] = (ir.shape.badges ?? []).map(b => ({

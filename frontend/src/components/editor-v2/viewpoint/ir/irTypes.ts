@@ -52,12 +52,35 @@ export type TextSource =
     | { from: 'literal'; text: string }
     | { from: 'intrinsic'; prop: 'name' | 'metaclassName' | 'qualifiedName' };
 
+/** Font family tokens mapped to design-system CSS vars at render:
+ *  'sans' -> var(--font-sans), 'mono' -> var(--font-mono). */
+export type FontFamilyToken = 'sans' | 'mono';
+
+/** Named weights mapped to numeric CSS weights at render:
+ *  normal 400, medium 500, semibold 600, bold 700. */
+export type FontWeightToken = 'normal' | 'medium' | 'semibold' | 'bold';
+
+/**
+ * Typographic style for a text surface (spec ir-1.3 addendum sez. 2). Every axis
+ * is optional and Conditional; an absent axis inherits the surface's CSS default
+ * (no override emitted). TS1 wires it on LabelSpec (vertex label) only.
+ */
+export interface TextStyle {
+    fontFamily?: Conditional<FontFamilyToken>;
+    fontSize?: Conditional<number>;              // px
+    fontWeight?: Conditional<FontWeightToken>;
+    fontStyle?: Conditional<'normal' | 'italic'>;
+    color?: Conditional<string>;                 // same shape as ShapeSpec.fill
+}
+
 export interface LabelSpec {
     position: LabelPosition;
     source: TextSource;
     visible?: Conditional<boolean>;
     /** spec v1.2 sez. 5 — absent = default: intrinsic name labels are editable. */
     editable?: boolean | { widget: 'text' | 'textarea' | 'select' | 'checkbox' | 'color' };
+    /** spec ir-1.3 addendum sez. 3.1 — typographic style (TS1). Absent = CSS default. */
+    style?: TextStyle;
 }
 
 export interface BadgeSpec {
@@ -306,12 +329,26 @@ export type CompiledAccessor = (ctx: ReadCtx, elementId: string) => unknown;
 export type CompiledPredicate = (ctx: ReadCtx, elementId: string) => boolean;
 export type CompiledConditional<T> = (ctx: ReadCtx, elementId: string) => T;
 
+/** Compiled TextStyle (ir-1.3): each authored axis resolved to a value function;
+ *  an absent axis stays undefined (no override at render). The '' / 0 value a
+ *  conditional returns when no branch matches means "no override" (mirrors the
+ *  CompiledView.fill '' convention). */
+export interface CompiledTextStyle {
+    fontFamily?: CompiledConditional<FontFamilyToken | ''>;
+    fontSize?: CompiledConditional<number>;
+    fontWeight?: CompiledConditional<FontWeightToken | ''>;
+    fontStyle?: CompiledConditional<'normal' | 'italic' | ''>;
+    color?: CompiledConditional<string>;
+}
+
 export interface CompiledLabel {
     position: LabelPosition;
     text: CompiledAccessor;
     visible: CompiledConditional<boolean>;
     /** True when double-click edits the element name (intrinsic name/qualifiedName, editable !== false). */
     editsName: boolean;
+    /** Compiled typographic style (ir-1.3 TS1); undefined when the label has no style. */
+    style?: CompiledTextStyle;
 }
 
 export interface CompiledBadge {

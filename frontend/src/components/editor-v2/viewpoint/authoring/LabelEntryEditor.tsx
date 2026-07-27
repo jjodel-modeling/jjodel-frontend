@@ -1,7 +1,8 @@
 import React from 'react';
 import { Select, Checkbox, ConditionalEditor, type PathBuilderFeatures } from '../../../ui';
 import { TextSourceEditor } from './TextSourceEditor';
-import type { LabelSpec, LabelPosition, TextSource } from '../ir/irTypes';
+import { TextStyleEditor } from './TextStyleEditor';
+import type { LabelSpec, LabelPosition, TextSource, TextStyle } from '../ir/irTypes';
 
 const POSITION_OPTIONS = [
     { value: 'top', label: 'Top' },
@@ -88,6 +89,17 @@ export const LabelEntryEditor: React.FC<LabelEntryEditorProps> = ({
                     onChange={(next) => onChange({ ...label, visible: next })}
                     renderValue={(v, onCh) => <Checkbox checked={v} onChange={onCh} label="visible" />}
                     defaultValue={true}
+                    features={features}
+                    featuresHint={featuresHint}
+                    classNames={classNames}
+                />
+            </div>
+
+            <div className="jj-field">
+                <label className="jj-field-label">Stile</label>
+                <TextStyleEditor
+                    value={label.style}
+                    onChange={(style: TextStyle | undefined) => onChange({ ...label, style })}
                     features={features}
                     featuresHint={featuresHint}
                     classNames={classNames}
