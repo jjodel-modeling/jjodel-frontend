@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { DClass, LPointerTargetable, type LViewElement } from '../../../../joiner';
 import { Button, HelpText, ErrorText, Select } from '../../../ui';
-import { defaultObjectViewIR } from '../ir/irDefaults';
+import { defaultObjectViewIR, defaultEdgeViewIR } from '../ir/irDefaults';
 import { validateIR } from '../ir/irValidate';
-import type { RowViewIR, VertexViewIR } from '../ir/irTypes';
+import type { EdgeViewIR, RowViewIR, VertexViewIR } from '../ir/irTypes';
 
 const KIND_OPTIONS = [
     { value: 'vertex', label: 'Vertex (node)' },
     { value: 'row', label: 'Row (inline)' },
+    { value: 'edge', label: 'Edge (reference)' },
 ];
 
 export interface EnableIRPanelProps {
@@ -55,8 +56,9 @@ function resolveMetaclassNames(view: LViewElement): string[] {
 export const EnableIRPanel: React.FC<EnableIRPanelProps> = ({ view }) => {
     const [error, setError] = useState<string | null>(null);
     // Kind of IR to seed. 'vertex' reproduces the pre-R3 behaviour exactly; 'row'
-    // seeds a minimal inline row view authored from RowAuthoringPanel afterwards.
-    const [kind, setKind] = useState<'vertex' | 'row'>('vertex');
+    // seeds a minimal inline row view (RowAuthoringPanel); 'edge' seeds a minimal
+    // reference-as-edge view authored from EdgeAuthoringPanel afterwards.
+    const [kind, setKind] = useState<'vertex' | 'row' | 'edge'>('vertex');
 
     // Guard (Fase R1): never overwrite an existing ir. A view may already carry an ir
     // of a kind this panel cannot author yet (e.g. 'row'); seeding the vertex default
@@ -88,7 +90,14 @@ export const EnableIRPanel: React.FC<EnableIRPanelProps> = ({ view }) => {
             metaclasses: names.length > 0 ? [...names] : '*',
             ...(view.name ? { label: view.name } : {}),
         };
-        const seed = kind === 'row' ? rowSeed : vertexSeed;
+        // Edge seed is intentionally minimal (SOURCE metaclass resolved like the
+        // vertex, fallback empty; no reference): the author sets reference, line,
+        // terminations and label center from EdgeAuthoringPanel.
+        const edgeSeed: EdgeViewIR = {
+            ...defaultEdgeViewIR(),
+            metaclasses: names.length > 0 ? [...names] : [],
+        };
+        const seed = kind === 'row' ? rowSeed : kind === 'edge' ? edgeSeed : vertexSeed;
         const v = validateIR(view.id, seed);
         if (!v.ok) { setError(v.error); return; }
         setError(null);
@@ -109,13 +118,19 @@ export const EnableIRPanel: React.FC<EnableIRPanelProps> = ({ view }) => {
                 <Select
                     options={KIND_OPTIONS}
                     value={kind}
-                    onChange={(e) => setKind(e.target.value as 'vertex' | 'row')}
+                    onChange={(e) => setKind(e.target.value as 'vertex' | 'row' | 'edge')}
                 />
             </div>
 
             <div className="jj-field" style={{ marginTop: 8 }}>
                 {kind === 'row' ? (
                     <HelpText>La row view partirà senza metaclasse: impostala (e il template) subito dopo dal pannello di authoring.</HelpText>
+                ) : kind === 'edge' ? (
+                    names.length > 0 ? (
+                        <HelpText>La edge view partirà applicata alla metaclasse sorgente: {names.join(', ')}. Imposta reference, stile e terminazioni subito dopo dal pannello di authoring.</HelpText>
+                    ) : (
+                        <HelpText>La edge view partirà senza metaclasse sorgente: impostala (e l'eventuale reference) subito dopo dal pannello di authoring.</HelpText>
+                    )
                 ) : names.length > 0 ? (
                     <HelpText>La view partirà applicata a: {names.join(', ')}.</HelpText>
                 ) : (

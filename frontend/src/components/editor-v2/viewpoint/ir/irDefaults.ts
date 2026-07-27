@@ -17,7 +17,7 @@
  */
 
 import { irHash } from './irCompile';
-import type { CompiledView, RowViewIR, VertexViewIR } from './irTypes';
+import type { CompiledView, EdgeViewIR, RowViewIR, VertexViewIR } from './irTypes';
 
 /** Stable id for the migrated default view (Fase 4 idempotency). */
 export const IR_DEFAULT_OBJECT_VIEW_ID = 'Pointer_IRDefaultObjectView';
@@ -65,6 +65,23 @@ export function defaultRowViewIR(): RowViewIR {
         kind: 'row',
         metaclasses: '*',
         template: [{ from: 'intrinsic', prop: 'name' }],
+    };
+}
+
+/**
+ * Seed for a new reference-as-edge view (Fase E-ref, ratifica R-8): minimal,
+ * authored from EdgeAuthoringPanel afterwards. `metaclasses` empty (the author sets
+ * the SOURCE metaclass), `edge` empty so the compile defaults apply (terminations
+ * none / openArrow, labelPlacement auto — irCompile.ts:415-420; not duplicated
+ * here). `reference` absent = matches any reference of the source metaclass until
+ * the author restricts it.
+ */
+export function defaultEdgeViewIR(): EdgeViewIR {
+    return {
+        irVersion: 'ir-1.2',
+        kind: 'edge',
+        metaclasses: [],
+        edge: {},
     };
 }
 
