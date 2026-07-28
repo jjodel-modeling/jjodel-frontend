@@ -1691,16 +1691,10 @@ html[data-theme="dark"] {
     &--selected {
         background-color: var(--color-selection-bg);
 
-        &::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 2px;
-            background-color: var(--color-selection-bar);
-            border-radius: 1px;
-        }
+        // Cyan left bar removed (Fase 2 C1, 2026-07-28): the active state is now
+        // the tinted background only — cleaner, still legible. This leaves
+        // --color-selection-bar orphaned.
+        // TODO: cleanup — retire --color-selection-bar in _colors-light/dark.scss.
 
         &:hover {
             background-color: var(--color-selection-bg);
