@@ -553,8 +553,8 @@ type EntityBadge = 'M' | 'P' | 'm' | 'C' | 'VP' | 'v' | 'A' | 'R';
 const BADGE_ICON: Record<string, { icon: string; label: string }> = {
     'tree-DModel': { icon: 'bi-diagram-3', label: 'Metamodel' },
     'tree-DPackage': { icon: 'bi-folder2', label: 'Package' },
-    'tree-DClass': { icon: 'bi-square', label: 'Class' },
-    'tree-DAttribute': { icon: 'bi-dash-lg', label: 'Attribute' },
+    'tree-DClass': { icon: 'bi-box-seam', label: 'Class' },
+    'tree-DAttribute': { icon: 'bi-tag', label: 'Attribute' },
     'tree-DReference': { icon: 'bi-arrow-right', label: 'Reference' },
     'tree-nested-model': { icon: 'bi-file-earmark', label: 'Model' },
     'tree-viewpoint': { icon: 'bi-eye', label: 'Viewpoint' },

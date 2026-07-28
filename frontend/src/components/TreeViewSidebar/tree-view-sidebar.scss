@@ -642,19 +642,23 @@ $color-subview: #94a3b8;    // Slate - Sub-views
     // Matches viewpoint tree badge pattern (ViewTreeNode)
     border: none;
 
+    // Per-type calm palette (2026-07-28 round 2): a distinct, readable hue per
+    // metaclass so the type icons no longer read as identical dark squares. The
+    // colours are scoped to the tree; the global --color-entity-* tokens (which
+    // also colour the canvas nodes) are intentionally untouched.
     &.tree-DModel {
-        color: var(--color-entity-metamodel-fg);
-        background: var(--color-entity-metamodel-bg);
+        color: #6366F1;
+        background: rgba(99, 102, 241, 0.12);
     }
 
     &.tree-DPackage {
-        color: var(--color-entity-package-fg);
-        background: var(--color-entity-package-bg);
+        color: #D97706;
+        background: rgba(217, 119, 6, 0.12);
     }
 
     &.tree-DClass {
-        color: var(--color-entity-class-fg);
-        background: var(--color-entity-class-bg);
+        color: #2563EB;
+        background: rgba(37, 99, 235, 0.12);
 
         &.abstract-class {
             font-style: italic;
@@ -662,13 +666,13 @@ $color-subview: #94a3b8;    // Slate - Sub-views
     }
 
     &.tree-DAttribute {
-        color: #639922;
-        background: rgba(99, 153, 34, 0.12);
+        color: #0D9488;
+        background: rgba(13, 148, 136, 0.12);
     }
 
     &.tree-DReference {
-        color: #D85A30;
-        background: rgba(216, 90, 48, 0.12);
+        color: #7C3AED;
+        background: rgba(124, 58, 237, 0.12);
     }
 
     &.tree-DEnumerator,
@@ -699,8 +703,8 @@ $color-subview: #94a3b8;    // Slate - Sub-views
 
     // Nested M1 model icon — lowercase "m"
     &.tree-nested-model {
-        color: var(--color-entity-model-fg);
-        background: var(--color-entity-model-bg);
+        color: #334155;
+        background: rgba(51, 65, 85, 0.12);
         font-style: italic;
     }
 }
@@ -1043,16 +1047,21 @@ $color-highlight-unknown: #f59e0b; // Amber - unknown action
         background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
     }
 
-    // Dark mode — text-only colored letters (brighter for dark backgrounds)
-    // DModel/DPackage/DClass/nested-model: driven by --color-entity-* tokens (no override here)
+    // Dark mode — bare colored glyphs (brighter for dark backgrounds). Per-type
+    // calm palette (2026-07-28 round 2): lighter variants of the light-mode hues
+    // so each metaclass stays legible on dark; scoped to the tree (canvas untouched).
     .tree-node__icon {
-        &.tree-DAttribute { background: transparent; color: #9AD04E; }
-        &.tree-DReference { background: transparent; color: #F09474; }
+        &.tree-DModel { background: transparent; color: #818CF8; }
+        &.tree-DPackage { background: transparent; color: #FBBF24; }
+        &.tree-DClass { background: transparent; color: #60A5FA; }
+        &.tree-DAttribute { background: transparent; color: #2DD4BF; }
+        &.tree-DReference { background: transparent; color: #A78BFA; }
         &.tree-DEnumerator, &.tree-DEnum { background: transparent; color: #F08DB3; }
         &.tree-DEnumLiteral { background: transparent; color: #F08DB3; }
         &.tree-DOperation { background: transparent; color: #44E0F8; }
         &.tree-DParameter { background: transparent; color: #d1d5db; }
         &.tree-DObject { background: transparent; color: #b0b8c4; }
+        &.tree-nested-model { background: transparent; color: #94A3B8; }
     }
 
     .tree-nested-model__badge {

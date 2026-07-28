@@ -649,17 +649,17 @@ $radius-md: 6px;
         flex-shrink: 0;
         background: transparent;
 
-        // Icon colour = single source: the --color-entity-* tokens (Fase 2 C3,
-        // 2026-07-28). Model/Package/Class previously carried divergent literals
-        // here; they now defer to the tokens so the token wins, not the literal.
-        &.tree-DModel { color: var(--color-entity-metamodel-fg); }
-        &.tree-DPackage { color: var(--color-entity-package-fg); }
+        // Per-type calm palette (2026-07-28 round 2), scoped to the panel copy to
+        // match the sidebar tree. The global --color-entity-* tokens (canvas nodes)
+        // stay untouched.
+        &.tree-DModel { color: #6366F1; }
+        &.tree-DPackage { color: #D97706; }
         &.tree-DClass {
-            color: var(--color-entity-class-fg);
+            color: #2563EB;
             &.abstract-class { font-style: italic; }
         }
-        &.tree-DAttribute { color: #639922; }
-        &.tree-DReference { color: #D85A30; }
+        &.tree-DAttribute { color: #0D9488; }
+        &.tree-DReference { color: #7C3AED; }
         &.tree-DEnumerator, &.tree-DEnum { color: #D4537E; }
         &.tree-DEnumLiteral { color: #D4537E; }
         &.tree-DOperation { color: #06b6d4; }
