@@ -151,20 +151,14 @@ function ViewDataComponent(props: AllProps) {
     return (
         <div className={"view-editor-root"}>
             <div className={'view-editor-header view-entity-header'}>
-                {/* Row 1 — entity-style header, homogeneous with the metaclass .props-header */}
-                <div className="props-header">
+                {/* Single context row — back + eye + inline breadcrumb (ends with the
+                    view name) + type badge + help. The breadcrumb replaces the separate
+                    .props-header__name and the former light-blue breadcrumb band. */}
+                <div className="props-header props-header--view">
                     <CommandBar>
                         <Btn icon={'back'} action={() => props.setSelectedView(undefined)} tip={'Back'}/>
                     </CommandBar>
                     <div className="props-header__icon"><i className="bi bi-eye" /></div>
-                    <span className="props-header__name">{view.name || 'Unnamed'}</span>
-                    <span className={`jj-type-badge ${isVP ? 'jj-type-badge--viewpoint' : 'jj-type-badge--view'}`}>
-                        {isVP ? 'VIEWPOINT' : 'VIEW'}
-                    </span>
-                    <HelpButton helpKey="properties-panel" />
-                </div>
-                {/* Row 2 — light-blue breadcrumb band hosting the existing .path-list */}
-                <div className="view-header-breadcrumb-band">
                     <div className={"path-list"}>{
                         (viewChain.map((v) => (
                             <div className={"path-element"} onClick={()=>props.setSelectedView(v.id)}>
@@ -175,6 +169,10 @@ function ViewDataComponent(props: AllProps) {
                             <i className={"path-separator bi bi-chevron-right"} />
                         )
                     }</div>
+                    <span className={`jj-type-badge ${isVP ? 'jj-type-badge--viewpoint' : 'jj-type-badge--view'}`}>
+                        {isVP ? 'VIEWPOINT' : 'VIEW'}
+                    </span>
+                    <HelpButton helpKey="properties-panel" />
                 </div>
             </div>
 

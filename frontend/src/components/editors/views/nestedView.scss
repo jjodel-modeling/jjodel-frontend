@@ -3592,13 +3592,20 @@ html[data-theme="dark"] {
 .view-editor-tab-bar {
   display: flex;
   flex: 0 0 auto;
+  flex-wrap: nowrap;             // single row: tabs never reflow to a second line
+  overflow-x: auto;             // scroll horizontally when the tabs overflow
+  scrollbar-width: none;        // hide the horizontal scrollbar (Firefox)
   border-bottom: 1px solid var(--color-border-primary);
   padding: 0 8px;
   gap: 0;
   background: var(--color-bg-secondary);
+
+  &::-webkit-scrollbar { display: none; }   // hide the horizontal scrollbar (WebKit)
 }
 
 .view-editor-tab {
+  flex: 0 0 auto;               // keep natural width, never shrink → equal heights
+  white-space: nowrap;         // prevents "Apply to" wrapping to two rows
   padding: 8px 16px;
   border: none;
   background: none;
@@ -3673,6 +3680,25 @@ html[data-theme="dark"] {
     float: none !important;
     margin: 0 !important;
     padding: 0 !important;
+  }
+}
+
+// Fase 2 — collapsed single-row view header. The `.props-header` row also hosts the
+// breadcrumb inline (the separate band above is no longer rendered). Additive
+// modifier: the shared base `.props-header*` (info-improvements.scss, also used by
+// the metaclass inspector) is NOT touched. Specificity (0,4,0) beats the base
+// `.view-editor-root .view-editor-header .path-list` (0,3,0); `!important` mirrors
+// the band's own overrides so the float/margins from the base rule are neutralized.
+.view-editor-header.view-entity-header .props-header--view {
+  .path-list {
+    display: inline-flex !important;
+    float: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    flex: 1 1 auto;
+    min-width: 0;
+    align-items: center;
+    overflow: hidden;
   }
 }
 
