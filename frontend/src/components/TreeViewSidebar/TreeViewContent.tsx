@@ -586,7 +586,6 @@ interface EntityRowProps {
     showNewBadge?: boolean;
     actions?: ReactNode;           // hover-reveal slot (e.g. add/duplicate/delete buttons)
     nameOverride?: ReactNode;      // custom name renderer (e.g. inline rename input)
-    activeIndicator?: 'viewpoint' | 'model' | null; // pulsing dot — entity-typed
     highlightQuery?: string;       // search substring to <mark> in the name
 }
 
@@ -595,7 +594,7 @@ const EntityRow = memo(function EntityRow(props: EntityRowProps): ReactElement {
         badge, badgeClassName, name, nameClassName, pillText, expandKey, isLeaf,
         expanded, onToggle, extraIcon, selected,
         onClick, onDoubleClick, onContextMenu, depth, dataElementId, highlightAction, isHighlighted, showNewBadge,
-        actions, nameOverride, activeIndicator, highlightQuery,
+        actions, nameOverride, highlightQuery,
     } = props;
 
     const hasChevron = !!expandKey && !isLeaf;
@@ -679,12 +678,6 @@ const EntityRow = memo(function EntityRow(props: EntityRowProps): ReactElement {
                 )}
             </div>
             {actions && <span className="tree-row__actions">{actions}</span>}
-            {activeIndicator && (
-                <span
-                    className={`tree-row__active-dot tree-row__active-dot--${activeIndicator}`}
-                    aria-label="active in editor"
-                />
-            )}
         </div>
     );
 
@@ -1004,7 +997,6 @@ const ModelNode = memo(function ModelNode({
                 expanded={isExpanded && canExpand}
                 onToggle={onToggle}
                 selected={isSelected}
-                activeIndicator={model.isActive ? 'model' : null}
                 onClick={handleClick}
                 depth={depth}
                 dataElementId={model.id}
@@ -1321,7 +1313,8 @@ const ViewpointNode = memo(function ViewpointNode({
 } & ViewpointRenameProps): ReactElement {
     const hasSubViews = vp.subViews.length > 0;
     const expanded = isExpandedFn(vp.id);
-    const isActive = !!activeViewpointId && vp.id === activeViewpointId;
+    // active-in-editor dot removed (2026-07-28 refinement); activeViewpointId is
+    // no longer consumed here (prop kept threaded, now inert). TODO: cleanup.
 
     const handleClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
@@ -1374,7 +1367,6 @@ const ViewpointNode = memo(function ViewpointNode({
                 onClick={handleClick}
                 depth={depth}
                 dataElementId={vp.id}
-                activeIndicator={isActive ? 'viewpoint' : null}
                 actions={actions}
                 highlightQuery={highlightQuery}
             />

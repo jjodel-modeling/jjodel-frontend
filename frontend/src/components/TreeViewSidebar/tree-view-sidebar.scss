@@ -1814,37 +1814,8 @@ html[data-theme="dark"] {
         &:focus { border-color: var(--color-info); }
     }
 
-    // ─── Active indicator (pulsing dot, trailing) ───────────────────────
-    // Sostituisce la cyan bar persistente per i due "active" concepts:
-    //   - viewpoint attivo (lens applicata)
-    //   - entity aperta in editor (typically model)
-    // L'aura pulsante riusa `@keyframes node-problem-pulse` definito in
-    // NodeProblemIndicator.scss per visual consistency (no duplicate keyframe).
-    &__active-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        margin-left: 8px;
-        margin-right: 4px;
-        flex-shrink: 0;
-        position: relative;
-        align-self: center;
-
-        // Halo pulsante — espansione + fade-out (sonar ping)
-        &::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            border-radius: 50%;
-            background: inherit;
-            animation: node-problem-pulse 1.6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        &--viewpoint { background: var(--color-entity-viewpoint-saturated); }
-        &--model     { background: var(--color-entity-model-saturated); }
-    }
+    // Active-in-editor pulsing dot removed (2026-07-28 refinement). The shared
+    // @keyframes node-problem-pulse (NodeProblemIndicator.scss) is left intact.
 }
 
 // Leaf chevron slot — invisible but occupies the same width.
