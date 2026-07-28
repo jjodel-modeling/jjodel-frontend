@@ -49,7 +49,6 @@ import { EditorContext } from './contexts/EditorContext';
 import { HighlightProvider, type HighlightState } from './contexts/HighlightContext';
 import { getNextFreeHandleIndex, computePortDistribution } from './utils/portDistribution';
 import { getSideFromHandle } from './utils/edgeUtils';
-import { LANE_DEBUG, reconstructEdgePoints, type LaneRect, type ReconstructEdge } from './utils/laneSeparation';
 import type { ClassNodeData, EnumNodeData, PackageNodeData, ObjectNodeData, ReferenceEdgeData, InheritanceEdgeData, CompositionEdgeData, InstanceReferenceEdgeData, AnchorConfig, ReferenceKind, NotationMode, ColorScheme, CustomColorScheme, ActiveColorScheme } from './types';
 import { EdgeTypePopup, type EdgeTypeChoice } from './components/EdgeTypePopup';
 import { M1ReferencePopup } from './components/M1ReferencePopup';
@@ -1027,37 +1026,6 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
 
         const { edgeHandles } = computePortDistribution(edgeList, nodeIds, positions);
 
-        // ── Lane separation Phase A: reconstruct edge geometry + log (no visual change) ──
-        // Build the to-be-rendered edge list (handles overridden with the just-assigned
-        // distribution) + node rects from the same source as buildNodePositions, then
-        // reconstruct each edge's point array with the SAME pure functions the render uses.
-        // Gated by LANE_DEBUG; produces no offsets and mutates nothing.
-        if (LANE_DEBUG) {
-            const nodeRects = new Map<string, LaneRect>();
-            for (const n of currentNodes) {
-                const w = ((n.measured?.width ?? (n as any).width ?? 180) as number);
-                const h = ((n.measured?.height ?? (n as any).height ?? 80) as number);
-                nodeRects.set(n.id, { x: n.position.x, y: n.position.y, width: w, height: h });
-            }
-            const distributedEdges: ReconstructEdge[] = edgeList.map(e => {
-                const d = edgeHandles.get(e.id);
-                return {
-                    id: e.id,
-                    source: e.source,
-                    target: e.target,
-                    type: e.type,
-                    sourceHandle: d?.sourceHandle ?? e.sourceHandle,
-                    targetHandle: d?.targetHandle ?? e.targetHandle,
-                    data: e.data as ReconstructEdge['data'],
-                };
-            });
-            for (const e of distributedEdges) {
-                const reconstructed = reconstructEdgePoints(e, distributedEdges, nodeRects, positions);
-                // eslint-disable-next-line no-console
-                console.log('[laneA:producer]', e.id, JSON.stringify(reconstructed));
-            }
-        }
-
         const handleIdx = (h?: string | null): number => {
             const m = h?.match(/-(\d+)$/);
             return m ? parseInt(m[1], 10) : 0;
@@ -1421,14 +1389,6 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     // Handle new connections: save the valid connection, then show edge type popup on drop
     const onConnect = useCallback(
         (connection: Connection) => {
-            // [BUG-DIAG-DROP] ReactFlow accepted the connection at framework level.
-            // eslint-disable-next-line no-console
-            console.log('[BUG-DIAG-DROP] onConnect fired', {
-                source: connection.source,
-                target: connection.target,
-                sourceHandle: connection.sourceHandle,
-                targetHandle: connection.targetHandle,
-            });
             // Store the valid connection; onConnectEnd will show the popup
             pendingConnectionRef.current = connection;
         },
@@ -1440,19 +1400,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             const connection = pendingConnectionRef.current;
             pendingConnectionRef.current = null;
 
-            // [BUG-DIAG-DROP] onConnectEnd fired — log the connection state.
             // If onConnect never fired, connection will be null here (drop on empty canvas).
-            // eslint-disable-next-line no-console
-            console.log('[BUG-DIAG-DROP] onConnectEnd fired', {
-                hasConnection: !!connection,
-                source: connection?.source,
-                target: connection?.target,
-            });
-
             if (!connection || !connection.source || !connection.target) {
                 // Invalid connection (dropped on empty canvas) — ignore
-                // eslint-disable-next-line no-console
-                console.log('[BUG-DIAG-DROP] onConnectEnd → invalid connection, exit');
                 return;
             }
 
@@ -1466,38 +1416,11 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 const sourceNode = currentNodes.find(n => n.id === connection.source);
                 const targetNode = currentNodes.find(n => n.id === connection.target);
 
-                // [BUG-DIAG-DROP] Inspect the resolved nodes for the M1 branch.
-                // eslint-disable-next-line no-console
-                console.log('[BUG-DIAG-DROP] M1 branch — node resolution', {
-                    sourceFound: !!sourceNode,
-                    targetFound: !!targetNode,
-                    sourceType: sourceNode?.type,
-                    targetType: targetNode?.type,
-                });
-
                 if (sourceNode?.type === 'objectNode' && targetNode?.type === 'objectNode') {
                     const sourceData = sourceNode.data as ObjectNodeData;
                     const targetData = targetNode.data as ObjectNodeData;
                     const sourceMetaclass = mi.allClasses.find(c => c.id === sourceData.instanceOfClassId);
                     const targetMetaclass = mi.allClasses.find(c => c.id === targetData.instanceOfClassId);
-
-                    // [BUG-DIAG-DROP] Inspect metaclass resolution + full reference list of source.
-                    // eslint-disable-next-line no-console
-                    console.log('[BUG-DIAG-DROP] M1 branch — metaclass resolution', {
-                        sourceClassId: sourceData.instanceOfClassId,
-                        targetClassId: targetData.instanceOfClassId,
-                        sourceMetaclassName: sourceMetaclass?.name,
-                        targetMetaclassName: targetMetaclass?.name,
-                        sourceMetaclassFound: !!sourceMetaclass,
-                        targetMetaclassInAllClasses: !!targetMetaclass,
-                        sourceReferences: sourceMetaclass?.references.map(r => ({
-                            name: r.name,
-                            targetClassId: r.targetClassId,
-                            targetClassName: r.targetClassName,
-                            containment: r.containment,
-                            upperBound: r.upperBound,
-                        })),
-                    });
 
                     if (sourceMetaclass) {
                         const compatibleRefs = getCompatibleReferences(
@@ -1505,17 +1428,6 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                             targetData.instanceOfClassId,
                             mi.allClasses,
                         );
-
-                        // [BUG-DIAG-DROP] Compatible references computed.
-                        // eslint-disable-next-line no-console
-                        console.log('[BUG-DIAG-DROP] M1 branch — compatibleRefs', {
-                            count: compatibleRefs.length,
-                            refs: compatibleRefs.map(c => ({
-                                name: c.ref.name,
-                                isContainment: c.isContainment,
-                                upperBound: c.ref.upperBound,
-                            })),
-                        });
 
                         // IR connect rules applicable to this metaclass pair
                         // (object-as-edge creation; wiring cantiere 2026-07-20).
@@ -1527,15 +1439,11 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         );
 
                         if (compatibleRefs.length === 0 && connectMatches.length === 0) {
-                            // eslint-disable-next-line no-console
-                            console.log('[BUG-DIAG-DROP] M1 branch → 0 compatible refs, exit silently');
                             return; // no compatible refs — ignore
                         }
 
                         if (compatibleRefs.length === 1 && connectMatches.length === 0) {
                             // Auto-select: skip popup, create edge directly
-                            // eslint-disable-next-line no-console
-                            console.log('[BUG-DIAG-DROP] M1 branch → auto-select single ref:', compatibleRefs[0].ref.name);
                             handleM1ReferenceSelectedRef.current(compatibleRefs[0].ref, connection);
                             return;
                         }
@@ -1547,17 +1455,12 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                         }
 
                         // Multiple options: show picker popup (references + IR object-as-edge entries)
-                        // eslint-disable-next-line no-console
-                        console.log('[BUG-DIAG-DROP] M1 branch → show picker popup');
                         setPendingM1Connection({
                             connection,
                             position: { x: clientX, y: clientY },
                             compatibleRefs,
                             objectEdgeMatches: connectMatches,
                         });
-                    } else {
-                        // eslint-disable-next-line no-console
-                        console.log('[BUG-DIAG-DROP] M1 branch → sourceMetaclass NOT found in allClasses, exit silently');
                     }
                     return;
                 }
