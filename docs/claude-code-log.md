@@ -1,5 +1,11 @@
 # Claude Code Session Log
 
+## 2026-07-28 — refactor: Properties panel redesign, Fase 2 (Commit 3-4)
+**Prompt**: completare la Fase 2 del Properties panel in 2 commit: EN sweep + micro-label Border in VertexAuthoringPanel; EN labels + layout value-below-mode in ConditionalEditor.
+**File toccati**: frontend/src/components/editor-v2/viewpoint/authoring/VertexAuthoringPanel.tsx; frontend/src/components/ui/ConditionalEditor/ConditionalEditor.tsx
+**Esito**: ✅ completato
+**Note**: Commit 3 (982d669a5) = stringhe EN + micro-label Color/Width/Style sotto "Border" (label invariata) + spacing con --space-*; Advanced hint riformulato in "not yet editable". Commit 4 (63f08651f) ridotto al solo relabel EN: il layout value-below-mode era già presente (ConditionalEditor .wrapper flex-direction:column dal 2026-07-22, 891648b13), nessun cambio CSS. Componente condiviso: le label EN si propagano a visible/fill/line/textstyle/edge (voluto).
+**Nome del documento prompt**: 2026-07-28 Fase 2 Properties panel, Commit 3-4
 
 ## 2026-07-28 — fix: IR object node content riempie il box del nodo (edge-gap, Fase 2 commit 1)
 **Prompt**: Fase 2 riconciliazione size↔geometria — Commit 1 (Fix B): in content-hug gli edge non toccavano il bordo dello State perché `.mm-node` (block) floora a 140×40 mentre `.ir-node-content{height:100%}` non si risolve contro l'altezza auto → il bordo visibile resta più piccolo del box su cui React Flow (`DynamicHandles` via `getBoundingClientRect`) piazza gli handle. Passo 0 read-only obbligatorio (6 punti confermati). Solo CSS, render-side, fuori critical zone.
