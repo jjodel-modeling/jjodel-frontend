@@ -606,8 +606,8 @@ $radius-md: 6px;
 
     // Toggle button - reset browser defaults
     .tree-node__toggle {
-        width: 20px;
-        height: 20px;
+        width: 14px;
+        height: 14px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -638,8 +638,8 @@ $radius-md: 6px;
 
     // Tree node icon - TEXT-ONLY STYLE (colored letter, no background)
     .tree-node__icon {
-        width: 16px;
-        height: 16px;
+        width: 14px;
+        height: 14px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -649,10 +649,13 @@ $radius-md: 6px;
         flex-shrink: 0;
         background: transparent;
 
-        &.tree-DModel { color: #7F77DD; }
-        &.tree-DPackage { color: #888780; }
+        // Icon colour = single source: the --color-entity-* tokens (Fase 2 C3,
+        // 2026-07-28). Model/Package/Class previously carried divergent literals
+        // here; they now defer to the tokens so the token wins, not the literal.
+        &.tree-DModel { color: var(--color-entity-metamodel-fg); }
+        &.tree-DPackage { color: var(--color-entity-package-fg); }
         &.tree-DClass {
-            color: #378ADD;
+            color: var(--color-entity-class-fg);
             &.abstract-class { font-style: italic; }
         }
         &.tree-DAttribute { color: #639922; }

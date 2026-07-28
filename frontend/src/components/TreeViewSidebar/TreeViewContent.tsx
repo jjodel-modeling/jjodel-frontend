@@ -546,6 +546,24 @@ const SectionNode = memo(function SectionNode({
 
 type EntityBadge = 'M' | 'P' | 'm' | 'C' | 'VP' | 'v' | 'A' | 'R';
 
+// Type icon glyphs (Fase 2 C3, 2026-07-28): the per-type "badge" is now a
+// Bootstrap glyph instead of a letter. Keyed by the per-type colour class so the
+// old letter collisions (C = Class/Transformation, R = Reference/Rule) resolve to
+// distinct icons. Colour still comes from the .tree-D* class on the wrapper span.
+const BADGE_ICON: Record<string, { icon: string; label: string }> = {
+    'tree-DModel': { icon: 'bi-diagram-3', label: 'Metamodel' },
+    'tree-DPackage': { icon: 'bi-folder2', label: 'Package' },
+    'tree-DClass': { icon: 'bi-square', label: 'Class' },
+    'tree-DAttribute': { icon: 'bi-dash-lg', label: 'Attribute' },
+    'tree-DReference': { icon: 'bi-arrow-right', label: 'Reference' },
+    'tree-nested-model': { icon: 'bi-file-earmark', label: 'Model' },
+    'tree-viewpoint': { icon: 'bi-eye', label: 'Viewpoint' },
+    'tree-leaf-view': { icon: 'bi-easel', label: 'View' },
+    'tree-transformation': { icon: 'bi-arrow-left-right', label: 'Transformation' },
+    'tree-rule': { icon: 'bi-list-check', label: 'Rule' },
+    'tree-helper': { icon: 'bi-wrench', label: 'Helper' },
+};
+
 interface EntityRowProps {
     badge: EntityBadge;
     badgeClassName?: string;       // CSS class for badge color (e.g. 'tree-DModel')
@@ -581,6 +599,7 @@ const EntityRow = memo(function EntityRow(props: EntityRowProps): ReactElement {
     } = props;
 
     const hasChevron = !!expandKey && !isLeaf;
+    const badgeIcon = badgeClassName ? BADGE_ICON[badgeClassName] : undefined;
 
     // Problem indicator — only for real entity ids (not synthetic section keys)
     const problemKey = (expandKey && !isSectionKey(expandKey)) ? expandKey : '';
@@ -625,7 +644,13 @@ const EntityRow = memo(function EntityRow(props: EntityRowProps): ReactElement {
             )}
 
             <div className="tree-row__content" onClick={onClick} onDoubleClick={onDoubleClick}>
-                <span className={`tree-node__icon ${badgeClassName || ''}`}>{badge}</span>
+                <span
+                    className={`tree-node__icon ${badgeClassName || ''}`}
+                    title={badgeIcon?.label}
+                    aria-label={badgeIcon?.label}
+                >
+                    {badgeIcon ? <i className={`bi ${badgeIcon.icon}`} aria-hidden /> : badge}
+                </span>
                 {nameOverride !== undefined ? nameOverride : (
                     <span className={`tree-row__name ${nameClassName || ''}`.trim()}>{renderHighlightedName(name || 'unnamed', highlightQuery)}</span>
                 )}
@@ -1433,12 +1458,12 @@ const TransformationItem = memo(function TransformationItem({
                 highlightQuery={highlightQuery}
             />
             {expanded && hasChildren && (
-                <div className="tree-children">
+                <div className="tree-children" style={{ '--tree-depth': depth } as any}>
                     {transformation.rules?.map((rule, i) => (
                         <div key={`r-${i}`} className="tree-row tree-row--feature" style={{ paddingLeft: `${(depth + 1) * TREE_INDENT_STEP}px` }}>
                             <span className="tree-node__toggle is-leaf" aria-hidden />
                             <div className="tree-row__content">
-                                <span className="tree-node__icon tree-rule">R</span>
+                                <span className="tree-node__icon tree-rule" title="Rule" aria-label="Rule"><i className="bi bi-list-check" aria-hidden /></span>
                                 <span className="tree-row__name">{rule}</span>
                             </div>
                         </div>
@@ -1447,7 +1472,7 @@ const TransformationItem = memo(function TransformationItem({
                         <div key={`h-${i}`} className="tree-row tree-row--feature" style={{ paddingLeft: `${(depth + 1) * TREE_INDENT_STEP}px` }}>
                             <span className="tree-node__toggle is-leaf" aria-hidden />
                             <div className="tree-row__content">
-                                <span className="tree-node__icon tree-helper">H</span>
+                                <span className="tree-node__icon tree-helper" title="Helper" aria-label="Helper"><i className="bi bi-wrench" aria-hidden /></span>
                                 <span className="tree-row__name">{helper}</span>
                             </div>
                         </div>
