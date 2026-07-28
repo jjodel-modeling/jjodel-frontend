@@ -45,7 +45,7 @@ export function ConditionalEditor<T>({
 
     // Multi-rule form: not editable this phase — preserved verbatim as a chip.
     if (isRules) {
-        return <span className={styles.chip}>conditional (regole multiple, non ancora editabile)</span>;
+        return <span className={styles.chip}>conditional (multiple rules, not yet editable)</span>;
     }
 
     const switchToFixed = () => {
@@ -63,8 +63,8 @@ export function ConditionalEditor<T>({
     return (
         <div className={styles.wrapper}>
             <div className={styles.modeToggle}>
-                <Button variant={mode === 'fixed' ? 'primary' : 'ghost'} size="sm" onClick={switchToFixed}>Fisso</Button>
-                <Button variant={mode === 'conditional' ? 'primary' : 'ghost'} size="sm" onClick={switchToConditional}>Condizionale</Button>
+                <Button variant={mode === 'fixed' ? 'primary' : 'ghost'} size="sm" onClick={switchToFixed}>Fixed</Button>
+                <Button variant={mode === 'conditional' ? 'primary' : 'ghost'} size="sm" onClick={switchToConditional}>Conditional</Button>
             </div>
 
             {mode === 'fixed' && renderValue((value as T) ?? defaultValue, (v) => onChange(v))}
@@ -75,7 +75,7 @@ export function ConditionalEditor<T>({
                 return (
                     <div className={styles.conditional}>
                         <div className={styles.section}>
-                            <div className={styles.sectionLabel}>Quando</div>
+                            <div className={styles.sectionLabel}>When</div>
                             <PredicateBuilder
                                 value={cond.when}
                                 onChange={(w) => onChange({ ...cond, when: w })}
@@ -85,12 +85,12 @@ export function ConditionalEditor<T>({
                             />
                         </div>
                         <div className={styles.section}>
-                            <div className={styles.sectionLabel}>Allora</div>
+                            <div className={styles.sectionLabel}>Then</div>
                             {renderValue(cond.then, (t) => onChange({ ...cond, then: t }))}
                         </div>
                         <Checkbox
                             checked={hasElse}
-                            label="Includi ramo else"
+                            label="Include else branch"
                             onChange={(c) => {
                                 if (c) onChange({ ...cond, else: cond.else ?? defaultValue });
                                 // Drop the else key entirely (no placeholder) — rebuild without it.
@@ -99,7 +99,7 @@ export function ConditionalEditor<T>({
                         />
                         {hasElse && (
                             <div className={styles.section}>
-                                <div className={styles.sectionLabel}>Altrimenti</div>
+                                <div className={styles.sectionLabel}>Otherwise</div>
                                 {renderValue(cond.else ?? defaultValue, (e) => onChange({ ...cond, else: e }))}
                             </div>
                         )}
