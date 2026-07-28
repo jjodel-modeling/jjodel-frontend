@@ -1667,6 +1667,22 @@ html[data-theme="dark"] {
 
 .tree-children {
     position: relative;
+
+    // Indentation guide (Fase 2 C4, 2026-07-28): a subtle 1px vertical hairline
+    // per entity container, stepped by nesting depth via the inline --tree-depth
+    // var set in TreeViewContent. Section containers ([data-section-content]) are
+    // excluded so the guide never runs as one full-height line from the root
+    // (the 2026-05-12 removal). Aligns just under the owner row's chevron.
+    &:not([data-section-content])::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: calc(var(--tree-depth, 0) * 12px + 7px);
+        width: 1px;
+        background-color: rgba(51, 65, 85, 0.12);
+        pointer-events: none;
+    }
 }
 
 // ─── Tree row (entity row replacement) ───────────────────────────────────────
@@ -1996,8 +2012,8 @@ html[data-theme="dark"] {
         // &--selected: driven by --color-selection-* tokens (no override here)
     }
 
-    .tree-children::before {
-        background-color: rgba(255, 255, 255, 0.15);
+    .tree-children:not([data-section-content])::before {
+        background-color: rgba(148, 163, 184, 0.15);
     }
 
     .tree-section__label {

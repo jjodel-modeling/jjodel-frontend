@@ -837,7 +837,7 @@ const ClassNode = memo(function ClassNode({
             />
             {popup}
             {isExpanded && hasStructuralFeatures && (
-                <div className="tree-children">
+                <div className="tree-children" style={{ '--tree-depth': depth } as any}>
                     {cls.attributes.map(attr => (
                         <StructuralFeatureRow
                             key={attr.id}
@@ -924,7 +924,7 @@ const PackageNode = memo(function PackageNode({
             />
             {popup}
             {isExpanded && (
-                <div className="tree-children">
+                <div className="tree-children" style={{ '--tree-depth': depth } as any}>
                     {pkg.subPackages.map(sub => (
                         <PackageNode
                             key={sub.id}
@@ -1011,7 +1011,7 @@ const ModelNode = memo(function ModelNode({
                 highlightQuery={highlightQuery}
             />
             {isExpanded && canExpand && (
-                <div className="tree-children">
+                <div className="tree-children" style={{ '--tree-depth': depth } as any}>
                     {model.instances.map(inst => (
                         <FeatureRow
                             key={inst.id}
@@ -1093,7 +1093,7 @@ const MetamodelNode = memo(function MetamodelNode({
             />
             {popup}
             {isExpanded && (
-                <div className="tree-children">
+                <div className="tree-children" style={{ '--tree-depth': depth } as any}>
                     {mm.rootPackages.map(pkg => (
                         <PackageNode
                             key={pkg.id}
@@ -1267,7 +1267,7 @@ const SubViewItem = memo(function SubViewItem({
                 highlightQuery={highlightQuery}
             />
             {expanded && hasChildren && (
-                <div className="tree-children">
+                <div className="tree-children" style={{ '--tree-depth': depth } as any}>
                     {view.children.map(child => (
                         <SubViewItem
                             key={child.id}
@@ -1379,7 +1379,7 @@ const ViewpointNode = memo(function ViewpointNode({
                 highlightQuery={highlightQuery}
             />
             {expanded && hasSubViews && (
-                <div className="tree-children">
+                <div className="tree-children" style={{ '--tree-depth': depth } as any}>
                     {vp.subViews.map(sv => (
                         <SubViewItem
                             key={sv.id}
