@@ -1709,29 +1709,48 @@ html[data-theme="dark"] {
     transition: background-color $transition-fast;
     position: relative;
 
-    &:hover {
-        background-color: var(--color-accent-subtle);
+    // Pill-shaped inset hover/selection (2026-07-28 round 3): the row's active
+    // background is an inset, rounded ::before so it floats inside the panel
+    // (never full-width) and the row content, section headers and indentation
+    // guide never shift. Hover is a neutral grey, selection the pale selection
+    // tint — same radius and inset, so the two states read as one family. No
+    // cyan on hover, no bar, no pulse.
+    &::before {
+        content: '';
+        position: absolute;
+        inset: 1px 4px;
+        border-radius: 9px;
+        pointer-events: none;
+        z-index: 0;
+        transition: background-color $transition-fast;
     }
 
-    &--selected {
+    // Keep the real row content above the inset pill.
+    > .tree-node__toggle,
+    > .tree-row__content,
+    > .tree-row__actions {
+        position: relative;
+        z-index: 1;
+    }
+
+    &:hover::before {
+        background-color: #f1f5f9;
+    }
+
+    &--selected::before {
         background-color: var(--color-selection-bg);
+    }
 
-        // Cyan left bar removed (Fase 2 C1, 2026-07-28): the active state is now
-        // the tinted background only — cleaner, still legible. This leaves
-        // --color-selection-bar orphaned.
-        // TODO: cleanup — retire --color-selection-bar in _colors-light/dark.scss.
+    // Cyan left bar removed (Fase 2 C1, 2026-07-28): the selected state is the
+    // tinted pill only. This leaves --color-selection-bar orphaned.
+    // TODO: cleanup — retire --color-selection-bar in _colors-light/dark.scss.
 
-        &:hover {
-            background-color: var(--color-selection-bg);
-        }
+    &--selected:hover::before {
+        background-color: var(--color-selection-bg);
     }
 
     &--feature {
         cursor: pointer;
-
-        &:hover {
-            background-color: var(--color-accent-subtle);
-        }
     }
 
     &__content {
@@ -1985,11 +2004,11 @@ html[data-theme="dark"] {
 
 [data-theme="dark"] {
     .tree-row {
-        &:hover {
+        &:hover::before {
             background-color: rgba(255, 255, 255, 0.04);
         }
 
-        // &--selected: driven by --color-selection-* tokens (no override here)
+        // &--selected::before: driven by --color-selection-* tokens (no override here)
     }
 
     .tree-children:not([data-section-content])::before {
