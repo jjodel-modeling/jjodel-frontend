@@ -741,7 +741,7 @@ $color-subview: #94a3b8;    // Slate - Sub-views
 
 // Instance name styling
 .tree-instance__name {
-    font-size: 12px;
+    font-size: 11px;
     color: $color-text-primary;
 }
 
@@ -1712,14 +1712,14 @@ html[data-theme="dark"] {
     &__content {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: var(--space-2);
         flex: 1;
         min-width: 0;
         padding-left: 2px;
     }
 
     &__name {
-        font-size: 12px;
+        font-size: 11px;
         color: var(--color-text-primary);
         white-space: nowrap;
         overflow: hidden;
@@ -1882,7 +1882,7 @@ html[data-theme="dark"] {
 // ─── Feature row (M1 instance leaf) ──────────────────────────────────────────
 
 .tree-feature__name {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--color-text-primary);
     white-space: nowrap;
     overflow: hidden;
