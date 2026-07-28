@@ -31,7 +31,7 @@ const BORDER_STYLE_OPTIONS = [
 
 const DEFAULT_BORDER = { color: '#334155', width: 1, style: 'solid' as const };
 const COMMIT_DEBOUNCE_MS = 300;
-const FEATURES_HINT = 'imposta una metaclasse per abilitare i path sulle feature';
+const FEATURES_HINT = 'Set a metaclass to enable feature paths';
 
 /** Lossless deep clone for plain IR objects (pure JSON: no functions/dates). */
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
@@ -180,7 +180,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
     const fieldCompartments = draft.fieldCompartments ?? [];
     const border = shape.border ?? DEFAULT_BORDER;
     // Resolved resizable state (mirrors the checkbox default): explicit flag ?? per-form default.
-    // Gates the "Propaga dimensione" button — propagating a size to a non-resizable view has no effect.
+    // Gates the "Propagate size" button — propagating a size to a non-resizable view has no effect.
     const canResize = draft.resizable ?? defaultResizableForForm(typeof form === 'string' ? form : undefined);
 
     // --- immutable patch helpers ---
@@ -193,7 +193,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
 
     return (
         <section className="properties-tab properties-panel">
-            <div className="jj-field-label" style={{ marginTop: 4 }}>IR View authoring</div>
+            <div className="jj-field-label" style={{ marginTop: 'var(--space-1)' }}>IR View authoring</div>
 
             {/* Basic / Advanced tabs — segmented control (pure local UI state). */}
             <div className="jj-field" style={{ display: 'flex', gap: 'var(--spacing-1)', marginBottom: 8 }}>
@@ -209,7 +209,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                 incoherent model (duplicate metamodels) worth the author's attention. */}
             {featureInfo.metamodelsWithClass > 1 && (
                 <ErrorText>
-                    {`La metaclasse «${featureInfo.targetName}» è dichiarata in ${featureInfo.metamodelsWithClass} metamodelli del progetto: il picker usa quella a cui è applicata questa view. Verifica che i metamodelli non siano duplicati.`}
+                    {`The metaclass "${featureInfo.targetName}" is declared in ${featureInfo.metamodelsWithClass} project metamodels: the picker uses the one this view is applied to. Check that the metamodels are not duplicated.`}
                 </ErrorText>
             )}
 
@@ -252,8 +252,11 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                     {/* Border (always scalar in the schema) */}
                     <div className="jj-field">
                         <label className="jj-field-label">Border</label>
+                        <label className="jj-field-label">Color</label>
                         <ColorPicker value={border.color} onChange={(hex) => patchBorder({ color: hex })} />
+                        <label className="jj-field-label" style={{ marginTop: 'var(--space-2)' }}>Width</label>
                         <NumberInput value={border.width} min={0} onChange={(w) => patchBorder({ width: w })} />
+                        <label className="jj-field-label" style={{ marginTop: 'var(--space-2)' }}>Style</label>
                         <Select options={BORDER_STYLE_OPTIONS} value={border.style} onChange={(e) => patchBorder({ style: e.target.value as 'solid' | 'dashed' | 'dotted' })} />
                     </div>
 
@@ -265,21 +268,21 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                             onChange={(checked) => patch({ ...draft, resizable: checked })}
                             label="Resizable"
                         />
-                        <HelpText>Forza le maniglie di resize. Deseleziona per bloccarlo. Non impostato: segue la forma.</HelpText>
+                        <HelpText>Forces the resize handles. Uncheck to lock. When unset, follows the shape.</HelpText>
                         <Button
                             variant="secondary"
                             disabled={!canResize}
-                            title="Applica la dimensione dell'istanza selezionata a tutte le istanze di questa view"
+                            title="Apply the selected instance size to all instances of this view"
                             onClick={() => window.dispatchEvent(
                                 new CustomEvent(JjodelEvents.PROPAGATE_VIEW_SIZE, { detail: { viewId: view.id } })
                             )}
                         >
-                            <i className="bi bi-arrows-fullscreen" /> Propaga dimensione
+                            <i className="bi bi-arrows-fullscreen" /> Propagate size
                         </Button>
                     </div>
 
                     {/* Labels — full list (includes the former primary label at index 0) */}
-                    <div className="jj-field-label" style={{ marginTop: 8 }}>Labels</div>
+                    <div className="jj-field-label" style={{ marginTop: 'var(--space-2)' }}>Labels</div>
                     <LabelListEditor
                         labels={labels}
                         features={features}
@@ -289,7 +292,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                     />
 
                     {/* Field compartments */}
-                    <div className="jj-field-label" style={{ marginTop: 8 }}>Field compartments</div>
+                    <div className="jj-field-label" style={{ marginTop: 'var(--space-2)' }}>Field compartments</div>
                     <FieldCompartmentListEditor
                         compartments={fieldCompartments}
                         features={features}
@@ -299,7 +302,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                     />
 
                     {/* Badges */}
-                    <div className="jj-field-label" style={{ marginTop: 8 }}>Badges</div>
+                    <div className="jj-field-label" style={{ marginTop: 'var(--space-2)' }}>Badges</div>
                     <BadgeListEditor
                         badges={badges}
                         features={features}
@@ -319,8 +322,8 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                         featuresHint={FEATURES_HINT}
                         classNames={classNames}
                     />
-                    <div className="jj-field" style={{ marginTop: 8 }}>
-                        <HelpText>Le regole multiple (rules, più branch when/then in sequenza con default) e altre funzionalità avanzate non ancora supportate arriveranno qui in futuro. I campi condizionali singoli (when/then/else) si editano ora direttamente in Basic, accanto a ciascun campo.</HelpText>
+                    <div className="jj-field" style={{ marginTop: 'var(--space-2)' }}>
+                        <HelpText>Multiple rules are not yet editable here. Single conditional fields (when/then/else) are edited now directly in Basic, next to each field.</HelpText>
                     </div>
                 </>
             )}
