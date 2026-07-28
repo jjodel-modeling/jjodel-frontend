@@ -1145,6 +1145,7 @@ const SubViewItem = memo(function SubViewItem({
     isExpandedFn,
     onToggleFn,
     onSelect,
+    selectedViewId,
     highlightQuery,
     renamingViewId,
     renameValue,
@@ -1158,11 +1159,13 @@ const SubViewItem = memo(function SubViewItem({
     isExpandedFn: (key: string) => boolean;
     onToggleFn: (key: string) => void;
     onSelect?: () => void;
+    selectedViewId?: string;
     highlightQuery?: string;
 } & SubViewItemRenameProps): ReactElement {
     const hasChildren = view.children.length > 0;
     const expanded = isExpandedFn(view.id);
     const isRenaming = renamingViewId === view.id;
+    const isSelected = !!selectedViewId && view.id === selectedViewId;
 
     const lView = useMemo(
         () => LPointerTargetable.fromPointer(view.id) as LViewElement,
@@ -1250,6 +1253,7 @@ const SubViewItem = memo(function SubViewItem({
                 expandKey={view.id}
                 isLeaf={!hasChildren}
                 expanded={expanded}
+                selected={isSelected}
                 onToggle={() => onToggleFn(view.id)}
                 onClick={handleClick}
                 onDoubleClick={handleDoubleClick}
@@ -1268,6 +1272,7 @@ const SubViewItem = memo(function SubViewItem({
                             isExpandedFn={isExpandedFn}
                             onToggleFn={onToggleFn}
                             onSelect={onSelect}
+                            selectedViewId={selectedViewId}
                             highlightQuery={highlightQuery}
                             renamingViewId={renamingViewId}
                             renameValue={renameValue}
@@ -1293,6 +1298,7 @@ const ViewpointNode = memo(function ViewpointNode({
     isExpandedFn,
     onToggleFn,
     onSelect,
+    selectedViewId,
     activeViewpointId,
     highlightQuery,
     startRenameView,
@@ -1308,13 +1314,16 @@ const ViewpointNode = memo(function ViewpointNode({
     isExpandedFn: (key: string) => boolean;
     onToggleFn: (key: string) => void;
     onSelect?: () => void;
+    selectedViewId?: string;
     activeViewpointId?: string;
     highlightQuery?: string;
 } & ViewpointRenameProps): ReactElement {
     const hasSubViews = vp.subViews.length > 0;
     const expanded = isExpandedFn(vp.id);
-    // active-in-editor dot removed (2026-07-28 refinement); activeViewpointId is
-    // no longer consumed here (prop kept threaded, now inert). TODO: cleanup.
+    // Highlight the viewpoint when it is the one open in Properties (selection
+    // pill, 2026-07-28 round 2 refinement). The active-in-editor dot was removed
+    // earlier; activeViewpointId stays threaded but inert. TODO: cleanup.
+    const isSelected = !!selectedViewId && vp.id === selectedViewId;
 
     const handleClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
@@ -1364,6 +1373,7 @@ const ViewpointNode = memo(function ViewpointNode({
                 expanded={expanded}
                 onToggle={() => onToggleFn(vp.id)}
                 extraIcon={!vp.isExclusive ? 'stack' : null}
+                selected={isSelected}
                 onClick={handleClick}
                 depth={depth}
                 dataElementId={vp.id}
@@ -1380,6 +1390,7 @@ const ViewpointNode = memo(function ViewpointNode({
                             isExpandedFn={isExpandedFn}
                             onToggleFn={onToggleFn}
                             onSelect={onSelect}
+                            selectedViewId={selectedViewId}
                             highlightQuery={highlightQuery}
                             renamingViewId={renamingViewId}
                             renameValue={renameValue}
@@ -1516,6 +1527,7 @@ interface StateProps {
     standaloneModels: TreeModelData[];
     viewpoints: TreeViewpointData[];
     selectedElementId?: string;
+    selectedViewId?: string;
     activeViewpointId?: string;
     projectId?: Pointer<DProject>;
     expandedTreeNodes: string[];
@@ -1528,7 +1540,7 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 function TreeViewContentComponent(props: AllProps) {
     const {
         metamodels, standaloneModels, viewpoints, selectedElementId,
-        activeViewpointId, projectId, expandedTreeNodes, onSelect,
+        selectedViewId, activeViewpointId, projectId, expandedTreeNodes, onSelect,
         searchOpen, onSearchClose,
     } = props;
 
@@ -1931,6 +1943,7 @@ function TreeViewContentComponent(props: AllProps) {
                                     isExpandedFn={isExpandedFn}
                                     onToggleFn={onToggleFn}
                                     onSelect={onSelect}
+                                    selectedViewId={selectedViewId}
                                     activeViewpointId={activeViewpointId}
                                     highlightQuery={highlightQuery}
                                     startRenameView={startRenameView}
@@ -1961,6 +1974,7 @@ function TreeViewContentComponent(props: AllProps) {
                                     isExpandedFn={isExpandedFn}
                                     onToggleFn={onToggleFn}
                                     onSelect={onSelect}
+                                    selectedViewId={selectedViewId}
                                     activeViewpointId={activeViewpointId}
                                     highlightQuery={highlightQuery}
                                     startRenameView={startRenameView}
@@ -1982,6 +1996,7 @@ function TreeViewContentComponent(props: AllProps) {
                             isExpandedFn={isExpandedFn}
                             onToggleFn={onToggleFn}
                             onSelect={onSelect}
+                            selectedViewId={selectedViewId}
                             activeViewpointId={activeViewpointId}
                             highlightQuery={highlightQuery}
                             startRenameView={startRenameView}
@@ -2311,6 +2326,10 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     ret.viewpoints = vpList;
 
     ret.selectedElementId = state._lastSelected?.modelElement || undefined;
+    // Selected view/viewpoint id (DProject._lastSelected.view) — highlights the
+    // view or viewpoint currently open in Properties with the same selection pill
+    // used for model-element rows (2026-07-28 round 2 refinement).
+    ret.selectedViewId = state._lastSelected?.view || undefined;
 
     // Active viewpoint id (DProject.activeViewpoint). Used to highlight the
     // currently-open VP in the tree with the cyan selection pattern.
