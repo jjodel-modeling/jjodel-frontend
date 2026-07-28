@@ -158,7 +158,19 @@ export function useEditorMode(
             if (!cls) continue;
             const refs = cls.allReferences ?? cls.references ?? [];
             const refCount = Array.isArray(refs) ? refs.length : 0;
-            parts.push(`${id}:${cls.name}:${cls.abstract}:${refCount}`);
+            // Include feature NAMES so an id-preserving M2 rename (which keeps
+            // both the id and the count unchanged) still changes this signature
+            // and re-derives modeInfo. Counting alone let a rename slip through,
+            // feeding a stale reference name to the M1 connect write path
+            // (see docs/discovery/discovery_2026-07-26_coevolution_edge_rename.md).
+            const refNames = Array.isArray(refs)
+                ? refs.map((rid: any) => (typeof rid === 'string' ? state.idlookup?.[rid]?.name : rid?.name) ?? '').join(',')
+                : '';
+            const attrs = cls.attributes ?? [];
+            const attrNames = Array.isArray(attrs)
+                ? attrs.map((aid: any) => (typeof aid === 'string' ? state.idlookup?.[aid]?.name : aid?.name) ?? '').join(',')
+                : '';
+            parts.push(`${id}:${cls.name}:${cls.abstract}:${refCount}:${refNames}:${attrNames}`);
         }
         return parts.join('|');
     });
