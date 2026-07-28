@@ -42,6 +42,15 @@ const BASE_CSS = `
 .mm-node.selected:has(> .ir-node-content),
 .mm-node.drop-target:has(> .ir-node-content) { border-color: transparent; box-shadow: none; }
 .ir-node-content { box-sizing: border-box; background: var(--node-bg); border: 1px solid var(--border-default); border-radius: 4px; box-shadow: 0 1px 3px var(--node-shadow), 0 4px 12px var(--node-shadow-deep, rgba(0, 0, 0, 0.08)); overflow: hidden; }
+/* Fase 2 (2026-07-28): reconcile the visible box with the .mm-node layout box. In
+   content-hug the block .mm-node floors to 140x40 (EditorV2.scss) but .ir-node-content's
+   width/height:100% do not resolve against the .mm-node's auto size, so the visible box
+   stays at content size (< floor) while React Flow places the edge handles on the floored
+   .mm-node box → edges miss the visible border. Replicate the .mm-node floor on the visible
+   box so the two coincide. Geometric shapes keep min:0 via their ir-shape--* rules (higher
+   specificity), so they still free-resize. The floor is lifted under .mm-node.ir-sized
+   (explicit size) so a resize can shrink below it. */
+.ir-node-content { min-width: 140px; min-height: 40px; }
 .ir-node-content.ir-shape--rounded { border-radius: 10px; }
 /* Fase 2 (2026-07-24): geometric shape nodes (ellipse) free-resize below the
    label down to SHAPE_MIN_SIZE (the resizer floor). Neutralize every intrinsic

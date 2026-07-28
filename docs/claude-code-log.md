@@ -1,6 +1,16 @@
 # Claude Code Session Log
 
 
+## 2026-07-28 — fix: IR object node content riempie il box del nodo (edge-gap, Fase 2 commit 1)
+**Prompt**: Fase 2 riconciliazione size↔geometria — Commit 1 (Fix B): in content-hug gli edge non toccavano il bordo dello State perché `.mm-node` (block) floora a 140×40 mentre `.ir-node-content{height:100%}` non si risolve contro l'altezza auto → il bordo visibile resta più piccolo del box su cui React Flow (`DynamicHandles` via `getBoundingClientRect`) piazza gli handle. Passo 0 read-only obbligatorio (6 punti confermati). Solo CSS, render-side, fuori critical zone.
+**Files touched**: `editor-v2/viewpoint/ir/irStyle.ts` (una regola: `.ir-node-content { min-width:140px; min-height:40px }` replica il floor del `.mm-node` sul bordo visibile), `docs/claude-code-log.md` (questa entry). Base: `docs/discovery/discovery_2026-07-28_size_geometry_reconciliation.md`.
+**Outcome**: ✅ completed — build verde; conferma visiva di Alfonso ("ok funziona tutto"): gli edge toccano il bordo in content-hug, nessuna regressione su compartimenti/package/enum né sulle shape (ellipse/circle/diamond mantengono `min:0` via le regole `ir-shape--*`, specificità maggiore). Gap confermato solo verticale (width già combacia via `width:100%`). Il floor sarà azzerato sotto `.mm-node.ir-sized` nel Commit 2 (Fix A).
+**Regressions**: no — regola scopata a `.ir-node-content` (IR-only), floor non-vincolante per box ≥ 140×40; verificato a schermo.
+**Out-of-scope changes**: no — solo `irStyle.ts` + questa entry.
+**Layer Impact Report**: not-required — nessun file critical-zone toccato (render-side; no `useJjomSync`/`portDistribution`/`canvasToJjom`/transformer).
+**Prompt document name**: 2026-07-28 15:39
+**Notes**: `ir-resizable` resta emesso da `ObjectNode` ma diventerà inerte dopo il Commit 2 (neutralizer spostato su `ir-sized`); lasciato in place (decisione separata). HEAD si muove per sessioni parallele di ricostruzione history; committato solo `irStyle.ts` + questa entry, niente bundling.
+
 ## 2026-07-27 — feat: propaga la dimensione a tutte le istanze di una view (IR)
 **Prompt**: Fase 2 (con LIR) — accanto alla checkbox "Resizable" del `VertexAuthoringPanel`, pulsante "Propaga dimensione" che prende la size dell'istanza selezionata e la applica a tutte le istanze che risolvono a quella view nel viewpoint corrente. One-shot, geometria per-istanza (w/h sui DVertex), nessun campo IR nuovo. Wiring via CustomEvent pannello→EditorV2.
 **Files touched**: `events/registry.ts` (+`PROPAGATE_VIEW_SIZE`), `editor-v2/sync/canvasToJjom.ts` (**critical zone**: +`syncSizeBatchToJjom`, gemella di `syncPositionBatchToJjom`, una TRANSACTION), `editor-v2/viewpoint/authoring/VertexAuthoringPanel.tsx` (bottone + `const canResize` + import `JjodelEvents`), `editor-v2/EditorV2.tsx` (listener `PROPAGATE_VIEW_SIZE`: target-first via `resolveIRView`, sorgente = 1 selezionato, `setNodes` width/height + `syncSizeBatchToJjom` + `scheduleLayoutSave`; +3 import), `docs/claude-code-log.md` (questa entry). Fase 1: `docs/discovery/discovery_2026-07-27_size_propagation.md`; LIR: `docs/discovery/lir_2026-07-27_size_propagation.md`.
