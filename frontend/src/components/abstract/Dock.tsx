@@ -259,13 +259,10 @@ function DockComponent(props: AllProps) {
         };
     }, []);
 
-    // PropertiesWithTreeView width-lock (2026-07-06): il tab a larghezza fissa è
-    // ora pilotato DIRETTAMENTE da PropertiesWithTreeView, che scrive su
-    // document.body la custom property `--properties-tree-tab-width` e il
-    // data-attr `data-properties-tree-width-lock` (consumati in abstract/style.scss).
-    // Nessun listener qui: gli effect dei figli girano prima di quelli del Dock,
-    // quindi un canale a evento perderebbe il dispatch iniziale. Rimosso il vecchio
-    // listener rail-only (PROPERTIES_TREE_RAIL_ONLY_ENTER/EXIT).
+    // PropertiesWithTreeView width-lock: RETIRED (F5 2026-07-29). Properties + Tree
+    // float now (Dashboard mount, portal to <body>); there is no dock tab to width-lock,
+    // so nothing is written to document.body here and no listener is needed. (Earlier
+    // still, the rail-only listener PROPERTIES_TREE_RAIL_ONLY_ENTER/EXIT was removed.)
 
     const groups = {
         'models': {floatable: true, maximizable: false},
@@ -326,7 +323,7 @@ function DockComponent(props: AllProps) {
 
     // Calculate panel sizes based on layout mode
     // Note: When JjTL is active, CSS handles hiding the right panel
-    const { leftSize, rightSize } = calculatePanelSizes(layoutMode);
+    const { leftSize } = calculatePanelSizes(layoutMode);
 
     // Left panel (Models Summary / Canvas)
     layout.dockbox.children.push({tabs: [ModelsSummary], size: leftSize});
@@ -335,9 +332,10 @@ function DockComponent(props: AllProps) {
     // Node, Console, MTM, Logger) is no longer built. Properties + Tree now render as a
     // floating overlay over the full-width canvas (Dashboard mount, portal to <body>).
     // The dockbox is left single-child (canvas group); rc-dock normalises the sole child
-    // to 100% width — no CSS change needed. `rightSize`/`groups.editors` and the editors
-    // tab consts above are left in place (orphaned): Console → future bottom drawer;
-    // retiring the width-lock and the orphans is a separate cleanup commit (F5).
+    // to 100% width — no CSS change needed. `groups.editors` and the editors tab consts
+    // above are still left in place (orphaned): Console → future bottom drawer. Retiring
+    // them is deferred past F5 — the consts still declare group:'editors', so a clean
+    // removal would have to drop them too (out of this commit's scope).
 
     // Emit custom event when the active tab in the left panel changes
     // so that StatusBar can switch between project stats and editor breadcrumb,

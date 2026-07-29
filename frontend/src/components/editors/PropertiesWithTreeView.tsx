@@ -39,12 +39,6 @@ const MIN_PROPS_WIDTH = 400;
 const MAX_PROPS_WIDTH = 700;
 const STORAGE_KEY_PROPERTIES_WIDTH = 'jjodel_property_panel_width';
 
-// Ingombro reale (margin-box) di un toggle collassato: 24px button + 2+2 di
-// margine orizzontale = 28px. DEVE combaciare con .collapsed-panel-toggle nello
-// SCSS (single source of truth per la formula di larghezza del tab). Se lo SCSS
-// cambia i margini, aggiornare qui il valore reale — non fingere 28.
-const COLLAPSED_PANEL_TOGGLE_WIDTH = 28;
-
 // Floating overlay (F2 2026-07-29): stacked-layout dims for mode='floating'. The
 // overlay is a fixed column (its own width) with the Tree card on top (its own
 // height) and Properties filling below. Own localStorage keys so they never collide
@@ -127,13 +121,11 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                 document.removeEventListener('mouseup', handleMouseUp);
                 document.body.style.cursor = '';
                 document.body.style.userSelect = '';
-                document.body.removeAttribute('data-properties-tree-dragging');
             };
             document.addEventListener('mousemove', handleMouseMove);
             document.addEventListener('mouseup', handleMouseUp);
             document.body.style.cursor = 'row-resize';
             document.body.style.userSelect = 'none';
-            document.body.setAttribute('data-properties-tree-dragging', 'true');
             return;
         }
         const startX = e.clientX;
@@ -153,17 +145,12 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
             document.removeEventListener('mouseup', handleMouseUp);
             document.body.style.cursor = '';
             document.body.style.userSelect = '';
-            // Riabilita la transition 200ms del width-lock del tab (vedi effect
-            // di dispatch della larghezza + regola in abstract/style.scss).
-            document.body.removeAttribute('data-properties-tree-dragging');
         };
 
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
         document.body.style.cursor = 'col-resize';
         document.body.style.userSelect = 'none';
-        // Disabilita la transition del tab durante il drag → follow istantaneo.
-        document.body.setAttribute('data-properties-tree-dragging', 'true');
     }, [mode, treeHeight, width]);
 
     useEffect(() => {
@@ -197,13 +184,11 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                 document.removeEventListener('mouseup', handleMouseUp);
                 document.body.style.cursor = '';
                 document.body.style.userSelect = '';
-                document.body.removeAttribute('data-properties-tree-dragging');
             };
             document.addEventListener('mousemove', handleMouseMove);
             document.addEventListener('mouseup', handleMouseUp);
             document.body.style.cursor = 'col-resize';
             document.body.style.userSelect = 'none';
-            document.body.setAttribute('data-properties-tree-dragging', 'true');
             return;
         }
         const startX = e.clientX;
@@ -224,14 +209,12 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
             document.removeEventListener('mouseup', handleMouseUp);
             document.body.style.cursor = '';
             document.body.style.userSelect = '';
-            document.body.removeAttribute('data-properties-tree-dragging');
         };
 
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
         document.body.style.cursor = 'col-resize';
         document.body.style.userSelect = 'none';
-        document.body.setAttribute('data-properties-tree-dragging', 'true');
     }, [mode, overlayWidth, propsWidth]);
 
     useEffect(() => {
@@ -341,46 +324,16 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     const showTreePanel = isTreeViewVisible;
     const showResizeHandle = showPropertiesPanel && showTreePanel;
 
-    // Both-collapsed (2026-07-06 addendum): il tab va a 0, i due toggle NON sono
-    // più in-panel ma diventano un cluster flottante (portal su <body>). Gate: solo
-    // con un editor model/metamodel attivo (dashboard/transformation/summary →
-    // cluster assente). Kill-switch CSS aggiuntivo per canvas-only e documentation.
+    // Reopen pill gate (floating overlay): the pill appears exactly when the overlay is
+    // NOT visible. The overlay renders iff !bothCollapsed, so `bothCollapsed` (neither
+    // card shown) IS "overlay hidden" — accordion-maximized still counts as visible, as
+    // both cards stay mounted. Gated on an active model/metamodel editor, so the pill is
+    // absent on dashboard/transformation/summary. A CSS kill-switch (properties-with-
+    // tree-view.scss) additionally hides it in canvas-only and on the documentation tab.
+    // Pill and overlay are therefore mutually exclusive in every combination.
     const bothCollapsed = !showPropertiesPanel && !showTreePanel;
     const showFloatingCluster = bothCollapsed &&
         (activeEditorType === 'model' || activeEditorType === 'metamodel');
-
-    // Width-lock del dock tab (2026-07-06): larghezze fisse e indipendenti. La
-    // larghezza desiderata del tab = somma delle parti visibili (pannello aperto
-    // → la sua width; pannello chiuso → l'ingombro del toggle). Scritta
-    // DIRETTAMENTE su document.body come custom property + data-attr di
-    // attivazione: NON via evento, perché gli effect dei figli girano prima di
-    // quelli del Dock e un dispatch iniziale andrebbe perso (si partirebbe senza
-    // lock). Consumata da abstract/style.scss. Attiva solo in mode 'tab' (popup/
-    // inline non hanno lo split → nessun lock, nessun cleanup che tocchi il body).
-    useEffect(() => {
-        if (mode !== 'tab') return;
-        const bothClosed = !showPropertiesPanel && !showTreePanel;
-        let tabWidth: number;
-        if (showPropertiesPanel && showTreePanel) tabWidth = propsWidth + width;
-        else if (showPropertiesPanel) tabWidth = propsWidth + COLLAPSED_PANEL_TOGGLE_WIDTH;
-        else if (showTreePanel) tabWidth = width + COLLAPSED_PANEL_TOGGLE_WIDTH;
-        else tabWidth = 0; // both-collapsed (2026-07-06 addendum): tab a 0, il canvas
-                           // prende tutto lo spazio; i toggle diventano un cluster
-                           // flottante (portal su <body>), non più in-panel.
-
-        const body = document.body;
-        body.style.setProperty('--properties-tree-tab-width', `${tabWidth}px`);
-        body.setAttribute('data-properties-tree-width-lock', 'true');
-        // Data-attr dedicato allo stato both-collapsed: abstract/style.scss lo usa
-        // per azzerare il pannello (pattern canvas-only) e nascondere il divider.
-        if (bothClosed) body.setAttribute('data-properties-tree-both-collapsed', 'true');
-        else body.removeAttribute('data-properties-tree-both-collapsed');
-        return () => {
-            body.style.removeProperty('--properties-tree-tab-width');
-            body.removeAttribute('data-properties-tree-width-lock');
-            body.removeAttribute('data-properties-tree-both-collapsed');
-        };
-    }, [mode, showPropertiesPanel, showTreePanel, propsWidth, width]);
 
     // Canvas right-inset writer (F3 2026-07-29): publish the overlay's right footprint
     // (column width + 8px gutter) onto <body> as --jj-canvas-right-inset so the canvas
@@ -627,9 +580,9 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                 document.body
               ))
             : splitPanel}
-        {/* Both-collapsed: cluster flottante di riapertura, portalizzato su <body>
-            così sfugge al pannello a 0px. Gate JS su editor model/metamodel; il CSS
-            aggiunge il kill-switch per canvas-only / documentation. */}
+        {/* Reopen pill: floating cluster, portaled to <body>. Shown only while the overlay
+            is hidden (both cards collapsed) over a model/metamodel editor; the CSS adds a
+            kill-switch for canvas-only / documentation. Mutually exclusive with the overlay. */}
         {showFloatingCluster && createPortal(
             <div className="properties-tree-floating-cluster" role="group" aria-label="Reopen panels">
                 <button
