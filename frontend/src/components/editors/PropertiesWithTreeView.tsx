@@ -62,7 +62,7 @@ function clampTreeHeight(h: number): number {
 }
 
 interface PropertiesWithTreeViewProps {
-    mode: 'popup' | 'tab' | 'inline' | 'floating';
+    mode: 'floating';
 }
 
 export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ mode }) => {
@@ -388,11 +388,7 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
         };
     }, [toggleTreeView]);
 
-    // For non-split modes (popup/inline), just render Info without the split.
     // 'floating' (F2) renders the same split as 'tab', but portaled to <body>.
-    if (mode !== 'tab' && mode !== 'floating') {
-        return <Info mode={mode} />;
-    }
     const isFloating = mode === 'floating';
 
     // Right panel visibility is controlled by CSS via body[data-editor-type].
