@@ -17,6 +17,16 @@ export interface ConditionalEditorProps<T> {
     features: PathBuilderFeatures | null;
     featuresHint?: string;
     classNames: string[];
+    /**
+     * Whether the Fixed/Conditional switch is offered. Default `true`, so every
+     * call-site that does not pass it behaves exactly as before.
+     *
+     * `false` (Basic disclosure mode) hides the switch: a fixed value renders as a
+     * plain editor with no affordance to go conditional, and a value that is ALREADY
+     * conditional renders as a read-only chip. The value itself is never coerced —
+     * handing a Conditional object to `renderValue` would render the raw object.
+     */
+    allowConditional?: boolean;
 }
 
 /**
@@ -37,6 +47,7 @@ export function ConditionalEditor<T>({
     features,
     featuresHint,
     classNames,
+    allowConditional = true,
 }: ConditionalEditorProps<T>): React.ReactElement {
     const isCond = isConditionalValue(value);
     const isRules = isCond && 'rules' in (value as any);
@@ -46,6 +57,20 @@ export function ConditionalEditor<T>({
     // Multi-rule form: not editable this phase — preserved verbatim as a chip.
     if (isRules) {
         return <span className={styles.chip}>conditional (multiple rules, not yet editable)</span>;
+    }
+
+    // Basic disclosure mode: no switch. An already-conditional value gets the same
+    // read-only chip treatment as the multi-rule form — shown, never rewritten, and
+    // editable again as soon as the mode goes back to Advanced.
+    if (!allowConditional) {
+        if (isWhen) {
+            return <span className={styles.chip}>conditional (edit in Advanced mode)</span>;
+        }
+        return (
+            <div className={styles.wrapper}>
+                {renderValue((value as T) ?? defaultValue, (v) => onChange(v))}
+            </div>
+        );
     }
 
     const switchToFixed = () => {

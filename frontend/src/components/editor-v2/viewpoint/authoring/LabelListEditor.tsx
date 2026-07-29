@@ -13,6 +13,8 @@ export interface LabelListEditorProps {
     featuresHint?: string;
     /** All project class names — for the `isKind` selector in conditional editors. */
     classNames: string[];
+    /** Forwarded to each entry's ConditionalEditor; omitted = conditional allowed. */
+    allowConditional?: boolean;
     onChange: (labels: LabelSpec[]) => void;
 }
 
@@ -27,6 +29,7 @@ export const LabelListEditor: React.FC<LabelListEditorProps> = ({
     features,
     featuresHint,
     classNames,
+    allowConditional,
     onChange,
 }) => {
     const replace = (index: number, label: LabelSpec) => {
@@ -62,6 +65,7 @@ export const LabelListEditor: React.FC<LabelListEditorProps> = ({
                     features={features}
                     featuresHint={featuresHint}
                     classNames={classNames}
+                    allowConditional={allowConditional}
                     onChange={(l) => replace(index, l)}
                 />
             )}

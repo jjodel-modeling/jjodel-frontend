@@ -233,6 +233,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                         features={features}
                         featuresHint={FEATURES_HINT}
                         classNames={classNames}
+                        allowConditional={advanced}
                     />
                 </div>
             </FormSection>
@@ -248,6 +249,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                         features={features}
                         featuresHint={FEATURES_HINT}
                         classNames={classNames}
+                        allowConditional={advanced}
                     />
                 </div>
             </FormSection>
@@ -294,6 +296,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                     features={features}
                     featuresHint={FEATURES_HINT}
                     classNames={classNames}
+                    allowConditional={advanced}
                     onChange={(next) => patchShape({ labels: next })}
                 />
             </FormSection>

@@ -29,6 +29,8 @@ export interface LabelEntryEditorProps {
     featuresHint?: string;
     /** All project class names — for the `isKind` selector in the conditional editor. */
     classNames: string[];
+    /** Forwarded to the `visible` ConditionalEditor; omitted = conditional allowed. */
+    allowConditional?: boolean;
     onChange: (label: LabelSpec) => void;
 }
 
@@ -45,6 +47,7 @@ export const LabelEntryEditor: React.FC<LabelEntryEditorProps> = ({
     features,
     featuresHint,
     classNames,
+    allowConditional,
     onChange,
 }) => {
     const editable = label.editable;
@@ -92,6 +95,7 @@ export const LabelEntryEditor: React.FC<LabelEntryEditorProps> = ({
                     features={features}
                     featuresHint={featuresHint}
                     classNames={classNames}
+                    allowConditional={allowConditional}
                 />
             </div>
 
