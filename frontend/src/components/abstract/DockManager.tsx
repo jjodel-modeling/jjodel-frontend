@@ -98,7 +98,13 @@ class DockManager {
                 return;
             }
         }
-        const index = (group === 'models') ? 0 : 1;
+        // F1 (2026-07-29 floating panels): both groups resolve to the canvas child
+        // children[0]. The 'editors' group (Documentation opened via Jodie) is
+        // redirected here from the former right child ahead of F2's removal of the
+        // right dock panel, so the doc tab survives that removal. 'models' already
+        // targeted children[0]. See
+        // docs/discovery/discovery_2026-07-28_floating_panels_canvas.md (B5b, risk #1).
+        const index = 0;
         DockManager.dock.dockMove(tab, DockManager.dock.getLayout().dockbox.children[index], 'middle');
     }
 
