@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { LProject, LPointerTargetable, DClass, type LViewElement } from '../../../../joiner';
+import { useSelector } from 'react-redux';
+import { LProject, LPointerTargetable, DClass, SetRootFieldAction, windoww, type LViewElement } from '../../../../joiner';
 import { Input, Select, NumberInput, ColorPicker, ErrorText, Button, HelpText, ConditionalEditor, Checkbox, FormSection, type PathBuilderFeatures } from '../../../ui';
+import { useInterfaceMode } from '../../../../hooks/useInterfaceMode';
 import { getMetaclassInfo, type MetaclassInfo } from '../../hooks/useEditorMode';
 import { validateIR } from '../ir/irValidate';
 import { defaultObjectViewIR } from '../ir/irDefaults';
@@ -51,9 +53,47 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
 
     const [draft, setDraft] = useState<VertexViewIR>(seed);
     const [error, setError] = useState<string | null>(null);
-    // Basic/Advanced tab is pure local UI state — it never touches view.ir or the draft.
-    const [tab, setTab] = useState<'basic' | 'advanced'>('basic');
+
+    // Disclosure mode. `tab` is the historical local Basic/Advanced state, kept but
+    // RE-DEFINED: it no longer means "visual vs matching" (Advanced now shows the
+    // visual sections *and* matching), and it is no longer standalone — it mirrors
+    // the GLOBAL interface mode. It still never touches view.ir or the draft.
+    //
+    // Seed: localStorage via useInterfaceMode (survives reload) OR Redux `advanced`
+    // (set by a per-project state load).
+    const { isAdvanced: storedAdvanced, setMode: setGlobalMode } = useInterfaceMode();
+    const reduxAdvanced = useSelector((s: any) => !!s.advanced);
+    const [tab, setTab] = useState<'basic' | 'advanced'>(() => (storedAdvanced || reduxAdvanced) ? 'advanced' : 'basic');
+    const advanced = tab === 'advanced';
     const dirtyRef = useRef(false);
+
+    // Global → panel. The mode is also flipped from the Navbar (:838-866), the
+    // BottomBar (:53-58) and Settings (ProfileSection:393-397); those writers set
+    // Redux `advanced` + localStorage directly, and useInterfaceMode only re-reads
+    // localStorage on mount (its `storage` listener is cross-tab only), so Redux is
+    // the one same-tab reactive channel — follow it. The first run is skipped on
+    // purpose: at mount Redux holds its default (`false`, store.tsx:215) while
+    // localStorage may legitimately say 'advanced', and the seed above must win.
+    const lastReduxAdvanced = useRef(reduxAdvanced);
+    useEffect(() => {
+        if (lastReduxAdvanced.current === reduxAdvanced) return;
+        lastReduxAdvanced.current = reduxAdvanced;
+        setTab(reduxAdvanced ? 'advanced' : 'basic');
+    }, [reduxAdvanced]);
+
+    // Panel → global. Mirrors the canonical write of every other mode toggle
+    // (Navbar / BottomBar / ProfileSection): Redux `advanced` — what the Navbar
+    // badge and the mode-gated panels read — plus the hook's setMode, which writes
+    // localStorage, U.interfaceMode and fires SystemEvents.INTERFACE_MODE_CHANGE.
+    const selectMode = (next: 'basic' | 'advanced') => {
+        if (next === tab) return;
+        const isAdv = next === 'advanced';
+        setTab(next);
+        lastReduxAdvanced.current = isAdv;
+        setGlobalMode(next);
+        SetRootFieldAction.new('advanced', isAdv);
+        windoww.advanced = isAdv;
+    };
 
     // Reset the draft when the selected view changes (no commit on reset).
     useEffect(() => {
@@ -195,10 +235,12 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
         <section className="properties-tab properties-panel">
             <div className="jj-field-label" style={{ marginTop: 'var(--space-1)' }}>IR View authoring</div>
 
-            {/* Basic / Advanced tabs — segmented control (pure local UI state). */}
+            {/* Basic / Advanced — segmented control bound to the GLOBAL interface mode
+                (single disclosure toggle: it also drives the Navbar and every other
+                mode-gated panel). */}
             <div className="jj-field" style={{ display: 'flex', gap: 'var(--spacing-1)', marginBottom: 8 }}>
-                <Button variant={tab === 'basic' ? 'primary' : 'ghost'} size="sm" onClick={() => setTab('basic')}>Basic</Button>
-                <Button variant={tab === 'advanced' ? 'primary' : 'ghost'} size="sm" onClick={() => setTab('advanced')}>Advanced</Button>
+                <Button variant={tab === 'basic' ? 'primary' : 'ghost'} size="sm" onClick={() => selectMode('basic')}>Basic</Button>
+                <Button variant={tab === 'advanced' ? 'primary' : 'ghost'} size="sm" onClick={() => selectMode('advanced')}>Advanced</Button>
             </div>
 
             {error && <ErrorText>{error}</ErrorText>}
@@ -213,117 +255,124 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                 </ErrorText>
             )}
 
-            {tab === 'basic' && (
-                <>
-                    {/* View label (IR label field, distinct from the DViewElement name) */}
-                    <FormSection title="General">
-                        <div className="jj-field">
-                            <label className="jj-field-label">Label</label>
-                            <Input value={draft.label ?? ''} onChange={(e) => patch({ ...draft, label: e.target.value })} />
-                        </div>
-                    </FormSection>
+            {/* Visual sections — always rendered; Basic only drops the Advanced-only
+                ones (compartments, badges, matching) further down. */}
 
-                    {/* Shape form */}
-                    <FormSection title="Shape">
-                        <div className="jj-field">
-                            <ConditionalEditor<ShapeForm>
-                                value={form}
-                                onChange={(next) => patchShape({ form: next })}
-                                renderValue={(v, onCh) => <Select options={FORM_OPTIONS} value={v} onChange={(e) => onCh(e.target.value as ShapeForm)} />}
-                                defaultValue={'rect'}
-                                features={features}
-                                featuresHint={FEATURES_HINT}
-                                classNames={classNames}
-                            />
-                        </div>
-                    </FormSection>
+            {/* View label (IR label field, distinct from the DViewElement name) */}
+            <FormSection title="General">
+                <div className="jj-field">
+                    <label className="jj-field-label">Label</label>
+                    <Input value={draft.label ?? ''} onChange={(e) => patch({ ...draft, label: e.target.value })} />
+                </div>
+            </FormSection>
 
-                    {/* Fill */}
-                    <FormSection title="Fill">
-                        <div className="jj-field">
-                            <ConditionalEditor
-                                value={fill}
-                                onChange={(next) => patchShape({ fill: next })}
-                                renderValue={(v, onCh) => <ColorPicker value={v} onChange={onCh} />}
-                                defaultValue={''}
-                                features={features}
-                                featuresHint={FEATURES_HINT}
-                                classNames={classNames}
-                            />
-                        </div>
-                    </FormSection>
+            {/* Shape form */}
+            <FormSection title="Shape">
+                <div className="jj-field">
+                    <ConditionalEditor<ShapeForm>
+                        value={form}
+                        onChange={(next) => patchShape({ form: next })}
+                        renderValue={(v, onCh) => <Select options={FORM_OPTIONS} value={v} onChange={(e) => onCh(e.target.value as ShapeForm)} />}
+                        defaultValue={'rect'}
+                        features={features}
+                        featuresHint={FEATURES_HINT}
+                        classNames={classNames}
+                    />
+                </div>
+            </FormSection>
 
-                    {/* Border (always scalar in the schema) */}
-                    <FormSection title="Border">
-                        <div className="jj-field">
-                            <label className="jj-field-label">Color</label>
-                            <ColorPicker value={border.color} onChange={(hex) => patchBorder({ color: hex })} />
-                            <label className="jj-field-label" style={{ marginTop: 'var(--space-2)' }}>Width</label>
-                            <NumberInput value={border.width} min={0} onChange={(w) => patchBorder({ width: w })} />
-                            <label className="jj-field-label" style={{ marginTop: 'var(--space-2)' }}>Style</label>
-                            <Select options={BORDER_STYLE_OPTIONS} value={border.style} onChange={(e) => patchBorder({ style: e.target.value as 'solid' | 'dashed' | 'dotted' })} />
-                        </div>
-                    </FormSection>
+            {/* Fill */}
+            <FormSection title="Fill">
+                <div className="jj-field">
+                    <ConditionalEditor
+                        value={fill}
+                        onChange={(next) => patchShape({ fill: next })}
+                        renderValue={(v, onCh) => <ColorPicker value={v} onChange={onCh} />}
+                        defaultValue={''}
+                        features={features}
+                        featuresHint={FEATURES_HINT}
+                        classNames={classNames}
+                    />
+                </div>
+            </FormSection>
 
-                    {/* Resizable — top-level flag (like `label`, not a shape.* field). Mirrors
-                        the runtime gate: shown state = explicit flag ?? per-form default. */}
-                    <FormSection title="Sizing">
-                        <div className="jj-field">
-                            <Checkbox
-                                checked={draft.resizable ?? defaultResizableForForm(typeof form === 'string' ? form : undefined)}
-                                onChange={(checked) => patch({ ...draft, resizable: checked })}
-                                label="Resizable"
-                            />
-                            <HelpText>Forces the resize handles. Uncheck to lock. When unset, follows the shape.</HelpText>
-                            <Button
-                                variant="secondary"
-                                disabled={!canResize}
-                                title="Apply the selected instance size to all instances of this view"
-                                onClick={() => window.dispatchEvent(
-                                    new CustomEvent(JjodelEvents.PROPAGATE_VIEW_SIZE, { detail: { viewId: view.id } })
-                                )}
-                            >
-                                <i className="bi bi-arrows-fullscreen" /> Propagate size
-                            </Button>
-                        </div>
-                    </FormSection>
+            {/* Border (always scalar in the schema) */}
+            <FormSection title="Border">
+                <div className="jj-field">
+                    <label className="jj-field-label">Color</label>
+                    <ColorPicker value={border.color} onChange={(hex) => patchBorder({ color: hex })} />
+                    <label className="jj-field-label" style={{ marginTop: 'var(--space-2)' }}>Width</label>
+                    <NumberInput value={border.width} min={0} onChange={(w) => patchBorder({ width: w })} />
+                    <label className="jj-field-label" style={{ marginTop: 'var(--space-2)' }}>Style</label>
+                    <Select options={BORDER_STYLE_OPTIONS} value={border.style} onChange={(e) => patchBorder({ style: e.target.value as 'solid' | 'dashed' | 'dotted' })} />
+                </div>
+            </FormSection>
 
-                    {/* Labels — full list (includes the former primary label at index 0) */}
-                    <FormSection title="Labels">
-                        <LabelListEditor
-                            labels={labels}
-                            features={features}
-                            featuresHint={FEATURES_HINT}
-                            classNames={classNames}
-                            onChange={(next) => patchShape({ labels: next })}
-                        />
-                    </FormSection>
+            {/* Resizable — top-level flag (like `label`, not a shape.* field). Mirrors
+                the runtime gate: shown state = explicit flag ?? per-form default. */}
+            <FormSection title="Sizing">
+                <div className="jj-field">
+                    <Checkbox
+                        checked={draft.resizable ?? defaultResizableForForm(typeof form === 'string' ? form : undefined)}
+                        onChange={(checked) => patch({ ...draft, resizable: checked })}
+                        label="Resizable"
+                    />
+                    <HelpText>Forces the resize handles. Uncheck to lock. When unset, follows the shape.</HelpText>
+                    <Button
+                        variant="secondary"
+                        disabled={!canResize}
+                        title="Apply the selected instance size to all instances of this view"
+                        onClick={() => window.dispatchEvent(
+                            new CustomEvent(JjodelEvents.PROPAGATE_VIEW_SIZE, { detail: { viewId: view.id } })
+                        )}
+                    >
+                        <i className="bi bi-arrows-fullscreen" /> Propagate size
+                    </Button>
+                </div>
+            </FormSection>
 
-                    {/* Field compartments */}
-                    <FormSection title="Field compartments">
-                        <FieldCompartmentListEditor
-                            compartments={fieldCompartments}
-                            features={features}
-                            featuresHint={FEATURES_HINT}
-                            classNames={classNames}
-                            onChange={(next) => patch({ ...draft, fieldCompartments: next })}
-                        />
-                    </FormSection>
+            {/* Labels — full list (includes the former primary label at index 0) */}
+            <FormSection title="Labels">
+                <LabelListEditor
+                    labels={labels}
+                    features={features}
+                    featuresHint={FEATURES_HINT}
+                    classNames={classNames}
+                    onChange={(next) => patchShape({ labels: next })}
+                />
+            </FormSection>
 
-                    {/* Badges */}
-                    <FormSection title="Badges">
-                        <BadgeListEditor
-                            badges={badges}
-                            features={features}
-                            featuresHint={FEATURES_HINT}
-                            classNames={classNames}
-                            onChange={(next) => patchShape({ badges: next })}
-                        />
-                    </FormSection>
-                </>
+            {/* Field compartments — Advanced only. The data round-trips verbatim
+                while hidden: the whole cloned ir (draft.fieldCompartments
+                included) is written back on every commit. */}
+            {advanced && (
+                <FormSection title="Field compartments">
+                    <FieldCompartmentListEditor
+                        compartments={fieldCompartments}
+                        features={features}
+                        featuresHint={FEATURES_HINT}
+                        classNames={classNames}
+                        onChange={(next) => patch({ ...draft, fieldCompartments: next })}
+                    />
+                </FormSection>
             )}
 
-            {tab === 'advanced' && (
+            {/* Badges — Advanced only (same round-trip guarantee). */}
+            {advanced && (
+                <FormSection title="Badges">
+                    <BadgeListEditor
+                        badges={badges}
+                        features={features}
+                        featuresHint={FEATURES_HINT}
+                        classNames={classNames}
+                        onChange={(next) => patchShape({ badges: next })}
+                    />
+                </FormSection>
+            )}
+
+            {/* Matching — Advanced only. Sits after the visual sections: Advanced is a
+                superset of Basic now, not the alternative "matching" view it used to be. */}
+            {advanced && (
                 <>
                     <MatchingSection
                         draft={draft}
