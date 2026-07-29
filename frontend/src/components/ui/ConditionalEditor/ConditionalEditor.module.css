@@ -33,10 +33,16 @@
    the authoring editors; preserved verbatim until B2b-ii unifies them). */
 .chip {
   display: inline-block;
-  font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
-  font-style: italic;
-  padding: 2px 6px;
-  border: 1px dashed var(--color-border-primary);
-  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;               /* slate-600 */
+  background-color: #f1f5f9;    /* slate-100 — filled pill, mockup "Fixed" chip */
+  padding: 3px 10px;
+  border: none;
+  border-radius: 999px;
+}
+
+html[data-theme="dark"] .chip {
+  background-color: #1e293b;
+  color: #cbd5e1;
 }

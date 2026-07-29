@@ -11,14 +11,19 @@
   padding: var(--spacing-1) 0;
 }
 
+/* Sub-card: the entry is a small card of its own — a header strip carrying the
+   dot + title and the row controls, separated from the padded body by a hairline.
+   Header and body own the padding now (the card itself has none). */
 .entry {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-2);
+  gap: 0;
   border: var(--input-border-width) solid var(--input-border-color);
   border-radius: var(--radius-md);
-  padding: var(--spacing-2);
-  background-color: var(--color-bg-secondary);
+  padding: 0;
+  overflow: hidden;
+  background-color: #f8fafc;          /* slate-50 — sub-card surface (mockup) */
+  border-color: #e2e8f0;              /* slate-200 hairline */
 }
 
 .entryHeader {
@@ -26,12 +31,27 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--spacing-2);
+  padding: var(--spacing-1) var(--spacing-2);
+  border-bottom: var(--input-border-width) solid #e2e8f0;
 }
 
 .entryLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
   font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--color-text-secondary);
+}
+
+/* Status dot in front of the entry title (mockup: "• Label #1"). */
+.entryLabel::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #0ea5e9;
 }
 
 .controls {
@@ -47,10 +67,10 @@
   width: 22px;
   height: 22px;
   padding: 0;
-  border: var(--input-border-width) solid var(--input-border-color);
+  border: var(--input-border-width) solid transparent;
   border-radius: var(--radius-sm);
-  background-color: var(--color-bg-primary);
-  color: var(--color-text-secondary);
+  background-color: transparent;
+  color: #94a3b8;                     /* slate-400 — quiet until hovered */
   cursor: pointer;
   font-size: 12px;
   line-height: 1;
@@ -58,7 +78,7 @@
 }
 
 .iconBtn:hover:not(:disabled) {
-  border-color: var(--input-border-color-hover);
+  background-color: #e2e8f0;
   color: var(--color-text-primary);
 }
 
@@ -76,24 +96,47 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-2);
+  padding: var(--spacing-2);
 }
 
+/* Add button: full-width dashed drop-zone at the bottom of the list (mockup). */
 .addBtn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--spacing-1);
-  align-self: flex-start;
-  padding: var(--spacing-1) var(--spacing-2);
-  border: 1px dashed var(--color-border-primary);
+  align-self: stretch;
+  padding: var(--spacing-2);
+  border: 1px dashed #cbd5e1;
   border-radius: var(--radius-md);
   background-color: transparent;
-  color: var(--color-text-secondary);
+  color: #0284c7;                     /* accent label (mockup) */
+  font-weight: 500;
   cursor: pointer;
   font-size: var(--font-size-sm);
   transition: border-color var(--transition-fast), color var(--transition-fast);
 }
 
 .addBtn:hover {
-  border-color: var(--input-border-color-hover);
-  color: var(--color-text-primary);
+  border-color: #0ea5e9;
+  color: #0369a1;
+}
+
+/* Dark counterparts for the hardcoded light surfaces above. */
+html[data-theme="dark"] .entry {
+  background-color: #0f1012;
+  border-color: #334155;
+}
+
+html[data-theme="dark"] .entryHeader {
+  border-bottom-color: #334155;
+}
+
+html[data-theme="dark"] .iconBtn:hover:not(:disabled) {
+  background-color: #1e293b;
+}
+
+html[data-theme="dark"] .addBtn {
+  border-color: #334155;
+  color: #38bdf8;
 }

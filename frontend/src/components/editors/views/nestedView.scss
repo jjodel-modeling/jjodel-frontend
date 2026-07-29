@@ -3702,7 +3702,35 @@ html[data-theme="dark"] {
   }
 }
 
-// VIEW / VIEWPOINT type badge — same visual language as `.jj-type-badge--*`;
-// colors mirror the prior `.breadcrumb-type-badge` slate / violet.
-.jj-type-badge--view { background: rgba(71, 85, 105, 0.1); color: #475569; }
+// VIEW / VIEWPOINT type badge — same visual language as `.jj-type-badge--*`.
+// 2026-07-29 (mockup alignment): the VIEW chip becomes a soft cyan pill, matching
+// the `--class` badge language (`_form-system.scss:1252`) — a tint, never a solid
+// accent fill (design system §7.1). VIEWPOINT keeps its violet.
+.jj-type-badge--view { background: rgba(14, 165, 233, 0.12); color: #0369a1; }
 .jj-type-badge--viewpoint { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
+
+// 2026-07-29 (mockup alignment) — breadcrumb inside the single-row view header:
+// lighter separators and the trailing element (the view being edited) emphasized,
+// so "context › name" reads as one hierarchy instead of two equal links.
+// Specificity (0,5,0) beats the base `.view-editor-root .view-editor-header
+// .path-list .path-element` block earlier in this file (0,4,0).
+.view-editor-root .view-editor-header.view-entity-header .props-header--view {
+  .path-separator {
+    font-size: 10px;
+    color: #cbd5e1;                  // slate-300 — hairline chevron
+    margin: auto 4px;
+  }
+
+  .path-element {
+    font-size: 12px;
+    color: #64748b;                  // slate-500 — context segments
+  }
+
+  // The view / viewpoint currently open: darker and medium weight. `last-of-type`
+  // (not `last-child`): the chevrons interleaved by `.separator()` are <i> elements,
+  // so the last `.path-element` div is the one being edited.
+  .path-element:last-of-type {
+    color: #334155;                  // slate-700
+    font-weight: 500;
+  }
+}

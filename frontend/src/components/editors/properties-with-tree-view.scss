@@ -275,6 +275,72 @@ $radius-md: 6px;
     min-height: 0;
 }
 
+// ============================================
+// MOCKUP ALIGNMENT (2026-07-29, fase 2B/B4)
+// Every rule below is anchored on `.properties-panel-container`, so the shared
+// design-system components (Checkbox, HelpText, Button, CommandBar) keep their
+// global styling everywhere else in the app. The components are CSS-module based,
+// so their hashed classes are unreachable from here: the hooks used instead are
+// stable — ARIA roles/states, Bootstrap icon classes and DOM structure.
+// ============================================
+.properties-panel-container {
+
+    // D1 — back chevron: drop the boxed frame (`commandbar.scss:306` draws a 1px
+    // border on the ::before). (0,4,0) beats the base (0,3,0); the glyph stays.
+    .props-header--view .command-bar .tab-btn.back::before {
+        border-color: transparent;
+    }
+
+    // D2 — checkbox: accent fill with a white tick when checked, instead of the slate
+    // fill the Checkbox module ships (`Checkbox.module.css:41`). Reached by role +
+    // aria-checked, so nothing outside this card changes.
+    button[role="checkbox"] {
+        border-radius: 5px;
+        border-color: #cbd5e1;              // slate-300 hairline when off
+    }
+
+    button[role="checkbox"][aria-checked="true"] {
+        background-color: #0ea5e9;
+        border-color: #0ea5e9;
+    }
+
+    button[role="checkbox"][aria-checked="true"]:hover:not(:disabled) {
+        background-color: #0284c7;
+        border-color: #0284c7;
+    }
+
+    // D3 — field hints (HelpText): hanging indent onto the label column (checkbox
+    // 18px + 8px gap), quieter tone, narrower measure so they wrap.
+    .jj-field > p {
+        margin-left: 26px;
+        max-width: 38ch;
+        font-size: 11px;
+        color: #94a3b8;                     // slate-400
+    }
+
+    // D4 — secondary action inside a field (e.g. Propagate size): ghost + aligned on
+    // the same column as the hint.
+    .jj-field > button {
+        margin-left: 26px;
+        padding: 6px 12px;
+        border-radius: 8px;
+        border-color: #e2e8f0;
+        color: #64748b;
+    }
+
+    .jj-field > button:disabled {
+        border-color: #f1f5f9;
+        color: #cbd5e1;
+    }
+
+    // D5 — label sub-card: dashed hairline between the field block and the visibility
+    // block. The sub-card chrome itself lives in `ListEditor.module.css`.
+    .props-label-entry-split {
+        border-top: 1px dashed #e2e8f0;
+        padding-top: 8px;
+    }
+}
+
 // Collapsed indicator: speculare a .tree-view-collapsed ma sul lato
 // sinistro dello split. Click-to-expand. Border-RIGHT (verso il tree).
 .properties-panel-collapsed {
@@ -909,6 +975,32 @@ $radius-md: 6px;
             &:hover {
                 color: $color-highlight;
             }
+        }
+    }
+
+    // Mockup-alignment overrides — dark counterparts (2026-07-29, fase 2B/B4).
+    // The accent checkbox fill works on both themes; only the muted greys need it.
+    .properties-panel-container {
+        .jj-field > p {
+            color: #64748b;                 // slate-500 reads better on the dark card
+        }
+
+        .jj-field > button {
+            border-color: #334155;
+            color: #cbd5e1;
+        }
+
+        .jj-field > button:disabled {
+            border-color: #1e293b;
+            color: #475569;
+        }
+
+        button[role="checkbox"] {
+            border-color: #334155;
+        }
+
+        .props-label-entry-split {
+            border-top-color: #334155;
         }
     }
 

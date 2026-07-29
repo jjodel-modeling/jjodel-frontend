@@ -85,7 +85,10 @@ export const LabelEntryEditor: React.FC<LabelEntryEditorProps> = ({
                     />}
             </div>
 
-            <div className="jj-field">
+            {/* `props-label-entry-split`: dashed hairline that separates the field
+                block above from the visibility block (styled card-scoped in
+                properties-with-tree-view.scss). */}
+            <div className="jj-field props-label-entry-split">
                 <label className="jj-field-label">Visible</label>
                 <ConditionalEditor
                     value={label.visible}

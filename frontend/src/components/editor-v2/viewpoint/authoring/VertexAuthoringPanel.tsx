@@ -275,7 +275,9 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                         onChange={(checked) => patch({ ...draft, resizable: checked })}
                         label="Resizable"
                     />
-                    <HelpText>Forces the resize handles. Uncheck to lock. When unset, follows the shape.</HelpText>
+                    {/* icon={false}: inside the Properties card the hint is a quiet
+                        indented line under the field label, without the (i) glyph. */}
+                    <HelpText icon={false}>Forces the resize handles. Uncheck to lock. When unset, follows the shape.</HelpText>
                     <Button
                         variant="secondary"
                         disabled={!canResize}
@@ -284,7 +286,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                             new CustomEvent(JjodelEvents.PROPAGATE_VIEW_SIZE, { detail: { viewId: view.id } })
                         )}
                     >
-                        <i className="bi bi-arrows-fullscreen" /> Propagate size
+                        Propagate size
                     </Button>
                 </div>
             </FormSection>
