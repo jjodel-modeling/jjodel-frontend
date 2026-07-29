@@ -871,7 +871,9 @@
 .jodie-minimized {
     position: fixed;
     bottom: 100px;  /* Positioned above footer */
-    right: 30px;
+    /* F3: sit left of the floating overlay (var published on <body>; 0px fallback
+       keeps the historic 30px when the overlay is hidden or absent). */
+    right: calc(var(--jj-canvas-right-inset, 0px) + 30px);
     z-index: 10000;
     width: 58px;
     height: 58px;

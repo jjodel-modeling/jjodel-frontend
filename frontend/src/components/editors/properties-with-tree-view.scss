@@ -974,14 +974,20 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
 // ============================================
 .properties-tree-overlay {
     position: fixed;
-    // Start BELOW the canvas toolbar so it never covers the VIEW/Theme controls.
+    // Start just below the canvas toolbar so it never covers the VIEW/Theme controls.
     // No CSS vars exist for these heights, so compose the known literals:
-    // navbar 60px (navbar.scss:178) + .editor-v2-toolbar 40px (EditorV2.scss) + 8px gap.
-    top: calc(60px + 40px + 8px);
+    // navbar 60px (navbar.scss:178) + .editor-v2-toolbar 40px (EditorV2.scss), flush.
+    top: calc(60px + 40px);
     right: 8px;   // ratified 8px gutter from the canvas edge
-    bottom: 8px;  // full-height column (top+bottom bound the height); width inline
+    // Stop ABOVE the status bar (StatusBar.scss height 32px) + 8px gap, so the
+    // Properties card never overlaps it. top+bottom bound the column height; width inline.
+    bottom: calc(32px + 8px);
     z-index: 900; // above canvas + rc-dock, below canvas context-menu (1000) and modals
     display: flex;
+    // NB: the wrapper stays pointer-events:auto (normal). An earlier experiment set it
+    // to `none` (+ auto on the cards) for canvas click-through in the gaps, but that
+    // subtly broke the resize handles' hit-testing. Reliable controls win; the MiniMap
+    // sits left of this column anyway, so it is unaffected.
 }
 
 .properties-with-tree-view--floating {
@@ -993,44 +999,79 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
     background: transparent;
     overflow: visible;       // let the contained card shadows show
 
-    // Tree card on top, Properties below, with an 8px gap between them.
+    // Tree card (top) · in-flow splitter · Properties card (bottom).
     .tree-view-panel-container {
         order: 1;
         width: 100%;
         max-width: 100%;
-        margin-bottom: 8px;  // gap to the Properties card below
     }
     .properties-panel-container {
-        order: 2;
+        order: 3;
         width: 100%;
         max-width: 100%;
     }
 
-    // Tree divider handle → horizontal (bottom edge of the Tree card), row-resize.
-    .tree-view-panel-resize-handle {
-        top: auto;
-        bottom: -3px;
-        left: 0;
-        right: 0;
-        width: auto;
-        height: 6px;
-        cursor: row-resize;
+    // F3-fix: the vertical resize divider is a REAL in-flow flex item between the two
+    // cards (order 2), not an absolute handle inside a card. Absolute handles kept
+    // failing to receive the mousedown (clipped by the card overflow / stacking); a
+    // plain flex item is reliably hit-tested. It replaces the old 8px inter-card gap.
+    .tree-view-panel-vsplit {
+        order: 2;
+        flex: 0 0 12px;          // grabbable band; also the visual separation
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;  // textarea-style grip at the right end
+        padding: 0 4px;
+        cursor: ns-resize;
 
-        &::before {
-            top: auto;
-            bottom: 3px;
-            left: 0;
-            right: 0;
-            width: auto;
-            height: 1px;
+        .tree-view-panel-vsplit__grip {
+            width: 16px;
+            height: 8px;
+            // thin 1px black diagonal lines (textarea look)
+            background-image: repeating-linear-gradient(135deg, #1e293b 0 1px, transparent 1px 3px);
+            opacity: 0.75;
+            pointer-events: none;   // the whole band is the grab target, not the glyph
         }
+
+        &:hover .tree-view-panel-vsplit__grip { opacity: 1; }
+    }
+
+    // F3-fix: keep the sticky Tree filter above the scrolling rows — their selection
+    // pills / hover actions reach z-index 1, tying with the filter's own z-index 1 and
+    // (being later in the DOM) painting over it. Lift the filter so rows are clipped
+    // cleanly below it instead of showing through/around/above it.
+    .tree-search {
+        z-index: 5;
     }
     // Properties handle stays on the LEFT edge → controls the overlay column width
     // (cursor col-resize is already set on the base .properties-panel-resize-handle).
+
+    // F3-fix accordion: the collapsed card shows only its header (the maximized card
+    // fills the rest). The header is flex-shrink:0, so the card stays at header height.
+    .card-header-only {
+        .tree-view-panel-body,
+        .properties-panel-body {
+            display: none;
+        }
+    }
+}
+
+// F3-fix accordion: double-click a card header to maximize / restore it. Stop the
+// double-click from selecting the header title text.
+.properties-with-tree-view--floating {
+    .tree-view-panel-header,
+    .properties-panel-header {
+        user-select: none;
+    }
 }
 
 // Dark: keep the floating wrapper transparent (the [data-theme=dark]
 // .properties-with-tree-view backdrop rule would otherwise tint it).
 [data-theme="dark"] .properties-with-tree-view--floating {
     background: transparent;
+}
+
+// Dark: black grip lines are invisible on a dark canvas — use a light slate.
+[data-theme="dark"] .properties-with-tree-view--floating .tree-view-panel-vsplit__grip {
+    background-image: repeating-linear-gradient(135deg, #94a3b8 0 1px, transparent 1px 3px);
 }

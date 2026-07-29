@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useReactFlow } from '@xyflow/react';
+import { fitPadding } from '../viewportInset';
 import type { NodeProblem } from './registry';
 import './NodeProblemOverlay.scss';
 
@@ -159,7 +160,7 @@ export function NodeProblemOverlay({ problems, anchorEl, onClose }: Props) {
         const target = p.action.targetNodeId;
         const inViewport = isNodeInViewport(target);
         if (!inViewport || p.action.type === 'scroll-to-node' || p.action.type === 'focus-node') {
-            rf.fitView({ nodes: [{ id: target }], duration: 300, padding: 0.3 });
+            rf.fitView({ nodes: [{ id: target }], duration: 300, padding: fitPadding(0.3) });
             rf.setNodes(nodes => nodes.map(n => ({ ...n, selected: n.id === target })));
         }
         onClose();

@@ -45,6 +45,8 @@ import { useHistory } from './hooks/useHistory';
 import { useAlignment } from './hooks/useAlignment';
 import { useAutoAnchor, computeAnchorsWithHysteresis, getNodeRect, computeGeometricAnchorsForAllEdges } from './hooks/useAutoAnchor';
 import { reduceReLayout, countReferenceEdges, INITIAL_RELAYOUT_STATE, type ReLayoutState, type ReLayoutEvent } from './utils/reLayoutWatcher';
+// Viewport-only helper (F3): reserve room for the floating overlay in fit/centering.
+import { fitPadding, getCanvasRightInset } from './viewportInset';
 import { EditorContext } from './contexts/EditorContext';
 import { HighlightProvider, type HighlightState } from './contexts/HighlightContext';
 import { getNextFreeHandleIndex, computePortDistribution } from './utils/portDistribution';
@@ -569,7 +571,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
     const { screenToFlowPosition, getNodes, getEdges, zoomIn, zoomOut, fitView, getViewport, setViewport } = useReactFlow();
     const updateNodeInternals = useUpdateNodeInternals();
     const storeApi = useStoreApi();
-    fitViewRef.current = () => fitView({ padding: 0.2, maxZoom: 1 });
+    fitViewRef.current = () => fitView({ padding: fitPadding(), maxZoom: 1 });
 
     const {
         activeEditorId,
@@ -904,7 +906,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 const x = (targetNode.position?.x ?? 0) + ((targetNode.measured?.width ?? 150) / 2);
                 const y = (targetNode.position?.y ?? 0) + ((targetNode.measured?.height ?? 50) / 2);
                 const vp = getViewport();
-                setViewport({ x: -x * vp.zoom + window.innerWidth / 3, y: -y * vp.zoom + window.innerHeight / 3, zoom: vp.zoom }, { duration: 300 });
+                // F3: subtract the overlay's right inset so "one third from the left"
+                // is measured against the VISIBLE canvas width, not the full window.
+                setViewport({ x: -x * vp.zoom + (window.innerWidth - getCanvasRightInset()) / 3, y: -y * vp.zoom + window.innerHeight / 3, zoom: vp.zoom }, { duration: 300 });
             }
         };
         window.addEventListener(JjodelEvents.SELECT_NODE, handleSelectNode);
@@ -3110,9 +3114,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
         setViewport({ ...getViewport(), zoom: next }, { duration: 150 });
     }, [storeApi, setViewport, getViewport]);
     const handleResetZoom = useCallback(() => {
-        fitView({ padding: 0.2, maxZoom: 1, duration: 200 });
+        fitView({ padding: fitPadding(), maxZoom: 1, duration: 200 });
     }, [fitView]);
-    const handleFitView = useCallback(() => fitView({ padding: 0.2, maxZoom: 1, duration: 200 }), [fitView]);
+    const handleFitView = useCallback(() => fitView({ padding: fitPadding(), maxZoom: 1, duration: 200 }), [fitView]);
 
     // Register the flow editor as a ZoomController with the active-editor context.
     useEffect(() => {
@@ -3278,7 +3282,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             });
             return applyDistribution(recomputed);
         });
-        requestAnimationFrame(() => fitView({ padding: 0.2, maxZoom: 1, duration: 300 }));
+        requestAnimationFrame(() => fitView({ padding: fitPadding(), maxZoom: 1, duration: 300 }));
     }, [getNodes, getEdges, setNodes, setEdges, fitView, applyDistribution]);
     autoLayoutRef.current = handleAutoLayout;
 
@@ -3807,7 +3811,7 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 defaultEdgeOptions={defaultEdgeOptions}
                 connectionMode={ConnectionMode.Loose}
                 fitView={!isJjomMode && nodes.length > 0}
-                fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
+                fitViewOptions={{ padding: fitPadding(), maxZoom: 1 }}
                 defaultViewport={{ x: 0, y: 0, zoom: 1 }}
                 snapToGrid={snapEnabled}
                 snapGrid={[16, 16]}
@@ -3844,7 +3848,9 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
                 )}
                 {/* Zoom controls moved to toolbar */}
                 <MiniMap
-                    style={{ position: 'absolute', margin: 0, right: '20px', bottom: '100px', borderRadius: '4px', opacity: 0.8 }}
+                    pannable
+                    zoomable
+                    style={{ position: 'absolute', margin: 0, right: 'calc(var(--jj-canvas-right-inset, 0px) + 20px)', bottom: '100px', borderRadius: '4px', opacity: 0.8 }}
                     nodeStrokeWidth={3}
                     nodeColor={(node) => {
                         if (node.type === 'classNode') return theme === 'dark' ? '#0ea5e9' : '#0284c7';

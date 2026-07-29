@@ -258,6 +258,13 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
         setIsPropertiesVisible((v) => !v);
     }, []);
 
+    // Floating overlay (F3-fix): accordion maximize/restore. `null` = balanced split;
+    // 'tree'/'properties' = that card fills the overlay, the other collapses to just its
+    // header. Driven by a button in each card header.
+    const [cardMaximized, setCardMaximized] = useState<'tree' | 'properties' | null>(null);
+    const toggleMaximizeTree = useCallback(() => setCardMaximized(m => (m === 'tree' ? null : 'tree')), []);
+    const toggleMaximizeProperties = useCallback(() => setCardMaximized(m => (m === 'properties' ? null : 'properties')), []);
+
     // Expert/Advanced mode — controls visibility of NODE section
     const advanced = useSelector((state: any) => state.advanced);
     const [nodeOpen, setNodeOpen] = useState(false);
@@ -375,6 +382,24 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
         };
     }, [mode, showPropertiesPanel, showTreePanel, propsWidth, width]);
 
+    // Canvas right-inset writer (F3 2026-07-29): publish the overlay's right footprint
+    // (column width + 8px gutter) onto <body> as --jj-canvas-right-inset so the canvas
+    // viewport fit, the MiniMap and the Jodie FAB can reserve room for it. 0px when the
+    // overlay is not showing (pill mode, or a non-model/metamodel editor) → readers fall
+    // back to their historic full-width behaviour. Floating mode only; single writer.
+    // NOTE: this is NOT the retired width-lock var — it does not size the dock, and it
+    // never touches the data-properties-tree-* body attributes.
+    useEffect(() => {
+        if (mode !== 'floating') return;
+        const overlayShown = (activeEditorType === 'model' || activeEditorType === 'metamodel')
+            && (showPropertiesPanel || showTreePanel);
+        const inset = overlayShown ? overlayWidth + 8 : 0;
+        document.body.style.setProperty('--jj-canvas-right-inset', `${inset}px`);
+        return () => {
+            document.body.style.removeProperty('--jj-canvas-right-inset');
+        };
+    }, [mode, activeEditorType, showPropertiesPanel, showTreePanel, overlayWidth]);
+
     // Double click on a view row in the tree pins the panel on it (2026-07-23). Toggle
     // semantics, mirroring the pin button: double clicking the view that is ALREADY pinned
     // unpins it; a different view re-targets the pin.
@@ -427,6 +452,24 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     // the reopen pill when both cards are collapsed. Portaled to <body> (position:fixed,
     // tier z ~900) so it escapes the dock DOM.
     const overlayActive = activeEditorType === 'model' || activeEditorType === 'metamodel';
+
+    // Accordion (F3-fix): only meaningful when both cards are visible in the floating
+    // overlay. Drives the flex sizing of the two cards and which bodies render.
+    const effectiveMax = (isFloating && showResizeHandle) ? cardMaximized : null;
+    // NB: `height: 'auto'` overrides the base `.tree/.properties-panel-container { height:100% }`
+    // — otherwise a collapsed card (flex:0 0 auto) resolves flex-basis to 100% and squashes
+    // the maximized card to 0 instead of leaving just its header.
+    const treeFloatStyle: React.CSSProperties = effectiveMax === 'tree'
+        ? { flex: '1 1 0', height: 'auto', minHeight: 0, width: '100%', maxWidth: '100%' }
+        : effectiveMax === 'properties'
+            ? { flex: '0 0 auto', height: 'auto', minHeight: 0, width: '100%', maxWidth: '100%' }
+            : { flex: `0 0 ${treeHeight}px`, height: `${treeHeight}px`, minHeight: 0, maxHeight: 'none', width: '100%', maxWidth: '100%' };
+    const propsFloatStyle: React.CSSProperties = {
+        flex: effectiveMax === 'tree' ? '0 0 auto' : '1 1 0',
+        height: 'auto',
+        minHeight: 0, width: '100%', maxWidth: '100%',
+    };
+
     const splitPanel = (
         <div
             ref={containerRef}
@@ -436,9 +479,9 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                 bordo sinistro) oppure toggle collassato. */}
             {showPropertiesPanel ? (
                 <div
-                    className="properties-panel-container"
+                    className={`properties-panel-container${effectiveMax === 'tree' ? ' card-header-only' : ''}`}
                     style={isFloating
-                        ? { flex: '1 1 auto', minHeight: 0, width: '100%', maxWidth: '100%' }
+                        ? propsFloatStyle
                         : { width: `${propsWidth}px`, minWidth: `${propsWidth}px`, maxWidth: `${propsWidth}px` }}
                 >
                     <div
@@ -448,7 +491,11 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                         aria-orientation="vertical"
                         aria-label="Resize properties panel"
                     />
-                    <div className="properties-panel-header">
+                    <div
+                        className="properties-panel-header"
+                        onDoubleClick={isFloating && showResizeHandle ? toggleMaximizeProperties : undefined}
+                        title={isFloating && showResizeHandle ? 'Double-click to maximize / restore' : undefined}
+                    >
                         <i className="bi bi-sliders" />
                         <span>PROPERTIES</span>
                         <button
@@ -500,6 +547,23 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                 <CollapsedPanelToggle side="properties" onClick={() => setIsPropertiesVisible(true)} />
             )}
 
+            {/* F3-fix: in-flow vertical splitter BETWEEN the two cards (floating overlay).
+                A real flex item — not absolute, not clipped by the card's overflow, no
+                stacking-context games — so the drag reliably lands on it. The previous
+                absolute handle/grip inside the card never received the mousedown. */}
+            {isFloating && showResizeHandle && effectiveMax === null && (
+                <div
+                    className="tree-view-panel-vsplit"
+                    onMouseDown={handleResizeStart}
+                    role="separator"
+                    aria-orientation="horizontal"
+                    aria-label="Resize tree height"
+                    title="Drag to resize"
+                >
+                    <span className="tree-view-panel-vsplit__grip" aria-hidden="true" />
+                </div>
+            )}
+
             {/* Tree: container a larghezza fissa (sempre `width`, mai espansione
                 a riempire) oppure toggle collassato. Larghezza indipendente dallo
                 stato del Properties (R1). Il resize handle vive dentro il tree
@@ -507,12 +571,12 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                 i pannelli sono espansi. */}
             {showTreePanel ? (
                 <div
-                    className={`tree-view-panel-container ${isHighlighted ? 'tree-view-panel-container--highlighted' : ''} ${isScriptExecuting ? 'tree-view-panel-container--executing' : ''}`}
+                    className={`tree-view-panel-container ${isHighlighted ? 'tree-view-panel-container--highlighted' : ''} ${isScriptExecuting ? 'tree-view-panel-container--executing' : ''}${effectiveMax === 'properties' ? ' card-header-only' : ''}`}
                     style={isFloating
-                        ? { height: `${treeHeight}px`, minHeight: `${treeHeight}px`, maxHeight: `${treeHeight}px`, width: '100%', maxWidth: '100%' }
+                        ? treeFloatStyle
                         : { width: `${width}px`, minWidth: `${width}px`, maxWidth: `${width}px` }}
                 >
-                    {showResizeHandle && (
+                    {showResizeHandle && !isFloating && (
                         <div
                             className="tree-view-panel-resize-handle"
                             onMouseDown={handleResizeStart}
@@ -521,7 +585,11 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                             aria-label="Resize tree view"
                         />
                     )}
-                    <div className="tree-view-panel-header">
+                    <div
+                        className="tree-view-panel-header"
+                        onDoubleClick={isFloating && showResizeHandle ? toggleMaximizeTree : undefined}
+                        title={isFloating && showResizeHandle ? 'Double-click to maximize / restore' : undefined}
+                    >
                         <i className="bi bi-diagram-2" />
                         <span>TREE VIEW</span>
                         {isScriptExecuting && (
