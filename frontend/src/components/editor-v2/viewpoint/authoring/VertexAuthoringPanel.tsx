@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { LProject, LPointerTargetable, DClass, type LViewElement } from '../../../../joiner';
-import { Input, Select, NumberInput, ColorPicker, ErrorText, Button, HelpText, ConditionalEditor, Checkbox, type PathBuilderFeatures } from '../../../ui';
+import { Input, Select, NumberInput, ColorPicker, ErrorText, Button, HelpText, ConditionalEditor, Checkbox, FormSection, type PathBuilderFeatures } from '../../../ui';
 import { getMetaclassInfo, type MetaclassInfo } from '../../hooks/useEditorMode';
 import { validateIR } from '../ir/irValidate';
 import { defaultObjectViewIR } from '../ir/irDefaults';
@@ -216,100 +216,110 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
             {tab === 'basic' && (
                 <>
                     {/* View label (IR label field, distinct from the DViewElement name) */}
-                    <div className="jj-field">
-                        <label className="jj-field-label">Label</label>
-                        <Input value={draft.label ?? ''} onChange={(e) => patch({ ...draft, label: e.target.value })} />
-                    </div>
+                    <FormSection title="General">
+                        <div className="jj-field">
+                            <label className="jj-field-label">Label</label>
+                            <Input value={draft.label ?? ''} onChange={(e) => patch({ ...draft, label: e.target.value })} />
+                        </div>
+                    </FormSection>
 
                     {/* Shape form */}
-                    <div className="jj-field">
-                        <label className="jj-field-label">Shape</label>
-                        <ConditionalEditor<ShapeForm>
-                            value={form}
-                            onChange={(next) => patchShape({ form: next })}
-                            renderValue={(v, onCh) => <Select options={FORM_OPTIONS} value={v} onChange={(e) => onCh(e.target.value as ShapeForm)} />}
-                            defaultValue={'rect'}
-                            features={features}
-                            featuresHint={FEATURES_HINT}
-                            classNames={classNames}
-                        />
-                    </div>
+                    <FormSection title="Shape">
+                        <div className="jj-field">
+                            <ConditionalEditor<ShapeForm>
+                                value={form}
+                                onChange={(next) => patchShape({ form: next })}
+                                renderValue={(v, onCh) => <Select options={FORM_OPTIONS} value={v} onChange={(e) => onCh(e.target.value as ShapeForm)} />}
+                                defaultValue={'rect'}
+                                features={features}
+                                featuresHint={FEATURES_HINT}
+                                classNames={classNames}
+                            />
+                        </div>
+                    </FormSection>
 
                     {/* Fill */}
-                    <div className="jj-field">
-                        <label className="jj-field-label">Fill</label>
-                        <ConditionalEditor
-                            value={fill}
-                            onChange={(next) => patchShape({ fill: next })}
-                            renderValue={(v, onCh) => <ColorPicker value={v} onChange={onCh} />}
-                            defaultValue={''}
-                            features={features}
-                            featuresHint={FEATURES_HINT}
-                            classNames={classNames}
-                        />
-                    </div>
+                    <FormSection title="Fill">
+                        <div className="jj-field">
+                            <ConditionalEditor
+                                value={fill}
+                                onChange={(next) => patchShape({ fill: next })}
+                                renderValue={(v, onCh) => <ColorPicker value={v} onChange={onCh} />}
+                                defaultValue={''}
+                                features={features}
+                                featuresHint={FEATURES_HINT}
+                                classNames={classNames}
+                            />
+                        </div>
+                    </FormSection>
 
                     {/* Border (always scalar in the schema) */}
-                    <div className="jj-field">
-                        <label className="jj-field-label">Border</label>
-                        <label className="jj-field-label">Color</label>
-                        <ColorPicker value={border.color} onChange={(hex) => patchBorder({ color: hex })} />
-                        <label className="jj-field-label" style={{ marginTop: 'var(--space-2)' }}>Width</label>
-                        <NumberInput value={border.width} min={0} onChange={(w) => patchBorder({ width: w })} />
-                        <label className="jj-field-label" style={{ marginTop: 'var(--space-2)' }}>Style</label>
-                        <Select options={BORDER_STYLE_OPTIONS} value={border.style} onChange={(e) => patchBorder({ style: e.target.value as 'solid' | 'dashed' | 'dotted' })} />
-                    </div>
+                    <FormSection title="Border">
+                        <div className="jj-field">
+                            <label className="jj-field-label">Color</label>
+                            <ColorPicker value={border.color} onChange={(hex) => patchBorder({ color: hex })} />
+                            <label className="jj-field-label" style={{ marginTop: 'var(--space-2)' }}>Width</label>
+                            <NumberInput value={border.width} min={0} onChange={(w) => patchBorder({ width: w })} />
+                            <label className="jj-field-label" style={{ marginTop: 'var(--space-2)' }}>Style</label>
+                            <Select options={BORDER_STYLE_OPTIONS} value={border.style} onChange={(e) => patchBorder({ style: e.target.value as 'solid' | 'dashed' | 'dotted' })} />
+                        </div>
+                    </FormSection>
 
                     {/* Resizable — top-level flag (like `label`, not a shape.* field). Mirrors
                         the runtime gate: shown state = explicit flag ?? per-form default. */}
-                    <div className="jj-field">
-                        <Checkbox
-                            checked={draft.resizable ?? defaultResizableForForm(typeof form === 'string' ? form : undefined)}
-                            onChange={(checked) => patch({ ...draft, resizable: checked })}
-                            label="Resizable"
-                        />
-                        <HelpText>Forces the resize handles. Uncheck to lock. When unset, follows the shape.</HelpText>
-                        <Button
-                            variant="secondary"
-                            disabled={!canResize}
-                            title="Apply the selected instance size to all instances of this view"
-                            onClick={() => window.dispatchEvent(
-                                new CustomEvent(JjodelEvents.PROPAGATE_VIEW_SIZE, { detail: { viewId: view.id } })
-                            )}
-                        >
-                            <i className="bi bi-arrows-fullscreen" /> Propagate size
-                        </Button>
-                    </div>
+                    <FormSection title="Sizing">
+                        <div className="jj-field">
+                            <Checkbox
+                                checked={draft.resizable ?? defaultResizableForForm(typeof form === 'string' ? form : undefined)}
+                                onChange={(checked) => patch({ ...draft, resizable: checked })}
+                                label="Resizable"
+                            />
+                            <HelpText>Forces the resize handles. Uncheck to lock. When unset, follows the shape.</HelpText>
+                            <Button
+                                variant="secondary"
+                                disabled={!canResize}
+                                title="Apply the selected instance size to all instances of this view"
+                                onClick={() => window.dispatchEvent(
+                                    new CustomEvent(JjodelEvents.PROPAGATE_VIEW_SIZE, { detail: { viewId: view.id } })
+                                )}
+                            >
+                                <i className="bi bi-arrows-fullscreen" /> Propagate size
+                            </Button>
+                        </div>
+                    </FormSection>
 
                     {/* Labels — full list (includes the former primary label at index 0) */}
-                    <div className="jj-field-label" style={{ marginTop: 'var(--space-2)' }}>Labels</div>
-                    <LabelListEditor
-                        labels={labels}
-                        features={features}
-                        featuresHint={FEATURES_HINT}
-                        classNames={classNames}
-                        onChange={(next) => patchShape({ labels: next })}
-                    />
+                    <FormSection title="Labels">
+                        <LabelListEditor
+                            labels={labels}
+                            features={features}
+                            featuresHint={FEATURES_HINT}
+                            classNames={classNames}
+                            onChange={(next) => patchShape({ labels: next })}
+                        />
+                    </FormSection>
 
                     {/* Field compartments */}
-                    <div className="jj-field-label" style={{ marginTop: 'var(--space-2)' }}>Field compartments</div>
-                    <FieldCompartmentListEditor
-                        compartments={fieldCompartments}
-                        features={features}
-                        featuresHint={FEATURES_HINT}
-                        classNames={classNames}
-                        onChange={(next) => patch({ ...draft, fieldCompartments: next })}
-                    />
+                    <FormSection title="Field compartments">
+                        <FieldCompartmentListEditor
+                            compartments={fieldCompartments}
+                            features={features}
+                            featuresHint={FEATURES_HINT}
+                            classNames={classNames}
+                            onChange={(next) => patch({ ...draft, fieldCompartments: next })}
+                        />
+                    </FormSection>
 
                     {/* Badges */}
-                    <div className="jj-field-label" style={{ marginTop: 'var(--space-2)' }}>Badges</div>
-                    <BadgeListEditor
-                        badges={badges}
-                        features={features}
-                        featuresHint={FEATURES_HINT}
-                        classNames={classNames}
-                        onChange={(next) => patchShape({ badges: next })}
-                    />
+                    <FormSection title="Badges">
+                        <BadgeListEditor
+                            badges={badges}
+                            features={features}
+                            featuresHint={FEATURES_HINT}
+                            classNames={classNames}
+                            onChange={(next) => patchShape({ badges: next })}
+                        />
+                    </FormSection>
                 </>
             )}
 
