@@ -45,8 +45,30 @@ const STORAGE_KEY_PROPERTIES_WIDTH = 'jjodel_property_panel_width';
 // cambia i margini, aggiornare qui il valore reale — non fingere 28.
 const COLLAPSED_PANEL_TOGGLE_WIDTH = 28;
 
+// Floating overlay (F2 2026-07-29): stacked-layout dims for mode='floating'. The
+// overlay is a fixed column (its own width) with the Tree card on top (its own
+// height) and Properties filling below. Own localStorage keys so they never collide
+// with the tab-mode width/propsWidth semantics (which mean panel widths, not these).
+const DEFAULT_OVERLAY_WIDTH = 400;
+const MIN_OVERLAY_WIDTH = 320;
+const MAX_OVERLAY_WIDTH = 640;
+const STORAGE_KEY_OVERLAY_WIDTH = 'jjodel_property_overlay_width';
+
+const DEFAULT_TREE_HEIGHT = 360;
+const MIN_TREE_HEIGHT = 180;
+const MAX_TREE_HEIGHT = 720;
+const STORAGE_KEY_TREE_HEIGHT = 'jjodel_property_tree_height';
+
+// Cap the Tree card height to the smaller of the hard px ceiling and ~60vh, so the
+// Properties card below always keeps room (and never scrolls off-screen). Floored at
+// MIN_TREE_HEIGHT. Used by both the initial read and the drag handler (F2-fix).
+function clampTreeHeight(h: number): number {
+    const vhCap = typeof window !== 'undefined' ? Math.floor(window.innerHeight * 0.6) : MAX_TREE_HEIGHT;
+    return Math.min(MAX_TREE_HEIGHT, vhCap, Math.max(MIN_TREE_HEIGHT, h));
+}
+
 interface PropertiesWithTreeViewProps {
-    mode: 'popup' | 'tab' | 'inline';
+    mode: 'popup' | 'tab' | 'inline' | 'floating';
 }
 
 export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ mode }) => {
@@ -62,8 +84,58 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
         return Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, parsed));
     });
 
+    // Floating overlay (F2): column width, persisted. Declared before the resize
+    // handlers so they can list it in their useCallback deps (no TDZ). Clamp + NaN guard.
+    const [overlayWidth, setOverlayWidth] = useState<number>(() => {
+        const saved = localStorage.getItem(STORAGE_KEY_OVERLAY_WIDTH);
+        if (!saved) return DEFAULT_OVERLAY_WIDTH;
+        const parsed = parseInt(saved, 10);
+        if (Number.isNaN(parsed)) return DEFAULT_OVERLAY_WIDTH;
+        return Math.min(MAX_OVERLAY_WIDTH, Math.max(MIN_OVERLAY_WIDTH, parsed));
+    });
+
+    useEffect(() => {
+        localStorage.setItem(STORAGE_KEY_OVERLAY_WIDTH, String(overlayWidth));
+    }, [overlayWidth]);
+
+    // Floating overlay (F2): Tree card height (top of the vertical split), persisted.
+    const [treeHeight, setTreeHeight] = useState<number>(() => {
+        const saved = localStorage.getItem(STORAGE_KEY_TREE_HEIGHT);
+        if (!saved) return DEFAULT_TREE_HEIGHT;
+        const parsed = parseInt(saved, 10);
+        if (Number.isNaN(parsed)) return DEFAULT_TREE_HEIGHT;
+        return clampTreeHeight(parsed);
+    });
+
+    useEffect(() => {
+        localStorage.setItem(STORAGE_KEY_TREE_HEIGHT, String(treeHeight));
+    }, [treeHeight]);
+
     const handleResizeStart = useCallback((e: React.MouseEvent) => {
         e.preventDefault();
+        // Floating (F2): this handle is the horizontal divider between the Tree card
+        // (top) and Properties (bottom). Dragging DOWN grows the Tree card height.
+        if (mode === 'floating') {
+            const startY = e.clientY;
+            const startHeight = treeHeight;
+            const handleMouseMove = (moveEvent: MouseEvent) => {
+                const delta = moveEvent.clientY - startY;
+                setTreeHeight(clampTreeHeight(startHeight + delta));
+            };
+            const handleMouseUp = () => {
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+                document.body.removeAttribute('data-properties-tree-dragging');
+            };
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            document.body.style.cursor = 'row-resize';
+            document.body.style.userSelect = 'none';
+            document.body.setAttribute('data-properties-tree-dragging', 'true');
+            return;
+        }
         const startX = e.clientX;
         const startWidth = width;
 
@@ -92,7 +164,7 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
         document.body.style.userSelect = 'none';
         // Disabilita la transition del tab durante il drag → follow istantaneo.
         document.body.setAttribute('data-properties-tree-dragging', 'true');
-    }, [width]);
+    }, [mode, treeHeight, width]);
 
     useEffect(() => {
         localStorage.setItem(STORAGE_KEY, String(width));
@@ -110,6 +182,30 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
 
     const handlePropsResizeStart = useCallback((e: React.MouseEvent) => {
         e.preventDefault();
+        // Floating (F2): this handle is the LEFT edge of the overlay column (anchored
+        // to the right of the viewport). Dragging LEFT widens it → `startWidth - delta`,
+        // same sign as the tab-mode Properties handle.
+        if (mode === 'floating') {
+            const startX = e.clientX;
+            const startWidth = overlayWidth;
+            const handleMouseMove = (moveEvent: MouseEvent) => {
+                const delta = moveEvent.clientX - startX;
+                setOverlayWidth(Math.min(MAX_OVERLAY_WIDTH, Math.max(MIN_OVERLAY_WIDTH, startWidth - delta)));
+            };
+            const handleMouseUp = () => {
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+                document.body.removeAttribute('data-properties-tree-dragging');
+            };
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+            document.body.setAttribute('data-properties-tree-dragging', 'true');
+            return;
+        }
         const startX = e.clientX;
         const startWidth = propsWidth;
 
@@ -136,7 +232,7 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
         document.body.style.cursor = 'col-resize';
         document.body.style.userSelect = 'none';
         document.body.setAttribute('data-properties-tree-dragging', 'true');
-    }, [propsWidth]);
+    }, [mode, overlayWidth, propsWidth]);
 
     useEffect(() => {
         localStorage.setItem(STORAGE_KEY_PROPERTIES_WIDTH, String(propsWidth));
@@ -314,10 +410,12 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
         };
     }, [toggleTreeView]);
 
-    // For non-tab modes, just render Info without the split
-    if (mode !== 'tab') {
+    // For non-split modes (popup/inline), just render Info without the split.
+    // 'floating' (F2) renders the same split as 'tab', but portaled to <body>.
+    if (mode !== 'tab' && mode !== 'floating') {
         return <Info mode={mode} />;
     }
+    const isFloating = mode === 'floating';
 
     // Right panel visibility is controlled by CSS via body[data-editor-type].
     // Always render content so it's ready when the panel becomes visible.
@@ -325,18 +423,23 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     // niente più modifier classes split-only-*. Quando un pannello è chiuso
     // viene sostituito da una rail 28px sul suo lato, sempre cliccabile.
 
-    return (
-        <>
+    // Floating overlay is shown only over a model/metamodel canvas; it steps aside for
+    // the reopen pill when both cards are collapsed. Portaled to <body> (position:fixed,
+    // tier z ~900) so it escapes the dock DOM.
+    const overlayActive = activeEditorType === 'model' || activeEditorType === 'metamodel';
+    const splitPanel = (
         <div
             ref={containerRef}
-            className="properties-with-tree-view"
+            className={`properties-with-tree-view${isFloating ? ' properties-with-tree-view--floating' : ''}`}
         >
             {/* Properties: container a larghezza fissa (400-700, resize handle sul
                 bordo sinistro) oppure toggle collassato. */}
             {showPropertiesPanel ? (
                 <div
                     className="properties-panel-container"
-                    style={{ width: `${propsWidth}px`, minWidth: `${propsWidth}px`, maxWidth: `${propsWidth}px` }}
+                    style={isFloating
+                        ? { flex: '1 1 auto', minHeight: 0, width: '100%', maxWidth: '100%' }
+                        : { width: `${propsWidth}px`, minWidth: `${propsWidth}px`, maxWidth: `${propsWidth}px` }}
                 >
                     <div
                         className="properties-panel-resize-handle"
@@ -367,7 +470,7 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                     </div>
                     <div className="properties-panel-body">
                         <Info
-                            mode={mode}
+                            mode={isFloating ? 'tab' : mode}
                             overrideSelected={effectivePin}
                             onInternalNavigate={isPinned ? handleInternalNavigate : undefined}
                         />
@@ -405,7 +508,9 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
             {showTreePanel ? (
                 <div
                     className={`tree-view-panel-container ${isHighlighted ? 'tree-view-panel-container--highlighted' : ''} ${isScriptExecuting ? 'tree-view-panel-container--executing' : ''}`}
-                    style={{ width: `${width}px`, minWidth: `${width}px`, maxWidth: `${width}px` }}
+                    style={isFloating
+                        ? { height: `${treeHeight}px`, minHeight: `${treeHeight}px`, maxHeight: `${treeHeight}px`, width: '100%', maxWidth: '100%' }
+                        : { width: `${width}px`, minWidth: `${width}px`, maxWidth: `${width}px` }}
                 >
                     {showResizeHandle && (
                         <div
@@ -442,6 +547,18 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
             )}
 
         </div>
+    );
+
+    return (
+        <>
+        {isFloating
+            ? (overlayActive && !bothCollapsed && createPortal(
+                <div className="properties-tree-overlay" style={{ width: `${overlayWidth}px` }}>
+                    {splitPanel}
+                </div>,
+                document.body
+              ))
+            : splitPanel}
         {/* Both-collapsed: cluster flottante di riapertura, portalizzato su <body>
             così sfugge al pannello a 0px. Gate JS su editor model/metamodel; il CSS
             aggiunge il kill-switch per canvas-only / documentation. */}

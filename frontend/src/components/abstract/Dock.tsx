@@ -7,7 +7,6 @@ import {FakeStateProps, windoww} from '../../joiner/types';
 import {LayoutData} from 'rc-dock';
 import {Collaborative, Console, Logger, MetaData} from "../editors";
 import {NodeEditor} from "../editors/NodeEditor";
-import {PropertiesWithTreeView} from "../editors/PropertiesWithTreeView";
 import DockManager from './DockManager';
 import {PinnableDock, TabContent, TabHeader} from '../dock/MyRcDock';
 import { TabsOverflowMenu } from '../dock/TabsOverflowMenu';
@@ -279,7 +278,10 @@ function DockComponent(props: AllProps) {
 
     const summaryTid = (id(), tid()); // advance counter for TabHeader/TabContent pairing
     const ModelsSummary = {id: 'project_summary', title: <TabHeader tid={summaryTid}><Logo style={{marginLeft: '-10px', fontSize: '1.5rem', paddingRight: '6px'}}/> {DProject.getProject()?.name}</TabHeader>, group: 'models', closable: false, content: <TabContent tid={summaryTid}><ModelsSummaryTab /></TabContent>};
-    const structure = {id: id(), title: <TabHeader tid={tid()}>Properties</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><PropertiesWithTreeView mode={'tab'}/></TabContent>};
+    // F2 floating panels (2026-07-29): the Properties tab (`structure`) is gone from the
+    // dock — Properties + Tree now render as a floating overlay (mounted in Dashboard,
+    // `<PropertiesWithTreeView mode='floating'/>`). Removed here so it is never rendered
+    // twice. The other editors-group tab consts below are left in place (orphaned).
     const metadata = {id: id(), title: <TabHeader tid={tid()}>Metadata</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><MetaData /></TabContent>};
     // Tree View tab removed - now using dedicated TreeViewSidebar component
     const node = {id: id(), title: <TabHeader tid={tid()}>Node</TabHeader>, group: 'editors', closable: false, content: <TabContent tid={tid()}><NodeEditor /></TabContent>};
@@ -329,23 +331,13 @@ function DockComponent(props: AllProps) {
     // Left panel (Models Summary / Canvas)
     layout.dockbox.children.push({tabs: [ModelsSummary], size: leftSize});
 
-    // Properties is the sole right-panel content.
-    // Viewpoints editing → accessible via toolbar viewpoint selector (Prompt 6)
-    // Node → collapsible section inside Properties (advanced mode only)
-    // Console → will become bottom drawer (Prompt 7)
-    // Components are kept intact, only removed from tab navigation.
-    const tabs = [];
-    tabs.push(structure);  // Properties (renders ViewData/ViewpointProperties when a view/viewpoint is selected in the Tree View)
-    if (advanced) tabs.push(node);  // Node (Advanced only)
-    tabs.push(console);    // Console
-    if (advanced) tabs.push(mtm);
-    if (advanced) tabs.push(logger);
-
-// if (?.type === 'collaborative') tabs.push(collaborative);
-    if (false && LProject.getProject()?.type === 'collaborative') tabs.push(permissions);
-    // Right panel (Editors) - Properties, Viewpoints, Node, Console
-    // Note: JjTL editor hides this panel via DockManager.dock.loadLayout() in JjtlDevelopmentEnv.tsx
-    layout.dockbox.children.push({tabs, size: rightSize});
+    // F2 floating panels (2026-07-29): the right dock child (editors group — Properties,
+    // Node, Console, MTM, Logger) is no longer built. Properties + Tree now render as a
+    // floating overlay over the full-width canvas (Dashboard mount, portal to <body>).
+    // The dockbox is left single-child (canvas group); rc-dock normalises the sole child
+    // to 100% width — no CSS change needed. `rightSize`/`groups.editors` and the editors
+    // tab consts above are left in place (orphaned): Console → future bottom drawer;
+    // retiring the width-lock and the orphans is a separate cleanup commit (F5).
 
     // Emit custom event when the active tab in the left panel changes
     // so that StatusBar can switch between project stats and editor breadcrumb,

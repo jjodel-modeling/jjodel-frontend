@@ -1045,8 +1045,10 @@ body[data-layout-mode="split"] {
     min-width: 300px;
   }
 
-  .dock-hbox > .dock-panel:last-child,
-  .dock-hbox > .dock-box:last-child {
+  // F2-fix (2026-07-29): :not(:first-child) so a single-child dockbox (canvas only,
+  // post-F2) is never matched — this used to size the removed Properties column.
+  .dock-hbox > .dock-panel:not(:first-child):last-child,
+  .dock-hbox > .dock-box:not(:first-child):last-child {
     min-width: 400px;
     transition: opacity 200ms ease;
     max-width: 710px
@@ -1060,8 +1062,9 @@ body[data-layout-mode="sidebar"] {
     min-width: 300px;
   }
 
-  .dock-hbox > .dock-panel:last-child,
-  .dock-hbox > .dock-box:last-child {
+  // F2-fix (2026-07-29): :not(:first-child) — see split block above.
+  .dock-hbox > .dock-panel:not(:first-child):last-child,
+  .dock-hbox > .dock-box:not(:first-child):last-child {
     min-width: 350px;
     max-width: 550px;
     box-shadow: -2px 0 8px rgba(0, 0, 0, 0.05);
@@ -1069,43 +1072,12 @@ body[data-layout-mode="sidebar"] {
   }
 }
 
-/* Default (no mode) - responsive percentages based on screen size */
-
-/* Monitor 27"+ (≥2560px): 25% properties, 75% canvas */
-@media (min-width: 2560px) {
-  body:not([data-layout-mode]) .dock-hbox > .dock-panel:last-child,
-  body:not([data-layout-mode]) .dock-hbox > .dock-box:last-child {
-    min-width: 500px;
-    max-width: 800px;
-  }
-}
-
-/* Desktop FHD (1920-2559px): 35% properties */
-@media (min-width: 1920px) and (max-width: 2559px) {
-  body:not([data-layout-mode]) .dock-hbox > .dock-panel:last-child,
-  body:not([data-layout-mode]) .dock-hbox > .dock-box:last-child {
-    min-width: 500px;
-    max-width: 750px;
-  }
-}
-
-/* Laptop (1440-1919px): 40% properties */
-@media (min-width: 1440px) and (max-width: 1919px) {
-  body:not([data-layout-mode]) .dock-hbox > .dock-panel:last-child,
-  body:not([data-layout-mode]) .dock-hbox > .dock-box:last-child {
-    min-width: 450px;
-    max-width: 650px;
-  }
-}
-
-/* Tablet and smaller (<1440px): 50% properties */
-@media (max-width: 1439px) {
-  body:not([data-layout-mode]) .dock-hbox > .dock-panel:last-child,
-  body:not([data-layout-mode]) .dock-hbox > .dock-box:last-child {
-    min-width: 400px;
-    max-width: 600px;
-  }
-}
+/* Default responsive last-child sizing (F2-fix 2026-07-29): REMOVED. These four
+   media blocks capped the width of `.dock-hbox > .dock-panel:last-child` — the old
+   Properties column — for the no-`data-layout-mode` default layout. Post-F2 the
+   dockbox has a single child (the canvas), which is both :first-child and
+   :last-child, so these rules squeezed the full-width canvas to ~30%. Properties
+   floats now; there is no legitimate last-child target here anymore. */
 
 /* Properties+Tree width-lock (2026-07-06) — larghezze fisse e indipendenti.
    PropertiesWithTreeView setta su <body> la custom property
@@ -1131,8 +1103,12 @@ body[data-properties-tree-width-lock="true"] {
    istantaneo (attr settato/rimosso da PropertiesWithTreeView su mousedown/up).
    `!important` batte la transition della width-lock a prescindere dall'ordine. */
 body[data-properties-tree-dragging] {
-  .dock-hbox > .dock-panel:last-child,
-  .dock-hbox > .dock-box:last-child {
+  // F2-fix (2026-07-29): :not(:first-child) — the floating overlay's resize handlers
+  // still set this attr during a drag, so without the guard it would match the sole
+  // canvas child. (width-lock/both-collapsed below stay as-is: their attrs are never
+  // written post-F2, so they are inert and left for the F5 width-lock retire.)
+  .dock-hbox > .dock-panel:not(:first-child):last-child,
+  .dock-hbox > .dock-box:not(:first-child):last-child {
     transition: none !important;
   }
 }
@@ -1169,8 +1145,9 @@ body[data-properties-tree-both-collapsed="true"] {
 
 /* Documentation Tab - hide properties panel (not needed for docs view) */
 body[data-active-tab="documentation"] {
-  .dock-hbox > .dock-panel:last-child,
-  .dock-hbox > .dock-box:last-child {
+  // F2-fix (2026-07-29): :not(:first-child) so the sole canvas child is never hidden.
+  .dock-hbox > .dock-panel:not(:first-child):last-child,
+  .dock-hbox > .dock-box:not(:first-child):last-child {
     width: 0 !important;
     min-width: 0 !important;
     max-width: 0 !important;
@@ -1193,8 +1170,10 @@ body[data-active-tab="documentation"] {
 
 /* Summary/Dashboard Mode - hide properties panel (no editor active) */
 body[data-editor-type="summary"] {
-  .dock-hbox > .dock-panel:last-child,
-  .dock-hbox > .dock-box:last-child {
+  // F2-fix (2026-07-29): :not(:first-child) — this was hiding the full-width canvas
+  // (sole dockbox child) on the project summary/dashboard → white screen.
+  .dock-hbox > .dock-panel:not(:first-child):last-child,
+  .dock-hbox > .dock-box:not(:first-child):last-child {
     width: 0 !important;
     min-width: 0 !important;
     max-width: 0 !important;
@@ -1217,8 +1196,9 @@ body[data-editor-type="summary"] {
 
 /* Transformation Mode - hide properties panel (JjTL has its own panels) */
 body[data-editor-type="transformation"] {
-  .dock-hbox > .dock-panel:last-child,
-  .dock-hbox > .dock-box:last-child {
+  // F2-fix (2026-07-29): :not(:first-child) so the sole canvas child is never hidden.
+  .dock-hbox > .dock-panel:not(:first-child):last-child,
+  .dock-hbox > .dock-box:not(:first-child):last-child {
     width: 0 !important;
     min-width: 0 !important;
     max-width: 0 !important;
@@ -1241,8 +1221,9 @@ body[data-editor-type="transformation"] {
 
 /* Viewpoint Mode - hide properties panel (ViewpointWorkbench has its own) */
 body[data-editor-type="viewpoint"] {
-  .dock-hbox > .dock-panel:last-child,
-  .dock-hbox > .dock-box:last-child {
+  // F2-fix (2026-07-29): :not(:first-child) so the sole canvas child is never hidden.
+  .dock-hbox > .dock-panel:not(:first-child):last-child,
+  .dock-hbox > .dock-box:not(:first-child):last-child {
     width: 0 !important;
     min-width: 0 !important;
     max-width: 0 !important;
@@ -1265,8 +1246,9 @@ body[data-editor-type="viewpoint"] {
 
 /* Canvas-Only Mode - hide properties panel completely */
 body[data-layout-mode="canvas-only"] {
-  .dock-hbox > .dock-panel:last-child,
-  .dock-hbox > .dock-box:last-child {
+  // F2-fix (2026-07-29): :not(:first-child) so the sole canvas child is never hidden.
+  .dock-hbox > .dock-panel:not(:first-child):last-child,
+  .dock-hbox > .dock-box:not(:first-child):last-child {
     width: 0 !important;
     min-width: 0 !important;
     max-width: 0 !important;
@@ -1297,8 +1279,10 @@ body[data-layout-mode="canvas-only"] {
 
 /* Dark mode sidebar shadow */
 [data-theme="dark"] body[data-layout-mode="sidebar"] {
-  .dock-hbox > .dock-panel:last-child,
-  .dock-hbox > .dock-box:last-child {
+  // F2-fix (2026-07-29): :not(:first-child) — pairs with the light sidebar block,
+  // so a single-child dockbox (canvas only) never gets the properties-edge shadow.
+  .dock-hbox > .dock-panel:not(:first-child):last-child,
+  .dock-hbox > .dock-box:not(:first-child):last-child {
     box-shadow: -2px 0 8px rgba(0, 0, 0, 0.3);
   }
 }

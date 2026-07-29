@@ -31,8 +31,14 @@ $radius-md: 6px;
     display: flex;
     height: 100%;
     width: 100%;
+    box-sizing: border-box;
     overflow: hidden;
-    background-color: $color-bg-primary;
+    // Card treatment (2026-07-28 Fase 2A): tinted backdrop behind the two panels.
+    // Only VERTICAL padding is added (the top/bottom gutter): a horizontal gutter
+    // would exceed the width-lock (--properties-tree-tab-width = sum of the panel
+    // widths) and get clipped by overflow:hidden, so the cards stay flush left/right.
+    background-color: #eef1f5; // slate-100 tint, sits behind the cards
+    padding: 10px 0;
     position: relative;
 
     &--empty {
@@ -56,8 +62,13 @@ $radius-md: 6px;
     height: 100%;
     overflow: hidden;
     min-width: 0;
-    background: #f8fafc; // slate-50, visually distinct from white canvas
-    border-left: 1px solid #e2e8f0; // slate-200, separates from canvas
+    // Card (2026-07-28 Fase 2A): white rounded panel on the tinted backdrop. Radius
+    // + overflow:hidden round the header/body corners. The shadow is kept small and
+    // contained (the wrapper's overflow:hidden clips wide shadows at the tab edges).
+    background: #fff;
+    border: 1px solid #e2e8f0; // slate-200 hairline
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.10);
 
     // The Info component styles already handle scrolling
     .properties-tab,
@@ -331,8 +342,12 @@ $radius-md: 6px;
     flex-direction: column;
     height: 100%;
     overflow: hidden;
-    background-color: $color-bg-primary;
-    border-left: 1px solid $color-border;
+    // Card (2026-07-28 Fase 2A): matches the properties card — white, rounded,
+    // hairline border, contained soft shadow — on the tinted backdrop.
+    background-color: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.10);
     // Anchor for the absolute-positioned resize handle (vedi .tree-view-panel-resize-handle)
     position: relative;
     // Smooth transitions when toggling visibility. `width` rimossa dalla lista
@@ -783,7 +798,15 @@ $radius-md: 6px;
 
 [data-theme="dark"] {
     .properties-with-tree-view {
+        background-color: #14181d; // darker backdrop so the cards read as elevated (Fase 2A)
+    }
+
+    // Properties card in dark (Fase 2A): base bg is #fff (light) — override to the
+    // dark panel surface, matching the tree card, with a dark contained shadow.
+    .properties-panel-container {
         background-color: #1e1e1e;
+        border-color: #333;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
     }
 
     .properties-node-section {
@@ -806,6 +829,7 @@ $radius-md: 6px;
     .tree-view-panel-container {
         background-color: #1e1e1e;
         border-color: #333;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4); // dark contained card shadow (Fase 2A)
     }
 
     .tree-view-panel-header {
@@ -935,6 +959,78 @@ $radius-md: 6px;
 // activeEditorType model/metamodel non copre questi due stati, che non sono
 // editor-type). Vedi abstract/style.scss per data-layout-mode / data-active-tab.
 body[data-layout-mode="canvas-only"] .properties-tree-floating-cluster,
-body[data-active-tab="documentation"] .properties-tree-floating-cluster {
+body[data-layout-mode="canvas-only"] .properties-tree-overlay,
+body[data-active-tab="documentation"] .properties-tree-floating-cluster,
+body[data-active-tab="documentation"] .properties-tree-overlay {
     display: none !important;
+}
+
+// ============================================
+// FLOATING OVERLAY (F2 2026-07-29)
+// Properties + Tree rendered as a floating, stacked overlay over the full-width
+// canvas (portaled to <body>, mode='floating'). Tree on top (fixed height),
+// Properties below (flex). All rules are scoped to the floating variant so the
+// tab/popup/inline modes stay byte-identical.
+// ============================================
+.properties-tree-overlay {
+    position: fixed;
+    // Start BELOW the canvas toolbar so it never covers the VIEW/Theme controls.
+    // No CSS vars exist for these heights, so compose the known literals:
+    // navbar 60px (navbar.scss:178) + .editor-v2-toolbar 40px (EditorV2.scss) + 8px gap.
+    top: calc(60px + 40px + 8px);
+    right: 8px;   // ratified 8px gutter from the canvas edge
+    bottom: 8px;  // full-height column (top+bottom bound the height); width inline
+    z-index: 900; // above canvas + rc-dock, below canvas context-menu (1000) and modals
+    display: flex;
+}
+
+.properties-with-tree-view--floating {
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    padding: 0;              // no tinted backdrop gutter — the cards float on the canvas
+    background: transparent;
+    overflow: visible;       // let the contained card shadows show
+
+    // Tree card on top, Properties below, with an 8px gap between them.
+    .tree-view-panel-container {
+        order: 1;
+        width: 100%;
+        max-width: 100%;
+        margin-bottom: 8px;  // gap to the Properties card below
+    }
+    .properties-panel-container {
+        order: 2;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    // Tree divider handle → horizontal (bottom edge of the Tree card), row-resize.
+    .tree-view-panel-resize-handle {
+        top: auto;
+        bottom: -3px;
+        left: 0;
+        right: 0;
+        width: auto;
+        height: 6px;
+        cursor: row-resize;
+
+        &::before {
+            top: auto;
+            bottom: 3px;
+            left: 0;
+            right: 0;
+            width: auto;
+            height: 1px;
+        }
+    }
+    // Properties handle stays on the LEFT edge → controls the overlay column width
+    // (cursor col-resize is already set on the base .properties-panel-resize-handle).
+}
+
+// Dark: keep the floating wrapper transparent (the [data-theme=dark]
+// .properties-with-tree-view backdrop rule would otherwise tint it).
+[data-theme="dark"] .properties-with-tree-view--floating {
+    background: transparent;
 }

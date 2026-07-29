@@ -35,6 +35,7 @@ import useQuery from '../../hooks/useQuery';
 import { ElementBadge } from '../../components/common/ElementBadge';
 import DockManager from '../../components/abstract/DockManager';
 import Dock from "../../components/abstract/Dock";
+import { PropertiesWithTreeView } from "../../components/editors/PropertiesWithTreeView";
 import {CSS_Units} from "../../view/viewElement/view";
 import {useStateIfMounted} from 'use-state-if-mounted';
 import { Tooltip } from '../../components/forEndUser/Tooltip';
@@ -620,6 +621,10 @@ function ProjectDashboard(props: DashProps): any {
             {!hideLeftBar && <LeftBar active={'Project'} project={project} />}
             <div className="project-dock-wrapper">
                 <Try><Dock /></Try>
+                {/* F2 floating panels (2026-07-29): Properties + Tree render as a floating
+                    overlay over the full-width canvas (portaled to <body>). Sibling of
+                    <Dock/>, inside Redux + TreeViewPanelProvider — no context barrier. */}
+                <Try><PropertiesWithTreeView mode={'floating'} /></Try>
             </div>
             {/* TODO: Add contextual RightPanel for project view with:
                 - Overview: Rev, creation date, owner
