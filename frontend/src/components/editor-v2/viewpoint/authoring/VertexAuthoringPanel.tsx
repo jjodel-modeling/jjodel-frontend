@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { LProject, LPointerTargetable, DClass, SetRootFieldAction, windoww, type LViewElement } from '../../../../joiner';
+import { LProject, LPointerTargetable, DClass, type LViewElement } from '../../../../joiner';
 import { Input, Select, NumberInput, ColorPicker, ErrorText, Button, HelpText, ConditionalEditor, Checkbox, FormSection, type PathBuilderFeatures } from '../../../ui';
-import { useInterfaceMode } from '../../../../hooks/useInterfaceMode';
 import { getMetaclassInfo, type MetaclassInfo } from '../../hooks/useEditorMode';
 import { validateIR } from '../ir/irValidate';
 import { defaultObjectViewIR } from '../ir/irDefaults';
@@ -54,46 +53,13 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
     const [draft, setDraft] = useState<VertexViewIR>(seed);
     const [error, setError] = useState<string | null>(null);
 
-    // Disclosure mode. `tab` is the historical local Basic/Advanced state, kept but
-    // RE-DEFINED: it no longer means "visual vs matching" (Advanced now shows the
-    // visual sections *and* matching), and it is no longer standalone — it mirrors
-    // the GLOBAL interface mode. It still never touches view.ir or the draft.
-    //
-    // Seed: localStorage via useInterfaceMode (survives reload) OR Redux `advanced`
-    // (set by a per-project state load).
-    const { isAdvanced: storedAdvanced, setMode: setGlobalMode } = useInterfaceMode();
-    const reduxAdvanced = useSelector((s: any) => !!s.advanced);
-    const [tab, setTab] = useState<'basic' | 'advanced'>(() => (storedAdvanced || reduxAdvanced) ? 'advanced' : 'basic');
-    const advanced = tab === 'advanced';
+    // Disclosure mode — read-only here. The single Basic/Advanced toggle lives in the
+    // Properties card header (PropertiesWithTreeView), which owns the write path; this
+    // panel only reads the resulting global mode. Redux `advanced` is the runtime
+    // broadcast channel every mode writer sets (Navbar, BottomBar, Settings, the card
+    // header), so a plain selector keeps the panel in sync from any of them.
+    const advanced = useSelector((s: any) => !!s.advanced);
     const dirtyRef = useRef(false);
-
-    // Global → panel. The mode is also flipped from the Navbar (:838-866), the
-    // BottomBar (:53-58) and Settings (ProfileSection:393-397); those writers set
-    // Redux `advanced` + localStorage directly, and useInterfaceMode only re-reads
-    // localStorage on mount (its `storage` listener is cross-tab only), so Redux is
-    // the one same-tab reactive channel — follow it. The first run is skipped on
-    // purpose: at mount Redux holds its default (`false`, store.tsx:215) while
-    // localStorage may legitimately say 'advanced', and the seed above must win.
-    const lastReduxAdvanced = useRef(reduxAdvanced);
-    useEffect(() => {
-        if (lastReduxAdvanced.current === reduxAdvanced) return;
-        lastReduxAdvanced.current = reduxAdvanced;
-        setTab(reduxAdvanced ? 'advanced' : 'basic');
-    }, [reduxAdvanced]);
-
-    // Panel → global. Mirrors the canonical write of every other mode toggle
-    // (Navbar / BottomBar / ProfileSection): Redux `advanced` — what the Navbar
-    // badge and the mode-gated panels read — plus the hook's setMode, which writes
-    // localStorage, U.interfaceMode and fires SystemEvents.INTERFACE_MODE_CHANGE.
-    const selectMode = (next: 'basic' | 'advanced') => {
-        if (next === tab) return;
-        const isAdv = next === 'advanced';
-        setTab(next);
-        lastReduxAdvanced.current = isAdv;
-        setGlobalMode(next);
-        SetRootFieldAction.new('advanced', isAdv);
-        windoww.advanced = isAdv;
-    };
 
     // Reset the draft when the selected view changes (no commit on reset).
     useEffect(() => {
@@ -233,16 +199,6 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
 
     return (
         <section className="properties-tab properties-panel">
-            <div className="jj-field-label" style={{ marginTop: 'var(--space-1)' }}>IR View authoring</div>
-
-            {/* Basic / Advanced — segmented control bound to the GLOBAL interface mode
-                (single disclosure toggle: it also drives the Navbar and every other
-                mode-gated panel). */}
-            <div className="jj-field" style={{ display: 'flex', gap: 'var(--spacing-1)', marginBottom: 8 }}>
-                <Button variant={tab === 'basic' ? 'primary' : 'ghost'} size="sm" onClick={() => selectMode('basic')}>Basic</Button>
-                <Button variant={tab === 'advanced' ? 'primary' : 'ghost'} size="sm" onClick={() => selectMode('advanced')}>Advanced</Button>
-            </div>
-
             {error && <ErrorText>{error}</ErrorText>}
 
             {/* Active ambiguity warning: the target class name is declared in more

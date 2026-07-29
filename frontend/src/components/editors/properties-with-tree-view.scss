@@ -166,6 +166,49 @@ $radius-md: 6px;
     }
 }
 
+// Basic/Advanced disclosure switch in the Properties header (2026-07-29). Segmented
+// pill: light active tab on a slate track, mirroring the `.jodie-mode-switch`
+// convention (JodieWindow.css:2155) but with the slate active state of the design
+// system (§7.1 — cyan is never a button background). 11px uppercase-neutral labels,
+// 24px tall so it matches the pin/collapse buttons on the 41px header row.
+.properties-mode-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    padding: 2px;
+    border-radius: $radius-sm;
+    background-color: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    flex-shrink: 0;
+
+    &__opt {
+        appearance: none;
+        border: none;
+        background: transparent;
+        color: #64748b;
+        font: inherit;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.2px;
+        text-transform: none;
+        line-height: 1;
+        padding: 4px 8px;
+        border-radius: 3px;
+        cursor: pointer;
+        transition: background $transition-fast, color $transition-fast;
+
+        &:hover:not(.properties-mode-switch__opt--active) {
+            color: $color-text-primary;
+        }
+
+        &--active {
+            background-color: #ffffff;
+            color: #334155;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+        }
+    }
+}
+
 .properties-panel-toggle-btn {
     width: 24px;
     height: 24px;
@@ -865,6 +908,27 @@ $radius-md: 6px;
 
             &:hover {
                 color: $color-highlight;
+            }
+        }
+    }
+
+    // Disclosure switch — dark mode (2026-07-29). Same shape, dark track + raised
+    // active tab (the light #fff pill would glare on the dark header).
+    .properties-mode-switch {
+        background-color: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.1);
+
+        &__opt {
+            color: #cbd5e1;
+
+            &:hover:not(.properties-mode-switch__opt--active) {
+                color: #f1f5f9;
+            }
+
+            &--active {
+                background-color: #334155;
+                color: #f1f5f9;
+                box-shadow: none;
             }
         }
     }

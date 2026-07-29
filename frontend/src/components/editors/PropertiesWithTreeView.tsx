@@ -5,6 +5,8 @@ import { Info } from './Info';
 import { NodeEditor } from './NodeEditor';
 import { TreeViewContent } from '../TreeViewSidebar/TreeViewContent';
 import { useTreeViewPanel } from '../../contexts/TreeViewPanelContext';
+import { useInterfaceMode, isAdvancedMode } from '../../hooks/useInterfaceMode';
+import { SetRootFieldAction, windoww } from '../../joiner';
 import './properties-with-tree-view.scss';
 // Import tree view styles for icon colors and tree node styling
 import '../TreeViewSidebar/tree-view-sidebar.scss';
@@ -252,6 +254,35 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     const advanced = useSelector((state: any) => state.advanced);
     const [nodeOpen, setNodeOpen] = useState(false);
 
+    // ─── Basic/Advanced disclosure toggle (card header). Single toggle for the whole
+    // card: the IR authoring panel and the NODE section below both read the same
+    // global mode. Writes mirror the canonical pattern of every other mode toggle
+    // (Navbar:838-866, BottomBar:53-58, ProfileSection:393-397): Redux `advanced` is
+    // the runtime broadcast channel, while the hook's setMode persists the choice to
+    // localStorage, updates U.interfaceMode and fires INTERFACE_MODE_CHANGE.
+    const { setMode: setGlobalInterfaceMode } = useInterfaceMode();
+    const selectDisclosureMode = useCallback((next: 'basic' | 'advanced') => {
+        const isAdv = next === 'advanced';
+        if (isAdv === !!advanced) return;
+        SetRootFieldAction.new('advanced', isAdv);
+        windoww.advanced = isAdv;
+        setGlobalInterfaceMode(next);
+    }, [advanced, setGlobalInterfaceMode]);
+
+    // Restore the persisted mode once per mount. Redux `advanced` has no boot-time
+    // initializer (default `false`, store.tsx:215) while the user's last explicit
+    // choice lives in localStorage, so without this a reload silently drops Advanced
+    // everywhere (Navbar badge included). Only the positive direction is restored: a
+    // `false` in Redux is indistinguishable from "never set", so a project state
+    // loaded with advanced:true is never downgraded.
+    useEffect(() => {
+        if (!advanced && isAdvancedMode()) {
+            SetRootFieldAction.new('advanced', true);
+            windoww.advanced = true;
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     // When a view/viewpoint is selected in the Tree View, Info.tsx renders ViewData
     // (with Monaco editors for Template/Style) inside the Properties column.
     // 2026-07-06 fixed-widths: the Properties column has its own fixed width now
@@ -447,6 +478,28 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                     >
                         <i className="bi bi-sliders" />
                         <span>PROPERTIES</span>
+                        {/* Disclosure toggle — the single Basic/Advanced control for the
+                            card. onDoubleClick is swallowed so a fast double click on the
+                            switch does not also trigger the header's maximize/restore. */}
+                        <div
+                            className="properties-mode-switch"
+                            role="group"
+                            aria-label="Interface mode"
+                            onDoubleClick={(e) => e.stopPropagation()}
+                        >
+                            {(['basic', 'advanced'] as const).map((m) => (
+                                <button
+                                    key={m}
+                                    type="button"
+                                    className={`properties-mode-switch__opt${(m === 'advanced') === !!advanced ? ' properties-mode-switch__opt--active' : ''}`}
+                                    onClick={() => selectDisclosureMode(m)}
+                                    aria-pressed={(m === 'advanced') === !!advanced}
+                                    title={m === 'basic' ? 'Basic — essential options only' : 'Advanced — all options and expert sections'}
+                                >
+                                    {m === 'basic' ? 'Basic' : 'Advanced'}
+                                </button>
+                            ))}
+                        </div>
                         <button
                             className={`properties-panel-pin-btn${isPinned ? ' is-active' : ''}`}
                             onClick={togglePin}
