@@ -1,5 +1,5 @@
 import React from 'react';
-import { Select, Input, Checkbox } from '../../../ui';
+import { Select, Input, Toggle } from '../../../ui';
 import type { FieldSegment } from '../ir/irTypes';
 
 const KIND_OPTIONS = [
@@ -64,10 +64,11 @@ export const FieldSegmentEditor: React.FC<FieldSegmentEditorProps> = ({ segment,
             {segment.kind === 'value' && (
                 editableIsWidget
                     ? <span style={CHIP}>editable: advanced widget</span>
-                    : <Checkbox
+                    : <Toggle
                         checked={valueEditable === true}
                         onChange={(c) => onChange({ kind: 'value', editable: c })}
                         label="editable inline"
+                        size="xs"
                     />
             )}
         </div>

@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-    Checkbox,
+    Toggle,
     NumberInput,
     HelpText,
     Button,
@@ -78,10 +78,11 @@ export const MatchingSection: React.FC<MatchingSectionProps> = ({
             {/* Metaclasses */}
             <div className="jj-field" style={{ marginTop: 8 }}>
                 <label className="jj-field-label">Metaclassi</label>
-                <Checkbox
+                <Toggle
                     checked={isWildcard}
                     onChange={setWildcard}
                     label="Tutte le metaclassi (*)"
+                    size="xs"
                 />
                 {!isWildcard && (
                     <>
@@ -115,10 +116,11 @@ export const MatchingSection: React.FC<MatchingSectionProps> = ({
             {/* Predicate (top-level) */}
             <div className="jj-field" style={{ marginTop: 8 }}>
                 <label className="jj-field-label">Condizione</label>
-                <Checkbox
+                <Toggle
                     checked={hasPredicate}
                     onChange={setHasPredicate}
                     label="Applica solo se (predicate)"
+                    size="xs"
                 />
                 {draft.predicate !== undefined && (
                     <div style={{ marginTop: 4 }}>
@@ -149,10 +151,11 @@ export const MatchingSection: React.FC<MatchingSectionProps> = ({
             {/* Exclusive */}
             <div className="jj-field" style={{ marginTop: 8 }}>
                 <label className="jj-field-label">Esclusiva</label>
-                <Checkbox
+                <Toggle
                     checked={draft.exclusive ?? true}
                     onChange={(c) => patch({ ...draft, exclusive: c })}
                     label="exclusive"
+                    size="xs"
                 />
                 <HelpText>Le view decorative (exclusive disattivato) non sono ancora supportate dal resolver IR: disattivandolo la view sparisce dal canvas (limite corrente).</HelpText>
             </div>

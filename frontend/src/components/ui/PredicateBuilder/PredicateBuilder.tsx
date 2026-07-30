@@ -2,7 +2,7 @@ import React from 'react';
 import { Select } from '../Select';
 import { Input } from '../Input';
 import { NumberInput } from '../NumberInput';
-import { Checkbox } from '../Checkbox';
+import { Toggle } from '../Toggle';
 import { PathBuilder, type PathBuilderFeatures } from '../PathBuilder';
 import { ListEditor } from '../ListEditor';
 import {
@@ -121,10 +121,11 @@ const OperandEditor: React.FC<OperandEditorProps> = ({
                                 onChange={(e) => onChange(defaultLiteral(e.target.value as LiteralKind))}
                             />
                             {lit.kind === 'boolean' && (
-                                <Checkbox
+                                <Toggle
                                     checked={lit.value}
                                     label="vero"
                                     onChange={(c) => onChange({ kind: 'boolean', value: c })}
+                                    size="xs"
                                 />
                             )}
                             {lit.kind === 'number' && (
@@ -254,12 +255,13 @@ export const PredicateBuilder: React.FC<PredicateBuilderProps> = ({
                                 onChange={(e) => onChange({ ...k, class: e.target.value })}
                             />
                         )}
-                        <Checkbox
+                        <Toggle
                             checked={hasPath}
                             label="su un oggetto raggiunto da un path"
                             onChange={(c) =>
                                 onChange(c ? { ...k, path: k.path ?? '' } : { op: 'isKind', class: k.class })
                             }
+                            size="xs"
                         />
                         {hasPath && (
                             <PathBuilder
@@ -275,10 +277,11 @@ export const PredicateBuilder: React.FC<PredicateBuilderProps> = ({
             case 'literal': {
                 const l = value;
                 return (
-                    <Checkbox
+                    <Toggle
                         checked={l.value}
                         label="sempre vero"
                         onChange={(c) => onChange({ op: 'literal', value: c })}
+                        size="xs"
                     />
                 );
             }

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '../Button';
-import { Checkbox } from '../Checkbox';
+import { Toggle } from '../Toggle';
 import { PredicateBuilder } from '../PredicateBuilder';
 import type { PathBuilderFeatures } from '../PathBuilder';
 import { isConditionalValue } from './conditional';
@@ -113,7 +113,7 @@ export function ConditionalEditor<T>({
                             <div className={styles.sectionLabel}>Then</div>
                             {renderValue(cond.then, (t) => onChange({ ...cond, then: t }))}
                         </div>
-                        <Checkbox
+                        <Toggle
                             checked={hasElse}
                             label="Include else branch"
                             onChange={(c) => {
@@ -121,6 +121,7 @@ export function ConditionalEditor<T>({
                                 // Drop the else key entirely (no placeholder) — rebuild without it.
                                 else onChange({ when: cond.when, then: cond.then });
                             }}
+                            size="xs"
                         />
                         {hasElse && (
                             <div className={styles.section}>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ListEditor, Input, Select, Checkbox, HelpText, ConditionalEditor, forPredicateKind, type PathBuilderFeatures } from '../../../ui';
+import { ListEditor, Input, Select, Toggle, HelpText, ConditionalEditor, forPredicateKind, type PathBuilderFeatures } from '../../../ui';
 import { FieldSegmentEditor } from './FieldSegmentEditor';
 import type { FieldCompartmentSpec, FieldSegment, Predicate } from '../ir/irTypes';
 
@@ -196,10 +196,11 @@ export const FieldCompartmentListEditor: React.FC<FieldCompartmentListEditorProp
                                     <span style={CHIP}>predicate avanzato (preservato)</span>
                                 ) : (
                                     <>
-                                        <Checkbox
+                                        <Toggle
                                             checked={isBasicIsKind}
                                             onChange={(checked) => setChildFilter(checked ? forPredicateKind('isKind', classNames) : undefined)}
                                             label="filtra per metaclasse (isKind)"
+                                            size="xs"
                                         />
                                         {isBasicIsKind && childFilter && childFilter.op === 'isKind' && (
                                             <Select
@@ -238,10 +239,11 @@ export const FieldCompartmentListEditor: React.FC<FieldCompartmentListEditorProp
 
                         <div className="jj-field">
                             <label className="jj-field-label">Separator</label>
-                            <Checkbox
+                            <Toggle
                                 checked={comp.separator === true}
                                 onChange={(c) => replace(index, { ...comp, separator: c })}
                                 label="row separators"
+                                size="xs"
                             />
                         </div>
 
@@ -250,7 +252,7 @@ export const FieldCompartmentListEditor: React.FC<FieldCompartmentListEditorProp
                             <ConditionalEditor
                                 value={comp.visible}
                                 onChange={(next) => replace(index, { ...comp, visible: next })}
-                                renderValue={(v, onCh) => <Checkbox checked={v} onChange={onCh} label="visible" />}
+                                renderValue={(v, onCh) => <Toggle checked={v} onChange={onCh} label="visible" size="xs" />}
                                 defaultValue={true}
                                 features={features}
                                 featuresHint={featuresHint}

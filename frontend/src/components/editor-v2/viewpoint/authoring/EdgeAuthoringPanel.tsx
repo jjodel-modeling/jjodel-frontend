@@ -3,7 +3,7 @@ import { LProject, LPointerTargetable, DClass, type LViewElement } from '../../.
 import {
     Select,
     NumberInput,
-    Checkbox,
+    Toggle,
     ColorPicker,
     ConditionalEditor,
     HelpText,
@@ -267,10 +267,11 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) 
             <div className="jj-field-label" style={{ marginTop: 8 }}>Matching</div>
             <div className="jj-field" style={{ marginTop: 4 }}>
                 <label className="jj-field-label">Metaclasse sorgente</label>
-                <Checkbox
+                <Toggle
                     checked={isWildcard}
                     onChange={setWildcard}
                     label="Tutte le metaclassi (*)"
+                    size="xs"
                 />
                 {!isWildcard && (
                     <>
@@ -315,10 +316,11 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) 
             {/* Matching — predicate */}
             <div className="jj-field" style={{ marginTop: 8 }}>
                 <label className="jj-field-label">Condizione</label>
-                <Checkbox
+                <Toggle
                     checked={hasPredicate}
                     onChange={setHasPredicate}
                     label="Applica solo se (predicate)"
+                    size="xs"
                 />
                 {draft.predicate !== undefined && (
                     <div style={{ marginTop: 4 }}>
@@ -413,10 +415,11 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) 
             {/* Label center */}
             <div className="jj-field-label" style={{ marginTop: 8 }}>Label</div>
             <div className="jj-field" style={{ marginTop: 4 }}>
-                <Checkbox
+                <Toggle
                     checked={hasCenterLabel}
                     onChange={setHasCenterLabel}
                     label="Label al centro"
+                    size="xs"
                 />
                 {draft.edge.labels?.center !== undefined && (
                     <div style={{ marginTop: 4 }}>

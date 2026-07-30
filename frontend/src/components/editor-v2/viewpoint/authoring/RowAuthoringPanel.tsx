@@ -4,7 +4,7 @@ import {
     Input,
     Select,
     NumberInput,
-    Checkbox,
+    Toggle,
     HelpText,
     ErrorText,
     Button,
@@ -219,10 +219,11 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view }) =>
             <div className="jj-field-label" style={{ marginTop: 8 }}>Matching</div>
             <div className="jj-field" style={{ marginTop: 4 }}>
                 <label className="jj-field-label">Metaclassi</label>
-                <Checkbox
+                <Toggle
                     checked={isWildcard}
                     onChange={setWildcard}
                     label="Tutte le metaclassi (*)"
+                    size="xs"
                 />
                 {!isWildcard && (
                     <>
@@ -256,10 +257,11 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view }) =>
             {/* Matching — predicate */}
             <div className="jj-field" style={{ marginTop: 8 }}>
                 <label className="jj-field-label">Condizione</label>
-                <Checkbox
+                <Toggle
                     checked={hasPredicate}
                     onChange={setHasPredicate}
                     label="Applica solo se (predicate)"
+                    size="xs"
                 />
                 {draft.predicate !== undefined && (
                     <div style={{ marginTop: 4 }}>
@@ -314,7 +316,7 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view }) =>
                     <ConditionalEditor<boolean>
                         value={draft.visible}
                         onChange={(next) => patch({ ...draft, visible: next })}
-                        renderValue={(v, onCh) => <Checkbox checked={v} onChange={onCh} label="visible" />}
+                        renderValue={(v, onCh) => <Toggle checked={v} onChange={onCh} label="visible" size="xs" />}
                         defaultValue={true}
                         features={features}
                         featuresHint={FEATURES_HINT}

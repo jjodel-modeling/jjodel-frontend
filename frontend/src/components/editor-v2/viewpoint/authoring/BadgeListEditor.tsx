@@ -1,5 +1,5 @@
 import React from 'react';
-import { ListEditor, Input, Select, Checkbox, HelpText, ConditionalEditor, type PathBuilderFeatures } from '../../../ui';
+import { ListEditor, Input, Select, Toggle, HelpText, ConditionalEditor, type PathBuilderFeatures } from '../../../ui';
 import type { BadgeSpec, BadgePosition } from '../ir/irTypes';
 
 const POSITION_OPTIONS = [
@@ -92,7 +92,7 @@ export const BadgeListEditor: React.FC<BadgeListEditorProps> = ({ badges, featur
                             <ConditionalEditor
                                 value={badge.visible}
                                 onChange={(next) => replace(index, { ...badge, visible: next ?? true })}
-                                renderValue={(v, onCh) => <Checkbox checked={v} onChange={onCh} label="visible" />}
+                                renderValue={(v, onCh) => <Toggle checked={v} onChange={onCh} label="visible" size="xs" />}
                                 defaultValue={true}
                                 features={features}
                                 featuresHint={featuresHint}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Select, Checkbox, ConditionalEditor, type PathBuilderFeatures } from '../../../ui';
+import { Select, Toggle, ConditionalEditor, type PathBuilderFeatures } from '../../../ui';
 import { TextSourceEditor } from './TextSourceEditor';
 import { TextStyleEditor } from './TextStyleEditor';
 import type { LabelSpec, LabelPosition, TextSource, TextStyle } from '../ir/irTypes';
@@ -78,10 +78,11 @@ export const LabelEntryEditor: React.FC<LabelEntryEditorProps> = ({
                 <label className="jj-field-label">Editable</label>
                 {editableIsWidget
                     ? <span style={CHIP}>editable: advanced widget</span>
-                    : <Checkbox
+                    : <Toggle
                         checked={editable === true}
                         onChange={(c) => onChange({ ...label, editable: c })}
                         label="editable inline"
+                        size="xs"
                     />}
             </div>
 
@@ -93,7 +94,7 @@ export const LabelEntryEditor: React.FC<LabelEntryEditorProps> = ({
                 <ConditionalEditor
                     value={label.visible}
                     onChange={(next) => onChange({ ...label, visible: next })}
-                    renderValue={(v, onCh) => <Checkbox checked={v} onChange={onCh} label="visible" />}
+                    renderValue={(v, onCh) => <Toggle checked={v} onChange={onCh} label="visible" size="xs" />}
                     defaultValue={true}
                     features={features}
                     featuresHint={featuresHint}

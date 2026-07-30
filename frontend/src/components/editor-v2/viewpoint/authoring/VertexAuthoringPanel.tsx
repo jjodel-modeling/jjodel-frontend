@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { LProject, LPointerTargetable, DClass, type LViewElement } from '../../../../joiner';
-import { Input, Select, NumberInput, ColorPicker, ErrorText, Button, HelpText, ConditionalEditor, Checkbox, FormSection, type PathBuilderFeatures } from '../../../ui';
+import { Input, Select, NumberInput, ColorPicker, ErrorText, Button, HelpText, ConditionalEditor, Toggle, FormSection, type PathBuilderFeatures } from '../../../ui';
 import { getMetaclassInfo, type MetaclassInfo } from '../../hooks/useEditorMode';
 import { validateIR } from '../ir/irValidate';
 import { defaultObjectViewIR } from '../ir/irDefaults';
@@ -270,10 +270,11 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                 the runtime gate: shown state = explicit flag ?? per-form default. */}
             <FormSection title="Sizing" divider={false}>
                 <div className="jj-field">
-                    <Checkbox
+                    <Toggle
                         checked={draft.resizable ?? defaultResizableForForm(typeof form === 'string' ? form : undefined)}
                         onChange={(checked) => patch({ ...draft, resizable: checked })}
                         label="Resizable"
+                        size="xs"
                     />
                     {/* icon={false}: inside the Properties card the hint is a quiet
                         indented line under the field label, without the (i) glyph. */}
