@@ -1,5 +1,4 @@
 import React from 'react';
-import { Button } from '../Button';
 import { Toggle } from '../Toggle';
 import { PredicateBuilder } from '../PredicateBuilder';
 import type { PathBuilderFeatures } from '../PathBuilder';
@@ -87,9 +86,21 @@ export function ConditionalEditor<T>({
 
     return (
         <div className={styles.wrapper}>
-            <div className={styles.modeToggle}>
-                <Button variant={mode === 'fixed' ? 'primary' : 'ghost'} size="sm" onClick={switchToFixed}>Fixed</Button>
-                <Button variant={mode === 'conditional' ? 'primary' : 'ghost'} size="sm" onClick={switchToConditional}>Conditional</Button>
+            {/* Segmented switch, not two buttons: the pair is one mode selector with a
+                single active choice, which the raised pill states directly. */}
+            <div className={styles.modeToggle} role="group" aria-label="Value mode">
+                <button
+                    type="button"
+                    className={`${styles.modeOpt}${mode === 'fixed' ? ` ${styles.modeOptActive}` : ''}`}
+                    aria-pressed={mode === 'fixed'}
+                    onClick={switchToFixed}
+                >Fixed</button>
+                <button
+                    type="button"
+                    className={`${styles.modeOpt}${mode === 'conditional' ? ` ${styles.modeOptActive}` : ''}`}
+                    aria-pressed={mode === 'conditional'}
+                    onClick={switchToConditional}
+                >Conditional</button>
             </div>
 
             {mode === 'fixed' && renderValue((value as T) ?? defaultValue, (v) => onChange(v))}

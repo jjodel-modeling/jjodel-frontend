@@ -262,16 +262,14 @@ $pc-slate-50:  #f8fafc;
 $pc-accent:        #0ea5e9;   // active tab underline, Add label
 $pc-accent-strong: #0284c7;   // VIEW chip text, active tab text
 $pc-accent-soft:   #e0f2fe;   // VIEW chip background
-$pc-check:         #3b82f6;   // checked checkbox, sub-card dot
 // radii
 $pc-radius-input: 12px;
 $pc-radius-chip: 8px;
 $pc-radius-ghost: 10px;
-$pc-radius-check: 6px;
 // spacing
 $pc-gap-section: 24px;
 $pc-gap-in-section: 12px;
-$pc-hint-indent: 32px;        // 20px checkbox + 12px gap
+$pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Checkbox)
 
 .properties-panel-container {
 
@@ -284,15 +282,30 @@ $pc-hint-indent: 32px;        // 20px checkbox + 12px gap
         color: $pc-slate-600;
     }
 
+    // ─── Header row 1 actions slot: back + help, portaled up by ViewData ───
+    .properties-panel-header__actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+
+        // `.command-bar` is built for a standalone toolbar row: it carries a 10px
+        // bottom margin (commandbar.scss:23) that would lift its glyph off the
+        // header's centre line. Neutralised here only.
+        .command-bar {
+            margin-bottom: 0;
+            height: 24px;
+        }
+
+        // The back chevron's frame is a border on `.tab-btn.back::before`
+        // (commandbar.scss:306); (0,5,0) beats that (0,3,0) base. The rule follows
+        // the button up here — in the header row the frame would box it against the
+        // pin and collapse buttons, which are frameless.
+        .command-bar .tab-btn.back::before { border-color: transparent; }
+    }
+
     // ─── Header row 2: breadcrumb + VIEW chip ───
     .props-header--view {
         border-bottom: 1px solid $pc-slate-100;
-
-        // The back chevron's frame is a border on `.tab-btn.back::before`
-        // (commandbar.scss:306); (0,5,0) beats that (0,3,0) base.
-        .command-bar .tab-btn.back::before { border-color: transparent; }
-
-        .props-header__icon .bi { font-size: 16px; color: $pc-slate-500; }
 
         .path-separator { font-size: 12px; color: $pc-slate-300; margin: auto 6px; }
 
@@ -372,6 +385,17 @@ $pc-hint-indent: 32px;        // 20px checkbox + 12px gap
         background-color: #ffffff;
     }
 
+    // `Select` renders `appearance:none` + its own chevron, absolutely positioned in a
+    // 36px right gutter it reserves with `padding-right`. The shorthand above wipes
+    // that gutter, so the selected value ran underneath the chevron. Restored here —
+    // and the vertical padding drops to 8px because the component keeps the box at a
+    // fixed 40px: at 11px the content box (18px) was shorter than the 15px text line,
+    // squeezing the value. 8px leaves 24px, so it sits clear, and the select still
+    // matches the inputs' 40px height instead of growing past them.
+    .jj-field select {
+        padding: 8px 36px 8px 14px;
+    }
+
     // ─── Stepper (− value +): the NumberInput wrapper, reached structurally. The
     //     `[role=checkbox]` exclusion keeps the Checkbox out of this branch.
     .jj-field > div:has(> button:not([role="checkbox"]) + input) {
@@ -397,24 +421,11 @@ $pc-hint-indent: 32px;        // 20px checkbox + 12px gap
         }
     }
 
-    // ─── Checkboxes (Resizable, editable inline, visible, …) ───
-    button[role="checkbox"] {
-        width: 20px;
-        height: 20px;
-        border: 2px solid $pc-slate-300;
-        border-radius: $pc-radius-check;
-        background-color: #ffffff;
-
-        &[aria-checked="true"] {
-            background-color: $pc-check;
-            border-color: $pc-check;
-
-            &:hover:not(:disabled) {
-                background-color: #2563eb;
-                border-color: #2563eb;
-            }
-        }
-    }
+    // ─── Checkboxes: no card override (2026-07-30) ───
+    // The mockup's 20x20 / r6 / #3b82f6 box was a look of its own — a blue that is
+    // not a design-system colour — so the card now renders the shared `Checkbox`
+    // exactly as the rest of the app does (18x18, r4, checked slate #334155).
+    // `$pc-hint-indent` follows it back to 26px.
 
     // ─── Hints (HelpText): indented onto the label column, wrapped measure ───
     .jj-field > p {
@@ -423,6 +434,15 @@ $pc-hint-indent: 32px;        // 20px checkbox + 12px gap
         font-size: 13px;
         line-height: 1.5;
         color: $pc-slate-400;
+    }
+
+    // The (i) glyph is dropped inside the card: in the mockup a hint is a quiet
+    // line of text, not an annotated callout. Card-scoped because `HelpText` is
+    // app-wide (reached also through `Input`/`Field`), so its icon survives
+    // everywhere else. `p > i.bi-info-circle` is the component's own signature —
+    // grep: `bi-info-circle` has no other producer inside this card.
+    p > i.bi-info-circle {
+        display: none;
     }
 
     // ─── Secondary action in a field (e.g. Propagate size): ghost, same column ───
@@ -1106,10 +1126,6 @@ $pc-hint-indent: 32px;        // 20px checkbox + 12px gap
         .jj-field > button:disabled {
             border-color: #1e293b;
             color: #475569;
-        }
-
-        button[role="checkbox"] {
-            border-color: #334155;
         }
 
         .props-label-entry-split {

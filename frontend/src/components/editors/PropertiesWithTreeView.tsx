@@ -452,6 +452,11 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                     >
                         <i className="bi bi-sliders" />
                         <span>PROPERTIES</span>
+                        {/* Slot for the context actions of whatever the body is showing
+                            (today: the view editor's back + help, portaled up by ViewData).
+                            Empty and zero-width when nothing claims it, so the pin and
+                            collapse buttons keep their position. */}
+                        <div className="properties-panel-header__actions" />
                         <button
                             className={`properties-panel-pin-btn${isPinned ? ' is-active' : ''}`}
                             onClick={togglePin}

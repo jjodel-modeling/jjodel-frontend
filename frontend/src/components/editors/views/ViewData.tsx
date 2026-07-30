@@ -1,4 +1,5 @@
-import React, {Dispatch, ReactElement, ReactNode, useState} from 'react';
+import React, {Dispatch, ReactElement, ReactNode, useEffect, useState} from 'react';
+import {createPortal} from 'react-dom';
 import {
     Defaults,
     DState,
@@ -44,7 +45,6 @@ function ViewDataComponent(props: AllProps) {
     const viewpoints = props.viewpoints;
     const debug = props.debug;
     const readOnly = !debug && Defaults.check(view.id);
-    const viewChain: LViewElement[] = [...view.fatherChain.reverse(), view];
 
     const isVP: boolean = view.className === DViewPoint.cname;
     const isV: boolean = !isVP;
@@ -148,31 +148,40 @@ function ViewDataComponent(props: AllProps) {
     // from a view to a viewpoint), snap to the first available.
     const activeDescriptor = tabs.find(t => t.id === activeTab) ?? tabs[0];
 
+    // Context actions (back + help) are hosted by the Properties card header, so the
+    // card shows a single header row and the context row carries only the breadcrumb.
+    // The slot is looked up after mount — on the first render the header is committed
+    // but not yet queryable. When there is no slot (the standalone NestedView host,
+    // which owns no such header) the actions render inline, exactly as before.
+    const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
+    useEffect(() => {
+        setHeaderSlot(document.querySelector<HTMLElement>('.properties-panel-header__actions'));
+    }, []);
+
+    const headerActions = (
+        <>
+            <CommandBar>
+                <Btn icon={'back'} action={() => props.setSelectedView(undefined)} tip={'Back'}/>
+            </CommandBar>
+            <HelpButton helpKey="properties-panel" />
+        </>
+    );
+
     return (
         <div className={"view-editor-root"}>
             <div className={'view-editor-header view-entity-header'}>
-                {/* Single context row — back + eye + inline breadcrumb (ends with the
-                    view name) + type badge + help. The breadcrumb replaces the separate
-                    .props-header__name and the former light-blue breadcrumb band. */}
+                {/* Context row — the element being edited + its type badge. The ancestor
+                    chain was dropped (2026-07-30): the Tree card sitting right above the
+                    Properties card already exposes it, so repeating it here only cost
+                    width. Back and help moved to the card header row (`headerActions`). */}
                 <div className="props-header props-header--view">
-                    <CommandBar>
-                        <Btn icon={'back'} action={() => props.setSelectedView(undefined)} tip={'Back'}/>
-                    </CommandBar>
-                    <div className="props-header__icon"><i className="bi bi-eye" /></div>
-                    <div className={"path-list"}>{
-                        (viewChain.map((v) => (
-                            <div className={"path-element"} onClick={()=>props.setSelectedView(v.id)}>
-                                {U.cropStr(v.name, 1,1, 10, 10)}
-                            </div>
-                        )) as any
-                        ).separator(
-                            <i className={"path-separator bi bi-chevron-right"} />
-                        )
-                    }</div>
+                    {headerSlot ? createPortal(headerActions, headerSlot) : headerActions}
+                    <div className={"path-list"}>
+                        <div className={"path-element"}>{U.cropStr(view.name, 1, 1, 10, 10)}</div>
+                    </div>
                     <span className={`jj-type-badge ${isVP ? 'jj-type-badge--viewpoint' : 'jj-type-badge--view'}`}>
                         {isVP ? 'VIEWPOINT' : 'VIEW'}
                     </span>
-                    <HelpButton helpKey="properties-panel" />
                 </div>
             </div>
 
