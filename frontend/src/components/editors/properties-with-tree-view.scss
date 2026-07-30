@@ -65,10 +65,12 @@ $radius-md: 6px;
     // Card (2026-07-28 Fase 2A): white rounded panel on the tinted backdrop. Radius
     // + overflow:hidden round the header/body corners. The shadow is kept small and
     // contained (the wrapper's overflow:hidden clips wide shadows at the tab edges).
+    // B4 skin (2026-07-30): frame values from the approved mockup replica — sky-100
+    // hairline, 16px radius, two-layer soft shadow.
     background: #fff;
-    border: 1px solid #e2e8f0; // slate-200 hairline
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.10);
+    border: 1px solid #dbeafe;
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.05);
 
     // The Info component styles already handle scrolling
     .properties-tab,
@@ -276,68 +278,243 @@ $radius-md: 6px;
 }
 
 // ============================================
-// MOCKUP ALIGNMENT (2026-07-29, fase 2B/B4)
-// Every rule below is anchored on `.properties-panel-container`, so the shared
-// design-system components (Checkbox, HelpText, Button, CommandBar) keep their
-// global styling everywhere else in the app. The components are CSS-module based,
-// so their hashed classes are unreachable from here: the hooks used instead are
-// stable — ARIA roles/states, Bootstrap icon classes and DOM structure.
+// B4: mockup skin (valori dalla replica approvata) — 2026-07-30
+//
+// Everything is anchored on `.properties-panel-container`, the Properties card root
+// inside the floating overlay, so the shared design-system components keep their
+// global styling everywhere else in the app. Checkbox / HelpText / Button /
+// NumberInput are CSS-module based: their hashed classes cannot be reached from an
+// external sheet, so the hooks used here are stable ones — ARIA role + state, the
+// global `.jj-field*` classes, Bootstrap icon classes and DOM structure.
+//
+// `!important` appears only where the at-rest base rules already use it
+// (`viewapplyto.scss:815` on select, `info-improvements.scss:1174` on inputs);
+// specificity alone cannot win against those.
 // ============================================
+
+// palette
+$pc-slate-800: #1e293b;
+$pc-slate-700: #334155;
+$pc-slate-600: #475569;
+$pc-slate-500: #64748b;
+$pc-slate-400: #94a3b8;
+$pc-slate-300: #cbd5e1;
+$pc-slate-200: #e2e8f0;
+$pc-slate-100: #f1f5f9;
+$pc-slate-50:  #f8fafc;
+$pc-accent:        #0ea5e9;   // active tab underline, Add label
+$pc-accent-strong: #0284c7;   // VIEW chip text, active tab text
+$pc-accent-soft:   #e0f2fe;   // VIEW chip background
+$pc-check:         #3b82f6;   // checked checkbox, sub-card dot
+// radii
+$pc-radius-input: 12px;
+$pc-radius-chip: 8px;
+$pc-radius-ghost: 10px;
+$pc-radius-check: 6px;
+// spacing
+$pc-gap-section: 24px;
+$pc-gap-in-section: 12px;
+$pc-hint-indent: 32px;        // 20px checkbox + 12px gap
+
 .properties-panel-container {
 
-    // D1 — back chevron: drop the boxed frame (`commandbar.scss:306` draws a 1px
-    // border on the ::before). (0,4,0) beats the base (0,3,0); the glyph stays.
-    .props-header--view .command-bar .tab-btn.back::before {
-        border-color: transparent;
+    // ─── Header row 1: title + B2 segmented control ───
+    .properties-panel-header > span:first-of-type {
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: $pc-slate-600;
     }
 
-    // D2 — checkbox: accent fill with a white tick when checked, instead of the slate
-    // fill the Checkbox module ships (`Checkbox.module.css:41`). Reached by role +
-    // aria-checked, so nothing outside this card changes.
+    .properties-mode-switch {
+        padding: 3px;
+        border: none;
+        border-radius: $pc-radius-ghost;
+        background-color: $pc-slate-100;
+
+        &__opt {
+            font-size: 13px;
+            font-weight: 600;
+            color: $pc-slate-400;
+            padding: 4px 10px;
+            border-radius: $pc-radius-chip;
+
+            &--active {
+                background-color: #ffffff;
+                color: $pc-slate-800;
+                box-shadow: 0 1px 2px rgba(15, 23, 42, 0.10);
+            }
+        }
+    }
+
+    // ─── Header row 2: breadcrumb + VIEW chip ───
+    .props-header--view {
+        border-bottom: 1px solid $pc-slate-100;
+
+        // The back chevron's frame is a border on `.tab-btn.back::before`
+        // (commandbar.scss:306); (0,5,0) beats that (0,3,0) base.
+        .command-bar .tab-btn.back::before { border-color: transparent; }
+
+        .props-header__icon .bi { font-size: 16px; color: $pc-slate-500; }
+
+        .path-separator { font-size: 12px; color: $pc-slate-300; margin: auto 6px; }
+
+        .path-element {
+            font-size: 15px;
+            color: $pc-slate-500;
+
+            // Context segments in normal case. The data itself can be all-caps (the
+            // string is the viewpoint's own name via `U.cropStr(v.name)`), so the case
+            // is normalised visually: `lowercase` + capitalised first letter. CSS has
+            // no per-word Title Case for already-uppercase text — see the residual
+            // note in the log entry.
+            &:not(:last-of-type) {
+                text-transform: lowercase;
+
+                &::first-letter { text-transform: uppercase; }
+            }
+        }
+
+        // The view / viewpoint currently open.
+        .path-element:last-of-type {
+            font-size: 15px;
+            font-weight: 700;
+            color: $pc-slate-800;
+        }
+
+        .jj-type-badge {
+            margin-left: auto;              // pushed right, before the help button
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            padding: 4px 10px;
+            border-radius: $pc-radius-chip;
+        }
+
+        .jj-type-badge--view {
+            background: $pc-accent-soft;
+            color: $pc-accent-strong;
+        }
+    }
+
+    // ─── Tab bar (Apply to / Template / IR / …) ───
+    .view-editor-tab-bar { border-bottom: 1px solid $pc-slate-100; }
+
+    .view-editor-tab {
+        font-size: 14px;
+        padding: 12px 10px;
+        color: $pc-slate-500;
+        border-bottom: 2px solid transparent;
+
+        &.active {
+            color: $pc-accent-strong;
+            font-weight: 600;
+            border-bottom-color: $pc-accent;
+        }
+    }
+
+    // ─── Body: horizontal padding (base rule uses !important) ───
+    .view-editor-tab-content > section.properties-tab.properties-panel {
+        padding: 16px 20px !important;
+    }
+
+    // ─── Field labels ───
+    .jj-field-label {
+        font-size: 14px;
+        color: $pc-slate-500;
+    }
+
+    // ─── Text inputs / selects ───
+    .jj-field input:not([type="color"]):not([type="checkbox"]),
+    .jj-field select {
+        font-size: 15px;
+        color: $pc-slate-800;
+        padding: 11px 14px;
+        border: 1px solid $pc-slate-200 !important;
+        border-radius: $pc-radius-input;
+        background-color: #ffffff;
+    }
+
+    // ─── Stepper (− value +): the NumberInput wrapper, reached structurally. The
+    //     `[role=checkbox]` exclusion keeps the Checkbox out of this branch.
+    .jj-field > div:has(> button:not([role="checkbox"]) + input) {
+        border: 1px solid $pc-slate-200;
+        border-radius: $pc-radius-input;
+        overflow: hidden;
+
+        > button:not([role="checkbox"]) {
+            width: 38px;
+            color: $pc-slate-400;
+            border: none;
+            background: transparent;
+        }
+
+        > input {
+            font-size: 15px;
+            font-weight: 600;
+            color: $pc-slate-800;
+            min-width: 42px;
+            text-align: center;
+            border: none !important;
+            border-radius: 0;
+        }
+    }
+
+    // ─── Checkboxes (Resizable, editable inline, visible, …) ───
     button[role="checkbox"] {
-        border-radius: 5px;
-        border-color: #cbd5e1;              // slate-300 hairline when off
+        width: 20px;
+        height: 20px;
+        border: 2px solid $pc-slate-300;
+        border-radius: $pc-radius-check;
+        background-color: #ffffff;
+
+        &[aria-checked="true"] {
+            background-color: $pc-check;
+            border-color: $pc-check;
+
+            &:hover:not(:disabled) {
+                background-color: #2563eb;
+                border-color: #2563eb;
+            }
+        }
     }
 
-    button[role="checkbox"][aria-checked="true"] {
-        background-color: #0ea5e9;
-        border-color: #0ea5e9;
-    }
-
-    button[role="checkbox"][aria-checked="true"]:hover:not(:disabled) {
-        background-color: #0284c7;
-        border-color: #0284c7;
-    }
-
-    // D3 — field hints (HelpText): hanging indent onto the label column (checkbox
-    // 18px + 8px gap), quieter tone, narrower measure so they wrap.
+    // ─── Hints (HelpText): indented onto the label column, wrapped measure ───
     .jj-field > p {
-        margin-left: 26px;
-        max-width: 38ch;
-        font-size: 11px;
-        color: #94a3b8;                     // slate-400
+        margin-left: $pc-hint-indent;
+        max-width: 290px;
+        font-size: 13px;
+        line-height: 1.5;
+        color: $pc-slate-400;
     }
 
-    // D4 — secondary action inside a field (e.g. Propagate size): ghost + aligned on
-    // the same column as the hint.
+    // ─── Secondary action in a field (e.g. Propagate size): ghost, same column ───
     .jj-field > button {
-        margin-left: 26px;
-        padding: 6px 12px;
-        border-radius: 8px;
-        border-color: #e2e8f0;
-        color: #64748b;
+        margin-left: $pc-hint-indent;
+        padding: 8px 16px;
+        font-size: 14px;
+        color: $pc-slate-400;
+        background-color: #ffffff;
+        border: 1px solid $pc-slate-200;
+        border-radius: $pc-radius-ghost;
+
+        &:hover:not(:disabled) {
+            color: $pc-slate-600;
+            border-color: $pc-slate-300;
+        }
+
+        &:disabled {
+            color: $pc-slate-300;
+            border-color: $pc-slate-100;
+        }
     }
 
-    .jj-field > button:disabled {
-        border-color: #f1f5f9;
-        color: #cbd5e1;
-    }
-
-    // D5 — label sub-card: dashed hairline between the field block and the visibility
-    // block. The sub-card chrome itself lives in `ListEditor.module.css`.
+    // ─── Label sub-card: dashed divider between the fields and the visibility block
+    //     (the sub-card chrome itself lives in ListEditor.module.css) ───
     .props-label-entry-split {
-        border-top: 1px dashed #e2e8f0;
-        padding-top: 8px;
+        border-top: 1.5px dashed $pc-slate-300;
+        padding-top: $pc-gap-in-section;
     }
 }
 

@@ -1,9 +1,9 @@
-/* Vertical rhythm sized for narrow side panels (the Properties/IR authoring
-   column, ~300px): section 20px, title 4px, divider 8px, inter-field 16px.
-   The former 32/8/16/20 scale was tuned for wide forms and read as very airy
-   once a panel stacks 6+ sections. */
+/* Vertical rhythm from the approved mockup replica (B4): 24px between sections,
+   12px between fields inside a section, 12px under the section title. Sized for
+   the narrow Properties column, where the original 32/8/16/20 scale (tuned for
+   wide forms) read as very airy once a panel stacks 6+ sections. */
 .section {
-  margin-top: var(--spacing-5);
+  margin-top: 24px;
 }
 
 .section:first-child {
@@ -11,12 +11,12 @@
 }
 
 .title {
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: 0.05em;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: var(--color-slate-500);
-  margin: 0 0 var(--spacing-1) 0;
+  color: #64748b;
+  margin: 0 0 12px 0;
 }
 
 .divider {
@@ -28,5 +28,5 @@
 .content {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-4);
+  gap: 12px;
 }

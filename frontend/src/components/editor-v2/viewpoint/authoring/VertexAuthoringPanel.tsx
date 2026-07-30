@@ -215,7 +215,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                 ones (compartments, badges, matching) further down. */}
 
             {/* View label (IR label field, distinct from the DViewElement name) */}
-            <FormSection title="General">
+            <FormSection title="General" divider={false}>
                 <div className="jj-field">
                     <label className="jj-field-label">Label</label>
                     <Input value={draft.label ?? ''} onChange={(e) => patch({ ...draft, label: e.target.value })} />
@@ -223,7 +223,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
             </FormSection>
 
             {/* Shape form */}
-            <FormSection title="Shape">
+            <FormSection title="Shape" divider={false}>
                 <div className="jj-field">
                     <ConditionalEditor<ShapeForm>
                         value={form}
@@ -239,7 +239,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
             </FormSection>
 
             {/* Fill */}
-            <FormSection title="Fill">
+            <FormSection title="Fill" divider={false}>
                 <div className="jj-field">
                     <ConditionalEditor
                         value={fill}
@@ -255,7 +255,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
             </FormSection>
 
             {/* Border (always scalar in the schema) */}
-            <FormSection title="Border">
+            <FormSection title="Border" divider={false}>
                 <div className="jj-field">
                     <label className="jj-field-label">Color</label>
                     <ColorPicker value={border.color} onChange={(hex) => patchBorder({ color: hex })} />
@@ -268,7 +268,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
 
             {/* Resizable — top-level flag (like `label`, not a shape.* field). Mirrors
                 the runtime gate: shown state = explicit flag ?? per-form default. */}
-            <FormSection title="Sizing">
+            <FormSection title="Sizing" divider={false}>
                 <div className="jj-field">
                     <Checkbox
                         checked={draft.resizable ?? defaultResizableForForm(typeof form === 'string' ? form : undefined)}
@@ -292,7 +292,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
             </FormSection>
 
             {/* Labels — full list (includes the former primary label at index 0) */}
-            <FormSection title="Labels">
+            <FormSection title="Labels" divider={false}>
                 <LabelListEditor
                     labels={labels}
                     features={features}
@@ -307,7 +307,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                 while hidden: the whole cloned ir (draft.fieldCompartments
                 included) is written back on every commit. */}
             {advanced && (
-                <FormSection title="Field compartments">
+                <FormSection title="Field compartments" divider={false}>
                     <FieldCompartmentListEditor
                         compartments={fieldCompartments}
                         features={features}
@@ -320,7 +320,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
 
             {/* Badges — Advanced only (same round-trip guarantee). */}
             {advanced && (
-                <FormSection title="Badges">
+                <FormSection title="Badges" divider={false}>
                     <BadgeListEditor
                         badges={badges}
                         features={features}
