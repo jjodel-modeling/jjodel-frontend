@@ -2100,44 +2100,46 @@ $transition-menu: 150ms ease;
 }
 
 // ============================================
-// APP BAR — LEVEL BADGE (read-only)
+// APP BAR — BASIC/ADVANCED MODE SWITCH
 // ============================================
+// Segmented pill carrying the global interface mode, in the slot the read-only
+// level badge used to occupy (2026-07-30). Geometry and colours are inherited from
+// the properties-card mockup skin this control was moved out of (B4, ca558c972), so
+// it still reads as the same control family; the label is 12px instead of 13px to
+// sit under the app bar's 12px menu titles rather than shout over them.
 
-.appbar-level-badge {
+.appbar-mode-switch {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 10px;
-  background: var(--color-bg-secondary, #f8fafc);
-  border: 0.5px solid var(--color-border-tertiary, #e2e8f0);
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--color-text-tertiary, #94a3b8);
-  cursor: pointer;
-  transition: all 150ms ease;
+  gap: 1px;
+  padding: 3px;
+  border-radius: 10px;
+  background-color: #f1f5f9;
   flex-shrink: 0;
 
-  &:hover {
-    border-color: var(--color-text-tertiary, #94a3b8);
-    color: var(--color-text-secondary, #64748b);
-  }
+  &__opt {
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    line-height: 1;
+    padding: 4px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 150ms ease, color 150ms ease;
 
-  &__dot {
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: currentColor;
-    flex-shrink: 0;
-  }
+    &:hover:not(.appbar-mode-switch__opt--active) {
+      color: #475569;
+    }
 
-  &--advanced {
-    color: var(--color-text-secondary, #64748b);
-    border-color: #cbd5e1;
-
-    &:hover {
-      color: var(--color-text-primary, #475569);
-      border-color: var(--color-text-tertiary, #94a3b8);
+    &--active {
+      background-color: #ffffff;
+      color: #1e293b;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.10);
     }
   }
 }
@@ -2266,19 +2268,23 @@ $transition-menu: 150ms ease;
     }
   }
 
-  .appbar-level-badge {
-    background: rgba(255, 255, 255, 0.04);
-    border-color: #475569;
-    color: #64748b;
+  // Mode switch — dark: the white active pill would glare on the dark bar, so the
+  // raised segment is slate (mirrors the same control inside the properties card).
+  .appbar-mode-switch {
+    background-color: rgba(255, 255, 255, 0.05);
 
-    &:hover {
-      border-color: #64748b;
+    &__opt {
       color: #94a3b8;
-    }
 
-    &--advanced {
-      color: #94a3b8;
-      border-color: #64748b;
+      &:hover:not(.appbar-mode-switch__opt--active) {
+        color: #cbd5e1;
+      }
+
+      &--active {
+        background-color: #334155;
+        color: #f1f5f9;
+        box-shadow: none;
+      }
     }
   }
 }

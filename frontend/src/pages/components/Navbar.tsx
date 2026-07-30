@@ -60,6 +60,7 @@ import { useTheme } from '../../services/ThemeService';
 import { buildProjectExportJson } from '../../model/megamodelPersistence';
 import { getRuntimeMegamodel } from '../../model/megamodelRuntime';
 import { useAvatar } from '../../hooks/useAvatar';
+import { isAdvancedMode } from '../../hooks/useInterfaceMode';
 import { AVATAR_COLORS, AVATAR_ICONS } from '../../constants/avatarConfig';
 import { JjodelEvents, EnvGenEvents } from '../../events/registry';
 import { DOCUMENT_TYPES, DocumentTypeEntry } from '../../constants/documentTypes';
@@ -864,6 +865,32 @@ function NavbarComponent(props: AllProps) {
             enableAdvancedMode();
         }
     };
+
+    // Direct selection for the app bar's Basic|Advanced segmented control. Routes to the
+    // same two writers as the View menu entry and Cmd+Shift+M — no second write path — and
+    // no-ops when the requested mode is already active, so re-clicking the active segment
+    // does not replay the toast or the first-time tutorial.
+    const selectInterfaceMode = (next: 'basic' | 'advanced') => {
+        const isAdv = next === 'advanced';
+        if (isAdv === !!props.advanced) return;
+        if (isAdv) enableAdvancedMode(); else disableAdvancedMode();
+    };
+
+    // Restore the persisted mode once per mount. Redux `advanced` has no boot-time
+    // initializer (default `false`, store.tsx:215) while the user's last explicit choice
+    // lives in localStorage, so without this a reload silently drops Advanced everywhere.
+    // Owned by the app bar because the mode is global: the Navbar is the only component
+    // mounted on every view (dashboard included), whereas the Properties card — where this
+    // effect used to live — mounts only inside the project editor. Only the positive
+    // direction is restored: a `false` in Redux is indistinguishable from "never set", so a
+    // project state loaded with advanced:true is never downgraded.
+    useEffect(() => {
+        if (!props.advanced && isAdvancedMode()) {
+            SetRootFieldAction.new('advanced', true);
+            windoww.advanced = true;
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Layout mode state
     const [layoutMode, setLayoutModeState] = useState<LayoutMode>(() => {
@@ -1777,10 +1804,6 @@ function NavbarComponent(props: AllProps) {
         return () => document.removeEventListener('mousedown', handleMouseDown);
     }, [showOverflow]);
 
-    // Level badge component
-    // LevelBadge — inlined below. useSettingsModal() hoisted above.
-    const levelLabel = props.advanced ? 'Advanced' : 'Basic';
-
     return(<>
         <nav id={'navbar'} className={'w-100 nav-container d-flex appbar'} style={{zIndex: 99}}>
             <div className='nav-logo' onClick={() => R.navigate('/allProjects')}>
@@ -1904,15 +1927,23 @@ function NavbarComponent(props: AllProps) {
             )}
 
             <div className="main-header-right">
-                {/* Level badge (read-only) — inlined */}
-                <button
-                    className={`appbar-level-badge ${props.advanced ? 'appbar-level-badge--advanced' : ''}`}
-                    onClick={() => openSettings('profile')}
-                    title="Click to change in Settings"
-                >
-                    <span className="appbar-level-badge__dot" />
-                    {levelLabel}
-                </button>
+                {/* Basic/Advanced mode switch — the single visible writer for the global
+                    interface mode (2026-07-30). Replaces the former read-only level badge:
+                    same state, now actionable in place instead of bouncing to Settings. */}
+                <div className="appbar-mode-switch" role="group" aria-label="Interface mode">
+                    {(['basic', 'advanced'] as const).map((m) => (
+                        <button
+                            key={m}
+                            type="button"
+                            className={`appbar-mode-switch__opt${(m === 'advanced') === !!props.advanced ? ' appbar-mode-switch__opt--active' : ''}`}
+                            onClick={() => selectInterfaceMode(m)}
+                            aria-pressed={(m === 'advanced') === !!props.advanced}
+                            title={m === 'basic' ? 'Basic — essential options only' : 'Advanced — all options and expert sections'}
+                        >
+                            {m === 'basic' ? 'Basic' : 'Advanced'}
+                        </button>
+                    ))}
+                </div>
                 <div className="appbar__sep" />
                 {/* Layout Controls moved to EditorV2 Toolbar */}
                 {/* Tree View Toggle — currently renders nothing (commented out) */}
