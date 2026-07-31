@@ -1,14 +1,10 @@
 import {useState, MouseEventHandler, JSX} from 'react';
-import {DProject, DUser, L, LProject, LUser, R, SetRootFieldAction, U, windoww} from '../../joiner';
+import {DProject, LProject, LUser, R, U} from '../../joiner';
 
-import { icon } from './icons/Icons';
 import {DashProps} from "./Dashboard";
 import Collaborative from "../../components/collaborative/Collaborative";
 import {ProjectsApi} from "../../api/persistance";
-import storage from "../../data/storage";
 import { isProjectModified } from '../../common/libraries/projectModified';
-import { Tooltip } from '../../components/forEndUser/Tooltip';
-import {SaveManager} from "../../components/topbar/SaveManager";
 import {Link, useLocation, useNavigate, useSearchParams} from "react-router-dom";
 import { DevModeLabel } from '../../components/DevModeLabel/DevModeLabel';
 import { buildProjectExportJson } from '../../model/megamodelPersistence';
@@ -27,11 +23,6 @@ function relativeTime(date: number | string | Date): string {
     if (days < 7) return `${days}d`;
     return `${Math.floor(days / 7)}w`;
 }
-
-interface StateProps {
-    projects: LProject[];
-}
-
 
 export type LeftBarProps = {
     user?: LUser;
@@ -76,21 +67,10 @@ const Item = (props: ItemProps) => {
     );
 }
 
-const Upload = () => {
-    return(<></>);
-    return(
-        <div className={'upload'}>
-            <i className="bi bi-arrow-up-circle"></i>
-            <p>Drop your Jjodel project archive here to import it.</p>
-        </div>
-    );
-};
-
 type MenuProps = {
     children: any;
     title?: string;
     mode?: "collapsable";
-    project?: boolean;
 };
 
 const Menu = (props: MenuProps) => {
@@ -103,7 +83,6 @@ const Menu = (props: MenuProps) => {
                 <div className="menu-header" onClick={props.mode ? () => setOpen(!open) : undefined} style={props.mode ? {cursor: 'pointer'} : {}}>
                     <h1>
                         {props.title}
-                        {isProjectModified() && props.project && <i className="bi bi-circle-fill modified"></i>}
                     </h1>
                     {props.mode && (
                         <i className={`bi ${open ? 'bi-chevron-down' : 'bi-chevron-right'}`} />
@@ -116,35 +95,6 @@ const Menu = (props: MenuProps) => {
         </div>
     );
 }
-
-const Divisor = () => {
-    return (<hr className='my-1' />);
-};
-
-const SectionLabel = ({ children }: { children: string }) => (
-    <div className="section-label">{children}</div>
-);
-
-function getProjectStatus(lastModified: number | string | Date | undefined): { label: 'Active' | 'Idle' | 'Stale'; color: string } {
-    if (!lastModified) return { label: 'Stale', color: '#64748b' };
-    const ts = typeof lastModified === 'number' ? lastModified : new Date(lastModified).getTime();
-    const h = (Date.now() - ts) / 3600000;
-    if (h < 48) return { label: 'Active', color: '#166534' };
-    if (h < 168) return { label: 'Idle', color: '#92400e' };
-    return { label: 'Stale', color: '#64748b' };
-}
-
-const ProjectHeader = ({ name, lastModified }: { name: string; lastModified?: number | string | Date }) => {
-    const status = getProjectStatus(lastModified);
-    return (
-        <div className="project-header">
-            <span className="project-header__name" title={name}>{name}</span>
-            <span className="status-badge" style={{ background: status.color }}>{status.label}</span>
-        </div>
-    );
-};
-
-Menu.Item = Item;
 
 function LeftBar(props: LeftBarProps): JSX.Element {
 

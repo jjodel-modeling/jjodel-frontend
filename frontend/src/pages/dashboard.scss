@@ -972,49 +972,6 @@ project-card .tip {
     margin-left: 8px;
   }
 
-  /* Footer - Compact */
-  .leftbar-footer {
-    margin-top: auto;
-    padding: 8px 16px;
-    border-top: 1px solid var(--color-border-primary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-
-    .version-text {
-      font-size: 11px;
-      color: var(--color-text-tertiary);
-    }
-
-    .license-badge {
-      display: inline-flex;
-      font-size: 10px;
-      border-radius: 4px;
-      overflow: hidden;
-      text-decoration: none;
-      line-height: 1;
-
-      .license-label {
-        background: #475569;
-        color: #ffffff;
-        padding: 3px 6px;
-        font-weight: 500;
-      }
-
-      .license-type {
-        background: #0D9488;
-        color: #ffffff;
-        padding: 3px 6px;
-        font-weight: 600;
-      }
-
-      &:hover {
-        opacity: 0.9;
-      }
-    }
-  }
-
   /* ---- State B: Project sidebar (psb- prefix) ---- */
 
   &.leftbar--project {
@@ -1216,17 +1173,6 @@ project-card .tip {
         }
       }
     }
-  }
-
-  .status-badge {
-    display: inline-block;
-    font-size: 10px;
-    font-weight: 600;
-    color: #fff;
-    padding: 1px 6px;
-    border-radius: 8px;
-    line-height: 1.4;
-    flex-shrink: 0;
   }
 
   .item--muted {
