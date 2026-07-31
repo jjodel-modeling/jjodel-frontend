@@ -271,8 +271,6 @@ function DockComponent(props: AllProps) {
         'editors': {floatable: true, maximizable: false, tabLocked: true}
     };
 
-    let advanced:boolean = props.advanced;
-
     const summaryTid = (id(), tid()); // advance counter for TabHeader/TabContent pairing
     const ModelsSummary = {id: 'project_summary', title: <TabHeader tid={summaryTid}><Logo style={{marginLeft: '-10px', fontSize: '1.5rem', paddingRight: '6px'}}/> {DProject.getProject()?.name}</TabHeader>, group: 'models', closable: false, content: <TabContent tid={summaryTid}><ModelsSummaryTab /></TabContent>};
     // F2 floating panels (2026-07-29): the Properties tab (`structure`) is gone from the
@@ -385,7 +383,7 @@ function DockComponent(props: AllProps) {
 
     return (
         <>
-            <PinnableDock key={''+advanced} ref={dock => { DockManager.dock = dock }} defaultLayout={layout} groups={groups} onLayoutChange={handleLayoutChange} />
+            <PinnableDock ref={dock => { DockManager.dock = dock }} defaultLayout={layout} groups={groups} onLayoutChange={handleLayoutChange} />
             <TabsOverflowMenu />
         </>
     );
@@ -393,7 +391,6 @@ function DockComponent(props: AllProps) {
 interface OwnProps {}
 interface StateProps {
     user: LUser|null
-    advanced: boolean;
 }
 interface DispatchProps {}
 type AllProps = OwnProps & StateProps & DispatchProps;
@@ -402,7 +399,6 @@ type AllProps = OwnProps & StateProps & DispatchProps;
 function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     const ret: StateProps = {} as FakeStateProps;
     ret.user = LUser.getUser();
-    ret.advanced = state.advanced;
     return ret;
 }
 
