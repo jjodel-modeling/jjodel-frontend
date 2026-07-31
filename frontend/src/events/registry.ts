@@ -37,6 +37,9 @@ export const JjodelEvents = {
   PROPERTIES_PIN_VIEW: 'jjodel:properties-pin-view',
   // Project
   NEW_PROJECT: 'jjodel:new-project',
+  CREATE_MODEL: 'jjodel:createModel',
+  CREATE_VIEWPOINT: 'jjodel:createViewpoint',
+  SHARE_PROJECT: 'jjodel:shareProject',
   OPEN_TRANSFORMATION: 'jjodel:openTransformation',
   TRANSFORMATIONS: 'jjodel:transformations',
   OPEN_NEW_TRANSFORMATION_DIALOG: 'jjodel:open-new-transformation-dialog',

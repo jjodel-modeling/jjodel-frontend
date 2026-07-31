@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import {
     LModel,
     LProject,
@@ -240,11 +239,6 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
     const [linkCopied, setLinkCopied] = useState(false);
     const projectMenuRef = useRef<HTMLDivElement>(null);
 
-    // Section from URL search params (driven by LeftBar sidebar)
-    const [searchParams] = useSearchParams();
-    const currentSection = (searchParams.get('section') || 'metamodels') as
-        'metamodels' | 'models' | 'transformations' | 'viewpoints' | 'documentation';
-
     const [showShareModal, setShowShareModal] = useState(false);
     const [showMegamodelModal, setShowMegamodelModal] = useState(false);
 
@@ -442,6 +436,20 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         const handler = () => setShowNewTransformationDialog(true);
         window.addEventListener(JjodelEvents.OPEN_NEW_TRANSFORMATION_DIALOG, handler);
         return () => window.removeEventListener(JjodelEvents.OPEN_NEW_TRANSFORMATION_DIALOG, handler);
+    }, []);
+
+    // Open New Viewpoint dialog when the project rail requests it
+    useEffect(() => {
+        const handler = () => setShowNewViewpointDialog(true);
+        window.addEventListener(JjodelEvents.CREATE_VIEWPOINT, handler);
+        return () => window.removeEventListener(JjodelEvents.CREATE_VIEWPOINT, handler);
+    }, []);
+
+    // Open the Share modal when the project rail requests it
+    useEffect(() => {
+        const handler = () => setShowShareModal(true);
+        window.addEventListener(JjodelEvents.SHARE_PROJECT, handler);
+        return () => window.removeEventListener(JjodelEvents.SHARE_PROJECT, handler);
     }, []);
 
     // Broadcast transformations to TreeView via CustomEvent
@@ -1126,6 +1134,31 @@ const ProjectEditor: React.FC<ProjectEditorProps> = ({ project, onNavigateBack }
         setShowMetamodelMenu(false);
         createM1(project, metamodel);
     };
+
+    // Create a model when the project rail requests it — same flow as this section's
+    // "+ New" button (0 metamodels: no-op; 1: create directly; N: open the picker).
+    // Refs mirror the OPEN_TRANSFORMATION listener below: the effect is mounted once,
+    // but the handler and the metamodel list change on every render.
+    const handleNewModelClickRef = useRef(handleNewModelClick);
+    handleNewModelClickRef.current = handleNewModelClick;
+    const metamodelCountRef = useRef(metamodels.length);
+    metamodelCountRef.current = metamodels.length;
+    useEffect(() => {
+        const handler = () => {
+            handleNewModelClickRef.current();
+            // With N metamodels the picker renders inside this section, which may be
+            // scrolled out of view when the request comes from the rail. Wait a frame so
+            // the dropdown is committed before scrolling to it.
+            if (metamodelCountRef.current > 1) {
+                requestAnimationFrame(() => {
+                    document.getElementById('section-models')
+                        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
+            }
+        };
+        window.addEventListener(JjodelEvents.CREATE_MODEL, handler);
+        return () => window.removeEventListener(JjodelEvents.CREATE_MODEL, handler);
+    }, []);
 
     const handleDeleteMetamodel = (mm: LModel) => {
         // Close any open tabs for this metamodel before deleting

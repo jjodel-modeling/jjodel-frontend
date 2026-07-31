@@ -5,7 +5,7 @@ import {DashProps} from "./Dashboard";
 import Collaborative from "../../components/collaborative/Collaborative";
 import {ProjectsApi} from "../../api/persistance";
 import { isProjectModified } from '../../common/libraries/projectModified';
-import {Link, useLocation, useNavigate, useSearchParams} from "react-router-dom";
+import {useLocation, useNavigate, useSearchParams} from "react-router-dom";
 import { DevModeLabel } from '../../components/DevModeLabel/DevModeLabel';
 import { buildProjectExportJson } from '../../model/megamodelPersistence';
 import { getRuntimeMegamodel } from '../../model/megamodelRuntime';
@@ -172,17 +172,13 @@ function LeftBar(props: LeftBarProps): JSX.Element {
     // "← All projects" reuses the same unsaved-check flow as closeProject
     const handleBackToProjects = closeProject;
 
-    // Section navigation — uses ?section= search param (compatible with HashRouter)
-    type ProjectSection = 'metamodels' | 'models' | 'transformations' | 'viewpoints' | 'documentation';
-    const currentSection = (searchParams.get('section') as ProjectSection) || 'metamodels';
-
-    const navigateToSection = (section: ProjectSection) => {
-        const projectId = project?.id;
-        if (!projectId) return;
-        const newParams = new URLSearchParams(searchParams);
-        newParams.set('section', section);
-        if (!newParams.has('id')) newParams.set('id', projectId);
-        setSearchParams(newParams);
+    // Rail actions whose UI is owned by ProjectEditor (modals, the metamodel-selection
+    // dropdown) are requested by CustomEvent, mirroring the OPEN_MEGAMODEL path below.
+    // The tab is activated first because that UI renders inside `project_summary`, which
+    // is not necessarily the active tab when the rail is visible (Documentation is).
+    const requestFromProjectEditor = (eventName: string) => {
+        DockManager.activateProjectSummary();
+        window.dispatchEvent(new CustomEvent(eventName));
     };
 
     const toggleFavorite = async() => {
@@ -256,9 +252,9 @@ function LeftBar(props: LeftBarProps): JSX.Element {
     const openMegamodel = () => {
         window.dispatchEvent(new CustomEvent(JjodelEvents.OPEN_MEGAMODEL));
     };
-    // Listener is added in a follow-up task (ProjectEditor mounts ShareProjectModal).
+    // Listener: ProjectEditor, which owns ShareProjectModal.
     const openShareModal = () => {
-        window.dispatchEvent(new CustomEvent('jjodel:openShareModal'));
+        requestFromProjectEditor(JjodelEvents.SHARE_PROJECT);
     };
 
     const pMetamodels = project?.metamodels || [];
@@ -338,17 +334,20 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                     'models', 'Models', 'm',
                     pModels.map(m => ({ id: m.id, name: m.name })),
                     (m) => { const lm = pModels.find(x => x.id === m.id); if (lm) DockManager.open2(lm); },
-                    () => navigateToSection('models'),
+                    () => requestFromProjectEditor(JjodelEvents.CREATE_MODEL),
                     'New model',
                 )}
 
                 {renderSection(
                     'transformations', 'Transforms', 'T',
                     pTransformations.map(t => ({ id: t.id, name: t.name })),
-                    // Click on single transform navigates to section; opening requires
-                    // source/target metamodels + execute callback that live in ProjectEditor.
-                    () => navigateToSection('transformations'),
-                    () => navigateToSection('transformations'),
+                    // Opening a transformation needs source/target metamodels + the execute
+                    // callback, all of which live in ProjectEditor: ask it to run its own
+                    // handleOpenTransformation, the same path the Tree View entries use.
+                    // No tab activation here — the handler opens (and activates) its own
+                    // jjtl_* tab, so forcing the summary first would only flash it.
+                    (t) => window.dispatchEvent(new CustomEvent(JjodelEvents.OPEN_TRANSFORMATION, { detail: { id: t.id } })),
+                    () => requestFromProjectEditor(JjodelEvents.OPEN_NEW_TRANSFORMATION_DIALOG),
                     'New transform',
                 )}
 
@@ -356,7 +355,7 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                     'viewpoints', 'Viewpoints', 'V',
                     pViewpoints.map(v => ({ id: v.id, name: v.name })),
                     (v) => { const lv = pViewpoints.find(x => x.id === v.id); if (lv) DockManager.openViewpoint(lv); },
-                    () => navigateToSection('viewpoints'),
+                    () => requestFromProjectEditor(JjodelEvents.CREATE_VIEWPOINT),
                     'New viewpoint',
                 )}
 

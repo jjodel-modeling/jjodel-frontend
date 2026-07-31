@@ -108,6 +108,34 @@ class DockManager {
         DockManager.dock.dockMove(tab, DockManager.dock.getLayout().dockbox.children[index], 'middle');
     }
 
+    /**
+     * Activate the `project_summary` tab if it is not already the active one.
+     *
+     * Callers are affordances outside the dock (the project rail) that trigger UI
+     * owned by ProjectEditor — modals and the metamodel-selection dropdown. That UI
+     * lives inside the `project_summary` tab content, and rc-dock lays inactive panes
+     * out off-screen inside a clipped container, so a `position:fixed` modal rendered
+     * in a hidden pane resolves against the translated ancestor and never shows.
+     *
+     * The rail is visible on the summary tab (already active — this is a no-op) and on
+     * the Documentation tab (`doc_*`), which is the case this exists for.
+     *
+     * @returns true if the tab was found (and thus activated), false otherwise.
+     */
+    static activateProjectSummary(): boolean {
+        if (!DockManager.dock) return false;
+        try {
+            const existing = DockManager.dock.find('project_summary');
+            if (!existing || !('content' in existing)) return false;
+            // Same activation call as the open() guard: null payload, activate = true.
+            DockManager.dock.updateTab('project_summary', null as any, true);
+            return true;
+        } catch (error) {
+            console.error('[DockManager] Error activating project summary:', error);
+            return false;
+        }
+    }
+
     static async open2(me: LModel): Promise<void> {
         const tab = (me.isMetamodel) ? TabDataMaker.metamodel(me) : TabDataMaker.model(me);
         await DockManager.open('models', tab);
