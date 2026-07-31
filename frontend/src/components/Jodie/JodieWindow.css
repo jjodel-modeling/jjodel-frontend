@@ -871,9 +871,10 @@
 .jodie-minimized {
     position: fixed;
     bottom: 100px;  /* Positioned above footer */
-    /* F3: sit left of the floating overlay (var published on <body>; 0px fallback
-       keeps the historic 30px when the overlay is hidden or absent). */
-    right: calc(var(--jj-canvas-right-inset, 0px) + 30px);
+    /* Anchored bottom-left inside the canvas area. In editor tabs the left rail
+       is unmounted, so 30px clears the canvas edge; when the rail is in the DOM,
+       the body:has(.leftbar) rule below offsets past its fixed width. */
+    left: 30px;
     z-index: 10000;
     width: 58px;
     height: 58px;
@@ -904,9 +905,14 @@
     color: #ffffff !important;  /* Ensure icon stays white on hover */
 }
 
-/* Stack FAB above notification when visible */
-body[data-notification-visible="true"] .jodie-minimized {
-    bottom: 280px;  /* Move above notification widget (~200px height + gap) */
+/* Views with the left rail mounted (dashboard, project summary): keep the FAB
+   inside the content area, to the right of the fixed-width rail. Under 768px
+   the rail slides off-canvas (dashboard.scss: left -240px) while staying in the
+   DOM, so the offset applies only where the rail is actually visible. */
+@media (min-width: 769px) {
+    body:has(.leftbar) .jodie-minimized {
+        left: calc(240px + 30px);
+    }
 }
 
 .jodie-minimized.jodie-has-unread::after {
