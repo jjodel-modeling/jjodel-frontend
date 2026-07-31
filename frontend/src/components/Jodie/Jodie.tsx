@@ -153,7 +153,7 @@ export function Jodie(): JSX.Element {
                     level: 'M2',
                 };
             }
-            return JjodieContextService.getContextString(project as LProject, activeArtifact);
+            return JjodieContextService.getContextJSON(project as LProject, activeArtifact);
         }
         catch (err) { console.warn('Could not get project context:', err); }
     }, [state.idlookup.clonedCounter, editorChangeCounter]);

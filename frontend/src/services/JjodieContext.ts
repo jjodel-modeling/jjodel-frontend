@@ -10,6 +10,7 @@
 
 import type { LProject, LClass, LAttribute, LReference, LPackage, LEnumerator, LModel } from '../joiner';
 import { DocumentationSection } from '../types/jodie';
+import { JsonModelService } from './export';
 
 // ============================================
 // EXPORTED TYPES
@@ -316,6 +317,49 @@ export class JjodieContextService {
     static getContextString(project: LProject, activeArtifact?: ActiveArtifact): string {
         const context = this.extractFromProject(project, activeArtifact);
         return this.buildContextString(context, activeArtifact);
+    }
+
+    /**
+     * Build the AI context as a semantic JSON string instead of the ad-hoc
+     * markdown of getContextString. The metamodel is emitted in the trimmed
+     * `jjodel-metamodel` shape (JsonModelService.buildMetamodelDocumentLight),
+     * wrapped in an envelope that preserves the "currently editing" signal:
+     *
+     *   { "currentlyEditing": { name, level }, "metamodel": { ... } }
+     *
+     * Scoping mirrors getContextString: the metamodel relevant to the active
+     * artefact (M1 model → its conformity metamodel, M2 → itself). When no
+     * scope resolves, every project metamodel is emitted under `metamodels`.
+     * Returns undefined when there is nothing to describe.
+     */
+    static getContextJSON(project: LProject, activeArtifact?: ActiveArtifact): string | undefined {
+        try {
+            const scope = this.resolveMetamodelScope(project, activeArtifact);
+
+            const envelope: Record<string, unknown> = {};
+            if (activeArtifact) {
+                envelope.currentlyEditing = {
+                    name: activeArtifact.name,
+                    level: activeArtifact.level === 'M1' ? 'M1 model' : 'M2 metamodel',
+                };
+            }
+
+            if (scope) {
+                envelope.metamodel = JsonModelService.buildMetamodelDocumentLight(scope);
+            } else {
+                const metamodels: LModel[] = (project as any).metamodels || [];
+                const docs = metamodels
+                    .filter((mm) => !!mm)
+                    .map((mm) => JsonModelService.buildMetamodelDocumentLight(mm));
+                if (docs.length === 0) return undefined;
+                envelope.metamodels = docs;
+            }
+
+            return JSON.stringify(envelope, null, 2);
+        } catch (err) {
+            console.warn('Could not build JSON project context:', err);
+            return undefined;
+        }
     }
 
     /**
