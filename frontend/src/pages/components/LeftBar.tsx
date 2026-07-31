@@ -1,4 +1,5 @@
 import {useState, MouseEventHandler, JSX} from 'react';
+import {useSelector} from 'react-redux';
 import {DProject, LProject, LUser, R, U} from '../../joiner';
 
 import {DashProps} from "./Dashboard";
@@ -12,6 +13,8 @@ import { getRuntimeMegamodel } from '../../model/megamodelRuntime';
 import DockManager from '../../components/abstract/DockManager';
 import { createM2 } from './Navbar';
 import { JjodelEvents } from '../../events/registry';
+
+const SHARE_DISABLED_HINT = 'Only public projects can be shared';
 
 function relativeTime(date: number | string | Date): string {
     const d = typeof date === 'number' ? date : (typeof date === 'string' ? new Date(date).getTime() : date.getTime());
@@ -256,6 +259,16 @@ function LeftBar(props: LeftBarProps): JSX.Element {
     const openShareModal = () => {
         requestFromProjectEditor(JjodelEvents.SHARE_PROJECT);
     };
+    // ShareProjectModal renders nothing unless the project is public
+    // (ShareProjectModal.tsx: `if (project.type !== 'public') return null`), so the rail
+    // gates on the same condition rather than firing an event that produces no modal.
+    //
+    // Read the type from the D-layer instead of the `project` prop: ProjectDashboard
+    // (Dashboard.tsx) rebuilds that proxy on render but is not connected to Redux, so it
+    // only re-renders on a tab event — flipping the project to public from the visibility
+    // badge would otherwise leave this entry greyed out until a tab opens or closes.
+    const canShare = useSelector((state: any) =>
+        (project?.id ? state?.idlookup?.[project.id]?.type : undefined) === 'public');
 
     const pMetamodels = project?.metamodels || [];
     const pModels = project?.models || [];
@@ -374,7 +387,11 @@ function LeftBar(props: LeftBarProps): JSX.Element {
                             <i className={`bi ${project?.isFavorite ? 'bi-star-fill' : 'bi-star'}`} />
                             <span>{project?.isFavorite ? 'Remove from favorites' : 'Add to favorites'}</span>
                         </div>
-                        <div className="psb-action" onClick={openShareModal}>
+                        <div
+                            className={`psb-action${canShare ? '' : ' psb-action--disabled'}`}
+                            onClick={canShare ? openShareModal : undefined}
+                            title={canShare ? undefined : SHARE_DISABLED_HINT}
+                        >
                             <i className="bi bi-share" />
                             <span>Share</span>
                         </div>

@@ -1172,6 +1172,18 @@ project-card .tip {
           color: #dc2626;
         }
       }
+
+      /* Unavailable for the current project state. Keeps pointer-events so the
+         title tooltip still explains why. */
+      &--disabled {
+        color: #cbd5e1;
+        cursor: default;
+
+        &:hover {
+          background: transparent;
+          color: #cbd5e1;
+        }
+      }
     }
   }
 
