@@ -10,8 +10,8 @@
 ═══════════════════════════════════════════════════════════════════
 NON-NEGOTIABLE RULES — re-read before every task
 ═══════════════════════════════════════════════════════════════════
-Canonical list — §1, §4.2 and §20.1 point here; rules are not
-restated there.
+Canonical list — §20.1 points here; rules are not restated there.
+Shared engagement rules live in docs/PROTOCOL.md (P1..P9); see §1.
 
 — Scope & preservation —
  1. Touch only files explicitly listed in the prompt. A broader
@@ -43,7 +43,8 @@ restated there.
 16. Read docs/claude-code-log.md (last 5–10 entries) at session
     start. Update it at task end.
 17. Never `git add .` / `git add -A`. Always `git add <specific-file>`.
-18. Hard stop before commit: show diff, wait for approval.
+18. Show the diff of touched files in the closing report. The
+    diff does not hold the commit (docs/PROTOCOL.md P6).
 19. A task touching more than 5 files → pause, list them, get
     confirmation.
 20. A change that propagates to a layer not named in the prompt
@@ -66,9 +67,16 @@ restated there.
 ═══════════════════════════════════════════════════════════════════
 ```
 
-## 1. Hard stops — pause and ask
+## 1. Protocollo di esecuzione
 
-The hard-stop conditions are consolidated in the canonical **NON-NEGOTIABLE RULES** block at the top of this file (the *Workflow & hard-stops* group, plus any rule whose violation you are "about to" commit). Re-read that block before every task; when about to cross one of those lines, STOP and write a short message instead of guessing.
+Le regole di ingaggio condivise (scope, lettura preventiva, two-phase e discovery
+report, commit, build, smoke visivo, prompt log) stanno in `docs/PROTOCOL.md`
+come clausole P1..P9. I prompt le citano per numero. Questo file non le duplica.
+
+Restano qui, perché specifiche di questo codebase e non del protocollo: le
+regole NON-NEGOTIABLE, la critical zone e il Layer Impact Report (§3), la
+diagnosi dei bug visivi (§5), i comandi di sviluppo (§17), e la semantica di
+autovalutazione del prompt log (§21.3).
 
 ---
 
@@ -77,10 +85,6 @@ The hard-stop conditions are consolidated in the canonical **NON-NEGOTIABLE RULE
 Committed behavior represents verified state. A modification never degrades it.
 
 **Rules**
-- Do not remove code that appears "unused" unless the prompt asks. Dead code gets a `// TODO: cleanup — <reason>` annotation, not deletion.
-- Do not reorder imports, reformat blocks, or "improve" code adjacent to the edit point. The diff must be minimal.
-- Do not modify TypeScript interfaces that are already exported. Adding optional properties is OK. Changing or removing existing properties is not — unless explicitly asked.
-- CSS classes and SCSS variable names are public API for the rest of the codebase. Do not touch them unless explicitly asked. Name collisions in CSS do not raise compile errors; they manifest as silent visual bugs.
 - Do not introduce new dependencies without explicit approval.
 - Do not commit instrumentation (`console.log`, `[diagN]` blocks). These are removed in a dedicated cleanup commit after the fix is confirmed.
 
@@ -108,7 +112,7 @@ Committed behavior represents verified state. A modification never degrades it.
 | `frontend/src/utils/defaultViewTemplate.ts` | `DEFAULT_VIEW_JSX_STRING` + detect markers. |
 | `frontend/src/common/DV.tsx` | Default view runtime definitions. |
 
-**Cross-reference**: when modifying `portDistribution.ts`, also read `handlePosition.ts` and `DynamicHandles.tsx` — they together form the rendering pipeline for handle positions. A change in `portDistribution.ts` alone may be insufficient (or inert) for visual bugs; see the §3.10 note and §5.1 `Visual bugs: specify before diagnosing` for the methodology.
+**Cross-reference**: when modifying `portDistribution.ts`, also read `handlePosition.ts` and `DynamicHandles.tsx` — they together form the rendering pipeline for handle positions. A change in `portDistribution.ts` alone may be insufficient (or inert) for visual bugs; see the §3.10 note and §5 `Visual bugs: specify before diagnosing` for the methodology.
 
 ### 3.2 Layer Impact Report — mandatory for sync/D-L tasks
 
@@ -339,45 +343,9 @@ consistency cleanup.
 
 ---
 
-## 4. Scope & anti-refactoring
+## 5. Visual bugs: specify before diagnosing
 
-### 4.1 Scope boundary
-
-Modify only the files named in the prompt. If a strictly necessary additional edit is needed (e.g., missing import), apply it and mention it. If a broader change "would be better," ask first — do not do it silently.
-
-### 4.2 Do-not list (blocklist)
-
-These anti-refactoring rules are consolidated in the canonical **NON-NEGOTIABLE RULES** block at the top of this file (*Scope & preservation* group, with the V3 and legacy-CSS-token items under *Technical anti-patterns* and *Style & design-system*).
-
-### 4.3 Verify identifier names before introducing new ones
-
-Before adding a new identifier (CSS/SCSS class, exported variable, exported function, custom event name, context key), run a global grep to verify it does not collide with an existing one.
-
-```bash
-grep -rn "myNewClassName\|myNewEventName" frontend/src/
-```
-
-CSS class collisions do not raise compile errors and surface as silent visual bugs in apparently unrelated components.
-
----
-
-## 5. Discovery before action
-
-The prompt may cite paths that are wrong, outdated, or refer to a different branch. Verify before editing.
-
-**Always before modifying a file**
-1. `find` / `grep` to confirm the path exists.
-2. `cat` (or read tool) the entire file or the relevant section before editing.
-3. Identify local conventions (naming, import order, component structure, SCSS style).
-4. Check `git log -1 --format='%ai %h %s' -- <file>` if recency matters.
-
-**Always before introducing a new identifier**: global grep (see §4.3).
-
-**Always at session start**
-1. Read `AGENTS.md` (this file) — start with the NON-NEGOTIABLE RULES block.
-2. Read `docs/claude-code-log.md` — last 5–10 entries for recent context.
-
-### 5.1 Visual bugs: specify before diagnosing
+Check `git log -1 --format='%ai %h %s' -- <file>` if recency matters.
 
 When a bug is reported via screenshot or visual description (e.g. "the edges cross", "the labels overlap", "the node is misaligned"), the first step is **always** to extract a formal specification from the reporter before choosing a diagnostic path. A word like "cross", "overlap", "wrong position" covers multiple distinct failure modes; each maps to a different module and a different fix.
 
@@ -410,7 +378,6 @@ When a previous session's discovery describes a specific bad state ("the two anc
 
 ### 6.1 Staging
 
-- Always `git add <specific-file>`. Never `git add .` or `git add -A`.
 - For sparse changes in dense log files (e.g., `docs/claude-code-log.md`), `git add -p` tends to present one giant hunk. Use this pattern instead:
   ```bash
   cp docs/claude-code-log.md /tmp/log-backup.md
@@ -424,13 +391,11 @@ When a previous session's discovery describes a specific bad state ("the two anc
 
 ### 6.2 Commit messages
 
-- Conventional commits in English: `feat:`, `fix:`, `refactor:`, `chore:`, `docs:`, `test:`.
 - Subject line ≤ 72 chars. Scope where useful: `fix(editor-v2): role-aware bucket keys`.
 - Split commits thematically. Do not bundle unrelated changes.
 
-### 6.3 Hard stop before commit
+### 6.3 Around the commit
 
-- Show the diff to the user. Wait for explicit approval.
 - Never use `--no-verify` or skip pre-commit hooks.
 - After commit: update `docs/claude-code-log.md`.
 
@@ -886,13 +851,6 @@ These anti-patterns are consolidated in the canonical **NON-NEGOTIABLE RULES** b
 
 Codex maintains `docs/claude-code-log.md` as an append-only operational log.
 
-### 21.1 Lifecycle
-
-- **At session start**: read the last 5–10 entries for context.
-- **At task end**: append a new entry.
-- **When the active file exceeds 20 entries**: move older ones to `docs/claude-code-log-archive.md` keeping only the last 20 active.
-- The log does **not** replace commit messages.
-
 ### 21.2 Entry format
 
 ```
@@ -903,9 +861,12 @@ Codex maintains `docs/claude-code-log.md` as an append-only operational log.
 **Regressions**: yes | no | unknown
 **Out-of-scope changes**: yes | no
 **Layer Impact Report**: produced | not-required | skipped
+**Smoke visivo**: passato | fallito (dettaglio) | non applicabile
 **Notes**: (optional)
 **Prompt document name**: YYYY-MM-DD HH:mm
 ```
+
+This block is the canonical format, mirrored verbatim in `docs/PROTOCOL.md` P9.
 
 ### 21.3 Self-assessment — fill the three metrics honestly
 

@@ -44,7 +44,9 @@ Il report è un insieme di ipotesi con evidenze, non un riferimento definitivo. 
 
 ## P5 — Critical zone
 
-`useJjomSync.ts`, `portDistribution.ts`, `sync/*`. Richiedono go-ahead esplicito nel prompt più Layer Impact Report prima di qualunque modifica. Attenzione particolare, ovunque, a: custom DOM events, LModel proxy (trova per NOME, scrive con `$attr.value`), ID temporanei di `DObject.new()`.
+L'elenco completo dei file in critical zone e il template obbligatorio del Layer Impact Report stanno in `CLAUDE.md` §3.1 e §3.2. Questa clausola non li duplica.
+
+I file in critical zone richiedono go-ahead esplicito nel prompt più Layer Impact Report prima di qualunque modifica. Attenzione particolare, ovunque, a: custom DOM events, LModel proxy (trova per NOME, scrive con `$attr.value`), ID temporanei di `DObject.new()`.
 
 ## P6 — Commit
 
@@ -54,7 +56,9 @@ Si committa a ogni passo compiuto, anche prima della verifica visiva di Alfonso.
 
 Commit message: tipo convenzionale (`feat:`, `fix:`, `refactor:`, `docs:`), in inglese, una riga. Il tipo è indicato nel prompt: se manca, chiedilo, non sceglierlo.
 
-Per modifiche che toccano più di 3 file: elenca prima tutti i file e cosa cambia in ciascuno, poi procedi.
+Per modifiche che toccano più di 5 file: elenca prima tutti i file e cosa cambia in ciascuno, poi procedi.
+
+Nel report di chiusura mostra sempre il diff dei file toccati. L'esposizione del diff non trattiene il commit.
 
 ## P7 — Build pulita
 
@@ -64,9 +68,9 @@ Dopo ogni modifica, `npm run build` (o il comando indicato nel prompt) deve comp
 
 Prima dell'hard stop, esegui lo smoke visivo e riporta l'esito nel prompt log.
 
-Dev server: **http://localhost:3000** (la porta 3001 può servire una build stale: non usarla per la verifica).
+Dev server: **http://localhost:3000** (la porta 3001 può servire una build stale: non usarla per la verifica). Il server è in ascolto su `[::1]` soltanto: usare `http://localhost:3000`, non `http://127.0.0.1:3000`.
 
-Lo smoke apre gli stati noti definiti in `scripts/smoke/states.ts` e verifica:
+Lo smoke apre gli stati noti definiti in `frontend/scripts/smoke/states.ts` e verifica:
 
 1. nessun errore in console
 2. il canvas ha larghezza superiore alla soglia attesa (intercetta il canvas collassato)
@@ -85,13 +89,19 @@ Al termine di ogni task, aggiungi un'entry a `docs/claude-code-log.md`. Leggi il
 Formato:
 
 ```
-## YYYY-MM-DD HH:mm — tipo: descrizione breve
-**Prompt**: nome del documento prompt e riassunto in una riga
-**File toccati**: lista
-**Esito**: ✅ completato | ⚠️ parziale | ❌ problemi
-**Smoke visivo**: passato | fallito (dettaglio)
-**Note**: opzionale
+## YYYY-MM-DD — type: short description
+**Prompt**: summary of received prompt
+**Files touched**: list of modified files
+**Outcome**: ✅ completed | ⚠️ partial | ❌ problems
+**Regressions**: yes | no | unknown
+**Out-of-scope changes**: yes | no
+**Layer Impact Report**: produced | not-required | skipped
+**Smoke visivo**: passato | fallito (dettaglio) | non applicabile
+**Notes**: (optional)
+**Prompt document name**: YYYY-MM-DD HH:mm
 ```
+
+La semantica dei campi di autovalutazione è definita in `CLAUDE.md` §21.3.
 
 Il log non sostituisce i commit message, e il discovery report non sostituisce il log: sono tre artefatti distinti.
 
@@ -99,7 +109,7 @@ Il log non sostituisce i commit message, e il discovery report non sostituisce i
 
 ## Nota di implementazione per P8
 
-Lo smoke non esiste ancora. Va creato una volta sola, con Playwright (già disponibile), in `scripts/smoke/`. Serve:
+Lo smoke non esiste ancora. Va creato una volta sola, con Playwright, installato come devDependency dal commit che introduce lo smoke, in `frontend/scripts/smoke/`. Serve:
 
 - `states.ts`: elenco degli stati da aprire, ognuno con URL, azioni di setup e soglie attese
 - `run.ts`: apre ogni stato, esegue le cinque asserzioni, stampa un report a righe
