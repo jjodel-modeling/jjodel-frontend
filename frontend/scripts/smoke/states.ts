@@ -49,6 +49,14 @@ export const STATUSBAR_INTERSECT_TOLERANCE_PX = 0;
  * allowlist is prophylaxis for states added later, not something the current
  * run exercises.
  *
+ * The list is explicit on purpose: `[role="dialog"]` would be broader than
+ * "modal" and would exempt .app-notif-popover (src/components/NotificationCenter.tsx:105)
+ * and NodeProblemOverlay (src/components/editor-v2/problems/NodeProblemOverlay.tsx:180),
+ * which are fixed too — the very regressions A3 exists to catch. The explicit
+ * list takes the opposite risk: a new modal not yet listed here is a false
+ * positive. That is the right way round to be wrong. When you add a modal, add
+ * it here.
+ *
  * Matching is exact (el.matches), never el.closest: with `#root` in the list,
  * an ancestor-based match would exempt the entire document.
  */
@@ -60,12 +68,6 @@ export const FIXED_ALLOWLIST: string[] = [
     '.add-tag-dialog-backdrop',
     '.add-tag-dialog',
     '.wm-backdrop',
-    // Safety net requested for future modal states. Note it is broader than
-    // "modal": .app-notif-popover (components/NotificationCenter.tsx:105) and
-    // NodeProblemOverlay (components/editor-v2/problems/NodeProblemOverlay.tsx:180)
-    // also carry role="dialog" and are fixed, so a regression that parks either
-    // of them over the status bar would be exempted here.
-    '[role="dialog"]',
 ];
 
 // ── Timing ──────────────────────────────────────────────────────────────────

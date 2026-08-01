@@ -86,11 +86,19 @@ an ancestor-based match would exempt the whole document.
 None of the modals is open in the three current states, so that part of the
 allowlist is prophylaxis for states added later, not something exercised today.
 
-`[role="dialog"]` is in the list as a safety net, and it is broader than
-"modal": `.app-notif-popover` (`src/components/NotificationCenter.tsx:105`) and
-`NodeProblemOverlay` (`src/components/editor-v2/problems/NodeProblemOverlay.tsx:180`)
-also carry it and are fixed, so a regression parking either over the status bar
-would be exempted. Narrow it if that ever matters.
+### Why the list is explicit, and not `[role="dialog"]`
+
+`[role="dialog"]` is broader than "modal". `.app-notif-popover`
+(`src/components/NotificationCenter.tsx:105`) and `NodeProblemOverlay`
+(`src/components/editor-v2/problems/NodeProblemOverlay.tsx:180`) carry it and
+are `position: fixed`: with that selector in the allowlist, a regression parking
+either of them over the status bar would be exempted by the very assertion that
+exists to catch it.
+
+The explicit list takes the opposite risk: a new modal not yet listed produces a
+false positive. That is the right way round to be wrong — a false positive is
+visible and fixed in thirty seconds, a false negative is never seen. **When you
+add a modal, add it here.**
 
 ## The console baseline
 

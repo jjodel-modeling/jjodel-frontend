@@ -868,6 +868,8 @@ Claude Code maintains `docs/claude-code-log.md` as an append-only operational lo
 **Prompt**: summary of received prompt
 **Files touched**: list of modified files
 **Outcome**: ✅ completed | ⚠️ partial | ❌ problems
+**Corregge**: <name of the prompt document this task corrects> | —
+**Causa**: <letter from the §21.3 taxonomy> | —
 **Regressions**: yes | no | unknown
 **Out-of-scope changes**: yes | no
 **Layer Impact Report**: produced | not-required | skipped
@@ -878,9 +880,32 @@ Claude Code maintains `docs/claude-code-log.md` as an append-only operational lo
 
 This block is the canonical format, mirrored verbatim in `docs/PROTOCOL.md` P9.
 
-### 21.3 Self-assessment — fill the three metrics honestly
+### 21.3 Self-assessment — fill the metrics honestly
 
-These three fields exist to measure whether CLAUDE.md and the workflow are reducing regressions and scope creep over time. They are useful only if filled honestly. A compliant-looking log that hides issues defeats the purpose.
+These fields exist to measure whether CLAUDE.md and the workflow are reducing regressions and scope creep over time. They are useful only if filled honestly. A compliant-looking log that hides issues defeats the purpose.
+
+**Corregge / Causa**
+
+The first-try success rate of past months had to be reconstructed by archaeology — inferring rework chains from prompt names and checkpoint prose. These two fields turn the same measurement into a grep, and make it possible to check in a month's time whether a rule actually worked.
+
+- `Corregge` — the name of the prompt document this task exists to remedy. Fill it whenever the task was born to fix the result of a previous one, **even if that task's outcome was ✅**. Otherwise `—`.
+- `Causa` — one letter from the taxonomy below. Fill it when the outcome is ⚠️ or ❌, **or** when `Corregge` is filled. Otherwise `—`.
+
+Taxonomy:
+
+```
+(a) ambiguous or incomplete specification in the prompt
+(b) scope exceeded: files touched that were not declared
+(c) insufficient discovery, or a wrong assumption about existing code
+(d) visual regression found only at manual verification
+(e) conflict with uncommitted git state
+(f) architectural decision changed midway
+(g) environmental or operational (port, dev server, build, quota, cache)
+```
+
+One letter per entry: the prevailing one. If there genuinely are two, the second goes in `**Notes**`.
+
+No back-filling: existing entries stay as they are. These fields apply from the tasks that follow the commit introducing them.
 
 **Regressions**
 - `yes` — the change broke something that worked before the task. Detected during the task, by tests, in CI, or reported by the user in the next turn.

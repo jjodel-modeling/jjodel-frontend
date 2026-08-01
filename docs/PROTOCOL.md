@@ -93,6 +93,8 @@ Formato:
 **Prompt**: summary of received prompt
 **Files touched**: list of modified files
 **Outcome**: ✅ completed | ⚠️ partial | ❌ problems
+**Corregge**: <name of the prompt document this task corrects> | —
+**Causa**: <letter from the §21.3 taxonomy> | —
 **Regressions**: yes | no | unknown
 **Out-of-scope changes**: yes | no
 **Layer Impact Report**: produced | not-required | skipped
