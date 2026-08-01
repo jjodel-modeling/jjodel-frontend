@@ -1,0 +1,21 @@
+{
+  // Type coverage for the smoke scripts, which live outside the main
+  // tsconfig's `include: ["src"]`.
+  //
+  // Deliberately a separate project: adding "scripts" to the main include
+  // would change both the `npm run typecheck` baseline (33 errors) and the
+  // build perimeter. Run with `npm run typecheck:scripts`.
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    // The scripts run under node --experimental-strip-types, which resolves
+    // relative imports with their real .ts extension.
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "allowImportingTsExtensions": true,
+    "types": ["node"],
+    "noEmit": true
+  },
+  "include": [
+    "smoke/**/*.ts"
+  ]
+}

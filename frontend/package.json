@@ -96,6 +96,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "typecheck:scripts": "tsc --noEmit -p scripts/tsconfig.json",
+    "smoke": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/smoke/run.ts",
     "smoke:calibrate": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/smoke/calibrate.ts",
     "________________________________other_build_modes___________________________": "",
     "build_2": "ts-node esbuild.config.ts",
