@@ -89,16 +89,29 @@ interface ResizeStart {
 
 const JODIE_DEFAULT_WIDTH = 760;
 const JODIE_DEFAULT_HEIGHT = 520;
+// TODO: cleanup — no consumer left after the bottom-left default (kept per preservation rule).
 const JODIE_DEFAULT_MARGIN = 20;
+// Replicate the minimized FAB offsets from JodieWindow.css (.jodie-minimized: left 30px, bottom 100px).
+const JODIE_FAB_LEFT = 30;
+const JODIE_FAB_BOTTOM = 100;
 const JODIE_ANIMATION_MS = 220;
 const DEFAULT_SIZE: Size = { width: JODIE_DEFAULT_WIDTH, height: JODIE_DEFAULT_HEIGHT };
 const MIN_SIZE: Size = { width: 320, height: 400 };
 const MAX_SIZE: Size = { width: 1200, height: 900 };
 
-const computeDefaultPosition = (size: Size = DEFAULT_SIZE): Position => ({
-    x: Math.max(0, window.innerWidth - size.width - JODIE_DEFAULT_MARGIN),
-    y: Math.max(0, window.innerHeight - size.height - JODIE_DEFAULT_MARGIN),
-});
+// Bottom-left, anchored to the minimized FAB that opens the window.
+const computeDefaultPosition = (size: Size = DEFAULT_SIZE): Position => {
+    // Project rail: mounted in dashboard/project summary, absent in editor tabs (inset 0).
+    // Under 769px it slides off-canvas while staying in the DOM, so clamp negatives away.
+    const railInset = Math.max(0, document.querySelector('.leftbar')?.getBoundingClientRect().right ?? 0);
+    const x = railInset + JODIE_FAB_LEFT;
+    // On narrow viewports the rail-aligned x would overflow: keep the window fully visible instead.
+    const maxX = window.innerWidth - size.width - JODIE_FAB_LEFT;
+    return {
+        x: x > maxX ? Math.max(JODIE_FAB_LEFT, maxX) : x,
+        y: Math.max(0, window.innerHeight - size.height - JODIE_FAB_BOTTOM),
+    };
+};
 
 export function JodieWindow({
     messages,
@@ -255,7 +268,7 @@ export function JodieWindow({
         setIsFullscreen(false);
     }, [savedGeometry, triggerAnimation]);
 
-    // Reset: bottom-right with default size; also exits fullscreen if active
+    // Reset: bottom-left with default size; also exits fullscreen if active
     const resetPosition = useCallback(() => {
         triggerAnimation();
         const defaultSize = DEFAULT_SIZE;
