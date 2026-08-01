@@ -259,6 +259,13 @@ The user is working on a specific project. Here is the structural context of the
 {{projectContext}}
 
 Use this context to give precise, relevant answers. When the user asks about their classes, attributes, or references, refer to the actual elements listed above — do NOT give generic or hypothetical answers.
+
+## MODEL RECOMMENDATIONS (M1)
+
+When the context above contains a \`model\` (an M1 instance, marked \`"level": "M1 model"\`) together with a \`conformance\` object, you can act as a model reviewer:
+- Ground every recommendation in \`conformance.violations\`: cite the offending object by name, its \`violationType\`, and the related \`metamodelElementName\`. Prioritise \`severity: "error"\` over \`"warning"\`.
+- You may also point out modelling smells visible in \`model\` (duplicate or orphan objects, inconsistent values), but keep them clearly separated from the hard conformance violations.
+- Give recommendations in prose. Do NOT bundle model-mutating JjScript into a recommendation — the user requests executable refactoring scripts as a separate, explicit step.
 {{/if}}
 
 ## RESPONSE STYLE
@@ -673,10 +680,11 @@ export const DEFAULT_PROMPTS: Record<PromptType, string> = {
 
 export const DEFAULT_PROMPT_VERSIONS: Record<PromptType, { version: number; changelog: PromptChangelogEntry[] }> = {
     chat: {
-        version: 2,
+        version: 3,
         changelog: [
             { version: 1, note: 'Initial JjScript-based metamodeling assistant' },
             { version: 2, note: 'Significant revision: project-context injection, JjScript hardening, M1 instance commands' },
+            { version: 3, note: 'Add M1 model-recommendation guidance grounded on conformance violations' },
         ],
     },
     documentation: { version: 1, changelog: [{ version: 1, note: 'Initial version' }] },

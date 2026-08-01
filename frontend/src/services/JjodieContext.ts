@@ -11,6 +11,7 @@
 import type { LProject, LClass, LAttribute, LReference, LPackage, LEnumerator, LModel } from '../joiner';
 import { DocumentationSection } from '../types/jodie';
 import { JsonModelService } from './export';
+import { validateConformance } from '../model/conformance/ConformanceValidator';
 
 // ============================================
 // EXPORTED TYPES
@@ -321,15 +322,17 @@ export class JjodieContextService {
 
     /**
      * Build the AI context as a semantic JSON string instead of the ad-hoc
-     * markdown of getContextString. The metamodel is emitted in the trimmed
-     * `jjodel-metamodel` shape (JsonModelService.buildMetamodelDocumentLight),
-     * wrapped in an envelope that preserves the "currently editing" signal:
+     * markdown of getContextString, wrapped in an envelope that preserves the
+     * "currently editing" signal.
      *
-     *   { "currentlyEditing": { name, level }, "metamodel": { ... } }
+     * - M2 metamodel active → the metamodel in the trimmed `jjodel-metamodel`
+     *   shape (buildMetamodelDocumentLight) under `metamodel`.
+     * - M1 model active → the model in the `jjodel-model` shape
+     *   (buildModelDocumentLight, metamodel embedded) under `model`, PLUS a
+     *   `conformance` report (validateConformance) so recommendations can be
+     *   grounded on real violations rather than inferred ones.
+     * - No scope resolves → every project metamodel under `metamodels`.
      *
-     * Scoping mirrors getContextString: the metamodel relevant to the active
-     * artefact (M1 model → its conformity metamodel, M2 → itself). When no
-     * scope resolves, every project metamodel is emitted under `metamodels`.
      * Returns undefined when there is nothing to describe.
      */
     static getContextJSON(project: LProject, activeArtifact?: ActiveArtifact): string | undefined {
@@ -342,6 +345,26 @@ export class JjodieContextService {
                     name: activeArtifact.name,
                     level: activeArtifact.level === 'M1' ? 'M1 model' : 'M2 metamodel',
                 };
+            }
+
+            // M1 model: emit the model document (metamodel embedded) plus the
+            // deterministic conformance report, so recommendations can be
+            // grounded on real violations. Requires both the model and its
+            // metamodel; otherwise falls through to the metamodel-only branch.
+            if (activeArtifact?.level === 'M1') {
+                const models: LModel[] = (project as any).models || [];
+                const model = models.find((m) => !!m && m.id === activeArtifact.id) ?? null;
+                if (model && (model as any).instanceof) {
+                    envelope.model = JsonModelService.buildModelDocumentLight(model);
+                    if (scope) {
+                        const result = validateConformance(model, scope);
+                        envelope.conformance = {
+                            status: result.status,
+                            violations: result.violations,
+                        };
+                    }
+                    return JSON.stringify(envelope, null, 2);
+                }
             }
 
             if (scope) {

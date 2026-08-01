@@ -167,6 +167,24 @@ export class JsonModelService {
         return JSON.stringify(this.buildModelDocument(model), null, 2);
     }
 
+    /**
+     * Build a token-lean variant of the model document, for feeding into LLM
+     * prompts. Same `jjodel-model` shape as buildModelDocument (metamodel
+     * embedded), with only the heavy / noise fields stripped
+     * (externalMetamodels, export timestamp, version stamps).
+     *
+     * Unlike buildMetamodelDocumentLight, this does NOT strip `id`: object ids,
+     * `$ref` targets and object names are the stable handles a downstream
+     * refactoring script needs to address instances (`set <name>.<attr> = ...`,
+     * `delete instance <name>`), so identity must be preserved.
+     */
+    static buildModelDocumentLight(model: LModel): Record<string, unknown> {
+        return this.stripKeysDeep(
+            this.buildModelDocument(model),
+            this.LIGHT_MODEL_OMIT_KEYS
+        ) as Record<string, unknown>;
+    }
+
     // ============================================
     // PUBLIC — FILE DOWNLOAD
     // ============================================
@@ -462,6 +480,15 @@ export class JsonModelService {
      */
     private static readonly LIGHT_OMIT_KEYS = new Set<string>([
         'externalMetamodels', 'id', 'exportedAt', 'jjodelVersion', 'formatVersion',
+    ]);
+
+    /**
+     * Keys removed by buildModelDocumentLight. Same rationale as LIGHT_OMIT_KEYS
+     * but WITHOUT `id`: an M1 document uses object ids / `$ref` as identity
+     * handles (see buildModelDocumentLight), so they must survive the trim.
+     */
+    private static readonly LIGHT_MODEL_OMIT_KEYS = new Set<string>([
+        'externalMetamodels', 'exportedAt', 'jjodelVersion', 'formatVersion',
     ]);
 
     /** Deep-clone `value`, dropping any object key present in `omit`. */
