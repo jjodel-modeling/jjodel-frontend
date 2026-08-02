@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-01 — docs: allowlist A3 ristretta e telemetria di rework nel prompt log
+**Prompt**: due modifiche indipendenti in un commit. (1) Rimuovere `[role="dialog"]` da `FIXED_ALLOWLIST` lasciando la lista esplicita dei selettori verificati in `1b20cc5c8`. (2) Aggiungere i campi `Corregge` e `Causa` al formato del prompt log più una tassonomia a sette lettere in §21.3, applicandoli a **entrambi** i blocchi byte-identical (`CLAUDE.md` §21.2 e `docs/PROTOCOL.md` P9) e verificando che restino tali.
+**Files touched**: `frontend/scripts/smoke/states.ts`, `frontend/scripts/smoke/README.md`, `CLAUDE.md` (§21.2 e §21.3), `docs/PROTOCOL.md` (P9), `AGENTS.md` (rigenerato). Commit `77edbfbc5`. Più `docs/claude-code-log.md` (questa entry).
+**Outcome**: ✅ completed — `npm run build` verde, `npx tsc --noEmit` 33 = baseline, `npm run typecheck:scripts` pulito, `npm run smoke` verde exit 0 (10 passed, 0 failed, 2 skipped).
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — la restrizione dell'allowlist non cambia il comportamento negli stati attuali: il conteggio degli allowlistati resta 1 su 3 / 1 su 4 / 1 su 4 (solo `#root`), quindi nessun elemento dei tre stati stava venendo esentato da `[role="dialog"]`. È riduzione di rischio futura, non un cambio di esito. Le modifiche a Markdown non toccano codice.
+**Out-of-scope changes**: no — `git add` per path espliciti, WIP concorrente (TextStyle, paper MDE) intatto.
+**Layer Impact Report**: not-required — nessun file critical-zone (§3.1).
+**Smoke visivo**: passato — 10 passed, 0 failed, 2 skipped, exit 0, allowlist ristretta.
+**Notes**: (1) **Byte-identity verificata due volte** come richiesto dal vincolo critico: `diff` silenzioso più `md5` sui due blocchi estratti, entrambi `1f63f46dc4333b1fe24feb2e098083c9`. (2) **Una modifica minima non elencata nel prompt ma resa necessaria dalle sue**: il titolo di §21.3 diceva "fill the three metrics honestly" e il paragrafo d'apertura "These three fields" — con l'aggiunta di `Corregge` e `Causa` i campi diventano cinque, quindi "three" è stato tolto. Solo quello: nessun'altra riformulazione del testo che resta. (3) I due nuovi campi valgono **dai task successivi a questo commit**: nessuna retro-compilazione delle entry esistenti, come da prompt. Questa entry è la prima a portarli, valorizzati `—`/`—` perché non nasce per correggere nulla. (4) `Corregge` va valorizzato anche quando l'esito del task corretto era ✅: è la condizione che rende misurabile per grep il tasso di successo al primo colpo, oggi ricostruibile solo per archeologia.
+**Prompt document name**: 2026-08-01 23:33
+
 ## 2026-08-01 — test: smoke visivo con asserzioni e baseline della console
 **Prompt**: Commit C. Implementare P8 sui numeri della calibrazione: quattro asserzioni (A1 struttura montata, A2 geometria canvas ≥ 0.95, A3 nessun overlay sulla status bar con tolleranza 0, A4 nessuna regressione console vs baseline), costanti fissate e non ricalcolabili, tre coperture mancanti da dichiarare esplicitamente invece di ometterle, baseline console generata e committata, copertura typecheck per `scripts/` senza toccare l'`include` del tsconfig principale.
 **Files touched**: `frontend/scripts/smoke/states.ts` (nuovo), `frontend/scripts/smoke/assertions.ts` (nuovo), `frontend/scripts/smoke/run.ts` (nuovo), `frontend/scripts/smoke/console-baseline.json` (nuovo, generato), `frontend/scripts/smoke/README.md` (nuovo), `frontend/scripts/tsconfig.json` (nuovo), `frontend/scripts/smoke/calibrate.ts` (rifattorizzato per riusare `states.ts`/`assertions.ts` + flag `--write-baseline`), `frontend/package.json` (script `smoke` e `typecheck:scripts`). Più `docs/claude-code-log.md` (questa entry). Commit `1b20cc5c8`.
