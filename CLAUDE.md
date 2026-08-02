@@ -745,6 +745,7 @@ Verification gates before commit:
 - `npm run build` must pass (exit 0, only the pre-existing chunk-size warning).
 - `npm run typecheck` has a known non-zero baseline (filename casing plus a few genuine type errors). Your change must not increase the count.
 - `npm run test` where the touched area has tests. The suite has known failures; do not treat a red suite as caused by your change without checking.
+- `npm run check:docs` must pass when you touch `CLAUDE.md`, `docs/PROTOCOL.md` or `docs/claude-code-log.md`. It verifies that the §21.2 entry-format block is byte-identical to `docs/PROTOCOL.md` P9, and that recent log entries carry `Corregge` and `Causa` with values inside the §21.3 taxonomy.
 
 ---
 

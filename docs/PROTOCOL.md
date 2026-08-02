@@ -103,7 +103,7 @@ Formato:
 **Prompt document name**: YYYY-MM-DD HH:mm
 ```
 
-La semantica dei campi di autovalutazione è definita in `CLAUDE.md` §21.3.
+La semantica dei campi di autovalutazione, incluse le regole di compilazione di `Corregge` e `Causa` e la tassonomia dei valori ammessi, è definita in `CLAUDE.md` §21.3. Questo file non la duplica. Il blocco di formato qui sopra è verificato byte a byte contro `CLAUDE.md` §21.2 da `npm run check:docs`.
 
 Il log non sostituisce i commit message, e il discovery report non sostituisce il log: sono tre artefatti distinti.
 
