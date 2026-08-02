@@ -265,13 +265,6 @@ export function JodieHeader({
                     </button>
                 )}
                 <button
-                    className="jodie-header-btn"
-                    onClick={onOpenSettings}
-                    title="AI Settings"
-                >
-                    <i className="bi bi-gear" />
-                </button>
-                <button
                     className="jodie-header-btn jodie-close-btn"
                     onClick={onClose}
                     title="Close"
