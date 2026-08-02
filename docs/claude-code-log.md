@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-02 — fix(jodie): espansione flush al bordo del viewport
+**Prompt**: «allinea la finestra di jjodie al bordo sinistro anche quando si espande», con screenshot della finestra flottante in un progetto col rail montato.
+**Files touched**: `components/Jodie/JodieWindow.tsx` (`enterFullscreen` :251-253 e ramo `isFullscreen` del listener di resize :382-383, entrambi da `Math.max(0, Math.min(computeLeftInset(), …))` a `x: 0`).
+**Outcome**: ✅ completed — commit `7d03649a6`. `npm run build` verde, `npm run typecheck` 33 = baseline (Δ0), smoke 10 passed / 0 failed / 2 skipped.
+**Corregge**: 2026-08-01 14:05
+**Causa**: (f)
+**Regressions**: no — verificato per misura diretta sul browser (Playwright, viewport 1440×900, stato `empty-project` col rail montato): prima `espansa x=240`, dopo `espansa x=0 y=0 w=760 h=900`; flottante invariata a `x=248` (rail 240 + gap 8). `computeLeftInset()` resta viva, usata dal default flottante.
+**Out-of-scope changes**: no — un solo file, due punti, `git add` per path esplicito.
+**Layer Impact Report**: not-required — nessun file critical-zone (§3.1).
+**Smoke visivo**: passato — 10 passed, 0 failed, 2 skipped. Nota: nessuno stato dello smoke apre la finestra Jjodie, quindi la copertura viene dalla misura diretta sopra, non dalle asserzioni.
+**Notes**: (1) **Ribalta un vincolo ratificato il giorno prima**: il prompt del 2026-08-01 14:05 diceva «x = bordo sinistro dell'**area contenuto**» e «la finestra non deve mai coprire il rail». Il comportamento misurato era già conforme a quella spec (x=240, flush al rail); la richiesta di oggi chiede il bordo del **viewport**. Decisione presa esplicitamente da Alfonso dopo aver visto i numeri misurati, non dedotta. (2) Metodo: prima di modificare ho misurato la geometria reale con l'harness dello smoke invece di dedurla dal codice (CLAUDE.md §5) — è così che è emerso che l'espansione era già left-aligned e che la divergenza stava nella definizione di «bordo sinistro». (3) Espansa la finestra copre il rail e la status bar (h = `innerHeight`, preesistente): l'asserzione A3 non la intercetta perché lo smoke non apre la chat.
+**Prompt document name**: 2026-08-02 (richiesta in chat, senza documento prompt)
+
 ## 2026-08-02 — fix(jodie): finestra chat allineata a sinistra (flottante e fullscreen)
 **Prompt**: ancorare la finestra Jjodie al lato sinistro in entrambe le modalità. Default flottante a `inset + 8px` (passo base della griglia), espansione flush al bordo dell'area contenuto con gap zero e crescita verso destra, margine verticale invariato a `JODIE_DEFAULT_MARGIN = 20` (esplicitamente **non** i 100px del FAB), nessuna nuova impostazione. 7 verifiche, report obbligatorio, `.jodie-window--fullscreen` da invertire (bordo + ombra).
 **Files touched**: `components/Jodie/JodieWindow.tsx` (nuova `JODIE_LEFT_GAP = 8` :94-96; helper `computeLeftInset()` :104-106 estratto dal corpo precedente; `computeDefaultPosition` :108-113 con clamp `max(0, min(inset+gap, innerWidth-width-gap))` e `y` di nuovo su `JODIE_DEFAULT_MARGIN`; `enterFullscreen` :250-252 flush a sinistra; **ramo fullscreen del listener di resize :382-383**), `components/Jodie/JodieWindow.css` (`.jodie-window--fullscreen`: `border-right`→`border-left`, ombra `-8px`→`8px`), `docs/discovery/discovery_2026-08-02_jjodie_window_left_aligned.md` (nuovo, commit `docs:` separato), `docs/claude-code-log.md`.
