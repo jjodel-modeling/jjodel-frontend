@@ -249,8 +249,8 @@ export function JodieWindow({
         setSavedGeometry({ position, size });
         const fsSize: Size = { width: JODIE_DEFAULT_WIDTH, height: window.innerHeight };
         const fsPosition: Position = {
-            // Flush to the content area: no gap, the window grows rightwards from a fixed left edge.
-            x: Math.max(0, Math.min(computeLeftInset(), window.innerWidth - fsSize.width)),
+            // Flush to the viewport edge, over the rail: expanded it is a docked panel, not a floating one.
+            x: 0,
             y: 0,
         };
         setSize(fsSize);
@@ -379,8 +379,8 @@ export function JodieWindow({
             if (isFullscreen) {
                 setSize(prev => ({ width: prev.width, height: window.innerHeight }));
                 setPosition(prev => ({
-                    // Stay flush to the content area, mirroring enterFullscreen.
-                    x: Math.max(0, Math.min(computeLeftInset(), window.innerWidth - size.width)),
+                    // Stay flush to the viewport edge, mirroring enterFullscreen.
+                    x: 0,
                     y: 0,
                 }));
                 return;
