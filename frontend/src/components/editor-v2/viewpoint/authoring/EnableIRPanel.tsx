@@ -8,7 +8,7 @@ import type { EdgeViewIR, RowViewIR, VertexViewIR } from '../ir/irTypes';
 const KIND_OPTIONS = [
     { value: 'vertex', label: 'Vertex (node)' },
     { value: 'row', label: 'Row (inline)' },
-    { value: 'edge', label: 'Edge (reference)' },
+    { value: 'edge', label: 'Edge (line)' },
 ];
 
 export interface EnableIRPanelProps {
@@ -127,9 +127,9 @@ export const EnableIRPanel: React.FC<EnableIRPanelProps> = ({ view }) => {
                     <HelpText>La row view partirà senza metaclasse: impostala (e il template) subito dopo dal pannello di authoring.</HelpText>
                 ) : kind === 'edge' ? (
                     names.length > 0 ? (
-                        <HelpText>La edge view partirà applicata alla metaclasse sorgente: {names.join(', ')}. Imposta reference, stile e terminazioni subito dopo dal pannello di authoring.</HelpText>
+                        <HelpText>La edge view partirà applicata alla metaclasse: {names.join(', ')}. La natura (reference o object) e tutto il resto si impostano subito dopo dal pannello di authoring.</HelpText>
                     ) : (
-                        <HelpText>La edge view partirà senza metaclasse sorgente: impostala (e l'eventuale reference) subito dopo dal pannello di authoring.</HelpText>
+                        <HelpText>La edge view partirà senza metaclasse: impostala, insieme alla natura (reference o object), subito dopo dal pannello di authoring.</HelpText>
                     )
                 ) : names.length > 0 ? (
                     <HelpText>La view partirà applicata a: {names.join(', ')}.</HelpText>

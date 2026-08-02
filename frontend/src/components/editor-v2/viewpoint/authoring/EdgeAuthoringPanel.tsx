@@ -9,6 +9,7 @@ import {
     HelpText,
     ErrorText,
     Button,
+    PathBuilder,
     PredicateBuilder,
     forPredicateKind,
     type PathBuilderFeatures,
@@ -25,6 +26,13 @@ export interface EdgeAuthoringPanelProps {
 
 const COMMIT_DEBOUNCE_MS = 300;
 const FEATURES_HINT = 'imposta una metaclasse sorgente per abilitare i path sulle feature';
+const ENDPOINT_FEATURES_HINT = 'imposta una metaclasse per abilitare la scelta dei capi';
+const ENDPOINT_ARRAY_ERROR = "Un capo non può leggere l'intero array (.values): scegli values[N] (per esempio values[0]) o una reference a valore singolo.";
+
+const NATURE_OPTIONS = [
+    { value: 'reference', label: 'Reference (stila una reference M1)' },
+    { value: 'object', label: 'Object (oggetto reso come linea)' },
+];
 
 const LINE_STYLE_OPTIONS = [
     { value: 'solid', label: 'Solid' },
@@ -46,9 +54,44 @@ const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
 const newCenterSource = (): TextSource => ({ from: 'literal', text: '' });
 
 /**
- * EdgeAuthoringPanel — authors the IR of a selected reference-as-edge view
- * (kind `edge`, reference substrate). Styles the RF edges derived from M1
- * references whose SOURCE object matches `metaclasses` (+ optional `reference`).
+ * Which substrate the edge view describes. UI state only: the IR has NO nature
+ * field and none is introduced here — a view IS object-as-edge exactly when both
+ * endpoint PathExprs are present (`isObjectAsEdge` in irCompile), so the nature is
+ * always re-derived from the data, never persisted.
+ */
+type EdgeNature = 'reference' | 'object';
+
+/** Nature of an ir, derived (never read from a field). */
+function natureOf(ir: EdgeViewIR | undefined): EdgeNature {
+    return ir?.edge?.source && ir?.edge?.target ? 'object' : 'reference';
+}
+
+/**
+ * An endpoint PathExpr is usable when it is non-empty and does not read a whole
+ * array: the endpoint normalization in irEdgeViews rejects arrays, so `$ref.values`
+ * would compile, resolve to nothing, and leave the object rendered as a node with no
+ * diagnostic at all. The indexed form `$ref.values[0]` is fine.
+ *
+ * Pure and dependency-free on purpose: the unit test cannot import this module
+ * (joiner -> monaco -> `window`), so it mirrors this predicate as a literal.
+ */
+function isUsableEndpointExpr(expr: string | undefined): boolean {
+    if (!expr) return false;
+    return !/\.values$/.test(expr);
+}
+
+/**
+ * EdgeAuthoringPanel — authors the IR of a selected edge view (kind `edge`), on
+ * both substrates:
+ * - reference-as-edge: styles the RF edges derived from M1 references whose SOURCE
+ *   object matches `metaclasses` (+ optional `reference`);
+ * - object-as-edge: every instance of `metaclasses` is drawn as a line between the
+ *   two endpoint PathExprs (`edge.source` / `edge.target`), its node hidden.
+ *
+ * The nature is NOT a field of the IR (see `natureOf`): it is UI state re-derived
+ * from the endpoints. Both endpoints therefore reach the ir together or not at all
+ * (`applyEndpoints`) — a half-authored pair would silently be a live
+ * reference-as-edge view carrying an inert PathExpr.
  *
  * The edit cycle mirrors RowAuthoringPanel exactly — a deep-cloned draft is
  * patched immutably; on each user edit it is validated eagerly (inline ErrorText)
@@ -67,12 +110,24 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) 
 
     const [draft, setDraft] = useState<EdgeViewIR>(seed);
     const [error, setError] = useState<string | null>(null);
+    // Nature and endpoint expressions are UI state, not IR. The endpoints live here
+    // (and not only in the draft) because they are written atomically: an expression
+    // typed while the other one is still missing must stay out of the ir.
+    const [nature, setNature] = useState<EdgeNature>(() => natureOf((view as any).ir));
+    const [sourceExpr, setSourceExpr] = useState<string>(() => (view as any).ir?.edge?.source ?? '');
+    const [targetExpr, setTargetExpr] = useState<string>(() => (view as any).ir?.edge?.target ?? '');
     const dirtyRef = useRef(false);
 
-    // Reset the draft when the selected view changes (no commit on reset).
+    // Reset the draft when the selected view changes (no commit on reset). Nature and
+    // endpoints are re-derived from the same seed, so reopening the tab on a complete
+    // object view lands back on the object branch.
     useEffect(() => {
         dirtyRef.current = false;
-        setDraft(seed());
+        const next = seed();
+        setDraft(next);
+        setNature(natureOf(next));
+        setSourceExpr(next.edge?.source ?? '');
+        setTargetExpr(next.edge?.target ?? '');
         setError(null);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [view.id]);
@@ -93,6 +148,56 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) 
     const patch = (next: EdgeViewIR) => {
         dirtyRef.current = true;
         setDraft(next);
+    };
+
+    // --- nature + endpoints (atomic write) ---
+
+    /**
+     * The two endpoints reach the ir together or not at all. A draft carrying a
+     * single endpoint compiles to isObjectAsEdge=false, i.e. a live reference-as-edge
+     * view whose PathExpr is inert and unreported: a state the UI must never produce.
+     * Incomplete or unusable input therefore DROPS both keys (drop of the key, as the
+     * reference and label-center editors already do) instead of writing empty strings.
+     */
+    const applyEndpoints = (nextSource: string, nextTarget: string) => {
+        setSourceExpr(nextSource);
+        setTargetExpr(nextTarget);
+        const edge = { ...draft.edge };
+        if (isUsableEndpointExpr(nextSource) && isUsableEndpointExpr(nextTarget)) {
+            edge.source = nextSource;
+            edge.target = nextTarget;
+        } else {
+            delete edge.source;
+            delete edge.target;
+        }
+        // The local expressions moved but the ir did not: no commit, no recompile.
+        if (edge.source === draft.edge.source && edge.target === draft.edge.target) return;
+        patch({ ...draft, edge });
+    };
+
+    /**
+     * Nature switch, explicit and symmetric: each direction drops the keys that
+     * belong to the other substrate, so the ir never carries both a `reference`
+     * restriction (ignored by the object resolver) and a pair of endpoints.
+     */
+    const changeNature = (next: EdgeNature) => {
+        if (next === nature) return;
+        setNature(next);
+        if (next === 'object') {
+            if (draft.reference !== undefined) {
+                const { reference, ...rest } = draft;
+                patch(rest as EdgeViewIR);
+            }
+            return;
+        }
+        setSourceExpr('');
+        setTargetExpr('');
+        if (draft.edge.source !== undefined || draft.edge.target !== undefined) {
+            const edge = { ...draft.edge };
+            delete edge.source;
+            delete edge.target;
+            patch({ ...draft, edge });
+        }
     };
 
     // Resolve the PathBuilder feature set from the edge view's first (source)
@@ -155,6 +260,16 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) 
     }, [JSON.stringify(draft.metaclasses), JSON.stringify((view as any).appliableToClasses ?? []), view.id]);
 
     const features = featureInfo.features;
+    const isObject = nature === 'object';
+
+    // Endpoint pickers see the REFERENCES only: an endpoint must navigate to another
+    // object, and an attribute path would compile and then resolve to nothing (silent
+    // fallback, the object stays a node). Same feature resolution as everything else —
+    // only the attribute list is emptied, PathBuilder is untouched.
+    const endpointFeatures = useMemo<PathBuilderFeatures | null>(
+        () => (features ? { attributes: [], references: features.references } : null),
+        [features],
+    );
 
     // All class names across every project metamodel (deduped) — offered to the
     // PredicateBuilder `isKind` selector. The project class set does not change
@@ -253,7 +368,9 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) 
     return (
         <section className="properties-tab properties-panel">
             <div className="jj-field-label" style={{ marginTop: 4 }}>IR Edge view authoring</div>
-            <HelpText>Una edge view di tipo reference stila gli edge derivati dalle reference M1 il cui oggetto SORGENTE corrisponde alla metaclasse (ed eventuale reference) qui sotto.</HelpText>
+            <HelpText>{isObject
+                ? "Una edge view di tipo object rende ogni istanza della metaclasse come una linea fra i due capi: l'oggetto non viene più disegnato come nodo."
+                : 'Una edge view di tipo reference stila gli edge derivati dalle reference M1 il cui oggetto SORGENTE corrisponde alla metaclasse (ed eventuale reference) qui sotto.'}</HelpText>
 
             {error && <ErrorText>{error}</ErrorText>}
 
@@ -263,16 +380,37 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) 
                 </ErrorText>
             )}
 
+            {/* Nature — first control of the form: it decides what everything below means.
+                Not a field of the ir: derived from the endpoints, kept in UI state. */}
+            <div className="jj-field" style={{ marginTop: 8 }}>
+                <label className="jj-field-label">Natura</label>
+                <Select
+                    options={NATURE_OPTIONS}
+                    value={nature}
+                    onChange={(e) => changeNature(e.target.value as EdgeNature)}
+                />
+                <HelpText>{isObject
+                    ? "La natura non è un campo dell'IR: la view è di tipo object finché entrambi i capi sono impostati."
+                    : 'Reference: la linea esiste già (è la reference M1) e la view ne decide solo aspetto ed etichetta.'}</HelpText>
+            </div>
+
             {/* Matching — source metaclass */}
             <div className="jj-field-label" style={{ marginTop: 8 }}>Matching</div>
             <div className="jj-field" style={{ marginTop: 4 }}>
-                <label className="jj-field-label">Metaclasse sorgente</label>
+                <label className="jj-field-label">{isObject ? "Metaclasse dell'oggetto" : 'Metaclasse sorgente'}</label>
                 <Toggle
                     checked={isWildcard}
                     onChange={setWildcard}
                     label="Tutte le metaclassi (*)"
                     size="xs"
+                    disabled={isObject}
                 />
+                {isObject && (
+                    <HelpText>Una object-as-edge deve nominare almeno una metaclasse: con il wildcard non finisce in nessun bucket del resolver e non produce nulla.</HelpText>
+                )}
+                {isObject && isWildcard && (
+                    <ErrorText>Questa view ha metaclasse wildcard (*): sul substrato object non si applica a nulla. Nomina almeno una metaclasse.</ErrorText>
+                )}
                 {!isWildcard && (
                     <>
                         {list.map((name, idx) => (
@@ -287,7 +425,9 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) 
                             </div>
                         ))}
                         {list.length === 0 && (
-                            <HelpText>Con la lista vuota la edge view non si applica a nessuna reference.</HelpText>
+                            <HelpText>{isObject
+                                ? 'Con la lista vuota la edge view non rende come linea nessun oggetto.'
+                                : 'Con la lista vuota la edge view non si applica a nessuna reference.'}</HelpText>
                         )}
                         <div style={{ marginTop: 4 }}>
                             <Select
@@ -299,19 +439,24 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) 
                         </div>
                     </>
                 )}
-                <HelpText>Le reference e le feature del PathBuilder si risolvono dalla prima metaclasse della lista.</HelpText>
+                <HelpText>{isObject
+                    ? 'I capi e le feature del PathBuilder si risolvono dalla prima metaclasse della lista.'
+                    : 'Le reference e le feature del PathBuilder si risolvono dalla prima metaclasse della lista.'}</HelpText>
             </div>
 
-            {/* Matching — reference */}
-            <div className="jj-field" style={{ marginTop: 8 }}>
-                <label className="jj-field-label">Reference</label>
-                <Select
-                    options={refOptions}
-                    value={draft.reference ?? ''}
-                    onChange={(e) => setReference(e.target.value)}
-                />
-                <HelpText>Una reference specifica ha priorità sulle view che matchano qualsiasi reference. Con metaclasse sorgente wildcard o assente il picker resta vuoto.</HelpText>
-            </div>
+            {/* Matching — reference (reference substrate only: the object resolver
+                never reads `reference`, so offering it there would be a dead control) */}
+            {!isObject && (
+                <div className="jj-field" style={{ marginTop: 8 }}>
+                    <label className="jj-field-label">Reference</label>
+                    <Select
+                        options={refOptions}
+                        value={draft.reference ?? ''}
+                        onChange={(e) => setReference(e.target.value)}
+                    />
+                    <HelpText>Una reference specifica ha priorità sulle view che matchano qualsiasi reference. Con metaclasse sorgente wildcard o assente il picker resta vuoto.</HelpText>
+                </div>
+            )}
 
             {/* Matching — predicate */}
             <div className="jj-field" style={{ marginTop: 8 }}>
@@ -334,7 +479,9 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) 
                     </div>
                 )}
                 {!hasPredicate && (
-                    <HelpText>Il predicate è valutato sull'oggetto sorgente della reference.</HelpText>
+                    <HelpText>{isObject
+                        ? "Il predicate è valutato sull'oggetto reso come linea."
+                        : "Il predicate è valutato sull'oggetto sorgente della reference."}</HelpText>
                 )}
             </div>
 
@@ -347,6 +494,40 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) 
                 />
                 <HelpText>Vince la priorità più alta; a parità, la specificità (esatta &gt; ereditata &gt; wildcard), poi l'ordine di dichiarazione.</HelpText>
             </div>
+
+            {/* Endpoints — object substrate only. Written atomically (applyEndpoints):
+                either both keys are in the ir, or neither is. */}
+            {isObject && (
+                <>
+                    <div className="jj-field-label" style={{ marginTop: 8 }}>Capi</div>
+                    <HelpText>Con entrambi i capi impostati le istanze di questa metaclasse vengono disegnate come linee: non appaiono più come nodi sul canvas e le loro reference verso i capi non vengono più disegnate.</HelpText>
+                    <div className="jj-field" style={{ marginTop: 4 }}>
+                        <label className="jj-field-label">Capo sorgente</label>
+                        <PathBuilder
+                            features={endpointFeatures}
+                            value={sourceExpr}
+                            disabledHint={ENDPOINT_FEATURES_HINT}
+                            onChange={(expr) => applyEndpoints(expr, targetExpr)}
+                        />
+                        {sourceExpr !== '' && !isUsableEndpointExpr(sourceExpr) && (
+                            <ErrorText>{ENDPOINT_ARRAY_ERROR}</ErrorText>
+                        )}
+                    </div>
+                    <div className="jj-field" style={{ marginTop: 8 }}>
+                        <label className="jj-field-label">Capo destinazione</label>
+                        <PathBuilder
+                            features={endpointFeatures}
+                            value={targetExpr}
+                            disabledHint={ENDPOINT_FEATURES_HINT}
+                            onChange={(expr) => applyEndpoints(sourceExpr, expr)}
+                        />
+                        {targetExpr !== '' && !isUsableEndpointExpr(targetExpr) && (
+                            <ErrorText>{ENDPOINT_ARRAY_ERROR}</ErrorText>
+                        )}
+                    </div>
+                    <HelpText>I due capi vengono scritti insieme: finché ne manca uno (o legge un intero array) la view resta una edge view di tipo reference e il canvas non cambia.</HelpText>
+                </>
+            )}
 
             {/* Line style */}
             <div className="jj-field-label" style={{ marginTop: 8 }}>Linea</div>
@@ -432,7 +613,9 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) 
                     </div>
                 )}
                 {!hasCenterLabel && (
-                    <HelpText>Senza label l'edge mantiene l'etichetta di default (nome della reference).</HelpText>
+                    <HelpText>{isObject
+                        ? 'Senza label la linea non mostra testo al centro.'
+                        : "Senza label l'edge mantiene l'etichetta di default (nome della reference)."}</HelpText>
                 )}
             </div>
         </section>

@@ -1,24 +1,37 @@
 /**
- * Unit tests for the Fase E-ref authoring surface (reference-as-edge):
- *  - the built-in `defaultEdgeViewIR` seed (shape + validity + compile defaults);
- *  - the minimal `edge` seed EnableIRPanel writes when enabling an edge view;
- *  - the IR-shape invariants the EdgeAuthoringPanel's drop-key helpers produce
- *    (absent `reference` = matches any reference; absent `labels.center` = no
- *    center label), each driven through the real validate/compile pipeline.
+ * Unit tests for the edge authoring surface, both substrates:
+ *  - E-ref (reference-as-edge): the built-in `defaultEdgeViewIR` seed (shape +
+ *    validity + compile defaults); the minimal `edge` seed EnableIRPanel writes;
+ *    the IR-shape invariants the drop-key helpers produce (absent `reference` =
+ *    matches any reference; absent `labels.center` = no center label);
+ *  - E-obj (object-as-edge): the endpoint pair as the sole discriminant of the
+ *    nature, the atomic drop of both endpoints, the inert wildcard, the endpoint
+ *    guard, and the object round-trip.
  *
  * EdgeAuthoringPanel / EnableIRPanel are NOT import-safe in the node vitest env
  * (they import joiner → monaco-editor → `window` undefined), so — as in
  * rowAuthoring.test.ts — the seeds are asserted as mirrored literals driven
  * through validateIR / compileEdgeView (the same functions the component's
- * enable()/commit path uses) rather than imported from the component.
+ * enable()/commit path uses) rather than imported from the component. The same
+ * applies to the panel's pure endpoint guard, mirrored below.
  */
 import { describe, it, expect } from 'vitest';
 import { validateIR } from '../../ir/irValidate';
 import { compileEdgeView } from '../../ir/irCompile';
+import { getIRIndex } from '../../ir/irResolveCore';
 import { defaultEdgeViewIR } from '../../ir/irDefaults';
 import type { EdgeViewIR } from '../../ir/irTypes';
 
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
+
+/** Minimal DState slice holding one IR view of a dedicated viewpoint. */
+function stateWith(viewId: string, ir: EdgeViewIR) {
+    return {
+        viewpoint: 'VP_EOBJ',
+        viewelements: [viewId],
+        idlookup: { [viewId]: { id: viewId, viewpoint: 'VP_EOBJ', ir } } as Record<string, any>,
+    };
+}
 
 describe('defaultEdgeViewIR — seed shape + validity', () => {
     it('has the exact documented shape (ratifica R-8)', () => {
@@ -101,6 +114,124 @@ describe('EdgeAuthoringPanel — center label (drop-key semantics)', () => {
         const ir: EdgeViewIR = { ...defaultEdgeViewIR(), metaclasses: ['State'], edge: {} };
         expect('labels' in ir.edge).toBe(false);
         expect(compileEdgeView('label-off', ir).labelText).toBe(null);
+    });
+});
+
+// ---- E-obj: object-as-edge ------------------------------------------------
+
+/**
+ * Mirror of the panel's pure endpoint guard (EdgeAuthoringPanel.isUsableEndpointExpr).
+ * Same reason as the seeds above: the panel cannot be imported here. An endpoint
+ * reading a whole array is refused because the endpoint normalization in irEdgeViews
+ * rejects arrays — it would compile, resolve to nothing, and silently leave the
+ * object rendered as a node.
+ */
+const isUsableEndpointExpr = (expr: string | undefined): boolean => {
+    if (!expr) return false;
+    return !/\.values$/.test(expr);
+};
+
+/** Mirrors the ir the panel commits once BOTH endpoints are usable. */
+const OBJECT_SEED: EdgeViewIR = {
+    ...defaultEdgeViewIR(),
+    metaclasses: ['Transition'],
+    edge: { source: '$src.value', target: '$tgt.value' },
+};
+
+describe('EdgeAuthoringPanel — object-as-edge seed', () => {
+    it('validates and compiles as object-as-edge', () => {
+        expect(validateIR('obj-seed', OBJECT_SEED)).toEqual({ ok: true });
+        const c = compileEdgeView('obj-seed', OBJECT_SEED);
+        expect(c.isObjectAsEdge).toBe(true);
+        expect(typeof c.sourceExpr).toBe('function');
+        expect(typeof c.targetExpr).toBe('function');
+        expect(c.reference).toBe(null);
+    });
+});
+
+describe('EdgeAuthoringPanel — the endpoint pair is the discriminant (atomic write)', () => {
+    it('a source without a target is NOT object-as-edge', () => {
+        const ir: EdgeViewIR = { ...OBJECT_SEED, edge: { source: '$src.value' } };
+        expect(validateIR('obj-src-only', ir)).toEqual({ ok: true });
+        expect(compileEdgeView('obj-src-only', ir).isObjectAsEdge).toBe(false);
+    });
+
+    it('a target without a source is NOT object-as-edge', () => {
+        const ir: EdgeViewIR = { ...OBJECT_SEED, edge: { target: '$tgt.value' } };
+        expect(validateIR('obj-tgt-only', ir)).toEqual({ ok: true });
+        expect(compileEdgeView('obj-tgt-only', ir).isObjectAsEdge).toBe(false);
+    });
+
+    it('the drop leaves NEITHER key in the ir (both keys go together)', () => {
+        // Mirrors applyEndpoints' incomplete branch: drop of the keys, never empty strings.
+        const edge = { ...OBJECT_SEED.edge };
+        delete edge.source;
+        delete edge.target;
+        const dropped: EdgeViewIR = { ...OBJECT_SEED, edge };
+        expect('source' in dropped.edge).toBe(false);
+        expect('target' in dropped.edge).toBe(false);
+        expect(validateIR('obj-dropped', dropped)).toEqual({ ok: true });
+        expect(compileEdgeView('obj-dropped', dropped).isObjectAsEdge).toBe(false);
+    });
+
+    it('the endpoint guard accepts .value and values[N], refuses a whole array', () => {
+        expect(isUsableEndpointExpr('$src.value')).toBe(true);
+        expect(isUsableEndpointExpr('$src.values[0]')).toBe(true);
+        expect(isUsableEndpointExpr('$src.values[12]')).toBe(true);
+        expect(isUsableEndpointExpr('$src.values')).toBe(false);
+        expect(isUsableEndpointExpr('')).toBe(false);
+        expect(isUsableEndpointExpr(undefined)).toBe(false);
+    });
+});
+
+describe('EdgeAuthoringPanel — wildcard is inert on the object substrate', () => {
+    it('metaclasses "*" with both endpoints lands in NO bucket', () => {
+        const ir: EdgeViewIR = { ...OBJECT_SEED, metaclasses: '*' };
+        const index = getIRIndex(stateWith('V_obj_wild', ir), 'sig_eobj_wildcard')!;
+        expect(index.objectAsEdgeByMetaclass.size).toBe(0);
+        expect(index.edgeByMetaclass.size).toBe(0);
+        expect(index.edgeWildcard.length).toBe(0);
+        // Still counted as a view of the viewpoint — it simply applies to nothing.
+        expect(index.viewIds).toEqual(['V_obj_wild']);
+    });
+
+    it('a named metaclass lands in the object bucket, never in the reference one', () => {
+        const index = getIRIndex(stateWith('V_obj_named', OBJECT_SEED), 'sig_eobj_named')!;
+        expect(index.objectAsEdgeByMetaclass.get('Transition')!.map(e => e.compiled.viewId))
+            .toEqual(['V_obj_named']);
+        expect(index.edgeByMetaclass.size).toBe(0);
+        expect(index.edgeWildcard.length).toBe(0);
+    });
+});
+
+describe('EdgeAuthoringPanel — object round-trip (draft → ir, untouched fields survive)', () => {
+    it('a fully-authored object ir survives clone → validate → compile with fields intact', () => {
+        const ir: EdgeViewIR = {
+            irVersion: 'ir-1.2',
+            kind: 'edge',
+            metaclasses: ['Transition'],
+            priority: 2,
+            edge: {
+                source: '$src.value',
+                target: '$tgt.values[0]',
+                line: { color: '#334155', width: 1, style: 'solid' },
+                terminations: { sourceEnd: 'none', targetEnd: 'openArrow' },
+                labels: { center: { from: 'intrinsic', prop: 'name' } },
+                // Fields the panel does not author must round-trip verbatim.
+                routing: 'orthogonal',
+                persistWaypoints: false,
+            },
+        };
+        const roundTripped = clone(ir);
+        expect(roundTripped).toEqual(ir);
+        expect(validateIR('obj-roundtrip', roundTripped)).toEqual({ ok: true });
+        const c = compileEdgeView('obj-roundtrip', roundTripped);
+        expect(c.isObjectAsEdge).toBe(true);
+        expect(c.priority).toBe(2);
+        expect(c.routing).toBe('orthogonal');
+        expect(c.persistWaypoints).toBe(false);
+        expect(typeof c.labelText).toBe('function');
+        expect(c.terminations).toEqual({ sourceEnd: 'none', targetEnd: 'openArrow' });
     });
 });
 
