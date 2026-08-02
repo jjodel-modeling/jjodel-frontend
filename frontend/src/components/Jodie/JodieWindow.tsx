@@ -89,9 +89,11 @@ interface ResizeStart {
 
 const JODIE_DEFAULT_WIDTH = 760;
 const JODIE_DEFAULT_HEIGHT = 520;
-// TODO: cleanup — no consumer left after the bottom-left default (kept per preservation rule).
 const JODIE_DEFAULT_MARGIN = 20;
-// Replicate the minimized FAB offsets from JodieWindow.css (.jodie-minimized: left 30px, bottom 100px).
+// Left gap when floating: one design-system grid step, so the window reads as edge-attached.
+// Fullscreen uses no gap at all — it is a docked panel, flush to the content area.
+const JODIE_LEFT_GAP = 8;
+// TODO: cleanup — no consumer left since the window stopped aligning to the FAB offsets.
 const JODIE_FAB_LEFT = 30;
 const JODIE_FAB_BOTTOM = 100;
 const JODIE_ANIMATION_MS = 220;
@@ -99,19 +101,17 @@ const DEFAULT_SIZE: Size = { width: JODIE_DEFAULT_WIDTH, height: JODIE_DEFAULT_H
 const MIN_SIZE: Size = { width: 320, height: 400 };
 const MAX_SIZE: Size = { width: 1200, height: 900 };
 
-// Bottom-left, anchored to the minimized FAB that opens the window.
-const computeDefaultPosition = (size: Size = DEFAULT_SIZE): Position => {
-    // Project rail: mounted in dashboard/project summary, absent in editor tabs (inset 0).
-    // Under 769px it slides off-canvas while staying in the DOM, so clamp negatives away.
-    const railInset = Math.max(0, document.querySelector('.leftbar')?.getBoundingClientRect().right ?? 0);
-    const x = railInset + JODIE_FAB_LEFT;
-    // On narrow viewports the rail-aligned x would overflow: keep the window fully visible instead.
-    const maxX = window.innerWidth - size.width - JODIE_FAB_LEFT;
-    return {
-        x: x > maxX ? Math.max(JODIE_FAB_LEFT, maxX) : x,
-        y: Math.max(0, window.innerHeight - size.height - JODIE_FAB_BOTTOM),
-    };
-};
+// Left edge of the content area: 0 in editor tabs (rail unmounted), the rail width where it is mounted.
+// Under 769px the rail slides off-canvas while staying in the DOM, so clamp negatives away.
+const computeLeftInset = (): number =>
+    Math.max(0, document.querySelector('.leftbar')?.getBoundingClientRect().right ?? 0);
+
+// Left-aligned, one grid step off the content area; vertical margin unchanged.
+const computeDefaultPosition = (size: Size = DEFAULT_SIZE): Position => ({
+    // The min() clamp keeps the 760px-wide window fully visible on narrow viewports.
+    x: Math.max(0, Math.min(computeLeftInset() + JODIE_LEFT_GAP, window.innerWidth - size.width - JODIE_LEFT_GAP)),
+    y: Math.max(0, window.innerHeight - size.height - JODIE_DEFAULT_MARGIN),
+});
 
 export function JodieWindow({
     messages,
@@ -243,13 +243,14 @@ export function JodieWindow({
         };
     };
 
-    // Enter fullscreen: anchor right, full viewport height, default width
+    // Enter fullscreen: anchor left, full viewport height, default width
     const enterFullscreen = useCallback(() => {
         triggerAnimation();
         setSavedGeometry({ position, size });
         const fsSize: Size = { width: JODIE_DEFAULT_WIDTH, height: window.innerHeight };
         const fsPosition: Position = {
-            x: Math.max(0, window.innerWidth - fsSize.width),
+            // Flush to the content area: no gap, the window grows rightwards from a fixed left edge.
+            x: Math.max(0, Math.min(computeLeftInset(), window.innerWidth - fsSize.width)),
             y: 0,
         };
         setSize(fsSize);
@@ -378,7 +379,8 @@ export function JodieWindow({
             if (isFullscreen) {
                 setSize(prev => ({ width: prev.width, height: window.innerHeight }));
                 setPosition(prev => ({
-                    x: Math.max(0, window.innerWidth - size.width),
+                    // Stay flush to the content area, mirroring enterFullscreen.
+                    x: Math.max(0, Math.min(computeLeftInset(), window.innerWidth - size.width)),
                     y: 0,
                 }));
                 return;

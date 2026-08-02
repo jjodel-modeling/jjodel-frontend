@@ -88,11 +88,11 @@
     box-shadow: var(--shadow-2xl);
 }
 
-/* Fullscreen modifier: right-anchored, full viewport height. Drag/resize disabled. */
+/* Fullscreen modifier: left-anchored, full viewport height. Drag/resize disabled. */
 .jodie-window--fullscreen {
     border-radius: 0;
-    border-right: none;
-    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.12);
+    border-left: none;
+    box-shadow: 8px 0 24px rgba(0, 0, 0, 0.12);
 }
 
 .jodie-window--fullscreen .jodie-header {
