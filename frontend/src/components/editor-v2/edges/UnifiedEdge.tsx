@@ -102,6 +102,15 @@ function UnifiedEdge(props: EdgeProps) {
     const irSourceTermination = irData.irSourceTermination as string | undefined;
     const irTargetTermination = irData.irTargetTermination as string | undefined;
     const irLabelAlwaysVisible = !!irData.irLabelAlwaysVisible;
+    // The label of an IR-authored edge has no write-back path yet. Its text comes from
+    // the compiled view (irEdgeViews.applyEdgeStyle re-seeds e.label on every recompute)
+    // and commitLabel's syncEdgeRefProperty cannot reach it: a synthetic object-as-edge
+    // id (`irobj_<objectId>`) is not a JjOM pointer at all, and on a decorated reference
+    // edge it would rename the M2 DReference instead. Until the authored editability flag
+    // lands with E-lab the affordance is removed rather than left as a dead write.
+    // Classic non-IR edges (including every M2 `reference`, which is never IR-decorated)
+    // keep the current behavior.
+    const labelEditable = !isIREdge;
 
     const { setEdges, getNodes } = useReactFlow();
     const notation = useEditorContextSafe()?.notation ?? 'uml';
@@ -758,10 +767,10 @@ function UnifiedEdge(props: EdgeProps) {
                             transform: `translate(-50%, -50%) translate(${10+ labelPos.x + labelOffset.x}px, ${labelPos.y + labelOffset.y}px)`,
                             pointerEvents: 'all',
                         }}
-                        onDoubleClick={(e) => { e.stopPropagation(); setEditing(true); }}
-                        onClick={(e) => { e.stopPropagation(); if (selected) { setEditing(true); return; } selectEdge?.(id); }}
+                        onDoubleClick={(e) => { e.stopPropagation(); if (!labelEditable) return; setEditing(true); }}
+                        onClick={(e) => { e.stopPropagation(); if (labelEditable && selected) { setEditing(true); return; } selectEdge?.(id); }}
                     >
-                        {editing ? (
+                        {editing && labelEditable ? (
                             <input
                                 autoFocus
                                 className="edge-label__input"
