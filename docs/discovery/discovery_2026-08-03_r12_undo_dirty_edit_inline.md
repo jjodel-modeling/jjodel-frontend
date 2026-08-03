@@ -151,7 +151,9 @@ Tre ragioni per cui non va bene qui:
 - **Salvare** (`ProjectsApi.save`) scrive e azzera il flag.
 - **Terza condizione, non ovvia**: il warning funziona solo se l'handler `beforeunload` e' stato installato. `U.enableUnsavedChangesWarning()` (`U.tsx:225-238`) e' chiamato in **un solo punto**, `ProjectEditor.tsx:401-407`, dentro un `useEffect` con cleanup che lo disinstalla allo unmount. E `ProjectEditor` e' montato come tab del dock (`ModelsSummaryTab.tsx:14`).
 
-  **Domanda aperta che non ho potuto chiudere in sola lettura**: se il tab che ospita `ProjectEditor` viene smontato quando l'utente lavora sul tab del canvas, l'handler risulta disinstallato e il punto 3 della verifica visiva della Fase 2 (*«chiudo la tab del browser: compare il warning»*) fallirebbe **anche con il flag correttamente impostato**. Va verificato a runtime prima di scommetterci.
+  **Domanda che in sola lettura restava aperta**: se il tab che ospita `ProjectEditor` viene smontato quando l'utente lavora sul tab del canvas, l'handler risulta disinstallato e il punto 3 della verifica visiva della Fase 2 (*«chiudo la tab del browser: compare il warning»*) fallirebbe **anche con il flag correttamente impostato**.
+
+  **Chiusa a runtime: la catena funziona.** Misura in §7. Non e' piu' un'incertezza.
 
 ---
 
@@ -190,4 +192,44 @@ Tre ragioni per cui non va bene qui:
 1. **D1** — visto che lo snapshot sarebbe inerte (§2.3): si aggiunge comunque la chiamata come allineamento al pattern (A), oppure si lascia `IRNodeContent` com'e' e si rimanda tutto al fix strutturale del dual undo? Aggiungere D1/A e chiamarlo «fix dell'undo» nel log sarebbe scorretto; aggiungerlo dichiarandolo preparatorio e' legittimo.
 2. **D2** — si accetta l'asimmetria (A, solo IR, dentro la lista DOVE) o si estende ai due handler nativi di `ObjectNode` (B, richiede di ampliare la lista)?
 3. **§5.4** — si aggiunge la guardia «valore cambiato» ai due handler, allineandoli a `ObjectNode`? E' un cambiamento di comportamento, per quanto piccolo, e non e' nel prompt.
-4. **§3.6** — vuoi che verifichi a runtime se l'handler `beforeunload` e' installato mentre il canvas e' attivo? Senza quella verifica il criterio 3 della verifica visiva non e' predicibile.
+4. ~~**§3.6** — vuoi che verifichi a runtime se l'handler `beforeunload` e' installato mentre il canvas e' attivo?~~ **Risposta: si', verificato. Vedi §7.** Domanda chiusa: il criterio 3 e' raggiungibile.
+
+---
+
+## 7. Verifica a runtime della §3.6 (eseguita)
+
+**Metodo.** Due sonde Playwright pilotate dagli helper dello smoke (`scripts/smoke/states.ts`: `seed`, `createProject`, le costanti di timing e il viewport 1440x900), quindi lo stato e' raggiunto esattamente come lo raggiunge `npm run smoke`. Le sonde vivono nello scratchpad di sessione, **non nel repo**: nessun file di `frontend/` e' stato creato o modificato. Dev server gia' attivo su `localhost:3000`.
+
+Due segnali indipendenti, per non far dipendere la risposta da uno solo:
+1. `window.U.beforeUnloadHandler` — la contabilita' dell'app (`private` di TS e' cancellato a runtime, quindi leggibile). `window.U` e' esposto da `joiner/index.ts:295`.
+2. Un conteggio reale dei listener `beforeunload` vivi, strumentando `addEventListener`/`removeEventListener` con un `addInitScript` che gira **prima** di ogni script dell'app.
+
+### 7.1 L'handler resta installato: `ProjectEditor` non viene smontato
+
+| Stato | `.project-editor` | `.editor-v2__canvas` | `U.beforeUnloadHandler` | listener vivi |
+|---|---|---|---|---|
+| progetto aperto, nessun tab | montato | assente | **impostato** | 2 |
+| **tab metamodello/canvas aperto** | **ancora montato** | montato | **impostato** | 2 |
+
+Traccia dei listener nei due stati: `["+ add (live=1)", "+ add (live=2)"]` — **nessuna rimozione**. Aprire il tab del canvas non smonta `ProjectEditor` e non disinstalla l'handler. L'ipotesi di §3.6 e' **smentita**.
+
+### 7.2 Test end-to-end: marcare dirty basta davvero
+
+La presenza del listener e' necessaria, non sufficiente. Secondo esperimento, con il canvas attivo, `page.close({ runBeforeUnload: true })` e osservazione dei dialog:
+
+| Scenario | flag | dialog sollevati | esito |
+|---|---|---|---|
+| controllo | `false` (invariato) | **0** | nessun warning, corretto |
+| test | `true`, scritto dalla pagina | **1** — `beforeunload: ""` | **warning mostrato** |
+
+`.project-editor` risulta montato in **1** sola istanza in entrambi gli scenari, e `U.shouldBypassBeforeUnload` e' `false`.
+
+**Verdetto: la catena funziona. Marcare `U.isProjectModified = true` dal canvas e' sufficiente a produrre il warning di uscita.** Il criterio 3 della verifica visiva della Fase 2 e' raggiungibile con la sola strada D2/A.
+
+### 7.3 Perche' la sonda e' rappresentativa del fix
+
+Il fix scriverebbe `U.isProjectModified = true` importando `U` da `joiner`. `joiner/index.ts:134` e' `export var U = windoww.U`: l'export **e'** l'oggetto globale, non una copia. La sonda ha scritto su `window.U` e l'handler — che legge `U.isProjectModified` dalla propria chiusura sulla classe di `common/U.tsx` (`:231`) — ha sollevato il dialog. Quindi l'oggetto scritto e quello letto dall'handler sono lo stesso, ed e' quello che otterrebbe il fix.
+
+### 7.4 Anomalia registrata, non bloccante
+
+I listener vivi sono **2**, con un solo sito di registrazione in tutto il sorgente (`U.tsx:237`) protetto da un early return (`U.tsx:226`) e una sola istanza di `.project-editor`. Qualcosa registra due volte — doppia valutazione del modulo sotto Vite in dev, o doppio mount dell'effetto — ma entrambi i listener leggono lo stesso flag e il comportamento osservato e' corretto in entrambi gli scenari. **Non blocca il fix.** Vale come nota per chi un giorno tocchi `enableUnsavedChangesWarning`: la guardia di idempotenza non sta reggendo. Non indagato oltre, fuori dallo scopo di R12.
