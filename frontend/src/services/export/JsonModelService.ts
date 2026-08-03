@@ -108,6 +108,21 @@ export class JsonModelService {
         return JSON.stringify(this.buildMetamodelDocument(metamodel), null, 2);
     }
 
+    /**
+     * Build a token-lean variant of the metamodel document, for feeding into
+     * LLM prompts. Same `jjodel-metamodel` semantic shape as
+     * buildMetamodelDocument, with heavy / id-only fields deep-stripped
+     * (externalMetamodels, ids, export timestamp, version stamps). Cross-
+     * metamodel classifier refs keep their `name` (+ `package`) so they still
+     * resolve by name; only their internal metamodel id is dropped.
+     */
+    static buildMetamodelDocumentLight(metamodel: LModel): Record<string, unknown> {
+        return this.stripKeysDeep(
+            this.buildMetamodelDocument(metamodel),
+            this.LIGHT_OMIT_KEYS
+        ) as Record<string, unknown>;
+    }
+
     // ============================================
     // PUBLIC — MODEL (M1)
     // ============================================
@@ -150,6 +165,24 @@ export class JsonModelService {
      */
     static exportModelToJSON(model: LModel): string {
         return JSON.stringify(this.buildModelDocument(model), null, 2);
+    }
+
+    /**
+     * Build a token-lean variant of the model document, for feeding into LLM
+     * prompts. Same `jjodel-model` shape as buildModelDocument (metamodel
+     * embedded), with only the heavy / noise fields stripped
+     * (externalMetamodels, export timestamp, version stamps).
+     *
+     * Unlike buildMetamodelDocumentLight, this does NOT strip `id`: object ids,
+     * `$ref` targets and object names are the stable handles a downstream
+     * refactoring script needs to address instances (`set <name>.<attr> = ...`,
+     * `delete instance <name>`), so identity must be preserved.
+     */
+    static buildModelDocumentLight(model: LModel): Record<string, unknown> {
+        return this.stripKeysDeep(
+            this.buildModelDocument(model),
+            this.LIGHT_MODEL_OMIT_KEYS
+        ) as Record<string, unknown>;
     }
 
     // ============================================
@@ -436,6 +469,41 @@ export class JsonModelService {
     // ============================================
     // UTILITIES
     // ============================================
+
+    /**
+     * Keys removed by buildMetamodelDocumentLight. `externalMetamodels` is the
+     * biggest token sink (full transitive-closure embedding); the rest are
+     * ids / timestamps / version stamps that carry no modelling meaning for an
+     * LLM. Safe as a blanket recursive strip for the M2 metamodel document,
+     * where `id` appears only in `metadata` and cross-metamodel classifier refs
+     * (no class / attribute / reference carries an id of its own).
+     */
+    private static readonly LIGHT_OMIT_KEYS = new Set<string>([
+        'externalMetamodels', 'id', 'exportedAt', 'jjodelVersion', 'formatVersion',
+    ]);
+
+    /**
+     * Keys removed by buildModelDocumentLight. Same rationale as LIGHT_OMIT_KEYS
+     * but WITHOUT `id`: an M1 document uses object ids / `$ref` as identity
+     * handles (see buildModelDocumentLight), so they must survive the trim.
+     */
+    private static readonly LIGHT_MODEL_OMIT_KEYS = new Set<string>([
+        'externalMetamodels', 'exportedAt', 'jjodelVersion', 'formatVersion',
+    ]);
+
+    /** Deep-clone `value`, dropping any object key present in `omit`. */
+    private static stripKeysDeep(value: any, omit: Set<string>): any {
+        if (Array.isArray(value)) return value.map(v => this.stripKeysDeep(v, omit));
+        if (value && typeof value === 'object') {
+            const out: any = {};
+            for (const [k, v] of Object.entries(value)) {
+                if (omit.has(k)) continue;
+                out[k] = this.stripKeysDeep(v, omit);
+            }
+            return out;
+        }
+        return value;
+    }
 
     private static applyMultiplicity(out: any, lowerBound: any, upperBound: any): void {
         if (lowerBound !== undefined && lowerBound !== 0) out.lowerBound = lowerBound;
