@@ -7,9 +7,17 @@
  *
  * Phase 2: context menu (right-click) on nodes and canvas, inline rename,
  * delete confirmation dialog, keyboard shortcuts.
+ *
+ * Rendered through a portal to <body>: the only mount site is ProjectEditor, which
+ * lives inside an rc-dock pane, and rc-dock transforms that pane. A `position: fixed`
+ * descendant of a transformed ancestor resolves against that ancestor instead of the
+ * viewport, so `.mm-view` (fixed, inset 0) was being clipped to the dock panel —
+ * 1360px wide starting at x=240 instead of covering the screen, with no backdrop over
+ * the rail or the app bar. Same reason PropertiesWithTreeView portals its overlay.
  */
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { EmptyState as JjEmptyState } from '../ui/EmptyState';
 import type { Megamodel, MegamodelEdge as MegaEdge, ArtifactType } from '../../model/megamodel';
 import { computeMegamodelLayout } from './megamodelLayout';
@@ -998,7 +1006,7 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
 
     // ── Empty state ───────────────────────────────────────────────────────────
     if (layoutReady && nodes.length === 0) {
-        return (
+        return createPortal(
             <div className="mm-view" onClick={handleBackdropClick}>
                 <div className="mm-view__modal">
                     {header}
@@ -1019,11 +1027,12 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
                         onClose={closeContextMenu}
                     />
                 )}
-            </div>
+            </div>,
+            document.body
         );
     }
 
-    return (
+    return createPortal(
         <div className="mm-view" onClick={handleBackdropClick}>
             <div className="mm-view__modal">
                 {header}
@@ -1202,7 +1211,8 @@ const MegamodelView: React.FC<MegamodelViewProps> = ({
                     </div>
                 </div>
             )}
-        </div>
+        </div>,
+        document.body
     );
 };
 

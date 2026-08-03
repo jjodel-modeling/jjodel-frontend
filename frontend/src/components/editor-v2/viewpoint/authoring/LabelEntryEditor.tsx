@@ -1,7 +1,7 @@
 import React from 'react';
 import { Select, Toggle, ConditionalEditor, type PathBuilderFeatures } from '../../../ui';
 import { TextSourceEditor } from './TextSourceEditor';
-import { TextStyleEditor } from './TextStyleEditor';
+import { TextStyleField } from './TextStyleField';
 import type { LabelSpec, LabelPosition, TextSource, TextStyle } from '../ir/irTypes';
 
 const POSITION_OPTIONS = [
@@ -103,16 +103,13 @@ export const LabelEntryEditor: React.FC<LabelEntryEditorProps> = ({
                 />
             </div>
 
-            <div className="jj-field">
-                <label className="jj-field-label">Stile</label>
-                <TextStyleEditor
-                    value={label.style}
-                    onChange={(style: TextStyle | undefined) => onChange({ ...label, style })}
-                    features={features}
-                    featuresHint={featuresHint}
-                    classNames={classNames}
-                />
-            </div>
+            <TextStyleField
+                value={label.style}
+                onChange={(style: TextStyle | undefined) => onChange({ ...label, style })}
+                features={features}
+                featuresHint={featuresHint}
+                classNames={classNames}
+            />
         </>
     );
 };

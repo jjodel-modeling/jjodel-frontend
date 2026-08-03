@@ -1,5 +1,5 @@
 import React from 'react';
-import { Select, NumberInput, Checkbox, ColorPicker, ConditionalEditor, type PathBuilderFeatures } from '../../../ui';
+import { Select, Input, ColorPicker, ConditionalEditor, isConditionalValue, type PathBuilderFeatures } from '../../../ui';
 import type { TextStyle, FontFamilyToken, FontWeightToken, Conditional } from '../ir/irTypes';
 
 const FAMILY_OPTIONS = [
@@ -7,15 +7,17 @@ const FAMILY_OPTIONS = [
     { value: 'mono', label: 'Mono' },
 ];
 const WEIGHT_OPTIONS = [
-    { value: 'normal', label: 'Normal (400)' },
-    { value: 'medium', label: 'Medium (500)' },
-    { value: 'semibold', label: 'Semibold (600)' },
-    { value: 'bold', label: 'Bold (700)' },
+    { value: 'normal', label: 'Normal' },
+    { value: 'medium', label: 'Medium' },
+    { value: 'semibold', label: 'Semibold' },
+    { value: 'bold', label: 'Bold' },
 ];
 const STYLE_OPTIONS = [
-    { value: 'normal', label: 'Normal' },
-    { value: 'italic', label: 'Italic' },
+    { value: 'normal', label: 'Normale' },
+    { value: 'italic', label: 'Corsivo' },
 ];
+
+const COLOR_SEED = '#334155';
 
 export interface TextStyleEditorProps {
     value: TextStyle | undefined;
@@ -31,7 +33,8 @@ export interface TextStyleEditorProps {
  * Immutable axis patch (ir-1.3 TS1): apply `patch` over the current TextStyle,
  * dropping any key whose patched value is undefined; collapse the whole object to
  * undefined when no axis remains, so a label with no authored style round-trips
- * byte-identical (mirrors the key-drop discipline of EdgeAuthoringPanel).
+ * byte-identical. UNCHANGED from TS1 — the "Default" state of a control unsets the
+ * axis through exactly this key-drop (no new write path).
  */
 function setAxis(prev: TextStyle | undefined, patch: Partial<TextStyle>): TextStyle | undefined {
     const base: TextStyle = { ...(prev ?? {}) };
@@ -42,59 +45,94 @@ function setAxis(prev: TextStyle | undefined, patch: Partial<TextStyle>): TextSt
     return Object.keys(base).length === 0 ? undefined : base;
 }
 
-interface AxisFieldProps<T> {
+interface AxisRowProps<T> {
     label: string;
-    /** Axis present in the TextStyle (checkbox on = override; off = inherit default). */
-    enabled: boolean;
-    onToggle: (on: boolean) => void;
     value: Conditional<T> | undefined;
+    /** Already bound to setAxis(+key) in the parent. */
     onChange: (next: Conditional<T> | undefined) => void;
-    renderValue: (v: T, onCh: (v: T) => void) => React.ReactNode;
-    defaultValue: T;
+    /** Non-conditional control incl. the "Default"/unset affordance (bare = current bare value or undefined). */
+    renderSimple: (bare: T | undefined, setBare: (v: T | undefined) => void) => React.ReactNode;
+    /** Control for a conditional branch value (always a real T, no "Default"). */
+    renderBranch: (v: T, onCh: (v: T) => void) => React.ReactNode;
+    /** Seed value when flipping to conditional and ConditionalEditor's branch default. */
+    axisDefault: T;
     features: PathBuilderFeatures | null;
     featuresHint?: string;
     classNames: string[];
 }
 
 /**
- * One typographic axis: a presence checkbox (absent = inherit the surface CSS
- * default, §4) plus, when present, the existing ConditionalEditor<T> — which
- * carries its own Fixed/Conditional toggle. Reuse, not a bespoke conditional UI.
+ * One typographic axis as a compact row: [label] [control] [ƒx]. The ƒx state is
+ * DERIVED from the value (Conditional -> active, showing the ConditionalEditor below;
+ * bare/undefined -> inactive, showing the simple control whose "Default" option unsets
+ * the axis). ConditionalEditor is reused verbatim (its own Fixed/Conditional switch
+ * stays — it only appears once ƒx is already active).
  */
-function AxisField<T>({
+function AxisRow<T>({
     label,
-    enabled,
-    onToggle,
     value,
     onChange,
-    renderValue,
-    defaultValue,
+    renderSimple,
+    renderBranch,
+    axisDefault,
     features,
     featuresHint,
     classNames,
-}: AxisFieldProps<T>): React.ReactElement {
+}: AxisRowProps<T>): React.ReactElement {
+    const isCond = isConditionalValue(value);
+    const bare = isCond ? undefined : (value as T | undefined);
+
+    const flip = () => {
+        if (isCond) {
+            // Collapse to the then-branch value (stays authored, not undefined).
+            onChange((value as { then: T }).then);
+        } else {
+            const base = (value as T | undefined) ?? axisDefault;
+            onChange({ when: { op: 'literal', value: true }, then: base });
+        }
+    };
+
     return (
-        <div className="jj-field">
-            <Checkbox checked={enabled} onChange={onToggle} label={label} />
-            {enabled && (
-                <ConditionalEditor<T>
-                    value={value}
-                    onChange={onChange}
-                    renderValue={renderValue}
-                    defaultValue={defaultValue}
-                    features={features}
-                    featuresHint={featuresHint}
-                    classNames={classNames}
-                />
+        <div className={`jj-textstyle-row${isCond ? ' jj-textstyle-row--cond' : ''}`}>
+            <div className="jj-textstyle-row__main">
+                <span className="jj-textstyle-row__label">{label}</span>
+                <div className="jj-textstyle-row__control">
+                    {isCond
+                        ? <span className="jj-textstyle-row__condlabel">Condizionale</span>
+                        : renderSimple(bare, (v) => onChange(v))}
+                </div>
+                <button
+                    type="button"
+                    className={`jj-textstyle-row__fx${isCond ? ' is-active' : ''}`}
+                    onClick={flip}
+                    title={isCond ? 'Torna a valore fisso' : 'Rendi condizionale (ƒx)'}
+                    aria-pressed={isCond}
+                >
+                    <i className="bi bi-lightning-charge" aria-hidden="true" />
+                </button>
+            </div>
+            {isCond && (
+                <div className="jj-textstyle-row__cond">
+                    <ConditionalEditor<T>
+                        value={value}
+                        onChange={onChange}
+                        renderValue={renderBranch}
+                        defaultValue={axisDefault}
+                        features={features}
+                        featuresHint={featuresHint}
+                        classNames={classNames}
+                    />
+                </div>
             )}
         </div>
     );
 }
 
 /**
- * TextStyleEditor — authors a TextStyle (ir-1.3 TS1): fontFamily, fontSize,
- * fontWeight, fontStyle, color. Each axis is optional (absent = inherit) and can
- * be fixed or Conditional through the shared ConditionalEditor. Presentational:
+ * TextStyleEditor — per-axis authoring body of the Tipografia popover (ir-1.3 TS1,
+ * Fase 2b redesign). Five always-visible rows (Font, Dimensione, Peso, Stile, Colore);
+ * the unset state lives inside each control as "Default" (key-drop via setAxis); a
+ * per-row ƒx toggle enters conditional mode (reusing ConditionalEditor). Presentational:
  * flat data props, design-system tokens, no editor-v2 runtime import.
  */
 export const TextStyleEditor: React.FC<TextStyleEditorProps> = ({
@@ -104,76 +142,131 @@ export const TextStyleEditor: React.FC<TextStyleEditorProps> = ({
     featuresHint,
     classNames,
 }) => {
-    const v = value;
+    const patch = (partial: Partial<TextStyle>) => onChange(setAxis(value, partial));
+
     return (
-        <>
-            <AxisField<FontFamilyToken>
+        <div className="jj-textstyle-rows">
+            <AxisRow<FontFamilyToken>
                 label="Font"
-                enabled={v?.fontFamily !== undefined}
-                onToggle={(on) => onChange(setAxis(v, { fontFamily: on ? 'sans' : undefined }))}
-                value={v?.fontFamily}
-                onChange={(next) => onChange(setAxis(v, { fontFamily: next }))}
-                defaultValue="sans"
-                renderValue={(val, onCh) => (
-                    <Select options={FAMILY_OPTIONS} value={val} onChange={(e) => onCh(e.target.value as FontFamilyToken)} />
+                value={value?.fontFamily}
+                onChange={(next) => patch({ fontFamily: next })}
+                axisDefault="sans"
+                renderSimple={(bare, setBare) => (
+                    <Select
+                        placeholder="Default"
+                        options={FAMILY_OPTIONS}
+                        value={bare ?? ''}
+                        onChange={(e) => setBare(e.target.value === '' ? undefined : (e.target.value as FontFamilyToken))}
+                    />
+                )}
+                renderBranch={(val, onCh) => (
+                    <Select placeholder="Sans" options={FAMILY_OPTIONS} value={val} onChange={(e) => onCh(e.target.value as FontFamilyToken)} />
                 )}
                 features={features}
                 featuresHint={featuresHint}
                 classNames={classNames}
             />
-            <AxisField<number>
-                label="Dimensione (px)"
-                enabled={v?.fontSize !== undefined}
-                onToggle={(on) => onChange(setAxis(v, { fontSize: on ? 12 : undefined }))}
-                value={v?.fontSize}
-                onChange={(next) => onChange(setAxis(v, { fontSize: next }))}
-                defaultValue={12}
-                renderValue={(val, onCh) => <NumberInput value={val} min={8} max={32} onChange={onCh} />}
+            <AxisRow<number>
+                label="Dimensione"
+                value={value?.fontSize}
+                onChange={(next) => patch({ fontSize: next })}
+                axisDefault={12}
+                renderSimple={(bare, setBare) => (
+                    <div className="jj-textstyle-size">
+                        <Input
+                            type="number"
+                            min={8}
+                            max={32}
+                            placeholder="Default"
+                            value={bare ?? ''}
+                            onChange={(e) => { const t = e.target.value; setBare(t === '' ? undefined : Number(t)); }}
+                        />
+                        <span className="jj-textstyle-size__suffix">px</span>
+                    </div>
+                )}
+                renderBranch={(val, onCh) => (
+                    <div className="jj-textstyle-size">
+                        <Input
+                            type="number"
+                            min={8}
+                            max={32}
+                            value={val}
+                            onChange={(e) => { const t = e.target.value; if (t !== '') onCh(Number(t)); }}
+                        />
+                        <span className="jj-textstyle-size__suffix">px</span>
+                    </div>
+                )}
                 features={features}
                 featuresHint={featuresHint}
                 classNames={classNames}
             />
-            <AxisField<FontWeightToken>
+            <AxisRow<FontWeightToken>
                 label="Peso"
-                enabled={v?.fontWeight !== undefined}
-                onToggle={(on) => onChange(setAxis(v, { fontWeight: on ? 'normal' : undefined }))}
-                value={v?.fontWeight}
-                onChange={(next) => onChange(setAxis(v, { fontWeight: next }))}
-                defaultValue="normal"
-                renderValue={(val, onCh) => (
-                    <Select options={WEIGHT_OPTIONS} value={val} onChange={(e) => onCh(e.target.value as FontWeightToken)} />
+                value={value?.fontWeight}
+                onChange={(next) => patch({ fontWeight: next })}
+                axisDefault="normal"
+                renderSimple={(bare, setBare) => (
+                    <Select
+                        placeholder="Default"
+                        options={WEIGHT_OPTIONS}
+                        value={bare ?? ''}
+                        onChange={(e) => setBare(e.target.value === '' ? undefined : (e.target.value as FontWeightToken))}
+                    />
+                )}
+                renderBranch={(val, onCh) => (
+                    <Select placeholder="Normal" options={WEIGHT_OPTIONS} value={val} onChange={(e) => onCh(e.target.value as FontWeightToken)} />
                 )}
                 features={features}
                 featuresHint={featuresHint}
                 classNames={classNames}
             />
-            <AxisField<'normal' | 'italic'>
+            <AxisRow<'normal' | 'italic'>
                 label="Stile"
-                enabled={v?.fontStyle !== undefined}
-                onToggle={(on) => onChange(setAxis(v, { fontStyle: on ? 'normal' : undefined }))}
-                value={v?.fontStyle}
-                onChange={(next) => onChange(setAxis(v, { fontStyle: next }))}
-                defaultValue="normal"
-                renderValue={(val, onCh) => (
-                    <Select options={STYLE_OPTIONS} value={val} onChange={(e) => onCh(e.target.value as 'normal' | 'italic')} />
+                value={value?.fontStyle}
+                onChange={(next) => patch({ fontStyle: next })}
+                axisDefault="normal"
+                renderSimple={(bare, setBare) => (
+                    <Select
+                        placeholder="Default"
+                        options={STYLE_OPTIONS}
+                        value={bare ?? ''}
+                        onChange={(e) => setBare(e.target.value === '' ? undefined : (e.target.value as 'normal' | 'italic'))}
+                    />
+                )}
+                renderBranch={(val, onCh) => (
+                    <Select placeholder="Normale" options={STYLE_OPTIONS} value={val} onChange={(e) => onCh(e.target.value as 'normal' | 'italic')} />
                 )}
                 features={features}
                 featuresHint={featuresHint}
                 classNames={classNames}
             />
-            <AxisField<string>
+            <AxisRow<string>
                 label="Colore"
-                enabled={v?.color !== undefined}
-                onToggle={(on) => onChange(setAxis(v, { color: on ? '' : undefined }))}
-                value={v?.color}
-                onChange={(next) => onChange(setAxis(v, { color: next }))}
-                defaultValue=""
-                renderValue={(val, onCh) => <ColorPicker value={val} onChange={onCh} />}
+                value={value?.color}
+                onChange={(next) => patch({ color: next })}
+                axisDefault={COLOR_SEED}
+                renderSimple={(bare, setBare) => (
+                    bare === undefined
+                        ? (
+                            <button type="button" className="jj-textstyle-defaultbtn" onClick={() => setBare(COLOR_SEED)}>
+                                Default
+                            </button>
+                        )
+                        : (
+                            <div className="jj-textstyle-color">
+                                <ColorPicker value={bare} onChange={(hex) => setBare(hex)} />
+                                <button type="button" className="jj-textstyle-clear" title="Rimuovi (Default)" onClick={() => setBare(undefined)}>
+                                    <i className="bi bi-x-lg" aria-hidden="true" />
+                                </button>
+                            </div>
+                        )
+                )}
+                renderBranch={(val, onCh) => <ColorPicker value={val} onChange={onCh} />}
                 features={features}
                 featuresHint={featuresHint}
                 classNames={classNames}
             />
-        </>
+        </div>
     );
 };
 

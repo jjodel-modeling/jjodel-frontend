@@ -69,7 +69,7 @@
 \email{alfonso.pierantonio@univaq.it}
 
 \begin{abstract}
-Large language model (LLM) agents now write a large share of the code in some model-driven engineering (MDE) tools, under human direction and across many sessions. The apparatus that makes this work, the harness, is a set of markup documents that carry intent, context, and verdicts between a human director and two agents, an architect and an implementer. These documents are the control surface of the process, yet their roles, the quality factors they serve, and how well an LLM actually exploits them are left informal. We abstract from a 370k-line MDE workbench, \texttt{Jjodel}, a reference harness: a triad of executors, a taxonomy of document types, a process model, and a phased evolution in which the process periodically rewrites itself through recalibration. We then characterize the harness in two complementary ways. A quality goal model (GRL/NFR) records what each document type is meant to improve, and what it harms, exposing three structural trade-offs. A performance characterization maps each document type to the typical characteristics of LLMs (context-window cost, long-context recall, instruction following, lazy loading, determinism). Knowledge debt is the gap between the two: where the intended quality contribution is not realized. We measure that gap on the \texttt{Jjodel} corpus of 233 documents and outline a cross-model validation with three LLMs (Claude, Gemini, Mistral) visualized as radar diagrams. The contribution is the reference harness, its quality and LLM-performance characterization, and knowledge debt cast as a measurable intended-versus-realized gap.
+Large language model (LLM) agents now write a large share of the code in some model-driven engineering (MDE) tools, under human direction and across many sessions. The apparatus that makes this work, the harness, is a set of markup documents that carry intent, context, and verdicts between a human director and two agents, an architect and an implementer. These documents are the control surface of the process, yet their roles, the quality factors they serve, and how well an LLM actually exploits them are left informal. We abstract from a 320k-line MDE workbench, \texttt{Jjodel}, a reference harness: a triad of executors, a taxonomy of document types, a process model, and a phased evolution in which the process periodically rewrites itself through recalibration. We then characterize the harness in two complementary ways. A quality goal model (GRL/NFR) records what each document type is meant to improve, and what it harms, exposing three structural trade-offs. A performance characterization maps each document type to the typical characteristics of LLMs (context-window cost, long-context recall, instruction following, lazy loading, determinism). Knowledge debt is the gap between the two: where the intended quality contribution is not realized. We measure that gap on the \texttt{Jjodel} corpus of 346 documents and outline a cross-model validation with three LLMs (Claude, Gemini, Mistral) visualized as radar diagrams. The contribution is the reference harness, its quality and LLM-performance characterization, and knowledge debt cast as a measurable intended-versus-realized gap.
 \end{abstract}
 
 \keywords{model-driven engineering, large language models, harness engineering, goal modelling, quality attributes, knowledge debt, agentic development}
@@ -91,7 +91,7 @@ This paper abstracts a reusable harness from a real, heavily LLM-assisted MDE pr
 \item[RQ3] How does each document type perform with respect to LLM characteristics, and where does the intended quality contribution diverge from the realized one (knowledge debt)?
 \end{description}
 
-\noindent\textbf{Contributions.} (1) A reference harness abstracted from a 370k-line case: a triad of executors, a document taxonomy, a process model, and a phased evolution with recalibration as a self-referential meta-transformation. (2) A quality goal model of the harness, with a contribution matrix and three structural trade-offs. (3) A characterization of document-type performance against LLM characteristics. (4) Knowledge debt reframed as a measurable intended-versus-realized gap, quantified on \texttt{Jjodel} and with a cross-model validation design (Claude, Gemini, Mistral) visualized as radar diagrams.
+\noindent\textbf{Contributions.} (1) A reference harness abstracted from a 320k-line case: a triad of executors, a document taxonomy, a process model, and a phased evolution with recalibration as a self-referential meta-transformation. (2) A quality goal model of the harness, with a contribution matrix and three structural trade-offs. (3) A characterization of document-type performance against LLM characteristics. (4) Knowledge debt reframed as a measurable intended-versus-realized gap, quantified on \texttt{Jjodel} and with a cross-model validation design (Claude, Gemini, Mistral) visualized as radar diagrams.
 
 \section{Background}
 % TODO verify all footnote URLs and add access dates before submission.
@@ -154,7 +154,7 @@ Context and scale limits & design and maintenance & No coherent global model of 
 Two observations matter for the rest of the paper. First, the stage column shows that several problems are born at generation but become visible only later, at review, testing, or maintenance, which is exactly why a disciplined process with explicit review and recording steps can intercept them. Second, knowledge debt and cognitive atrophy stand apart: they are not defects in the code but in what the process fails to internalize, and unlike technical debt they escape any code-level check. This is the problem our harness is meant to expose and measure, and the one the rest of the paper operationalizes.
 
 \section{A reference harness for LLM-assisted development}
-We abstract the harness from \texttt{Jjodel}, a web-based MDE workbench (metamodelling, model editing, a transformation and an expression language, Ecore and XMI I/O) of about 370k lines, a large share produced by the implementer under direction.
+We abstract the harness from \texttt{Jjodel}, a web-based MDE workbench (metamodelling, model editing, a transformation and an expression language, Ecore and XMI I/O) of about 320k lines, a large share produced by the implementer under direction.
 
 \subsection{The triad}
 The harness has three executors: a \emph{director} (human) who authors intent and gates the loop, an \emph{architect} (a conversational LLM) who reasons and generates prompts, and an \emph{implementer} (a coding agent) who edits the code base. The director plays two roles the model keeps apart: \emph{authoring} intent is an activity, while \emph{gating} (accept, reject, redirect) produces no artifact and is a decision. We record the executor of each step (director, architect, implementer, or collaborative) and whether the step is automatic (performed by an agent with no human action) or manual.
@@ -324,7 +324,7 @@ The characterization explains the trade-offs mechanically. The persistent contex
 \section{Knowledge debt as the intended-versus-realized gap}
 Knowledge debt is where a document's realized contribution falls short of its intended one. The goal model gives the intended contribution; an audit of the corpus gives the realized one; each negative realized link overriding a positive intended link is a debt instance. In process terms the gap surfaces as a conformance failure of the enacted process against its intended document-and-step model, of six kinds: a document that no type covers (missing document type); a real step that no defined step covers (missing step); a persistent store whose content no longer matches the code (stale context); a step whose output never appears as a written document (dead step); an activity reading a long-stale document (stale read); and a transient handoff carrying assumptions absent from every document type's definition (undocumented knowledge in transit).
 
-We measured these on the \texttt{Jjodel} corpus of 233 authored documents at a fixed commit; every figure is scripted and re-runnable (Table~\ref{tab:ind}). Two results are sharp. \textbf{Handoff incarnation.} Of 97 discovery reports, excluding the append-only log, only 4 (5 counting a code-base overview) are referenced by any downstream design, spec, or implementation document. The discovery report's intended traceability contribution is realized at about 4 to 5 percent: the knowledge stays in session. \textbf{Governance conformance.} The persistent context states a rotation invariant for the log (keep the last 20 entries, archive the rest); the active log holds 514 entries and no archive exists, a violation by a factor of 25. The document asserts a rule the process does not keep.
+We measured these on the \texttt{Jjodel} corpus of 346 authored documents at a fixed commit; every figure is scripted and re-runnable (Table~\ref{tab:ind}). Two results are sharp. \textbf{Handoff incarnation.} Of 193 discovery reports, excluding the append-only log, only 7 (about 3.6 percent) are referenced by any downstream design, spec, or implementation document. The discovery report's intended traceability contribution is therefore realized only marginally: the knowledge stays in session. \textbf{Governance conformance.} The persistent context states a rotation invariant for the log (keep the last 20 entries, archive the rest); the active log holds 657 entries and no archive exists, a violation by a factor of about 33. The document asserts a rule the process does not keep.
 
 \begin{table}[t]
 \caption{Measured indicators on \texttt{Jjodel} at a fixed commit. All static (computable from model and corpus).}
@@ -334,11 +334,11 @@ We measured these on the \texttt{Jjodel} corpus of 233 authored documents at a f
 \toprule
 Indicator & Value \\
 \midrule
-Document typing coverage & $\approx$60\% (141/233) \\
-Handoff incarnation rate & $\approx$4--5\% (4--5/97) \\
-Persistent-context freshness & 1 of 2 stores stale \\
-Governance-rule conformance & 1 invariant violated 25$\times$ \\
-Retired-step fraction & 1 of 11 document types \\
+Document typing coverage & $\approx$67\% (233/346) \\
+Handoff incarnation rate & $\approx$3.6\% (7/193) \\
+Persistent-context freshness & both stores now maintained \\
+Governance-rule conformance & 1 invariant violated 33$\times$ \\
+Retired-step fraction & 1 of 13 document types \\
 Derived-doc drift & 3--4\% size of source spec \\
 Type-authority presence & absent (metamodel file) \\
 \bottomrule

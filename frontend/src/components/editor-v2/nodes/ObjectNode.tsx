@@ -19,7 +19,7 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSelector } from 'react-redux';
-import { NodeResizer, useReactFlow, type NodeProps, type Node } from '@xyflow/react';
+import { NodeResizer, useReactFlow, useStore, type NodeProps, type Node } from '@xyflow/react';
 import DynamicHandles from '../components/DynamicHandles';
 import { isNodeResizable, SHAPE_MIN_SIZE, defaultResizableForForm } from './nodeSizing';
 import InlineEnumSelect from '../components/InlineEnumSelect';
@@ -44,6 +44,16 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
     const { setNodes } = useReactFlow();
     const editorContext = useEditorContextSafe();
     const hlClass = useNodeHighlightClass(id);
+
+    // ir-sized (Fase 2, 2026-07-28): true when the node carries an EXPLICIT size
+    // (top-level width/height set by NodeResizer or size propagation — the same
+    // channel; resetNodeSize removes them), NOT the measured size. Gates the
+    // fill-neutralizer (irStyle.ts) so enabling `resizable` alone does not collapse
+    // the box — only an actual size makes it fill the RF box.
+    const hasExplicitSize = useStore((s) => {
+        const n = s.nodeLookup.get(id);
+        return n?.width != null && n?.height != null;
+    });
 
     // IR view resolution (spike 2026-07-17): non-null only when the active
     // viewpoint declares an applicable IR view for this object's metaclass.
@@ -381,7 +391,7 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
         const canResize = resolvedResizable ?? hasGeometricShape;
         return (
             <div
-                className={`mm-node mm-object ${selected ? 'selected' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass} ir-view-${irResolution.compiled.viewId}${canResize ? ' ir-resizable' : ''}`}
+                className={`mm-node mm-object ${selected ? 'selected' : ''}${isProblemHighlighted ? ' mm-object--problem-highlighted' : ''} ${hlClass} ir-view-${irResolution.compiled.viewId}${canResize ? ' ir-resizable' : ''}${hasExplicitSize ? ' ir-sized' : ''}`}
                 data-viewid={irResolution.compiled.viewId}
             >
                 {isNodeResizable('objectNode', canResize) && (

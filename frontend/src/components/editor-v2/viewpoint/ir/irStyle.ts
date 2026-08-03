@@ -79,14 +79,16 @@ const BASE_CSS = `
 .ir-node-content.ir-shape--diamond > .ir-diamond-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 0; }
 .ir-node-content.ir-shape--diamond > :not(.ir-diamond-svg) { position: relative; z-index: 1; }
 .mm-node:has(> .ir-node-content.ir-shape--diamond) { min-width: 0; min-height: 0; width: 100%; height: 100%; }
-/* Fase 2 (2026-07-27): a vertex view marked resizable (the resizable flag; ObjectNode
-   emits the ir-resizable class on the .mm-node wrapper when canResize) must shrink to
-   the resizer floor like the geometric shapes. Neutralizes the .mm-node/.mm-object
-   140/40 floor (EditorV2.scss) and fills the RF box on both axes. Scoped to the
-   marker (specificity 0,2,0 beats .mm-node/.mm-object 0,1,0) so content-hug boxes
-   without the flag stay unchanged; the overlap with the geometric-shape :has rules
-   above (their own width/height:100%) is idempotent. */
-.mm-node.ir-resizable { min-width: 0; min-height: 0; width: 100%; height: 100%; }
+/* Fase 2 (2026-07-28): gate the fill-neutralizer on an EXPLICIT size, not merely on the
+   resizable flag. ObjectNode emits the ir-sized class on the .mm-node when the node carries
+   a top-level width/height (set by NodeResizer / size propagation), so enabling Resizable
+   alone keeps content-hug + floor (no collapse); the first resize makes the box fill the
+   RF box and shrink to the resizer floor. Neutralizes the .mm-node/.mm-object 140/40 floor
+   (EditorV2.scss) AND the Commit-1 floor replicated on .ir-node-content, filling both axes.
+   Scoped to the marker (specificity beats the base 0,1,0). ObjectNode still emits the
+   ir-resizable class (now inert) - left in place, separate cleanup. */
+.mm-node.ir-sized { min-width: 0; min-height: 0; width: 100%; height: 100%; }
+.mm-node.ir-sized .ir-node-content { min-width: 0; min-height: 0; }
 .mm-node.selected > .ir-node-content { outline: 2px solid var(--color-accent); outline-offset: 1px; }
 .mm-node.drop-target > .ir-node-content { outline: 2px solid var(--color-accent); }
 .ir-hull { border: 1.5px dashed rgba(51,65,85,0.45); border-radius: 12px; background: rgba(51,65,85,0.03); }
