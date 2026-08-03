@@ -330,22 +330,23 @@ const EventsSection: React.FC<EventsSectionProps> = ({ dview }) => {
             <summary>Events</summary>
             <div className="wp-collapsible__content">
                 <div className="wp-collapsible__sub-header">Default events</div>
-                {defaultEvents.map(name => {
-                    const hasHandler = !!(dview as any)[name];
-                    return (
-                        <div className="wp-event-item" key={name}>
-                            <span className={`wp-event-item__dot ${hasHandler ? 'wp-event-item__dot--active' : ''}`} />
-                            <span className="wp-event-item__name">{name}</span>
-                        </div>
-                    );
-                })}
+                {/*
+                 * No status dot: event handlers are saved with the view but the current
+                 * editor never runs them, so neither state of the indicator would be true
+                 * (--active claims they run, the base state claims none is defined).
+                 * The names stay: knowing which slots exist is still useful information.
+                 */}
+                {defaultEvents.map(name => (
+                    <div className="wp-event-item" key={name}>
+                        <span className="wp-event-item__name">{name}</span>
+                    </div>
+                ))}
 
                 {customEventKeys.length > 0 && (
                     <>
                         <div className="wp-collapsible__sub-header" style={{ marginTop: 8 }}>Custom events</div>
                         {customEventKeys.map(name => (
                             <div className="wp-event-item" key={name}>
-                                <span className="wp-event-item__dot wp-event-item__dot--active" />
                                 <span className="wp-event-item__name">{name}</span>
                             </div>
                         ))}

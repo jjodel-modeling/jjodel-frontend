@@ -6,6 +6,7 @@ import {connect} from "react-redux";
 import {JsEditor} from "../../languages";
 import {Function} from "../../../forEndUser/FunctionComponent";
 import { CommandBar, Btn, Sep } from '../../../commandbar/CommandBar';
+import { HelpText } from '../../../ui';
 import './events-tab.scss';
 
 function ViewEventsComponent(props: AllProps) {
@@ -25,6 +26,13 @@ function ViewEventsComponent(props: AllProps) {
     const customEventKeys = Object.keys(dview.events).filter(k => dview.events[k]);
 
     return(<section className={'events-tab'}>
+        {/* Inert runtime notice: covers both the default and the custom section */}
+        <HelpText>
+            Handlers defined here are saved with the view, but the current editor does not execute them.
+            Their execution channel belonged to the classic editor, which has been retired.
+            Nothing written here is lost.
+        </HelpText>
+
         {/* Default Events Section */}
         <div className="events-section events-section--default">
             <div className="events-section-header">
