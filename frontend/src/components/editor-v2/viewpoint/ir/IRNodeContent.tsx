@@ -11,6 +11,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
+import { U } from '../../../../joiner';
 import { syncNodeLabel, syncUpdateFeatureValue } from '../../sync/canvasToJjom';
 import type { CompiledView, CompiledTextStyle } from './irTypes';
 import type { ReadCtx } from './irReadCtx';
@@ -120,19 +121,32 @@ function IRNodeContent({ compiled, objectId, vertexId, readCtx }: IRNodeContentP
         [compiled],
     );
 
+    // Both commits also fire on blur, so entering edit and leaving without typing
+    // reaches them with an unchanged value. The dirty flag is therefore gated on a
+    // real change: marking a project modified by an edit that modified nothing
+    // produces an unjustified exit warning. The comparison reads the render-scoped
+    // pre-edit value, and the write path is left exactly as it was — only the flag
+    // is conditional. No canvas snapshot here on purpose: the canvas history holds
+    // React Flow nodes/edges, and a slot value is not in them (see the R12 report).
     const commitRowEdit = useCallback(() => {
         if (editingRow) {
+            const before = rows.attributes.find(r => r.key === editingRow.key)
+                ?? rows.references.find(r => r.key === editingRow.key);
             syncUpdateFeatureValue(vertexId, editingRow.name, editValue);
+            if (!before || before.value !== editValue) U.isProjectModified = true;
             setEditingRow(null);
         }
-    }, [editingRow, editValue, vertexId]);
+    }, [editingRow, editValue, vertexId, rows]);
 
     const commitLabelEdit = useCallback(() => {
         if (editingLabel !== null) {
+            // Same source the edit was seeded from (see the label onDoubleClick).
+            const changed = (readCtx.getName(objectId) ?? '') !== editValue;
             syncNodeLabel(vertexId, editValue);
+            if (changed) U.isProjectModified = true;
             setEditingLabel(null);
         }
-    }, [editingLabel, editValue, vertexId]);
+    }, [editingLabel, editValue, vertexId, readCtx, objectId]);
 
     const editKeys = useCallback((commit: () => void) => (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') commit();
