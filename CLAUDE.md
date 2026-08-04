@@ -39,7 +39,8 @@ Shared engagement rules live in docs/PROTOCOL.md (P1..P9); see §1.
 15. Discovery before action: grep paths from the prompt; never
     assume a path is correct. A cited path that doesn't exist → STOP.
 16. Read docs/claude-code-log.md (last 5–10 entries) at session
-    start. Update it at task end.
+    start. Update it at task end. A discovery report is committed
+    in the task that produced it, never left untracked (P4).
 17. Never `git add .` / `git add -A`. Always `git add <specific-file>`.
 18. Show the diff of touched files in the closing report. The
     diff does not hold the commit (docs/PROTOCOL.md P6).
