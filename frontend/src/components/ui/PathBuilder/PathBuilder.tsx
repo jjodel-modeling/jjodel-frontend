@@ -2,6 +2,7 @@ import React from 'react';
 import { Select } from '../Select';
 import { NumberInput } from '../NumberInput';
 import { pathExprFromSelection, type PathSelection } from './pathExpr';
+import { singleHopOf } from '../../editor-v2/viewpoint/ir/pathExpr';
 import styles from './PathBuilder.module.css';
 
 /**
@@ -26,15 +27,18 @@ export interface PathBuilderProps {
 
 type Take = PathSelection['take'];
 
-/** Best-effort parse of a single-hop PathExpr into its selection parts. */
+/**
+ * Best-effort parse of a single-hop PathExpr into its selection parts.
+ * Reads the shared grammar (ir/pathExpr) instead of a private regex; singleHopOf
+ * keeps the authoring scope single-hop and absorbs the parser's exceptions, so
+ * an unparsable path still lands on the neutral "no feature" state.
+ */
 function parseExpr(expr: string): { feature: string; take: Take; index: number } {
-    const m = /^\$([A-Za-z_][A-Za-z0-9_]*)(?:\.(value|values(?:\[(\d+)\])?))?$/.exec(expr ?? '');
-    if (!m) return { feature: '', take: 'value', index: 0 };
-    const feature = m[1];
-    const suffix = m[2];
-    if (!suffix || suffix === 'value') return { feature, take: 'value', index: 0 };
-    if (suffix === 'values') return { feature, take: 'values', index: 0 };
-    return { feature, take: 'valuesAt', index: m[3] ? parseInt(m[3], 10) : 0 };
+    const hop = singleHopOf(expr ?? '');
+    if (!hop) return { feature: '', take: 'value', index: 0 };
+    if (hop.take === 'value') return { feature: hop.feature, take: 'value', index: 0 };
+    if (hop.take === 'values') return { feature: hop.feature, take: 'values', index: 0 };
+    return { feature: hop.feature, take: 'valuesAt', index: hop.take };
 }
 
 /**

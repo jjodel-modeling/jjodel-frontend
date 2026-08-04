@@ -4,6 +4,7 @@ import { Input } from '../Input';
 import { NumberInput } from '../NumberInput';
 import { Toggle } from '../Toggle';
 import { PathBuilder, type PathBuilderFeatures } from '../PathBuilder';
+import { singleHopOf } from '../../editor-v2/viewpoint/ir/pathExpr';
 import { ListEditor } from '../ListEditor';
 import {
     PREDICATE_KIND_OPTIONS,
@@ -55,9 +56,11 @@ function resolvePathLiteralType(
     features: PathBuilderFeatures | null,
 ): LiteralKind | undefined {
     if (isLiteralOperand(operand) || !features) return undefined;
-    const m = /^\$([A-Za-z_][A-Za-z0-9_]*)/.exec(operand);
-    if (!m) return undefined;
-    const attr = features.attributes.find((a) => a.name === m[1]);
+    // Shared grammar (ir/pathExpr) instead of a private regex; singleHopOf enforces
+    // the single-hop scope this function already declares, and never throws.
+    const hop = singleHopOf(operand);
+    if (!hop) return undefined;
+    const attr = features.attributes.find((a) => a.name === hop.feature);
     if (!attr) return undefined;
     return attributeTypeToLiteralKind(attr.type);
 }

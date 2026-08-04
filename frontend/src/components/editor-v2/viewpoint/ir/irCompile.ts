@@ -32,46 +32,7 @@ import type {
     RowViewIR,
 } from './irTypes';
 import type { ReadCtx } from './irReadCtx';
-
-/** Constructs forbidden in PathExpr (spec v1.1 §PathExpr). */
-const FORBIDDEN_PATH = /\?\.|\?\?|[?:()]/;
-/** One step: $feature | value | values | values[N] */
-const STEP_RE = /^(\$[A-Za-z_][A-Za-z0-9_]*|value|values(\[\d+\])?)$/;
-
-interface ParsedPath {
-    /** [{feature, accessor}] chain; v1 spike evaluates only the first hop (self). */
-    steps: { feature?: string; take: 'value' | 'values' | number }[];
-    featureNames: string[];
-}
-
-function parsePathExpr(expr: PathExpr): ParsedPath {
-    if (FORBIDDEN_PATH.test(expr)) {
-        throw new Error(`[ir] forbidden construct in PathExpr: ${expr}`);
-    }
-    const tokens = expr.split('.').map(t => t.trim()).filter(Boolean);
-    const steps: ParsedPath['steps'] = [];
-    const featureNames: string[] = [];
-    let current: { feature?: string; take: 'value' | 'values' | number } | null = null;
-    for (const tok of tokens) {
-        if (!STEP_RE.test(tok)) throw new Error(`[ir] invalid PathExpr step "${tok}" in ${expr}`);
-        if (tok.startsWith('$')) {
-            if (current) steps.push(current);
-            const feature = tok.slice(1);
-            featureNames.push(feature);
-            current = { feature, take: 'value' };
-        } else if (tok === 'value') {
-            if (!current) throw new Error(`[ir] dangling .value in ${expr}`);
-            current.take = 'value';
-        } else { // values or values[N]
-            if (!current) throw new Error(`[ir] dangling .values in ${expr}`);
-            const m = tok.match(/^values\[(\d+)\]$/);
-            current.take = m ? parseInt(m[1], 10) : 'values';
-        }
-    }
-    if (current) steps.push(current);
-    if (steps.length === 0) throw new Error(`[ir] empty PathExpr: ${expr}`);
-    return { steps, featureNames };
-}
+import { parsePathExpr } from './pathExpr';
 
 /**
  * Multi-hop cross-object paths collected during a single compileView /
