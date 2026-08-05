@@ -5,8 +5,9 @@
  *    the IR-shape invariants the drop-key helpers produce (absent `reference` =
  *    matches any reference; absent `labels.center` = no center label);
  *  - E-obj (object-as-edge): the endpoint pair as the sole discriminant of the
- *    nature, the atomic drop of both endpoints, the inert wildcard, the endpoint
- *    guard, and the object round-trip.
+ *    nature, the atomic replacement of both endpoints, the non-destructive editing
+ *    of a committed pair, the drop reserved to the explicit nature switch, the
+ *    inert wildcard, the endpoint guard, and the object round-trip.
  *
  * EdgeAuthoringPanel / EnableIRPanel are NOT import-safe in the node vitest env
  * (they import joiner → monaco-editor → `window` undefined), so — as in
@@ -181,6 +182,88 @@ describe('EdgeAuthoringPanel — the endpoint pair is the discriminant (atomic w
         expect(isUsableEndpointExpr('$src.values')).toBe(false);
         expect(isUsableEndpointExpr('')).toBe(false);
         expect(isUsableEndpointExpr(undefined)).toBe(false);
+    });
+});
+
+/**
+ * Mirror of the ir-facing half of EdgeAuthoringPanel.applyEndpoints — same reason as
+ * the guard above: the panel cannot be imported here. `null` means "the ir does not
+ * move" (no patch, no commit): either the typed pair is not usable, or it is identical
+ * to the committed one. It never returns an edge with a single endpoint, and it never
+ * removes one: emptying an endpoint leaves a committed pair alone.
+ */
+function nextEdgeForEndpoints(
+    edge: EdgeViewIR['edge'],
+    nextSource: string,
+    nextTarget: string,
+): EdgeViewIR['edge'] | null {
+    if (!isUsableEndpointExpr(nextSource) || !isUsableEndpointExpr(nextTarget)) return null;
+    const next = { ...edge };
+    next.source = nextSource;
+    next.target = nextTarget;
+    if (next.source === edge.source && next.target === edge.target) return null;
+    return next;
+}
+
+/** Mirror of changeNature('reference'): the only gesture that leaves object-as-edge. */
+function dropEndpoints(edge: EdgeViewIR['edge']): EdgeViewIR['edge'] {
+    const next = { ...edge };
+    delete next.source;
+    delete next.target;
+    return next;
+}
+
+describe('EdgeAuthoringPanel — editing an endpoint does not destroy the committed pair', () => {
+    it('emptying the source leaves BOTH committed endpoints in the ir, and commits nothing', () => {
+        const before = clone(OBJECT_SEED);
+        expect(nextEdgeForEndpoints(before.edge, '', '$tgt.value')).toBe(null);
+        // The ir is untouched: still object-as-edge, still byte-identical.
+        expect(before).toEqual(OBJECT_SEED);
+        expect(compileEdgeView('obj-keep-empty', before).isObjectAsEdge).toBe(true);
+    });
+
+    it('an unusable source (whole array) leaves the committed pair alone too', () => {
+        const before = clone(OBJECT_SEED);
+        expect(nextEdgeForEndpoints(before.edge, '$src.values', '$tgt.value')).toBe(null);
+        expect(before).toEqual(OBJECT_SEED);
+        expect(compileEdgeView('obj-keep-array', before).isObjectAsEdge).toBe(true);
+    });
+
+    it('with no committed pair an incomplete input still writes nothing (unchanged)', () => {
+        const ir: EdgeViewIR = { ...defaultEdgeViewIR(), metaclasses: ['Transition'] };
+        expect(nextEdgeForEndpoints(ir.edge, '$src.value', '')).toBe(null);
+        expect('source' in ir.edge).toBe(false);
+        expect('target' in ir.edge).toBe(false);
+        expect(compileEdgeView('obj-none-partial', ir).isObjectAsEdge).toBe(false);
+    });
+
+    it('a complete new pair replaces the committed one atomically, other fields intact', () => {
+        const before: EdgeViewIR = {
+            ...OBJECT_SEED,
+            edge: { ...OBJECT_SEED.edge, routing: 'orthogonal', persistWaypoints: false },
+        };
+        const edge = nextEdgeForEndpoints(before.edge, '$from.value', '$to.values[0]')!;
+        expect(edge).not.toBe(null);
+        expect(edge.source).toBe('$from.value');
+        expect(edge.target).toBe('$to.values[0]');
+        // Untouched fields survive the replacement.
+        expect(edge.routing).toBe('orthogonal');
+        expect(edge.persistWaypoints).toBe(false);
+        const after: EdgeViewIR = { ...before, edge };
+        expect(validateIR('obj-replaced', after)).toEqual({ ok: true });
+        expect(compileEdgeView('obj-replaced', after).isObjectAsEdge).toBe(true);
+    });
+
+    it('retyping the same pair does not move the ir (no commit, no recompile)', () => {
+        expect(nextEdgeForEndpoints(OBJECT_SEED.edge, '$src.value', '$tgt.value')).toBe(null);
+    });
+
+    it('the nature switch to reference is what drops both endpoints', () => {
+        const dropped: EdgeViewIR = { ...OBJECT_SEED, edge: dropEndpoints(OBJECT_SEED.edge) };
+        expect('source' in dropped.edge).toBe(false);
+        expect('target' in dropped.edge).toBe(false);
+        expect(validateIR('obj-nature-reference', dropped)).toEqual({ ok: true });
+        expect(compileEdgeView('obj-nature-reference', dropped).isObjectAsEdge).toBe(false);
     });
 });
 

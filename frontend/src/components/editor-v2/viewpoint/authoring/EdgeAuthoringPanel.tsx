@@ -156,20 +156,26 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) 
      * The two endpoints reach the ir together or not at all. A draft carrying a
      * single endpoint compiles to isObjectAsEdge=false, i.e. a live reference-as-edge
      * view whose PathExpr is inert and unreported: a state the UI must never produce.
-     * Incomplete or unusable input therefore DROPS both keys (drop of the key, as the
-     * reference and label-center editors already do) instead of writing empty strings.
+     *
+     * An incomplete or unusable pair therefore does NOT reach the ir — but it does not
+     * erase it either: the ir is left exactly as it is, so a pair already committed
+     * stays live while the author retypes one of the two. Emptying one endpoint used to
+     * drop BOTH keys, which silently discarded the other (valid) endpoint and flipped a
+     * working object-as-edge back to a live reference-as-edge view — a notation change
+     * nobody asked for (discovery 2026-08-05 §2.4). Leaving object-as-edge is now only
+     * `changeNature`, which is an explicit gesture.
+     *
+     * The write itself is unchanged and still atomic: both keys are replaced together,
+     * and this stays the only writer of the endpoints.
      */
     const applyEndpoints = (nextSource: string, nextTarget: string) => {
         setSourceExpr(nextSource);
         setTargetExpr(nextTarget);
+        // Pair not usable: the local expressions moved, the ir does not move at all.
+        if (!isUsableEndpointExpr(nextSource) || !isUsableEndpointExpr(nextTarget)) return;
         const edge = { ...draft.edge };
-        if (isUsableEndpointExpr(nextSource) && isUsableEndpointExpr(nextTarget)) {
-            edge.source = nextSource;
-            edge.target = nextTarget;
-        } else {
-            delete edge.source;
-            delete edge.target;
-        }
+        edge.source = nextSource;
+        edge.target = nextTarget;
         // The local expressions moved but the ir did not: no commit, no recompile.
         if (edge.source === draft.edge.source && edge.target === draft.edge.target) return;
         patch({ ...draft, edge });
@@ -199,6 +205,13 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) 
             patch({ ...draft, edge });
         }
     };
+
+    // Divergence between the form and the ir, deliberate and therefore to be shown:
+    // the typed pair is not usable, but a committed pair is still driving the canvas.
+    // Without a message this would trade a silent loss for a silent state.
+    const typedPairUsable = isUsableEndpointExpr(sourceExpr) && isUsableEndpointExpr(targetExpr);
+    const hasCommittedPair = !!(draft.edge?.source && draft.edge?.target);
+    const endpointsDiverge = !typedPairUsable && hasCommittedPair;
 
     // Resolve the PathBuilder feature set from the edge view's first (source)
     // metaclass — same identity-first resolution as RowAuthoringPanel (a project
@@ -525,7 +538,12 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) 
                             <ErrorText>{ENDPOINT_ARRAY_ERROR}</ErrorText>
                         )}
                     </div>
-                    <HelpText>I due capi vengono scritti insieme: finché ne manca uno (o legge un intero array) la view resta una edge view di tipo reference e il canvas non cambia.</HelpText>
+                    {/* Same slot, two messages: while a committed pair is still live the
+                        generic one would be false (the view is NOT a reference view), so
+                        it is replaced by the divergence notice. */}
+                    <HelpText>{endpointsDiverge
+                        ? `La coppia dei capi non è completa: la view continua a usare i capi salvati (${draft.edge?.source} → ${draft.edge?.target}) e il canvas non cambia. Per rimuoverli e tornare a una edge view di tipo reference, cambia la Natura.`
+                        : 'I due capi vengono scritti insieme: finché ne manca uno (o legge un intero array) la view resta una edge view di tipo reference e il canvas non cambia.'}</HelpText>
                 </>
             )}
 
