@@ -6,6 +6,7 @@ import { getMetaclassInfo, type MetaclassInfo } from '../../hooks/useEditorMode'
 import { validateIR } from '../ir/irValidate';
 import { defaultObjectViewIR } from '../ir/irDefaults';
 import type { VertexViewIR, ShapeForm } from '../ir/irTypes';
+import { resolveMetaclassId, withMetaclassPins, type MetaclassRef } from '../ir/metaclassPin';
 import { defaultResizableForForm } from '../../nodes/nodeSizing';
 import { LabelListEditor } from './LabelListEditor';
 import { FieldCompartmentListEditor } from './FieldCompartmentListEditor';
@@ -84,22 +85,62 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [draft, view.id]);
 
+    // Identity universe for the metaclass pin, read once per mount: every class of
+    // every project metamodel, in project iteration order. `classNames` below stays
+    // the deduped NAME list the PredicateBuilder wants; this one keeps the pointer.
+    const allClasses = useMemo<MetaclassRef[]>(() => {
+        const metamodels = LProject.getProject()?.metamodels ?? [];
+        const out: MetaclassRef[] = [];
+        for (const mm of metamodels) {
+            let info;
+            try { info = getMetaclassInfo((mm as any).id, (mm as any).id); } catch { continue; }
+            for (const c of info.allClasses) out.push({ id: c.id, name: c.name });
+        }
+        return out;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Legacy identity: the classes this view is applied to. appliableToClasses mixes
+    // D-level type names with M2 class pointers (cf. EnableIRPanel), so only real
+    // DClass entries qualify — the same filter the pin resolution ran inline before.
+    const appliesToClasses = useMemo<MetaclassRef[]>(() => {
+        const out: MetaclassRef[] = [];
+        for (const entry of (((view as any).appliableToClasses ?? []) as string[])) {
+            try {
+                const l = LPointerTargetable.fromPointer(entry) as any;
+                if (l && l.className === DClass.cname) out.push({ id: l.id, name: l.name });
+            } catch { /* malformed / unresolvable entry — skip */ }
+        }
+        return out;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [JSON.stringify((view as any).appliableToClasses ?? []), view.id]);
+
+    const pinCtx = useMemo(
+        () => ({ appliesTo: appliesToClasses, candidates: allClasses }),
+        [appliesToClasses, allClasses],
+    );
+
+    // The pin map is reconciled inside the patch that moves `metaclasses`, never in
+    // one of its own: two lists free to move apart would diverge at the first edit,
+    // which is what the pin exists to prevent. Every other edit goes through
+    // withMetaclassPins untouched — it reconciles only on a metaclass change, so an
+    // unpinned view stays unpinned until the author actually picks a metaclass.
     const patch = (next: VertexViewIR) => {
         dirtyRef.current = true;
-        setDraft(next);
+        setDraft(withMetaclassPins(draft, next, pinCtx));
     };
 
     // Resolve the PathBuilder feature set from the view's target metaclass.
     //
-    // Resolution is by IDENTITY, not by name. The view pins a specific class via
-    // appliableToClasses (a class pointer); a project may hold duplicate metamodels
-    // whose classes share a name, and a name-only lookup returns the class of the
-    // first metamodel iterated — potentially a different class than the one this
-    // view targets, with a stale/partial feature set (discovery 2026-07-23 §9: two
-    // `USER_185` metamodels, each with its own `State`). We first pin the exact
-    // class pointer from appliableToClasses and read its features from that
-    // metaclass; in parallel we count how many metamodels declare a class of this
-    // name, to surface the ambiguity to the author (metamodelsWithClass > 1).
+    // Resolution is by IDENTITY, not by name: a project may hold duplicate
+    // metamodels whose classes share a name, and a name-only lookup returns the
+    // class of the first metamodel iterated — potentially a different class than
+    // the one this view targets, with a stale/partial feature set (discovery
+    // 2026-07-23 §9: two `USER_185` metamodels, each with its own `State`). The
+    // identity comes from the ir's own pin and, for views authored before the pin
+    // existed, from appliableToClasses (chain in ir/metaclassPin.ts); we read the
+    // features from that class, and in parallel count how many metamodels declare a
+    // class of this name, to surface the ambiguity (metamodelsWithClass > 1).
     const featureInfo = useMemo<{
         features: PathBuilderFeatures | null;
         metamodelsWithClass: number;
@@ -111,16 +152,11 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
         }
         const targetName = mcs[0];
 
-        // Preferred identity: the class pointer this view is applied to whose name
-        // matches the IR target. appliableToClasses mixes D-level type names with
-        // M2 class pointers (cf. EnableIRPanel); only real DClass entries qualify.
-        let targetId: string | null = null;
-        for (const entry of (((view as any).appliableToClasses ?? []) as string[])) {
-            try {
-                const l = LPointerTargetable.fromPointer(entry) as any;
-                if (l && l.className === DClass.cname && l.name === targetName) { targetId = l.id; break; }
-            } catch { /* malformed / unresolvable entry — skip */ }
-        }
+        const targetId = resolveMetaclassId(targetName, {
+            pins: draft.authoringMetaclassPins,
+            appliesTo: appliesToClasses,
+            candidates: allClasses,
+        })?.id ?? null;
 
         const metamodels = LProject.getProject()?.metamodels ?? [];
         let metamodelsWithClass = 0;
@@ -140,9 +176,8 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
             }
         }
 
-        // Identity match wins; fall back to the first name match (legacy behaviour)
-        // only when appliableToClasses cannot pin an id (e.g. metaclasses edited to
-        // a name not in the view's Apply-to set).
+        // Identity match wins; fall back to the first name match only when the chain
+        // cannot pin an id at all (no pin, and a name outside the Apply-to set).
         const target = byId ?? byNameFallback;
         if (!target) return { features: null, metamodelsWithClass, targetName };
         return {
@@ -157,8 +192,10 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
             metamodelsWithClass,
             targetName,
         };
+        // appliesToClasses is itself memoized on the stringified appliableToClasses,
+        // so it carries the dependency this list used to spell out.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [JSON.stringify(draft.metaclasses), JSON.stringify((view as any).appliableToClasses ?? []), view.id]);
+    }, [JSON.stringify(draft.metaclasses), JSON.stringify(draft.authoringMetaclassPins ?? null), appliesToClasses, allClasses, view.id]);
 
     const features = featureInfo.features;
 

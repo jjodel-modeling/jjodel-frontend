@@ -120,11 +120,31 @@ export interface ShapeSpec {
     badges?: BadgeSpec[];
 }
 
+/**
+ * Which concrete class each name in `metaclasses` stands for: metaclass name ->
+ * M2 class pointer (a DClass id).
+ *
+ * AUTHORING METADATA, NOT MODEL SEMANTICS. The resolver never reads it:
+ * `metaclasses` stays a list of names and matching stays by name (irResolveCore).
+ * The only consumer is the authoring layer, which needs the identity to read the
+ * right feature set when two metamodels of the same project declare a class of
+ * the same name (discovery 2026-07-23 §9: two `USER_185` metamodels, each with
+ * its own `State`). Until now that identity came from `view.appliableToClasses`,
+ * which the IR resolver ignores and the tab partition retires as a control.
+ *
+ * Optional and additive: an IR without it is valid and behaves exactly as before
+ * (the authoring layer falls back to appliableToClasses, then to the name). No
+ * irVersion bump, no migration, no backfill.
+ */
+export type AuthoringMetaclassPins = { [metaclassName: string]: string };
+
 export interface VertexViewIR {
     irVersion: string;               // "ir-1.0" | "ir-1.2"
     kind: 'vertex';
     /** Metamodel metaclass names, or '*' (default-view wildcard: minimum specificity). */
     metaclasses: string[] | '*';
+    /** Authoring-only identity for the names above — see AuthoringMetaclassPins. */
+    authoringMetaclassPins?: AuthoringMetaclassPins;
     predicate?: Predicate;
     priority?: number;
     exclusive?: boolean;             // spike: only exclusive views are rendered; decorative ones are ignored
@@ -188,6 +208,8 @@ export interface EdgeViewIR {
     irVersion: string;
     kind: 'edge';
     metaclasses: string[] | '*';
+    /** Authoring-only identity for the names above — see AuthoringMetaclassPins. */
+    authoringMetaclassPins?: AuthoringMetaclassPins;
     reference?: string;
     predicate?: Predicate;
     priority?: number;
@@ -226,6 +248,8 @@ export interface RowViewIR {
     irVersion: string;               // "ir-1.0" — no bump
     kind: 'row';
     metaclasses: string[] | '*';
+    /** Authoring-only identity for the names above — see AuthoringMetaclassPins. */
+    authoringMetaclassPins?: AuthoringMetaclassPins;
     predicate?: Predicate;
     priority?: number;
     label?: string;

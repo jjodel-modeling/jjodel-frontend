@@ -18,6 +18,7 @@ import { getMetaclassInfo, type MetaclassInfo } from '../../hooks/useEditorMode'
 import { validateIR } from '../ir/irValidate';
 import { defaultRowViewIR } from '../ir/irDefaults';
 import type { RowViewIR, TextSource } from '../ir/irTypes';
+import { resolveMetaclassId, withMetaclassPins, type MetaclassRef } from '../ir/metaclassPin';
 import { TextSourceEditor } from './TextSourceEditor';
 
 export interface RowAuthoringPanelProps {
@@ -76,16 +77,53 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view }) =>
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [draft, view.id]);
 
+    // Identity universe for the metaclass pin, read once per mount: every class of
+    // every project metamodel, in project iteration order. `classNames` below stays
+    // the deduped NAME list the PredicateBuilder wants; this one keeps the pointer.
+    const allClasses = useMemo<MetaclassRef[]>(() => {
+        const metamodels = LProject.getProject()?.metamodels ?? [];
+        const out: MetaclassRef[] = [];
+        for (const mm of metamodels) {
+            let info;
+            try { info = getMetaclassInfo((mm as any).id, (mm as any).id); } catch { continue; }
+            for (const c of info.allClasses) out.push({ id: c.id, name: c.name });
+        }
+        return out;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Legacy identity: the classes this view is applied to. appliableToClasses mixes
+    // D-level type names with M2 class pointers (cf. EnableIRPanel), so only real
+    // DClass entries qualify — the same filter the pin resolution ran inline before.
+    const appliesToClasses = useMemo<MetaclassRef[]>(() => {
+        const out: MetaclassRef[] = [];
+        for (const entry of (((view as any).appliableToClasses ?? []) as string[])) {
+            try {
+                const l = LPointerTargetable.fromPointer(entry) as any;
+                if (l && l.className === DClass.cname) out.push({ id: l.id, name: l.name });
+            } catch { /* malformed / unresolvable entry — skip */ }
+        }
+        return out;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [JSON.stringify((view as any).appliableToClasses ?? []), view.id]);
+
+    const pinCtx = useMemo(
+        () => ({ appliesTo: appliesToClasses, candidates: allClasses }),
+        [appliesToClasses, allClasses],
+    );
+
+    // The pin map is reconciled inside the patch that moves `metaclasses`, never in
+    // one of its own — same contract as the other two panels (ir/metaclassPin.ts).
     const patch = (next: RowViewIR) => {
         dirtyRef.current = true;
-        setDraft(next);
+        setDraft(withMetaclassPins(draft, next, pinCtx));
     };
 
     // Resolve the PathBuilder feature set from the row view's first metaclass —
     // same identity-first resolution as VertexAuthoringPanel (a project may hold
-    // duplicate metamodels whose classes share a name; the view pins the exact
-    // class via appliableToClasses, and we count how many metamodels declare the
-    // name to surface the ambiguity).
+    // duplicate metamodels whose classes share a name; the identity comes from the
+    // ir's pin and, on views authored before it existed, from appliableToClasses,
+    // and we count how many metamodels declare the name to surface the ambiguity).
     const featureInfo = useMemo<{
         features: PathBuilderFeatures | null;
         metamodelsWithClass: number;
@@ -97,13 +135,11 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view }) =>
         }
         const targetName = mcs[0];
 
-        let targetId: string | null = null;
-        for (const entry of (((view as any).appliableToClasses ?? []) as string[])) {
-            try {
-                const l = LPointerTargetable.fromPointer(entry) as any;
-                if (l && l.className === DClass.cname && l.name === targetName) { targetId = l.id; break; }
-            } catch { /* malformed / unresolvable entry — skip */ }
-        }
+        const targetId = resolveMetaclassId(targetName, {
+            pins: draft.authoringMetaclassPins,
+            appliesTo: appliesToClasses,
+            candidates: allClasses,
+        })?.id ?? null;
 
         const metamodels = LProject.getProject()?.metamodels ?? [];
         let metamodelsWithClass = 0;
@@ -136,8 +172,10 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view }) =>
             metamodelsWithClass,
             targetName,
         };
+        // appliesToClasses is itself memoized on the stringified appliableToClasses,
+        // so it carries the dependency this list used to spell out.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [JSON.stringify(draft.metaclasses), JSON.stringify((view as any).appliableToClasses ?? []), view.id]);
+    }, [JSON.stringify(draft.metaclasses), JSON.stringify(draft.authoringMetaclassPins ?? null), appliesToClasses, allClasses, view.id]);
 
     const features = featureInfo.features;
 
