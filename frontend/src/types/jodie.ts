@@ -208,13 +208,14 @@ export class AI{
         // Update the subdomain after deploying the Cloudflare Worker
         const PROXY_URL = 'https://jjodel-ai-proxy.alfonso99.workers.dev';
         const PROXY_LOCAL_URL = 'http://localhost:8787';
-        if (!this.proxy) return this.endpoint;
+
+        if (!this.proxy || window.location.hostname === 'localhost') return this.endpoint;
         /*switch (this.name) {
             case AIProvider.Claude:
             case AIProvider.Gemini:
             default: return '';
         }*/
-        return (window.location.hostname === 'localhost' ? PROXY_LOCAL_URL : PROXY_URL) + this.proxy;
+        return PROXY_URL + this.proxy;
     }
     hasVision(version?: string): boolean{
         let model = version && this.versions[version];
@@ -302,7 +303,7 @@ AI.DeepSeek
     .add('deepseek-chat',             'DeepSeek Chat',    false, false)
     .add('deepseek-coder',            'DeepSeek Coder',   false, false)
 AI.Gemini
-    .add('gemini-2.0-flash-exp',      'Gemini 2.0 Flash', true,  true)
+    .add('gemini-3.5-flash',          'Gemini 3.5 Flash', true,  true)
     .add('gemini-1.5-pro',            'Gemini 1.5 Pro',   true,  true)
     .add('gemini-1.5-flash',          'Gemini 1.5 Flash', true,  true)
     .add('gemini-pro',                'Gemini Pro',       false, false, true)
@@ -731,7 +732,7 @@ export class AIConfig{
 /*new AIConfig(AIProvider.Claude, 'claude-sonnet-4-20250514');
 new AIConfig(AIProvider.GPT, 'gpt-4o');
 new AIConfig(AIProvider.DeepSeek, 'deepseek-chat');
-new AIConfig(AIProvider.Gemini, 'gemini-2.0-flash-exp');
+new AIConfig(AIProvider.Gemini, 'gemini-3.5-flash');
 new AIConfig(AIProvider.Mistral, 'mistral-large-latest');
 new AIConfig(AIProvider.Groq, 'llama-3.3-70b-versatile');
 new AIConfig(AIProvider.Kimi, 'moonshot-v1-8k');
