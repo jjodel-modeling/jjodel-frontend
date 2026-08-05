@@ -249,7 +249,7 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view }) =>
 
             {featureInfo.metamodelsWithClass > 1 && (
                 <ErrorText>
-                    {`La metaclasse «${featureInfo.targetName}» è dichiarata in ${featureInfo.metamodelsWithClass} metamodelli del progetto: il picker usa quella a cui è applicata questa view. Verifica che i metamodelli non siano duplicati.`}
+                    {`La metaclasse «${featureInfo.targetName}» è dichiarata in ${featureInfo.metamodelsWithClass} metamodelli del progetto: la view usa quella fissata quando la metaclasse è stata scelta, non una qualsiasi con questo nome. Verifica che i metamodelli non siano duplicati.`}
                 </ErrorText>
             )}
 

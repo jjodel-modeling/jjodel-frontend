@@ -142,18 +142,35 @@ describe('endpointDraftState — how the form relates to the draft', () => {
         expect(endpointDraftState(PAIR, '$src.values', '$tgt.value').diverges).toBe(true);
     });
 
-    it('caso B: no committed pair and one endpoint typed does NOT diverge', () => {
-        // Nothing to diverge from. The state is unsaved work, reported separately.
+    it('caso A is a divergence, never unsaved work', () => {
+        expect(endpointDraftState(PAIR, '', '$tgt.value').unsavedSingleEndpoint).toBe(false);
+    });
+
+    it('caso B: no committed pair and one endpoint typed is unsaved work, NOT a divergence', () => {
+        // Nothing to diverge from. The two conditions are mutually exclusive by
+        // construction: one requires a committed pair, the other requires none.
         const s = endpointDraftState(EMPTY, '$src.value', '');
         expect(s.hasCommittedPair).toBe(false);
         expect(s.typedPairUsable).toBe(false);
         expect(s.diverges).toBe(false);
+        expect(s.unsavedSingleEndpoint).toBe(true);
+    });
+
+    it('caso B fires from either side', () => {
+        expect(endpointDraftState(EMPTY, '', '$tgt.value').unsavedSingleEndpoint).toBe(true);
+    });
+
+    it('caso B does not fire once BOTH are typed, even if one is unusable', () => {
+        // Two typed endpoints already render the array error, which says why nothing
+        // commits. Deliberately narrow: the full scaffold is F2.
+        expect(endpointDraftState(EMPTY, '$src.values', '$tgt.value').unsavedSingleEndpoint).toBe(false);
     });
 
     it('both endpoints usable: neither condition holds', () => {
         const s = endpointDraftState(PAIR, '$src.value', '$tgt.value');
         expect(s.typedPairUsable).toBe(true);
         expect(s.diverges).toBe(false);
+        expect(s.unsavedSingleEndpoint).toBe(false);
     });
 
     it('after the nature switch to reference the exit is clean', () => {
@@ -162,12 +179,27 @@ describe('endpointDraftState — how the form relates to the draft', () => {
         expect(s.hasCommittedPair).toBe(false);
         expect(s.typedPairUsable).toBe(false);
         expect(s.diverges).toBe(false);
+        expect(s.unsavedSingleEndpoint).toBe(false);
     });
 
     it('an empty edge with nothing typed is quiet', () => {
         const s = endpointDraftState(EMPTY, '', '');
         expect(s.diverges).toBe(false);
         expect(s.hasCommittedPair).toBe(false);
+        expect(s.unsavedSingleEndpoint).toBe(false);
+    });
+
+    it('never reports both conditions at once', () => {
+        const edges = [EMPTY, PAIR, { source: '$s.value' }, { target: '$t.value' }];
+        const exprs = ['', '$a.value', '$a.values'];
+        for (const edge of edges) {
+            for (const s of exprs) {
+                for (const t of exprs) {
+                    const st = endpointDraftState(edge, s, t);
+                    expect(st.diverges && st.unsavedSingleEndpoint).toBe(false);
+                }
+            }
+        }
     });
 
     it('tolerates an ir with no edge at all', () => {

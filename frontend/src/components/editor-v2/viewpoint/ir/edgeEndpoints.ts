@@ -111,6 +111,21 @@ export interface EndpointDraftState {
      * Without a message this would trade a silent loss for a silent state.
      */
     diverges: boolean;
+    /**
+     * Exactly one endpoint typed, with nothing committed to diverge from: the
+     * author is halfway through the pair and NOTHING is being kept. `diverges` is
+     * false here by construction — there is no committed pair — so the divergence
+     * notice never fires and the state would otherwise be reported by nothing at
+     * all, right up to the moment the panel closes and the text is gone.
+     *
+     * Not an error: typing the first of two endpoints is the normal path. It is a
+     * statement that the work is not saved yet.
+     *
+     * Deliberately narrow (exactly one non-empty). Two typed endpoints of which one
+     * is unusable is ALSO unsaved work, but it already renders the array error, so
+     * that case keeps its own diagnostic. The full two-endpoint scaffold is F2.
+     */
+    unsavedSingleEndpoint: boolean;
 }
 
 export function endpointDraftState(
@@ -120,9 +135,11 @@ export function endpointDraftState(
 ): EndpointDraftState {
     const typedPairUsable = isUsableEndpointExpr(sourceExpr) && isUsableEndpointExpr(targetExpr);
     const hasCommittedPair = !!(edge?.source && edge?.target);
+    const typedCount = (sourceExpr ? 1 : 0) + (targetExpr ? 1 : 0);
     return {
         typedPairUsable,
         hasCommittedPair,
         diverges: !typedPairUsable && hasCommittedPair,
+        unsavedSingleEndpoint: !hasCommittedPair && typedCount === 1,
     };
 }

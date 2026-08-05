@@ -156,17 +156,10 @@ describe('EdgeAuthoringPanel — the endpoint pair is the discriminant (atomic w
         expect(compileEdgeView('obj-tgt-only', ir).isObjectAsEdge).toBe(false);
     });
 
-    it('the drop leaves NEITHER key in the ir (both keys go together)', () => {
-        // Mirrors applyEndpoints' incomplete branch: drop of the keys, never empty strings.
-        const edge = { ...OBJECT_SEED.edge };
-        delete edge.source;
-        delete edge.target;
-        const dropped: EdgeViewIR = { ...OBJECT_SEED, edge };
-        expect('source' in dropped.edge).toBe(false);
-        expect('target' in dropped.edge).toBe(false);
-        expect(validateIR('obj-dropped', dropped)).toEqual({ ok: true });
-        expect(compileEdgeView('obj-dropped', dropped).isObjectAsEdge).toBe(false);
-    });
+    // The drop of both keys is asserted below, on `dropEndpoints`, where it belongs:
+    // it is reached ONLY from the nature switch. An earlier copy lived here labelled
+    // "mirrors applyEndpoints' incomplete branch", which stopped being true when
+    // 49c32c134 made the incomplete branch leave the ir alone.
 
     it('the endpoint guard accepts .value and values[N], refuses a whole array', () => {
         expect(isUsableEndpointExpr('$src.value')).toBe(true);

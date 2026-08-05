@@ -213,7 +213,8 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) 
     // How the form relates to the draft (ir/edgeEndpoints.ts): every branch of the
     // endpoint behaviour is decided there, so it can be unit-tested without mounting
     // this component.
-    const { diverges: endpointsDiverge } = endpointDraftState(draft.edge, sourceExpr, targetExpr);
+    const { diverges: endpointsDiverge, unsavedSingleEndpoint } =
+        endpointDraftState(draft.edge, sourceExpr, targetExpr);
 
     // Resolve the PathBuilder feature set from the edge view's first (source)
     // metaclass — same identity-first resolution as RowAuthoringPanel (a project
@@ -391,7 +392,7 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) 
 
             {featureInfo.metamodelsWithClass > 1 && (
                 <ErrorText>
-                    {`La metaclasse «${featureInfo.targetName}» è dichiarata in ${featureInfo.metamodelsWithClass} metamodelli del progetto: il picker usa quella a cui è applicata questa view. Verifica che i metamodelli non siano duplicati.`}
+                    {`La metaclasse «${featureInfo.targetName}» è dichiarata in ${featureInfo.metamodelsWithClass} metamodelli del progetto: la view usa quella fissata quando la metaclasse è stata scelta, non una qualsiasi con questo nome. Verifica che i metamodelli non siano duplicati.`}
                 </ErrorText>
             )}
 
@@ -540,12 +541,17 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) 
                             <ErrorText>{ENDPOINT_ARRAY_ERROR}</ErrorText>
                         )}
                     </div>
-                    {/* Same slot, two messages: while a committed pair is still live the
-                        generic one would be false (the view is NOT a reference view), so
-                        it is replaced by the divergence notice. */}
+                    {/* Same slot, three messages. The generic one is only true when
+                        nothing is at stake: while a committed pair is still live it
+                        would be false (the view is NOT a reference view), and with one
+                        endpoint typed it would omit that the text is about to be lost.
+                        Neither state reaches validateIR — the ir is valid in both, the
+                        divergence is a condition of the FORM. */}
                     <HelpText>{endpointsDiverge
-                        ? `La coppia dei capi non è completa: la view continua a usare i capi salvati (${draft.edge?.source} → ${draft.edge?.target}) e il canvas non cambia. Per rimuoverli e tornare a una edge view di tipo reference, cambia la Natura.`
-                        : 'I due capi vengono scritti insieme: finché ne manca uno (o legge un intero array) la view resta una edge view di tipo reference e il canvas non cambia.'}</HelpText>
+                        ? `La coppia dei capi non è completa: finché non tornano validi entrambi la view continua a usare la coppia precedente (${draft.edge?.source} → ${draft.edge?.target}) e il canvas non cambia. Uscendo dal pannello la modifica incompleta viene scartata e alla riapertura ricompare la coppia precedente. Per rimuoverla e tornare a una edge view di tipo reference, cambia la Natura.`
+                        : unsavedSingleEndpoint
+                            ? 'Con un capo solo non viene salvato niente: i due capi si scrivono insieme, quindi finché non imposti anche l\'altro la view resta una edge view di tipo reference e uscendo dal pannello il capo digitato va perso.'
+                            : 'I due capi vengono scritti insieme: finché ne manca uno (o legge un intero array) la view resta una edge view di tipo reference e il canvas non cambia.'}</HelpText>
                 </>
             )}
 

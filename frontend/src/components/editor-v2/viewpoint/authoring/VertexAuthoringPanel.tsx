@@ -244,7 +244,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                 incoherent model (duplicate metamodels) worth the author's attention. */}
             {featureInfo.metamodelsWithClass > 1 && (
                 <ErrorText>
-                    {`The metaclass "${featureInfo.targetName}" is declared in ${featureInfo.metamodelsWithClass} project metamodels: the picker uses the one this view is applied to. Check that the metamodels are not duplicated.`}
+                    {`La metaclasse «${featureInfo.targetName}» è dichiarata in ${featureInfo.metamodelsWithClass} metamodelli del progetto: la view usa quella fissata quando la metaclasse è stata scelta, non una qualsiasi con questo nome. Verifica che i metamodelli non siano duplicati.`}
                 </ErrorText>
             )}
 
