@@ -102,34 +102,6 @@ body.theme-transitioning * {
    Replaces default browser checkbox
    ============================================ */
 
-/* Hide native checkbox but keep accessible */
-input[type="checkbox"] {
-  position: absolute;
-  opacity: 0;
-  width: 0;
-  height: 0;
-  pointer-events: none;
-}
-
-/* Custom checkbox container - applies to label or wrapper */
-/* Exclude react-select internal inputs
-input[type="checkbox"]:not([class*="css-"]):not([id*="react-select"]),
-label:has(input[type="checkbox"]):not([class*="css-"])::before {
-  content: '';
-  display: inline-block;
-  width: 18px;
-  height: 18px;
-  min-width: 18px;
-  border-radius: 4px;
-  border: 2px solid var(--color-border-secondary, #d0d3d8);
-  background-color: var(--color-bg-elevated, #ffffff);
-  vertical-align: middle;
-  margin-right: var(--space-2, 8px);
-  cursor: pointer;
-  transition: all 0.15s ease;
-  position: relative;
-}
-*/
 /* Hide any checkbox visual inside react-select
 [class*="-container"] input[type="checkbox"],
 [class*="css-"] input[type="checkbox"] {
@@ -138,40 +110,6 @@ label:has(input[type="checkbox"]):not([class*="css-"])::before {
   width: 0 !important;
   height: 0 !important;
 }*/
-
-/* Hover state */
-input[type="checkbox"]:not(:checked):not(:disabled) + span:hover::before,
-input[type="checkbox"]:not(:checked):not(:disabled) + label:hover::before,
-label:has(input[type="checkbox"]:not(:checked):not(:disabled)):hover::before {
-  border-color: var(--color-accent, #475569);
-}
-
-/* Checked state */
-input[type="checkbox"]:checked + span::before,
-input[type="checkbox"]:checked + label::before,
-label:has(input[type="checkbox"]:checked)::before {
-  border: none;
-  background-color: var(--color-accent, #475569);
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 12 12' fill='none' stroke='white' stroke-width='2' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2 6l3 3 5-5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: 10px 10px;
-}
-
-/* Focus state */
-input[type="checkbox"]:focus + span::before,
-input[type="checkbox"]:focus + label::before,
-label:has(input[type="checkbox"]:focus)::before {
-  box-shadow: 0 0 0 2px rgba(71, 85, 105, 0.25);
-}
-
-/* Disabled state */
-input[type="checkbox"]:disabled + span::before,
-input[type="checkbox"]:disabled + label::before,
-label:has(input[type="checkbox"]:disabled)::before {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
 
 /* Wrapper for checkbox + label inline layout */
 .checkbox-wrapper,
