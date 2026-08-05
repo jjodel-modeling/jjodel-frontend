@@ -13,7 +13,8 @@ misurata e non una scommessa.
 1. *«Il rischio principale è la doppia autorità sullo stesso pixel fra tab Style e interprete IR.»*
    → **Falsificata nella forma prevista.** Oggi il tab Style in modalità locale (default) non dipinge
    nulla: il suo selettore non esiste nel DOM di editor-v2. La doppia autorità esiste solo dietro il
-   toggle `cssIsGlobal`, ed è più pericolosa di come era descritta (§2.4).
+   toggle `cssIsGlobal`, e passa dal testo CSS annidato, non dai nomi delle palette (§2.4, misurato
+   in §2.5 il 2026-08-05).
 2. *«Il sub-tab Basic/Advanced di `VertexAuthoringPanel` è scollegato dal mode globale.»*
    → **Falsificata.** È già cablato su Redux `state.advanced` (§3.2). La domanda sospesa è cambiata:
    non "come unificarlo" ma "perché Row ed Edge non lo hanno".
@@ -277,27 +278,53 @@ Per i **viewpoint** il selettore locale è `.GraphContainer`, classe montata dal
 Quindi: in modalità locale né il CSS dell'utente né **le variabili di palette** vengono mai definite su
 un elemento del canvas. Il tab Style oggi non dipinge nulla.
 
-**Modalità globale (`cssIsGlobal = true`) → autoritativo per accidente, e peggio del previsto.**
-Il selettore diventa `body`, e il testo dell'utente finisce *dentro* quel blocco. Due conseguenze:
+**Modalità globale (`cssIsGlobal = true`) → autoritativo per accidente.**
+Il selettore diventa `body`, e il testo dell'utente finisce *dentro* quel blocco. Due conseguenze,
+**entrambe misurate il 2026-08-05** (§2.5): una si conferma, l'altra si ridimensiona.
 
-1. **Le variabili di palette diventano globali su `body`.** Una palette chiamata `node-bg` produce
-   `--node-bg` su `body` (`view.tsx:804`), e `.ir-node-content` dipinge il proprio fondo con
-   `background: var(--node-bg)` (`irStyle.ts:44`). Nessun `!important` richiesto: è pura cascata di
-   custom properties. Stesso discorso per `--border-default`. Questa è **doppia autorità reale sullo
-   stesso pixel**, con precedenza decisa dal nome che l'utente dà a una palette.
-2. **Il CSS dell'utente diventa una regola annidata.** `body { .ir-node-content { … } }` è CSS Nesting
-   valido nella sintassi rilassata (una regola annidata può iniziare con `.`), supportata dai browser
-   target. Il testo è arbitrario — l'editor è Monaco in `defaultLanguage='less'`
-   (`PaletteData.tsx:815-820`), senza alcun filtro — quindi l'utente può scrivere `!important` e
-   **battere gli inline** che `IRNodeContent` applica su `.ir-node-content`
-   (`IRNodeContent.tsx:157-180`: `inlineStyle.background = fill`, `inlineStyle.border = …`).
+1. **Il CSS dell'utente diventa una regola annidata, e vince sugli inline dell'interprete.**
+   `body { .ir-node-content { … } }` è CSS Nesting valido nella sintassi rilassata (una regola annidata
+   può iniziare con `.`). Il testo è arbitrario — l'editor è Monaco in `defaultLanguage='less'`
+   (`PaletteData.tsx:815-820`), senza alcun filtro — quindi un `!important` **batte gli inline** che
+   `IRNodeContent` applica su `.ir-node-content` (`IRNodeContent.tsx:157-180`:
+   `inlineStyle.background = fill`, `inlineStyle.border = …`). **Confermato a runtime.**
+   Aggravante: il `css` di default che ogni `DViewElement` riceve alla creazione
+   (`classes.ts:1125-1170`) è **già scritto in forma annidata e già pieno di `!important`** — era LESS
+   per il compilatore classico, oggi è CSS Nesting nativo iniettato raw.
+2. **Le variabili di palette diventano globali su `body`, ma raggiungono solo una parte dei token.**
+   Vale solo per i token dichiarati su `:root` o più in alto; quelli ridichiarati su un antenato **più
+   vicino** al nodo sono schermati. La divisione, per i token che `.ir-node-content` consuma:
 
-**Incertezza dichiarata**: il punto 2 non è stato verificato a runtime. Il punto 1 non richiede nesting
-e vale con certezza. Basta un minuto di verifica manuale per chiudere anche il 2 — vedi §7 Q1.
+   | token | dichiarato su | una palette omonima su `body` lo sovrascrive? |
+   |---|---|---|
+   | `--node-bg` | `.editor-v2.theme-*` (`_themes.scss:40,186`) | **no**, schermato |
+   | `--border-default` | `.editor-v2.theme-*` (`_themes.scss:19,165`) | **no**, schermato |
+   | `--node-shadow`, `--node-shadow-deep` | `.editor-v2.theme-*` (`:41-42,187-188`) | **no**, schermato |
+   | `--color-accent` (outline di selezione, `irStyle.ts:92-93`) | `:root` (`_colors-light.scss:75-76,118`) | **sì** |
 
-**Il tab Style *può* emettere `!important`**: sì, il campo è testo libero senza sanitizzazione. La
-risposta alla domanda del prompt è affermativa, ed è esattamente il caso peggiore ipotizzato — solo che
-il danno arriva prima, dalle variabili, e senza `!important`.
+   La versione precedente di questa sezione dava `node-bg` come esempio funzionante: **era sbagliata**.
+   Il canale esiste, ma è più stretto di come era descritto.
+
+### §2.5 Misura di §2.4 (2026-08-05, Chrome headless)
+
+Pagina isolata che replica la catena esatta: token su `:root`, token di tema su `.editor-v2.theme-light`,
+`BASE_CSS` dell'interprete, `<style id="views-css-injector-d">` costruito con la stessa concatenazione di
+`view.tsx:864-866`, e un `.ir-node-content` con il paint inline di `IRNodeContent`.
+
+```
+nesting-parsed        : YES (1 nested rule)
+background-computed   : rgb(9, 9, 9)      ← regola annidata !important, non l'inline rgb(50,50,50)
+outline-color         : rgb(0, 255, 0)    ← palette su body, non il --color-accent di :root
+var--node-bg-at-node  : rgb(255, 255, 255) ← valore del tema, NON il rgb(255,0,0) messo su body
+var--node-bg-at-body  : rgb(255, 0, 0)     ← il valore esiste su body e non arriva al nodo
+```
+
+Riproducibile: `scratchpad/q1-css-authority.html` + `Google Chrome --headless --dump-dom`.
+
+**Il tab Style *può* emettere `!important`**: sì, il campo è testo libero senza sanitizzazione, ed è
+esattamente il caso peggiore ipotizzato dal prompt — misurato, non dedotto. Il canale principale è la
+regola annidata, non le variabili: quelle raggiungono solo i token di `:root`, e fra quelli che l'IR
+consuma solo `--color-accent`.
 
 ---
 
@@ -563,10 +590,12 @@ PathBuilder** su progetti con metamodelli omonimi duplicati (§3.1). È l'unico 
 sottrazione ha un costo funzionale misurabile.
 
 **R3 — Il toggle `cssIsGlobal` è oggi l'unico interruttore che rende il tab Style capace di sovrascrivere
-l'IR** (§2.4). Se il tab viene rimosso ma il campo resta, un progetto salvato con `cssIsGlobal = true` e
-una palette dal nome collidente continuerà a ridipingere i nodi IR **senza alcuna superficie da cui
-capirlo**. Questo è il caso peggiore concreto di doppia autorità: non due tab che competono, ma un tab
-rimosso che continua a vincere.
+l'IR** (§2.4, misurato in §2.5). Se il tab viene rimosso ma il campo resta, un progetto salvato con
+`cssIsGlobal = true` e una regola annidata `!important` continuerà a ridipingere i nodi IR **senza alcuna
+superficie da cui capirlo**. Questo è il caso peggiore concreto di doppia autorità: non due tab che
+competono, ma un tab rimosso che continua a vincere. Il canale delle variabili di palette esiste ma è
+stretto (solo i token di `:root`, cioè `--color-accent` fra quelli che l'IR consuma): il vettore da
+sorvegliare è il testo CSS, non i nomi delle palette.
 
 **R4 — Tre politiche di disclosure divergenti fra i tre pannelli IR** (§3.2). Con la tab map, il
 Matching migra in "Applies to": la divergenza diventa visibile all'utente come un tab che cambia
@@ -576,11 +605,14 @@ contenuto a seconda del kind.
 
 ### Domande
 
-**Q1 — verifica a runtime da 60 secondi, prima di qualsiasi diff.** Aprire una view IR, tab Style,
-mettere `cssIsGlobal = true`, scrivere `.ir-node-content { background: red !important; }`, guardare il
-canvas. Poi ripetere in locale (`cssIsGlobal = false`) e confermare che non succede nulla. Chiude
-l'unica incertezza rimasta di §2.4 e trasforma il verdetto sul tab Style da "morto/condizionale" a un
-verdetto secco. Vuoi che lo faccia io in una fase separata, o lo verifichi tu al prossimo dogfooding?
+**Q1 — CHIUSA il 2026-08-05.** Misurata in §2.5 su pagina isolata, non sull'app: la catena riprodotta è
+quella di `view.tsx:864-866` più `irStyle.ts` più il paint inline di `IRNodeContent`, che è tutto ciò che
+serve — il resto dell'app non entra nel meccanismo. Esito: la regola annidata `!important` **batte**
+l'inline dell'interprete; il canale delle variabili di palette funziona solo per i token di `:root`.
+Il verdetto sul tab Style resta **inerte in locale, autoritativo in globale**, ora misurato.
+Residuo non verificato, di rilevanza bassa: che l'iniettore di `Dashboard.tsx:613` monti effettivamente
+la regola nel documento dell'editor — è un `<style>` alla radice dell'app, quindi lo dà per scontato la
+stessa catena che oggi rende visibili i CSS dei viewpoint.
 
 **Q2 — semantica di "ridondante" sui campi.** Il triage distingue rimuovere il *tab* dal rimuovere il
 *campo*. Per Style e Options la mia lettura è: rimuovere i tab, **non** toccare i campi (nessuna
@@ -604,5 +636,10 @@ La barra si può ridurre a **Applies to · Shape · Content** rimuovendo quattro
 Events, Options, Components) **senza perdere una sola funzione viva**: sono morti per tutte le view, non
 solo per quelle IR, perché il canvas classico e il resolver classico sono spenti. Da "Apply to"
 sopravvivono tre controlli (Name, Viewpoint, Applicable to) e uno è dubbio (Parent view). Il tab Style è
-il solo caso delicato: inerte nel default, ma capace — dietro `cssIsGlobal` — di battere l'interprete IR
-attraverso le variabili di palette, senza nemmeno bisogno di `!important`.
+il solo caso delicato: inerte nel default, ma capace — dietro `cssIsGlobal` — di battere gli inline
+dell'interprete IR con una regola annidata `!important`, misurato in §2.5.
+
+> **Nota sulla ratifica successiva (2026-08-05)**: la partizione ratificata è a cinque tab
+> — `Applies to · Structure · Appearance · Text · Source` — non a tre. La mappa di migrazione di §4 va
+> letta con `Shape → Structure + Appearance` e `Content → Text`; i due controlli che §4.1 dava senza casa
+> (Natura e Capi degli edge) la trovano in **Structure**.
