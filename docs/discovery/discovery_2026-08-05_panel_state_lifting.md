@@ -670,3 +670,239 @@ perde il path, la natura e la visibilità stessa del campo — **e questo vale g
 lo rende soltanto ordinario. Il rischio non ovvio è un altro: svuotare un capo su una object-as-edge
 viva cancella atomicamente anche l'altro, riportando la view a reference-as-edge senza conferma, con
 l'UI che continua a mostrare il capo superstite.
+
+---
+
+# Addendum 2026-08-05 (seconda sessione) — OQ-4, OQ-6bis, OQ-9 e la sezione Opzioni
+
+**Perché esiste**: il prompt `2026-08-05 13:19` chiede lo stesso task 1.2 di questo report, che era già
+committato (`f83252d06`, 13:08). Il report **non è stato riscritto**. Confrontato punto per punto con le
+OQ del prompt, restavano scoperti: **OQ-4 per intero** (la strada B, che §7 liquida in una riga),
+la **seconda metà di OQ-6** (il precedente per un badge di errore su header di tab), **OQ-9** (cosa
+importano davvero i test) e la **sezione finale "Opzioni"**, che il prompt dichiara obbligatoria e che
+qui mancava. Questo addendum colma solo quelli.
+
+**HEAD alla scrittura**: `f83252d06`. **Working tree NON pulito**, e conta — vedi §14.
+
+---
+
+## §10 OQ-4 — La strada B misurata: montare tutto e nascondere
+
+### §10.1 Effetti collaterali: quattro verifiche, quattro esiti
+
+| verifica | esito | evidenza |
+|---|---|---|
+| `useEffect` nei sotto-editor | **uno solo su nove ne ha**, ed è già inerte da chiuso | `grep -c useEffect` sull'albero authoring: solo `TextStyleField.tsx` (2), entrambi con `if (!open) return` in testa (`:110-111`). Gli altri otto: zero effetti |
+| `useEffect` nei pannelli | **non si moltiplicano** | i 3 effetti per pannello (seed, validate+debounce, e il terzo) vivono nel pannello, non nel corpo dei tab. Con la strada B il pannello resta montato **una volta**: sono gli stessi effetti di oggi, nella stessa quantità |
+| `focus()` / `scrollIntoView` / `autoFocus` | **zero occorrenze** in tutto l'albero authoring e in `components/ui/` | grep su `createPortal|scrollIntoView|\.focus()|autoFocus` |
+| popover in portal | **uno**, e si auto-chiude al cambio tab | `TextStyleField.tsx:2` (`createPortal`), reso solo se `open && popStyle` (`:166`). Il listener `mousedown` in fase di cattura (`:122`) chiude il popover per ogni click fuori dal trigger e dal popover: cliccare un header di tab è esattamente quel caso |
+
+Il portal è l'unico punto che merita una riga nel prompt di Fase 2: un popover aperto dentro un tab che
+diventa `display:none` **sopravvivrebbe visivamente** (il portal esce dal contenitore nascosto). Non
+succede per il click, che lo chiude, ma succederebbe con un cambio tab da tastiera se mai ne esistesse
+uno. Oggi la barra è solo cliccabile (`ViewData.tsx:190-201`, nessun handler di tastiera).
+
+### §10.2 Costo in nodi: quanto pesa tenere tutto montato
+
+Unità di misura: **elementi JSX statici** contati sul sorgente (`grep -o '<[A-Za-z][A-Za-z0-9]*'`).
+È un proxy per ordine di grandezza, non un conteggio di nodi DOM: i tag di componente espandono, i
+frammenti no. Serve a rispondere "centinaia o decine di migliaia", e a quello risponde.
+
+Per-unità, misurato:
+
+| componente | tag JSX propri |
+|---|---|
+| `FieldCompartmentListEditor` | 31 |
+| `MatchingSection` | 28 |
+| `TextStyleField` | 24 |
+| `BadgeListEditor` | 18 |
+| `LabelEntryEditor` | 17 |
+| `FieldSegmentEditor`, `TextSourceEditor` | 6 ciascuno |
+| `ui/PredicateBuilder` | 33 |
+| `ui/ConditionalEditor` | 22 totali, ma **7 in modo Fixed** — `PredicateBuilder` è montato solo nel ramo `mode === 'conditional'` (`ConditionalEditor.tsx:108-145`) |
+| `ui/ListEditor` | 19 |
+| `ui/PathBuilder` | 10 |
+
+Sottoalbero di una singola label: `LabelEntryEditor` 17 + `TextSourceEditor` 6 + `TextStyleField` 24 +
+`ConditionalEditor` in Fixed 7 = **54**.
+
+Caso peggiore dichiarato (6 label, 4 compartimenti da 3 segmenti, 6 badge, tutti i `Conditional` in
+Fixed):
+
+| tab | composizione | tag |
+|---|---|---|
+| Text | `LabelListEditor` + 6 × 54 | ~330 |
+| Structure | `FieldCompartmentListEditor` 31 + 4 × (3 × 6 + 7) | ~130 |
+| Appearance | Shape/Fill/Border/Sizing ~40 + `BadgeListEditor` 18 + 6 badge × ~10 | ~120 |
+| Applies to | `MatchingSection` 28 + `PredicateBuilder` 33 se il predicate è attivo | ~60 |
+| Source | JSON read-only | ~5 |
+| **totale strada B** | tutti montati insieme | **~645** |
+| **totale strada A/C** | solo il tab più pesante (Text) | **~330** |
+
+**Il rapporto è circa 2×, e l'assoluto resta nelle centinaia.** Per confronto d'ordine: il pannello
+Properties monta già oggi l'intero pannello di authoring, cioè la somma di quelle voci meno la barra —
+la strada B non aggiunge nulla che non sia già montato **adesso**, in un tab IR solo. In questo senso il
+costo in nodi della strada B non è "il doppio di dopo": è **esattamente quanto si monta oggi**.
+
+Se i `Conditional` sono in modo conditional il peso cresce di 33 tag per occorrenza, ma cresce
+identicamente in tutte e tre le strade: è nel tab attivo comunque.
+
+### §10.3 Cosa la strada B non risolve
+
+Due cose, entrambe già dette altrove nel report e che vanno ripetute qui perché cambiano il confronto:
+
+1. **`display:none` non preserva il draft attraverso il cambio di `view.id`.** Il remount su `key`
+   (`Info.tsx:1208-1209`, `NestedView.tsx:493`) resta e continua a distruggere tutto. La strada B copre
+   il cambio tab, non il cambio view. La strada A, se l'owner sta sopra la `key`, non copre nemmeno lei.
+2. **Il rischio §2.4 (svuotare un capo su una object-as-edge viva) è indipendente dalla strada.** Vive
+   nella logica di `applyEndpoints`, non nel ciclo di vita del montaggio — ed è appunto quello su cui c'è
+   WIP non committato (§14).
+
+---
+
+## §11 OQ-6bis — Dove si mostra l'errore oggi, e il precedente che non esiste
+
+**Siti di rendering degli errori, per pannello** (tutti in testa al corpo, prima di ogni sezione):
+
+| pannello | `ErrorText` di `validateIR` | altri `ErrorText` contestuali |
+|---|---|---|
+| `VertexAuthoringPanel` | `:202` | `:209-211` (ambiguità di metaclasse) |
+| `RowAuthoringPanel` | `:210` | `:213-215` (ambiguità di metaclasse) |
+| `EdgeAuthoringPanel` | `:388` | `:391-393` (ambiguità), `:425` (wildcard + natura object), `:526` e `:538` (capo che legge un array) |
+| `EnableIRPanel` | `:114` | — |
+
+Due famiglie distinte, che la partizione separa: quello di `validateIR` è **di pannello** e resta in
+testa; i quattro contestuali di `EdgeAuthoringPanel` sono **di campo** e viaggiano col campo nel suo tab.
+Il solo che si spezza è `:425`: nasce da `metaclasses` (→ `Applies to`) e si manifesta sulla natura
+(→ `Structure`). Vedi §5.2 del report.
+
+**Precedente per un badge di errore su un header di tab: NON ESISTE.** Verificato con grep su
+`tab.*badge|badge.*tab|tab-badge|tab__badge|tab.*dot|hasError|has-error` in tutto `components/`:
+
+- `ui/Input/Input.tsx:94-136` è il precedente **di campo**: `hasError` → classe `input-error`,
+  `aria-invalid`, `aria-describedby`, `ErrorText` sotto il controllo. È design-system e riusabile, ma
+  descrive un input, non un tab.
+- `DocumentationTab.tsx:308-352` usa `hasError` per lo stato di una **modale di progresso**, non per
+  decorare un header.
+- `JodieHeader.tsx:128` cita un "badge" ma è l'indicatore di contesto della finestra Jodie, aggiornato
+  sui cambi tab di rc-dock: non è un segnale di errore e non sta su un header di tab.
+- `.view-editor-tab` (`nestedView.scss:3606-3628`) ha **solo** base, `:hover` e `.active`. Nessuno stato
+  di errore, nessuno slot per decorazioni.
+
+**Conclusione**: la riflessione dell'errore sui tab è **UI nuova al 100%** — una classe SCSS, uno stato
+per-tab e un canale che dica quale tab è responsabile. Quel canale oggi non esiste: `validateIR` ritorna
+una stringa (`irValidate.ts:22`) senza coordinate di campo, come già osserva la Q3 del report.
+
+---
+
+## §12 OQ-9 — Cosa importano i test, e cosa rispecchiano per copia
+
+I due file sotto `authoring/__tests__/` **non importano alcun componente**. Importano solo moduli IR puri:
+
+| test | import |
+|---|---|
+| `edgeAuthoring.test.ts:20-24` | `irValidate`, `irCompile` (`compileEdgeView`), `irResolveCore` (`getIRIndex`), `irDefaults` (`defaultEdgeViewIR`), `irTypes` (solo type) |
+| `rowAuthoring.test.ts:15-24` | `irCompile` (`compileRowView`), `irValidate`, `irDefaults` (`defaultRowViewIR`), `irTypes` (solo type) |
+
+**Rispecchiati per copia dentro il test** (ri-implementazioni letterali di logica che vive nel pannello):
+
+| helper | sito nel test | originale |
+|---|---|---|
+| `isUsableEndpointExpr` | `edgeAuthoring.test.ts:130` | `EdgeAuthoringPanel.tsx:78` — funzione modulo-locale, **non esportata** |
+| `nextEdgeForEndpoints` | `edgeAuthoring.test.ts:195` | logica di `applyEndpoints` |
+| `dropEndpoints` | `edgeAuthoring.test.ts:209` | logica di `changeNature` verso `reference` |
+| `stateWith` | `edgeAuthoring.test.ts:29` | fixture di stato Redux, nessun originale |
+| `childrenComp` | `rowAuthoring.test.ts:30` | fixture, nessun originale |
+
+**Conseguenza per la strada A**: cambiare le *firme* dei sotto-editor non tocca un solo test, perché
+nessun test li importa. Cambiare la *logica* di `applyEndpoints` o di `changeNature` **rompe i mirror**,
+che sono copie e non si aggiornano da sole. È esattamente ciò che sta succedendo adesso nel working tree
+(§14): il WIP cambia `applyEndpoints` e aggiorna in parallelo `edgeAuthoring.test.ts` (+87 righe).
+
+Nota per il task 2.1 del backlog: `isUsableEndpointExpr` è **ancora dentro `EdgeAuthoringPanel.tsx`**
+(`:78`), con cinque call-site nello stesso file (`:175`, `:212`, `:525`, `:537`) più il mirror nel test.
+Il refactor `fc0af70d2` ha estratto `ir/pathExpr.ts` ma non questa guardia.
+
+---
+
+## §13 Opzioni
+
+Nessuna raccomandazione: la scelta è di Alfonso. Per ciascuna, cosa richiede e che rischio introduce.
+
+### Opzione A — Sollevare lo stato nel pannello
+
+**Cosa richiede**: un owner sopra i cinque tab che possieda `draft`, `dirtyRef`, il timer di debounce e
+`validateIR`, più i tre atomi di `EdgeAuthoringPanel` (`nature`, `sourceExpr`, `targetExpr`).
+**File**: 3 pannelli + 1 owner nuovo + `ViewData.tsx` = **5**, cioè la soglia della regola 19 di
+`CLAUDE.md`. **Zero** file sotto `ui/`, **zero** sotto-editor (non hanno stato), **zero** test (non
+importano componenti).
+**Righe di E-ref/E-obj riscritte**: i tre `useState` (`EdgeAuthoringPanel.tsx:116-118`) e i due
+consumatori che li scrivono, `applyEndpoints` (`:171-182`) e `changeNature` (`:189-207`). Il write path
+(`view.ir = draft`) e il discriminante `isObjectAsEdge` (`irCompile.ts:391`) non si toccano.
+**Vincolo sui rinomini**: rispettabile. Il sollevamento sposta dichiarazioni e aggiunge props; non
+richiede di rinominare `sourceExpr`, `targetExpr`, `nature`, `applyEndpoints` né `dirtyRef`. Le props
+nuove sono nomi nuovi, che la regola 2 non vieta.
+**Rischi**: (1) il momento del seed — se gira più di una volta per `view.id` sovrascrive il draft, cioè
+riproduce la perdita che il sollevamento vuole evitare, in forma più difficile da vedere (§6.2 punto 1);
+(2) `dirtyRef` dimenticato indietro produce un pannello che sembra funzionare e non committa più (R2);
+(3) la divergenza UI/`ir` di §2.4 smette di auto-risolversi allo smontaggio e persiste per l'intera
+sessione (§6.2 punto 2) — cambiamento osservabile su un ramo già verificato a video.
+
+### Opzione B — Non smontare: tutti i tab montati, gli inattivi nascosti
+
+**Cosa richiede**: la barra rende i cinque corpi e ne nasconde quattro. Zero sollevamento, **zero righe
+di E-ref ed E-obj toccate**, zero props nuove, zero file oltre a quello che monta la barra.
+**Costo misurato** (§10.2): ~645 elementi JSX montati nel caso peggiore contro ~330 del solo tab più
+pesante — e ~645 è **quanto si monta già oggi**, perché il tab IR odierno è il pannello intero.
+**Effetti collaterali misurati** (§10.1): nessuno su focus e scroll (zero occorrenze in tutto l'albero);
+un solo popover in portal, che si auto-chiude al click sull'header; un solo sotto-editor con effetti, già
+inerti da chiuso.
+**Rischi**: (1) è un **pattern nuovo per questo codebase** — nessuno dei tre host a tab lo usa (§7);
+(2) `display:none` non copre il remount su `key` al cambio view, che resta la perdita più grande;
+(3) un popover aperto in un tab nascosto resterebbe visibile se il cambio tab avvenisse senza un
+`mousedown` (oggi impossibile: la barra è solo cliccabile);
+(4) non chiude nessuno dei rischi di logica (§2.4, R2, R3): li lascia esattamente dove sono.
+
+### Opzione C — Il pattern di casa: montare solo il tab attivo
+
+**Cosa richiede**: niente. È ciò che `ViewData.tsx` fa già — `activeDescriptor.render()` produce una sola
+sottostruttura (`:149`, `:204`) — ed è ciò che fanno gli altri due host a tab del codebase
+(`UnifiedSettingsModal.tsx:127-140`, `SettingsDrawerContent.tsx:24`).
+**Costo**: zero righe.
+**Rischi**: è l'opzione che **non risolve il problema**. Con il draft nel pannello e il pannello dentro
+il tab, ogni cambio tab distrugge draft, `dirtyRef`, i tre atomi degli edge e ogni commit in volo che non
+abbia ancora scavallato i 300 ms. È lo stato attuale reso ordinario, cioè la premessa del task 1.2.
+Diventa una scelta difendibile **solo** in combinazione con A (owner sopra i tab + montaggio del solo
+attivo), che è la forma in cui la ratifica descrive l'invariante «un solo draft a livello di pannello».
+
+### Il confronto in una riga
+
+A e C sono complementari, non alternative: A sposta lo stato **sopra** la barra, C decide cosa la barra
+monta **sotto**. B è l'unica che evita del tutto il sollevamento, costa zero righe sui due rami
+verificati, e in cambio introduce un pattern che il codebase non ha mai usato.
+
+---
+
+## §14 Deriva rispetto al working tree — da leggere prima di usare i `file:riga` di questo report
+
+Alla scrittura di questo addendum il working tree **non è pulito**:
+
+```
+ M frontend/src/components/editor-v2/viewpoint/authoring/EdgeAuthoringPanel.tsx      (+38 -12)
+ M frontend/src/components/editor-v2/viewpoint/authoring/__tests__/edgeAuthoring.test.ts (+87)
+```
+
+È WIP di un'altra sessione che **implementa la raccomandazione di §2.4 di questo stesso report**:
+`applyEndpoints` non fa più il drop di entrambe le chiavi quando la coppia digitata è incompleta —
+lascia l'`ir` intatto e mostra un avviso di divergenza (`endpointsDiverge`). Conseguenze:
+
+1. **I `file:riga` di `EdgeAuthoringPanel.tsx` nel corpo del report sono sfasati.** `applyEndpoints` era
+   citato a `:162-176`, nel working tree sta a `:171-182`. Riancorare per nome, mai per numero.
+2. **La Q2 del report è in parte già risposta dai fatti**: lo svuotamento di un capo non è più un drop
+   atomico silenzioso. Resta da decidere solo la seconda metà (trattenere il capo superstite nello stato
+   sollevato), che è appunto ciò che dipende dal task 1.2.
+3. **Il §6.2 punto 2 cambia segno**: la divergenza UI/`ir` non è più uno stato silenzioso da evitare, è
+   uno stato **dichiarato in UI**. Sollevandola, persisterebbe attraverso i tab con il suo avviso — il
+   che la rende meno pericolosa di come il report la descriveva.
+
+Nessuno di quei due file è stato toccato da questa sessione.
