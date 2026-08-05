@@ -612,23 +612,10 @@ Expression evaluation engine, used by both JjTL and JjScript. Standalone languag
 - `=>` — lambda in both JjEL and JjTL.
 - `--` — comments in both JjEL and JjTL.
 
-### 12.7 MANDATORY checklist when modifying JjTL syntax
+### 12.7 Editing the language
 
-Always update all 5 files together. Never just the parser:
-
-1. `frontend/src/jjtl/types/tokens.ts` — token types + `JJTL_KEYWORDS` map
-2. `frontend/src/jjtl/lexer/lexer.ts` — tokenization (uses `JJTL_KEYWORDS`)
-3. `frontend/src/jjtl/parser/parser.ts` — parsing rules
-4. `frontend/src/jjtl/diagrams/types.ts` — EBNF in `GRAMMAR_RULES`
-5. `frontend/src/jjtl/diagrams/GrammarDiagram.tsx` — railroad diagram rendering
-
-Railroad diagrams are user-facing visual documentation and do **not** update automatically.
-
-### 12.8 Known limitations
-
-- **Source attribute in forall**: `a.name -> targetAttr` does not parse (dotted source attrs). Workaround: conversion syntax `-> targetAttr : a.name`.
-- **Source format**: flat array `[{className, ...}]` is more reliable than `{classes, instances}` (the latter has a duplicate extraction bug).
-- **Pluralization heuristic**: `targetClass.charAt(0).toLowerCase() + targetClass.slice(1) + 's'` — naive, needs a proper strategy.
+The 5-file checklist for a syntax change and the current parser limitations live in
+`frontend/src/jjtl/CLAUDE.md`, which loads when working under that directory.
 
 ---
 
