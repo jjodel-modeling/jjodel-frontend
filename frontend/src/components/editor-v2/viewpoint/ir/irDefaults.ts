@@ -119,11 +119,19 @@ const delegationCache = new WeakMap<object, boolean>();
  * True when the resolved view must render through the native abstract branch of
  * ObjectNode instead of the IR interpreter (delegation, spec v1.2 sez. 11):
  * - the view carries `migratedFrom: 'classic-default'` AND its structure,
- *   normalized (key order canonicalized, `migratedFrom` excluded — no identity
- *   fields live inside `ir` today: view identity is the DViewElement id, spec
- *   sez. 12), equals defaultObjectViewIR(). An edited view diverges from the
- *   factory and returns to the interpreter as a custom view;
+ *   normalized (key order canonicalized, `migratedFrom` and
+ *   `authoringMetaclassPins` excluded), equals defaultObjectViewIR(). An edited
+ *   view diverges from the factory and returns to the interpreter as a custom
+ *   view;
  * - or the view id is IR_DEFAULT_OBJECT_VIEW_ID (built-in default wildcard).
+ *
+ * Both exclusions answer the same question — what counts as the SEMANTIC identity
+ * of an ir — and neither field is part of it. `migratedFrom` records where the ir
+ * came from; `authoringMetaclassPins` records which concrete class each name in
+ * `metaclasses` stands for, and the resolver never reads it (see irTypes). Letting
+ * the pin into the comparison would flip every migrated default view off native
+ * delegation the moment its metaclass is edited — a diffuse rendering change with
+ * no visible cause, on nearly the whole view stock of a migrated project.
  */
 export function isMigratedDefaultView(compiled: Pick<CompiledView, 'viewId' | 'ir'>): boolean {
     if (compiled.viewId === IR_DEFAULT_OBJECT_VIEW_ID) return true;
@@ -135,6 +143,7 @@ export function isMigratedDefaultView(compiled: Pick<CompiledView, 'viewId' | 'i
     if (ir.migratedFrom === 'classic-default') {
         const structural: Record<string, unknown> = { ...ir };
         delete structural.migratedFrom;
+        delete structural.authoringMetaclassPins;
         if (factoryHash === null) factoryHash = irHash(canonicalize(defaultObjectViewIR()) as VertexViewIR);
         delegated = irHash(canonicalize(structural) as VertexViewIR) === factoryHash;
     }

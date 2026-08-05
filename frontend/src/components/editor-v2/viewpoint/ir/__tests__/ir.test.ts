@@ -885,6 +885,46 @@ describe('isMigratedDefaultView (delegation, spec v1.2 sez. 11)', () => {
         const cv = compileView(IR_DEFAULT_OBJECT_VIEW_ID, defaultObjectViewIR());
         expect(isMigratedDefaultView(cv)).toBe(true);
     });
+    it('marker + authoringMetaclassPins → STILL delegated (the pin is not identity)', () => {
+        // Task 1.3: the pin is authoring metadata the resolver never reads. Were it
+        // part of the comparison, writing it would silently move every migrated
+        // default view off native rendering — a diffuse change with no visible cause.
+        const pinned = {
+            ...defaultObjectViewIR(),
+            migratedFrom: 'classic-default',
+            authoringMetaclassPins: { State: 'ptr_B_State' },
+        } as unknown as VertexViewIR;
+        const cv = compileView('V_mig_pinned', pinned);
+        expect(isMigratedDefaultView(cv)).toBe(true);
+    });
+    it('two migrated defaults differing ONLY by the pin compare equal', () => {
+        // The exclusion is inside isMigratedDefaultView (canonicalize is private and
+        // stays a pure key-sort), so equality is observable only through it.
+        const a = {
+            ...defaultObjectViewIR(),
+            migratedFrom: 'classic-default',
+            authoringMetaclassPins: { State: 'ptr_A_State' },
+        } as unknown as VertexViewIR;
+        const b = {
+            ...defaultObjectViewIR(),
+            migratedFrom: 'classic-default',
+            authoringMetaclassPins: { State: 'ptr_B_State' },
+        } as unknown as VertexViewIR;
+        expect(isMigratedDefaultView(compileView('V_pin_a', a))).toBe(true);
+        expect(isMigratedDefaultView(compileView('V_pin_b', b))).toBe(true);
+    });
+    it('marker + pin + a real edit → interpreter, no delegation (the pin does not mask edits)', () => {
+        // Guard against over-excluding: the pin must not make an edited view look
+        // like the factory.
+        const edited = {
+            ...defaultObjectViewIR(),
+            migratedFrom: 'classic-default',
+            authoringMetaclassPins: { State: 'ptr_B_State' },
+            priority: 7,
+        } as unknown as VertexViewIR;
+        const cv = compileView('V_mig_pin_edit', edited);
+        expect(isMigratedDefaultView(cv)).toBe(false);
+    });
 });
 
 describe('layout persistence (discovery 2026-07-19)', () => {
