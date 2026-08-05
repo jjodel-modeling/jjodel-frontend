@@ -60,6 +60,13 @@ function ViewDataComponent(props: AllProps) {
     // (non-edge) view, so the `view.isEdge !== true` clause stays on the enable branch.
     const showIRTab = (ir?.kind === 'vertex') || (ir?.kind === 'row') || (ir?.kind === 'edge') || (isV && !ir && view.isEdge !== true);
 
+    // Legacy view (no `ir`): its jsxString has no interpreter left after the classic
+    // shutdown (Fase 5a), so the Template tab is opened READ-ONLY with an inert-runtime
+    // notice. The tab is deliberately still mounted: the template is the only surviving
+    // trace of the original notation, and hiding it would destroy that information.
+    // IR-authored views are untouched by this (they keep whatever `readOnly` they had).
+    const templateLegacy = isV && !ir;
+
     // Build the tab list. Each `render` closure captures the current view/readonly
     // so the children stay in sync with Redux updates.
     const tabs: TabDescriptor[] = [
@@ -77,7 +84,7 @@ function ViewDataComponent(props: AllProps) {
             label: 'Template',
             render: () => (
                 <Try>
-                    <TemplateData viewID={view.id} readonly={readOnly} />
+                    <TemplateData viewID={view.id} readonly={readOnly || templateLegacy} legacyNoIR={templateLegacy} />
                 </Try>
             ),
         }] : []),

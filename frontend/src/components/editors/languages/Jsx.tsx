@@ -35,6 +35,14 @@ function JsxEditorComponent(props: AllProps) {
 
 
     const blur = (evt?: React.FocusEvent) => { // confirm in redux state for final state
+        // A read-only editor must not reach the write path at all. Monaco's `readOnly`
+        // stops the keystrokes, not this handler: the wrapper's onBlur fires regardless,
+        // and `view.jsxString = jsx` goes through set_jsxString (view.tsx), which schedules
+        // VIEWS_RECOMPILE_jsxString even when the value is unchanged. The gate is on
+        // `readOnly`, not on any caller-specific condition, so it covers every read-only
+        // consumer: the default views (Defaults.check) as well as the legacy views the
+        // Template tab now opens read-only.
+        if (readOnly) return;
         view.jsxString = jsx;
     }
 
@@ -155,7 +163,11 @@ function JsxEditorComponent(props: AllProps) {
             icon="bi-code-slash"
             value={jsx}
             onChange={change}
-            onSave={(newValue) => {
+            // Read-only: no save handler at all. The modal already hides the Save button
+            // when readOnly, but its Ctrl+S shortcut calls `onSave?.(value)` without
+            // checking the flag; passing undefined makes that optional call a no-op
+            // without touching the shared modal, which other editors also use.
+            onSave={readOnly ? undefined : (newValue) => {
                 setJsx(newValue);  // Update local state
                 view.jsxString = newValue;  // Save to redux/model
                 setFullscreen(false);

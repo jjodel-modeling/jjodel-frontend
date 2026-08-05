@@ -7,6 +7,7 @@ import {Function} from "../../../forEndUser/FunctionComponent";
 import {FakeStateProps} from "../../../../joiner/types";
 import {connect} from "react-redux";
 import {HRule} from '../../../widgets/Widgets';
+import {HelpText} from '../../../ui';
 
 function TemplateData(props: AllProps) {
     const view = props.view;
@@ -14,6 +15,16 @@ function TemplateData(props: AllProps) {
 
     return(<>
         <section className={'p-3 template-tab'}>
+            {/* Inert runtime notice, same pattern as the Events tab (CustomData): a view
+                without an `ir` has no engine left to interpret its jsxString. The editor
+                stays mounted and readable on purpose (the template is the only surviving
+                trace of the original notation) but is opened read-only by ViewData. */}
+            {props.legacyNoIR && (
+                <HelpText>
+                    Questo template non viene più interpretato. Il rendering usa la notazione
+                    astratta; per definire una sintassi concreta, abilita l'IR.
+                </HelpText>
+            )}
             {/*<TextArea data={view} field={"constants"} label={"Constants"}  readonly={readOnly} />*/}
             {/*<TextArea data={view} field={"preRenderFunc"} label={"PreRender Function"}  readonly={readOnly} />*/}
             <JsxEditor viewid={view.id} readOnly={readOnly} />
@@ -43,6 +54,10 @@ function TemplateData(props: AllProps) {
 interface OwnProps {
     viewID: Pointer<DViewElement>;
     readonly : boolean;
+    /** View without an `ir`: the jsxString has no interpreter left (classic shutdown,
+     *  Fase 5a). Drives the inert-runtime notice only; the read-only gate travels on
+     *  `readonly`, which ViewData raises for the same views. */
+    legacyNoIR?: boolean;
 }
 
 interface StateProps {
