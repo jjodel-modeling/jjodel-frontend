@@ -147,6 +147,47 @@ export const CLASSIC_OBJECT_VIEW_MARKER = 'jjodel-classic-object v3';
 export const CLASSIC_VALUE_VIEW_MARKER = 'jjodel-classic-value v3';
 export const CLASSIC_SINGLETON_VIEW_MARKER = 'jjodel-classic-singleton v3';
 
+// ============================================================
+// TOOL-GENERATED DEFAULT FAMILIES — recognition markers
+// ============================================================
+// The three markers above cover only the classic M1 object/singleton/value
+// family. Everything else Jjodel generates by itself was invisible to
+// `isKnownDefault` in the inverse migration `2.225 -> 2.226`, so it fell into
+// the "custom jsxString" branch and got marked `irLegacyClassic`: on the real
+// saved projects that was 1315 views out of 1550 (census 2026-08-04), of which
+// the most frequent are not authored notation at all.
+//
+// These markers close that gap. Each is an `includes` fragment, NOT a whole
+// template: the same view exists in several historical versions and an equality
+// test would miss almost all of them. Each fragment is emitted verbatim by
+// `common/DV.tsx` (the generator) and is specific enough not to catch authored
+// notation that merely happens to reuse a CSS class.
+//
+// Deliberately NOT covered: `<section className="overlap">` of
+// DV.semanticErrorOverlay (DV.tsx:1085,1089). `overlap` alone is too generic to
+// qualify as a marker, and the anchor overlay below is matched on its own
+// distinctive className instead.
+
+/** Edge relation views (DV.tsx:870): the class-list prefix is identical for
+ *  every mode name (Association / Aggregation / Composition / Extension), which
+ *  is appended after it. Largest single family in the census (381 occurrences). */
+export const CLASSIC_EDGE_RELATION_MARKER = 'edge hoverable hide-ep clickthrough fullscreen';
+
+/** Head comment stamped on the generated abstract-syntax views (DV.tsx:1219 and
+ *  others). Stable across v2.0 / v2.2 / v2.3 — the version digits follow it, so
+ *  the fragment stops before them on purpose and one marker covers all three. */
+export const JJODEL_ABSTRACT_SYNTAX_MARKER = 'Jjodel Abstract Syntax Specification';
+
+/** Edge-point view (DV.tsx:592-595). */
+export const CLASSIC_EDGEPOINT_VIEW_MARKER = 'className={"edgePoint"}';
+
+/** Anchor overlay (DV.tsx:585-589). Keyed on the inner anchor className, not on
+ *  the outer `overlap` wrapper, which is too generic (see note above). */
+export const CLASSIC_ANCHOR_OVERLAY_MARKER = 'anchor draggable resizable';
+
+/** "Shapeless element" placeholder shown when nothing matched (DV.tsx:1332). */
+export const CLASSIC_VOID_VIEW_MARKER = 'void model-less';
+
 export const CLASSIC_OBJECT_VIEW_JSX: string = `
 /* jjodel-classic-object v3 */
 

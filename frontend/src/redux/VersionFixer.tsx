@@ -17,7 +17,9 @@ import {Tooltip} from "../components/forEndUser/Tooltip";
 import {DEFAULT_VIEW_JSX_STRING, LEGACY_PLACEHOLDER_MARKER, V2_2_TO_V2_3_DETECT_MARKER,
     DEFAULT_VIEW_JSX_V2_3_LEGACY, V2_3_TO_V3_DETECT_MARKER,
     CLASSIC_OBJECT_VIEW_JSX, CLASSIC_VALUE_VIEW_JSX, CLASSIC_SINGLETON_VIEW_JSX,
-    CLASSIC_OBJECT_VIEW_MARKER, CLASSIC_VALUE_VIEW_MARKER, CLASSIC_SINGLETON_VIEW_MARKER} from "../utils/defaultViewTemplate";
+    CLASSIC_OBJECT_VIEW_MARKER, CLASSIC_VALUE_VIEW_MARKER, CLASSIC_SINGLETON_VIEW_MARKER,
+    CLASSIC_EDGE_RELATION_MARKER, JJODEL_ABSTRACT_SYNTAX_MARKER, CLASSIC_EDGEPOINT_VIEW_MARKER,
+    CLASSIC_ANCHOR_OVERLAY_MARKER, CLASSIC_VOID_VIEW_MARKER} from "../utils/defaultViewTemplate";
 import {defaultObjectViewIR} from "../components/editor-v2/viewpoint/ir/irDefaults";
 
 /*
@@ -1007,13 +1009,27 @@ everytime you put hands into a D-Object shape or valid values, you should docume
     private ['2.225 -> 2.226'](s: DState): DState {
         let migratedToIR = 0;
         let markedLegacy = 0;
+        // Recognises a jsxString the TOOL generated, as opposed to one the author wrote.
+        // The first six clauses are the original default-M1 family. The five that follow
+        // close the gap found by the census of 2026-08-04: on the real saved projects
+        // 1315 views out of 1550 were falling through to the legacy branch, and the most
+        // frequent of them were tool-generated defaults (edge relations, abstract-syntax
+        // views, edge points, anchor overlays, the shapeless placeholder), not authored
+        // notation. Every added clause is an `includes` on a stable fragment emitted by
+        // common/DV.tsx: the same views exist in several historical versions, so equality
+        // against a whole template would miss nearly all of them.
         const isKnownDefault = (jsx: string): boolean =>
             jsx === DEFAULT_VIEW_JSX_STRING
             || jsx === DEFAULT_VIEW_JSX_V2_3_LEGACY
             || jsx.includes(V2_3_TO_V3_DETECT_MARKER)
             || jsx.includes(V2_2_TO_V2_3_DETECT_MARKER)
             || jsx.includes(LEGACY_PLACEHOLDER_MARKER)
-            || jsx.includes('jjodel-default-view');
+            || jsx.includes('jjodel-default-view')
+            || jsx.includes(CLASSIC_EDGE_RELATION_MARKER)
+            || jsx.includes(JJODEL_ABSTRACT_SYNTAX_MARKER)
+            || jsx.includes(CLASSIC_EDGEPOINT_VIEW_MARKER)
+            || jsx.includes(CLASSIC_ANCHOR_OVERLAY_MARKER)
+            || jsx.includes(CLASSIC_VOID_VIEW_MARKER);
         for (let k in s.idlookup) {
             let e = s.idlookup[k] as any;
             if (!e || typeof e !== 'object') continue;

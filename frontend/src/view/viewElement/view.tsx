@@ -1756,11 +1756,17 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         newView.css_MUST_RECOMPILE = true;
         newView.pointedBy = PointedBy.merge(newView, v);
         newView.subViews = {...newView.subViews, ...v.subViews};
-        // Preserve the IR contract fields across default-view regeneration
-        // (VersionFixer 2.225 -> 2.226 inverse migration; spec v1.2 sez. 11):
-        // without this carry-over the version bump would wipe the migrated `ir`.
+        // Preserve the IR contract across default-view regeneration (VersionFixer
+        // 2.225 -> 2.226 inverse migration; spec v1.2 sez. 11): without this carry-over
+        // the version bump would wipe the migrated `ir`.
         if ((v as any).ir !== undefined) (newView as any).ir = (v as any).ir;
-        if ((v as any).irLegacyClassic) (newView as any).irLegacyClassic = true;
+        // `irLegacyClassic` is deliberately NOT carried over. The migration marks the view
+        // BEFORE this regeneration runs (VersionFixer.update: the chain first, then this
+        // loop), so the mark was a verdict on a jsxString that no longer exists here —
+        // `newView` is by construction a current default. Carrying it produced views that
+        // held the current template AND the legacy mark: 57 of the 85 marked views in the
+        // example corpus (census 2026-08-04), i.e. more false positives than true ones.
+        // Nothing to recompute: a regenerated default is never legacy.
         s.idlookup[v.id] = newView;
         // When called with explicit state (e.g. from VersionFixer during project load),
         // skip dispatching to the live Redux store — the state object will be loaded
