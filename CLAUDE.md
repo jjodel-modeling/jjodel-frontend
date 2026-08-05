@@ -1,6 +1,8 @@
 # CLAUDE.md — Jjodel Project Reference
 
 > Operational reference for Claude Code. Captures what cannot be inferred from reading the code: conventions, critical patterns, language boundaries, gotchas. Everything else lives in `docs/` or the source.
+>
+> After modifying this file, run `npm run gen:agents` to regenerate `AGENTS.md`, then verify with `npm run check:docs`.
 
 ---
 
@@ -14,6 +16,9 @@ Shared engagement rules live in docs/PROTOCOL.md (P1..P9); see §1.
 — Scope & preservation —
  1. Touch only files explicitly listed in the prompt. A broader
     change "would be better" → ask first; never do it silently.
+ 1b. Critical-zone rules (§3.x) override Rule 1. If a §3 rule requires
+     touching a file outside the listed scope, follow the §3 rule and
+     report the scope expansion in the closing diff.
  2. Never rename existing identifiers (CSS classes, vars, functions,
     props, components, exported names) unless the prompt asks.
  3. Committed behavior is verified. Never degrade it. In doubt: STOP.
@@ -29,9 +34,16 @@ Shared engagement rules live in docs/PROTOCOL.md (P1..P9); see §1.
     optional properties.
 
 — Critical zone (§3) —
-12. Never wrap useJjomSync-adjacent code in TRANSACTION.
-13. Every new DVoidEdge.new2 for an M1 ref needs a hasCanvasEdgePair
-    guard mirroring useJjomSync Step 4.
+12. Never wrap DVertex.new / DVoidEdge.new2 / DVoidEdge.new3 in an
+    outer TRANSACTION near the sync layer (coordinate loss).
+    TRANSACTIONs containing only SetFieldAction / SetRootFieldAction /
+    DeleteElementAction (no creators) are safe even in sync-adjacent
+    code.
+13. M1 reference edges: guard with hasCanvasEdgePair using pair-key
+    src→tgt (see useM1ReferenceEdges.ts). M2 reference edges: use
+    composite key refId:src→tgt and protect via idlookup scan +
+    existingEdgeKeys (see useJjomSync.ts Step 3). Do not apply M1
+    pair-based guards to M2 edges — they would block sibling refs.
 14. Touching default-view source (DV.tsx, defaultViewTemplate.ts) →
     add a VersionFixer migration that rewrites jsxString.
 
@@ -44,8 +56,8 @@ Shared engagement rules live in docs/PROTOCOL.md (P1..P9); see §1.
 17. Never `git add .` / `git add -A`. Always `git add <specific-file>`.
 18. Show the diff of touched files in the closing report. The
     diff does not hold the commit (docs/PROTOCOL.md P6).
-19. A task touching more than 5 files → pause, list them, get
-    confirmation.
+19. A task touching more than 5 files → pause, list them with what
+    changes in each, and get confirmation before proceeding.
 20. A change that propagates to a layer not named in the prompt
     (D-layer, L-layer, sync, view, JjOM) → pause and report.
 
@@ -57,6 +69,8 @@ Shared engagement rules live in docs/PROTOCOL.md (P1..P9); see §1.
     use .new() directly).
 24. Don't reintroduce removed Editor V3 components or events (§10).
 25. No hardcoded 'jjodel:...' event strings — use events/registry.ts.
+    If you find one in existing code, leave it (migration tracked
+    elsewhere).
 
 — Style & design-system —
 26. No emojis in code (OK in chat responses).
@@ -65,6 +79,7 @@ Shared engagement rules live in docs/PROTOCOL.md (P1..P9); see §1.
 28. No CSS variables in component files — always in styles/tokens/.
 ═══════════════════════════════════════════════════════════════════
 ```
+
 ## 0. Runtime — model & effort
 
 This agent runs as **Claude Opus 5** (requires Claude Code v2.1.154+; run `claude update` if older).
@@ -100,9 +115,25 @@ Committed behavior represents verified state. A modification never degrades it.
 - Do not commit instrumentation (`console.log`, `[diagN]` blocks). These are removed in a dedicated cleanup commit after the fix is confirmed.
 
 **Test before considering a task done**
-- `npm run typecheck` must pass.
+- `npm run typecheck` must pass without introducing new errors. A known baseline of pre-existing errors exists; verify your change does not increase the count.
 - `npm run build` must pass.
 - If tests exist for the touched area, `npm run test` must pass for those files.
+
+---
+
+## 2.5 Aree attive (2026-08-05)
+
+These areas absorb the majority of current activity but are not yet fully
+stabilized. Discovery on tasks touching them must explicitly explore local
+constraints.
+
+| Area | File hot | Stato |
+|------|----------|-------|
+| IR / Authoring | `VertexAuthoringPanel.tsx`, `EdgeAuthoringPanel.tsx`, `irStyle.ts` | In sviluppo |
+| IR / Execution | `executor.ts`, `irCompile.ts`, `irTypes.ts` | In sviluppo |
+| Validazione | `editor-v2/problems/` (registry, conformance, uniqueness) | Attivo |
+| Jodie UI | `JodieWindow.tsx` | Convergenza visiva |
+| Tree View | `TreeViewContent.tsx`, `tree-view-sidebar.scss` | Rifiniture |
 
 ---
 
@@ -121,7 +152,10 @@ Committed behavior represents verified state. A modification never degrades it.
 | `frontend/src/components/editor-v2/utils/portDistribution.ts` | Handle/port placement. Role-aware bucket keys. |
 | `frontend/src/redux/VersionFixer.tsx` | Schema migrations for persisted project state. |
 | `frontend/src/utils/defaultViewTemplate.ts` | `DEFAULT_VIEW_JSX_STRING` + detect markers. |
-| `frontend/src/common/DV.tsx` | Default view runtime definitions. |
+| `frontend/src/common/DV.tsx` | Default view runtime. |
+| `frontend/src/components/editor-v2/viewpoint/authoring/` | Vertex/edge authoring UI (IR). |
+| `frontend/src/components/editor-v2/viewpoint/ir/` | IR execution rendering. |
+| `frontend/src/components/editor-v2/problems/` | Validation overlay with own registry — touches canvas. |
 
 **Cross-reference**: when modifying `portDistribution.ts`, also read `handlePosition.ts` and `DynamicHandles.tsx` — they together form the rendering pipeline for handle positions. A change in `portDistribution.ts` alone may be insufficient (or inert) for visual bugs; see the §3.10 note and §5 `Visual bugs: specify before diagnosing` for the methodology.
 
@@ -157,11 +191,11 @@ Uncertain about propagation? → STOP and ask.
 
 The report goes in chat before the diff. Not in a commit.
 
-### 3.3 TRANSACTION prohibition near the sync layer
+### 3.3 TRANSACTION rules near the sync layer
 
-`DVertex.new` and `DVoidEdge.new2` each open their own internal TRANSACTION. Wrapping them in an outer TRANSACTION causes coordinate loss and dropped `SetFieldAction`s (the nested writes are merged out).
-
-The explicit warning lives inside `useJjomSync.ts` (currently around the "Create missing elements" comment block).
+`DVertex.new`, `DVoidEdge.new2`, and `DVoidEdge.new3` each open an internal
+TRANSACTION. Wrapping them in an outer TRANSACTION causes coordinate loss and
+dropped `SetFieldAction`s (nested writes are merged out).
 
 **WRONG — coordinate loss**
 ```typescript
@@ -179,44 +213,48 @@ for (const node of nodes) {
 }
 ```
 
-TRANSACTION is still the correct pattern in drag handlers, command executors, and JjScript code. It is specifically wrong in sync-adjacent code.
+**SAFE — pure-action TRANSACTION (no creators)**
+TRANSACTIONs that contain only `SetFieldAction`, `SetRootFieldAction`, or
+`DeleteElementAction` (no `.new()` / `.new2()` / `.new3()` calls) are safe
+even in sync-adjacent code. This pattern is used for:
+- Tagging a newly created graph (`SetFieldAction` + `SetRootFieldAction`)
+- Deleting stale edges after a D-first `extends` removal (`DeleteElementAction`)
+- Reconciling reference endpoints (`SetFieldAction` + `DeleteElementAction`)
+
+The hazard is specifically the nesting of creator calls, not the presence of
+a TRANSACTION per se.
 
 ### 3.4 DVoidEdge race-window guard
 
-When creating `DVoidEdge` for M1 references in v2-flow, mirror the guard pattern from `syncState.ts`:
+The guard strategy depends on the edge type (M1 instance vs M2 reference).
 
-**RIGHT**
-```typescript
-const ek = `${srcVId}→${tgtVId}`;
-if (existingKeys.has(ek) || hasCanvasEdgePair(ek)) continue;
+**M1 reference edges** (populated by `useM1ReferenceEdges.ts`)
+- Key: pair-based `${srcVId}→${tgtVId}`
+- Guard: `hasCanvasEdgePair(ek)` + `existingKeys.has(ek)`
+- Semantics: one edge per vertex pair for a given M1 reference value
 
-DVoidEdge.new2(/* ... */);
-markCanvasEdgePair(srcVId, tgtVId);
-existingKeys.add(ek);
-```
+**M2 reference edges** (populated by `useJjomSync.ts` Step 3)
+- Key: composite `${refId}:${srcVertex}→${tgtVertex}`
+- Guard: `existingEdgeKeys.has(ek)` after an `idlookup` scan of the graph's
+  subElements and the RF edge cache
+- Semantics: multiple sibling references between the same vertex pair are
+  preserved (e.g. Family→Member: father, mother, sons, daughters)
+- `hasCanvasEdgePair` is NOT used here — it would incorrectly block siblings
 
-**WRONG — orphan DVoidEdges accumulate**
-```typescript
-if (existingKeys.has(ek)) continue;  // missing hasCanvasEdgePair check
-DVoidEdge.new2(/* ... */);
-```
+**Inheritance edges**
+- Key: pair-based `${src}→${tgt}`
+- Guard: `existingEdgeKeys.has(ek) || hasCanvasEdgePair(ek)`
+- Semantics: a class extends another at most once
 
-Key format is directional: `${src}→${tgt}` (`→` is U+2192). It is **not symmetric** — `A→B` and `B→A` are distinct.
-
-For references with multiple EReferences between the same class pair, use the composite dedup key on `subElements`:
-
-```typescript
-const compositeKey = `${refId}:${srcVertex}→${tgtVertex}`;
-```
-
-A pair-based key alone would collapse sibling references between the same vertices. See `useJjomSync.ts` Step 3 reference branch for the canonical implementation.
+Key format uses directional arrow `→` (U+2192). It is **not symmetric** —
+`A→B` and `B→A` are distinct.
 
 ### 3.5 Step 4 dependency limitation + useM1ReferenceEdges
 
 `useJjomSync.ts` Step 4 has these deps:
 ```typescript
 [modelid, hasGraph, subElementIds.length, modelClassCount,
- modelRefCount, modelObjectCount]
+ modelRefCount, modelRefTypeSig, modelExtendsSig, modelObjectCount]
 ```
 
 `modelRefCount` counts **M2 DReferences only**. Step 4 does **not** re-fire on `SetFieldAction` over `DValue.values` (M1 slot population). This means: when M1 reference values arrive after the initial mount (post-load, post-transformation), Step 4 misses them.
@@ -267,12 +305,11 @@ Both patterns coexist by design. Do not "unify" them.
 
 ### 3.8 composition vs containment
 
-`composition` is the canonical D-layer field. `containment` exists only in comments and a couple of legacy docstrings.
-
-```typescript
-thiss.composition = false;   // canonical write
-// Do not write thiss.containment = ...
-```
+`composition` is the canonical D-layer field. `containment` is supported for
+backward compatibility — it is read by Ecore/XMI I/O services, written by
+JjScript `copy` commands, and parsed as a first-class option by the JjScript
+parser — but do not introduce `containment` in new code. Prefer `composition`
+for all new writes.
 
 ### 3.9 VersionFixer & jsxString persistence
 
@@ -294,7 +331,7 @@ Whenever you modify a default-view source file, you must:
 
 ### 3.10 Role-aware bucket keys in portDistribution
 
-> **Note (2026-05-27)**: the role-keyed bucketing described in this section governs `portDistribution.ts`'s `edgeHandles` output, which assigns handleIds. The actual positioning of anchors on the screen is currently driven by `handlePosition.ts:computeSidePositions` and `DynamicHandles.tsx`, **not** by `portDistribution.ts`'s `nodeHandles` field (which is discarded by `EditorV2.tsx:792`). The overflow-protection trade-off described below is still relevant for handleId assignment, but its visual implications depend on `computeSidePositions`. Re-evaluate this section after the anchor ordering fix (tracked in `docs/discovery/2026-05-27_anchor_ordering_inversion.md`) is merged.
+> **Note (2026-05-27)**: the role-keyed bucketing described in this section governs `portDistribution.ts`'s `edgeHandles` output, which assigns handleIds. The actual positioning of anchors on the screen is currently driven by `handlePosition.ts:computeSidePositions` and `DynamicHandles.tsx`, **not** by `portDistribution.ts`'s `nodeHandles` field (discarded by `EditorV2.tsx`). The overflow-protection trade-off described below is still relevant for handleId assignment, but its visual implications depend on `computeSidePositions`. Re-evaluate this section after the anchor ordering fix (tracked in `docs/discovery/2026-05-27_anchor_ordering_inversion.md`) is merged.
 
 When a pair of nodes can have fan-in and fan-out simultaneously (e.g., bidirectional references between two classes), bucket keys for port distribution must include the role:
 
@@ -321,7 +358,8 @@ is load-bearing:
   `LModelElement.tsx` `LObject.set_name`) writes both sides — `data.name` via
   `SetFieldAction`, and the slot via the proxy assignment `nameattribute.value = val`
   (which routes through `LValue.set_value` → `setValueAtPosition`).
-- **slot → name**: `LValue.setValueAtPosition` (around `LModelElement.tsx:7484`) propagates
+- **slot → name**: `LValue.setValueAtPosition` (in `LModelElement.tsx`,
+  look for the method handling slot propagation) propagates
   the slot value onto `data.name` with a **direct `SetFieldAction` on `'name'`** — it does
   **not** call `set_name`.
 
@@ -349,7 +387,7 @@ The convention is consistent across the codebase (e.g. `setValueAtPosition`'s
 `proxy.ts` returns the D-name). This typo cost the entire Direction-A identity-sync effort:
 the name → slot write was gated on `=== 'LValue'` and never ran. Residual dead occurrences of
 the same typo remain in the base `LPointerTargetable.set_name`/`get_name`
-(`classes.ts:2129`, `:2155`) — dead for instances (`LObject` overrides them), pending a
+(`joiner/classes.ts`) — dead for instances (`LObject` overrides them), pending a
 consistency cleanup.
 
 ---
@@ -410,10 +448,6 @@ When a previous session's discovery describes a specific bad state ("the two anc
 - Never use `--no-verify` or skip pre-commit hooks.
 - After commit: update `docs/claude-code-log.md`.
 
-### 6.4 Incident log
-
-- **Scope violation 2026-05-25**: bundled identity-binding files into anchorpoint fix commit `729c5ce07` despite explicit 3-file scope. Mitigated via opzione 1 (post-hoc log entry) since branch was already pushed. **Lesson**: when prompt says "stage solo N file", verify with `git status` + `git diff --cached` before commit.
-
 ---
 
 ## 7. Design system
@@ -427,7 +461,7 @@ When a previous session's discovery describes a specific bad state ("the two anc
 - **Grid**: 8px base. Standard padding: 8 / 12 / 16 / 24.
 - **Cyan (#0ea5e9)**: never as button background. Only focus states, active indicators, links.
 - **Primary buttons**: slate gradient `linear-gradient(135deg, #334155, #1e293b)`. White icons.
-- **Horizontal toggle switches**: 36×20 px. Active `#334155` (slate, not cyan). Inactive `#cbd5e1`. Label on the left, never inside. Impl: `jjodel-switch.scss`.
+- **Horizontal toggle switches**: 36×20 px. Active `#334155` (slate, not cyan). Inactive `#cbd5e1`. Label on the left, never inside. Impl: `styles/components/_switch.scss`.
 - **Vertical toggles**: only for debug/advanced mode in the navbar.
 - **Multi-select chips**: slate-100 (`#f1f5f9`), border slate-200, label slate-700. Selected option subtle cyan `rgba(14,165,233,0.08)`. Impl: `inputselect.scss`, `viewapplyto.scss`.
 
@@ -443,7 +477,7 @@ When a previous session's discovery describes a specific bad state ("the two anc
 - `--radius`
 - `--color` (ambiguous — use `--color-text-primary` or `--color-accent`)
 
-**Current state**: 1 residual `var(--accent)` in `frontend/src/components/editor-v2/EditorV2.scss:857` awaiting cleanup. Do not add new occurrences; the open ticket is for removal, not propagation.
+**Current state**: 1 residual `var(--accent)` in `frontend/src/components/editor-v2/EditorV2.scss` awaiting cleanup. Do not add new occurrences; the open ticket is for removal, not propagation.
 
 **Rules for new tokens**:
 - `grep -r` before adding, to avoid collisions
@@ -459,7 +493,8 @@ When a previous session's discovery describes a specific bad state ("the two anc
 - Components: PascalCase
 - Functions: camelCase
 - Constants: UPPER_SNAKE_CASE
-- SCSS files: kebab-case
+- SCSS files: kebab-case for generic files; SCSS paired with a React component
+  follows the component name (PascalCase)
 
 ### 8.2 TypeScript
 
@@ -478,7 +513,7 @@ SetRootFieldAction.new('graphs', graphId, '+=', true);
 TRANSACTION('Description', () => { /* multiple actions */ });
 ```
 
-**Reminder**: TRANSACTION is forbidden near the sync layer. See §3.3.
+**Reminder**: see §3.3 for TRANSACTION rules near the sync layer.
 
 ### 8.5 State management
 
@@ -567,11 +602,11 @@ Accumulate by **name**, not by ID, inside the TRANSACTION.
 
 ### 10.1 Editor V3 (removed 2026-04-06)
 
-23 files removed from `panels/viewpoint-editor/`, 5 external files updated. Replaced by the ViewpointWorkbench approach (classic editor).
+23 files removed from `panels/viewpoint-editor/`, 5 external files updated.
 
 Current flow:
 ```
-DockManager.openViewpoint() → TabDataMaker → ViewpointWorkbench
+DockManager.openViewpoint() → TabDataMaker → viewpoint rendering
 ```
 
 **Events eliminated** (do not reintroduce without discussion):
@@ -593,7 +628,7 @@ Expression evaluation engine, used by both JjTL and JjScript. Standalone languag
 ## 12. JjTL — Transformation Language
 
 **Full reference**: `frontend/src/jjtl/SPEC.md` — syntax and grammar, AST-bridge mappings, the execution model (incl. the 4-strategy property resolution), trace model, JjEL integration, and known bugs/gaps. Single source; not duplicated here. Only the subsections **not** in the SPEC are kept below.
-**Design document**: `___JjTL__1_.pdf` (rationale + comparative analysis with ATL, ETL, QVT-R, QVT-O)
+
 **Roadmap**: `docs/jjtl/JJTL-DEVELOPMENT-PLAN.md`
 
 ### 12.6 Language boundaries — JjEL / JjTL / JjScript
@@ -653,7 +688,7 @@ Importers and exporters for Ecore (.ecore) and XMI (.xmi) formats.
 - `frontend/src/services/export/EcoreService.ts`
 - `frontend/src/services/export/XMIService.ts`
 
-**Tests**: `frontend/src/services/export/__tests__/ecore-io.test.ts` (32 tests).
+**Tests**: `frontend/src/services/export/__tests__/ecore-io.test.ts` (36 tests).
 
 **Fixtures**: `frontend/src/__tests__/fixtures/xmi-m1/`.
 
@@ -696,7 +731,7 @@ The runtime store is exposed as `windoww.store` to avoid collision with React De
 
 Unified system for AI providers: OpenAI, Anthropic, DeepSeek, Mistral, Gemini, Groq, Kimi, Ollama, Local.
 
-**Full details**: `docs/ai-providers.md`.
+**Full details**: `docs/discovery/2026-06-13_ai-provider-subsystem.md`.
 
 **Usage pattern**:
 ```typescript
@@ -724,6 +759,7 @@ npm run build        # vite build (production bundle)
 npm run typecheck    # tsc --noEmit (real type gate; vite/esbuild does not type-check)
 npm run test         # vitest run
 npm run test:watch   # vitest (watch mode)
+npm run smoke        # smoke tests (frontend/scripts/smoke/)
 npm run dev          # docker-compose dev stack, not the dev server (use npm start)
 ```
 
@@ -731,28 +767,33 @@ No `lint` script: ESLint is not installed, so do not run it. No coverage script.
 
 Verification gates before commit:
 - `npm run build` must pass (exit 0, only the pre-existing chunk-size warning).
-- `npm run typecheck` has a known non-zero baseline (filename casing plus a few genuine type errors). Your change must not increase the count.
+- `npm run typecheck` must pass without introducing new errors. A known non-zero baseline of pre-existing errors exists; verify your change does not increase the count.
 - `npm run test` where the touched area has tests. The suite has known failures; do not treat a red suite as caused by your change without checking.
-- `npm run check:docs` must pass when you touch `CLAUDE.md`, `docs/PROTOCOL.md` or `docs/claude-code-log.md`. It verifies that the §21.2 entry-format block is byte-identical to `docs/PROTOCOL.md` P9, and that recent log entries carry `Corregge` and `Causa` with values inside the §21.3 taxonomy.
+- `npm run check:docs` must pass when you touch `CLAUDE.md`, `docs/PROTOCOL.md` or `docs/claude-code-log.md`. It verifies that the §21.2 entry-format block is byte-identical to `docs/PROTOCOL.md` P9, and that recent log entries carry `Corregge` and `Causa`. If a recent entry uses prose instead of the strict format, note it in `**Notes**` rather than failing the gate.
 
 ---
 
-## 18. Project structure (top level)
+## 18. Project structure (top level) — mappa parziale
+
+> This map lists the normated modules, not the complete tree. The repo
+> contains additional directories; when in doubt, explore.
 
 ```
 frontend/src/
 ├── components/
-│   ├── abstract/tabs/      # ModelTab, MetamodelTab
-│   ├── editor-v2/          # React Flow editor (hooks, sync, panels)
+│   ├── abstract/           # Tabs, DockManager
+│   ├── editor-v2/          # React Flow editor (hooks, sync, panels, problems)
 │   ├── import/             # Importers + ImportSummaryModal
 │   ├── project/            # ProjectEditor, Dashboard
-│   └── shared/
+│   ├── Jodie/              # Jodie assistant UI
+│   └── shared/             # JsonViewer (vestigial)
 ├── common/                 # DV.tsx (default view runtime)
 ├── events/                 # registry.ts
 ├── jjel/                   # Expression Language
 ├── jjscript/               # Scripting Language
 ├── jjtl/                   # Transformation Language
 ├── joiner/                 # Core utilities, Redux, data layer
+├── model/                  # LModelElement, logic wrappers
 ├── redux/                  # VersionFixer, store, actions
 ├── services/export/        # Ecore + XMI I/O
 ├── styles/                 # tokens/, variables.scss
@@ -768,7 +809,7 @@ frontend/src/
 
 | File | Role |
 |------|------|
-| `components/editor-v2/hooks/useJjomSync.ts` | Main sync hook. TRANSACTION-forbidden zone (§3.3). |
+| `components/editor-v2/hooks/useJjomSync.ts` | Main sync hook. TRANSACTION rules in §3.3. |
 | `components/editor-v2/hooks/useM1ReferenceEdges.ts` | Supplements Step 4 for M1 refs post-mount (§3.5). |
 | `components/editor-v2/sync/syncState.ts` | `hasCanvasEdgePair`, `markCanvasEdgePair` (§3.4). |
 | `components/editor-v2/sync/canvasToJjom.ts` | Canvas → JjOM write-back. |
@@ -785,7 +826,7 @@ frontend/src/
 |------|------|
 | `components/editor-v2/EditorV2.tsx` | Main v2-flow editor (3000+ lines). |
 | `components/project/ProjectEditor.tsx` | Project dashboard. |
-| `DockManager.ts` | Tabs and panels. |
+| `components/abstract/DockManager.tsx` | Tabs and panels. |
 
 ### 19.3 Language engines
 
@@ -811,18 +852,6 @@ frontend/src/
 | `Navbar.tsx` + `navbar.scss` | App bar (header row 1). |
 | `Toolbar.tsx` | Toolbar (header row 2). |
 | `Info.tsx` + `info.scss` | Properties panel. |
-| `MappingLinesOverlay.tsx` | Mapping arrows. |
-| `DualMetamodelPanel.tsx` | Side-by-side metamodels. |
-| `ExecuteTransformationDialog.tsx` | Transformation execution dialog. |
-
-### 19.6 Styles
-
-| File | Role |
-|------|------|
-| `styles/tokens/_colors-light.scss` | Light mode color tokens. |
-| `styles/tokens/_colors-dark.scss` | Dark mode color tokens. |
-| `styles/tokens/index.scss` | Token entry point. |
-| `styles/variables.scss` | Active CSS variables. |
 
 ---
 
@@ -919,4 +948,4 @@ Applies only to tasks that explicitly touch the sync layer or D-L proxy (see §3
 
 ---
 
-**Last calibration**: 2026-05-22 (full audit against working tree)
+**Last calibration**: 2026-08-05 (full diagnostic audit + structural sync)
