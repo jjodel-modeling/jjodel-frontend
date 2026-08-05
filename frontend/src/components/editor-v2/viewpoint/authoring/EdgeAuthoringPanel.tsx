@@ -19,6 +19,15 @@ import { validateIR } from '../ir/irValidate';
 import { defaultEdgeViewIR } from '../ir/irDefaults';
 import type { EdgeViewIR, TextSource, EdgeTermination } from '../ir/irTypes';
 import { resolveMetaclassId, withMetaclassPins, type MetaclassRef } from '../ir/metaclassPin';
+import {
+    natureOf,
+    isUsableEndpointExpr,
+    nextEdgeForEndpoints,
+    hasAnyEndpoint,
+    dropEndpoints,
+    endpointDraftState,
+    type EdgeNature,
+} from '../ir/edgeEndpoints';
 import { TextSourceEditor } from './TextSourceEditor';
 
 export interface EdgeAuthoringPanelProps {
@@ -53,33 +62,6 @@ const TERMINATION_OPTIONS = [
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
 /** New label-center default: a blank literal (mirrors the row template default). */
 const newCenterSource = (): TextSource => ({ from: 'literal', text: '' });
-
-/**
- * Which substrate the edge view describes. UI state only: the IR has NO nature
- * field and none is introduced here — a view IS object-as-edge exactly when both
- * endpoint PathExprs are present (`isObjectAsEdge` in irCompile), so the nature is
- * always re-derived from the data, never persisted.
- */
-type EdgeNature = 'reference' | 'object';
-
-/** Nature of an ir, derived (never read from a field). */
-function natureOf(ir: EdgeViewIR | undefined): EdgeNature {
-    return ir?.edge?.source && ir?.edge?.target ? 'object' : 'reference';
-}
-
-/**
- * An endpoint PathExpr is usable when it is non-empty and does not read a whole
- * array: the endpoint normalization in irEdgeViews rejects arrays, so `$ref.values`
- * would compile, resolve to nothing, and leave the object rendered as a node with no
- * diagnostic at all. The indexed form `$ref.values[0]` is fine.
- *
- * Pure and dependency-free on purpose: the unit test cannot import this module
- * (joiner -> monaco -> `window`), so it mirrors this predicate as a literal.
- */
-function isUsableEndpointExpr(expr: string | undefined): boolean {
-    if (!expr) return false;
-    return !/\.values$/.test(expr);
-}
 
 /**
  * EdgeAuthoringPanel — authors the IR of a selected edge view (kind `edge`), on
@@ -193,31 +175,16 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) 
     // --- nature + endpoints (atomic write) ---
 
     /**
-     * The two endpoints reach the ir together or not at all. A draft carrying a
-     * single endpoint compiles to isObjectAsEdge=false, i.e. a live reference-as-edge
-     * view whose PathExpr is inert and unreported: a state the UI must never produce.
-     *
-     * An incomplete or unusable pair therefore does NOT reach the ir — but it does not
-     * erase it either: the ir is left exactly as it is, so a pair already committed
-     * stays live while the author retypes one of the two. Emptying one endpoint used to
-     * drop BOTH keys, which silently discarded the other (valid) endpoint and flipped a
-     * working object-as-edge back to a live reference-as-edge view — a notation change
-     * nobody asked for (discovery 2026-08-05 §2.4). Leaving object-as-edge is now only
-     * `changeNature`, which is an explicit gesture.
-     *
-     * The write itself is unchanged and still atomic: both keys are replaced together,
-     * and this stays the only writer of the endpoints.
+     * The two endpoints reach the ir together or not at all — the decision is
+     * `nextEdgeForEndpoints` (ir/edgeEndpoints.ts), which returns null whenever the
+     * ir must not move. This stays the only writer of the endpoints; all that is
+     * left here is the wiring of the two local expressions, which always move.
      */
     const applyEndpoints = (nextSource: string, nextTarget: string) => {
         setSourceExpr(nextSource);
         setTargetExpr(nextTarget);
-        // Pair not usable: the local expressions moved, the ir does not move at all.
-        if (!isUsableEndpointExpr(nextSource) || !isUsableEndpointExpr(nextTarget)) return;
-        const edge = { ...draft.edge };
-        edge.source = nextSource;
-        edge.target = nextTarget;
-        // The local expressions moved but the ir did not: no commit, no recompile.
-        if (edge.source === draft.edge.source && edge.target === draft.edge.target) return;
+        const edge = nextEdgeForEndpoints(draft.edge, nextSource, nextTarget);
+        if (!edge) return;
         patch({ ...draft, edge });
     };
 
@@ -238,20 +205,15 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) 
         }
         setSourceExpr('');
         setTargetExpr('');
-        if (draft.edge.source !== undefined || draft.edge.target !== undefined) {
-            const edge = { ...draft.edge };
-            delete edge.source;
-            delete edge.target;
-            patch({ ...draft, edge });
+        if (hasAnyEndpoint(draft.edge)) {
+            patch({ ...draft, edge: dropEndpoints(draft.edge) });
         }
     };
 
-    // Divergence between the form and the ir, deliberate and therefore to be shown:
-    // the typed pair is not usable, but a committed pair is still driving the canvas.
-    // Without a message this would trade a silent loss for a silent state.
-    const typedPairUsable = isUsableEndpointExpr(sourceExpr) && isUsableEndpointExpr(targetExpr);
-    const hasCommittedPair = !!(draft.edge?.source && draft.edge?.target);
-    const endpointsDiverge = !typedPairUsable && hasCommittedPair;
+    // How the form relates to the draft (ir/edgeEndpoints.ts): every branch of the
+    // endpoint behaviour is decided there, so it can be unit-tested without mounting
+    // this component.
+    const { diverges: endpointsDiverge } = endpointDraftState(draft.edge, sourceExpr, targetExpr);
 
     // Resolve the PathBuilder feature set from the edge view's first (source)
     // metaclass — same identity-first resolution as RowAuthoringPanel (a project

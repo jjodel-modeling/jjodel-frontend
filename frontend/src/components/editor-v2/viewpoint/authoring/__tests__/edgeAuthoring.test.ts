@@ -13,14 +13,19 @@
  * (they import joiner → monaco-editor → `window` undefined), so — as in
  * rowAuthoring.test.ts — the seeds are asserted as mirrored literals driven
  * through validateIR / compileEdgeView (the same functions the component's
- * enable()/commit path uses) rather than imported from the component. The same
- * applies to the panel's pure endpoint guard, mirrored below.
+ * enable()/commit path uses) rather than imported from the component.
+ *
+ * The panel's endpoint decisions are NOT mirrored: they live in ir/edgeEndpoints,
+ * a pure module, and are imported below. What is asserted here is their effect on
+ * the ir through the real validate/compile/index pipeline; the functions' own unit
+ * behaviour is covered in ir/__tests__/edgeEndpoints.test.ts.
  */
 import { describe, it, expect } from 'vitest';
 import { validateIR } from '../../ir/irValidate';
 import { compileEdgeView } from '../../ir/irCompile';
 import { getIRIndex } from '../../ir/irResolveCore';
 import { defaultEdgeViewIR } from '../../ir/irDefaults';
+import { isUsableEndpointExpr, nextEdgeForEndpoints, dropEndpoints } from '../../ir/edgeEndpoints';
 import type { EdgeViewIR } from '../../ir/irTypes';
 
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
@@ -120,18 +125,6 @@ describe('EdgeAuthoringPanel — center label (drop-key semantics)', () => {
 
 // ---- E-obj: object-as-edge ------------------------------------------------
 
-/**
- * Mirror of the panel's pure endpoint guard (EdgeAuthoringPanel.isUsableEndpointExpr).
- * Same reason as the seeds above: the panel cannot be imported here. An endpoint
- * reading a whole array is refused because the endpoint normalization in irEdgeViews
- * rejects arrays — it would compile, resolve to nothing, and silently leave the
- * object rendered as a node.
- */
-const isUsableEndpointExpr = (expr: string | undefined): boolean => {
-    if (!expr) return false;
-    return !/\.values$/.test(expr);
-};
-
 /** Mirrors the ir the panel commits once BOTH endpoints are usable. */
 const OBJECT_SEED: EdgeViewIR = {
     ...defaultEdgeViewIR(),
@@ -184,34 +177,6 @@ describe('EdgeAuthoringPanel — the endpoint pair is the discriminant (atomic w
         expect(isUsableEndpointExpr(undefined)).toBe(false);
     });
 });
-
-/**
- * Mirror of the ir-facing half of EdgeAuthoringPanel.applyEndpoints — same reason as
- * the guard above: the panel cannot be imported here. `null` means "the ir does not
- * move" (no patch, no commit): either the typed pair is not usable, or it is identical
- * to the committed one. It never returns an edge with a single endpoint, and it never
- * removes one: emptying an endpoint leaves a committed pair alone.
- */
-function nextEdgeForEndpoints(
-    edge: EdgeViewIR['edge'],
-    nextSource: string,
-    nextTarget: string,
-): EdgeViewIR['edge'] | null {
-    if (!isUsableEndpointExpr(nextSource) || !isUsableEndpointExpr(nextTarget)) return null;
-    const next = { ...edge };
-    next.source = nextSource;
-    next.target = nextTarget;
-    if (next.source === edge.source && next.target === edge.target) return null;
-    return next;
-}
-
-/** Mirror of changeNature('reference'): the only gesture that leaves object-as-edge. */
-function dropEndpoints(edge: EdgeViewIR['edge']): EdgeViewIR['edge'] {
-    const next = { ...edge };
-    delete next.source;
-    delete next.target;
-    return next;
-}
 
 describe('EdgeAuthoringPanel — editing an endpoint does not destroy the committed pair', () => {
     it('emptying the source leaves BOTH committed endpoints in the ir, and commits nothing', () => {
