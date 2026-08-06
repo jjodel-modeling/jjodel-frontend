@@ -224,7 +224,9 @@ export interface EdgeViewIR {
             style?: Conditional<'solid' | 'dashed' | 'dotted'>;
         };
         terminations?: { sourceEnd?: EdgeTermination; targetEnd?: EdgeTermination };
-        /** Routing hint; the flow substrate renders Manhattan (UnifiedEdge) — hint recorded in data. */
+        /** Path shape drawn by UnifiedEdge (E-route). Absent ≡ 'orthogonal' (Manhattan
+         *  router); 'straight' and 'curved' reuse the same handles and only change the
+         *  curve, which drops waypoints and crossing bridges for that edge. */
         routing?: 'orthogonal' | 'straight' | 'curved';
         labels?: {
             center?: TextSource;

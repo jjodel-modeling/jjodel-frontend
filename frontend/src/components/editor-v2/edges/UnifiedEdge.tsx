@@ -4,6 +4,9 @@ import {
     useReactFlow,
     useInternalNode,
     useEdges,
+    getStraightPath,
+    getBezierPath,
+    Position,
     type EdgeProps,
 } from '@xyflow/react';
 import type { ReferenceEdgeData, InheritanceEdgeData, CompositionEdgeData, InstanceReferenceEdgeData, ReferenceKind } from '../types';
@@ -27,6 +30,7 @@ import {
     unregisterEdgePath,
     getEdgeCrossings,
     buildFinalPath,
+    type Side,
 } from '../utils/edgeUtils';
 import { MAX_HANDLES_PER_SIDE } from '../utils/portDistribution';
 import { applyBundleSpread } from './bundleSpread';
@@ -42,6 +46,15 @@ const LABEL_SPREAD_PX = 18;
 const ROLE_LINE_GAP = 10; // px, perpendicular nudge so the role text is off the line
 const ROLE_LINE_GAP_PX = 10; // px, perpendicular nudge so the role text is off the line
 const ROLE_LINE_GAP_PY = 10; // px, perpendicular nudge so the role text is off the line
+
+// E-route: React Flow's Position enum carries the same four strings as the
+// codebase's Side type; the map keeps the conversion explicit instead of casting.
+const SIDE_TO_POSITION: Record<Side, Position> = {
+    top: Position.Top,
+    right: Position.Right,
+    bottom: Position.Bottom,
+    left: Position.Left,
+};
 
 // ═══════════════════════════════════════════════════════════════
 // UnifiedEdge — single component for all edge types
@@ -102,6 +115,9 @@ function UnifiedEdge(props: EdgeProps) {
     const irSourceTermination = irData.irSourceTermination as string | undefined;
     const irTargetTermination = irData.irTargetTermination as string | undefined;
     const irLabelAlwaysVisible = !!irData.irLabelAlwaysVisible;
+    // E-route: authored routing style. Absent / null / 'orthogonal' all render
+    // exactly as before — every existing view is byte-identical on screen.
+    const irRouting = irData.irRoutingHint as 'orthogonal' | 'straight' | 'curved' | undefined;
     // The label of an IR-authored edge has no write-back path yet. Its text comes from
     // the compiled view (irEdgeViews.applyEdgeStyle re-seeds e.label on every recompute)
     // and commitLabel's syncEdgeRefProperty cannot reach it: a synthetic object-as-edge
@@ -118,6 +134,12 @@ function UnifiedEdge(props: EdgeProps) {
     const showEdgeLabels = useEditorContextSafe()?.showEdgeLabels ?? false;
     const isERNotation = notation === 'er';
     const isSelfLoop = source === target;
+
+    // E-route: the non-orthogonal styles replace the drawn path only. Self-loops keep
+    // their dedicated corner curl — a segment or a bezier from a node to itself would
+    // degenerate to a point. Everything downstream of the Manhattan router (waypoints,
+    // bundle spread, crossings, segment handles) is bypassed for these edges.
+    const isNonOrthogonalIR = isIREdge && !isSelfLoop && (irRouting === 'straight' || irRouting === 'curved');
 
     // ─── Label state (reference edges only) ───
     const [editing, setEditing] = useState(false);
@@ -175,6 +197,24 @@ function UnifiedEdge(props: EdgeProps) {
         [sourceX, sourceY, sourceSide, targetX, targetY, targetSide]
     );
 
+    // ─── E-route: non-orthogonal IR geometry (direct / bezier) ───
+    // Same endpoints and same handles as the Manhattan path — only the curve between
+    // them changes, which is what keeps this out of the anchoring logic. The bezier
+    // takes its tangents from the handle sides, so the line still leaves and enters
+    // perpendicular to the node border. Both helpers also return the path centre,
+    // which is the label anchor: a bezier `d` has no M/L points for the polyline
+    // walker in computeLabelPosition, which would otherwise report the canvas origin.
+    const irRoutedGeom = useMemo(() => {
+        if (!isNonOrthogonalIR) return null;
+        const [d, labelX, labelY] = irRouting === 'straight'
+            ? getStraightPath({ sourceX, sourceY, targetX, targetY })
+            : getBezierPath({
+                sourceX, sourceY, sourcePosition: SIDE_TO_POSITION[sourceSide],
+                targetX, targetY, targetPosition: SIDE_TO_POSITION[targetSide],
+            });
+        return { d, labelX, labelY };
+    }, [isNonOrthogonalIR, irRouting, sourceX, sourceY, sourceSide, targetX, targetY, targetSide]);
+
     // ─── Pipeline: parse → apply waypoints → bundle spread → round corners ───
     const rawPoints = useMemo(() => parsePathPoints(rawPath), [rawPath]);
     const adjustedPoints = useMemo(
@@ -212,11 +252,18 @@ function UnifiedEdge(props: EdgeProps) {
     // paths are phantom (not rendered — the tree connector renders instead).
     // The tree geometry (trunk + bar + branches) is registered separately
     // by useTreeLayout, so crossing detection remains accurate.
+    // Non-orthogonal IR edges register nothing: getEdgeCrossings only pairs strictly
+    // horizontal segments against strictly vertical ones, so a diagonal or sampled
+    // curve is out of the registry's contract — and registering the Manhattan
+    // polyline these edges no longer draw would poison the crossing detection of
+    // every other edge, classic ones included. Consequence, by design: crossings
+    // involving a direct/bezier edge get no bridge arc, on either side.
     useEffect(() => {
         if (isInheritance && isGrouped) return;
+        if (isNonOrthogonalIR) return;
         registerEdgePath(id, spreadPoints, source, target, treeGroupId);
         return () => unregisterEdgePath(id);
-    }, [id, spreadPoints, source, target, treeGroupId, isInheritance, isGrouped]);
+    }, [id, spreadPoints, source, target, treeGroupId, isInheritance, isGrouped, isNonOrthogonalIR]);
 
     // ─── Detect crossings with other edges ───
     // Scope detection to the current React Flow canvas by passing the active node IDs.
@@ -225,9 +272,9 @@ function UnifiedEdge(props: EdgeProps) {
     // re-rendering this edge on unrelated node changes. Recompute triggers: own
     // path (spreadPoints) and any edges-array change (allEdges).
     const crossings = useMemo(
-        () => getEdgeCrossings(id, spreadPoints, new Set(getNodes().map(n => n.id))),
+        () => (isNonOrthogonalIR ? [] : getEdgeCrossings(id, spreadPoints, new Set(getNodes().map(n => n.id)))),
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [id, spreadPoints, allEdges]
+        [id, spreadPoints, allEdges, isNonOrthogonalIR]
     );
 
     // ─── Self-loop corner geometry (source === target) ───
@@ -265,11 +312,14 @@ function UnifiedEdge(props: EdgeProps) {
         if (isSelfLoop) {
             return selfLoopGeom ? selfLoopGeom.path : computeSelfLoopPath(sourceX, sourceY, targetX, targetY);
         }
+        // E-route: the authored curve replaces the whole Manhattan pipeline output.
+        // Corner rounding and bridge arcs are Manhattan-only concepts.
+        if (irRoutedGeom) return irRoutedGeom.d;
         if (crossings.length > 0) {
             return buildFinalPath(spreadPoints, crossings, 4, 6);
         }
         return roundManhattanPath(spreadPath, 4);
-    }, [spreadPath, spreadPoints, crossings, isSelfLoop, selfLoopGeom, sourceX, sourceY, targetX, targetY]);
+    }, [spreadPath, spreadPoints, crossings, isSelfLoop, selfLoopGeom, irRoutedGeom, sourceX, sourceY, targetX, targetY]);
 
     // De-overlap shifts precomputed in EditorV2.applyDistribution (0 when no bundle/collision).
     const roleArcShift = edgeData?.roleArcShift ?? 0;
@@ -281,8 +331,19 @@ function UnifiedEdge(props: EdgeProps) {
             const p = selfLoopGeom?.labelPoint ?? computeLabelPosition(spreadPath);
             return { x: p.x, y: p.y, isHorizontal: true };
         }
+        // E-route (R-B11): the centre reported by the React Flow helper. The polyline
+        // walker cannot serve a curve — on a bezier `d` it finds no points and answers
+        // the canvas origin. Orientation for the perpendicular nudge comes from the
+        // dominant axis between the two endpoints.
+        if (irRoutedGeom) {
+            return {
+                x: irRoutedGeom.labelX,
+                y: irRoutedGeom.labelY,
+                isHorizontal: Math.abs(targetX - sourceX) >= Math.abs(targetY - sourceY),
+            };
+        }
         return computeLabelPosition(spreadPath, roleArcShift); // arc-length midpoint, slid for bundles
-    }, [spreadPath, isSelfLoop, selfLoopGeom, roleArcShift]);
+    }, [spreadPath, isSelfLoop, selfLoopGeom, irRoutedGeom, roleArcShift, sourceX, sourceY, targetX, targetY]);
 
     // Small perpendicular nudge off the line. No cross-edge de-overlap here (see 2c).
     const labelOffset = useMemo(() => {
@@ -732,7 +793,12 @@ function UnifiedEdge(props: EdgeProps) {
             />
 
             {/* Segment handles for manual edge customization */}
-            {!isSelfLoop && (
+            {/* E-route (R-B10): a direct/bezier edge has no Manhattan segments to grab,
+                so the handles are not mounted — which also removes the only gesture that
+                creates waypoints, since it lives inside DraggableHandle. Waypoints already
+                persisted on DVertex.irEdgeLayout are neither read for drawing nor erased:
+                they come back the moment the edge returns to Manhattan. */}
+            {!isSelfLoop && !isNonOrthogonalIR && (
                 <SegmentHandles
                     edgeId={id}
                     adjustedPath={adjustedPath}

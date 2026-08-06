@@ -49,6 +49,14 @@ const LINE_STYLE_OPTIONS = [
     { value: 'dashed', label: 'Dashed' },
     { value: 'dotted', label: 'Dotted' },
 ];
+// The persisted identifiers stay the ones the IR type already declares: saved edge
+// views have no VersionFixer, so a second vocabulary would strand them. Only the
+// labels are the arc's wording.
+const ROUTING_OPTIONS = [
+    { value: 'orthogonal', label: 'Manhattan' },
+    { value: 'straight', label: 'Direct' },
+    { value: 'curved', label: 'Bezier' },
+];
 const TERMINATION_OPTIONS = [
     { value: 'none', label: 'None' },
     { value: 'openArrow', label: 'Open arrow' },
@@ -80,7 +88,7 @@ const newCenterSource = (): TextSource => ({ from: 'literal', text: '' });
  * patched immutably; on each user edit it is validated eagerly (inline ErrorText)
  * and, when valid, committed after a debounce via `view.ir = draft` (whole-object
  * replace → recompile → live preview through UnifiedEdge's gated branch, E0).
- * Fields not touched here (object-as-edge source/target, routing, persistWaypoints)
+ * Fields not touched here (object-as-edge source/target, persistWaypoints)
  * round-trip verbatim because the whole cloned ir is written back.
  *
  * Matching is authored inline (source metaclass / reference / predicate / priority)
@@ -360,6 +368,21 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) 
     const patchTerminations = (partial: Partial<NonNullable<EdgeViewIR['edge']['terminations']>>) =>
         patchEdge({ terminations: { ...draft.edge.terminations, ...partial } });
 
+    // --- routing ---
+    const routing = draft.edge.routing ?? 'orthogonal';
+    const setRouting = (next: 'orthogonal' | 'straight' | 'curved') => {
+        if (next === 'orthogonal') {
+            // Drop the KEY (not `routing: 'orthogonal'`) — absent and 'orthogonal' render
+            // identically, and dropping keeps the ir byte-identical to a view authored
+            // without any routing, same contract as the predicate and the center label.
+            const edge = { ...draft.edge };
+            delete edge.routing;
+            patch({ ...draft, edge });
+        } else {
+            patchEdge({ routing: next });
+        }
+    };
+
     // --- label center ---
     const hasCenterLabel = draft.edge.labels?.center !== undefined;
     const setHasCenterLabel = (checked: boolean) => {
@@ -598,6 +621,20 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) 
                     featuresHint={FEATURES_HINT}
                     classNames={classNames}
                 />
+            </div>
+            <div className="jj-field" style={{ marginTop: 8 }}>
+                <label className="jj-field-label">Routing</label>
+                <Select
+                    options={ROUTING_OPTIONS}
+                    value={routing}
+                    onChange={(e) => setRouting(e.target.value as 'orthogonal' | 'straight' | 'curved')}
+                />
+                {routing !== 'orthogonal' && (
+                    <HelpText>
+                        Su Direct e Bezier le maniglie di segmento spariscono e non si creano waypoint;
+                        quelli già salvati restano e tornano visibili con Manhattan.
+                    </HelpText>
+                )}
             </div>
 
             {/* Terminations */}

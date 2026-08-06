@@ -7,7 +7,8 @@
  *    whose SOURCE object resolves an edge view get stroke/terminations/label
  *    from the compiled view, emitted in DOMAIN vocabulary onto e.data (E0, spec
  *    addendum D1). UnifiedEdge's gated branch (data.irEdgeViewId present) consumes
- *    them; the routing hint is recorded but inert (D3, Manhattan frozen).
+ *    them, the routing hint included (E-route): 'straight' and 'curved' replace the
+ *    drawn path, absent / 'orthogonal' keep the Manhattan router.
  *
  * 2. Object-as-edge synthesis (Transition pattern): objects whose resolved
  *    edge view has source/target PathExprs are hidden as nodes and drawn as a
@@ -48,8 +49,8 @@ function applyEdgeStyle(e: Edge, cv: CompiledEdgeView, ctx: ReadCtx, evalId: str
         // it. The previous e.style / RF markerStart/markerEnd writes were dead — UnifiedEdge
         // renders its own <path>/<marker>s and never read them. Absent ir* keys leave the
         // classic rendering untouched. Terminations stay in the EdgeTermination vocabulary
-        // (mapped to markers by UnifiedEdge, not to RF MarkerType here). routing stays inert
-        // (D3, Manhattan frozen): irRoutingHint recorded but not consumed.
+        // (mapped to markers by UnifiedEdge, not to RF MarkerType here). irRoutingHint is
+        // read by the same branch (E-route) to pick the path shape.
         data: {
             ...(e.data ?? {}),
             irEdgeViewId: cv.viewId,
