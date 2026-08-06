@@ -29,7 +29,7 @@ import {
     type EdgeNature,
 } from '../ir/edgeEndpoints';
 import { TextSourceEditor } from './TextSourceEditor';
-import { IRBreadcrumb, IRSourceBody, irTabBodyStyle, type IRTabId } from './irTabs';
+import { IRIdentityFields, IRSourceBody, irTabBodyStyle, type IRIdentityProps, type IRTabId } from './irTabs';
 
 export interface EdgeAuthoringPanelProps {
     view: LViewElement;
@@ -38,6 +38,12 @@ export interface EdgeAuthoringPanelProps {
      * rendered visible, which is the pre-partition layout (see `irTabBodyStyle`).
      */
     activeTab?: IRTabId;
+    /**
+     * What the relocated legacy identity fields need beyond the view (R-H). Absent
+     * when no host drives the partition: the fields are then not rendered, exactly
+     * as before the relocation.
+     */
+    identity?: IRIdentityProps;
 }
 
 const COMMIT_DEBOUNCE_MS = 300;
@@ -105,7 +111,7 @@ const newCenterSource = (): TextSource => ({ from: 'literal', text: '' });
  * `exclusive`, and does not know `reference`. The predicate roots on the SOURCE
  * object (ratifica R-1): no dedicated target UI. `exclusive` is omitted (R-5).
  */
-export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, activeTab }) => {
+export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, activeTab, identity }) => {
     const seed = (): EdgeViewIR => clone((view as any).ir ?? defaultEdgeViewIR());
 
     const [draft, setDraft] = useState<EdgeViewIR>(seed);
@@ -434,7 +440,9 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
 
             {/* ─────────── Applies to ─────────── */}
             <div style={body('ir-applies-to')}>
-            <IRBreadcrumb view={view} />
+            {/* Authoritative controls of the legacy Apply-to tab, which the five-tab
+                bar no longer offers to an IR view (R-H). */}
+            {identity && <IRIdentityFields view={view} {...identity} />}
 
             {/* Matching — source metaclass */}
             <div className="jj-field-label" style={{ marginTop: 8 }}>Matching</div>
@@ -488,6 +496,22 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                     ? 'I capi e le feature del PathBuilder si risolvono dalla prima metaclasse della lista.'
                     : 'Le reference e le feature del PathBuilder si risolvono dalla prima metaclasse della lista.'}</HelpText>
             </div>
+
+            {/* Matching — reference (reference substrate only: the object resolver
+                never reads `reference`, so offering it there would be a dead control).
+                Stays with the matching block it has always been rendered inside: the
+                partition does not split an existing section (Q2 del 2026-08-06). */}
+            {!isObject && (
+                <div className="jj-field" style={{ marginTop: 8 }}>
+                    <label className="jj-field-label">Reference</label>
+                    <Select
+                        options={refOptions}
+                        value={draft.reference ?? ''}
+                        onChange={(e) => setReference(e.target.value)}
+                    />
+                    <HelpText>Una reference specifica ha priorità sulle view che matchano qualsiasi reference. Con metaclasse sorgente wildcard o assente il picker resta vuoto.</HelpText>
+                </div>
+            )}
 
             {/* Matching — predicate */}
             <div className="jj-field" style={{ marginTop: 8 }}>
@@ -547,20 +571,6 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                     ? "La natura non è un campo dell'IR: la view è di tipo object finché entrambi i capi sono impostati."
                     : 'Reference: la linea esiste già (è la reference M1) e la view ne decide solo aspetto ed etichetta.'}</HelpText>
             </div>
-
-            {/* Reference (reference substrate only: the object resolver never reads
-                `reference`, so offering it there would be a dead control) */}
-            {!isObject && (
-                <div className="jj-field" style={{ marginTop: 8 }}>
-                    <label className="jj-field-label">Reference</label>
-                    <Select
-                        options={refOptions}
-                        value={draft.reference ?? ''}
-                        onChange={(e) => setReference(e.target.value)}
-                    />
-                    <HelpText>Una reference specifica ha priorità sulle view che matchano qualsiasi reference. Con metaclasse sorgente wildcard o assente il picker resta vuoto.</HelpText>
-                </div>
-            )}
 
             {/* Endpoints — object substrate only. Written atomically (applyEndpoints):
                 either both keys are in the ir, or neither is. */}

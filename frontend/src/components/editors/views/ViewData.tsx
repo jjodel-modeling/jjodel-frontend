@@ -82,6 +82,11 @@ function ViewDataComponent(props: AllProps) {
     const irKind: IRAuthoringKind | undefined =
         (ir?.kind === 'vertex' || ir?.kind === 'row' || ir?.kind === 'edge') ? ir.kind : undefined;
 
+    // The authoritative controls of the legacy Apply-to tab move into the IR
+    // `Applies to` body (R-H): this is what they need beyond the view itself, and it
+    // is the single extra prop the panels take for them.
+    const identity = { viewpoints, readOnly };
+
     // Every IR tab renders the SAME panel element, differing only by `activeTab`:
     // React reconciles by type and position, so switching tab updates a prop instead
     // of remounting. That is what keeps the panel's single draft, its 300 ms debounce
@@ -89,10 +94,10 @@ function ViewDataComponent(props: AllProps) {
     const renderIRPanel = (id: IRTabId): ReactElement => (
         <Try>
             {irKind === 'vertex'
-                ? <VertexAuthoringPanel view={view} activeTab={id} />
+                ? <VertexAuthoringPanel view={view} activeTab={id} identity={identity} />
                 : irKind === 'row'
-                    ? <RowAuthoringPanel view={view} activeTab={id} />
-                    : <EdgeAuthoringPanel view={view} activeTab={id} />}
+                    ? <RowAuthoringPanel view={view} activeTab={id} identity={identity} />
+                    : <EdgeAuthoringPanel view={view} activeTab={id} identity={identity} />}
         </Try>
     );
 

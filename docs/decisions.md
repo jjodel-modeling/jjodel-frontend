@@ -50,6 +50,10 @@ citare l'id con la data. Le decisioni sostituite si spostano in "Superate", con 
   `canonicalize`: la canonicalizzazione non lo riscrive e non lo rimuove.
 - **R-G** (2026-08-05) — Risalita al parent per feature negli endpoint: semantica ratificata;
   il lessema concreto è delegato al prompt di F3. F3 non parte prima che 2.1 sia landata.
+- **R-H** (2026-08-06) — Per le view IR il tab Applies to assorbe i controlli autoritativi del tab
+  legacy (Name; father: Viewpoint/Parent), ricollocati verbatim con write path invariati; il doppio
+  writer di father resta registrato e non corretto qui. Breadcrumb rinviata finché parent e viewpoint
+  non sono distinguibili.
 
 ## Edge IR — arco espressività (serie R-B del 2026-08-03) ed E-route
 

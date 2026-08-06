@@ -20,7 +20,7 @@ import { defaultRowViewIR } from '../ir/irDefaults';
 import type { RowViewIR, TextSource } from '../ir/irTypes';
 import { resolveMetaclassId, withMetaclassPins, type MetaclassRef } from '../ir/metaclassPin';
 import { TextSourceEditor } from './TextSourceEditor';
-import { IRBreadcrumb, IRSourceBody, irTabBodyStyle, type IRTabId } from './irTabs';
+import { IRIdentityFields, IRSourceBody, irTabBodyStyle, type IRIdentityProps, type IRTabId } from './irTabs';
 
 export interface RowAuthoringPanelProps {
     view: LViewElement;
@@ -31,6 +31,12 @@ export interface RowAuthoringPanelProps {
      * geometry, so Structure and Appearance are not rendered at all (V1).
      */
     activeTab?: IRTabId;
+    /**
+     * What the relocated legacy identity fields need beyond the view (R-H). Absent
+     * when no host drives the partition: the fields are then not rendered, exactly
+     * as before the relocation.
+     */
+    identity?: IRIdentityProps;
 }
 
 const COMMIT_DEBOUNCE_MS = 300;
@@ -59,7 +65,7 @@ const newTemplateSource = (): TextSource => ({ from: 'literal', text: '' });
  * through MatchingSection, which is typed `VertexViewIR` and carries `exclusive`
  * (absent on RowViewIR).
  */
-export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view, activeTab }) => {
+export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view, activeTab, identity }) => {
     const seed = (): RowViewIR => clone((view as any).ir ?? defaultRowViewIR());
 
     const [draft, setDraft] = useState<RowViewIR>(seed);
@@ -269,7 +275,9 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view, acti
 
             {/* ─────────── Applies to ─────────── */}
             <div style={body('ir-applies-to')}>
-            <IRBreadcrumb view={view} />
+            {/* Authoritative controls of the legacy Apply-to tab, which the five-tab
+                bar no longer offers to an IR view (R-H). */}
+            {identity && <IRIdentityFields view={view} {...identity} />}
 
             {/* Matching — metaclasses */}
             <div className="jj-field-label" style={{ marginTop: 8 }}>Matching</div>
@@ -345,32 +353,11 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view, acti
                 <HelpText>Vince la priorità più alta; a parità, la specificità (esatta &gt; ereditata &gt; wildcard), poi l'ordine di dichiarazione.</HelpText>
             </div>
 
-            {/* Visible — only edited when already present (never seeded here → verbatim).
-                It governs WHETHER the row renders, so it sits with the matching rather
-                than with the text; Structure would hide it structurally on a row. */}
-            {draft.visible !== undefined && (
-                <div className="jj-field" style={{ marginTop: 8 }}>
-                    <label className="jj-field-label">Visible</label>
-                    <ConditionalEditor<boolean>
-                        value={draft.visible}
-                        onChange={(next) => patch({ ...draft, visible: next })}
-                        renderValue={(v, onCh) => <Toggle checked={v} onChange={onCh} label="visible" size="xs" />}
-                        defaultValue={true}
-                        features={features}
-                        featuresHint={FEATURES_HINT}
-                        classNames={classNames}
-                    />
-                </div>
-            )}
-
-            {/* Label of the view (IR label, distinct from the DViewElement name) */}
-            <div className="jj-field" style={{ marginTop: 8 }}>
-                <label className="jj-field-label">Label</label>
-                <Input value={draft.label ?? ''} onChange={(e) => patch({ ...draft, label: e.target.value })} />
-            </div>
             </div>
 
             {/* ─────────── Text ─────────── */}
+            {/* A row has no geometry, so everything that is not matching lands here,
+                in the order the panel already had it (Q5 del 2026-08-06). */}
             <div style={body('ir-text')}>
             {/* Template — the inline text of the row */}
             <div className="jj-field-label" style={{ marginTop: 8 }}>Template</div>
@@ -391,6 +378,29 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view, acti
                     />
                 )}
             />
+
+            {/* Visible — only edited when already present (never seeded here → verbatim). */}
+            {draft.visible !== undefined && (
+                <div className="jj-field" style={{ marginTop: 8 }}>
+                    <label className="jj-field-label">Visible</label>
+                    <ConditionalEditor<boolean>
+                        value={draft.visible}
+                        onChange={(next) => patch({ ...draft, visible: next })}
+                        renderValue={(v, onCh) => <Toggle checked={v} onChange={onCh} label="visible" size="xs" />}
+                        defaultValue={true}
+                        features={features}
+                        featuresHint={FEATURES_HINT}
+                        classNames={classNames}
+                    />
+                </div>
+            )}
+
+            {/* Label of the view (IR label, distinct from the DViewElement name,
+                which the relocated Name field of Applies to writes) */}
+            <div className="jj-field" style={{ marginTop: 8 }}>
+                <label className="jj-field-label">Label</label>
+                <Input value={draft.label ?? ''} onChange={(e) => patch({ ...draft, label: e.target.value })} />
+            </div>
             </div>
 
             {/* ─────────── Source ─────────── */}

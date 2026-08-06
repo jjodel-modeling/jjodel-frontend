@@ -12,7 +12,7 @@ import { LabelListEditor } from './LabelListEditor';
 import { FieldCompartmentListEditor } from './FieldCompartmentListEditor';
 import { BadgeListEditor } from './BadgeListEditor';
 import { MatchingSection } from './MatchingSection';
-import { IRBreadcrumb, IRSourceBody, irTabBodyStyle, type IRTabId } from './irTabs';
+import { IRIdentityFields, IRSourceBody, irTabBodyStyle, type IRIdentityProps, type IRTabId } from './irTabs';
 import { JjodelEvents } from '../../../../events/registry';
 
 export interface VertexAuthoringPanelProps {
@@ -22,6 +22,12 @@ export interface VertexAuthoringPanelProps {
      * rendered visible, which is the pre-partition layout (see `irTabBodyStyle`).
      */
     activeTab?: IRTabId;
+    /**
+     * What the relocated legacy identity fields need beyond the view (R-H). Absent
+     * when no host drives the partition: the fields are then not rendered, exactly
+     * as before the relocation.
+     */
+    identity?: IRIdentityProps;
 }
 
 const FORM_OPTIONS = [
@@ -57,7 +63,7 @@ const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
  * edited here (extra labels, compartments, badges, any Conditional) round-trip
  * verbatim because the whole cloned ir is written back.
  */
-export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view, activeTab }) => {
+export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view, activeTab, identity }) => {
     const seed = (): VertexViewIR => clone((view as any).ir ?? defaultObjectViewIR());
 
     const [draft, setDraft] = useState<VertexViewIR>(seed);
@@ -263,15 +269,9 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
 
             {/* ─────────── Applies to ─────────── */}
             <div style={body('ir-applies-to')}>
-                <IRBreadcrumb view={view} />
-
-                {/* View label (IR label field, distinct from the DViewElement name) */}
-                <FormSection title="General" divider={false}>
-                    <div className="jj-field">
-                        <label className="jj-field-label">Label</label>
-                        <Input value={draft.label ?? ''} onChange={(e) => patch({ ...draft, label: e.target.value })} />
-                    </div>
-                </FormSection>
+                {/* Authoritative controls of the legacy Apply-to tab, which the
+                    five-tab bar no longer offers to an IR view (R-H). */}
+                {identity && <IRIdentityFields view={view} {...identity} />}
 
                 {/* Matching — reachable in Basic too since the partition (R-3): the
                     disclosure mode no longer gates whole sections, only Conditional
@@ -392,6 +392,15 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
 
             {/* ─────────── Text ─────────── */}
             <div style={body('ir-text')}>
+                {/* View label (IR label field, distinct from the DViewElement name,
+                    which the relocated Name field of Applies to writes) */}
+                <FormSection title="General" divider={false}>
+                    <div className="jj-field">
+                        <label className="jj-field-label">Label</label>
+                        <Input value={draft.label ?? ''} onChange={(e) => patch({ ...draft, label: e.target.value })} />
+                    </div>
+                </FormSection>
+
                 {/* Labels — full list (includes the former primary label at index 0) */}
                 <FormSection title="Labels" divider={false}>
                     <LabelListEditor

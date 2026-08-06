@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { CSSProperties } from 'react';
-import type { LViewElement } from '../../../../joiner';
+import { Input, Select, type LViewElement, type LViewPoint, type DViewPoint } from '../../../../joiner';
 
 /**
  * irTabs — the five-tab partition of the IR authoring panels (ratifica 2026-08-04).
@@ -59,35 +59,100 @@ export const irTabsForKind = (kind: IRAuthoringKind, advanced: boolean): IRTabId
 export const irTabBodyStyle = (id: IRTabId, active: IRTabId | undefined): CSSProperties | undefined =>
     (active === undefined || active === id) ? undefined : { display: 'none' };
 
-/**
- * Read-only breadcrumb `viewpoint › parent › this view`. Text only, no navigation.
- *
- * The middle segment appears only when the parent is not the viewpoint itself:
- * `father` is the single field behind BOTH the "Viewpoint" and the "Parent view"
- * selects of the legacy Apply-to tab (`InfoData.tsx:306` and `:323`), and
- * `get_viewpoint` (`view.tsx:1427`) walks that same chain up to its root — so on a
- * top-level view the two segments would print the same name twice.
- */
-export const IRBreadcrumb: React.FC<{ view: LViewElement }> = ({ view }) => {
-    let vpName: string | undefined;
-    let parentName: string | undefined;
-    try {
-        const vp = (view as any).viewpoint;
-        const parent = (view as any).father;
-        vpName = vp?.name;
-        if (parent && (!vp || parent.id !== vp.id)) parentName = parent.name;
-    } catch { /* unresolvable ancestor — the breadcrumb degrades to the view name */ }
+// Inline info icon with hover tooltip — local copy of the `InfoTooltip` helper in
+// `Info.tsx` and `InfoData.tsx` (neither exports it). Carried along so the relocated
+// fields below render verbatim, the same duplication those two files already declare.
+function InfoTooltip(props: { text: string }) {
+    const [show, setShow] = useState(false);
+    return (
+        <span className="jj-info-icon-wrapper"
+            onMouseEnter={() => setShow(true)}
+            onMouseLeave={() => setShow(false)}
+        >
+            <span className="jj-info-icon">i</span>
+            {show && <span className="jj-info-tooltip">{props.text}</span>}
+        </span>
+    );
+}
 
-    const segments = [vpName, parentName, view.name].filter(Boolean) as string[];
-    if (segments.length === 0) return null;
+/**
+ * The single extra prop `ViewData` passes down for the relocated fields: what they
+ * need beyond the view itself. Bundled into one object because the amendment allows
+ * exactly one additional prop per panel.
+ */
+export interface IRIdentityProps {
+    viewpoints: LViewPoint[];
+    readOnly: boolean;
+}
+
+export interface IRIdentityFieldsProps extends IRIdentityProps {
+    view: LViewElement;
+}
+
+/**
+ * The authoritative controls of the legacy Apply-to tab, relocated into the IR
+ * `Applies to` body (R-H, 2026-08-06). The five-tab bar no longer offers that tab to
+ * an IR view, and these are the only controls on it the triage of 2026-08-04 rates
+ * authoritative: `name` has no other writer, and `father` decides which index the
+ * resolver files the view under (`irResolveCore.ts:113`).
+ *
+ * Relocated VERBATIM — same components (the `Input`/`Select` of `joiner`, bound by
+ * `data`/`field`, not the `components/ui` ones), same bindings, same write paths,
+ * same markup and tooltips as `InfoData.tsx:151-159` and `:297-328`.
+ *
+ * The known defect travels with them, deliberately unfixed here: the Viewpoint and
+ * the Parent view selects write the SAME `father` field with no custom setter, so
+ * reparenting through one loses what the other meant.
+ */
+export const IRIdentityFields: React.FC<IRIdentityFieldsProps> = ({ view, viewpoints, readOnly }) => {
+    const vp = (view as any).viewpoint;
+    const vpid = vp?.id;
+    const dallVP: DViewPoint[] = viewpoints.map((v) => (v as any).__raw);
 
     return (
-        <div
-            className="jj-field-label"
-            style={{ marginTop: 4, color: 'var(--color-text-secondary)', fontWeight: 400 }}
-        >
-            {segments.join(' › ')}
-        </div>
+        <>
+            {/* Name */}
+            <div className="jj-field">
+                <label className="jj-field-label">
+                    Name <span className="jj-field-required">*</span>
+                    <InfoTooltip text="Display name of this view" />
+                </label>
+                <Input data={view} field={'name'} readOnly={readOnly} />
+            </div>
+
+            {/* Viewpoint */}
+            <div className="jj-field">
+                <div className="jj-field-label">
+                    Viewpoint
+                    <InfoTooltip text="The viewpoint this view belongs to" />
+                </div>
+                <Select
+                    readOnly={readOnly}
+                    data={view}
+                    field={'father'}
+                    jjSelect={true}
+                    getter={() => vpid}
+                    placeholder={'Select viewpoint...'}
+                    options={dallVP.map((viewpoint) => ({ value: viewpoint.id, label: viewpoint.name })) as any}
+                />
+            </div>
+
+            {/* Parent view */}
+            <div className="jj-field">
+                <div className="jj-field-label">
+                    Parent view
+                    <InfoTooltip text="Inherit settings from a parent view" />
+                </div>
+                <Select
+                    readOnly={readOnly}
+                    data={view}
+                    field={'father'}
+                    jjSelect={true}
+                    placeholder={'None'}
+                    options={[{ value: '', label: 'None' }, ...(view as any).allPossibleParentViews.filter((v: any) => v.viewpoint?.id === vpid).map((v: any) => ({ value: v.id, label: v.name }))] as any}
+                />
+            </div>
+        </>
     );
 };
 

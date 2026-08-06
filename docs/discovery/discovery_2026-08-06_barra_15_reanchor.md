@@ -439,3 +439,95 @@ irraggiungibili Name e Viewpoint, due controlli che il triage del 2026-08-04 dà
 mappa R-5 non accoglie. L'esecuzione è comunque ferma alla **guardia git 1**: il micro-commit di
 normalizzazione del log non è atterrato e il suo diff è nel working tree, quindi qualunque
 `git add docs/claude-code-log.md` da qui lo trascinerebbe nel commit della 1.5.
+
+---
+
+# Addendum 2026-08-06 — esiti dell'emendamento 1 (prompt `2026-08-06 12:50`)
+
+Non riscrive nulla del report: registra le decisioni che l'emendamento ha preso sulle domande
+aperte, e le collocazioni effettivamente scelte, con i `file:riga` **dopo** l'implementazione
+(commit della 1.5 `fd92b3d1c` più questo).
+
+## Q1 — ratificata: Applies to assorbe i controlli autoritativi (R-H)
+
+Name e i due select del `father` sono ricollocati **verbatim** in testa al corpo Applies to di tutti
+e tre i pannelli. Verbatim in senso stretto: stessi componenti — l'`Input` e il `Select` di `joiner`
+legati per `data`/`field`, **non** quelli di `components/ui` — stesse props, stesso markup, stessi
+tooltip, stesso write path.
+
+| controllo | origine (legacy) | destinazione |
+|---|---|---|
+| Name | `InfoData.tsx:152-159` | `irTabs.tsx:110-117` (`IRIdentityFields`) |
+| Viewpoint | `InfoData.tsx:297-312` | `irTabs.tsx:119-134` |
+| Parent view | `InfoData.tsx:314-328` | `irTabs.tsx:136-150` |
+
+Montati da `VertexAuthoringPanel.tsx:274`, `RowAuthoringPanel.tsx:280`, `EdgeAuthoringPanel.tsx:445`.
+
+**Il doppio writer di `father` viaggia intatto e non è corretto qui**: i due `Select` scrivono lo
+stesso campo senza setter custom. Registrato, non toccato.
+
+**`readOnly` è preservato**: `ViewData` passa il proprio `readOnly` (`!debug && Defaults.check(view.id)`),
+quindi su una default view i tre campi restano di sola lettura come in `InfoData`. Senza questo, la
+ricollocazione avrebbe aperto in scrittura campi oggi protetti.
+
+**Il prop aggiuntivo, dichiarato come richiede l'emendamento**: UNO per pannello,
+`identity?: IRIdentityProps` (`irTabs.tsx:88-96`), che porta `{ viewpoints, readOnly }` — l'unica cosa
+che i tre controlli richiedono oltre alla view. `vpid` e `allPossibleParentViews` si leggono dalla view
+stessa. Nessun context nuovo, nessun altro plumbing. Passato da `ViewData.tsx:88`.
+
+`Applicable to` / `appliableToClasses` **non** è ricollocato: sparisce dalla barra per le view IR, il
+codice resta in `InfoData.tsx:281-294` per la 1.6.
+
+## Q2 — reference: nessuno spezzamento, resta col matching
+
+Il blocco `Matching — reference` era ed è renderizzato **dentro** la sezione matching, fra la
+metaclasse e il predicate. Si applica quindi la clausola dell'emendamento: **resta col matching in
+Applies to**, non va in Structure. `EdgeAuthoringPanel.tsx:499-513`.
+
+Structure per l'edge resta quindi: Natura (`:562-575`) e Capi (`:579-620`).
+
+## Q3 — pin: cancellato dal contenuto di Applies to
+
+`authoringMetaclassPins` è metadato di authoring senza UI per decisione (R-1 del 2026-08-04). Nessun
+lavoro in 1.5, nessuna voce nella mappa. Il §h del report resta valido come constatazione.
+
+## Q4 — breadcrumb: rinviata
+
+Il renvoi previsto da COSA 4 è scattato. La `IRBreadcrumb` scritta nella prima passata è stata
+**rimossa**: con il select Viewpoint ora dentro Applies to non aggiungeva informazione, e con
+viewpoint e parent che scrivono lo stesso `father` sarebbe degenerata in `VP › VP › view`. Si riapre
+quando i due saranno distinguibili.
+
+## Q5 — residui della row, e `draft.label`
+
+Regola applicata: chi non sta nella sezione matching va in Text, in coda, nell'ordine che il JSX
+aveva già.
+
+| controllo | prima | ora |
+|---|---|---|
+| `draft.label` (row) | dopo `visible`, in coda al pannello | `RowAuthoringPanel.tsx:391-395` (Text, in coda) |
+| `visible` (row) | dopo il Template | `RowAuthoringPanel.tsx:372-388` (Text, dopo il Template) |
+| `draft.label` (vertex) | `FormSection` "General", in testa al pannello | `VertexAuthoringPanel.tsx:397-403` (Text, prima di Labels) |
+
+Per la row l'ordine interno di Text — Template, Visible, Label — è **esattamente** quello che il
+pannello aveva prima della partizione: nessun riordino.
+
+Il `draft.label` del vertex segue la stessa regola del suo omologo di row (Q5 nomina la row, ma il
+controllo è lo stesso in entrambi i pannelli): tenerlo in Applies to avrebbe messo due campi chiamati
+"Name" e "Label" a due righe di distanza, con write path diversi — `DViewElement.name` contro
+`ir.label`.
+
+## R-1 del report — padding: vincolo rispettato
+
+I cinque corpi sono `<div>` **dentro** la `section.properties-tab.properties-panel` già esistente
+(`VertexAuthoringPanel.tsx:271`, `RowAuthoringPanel.tsx:277`, `EdgeAuthoringPanel.tsx:442` e omologhi).
+Nessun wrapper fra `.view-editor-tab-content` e la section, quindi le due regole `!important` con
+combinatore figlio diretto continuano a matchare. Verificato anche che le altre regole di
+`viewapplyto.scss` usano combinatori **discendenti** (`.properties-panel .jj-field ...`), insensibili
+al livello aggiunto.
+
+## Resta aperto
+
+Il tab **Style** continua a non essere raggiungibile per le view IR, con il rischio R3 del tab map
+(un progetto salvato con `cssIsGlobal = true` e una regola annidata `!important` ridipinge i nodi IR
+senza più una superficie da cui accorgersene). L'emendamento non lo affronta: va con la 1.6.
