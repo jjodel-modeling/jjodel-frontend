@@ -12,10 +12,16 @@ import { LabelListEditor } from './LabelListEditor';
 import { FieldCompartmentListEditor } from './FieldCompartmentListEditor';
 import { BadgeListEditor } from './BadgeListEditor';
 import { MatchingSection } from './MatchingSection';
+import { IRBreadcrumb, IRSourceBody, irTabBodyStyle, type IRTabId } from './irTabs';
 import { JjodelEvents } from '../../../../events/registry';
 
 export interface VertexAuthoringPanelProps {
     view: LViewElement;
+    /**
+     * Active tab of the five-tab partition. Optional: when absent every body is
+     * rendered visible, which is the pre-partition layout (see `irTabBodyStyle`).
+     */
+    activeTab?: IRTabId;
 }
 
 const FORM_OPTIONS = [
@@ -33,7 +39,10 @@ const BORDER_STYLE_OPTIONS = [
 
 const DEFAULT_BORDER = { color: '#334155', width: 1, style: 'solid' as const };
 const COMMIT_DEBOUNCE_MS = 300;
-const FEATURES_HINT = 'Set a metaclass to enable feature paths';
+// Cross-tab message (R-B): the metaclass that unlocks these paths is authored in
+// Applies to, while the paths themselves are edited in Text and Structure — so the
+// hint names the tab that holds the cause.
+const FEATURES_HINT = 'Set a metaclass in the Applies to tab to enable feature paths';
 
 /** Lossless deep clone for plain IR objects (pure JSON: no functions/dates). */
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
@@ -48,7 +57,7 @@ const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
  * edited here (extra labels, compartments, badges, any Conditional) round-trip
  * verbatim because the whole cloned ir is written back.
  */
-export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view }) => {
+export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view, activeTab }) => {
     const seed = (): VertexViewIR => clone((view as any).ir ?? defaultObjectViewIR());
 
     const [draft, setDraft] = useState<VertexViewIR>(seed);
@@ -234,6 +243,9 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
         patchShape({ border: { ...base, ...partial } });
     };
 
+    /** Body visibility of the five-tab partition: `display: none` only (R-A). */
+    const body = (id: IRTabId) => irTabBodyStyle(id, activeTab);
+
     return (
         <section className="properties-tab properties-panel">
             {error && <ErrorText>{error}</ErrorText>}
@@ -241,23 +253,59 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
             {/* Active ambiguity warning: the target class name is declared in more
                 than one project metamodel. The picker binds to the class this view
                 is applied to (by id), but the duplication usually signals an
-                incoherent model (duplicate metamodels) worth the author's attention. */}
+                incoherent model (duplicate metamodels) worth the author's attention.
+                Cross-tab (R-B): it names the tab where the metaclass is chosen. */}
             {featureInfo.metamodelsWithClass > 1 && (
                 <ErrorText>
-                    {`La metaclasse «${featureInfo.targetName}» è dichiarata in ${featureInfo.metamodelsWithClass} metamodelli del progetto: la view usa quella fissata quando la metaclasse è stata scelta, non una qualsiasi con questo nome. Verifica che i metamodelli non siano duplicati.`}
+                    {`La metaclasse «${featureInfo.targetName}» è dichiarata in ${featureInfo.metamodelsWithClass} metamodelli del progetto: la view usa quella fissata nel tab Applies to quando la metaclasse è stata scelta, non una qualsiasi con questo nome. Verifica che i metamodelli non siano duplicati.`}
                 </ErrorText>
             )}
 
-            {/* Visual sections — always rendered; Basic only drops the Advanced-only
-                ones (compartments, badges, matching) further down. */}
+            {/* ─────────── Applies to ─────────── */}
+            <div style={body('ir-applies-to')}>
+                <IRBreadcrumb view={view} />
 
-            {/* View label (IR label field, distinct from the DViewElement name) */}
-            <FormSection title="General" divider={false}>
-                <div className="jj-field">
-                    <label className="jj-field-label">Label</label>
-                    <Input value={draft.label ?? ''} onChange={(e) => patch({ ...draft, label: e.target.value })} />
+                {/* View label (IR label field, distinct from the DViewElement name) */}
+                <FormSection title="General" divider={false}>
+                    <div className="jj-field">
+                        <label className="jj-field-label">Label</label>
+                        <Input value={draft.label ?? ''} onChange={(e) => patch({ ...draft, label: e.target.value })} />
+                    </div>
+                </FormSection>
+
+                {/* Matching — reachable in Basic too since the partition (R-3): the
+                    disclosure mode no longer gates whole sections, only Conditional
+                    branches and the Source tab. */}
+                <MatchingSection
+                    draft={draft}
+                    patch={patch}
+                    features={features}
+                    featuresHint={FEATURES_HINT}
+                    classNames={classNames}
+                />
+                <div className="jj-field" style={{ marginTop: 'var(--space-2)' }}>
+                    <HelpText>Multiple rules are not yet editable here. Single conditional fields (when/then/else) are edited now directly in Basic, next to each field.</HelpText>
                 </div>
-            </FormSection>
+            </div>
+
+            {/* ─────────── Structure ─────────── */}
+            <div style={body('ir-structure')}>
+                {/* Field compartments — the data round-trips verbatim either way: the
+                    whole cloned ir (draft.fieldCompartments included) is written back
+                    on every commit. */}
+                <FormSection title="Field compartments" divider={false}>
+                    <FieldCompartmentListEditor
+                        compartments={fieldCompartments}
+                        features={features}
+                        featuresHint={FEATURES_HINT}
+                        classNames={classNames}
+                        onChange={(next) => patch({ ...draft, fieldCompartments: next })}
+                    />
+                </FormSection>
+            </div>
+
+            {/* ─────────── Appearance ─────────── */}
+            <div style={body('ir-appearance')}>
 
             {/* Shape form */}
             <FormSection title="Shape" divider={false}>
@@ -329,62 +377,40 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                 </div>
             </FormSection>
 
-            {/* Labels — full list (includes the former primary label at index 0) */}
-            <FormSection title="Labels" divider={false}>
-                <LabelListEditor
-                    labels={labels}
+            {/* Badges — same round-trip guarantee as the compartments. */}
+            <FormSection title="Badges" divider={false}>
+                <BadgeListEditor
+                    badges={badges}
                     features={features}
                     featuresHint={FEATURES_HINT}
                     classNames={classNames}
-                    allowConditional={advanced}
-                    onChange={(next) => patchShape({ labels: next })}
+                    onChange={(next) => patchShape({ badges: next })}
                 />
             </FormSection>
 
-            {/* Field compartments — Advanced only. The data round-trips verbatim
-                while hidden: the whole cloned ir (draft.fieldCompartments
-                included) is written back on every commit. */}
-            {advanced && (
-                <FormSection title="Field compartments" divider={false}>
-                    <FieldCompartmentListEditor
-                        compartments={fieldCompartments}
+            </div>
+
+            {/* ─────────── Text ─────────── */}
+            <div style={body('ir-text')}>
+                {/* Labels — full list (includes the former primary label at index 0) */}
+                <FormSection title="Labels" divider={false}>
+                    <LabelListEditor
+                        labels={labels}
                         features={features}
                         featuresHint={FEATURES_HINT}
                         classNames={classNames}
-                        onChange={(next) => patch({ ...draft, fieldCompartments: next })}
+                        allowConditional={advanced}
+                        onChange={(next) => patchShape({ labels: next })}
                     />
                 </FormSection>
-            )}
+            </div>
 
-            {/* Badges — Advanced only (same round-trip guarantee). */}
-            {advanced && (
-                <FormSection title="Badges" divider={false}>
-                    <BadgeListEditor
-                        badges={badges}
-                        features={features}
-                        featuresHint={FEATURES_HINT}
-                        classNames={classNames}
-                        onChange={(next) => patchShape({ badges: next })}
-                    />
+            {/* ─────────── Source ─────────── */}
+            <div style={body('ir-source')}>
+                <FormSection title="Source" divider={false}>
+                    <IRSourceBody ir={(view as any).ir} />
                 </FormSection>
-            )}
-
-            {/* Matching — Advanced only. Sits after the visual sections: Advanced is a
-                superset of Basic now, not the alternative "matching" view it used to be. */}
-            {advanced && (
-                <>
-                    <MatchingSection
-                        draft={draft}
-                        patch={patch}
-                        features={features}
-                        featuresHint={FEATURES_HINT}
-                        classNames={classNames}
-                    />
-                    <div className="jj-field" style={{ marginTop: 'var(--space-2)' }}>
-                        <HelpText>Multiple rules are not yet editable here. Single conditional fields (when/then/else) are edited now directly in Basic, next to each field.</HelpText>
-                    </div>
-                </>
-            )}
+            </div>
         </section>
     );
 };

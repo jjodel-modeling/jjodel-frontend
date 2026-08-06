@@ -29,14 +29,23 @@ import {
     type EdgeNature,
 } from '../ir/edgeEndpoints';
 import { TextSourceEditor } from './TextSourceEditor';
+import { IRBreadcrumb, IRSourceBody, irTabBodyStyle, type IRTabId } from './irTabs';
 
 export interface EdgeAuthoringPanelProps {
     view: LViewElement;
+    /**
+     * Active tab of the five-tab partition. Optional: when absent every body is
+     * rendered visible, which is the pre-partition layout (see `irTabBodyStyle`).
+     */
+    activeTab?: IRTabId;
 }
 
 const COMMIT_DEBOUNCE_MS = 300;
-const FEATURES_HINT = 'imposta una metaclasse sorgente per abilitare i path sulle feature';
-const ENDPOINT_FEATURES_HINT = 'imposta una metaclasse per abilitare la scelta dei capi';
+// Cross-tab messages (R-B): the metaclass that unlocks these paths is authored in
+// Applies to, while the paths themselves are edited in Text (labels) and Structure
+// (endpoints) — so both hints name the tab that holds the cause.
+const FEATURES_HINT = 'imposta una metaclasse sorgente nel tab Applies to per abilitare i path sulle feature';
+const ENDPOINT_FEATURES_HINT = 'imposta una metaclasse nel tab Applies to per abilitare la scelta dei capi';
 const ENDPOINT_ARRAY_ERROR = "Un capo non può leggere l'intero array (.values): scegli values[N] (per esempio values[0]) o una reference a valore singolo.";
 
 const NATURE_OPTIONS = [
@@ -96,7 +105,7 @@ const newCenterSource = (): TextSource => ({ from: 'literal', text: '' });
  * `exclusive`, and does not know `reference`. The predicate roots on the SOURCE
  * object (ratifica R-1): no dedicated target UI. `exclusive` is omitted (R-5).
  */
-export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) => {
+export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, activeTab }) => {
     const seed = (): EdgeViewIR => clone((view as any).ir ?? defaultEdgeViewIR());
 
     const [draft, setDraft] = useState<EdgeViewIR>(seed);
@@ -404,6 +413,9 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) 
         }
     };
 
+    /** Body visibility of the five-tab partition: `display: none` only (R-A). */
+    const body = (id: IRTabId) => irTabBodyStyle(id, activeTab);
+
     return (
         <section className="properties-tab properties-panel">
             <div className="jj-field-label" style={{ marginTop: 4 }}>IR Edge view authoring</div>
@@ -413,25 +425,16 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) 
 
             {error && <ErrorText>{error}</ErrorText>}
 
+            {/* Cross-tab (R-B): names the tab where the metaclass is chosen. */}
             {featureInfo.metamodelsWithClass > 1 && (
                 <ErrorText>
-                    {`La metaclasse «${featureInfo.targetName}» è dichiarata in ${featureInfo.metamodelsWithClass} metamodelli del progetto: la view usa quella fissata quando la metaclasse è stata scelta, non una qualsiasi con questo nome. Verifica che i metamodelli non siano duplicati.`}
+                    {`La metaclasse «${featureInfo.targetName}» è dichiarata in ${featureInfo.metamodelsWithClass} metamodelli del progetto: la view usa quella fissata nel tab Applies to quando la metaclasse è stata scelta, non una qualsiasi con questo nome. Verifica che i metamodelli non siano duplicati.`}
                 </ErrorText>
             )}
 
-            {/* Nature — first control of the form: it decides what everything below means.
-                Not a field of the ir: derived from the endpoints, kept in UI state. */}
-            <div className="jj-field" style={{ marginTop: 8 }}>
-                <label className="jj-field-label">Natura</label>
-                <Select
-                    options={NATURE_OPTIONS}
-                    value={nature}
-                    onChange={(e) => changeNature(e.target.value as EdgeNature)}
-                />
-                <HelpText>{isObject
-                    ? "La natura non è un campo dell'IR: la view è di tipo object finché entrambi i capi sono impostati."
-                    : 'Reference: la linea esiste già (è la reference M1) e la view ne decide solo aspetto ed etichetta.'}</HelpText>
-            </div>
+            {/* ─────────── Applies to ─────────── */}
+            <div style={body('ir-applies-to')}>
+            <IRBreadcrumb view={view} />
 
             {/* Matching — source metaclass */}
             <div className="jj-field-label" style={{ marginTop: 8 }}>Matching</div>
@@ -444,11 +447,14 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) 
                     size="xs"
                     disabled={isObject}
                 />
+                {/* Cross-tab (R-B): the constraint is imposed by the nature, which is
+                    authored in Structure — both messages name that tab, since from here
+                    the disabled toggle would otherwise have no visible cause. */}
                 {isObject && (
-                    <HelpText>Una object-as-edge deve nominare almeno una metaclasse: con il wildcard non finisce in nessun bucket del resolver e non produce nulla.</HelpText>
+                    <HelpText>Una object-as-edge deve nominare almeno una metaclasse: con il wildcard non finisce in nessun bucket del resolver e non produce nulla. La natura si cambia nel tab Structure.</HelpText>
                 )}
                 {isObject && isWildcard && (
-                    <ErrorText>Questa view ha metaclasse wildcard (*): sul substrato object non si applica a nulla. Nomina almeno una metaclasse.</ErrorText>
+                    <ErrorText>Questa view ha metaclasse wildcard (*): sul substrato object (natura impostata nel tab Structure) non si applica a nulla. Nomina almeno una metaclasse.</ErrorText>
                 )}
                 {!isWildcard && (
                     <>
@@ -482,20 +488,6 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) 
                     ? 'I capi e le feature del PathBuilder si risolvono dalla prima metaclasse della lista.'
                     : 'Le reference e le feature del PathBuilder si risolvono dalla prima metaclasse della lista.'}</HelpText>
             </div>
-
-            {/* Matching — reference (reference substrate only: the object resolver
-                never reads `reference`, so offering it there would be a dead control) */}
-            {!isObject && (
-                <div className="jj-field" style={{ marginTop: 8 }}>
-                    <label className="jj-field-label">Reference</label>
-                    <Select
-                        options={refOptions}
-                        value={draft.reference ?? ''}
-                        onChange={(e) => setReference(e.target.value)}
-                    />
-                    <HelpText>Una reference specifica ha priorità sulle view che matchano qualsiasi reference. Con metaclasse sorgente wildcard o assente il picker resta vuoto.</HelpText>
-                </div>
-            )}
 
             {/* Matching — predicate */}
             <div className="jj-field" style={{ marginTop: 8 }}>
@@ -533,6 +525,42 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) 
                 />
                 <HelpText>Vince la priorità più alta; a parità, la specificità (esatta &gt; ereditata &gt; wildcard), poi l'ordine di dichiarazione.</HelpText>
             </div>
+            </div>
+
+            {/* ─────────── Structure ─────────── */}
+            {/* Topology of the edge: what the line IS. Its content changes with the
+                nature — a reference view restricts a reference, an object view names
+                its two endpoints. */}
+            <div style={body('ir-structure')}>
+
+            {/* Nature — first control of the body: it decides what everything below
+                means. Not a field of the ir: derived from the endpoints, kept in UI
+                state. */}
+            <div className="jj-field" style={{ marginTop: 8 }}>
+                <label className="jj-field-label">Natura</label>
+                <Select
+                    options={NATURE_OPTIONS}
+                    value={nature}
+                    onChange={(e) => changeNature(e.target.value as EdgeNature)}
+                />
+                <HelpText>{isObject
+                    ? "La natura non è un campo dell'IR: la view è di tipo object finché entrambi i capi sono impostati."
+                    : 'Reference: la linea esiste già (è la reference M1) e la view ne decide solo aspetto ed etichetta.'}</HelpText>
+            </div>
+
+            {/* Reference (reference substrate only: the object resolver never reads
+                `reference`, so offering it there would be a dead control) */}
+            {!isObject && (
+                <div className="jj-field" style={{ marginTop: 8 }}>
+                    <label className="jj-field-label">Reference</label>
+                    <Select
+                        options={refOptions}
+                        value={draft.reference ?? ''}
+                        onChange={(e) => setReference(e.target.value)}
+                    />
+                    <HelpText>Una reference specifica ha priorità sulle view che matchano qualsiasi reference. Con metaclasse sorgente wildcard o assente il picker resta vuoto.</HelpText>
+                </div>
+            )}
 
             {/* Endpoints — object substrate only. Written atomically (applyEndpoints):
                 either both keys are in the ir, or neither is. */}
@@ -577,6 +605,10 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) 
                             : 'I due capi vengono scritti insieme: finché ne manca uno (o legge un intero array) la view resta una edge view di tipo reference e il canvas non cambia.'}</HelpText>
                 </>
             )}
+            </div>
+
+            {/* ─────────── Appearance ─────────── */}
+            <div style={body('ir-appearance')}>
 
             {/* Line style */}
             <div className="jj-field-label" style={{ marginTop: 8 }}>Linea</div>
@@ -655,6 +687,10 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) 
                     onChange={(e) => patchTerminations({ targetEnd: e.target.value as EdgeTermination })}
                 />
             </div>
+            </div>
+
+            {/* ─────────── Text ─────────── */}
+            <div style={body('ir-text')}>
 
             {/* Label center */}
             <div className="jj-field-label" style={{ marginTop: 8 }}>Label</div>
@@ -680,6 +716,13 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view }) 
                         ? 'Senza label la linea non mostra testo al centro.'
                         : "Senza label l'edge mantiene l'etichetta di default (nome della reference)."}</HelpText>
                 )}
+            </div>
+            </div>
+
+            {/* ─────────── Source ─────────── */}
+            <div style={body('ir-source')}>
+                <div className="jj-field-label" style={{ marginTop: 8 }}>Source</div>
+                <IRSourceBody ir={(view as any).ir} />
             </div>
         </section>
     );

@@ -20,13 +20,23 @@ import { defaultRowViewIR } from '../ir/irDefaults';
 import type { RowViewIR, TextSource } from '../ir/irTypes';
 import { resolveMetaclassId, withMetaclassPins, type MetaclassRef } from '../ir/metaclassPin';
 import { TextSourceEditor } from './TextSourceEditor';
+import { IRBreadcrumb, IRSourceBody, irTabBodyStyle, type IRTabId } from './irTabs';
 
 export interface RowAuthoringPanelProps {
     view: LViewElement;
+    /**
+     * Active tab of the five-tab partition. Optional: when absent every body is
+     * rendered visible, which is the pre-partition layout (see `irTabBodyStyle`).
+     * A row only ever receives `ir-applies-to`, `ir-text` or `ir-source`: it has no
+     * geometry, so Structure and Appearance are not rendered at all (V1).
+     */
+    activeTab?: IRTabId;
 }
 
 const COMMIT_DEBOUNCE_MS = 300;
-const FEATURES_HINT = 'imposta una metaclasse per abilitare i path sulle feature';
+// Cross-tab message (R-B): the metaclass that unlocks these paths is authored in
+// Applies to, while the paths themselves are edited in Text.
+const FEATURES_HINT = 'imposta una metaclasse nel tab Applies to per abilitare i path sulle feature';
 
 /** Lossless deep clone for plain IR objects (pure JSON: no functions/dates). */
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
@@ -49,7 +59,7 @@ const newTemplateSource = (): TextSource => ({ from: 'literal', text: '' });
  * through MatchingSection, which is typed `VertexViewIR` and carries `exclusive`
  * (absent on RowViewIR).
  */
-export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view }) => {
+export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view, activeTab }) => {
     const seed = (): RowViewIR => clone((view as any).ir ?? defaultRowViewIR());
 
     const [draft, setDraft] = useState<RowViewIR>(seed);
@@ -240,6 +250,9 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view }) =>
         setTemplate(n);
     };
 
+    /** Body visibility of the five-tab partition: `display: none` only (R-A). */
+    const body = (id: IRTabId) => irTabBodyStyle(id, activeTab);
+
     return (
         <section className="properties-tab properties-panel">
             <div className="jj-field-label" style={{ marginTop: 4 }}>IR Row view authoring</div>
@@ -247,11 +260,16 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view }) =>
 
             {error && <ErrorText>{error}</ErrorText>}
 
+            {/* Cross-tab (R-B): names the tab where the metaclass is chosen. */}
             {featureInfo.metamodelsWithClass > 1 && (
                 <ErrorText>
-                    {`La metaclasse «${featureInfo.targetName}» è dichiarata in ${featureInfo.metamodelsWithClass} metamodelli del progetto: la view usa quella fissata quando la metaclasse è stata scelta, non una qualsiasi con questo nome. Verifica che i metamodelli non siano duplicati.`}
+                    {`La metaclasse «${featureInfo.targetName}» è dichiarata in ${featureInfo.metamodelsWithClass} metamodelli del progetto: la view usa quella fissata nel tab Applies to quando la metaclasse è stata scelta, non una qualsiasi con questo nome. Verifica che i metamodelli non siano duplicati.`}
                 </ErrorText>
             )}
+
+            {/* ─────────── Applies to ─────────── */}
+            <div style={body('ir-applies-to')}>
+            <IRBreadcrumb view={view} />
 
             {/* Matching — metaclasses */}
             <div className="jj-field-label" style={{ marginTop: 8 }}>Matching</div>
@@ -327,27 +345,9 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view }) =>
                 <HelpText>Vince la priorità più alta; a parità, la specificità (esatta &gt; ereditata &gt; wildcard), poi l'ordine di dichiarazione.</HelpText>
             </div>
 
-            {/* Template — the inline text of the row */}
-            <div className="jj-field-label" style={{ marginTop: 8 }}>Template</div>
-            <ListEditor<TextSource>
-                items={template}
-                onRemove={removeSegment}
-                onMove={moveSegment}
-                onAdd={() => setTemplate([...template, newTemplateSource()])}
-                addLabel="Add segment"
-                emptyHint="No segments — a row must render at least one segment."
-                itemLabel={(seg, i) => `Segment #${i + 1} — ${seg.from}`}
-                renderItem={(seg, i) => (
-                    <TextSourceEditor
-                        source={seg}
-                        features={features}
-                        disabledHint={FEATURES_HINT}
-                        onChange={(s) => replaceSegment(i, s)}
-                    />
-                )}
-            />
-
-            {/* Visible — only edited when already present (never seeded here → verbatim). */}
+            {/* Visible — only edited when already present (never seeded here → verbatim).
+                It governs WHETHER the row renders, so it sits with the matching rather
+                than with the text; Structure would hide it structurally on a row. */}
             {draft.visible !== undefined && (
                 <div className="jj-field" style={{ marginTop: 8 }}>
                     <label className="jj-field-label">Visible</label>
@@ -367,6 +367,36 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view }) =>
             <div className="jj-field" style={{ marginTop: 8 }}>
                 <label className="jj-field-label">Label</label>
                 <Input value={draft.label ?? ''} onChange={(e) => patch({ ...draft, label: e.target.value })} />
+            </div>
+            </div>
+
+            {/* ─────────── Text ─────────── */}
+            <div style={body('ir-text')}>
+            {/* Template — the inline text of the row */}
+            <div className="jj-field-label" style={{ marginTop: 8 }}>Template</div>
+            <ListEditor<TextSource>
+                items={template}
+                onRemove={removeSegment}
+                onMove={moveSegment}
+                onAdd={() => setTemplate([...template, newTemplateSource()])}
+                addLabel="Add segment"
+                emptyHint="No segments — a row must render at least one segment."
+                itemLabel={(seg, i) => `Segment #${i + 1} — ${seg.from}`}
+                renderItem={(seg, i) => (
+                    <TextSourceEditor
+                        source={seg}
+                        features={features}
+                        disabledHint={FEATURES_HINT}
+                        onChange={(s) => replaceSegment(i, s)}
+                    />
+                )}
+            />
+            </div>
+
+            {/* ─────────── Source ─────────── */}
+            <div style={body('ir-source')}>
+                <div className="jj-field-label" style={{ marginTop: 8 }}>Source</div>
+                <IRSourceBody ir={(view as any).ir} />
             </div>
         </section>
     );

@@ -30,8 +30,14 @@ import {RowAuthoringPanel} from "../../editor-v2/viewpoint/authoring/RowAuthorin
 import {EdgeAuthoringPanel} from "../../editor-v2/viewpoint/authoring/EdgeAuthoringPanel";
 import {EnableIRPanel} from "../../editor-v2/viewpoint/authoring/EnableIRPanel";
 import {HelpText} from "../../ui";
+import {
+    IR_TAB_LABELS,
+    irTabsForKind,
+    type IRAuthoringKind,
+    type IRTabId
+} from "../../editor-v2/viewpoint/authoring/irTabs";
 
-type TabId = 'apply-to' | 'template' | 'style' | 'events' | 'options' | 'components' | 'ir';
+type TabId = 'apply-to' | 'template' | 'style' | 'events' | 'options' | 'components' | 'ir' | IRTabId;
 
 interface TabDescriptor {
     id: TabId;
@@ -67,9 +73,36 @@ function ViewDataComponent(props: AllProps) {
     // IR-authored views are untouched by this (they keep whatever `readOnly` they had).
     const templateLegacy = isV && !ir;
 
+    // Five-tab partition (ratifica 2026-08-04): a view carrying an `ir` of an
+    // authorable kind gets its own bar — Applies to · Structure · Appearance · Text ·
+    // Source — which REPLACES the legacy one. The legacy tab descriptors below are
+    // left exactly where they are and simply stop being reachable for those views;
+    // slice 1.6 removes them. A view without an `ir` keeps the legacy bar untouched,
+    // IR entry-point (EnableIRPanel) included.
+    const irKind: IRAuthoringKind | undefined =
+        (ir?.kind === 'vertex' || ir?.kind === 'row' || ir?.kind === 'edge') ? ir.kind : undefined;
+
+    // Every IR tab renders the SAME panel element, differing only by `activeTab`:
+    // React reconciles by type and position, so switching tab updates a prop instead
+    // of remounting. That is what keeps the panel's single draft, its 300 ms debounce
+    // and (on the edge) the endpoint state alive across tab changes — strada B, R-A.
+    const renderIRPanel = (id: IRTabId): ReactElement => (
+        <Try>
+            {irKind === 'vertex'
+                ? <VertexAuthoringPanel view={view} activeTab={id} />
+                : irKind === 'row'
+                    ? <RowAuthoringPanel view={view} activeTab={id} />
+                    : <EdgeAuthoringPanel view={view} activeTab={id} />}
+        </Try>
+    );
+
     // Build the tab list. Each `render` closure captures the current view/readonly
     // so the children stay in sync with Redux updates.
-    const tabs: TabDescriptor[] = [
+    const tabs: TabDescriptor[] = irKind ? irTabsForKind(irKind, props.advanced).map((id) => ({
+        id,
+        label: IR_TAB_LABELS[id],
+        render: () => renderIRPanel(id),
+    })) : [
         {
             id: 'apply-to',
             label: 'Apply to',
@@ -224,6 +257,9 @@ interface StateProps {
     project: LProject;
     viewpoints: LViewPoint[];
     debug: boolean;
+    // Global disclosure mode. Read here (and not only inside the panels) because the
+    // Source tab is gated on it at BAR level: in Basic the tab is not offered at all.
+    advanced: boolean;
 }
 interface DispatchProps { }
 type AllProps = Overlap<OwnProps, StateProps> & DispatchProps;
@@ -234,6 +270,7 @@ function mapStateToProps(state: DState, ownProps: OwnProps): StateProps {
     // ret.project = LProject.getProject();
     ret.viewpoints = LPointerTargetable.fromArr(ownProps.viewpoints); // ret.project.viewpoints;
     ret.debug = state.debug;
+    ret.advanced = !!(state as any).advanced;
     ret.view = LPointerTargetable.fromPointer(ownProps.viewid, state);
     return ret;
 }
