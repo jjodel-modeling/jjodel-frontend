@@ -66,9 +66,10 @@ const LINE_STYLE_OPTIONS = [
 ];
 // The persisted identifiers stay the ones the IR type already declares: saved edge
 // views have no VersionFixer, so a second vocabulary would strand them. Only the
-// labels are the arc's wording.
+// labels are the arc's wording. Manhattan is NOT listed here: it is the Select's
+// empty option, labelled "Manhattan (default)" below — the two entries dropped the
+// same key and reading them as distinct choices was the ambiguity.
 const ROUTING_OPTIONS = [
-    { value: 'orthogonal', label: 'Manhattan' },
     { value: 'straight', label: 'Direct' },
     { value: 'curved', label: 'Bezier' },
 ];
@@ -83,6 +84,19 @@ const TERMINATION_OPTIONS = [
 
 /** Lossless deep clone for plain IR objects (pure JSON: no functions/dates). */
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
+/**
+ * A `routing` outside the closed vocabulary (R-B9) is not a fourth value: it is the
+ * absent key. The empty string of the Select's placeholder option used to land in the
+ * ir this way, and since every commit writes the whole draft back it survived any
+ * later edit of an unrelated field. Normalized on the seed, so the stale value leaves
+ * the ir at the next genuine edit; on its own it commits nothing (the seed runs with
+ * dirtyRef false). An explicit 'orthogonal' is left alone — it is in the vocabulary.
+ */
+const dropInvalidRouting = (ir: EdgeViewIR): EdgeViewIR => {
+    const r = ir?.edge?.routing as string | undefined;
+    if (r !== undefined && r !== 'orthogonal' && r !== 'straight' && r !== 'curved') delete ir.edge.routing;
+    return ir;
+};
 /** New label-center default: a blank literal (mirrors the row template default). */
 const newCenterSource = (): TextSource => ({ from: 'literal', text: '' });
 
@@ -112,7 +126,7 @@ const newCenterSource = (): TextSource => ({ from: 'literal', text: '' });
  * object (ratifica R-1): no dedicated target UI. `exclusive` is omitted (R-5).
  */
 export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, activeTab, identity }) => {
-    const seed = (): EdgeViewIR => clone((view as any).ir ?? defaultEdgeViewIR());
+    const seed = (): EdgeViewIR => dropInvalidRouting(clone((view as any).ir ?? defaultEdgeViewIR()));
 
     const [draft, setDraft] = useState<EdgeViewIR>(seed);
     const [error, setError] = useState<string | null>(null);
@@ -384,10 +398,17 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
         patchEdge({ terminations: { ...draft.edge.terminations, ...partial } });
 
     // --- routing ---
-    const routing = draft.edge.routing ?? 'orthogonal';
-    const setRouting = (next: 'orthogonal' | 'straight' | 'curved') => {
-        if (next === 'orthogonal') {
-            // Drop the KEY (not `routing: 'orthogonal'`) — absent and 'orthogonal' render
+    // Absent ≡ 'orthogonal' (R-B9), and both read as the Select's empty option — the
+    // menu's only Manhattan entry, labelled "Manhattan (default)" below. The test
+    // mirrors setRouting's: an explicit 'orthogonal' (which this panel never writes,
+    // and which the seed deliberately keeps) would otherwise select no option at all.
+    const routing = draft.edge.routing === 'straight' || draft.edge.routing === 'curved'
+        ? draft.edge.routing
+        : '';
+    const setRouting = (next: 'orthogonal' | 'straight' | 'curved' | '') => {
+        if (next !== 'straight' && next !== 'curved') {
+            // Drop the KEY (not `routing: 'orthogonal'`, and never the placeholder's empty
+            // string, which is no value of the vocabulary) — absent and 'orthogonal' render
             // identically, and dropping keeps the ir byte-identical to a view authored
             // without any routing, same contract as the predicate and the center label.
             const edge = { ...draft.edge };
@@ -668,10 +689,11 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                 <label className="jj-field-label">Routing</label>
                 <Select
                     options={ROUTING_OPTIONS}
+                    placeholder="Manhattan (default)"
                     value={routing}
-                    onChange={(e) => setRouting(e.target.value as 'orthogonal' | 'straight' | 'curved')}
+                    onChange={(e) => setRouting(e.target.value as 'orthogonal' | 'straight' | 'curved' | '')}
                 />
-                {routing !== 'orthogonal' && (
+                {(routing === 'straight' || routing === 'curved') && (
                     <HelpText>
                         Su Direct e Bezier le maniglie di segmento spariscono e non si creano waypoint;
                         quelli già salvati restano e tornano visibili con Manhattan.
