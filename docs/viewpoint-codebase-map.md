@@ -267,21 +267,74 @@ DViewPoint.newVP(name);
 
 ### View Editor: ViewData
 
-**File:** `components/editors/views/ViewData.tsx` (135 lines)
+**File:** `components/editors/views/ViewData.tsx` (297 lines)
 **Tab ID prefix:** `"Dock_in_view_detail"`
 
-**6 Sub-tabs** (lines 56-65):
+**Two bars, one discriminator** (line 82). A view whose `ir.kind` is `vertex`, `row` or `edge`
+gets the IR bar; every other view, and every viewpoint, keeps the legacy bar. Since 2026-08-06
+(`fd92b3d1c`, `e15eb5081`).
 
-| # | Tab | Component | Scope |
-|---|-----|-----------|-------|
-| 1 | Apply to | `InfoData` | All views |
-| 2 | Template | `TemplateData` | Views only (not viewpoints) |
-| 3 | Style | `PaletteData` | All |
-| 4 | Events | `CustomData` | Views only |
-| 5 | Options | `GenericNodeData` | Views only |
-| 6 | Permissions | `PermissionViewTab` / `PermissionViewpointTab` | **Commented out** |
+#### IR bar (views carrying an `ir`)
 
-### Sub-tab Details
+Five tabs, built by `irTabsForKind` (`editor-v2/viewpoint/authoring/irTabs.tsx:43-48`), labels in
+`IR_TAB_LABELS` (`:26-32`):
+
+| # | Tab | Shown for |
+|---|-----|-----------|
+| 1 | Applies to | vertex, row, edge |
+| 2 | Structure | vertex, edge |
+| 3 | Appearance | vertex, edge |
+| 4 | Text | vertex, row, edge |
+| 5 | Source | vertex, row, edge, **Advanced only** |
+
+Mechanics (strada B):
+
+- One panel per kind (`VertexAuthoringPanel`, `RowAuthoringPanel`, `EdgeAuthoringPanel`), mounted
+  whole. Every tab renders the *same* element and differs only by the `activeTab` prop
+  (`ViewData.tsx:94-104`), so React updates a prop instead of remounting. That is what keeps the
+  panel's single draft, its 300 ms debounce and (on the edge) the three endpoint atoms alive across
+  a tab change.
+- Inactive bodies are hidden with `display: none` only (`irTabs.tsx:59-60`), never `visibility` or
+  `opacity`, which would leave the subtree laid out and reachable with the Tab key.
+- A row has no geometry, so Structure and Appearance are **not rendered at all**: dropped
+  structurally, which is a different mechanism from the `display: none` of an inactive tab.
+- Source is the only Advanced-gated tab, and it is gated at bar level. Everything else, matching
+  included, is reachable in Basic.
+
+**Applies to** opens with the authoritative controls relocated from the legacy Apply to tab (R-H,
+`irTabs.tsx:107-157`): Name, Viewpoint, Parent view, carried over verbatim (the `Input` and `Select`
+of `joiner` bound by `data`/`field`, same markup, same tooltips, same write paths). `readOnly`
+travels with them, so a default view keeps those fields protected. Known defect carried over
+deliberately: Viewpoint and Parent view write the *same* `father` field with no custom setter, so
+reparenting through one loses what the other meant.
+
+**Source** is a read-only `<pre>` of the `ir` actually persisted on the view, not of the draft
+(`irTabs.tsx:168-181`): while the draft fails `validateIR` nothing is committed, and showing what is
+really stored is what makes that gap visible. Deliberately not an editor, since the body is mounted
+at all times and Monaco would swallow keystrokes in capture phase (`CLAUDE.md` §15.1).
+
+**No Style surface.** The Style tab belongs to the legacy bar only, so a view with an `ir` has no
+way to reach its own CSS or palette. Open item, tracked as micro-slice 3.6.
+
+#### Legacy bar (views without an `ir`, and viewpoints)
+
+Not a fixed six: the descriptors are conditional (`ViewData.tsx:110-186`).
+
+| Tab | Component | Condition |
+|-----|-----------|-----------|
+| Apply to | `InfoData` | always |
+| Template | `TemplateData` | views only (`isV`); read-only when the view has no `ir` (`templateLegacy`) |
+| IR | `EnableIRPanel` | non-edge views with no `ir`: the entry point that creates one |
+| Style | `PaletteData` | always |
+| Events | `CustomData` (imported as `EventsData`) | views only |
+| Options | `GenericNodeData` | views only |
+| Components | `ComponentsTab` | viewpoints only (`isVP`); TODO placeholder |
+| Permissions | `PermissionViewTab` / `PermissionViewpointTab` | **commented out** |
+
+The legacy descriptors are left exactly where they are and simply stop being reachable for IR
+views; slice 1.6 removes them.
+
+### Sub-tab Details (legacy bar)
 
 **Apply To** (`InfoData.tsx`):
 - Name (text input)
@@ -321,13 +374,21 @@ Dock.tsx
        │    ├─ Viewpoint box (radio/checkbox, EX/OV badge)
        │    └─ View entries (expand/collapse)
        └─> ViewData (when view selected)
-            ├─> InfoData (Apply To)
-            ├─> TemplateData → JsxEditor (Monaco)
-            ├─> PaletteData → Monaco CSS editor + palette UI
-            ├─> CustomData → JsEditor components
-            ├─> GenericNodeData
-            │    ├─> NodeData / FieldData / EdgeData / EdgePointData / GraphData
-            └─> ComponentsTab (TODO placeholder)
+            │
+            ├─ IR bar (view.ir.kind in vertex | row | edge)
+            │    └─> VertexAuthoringPanel / RowAuthoringPanel / EdgeAuthoringPanel
+            │         (one instance, re-rendered per tab with a different activeTab;
+            │          bodies grouped by irTabs.tsx, inactive ones display:none)
+            │
+            └─ legacy bar (no ir, or viewpoint)
+                 ├─> InfoData (Apply To)
+                 ├─> TemplateData → JsxEditor (Monaco)
+                 ├─> EnableIRPanel (IR entry point)
+                 ├─> PaletteData → Monaco CSS editor + palette UI
+                 ├─> CustomData → JsEditor components
+                 ├─> GenericNodeData
+                 │    ├─> NodeData / FieldData / EdgeData / EdgePointData / GraphData
+                 └─> ComponentsTab (TODO placeholder)
 ```
 
 ---
