@@ -20,6 +20,14 @@ citare l'id con la data. Le decisioni sostituite si spostano in "Superate", con 
 - **R-E/E-1** (2026-08-05) — Discovery con report già esistente al path indicato: non
   riscriverlo; leggerlo per intero, confrontare punto per punto, aggiungere in coda un
   addendum con le sole cose non coperte.
+- **RC-7** (2026-08-06) — I documenti generati sono verificati da un gate, non dalla
+  disciplina: `npm run check:agents` rigenera in una temp di sistema e confronta byte per byte
+  con **tutti** i file prodotti dal generatore (oggi `AGENTS.md` e `frontend/src/jjtl/AGENTS.md`),
+  mai il solo root. Chi tocca un `CLAUDE.md` rigenera e include i generati nello stesso commit.
+  Nella stessa ratifica: i riferimenti `Corregge` di `check:docs` si risolvono sul **prefisso
+  timestamp**, l'unica parte che §21.2 fissa come formato — su entrambi i lati del confronto, non
+  sul nome intero (che è la direzione opposta a quella ratificata a voce, e misurata come
+  peggiorativa: 4 warning → 5 invece che → 1).
 
 ## Arco A — barra a tab e capi degli edge
 

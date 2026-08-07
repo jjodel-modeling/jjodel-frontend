@@ -265,7 +265,14 @@ function checkLog(): CheckOutcome {
     }
     for (const e of [...active, ...archived]) {
         const n = e.fields.get('Prompt document name');
-        if (n) known.add(n.trim());
+        if (!n) continue;
+        // Keyed on the timestamp prefix, which is the only part §21.2 fixes as a
+        // format. BOTH sides carry an optional trailing annotation — sometimes the
+        // reference, sometimes the target — so comparing whole names misses the
+        // match in either direction. A name without a well-formed prefix is kept
+        // verbatim rather than dropped from the set.
+        const m = TIMESTAMP_PREFIX.exec(n.trim());
+        known.add(m ? m[1] : n.trim());
     }
 
     // The log is NOT in chronological order: filter every entry on its own
@@ -274,7 +281,7 @@ function checkLog(): CheckOutcome {
 
     out.lines.push(
         `    ${active.length} entr${active.length === 1 ? 'y' : 'ies'} in ${rel(LOG_MD)}, ` +
-        `${archived.length} in the archive, ${known.size} distinct prompt-document name(s) known`,
+        `${archived.length} in the archive, ${known.size} distinct prompt-document key(s) known`,
     );
     out.lines.push(
         `    ${inScope.length} entr${inScope.length === 1 ? 'y' : 'ies'} in scope; ` +

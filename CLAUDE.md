@@ -769,8 +769,9 @@ No `lint` script: ESLint is not installed, so do not run it. No coverage script.
 
 Verification gates before commit:
 - `npm run build` must pass (exit 0, only the pre-existing chunk-size warning).
-- `npm run typecheck` must pass without introducing new errors. A known non-zero baseline of pre-existing errors exists; verify your change does not increase the count.
+- `npm run typecheck` must pass without introducing new errors. Baseline: **33** pre-existing errors — 19 of casing (`Settings/` vs `settings/`, TS1261 ×12 + TS1149 ×7) and 14 scattered (`api/data.ts` ×3, `Measurable.tsx` ×6, `Dummy.ts`, `EditorV2.tsx:2886`, `ChatMessages.tsx:246`, `ProjectEditor.tsx:220`, `Dashboard.tsx:570`). Verify your change does not increase the count.
 - `npm run test` where the touched area has tests. The suite has known failures; do not treat a red suite as caused by your change without checking.
+- `npm run check:agents` must pass when you touch any `CLAUDE.md`. It regenerates every `AGENTS.md` into a temp directory and compares it byte for byte with the committed one. When red, run `npm run gen:agents` and include the regenerated files in the same commit — never hand-edit them.
 - `npm run check:docs` must pass when you touch `CLAUDE.md`, `docs/PROTOCOL.md` or `docs/claude-code-log.md`. It verifies that the §21.2 entry-format block is byte-identical to `docs/PROTOCOL.md` P9, and that recent log entries carry `Corregge` and `Causa`. If a recent entry uses prose instead of the strict format, note it in `**Notes**` rather than failing the gate.
 
 ---

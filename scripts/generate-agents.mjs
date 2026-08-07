@@ -23,6 +23,11 @@
  * as empty → no §0 is emitted at all. Nested files have no §0 and receive name
  * substitutions only.
  *
+ * --out-dir <dir> (optional): write the same set of files under an alternative
+ * root, each keeping its path relative to the repo. Without the flag nothing
+ * changes — every AGENTS.md lands next to its CLAUDE.md. Used by the
+ * check:agents gate, which generates into a system temp dir and compares.
+ *
  * Name substitutions (case-sensitive, applied to the projected body only — never
  * the banner):
  *   "Claude Code" -> "Codex"
@@ -31,9 +36,9 @@
  * intentionally NOT rewritten, so both tools read and write the one log file.
  */
 
-import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, readdirSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, resolve, join } from 'node:path';
+import { dirname, resolve, join, relative } from 'node:path';
 
 // Repo root is derived from THIS script's location, not process.cwd(), so the
 // generator behaves identically whether run from the root or from frontend/.
@@ -113,7 +118,18 @@ function projectNested(claude) {
     return `${BANNER}\n\n${applySubstitutions(claude.replace(/\s+$/, ''))}\n`;
 }
 
+// --out-dir <dir>, or null when the flag is absent. Absent is the default and
+// leaves every path exactly where it has always been.
+function outRootFromArgv(argv) {
+    const i = argv.indexOf('--out-dir');
+    if (i === -1) return null;
+    const dir = argv[i + 1];
+    if (!dir) throw new Error('generate-agents: --out-dir requires a directory argument.');
+    return resolve(dir);
+}
+
 function main() {
+    const outRoot = outRootFromArgv(process.argv.slice(2));
     const files = findClaudeFiles(ROOT, []).sort();
     let written = 0;
     let skipped = 0;
@@ -125,7 +141,9 @@ function main() {
             continue;
         }
         const output = resolve(src) === ROOT_CLAUDE ? projectRoot(claude) : projectNested(claude);
-        const out = resolve(dirname(src), 'AGENTS.md');
+        const dest = resolve(dirname(src), 'AGENTS.md');
+        const out = outRoot ? join(outRoot, relative(ROOT, dest)) : dest;
+        if (outRoot) mkdirSync(dirname(out), { recursive: true });
         writeFileSync(out, output);
         console.log(`generate-agents: wrote ${out} (${output.split('\n').length - 1} lines).`);
         written++;

@@ -98,6 +98,7 @@
     "test:watch": "vitest",
     "typecheck:scripts": "tsc --noEmit -p scripts/tsconfig.json",
     "check:docs": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/gates/check-docs.ts",
+    "check:agents": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/gates/check-agents.ts",
     "smoke": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/smoke/run.ts",
     "smoke:calibrate": "node --disable-warning=ExperimentalWarning --experimental-strip-types scripts/smoke/calibrate.ts",
     "________________________________other_build_modes___________________________": "",
