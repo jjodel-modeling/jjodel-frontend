@@ -4,7 +4,7 @@
 
 > Operational reference for Codex. Captures what cannot be inferred from reading the code: conventions, critical patterns, language boundaries, gotchas. Everything else lives in `docs/` or the source.
 >
-> After modifying this file, run `npm run gen:agents` to regenerate `AGENTS.md`, then verify with `npm run check:docs`.
+> After modifying this file, run `npm run gen:agents` to regenerate `AGENTS.md`, then verify with `npm run check:agents`.
 
 ---
 
