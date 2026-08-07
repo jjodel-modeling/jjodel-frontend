@@ -47,6 +47,7 @@ import {ReactNode} from "react";
 import type {ViewpointType} from "../viewPoint/viewpoint";
 import {labeltype} from "../../model/dataStructure/GraphDataElements";
 import {DEFAULT_VIEW_JSX_STRING} from "../../utils/defaultViewTemplate";
+import {collectViewSubtree} from "./viewSubtree";
 
 let CSS_Units0 = {'Local-font relative':{
         'cap':     'cap - (Cap height) the nominal height of capital letters of the element\'s font.',
@@ -1451,9 +1452,38 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         if (pvid === oldpvid) return true;
         let dfather: DViewElement = (v && typeof v === "object") ? ((v as any).__raw || v) as any : DPointerTargetable.fromPointer(pvid);
 
+        // The denormalized `viewpoint` of the subtree follows the move. Only that field, and
+        // only on the descendants: their `father` links do not change (they stay under this
+        // view, which is the one moving) and neither does any `subViews` entry below this node.
+        // Realigning it is what keeps the three membership indexes agreeing - `viewpoint` is
+        // the one the IR resolver reads (irResolveCore.ts:84,113) and the one the classic
+        // scoring classifies on (selectors.ts:553-559), so a stale value makes a descendant
+        // stop rendering while the tree still shows it under the new viewpoint.
+        //
+        // Decided here, BEFORE the first write: inside a TRANSACTION actions are queued and
+        // fired only at FINAL_END, so a read from the body would see pre-transaction state
+        // anyway - taking the snapshot up here makes the cascade independent of that batching
+        // order instead of quietly relying on it.
+        //
+        // It runs on every reparent, not only on a cross-viewpoint one: the "write only if
+        // different" test below makes it idempotent, and it heals in passing a subtree whose
+        // `viewpoint` had already drifted (legacy data has no other way back).
+        const targetvp = (pvid && dfather && typeof dfather === "object") ? (dfather as any).viewpoint : undefined;
+        const viewsToRealign: string[] = [];
+        if (targetvp) {
+            const preWriteState: DState = store.getState();
+            for (const descendantId of collectViewSubtree(preWriteState as any, id as any)) {
+                if ((preWriteState.idlookup[descendantId] as DViewElement)?.viewpoint !== targetvp) viewsToRealign.push(descendantId);
+            }
+        }
+
         TRANSACTION('change '+this.get_name(c)+'.parent', ()=>{
             ret = SetFieldAction.new(id, "father", pvid, '', true);
             if (data.viewpoint !== dfather.viewpoint) SetFieldAction.new(id, "viewpoint", dfather.viewpoint, '', true);
+            // Direct SetFieldAction, never `lview.viewpoint = x`: that setter is a declared
+            // no-op (set_viewpoint above logs and returns true without writing), so the proxy
+            // route would silently do nothing and still report success.
+            for (const descendantId of viewsToRealign) SetFieldAction.new(descendantId as any, "viewpoint", targetvp, '', true);
             if (oldpvid) {
                 let subViews = (DPointerTargetable.fromPointer(oldpvid) as DViewElement).subViews;
                 if (id in subViews) {
