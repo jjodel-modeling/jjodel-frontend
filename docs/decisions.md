@@ -77,6 +77,37 @@ citare l'id con la data. Le decisioni sostituite si spostano in "Superate", con 
   write path verso il modello, e il minimo per spegnere `cssIsGlobal` da una view IR è una micro-voce
   futura.
 
+## Voce 4 — `father` writer unico, viewpoint derivato
+
+- **D-4-1** (2026-08-07) — Il viewpoint di appartenenza non è un controllo scrivibile: in Applies
+  to è una riga read-only che mostra `d.viewpoint` (il campo persistito che il resolver IR legge)
+  con indicatore attivo/non attivo. Allinea la UI a una regola che il modello già dichiarava:
+  `LViewElement.set_viewpoint` è un no-op che logga «call view.setFather(viewpoint) instead».
+- **D-4-2** (2026-08-07) — Un solo Select "Parent view", unico writer di `father` via `set_father`.
+  Lista: prima voce «(root of ‹viewpoint›)» che scrive il pointer al viewpoint, poi le view con
+  `d.viewpoint` uguale a quello della view corrente — lo stesso campo della riga read-only, così
+  riga e lista non possono contraddirsi.
+- **D-4-3** (2026-08-07) — Lo spostamento cross-viewpoint è un'azione esplicita «Move to
+  viewpoint…» nel body di Applies to, con select del target e conferma che dichiara la cascata
+  («n sub-views will follow»). Lo slot azioni del Tree View resta un'aggiunta futura.
+- **D-4-4** (2026-08-07) — La cascata vive in `set_father`: è un invariante di modello presidiato
+  nel setter, non nella UI. `validateIR` è lassista e non recupera a valle.
+- **D-4-5, emendata** (2026-08-07) — `ViewProperties.tsx` non si tocca: è irraggiungibile a HEAD
+  (host `WorkbenchProperties` senza importatori). La morte di `components/editors/viewpoint/` è
+  voce di igiene separata, col TypeError di `e.target.value || undefined` annotato lì.
+- **D-4-6** (2026-08-07) — La lista dei parent esclude la view stessa e tutto il suo sottoalbero:
+  un ciclo non è creabile dalla UI. Il visited set nella cascata resta come cintura per dati
+  legacy e console (`get_viewpoint`/`get_fatherChain` non ne hanno e non ritornerebbero).
+- **D-4-7** (2026-08-07) — L'opzione "None" è rimossa: «nessun parent» è la root. Nessun percorso
+  UI produce più `father = ''`. Il legacy persistito mostra uno stato "detached" evidente e si
+  ripara alla prima scelta esplicita: nessuna auto-sanatoria all'apertura del pannello.
+- **D-4-8** (2026-08-07) — La cascata gira SEMPRE, anche nei reparent intra-viewpoint, e per ogni
+  discendente scrive `viewpoint` solo se diverso: idempotente, e sana lazy le divergenze legacy
+  del ramo toccato. Enumerazione per scansione di `state.viewelements` su `father` (BFS, visited
+  set, snapshot preso PRIMA della prima scrittura), mai via `subViews` — che ha quattro writer,
+  uno dei quali (`updateDefaultView`) è una mutazione grezza a ogni caricamento progetto. Il
+  riallineamento è `SetFieldAction` diretta, mai `set_viewpoint` (no-op silenzioso).
+
 ## Edge IR — arco espressività (serie R-B del 2026-08-03) ed E-route
 
 - **Deroga d'ordine** (2026-08-06) — E-route eseguita subito, in parallelo alla coda arco A e

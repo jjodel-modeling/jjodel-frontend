@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { CSSProperties } from 'react';
-import { Input, Select, type LViewElement, type LViewPoint, type DViewPoint } from '../../../../joiner';
+import { Input, type LViewElement, type LViewPoint } from '../../../../joiner';
+import { ViewParentingFields } from '../../../viewParenting/ViewParentingFields';
 
 /**
  * irTabs — the five-tab partition of the IR authoring panels (ratifica 2026-08-04).
@@ -96,19 +97,14 @@ export interface IRIdentityFieldsProps extends IRIdentityProps {
  * authoritative: `name` has no other writer, and `father` decides which index the
  * resolver files the view under (`irResolveCore.ts:113`).
  *
- * Relocated VERBATIM — same components (the `Input`/`Select` of `joiner`, bound by
- * `data`/`field`, not the `components/ui` ones), same bindings, same write paths,
- * same markup and tooltips as `InfoData.tsx:151-159` and `:297-328`.
- *
- * The known defect travels with them, deliberately unfixed here: the Viewpoint and
- * the Parent view selects write the SAME `father` field with no custom setter, so
- * reparenting through one loses what the other meant.
+ * `name` is still the `Input` of `joiner` bound by `data`/`field`, as R-H relocated it.
+ * The parenting controls are not duplicated markup any more: the defect R-H registered
+ * and left standing — the Viewpoint and the Parent view selects writing the SAME
+ * `father` field, so reparenting through one lost what the other meant — was fixed in
+ * voce 4 (2026-08-07) by making the viewpoint derived and `father` single-writer, and
+ * the block now lives in `ViewParentingFields`, shared with `InfoData.tsx`.
  */
 export const IRIdentityFields: React.FC<IRIdentityFieldsProps> = ({ view, viewpoints, readOnly }) => {
-    const vp = (view as any).viewpoint;
-    const vpid = vp?.id;
-    const dallVP: DViewPoint[] = viewpoints.map((v) => (v as any).__raw);
-
     return (
         <>
             {/* Name */}
@@ -120,38 +116,11 @@ export const IRIdentityFields: React.FC<IRIdentityFieldsProps> = ({ view, viewpo
                 <Input data={view} field={'name'} readOnly={readOnly} />
             </div>
 
-            {/* Viewpoint */}
-            <div className="jj-field">
-                <div className="jj-field-label">
-                    Viewpoint
-                    <InfoTooltip text="The viewpoint this view belongs to" />
-                </div>
-                <Select
-                    readOnly={readOnly}
-                    data={view}
-                    field={'father'}
-                    jjSelect={true}
-                    getter={() => vpid}
-                    placeholder={'Select viewpoint...'}
-                    options={dallVP.map((viewpoint) => ({ value: viewpoint.id, label: viewpoint.name })) as any}
-                />
-            </div>
-
-            {/* Parent view */}
-            <div className="jj-field">
-                <div className="jj-field-label">
-                    Parent view
-                    <InfoTooltip text="Inherit settings from a parent view" />
-                </div>
-                <Select
-                    readOnly={readOnly}
-                    data={view}
-                    field={'father'}
-                    jjSelect={true}
-                    placeholder={'None'}
-                    options={[{ value: '', label: 'None' }, ...(view as any).allPossibleParentViews.filter((v: any) => v.viewpoint?.id === vpid).map((v: any) => ({ value: v.id, label: v.name }))] as any}
-                />
-            </div>
+            {/* Viewpoint (derived) + Parent view + Move to viewpoint — voce 4, 2026-08-07.
+                The two selects that both wrote `father` are gone: one block, one writer.
+                Shared verbatim with the legacy Apply-to tab, which mounts the same
+                component instead of a second copy of the markup. */}
+            <ViewParentingFields view={view} viewpoints={viewpoints} readOnly={readOnly} />
         </>
     );
 };

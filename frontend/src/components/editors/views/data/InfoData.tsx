@@ -24,6 +24,7 @@ import {FakeStateProps} from "../../../../joiner/types";
 import {connect} from "react-redux";
 import {Toggle} from '../../../ui';
 import {EdgeCandidateResult, findEdgeCandidate} from './edgeCandidate';
+import {ViewParentingFields} from '../../../viewParenting/ViewParentingFields';
 import "./viewapplyto.scss";
 import "./viewoptions.scss"
 
@@ -76,9 +77,6 @@ function InfoDataComponent(props: AllProps) {
     const view = props.view;
     const viewpoints = props.viewpoints;
     const readOnly = props.readonly;
-    const vp = view.viewpoint;
-    const vpid = vp?.id;
-    const dallVP: DViewPoint[] = viewpoints.map(v => v.__raw);
 
     const objectTypes = ['', 'DModel', 'DPackage', 'DEnumerator', 'DEnumLiteral', 'DClass', 'DAttribute', 'DReference', 'DOperation', 'DParameter', 'DObject', 'DValue', 'DStructuralFeature'];
     // Reactive at render: connect() re-runs mapStateToProps on every dispatch,
@@ -294,38 +292,11 @@ function InfoDataComponent(props: AllProps) {
                     />
                 </div>
 
-                {/* Viewpoint */}
-                <div className="jj-field">
-                    <div className="jj-field-label">
-                        Viewpoint
-                        <InfoTooltip text="The viewpoint this view belongs to" />
-                    </div>
-                    <Select
-                        readOnly={readOnly}
-                        data={view}
-                        field={'father'}
-                        jjSelect={true}
-                        getter={() => vpid}
-                        placeholder={'Select viewpoint...'}
-                        options={dallVP.map((viewpoint) => ({ value: viewpoint.id, label: viewpoint.name })) as any}
-                    />
-                </div>
-
-                {/* Parent view */}
-                <div className="jj-field">
-                    <div className="jj-field-label">
-                        Parent view
-                        <InfoTooltip text="Inherit settings from a parent view" />
-                    </div>
-                    <Select
-                        readOnly={readOnly}
-                        data={view}
-                        field={'father'}
-                        jjSelect={true}
-                        placeholder={'None'}
-                        options={[{ value: '', label: 'None' }, ...view.allPossibleParentViews.filter(v => v.viewpoint?.id === vpid).map((v) => ({ value: v.id, label: v.name }))] as any}
-                    />
-                </div>
+                {/* Viewpoint (derived) + Parent view + Move to viewpoint — voce 4, 2026-08-07.
+                    The two selects here both wrote `father`: picking a viewpoint reparented
+                    the view to the root and dropped the parent without saying so. One block,
+                    one writer now, shared with the IR `Applies to` body (irTabs.tsx). */}
+                <ViewParentingFields view={view} viewpoints={viewpoints} readOnly={readOnly} />
 
                 {/* OCL Editor */}
                 <OclEditor viewID={view.id} readOnly={readOnly} />
