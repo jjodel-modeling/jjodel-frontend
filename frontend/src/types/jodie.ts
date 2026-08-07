@@ -208,14 +208,13 @@ export class AI{
         // Update the subdomain after deploying the Cloudflare Worker
         const PROXY_URL = 'https://jjodel-ai-proxy.alfonso99.workers.dev';
         const PROXY_LOCAL_URL = 'http://localhost:8787';
-
-        if (!this.proxy || window.location.hostname === 'localhost') return this.endpoint;
+        if (!this.proxy) return this.endpoint;
         /*switch (this.name) {
             case AIProvider.Claude:
             case AIProvider.Gemini:
             default: return '';
         }*/
-        return PROXY_URL + this.proxy;
+        return (window.location.hostname === 'localhost' ? PROXY_LOCAL_URL : PROXY_URL) + this.proxy;
     }
     hasVision(version?: string): boolean{
         let model = version && this.versions[version];
@@ -304,8 +303,10 @@ AI.DeepSeek
     .add('deepseek-coder',            'DeepSeek Coder',   false, false)
 AI.Gemini
     .add('gemini-3.5-flash',          'Gemini 3.5 Flash', true,  true)
-    .add('gemini-1.5-pro',            'Gemini 1.5 Pro',   true,  true)
-    .add('gemini-1.5-flash',          'Gemini 1.5 Flash', true,  true)
+    // Legacy — kept for users with persisted selections on older IDs
+    .add('gemini-2.0-flash-exp',      'Gemini 2.0 Flash', false, false, true)
+    .add('gemini-1.5-pro',            'Gemini 1.5 Pro',   true,  true, true)
+    .add('gemini-1.5-flash',          'Gemini 1.5 Flash', true,  true, true)
     .add('gemini-pro',                'Gemini Pro',       false, false, true)
 AI.Mistral
     .add('mistral-large-latest',      'Mistral Large',    false, false)
@@ -362,6 +363,8 @@ AI.Groq // NB: groq is infrastructure provider, not llm. but have a LLM made of 
     // arabic language ai is too niche .add('canopylabs/orpheus-arabic-saudi', 'Canopy Labs Orpheus Arabic Saudi', unkn, unkn)
     .add('canopylabs/orpheus-v1-english', 'Canopy Labs Orpheus V1 English', unkn, unkn)
 
+AI.Custom.add('custom', 'Custom', false, false);
+
 /*AI.???
     .add('mixtral-8x7b-32768',               'Mixtral 8x7B',        false, false)
     .add('llava-v1.5-7b-4096-preview',       'LLaVA 1.5 7B',        true,  false)
@@ -369,7 +372,7 @@ AI.Groq // NB: groq is infrastructure provider, not llm. but have a LLM made of 
     .add('llava-v1.5-7b-4096-preview',       'LLaVA 1.5 7B',        true,  false)
 */
 AI.Claude.proxy = '/v1/anthropic/messages';
-AI.Gemini.proxy = '/v1/gemini';
+//AI.Gemini.proxy = '/v1/gemini';
 
 AI.GPT.endpoint = 'https://api.openai.com/v1/chat/completions';
 AI.Claude.endpoint = 'https://api.anthropic.com/v1/messages';
