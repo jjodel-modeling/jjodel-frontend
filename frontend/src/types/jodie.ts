@@ -274,7 +274,7 @@ AI.Ollama.requiresKey = false;
 AI.GPT     .addGUIinfo('GPT','sk-...',      '#059669', '#D1FAE5', openaiLogo);
 AI.Claude  .addGUIinfo('C',  'sk-ant-...',  '#D97706', '#FEF3C7', anthropicLogo);
 AI.Mistral .addGUIinfo('M',  '',            '#ff7000', '#EDE9FE', mistralLogo);
-AI.Gemini  .addGUIinfo('Gm', 'AIza...',     '#7C3AED', '#EDE9FE', geminiLogo);
+AI.Gemini  .addGUIinfo('Gm', '',            '#7C3AED', '#EDE9FE', geminiLogo);
 AI.DeepSeek.addGUIinfo('D',  'sk-...',      '#2563EB', '#DBEAFE', deepseekLogo);
 AI.Groq    .addGUIinfo('Gq', 'gsk_...',     '#EF4444', '#FEE2E2', groqLogo);
 AI.Kimi    .addGUIinfo('K',  '',            '#0891B2', '#CFFAFE', kimiLogo);

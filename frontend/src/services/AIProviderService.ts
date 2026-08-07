@@ -926,7 +926,7 @@ export class AIProviderService {
      */
     private static readonly DISTINCTIVE_KEY_PREFIXES: ReadonlyArray<{ prefix: string; provider: TAIProvider }> = [
         { prefix: 'sk-ant-', provider: AIProvider.Claude },
-        { prefix: 'AIza',    provider: AIProvider.Gemini },
+        //{ prefix: 'AIza',    provider: AIProvider.Gemini },
         { prefix: 'gsk_',    provider: AIProvider.Groq },
     ];
 
@@ -937,7 +937,7 @@ export class AIProviderService {
     private static readonly EXPECTED_KEY_PREFIX: Partial<Record<TAIProvider, string>> = {
         [AIProvider.Claude]:   'sk-ant-',
         [AIProvider.GPT]:      'sk-',
-        [AIProvider.Gemini]:   'AIza',
+        //[AIProvider.Gemini]:   'AIza',
         [AIProvider.Groq]:     'gsk_',
         [AIProvider.DeepSeek]: 'sk-',
     };
