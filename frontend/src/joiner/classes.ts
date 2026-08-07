@@ -151,6 +151,7 @@ import type {ProjectsApi as TypeProjectsAPI, UsersApi} from "../api/persistance"
 import type {Collaborative as CollaborativeT} from "../components/collaborative/Collaborative";
 import {names} from "tinycolor2";
 import { toast } from "../components/Toast";
+import { DEFAULT_VIEW_CSS } from "../view/viewElement/defaultViewCss";
 var windoww = window as any;
 
 // qui dichiarazioni di tipi che non sono importabili con "import type", ma che devono essere davvero importate a run-time (eg. per fare un "extend", chiamare un costruttore o usare un metodo statico)
@@ -1122,53 +1123,10 @@ export class Constructors<T extends DPointerTargetable = DPointerTargetable>{
             'color-': U.hexToPalette(), //['#ffffff', '#ff0000', '#00ff00', '#0000ff','#aaaaaa', '#ffaaaa', '#aaffaa', '#aaaaff'],
             'background-': U.hexToPalette() // ['#000000', '#33333', '#777777']};
         };
-        thiss.css = "\n/* placeholder justification, add .center, .left, .start, .right, or .end in the <Input /> container */\n\n";
-
-        thiss.css += "input:placeholder-shown {\n" +
-        "  width: 120px !important;\n" +
-        "  font-style: italic !important;\n" +
-        "  text-align: right;\n" +
-        "  left: -120px !important;\n" +
-        "}\n\n";
-
-        thiss.css += ".center {\n" +
-        "  & input:placeholder-shown {\n" +
-        "    width: 120px !important;\n" +
-        "    font-style: italic !important;\n" +
-        "    text-align: center;\n" +
-        "    left: -60px !important;\n" +
-        "  }\n" +
-        "}\n\n";
-
-        thiss.css += ".left, .start {\n" +
-        "  & input:placeholder-shown {\n" +
-        "    width: 120px !important;\n" +
-        "    font-style: italic !important;\n" +
-        "    text-align: left;\n" +
-        "    left: 0 !important;\n" +
-        "  }\n" +
-        "}\n\n";
-
-        thiss.css += ".right, .end {\n" +
-        "  & input:placeholder-shown {\n" +
-        "    width: 120px !important;\n" +
-        "    font-style: italic !important;\n" +
-        "    text-align: right;\n" +
-        "    left: -120px !important;\n" +
-        "  }\n" +
-        "}\n\n";
-
-        thiss.css += ".input-container {\n" +
-        "   & select {\n" +
-        "        border: none;\n" +
-        "        text-align: right;\n" +  
-        "     }\n" +
-        "}\n\n";
-
-        thiss.css += "&,[data-nodetype], [data-nodetype]>.visible{ /* corresponds to \"overflow: visible\" */   \n" +
-        "   overflow: visible;\n" +
-        "}\n\n";
-
+        // Moved verbatim into ../view/viewElement/defaultViewCss.ts: the audit of
+        // globalCssAudit.ts needs the same text to tell an authored css from an
+        // untouched one, and two copies would drift silently.
+        thiss.css = DEFAULT_VIEW_CSS;
 
         thiss.compiled_css = '';
         thiss.css_MUST_RECOMPILE = true;

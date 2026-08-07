@@ -4,10 +4,11 @@
  * to create new views.
  */
 
-import { DPointerTargetable, DViewElement, LPointerTargetable, LProject, LViewElement, LViewPoint, SetFieldAction, SetRootFieldAction, Defaults } from '../joiner';
+import { DPointerTargetable, DViewElement, LPointerTargetable, LProject, LViewElement, LViewPoint, SetFieldAction, SetRootFieldAction, Defaults, store } from '../joiner';
 import { toast } from '../components/Toast/toastDispatch';
 import { JjodelEvents } from '../events/registry';
 import { DEFAULT_VIEW_JSX_STRING } from './defaultViewTemplate';
+import { auditGlobalCss, markWarned, type ViewCssDescriptor } from './globalCssAudit';
 
 let lastEditedViewpointId: string | null = null;
 let lastEditedViewpointName: string | null = null;
@@ -54,6 +55,62 @@ export function activateViewpoint(viewpointId: string | null): void {
 
     // 2. Update state.viewpoint (used by EditorSwitch for split view toggle)
     SetRootFieldAction.new('viewpoint', viewpointId || '', '', true);
+
+    // 3. Warn once per distinct set of author-modified global CSS (micro-slice 3.6).
+    //    Informative only: nothing is written back to the model.
+    warnOnGlobalCss(viewpointId);
+}
+
+/** Beyond this many names the toast lists a count instead of a wall of text. */
+const MAX_NAMES_IN_TOAST = 3;
+
+/**
+ * Builds the audit input from the current store. Lives here, at the choke point, so
+ * `globalCssAudit` stays a pure module with no store dependency.
+ */
+function collectViewCssDescriptors(activeViewpointId: string | null): ViewCssDescriptor[] {
+    const idlookup: any = store.getState()?.idlookup ?? {};
+    const out: ViewCssDescriptor[] = [];
+    for (const id in idlookup) {
+        const d: any = idlookup[id];
+        if (!d) continue;
+        if (d.className !== 'DViewElement' && d.className !== 'DViewPoint') continue;
+        out.push({
+            id,
+            name: d.name || id,
+            css: d.css || '',
+            cssIsGlobal: !!d.cssIsGlobal,
+            isViewpoint: d.className === 'DViewPoint',
+            isExclusiveView: !!d.isExclusiveView,
+            isDefault: Defaults.check(id),
+            isActive: id === activeViewpointId,
+        });
+    }
+    return out;
+}
+
+/**
+ * One toast per activation, aggregating every culprit, and silent when the same set
+ * with the same css has already been reported in this session.
+ */
+function warnOnGlobalCss(activeViewpointId: string | null): void {
+    try {
+        const { culprits, key } = auditGlobalCss(collectViewCssDescriptors(activeViewpointId));
+        if (!culprits.length) return;
+        if (!markWarned(key)) return;
+
+        const names = culprits.map((c) => c.name);
+        const rest = names.length - MAX_NAMES_IN_TOAST;
+        const from = rest > 0
+            ? `${names.slice(0, MAX_NAMES_IN_TOAST).join(', ')} and ${rest} more`
+            : names.join(', ');
+        toast.warning(
+            `Global CSS with !important is repainting the canvas. From: ${from} (cssIsGlobal is on). Classic views can edit it in the Style tab.`,
+            'Global CSS',
+        );
+    } catch {
+        // A warning must never be able to break viewpoint activation.
+    }
 }
 
 /**

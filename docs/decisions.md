@@ -62,6 +62,20 @@ citare l'id con la data. Le decisioni sostituite si spostano in "Superate", con 
   legacy (Name; father: Viewpoint/Parent), ricollocati verbatim con write path invariati; il doppio
   writer di father resta registrato e non corretto qui. Breadcrumb rinviata finché parent e viewpoint
   non sono distinguibili.
+- **R-2/3.6** (2026-08-07) — Finestra Style, rilevamento del css globale. (1) Suonano solo i css
+  **modificati dall'autore**: confronto col blocco di fabbrica (`view/viewElement/defaultViewCss.ts`,
+  estratto dal costruttore) a whitespace normalizzato; residuo accettato, un css di fabbrica che
+  mordesse i nodi IR resta invisibile. (2) Predicato a **due** congiunti, `cssIsGlobal === true` e
+  presenza di `!important`: **deviazione dichiarata** dalla ratifica originaria a tre, perché la
+  Fase 0 ha misurato che un `!important` globale di primo livello è altrettanto dannoso e il terzo
+  congiunto lo escluderebbe (niente conteggio di graffe). (3) Insieme scansionato: tutte le view e i
+  viewpoint del progetto, col gate di `view.tsx:778-782` replicato (i viewpoint esclusivi non di
+  default contano solo se attivi; view normali, viewpoint di default e overlay sempre). (4)
+  Superficie: **un** toast warning per attivazione che aggrega gli N colpevoli, con dedup di sessione
+  su chiave stabile (insieme dei colpevoli più hash dei loro css), memoria module-level e non Redux;
+  la sede persistente in Source (R-2) resta rinviata. (5) **La 3.6 informa e non scrive**: nessun
+  write path verso il modello, e il minimo per spegnere `cssIsGlobal` da una view IR è una micro-voce
+  futura.
 
 ## Edge IR — arco espressività (serie R-B del 2026-08-03) ed E-route
 
