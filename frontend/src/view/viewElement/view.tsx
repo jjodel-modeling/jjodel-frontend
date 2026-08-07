@@ -1468,10 +1468,10 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
                 let oldSubViews = DPointerTargetable.fromPointer(pvid).subViews;
                 let insertBefore: string = '';
                 let subViews: GObject = {};
-                if (copyPos) {
+                if (copyPos > 0) { // indexOf returns -1 when absent, which is truthy: without the > 0 every name entered here.
                     let copiedFromName: string = copyPos ? name.substring(0, copyPos).trim() : '';
                     if (copiedFromName in oldSubViews) insertBefore = copiedFromName;
-                    else {
+                    else if (copiedFromName) { // an empty prefix matches the first key, which is not "the view this one was copied from".
                         for (let key in oldSubViews) if (key.indexOf(copiedFromName) === 0) { insertBefore = key; break; }
                     }
                 }
