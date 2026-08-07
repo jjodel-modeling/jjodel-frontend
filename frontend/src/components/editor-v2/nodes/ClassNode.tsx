@@ -715,6 +715,11 @@ function ClassNode({ id, data, selected, width, height }: NodeProps<ClassNodeTyp
                 onDoubleClick={handleDoubleClick}
                 onClick={() => { if (selected && !editing) setEditing(true); }}
             >
+                {/* Singleton stereotype — own line above the name; the header
+                    stacks vertically via .mm-node__header:has(.mm-node__stereotype). */}
+                {isSingleton && (
+                    <span className="mm-node__stereotype">«singleton»</span>
+                )}
                 {editing ? (
                     <input
                         className="mm-node__input"

@@ -405,10 +405,12 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                     />
                 )}
                 <DynamicHandles nodeId={id} />
+                {/* Singleton stereotype — same label as the native branch. The IR
+                    branch has no header (the name is an IR label inside
+                    IRNodeContent), so it sits in the wrapper, ahead of the
+                    interpreted content. */}
                 {isSingleton && (
-                    <span className="singleton-badge">
-                        <i className="bi bi-diamond-fill" />
-                    </span>
+                    <span className="mm-node__stereotype">«singleton»</span>
                 )}
                 <NodeProblemIndicator nodeId={id} />
                 <IRNodeContent
@@ -457,12 +459,6 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
 
             <DynamicHandles nodeId={id} />
 
-            {isSingleton && (
-                <span className="singleton-badge">
-                    <i className="bi bi-diamond-fill" />
-                </span>
-            )}
-
             <NodeProblemIndicator nodeId={id} />
 
             {/* Header: objectName : ClassName — underlined per UML convention */}
@@ -471,6 +467,13 @@ function ObjectNode({ id, data, selected }: NodeProps<ObjectNodeType>) {
                 onDoubleClick={handleDoubleClick}
                 onClick={() => { if (selected && !editing) setEditing(true); }}
             >
+                {/* Singleton stereotype — own line above the name; the header
+                    stacks vertically via .mm-node__header:has(.mm-node__stereotype).
+                    The name itself stays underlined (UML instance convention,
+                    shared by every M1 object). */}
+                {isSingleton && (
+                    <span className="mm-node__stereotype">«singleton»</span>
+                )}
                 {editing ? (
                     <input
                         className="mm-node__input"
