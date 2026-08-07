@@ -813,8 +813,7 @@ export class AIProviderService {
     private static async testGemini(apiKey: string, model: string): Promise<{ success: boolean; error?: string }> {
         try {
             // Use proxy endpoint to avoid CORS issues
-            const proxyUrl = `${AI.Gemini.getEndpoint()}/${model}/generateContent?key=${apiKey}`;
-
+            const proxyUrl = `${AI.Gemini.getEndpoint()}/${model}:generateContent?key=${apiKey}`;
             const response = await fetch(proxyUrl, {
                 method: 'POST',
                 headers: {
