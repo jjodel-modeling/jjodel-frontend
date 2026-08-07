@@ -9,9 +9,10 @@
  *    view being edited, read from the same denormalized field the read-only row shows.
  *    Row and list cannot contradict each other, because they are the same value.
  *  - no cycles (D-4-6): the view itself and its whole subtree are out of the list, so a
- *    cycle is not creatable from the UI. That matters beyond tidiness: the two upward
- *    walks in view.tsx (`get_viewpoint`, `get_fatherChain`) have no visited set and would
- *    not return.
+ *    cycle is not creatable from the UI. That matters beyond tidiness: a cycle that gets
+ *    in from legacy data or the console is walked by `get_viewpoint`/`get_fatherChain` in
+ *    view.tsx, which terminate on it but answer nothing useful (`undefined` and a partial
+ *    chain respectively). This list is what keeps the cycle from being created at all.
  *
  * The root of the viewpoint is a first-class entry, not a "None": `father` pointing at
  * the viewpoint IS how a top-level view is stored. The old "None" option wrote `''`,

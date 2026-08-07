@@ -5,8 +5,8 @@
  * They assert the shipped module, not a copy of its logic. The three properties that
  * matter downstream are the ones a wrong answer would break in production: every level
  * is reached (a grandchild that stays behind stops rendering after a move), a cycle
- * terminates (the two upward walks in view.tsx have no visited set and would hang the
- * tab), and the root is never in its own result (it would be reparented onto itself).
+ * terminates (an unguarded walk over `father` hangs the tab), and the root is never in
+ * its own result (it would be reparented onto itself).
  */
 import { describe, it, expect } from 'vitest';
 import { collectViewSubtree, type ViewSubtreeSource } from '../viewSubtree';

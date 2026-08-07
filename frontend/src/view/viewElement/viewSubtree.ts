@@ -18,9 +18,9 @@
  * discipline CLAUDE.md §3.6 already prescribes for this exact situation.
  *
  * Cycles cannot be built from the UI once the select excludes the subtree, but they
- * remain reachable from the console and from legacy data, and the two upward walks in
- * view.tsx (`get_viewpoint`, `get_fatherChain`) have no visited set and would not
- * return. The visited set here is that belt: this function always terminates.
+ * remain reachable from the console and from legacy data. The visited set here is that
+ * belt: this function always terminates. The two upward walks in view.tsx
+ * (`get_viewpoint`, `get_fatherChain`) each carry their own, for the same reason.
  *
  * Pure: no store access, no import from the joiner barrel (view.tsx is itself part of
  * that barrel's graph), no side effect. The caller passes the state it has already

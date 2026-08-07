@@ -1415,7 +1415,15 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         let current = this.get_father(c);
         if (!current) return [] as any;
         let ret: LViewElement[] = [];
+        // A cycle in `father` is not creatable from the "Parent view" select (D-4-6), but it stays
+        // reachable from legacy data and from the console, and without this set the walk never
+        // returns. Local to the call: no state is shared between invocations. On a cycle the chain
+        // is returned as accumulated so far - the same partial-array shape an acyclic walk ends on.
+        const visited: Set<string> = new Set();
         while (current) {
+            const cid = current.id;
+            if (cid && visited.has(cid)) break;
+            visited.add(cid);
             ret.push(current);
             current = current.father;
         }
@@ -1429,7 +1437,14 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         let p = c.data.father;
         if (!p) return LPointerTargetable.fromD(c.data);
         let curr: LViewElement = LPointerTargetable.fromPointer(p);
+        // Same belt as get_fatherChain. A cycle has no rootless ancestor, so it terminates on the
+        // `undefined` this walk already returns when the chain runs out without finding one: no new
+        // fallback value, and no exception surfaced to the caller.
+        const visited: Set<string> = new Set();
         while (curr) {
+            const cid = curr.id;
+            if (cid && visited.has(cid)) return undefined as any;
+            visited.add(cid);
             let prev = curr.father;
             if (!prev) return curr as LViewPoint;
             curr = prev;
