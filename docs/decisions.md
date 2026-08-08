@@ -76,6 +76,12 @@ citare l'id con la data. Le decisioni sostituite si spostano in "Superate", con 
   la sede persistente in Source (R-2) resta rinviata. (5) **La 3.6 informa e non scrive**: nessun
   write path verso il modello, e il minimo per spegnere `cssIsGlobal` da una view IR è una micro-voce
   futura.
+- **Nota Select condiviso** (2026-08-08, lezione voce 3) — Il primitivo `Select`
+  (`components/ui/Select/Select.tsx:91`) antepone sempre un'opzione vuota, e non disabilitata:
+  sui campi a vocabolario chiuso il default va gestito nel value visualizzato, mai scritto nello
+  stato o in persistenza. Prima di riusare il primitivo su un vocabolario chiuso (terminazioni,
+  stile linea, natura), verificare il trattamento del valore vuoto. Da non confondere con l'altro
+  `Select`, quello data-bound di `forEndUser/Input.tsx`, la cui opzione vuota è `disabled`.
 
 ## Voce 4 — `father` writer unico, viewpoint derivato
 
@@ -107,6 +113,11 @@ citare l'id con la data. Le decisioni sostituite si spostano in "Superate", con 
   set, snapshot preso PRIMA della prima scrittura), mai via `subViews` — che ha quattro writer,
   uno dei quali (`updateDefaultView`) è una mutazione grezza a ogni caricamento progetto. Il
   riallineamento è `SetFieldAction` diretta, mai `set_viewpoint` (no-op silenzioso).
+- **D-4-9** (2026-08-08) — Riconciliazione: le ratifiche di chat R-F1..R-F5 del 2026-08-08
+  coincidono con D-4-1..D-4-8 e non entrano nel registro con quel prefisso (`R-F` è già
+  assegnato, 2026-08-05); il residuo R-F4 (breadcrumb `viewpoint › parent › view`) è U-2
+  dell'arco U. Gate residuo della voce 4: smoke visivo della cascata cross-viewpoint (punto 4
+  della checklist).
 
 ## Edge IR — arco espressività (serie R-B del 2026-08-03) ed E-route
 
