@@ -421,6 +421,40 @@ $pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Chec
         }
     }
 
+    // ─── Stepper, neutralizzazione della regola generica (U-5, 2026-08-08) ───
+    // The generic input rule above (`.jj-field input:not([type=color]):not([type=checkbox])`)
+    // also lands on the input INSIDE a stepper, and it outranks both the branch above and
+    // the component's own module: `(0,4,1)` beats the branch's `(0,3,4)` and the module's
+    // single class. Its `padding: 11px 14px` was the whole defect — with the wrapper fixed
+    // at 96px, two 38px buttons and `box-sizing: border-box` (tokens/index.scss + Bootstrap
+    // reboot), the input's content box resolves to `96 − 76 − 28 − 2 < 0`, clamps to zero and
+    // `overflow: hidden` on the wrapper paints an EMPTY box over a perfectly healthy value.
+    // Measured on `View for ActionNode` with `ir.priority = 0` and `ir.shape.border.width = 2`
+    // in the store; see the Slice B addendum in
+    // docs/discovery/discovery_2026-08-08_uniformazione_card_properties.md.
+    //
+    // Descendant (not child) on purpose: the perimeter must match the rule it neutralises.
+    // A stepper nested inside another editor — `Spessore` inside `ConditionalEditor`
+    // (EdgeAuthoringPanel.tsx) — is NOT a direct child of `.jj-field`, so the branch above
+    // never reached it while the generic always did.
+    //
+    // Specificity: `(0,4,4)` — one element more than the generic's `(0,4,1)`, same class
+    // count — so it wins on `padding`, `border-radius` and `background` without `!important`.
+    // `border` is the exception: the generic declares it `!important`, so only `!important`
+    // can answer it, and among two `!important`s specificity decides. Same convention this
+    // sheet already documents at :247-249. Font, weight and centring stay with the branch above.
+    //
+    // KNOWN LIMIT (same fragility the sheet declares at :242-249): the hook is structural,
+    // because the component is CSS-module based and its classes are unreachable from here.
+    // If `NumberInput`'s markup stops being `button + input + button`, this rule silently
+    // stops matching and the empty box comes back. There is no compile error for that.
+    .jj-field div:has(> button:not([role="checkbox"]) + input) > input[type="text"] {
+        padding: 0;
+        border: none !important;
+        border-radius: 0;
+        background: transparent;
+    }
+
     // ─── Checkboxes: no card override (2026-07-30) ───
     // The mockup's 20x20 / r6 / #3b82f6 box was a look of its own — a blue that is
     // not a design-system colour — so the card now renders the shared `Checkbox`

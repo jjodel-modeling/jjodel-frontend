@@ -145,11 +145,37 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   `editor-v2/_themes.scss` è un token legacy vietato (CLAUDE.md regola 27). Il valore è
   hardcoded ~197 volte nel repo senza un token che lo rappresenti. Serve una voce di igiene dei
   token prima di chiudere questa: creare il token è fuori dal mandato di chi esegue.
-- **U-5 riformulato** (2026-08-08) — Il design «default effettivo sempre visibile» è già nel
-  codice (`?? 0` negli stepper, `DEFAULT_BORDER`, e la compile che materializza priority 0 e
+- **U-5 riformulato** (2026-08-08 mattina) — Il design «default effettivo sempre visibile» è già
+  nel codice (`?? 0` negli stepper, `DEFAULT_BORDER`, e la compile che materializza priority 0 e
   border width 1). Il difetto è di **rendering**, non di dati: la casella dello stepper può
-  restare vuota in modo persistente con lo store sano. Si corregge dentro `NumberInput`, senza
-  cambi di API e senza toccare gli identificatori persistiti nell'`ir`.
+  restare vuota in modo persistente con lo store sano.
+- **U-5, emendata — riscoped sulla skin B4** (2026-08-08 pomeriggio) — La sede della correzione
+  ipotizzata la mattina (`NumberInput`, «sync dello stato interno») è **caduta**: l'ipotesi H-B è
+  stata falsificata leggendo il componente, che non ha alcuno stato interno ed è un controlled
+  puro (`value={value}`). Il difetto è della **skin B4**: la regola generica
+  `properties-with-tree-view.scss:378-386` colpisce anche l'input interno degli stepper e la
+  vince su tutto (`(0,4,1)` contro i `(0,3,4)` del ramo stepper e la singola classe del CSS
+  module); il suo `padding: 11px 14px`, con wrapper fisso a 96px, bottoni a 38px e
+  `box-sizing: border-box` globale, manda il content box sotto zero, e `overflow: hidden`
+  dipinge una casella vuota su un valore sano. **Direzione ratificata: (1) neutralizzazione
+  additiva nel ramo stepper**, con perimetro pari a quello della regola che collide — quindi
+  selettore **discendente**, che copre anche lo stepper annidato dentro `ConditionalEditor`
+  (`Spessore`, `EdgeAuthoringPanel.tsx:663`), che il ramo a figlio diretto non ha mai raggiunto.
+  Scartata la (2), toccare la generica: è viva e corretta su molti altri input, gli hex dei
+  colori inclusi. Scartata la (3), allargare il primitivo: sposta geometria già approvata ai
+  gate e cura il sintomo al layer sbagliato. Meccanismo, aritmetica del box e prova
+  discriminante (Ordinal di un `DEnumLiteral`) nell'addendum Slice B di
+  `docs/discovery/discovery_2026-08-08_uniformazione_card_properties.md`.
+- **H-B falsificata, agli atti** (2026-08-08) — `NumberInput` non ha stato interno: niente
+  `useState`/`useEffect`/`useRef`, l'input è controllato puro. Non esiste nulla da
+  risincronizzare, e nessuno stato del draft — sano o transiente — produce una casella vuota
+  (il seed di fallback `defaultObjectViewIR()` dà `priority: 0` e, senza chiave `border`,
+  `width: 1`). Chi in futuro rivedesse U-5 non ripercorra quella strada.
+- **Residuo noto di U-5, non corretto** (2026-08-08) — La neutralizzazione restituisce il
+  contenuto ma non lo spazio: wrapper fisso a 96px meno due bottoni da 38px lascia **20px**
+  all'input, contro i 40px per cui il primitivo era stato disegnato
+  (`NumberInput.module.css:9`, «28 + 40 + 28 — input leggibile»). Una o due cifre entrano, da
+  tre in su vengono clippate da `overflow: hidden`. Correggerlo è la direzione (3), scartata.
 - **Q7 — perimetro della skin B4** (2026-08-08) — La Fase 2 lavora **dentro**
   `.properties-panel-container` (la skin B4 di `properties-with-tree-view.scss`), accettando che
   le sue regole valgano su entrambe le card. Il gate di verifica visiva è quindi doppio: ogni

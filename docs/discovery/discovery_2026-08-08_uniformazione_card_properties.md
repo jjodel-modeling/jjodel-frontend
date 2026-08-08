@@ -1032,3 +1032,162 @@ modificatore nuovo e le due card restano tipograficamente diverse — cioè U-3 
 *Fase 1 chiusa con questo file. Nessun file sorgente modificato, nessun commit.
 Il report resta untracked ed entra nel primo commit della Fase 2 insieme alla entry di
 `docs/claude-code-log.md`.*
+
+---
+
+# Addendum Slice B (2026-08-08) — micro-discovery su `NumberInput`
+
+**Contesto**: Fase 2, Slice B (U-5). Il prompt del 2026-08-08 14:22 chiedeva di verificare
+l'ipotesi **H-B** prima di editare, con bivio esplicito: confermata → fix dentro
+`NumberInput.tsx`; falsificata → nessun fix inventato altrove, addendum e hard stop.
+
+## 1. Esito: H-B FALSIFICATA
+
+> **H-B**: «il componente tiene uno stato interno seminato dalla prop `value` al mount e privo
+> di effetto di risincronizzazione; il primo render riceve un transiente (`undefined`/`NaN`) e
+> la casella resta vuota per sempre».
+
+`frontend/src/components/ui/NumberInput/NumberInput.tsx` letto **per intero** (84 righe).
+
+**Non esiste alcuno stato interno.** Nel file non compaiono né `useState`, né `useEffect`, né
+`useRef`, né `defaultValue`. L'input è **controllato puro**:
+
+```tsx
+<input
+    type="text"
+    className={styles.value}
+    value={value}            // NumberInput.tsx:65 — direttamente dalla prop, nessuna mediazione
+    onChange={handleInput}
+    disabled={disabled}
+/>
+```
+
+Non c'è niente da risincronizzare: a ogni render React scrive nel DOM il valore della prop.
+Un fix "di sync" dentro questo file sarebbe stato codice morto contro un difetto inesistente.
+
+**Corollario**: anche il ramo del transiente non regge comunque a monte. Se al mount
+`(view as any).ir` fosse assente, `VertexAuthoringPanel.tsx:67` semina il draft con
+`defaultObjectViewIR()`, che porta `priority: 0` (`irDefaults.ts:35`) e **nessuna** chiave
+`shape.border` (`irDefaults.ts:38-43`) → il fallback `DEFAULT_BORDER`
+(`VertexAuthoringPanel.tsx:46,239`) darebbe `width: 1`. Cioè: **`0` e `1`, non vuoto**. Nessuno
+stato del draft, sano o transiente, produce una casella vuota.
+
+## 2. Il meccanismo reale: collisione di layout nella skin B4
+
+La casella non è vuota perché manca il valore: è vuota perché **il box del testo è largo zero**.
+Il valore è nel DOM e non ha spazio in cui essere dipinto.
+
+### 2.1 Le tre regole che collidono
+
+**(a) Geometria del primitivo** — `NumberInput.module.css`:
+```css
+.wrapper { overflow: hidden;  width: 96px;  flex: 0 0 96px; }   /* :6, :9, :10 */
+.btn     { min-width: 28px !important; }                        /* :26 */
+.value   { min-width: 0 !important;  width: 0;  flex: 1; }      /* :63, :64, :65 */
+```
+L'input non ha larghezza propria: vive del `flex-grow` sullo spazio che avanza.
+
+**(b) Regola generica degli input della card** — `properties-with-tree-view.scss:378-386`:
+```scss
+.jj-field input:not([type="color"]):not([type="checkbox"]), .jj-field select {
+    padding: 11px 14px;
+    border: 1px solid $pc-slate-200 !important;
+    border-radius: $pc-radius-input;   // 12px
+}
+```
+L'input del NumberInput è `type="text"`: passa entrambi i `:not()` e **viene colpito**.
+
+**(c) Regola dello stepper** — `properties-with-tree-view.scss:401-422`:
+```scss
+.jj-field > div:has(> button:not([role="checkbox"]) + input) {
+    > button { width: 38px; ... }
+    > input  { min-width: 42px; border: none !important; ... }   // nessun reset di padding
+}
+```
+
+### 2.2 Chi vince, e perché il conto va a zero
+
+Specificità dei due selettori che si contendono l'input (entrambi sotto
+`.properties-panel-container`):
+
+| selettore | specificità | esito |
+|---|---|---|
+| `… .jj-field input:not([type=color]):not([type=checkbox])` | **(0,4,1)** | **vince** su `padding` e su `border` (fra due `!important` decide la specificità) |
+| `… .jj-field > div:has(> button:not([role=checkbox]) + input) > input` | (0,3,4) | perde su `padding`/`border`; il suo `min-width: 42px` perde comunque contro `min-width: 0 !important` di `.value` |
+| `.value` (CSS module, 1 classe) | (0,1,0) | il suo `padding: 0` **perde**; sopravvivono solo le dichiarazioni `!important` |
+
+Risultato sull'input: `padding: 11px 14px` + `border: 1px` + `min-width: 0`.
+
+`box-sizing: border-box` è globale — `styles/tokens/index.scss:60-62` (`* { box-sizing: border-box }`)
+e il reboot di Bootstrap 5, importato in `src/index.tsx:6`.
+
+Il conto dentro il wrapper da 96px:
+
+```
+bottoni      38px + 38px                        = 76px      (properties-with-tree-view.scss:407)
+spazio libero 96 − 76                           = 20px
+input: flex-basis 0 + grow 1                    → border-box = 20px
+content-box = 20 − 28 (padding) − 2 (border)    = −10  →  clampato a 0
+```
+
+**Content box = 0px. La cifra non ha dove essere dipinta.** Il `.wrapper` ha `overflow: hidden`
+(`:6`), quindi non c'è nemmeno traboccamento visibile: si vede una casella vuota.
+
+### 2.3 Perché questo spiega ogni fatto osservato
+
+| fatto (ricognizione live 2026-08-08) | spiegazione |
+|---|---|
+| store sano (`priority: 0`, `border.width: 2`, entrambi `number`) | il difetto è di layout, non di dati: il CSS non legge lo store |
+| il tab Source mostra `"width": 2` | `IRSourceBody` è un `<pre>` con `JSON.stringify` (`irTabs.tsx:137-155`): altro percorso di rendering, nessun `.jj-field` intorno |
+| casella vuota al primo accesso | la regola è statica: vale dal primo paint |
+| **resta vuota cambiando tab e tornando** | è CSS deterministico, non uno stato che si possa "riparare" — è esattamente il fatto che H-B non riusciva a spiegare senza inventare persistenza |
+| **la card astratta non mostra mai il difetto** | Lower/Upper stanno in `.jj-bounds-field` dentro `.jj-bounds-row` (`Info.tsx:441-449`), che è **fratello** di `.jj-field`, non figlio: nessuna delle due regole B4 li raggiunge. Non è merito della normalizzazione di `PropertiesNumberInput` (`Info.tsx:151-163`), che pure c'è: è la posizione nel DOM |
+
+### 2.4 Predizione falsificabile (test discriminante)
+
+Se il meccanismo è questo, il difetto **non è del pannello view**: è di chiunque metta un
+`NumberInput` come figlio diretto di `.jj-field` dentro la card. Nella card astratta c'è
+esattamente un caso simile — **Ordinal** di un letterale d'enumerazione (`Info.tsx:518-521`):
+
+```tsx
+<div className="jj-field">
+    <div className="jj-field-label">Ordinal</div>
+    <PropertiesNumberInput data={data} field={'ordinal'} min={0} />
+</div>
+```
+
+**Predizione**: selezionando un `DEnumLiteral`, la casella **Ordinal** è vuota come Priorità e
+Width, mentre Lower/Upper sullo stesso metamodello restano leggibili.
+Se Ordinal è vuota → meccanismo confermato, e U-5 va riscopato come difetto della skin B4.
+Se Ordinal mostra il numero → questa ricostruzione è sbagliata e va rifatta da capo.
+
+## 3. Perché non ho applicato alcun fix
+
+Il bivio del prompt (B2) prescrive, su H-B falsificata, di **non inventare un fix altrove** e di
+fermarsi. Lo rispetto anche nel merito: la correzione vive in
+`properties-with-tree-view.scss` (o in `NumberInput.module.css`), **nessuno dei due dichiarato
+in Slice B**, il cui unico file di codice era `NumberInput.tsx` — dove non c'è niente da
+correggere.
+
+In più la correzione tocca la skin B4, che per la ratifica Q7 riveste **entrambe** le card:
+qualunque cambio lì richiede il gate visivo doppio. Non è una modifica da infilare in coda a una
+slice il cui presupposto è appena caduto.
+
+### Direzioni possibili per la slice successiva (non implementate, non ratificate)
+
+1. **Reset del padding nel ramo stepper**: aggiungere `padding: 0` al blocco `> input` di
+   `properties-with-tree-view.scss:413-421`. Minimo, ma perde comunque su specificità contro la
+   regola generica (0,4,1 > 0,3,4): servirebbe alzare il selettore o un `!important`, che il
+   file usa già altrove dichiarandone il motivo (`:247-249`).
+2. **Escludere lo stepper dalla regola generica**: aggiungere un `:not()` in
+   `properties-with-tree-view.scss:378`. Più pulito concettualmente, ma serve un gancio stabile
+   sull'input dello stepper — che oggi non ha classi raggiungibili (CSS module hashato).
+3. **Dare al primitivo una larghezza che regga il padding ereditato**: intervento in
+   `NumberInput.module.css`, che però è condiviso con gli 8 call site di entrambe le card.
+
+La scelta fra le tre è di Alfonso: la (1) e la (2) sono locali alla card, la (3) è globale.
+
+## 4. Stato
+
+Nessun file di codice modificato in Slice B. Nessun commit. Questo addendum è l'unico
+artefatto prodotto.
