@@ -22,6 +22,9 @@ export type { TextareaProps } from './Textarea';
 export { Toggle } from './Toggle';
 export type { ToggleProps, ToggleSize } from './Toggle';
 
+export { SegmentedControl } from './SegmentedControl';
+export type { SegmentedControlProps, SegmentedControlOption } from './SegmentedControl';
+
 export { Label } from './Label';
 export type { LabelProps } from './Label';
 

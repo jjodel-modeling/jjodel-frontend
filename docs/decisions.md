@@ -125,6 +125,59 @@ citare l'id con la data. Le decisioni sostituite si spostano in "Superate", con 
   edge non ortogonale. Stato attuale: gli edge non ortogonali non registrano nulla: il
   crossing detection li ignora.
 
+## Uniformazione delle due property card (arco U, dal 2026-08-08)
+
+Discovery di Fase 1: `docs/discovery/discovery_2026-08-08_uniformazione_card_properties.md`.
+Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti dell'arco.
+
+- **U-6 / Q3 = opzione (b)** (2026-08-08) — Il toggle Fixed/Conditional di `ConditionalEditor`
+  è reso dal primitivo condiviso `SegmentedControl`, **senza glifi**: nessuna prop `icon` sui
+  segmenti, quindi nessun cyan in questo controllo (selezionato = pillola bianca, testo
+  slate-900). `.appbar-mode-switch` (navbar) resta com'è: la parentela dichiarata nel vecchio
+  commento era già stale — le due copie divergevano sul colore del testo attivo — e non si
+  insegue. Conseguenza accettata: il contrasto fra segmento scelto e non scelto cala rispetto
+  al cyan di prima.
+- **Token del glifo del segmented** (2026-08-08, **ratificata ma NON implementata**) — Il glifo
+  di `SegmentedControl` deve valere l'accent `#0ea5e9`, non `--color-cyan-500` (`#06b6d4`,
+  famiglia Tailwind cyan). Implementazione sospesa perché **nessun token del design system vale
+  `#0ea5e9`**: `--color-accent` è slate-700, l'unico token a quel valore è
+  `--color-toolbar-btn-active-text` (semanticamente estraneo) e `--accent` di
+  `editor-v2/_themes.scss` è un token legacy vietato (CLAUDE.md regola 27). Il valore è
+  hardcoded ~197 volte nel repo senza un token che lo rappresenti. Serve una voce di igiene dei
+  token prima di chiudere questa: creare il token è fuori dal mandato di chi esegue.
+- **U-5 riformulato** (2026-08-08) — Il design «default effettivo sempre visibile» è già nel
+  codice (`?? 0` negli stepper, `DEFAULT_BORDER`, e la compile che materializza priority 0 e
+  border width 1). Il difetto è di **rendering**, non di dati: la casella dello stepper può
+  restare vuota in modo persistente con lo store sano. Si corregge dentro `NumberInput`, senza
+  cambi di API e senza toccare gli identificatori persistiti nell'`ir`.
+- **Q7 — perimetro della skin B4** (2026-08-08) — La Fase 2 lavora **dentro**
+  `.properties-panel-container` (la skin B4 di `properties-with-tree-view.scss`), accettando che
+  le sue regole valgano su entrambe le card. Il gate di verifica visiva è quindi doppio: ogni
+  slice che tocchi B4 si guarda sulla card view **e** su quella della sintassi astratta.
+- **Q2 — sospensiva di R-H sciolta** (2026-08-08) — La breadcrumb rinviata da R-H («finché
+  parent e viewpoint non sono distinguibili») è sbloccata: la voce 4 ha reso il viewpoint
+  derivato e `father` writer unico. U-2 può partire. La breadcrumb legge `readViewParenting`
+  (campo persistito `d.viewpoint`), **mai** `get_viewpoint` — che risale la catena `father` e
+  potrebbe contraddire la riga read-only su dati legacy divergenti.
+- **Q4 — emendamento di U-1** (2026-08-08) — L'help va all'host (riga PROPERTIES), il back
+  torna nell'header della view, e il portal di `ViewData` verso
+  `.properties-panel-header__actions` viene ritirato. Motivo: il lookup è un
+  `document.querySelector` globale con deps vuote, quindi non scoped al proprio container e
+  incapace di seguire un rimonta dell'header.
+- **Q5 — doppie label per livelli** (2026-08-08) — U-7 non sopprime a tappeto la seconda label
+  dei toggle: si applica per livelli. Ridondanza pura (`Visible`/`visible`,
+  `Editable`/`editable inline`) → via la label del `Toggle`. Ridondanza parziale
+  (`Separator`/`row separators`) → via, riscrivendo la label di campo se serve. Label che porta
+  informazione assente dalla prima (`Metaclassi`/`Tutte le metaclassi (*)`,
+  `Condizione`/`Applica solo se (predicate)`, `Esclusiva`/`exclusive`) → **si tiene**: lì il
+  toggle commuta un modo, e la sua label è ciò che lo dice.
+- **Q6 — U-8 decaduto su ADVANCED STATE** (2026-08-08) — Non esiste alcun flusso UI di aggiunta
+  di custom state: il blocco è un `JsonViewer` in sola lettura e gli unici scrittori di `_state`
+  sono il setter del proxy e una `SetFieldAction` mirata in `ProjectEditor`. Non c'è un'azione
+  da offrire nell'empty state, e U-8 non si applica a quella sezione. Sulle liste dell'IR
+  (compartments, badge, label, segment) U-8 è invece **già soddisfatto**: `ListEditor` rende il
+  bottone dashed fuori dal ramo «lista vuota», quindi messaggio e azione convivono.
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.

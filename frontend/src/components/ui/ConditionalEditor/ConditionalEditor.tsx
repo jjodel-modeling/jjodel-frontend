@@ -1,10 +1,22 @@
 import React from 'react';
 import { Toggle } from '../Toggle';
+import { SegmentedControl } from '../SegmentedControl';
 import { PredicateBuilder } from '../PredicateBuilder';
 import type { PathBuilderFeatures } from '../PathBuilder';
 import { isConditionalValue } from './conditional';
 import type { Conditional, Predicate } from '../../editor-v2/viewpoint/ir/irTypes';
 import styles from './ConditionalEditor.module.css';
+
+/**
+ * The two modes of the switch, in bar order. Kept module-level so the array
+ * identity is stable across renders. The VALUES are the component's existing
+ * internal mode vocabulary ('fixed' / 'conditional') — unchanged; only the
+ * rendering moved to the shared primitive.
+ */
+const MODE_OPTIONS: { value: 'fixed' | 'conditional'; label: string }[] = [
+    { value: 'fixed', label: 'Fixed' },
+    { value: 'conditional', label: 'Conditional' },
+];
 
 export interface ConditionalEditorProps<T> {
     value: Conditional<T> | undefined;
@@ -87,21 +99,17 @@ export function ConditionalEditor<T>({
     return (
         <div className={styles.wrapper}>
             {/* Segmented switch, not two buttons: the pair is one mode selector with a
-                single active choice, which the raised pill states directly. */}
-            <div className={styles.modeToggle} role="group" aria-label="Value mode">
-                <button
-                    type="button"
-                    className={`${styles.modeOpt}${mode === 'fixed' ? ` ${styles.modeOptActive}` : ''}`}
-                    aria-pressed={mode === 'fixed'}
-                    onClick={switchToFixed}
-                >Fixed</button>
-                <button
-                    type="button"
-                    className={`${styles.modeOpt}${mode === 'conditional' ? ` ${styles.modeOptActive}` : ''}`}
-                    aria-pressed={mode === 'conditional'}
-                    onClick={switchToConditional}
-                >Conditional</button>
-            </div>
+                single active choice, which the raised pill states directly. Rendered by
+                the shared `SegmentedControl` primitive (U-6, ratifica 2026-08-08 Q3
+                opzione b), so this control and every future exclusive choice read as one
+                pattern. No `icon` on either option: the ratifica is explicit that this
+                control carries no glyph, and therefore no cyan. */}
+            <SegmentedControl
+                options={MODE_OPTIONS}
+                value={mode}
+                onChange={(next) => (next === 'fixed' ? switchToFixed() : switchToConditional())}
+                ariaLabel="Value mode"
+            />
 
             {mode === 'fixed' && renderValue((value as T) ?? defaultValue, (v) => onChange(v))}
 

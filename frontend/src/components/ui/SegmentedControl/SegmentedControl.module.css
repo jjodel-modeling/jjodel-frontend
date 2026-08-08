@@ -1,0 +1,68 @@
+/* Segmented control — project decision D1 (2026-08-05), "segmented in rilievo".
+   Non-negotiable per the decision: flex-wrap onto a second row, width fit-content
+   (never 100%), so the track never splits into two visually separate groups when
+   the host panel is resized narrow. */
+
+.track {
+  display: inline-flex;
+  flex-wrap: wrap;
+  width: fit-content;
+  max-width: 100%;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  background: var(--color-slate-100);
+  border-radius: var(--radius-md);
+}
+
+.trackDisabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.segment {
+  appearance: none;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-base);
+  padding: var(--spacing-1) var(--spacing-3);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+  white-space: nowrap;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  transition: color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.segment:hover:not(.segmentSelected):not(:disabled) {
+  color: var(--color-slate-700);
+  /* No background on hover — only the selected segment gets a filled chip. */
+}
+
+.segment:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.18);
+  /* Slate ring — deliberately distinct from the cyan-500 used elsewhere for
+     focus, so it never reads as "this segment is selected". */
+}
+
+.segmentSelected {
+  background: #ffffff;
+  color: var(--color-slate-900);
+  font-weight: var(--font-weight-semibold);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.14);
+}
+
+.segmentIcon {
+  color: var(--color-cyan-500);
+  font-size: var(--font-size-sm);
+}
+
+.segment:disabled {
+  cursor: default;
+}
