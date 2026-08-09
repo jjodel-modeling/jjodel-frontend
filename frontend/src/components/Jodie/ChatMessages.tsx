@@ -79,7 +79,7 @@ function MessageBubble({ message, onJjScriptExecute, onTestInCode, onOfferExecut
                 </div>
                 <div className="jodie-message-content">
                     <div className="jodie-offer">
-                        <div className="jodie-offer__title">Sembra un comando JjScript</div>
+                        <div className="jodie-offer__title">This looks like a JjScript command</div>
                         <code className="jodie-offer__preview">{offer.input}</code>
                         <div className="jodie-offer__actions">
                             <button
@@ -88,7 +88,7 @@ function MessageBubble({ message, onJjScriptExecute, onTestInCode, onOfferExecut
                                 onClick={() => onOfferExecute?.(message.id, offer.input)}
                             >
                                 <i className="bi bi-play-fill" />
-                                <span>Esegui</span>
+                                <span>Run</span>
                             </button>
                             <button
                                 className="jodie-promote-btn"
@@ -96,7 +96,7 @@ function MessageBubble({ message, onJjScriptExecute, onTestInCode, onOfferExecut
                                 onClick={() => onOfferAsk?.(message.id, offer.input)}
                             >
                                 <i className="bi bi-robot" />
-                                <span>Chiedi a Jjodie</span>
+                                <span>Ask Jjodie</span>
                             </button>
                         </div>
                     </div>
@@ -186,7 +186,7 @@ function MessageBubble({ message, onJjScriptExecute, onTestInCode, onOfferExecut
                         title="Send this input to Jjodie (AI) instead"
                     >
                         <i className="bi bi-robot" />
-                        <span>Chiedi a Jjodie</span>
+                        <span>Ask Jjodie</span>
                     </button>
                 )}
                 <div className="jodie-message-meta">
@@ -375,7 +375,7 @@ export function ChatMessages({ messages, isWaiting, onJjScriptExecuted, onTestIn
             return [{
                 command: commands[0] || '',
                 success: false,
-                message: 'Per eseguire questo script, apri prima un progetto.',
+                message: 'To run this script, open a project first.',
             }];
         }
 
@@ -384,7 +384,7 @@ export function ChatMessages({ messages, isWaiting, onJjScriptExecuted, onTestIn
             return [{
                 command: commands[0] || '',
                 success: false,
-                message: 'Il progetto non ha metamodelli. Clicca "+ New" nella sezione METAMODELS per crearne uno, poi esegui di nuovo lo script.',
+                message: 'The project has no metamodels. Click "+ New" in the METAMODELS section to create one, then run the script again.',
             }];
         }
 

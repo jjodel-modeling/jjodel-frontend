@@ -15,28 +15,28 @@ interface Capability {
 const CAPABILITIES: Capability[] = [
     {
         icon: 'bi-box-seam',
-        title: 'Creare Metaclassi',
-        desc: 'Nuove metaclassi con attributi specifici',
+        title: 'Create metaclasses',
+        desc: 'New metaclasses with specific attributes',
     },
     {
         icon: 'bi-trash3',
-        title: 'Eliminare Metaclassi',
-        desc: 'Rimuovere metaclassi esistenti',
+        title: 'Delete metaclasses',
+        desc: 'Remove existing metaclasses',
     },
     {
         icon: 'bi-pencil',
-        title: 'Modificare Attributi',
-        desc: 'Aggiungere, rimuovere o modificare attributi',
+        title: 'Edit attributes',
+        desc: 'Add, remove or edit attributes',
     },
     {
         icon: 'bi-link-45deg',
-        title: 'Creare Riferimenti',
-        desc: 'Composizioni, associazioni e aggregazioni',
+        title: 'Create references',
+        desc: 'Compositions, associations and aggregations',
     },
     {
         icon: 'bi-diagram-2',
-        title: 'Gestire Ereditarietà',
-        desc: 'Relazioni di ereditarietà tra metaclassi',
+        title: 'Manage inheritance',
+        desc: 'Inheritance relations between metaclasses',
     },
 ];
 
@@ -48,8 +48,8 @@ export const JjodieGreeting: React.FC<JjodieGreetingProps> = ({ className = '' }
     return (
         <div className={`jjodie-greeting ${className}`}>
             <p className="greeting-intro">
-                Ciao! Sono <strong>Jjodie</strong>, il tuo assistente per la metamodellazione.
-                Posso aiutarti a creare e modificare metamodelli in Jjodel.
+                Hi! I'm <strong>Jjodie</strong>, your metamodeling assistant.
+                I can help you create and edit metamodels in Jjodel.
             </p>
 
             <div className="capabilities-list">
@@ -68,7 +68,7 @@ export const JjodieGreeting: React.FC<JjodieGreetingProps> = ({ className = '' }
             </div>
 
             <p className="greeting-cta">
-                Dimmi cosa vuoi creare o digita <code>/help</code> per vedere i comandi disponibili!
+                Tell me what you want to create, or type <code>/help</code> to see the available commands!
             </p>
         </div>
     );

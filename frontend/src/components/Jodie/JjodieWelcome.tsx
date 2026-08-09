@@ -15,39 +15,40 @@ export const JjodieWelcome: React.FC = () => {
             </div>
 
             {/* Title */}
-            <h1 className="welcome-title">Ciao, sono Jjodie!</h1>
+            <h1 className="welcome-title">Hi, I'm Jjodie!</h1>
 
             {/* Subtitle */}
             <p className="welcome-subtitle">
-                Il tuo assistente per la metamodellazione. Posso aiutarti con:
+                Your metamodeling assistant. I can help you with:
             </p>
 
-            {/* Capabilities */}
+            {/* Capabilities — same four entries, same icons and order, as the empty-state
+                block of ChatMessages: one wording for one content (voce 6, D4). */}
             <div className="welcome-capabilities">
                 <div className="capability-item">
                     <i className="bi bi-diagram-3"></i>
-                    <span>Design di metamodelli</span>
+                    <span>Metamodel design patterns</span>
                 </div>
 
                 <div className="capability-item">
                     <i className="bi bi-check-circle"></i>
-                    <span>Validazione e vincoli</span>
+                    <span>Validation and constraints</span>
                 </div>
 
                 <div className="capability-item">
                     <i className="bi bi-lightbulb"></i>
-                    <span>Best practices</span>
+                    <span>Best practices and trade-offs</span>
                 </div>
 
                 <div className="capability-item">
                     <i className="bi bi-code-slash"></i>
-                    <span>Generazione codice</span>
+                    <span>Code generation guidance</span>
                 </div>
             </div>
 
-            {/* CTA */}
+            {/* CTA — no twin in ChatMessages, translated on its own. */}
             <p className="welcome-cta">
-                Dimmi cosa vuoi creare o digita <code>/help</code> per i comandi!
+                Tell me what you want to create, or type <code>/help</code> for the commands!
             </p>
         </div>
     );
