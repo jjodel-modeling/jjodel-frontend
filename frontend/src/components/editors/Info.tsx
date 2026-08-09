@@ -28,7 +28,7 @@ import { Tooltip } from '../forEndUser/Tooltip';
 import { icon } from '../../pages/components/icons/Icons';
 import { Toggle as JoinerToggle } from '../../joiner/components';
 // import { UpgradePrompt } from '../ModeSystem'; // TODO: reintroduce as toast or first-visit hint
-import { Button, EmptyState, Toggle, NumberInput, JjSelect } from '../ui';
+import { Button, EmptyState, Toggle, NumberInput, JjSelect, InfoTooltip } from '../ui';
 import { M2AnalyticsModal, M2AnalyticsData } from '../M2AnalyticsModal';
 import { useInterfaceMode } from '../../hooks/useInterfaceMode';
 
@@ -57,20 +57,6 @@ function CollapsibleSection(props: { title: string; defaultOpen?: boolean; heade
                 </div>
             )}
         </div>
-    );
-}
-
-// Inline info icon with hover tooltip
-function InfoTooltip(props: { text: string }) {
-    const [show, setShow] = useState(false);
-    return (
-        <span className="jj-info-icon-wrapper"
-            onMouseEnter={() => setShow(true)}
-            onMouseLeave={() => setShow(false)}
-        >
-            <span className="jj-info-icon">i</span>
-            {show && <span className="jj-info-tooltip">{props.text}</span>}
-        </span>
     );
 }
 

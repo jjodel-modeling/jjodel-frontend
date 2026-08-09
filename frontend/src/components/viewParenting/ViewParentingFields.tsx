@@ -25,23 +25,8 @@ import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { LProject, Select, type LViewElement, type LViewPoint } from '../../joiner';
 import { readViewParenting } from './viewParentingOptions';
+import { InfoTooltip } from '../ui';
 import './viewParenting.scss';
-
-// Inline info icon with hover tooltip — local copy of the `InfoTooltip` helper in
-// `Info.tsx`, `InfoData.tsx` and `irTabs.tsx` (none of them exports it). Same
-// duplication those files already declare, carried here so the fields render verbatim.
-function InfoTooltip(props: { text: string }) {
-    const [show, setShow] = useState(false);
-    return (
-        <span className="jj-info-icon-wrapper"
-            onMouseEnter={() => setShow(true)}
-            onMouseLeave={() => setShow(false)}
-        >
-            <span className="jj-info-icon">i</span>
-            {show && <span className="jj-info-tooltip">{props.text}</span>}
-        </span>
-    );
-}
 
 export interface ViewParentingFieldsProps {
     view: LViewElement;

@@ -215,6 +215,22 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   (compartments, badge, label, segment) U-8 è invece **già soddisfatto**: `ListEditor` rende il
   bottone dashed fuori dal ramo «lista vuota», quindi messaggio e azione convivono.
 
+## Voce 5 — grappolo igiene (dal 2026-08-09)
+
+- **D-5-1** (2026-08-09) — `InfoTooltip` è primitiva condivisa in
+  `components/ui/InfoTooltip/`; consolida i 4 siti byte-identici (md5
+  `47b49fac269cb6f677866c6d891615f3` sulle 12 righe della dichiarazione), incluso
+  `editors/Info.tsx`, fermo dal 2026-07-05 e col touch ratificato. Le classi `jj-info-*`
+  restano invariate — sono API interne, definite in `editors/info-improvements.scss:975-1015`
+  — e non si migrano a CSS Module perché il mandato è resa identica: la primitiva non è
+  auto-contenuta sul piano degli stili, e il suo docstring lo dichiara. Ingresso in vetrina
+  rinviato al punto 4 della sequenza DS. Segue il pattern a tre livelli di `components/ui/`
+  (file + `index.ts` del componente + voce nel barrel): l'opzione di saltare il barrel è stata
+  scartata in ratifica perché avrebbe reso `InfoTooltip` l'unica primitiva invisibile da
+  `ui/index.ts`. La firma resta inline `(props: { text: string })` invece di puntare a
+  `InfoTooltipProps`: riscriverla avrebbe rotto la prova per md5, ed è riscrivibile quando la
+  prova smette di essere portante.
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.

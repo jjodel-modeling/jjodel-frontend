@@ -58,6 +58,9 @@ export type { PredicateBuilderProps, PredicateKind } from './PredicateBuilder';
 export { ConditionalEditor, isConditionalValue } from './ConditionalEditor';
 export type { ConditionalEditorProps } from './ConditionalEditor';
 
+export { InfoTooltip } from './InfoTooltip';
+export type { InfoTooltipProps } from './InfoTooltip';
+
 // Layout Components
 export { FormSection } from './FormSection';
 export type { FormSectionProps } from './FormSection';

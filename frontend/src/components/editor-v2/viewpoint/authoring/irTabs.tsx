@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import type { CSSProperties } from 'react';
 import { Input, type LViewElement, type LViewPoint } from '../../../../joiner';
 import { ViewParentingFields } from '../../../viewParenting/ViewParentingFields';
+import { InfoTooltip } from '../../../ui';
 
 /**
  * irTabs — the five-tab partition of the IR authoring panels (ratifica 2026-08-04).
@@ -59,22 +60,6 @@ export const irTabsForKind = (kind: IRAuthoringKind, advanced: boolean): IRTabId
  */
 export const irTabBodyStyle = (id: IRTabId, active: IRTabId | undefined): CSSProperties | undefined =>
     (active === undefined || active === id) ? undefined : { display: 'none' };
-
-// Inline info icon with hover tooltip — local copy of the `InfoTooltip` helper in
-// `Info.tsx` and `InfoData.tsx` (neither exports it). Carried along so the relocated
-// fields below render verbatim, the same duplication those two files already declare.
-function InfoTooltip(props: { text: string }) {
-    const [show, setShow] = useState(false);
-    return (
-        <span className="jj-info-icon-wrapper"
-            onMouseEnter={() => setShow(true)}
-            onMouseLeave={() => setShow(false)}
-        >
-            <span className="jj-info-icon">i</span>
-            {show && <span className="jj-info-tooltip">{props.text}</span>}
-        </span>
-    );
-}
 
 /**
  * The single extra prop `ViewData` passes down for the relocated fields: what they

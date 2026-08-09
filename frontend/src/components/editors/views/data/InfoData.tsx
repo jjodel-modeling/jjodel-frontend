@@ -1,6 +1,6 @@
 /* Apply to - Uses the jj-* design system classes from Info.tsx baseline */
 
-import React, {Dispatch, useMemo, useState} from 'react';
+import React, {Dispatch, useMemo} from 'react';
 import {
     DState,
     DViewElement,
@@ -22,26 +22,11 @@ import {
 import {JsEditor, OclEditor} from "../../languages";
 import {FakeStateProps} from "../../../../joiner/types";
 import {connect} from "react-redux";
-import {Toggle} from '../../../ui';
+import {Toggle, InfoTooltip} from '../../../ui';
 import {EdgeCandidateResult, findEdgeCandidate} from './edgeCandidate';
 import {ViewParentingFields} from '../../../viewParenting/ViewParentingFields';
 import "./viewapplyto.scss";
 import "./viewoptions.scss"
-
-// Inline info icon with hover tooltip — local copy of the `InfoTooltip`
-// helper in `Info.tsx` (not exported). Constrained to not touching Info.tsx.
-function InfoTooltip(props: { text: string }) {
-    const [show, setShow] = useState(false);
-    return (
-        <span className="jj-info-icon-wrapper"
-            onMouseEnter={() => setShow(true)}
-            onMouseLeave={() => setShow(false)}
-        >
-            <span className="jj-info-icon">i</span>
-            {show && <span className="jj-info-tooltip">{props.text}</span>}
-        </span>
-    );
-}
 
 interface EdgeCandidateBannerProps {
     onApply: () => void;
