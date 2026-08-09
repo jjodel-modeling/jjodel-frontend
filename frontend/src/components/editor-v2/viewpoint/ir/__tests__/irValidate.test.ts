@@ -3,10 +3,10 @@
  * Pure: no store, no React — irValidate -> irCompile is joiner-free.
  */
 import { describe, it, expect } from 'vitest';
-import { validateIR } from '../irValidate';
+import { validateIR, VALID_ROUTING_VALUES } from '../irValidate';
 import { clearCompileCache } from '../irCompile';
-import { defaultObjectViewIR } from '../irDefaults';
-import type { RowViewIR, VertexViewIR } from '../irTypes';
+import { defaultObjectViewIR, defaultEdgeViewIR } from '../irDefaults';
+import type { EdgeViewIR, RowViewIR, VertexViewIR } from '../irTypes';
 
 describe('validateIR', () => {
     it('accepts a valid IR (defaultObjectViewIR)', () => {
@@ -60,5 +60,52 @@ describe('validateIR', () => {
         const r = validateIR('r-bad', row);
         expect(r.ok).toBe(false);
         if (!r.ok) expect(r.error.length).toBeGreaterThan(0);
+    });
+});
+
+describe('validateIR — edge.routing closed vocabulary (R-B9)', () => {
+    /**
+     * `routing` is typed as the union, but the values this rule catches come from
+     * outside the type system (a Select placeholder, an import, a direct store
+     * edit), so the field is written through `unknown` here too.
+     */
+    const edgeWithRouting = (routing: unknown): EdgeViewIR => ({
+        ...defaultEdgeViewIR(),
+        metaclasses: ['Transition'],
+        edge: { routing } as EdgeViewIR['edge'],
+    });
+
+    it('accepts an edge with NO routing key (absent is the Manhattan default)', () => {
+        clearCompileCache();
+        const ir = defaultEdgeViewIR();
+        expect('routing' in ir.edge).toBe(false);
+        expect(validateIR('e-routing-absent', ir)).toEqual({ ok: true });
+    });
+
+    it('accepts each of the three vocabulary values', () => {
+        for (const value of VALID_ROUTING_VALUES) {
+            clearCompileCache();
+            expect(validateIR(`e-routing-${value}`, edgeWithRouting(value))).toEqual({ ok: true });
+        }
+    });
+
+    it('rejects the empty string, naming the field and the value read', () => {
+        clearCompileCache();
+        const r = validateIR('e-routing-empty', edgeWithRouting(''));
+        expect(r.ok).toBe(false);
+        if (!r.ok) {
+            expect(r.error).toContain('edge.routing');
+            expect(r.error).toContain('""');
+        }
+    });
+
+    it('rejects an arbitrary value, naming the field and the value read', () => {
+        clearCompileCache();
+        const r = validateIR('e-routing-foo', edgeWithRouting('foo'));
+        expect(r.ok).toBe(false);
+        if (!r.ok) {
+            expect(r.error).toContain('edge.routing');
+            expect(r.error).toContain('"foo"');
+        }
     });
 });
