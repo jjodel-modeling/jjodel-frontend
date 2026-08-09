@@ -170,6 +170,12 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   `editor-v2/_themes.scss` è un token legacy vietato (CLAUDE.md regola 27). Il valore è
   hardcoded ~197 volte nel repo senza un token che lo rappresenti. Serve una voce di igiene dei
   token prima di chiudere questa: creare il token è fuori dal mandato di chi esegue.
+  **Implementata (2026-08-10)**: `4701b735b` crea `--color-sky-500: #0ea5e9` in
+  `styles/tokens.css` (famiglia Tailwind sky, introdotta con la sola grade 500) e ci punta il
+  glifo del primitivo al posto di `--color-cyan-500`. La motivazione della sospensione è
+  superata: il token che mancava ora esiste. Resta fuori, e resta il debito vero, la migrazione
+  dei ~197 literal `#0ea5e9` sparsi nel repo. Nota di verifica: il glifo non è oggi raggiungibile
+  a video, perché l'unico consumatore del primitivo (`ConditionalEditor`) non passa `icon`.
 - **U-5 riformulato** (2026-08-08 mattina) — Il design «default effettivo sempre visibile» è già
   nel codice (`?? 0` negli stepper, `DEFAULT_BORDER`, e la compile che materializza priority 0 e
   border width 1). Il difetto è di **rendering**, non di dati: la casella dello stepper può
