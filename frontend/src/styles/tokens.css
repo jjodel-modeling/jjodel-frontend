@@ -37,6 +37,11 @@
   --color-cyan-900: #164e63;
 
   /* ========================================
+     COLORS - Sky
+     ======================================== */
+  --color-sky-500: #0ea5e9; /* DS interactive accent; sky family introduced with grade 500 only */
+
+  /* ========================================
      COLORS - Red (Error/Danger)
      ======================================== */
   --color-red-50: #fef2f2;
