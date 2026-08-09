@@ -97,4 +97,24 @@ describe('readViewParenting', () => {
         expect(readViewParenting(project(), 'root').detached).toBe(false);
         expect(readViewParenting(project(), 'root').fatherId).toBe('vpA');
     });
+
+    // fatherName feeds the read-only breadcrumb (U-2). It comes from the same idlookup
+    // read as the row below it, so the two cannot disagree.
+    it('names the father of a child view', () => {
+        expect(readViewParenting(project(), 'child').fatherName).toBe('Root');
+        expect(readViewParenting(project(), 'grandchild').fatherName).toBe('Child');
+    });
+
+    it('names the viewpoint as the father of a top-level view', () => {
+        // `father = viewpoint` is how a top-level view is stored (D-4-7): the name is
+        // the viewpoint's own, which is why the breadcrumb drops the segment there.
+        expect(readViewParenting(project(), 'root').fatherName).toBe('Alpha');
+    });
+
+    it('leaves the father nameless when there is no father', () => {
+        const s = project();
+        s.idlookup.sibling.father = '';
+        s.idlookup.sibling.viewpoint = undefined;
+        expect(readViewParenting(s, 'sibling').fatherName).toBeUndefined();
+    });
 });

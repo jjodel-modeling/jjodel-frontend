@@ -149,3 +149,20 @@
   font-size: 11px;
   line-height: 16px;
 }
+
+// ----------------------------------------------
+// U-2: the read-only parenting breadcrumb reuses the global .jj-context-bar skin.
+// Scoped overrides only: no full-width bar chrome inside the field block, and no
+// click affordance — every segment is plain text here.
+// ----------------------------------------------
+.jj-parenting-breadcrumb.jj-context-bar {
+    padding: 0 0 10px;
+    background: transparent;
+    border-bottom: none;
+}
+.jj-parenting-breadcrumb .jj-context-bar__segment {
+    cursor: default;
+}
+.jj-parenting-breadcrumb .jj-context-bar__segment:hover {
+    background: transparent;
+}

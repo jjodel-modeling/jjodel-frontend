@@ -35,6 +35,8 @@ export interface ViewParentingFacts {
     viewpointName?: string;
     /** `d.father`, empty when the view hangs from nothing. */
     fatherId?: string;
+    /** Name of the father, when there is one. */
+    fatherName?: string;
     /** No father at all: legacy state, no UI path produces it any more. */
     detached: boolean;
     /** Root of the viewpoint first, then the co-located views, by name. */
@@ -68,6 +70,7 @@ export function readViewParenting(state: ViewSubtreeSource, viewId: string): Vie
     }
 
     const viewpointName: string | undefined = viewpointId ? state.idlookup?.[viewpointId]?.name : undefined;
+    const fatherName: string | undefined = fatherId ? state.idlookup?.[fatherId]?.name : undefined;
     const parentOptions: ParentOption[] = viewpointId
         ? [{ value: viewpointId, label: `(root of ${viewpointName || 'viewpoint'})` }, ...coLocated]
         : coLocated;
@@ -76,6 +79,7 @@ export function readViewParenting(state: ViewSubtreeSource, viewId: string): Vie
         viewpointId,
         viewpointName,
         fatherId,
+        fatherName,
         detached: !fatherId,
         parentOptions,
         descendantCount: subtree.length,

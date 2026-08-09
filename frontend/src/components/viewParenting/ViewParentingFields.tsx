@@ -63,8 +63,26 @@ export const ViewParentingFields: React.FC<ViewParentingFieldsProps> = ({ view, 
 
     const followers = facts.descendantCount;
 
+    // U-2: read-only breadcrumb over the same persisted facts as the row below (D-4-2).
+    // Segments that exist only; parent omitted when the father IS the viewpoint root.
+    const crumbs: string[] = [];
+    if (facts.viewpointId && facts.viewpointId !== (view.id as any)) crumbs.push(facts.viewpointName || 'unnamed');
+    if (facts.fatherId && facts.fatherId !== facts.viewpointId && facts.fatherId !== (view.id as any)) crumbs.push(facts.fatherName || 'unnamed');
+    crumbs.push(view.name || 'unnamed');
+
     return (
         <>
+            {crumbs.length >= 2 && (
+                <div className="jj-parenting-breadcrumb jj-context-bar" role="navigation" aria-label="View parenting">
+                    {crumbs.map((c, i) => (
+                        <React.Fragment key={i}>
+                            {i > 0 && <span className="jj-context-bar__sep">›</span>}
+                            <span className={'jj-context-bar__segment' + (i === crumbs.length - 1 ? ' jj-context-bar__segment--current' : '')}>{c}</span>
+                        </React.Fragment>
+                    ))}
+                </div>
+            )}
+
             {/* Viewpoint — derived from the parent chain, never written from here (D-4-1) */}
             <div className="jj-field">
                 <div className="jj-field-label">

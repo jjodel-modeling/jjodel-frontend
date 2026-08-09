@@ -62,6 +62,10 @@ citare l'id con la data. Le decisioni sostituite si spostano in "Superate", con 
   legacy (Name; father: Viewpoint/Parent), ricollocati verbatim con write path invariati; il doppio
   writer di father resta registrato e non corretto qui. Breadcrumb rinviata finché parent e viewpoint
   non sono distinguibili.
+  **Sospensiva sciolta (2026-08-09)**: parent e viewpoint sono distinguibili dalla voce 4
+  (D-4-1/D-4-2), U-2 parte. Ratifica in chat Cowork del 2026-08-09; la breadcrumb legge
+  `readViewParenting`, non i getter del proxy. Vedi Q2 nella sezione «Uniformazione delle due
+  property card», dove lo scioglimento è già a registro.
 - **R-2/3.6** (2026-08-07) — Finestra Style, rilevamento del css globale. (1) Suonano solo i css
   **modificati dall'autore**: confronto col blocco di fabbrica (`view/viewElement/defaultViewCss.ts`,
   estratto dal costruttore) a whitespace normalizzato; residuo accettato, un css di fabbrica che
