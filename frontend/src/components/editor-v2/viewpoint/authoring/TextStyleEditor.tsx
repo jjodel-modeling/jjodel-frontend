@@ -13,8 +13,8 @@ const WEIGHT_OPTIONS = [
     { value: 'bold', label: 'Bold' },
 ];
 const STYLE_OPTIONS = [
-    { value: 'normal', label: 'Normale' },
-    { value: 'italic', label: 'Corsivo' },
+    { value: 'normal', label: 'Normal' },
+    { value: 'italic', label: 'Italic' },
 ];
 
 const COLOR_SEED = '#334155';
@@ -98,14 +98,14 @@ function AxisRow<T>({
                 <span className="jj-textstyle-row__label">{label}</span>
                 <div className="jj-textstyle-row__control">
                     {isCond
-                        ? <span className="jj-textstyle-row__condlabel">Condizionale</span>
+                        ? <span className="jj-textstyle-row__condlabel">Conditional</span>
                         : renderSimple(bare, (v) => onChange(v))}
                 </div>
                 <button
                     type="button"
                     className={`jj-textstyle-row__fx${isCond ? ' is-active' : ''}`}
                     onClick={flip}
-                    title={isCond ? 'Torna a valore fisso' : 'Rendi condizionale (ƒx)'}
+                    title={isCond ? 'Back to fixed value' : 'Make conditional (ƒx)'}
                     aria-pressed={isCond}
                 >
                     <i className="bi bi-lightning-charge" aria-hidden="true" />
@@ -167,7 +167,7 @@ export const TextStyleEditor: React.FC<TextStyleEditorProps> = ({
                 classNames={classNames}
             />
             <AxisRow<number>
-                label="Dimensione"
+                label="Size"
                 value={value?.fontSize}
                 onChange={(next) => patch({ fontSize: next })}
                 axisDefault={12}
@@ -201,7 +201,7 @@ export const TextStyleEditor: React.FC<TextStyleEditorProps> = ({
                 classNames={classNames}
             />
             <AxisRow<FontWeightToken>
-                label="Peso"
+                label="Weight"
                 value={value?.fontWeight}
                 onChange={(next) => patch({ fontWeight: next })}
                 axisDefault="normal"
@@ -221,7 +221,7 @@ export const TextStyleEditor: React.FC<TextStyleEditorProps> = ({
                 classNames={classNames}
             />
             <AxisRow<'normal' | 'italic'>
-                label="Stile"
+                label="Style"
                 value={value?.fontStyle}
                 onChange={(next) => patch({ fontStyle: next })}
                 axisDefault="normal"
@@ -234,14 +234,14 @@ export const TextStyleEditor: React.FC<TextStyleEditorProps> = ({
                     />
                 )}
                 renderBranch={(val, onCh) => (
-                    <Select placeholder="Normale" options={STYLE_OPTIONS} value={val} onChange={(e) => onCh(e.target.value as 'normal' | 'italic')} />
+                    <Select placeholder="Normal" options={STYLE_OPTIONS} value={val} onChange={(e) => onCh(e.target.value as 'normal' | 'italic')} />
                 )}
                 features={features}
                 featuresHint={featuresHint}
                 classNames={classNames}
             />
             <AxisRow<string>
-                label="Colore"
+                label="Color"
                 value={value?.color}
                 onChange={(next) => patch({ color: next })}
                 axisDefault={COLOR_SEED}
@@ -255,7 +255,7 @@ export const TextStyleEditor: React.FC<TextStyleEditorProps> = ({
                         : (
                             <div className="jj-textstyle-color">
                                 <ColorPicker value={bare} onChange={(hex) => setBare(hex)} />
-                                <button type="button" className="jj-textstyle-clear" title="Rimuovi (Default)" onClick={() => setBare(undefined)}>
+                                <button type="button" className="jj-textstyle-clear" title="Remove (Default)" onClick={() => setBare(undefined)}>
                                     <i className="bi bi-x-lg" aria-hidden="true" />
                                 </button>
                             </div>

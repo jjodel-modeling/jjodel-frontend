@@ -65,7 +65,7 @@ function summarizeTextStyle(style: TextStyle | undefined): Summary {
         else if (color) swatch = { conditional: false, color: color as string };
     }
     // Axes present but nothing visible (e.g. only fontStyle:'normal') -> avoid a blank trigger.
-    if (segments.length === 0 && !swatch) segments.push({ conditional: false, text: 'Personalizzato' });
+    if (segments.length === 0 && !swatch) segments.push({ conditional: false, text: 'Custom' });
     return { isDefault: false, segments, swatch };
 }
 
@@ -96,7 +96,7 @@ function computePopoverStyle(rect: DOMRect): React.CSSProperties {
 export const TextStyleField: React.FC<TextStyleFieldProps> = ({
     value,
     onChange,
-    label = 'Stile',
+    label = 'Style',
     features = null,
     featuresHint,
     classNames = [],
@@ -157,7 +157,7 @@ export const TextStyleField: React.FC<TextStyleFieldProps> = ({
                 </span>
                 {summary.swatch && (
                     summary.swatch.conditional
-                        ? <span className="jj-textstyle-swatch jj-textstyle-swatch--conditional" title="Colore condizionale"><i className="bi bi-lightning-charge" aria-hidden="true" /></span>
+                        ? <span className="jj-textstyle-swatch jj-textstyle-swatch--conditional" title="Conditional color"><i className="bi bi-lightning-charge" aria-hidden="true" /></span>
                         : <span className="jj-textstyle-swatch" style={{ background: summary.swatch.color }} title={summary.swatch.color} />
                 )}
                 <i className="bi bi-chevron-down jj-textstyle-field__caret" aria-hidden="true" />
@@ -166,13 +166,13 @@ export const TextStyleField: React.FC<TextStyleFieldProps> = ({
             {open && popStyle && createPortal(
                 <div ref={popoverRef} className="jj-textstyle-popover" style={popStyle}>
                     <div className="jj-textstyle-popover__header">
-                        <span className="jj-textstyle-popover__title">Tipografia</span>
+                        <span className="jj-textstyle-popover__title">Typography</span>
                         <button
                             type="button"
                             className="jj-textstyle-popover__reset"
                             onClick={() => onChange(undefined)}
                             disabled={summary.isDefault}
-                            title="Reimposta al default"
+                            title="Reset to default"
                         >
                             <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
                         </button>

@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-09 — refactor(i18n): pannello TextStyle in inglese (voce 6, Commit 2/5)
+**Prompt**: «Fase 1 — Traduzione: pass di lingua R-4 (Voce 6)», documento prompt 2026-08-09 18:00, Commit 2 di 5. Tradurre le 16 stringhe di `TextStyleEditor.tsx` e `TextStyleField.tsx`. «Style»/«Stile» resta la label corretta per lo stile del font: il glossario sposta «Tratto» altrove (Commit 4), non tocca questi file.
+**Files touched**: `frontend/src/components/editor-v2/viewpoint/authoring/TextStyleEditor.tsx` (11 stringhe su 10 righe), `frontend/src/components/editor-v2/viewpoint/authoring/TextStyleField.tsx` (5), `docs/claude-code-log.md` (questa entry).
+**Outcome**: ✅ completed — 16 stringhe tradotte come da tabella del prompt: `Normale`→`Normal`, `Corsivo`→`Italic`, `Condizionale`→`Conditional`, `Torna a valore fisso`/`Rendi condizionale (ƒx)`→`Back to fixed value`/`Make conditional (ƒx)`, `Dimensione`→`Size`, `Peso`→`Weight`, `Stile`→`Style`, `Colore`→`Color`, `Rimuovi (Default)`→`Remove (Default)`; `Personalizzato`→`Custom`, `Colore condizionale`→`Conditional color`, `Tipografia`→`Typography`, `Reimposta al default`→`Reset to default`. Gate: build verde (solo warning chunk-size preesistente), `tsc` 33 = baseline invariata e zero errori nei due file toccati, nessun test copre l'area (`rg -l TextStyle` sui file di test: zero hit), `check:docs` 2/2 PASS coi due warning noti.
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — verifica visiva di Alfonso non ancora eseguita (HARD STOP 2)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: in attesa (HARD STOP 2)
+**Notes**: **Correzione a una nota del prompt.** Il prompt attribuiva `TextStyleEditor.tsx:16` al `Select` del *peso* e la 237 a quello dello *stile*. La lettura diretta lo smentisce: la 16 sta in `STYLE_OPTIONS` (stile del font), e `WEIGHT_OPTIONS` alle righe 9-14 era **già interamente inglese** (`Normal/Medium/Semibold/Bold`); la 237 è il `placeholder` del `Select` di stile nel ramo condizionale. Come il prompt stesso prescriveva per questo caso, ho tradotto `Normale`→`Normal` in entrambi i siti: la resa inglese non cambia. **Verifica sui consumatori**: `TextStyleField` ha **un solo** consumatore, `LabelEntryEditor.tsx:106`, che **non** passa la prop `label` — quindi il default `'Stile'` (riga 99) è ciò che si vede a schermo, e tradurlo è una modifica visibile, non inerte. Non toccato, perché commento e quindi fuori scope per D9: il docstring `TextStyleEditor.tsx:132-133`, che nomina «Tipografia popover» e enumera «Font, Dimensione, Peso, Stile, Colore» — dopo questo commit descrive label che non esistono più. È fra i 593 commenti censiti in Fase 0 e va con quella voce; lo segnalo perché è documentazione resa stantia da questo commit, non un residuo casuale.
+**Prompt document name**: 2026-08-09 18:00
+
 ## 2026-08-09 — refactor(i18n): stringhe sparse in inglese (voce 6, Commit 1/5)
 **Prompt**: «Fase 1 — Traduzione: pass di lingua R-4 (Voce 6)», documento prompt 2026-08-09 18:00, Commit 1 di 5. Tradurre le 21 stringhe sparse censite in Fase 0 §4 Area 5, su 8 file. Zero refactoring opportunistico; superficie autorizzata = il censimento.
 **Files touched**: `frontend/src/components/editors/EditorToolbar.tsx` (4 righe, 6 stringhe), `frontend/src/components/editor-v2/EditorV2.tsx` (2 toast), `frontend/src/components/editor-v2/hooks/useClassRemoval.ts` (2), `frontend/src/jjscript/components/ScriptBlock.tsx` (3), `frontend/src/components/editors/views/ViewData.tsx` (1), `frontend/src/components/editors/views/data/TemplateData.tsx` (1), `frontend/src/components/DonationBanner/DonationBanner.tsx` (3), `frontend/src/pages/ConfirmAccount.tsx` (1), `docs/claude-code-log.md` (questa entry).
