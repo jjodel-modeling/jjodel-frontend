@@ -12,6 +12,7 @@ import { LabelListEditor } from './LabelListEditor';
 import { FieldCompartmentListEditor } from './FieldCompartmentListEditor';
 import { BadgeListEditor } from './BadgeListEditor';
 import { MatchingSection } from './MatchingSection';
+import { metaclassAmbiguityWarning } from './authoringMessages';
 import { IRIdentityFields, IRSourceBody, irTabBodyStyle, type IRIdentityProps, type IRTabId } from './irTabs';
 import { JjodelEvents } from '../../../../events/registry';
 
@@ -263,7 +264,7 @@ export const VertexAuthoringPanel: React.FC<VertexAuthoringPanelProps> = ({ view
                 Cross-tab (R-B): it names the tab where the metaclass is chosen. */}
             {featureInfo.metamodelsWithClass > 1 && (
                 <ErrorText>
-                    {`La metaclasse «${featureInfo.targetName}» è dichiarata in ${featureInfo.metamodelsWithClass} metamodelli del progetto: la view usa quella fissata nel tab Applies to quando la metaclasse è stata scelta, non una qualsiasi con questo nome. Verifica che i metamodelli non siano duplicati.`}
+                    {metaclassAmbiguityWarning(featureInfo.targetName, featureInfo.metamodelsWithClass)}
                 </ErrorText>
             )}
 

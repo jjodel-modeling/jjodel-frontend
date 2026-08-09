@@ -29,6 +29,7 @@ import {
     type EdgeNature,
 } from '../ir/edgeEndpoints';
 import { TextSourceEditor } from './TextSourceEditor';
+import { metaclassAmbiguityWarning } from './authoringMessages';
 import { IRIdentityFields, IRSourceBody, irTabBodyStyle, type IRIdentityProps, type IRTabId } from './irTabs';
 
 export interface EdgeAuthoringPanelProps {
@@ -455,7 +456,7 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
             {/* Cross-tab (R-B): names the tab where the metaclass is chosen. */}
             {featureInfo.metamodelsWithClass > 1 && (
                 <ErrorText>
-                    {`La metaclasse «${featureInfo.targetName}» è dichiarata in ${featureInfo.metamodelsWithClass} metamodelli del progetto: la view usa quella fissata nel tab Applies to quando la metaclasse è stata scelta, non una qualsiasi con questo nome. Verifica che i metamodelli non siano duplicati.`}
+                    {metaclassAmbiguityWarning(featureInfo.targetName, featureInfo.metamodelsWithClass)}
                 </ErrorText>
             )}
 

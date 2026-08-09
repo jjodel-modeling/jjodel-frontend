@@ -20,6 +20,7 @@ import { defaultRowViewIR } from '../ir/irDefaults';
 import type { RowViewIR, TextSource } from '../ir/irTypes';
 import { resolveMetaclassId, withMetaclassPins, type MetaclassRef } from '../ir/metaclassPin';
 import { TextSourceEditor } from './TextSourceEditor';
+import { metaclassAmbiguityWarning } from './authoringMessages';
 import { IRIdentityFields, IRSourceBody, irTabBodyStyle, type IRIdentityProps, type IRTabId } from './irTabs';
 
 export interface RowAuthoringPanelProps {
@@ -269,7 +270,7 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view, acti
             {/* Cross-tab (R-B): names the tab where the metaclass is chosen. */}
             {featureInfo.metamodelsWithClass > 1 && (
                 <ErrorText>
-                    {`La metaclasse «${featureInfo.targetName}» è dichiarata in ${featureInfo.metamodelsWithClass} metamodelli del progetto: la view usa quella fissata nel tab Applies to quando la metaclasse è stata scelta, non una qualsiasi con questo nome. Verifica che i metamodelli non siano duplicati.`}
+                    {metaclassAmbiguityWarning(featureInfo.targetName, featureInfo.metamodelsWithClass)}
                 </ErrorText>
             )}
 
