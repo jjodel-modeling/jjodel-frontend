@@ -128,6 +128,16 @@ citare l'id con la data. Le decisioni sostituite si spostano in "Superate", con 
   `'orthogonal' | 'straight' | 'curved'`, mai rinominati (le view IR salvate non hanno
   VersionFixer); etichette UI libere (oggi Manhattan / Direct / Bezier). Campo assente ≡
   `orthogonal`, resa identica.
+- **R-B9-bis** (2026-08-09, dalla chiusura irValidate, commit `1cee0e252`) — Le regole di
+  validazione dell'IR vivono nel percorso di authoring (`validateIR`, chiamato dai soli quattro
+  pannelli di authoring), mai nel percorso di render (`compile*`): il render resta permissivo
+  verso i dati già persistiti, l'authoring applica il vocabolario. Ogni nuova regola di
+  validazione IR va collocata giudicando il caso con questo criterio (authoring-time vs
+  render-time), non per analogia col primo pattern incontrato nel codebase. Precedente: la
+  regola sul routing (R-B9) innestata in `compileEdgeView` avrebbe scartato in silenzio le view
+  già persistite con routing `''` che oggi rendono ortogonali (`UnifiedEdge.tsx:142`); in
+  `validateIR` blocca i nuovi valori invalidi senza toccare il pregresso. Vocabolario unico
+  esportato: `VALID_ROUTING_VALUES`.
 - **R-B10** (2026-08-03) — Con routing non ortogonale i waypoint non si creano
   (`SegmentHandles` non montato) e quelli persistiti in `DVertex.irEdgeLayout` non si
   cancellano né si riscrivono: tornano vivi al ritorno a `orthogonal`.
