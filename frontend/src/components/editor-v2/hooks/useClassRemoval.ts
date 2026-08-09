@@ -256,8 +256,8 @@ export function useClassRemoval(
             const n = orphanedInstances;
             fireToast(
                 n === 1
-                    ? `1 istanza di ${analysis.className} è diventata orfana`
-                    : `${n} istanze di ${analysis.className} sono diventate orfane`,
+                    ? `1 instance of ${analysis.className} became orphaned`
+                    : `${n} instances of ${analysis.className} became orphaned`,
             );
         }
 

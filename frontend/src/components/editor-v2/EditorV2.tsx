@@ -979,14 +979,14 @@ function EditorV2Inner({ modelid, onSwitchEditor, classicSlot, editorMode, hasVi
             // Source = the single SELECTED instance of this view. 0 or >1 → no-op + warn.
             const sources = targets.filter(n => n.selected);
             if (sources.length !== 1) {
-                toast.warning('Seleziona una sola istanza di questa view come sorgente della dimensione.');
+                toast.warning('Select exactly one instance of this view as the size source.');
                 return;
             }
             const src = sources[0];
             const w = src.measured?.width ?? (src as any).width;
             const h = src.measured?.height ?? (src as any).height;
             if (w == null || h == null) {
-                toast.warning('La dimensione della sorgente non e\' disponibile.');
+                toast.warning('The source size is not available.');
                 return;
             }
 

@@ -123,7 +123,7 @@ export function EditorToolbar({
             type="button"
             className={`editor-toolbar__btn ${wrap ? 'active' : ''}`}
             onClick={handleWrapToggle}
-            title={wrap ? 'Disabilita Word Wrap' : 'Abilita Word Wrap'}
+            title={wrap ? 'Disable Word Wrap' : 'Enable Word Wrap'}
           >
             <i className="bi bi-text-wrap" />
           </button>
@@ -133,7 +133,7 @@ export function EditorToolbar({
             type="button"
             className={`editor-toolbar__btn ${copyFeedback ? 'success' : ''}`}
             onClick={handleCopy}
-            title="Copia contenuto"
+            title="Copy content"
             disabled={!content}
           >
             <i className={`bi ${copyFeedback ? 'bi-check-lg' : 'bi-clipboard'}`} />
@@ -144,7 +144,7 @@ export function EditorToolbar({
             type="button"
             className={`editor-toolbar__btn ${expanded ? 'active' : ''}`}
             onClick={handleExpandToggle}
-            title={expanded ? 'Riduci altezza' : 'Espandi altezza'}
+            title={expanded ? 'Reduce height' : 'Expand height'}
           >
             <i className={`bi ${expanded ? 'bi-arrows-collapse' : 'bi-arrows-expand'}`} />
           </button>
@@ -155,7 +155,7 @@ export function EditorToolbar({
               type="button"
               className="editor-toolbar__btn"
               onClick={handleFullscreen}
-              title="Apri in finestra grande"
+              title="Open in large window"
             >
               <i className="bi bi-arrows-fullscreen" />
             </button>

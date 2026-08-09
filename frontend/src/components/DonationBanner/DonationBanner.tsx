@@ -15,7 +15,7 @@ export const DonationBanner: React.FC = () => {
             <button
                 className="donation-banner__close"
                 onClick={dismiss}
-                aria-label="Chiudi"
+                aria-label="Close"
             >
                 <i className="bi bi-x" />
             </button>
@@ -33,8 +33,8 @@ export const DonationBanner: React.FC = () => {
             </div>
 
             <p className="donation-banner__body">
-                Jjodel è gratuito e open source. Se lo usi nella tua ricerca o didattica,
-                considera una donazione per mantenere viva la piattaforma cloud.
+                Jjodel is free and open source. If you use it in your research or teaching,
+                consider a donation to keep the cloud platform alive.
             </p>
 
             <a
@@ -44,7 +44,7 @@ export const DonationBanner: React.FC = () => {
                 className="donation-banner__cta"
                 onClick={dismiss}
             >
-                Dona su Open Collective →
+                Donate on Open Collective →
             </a>
         </div>
     );

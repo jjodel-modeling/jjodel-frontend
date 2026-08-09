@@ -47,7 +47,7 @@ function ConfirmAccount() {
                 </p>
 
                 {loading ? (
-                    <p style={styles.loadingText}>Conferma in corso... 🔄</p>
+                    <p style={styles.loadingText}>Confirming... 🔄</p>
                 ) : (
                     <button
                         onClick={confirmAccount}

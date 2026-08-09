@@ -141,7 +141,7 @@ function ViewDataComponent(props: AllProps) {
                                     ? (
                                         <section className="properties-tab properties-panel">
                                             <div className="jj-field-label" style={{ marginTop: 4 }}>IR authoring</div>
-                                            <HelpText>View IR di kind "{ir.kind}": authoring non ancora disponibile.</HelpText>
+                                            <HelpText>View IR of kind "{ir.kind}": authoring not available yet.</HelpText>
                                         </section>
                                     )
                                     : <EnableIRPanel view={view} />}

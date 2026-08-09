@@ -1443,7 +1443,7 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
             {outcome?.kind === 'success' && (
                 <div className="script-block__success script-block__success--strip">
                     <i className="bi bi-check-circle" />
-                    <span>{outcome.count} comandi applicati</span>
+                    <span>{outcome.count} commands applied</span>
                 </div>
             )}
             {(outcome?.kind === 'runtime-error' || outcome?.kind === 'syntax-error') && (
@@ -1451,8 +1451,8 @@ export const ScriptBlock: React.FC<ScriptBlockProps> = ({
                     <i className="bi bi-exclamation-triangle" />
                     <span>
                         {outcome.kind === 'syntax-error'
-                            ? `Errore di sintassi alla riga ${outcome.line}: ${outcome.message}`
-                            : `Errore alla riga ${outcome.line}: ${outcome.message}`}
+                            ? `Syntax error at line ${outcome.line}: ${outcome.message}`
+                            : `Error at line ${outcome.line}: ${outcome.message}`}
                     </span>
                 </div>
             )}

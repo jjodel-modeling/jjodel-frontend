@@ -21,8 +21,8 @@ function TemplateData(props: AllProps) {
                 trace of the original notation) but is opened read-only by ViewData. */}
             {props.legacyNoIR && (
                 <HelpText>
-                    Questo template non viene più interpretato. Il rendering usa la notazione
-                    astratta; per definire una sintassi concreta, abilita l'IR.
+                    This template is no longer interpreted. Rendering uses the abstract
+                    notation; to define a concrete syntax, enable the IR.
                 </HelpText>
             )}
             {/*<TextArea data={view} field={"constants"} label={"Constants"}  readonly={readOnly} />*/}
