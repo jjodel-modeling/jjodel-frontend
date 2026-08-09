@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jjodel — Storia dello sviluppo</title>
+<style>
+  :root{
+    --slate-900:#0f172a; --slate-800:#1e293b; --slate-700:#334155; --slate-600:#475569;
+    --slate-500:#64748b; --slate-400:#94a3b8; --slate-300:#cbd5e1; --slate-200:#e2e8f0;
+    --slate-100:#f1f5f9; --slate-50:#f8fafc;
+    --cyan:#0ea5e9; --cyan-700:#0284c7; --cyan-50:#e0f2fe;
+    --ok-bg:#e0f2fe; --ok-fg:#0284c7;
+    --warn-bg:#fef9c3; --warn-fg:#854d0e;
+    --open-bg:#f1f5f9; --open-fg:#475569;
+    --bug-bg:#fee2e2; --bug-fg:#b91c1c;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       background:var(--slate-50);color:var(--slate-700);line-height:1.55;font-size:14px;padding:32px 16px 64px}
+  .wrap{max-width:880px;margin:0 auto}
+  header{margin-bottom:40px}
+  .kicker{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--cyan-700)}
+  h1{font-size:28px;font-weight:700;color:var(--slate-900);margin:6px 0 8px}
+  .sub{color:var(--slate-500);font-size:14px;max-width:640px}
+  .meta{margin-top:12px;font-size:11px;color:var(--slate-400)}
+  h2{font-size:18px;font-weight:700;color:var(--slate-800);margin:48px 0 6px;padding-top:8px}
+  h2 .n{color:var(--cyan);margin-right:8px}
+  .lede{color:var(--slate-500);margin-bottom:20px;font-size:13px;max-width:680px}
+  .card{background:#fff;border:1px solid var(--slate-200);border-radius:12px;padding:20px 24px;margin-bottom:16px;
+        box-shadow:0 1px 2px rgba(15,23,42,.05)}
+  /* numeri */
+  .facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .fact{background:#fff;border:1px solid var(--slate-200);border-radius:10px;padding:14px 16px}
+  .fact b{display:block;font-size:20px;color:var(--slate-900);font-weight:700}
+  .fact span{font-size:11px;color:var(--slate-500)}
+  /* obiettivi */
+  .goals{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+  .goal{background:#fff;border:1px solid var(--slate-200);border-radius:10px;padding:16px 18px}
+  .goal h3{font-size:13px;font-weight:600;color:var(--slate-800);margin-bottom:6px}
+  .goal p{font-size:12.5px;color:var(--slate-500)}
+  /* timeline */
+  .tl{position:relative;padding-left:26px;margin-top:24px}
+  .tl::before{content:'';position:absolute;left:7px;top:6px;bottom:6px;width:2px;background:var(--slate-200)}
+  .era{position:relative;margin-bottom:28px}
+  .era::before{content:'';position:absolute;left:-25px;top:5px;width:12px;height:12px;border-radius:50%;
+               background:#fff;border:3px solid var(--cyan)}
+  .era.current::before{background:var(--cyan)}
+  .era .when{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--cyan-700)}
+  .era h3{font-size:16px;font-weight:700;color:var(--slate-900);margin:2px 0 4px}
+  .era .stat{font-size:11px;color:var(--slate-400);margin-bottom:8px}
+  .era ul{list-style:none}
+  .era li{position:relative;padding-left:16px;margin-bottom:5px;font-size:13px}
+  .era li::before{content:'—';position:absolute;left:0;color:var(--slate-300)}
+  .era li b{color:var(--slate-800);font-weight:600}
+  /* pills */
+  .pill{display:inline-block;font-size:10.5px;font-weight:600;padding:1px 8px;border-radius:999px;vertical-align:1px;margin-left:6px;white-space:nowrap}
+  .p-ok{background:var(--ok-bg);color:var(--ok-fg)}
+  .p-part{background:var(--warn-bg);color:var(--warn-fg)}
+  .p-open{background:var(--open-bg);color:var(--open-fg);border:1px dashed var(--slate-300)}
+  .p-bug{background:var(--bug-bg);color:var(--bug-fg)}
+  /* aree */
+  .areas{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+  .area{background:#fff;border:1px solid var(--slate-200);border-radius:10px;padding:16px 18px}
+  .area h3{font-size:13px;font-weight:700;color:var(--slate-800);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em;font-size:11.5px}
+  .area ul{list-style:none}
+  .area li{font-size:12.5px;margin-bottom:4px;color:var(--slate-600)}
+  /* requisiti */
+  .req{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:700px){.req{grid-template-columns:1fr}}
+  .req .card{margin-bottom:0}
+  .req h3{font-size:13px;font-weight:700;color:var(--slate-800);margin-bottom:10px}
+  .req h4{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--slate-400);margin:12px 0 4px}
+  .req ul{list-style:none}
+  .req li{font-size:12.5px;margin-bottom:4px;padding-left:14px;position:relative}
+  .req li::before{content:'·';position:absolute;left:2px;color:var(--slate-300);font-weight:700}
+  /* futuro */
+  .future{border:2px dashed var(--slate-300);border-radius:12px;padding:20px 24px;background:var(--slate-100)}
+  .future h3{font-size:13px;font-weight:700;color:var(--slate-700);margin-bottom:8px}
+  .future p{font-size:12.5px;color:var(--slate-500);margin-bottom:10px}
+  .future ul{list-style:none;columns:2;column-gap:28px}
+  @media(max-width:700px){.future ul{columns:1}}
+  .future li{font-size:12.5px;margin-bottom:5px;padding-left:14px;position:relative;break-inside:avoid}
+  .future li::before{content:'▸';position:absolute;left:0;color:var(--cyan)}
+  footer{margin-top:48px;font-size:11px;color:var(--slate-400);border-top:1px solid var(--slate-200);padding-top:16px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="kicker">Jjodel · documento vivo</div>
+  <h1>Storia dello sviluppo</h1>
+  <p class="sub">Da un prototipo Create-React-App del marzo 2021 a una piattaforma di metamodeling web con tre linguaggi, authoring visuale della sintassi concreta e un redesign UI in corso. Feature, requisiti, obiettivi e milestone, ricostruiti da git e dal knowledge base di progetto.</p>
+  <div class="meta">Ultimo aggiornamento: 2026-08-01 · fonti: git history (2.314 commit), mappa sintassi concreta, contesto di progetto, file sessione</div>
+</header>
+
+<h2><span class="n">01</span>Visione e obiettivi</h2>
+<p class="lede">Perché Jjodel esiste, e i principi che ne hanno guidato ogni era.</p>
+<div class="goals">
+  <div class="goal"><h3>Metamodeling senza attrito</h3><p>Portare l'MDE nel browser: niente toolchain desktop, niente rigenerazioni. Metamodelli e modelli co-evolvono live, per ricercatori, educatori e studenti dal principiante all'esperto.</p></div>
+  <div class="goal"><h3>Riflessività</h3><p>Un nucleo dati riflessivo (DState, proxy D/L) in cui ogni cosa, dal metamodello alla vista, è un modello manipolabile a runtime.</p></div>
+  <div class="goal"><h3>Sintassi concrete come dati</h3><p>La notazione grafica non è codice: è un IR tipizzato, persistito e autorabile da UI. Espressività e robustezza insieme, con jsxString come livello di uscita.</p></div>
+  <div class="goal"><h3>Ridurre il cognitive load</h3><p>L'obiettivo cardine del redesign 2026: progressive disclosure (Basic/Advanced), pannelli flottanti, un design system coerente. Piena funzionalità, metà del rumore.</p></div>
+</div>
+
+<h2><span class="n">02</span>La storia in numeri</h2>
+<div class="facts">
+  <div class="fact"><b>31 mar 2021</b><span>primo commit (CRA init)</span></div>
+  <div class="fact"><b>2.314</b><span>commit sul branch di sviluppo</span></div>
+  <div class="fact"><b>6</b><span>contributor principali</span></div>
+  <div class="fact"><b>185</b><span>commit nel solo luglio 2026 (picco)</span></div>
+  <div class="fact"><b>3</b><span>linguaggi: JjEL, JjTL, JjScript</span></div>
+  <div class="fact"><b>1 libro + 1 paper</b><span>jjodel book v1.0 · paper JjTL/JjEL</span></div>
+</div>
+
+<h2><span class="n">03</span>Le ere</h2>
+<p class="lede">Sei fasi riconoscibili, dal prototipo alla piattaforma. Le date vengono dai commit; le milestone dai documenti di progetto.</p>
+<div class="tl">
+
+  <div class="era">
+    <div class="when">2021 – 2022 · Origini</div>
+    <h3>Il prototipo nel browser</h3>
+    <div class="stat">65 commit · avvio di Damiano Di Vincenzo</div>
+    <ul>
+      <li><b>31/03/2021</b> primo commit: init Create React App</li>
+      <li>Nucleo sperimentale: store Redux, grafo a canvas, prime azioni sullo stato</li>
+      <li><b>Dic 2022</b> primo Dockerfile: la piattaforma diventa deployabile</li>
+    </ul>
+  </div>
+
+  <div class="era">
+    <div class="when">2023 · Piattaforma riflessiva</div>
+    <h3>Viewpoint, viste e collaborazione</h3>
+    <div class="stat">347 commit</div>
+    <ul>
+      <li><b>Feb 2023</b> nasce il sistema viewpoint/viste: più notazioni sulla stessa astrazione, view come jsxString</li>
+      <li>Consolidamento del data model riflessivo (DState, proxy D/L, LModel)</li>
+      <li>Editor M2/M1 co-evolutivi con propagazione istantanea delle modifiche</li>
+      <li><b>Lug 2023</b> editing collaborativo</li>
+    </ul>
+  </div>
+
+  <div class="era">
+    <div class="when">2024 – 2025 · Maturazione</div>
+    <h3>Da prototipo a prodotto</h3>
+    <div class="stat">1.111 commit · picchi apr e set 2025</div>
+    <ul>
+      <li>Stabilizzazione, dashboard progetti, restyling progressivi (tree view, tab)</li>
+      <li>Ecosistema documentazione: sito Astro/Starlight su docs.jjodel.io con CI GitHub Actions</li>
+      <li>Il team si allarga: Alfonso Pierantonio, Damiano Di Vincenzo, Giordano T., Juri Di Rocco, Andrea Perelli</li>
+    </ul>
+  </div>
+
+  <div class="era">
+    <div class="when">Gen – Mag 2026 · Linguaggi e intelligenza</div>
+    <h3>JjEL, JjTL, JjScript, Jjodie</h3>
+    <div class="stat">~495 commit</div>
+    <ul>
+      <li><b>Gen 2026</b> Jjodie, l'assistente AI (client configurabili OpenAI / Anthropic / Ollama) + RAG e JjScript</li>
+      <li><b>Feb 2026</b> integrazione JjTL: trasformazioni model-to-model con piano di sviluppo in 8 fasi; JjTL come IR per futura traduzione ATL/ETL</li>
+      <li><b>Feb 2026</b> EditorV2: il nuovo canvas (fasi incrementali, edge routing con obstacle avoidance)</li>
+      <li><b>Mar–Apr 2026</b> JjEL stratificato su 3 livelli (collections, data/node, JjOM raw); sintassi ratificate (<code>:=</code>, <code>where</code>); testing pre-release (suite C, D, E)</li>
+      <li>Docs a 33 pagine con sezione Languages; API JjOM estratta (29 costrutti); paper JjTL/JjEL</li>
+      <li><b>Mag 2026</b> jjodel book v1.0</li>
+    </ul>
+  </div>
+
+  <div class="era">
+    <div class="when">Giu – Lug 2026 · Sintassi concreta autorabile</div>
+    <h3>L'IR delle viste</h3>
+    <div class="stat">La notazione diventa un artefatto tipizzato, versionato, editabile da UI</div>
+    <ul>
+      <li><b>08/06</b> genesis: schema a discriminatore <code>kind</code> + capacità componibili; tassonomia Graph / Vertex / GraphVertex / Field / Edge; IR persistito come master, rigenerazione forward-only</li>
+      <li><b>17/07</b> spike dell'interprete vertex sul canvas; poi schema v1.1 → v1.2</li>
+      <li><b>22–23/07</b> enablement da UI + matching (metaclasses, predicate, priority, exclusive)</li>
+      <li><b>25/07</b> arco row completo (R1–R3): dispatch polimorfico delle righe + authoring con preserve-verbatim; forme circle/diamond + free-resize</li>
+      <li><b>26/07</b> discovery edge: lo stack IR era già vivo; landa E0, il rendering IR-driven dello stile edge</li>
+      <li><b>27–28/07</b> EdgeAuthoringPanel per reference-as-edge (E-ref); TextStyleEditor per le label</li>
+      <li>Esito: <b>nodi e righe a un v1 completo con authoring end-to-end</b>; agli edge manca la metà object-as-edge (E-obj)</li>
+    </ul>
+  </div>
+
+  <div class="era current">
+    <div class="when">Lug 2026 – in corso · Redesign UI/UX</div>
+    <h3>Meno rumore, stessa potenza (~40–50%)</h3>
+    <div class="stat">185 commit a luglio · obiettivo: cognitive load</div>
+    <ul>
+      <li>Design system slate/cyan, griglia 8px, componenti ispirati a shadcn/ui, zero layout shift</li>
+      <li><b>28–29/07</b> floating panels (F1–F5): canvas full-width, card Properties + Tree View in overlay flottante</li>
+      <li>Tree view ridisegnata (pill states); card Properties ridisegnata sul mockup con metodo replica-HTML (valori letterali, mai prosa)</li>
+      <li><b>29–30/07</b> progressive disclosure Basic/Advanced (serie B): sezioni gated, toggle globale migrato nel Navbar (B5)</li>
+      <li><b>31/07</b> fase INSTANCES sul rail sinistro: discovery completa, fix del dock (R1: il cambio modalità chiudeva le tab), bonifica e contratto funzionale del rail (serie A)</li>
+      <li>Prossimi: token e skin del rail dal mockup (C3/C4)</li>
+    </ul>
+  </div>
+
+</div>
+
+<h2><span class="n">04</span>Feature per area</h2>
+<div class="areas">
+  <div class="area"><h3>Modeling core</h3><ul>
+    <li>Metamodelli e modelli co-evolutivi live <span class="pill p-ok">v1</span></li>
+    <li>Nucleo riflessivo DState + proxy D/L <span class="pill p-ok">v1</span></li>
+    <li>Canvas EditorV2 (routing, resize, handles) <span class="pill p-ok">v1</span></li>
+    <li>Collaborazione e persistenza progetti <span class="pill p-ok">v1</span></li>
+    <li>Import metamodelli <span class="pill p-part">non idempotente</span></li>
+  </ul></div>
+  <div class="area"><h3>Viewpoint e viste</h3><ul>
+    <li>Viste classiche jsxString <span class="pill p-ok">legacy</span></li>
+    <li>IR vertici: forme, label+text style, fill/border, compartimenti, badge, conditional, matching, authoring <span class="pill p-ok">v1</span></li>
+    <li>IR righe: dispatch polimorfico + authoring <span class="pill p-ok">v1</span> <span class="pill p-part">read-only</span></li>
+    <li>IR edge: stack + rendering E0 + authoring E-ref <span class="pill p-ok">v1</span> · E-obj <span class="pill p-open">da fare</span></li>
+    <li>Decorative views, rules editor <span class="pill p-open">da fare</span></li>
+  </ul></div>
+  <div class="area"><h3>Linguaggi</h3><ul>
+    <li>JjEL a 3 livelli (collections, context, JjOM) <span class="pill p-ok">v1</span></li>
+    <li>JjTL model-to-model, piano 8 fasi <span class="pill p-part">in sviluppo</span></li>
+    <li>JjScript in console <span class="pill p-ok">v1</span></li>
+  </ul></div>
+  <div class="area"><h3>UX e pannelli</h3><ul>
+    <li>Floating panels destra + pill di riapertura <span class="pill p-ok">fatto</span></li>
+    <li>Card Properties + disclosure Basic/Advanced <span class="pill p-ok">fatto</span></li>
+    <li>Tree view redesign <span class="pill p-ok">fatto</span></li>
+    <li>Rail sinistro / INSTANCES <span class="pill p-part">in corso</span></li>
+    <li>Dark mode <span class="pill p-part">parziale (rail escluso)</span></li>
+  </ul></div>
+  <div class="area"><h3>AI</h3><ul>
+    <li>Jjodie: assistente multi-provider (OpenAI, Anthropic, Ollama) <span class="pill p-ok">v1</span></li>
+    <li>RAG sul contesto di progetto <span class="pill p-ok">v1</span></li>
+  </ul></div>
+  <div class="area"><h3>Docs e ricerca</h3><ul>
+    <li>docs.jjodel.io (Astro/Starlight, CI) <span class="pill p-ok">33 pagine</span></li>
+    <li>jjodel book v1.0 <span class="pill p-ok">mag 2026</span></li>
+    <li>Paper JjTL/JjEL <span class="pill p-ok">fatto</span></li>
+  </ul></div>
+</div>
+
+<h2><span class="n">05</span>Requisiti</h2>
+<div class="req">
+  <div class="card">
+    <h3>Funzionali</h3>
+    <h4>Soddisfatti</h4>
+    <ul>
+      <li>Metamodeling riflessivo con propagazione live M2↔M1</li>
+      <li>Più viewpoint e viste sulla stessa astrazione</li>
+      <li>Authoring visuale della notazione (nodi, righe, edge E-ref)</li>
+      <li>Trasformazioni, espressioni e scripting in-tool</li>
+      <li>Collaborazione, multi-progetto, assistenza AI</li>
+    </ul>
+    <h4>Parziali</h4>
+    <ul>
+      <li>Edge authoring: manca object-as-edge (E-obj)</li>
+      <li>Righe: editing inline e Operation con parametri</li>
+      <li>Routing edge configurabile (oggi Manhattan fisso)</li>
+      <li>Disclosure estesa a tutti i pannelli (oggi vertex)</li>
+    </ul>
+    <h4>Aperti / bug</h4>
+    <ul>
+      <li><span class="pill p-bug" style="margin-left:0">bug</span> Rehydration viewpoint IR al reload (blocca il dogfooding)</li>
+      <li>Rename metaclasse non invalida i path (no-match silenzioso)</li>
+      <li>Decorative views, rules editor, reattività cross-object</li>
+      <li>Dual-canvas (due modelli affiancati)</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Non funzionali</h3>
+    <h4>Perseguiti attivamente</h4>
+    <ul>
+      <li>Cognitive load ridotto: progressive disclosure, pannelli on-demand</li>
+      <li>Coerenza visiva: design token slate/cyan, zero layout shift</li>
+      <li>Robustezza evolutiva: typecheck a baseline Δ0, two-phase con discovery report, hard stop visivi</li>
+      <li>Tracciabilità: log dei task, documenti vivi (mappa copertura, contesto), checkpoint di sessione</li>
+    </ul>
+    <h4>Da misurare o consolidare</h4>
+    <ul>
+      <li>Performance su modelli grandi (mai misurata sistematicamente)</li>
+      <li>Copertura test sulla UI (aree pannelli senza test)</li>
+      <li>Accessibilità e internazionalizzazione</li>
+      <li>Onboarding: docs e video pills in evoluzione</li>
+    </ul>
+  </div>
+</div>
+
+<h2><span class="n">06</span>Come lavoriamo</h2>
+<div class="card">
+  <p style="font-size:13px">Dal giugno 2026 lo sviluppo segue un modello a tre attori: <b>Alfonso</b> decide architettura e design e fa ogni verifica visiva; la <b>chat di progetto</b> co-progetta, analizza e genera prompt autocontenuti; <b>Claude Code</b> esegue chirurgicamente col minimo cambiamento. Le discipline: two-phase (discovery read-only con report salvato, hard stop, poi implementazione), un commit per volta con verifica visiva, replica HTML approvata prima di ogni skin, e un knowledge base che fa da memoria: mappe di copertura, ratifiche, file di sessione.</p>
+</div>
+
+<h2><span class="n">07</span>Prossimo futuro</h2>
+<div class="future">
+  <h3>Bozza — da completare insieme</h3>
+  <p>Candidati già sul tavolo, dall'ordine consigliato dei documenti vivi. Questa sezione è il punto d'ingresso della prossima iterazione: qui aggiungeremo obiettivi, priorità e date.</p>
+  <ul>
+    <li>Chiudere INSTANCES: token e skin del rail dal mockup (C3/C4)</li>
+    <li>E-obj: completare l'authoring edge (object-as-edge)</li>
+    <li>Fix rehydration viewpoint selector → sbloccare il dogfooding serio</li>
+    <li>Operation / righe con parametri + fix multi-compartment</li>
+    <li>Editing inline delle righe</li>
+    <li>B6: un solo writer visibile della modalità</li>
+    <li>JjTL: fasi restanti del piano in 8 fasi; traduzione ATL/ETL</li>
+    <li>Decorative views, rules editor, famiglia poligonale</li>
+    <li>Dual-canvas; disclosure sugli altri pannelli; dark mode completo</li>
+    <li>Rilascio: versione, changelog, docs allineate</li>
+  </ul>
+</div>
+
+<footer>
+  Documento vivo · aggiornare a ogni milestone · Fonti: repo <code>jjodel-frontend</code> (branch alfonso-frontend-jjtl, 2.314 commit dal 31/03/2021), <code>mappa_sintassi_concreta.md</code>, <code>contesto_progetto.md</code>, file <code>sessione_*.md</code>, jjodel book v1.0, paper JjTL/JjEL.
+</footer>
+
+</div>
+</body>
+</html>
