@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-09 — refactor(ui): PredicateBuilder in inglese (voce 6, Commit 3/5)
+**Prompt**: «Fase 1 — Traduzione: pass di lingua R-4 (Voce 6)», documento prompt 2026-08-09 18:00, Commit 3 di 5, più la segnalazione di Alfonso allo smoke del Commit 2 (screenshot del dropdown degli operatori ancora in italiano — è esattamente il perimetro di questo commit, non una regressione del precedente). Regola D3: simbolo più glossa inglese, mantenendo il simbolo già presente.
+**Files touched**: `frontend/src/components/ui/PredicateBuilder/predicateDefaults.ts` (13 label degli operatori), `frontend/src/components/ui/PredicateBuilder/PredicateBuilder.tsx` (13 stringhe), `docs/claude-code-log.md` (questa entry).
+**Outcome**: ✅ completed — 26 stringhe tradotte. Operatori (D3, simbolo preservato): `Tutte vere (AND)`→`All true (AND)`, `Almeno una vera (OR)`→`At least one true (OR)`, `Nega (NOT)`→`Negate (NOT)`, `= uguale a`→`= equals`, `≠ diverso da`→`≠ not equals`, `< minore di`→`< less than`, `≤ minore o uguale a`→`≤ less than or equal to`, `> maggiore di`→`> greater than`, `≥ maggiore o uguale a`→`≥ greater than or equal to`, `Esiste (non vuoto)`→`Exists (not empty)`, `È vuoto`→`Is empty`, `È di tipo…`→`Is of type…`, `Sempre vero/falso`→`Always true/false`. Builder: `Booleano`→`Boolean`, `Numero`→`Number`, `Testo`→`Text`, `Valore`→`Value`, `vero`→`true`, `Nessuna condizione — aggiungine una.`→`No conditions — add one.`, `Aggiungi condizione`→`Add condition`, `Seleziona tipo…`→`Select type…`, `Nome del tipo`→`Type name`, `su un oggetto raggiunto da un path`→`on an object reached by a path`, `sempre vero`→`always true`, `Sinistra`→`Left`, `Destra`→`Right`. Gate: build verde (solo warning chunk-size preesistente), `tsc` 33 = baseline invariata e zero errori nei due file toccati, vitest `predicateDefaults.test.ts` 13/13 verde e **totale test invariato**, `check:docs` 2/2 PASS coi due warning noti.
+**Corregge**: —
+**Causa**: —
+**Regressions**: unknown — verifica visiva di Alfonso non ancora eseguita (HARD STOP 3)
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required
+**Smoke visivo**: in attesa (HARD STOP 3)
+**Notes**: **Il rischio noto §6.4 del report di Fase 0 non si è materializzato**: l'unico test dell'area (`__tests__/predicateDefaults.test.ts`) itera `PREDICATE_KIND_OPTIONS` su `opt.value` e asserisce solo `toHaveLength(13)` — nessuna asserzione sul testo delle label. Nessun test aggiornato, totale invariato, e l'eccezione che il prompt autorizzava per questo commit non è servita. **Correzione a una riga della tabella del prompt**: il prompt indicava alla riga ~33 due voci separate, `Sempre vero`/`Sempre falso` → `Always true`/`Always false`. Nel codice esiste **una sola** opzione, `{ value: 'literal', label: 'Sempre vero/falso' }`, resa quindi come `Always true/false` — abbinamento per contenuto testuale e non per numero di riga, come il prompt stesso prescriveva. Il conteggio delle opzioni resta 13, come asserito dal test.
+**Prompt document name**: 2026-08-09 18:00
+
 ## 2026-08-09 — refactor(i18n): pannello TextStyle in inglese (voce 6, Commit 2/5)
 **Prompt**: «Fase 1 — Traduzione: pass di lingua R-4 (Voce 6)», documento prompt 2026-08-09 18:00, Commit 2 di 5. Tradurre le 16 stringhe di `TextStyleEditor.tsx` e `TextStyleField.tsx`. «Style»/«Stile» resta la label corretta per lo stile del font: il glossario sposta «Tratto» altrove (Commit 4), non tocca questi file.
 **Files touched**: `frontend/src/components/editor-v2/viewpoint/authoring/TextStyleEditor.tsx` (11 stringhe su 10 righe), `frontend/src/components/editor-v2/viewpoint/authoring/TextStyleField.tsx` (5), `docs/claude-code-log.md` (questa entry).

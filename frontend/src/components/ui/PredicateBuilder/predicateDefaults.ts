@@ -18,19 +18,19 @@ export type PredicateKind = Predicate['op'];
 
 /** Readable labels for every predicate kind, in the order shown in the Select. */
 export const PREDICATE_KIND_OPTIONS: { value: PredicateKind; label: string }[] = [
-    { value: 'and', label: 'Tutte vere (AND)' },
-    { value: 'or', label: 'Almeno una vera (OR)' },
-    { value: 'not', label: 'Nega (NOT)' },
-    { value: 'eq', label: '= uguale a' },
-    { value: 'neq', label: '≠ diverso da' },
-    { value: 'lt', label: '< minore di' },
-    { value: 'lte', label: '≤ minore o uguale a' },
-    { value: 'gt', label: '> maggiore di' },
-    { value: 'gte', label: '≥ maggiore o uguale a' },
-    { value: 'exists', label: 'Esiste (non vuoto)' },
-    { value: 'empty', label: 'È vuoto' },
-    { value: 'isKind', label: 'È di tipo…' },
-    { value: 'literal', label: 'Sempre vero/falso' },
+    { value: 'and', label: 'All true (AND)' },
+    { value: 'or', label: 'At least one true (OR)' },
+    { value: 'not', label: 'Negate (NOT)' },
+    { value: 'eq', label: '= equals' },
+    { value: 'neq', label: '≠ not equals' },
+    { value: 'lt', label: '< less than' },
+    { value: 'lte', label: '≤ less than or equal to' },
+    { value: 'gt', label: '> greater than' },
+    { value: 'gte', label: '≥ greater than or equal to' },
+    { value: 'exists', label: 'Exists (not empty)' },
+    { value: 'empty', label: 'Is empty' },
+    { value: 'isKind', label: 'Is of type…' },
+    { value: 'literal', label: 'Always true/false' },
 ];
 
 const COMPARATOR_KINDS: PredicateKind[] = ['eq', 'neq', 'lt', 'lte', 'gt', 'gte'];

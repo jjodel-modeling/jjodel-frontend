@@ -19,14 +19,14 @@ import styles from './PredicateBuilder.module.css';
 type LiteralKind = Literal['kind'];
 
 const LITERAL_KIND_OPTIONS: { value: LiteralKind; label: string }[] = [
-    { value: 'boolean', label: 'Booleano' },
-    { value: 'number', label: 'Numero' },
-    { value: 'string', label: 'Testo' },
+    { value: 'boolean', label: 'Boolean' },
+    { value: 'number', label: 'Number' },
+    { value: 'string', label: 'Text' },
 ];
 
 const OPERAND_MODE_OPTIONS = [
     { value: 'path', label: 'Path' },
-    { value: 'literal', label: 'Valore' },
+    { value: 'literal', label: 'Value' },
 ];
 
 /** Immutably move `arr[index]` by `delta`; out-of-range is a no-op (ListEditor contract). */
@@ -126,7 +126,7 @@ const OperandEditor: React.FC<OperandEditorProps> = ({
                             {lit.kind === 'boolean' && (
                                 <Toggle
                                     checked={lit.value}
-                                    label="vero"
+                                    label="true"
                                     onChange={(c) => onChange({ kind: 'boolean', value: c })}
                                     size="xs"
                                 />
@@ -193,8 +193,8 @@ export const PredicateBuilder: React.FC<PredicateBuilderProps> = ({
                     <div className={styles.nested}>
                         <ListEditor<Predicate>
                             items={group.args}
-                            emptyHint="Nessuna condizione — aggiungine una."
-                            addLabel="Aggiungi condizione"
+                            emptyHint="No conditions — add one."
+                            addLabel="Add condition"
                             itemLabel={(_, i) => `#${i + 1}`}
                             onAdd={() => onChange({ ...group, args: [...group.args, { op: 'literal', value: true }] })}
                             onRemove={(i) => onChange({ ...group, args: group.args.filter((_, idx) => idx !== i) })}
@@ -248,19 +248,19 @@ export const PredicateBuilder: React.FC<PredicateBuilderProps> = ({
                                 className={styles.control}
                                 options={classNames.map((c) => ({ value: c, label: c }))}
                                 value={k.class}
-                                placeholder="Seleziona tipo…"
+                                placeholder="Select type…"
                                 onChange={(e) => onChange({ ...k, class: e.target.value })}
                             />
                         ) : (
                             <Input
                                 value={k.class}
-                                placeholder="Nome del tipo"
+                                placeholder="Type name"
                                 onChange={(e) => onChange({ ...k, class: e.target.value })}
                             />
                         )}
                         <Toggle
                             checked={hasPath}
-                            label="su un oggetto raggiunto da un path"
+                            label="on an object reached by a path"
                             onChange={(c) =>
                                 onChange(c ? { ...k, path: k.path ?? '' } : { op: 'isKind', class: k.class })
                             }
@@ -282,7 +282,7 @@ export const PredicateBuilder: React.FC<PredicateBuilderProps> = ({
                 return (
                     <Toggle
                         checked={l.value}
-                        label="sempre vero"
+                        label="always true"
                         onChange={(c) => onChange({ op: 'literal', value: c })}
                         size="xs"
                     />
@@ -294,7 +294,7 @@ export const PredicateBuilder: React.FC<PredicateBuilderProps> = ({
                 return (
                     <div className={styles.operands}>
                         <div className={styles.operandBlock}>
-                            <div className={styles.operandLabel}>Sinistra</div>
+                            <div className={styles.operandLabel}>Left</div>
                             <OperandEditor
                                 value={c.left}
                                 onChange={(v) => onChange({ ...c, left: v })}
@@ -304,7 +304,7 @@ export const PredicateBuilder: React.FC<PredicateBuilderProps> = ({
                             />
                         </div>
                         <div className={styles.operandBlock}>
-                            <div className={styles.operandLabel}>Destra</div>
+                            <div className={styles.operandLabel}>Right</div>
                             <OperandEditor
                                 value={c.right}
                                 onChange={(v) => onChange({ ...c, right: v })}
