@@ -1,0 +1,93 @@
+/**
+ * InfoTooltip — styles colocated with the primitive (D-5-2).
+ *
+ * These three class names are global on purpose and keep the `jj-info-*` names they
+ * had when the component was duplicated in four places: they are internal API and
+ * D-5-1 ratified that they do not move and do not become a CSS Module. What moved is
+ * only the sede: the rules used to live in `components/editors/info-improvements.scss`
+ * (lines 974-1016 at commit db6ca7155), reachable from the other three call sites only
+ * because that stylesheet ends up in the global bundle. Colocating them here makes the
+ * dependency explicit — the primitive now carries its own styling.
+ *
+ * The panel is the dark one of the traceability dashboard. The ANCHORING, however, is
+ * the one the four sites already had — to the right of the icon, vertically centred —
+ * and NOT the dashboard's `bottom: calc(100% + 8px)`. Fase 0-bis measured why: all four
+ * call sites sit inside a scroll container (`.properties-panel`, `info.scss:414-417`;
+ * `.apply-to-tab`, `viewapplyto.scss:47-50`), the panel's containing block is the
+ * wrapper below, so an upward panel would be clipped at the top edge — by ~100-125px
+ * for the longest texts of `InfoData.tsx`. Ratified as option A: same direction as
+ * before, new skin. The caret therefore sits on the LEFT edge, pointing at the icon.
+ *
+ * Colours are literal hex, not tokens, and deliberately so: this is a dark surface on a
+ * light UI, and the light palette has no inverted-surface token. `--z-tooltip` is the
+ * one token that fits exactly and is used. `10px` radius and the 12px font size are not
+ * on the token scales (4/8/12/16 and 11/13/15); both come from the ratified spec.
+ */
+
+.jj-info-icon-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 5px;
+  cursor: help;
+}
+
+.jj-info-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 1px solid #cbd5e1;
+  font-size: 9px;
+  font-weight: 600;
+  font-style: italic;
+  color: #94a3b8;
+  line-height: 1;
+  user-select: none;
+}
+
+.jj-info-tooltip {
+  position: absolute;
+  left: calc(100% + 6px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: #334155;  // slate-700 — inverted surface, no light-palette token
+  color: #cbd5e1;       // slate-300
+  font-size: 12px;      // off the --text-* scale (11 / 13), from the ratified spec
+  line-height: 1.45;
+  padding: 12px 14px;
+  border-radius: 10px;  // off the --radius-* scale (4 / 8 / 12), from the spec
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);  // slate-900 at 25%
+  max-width: 340px;
+  width: max-content;
+  white-space: normal;
+  text-align: left;
+  z-index: var(--z-tooltip);
+  pointer-events: none;
+}
+
+// Caret: a square of the panel's own background, rotated 45°, half of it sticking out
+// of the left edge so it reads as a point aimed at the icon.
+.jj-info-tooltip::after {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  background: #334155;  // must track the panel background above
+  transform: translateY(-50%) rotate(45deg);
+}
+
+// `display: block` is not decoration: the panel's children are spans (a <div> inside a
+// <span> is not phrasing content), so without it the title would share the line with the
+// body and its margin-bottom would be inert on an inline box. The body needs no rule of
+// its own — it simply starts after the block above it.
+.jj-info-tooltip-title {
+  display: block;
+  color: #f1f5f9;  // slate-100
+  font-weight: 600;
+  margin-bottom: 4px;
+}

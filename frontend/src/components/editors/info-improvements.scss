@@ -971,50 +971,6 @@ html[data-theme="dark"] {
   padding: 4px 14px 12px;
 }
 
-/* --- Info tooltip icon --- */
-.jj-info-icon-wrapper {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  margin-left: 5px;
-  cursor: help;
-}
-
-.jj-info-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  border: 1px solid #cbd5e1;
-  font-size: 9px;
-  font-weight: 600;
-  font-style: italic;
-  color: #94a3b8;
-  line-height: 1;
-  user-select: none;
-}
-
-.jj-info-tooltip {
-  position: absolute;
-  left: calc(100% + 6px);
-  top: 50%;
-  transform: translateY(-50%);
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 5px;
-  padding: 5px 8px;
-  font-size: 11px;
-  color: #475569;
-  max-width: 220px;
-  white-space: normal;
-  line-height: 1.4;
-  z-index: 20;
-  pointer-events: none;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-}
-
 /* --- Toggle row badge --- */
 .jj-toggle-row__badge {
   display: inline-block;

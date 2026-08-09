@@ -277,3 +277,181 @@ sopravvive. Il §6 affermava il contrario: qui prevale quanto scritto in questa 
 
 **Stato**: Fase 1 chiusa. Gate verdi (build, `tsc` 33 = baseline, vitest 204/204 sul
 perimetro viewpoint e 10/10 su viewParenting). Smoke visivo pendente.
+
+---
+
+# Addendum emendamento 1 — grafica scura del tooltip (D-5-2, commit 2)
+
+**Documento prompt**: 2026-08-09 16:32
+**Fase**: 0-bis (estensione read-only del censimento)
+**Esito**: **HARD STOP** — la condizione del punto 2 è scattata su **tutti e quattro** i
+siti. Nessun file di codice scritto per il commit 2.
+
+## A1. Punto 1 — sede e riferimenti delle regole `jj-info-*`: **verde**
+
+Sede unica: `frontend/src/components/editors/info-improvements.scss`, righe **975**
+(`.jj-info-icon-wrapper`), **983** (`.jj-info-icon`), **999** (`.jj-info-tooltip`), fino a
+`:1015`. Tre selettori **piatti di primo livello**, nessuna nidificazione `&-`.
+
+Grep `jj-info` su tutto il repo (`.scss`, `.css`, `.tsx`, `.ts`, `.html`, escluso
+`node_modules`) → **7 hit e basta**: le 3 definizioni qui sopra e 4 nella primitiva
+(3 `className` più una menzione nel docstring). **Zero override per pannello, zero
+selettori discendenti esterni, zero riferimenti da altri file.** Le regole sono ritirabili
+dalla sede globale senza toccare nient'altro.
+
+Nomi nuovi liberi: `jj-info-tooltip-title` e `jj-info-tooltip-text` → **0 hit** entrambi.
+
+## A2. Punto 2 — clipping e stacking: **rosso su 4 siti su 4**
+
+Il pannello è `position: absolute` e il suo containing block è
+`.jj-info-icon-wrapper` (`position: relative`, `info-improvements.scss:976`), che sta
+**dentro** i contenitori qui sotto. Un assoluto è ritagliato da ogni antenato con
+`overflow` diverso da `visible` che stia fra sé e il proprio containing block: la fuga
+avviene solo se il containing block è **fuori** dallo scroller, che qui non è il caso.
+
+| Sito | Contenitore che ritaglia | Regola | Verdetto |
+|------|--------------------------|--------|----------|
+| `editors/Info.tsx` | `.properties-panel` | `info.scss:414-417` — `height: 100%; overflow: auto` | **clippa** |
+| `editors/views/data/InfoData.tsx` | `.properties-panel` (`:133`) **+** `.apply-to-tab` | `info.scss:417` **+** `viewapplyto.scss:47-50` — `overflow-x: visible !important; overflow-y: auto !important; height: 100%` | **clippa, doppiamente** |
+| `editor-v2/.../irTabs.tsx` | `.properties-panel` (host `ViewData.tsx:142`) | `info.scss:417` | **clippa** |
+| `viewParenting/ViewParentingFields.tsx` | entrambi gli host sopra | — | **clippa** |
+
+Due precisazioni che contano:
+
+1. **`overflow-x: visible` su `.apply-to-tab` non salva nulla.** Per specifica, se uno dei
+   due assi non è `visible`, l'altro computa ad `auto`: quel box ritaglia su **entrambi**
+   gli assi ed è uno scroll container a tutti gli effetti.
+2. **Gli intermedi sono puliti**: `.props-section` e `.props-section__body`
+   (`info-improvements.scss:918`, `:970`) non hanno `overflow` né `position`, e
+   `.properties-section-content` ha `overflow: hidden` in `info.scss:543` ma è già
+   sovrascritto a `visible` da `info-improvements.scss:172-176` («Override info.scss
+   overflow:hidden that clips toggles»). Gli unici clipper sono i due contenitori di
+   scroll.
+
+### Perché oggi funziona e con la grafica nuova no
+
+Non è una regressione latente che il commit 2 scopre: è la **geometria** che cambia. Oggi
+il pannello è `left: calc(100% + 6px); top: 50%; transform: translateY(-50%)` — centrato
+verticalmente sull'icona, quindi la sua estensione verticale oltre la riga è di poche
+decine di px e resta dentro il viewport dello scroller nella pratica.
+
+La grafica nuova è `bottom: calc(100% + 8px)`: il pannello sale. Stima con i valori dello
+spec (padding 12px, font 12px, line-height 1.45, max-width 340px):
+
+- body di una riga, senza titolo → altezza ~41px → bordo superiore **~49px sopra l'icona**
+- con `title` → **~70px**
+- i testi reali più lunghi di `InfoData.tsx` (278, 249, 249, 193 caratteri: path style e i
+  due endpoint JjEL) a 340px di larghezza vanno su 4-6 righe → altezza ~90-115px → bordo
+  superiore **~100-125px sopra l'icona**
+
+Qualunque icona si trovi entro ~130px dal bordo alto del viewport di scroll — e la prima
+riga del pannello ci sta **sempre** — vedrà il tooltip tagliato in alto. `InfoData.tsx`,
+col suo tooltip da 278 caratteri, è il caso peggiore ed è anche il consumatore più
+frequentato (10 usi).
+
+### Stacking
+
+`z-index: var(--z-tooltip)` (1050) è disponibile e sarebbe corretto contro i menu di
+react-select (`viewapplyto.scss:439`, `z-index: 999`). **Ma è irrilevante al problema**:
+il ritaglio da `overflow` non si batte con lo z-index. Segnalato per completezza, non come
+soluzione.
+
+## A3. Punto 3 — token: quasi tutto è hex, e non per pigrizia
+
+`styles/tokens/` (canone DS-6) contiene `_colors-light.scss`, `_colors-dark.scss`,
+`_radius.scss`, `_shadows.scss`, `_typography.scss`, `_z-index.scss`, più gradients,
+spacing, transitions.
+
+| Valore chiesto dallo spec | Token esistente | Uso |
+|---|---|---|
+| background `#334155` | `$slate-700` (`_colors-light.scss:32`) è una **variabile SCSS**, non una custom property; le custom property che valgono `#334155` stanno quasi tutte in `_colors-dark.scss`, cioè valgono così **solo** sotto `[data-theme="dark"]` | **hex con commento** |
+| testo `#cbd5e1` | `$slate-300` (`:26`), stessa natura | **hex con commento** |
+| titolo `#f1f5f9` | `$slate-100` (`:20`), stessa natura | **hex con commento** |
+| `border-radius: 10px` | `--radius-tooltip` esiste **ma vale 4px** (`--radius-sm`); la scala è 4/8/12/16 — **10px non è in scala** | vedi domanda 3 |
+| `box-shadow 0 4px 12px rgba(15,23,42,.25)` | `--shadow-tooltip` = `--shadow-md` = **stessa geometria**, colore e alpha diversi (`rgba(0,0,0,0.08)` in light) | vedi domanda 3 |
+| `font-size: 12px` | `--text-xs` = 11px, `--text-sm` = 13px — **12px non è in scala** | **hex/literal con commento** |
+| `z-index` | **`--z-tooltip` = 1050 esiste ed è esatto** | **token** |
+
+Il nodo di fondo: questo pannello è una **superficie scura su UI chiara**, e la palette
+light non ha token per una superficie invertita. Non ne creo (vietato dal punto 3), quindi
+restano literal commentati — esattamente la via che il punto 3 prevede.
+
+**Nessun file `.scss` di componente in questa zona fa `@use`/`@import` dei partial dei
+token**: consumano le custom property con `var(--x)`. `InfoTooltip.scss` farà lo stesso.
+
+## A4. Perché mi fermo, e cosa si decide in chat
+
+Il punto 2 di Fase 0-bis dice: «Se almeno un sito clippa: HARD STOP con report; la
+soluzione (portal, riposizionamento) si decide in chat, non in autonomia». Clippano tutti
+e quattro.
+
+**La grafica e l'API non sono in discussione**: pannello scuro, caret, ombra, `title?`
+opzionale sono indipendenti dall'ancoraggio e possono atterrare in qualunque caso. La
+decisione è stretta: **dove si ancora il pannello**.
+
+### Opzione A — ancoraggio orizzontale attuale, grafica nuova (raccomandata)
+
+`left: calc(100% + 6px); top: 50%; transform: translateY(-50%)` invariati; cambiano solo
+skin, caret (che va sul bordo **sinistro** del pannello, a puntare a destra verso
+l'icona), ombra, `title?`.
+
+- **Pro**: delta di clipping **zero** rispetto a oggi, cioè rispetto a una resa che lo
+  smoke del commit 1 valida. Niente JS, niente portal, niente misurazioni. Lo spec resta
+  onorato in tutto tranne la direzione.
+- **Contro**: si discosta dallo screenshot del cruscotto, dove il caret è in basso a
+  destra. La differenza è la direzione, non lo stile.
+
+### Opzione B — pannello sotto invece che sopra
+
+`top: calc(100% + 8px)`, caret sul bordo superiore.
+
+- **Pro**: una riga di CSS rispetto allo spec.
+- **Contro**: **non risolve**, sposta il taglio dal bordo alto a quello basso. Nei pannelli
+  proprietà i campi in fondo sono altrettanto comuni.
+
+### Opzione C — pannello fuori dal flusso, `position: fixed`
+
+Precedente reale in casa: `components/forEndUser/tooltip.scss:2-3` fa esattamente questo
+(`position: fixed; z-index: 9999`) ed è già importato da `Info.tsx:27`.
+
+- **Pro**: immune a qualunque `overflow`, per costruzione.
+- **Contro**: richiede misurazione a runtime (`getBoundingClientRect`) e riposizionamento
+  su scroll/resize — cioè JS di posizionamento che l'emendamento non prevede («niente
+  portal», «niente animazioni») e che porta con sé i propri modi di rompersi. È un
+  cambiamento di categoria, non di stile.
+
+### Opzione D — flip automatico sopra/sotto secondo lo spazio
+
+- **Pro**: è ciò che farebbe una libreria di popper.
+- **Contro**: stessa obiezione di C sul JS di misura, e non basta comunque quando lo
+  scroller è più basso del pannello (il caso dei tooltip da 278 caratteri).
+
+**Raccomandazione: A.** Tiene la grafica ratificata, non introduce codice di
+posizionamento e non tocca l'unica proprietà la cui resa è già stata verificata a video.
+Se lo screenshot del cruscotto è vincolante anche nella direzione, allora la strada onesta
+è C, e va aperta come voce a sé con il suo perimetro.
+
+## A5. Domande aperte per Alfonso
+
+1. **Quale opzione fra A, B, C, D** per l'ancoraggio? Raccomandata A.
+2. **GO sullo smoke di identità del commit 1** — il prerequisito 2 dell'emendamento lo
+   chiede prima del commit 2, e non è ancora arrivato.
+3. **`border-radius` e `box-shadow`**: lo spec chiede 10px e
+   `rgba(15,23,42,0.25)`; i token semanticamente giusti esistono ma con valori diversi
+   (`--radius-tooltip` 4px, `--shadow-tooltip` con alpha 0.08). Confermi i literal dello
+   spec, oppure si snappa alla scala (`--radius-md` 8px o `--radius-lg` 12px)?
+
+## A6. Esito della ratifica (aggiunto a valle, 2026-08-09)
+
+Alfonso: **opzione A**, **GO** sullo smoke di identità del commit 1, e **conferma dei
+literal dello spec** per radius (10px) e ombra (`rgba(15,23,42,0.25)`) invece dello snap
+alla scala dei token. Commit 2 eseguito su queste tre risposte, registrato come **D-5-2**.
+
+Una necessità emersa in implementazione, che il punto 2 dell'emendamento chiedeva di
+annotare: `.jj-info-tooltip-title` ha bisogno di `display: block` oltre alle tre proprietà
+dello spec. I figli del pannello sono `<span>` — un `<div>` dentro uno `<span>` non è
+phrasing content — e su una casella inline il `margin-bottom` è inerte e il titolo
+resterebbe sulla stessa riga del body. `.jj-info-tooltip-text` invece non ha ricevuto
+regole proprie, come da spec: parte da sé dopo il blocco del titolo.
+
+**Stato**: commit 2 chiuso.

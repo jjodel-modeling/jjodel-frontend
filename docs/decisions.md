@@ -230,6 +230,25 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   `ui/index.ts`. La firma resta inline `(props: { text: string })` invece di puntare a
   `InfoTooltipProps`: riscriverla avrebbe rotto la prova per md5, ed è riscrivibile quando la
   prova smette di essere portante.
+- **D-5-2** (2026-08-09) — `InfoTooltip` adotta la grafica del cruscotto di tracciabilità:
+  pannello slate `#334155`, testo `#cbd5e1`, titolo `#f1f5f9`, 12px, caret, ombra
+  `0 4px 12px rgba(15,23,42,.25)`, radius 10px. API estesa con `title?` opzionale, oggi non
+  esercitata da nessuno dei 4 siti; badge di stato **escluso** (è semantica di copertura
+  R→D→I→P→C del cruscotto, non della primitiva). Stili colocati in
+  `ui/InfoTooltip/InfoTooltip.scss`, regole globali `jj-info-*` ritirate da
+  `editors/info-improvements.scss`: la primitiva è ora auto-contenuta, cosa che D-5-1 non
+  poteva ancora dire. Niente animazioni, niente portal, niente librerie.
+  **L'ancoraggio resta quello di prima** — a destra dell'icona, centrato in verticale — e
+  **non** quello dello screenshot (`bottom: calc(100% + 8px)`): tutti e quattro i siti stanno
+  dentro uno scroll container (`.properties-panel`, `info.scss:414-417`; `.apply-to-tab`,
+  `viewapplyto.scss:47-50`) e il containing block del pannello è il wrapper dell'icona, quindi
+  un pannello verso l'alto verrebbe tagliato — fino a ~125px per i testi più lunghi di
+  `InfoData.tsx`. Il caret sta perciò sul bordo sinistro. Misura in
+  `docs/discovery/discovery_2026-08-09_infotooltip_ui_consolidation.md` §A2, scelta in §A4
+  (opzione A). Colori literal e non token per scelta dichiarata: è una superficie scura su UI
+  chiara e la palette light non ha token di superficie invertita; `--z-tooltip` è l'unico token
+  che calza ed è usato; 10px di radius e 12px di font sono fuori dalle scale (4/8/12/16 e
+  11/13/15) e vengono dallo spec ratificato.
 
 ## Superate
 
