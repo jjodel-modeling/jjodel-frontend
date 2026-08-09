@@ -27,4 +27,4 @@
  * byte-identical to the three copies it replaces.
  */
 export const metaclassAmbiguityWarning = (targetName: string | null, metamodelsWithClass: number): string =>
-    `La metaclasse «${targetName}» è dichiarata in ${metamodelsWithClass} metamodelli del progetto: la view usa quella fissata nel tab Applies to quando la metaclasse è stata scelta, non una qualsiasi con questo nome. Verifica che i metamodelli non siano duplicati.`;
+    `The metaclass «${targetName}» is declared in ${metamodelsWithClass} project metamodels: the view uses the one pinned in the Applies to tab when the metaclass was chosen, not any metaclass carrying that name. Check that the metamodels are not duplicated.`;

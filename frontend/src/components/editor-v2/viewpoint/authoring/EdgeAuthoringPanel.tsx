@@ -51,13 +51,13 @@ const COMMIT_DEBOUNCE_MS = 300;
 // Cross-tab messages (R-B): the metaclass that unlocks these paths is authored in
 // Applies to, while the paths themselves are edited in Text (labels) and Structure
 // (endpoints) — so both hints name the tab that holds the cause.
-const FEATURES_HINT = 'imposta una metaclasse sorgente nel tab Applies to per abilitare i path sulle feature';
-const ENDPOINT_FEATURES_HINT = 'imposta una metaclasse nel tab Applies to per abilitare la scelta dei capi';
-const ENDPOINT_ARRAY_ERROR = "Un capo non può leggere l'intero array (.values): scegli values[N] (per esempio values[0]) o una reference a valore singolo.";
+const FEATURES_HINT = 'set a source metaclass in the Applies to tab to enable feature paths';
+const ENDPOINT_FEATURES_HINT = 'set a metaclass in the Applies to tab to enable endpoint selection';
+const ENDPOINT_ARRAY_ERROR = "An endpoint cannot read the whole array (.values): choose values[N] (for example values[0]) or a single-valued reference.";
 
 const NATURE_OPTIONS = [
-    { value: 'reference', label: 'Reference (stila una reference M1)' },
-    { value: 'object', label: 'Object (oggetto reso come linea)' },
+    { value: 'reference', label: 'Reference (styles an M1 reference)' },
+    { value: 'object', label: 'Object (object rendered as a line)' },
 ];
 
 const LINE_STYLE_OPTIONS = [
@@ -358,10 +358,10 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
     // authored without a reference restriction (= matches any reference).
     const refNames = features?.references?.map((r) => r.name) ?? [];
     const refOptions = [
-        { value: '', label: '(qualsiasi reference)' },
+        { value: '', label: '(any reference)' },
         ...refNames.map((n) => ({ value: n, label: n })),
         ...(draft.reference && !refNames.includes(draft.reference)
-            ? [{ value: draft.reference, label: `${draft.reference} (non risolta)` }]
+            ? [{ value: draft.reference, label: `${draft.reference} (unresolved)` }]
             : []),
     ];
     const setReference = (name: string) => {
@@ -448,8 +448,8 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
         <section className="properties-tab properties-panel">
             <div className="jj-field-label" style={{ marginTop: 4 }}>IR Edge view authoring</div>
             <HelpText>{isObject
-                ? "Una edge view di tipo object rende ogni istanza della metaclasse come una linea fra i due capi: l'oggetto non viene più disegnato come nodo."
-                : 'Una edge view di tipo reference stila gli edge derivati dalle reference M1 il cui oggetto SORGENTE corrisponde alla metaclasse (ed eventuale reference) qui sotto.'}</HelpText>
+                ? 'An object edge view renders every instance of the metaclass as a line between the two endpoints: the object is no longer drawn as a node.'
+                : 'A reference edge view styles the edges derived from the M1 references whose SOURCE object matches the metaclass (and optional reference) below.'}</HelpText>
 
             {error && <ErrorText>{error}</ErrorText>}
 
@@ -469,11 +469,11 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
             {/* Matching — source metaclass */}
             <div className="jj-field-label" style={{ marginTop: 8 }}>Matching</div>
             <div className="jj-field" style={{ marginTop: 4 }}>
-                <label className="jj-field-label">{isObject ? "Metaclasse dell'oggetto" : 'Metaclasse sorgente'}</label>
+                <label className="jj-field-label">{isObject ? 'Object metaclass' : 'Source metaclass'}</label>
                 <Toggle
                     checked={isWildcard}
                     onChange={setWildcard}
-                    label="Tutte le metaclassi (*)"
+                    label="All metaclasses (*)"
                     size="xs"
                     disabled={isObject}
                 />
@@ -481,10 +481,10 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                     authored in Structure — both messages name that tab, since from here
                     the disabled toggle would otherwise have no visible cause. */}
                 {isObject && (
-                    <HelpText>Una object-as-edge deve nominare almeno una metaclasse: con il wildcard non finisce in nessun bucket del resolver e non produce nulla. La natura si cambia nel tab Structure.</HelpText>
+                    <HelpText>An object-as-edge must name at least one metaclass: with the wildcard it ends up in no resolver bucket and produces nothing. The nature is changed in the Structure tab.</HelpText>
                 )}
                 {isObject && isWildcard && (
-                    <ErrorText>Questa view ha metaclasse wildcard (*): sul substrato object (natura impostata nel tab Structure) non si applica a nulla. Nomina almeno una metaclasse.</ErrorText>
+                    <ErrorText>This view has a wildcard metaclass (*): on the object substrate (nature set in the Structure tab) it applies to nothing. Name at least one metaclass.</ErrorText>
                 )}
                 {!isWildcard && (
                     <>
@@ -494,29 +494,29 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                                 style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-1)', marginTop: 4 }}
                             >
                                 <span style={{ flex: 1 }}>{name}</span>
-                                <Button variant="ghost" size="sm" onClick={() => removeMetaclass(idx)} title="Rimuovi">
+                                <Button variant="ghost" size="sm" onClick={() => removeMetaclass(idx)} title="Remove">
                                     <i className="bi bi-x" aria-hidden="true" />
                                 </Button>
                             </div>
                         ))}
                         {list.length === 0 && (
                             <HelpText>{isObject
-                                ? 'Con la lista vuota la edge view non rende come linea nessun oggetto.'
-                                : 'Con la lista vuota la edge view non si applica a nessuna reference.'}</HelpText>
+                                ? 'With an empty list the edge view renders no object as a line.'
+                                : 'With an empty list the edge view applies to no reference.'}</HelpText>
                         )}
                         <div style={{ marginTop: 4 }}>
                             <Select
                                 options={available.map((n) => ({ value: n, label: n }))}
                                 value=""
-                                placeholder="Aggiungi metaclasse…"
+                                placeholder="Add metaclass…"
                                 onChange={(e) => addMetaclass(e.target.value)}
                             />
                         </div>
                     </>
                 )}
                 <HelpText>{isObject
-                    ? 'I capi e le feature del PathBuilder si risolvono dalla prima metaclasse della lista.'
-                    : 'Le reference e le feature del PathBuilder si risolvono dalla prima metaclasse della lista.'}</HelpText>
+                    ? 'Endpoints and PathBuilder features are resolved from the first metaclass in the list.'
+                    : 'References and PathBuilder features are resolved from the first metaclass in the list.'}</HelpText>
             </div>
 
             {/* Matching — reference (reference substrate only: the object resolver
@@ -531,17 +531,17 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                         value={draft.reference ?? ''}
                         onChange={(e) => setReference(e.target.value)}
                     />
-                    <HelpText>Una reference specifica ha priorità sulle view che matchano qualsiasi reference. Con metaclasse sorgente wildcard o assente il picker resta vuoto.</HelpText>
+                    <HelpText>A specific reference takes priority over views matching any reference. With a wildcard or missing source metaclass the picker stays empty.</HelpText>
                 </div>
             )}
 
             {/* Matching — predicate */}
             <div className="jj-field" style={{ marginTop: 8 }}>
-                <label className="jj-field-label">Condizione</label>
+                <label className="jj-field-label">Condition</label>
                 <Toggle
                     checked={hasPredicate}
                     onChange={setHasPredicate}
-                    label="Applica solo se (predicate)"
+                    label="Apply only if (predicate)"
                     size="xs"
                 />
                 {draft.predicate !== undefined && (
@@ -557,19 +557,19 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                 )}
                 {!hasPredicate && (
                     <HelpText>{isObject
-                        ? "Il predicate è valutato sull'oggetto reso come linea."
-                        : "Il predicate è valutato sull'oggetto sorgente della reference."}</HelpText>
+                        ? 'The predicate is evaluated on the object rendered as a line.'
+                        : 'The predicate is evaluated on the source object of the reference.'}</HelpText>
                 )}
             </div>
 
             {/* Matching — priority */}
             <div className="jj-field" style={{ marginTop: 8 }}>
-                <label className="jj-field-label">Priorità</label>
+                <label className="jj-field-label">Priority</label>
                 <NumberInput
                     value={draft.priority ?? 0}
                     onChange={(n) => patch({ ...draft, priority: n })}
                 />
-                <HelpText>Vince la priorità più alta; a parità, la specificità (esatta &gt; ereditata &gt; wildcard), poi l'ordine di dichiarazione.</HelpText>
+                <HelpText>The highest priority wins; on a tie, specificity (exact &gt; inherited &gt; wildcard), then declaration order.</HelpText>
             </div>
             </div>
 
@@ -583,25 +583,25 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                 means. Not a field of the ir: derived from the endpoints, kept in UI
                 state. */}
             <div className="jj-field" style={{ marginTop: 8 }}>
-                <label className="jj-field-label">Natura</label>
+                <label className="jj-field-label">Nature</label>
                 <Select
                     options={NATURE_OPTIONS}
                     value={nature}
                     onChange={(e) => changeNature(e.target.value as EdgeNature)}
                 />
                 <HelpText>{isObject
-                    ? "La natura non è un campo dell'IR: la view è di tipo object finché entrambi i capi sono impostati."
-                    : 'Reference: la linea esiste già (è la reference M1) e la view ne decide solo aspetto ed etichetta.'}</HelpText>
+                    ? 'The nature is not an IR field: the view is of type object as long as both endpoints are set.'
+                    : 'Reference: the line already exists (it is the M1 reference) and the view only decides its appearance and label.'}</HelpText>
             </div>
 
             {/* Endpoints — object substrate only. Written atomically (applyEndpoints):
                 either both keys are in the ir, or neither is. */}
             {isObject && (
                 <>
-                    <div className="jj-field-label" style={{ marginTop: 8 }}>Capi</div>
-                    <HelpText>Con entrambi i capi impostati le istanze di questa metaclasse vengono disegnate come linee: non appaiono più come nodi sul canvas e le loro reference verso i capi non vengono più disegnate.</HelpText>
+                    <div className="jj-field-label" style={{ marginTop: 8 }}>Endpoints</div>
+                    <HelpText>With both endpoints set, the instances of this metaclass are drawn as lines: they no longer appear as nodes on the canvas and their references towards the endpoints are no longer drawn.</HelpText>
                     <div className="jj-field" style={{ marginTop: 4 }}>
-                        <label className="jj-field-label">Capo sorgente</label>
+                        <label className="jj-field-label">Source endpoint</label>
                         <PathBuilder
                             features={endpointFeatures}
                             value={sourceExpr}
@@ -613,7 +613,7 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                         )}
                     </div>
                     <div className="jj-field" style={{ marginTop: 8 }}>
-                        <label className="jj-field-label">Capo destinazione</label>
+                        <label className="jj-field-label">Target endpoint</label>
                         <PathBuilder
                             features={endpointFeatures}
                             value={targetExpr}
@@ -631,10 +631,10 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                         Neither state reaches validateIR — the ir is valid in both, the
                         divergence is a condition of the FORM. */}
                     <HelpText>{endpointsDiverge
-                        ? `La coppia dei capi non è completa: finché non tornano validi entrambi la view continua a usare la coppia precedente (${draft.edge?.source} → ${draft.edge?.target}) e il canvas non cambia. Uscendo dal pannello la modifica incompleta viene scartata e alla riapertura ricompare la coppia precedente. Per rimuoverla e tornare a una edge view di tipo reference, cambia la Natura.`
+                        ? `The endpoint pair is not complete: until both are valid again the view keeps using the previous pair (${draft.edge?.source} → ${draft.edge?.target}) and the canvas does not change. Leaving the panel discards the incomplete edit and the previous pair reappears on reopening. To remove it and go back to a reference edge view, change the Nature.`
                         : unsavedSingleEndpoint
-                            ? 'Con un capo solo non viene salvato niente: i due capi si scrivono insieme, quindi finché non imposti anche l\'altro la view resta una edge view di tipo reference e uscendo dal pannello il capo digitato va perso.'
-                            : 'I due capi vengono scritti insieme: finché ne manca uno (o legge un intero array) la view resta una edge view di tipo reference e il canvas non cambia.'}</HelpText>
+                            ? 'With a single endpoint nothing is saved: the two endpoints are written together, so until you set the other one too the view stays a reference edge view and the typed endpoint is lost when you leave the panel.'
+                            : 'The two endpoints are written together: while one is missing (or reads a whole array) the view stays a reference edge view and the canvas does not change.'}</HelpText>
                 </>
             )}
             </div>
@@ -643,9 +643,9 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
             <div style={body('ir-appearance')}>
 
             {/* Line style */}
-            <div className="jj-field-label" style={{ marginTop: 8 }}>Linea</div>
+            <div className="jj-field-label" style={{ marginTop: 8 }}>Line</div>
             <div className="jj-field" style={{ marginTop: 4 }}>
-                <label className="jj-field-label">Colore</label>
+                <label className="jj-field-label">Color</label>
                 <ConditionalEditor
                     value={line.color}
                     onChange={(next) => patchLine({ color: next })}
@@ -657,7 +657,7 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                 />
             </div>
             <div className="jj-field" style={{ marginTop: 8 }}>
-                <label className="jj-field-label">Spessore</label>
+                <label className="jj-field-label">Width</label>
                 <ConditionalEditor<number>
                     value={line.width}
                     onChange={(next) => patchLine({ width: next })}
@@ -669,7 +669,7 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                 />
             </div>
             <div className="jj-field" style={{ marginTop: 8 }}>
-                <label className="jj-field-label">Tratto</label>
+                <label className="jj-field-label">Dash</label>
                 <ConditionalEditor<'solid' | 'dashed' | 'dotted'>
                     value={line.style}
                     onChange={(next) => patchLine({ style: next })}
@@ -696,16 +696,16 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                 />
                 {(routing === 'straight' || routing === 'curved') && (
                     <HelpText>
-                        Su Direct e Bezier le maniglie di segmento spariscono e non si creano waypoint;
-                        quelli già salvati restano e tornano visibili con Manhattan.
+                        On Direct and Bezier the segment handles disappear and no waypoint is created;
+                        the ones already saved are kept and become visible again with Manhattan.
                     </HelpText>
                 )}
             </div>
 
             {/* Terminations */}
-            <div className="jj-field-label" style={{ marginTop: 8 }}>Terminazioni</div>
+            <div className="jj-field-label" style={{ marginTop: 8 }}>Ends</div>
             <div className="jj-field" style={{ marginTop: 4 }}>
-                <label className="jj-field-label">Sorgente</label>
+                <label className="jj-field-label">Start</label>
                 <Select
                     options={TERMINATION_OPTIONS}
                     value={srcEnd}
@@ -713,7 +713,7 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                 />
             </div>
             <div className="jj-field" style={{ marginTop: 8 }}>
-                <label className="jj-field-label">Destinazione</label>
+                <label className="jj-field-label">End</label>
                 <Select
                     options={TERMINATION_OPTIONS}
                     value={tgtEnd}
@@ -731,7 +731,7 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                 <Toggle
                     checked={hasCenterLabel}
                     onChange={setHasCenterLabel}
-                    label="Label al centro"
+                    label="Center label"
                     size="xs"
                 />
                 {draft.edge.labels?.center !== undefined && (
@@ -746,8 +746,8 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                 )}
                 {!hasCenterLabel && (
                     <HelpText>{isObject
-                        ? 'Senza label la linea non mostra testo al centro.'
-                        : "Senza label l'edge mantiene l'etichetta di default (nome della reference)."}</HelpText>
+                        ? 'Without a label the line shows no text at its center.'
+                        : 'Without a label the edge keeps its default label (the reference name).'}</HelpText>
                 )}
             </div>
             </div>

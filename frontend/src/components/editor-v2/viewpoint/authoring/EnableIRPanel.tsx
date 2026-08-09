@@ -69,7 +69,7 @@ export const EnableIRPanel: React.FC<EnableIRPanelProps> = ({ view }) => {
         return (
             <section className="properties-tab properties-panel">
                 <div className="jj-field-label" style={{ marginTop: 4 }}>IR authoring</div>
-                <HelpText>Questa view ha già una rappresentazione IR di kind "{existingIr.kind}". L'authoring per questo kind non è ancora disponibile: la view non verrà modificata.</HelpText>
+                <HelpText>This view already has an IR representation of kind "{existingIr.kind}". Authoring for this kind is not available yet: the view will not be modified.</HelpText>
             </section>
         );
     }
@@ -109,7 +109,7 @@ export const EnableIRPanel: React.FC<EnableIRPanelProps> = ({ view }) => {
     return (
         <section className="properties-tab properties-panel">
             <div className="jj-field-label" style={{ marginTop: 4 }}>IR authoring</div>
-            <HelpText>Questa view usa ancora il template classico (jsxString). Abilitando l'IR la view viene descritta da una rappresentazione strutturata e il rendering delle istanze che matcha passa subito all'interprete IR.</HelpText>
+            <HelpText>This view still uses the classic template (jsxString). Enabling the IR describes the view with a structured representation, and the rendering of the instances it matches switches to the IR interpreter right away.</HelpText>
 
             {error && <ErrorText>{error}</ErrorText>}
 
@@ -124,22 +124,22 @@ export const EnableIRPanel: React.FC<EnableIRPanelProps> = ({ view }) => {
 
             <div className="jj-field" style={{ marginTop: 8 }}>
                 {kind === 'row' ? (
-                    <HelpText>La row view partirà senza metaclasse: impostala (e il template) subito dopo dal pannello di authoring.</HelpText>
+                    <HelpText>The row view will start with no metaclass: set it (and the template) right afterwards from the authoring panel.</HelpText>
                 ) : kind === 'edge' ? (
                     names.length > 0 ? (
-                        <HelpText>La edge view partirà applicata alla metaclasse: {names.join(', ')}. La natura (reference o object) e tutto il resto si impostano subito dopo dal pannello di authoring.</HelpText>
+                        <HelpText>The edge view will start applied to the metaclass: {names.join(', ')}. The nature (reference or object) and everything else are set right afterwards from the authoring panel.</HelpText>
                     ) : (
-                        <HelpText>La edge view partirà senza metaclasse: impostala, insieme alla natura (reference o object), subito dopo dal pannello di authoring.</HelpText>
+                        <HelpText>The edge view will start with no metaclass: set it, together with the nature (reference or object), right afterwards from the authoring panel.</HelpText>
                     )
                 ) : names.length > 0 ? (
-                    <HelpText>La view partirà applicata a: {names.join(', ')}.</HelpText>
+                    <HelpText>The view will start applied to: {names.join(', ')}.</HelpText>
                 ) : (
-                    <HelpText>La view partirà applicata a tutte le metaclassi (*); potrai restringerla subito dopo dal tab Advanced.</HelpText>
+                    <HelpText>The view will start applied to all metaclasses (*); you can narrow it right afterwards from the Advanced tab.</HelpText>
                 )}
             </div>
 
             <div className="jj-field" style={{ marginTop: 8 }}>
-                <Button variant="primary" onClick={enable}>Abilita authoring IR</Button>
+                <Button variant="primary" onClick={enable}>Enable IR authoring</Button>
             </div>
         </section>
     );

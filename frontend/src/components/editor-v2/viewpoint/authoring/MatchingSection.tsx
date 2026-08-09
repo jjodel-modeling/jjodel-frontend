@@ -73,15 +73,15 @@ export const MatchingSection: React.FC<MatchingSectionProps> = ({
         <>
             {/* Header */}
             <div className="jj-field-label" style={{ marginTop: 4 }}>Matching</div>
-            <HelpText>Questi campi decidono quando la view si applica; per le view IR sostituiscono il tab Apply-to, che su di esse non ha effetto.</HelpText>
+            <HelpText>These fields decide when the view applies; for IR views they replace the Apply-to tab, which has no effect on them.</HelpText>
 
             {/* Metaclasses */}
             <div className="jj-field" style={{ marginTop: 8 }}>
-                <label className="jj-field-label">Metaclassi</label>
+                <label className="jj-field-label">Metaclasses</label>
                 <Toggle
                     checked={isWildcard}
                     onChange={setWildcard}
-                    label="Tutte le metaclassi (*)"
+                    label="All metaclasses (*)"
                     size="xs"
                 />
                 {!isWildcard && (
@@ -92,34 +92,34 @@ export const MatchingSection: React.FC<MatchingSectionProps> = ({
                                 style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-1)', marginTop: 4 }}
                             >
                                 <span style={{ flex: 1 }}>{name}</span>
-                                <Button variant="ghost" size="sm" onClick={() => removeMetaclass(idx)} title="Rimuovi">
+                                <Button variant="ghost" size="sm" onClick={() => removeMetaclass(idx)} title="Remove">
                                     <i className="bi bi-x" aria-hidden="true" />
                                 </Button>
                             </div>
                         ))}
                         {list.length === 0 && (
-                            <HelpText>Con la lista vuota la view non si applica a nulla.</HelpText>
+                            <HelpText>With an empty list the view applies to nothing.</HelpText>
                         )}
                         <div style={{ marginTop: 4 }}>
                             <Select
                                 options={available.map((n) => ({ value: n, label: n }))}
                                 value=""
-                                placeholder="Aggiungi metaclasse…"
+                                placeholder="Add metaclass…"
                                 onChange={(e) => addMetaclass(e.target.value)}
                             />
                         </div>
                     </>
                 )}
-                <HelpText>Cambiare metaclasse non invalida i path già scritti nei predicate o nei campi condizionali; i path non risolvibili sulla nuova metaclasse falliscono silenziosamente a runtime (nessun match). Le feature del PathBuilder si risolvono dalla prima metaclasse della lista.</HelpText>
+                <HelpText>Changing metaclass does not invalidate paths already written in predicates or conditional fields; paths that cannot be resolved on the new metaclass fail silently at runtime (no match). PathBuilder features are resolved from the first metaclass in the list.</HelpText>
             </div>
 
             {/* Predicate (top-level) */}
             <div className="jj-field" style={{ marginTop: 8 }}>
-                <label className="jj-field-label">Condizione</label>
+                <label className="jj-field-label">Condition</label>
                 <Toggle
                     checked={hasPredicate}
                     onChange={setHasPredicate}
-                    label="Applica solo se (predicate)"
+                    label="Apply only if (predicate)"
                     size="xs"
                 />
                 {draft.predicate !== undefined && (
@@ -134,30 +134,30 @@ export const MatchingSection: React.FC<MatchingSectionProps> = ({
                     </div>
                 )}
                 {!hasPredicate && (
-                    <HelpText>Senza predicate la view si applica a ogni istanza delle metaclassi selezionate.</HelpText>
+                    <HelpText>Without a predicate the view applies to every instance of the selected metaclasses.</HelpText>
                 )}
             </div>
 
             {/* Priority */}
             <div className="jj-field" style={{ marginTop: 8 }}>
-                <label className="jj-field-label">Priorità</label>
+                <label className="jj-field-label">Priority</label>
                 <NumberInput
                     value={draft.priority ?? 0}
                     onChange={(n) => patch({ ...draft, priority: n })}
                 />
-                <HelpText>Vince la priorità più alta; a parità, la specificità (esatta &gt; ereditata &gt; wildcard), poi l'ordine di dichiarazione.</HelpText>
+                <HelpText>The highest priority wins; on a tie, specificity (exact &gt; inherited &gt; wildcard), then declaration order.</HelpText>
             </div>
 
             {/* Exclusive */}
             <div className="jj-field" style={{ marginTop: 8 }}>
-                <label className="jj-field-label">Esclusiva</label>
+                <label className="jj-field-label">Exclusive</label>
                 <Toggle
                     checked={draft.exclusive ?? true}
                     onChange={(c) => patch({ ...draft, exclusive: c })}
                     label="exclusive"
                     size="xs"
                 />
-                <HelpText>Le view decorative (exclusive disattivato) non sono ancora supportate dal resolver IR: disattivandolo la view sparisce dal canvas (limite corrente).</HelpText>
+                <HelpText>Decorative views (exclusive off) are not supported by the IR resolver yet: turning it off makes the view disappear from the canvas (current limitation).</HelpText>
             </div>
         </>
     );

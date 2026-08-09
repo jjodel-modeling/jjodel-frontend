@@ -43,7 +43,7 @@ export interface RowAuthoringPanelProps {
 const COMMIT_DEBOUNCE_MS = 300;
 // Cross-tab message (R-B): the metaclass that unlocks these paths is authored in
 // Applies to, while the paths themselves are edited in Text.
-const FEATURES_HINT = 'imposta una metaclasse nel tab Applies to per abilitare i path sulle feature';
+const FEATURES_HINT = 'set a metaclass in the Applies to tab to enable feature paths';
 
 /** Lossless deep clone for plain IR objects (pure JSON: no functions/dates). */
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
@@ -263,7 +263,7 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view, acti
     return (
         <section className="properties-tab properties-panel">
             <div className="jj-field-label" style={{ marginTop: 4 }}>IR Row view authoring</div>
-            <HelpText>Una row view rende un child in composizione come riga di testo inline dentro un compartment con sorgente "children"; non ha shape, badge o resize.</HelpText>
+            <HelpText>A row view renders a composition child as an inline text row inside a compartment with source "children"; it has no shape, badge or resize.</HelpText>
 
             {error && <ErrorText>{error}</ErrorText>}
 
@@ -283,11 +283,11 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view, acti
             {/* Matching — metaclasses */}
             <div className="jj-field-label" style={{ marginTop: 8 }}>Matching</div>
             <div className="jj-field" style={{ marginTop: 4 }}>
-                <label className="jj-field-label">Metaclassi</label>
+                <label className="jj-field-label">Metaclasses</label>
                 <Toggle
                     checked={isWildcard}
                     onChange={setWildcard}
-                    label="Tutte le metaclassi (*)"
+                    label="All metaclasses (*)"
                     size="xs"
                 />
                 {!isWildcard && (
@@ -298,34 +298,34 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view, acti
                                 style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-1)', marginTop: 4 }}
                             >
                                 <span style={{ flex: 1 }}>{name}</span>
-                                <Button variant="ghost" size="sm" onClick={() => removeMetaclass(idx)} title="Rimuovi">
+                                <Button variant="ghost" size="sm" onClick={() => removeMetaclass(idx)} title="Remove">
                                     <i className="bi bi-x" aria-hidden="true" />
                                 </Button>
                             </div>
                         ))}
                         {list.length === 0 && (
-                            <HelpText>Con la lista vuota la row view non si applica a nessun child.</HelpText>
+                            <HelpText>With an empty list the row view applies to no child.</HelpText>
                         )}
                         <div style={{ marginTop: 4 }}>
                             <Select
                                 options={available.map((n) => ({ value: n, label: n }))}
                                 value=""
-                                placeholder="Aggiungi metaclasse…"
+                                placeholder="Add metaclass…"
                                 onChange={(e) => addMetaclass(e.target.value)}
                             />
                         </div>
                     </>
                 )}
-                <HelpText>Le feature del PathBuilder si risolvono dalla prima metaclasse della lista.</HelpText>
+                <HelpText>PathBuilder features are resolved from the first metaclass in the list.</HelpText>
             </div>
 
             {/* Matching — predicate */}
             <div className="jj-field" style={{ marginTop: 8 }}>
-                <label className="jj-field-label">Condizione</label>
+                <label className="jj-field-label">Condition</label>
                 <Toggle
                     checked={hasPredicate}
                     onChange={setHasPredicate}
-                    label="Applica solo se (predicate)"
+                    label="Apply only if (predicate)"
                     size="xs"
                 />
                 {draft.predicate !== undefined && (
@@ -340,18 +340,18 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view, acti
                     </div>
                 )}
                 {!hasPredicate && (
-                    <HelpText>Senza predicate la row view si applica a ogni child delle metaclassi selezionate.</HelpText>
+                    <HelpText>Without a predicate the row view applies to every child of the selected metaclasses.</HelpText>
                 )}
             </div>
 
             {/* Matching — priority */}
             <div className="jj-field" style={{ marginTop: 8 }}>
-                <label className="jj-field-label">Priorità</label>
+                <label className="jj-field-label">Priority</label>
                 <NumberInput
                     value={draft.priority ?? 0}
                     onChange={(n) => patch({ ...draft, priority: n })}
                 />
-                <HelpText>Vince la priorità più alta; a parità, la specificità (esatta &gt; ereditata &gt; wildcard), poi l'ordine di dichiarazione.</HelpText>
+                <HelpText>The highest priority wins; on a tie, specificity (exact &gt; inherited &gt; wildcard), then declaration order.</HelpText>
             </div>
 
             </div>

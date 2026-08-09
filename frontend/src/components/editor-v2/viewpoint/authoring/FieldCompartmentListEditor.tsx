@@ -185,21 +185,21 @@ export const FieldCompartmentListEditor: React.FC<FieldCompartmentListEditorProp
                                     onChange={(e) => changeSource(e.target.value)}
                                 />
                             ) : (
-                                <span style={CHIP}>{`sorgente non supportata: ${sourceFrom} (preservata)`}</span>
+                                <span style={CHIP}>{`unsupported source: ${sourceFrom} (preserved)`}</span>
                             )}
                         </div>
 
                         {comp.source.from === 'children' && (
                             <div className="jj-field">
-                                <label className="jj-field-label">Filtro children</label>
+                                <label className="jj-field-label">Children filter</label>
                                 {isAdvancedFilter ? (
-                                    <span style={CHIP}>predicate avanzato (preservato)</span>
+                                    <span style={CHIP}>advanced predicate (preserved)</span>
                                 ) : (
                                     <>
                                         <Toggle
                                             checked={isBasicIsKind}
                                             onChange={(checked) => setChildFilter(checked ? forPredicateKind('isKind', classNames) : undefined)}
-                                            label="filtra per metaclasse (isKind)"
+                                            label="filter by metaclass (isKind)"
                                             size="xs"
                                         />
                                         {isBasicIsKind && childFilter && childFilter.op === 'isKind' && (
@@ -233,7 +233,7 @@ export const FieldCompartmentListEditor: React.FC<FieldCompartmentListEditorProp
                         ) : comp.source.from === 'children' ? (
                             <div className="jj-field">
                                 <label className="jj-field-label">Row segments</label>
-                                <HelpText>Le righe sono rese dalla row view di ciascun child (dispatch per metaclasse); il formato si definisce nelle view di kind "row", non qui.</HelpText>
+                                <HelpText>Rows are rendered by the row view of each child (dispatch by metaclass); the format is defined in the views of kind "row", not here.</HelpText>
                             </div>
                         ) : null}
 
