@@ -276,7 +276,8 @@ quelle due righe. `React` invece resta usato in entrambe (`React.MouseEvent` in
 sopravvive. Il §6 affermava il contrario: qui prevale quanto scritto in questa sezione.
 
 **Stato**: Fase 1 chiusa. Gate verdi (build, `tsc` 33 = baseline, vitest 204/204 sul
-perimetro viewpoint e 10/10 su viewParenting). Smoke visivo pendente.
+perimetro viewpoint e 10/10 su viewParenting). Smoke di identità **passato** (Alfonso,
+2026-08-09): i 4 hover rendono indistinguibili da prima.
 
 ---
 
@@ -454,4 +455,8 @@ phrasing content — e su una casella inline il `margin-bottom` è inerte e il t
 resterebbe sulla stessa riga del body. `.jj-info-tooltip-text` invece non ha ricevuto
 regole proprie, come da spec: parte da sé dopo il blocco del titolo.
 
-**Stato**: commit 2 chiuso.
+**Stato**: commit 2 chiuso. Smoke **passato** (Alfonso, 2026-08-09, «1-5 tutto ok»): la
+grafica rende nei quattro siti e il punto 5 — l'unico rischio che restava aperto, la
+fuoriuscita a destra dopo l'allargamento del pannello da 220 a 340px — non si verifica,
+nemmeno sui tooltip da 278 e 249 caratteri di `InfoData.tsx`. La misura di §A2 regge
+anche a video: con l'ancoraggio dell'opzione A nessuno dei due assi taglia.
