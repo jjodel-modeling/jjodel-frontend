@@ -278,7 +278,9 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   `className` del `__raw`): si riusa, non si riscrive. C1.1 i pannelli di authoring non si
   toccano. C1.2 l'identity block si calcola da `view.ir.kind` e `view.ir.metaclasses` per le
   view con IR; per le view legacy (`!view.ir`) non si rende affatto — niente placeholder,
-  niente spazio riservato.
+  niente spazio riservato. **Emendata da R-RAIL-26** (2026-08-10): il renderer dell'elemento
+  di metamodello esce dall'arco 1 e passa all'arco 2; l'arco 1 consegna guscio, slot e restyle
+  del tree.
 - **R-RAIL-2** (2026-08-10) — U-2 è superato **solo nella parte posizionale** del breadcrumb,
   non contraddetto: l'identity block del rail sostituisce la riga che dichiara dove sta
   l'elemento, ma il breadcrumb di «Applies to» è **semantica della view** — dice a quali
@@ -317,7 +319,10 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   44px) restano **letterali** nel foglio del rail, raccolte in un unico blocco di commento in
   testa al foglio che le elenca e ne dichiara la ragione (la scala dei token parte da 32 e
   sale di 8, quindi non ha gradini vicini); le quattro coppie entity sono già token dal commit
-  `4d215ff0e` (C9.1) e si consumano, senza ridefinirle né duplicarle in locale.
+  `4d215ff0e` (C9.1) e si consumano, senza ridefinirle né duplicarle in locale. **Annotazione**
+  (2026-08-10): la seconda metà non si è realizzata. Con R-RAIL-25 le quattro coppie restano
+  **token senza consumatori nel pannello**; il criterio «zero consumatori a fine passo 3 ⇒
+  passo incompleto» dell'emendamento rev 2 è ritirato, perché non discendeva da questa voce.
 - **R-RAIL-10** (2026-08-10) — I 14 valori `snap` vanno **sempre** al gradino vicino della
   scala: si emenda il design, non si estende la scala per far combaciare il mockup. Due sole
   eccezioni: `letter-spacing: 0.08em` resta letterale, e le quattro ombre si compongono a mano
@@ -348,6 +353,32 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   già esistente. L'espressione di `overlayShown` resta quella di oggi (R-RAIL-22). Motivo:
   col collasso totale chi chiudeva il rail perdeva la preferenza del tree al reload, perché
   la chiave del tree veniva scritta a `false`.
+- **R-RAIL-24** (2026-08-10) — La disclosure NODE resta **chiusa di default**. La premessa che
+  aveva motivato «aperta di default» era falsa: `nodeOpen` parte a `false` da sempre, quindi con
+  `advanced` attivo si è sempre vista la sola intestazione, e aprirla non avrebbe conservato il
+  comportamento — l'avrebbe cambiato. Restano invariati `aria-expanded`, lo stato non persistito
+  (nessuna chiave nuova, l'inventario di R-RAIL-11 non si allarga), `NodeEditor` e le sue prop.
+- **R-RAIL-25** (2026-08-10) — La palette del badge del pannello **non si migra** ai token
+  entity. Il badge prende oggi i colori da `styles/components/_form-system.scss:1251-1259`
+  (nove modificatori `.jj-type-badge--*`); `getElementTypeInfo` restituisce solo il nome di
+  classe, non il colore. Due ragioni indipendenti: (1) `_form-system.scss` è importato
+  globalmente da `styles/style.scss:2` e `.jj-type-badge` ha consumatori vivi oltre a `Info`
+  (`views/ViewData.tsx:221`), quindi il raggio d'azione di una modifica lì è l'app e non il
+  rail; (2) in tema light **nessuno dei quattro kind di C9.1 coincide** con il valore attuale, e
+  attribute ed enum sono **invertiti** — l'ambra che nel pannello significa «attributo» è il
+  token di `enum`, lo smeraldo che significa «enum» è il token di `attribute`. È un cambio di
+  colore, non una migrazione di sorgente. Nessun colore cambia a video; la questione va a
+  backlog in `docs/TECH-DEBT.md`.
+- **R-RAIL-26** (2026-08-10) — Il restyle dell'identity block va **all'arco 2**, ed emenda
+  R-RAIL-1: l'arco 1 consegna guscio, slot e restyle del tree. Dei quattro ingredienti del
+  blocco, il chip di firma era già fuori (R-RAIL-16), i colori escono con R-RAIL-25, e il
+  `padding` del form body è stato declinato perché `.properties-panel-body` ospita anche il ramo
+  view. Resta la tipografia, la cui casa è il guscio: la rev 2 ha tenuto il blocco dentro il
+  ramo model element solo per non cambiare cosa vede una view selezionata, quindi è una
+  sistemazione provvisoria, e regole scritte ora sotto un modificatore element-only verrebbero
+  smontate dall'arco 2. Vanno insieme all'arco 2: collocazione del blocco nel guscio, decisione
+  sulla palette, chip di firma, padding del form body sotto modificatore.
+  `editors/info-improvements.scss` **non si tocca in questo arco**.
 
 ## Superate
 
