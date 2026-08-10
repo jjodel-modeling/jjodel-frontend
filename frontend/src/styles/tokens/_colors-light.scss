@@ -339,6 +339,14 @@ $gradient-hover: linear-gradient(180deg, $slate-100 0%, $slate-200 100%);
   --color-entity-model-fg: #854F0B;
   --color-entity-viewpoint-bg: #FCE7F3;
   --color-entity-viewpoint-fg: #DB2777;
+  --color-entity-attribute-bg: #D1FAE5;
+  --color-entity-attribute-fg: #059669;
+  --color-entity-reference-bg: #CFFAFE;
+  --color-entity-reference-fg: #0891B2;
+  --color-entity-operation-bg: #E0E7FF;
+  --color-entity-operation-fg: #4F46E5;
+  --color-entity-enum-bg: #FEF3C7;
+  --color-entity-enum-fg: #D97706;
 
   /* Saturated variants — used for "alive" signaling (pulsing dot indicator
      dell'entity attiva in editor). Più saturi dei bg pastello, meno scuri
