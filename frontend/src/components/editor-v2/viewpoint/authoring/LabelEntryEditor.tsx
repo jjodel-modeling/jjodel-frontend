@@ -81,7 +81,6 @@ export const LabelEntryEditor: React.FC<LabelEntryEditorProps> = ({
                     : <Toggle
                         checked={editable === true}
                         onChange={(c) => onChange({ ...label, editable: c })}
-                        label="editable inline"
                         size="xs"
                     />}
             </div>
@@ -94,7 +93,7 @@ export const LabelEntryEditor: React.FC<LabelEntryEditorProps> = ({
                 <ConditionalEditor
                     value={label.visible}
                     onChange={(next) => onChange({ ...label, visible: next })}
-                    renderValue={(v, onCh) => <Toggle checked={v} onChange={onCh} label="visible" size="xs" />}
+                    renderValue={(v, onCh) => <Toggle checked={v} onChange={onCh} size="xs" />}
                     defaultValue={true}
                     features={features}
                     featuresHint={featuresHint}

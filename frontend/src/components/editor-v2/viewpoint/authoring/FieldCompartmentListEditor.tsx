@@ -191,7 +191,7 @@ export const FieldCompartmentListEditor: React.FC<FieldCompartmentListEditorProp
 
                         {comp.source.from === 'children' && (
                             <div className="jj-field">
-                                <label className="jj-field-label">Children filter</label>
+                                <label className="jj-field-label">Filter by metaclass (isKind)</label>
                                 {isAdvancedFilter ? (
                                     <span style={CHIP}>advanced predicate (preserved)</span>
                                 ) : (
@@ -199,7 +199,6 @@ export const FieldCompartmentListEditor: React.FC<FieldCompartmentListEditorProp
                                         <Toggle
                                             checked={isBasicIsKind}
                                             onChange={(checked) => setChildFilter(checked ? forPredicateKind('isKind', classNames) : undefined)}
-                                            label="filter by metaclass (isKind)"
                                             size="xs"
                                         />
                                         {isBasicIsKind && childFilter && childFilter.op === 'isKind' && (
@@ -238,11 +237,10 @@ export const FieldCompartmentListEditor: React.FC<FieldCompartmentListEditorProp
                         ) : null}
 
                         <div className="jj-field">
-                            <label className="jj-field-label">Separator</label>
+                            <label className="jj-field-label">Row separators</label>
                             <Toggle
                                 checked={comp.separator === true}
                                 onChange={(c) => replace(index, { ...comp, separator: c })}
-                                label="row separators"
                                 size="xs"
                             />
                         </div>
@@ -252,7 +250,7 @@ export const FieldCompartmentListEditor: React.FC<FieldCompartmentListEditorProp
                             <ConditionalEditor
                                 value={comp.visible}
                                 onChange={(next) => replace(index, { ...comp, visible: next })}
-                                renderValue={(v, onCh) => <Toggle checked={v} onChange={onCh} label="visible" size="xs" />}
+                                renderValue={(v, onCh) => <Toggle checked={v} onChange={onCh} size="xs" />}
                                 defaultValue={true}
                                 features={features}
                                 featuresHint={featuresHint}

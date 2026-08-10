@@ -390,7 +390,7 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view, acti
                     <ConditionalEditor<boolean>
                         value={draft.visible}
                         onChange={(next) => patch({ ...draft, visible: next })}
-                        renderValue={(v, onCh) => <Toggle checked={v} onChange={onCh} label="visible" size="xs" />}
+                        renderValue={(v, onCh) => <Toggle checked={v} onChange={onCh} size="xs" />}
                         defaultValue={true}
                         features={features}
                         featuresHint={FEATURES_HINT}

@@ -92,7 +92,7 @@ export const BadgeListEditor: React.FC<BadgeListEditorProps> = ({ badges, featur
                             <ConditionalEditor
                                 value={badge.visible}
                                 onChange={(next) => replace(index, { ...badge, visible: next ?? true })}
-                                renderValue={(v, onCh) => <Toggle checked={v} onChange={onCh} label="visible" size="xs" />}
+                                renderValue={(v, onCh) => <Toggle checked={v} onChange={onCh} size="xs" />}
                                 defaultValue={true}
                                 features={features}
                                 featuresHint={featuresHint}
