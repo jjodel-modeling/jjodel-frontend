@@ -338,6 +338,16 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   consumatore nuovo di `useInterfaceMode`. In `editors/Info.tsx` i due sistemi di modalità
   convivono a poche righe di distanza: non si «aggiusta» nulla, si evita soltanto di
   aggiungere consumatori del secondo.
+- **R-RAIL-23** (2026-08-10) — Il controllo di collasso in header **commuta solo la
+  visibilità dell'inspector** (`jjodel_property_panel_visible`). Con R-RAIL-18 l'header
+  appartiene al guscio e resta a schermo finché almeno uno dei due pane è montato, quindi
+  nascondere l'inspector è reversibile da lì e non esiste il vicolo cieco che motivava il
+  collasso totale. Il tree conserva la propria chiave e ⌘B: il rail **non scrive mai**
+  `jjodel_treeview_visible` e non chiama i setter di `TreeViewPanelContext` (R-RAIL-11).
+  Quando entrambi i pane sono nascosti il guscio si smonta e subentra la pill di riapertura
+  già esistente. L'espressione di `overlayShown` resta quella di oggi (R-RAIL-22). Motivo:
+  col collasso totale chi chiudeva il rail perdeva la preferenza del tree al reload, perché
+  la chiave del tree veniva scritta a `false`.
 
 ## Superate
 
