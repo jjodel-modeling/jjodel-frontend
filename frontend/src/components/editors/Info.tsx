@@ -16,7 +16,6 @@ import {FakeStateProps, int, windoww} from '../../joiner/types';
 
 import JsonViewer from '../shared/JsonViewer';
 import React, {Component, Dispatch, JSX, ReactElement, ReactNode, useState} from 'react';
-import HelpButton from '../HelpButton';
 import {connect} from 'react-redux';
 import './editors.scss';
 import './info.scss';
@@ -896,7 +895,9 @@ function PropertiesHeader(props: { data: LModelElement; className: string; isMet
             <span className={`jj-type-badge jj-type-badge--${badgeClass}`}>
                 {badge}
             </span>
-            <HelpButton helpKey="properties-panel" />
+            {/* No help button here (Q4): the card's contextual help is rendered once by
+                the host, in the PROPERTIES row (PropertiesWithTreeView.tsx). Keeping it
+                here too would show the same `properties-panel` help twice. */}
         </div>
     );
 }

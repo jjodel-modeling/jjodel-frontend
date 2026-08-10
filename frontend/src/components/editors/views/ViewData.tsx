@@ -1,5 +1,4 @@
-import React, {Dispatch, ReactElement, ReactNode, useEffect, useState} from 'react';
-import {createPortal} from 'react-dom';
+import React, {Dispatch, ReactElement, ReactNode, useState} from 'react';
 import {
     Defaults,
     DState,
@@ -22,7 +21,6 @@ import PaletteData from "./data/PaletteData";
 import GenericNodeData from "./data/GenericNodeData";
 
 import {Btn, CommandBar} from '../../commandbar/CommandBar';
-import HelpButton from '../../HelpButton';
 import "./nestedView.scss";
 import {ComponentsTab} from "./data/ComponentsTab";
 import {VertexAuthoringPanel} from "../../editor-v2/viewpoint/authoring/VertexAuthoringPanel";
@@ -193,34 +191,21 @@ function ViewDataComponent(props: AllProps) {
     // from a view to a viewpoint), snap to the first available.
     const activeDescriptor = tabs.find(t => t.id === activeTab) ?? tabs[0];
 
-    // Context actions (back + help) are hosted by the Properties card header, so the
-    // card shows a single header row and the context row carries only the breadcrumb.
-    // The slot is looked up after mount — on the first render the header is committed
-    // but not yet queryable. When there is no slot (the standalone NestedView host,
-    // which owns no such header) the actions render inline, exactly as before.
-    const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
-    useEffect(() => {
-        setHeaderSlot(document.querySelector<HTMLElement>('.properties-panel-header__actions'));
-    }, []);
-
-    const headerActions = (
-        <>
-            <CommandBar>
-                <Btn icon={'back'} action={() => props.setSelectedView(undefined)} tip={'Back'}/>
-            </CommandBar>
-            <HelpButton helpKey="properties-panel" />
-        </>
-    );
-
     return (
         <div className={"view-editor-root"}>
             <div className={'view-editor-header view-entity-header'}>
-                {/* Context row — the element being edited + its type badge. The ancestor
-                    chain was dropped (2026-07-30): the Tree card sitting right above the
-                    Properties card already exposes it, so repeating it here only cost
-                    width. Back and help moved to the card header row (`headerActions`). */}
+                {/* Context row — back + the element being edited + its type badge. The
+                    ancestor chain was dropped (2026-07-30): the Tree card sitting right
+                    above the Properties card already exposes it, so repeating it here
+                    only cost width. The back button is rendered here directly (Q4): the
+                    portal towards `.properties-panel-header__actions` was retired because
+                    its lookup was a global `document.querySelector` with empty deps —
+                    not scoped to its own container, and unable to follow a remount of the
+                    header. The card's contextual help now belongs to the host row. */}
                 <div className="props-header props-header--view">
-                    {headerSlot ? createPortal(headerActions, headerSlot) : headerActions}
+                    <CommandBar>
+                        <Btn icon={'back'} action={() => props.setSelectedView(undefined)} tip={'Back'}/>
+                    </CommandBar>
                     <div className={"path-list"}>
                         <div className={"path-element"}>{U.cropStr(view.name, 1, 1, 10, 10)}</div>
                     </div>

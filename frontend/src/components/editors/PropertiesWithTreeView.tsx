@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useSelector, useStore } from 'react-redux';
 import { Info } from './Info';
 import { NodeEditor } from './NodeEditor';
+import HelpButton from '../HelpButton';
 import { TreeViewContent } from '../TreeViewSidebar/TreeViewContent';
 import { useTreeViewPanel } from '../../contexts/TreeViewPanelContext';
 import './properties-with-tree-view.scss';
@@ -452,11 +453,14 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                     >
                         <i className="bi bi-sliders" />
                         <span>PROPERTIES</span>
-                        {/* Slot for the context actions of whatever the body is showing
-                            (today: the view editor's back + help, portaled up by ViewData).
-                            Empty and zero-width when nothing claims it, so the pin and
-                            collapse buttons keep their position. */}
-                        <div className="properties-panel-header__actions" />
+                        {/* Contextual help of the card, owned by the host (Q4): the same
+                            `properties-panel` help whatever the body is showing, so both
+                            cards carry it in the same place. It used to be portaled up
+                            here by ViewData for the view card only, and rendered a second
+                            time by PropertiesHeader for the abstract one. */}
+                        <div className="properties-panel-header__actions">
+                            <HelpButton helpKey="properties-panel" />
+                        </div>
                         <button
                             className={`properties-panel-pin-btn${isPinned ? ' is-active' : ''}`}
                             onClick={togglePin}

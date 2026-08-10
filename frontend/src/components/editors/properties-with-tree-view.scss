@@ -282,30 +282,34 @@ $pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Chec
         color: $pc-slate-600;
     }
 
-    // ─── Header row 1 actions slot: back + help, portaled up by ViewData ───
+    // ─── Header row 1 actions: the card's contextual help, rendered by the host ───
     .properties-panel-header__actions {
         display: inline-flex;
         align-items: center;
         gap: 4px;
+    }
 
+    // ─── Header row 2: back + breadcrumb + VIEW chip ───
+    .props-header--view {
+        border-bottom: 1px solid $pc-slate-100;
+
+        // The two rules below follow the back button, which Q4 brings back into this
+        // row from the header slot (2026-08-10).
+        //
         // `.command-bar` is built for a standalone toolbar row: it carries a 10px
-        // bottom margin (commandbar.scss:23) that would lift its glyph off the
-        // header's centre line. Neutralised here only.
+        // bottom margin (commandbar.scss:23) that would lift its glyph off the row's
+        // centre line — `.props-header` is a 40px flex box with `align-items:center`
+        // (info-improvements.scss:865-878), so flex centres the 34px margin box and
+        // the button lands ~5px high. Neutralised here only.
         .command-bar {
             margin-bottom: 0;
             height: 24px;
         }
 
         // The back chevron's frame is a border on `.tab-btn.back::before`
-        // (commandbar.scss:306); (0,5,0) beats that (0,3,0) base. The rule follows
-        // the button up here — in the header row the frame would box it against the
-        // pin and collapse buttons, which are frameless.
+        // (commandbar.scss:306); (0,5,0) beats that (0,3,0) base. The row carries no
+        // other framed control, so the frame would box this one alone.
         .command-bar .tab-btn.back::before { border-color: transparent; }
-    }
-
-    // ─── Header row 2: breadcrumb + VIEW chip ───
-    .props-header--view {
-        border-bottom: 1px solid $pc-slate-100;
 
         .path-separator { font-size: 12px; color: $pc-slate-300; margin: auto 6px; }
 
