@@ -6,7 +6,7 @@ file** — it existed only in chat). Every anchor below was re-verified against 
 working tree on 2026-07-21; where the discovery was wrong it is corrected here (see §1.9).
 This document therefore also serves as the committed record of the verified Fase 1 surface.
 
-**Companion spec**: `docs/specs/spec_2026-07-18_ir_schema_v1_2.md` (the IR schema this
+**Companion spec**: `docs/spec/claude_spec_2026-07-18_ir_schema_v1_2.md` (the IR schema this
 editor authors). All `sez. N` references point there.
 
 **Base path**: `frontend/src/`.

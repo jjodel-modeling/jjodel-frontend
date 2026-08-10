@@ -67,7 +67,7 @@ Rinviato con go-ahead + Layer Impact Report: routing configurabile (geometria/`p
 ## 6. Riferimenti
 
 - Discovery: `docs/discovery/discovery_2026-07-26_edge_authoring_substrate.md` (repo).
-- Schema base: `docs/specs/spec_2026-07-18_ir_schema_v1_2.md` §7 (`EdgeSpec`), §6 (`InteractionSpec.connect`).
+- Schema base: `docs/spec/claude_spec_2026-07-18_ir_schema_v1_2.md` §7 (`EdgeSpec`), §6 (`InteractionSpec.connect`).
 - Prior art per kind: `claude/spec_2026-07-25_ir_row_dispatch_addendum.md` (bucket/compile/resolve, authoring R3, comparatore condiviso).
 - Mappa di copertura: `claude/mappa_sintassi_concreta.md` (aggiornare la riga edge dopo E0).
 - Siti chiave (dalla discovery): `irResolveCore.ts:44-60,116-141,256-320`, `irCompile.ts:382-428`, `irEdgeViews.ts:49-72,118-257`, `UnifiedEdge.tsx:62-76,477-484,592-599`, `irContainment.ts:240-277`, `ViewData.tsx:58`, `EnableIRPanel.tsx:8-11`.

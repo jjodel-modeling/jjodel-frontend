@@ -25,6 +25,8 @@ Retarget della v1.1: l'IR non è più un formato intermedio di generazione AI ma
 
 La v1.1 resta in `docs/spec/` solo come riferimento storico per le sezioni di lowering (IR → DViewElement) non riscritte nella v1.2.
 
+`docs/specs/` (con la s) è stata ritirata il 2026-08-10 (fusione delle due copie, ratifiche R-FS1..R-FS7): i riferimenti storici a quel path si risolvono in `docs/spec/`.
+
 ## Addendum row dispatch
 **File**: `docs/spec/claude_spec_2026-07-25_ir_row_dispatch_addendum.md` · **Stato**: vigente, implementato in tre fette (R1 resolver+guard, R2 suppression, R3 authoring preserve)
 

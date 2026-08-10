@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-10 — docs: ritiro di docs/specs/, migrazione del design doc slice-1, nota di reindirizzamento
+**Prompt**: `claude/2026-08-10_prompt_fusione_spec_v12_fase2.md` («2026-08-10 03:05»), Commit 2 di 2.
+**Files touched**: `docs/specs/design_2026-07-21_ir_authoring_surface_slice1.md` → `docs/spec/design_2026-07-21_ir_authoring_surface_slice1.md` (`git mv`, nome conservato per R-FS6; dentro, il riferimento companion aggiornato al path canonico completo), `docs/spec/claude_spec_2026-07-26_ir_edge_authoring_addendum.md` (unica occorrenza → path canonico completo; R-FS4, opzione (i): nessun registro o documento chiuso toccato), `docs/spec/spec_attive.md` (riga di reindirizzamento in coda alla sezione ViewpointIR v1.2, R-FS5; nessuna indicizzazione del design doc, R-FS7), questo file (entry).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — solo documenti; verifica finale: `grep -rn "docs/specs/" docs/spec/ frontend/src` restituisce la sola riga di reindirizzamento (che nomina il path per definizione) e zero hit nel codice; la cartella `docs/specs/` non esiste più.
+**Out-of-scope changes**: no — i path del DOVE più questa entry.
+**Layer Impact Report**: not-required — nessun file di §3.1.
+**Smoke visivo**: non applicabile — nessuna modifica di resa.
+**Notes**: La sostituzione è stata di **path completo** (`docs/specs/spec_...` → `docs/spec/claude_spec_...`), mai di sola directory, come impone l'ostacolo (a) della discovery: una sostituzione di directory avrebbe prodotto riferimenti a un file inesistente.
+**Prompt document name**: 2026-08-10 03:05
+
 ## 2026-08-10 — docs: fusione delle due copie della spec ViewpointIR v1.2 (Fase 2, R-FS1..R-FS7)
 **Prompt**: `claude/2026-08-10_prompt_fusione_spec_v12_fase2.md`, eseguito dalla sessione Cowork del 10/8 mattina dopo la ratifica esplicita di Alfonso di R-FS1..R-FS7 (memo `claude/2026-08-10_memo_fusione_spec_v12.md`). Commit 1 di 2: fusione nella copia canonica e ritiro della copia divergente.
 **Files touched**: `docs/spec/claude_spec_2026-07-18_ir_schema_v1_2.md` (hunk 2-3: wildcard `metaclasses: '*'` in sez. 2 e 4, dal COSA originario; hunk 7: frase multi-hop in sez. 9; hunk 8: emendamento 2026-07-21 in sez. 12, verbatim dalla copia repo, R-FS1; header **Emendamenti** aggiornato), `docs/specs/spec_2026-07-18_ir_schema_v1_2.md` (rimosso), questo file (entry).
