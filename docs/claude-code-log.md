@@ -1,5 +1,18 @@
 # Claude Code Session Log
 
+## 2026-08-10 — fix: null-check su `get_allPossibleParentViews` per catene father rotte
+**Prompt**: «Fix backlog `allPossibleParentViews` (null-check `view.tsx:446-447`)», sessione Cowork notturna del 10/8 su mandato esplicito di Alfonso di implementare in autonomia le voci semplici del cruscotto. Discovery e implementazione nella stessa sessione; gate eseguiti nel clone cloud a HEAD `12ad6de83`, edit applicato al working tree del Mac via bridge.
+**Files touched**: `frontend/src/view/viewElement/view.tsx` (guardia `if (vp)` più commento di due righe sul getter, nessun altro ramo toccato), `docs/discovery/discovery_2026-08-10_allpossibleparentviews_nullcheck.md` (nuovo), questo file (entry).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `typecheck` Δ0 (14 errori: i 14 sparsi della baseline; i 19 di casing non si manifestano sul filesystem case-sensitive del clone), `vitest` 1125 passed con le sole 9 collection failures note, `build` ok col solo warning chunk-size preesistente.
+**Out-of-scope changes**: no — i due path del COSA più questa entry.
+**Layer Impact Report**: not-required — `view.tsx` non è tra i file di §3.1; getter read-only, nessun write path D/L toccato.
+**Smoke visivo**: non applicabile — nel caso sano (`vp` definito) il ramo è identico per costruzione; nel caso rotto (catena `father` dangling o ciclica, dati sporchi non creabili dalla UI) si passa dal crash del render del pannello a una lista di parent senza la voce del viewpoint.
+**Notes**: (1) **La voce 4 non aveva toccato il getter**: bug vivo a HEAD, verificato prima del fix (`get_viewpoint` ritorna `undefined as any` su ciclo o su pointer dangling, la riga 447 faceva `vp.id` senza guardia). Root cause e superficie di innesco nel report di discovery. (2) **Nessun test aggiunto**: una fixture con catena dangling sul proxy L ha costo sproporzionato per una guardia di una riga; motivato nel report, con follow-up facoltativo (warn nel ramo `!vp`). (3) **Commit senza push**: smoke visivo e push restano ad Alfonso, coerente col mandato della notte. (4) Con questa entry le attive salgono a 21: rotazione nel commit successivo, come da prassi di questo repo.
+**Prompt document name**: 2026-08-10 02:25
+
 ## 2026-08-10 — docs: rotazione del log a 20 entry attive (sesto lotto)
 **Prompt**: «giro docs: report fusione spec + triage, entry retroattive, rotazione log», documento prompt 2026-08-10, Commit 2 di 2. Rotazione standard dopo che il Commit 1 (`dd441ae01`) ha portato il file attivo a 22 entry.
 **Files touched**: `docs/claude-code-log.md` (tolte le 3 entry più vecchie, aggiunta questa), `docs/claude-code-log-archive.md` (le 3 entry appese in coda + il paragrafo di lotto nel preambolo).

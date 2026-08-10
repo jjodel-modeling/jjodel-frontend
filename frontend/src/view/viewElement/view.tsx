@@ -444,7 +444,9 @@ export class LViewElement<Context extends LogicContext<DViewElement, LViewElemen
         }
         delete allviews[c.data.id];
         let vp = this.get_viewpoint(c);
-        allviews[vp.id] = vp;
+        // get_viewpoint returns undefined on a cyclic or dangling father chain (see its
+        // anti-cycle belt): skip the re-insertion instead of crashing on vp.id.
+        if (vp) allviews[vp.id] = vp;
         return Object.values(allviews);
     }
 
