@@ -2,7 +2,7 @@
 
 **Data**: 2026-07-18
 **Stato**: supersede la v1.1 (`spec_2026-06-08_ir_schema_v1_1.md`). Recepisce le decisioni della sessione 2026-07-17_2 (opzione B confermata) e i findings dello spike Fase 1.
-**Emendamenti**: 2026-07-18 — fallback normativo della palette derivata (sez. 6); delega delle default migrate al rendering nativo (sez. 11). 2026-07-19 — perimetro esteso di `persistWaypoints` e persistenza su DVertex (sez. 7-8). Decisioni Alfonso, sessioni test.
+**Emendamenti**: 2026-07-18 — fallback normativo della palette derivata (sez. 6); delega delle default migrate al rendering nativo (sez. 11). 2026-07-19 — perimetro esteso di `persistWaypoints` e persistenza su DVertex (sez. 7-8). 2026-07-21 — fix render multi-hop, navigazione draw-semantic via `navigateRefHop`/`ReadCtx.getRef` (sez. 9, 12; commit `a479e489d`). Decisioni Alfonso, sessioni test. Fusione delle due copie divergenti (docs/spec e docs/specs) il 2026-08-10, ratifiche R-FS1..R-FS7.
 **Versione schema IR**: `ir-1.2`
 **Target**: **interprete di EditorV2** (flow). Il lowering IR → quadrupla `(oclCondition, jsxString, SCSS, opzioni)` della v1.1 diventa legacy/migration-only.
 
@@ -24,8 +24,10 @@ La risoluzione della view per un elemento è dichiarata nello schema, non eredit
 **Regola d'ordine deterministica** per le view candidate (stessa metaclasse o antenata, predicato che passa):
 
 1. `priority` esplicita (maggiore vince; assente = 0);
-2. specificità di metaclasse: match esatto (la metaclasse dell'oggetto è dichiarata in `metaclasses`) > match per ereditarietà (una antenata è dichiarata); a parità di antenata, distanza minore vince;
+2. specificità di metaclasse: match esatto (la metaclasse dell'oggetto è dichiarata in `metaclasses`) > match per ereditarietà (una antenata è dichiarata) > wildcard (`metaclasses: '*'`); a parità di antenata, distanza minore vince;
 3. ordine di dichiarazione della view nel viewpoint.
+
+Il **wildcard** `metaclasses: '*'` esiste per le default view (erede della semantica per-livello delle classic default: si applicano a ogni oggetto del livello). Ha sempre specificità minima: qualunque view dichiarata per metaclasse la batte a parità di priority.
 
 **Vincoli dell'interprete**:
 - risoluzione indicizzata per metaclasse: costruzione dell'indice all'attivazione del viewpoint, dispatch O(#view candidate), mai O(model);
@@ -47,7 +49,7 @@ Come v1.1 sez. 4 (`ViewpointIR`, `ViewIR` unione discriminata sui 5 kind, `ViewC
 interface ViewCommon {
   irVersion: string;
   id?: string;
-  metaclasses: MetaclassRef[];
+  metaclasses: MetaclassRef[] | '*';   // '*' = wildcard delle default view (specificità minima, sez. 2)
   predicate?: Predicate;
   priority?: number;            // primo criterio della regola di risoluzione (sez. 2)
   exclusive?: boolean;          // default true
@@ -165,7 +167,7 @@ Per ogni view compilata, l'interprete deriva staticamente dai PathExpr l'insieme
 - **self**: nomi di feature letti sul primo hop → subscription sullo snapshot dell'elemento (implementato nello spike);
 - **cross-oggetto** (multi-hop): coppie (hop, feature) → subscription sugli oggetti navigati. NON implementato nello spike (limite noto); richiesto per Fase 2b/2c (i predicati dei graphVertex e gli endpoint edge navigano). L'interprete DEVE invalidare il render di un elemento quando cambia una feature nel suo dependency set, e NON DEVE re-renderizzare per feature fuori dal set.
 
-Il dependency set è derivato, mai dichiarato nello schema.
+Il dependency set è derivato, mai dichiarato nello schema. La navigazione multi-hop (sia il render sia la concretizzazione del dependency set) è draw-semantic per costruzione, via l'helper unico `navigateRefHop` / `ReadCtx.getRef`: vedi la nota in sez. 12.
 
 ## 10. Fallback espliciti (contratto dell'interprete)
 
@@ -191,6 +193,8 @@ Per la Fase 4 (migration inversa, VersionFixer):
 ## 12. Persistenza (invariata, con nota ReadCtx)
 
 Come v1.1 sez. 8 (`ir?` additivo, serializzazione generica, IR master, identità = id del DViewElement). Nota di implementazione: gli accessor compilati leggono attraverso l'interfaccia stretta `ReadCtx` con due backend intercambiabili (proxy L / D-diretto, default proxy L). Lo switch resta swappabile finché il benchmark comparativo (Fase 4) non decide; la differenza semantica (il proxy coerce/tronca a upperBound) è documentata nel modulo.
+
+**Emendamento 2026-07-21 (fix render multi-hop)**: la navigazione degli hop non-terminali di un PathExpr è draw-semantic (risolta per pointer id) su entrambi i backend, tramite l'helper unico `navigateRefHop` esposto come `ReadCtx.getRef`; solo il valore dello step terminale passa dal backend attivo (preservando la coercizione del proxy L dove presente). Il proxy L, letto con `.value` su una reference, restituisce nome/proxy e non il pointer id: senza questa risoluzione la navigazione multi-hop degradava a vuoto. Lo stesso helper alimenta la concretizzazione dei dependency set cross-oggetto (sez. 9), così render e reattività non divergono sulla semantica di navigazione.
 
 ## 13. Fuori dalla v1.2
 
