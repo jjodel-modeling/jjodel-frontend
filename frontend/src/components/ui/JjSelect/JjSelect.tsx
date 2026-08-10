@@ -61,18 +61,24 @@ function buildStyles<
         }),
         menuPortal: (base) => ({ ...base, zIndex: 9999 }),
         menuList: (base) => ({ ...base, padding: 4 }),
+        // A disabled option is shown, not hidden: some lists (the "Parent view" tree) need
+        // to state which entries exist and are out of reach. react-select's own muted
+        // colour is overridden by the `color` below, so the disabled state is restated
+        // here — without it the option reads as selectable and simply fails to respond.
         option: (base, state) => ({
             ...base,
-            color: '#0f172a',
+            color: state.isDisabled ? '#94a3b8' : '#0f172a',
             padding: '6px 10px',
             borderRadius: 4,
-            backgroundColor: state.isSelected
-                ? 'rgba(14, 165, 233, 0.16)'
-                : state.isFocused
-                    ? 'rgba(14, 165, 233, 0.10)'
-                    : 'transparent',
-            cursor: 'pointer',
-            '&:active': { backgroundColor: 'rgba(14, 165, 233, 0.16)' },
+            backgroundColor: state.isDisabled
+                ? 'transparent'
+                : state.isSelected
+                    ? 'rgba(14, 165, 233, 0.16)'
+                    : state.isFocused
+                        ? 'rgba(14, 165, 233, 0.10)'
+                        : 'transparent',
+            cursor: state.isDisabled ? 'not-allowed' : 'pointer',
+            '&:active': state.isDisabled ? {} : { backgroundColor: 'rgba(14, 165, 233, 0.16)' },
         }),
         groupHeading: (base) => ({
             ...base,
