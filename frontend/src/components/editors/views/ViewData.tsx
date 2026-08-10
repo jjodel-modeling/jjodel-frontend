@@ -191,21 +191,30 @@ function ViewDataComponent(props: AllProps) {
     // from a view to a viewpoint), snap to the first available.
     const activeDescriptor = tabs.find(t => t.id === activeTab) ?? tabs[0];
 
+    // Who owns the way out is the host's business, not this panel's. Inside the
+    // Properties card the way out is the Tree right above it — selecting anything
+    // else replaces the panel — so the card asks for no back. The standalone
+    // NestedView host has no such tree: there the back IS the only way from the
+    // view editor to the viewpoint list, so it stays (default).
+    const showBack = props.showBack !== false;
+
     return (
         <div className={"view-editor-root"}>
             <div className={'view-editor-header view-entity-header'}>
-                {/* Context row — back + the element being edited + its type badge. The
-                    ancestor chain was dropped (2026-07-30): the Tree card sitting right
-                    above the Properties card already exposes it, so repeating it here
-                    only cost width. The back button is rendered here directly (Q4): the
-                    portal towards `.properties-panel-header__actions` was retired because
-                    its lookup was a global `document.querySelector` with empty deps —
-                    not scoped to its own container, and unable to follow a remount of the
+                {/* Context row — the element being edited + its type badge, and the back
+                    button when the host asks for it. The ancestor chain was dropped
+                    (2026-07-30): the Tree card sitting right above the Properties card
+                    already exposes it, so repeating it here only cost width. The portal
+                    towards `.properties-panel-header__actions` was retired (Q4): its
+                    lookup was a global `document.querySelector` with empty deps — not
+                    scoped to its own container, and unable to follow a remount of the
                     header. The card's contextual help now belongs to the host row. */}
                 <div className="props-header props-header--view">
-                    <CommandBar>
-                        <Btn icon={'back'} action={() => props.setSelectedView(undefined)} tip={'Back'}/>
-                    </CommandBar>
+                    {showBack && (
+                        <CommandBar>
+                            <Btn icon={'back'} action={() => props.setSelectedView(undefined)} tip={'Back'}/>
+                        </CommandBar>
+                    )}
                     <div className={"path-list"}>
                         <div className={"path-element"}>{U.cropStr(view.name, 1, 1, 10, 10)}</div>
                     </div>
@@ -241,6 +250,9 @@ interface OwnProps {
     viewid: Pointer<DViewElement>;
     viewpoints: Pointer<DViewPoint>[];
     setSelectedView: React.Dispatch<React.SetStateAction<Pointer<DViewElement> | undefined>>;// (val: LViewElement | undefined) => {}
+    /** Back button in the context row. Defaults to true; the Properties card sets it
+     *  to false because the Tree above the card already navigates away. */
+    showBack?: boolean;
 }
 interface StateProps {
     view: LViewElement;

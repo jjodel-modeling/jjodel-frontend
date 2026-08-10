@@ -1197,6 +1197,7 @@ function InfoComponent(props: AllProps) {
                         viewid={selectedView.id as any}
                         viewpoints={(LProject.getProject()?.viewpoints || []).map((vp: LViewPoint) => vp.id) as any}
                         setSelectedView={clearSelection as any}
+                        showBack={false}
                     />
                 )}
             </section>
