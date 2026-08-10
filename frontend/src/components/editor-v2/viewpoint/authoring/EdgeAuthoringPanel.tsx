@@ -11,6 +11,7 @@ import {
     Button,
     PathBuilder,
     PredicateBuilder,
+    FormSection,
     forPredicateKind,
     type PathBuilderFeatures,
 } from '../../../ui';
@@ -446,19 +447,20 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
 
     return (
         <section className="properties-tab properties-panel">
-            <div className="jj-field-label" style={{ marginTop: 4 }}>IR Edge view authoring</div>
-            <HelpText>{isObject
-                ? 'An object edge view renders every instance of the metaclass as a line between the two endpoints: the object is no longer drawn as a node.'
-                : 'A reference edge view styles the edges derived from the M1 references whose SOURCE object matches the metaclass (and optional reference) below.'}</HelpText>
+            <FormSection title="IR Edge view authoring" divider={false}>
+                <HelpText>{isObject
+                    ? 'An object edge view renders every instance of the metaclass as a line between the two endpoints: the object is no longer drawn as a node.'
+                    : 'A reference edge view styles the edges derived from the M1 references whose SOURCE object matches the metaclass (and optional reference) below.'}</HelpText>
 
-            {error && <ErrorText>{error}</ErrorText>}
+                {error && <ErrorText>{error}</ErrorText>}
 
-            {/* Cross-tab (R-B): names the tab where the metaclass is chosen. */}
-            {featureInfo.metamodelsWithClass > 1 && (
-                <ErrorText>
-                    {metaclassAmbiguityWarning(featureInfo.targetName, featureInfo.metamodelsWithClass)}
-                </ErrorText>
-            )}
+                {/* Cross-tab (R-B): names the tab where the metaclass is chosen. */}
+                {featureInfo.metamodelsWithClass > 1 && (
+                    <ErrorText>
+                        {metaclassAmbiguityWarning(featureInfo.targetName, featureInfo.metamodelsWithClass)}
+                    </ErrorText>
+                )}
+            </FormSection>
 
             {/* ─────────── Applies to ─────────── */}
             <div style={body('ir-applies-to')}>
@@ -467,8 +469,8 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
             {identity && <IRIdentityFields view={view} {...identity} />}
 
             {/* Matching — source metaclass */}
-            <div className="jj-field-label" style={{ marginTop: 8 }}>Matching</div>
-            <div className="jj-field" style={{ marginTop: 4 }}>
+            <FormSection title="Matching" divider={false}>
+            <div className="jj-field">
                 <label className="jj-field-label">{isObject ? 'Object metaclass' : 'Source metaclass'}</label>
                 <Toggle
                     checked={isWildcard}
@@ -524,7 +526,7 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                 Stays with the matching block it has always been rendered inside: the
                 partition does not split an existing section (Q2 del 2026-08-06). */}
             {!isObject && (
-                <div className="jj-field" style={{ marginTop: 8 }}>
+                <div className="jj-field">
                     <label className="jj-field-label">Reference</label>
                     <Select
                         options={refOptions}
@@ -536,7 +538,7 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
             )}
 
             {/* Matching — predicate */}
-            <div className="jj-field" style={{ marginTop: 8 }}>
+            <div className="jj-field">
                 <label className="jj-field-label">Condition</label>
                 <Toggle
                     checked={hasPredicate}
@@ -563,7 +565,7 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
             </div>
 
             {/* Matching — priority */}
-            <div className="jj-field" style={{ marginTop: 8 }}>
+            <div className="jj-field">
                 <label className="jj-field-label">Priority</label>
                 <NumberInput
                     value={draft.priority ?? 0}
@@ -571,6 +573,7 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                 />
                 <HelpText>The highest priority wins; on a tie, specificity (exact &gt; inherited &gt; wildcard), then declaration order.</HelpText>
             </div>
+            </FormSection>
             </div>
 
             {/* ─────────── Structure ─────────── */}
@@ -598,9 +601,9 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                 either both keys are in the ir, or neither is. */}
             {isObject && (
                 <>
-                    <div className="jj-field-label" style={{ marginTop: 8 }}>Endpoints</div>
+                    <FormSection title="Endpoints" divider={false}>
                     <HelpText>With both endpoints set, the instances of this metaclass are drawn as lines: they no longer appear as nodes on the canvas and their references towards the endpoints are no longer drawn.</HelpText>
-                    <div className="jj-field" style={{ marginTop: 4 }}>
+                    <div className="jj-field">
                         <label className="jj-field-label">Source endpoint</label>
                         <PathBuilder
                             features={endpointFeatures}
@@ -612,7 +615,7 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                             <ErrorText>{ENDPOINT_ARRAY_ERROR}</ErrorText>
                         )}
                     </div>
-                    <div className="jj-field" style={{ marginTop: 8 }}>
+                    <div className="jj-field">
                         <label className="jj-field-label">Target endpoint</label>
                         <PathBuilder
                             features={endpointFeatures}
@@ -635,6 +638,7 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                         : unsavedSingleEndpoint
                             ? 'With a single endpoint nothing is saved: the two endpoints are written together, so until you set the other one too the view stays a reference edge view and the typed endpoint is lost when you leave the panel.'
                             : 'The two endpoints are written together: while one is missing (or reads a whole array) the view stays a reference edge view and the canvas does not change.'}</HelpText>
+                    </FormSection>
                 </>
             )}
             </div>
@@ -643,8 +647,8 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
             <div style={body('ir-appearance')}>
 
             {/* Line style */}
-            <div className="jj-field-label" style={{ marginTop: 8 }}>Line</div>
-            <div className="jj-field" style={{ marginTop: 4 }}>
+            <FormSection title="Line" divider={false}>
+            <div className="jj-field">
                 <label className="jj-field-label">Color</label>
                 <ConditionalEditor
                     value={line.color}
@@ -656,7 +660,7 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                     classNames={classNames}
                 />
             </div>
-            <div className="jj-field" style={{ marginTop: 8 }}>
+            <div className="jj-field">
                 <label className="jj-field-label">Width</label>
                 <ConditionalEditor<number>
                     value={line.width}
@@ -668,7 +672,7 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                     classNames={classNames}
                 />
             </div>
-            <div className="jj-field" style={{ marginTop: 8 }}>
+            <div className="jj-field">
                 <label className="jj-field-label">Dash</label>
                 <ConditionalEditor<'solid' | 'dashed' | 'dotted'>
                     value={line.style}
@@ -686,7 +690,7 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                     classNames={classNames}
                 />
             </div>
-            <div className="jj-field" style={{ marginTop: 8 }}>
+            <div className="jj-field">
                 <label className="jj-field-label">Routing</label>
                 <Select
                     options={ROUTING_OPTIONS}
@@ -702,9 +706,11 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                 )}
             </div>
 
+            </FormSection>
+
             {/* Terminations */}
-            <div className="jj-field-label" style={{ marginTop: 8 }}>Ends</div>
-            <div className="jj-field" style={{ marginTop: 4 }}>
+            <FormSection title="Ends" divider={false}>
+            <div className="jj-field">
                 <label className="jj-field-label">Start</label>
                 <Select
                     options={TERMINATION_OPTIONS}
@@ -712,7 +718,7 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                     onChange={(e) => patchTerminations({ sourceEnd: e.target.value as EdgeTermination })}
                 />
             </div>
-            <div className="jj-field" style={{ marginTop: 8 }}>
+            <div className="jj-field">
                 <label className="jj-field-label">End</label>
                 <Select
                     options={TERMINATION_OPTIONS}
@@ -720,14 +726,15 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                     onChange={(e) => patchTerminations({ targetEnd: e.target.value as EdgeTermination })}
                 />
             </div>
+            </FormSection>
             </div>
 
             {/* ─────────── Text ─────────── */}
             <div style={body('ir-text')}>
 
             {/* Label center */}
-            <div className="jj-field-label" style={{ marginTop: 8 }}>Label</div>
-            <div className="jj-field" style={{ marginTop: 4 }}>
+            <FormSection title="Label" divider={false}>
+            <div className="jj-field">
                 <Toggle
                     checked={hasCenterLabel}
                     onChange={setHasCenterLabel}
@@ -750,12 +757,14 @@ export const EdgeAuthoringPanel: React.FC<EdgeAuthoringPanelProps> = ({ view, ac
                         : 'Without a label the edge keeps its default label (the reference name).'}</HelpText>
                 )}
             </div>
+            </FormSection>
             </div>
 
             {/* ─────────── Source ─────────── */}
             <div style={body('ir-source')}>
-                <div className="jj-field-label" style={{ marginTop: 8 }}>Source</div>
-                <IRSourceBody ir={(view as any).ir} />
+                <FormSection title="Source" divider={false}>
+                    <IRSourceBody ir={(view as any).ir} />
+                </FormSection>
             </div>
         </section>
     );

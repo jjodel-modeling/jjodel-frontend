@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { DClass, LPointerTargetable, type LViewElement } from '../../../../joiner';
-import { Button, HelpText, ErrorText, Select } from '../../../ui';
+import { Button, HelpText, ErrorText, Select, FormSection } from '../../../ui';
 import { defaultObjectViewIR, defaultEdgeViewIR } from '../ir/irDefaults';
 import { validateIR } from '../ir/irValidate';
 import type { EdgeViewIR, RowViewIR, VertexViewIR } from '../ir/irTypes';
@@ -68,8 +68,9 @@ export const EnableIRPanel: React.FC<EnableIRPanelProps> = ({ view }) => {
     if (existingIr) {
         return (
             <section className="properties-tab properties-panel">
-                <div className="jj-field-label" style={{ marginTop: 4 }}>IR authoring</div>
-                <HelpText>This view already has an IR representation of kind "{existingIr.kind}". Authoring for this kind is not available yet: the view will not be modified.</HelpText>
+                <FormSection title="IR authoring" divider={false}>
+                    <HelpText>This view already has an IR representation of kind "{existingIr.kind}". Authoring for this kind is not available yet: the view will not be modified.</HelpText>
+                </FormSection>
             </section>
         );
     }
@@ -108,12 +109,12 @@ export const EnableIRPanel: React.FC<EnableIRPanelProps> = ({ view }) => {
 
     return (
         <section className="properties-tab properties-panel">
-            <div className="jj-field-label" style={{ marginTop: 4 }}>IR authoring</div>
+            <FormSection title="IR authoring" divider={false}>
             <HelpText>This view still uses the classic template (jsxString). Enabling the IR describes the view with a structured representation, and the rendering of the instances it matches switches to the IR interpreter right away.</HelpText>
 
             {error && <ErrorText>{error}</ErrorText>}
 
-            <div className="jj-field" style={{ marginTop: 8 }}>
+            <div className="jj-field">
                 <label className="jj-field-label">Kind</label>
                 <Select
                     options={KIND_OPTIONS}
@@ -122,7 +123,7 @@ export const EnableIRPanel: React.FC<EnableIRPanelProps> = ({ view }) => {
                 />
             </div>
 
-            <div className="jj-field" style={{ marginTop: 8 }}>
+            <div className="jj-field">
                 {kind === 'row' ? (
                     <HelpText>The row view will start with no metaclass: set it (and the template) right afterwards from the authoring panel.</HelpText>
                 ) : kind === 'edge' ? (
@@ -138,9 +139,10 @@ export const EnableIRPanel: React.FC<EnableIRPanelProps> = ({ view }) => {
                 )}
             </div>
 
-            <div className="jj-field" style={{ marginTop: 8 }}>
+            <div className="jj-field">
                 <Button variant="primary" onClick={enable}>Enable IR authoring</Button>
             </div>
+            </FormSection>
         </section>
     );
 };

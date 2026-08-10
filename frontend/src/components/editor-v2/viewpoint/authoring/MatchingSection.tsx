@@ -6,6 +6,7 @@ import {
     Button,
     Select,
     PredicateBuilder,
+    FormSection,
     forPredicateKind,
     type PathBuilderFeatures,
 } from '../../../ui';
@@ -70,13 +71,11 @@ export const MatchingSection: React.FC<MatchingSectionProps> = ({
     };
 
     return (
-        <>
-            {/* Header */}
-            <div className="jj-field-label" style={{ marginTop: 4 }}>Matching</div>
+        <FormSection title="Matching" divider={false}>
             <HelpText>These fields decide when the view applies; for IR views they replace the Apply-to tab, which has no effect on them.</HelpText>
 
             {/* Metaclasses */}
-            <div className="jj-field" style={{ marginTop: 8 }}>
+            <div className="jj-field">
                 <label className="jj-field-label">Metaclasses</label>
                 <Toggle
                     checked={isWildcard}
@@ -114,7 +113,7 @@ export const MatchingSection: React.FC<MatchingSectionProps> = ({
             </div>
 
             {/* Predicate (top-level) */}
-            <div className="jj-field" style={{ marginTop: 8 }}>
+            <div className="jj-field">
                 <label className="jj-field-label">Condition</label>
                 <Toggle
                     checked={hasPredicate}
@@ -139,7 +138,7 @@ export const MatchingSection: React.FC<MatchingSectionProps> = ({
             </div>
 
             {/* Priority */}
-            <div className="jj-field" style={{ marginTop: 8 }}>
+            <div className="jj-field">
                 <label className="jj-field-label">Priority</label>
                 <NumberInput
                     value={draft.priority ?? 0}
@@ -149,7 +148,7 @@ export const MatchingSection: React.FC<MatchingSectionProps> = ({
             </div>
 
             {/* Exclusive */}
-            <div className="jj-field" style={{ marginTop: 8 }}>
+            <div className="jj-field">
                 <label className="jj-field-label">Exclusive</label>
                 <Toggle
                     checked={draft.exclusive ?? true}
@@ -159,7 +158,7 @@ export const MatchingSection: React.FC<MatchingSectionProps> = ({
                 />
                 <HelpText>Decorative views (exclusive off) are not supported by the IR resolver yet: turning it off makes the view disappear from the canvas (current limitation).</HelpText>
             </div>
-        </>
+        </FormSection>
     );
 };
 

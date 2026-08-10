@@ -11,6 +11,7 @@ import {
     ListEditor,
     PredicateBuilder,
     ConditionalEditor,
+    FormSection,
     forPredicateKind,
     type PathBuilderFeatures,
 } from '../../../ui';
@@ -262,17 +263,18 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view, acti
 
     return (
         <section className="properties-tab properties-panel">
-            <div className="jj-field-label" style={{ marginTop: 4 }}>IR Row view authoring</div>
-            <HelpText>A row view renders a composition child as an inline text row inside a compartment with source "children"; it has no shape, badge or resize.</HelpText>
+            <FormSection title="IR Row view authoring" divider={false}>
+                <HelpText>A row view renders a composition child as an inline text row inside a compartment with source "children"; it has no shape, badge or resize.</HelpText>
 
-            {error && <ErrorText>{error}</ErrorText>}
+                {error && <ErrorText>{error}</ErrorText>}
 
-            {/* Cross-tab (R-B): names the tab where the metaclass is chosen. */}
-            {featureInfo.metamodelsWithClass > 1 && (
-                <ErrorText>
-                    {metaclassAmbiguityWarning(featureInfo.targetName, featureInfo.metamodelsWithClass)}
-                </ErrorText>
-            )}
+                {/* Cross-tab (R-B): names the tab where the metaclass is chosen. */}
+                {featureInfo.metamodelsWithClass > 1 && (
+                    <ErrorText>
+                        {metaclassAmbiguityWarning(featureInfo.targetName, featureInfo.metamodelsWithClass)}
+                    </ErrorText>
+                )}
+            </FormSection>
 
             {/* ─────────── Applies to ─────────── */}
             <div style={body('ir-applies-to')}>
@@ -281,8 +283,8 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view, acti
             {identity && <IRIdentityFields view={view} {...identity} />}
 
             {/* Matching — metaclasses */}
-            <div className="jj-field-label" style={{ marginTop: 8 }}>Matching</div>
-            <div className="jj-field" style={{ marginTop: 4 }}>
+            <FormSection title="Matching" divider={false}>
+            <div className="jj-field">
                 <label className="jj-field-label">Metaclasses</label>
                 <Toggle
                     checked={isWildcard}
@@ -320,7 +322,7 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view, acti
             </div>
 
             {/* Matching — predicate */}
-            <div className="jj-field" style={{ marginTop: 8 }}>
+            <div className="jj-field">
                 <label className="jj-field-label">Condition</label>
                 <Toggle
                     checked={hasPredicate}
@@ -345,7 +347,7 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view, acti
             </div>
 
             {/* Matching — priority */}
-            <div className="jj-field" style={{ marginTop: 8 }}>
+            <div className="jj-field">
                 <label className="jj-field-label">Priority</label>
                 <NumberInput
                     value={draft.priority ?? 0}
@@ -353,6 +355,7 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view, acti
                 />
                 <HelpText>The highest priority wins; on a tie, specificity (exact &gt; inherited &gt; wildcard), then declaration order.</HelpText>
             </div>
+            </FormSection>
 
             </div>
 
@@ -361,7 +364,7 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view, acti
                 in the order the panel already had it (Q5 del 2026-08-06). */}
             <div style={body('ir-text')}>
             {/* Template — the inline text of the row */}
-            <div className="jj-field-label" style={{ marginTop: 8 }}>Template</div>
+            <FormSection title="Template" divider={false}>
             <ListEditor<TextSource>
                 items={template}
                 onRemove={removeSegment}
@@ -382,7 +385,7 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view, acti
 
             {/* Visible — only edited when already present (never seeded here → verbatim). */}
             {draft.visible !== undefined && (
-                <div className="jj-field" style={{ marginTop: 8 }}>
+                <div className="jj-field">
                     <label className="jj-field-label">Visible</label>
                     <ConditionalEditor<boolean>
                         value={draft.visible}
@@ -398,16 +401,18 @@ export const RowAuthoringPanel: React.FC<RowAuthoringPanelProps> = ({ view, acti
 
             {/* Label of the view (IR label, distinct from the DViewElement name,
                 which the relocated Name field of Applies to writes) */}
-            <div className="jj-field" style={{ marginTop: 8 }}>
+            <div className="jj-field">
                 <label className="jj-field-label">Label</label>
                 <Input value={draft.label ?? ''} onChange={(e) => patch({ ...draft, label: e.target.value })} />
             </div>
+            </FormSection>
             </div>
 
             {/* ─────────── Source ─────────── */}
             <div style={body('ir-source')}>
-                <div className="jj-field-label" style={{ marginTop: 8 }}>Source</div>
-                <IRSourceBody ir={(view as any).ir} />
+                <FormSection title="Source" divider={false}>
+                    <IRSourceBody ir={(view as any).ir} />
+                </FormSection>
             </div>
         </section>
     );
