@@ -14,12 +14,14 @@ import { JjodelEvents } from '../../events/registry';
 /**
  * PropertiesWithTreeView Component
  *
- * A split panel that combines:
- * - Left: Properties of the selected element (FLUID - takes remaining space)
- * - Right: Tree View of the metamodel hierarchy (FIXED 260px)
+ * The right rail: a single continuous shell (arc 1, 2026-08-10) holding, top to
+ * bottom, a header, the structure tree pane, the Focus breadcrumb bar and the
+ * inspector. It replaced the two stacked floating cards ("TREE VIEW" and
+ * "PROPERTIES"), each of which used to carry its own header, border and shadow.
  *
- * The Tree View can be toggled on/off with a button in the header.
- * When collapsed, a pulse dot signals JjScript activity instead of auto-opening.
+ * Layout is preset `2a` ("Adaptive rail", the only preset of this arc): the tree
+ * pane collapses to 0px when a leaf is selected (Focus posture) and returns on
+ * Escape or on the Focus/Browse button (Browse posture).
  */
 
 // Tree panel resizable (2026-05-13): range 200-500px, default 260 preserva il
@@ -40,26 +42,50 @@ const MIN_PROPS_WIDTH = 400;
 const MAX_PROPS_WIDTH = 700;
 const STORAGE_KEY_PROPERTIES_WIDTH = 'jjodel_property_panel_width';
 
-// Floating overlay (F2 2026-07-29): stacked-layout dims for mode='floating'. The
-// overlay is a fixed column (its own width) with the Tree card on top (its own
-// height) and Properties filling below. Own localStorage keys so they never collide
-// with the tab-mode width/propsWidth semantics (which mean panel widths, not these).
+// Floating overlay (F2 2026-07-29): the rail is a fixed column over the canvas,
+// with its own persisted width. Own localStorage key so it never collides with the
+// tab-mode width/propsWidth semantics (which mean panel widths, not this one).
+// Minimum raised 320 → 360 by R-RAIL-11 (2026-08-10): below 360 the rail's own
+// controls start wrapping. Clamped both on read and during the drag.
 const DEFAULT_OVERLAY_WIDTH = 400;
-const MIN_OVERLAY_WIDTH = 320;
+const MIN_OVERLAY_WIDTH = 360;
 const MAX_OVERLAY_WIDTH = 640;
 const STORAGE_KEY_OVERLAY_WIDTH = 'jjodel_property_overlay_width';
 
-const DEFAULT_TREE_HEIGHT = 360;
-const MIN_TREE_HEIGHT = 180;
-const MAX_TREE_HEIGHT = 720;
-const STORAGE_KEY_TREE_HEIGHT = 'jjodel_property_tree_height';
+/**
+ * Rail layout preset. Arc 1 ships exactly one (`2a`), so this type carries only
+ * the values the shell actually reads — no gate flags, which would be branches
+ * that can never go the other way (R-RAIL-3 / C3.2).
+ */
+export type RailPreset = {
+    /** Height of the tree pane in Browse posture, px. Focus posture is always 0. */
+    treePaneHeight: number;
+};
 
-// Cap the Tree card height to the smaller of the hard px ceiling and ~60vh, so the
-// Properties card below always keeps room (and never scrolls off-screen). Floored at
-// MIN_TREE_HEIGHT. Used by both the initial read and the drag handler (F2-fix).
-function clampTreeHeight(h: number): number {
-    const vhCap = typeof window !== 'undefined' ? Math.floor(window.innerHeight * 0.6) : MAX_TREE_HEIGHT;
-    return Math.min(MAX_TREE_HEIGHT, vhCap, Math.max(MIN_TREE_HEIGHT, h));
+/** Preset `2a` — "Adaptive rail". The only preset of arc 1, and the default. */
+export const PRESET_2A: RailPreset = {
+    treePaneHeight: 392,
+};
+
+/**
+ * Browse shows the tree pane; Focus collapses it to 0 and gives the whole rail to
+ * the inspector. Session-only by design: it resets to Browse on every mount.
+ */
+type RailPosture = 'browse' | 'focus';
+
+// Selecting one of these switches the rail to Focus posture: they are the leaves of
+// the structure tree, the elements whose inspector is worth the whole rail. Selecting
+// a container (package, class, model) leaves the posture alone.
+const LEAF_CLASSNAMES = new Set(['DAttribute', 'DReference', 'DOperation', 'DEnumLiteral']);
+
+// Escape must not be stolen from a field or from Monaco, where it means "revert the
+// edit". Monaco stops propagation in the bubble phase (CLAUDE.md §15.1), so a bubble
+// listener never sees its keys; this guard covers plain inputs.
+function isTypingTarget(target: EventTarget | null): boolean {
+    const el = target as HTMLElement | null;
+    if (!el || !el.tagName) return false;
+    const tag = el.tagName.toLowerCase();
+    return tag === 'input' || tag === 'textarea' || tag === 'select' || el.isContentEditable === true;
 }
 
 interface PropertiesWithTreeViewProps {
@@ -68,6 +94,7 @@ interface PropertiesWithTreeViewProps {
 
 export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ mode }) => {
     const containerRef = useRef<HTMLDivElement>(null);
+    const preset = PRESET_2A;
 
     // Width persistita: clamp + NaN guard al caricamento per protezione da
     // localStorage corrotto o da bound changes in versioni future.
@@ -93,67 +120,6 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
         localStorage.setItem(STORAGE_KEY_OVERLAY_WIDTH, String(overlayWidth));
     }, [overlayWidth]);
 
-    // Floating overlay (F2): Tree card height (top of the vertical split), persisted.
-    const [treeHeight, setTreeHeight] = useState<number>(() => {
-        const saved = localStorage.getItem(STORAGE_KEY_TREE_HEIGHT);
-        if (!saved) return DEFAULT_TREE_HEIGHT;
-        const parsed = parseInt(saved, 10);
-        if (Number.isNaN(parsed)) return DEFAULT_TREE_HEIGHT;
-        return clampTreeHeight(parsed);
-    });
-
-    useEffect(() => {
-        localStorage.setItem(STORAGE_KEY_TREE_HEIGHT, String(treeHeight));
-    }, [treeHeight]);
-
-    const handleResizeStart = useCallback((e: React.MouseEvent) => {
-        e.preventDefault();
-        // Floating (F2): this handle is the horizontal divider between the Tree card
-        // (top) and Properties (bottom). Dragging DOWN grows the Tree card height.
-        if (mode === 'floating') {
-            const startY = e.clientY;
-            const startHeight = treeHeight;
-            const handleMouseMove = (moveEvent: MouseEvent) => {
-                const delta = moveEvent.clientY - startY;
-                setTreeHeight(clampTreeHeight(startHeight + delta));
-            };
-            const handleMouseUp = () => {
-                document.removeEventListener('mousemove', handleMouseMove);
-                document.removeEventListener('mouseup', handleMouseUp);
-                document.body.style.cursor = '';
-                document.body.style.userSelect = '';
-            };
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', handleMouseUp);
-            document.body.style.cursor = 'row-resize';
-            document.body.style.userSelect = 'none';
-            return;
-        }
-        const startX = e.clientX;
-        const startWidth = width;
-
-        const handleMouseMove = (moveEvent: MouseEvent) => {
-            const delta = moveEvent.clientX - startX;
-            // Handle è sul bordo SINISTRO del tree panel (panel ancorato a destra
-            // dello split). Trascinare il mouse a sinistra (delta < 0) allarga
-            // il tree → formula `startWidth - delta`.
-            const next = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth - delta));
-            setWidth(next);
-        };
-
-        const handleMouseUp = () => {
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-            document.body.style.cursor = '';
-            document.body.style.userSelect = '';
-        };
-
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
-        document.body.style.cursor = 'col-resize';
-        document.body.style.userSelect = 'none';
-    }, [mode, treeHeight, width]);
-
     useEffect(() => {
         localStorage.setItem(STORAGE_KEY, String(width));
     }, [width]);
@@ -170,8 +136,8 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
 
     const handlePropsResizeStart = useCallback((e: React.MouseEvent) => {
         e.preventDefault();
-        // Floating (F2): this handle is the LEFT edge of the overlay column (anchored
-        // to the right of the viewport). Dragging LEFT widens it → `startWidth - delta`,
+        // Floating (F2): this handle is the LEFT edge of the rail column (anchored to
+        // the right of the viewport). Dragging LEFT widens it → `startWidth - delta`,
         // same sign as the tab-mode Properties handle.
         if (mode === 'floating') {
             const startX = e.clientX;
@@ -238,16 +204,14 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
         } catch { /* ignore */ }
     }, [isPropertiesVisible]);
 
-    const toggleProperties = useCallback(() => {
-        setIsPropertiesVisible((v) => !v);
-    }, []);
+    // (`collapseRail` is defined below, once the tree-view context is in scope.)
 
-    // Floating overlay (F3-fix): accordion maximize/restore. `null` = balanced split;
-    // 'tree'/'properties' = that card fills the overlay, the other collapses to just its
-    // header. Driven by a button in each card header.
-    const [cardMaximized, setCardMaximized] = useState<'tree' | 'properties' | null>(null);
-    const toggleMaximizeTree = useCallback(() => setCardMaximized(m => (m === 'tree' ? null : 'tree')), []);
-    const toggleMaximizeProperties = useCallback(() => setCardMaximized(m => (m === 'properties' ? null : 'properties')), []);
+    // Posture (preset 2a): session-only, always starts in Browse. Never persisted —
+    // reopening a project must show the structure, not the last element inspected.
+    const [posture, setPosture] = useState<RailPosture>('browse');
+    const togglePosture = useCallback(() => {
+        setPosture(p => (p === 'browse' ? 'focus' : 'browse'));
+    }, []);
 
     // Expert/Advanced mode — controls visibility of NODE section
     const advanced = useSelector((state: any) => state.advanced);
@@ -259,10 +223,7 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     // Redux `advanced`.
 
     // When a view/viewpoint is selected in the Tree View, Info.tsx renders ViewData
-    // (with Monaco editors for Template/Style) inside the Properties column.
-    // 2026-07-06 fixed-widths: the Properties column has its own fixed width now
-    // (400-700px, resizable), so the old maxWidth:'none' widening on view selection
-    // was removed — ViewData's Monaco auto-layouts to the container width.
+    // (with Monaco editors for Template/Style) inside the inspector zone.
 
     // Get tree view state from context. `show` riapre il tree dalla rail
     // collassata; `attentionPulse` pilota il pulse dot sul toggle collassato.
@@ -272,9 +233,24 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
         toggle: toggleTreeView,
         isHighlighted,
         isScriptExecuting,
+        // TODO: cleanup — `attentionPulse` lost its only surface with the collapsed
+        // panel toggles (rail arc 1, R-RAIL-11). Kept destructured so the context
+        // contract stays visible here until the pulse gets a home in the shell.
         attentionPulse,
         activeEditorType,
     } = useTreeViewPanel();
+
+    // Collapse the WHOLE rail, not just one zone (design §1, "Collapse rail"). With a
+    // single shell there is no per-card header left to reopen an individually hidden
+    // zone, so hiding one and leaving the other would strand the user in a rail with no
+    // way back in. Both visibilities go down together and `bothCollapsed` hands over to
+    // the reopen pill, which brings them back one at a time — the same pill that already
+    // served the both-collapsed state. The tree's visibility still lives in
+    // TreeViewPanelContext: this calls its toggle, it does not own or redefine it.
+    const collapseRail = useCallback(() => {
+        setIsPropertiesVisible(false);
+        if (isTreeViewVisible) toggleTreeView();
+    }, [isTreeViewVisible, toggleTreeView]);
 
     // ─── Pin (2026-07-05 fase 2): freeze Properties content on a captured selection triple
     // so the user can browse tree/canvas without losing editing context. Ephemeral (no
@@ -324,27 +300,84 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     // and the auto-unpin effect — pass overrideSelected only while still resolvable.
     const effectivePin = pinnedSelected && pinnedResolvable ? pinnedSelected : undefined;
 
+    // ─── Rail chrome data, read straight off the raw D-layer in `idlookup`.
+    // These are backward-link walks over raw entities, the sanctioned pattern for
+    // reads that must not wait on the L-layer forward collections (CLAUDE.md §3.6).
+    // Every selector returns a primitive so the rail does not re-render on unrelated
+    // store writes.
+
+    // Header title: the name of the DModel that owns the current selection.
+    const railTitle = useSelector((state: any) => {
+        const lookup = state.idlookup || {};
+        let id: string | undefined = state._lastSelected?.modelElement;
+        // Bounded walk: a corrupt father chain must not hang the render.
+        for (let hops = 0; id && hops < 64; hops++) {
+            const e = lookup[id];
+            if (!e) return '';
+            if (e.className === 'DModel') return e.name || '';
+            id = e.father;
+        }
+        return '';
+    });
+
+    // Selected element: its id drives the posture switch, its className says whether
+    // it is a leaf, and its name + owner feed the Focus breadcrumb bar.
+    const selectedElementId = useSelector((state: any) => state._lastSelected?.modelElement || '');
+    const selectedIsLeaf = useSelector((state: any) => {
+        const id = state._lastSelected?.modelElement;
+        const cn = id ? state.idlookup?.[id]?.className : undefined;
+        return !!cn && LEAF_CLASSNAMES.has(cn);
+    });
+    const selectedName = useSelector((state: any) => {
+        const id = state._lastSelected?.modelElement;
+        return id ? (state.idlookup?.[id]?.name || 'unnamed') : '';
+    });
+    const selectedOwnerName = useSelector((state: any) => {
+        const id = state._lastSelected?.modelElement;
+        const fatherId = id ? state.idlookup?.[id]?.father : undefined;
+        return fatherId ? (state.idlookup?.[fatherId]?.name || '') : '';
+    });
+
+    // Selecting a leaf switches to Focus. Keyed on the id ALONE on purpose: keying it
+    // on `selectedIsLeaf` too would re-assert Focus on every unrelated store write and
+    // fight the user's own click on "Browse" while the same leaf stays selected.
+    const leafRef = useRef(selectedIsLeaf);
+    leafRef.current = selectedIsLeaf;
+    useEffect(() => {
+        if (selectedElementId && leafRef.current) setPosture('focus');
+    }, [selectedElementId]);
+
+    // Escape always returns to Browse (design 4a), except while a field owns the key —
+    // there it means "revert the edit" and must not be intercepted.
+    useEffect(() => {
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key !== 'Escape') return;
+            if (isTypingTarget(e.target)) return;
+            setPosture('browse');
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, []);
+
     // Effective visibility (rail-based collapse model 2026-05-13): un pannello
     // "showXxx = true" significa espanso, "false" significa rail collassata.
     const showPropertiesPanel = isPropertiesVisible;
     const showTreePanel = isTreeViewVisible;
-    const showResizeHandle = showPropertiesPanel && showTreePanel;
 
-    // Reopen pill gate (floating overlay): the pill appears exactly when the overlay is
-    // NOT visible. The overlay renders iff !bothCollapsed, so `bothCollapsed` (neither
-    // card shown) IS "overlay hidden" — accordion-maximized still counts as visible, as
-    // both cards stay mounted. Gated on an active model/metamodel editor, so the pill is
-    // absent on dashboard/transformation/summary. A CSS kill-switch (properties-with-
-    // tree-view.scss) additionally hides it in canvas-only and on the documentation tab.
-    // Pill and overlay are therefore mutually exclusive in every combination.
+    // Reopen pill gate (floating overlay): the pill appears exactly when the rail is
+    // NOT visible. The rail renders iff !bothCollapsed, so `bothCollapsed` (neither
+    // zone shown) IS "rail hidden". Gated on an active model/metamodel editor, so the
+    // pill is absent on dashboard/transformation/summary. A CSS kill-switch (properties-
+    // with-tree-view.scss) additionally hides it in canvas-only and on the documentation
+    // tab. Pill and rail are therefore mutually exclusive in every combination.
     const bothCollapsed = !showPropertiesPanel && !showTreePanel;
     const showFloatingCluster = bothCollapsed &&
         (activeEditorType === 'model' || activeEditorType === 'metamodel');
 
-    // Canvas right-inset writer (F3 2026-07-29): publish the overlay's right footprint
+    // Canvas right-inset writer (F3 2026-07-29): publish the rail's right footprint
     // (column width + 8px gutter) onto <body> as --jj-canvas-right-inset so the canvas
     // viewport fit, the MiniMap and the Jodie FAB can reserve room for it. 0px when the
-    // overlay is not showing (pill mode, or a non-model/metamodel editor) → readers fall
+    // rail is not showing (pill mode, or a non-model/metamodel editor) → readers fall
     // back to their historic full-width behaviour. Floating mode only; single writer.
     // NOTE: this is NOT the retired width-lock var — it does not size the dock, and it
     // never touches the data-properties-tree-* body attributes.
@@ -394,90 +427,129 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
         };
     }, [toggleTreeView]);
 
-    // 'floating' (F2) renders the same split as 'tab', but portaled to <body>.
+    // 'floating' (F2) portals the rail to <body>.
     const isFloating = mode === 'floating';
 
     // Right panel visibility is controlled by CSS via body[data-editor-type].
     // Always render content so it's ready when the panel becomes visible.
-    // Rail collapse model 2026-05-13: niente più early return su bothHidden,
-    // niente più modifier classes split-only-*. Quando un pannello è chiuso
-    // viene sostituito da una rail 28px sul suo lato, sempre cliccabile.
 
-    // Floating overlay is shown only over a model/metamodel canvas; it steps aside for
-    // the reopen pill when both cards are collapsed. Portaled to <body> (position:fixed,
+    // The rail is shown only over a model/metamodel canvas; it steps aside for the
+    // reopen pill when both zones are collapsed. Portaled to <body> (position:fixed,
     // tier z ~900) so it escapes the dock DOM.
     const overlayActive = activeEditorType === 'model' || activeEditorType === 'metamodel';
 
-    // Accordion (F3-fix): only meaningful when both cards are visible in the floating
-    // overlay. Drives the flex sizing of the two cards and which bodies render.
-    const effectiveMax = (isFloating && showResizeHandle) ? cardMaximized : null;
-    // NB: `height: 'auto'` overrides the base `.tree/.properties-panel-container { height:100% }`
-    // — otherwise a collapsed card (flex:0 0 auto) resolves flex-basis to 100% and squashes
-    // the maximized card to 0 instead of leaving just its header.
-    const treeFloatStyle: React.CSSProperties = effectiveMax === 'tree'
-        ? { flex: '1 1 0', height: 'auto', minHeight: 0, width: '100%', maxWidth: '100%' }
-        : effectiveMax === 'properties'
-            ? { flex: '0 0 auto', height: 'auto', minHeight: 0, width: '100%', maxWidth: '100%' }
-            : { flex: `0 0 ${treeHeight}px`, height: `${treeHeight}px`, minHeight: 0, maxHeight: 'none', width: '100%', maxWidth: '100%' };
-    const propsFloatStyle: React.CSSProperties = {
-        flex: effectiveMax === 'tree' ? '0 0 auto' : '1 1 0',
-        height: 'auto',
-        minHeight: 0, width: '100%', maxWidth: '100%',
+    // The tree pane is a height, not a mount: collapsing it in Focus must animate, so
+    // the rows stay mounted (and keep their scroll position) at height 0.
+    const treePaneShown = showTreePanel && posture === 'browse';
+    const treePaneStyle: React.CSSProperties = {
+        height: `${treePaneShown ? preset.treePaneHeight : 0}px`,
+        opacity: treePaneShown ? 1 : 0,
     };
+
+    // The Focus bar stands in for the tree pane: it says where the inspected element
+    // sits and gets the user back. Only meaningful when the tree could be shown at all.
+    const showFocusBar = showTreePanel && posture === 'focus' && !!selectedElementId;
 
     const splitPanel = (
         <div
             ref={containerRef}
-            className={`properties-with-tree-view${isFloating ? ' properties-with-tree-view--floating' : ''}`}
+            className={`properties-with-tree-view${isFloating ? ' properties-with-tree-view--floating properties-with-tree-view--rail' : ''}${isFloating && posture === 'focus' ? ' properties-with-tree-view--rail-focus' : ''}`}
         >
-            {/* Properties: container a larghezza fissa (400-700, resize handle sul
-                bordo sinistro) oppure toggle collassato. */}
-            {showPropertiesPanel ? (
-                <div
-                    className={`properties-panel-container${effectiveMax === 'tree' ? ' card-header-only' : ''}`}
-                    style={isFloating
-                        ? propsFloatStyle
-                        : { width: `${propsWidth}px`, minWidth: `${propsWidth}px`, maxWidth: `${propsWidth}px` }}
-                >
-                    <div
-                        className="properties-panel-resize-handle"
-                        onMouseDown={handlePropsResizeStart}
-                        role="separator"
-                        aria-orientation="vertical"
-                        aria-label="Resize properties panel"
-                    />
-                    <div
-                        className="properties-panel-header"
-                        onDoubleClick={isFloating && showResizeHandle ? toggleMaximizeProperties : undefined}
-                        title={isFloating && showResizeHandle ? 'Double-click to maximize / restore' : undefined}
+            {/* Rail width handle: left edge of the column. Dragging left widens the rail. */}
+            <div
+                className="properties-panel-resize-handle"
+                onMouseDown={handlePropsResizeStart}
+                role="separator"
+                aria-orientation="vertical"
+                aria-label="Resize properties panel"
+            />
+
+            {/* Header (44px): one bar for the whole rail. Double click switches posture —
+                an expert shortcut; the labelled button next to it carries discovery. */}
+            <div className="rail-header" onDoubleClick={togglePosture}>
+                {railTitle && (
+                    <span
+                        className={`rail-header__badge rail-header__badge--${activeEditorType === 'metamodel' ? 'metamodel' : 'model'}`}
+                        aria-hidden="true"
                     >
-                        <i className="bi bi-sliders" />
-                        <span>PROPERTIES</span>
-                        {/* Contextual help of the card, owned by the host (Q4): the same
-                            `properties-panel` help whatever the body is showing, so both
-                            cards carry it in the same place. It used to be portaled up
-                            here by ViewData for the view card only, and rendered a second
-                            time by PropertiesHeader for the abstract one. */}
-                        <div className="properties-panel-header__actions">
-                            <HelpButton helpKey="properties-panel" />
-                        </div>
-                        <button
-                            className={`properties-panel-pin-btn${isPinned ? ' is-active' : ''}`}
-                            onClick={togglePin}
-                            aria-label={isPinned ? 'Unpin properties panel' : 'Pin properties panel'}
-                            aria-pressed={isPinned}
-                            title={isPinned ? 'Unpin — follow selection' : 'Pin — freeze content'}
-                        >
-                            <i className={`bi ${isPinned ? 'bi-pin-angle-fill' : 'bi-pin-angle'}`} />
-                        </button>
-                        <button
-                            className="properties-panel-toggle-btn"
-                            onClick={toggleProperties}
-                            aria-label="Hide properties panel"
-                        >
-                            <i className="bi bi-chevron-right" />
-                        </button>
+                        {activeEditorType === 'metamodel' ? 'M' : 'm'}
+                    </span>
+                )}
+                <span className="rail-header__title" title={railTitle}>{railTitle}</span>
+                <div className="rail-header__spacer" />
+                <button
+                    type="button"
+                    className="rail-header__btn"
+                    onClick={togglePosture}
+                    aria-label={posture === 'browse' ? 'Focus on the selected element' : 'Browse the structure'}
+                    title={posture === 'browse' ? 'Focus' : 'Browse'}
+                >
+                    <i className={`bi ${posture === 'browse' ? 'bi-arrows-collapse' : 'bi-arrows-expand'}`} />
+                </button>
+                {/* Contextual help of the rail, owned by the host (Q4): the same
+                    `properties-panel` help whatever the inspector is showing. */}
+                <div className="properties-panel-header__actions">
+                    <HelpButton helpKey="properties-panel" />
+                </div>
+                <button
+                    className={`properties-panel-pin-btn${isPinned ? ' is-active' : ''}`}
+                    onClick={togglePin}
+                    aria-label={isPinned ? 'Unpin properties panel' : 'Pin properties panel'}
+                    aria-pressed={isPinned}
+                    title={isPinned ? 'Unpin — follow selection' : 'Pin — freeze content'}
+                >
+                    <i className={`bi ${isPinned ? 'bi-pin-angle-fill' : 'bi-pin-angle'}`} />
+                </button>
+                <button
+                    className="properties-panel-toggle-btn"
+                    onClick={collapseRail}
+                    aria-label="Collapse rail"
+                    title="Collapse rail"
+                >
+                    <i className="bi bi-chevron-double-right" />
+                </button>
+            </div>
+
+            {/* Tree pane. Keeps its container/body classes so TreeViewContent's styling
+                and the sticky filter rule keep matching. */}
+            {showTreePanel && (
+                <div
+                    className={`tree-view-panel-container ${isHighlighted ? 'tree-view-panel-container--highlighted' : ''} ${isScriptExecuting ? 'tree-view-panel-container--executing' : ''}`}
+                    style={treePaneStyle}
+                >
+                    {isScriptExecuting && (
+                        <span className="tree-view-executing-badge">
+                            <span className="pulse-dot" />
+                            Executing
+                        </span>
+                    )}
+                    <div className="tree-view-panel-body">
+                        <TreeViewContent />
                     </div>
+                </div>
+            )}
+
+            {/* Focus breadcrumb bar (34px): only while the tree pane is collapsed. */}
+            {showFocusBar && (
+                <div className="rail-focusbar">
+                    <button
+                        type="button"
+                        className="rail-focusbar__back"
+                        onClick={() => setPosture('browse')}
+                        title="Back to the structure"
+                    >
+                        <i className="bi bi-diagram-3" aria-hidden="true" />
+                        {selectedOwnerName || 'Structure'}
+                    </button>
+                    <i className="bi bi-chevron-right rail-focusbar__sep" aria-hidden="true" />
+                    <span className="rail-focusbar__current">{selectedName}</span>
+                </div>
+            )}
+
+            {/* Inspector zone. Keeps `.properties-panel-container` so the whole B4 skin
+                (2026-07-30) that is anchored on it keeps applying to the form below. */}
+            {showPropertiesPanel && (
+                <div className="properties-panel-container">
                     <div className="properties-panel-body">
                         <Info
                             mode={isFloating ? 'tab' : mode}
@@ -506,77 +578,7 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                         )}
                     </div>
                 </div>
-            ) : bothCollapsed ? null : (
-                <CollapsedPanelToggle side="properties" onClick={() => setIsPropertiesVisible(true)} />
             )}
-
-            {/* F3-fix: in-flow vertical splitter BETWEEN the two cards (floating overlay).
-                A real flex item — not absolute, not clipped by the card's overflow, no
-                stacking-context games — so the drag reliably lands on it. The previous
-                absolute handle/grip inside the card never received the mousedown. */}
-            {isFloating && showResizeHandle && effectiveMax === null && (
-                <div
-                    className="tree-view-panel-vsplit"
-                    onMouseDown={handleResizeStart}
-                    role="separator"
-                    aria-orientation="horizontal"
-                    aria-label="Resize tree height"
-                    title="Drag to resize"
-                >
-                    <span className="tree-view-panel-vsplit__grip" aria-hidden="true" />
-                </div>
-            )}
-
-            {/* Tree: container a larghezza fissa (sempre `width`, mai espansione
-                a riempire) oppure toggle collassato. Larghezza indipendente dallo
-                stato del Properties (R1). Il resize handle vive dentro il tree
-                container (position absolute, left -3px), reso solo quando entrambi
-                i pannelli sono espansi. */}
-            {showTreePanel ? (
-                <div
-                    className={`tree-view-panel-container ${isHighlighted ? 'tree-view-panel-container--highlighted' : ''} ${isScriptExecuting ? 'tree-view-panel-container--executing' : ''}${effectiveMax === 'properties' ? ' card-header-only' : ''}`}
-                    style={isFloating
-                        ? treeFloatStyle
-                        : { width: `${width}px`, minWidth: `${width}px`, maxWidth: `${width}px` }}
-                >
-                    {showResizeHandle && !isFloating && (
-                        <div
-                            className="tree-view-panel-resize-handle"
-                            onMouseDown={handleResizeStart}
-                            role="separator"
-                            aria-orientation="vertical"
-                            aria-label="Resize tree view"
-                        />
-                    )}
-                    <div
-                        className="tree-view-panel-header"
-                        onDoubleClick={isFloating && showResizeHandle ? toggleMaximizeTree : undefined}
-                        title={isFloating && showResizeHandle ? 'Double-click to maximize / restore' : undefined}
-                    >
-                        <i className="bi bi-diagram-2" />
-                        <span>TREE VIEW</span>
-                        {isScriptExecuting && (
-                            <span className="tree-view-executing-badge">
-                                <span className="pulse-dot" />
-                                Executing
-                            </span>
-                        )}
-                        <button
-                            className="tree-view-toggle-btn"
-                            onClick={toggleTreeView}
-                            aria-label="Hide tree"
-                        >
-                            <i className="bi bi-chevron-left" />
-                        </button>
-                    </div>
-                    <div className="tree-view-panel-body">
-                        <TreeViewContent />
-                    </div>
-                </div>
-            ) : bothCollapsed ? null : (
-                <CollapsedPanelToggle side="tree" onClick={showTree} pulse={attentionPulse} />
-            )}
-
         </div>
     );
 
@@ -590,9 +592,9 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                 document.body
               ))
             : splitPanel}
-        {/* Reopen pill: floating cluster, portaled to <body>. Shown only while the overlay
-            is hidden (both cards collapsed) over a model/metamodel editor; the CSS adds a
-            kill-switch for canvas-only / documentation. Mutually exclusive with the overlay. */}
+        {/* Reopen pill: floating cluster, portaled to <body>. Shown only while the rail
+            is hidden (both zones collapsed) over a model/metamodel editor; the CSS adds a
+            kill-switch for canvas-only / documentation. Mutually exclusive with the rail. */}
         {showFloatingCluster && createPortal(
             <div className="properties-tree-floating-cluster" role="group" aria-label="Reopen panels">
                 <button
@@ -617,35 +619,6 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
             document.body
         )}
         </>
-    );
-};
-
-// ─── Collapsed panel toggle: button compatto 24×24 in alto (2026-05-13).
-// Sostituisce la rail full-height 28px del rail-fix. Posizione `align-self:
-// flex-start` allinea l'icona alla riga degli header dei pannelli espansi.
-// Icone invertite per semantica "outward-pointing" (chevron punta nella
-// direzione in cui il contenuto adiacente si muoverà dopo il click).
-interface CollapsedPanelToggleProps {
-    side: 'properties' | 'tree';
-    onClick: () => void;
-    // Attention pulse dot: shown when an event would previously have force-opened
-    // the panel while collapsed (2026-07-05 decoupling). Only wired on the tree side.
-    pulse?: boolean;
-}
-
-const CollapsedPanelToggle: React.FC<CollapsedPanelToggleProps> = ({ side, onClick, pulse }) => {
-    const iconClass = side === 'properties' ? 'bi-chevron-left' : 'bi-chevron-right';
-    const label = side === 'properties' ? 'Show properties' : 'Show tree';
-    return (
-        <button
-            type="button"
-            className={`collapsed-panel-toggle collapsed-panel-toggle--${side}`}
-            onClick={onClick}
-            aria-label={label}
-        >
-            <i className={`bi ${iconClass}`} aria-hidden="true" />
-            {pulse && <span className="collapsed-panel-toggle__pulse" aria-hidden="true" />}
-        </button>
     );
 };
 

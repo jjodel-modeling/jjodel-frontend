@@ -1,5 +1,40 @@
 // Properties with Tree View - Split Panel Styles
 // Combines Properties panel (left, FLUID) with Tree View (right, FIXED WIDTH)
+//
+// ============================================================================
+// LITERAL px IN THE RAIL'S NEW CODE (arc 1, 2026-08-10) — declared here once
+// instead of being justified again at each site. Nothing else in the rail's new
+// rules is a literal: every colour, radius, font size and duration is a token.
+//
+// (a) The three control heights of R-RAIL-9. The token scales have no step for
+//     them — `_spacing.scss:33-35` and `tokens.css:229-231` offer 32 / 40 / 48 px
+//     only — so a control between 26 and 44 has no near step to snap to, and
+//     adding height tokens for a single component was ruled out.
+//
+//       44px — rail header.                          declared below
+//       26px — tree row. Below the scale floor.       assigned by this arc to
+//              `TreeViewSidebar/tree-view-sidebar.scss` (R-RAIL-7)
+//       28px — multiplicity segmented control.        NOT used in arc 1: the
+//              inspector keeps its existing field components, so the design's
+//              multiplicity control does not ship yet.
+//
+// (b) Box sizes the Fase 0 mapping (table D3) never enumerated — it measured row
+//     and control HEIGHTS, not square boxes — so neither R-RAIL-9 nor R-RAIL-10
+//     governs them. Taken from the design verbatim, listed here to stay auditable:
+//
+//       18px — header entity badge (design §1)
+//       26px — header icon button (design §1); same number as the tree row above
+//       22px — Focus bar "Back" chip (design §6)
+//
+// (c) Border widths (1px) and the hand-composed shadow geometry (`0 4px 16px`,
+//     colour from `--color-node-shadow`), the latter required verbatim by the
+//     second exception of R-RAIL-10.
+//
+// 34px (Focus bar height) is deliberately NOT here: it HAS a near step, so it
+// snaps per R-RAIL-10 to `--input-height-sm` (32px, Δ2 — 32 in both token
+// systems). Same for the design's 9px and 10px icon glyphs, snapped to
+// `--font-size-xs`.
+// ============================================================================
 
 // Design tokens
 $color-border: #e2e4e8;
@@ -140,6 +175,10 @@ $radius-md: 6px;
 // ============================================
 // PROPERTIES PANEL HEADER (2026-05-13)
 // Header simmetrico al tree header. Toggle button speculare.
+//
+// TODO: cleanup — no longer rendered since rail arc 1 (2026-08-10): the shell has a
+// single `.rail-header`. The rules below, and the B4 rules nested on this selector
+// further down, are inert. Left in place rather than deleted along with the arc.
 // ============================================
 
 .properties-panel-header {
@@ -527,69 +566,11 @@ $pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Chec
     }
 }
 
-// ============================================
-// COLLAPSED PANEL TOGGLE (2026-05-13, ingombro deterministico 2026-07-06)
-// Button compatto 24×24 flottante in alto. INGOMBRO REALE = 24 + 2 + 2 = 28px
-// (margin-box), che DEVE combaciare con COLLAPSED_PANEL_TOGGLE_WIDTH nel
-// componente (formula di larghezza del tab). Margini simmetrici: niente più
-// `--properties`/`--tree` con `margin-left:auto` (rompeva il determinismo del
-// both-collapsed = 56px). Allineato agli header espansi via
-// `align-self: flex-start` + margin-top 8px.
-// ============================================
-
-.collapsed-panel-toggle {
-    flex: 0 0 24px;
-    width: 24px;
-    height: 24px;
-    align-self: flex-start;
-    margin-top: 8px;
-    margin-left: 2px;
-    margin-right: 2px;
-    padding: 0;
-    position: relative; // anchor for the attention pulse dot (--tree side)
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 120ms ease;
-
-    i.bi {
-        color: #0ea5e9;
-        font-size: 14px;
-        line-height: 1;
-    }
-
-    &:hover {
-        background-color: rgba(14, 165, 233, 0.10);
-    }
-
-    &:focus-visible {
-        outline: 1px solid #0ea5e9;
-        outline-offset: -1px;
-    }
-}
-
-// Modifier --properties / --tree: nessun override di margine (2026-07-06). I due
-// toggle hanno ingombro simmetrico e deterministico (28px), affiancati nel
-// both-collapsed (28+28=56). Le classi restano nel JSX per targeting semantico.
-
-// Attention pulse dot on the collapsed tree toggle (2026-07-05 decoupling).
-// Signals that an event would previously have force-opened the tree; there is
-// no auto-open anymore. Reuses the shared `pulseDot` keyframes (see below).
-.collapsed-panel-toggle__pulse {
-    position: absolute;
-    top: 1px;
-    right: 1px;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--accent-cyan, #0ea5e9);
-    animation: pulseDot 1.5s ease-in-out infinite;
-    pointer-events: none;
-}
+// COLLAPSED PANEL TOGGLE — retired with the two-card layout (rail arc 1,
+// 2026-08-10, R-RAIL-11). The single shell has one header, so there is no
+// per-card collapsed toggle and no surface left for its attention pulse dot.
+// `.collapsed-panel-toggle`, its `--properties` / `--tree` modifiers and
+// `.collapsed-panel-toggle__pulse` are gone with the component that rendered them.
 
 // R2 both-collapsed (2026-07-06 addendum): NON si renderizzano più toggle in-panel
 // quando entrambi i pannelli sono chiusi. Il tab va a 0px (vedi abstract/style.scss,
@@ -727,6 +708,8 @@ $pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Chec
     }
 }
 
+// TODO: cleanup — no longer rendered since rail arc 1 (2026-08-10): see the note on
+// `.properties-panel-header` above.
 .tree-view-panel-header {
     display: flex;
     align-items: center;
@@ -1300,30 +1283,9 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
         max-width: 100%;
     }
 
-    // F3-fix: the vertical resize divider is a REAL in-flow flex item between the two
-    // cards (order 2), not an absolute handle inside a card. Absolute handles kept
-    // failing to receive the mousedown (clipped by the card overflow / stacking); a
-    // plain flex item is reliably hit-tested. It replaces the old 8px inter-card gap.
-    .tree-view-panel-vsplit {
-        order: 2;
-        flex: 0 0 12px;          // grabbable band; also the visual separation
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;  // textarea-style grip at the right end
-        padding: 0 4px;
-        cursor: ns-resize;
-
-        .tree-view-panel-vsplit__grip {
-            width: 16px;
-            height: 8px;
-            // thin 1px black diagonal lines (textarea look)
-            background-image: repeating-linear-gradient(135deg, #1e293b 0 1px, transparent 1px 3px);
-            opacity: 0.75;
-            pointer-events: none;   // the whole band is the grab target, not the glyph
-        }
-
-        &:hover .tree-view-panel-vsplit__grip { opacity: 1; }
-    }
+    // The in-flow vertical splitter (`.tree-view-panel-vsplit`) is retired with the
+    // two-card layout (rail arc 1, 2026-08-10, R-RAIL-11): one shell has nothing to
+    // split, and the tree pane's height is now a function of the posture.
 
     // F3-fix: keep the sticky Tree filter above the scrolling rows — their selection
     // pills / hover actions reach z-index 1, tying with the filter's own z-index 1 and
@@ -1335,32 +1297,231 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
     // Properties handle stays on the LEFT edge → controls the overlay column width
     // (cursor col-resize is already set on the base .properties-panel-resize-handle).
 
-    // F3-fix accordion: the collapsed card shows only its header (the maximized card
-    // fills the rest). The header is flex-shrink:0, so the card stays at header height.
-    .card-header-only {
-        .tree-view-panel-body,
-        .properties-panel-body {
-            display: none;
-        }
-    }
-}
-
-// F3-fix accordion: double-click a card header to maximize / restore it. Stop the
-// double-click from selecting the header title text.
-.properties-with-tree-view--floating {
-    .tree-view-panel-header,
-    .properties-panel-header {
-        user-select: none;
-    }
+    // The accordion maximize (`.card-header-only`) is retired with the two-card
+    // layout (rail arc 1, 2026-08-10, R-RAIL-11).
 }
 
 // Dark: keep the floating wrapper transparent (the [data-theme=dark]
-// .properties-with-tree-view backdrop rule would otherwise tint it).
+// .properties-with-tree-view backdrop rule would otherwise tint it). The rail
+// modifier below repaints it as one surface.
 [data-theme="dark"] .properties-with-tree-view--floating {
     background: transparent;
 }
 
-// Dark: black grip lines are invisible on a dark canvas — use a light slate.
-[data-theme="dark"] .properties-with-tree-view--floating .tree-view-panel-vsplit__grip {
-    background-image: repeating-linear-gradient(135deg, #94a3b8 0 1px, transparent 1px 3px);
+// ============================================
+// RAIL SHELL — preset 2a (arc 1, 2026-08-10)
+//
+// One continuous shell replaces the two stacked cards: one header, one border, one
+// shadow. The zones keep their historic class names (`.tree-view-panel-container`,
+// `.properties-panel-container`, and the bodies inside them) so that TreeViewContent's
+// styling and the whole B4 inspector skin of 2026-07-30 keep matching — only their
+// per-card chrome is neutralised here.
+//
+// Values: every colour, radius, size and duration is a token, except the 44px header
+// (see the literal-heights block at the top of this file). Shadows are composed by
+// hand from a colour token (R-RAIL-10), never `var(--shadow-*)`.
+// ============================================
+.properties-with-tree-view--rail {
+    flex-direction: column;
+    background: var(--color-panel-bg);
+    border: 1px solid var(--color-panel-border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 4px 16px var(--color-node-shadow);
+    overflow: hidden;   // the shell rounds and clips its zones
+
+    // The two zones were `order: 1` / `order: 3` to stack the cards around the
+    // splitter. In the shell they follow DOM order, together with the header and the
+    // Focus bar that sit between them.
+    .tree-view-panel-container,
+    .properties-panel-container {
+        order: 0;
+    }
+
+    // Tree pane: a height, not a mount. Collapsing it in Focus posture animates, so the
+    // rows stay mounted and keep their scroll position at height 0. Height and opacity
+    // come inline from the component (0 / preset.treePaneHeight).
+    .tree-view-panel-container {
+        flex: none;
+        min-height: 0;
+        overflow: hidden;
+        background: transparent;
+        border: 0;
+        border-bottom: 1px solid var(--color-panel-border);
+        border-radius: 0;
+        box-shadow: none;
+        animation: none;   // no slide-in: the pane is part of the shell, not a card
+        transition:
+            height var(--duration-normal) var(--ease-out),
+            opacity var(--duration-fast) var(--ease-out);
+    }
+
+    // A collapsed pane must not keep a visible hairline: in Focus posture the Focus
+    // bar right below it owns the separation.
+    &.properties-with-tree-view--rail-focus .tree-view-panel-container {
+        border-bottom-width: 0;
+    }
+
+    // The "Executing" badge used to sit in the tree card header, which the shell no
+    // longer has. It now leads the tree pane: transient, so it may take the space.
+    .tree-view-executing-badge {
+        flex: none;
+        align-self: flex-start;
+        margin: var(--space-1) var(--space-3) 0;
+    }
+
+    // Inspector: takes the remainder and owns the only other scroll area.
+    .properties-panel-container {
+        flex: 1 1 auto;
+        height: auto;
+        min-height: 0;
+        background: transparent;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+}
+
+// ─── Rail header (44px, flex:none) ───────────────────────────────────────────
+.properties-with-tree-view--rail .rail-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex: none;
+    height: 44px;   // literal by R-RAIL-9 — see the block at the top of this file
+    padding: 0 var(--space-2) 0 var(--space-3);
+    border-bottom: 1px solid var(--color-bg-hover);
+    background: var(--color-panel-bg);
+    user-select: none;
+
+    &__badge {
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        border-radius: var(--radius-sm);
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-bold);
+        line-height: 1;
+
+        &--metamodel {
+            background: var(--color-entity-metamodel-bg);
+            color: var(--color-entity-metamodel-fg);
+        }
+
+        &--model {
+            background: var(--color-entity-model-bg);
+            color: var(--color-entity-model-fg);
+        }
+    }
+
+    // The title is the ONLY flexible item: everything after it is flex:none, so the
+    // controls never wrap or shrink and the name truncates instead.
+    &__title {
+        min-width: 0;
+        font-size: var(--font-size-base);
+        font-weight: var(--font-weight-semibold);
+        color: var(--color-text-primary);
+        letter-spacing: -0.01em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-transform: none;
+    }
+
+    &__spacer {
+        flex: 1;
+        min-width: var(--space-2);
+    }
+
+    &__btn {
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 26px;
+        height: 26px;
+        padding: 0;
+        border: 1px solid var(--color-panel-border);
+        border-radius: var(--radius-base);
+        background: var(--color-panel-bg);
+        color: var(--color-slate-600);
+        cursor: pointer;
+        transition: border-color var(--duration-fast) var(--ease-out),
+                    color var(--duration-fast) var(--ease-out);
+
+        &:hover {
+            border-color: var(--color-slate-400);
+            color: var(--color-text-primary);
+        }
+
+        i { font-size: var(--font-size-sm); }
+    }
+
+    // Host-owned help button, kept in its historic wrapper (Q4).
+    .properties-panel-header__actions {
+        flex: none;
+        display: flex;
+        align-items: center;
+    }
+
+    // The pin and collapse buttons keep their own classes and base styling.
+    .properties-panel-pin-btn,
+    .properties-panel-toggle-btn {
+        flex: none;
+    }
+}
+
+// ─── Focus breadcrumb bar (only while the tree pane is collapsed) ────────────
+.properties-with-tree-view--rail .rail-focusbar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex: none;
+    height: var(--input-height-sm);   // design 34px, snapped (R-RAIL-10)
+    padding: 0 var(--space-3);
+    background: var(--color-slate-50);
+    border-bottom: 1px solid var(--color-bg-hover);
+
+    &__back {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        flex: none;
+        max-width: 55%;
+        height: 22px;
+        padding: 0 var(--space-2);
+        border: 1px solid var(--color-panel-border);
+        border-radius: var(--radius-base);
+        background: var(--color-panel-bg);
+        font: inherit;
+        font-size: var(--font-size-xs);
+        color: var(--color-slate-600);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        cursor: pointer;
+        transition: border-color var(--duration-fast) var(--ease-out);
+
+        &:hover { border-color: var(--color-slate-400); }
+
+        i { font-size: var(--font-size-xs); }   // design 10px, snapped (R-RAIL-10)
+    }
+
+    &__sep {
+        flex: none;
+        font-size: var(--font-size-xs);   // design 9px, snapped (R-RAIL-10)
+        color: var(--color-slate-300);
+    }
+
+    &__current {
+        min-width: 0;
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-semibold);
+        color: var(--color-slate-700);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
 }
