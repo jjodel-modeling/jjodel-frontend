@@ -23,17 +23,15 @@
 //     governs them. Taken from the design verbatim, listed here to stay auditable:
 //
 //       18px — header entity badge (design §1)
-//       26px — header icon button (design §1); same number as the tree row above
-//       22px — Focus bar "Back" chip (design §6)
 //
 // (c) Border widths (1px) and the hand-composed shadow geometry (`0 4px 16px`,
 //     colour from `--color-node-shadow`), the latter required verbatim by the
 //     second exception of R-RAIL-10.
 //
-// 34px (Focus bar height) is deliberately NOT here: it HAS a near step, so it
-// snaps per R-RAIL-10 to `--input-height-sm` (32px, Δ2 — 32 in both token
-// systems). Same for the design's 9px and 10px icon glyphs, snapped to
-// `--font-size-xs`.
+// (d) 392px — the tree pane height, governed by R-RAIL-14. It is not declared in
+//     this sheet: it comes inline from `PRESET_2A.treePaneHeight`
+//     (`PropertiesWithTreeView.tsx`), listed here so the block stays the single
+//     audit point for the rail's literals.
 // ============================================================================
 
 // Design tokens
@@ -1285,7 +1283,7 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
 
     // The in-flow vertical splitter (`.tree-view-panel-vsplit`) is retired with the
     // two-card layout (rail arc 1, 2026-08-10, R-RAIL-11): one shell has nothing to
-    // split, and the tree pane's height is now a function of the posture.
+    // split, and the tree pane's height is fixed by the preset (R-RAIL-14).
 
     // F3-fix: keep the sticky Tree filter above the scrolling rows — their selection
     // pills / hover actions reach z-index 1, tying with the filter's own z-index 1 and
@@ -1330,16 +1328,14 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
     overflow: hidden;   // the shell rounds and clips its zones
 
     // The two zones were `order: 1` / `order: 3` to stack the cards around the
-    // splitter. In the shell they follow DOM order, together with the header and the
-    // Focus bar that sit between them.
+    // splitter. In the shell they follow DOM order, below the header.
     .tree-view-panel-container,
     .properties-panel-container {
         order: 0;
     }
 
-    // Tree pane: a height, not a mount. Collapsing it in Focus posture animates, so the
-    // rows stay mounted and keep their scroll position at height 0. Height and opacity
-    // come inline from the component (0 / preset.treePaneHeight).
+    // Tree pane. Its height comes inline from the component: the preset height while
+    // both panes are mounted, `flex: 1 1 auto` when it is the only one left (R-RAIL-14).
     .tree-view-panel-container {
         flex: none;
         min-height: 0;
@@ -1350,15 +1346,10 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
         border-radius: 0;
         box-shadow: none;
         animation: none;   // no slide-in: the pane is part of the shell, not a card
-        transition:
-            height var(--duration-normal) var(--ease-out),
-            opacity var(--duration-fast) var(--ease-out);
-    }
 
-    // A collapsed pane must not keep a visible hairline: in Focus posture the Focus
-    // bar right below it owns the separation.
-    &.properties-with-tree-view--rail-focus .tree-view-panel-container {
-        border-bottom-width: 0;
+        // Inspector hidden → the tree is the last zone and its separator would double
+        // up with the shell's own bottom border.
+        &:last-child { border-bottom-width: 0; }
     }
 
     // The "Executing" badge used to sit in the tree card header, which the shell no
@@ -1435,30 +1426,6 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
         min-width: var(--space-2);
     }
 
-    &__btn {
-        flex: none;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 26px;
-        height: 26px;
-        padding: 0;
-        border: 1px solid var(--color-panel-border);
-        border-radius: var(--radius-base);
-        background: var(--color-panel-bg);
-        color: var(--color-slate-600);
-        cursor: pointer;
-        transition: border-color var(--duration-fast) var(--ease-out),
-                    color var(--duration-fast) var(--ease-out);
-
-        &:hover {
-            border-color: var(--color-slate-400);
-            color: var(--color-text-primary);
-        }
-
-        i { font-size: var(--font-size-sm); }
-    }
-
     // Host-owned help button, kept in its historic wrapper (Q4).
     .properties-panel-header__actions {
         flex: none;
@@ -1470,58 +1437,5 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
     .properties-panel-pin-btn,
     .properties-panel-toggle-btn {
         flex: none;
-    }
-}
-
-// ─── Focus breadcrumb bar (only while the tree pane is collapsed) ────────────
-.properties-with-tree-view--rail .rail-focusbar {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    flex: none;
-    height: var(--input-height-sm);   // design 34px, snapped (R-RAIL-10)
-    padding: 0 var(--space-3);
-    background: var(--color-slate-50);
-    border-bottom: 1px solid var(--color-bg-hover);
-
-    &__back {
-        display: inline-flex;
-        align-items: center;
-        gap: var(--space-1);
-        flex: none;
-        max-width: 55%;
-        height: 22px;
-        padding: 0 var(--space-2);
-        border: 1px solid var(--color-panel-border);
-        border-radius: var(--radius-base);
-        background: var(--color-panel-bg);
-        font: inherit;
-        font-size: var(--font-size-xs);
-        color: var(--color-slate-600);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        cursor: pointer;
-        transition: border-color var(--duration-fast) var(--ease-out);
-
-        &:hover { border-color: var(--color-slate-400); }
-
-        i { font-size: var(--font-size-xs); }   // design 10px, snapped (R-RAIL-10)
-    }
-
-    &__sep {
-        flex: none;
-        font-size: var(--font-size-xs);   // design 9px, snapped (R-RAIL-10)
-        color: var(--color-slate-300);
-    }
-
-    &__current {
-        min-width: 0;
-        font-size: var(--font-size-xs);
-        font-weight: var(--font-weight-semibold);
-        color: var(--color-slate-700);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
     }
 }

@@ -15,13 +15,13 @@ import { JjodelEvents } from '../../events/registry';
  * PropertiesWithTreeView Component
  *
  * The right rail: a single continuous shell (arc 1, 2026-08-10) holding, top to
- * bottom, a header, the structure tree pane, the Focus breadcrumb bar and the
- * inspector. It replaced the two stacked floating cards ("TREE VIEW" and
- * "PROPERTIES"), each of which used to carry its own header, border and shadow.
+ * bottom, a header, the structure tree pane and the inspector. It replaced the two
+ * stacked floating cards ("TREE VIEW" and "PROPERTIES"), each of which used to
+ * carry its own header, border and shadow.
  *
- * Layout is preset `2a` ("Adaptive rail", the only preset of this arc): the tree
- * pane collapses to 0px when a leaf is selected (Focus posture) and returns on
- * Escape or on the Focus/Browse button (Browse posture).
+ * Geometry is fixed (R-RAIL-14): the tree pane takes `PRESET_2A.treePaneHeight`
+ * while both panes are mounted, and the whole remaining height when it is the only
+ * one left. Nothing here depends on the selection, and nothing is draggable.
  */
 
 // Tree panel resizable (2026-05-13): range 200-500px, default 260 preserva il
@@ -58,35 +58,14 @@ const STORAGE_KEY_OVERLAY_WIDTH = 'jjodel_property_overlay_width';
  * that can never go the other way (R-RAIL-3 / C3.2).
  */
 export type RailPreset = {
-    /** Height of the tree pane in Browse posture, px. Focus posture is always 0. */
+    /** Height of the tree pane while both panes are mounted, px (R-RAIL-14). */
     treePaneHeight: number;
 };
 
-/** Preset `2a` — "Adaptive rail". The only preset of arc 1, and the default. */
+/** Preset `2a`. The only preset of arc 1, and the default. */
 export const PRESET_2A: RailPreset = {
     treePaneHeight: 392,
 };
-
-/**
- * Browse shows the tree pane; Focus collapses it to 0 and gives the whole rail to
- * the inspector. Session-only by design: it resets to Browse on every mount.
- */
-type RailPosture = 'browse' | 'focus';
-
-// Selecting one of these switches the rail to Focus posture: they are the leaves of
-// the structure tree, the elements whose inspector is worth the whole rail. Selecting
-// a container (package, class, model) leaves the posture alone.
-const LEAF_CLASSNAMES = new Set(['DAttribute', 'DReference', 'DOperation', 'DEnumLiteral']);
-
-// Escape must not be stolen from a field or from Monaco, where it means "revert the
-// edit". Monaco stops propagation in the bubble phase (CLAUDE.md §15.1), so a bubble
-// listener never sees its keys; this guard covers plain inputs.
-function isTypingTarget(target: EventTarget | null): boolean {
-    const el = target as HTMLElement | null;
-    if (!el || !el.tagName) return false;
-    const tag = el.tagName.toLowerCase();
-    return tag === 'input' || tag === 'textarea' || tag === 'select' || el.isContentEditable === true;
-}
 
 interface PropertiesWithTreeViewProps {
     mode: 'floating';
@@ -204,13 +183,15 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
         } catch { /* ignore */ }
     }, [isPropertiesVisible]);
 
-    // (`collapseRail` is defined below, once the tree-view context is in scope.)
-
-    // Posture (preset 2a): session-only, always starts in Browse. Never persisted —
-    // reopening a project must show the structure, not the last element inspected.
-    const [posture, setPosture] = useState<RailPosture>('browse');
-    const togglePosture = useCallback(() => {
-        setPosture(p => (p === 'browse' ? 'focus' : 'browse'));
+    // Header control (R-RAIL-23): it commutes the INSPECTOR only, never the tree. The
+    // header belongs to the shell (R-RAIL-18) and survives as long as either pane is
+    // mounted, so hiding the inspector is reversible from here — there is no dead end
+    // left to escape by collapsing both zones at once. The tree keeps its own key and
+    // its ⌘B: this component never writes `jjodel_treeview_visible` and never calls the
+    // TreeViewPanelContext setters (R-RAIL-11). When the tree is already hidden, hiding
+    // the inspector empties the shell, which unmounts and hands over to the reopen pill.
+    const toggleInspector = useCallback(() => {
+        setIsPropertiesVisible(v => !v);
     }, []);
 
     // Expert/Advanced mode — controls visibility of NODE section
@@ -225,32 +206,15 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     // When a view/viewpoint is selected in the Tree View, Info.tsx renders ViewData
     // (with Monaco editors for Template/Style) inside the inspector zone.
 
-    // Get tree view state from context. `show` riapre il tree dalla rail
-    // collassata; `attentionPulse` pilota il pulse dot sul toggle collassato.
+    // Get tree view state from context. `show` riapre il tree dalla rail collassata.
     const {
         isVisible: isTreeViewVisible,
         show: showTree,
         toggle: toggleTreeView,
         isHighlighted,
         isScriptExecuting,
-        // TODO: cleanup — `attentionPulse` lost its only surface with the collapsed
-        // panel toggles (rail arc 1, R-RAIL-11). Kept destructured so the context
-        // contract stays visible here until the pulse gets a home in the shell.
-        attentionPulse,
         activeEditorType,
     } = useTreeViewPanel();
-
-    // Collapse the WHOLE rail, not just one zone (design §1, "Collapse rail"). With a
-    // single shell there is no per-card header left to reopen an individually hidden
-    // zone, so hiding one and leaving the other would strand the user in a rail with no
-    // way back in. Both visibilities go down together and `bothCollapsed` hands over to
-    // the reopen pill, which brings them back one at a time — the same pill that already
-    // served the both-collapsed state. The tree's visibility still lives in
-    // TreeViewPanelContext: this calls its toggle, it does not own or redefine it.
-    const collapseRail = useCallback(() => {
-        setIsPropertiesVisible(false);
-        if (isTreeViewVisible) toggleTreeView();
-    }, [isTreeViewVisible, toggleTreeView]);
 
     // ─── Pin (2026-07-05 fase 2): freeze Properties content on a captured selection triple
     // so the user can browse tree/canvas without losing editing context. Ephemeral (no
@@ -319,45 +283,6 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
         }
         return '';
     });
-
-    // Selected element: its id drives the posture switch, its className says whether
-    // it is a leaf, and its name + owner feed the Focus breadcrumb bar.
-    const selectedElementId = useSelector((state: any) => state._lastSelected?.modelElement || '');
-    const selectedIsLeaf = useSelector((state: any) => {
-        const id = state._lastSelected?.modelElement;
-        const cn = id ? state.idlookup?.[id]?.className : undefined;
-        return !!cn && LEAF_CLASSNAMES.has(cn);
-    });
-    const selectedName = useSelector((state: any) => {
-        const id = state._lastSelected?.modelElement;
-        return id ? (state.idlookup?.[id]?.name || 'unnamed') : '';
-    });
-    const selectedOwnerName = useSelector((state: any) => {
-        const id = state._lastSelected?.modelElement;
-        const fatherId = id ? state.idlookup?.[id]?.father : undefined;
-        return fatherId ? (state.idlookup?.[fatherId]?.name || '') : '';
-    });
-
-    // Selecting a leaf switches to Focus. Keyed on the id ALONE on purpose: keying it
-    // on `selectedIsLeaf` too would re-assert Focus on every unrelated store write and
-    // fight the user's own click on "Browse" while the same leaf stays selected.
-    const leafRef = useRef(selectedIsLeaf);
-    leafRef.current = selectedIsLeaf;
-    useEffect(() => {
-        if (selectedElementId && leafRef.current) setPosture('focus');
-    }, [selectedElementId]);
-
-    // Escape always returns to Browse (design 4a), except while a field owns the key —
-    // there it means "revert the edit" and must not be intercepted.
-    useEffect(() => {
-        const onKeyDown = (e: KeyboardEvent) => {
-            if (e.key !== 'Escape') return;
-            if (isTypingTarget(e.target)) return;
-            setPosture('browse');
-        };
-        window.addEventListener('keydown', onKeyDown);
-        return () => window.removeEventListener('keydown', onKeyDown);
-    }, []);
 
     // Effective visibility (rail-based collapse model 2026-05-13): un pannello
     // "showXxx = true" significa espanso, "false" significa rail collassata.
@@ -438,22 +363,17 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
     // tier z ~900) so it escapes the dock DOM.
     const overlayActive = activeEditorType === 'model' || activeEditorType === 'metamodel';
 
-    // The tree pane is a height, not a mount: collapsing it in Focus must animate, so
-    // the rows stay mounted (and keep their scroll position) at height 0.
-    const treePaneShown = showTreePanel && posture === 'browse';
-    const treePaneStyle: React.CSSProperties = {
-        height: `${treePaneShown ? preset.treePaneHeight : 0}px`,
-        opacity: treePaneShown ? 1 : 0,
-    };
-
-    // The Focus bar stands in for the tree pane: it says where the inspected element
-    // sits and gets the user back. Only meaningful when the tree could be shown at all.
-    const showFocusBar = showTreePanel && posture === 'focus' && !!selectedElementId;
+    // Fixed geometry (R-RAIL-14): the preset height while both panes are mounted, the
+    // whole remaining height when the inspector is hidden and the tree is the survivor.
+    // Not draggable, and not a function of the selection.
+    const treePaneStyle: React.CSSProperties = showPropertiesPanel
+        ? { height: `${preset.treePaneHeight}px` }
+        : { flex: '1 1 auto', minHeight: 0 };
 
     const splitPanel = (
         <div
             ref={containerRef}
-            className={`properties-with-tree-view${isFloating ? ' properties-with-tree-view--floating properties-with-tree-view--rail' : ''}${isFloating && posture === 'focus' ? ' properties-with-tree-view--rail-focus' : ''}`}
+            className={`properties-with-tree-view${isFloating ? ' properties-with-tree-view--floating properties-with-tree-view--rail' : ''}`}
         >
             {/* Rail width handle: left edge of the column. Dragging left widens the rail. */}
             <div
@@ -464,9 +384,8 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                 aria-label="Resize properties panel"
             />
 
-            {/* Header (44px): one bar for the whole rail. Double click switches posture —
-                an expert shortcut; the labelled button next to it carries discovery. */}
-            <div className="rail-header" onDoubleClick={togglePosture}>
+            {/* Header (44px): one bar for the whole rail, alive while either pane is. */}
+            <div className="rail-header">
                 {railTitle && (
                     <span
                         className={`rail-header__badge rail-header__badge--${activeEditorType === 'metamodel' ? 'metamodel' : 'model'}`}
@@ -477,15 +396,6 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                 )}
                 <span className="rail-header__title" title={railTitle}>{railTitle}</span>
                 <div className="rail-header__spacer" />
-                <button
-                    type="button"
-                    className="rail-header__btn"
-                    onClick={togglePosture}
-                    aria-label={posture === 'browse' ? 'Focus on the selected element' : 'Browse the structure'}
-                    title={posture === 'browse' ? 'Focus' : 'Browse'}
-                >
-                    <i className={`bi ${posture === 'browse' ? 'bi-arrows-collapse' : 'bi-arrows-expand'}`} />
-                </button>
                 {/* Contextual help of the rail, owned by the host (Q4): the same
                     `properties-panel` help whatever the inspector is showing. */}
                 <div className="properties-panel-header__actions">
@@ -502,11 +412,12 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                 </button>
                 <button
                     className="properties-panel-toggle-btn"
-                    onClick={collapseRail}
-                    aria-label="Collapse rail"
-                    title="Collapse rail"
+                    onClick={toggleInspector}
+                    aria-label={showPropertiesPanel ? 'Hide properties' : 'Show properties'}
+                    aria-pressed={!showPropertiesPanel}
+                    title={showPropertiesPanel ? 'Hide properties' : 'Show properties'}
                 >
-                    <i className="bi bi-chevron-double-right" />
+                    <i className={`bi ${showPropertiesPanel ? 'bi-chevron-double-right' : 'bi-chevron-double-left'}`} />
                 </button>
             </div>
 
@@ -526,23 +437,6 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                     <div className="tree-view-panel-body">
                         <TreeViewContent />
                     </div>
-                </div>
-            )}
-
-            {/* Focus breadcrumb bar (34px): only while the tree pane is collapsed. */}
-            {showFocusBar && (
-                <div className="rail-focusbar">
-                    <button
-                        type="button"
-                        className="rail-focusbar__back"
-                        onClick={() => setPosture('browse')}
-                        title="Back to the structure"
-                    >
-                        <i className="bi bi-diagram-3" aria-hidden="true" />
-                        {selectedOwnerName || 'Structure'}
-                    </button>
-                    <i className="bi bi-chevron-right rail-focusbar__sep" aria-hidden="true" />
-                    <span className="rail-focusbar__current">{selectedName}</span>
                 </div>
             )}
 
