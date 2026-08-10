@@ -196,7 +196,10 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
 
     // Expert/Advanced mode — controls visibility of NODE section
     const advanced = useSelector((state: any) => state.advanced);
-    const [nodeOpen, setNodeOpen] = useState(false);
+    // Open by default, and deliberately NOT persisted: the storage inventory of
+    // R-RAIL-11 is one visibility plus one width, and a disclosure that starts closed
+    // would put NodeEditor one click further away than the section has ever been.
+    const [nodeOpen, setNodeOpen] = useState(true);
 
     // The Basic/Advanced control lives in the app bar (Navbar), which also owns the
     // once-per-mount restore of the persisted mode: the interface mode is global and the
@@ -451,17 +454,20 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                             onInternalNavigate={isPinned ? handleInternalNavigate : undefined}
                         />
 
-                        {/* NODE section — Expert mode only */}
+                        {/* NODE section — Expert mode only (R-RAIL-12: it stays in the
+                            shell, so `advanced` keeps deciding WHEN it appears, not only
+                            where). Disclosure row: caret, eyebrow label, hairline rule. */}
                         {advanced && (
                             <div className="properties-node-section">
                                 <button
                                     className="properties-node-section__header"
                                     onClick={() => setNodeOpen(!nodeOpen)}
                                     type="button"
+                                    aria-expanded={nodeOpen}
                                 >
-                                    <i className={`bi bi-chevron-${nodeOpen ? 'down' : 'right'}`} />
-                                    <i className="bi bi-bounding-box-circles" />
-                                    <span>NODE</span>
+                                    <i className={`bi bi-chevron-${nodeOpen ? 'down' : 'right'}`} aria-hidden="true" />
+                                    <span className="properties-node-section__label">NODE</span>
+                                    <span className="properties-node-section__rule" aria-hidden="true" />
                                 </button>
                                 {nodeOpen && (
                                     <div className="properties-node-section__content">

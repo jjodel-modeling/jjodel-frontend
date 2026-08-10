@@ -26,7 +26,8 @@
 //
 // (c) Border widths (1px) and the hand-composed shadow geometry (`0 4px 16px`,
 //     colour from `--color-node-shadow`), the latter required verbatim by the
-//     second exception of R-RAIL-10.
+//     second exception of R-RAIL-10. The NODE eyebrow's hairline rule is the same
+//     1px, drawn as a box because it has to grow into the rest of the row.
 //
 // (d) 392px — the tree pane height, governed by R-RAIL-14. It is not declared in
 //     this sheet: it comes inline from `PRESET_2A.treePaneHeight`
@@ -997,39 +998,54 @@ $pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Chec
 // NODE SECTION (Expert mode — collapsible at bottom of Properties)
 // ============================================
 
+// NODE — disclosure row (rail arc 1, 2026-08-10). The design's eyebrow row replaces
+// the filled section header: caret, label, and a hairline rule that fills what is left
+// of the row. The rule IS the separator, so the old full-width `border-top` goes with
+// the fill. Values snapped per R-RAIL-10: row 30 → `--input-height-sm` (32, Δ2),
+// eyebrow margins 18/9 → `--space-4` / `--space-2`, caret 10 → `--font-size-xs`.
+// `letter-spacing: 0.08em` is the first exception of R-RAIL-10 and stays literal.
 .properties-node-section {
-    border-top: 1px solid $color-border;
     flex-shrink: 0;
 
     &__header {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: var(--space-2);
         width: 100%;
-        padding: 10px 12px;
-        background: $color-bg-secondary;
+        height: var(--input-height-sm);
+        margin: var(--space-4) 0 var(--space-2);
+        padding: 0 var(--space-3);
+        background: transparent;
         border: none;
         cursor: pointer;
-        font-size: 11px;
-        font-weight: 600;
-        color: $color-text-secondary;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        transition: background $transition-fast;
+        color: var(--color-slate-400);
+        transition: color var(--duration-fast) var(--ease-out);
 
         &:hover {
-            background: $color-bg-tertiary;
+            color: var(--color-slate-600);
         }
 
         i {
-            font-size: 12px;
-            color: $color-accent;
+            flex: none;
+            font-size: var(--font-size-xs);   // design 10px, snapped (R-RAIL-10)
         }
+    }
 
-        i:first-child {
-            font-size: 10px;
-            color: $color-text-tertiary;
-        }
+    &__label {
+        flex: none;
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-semibold);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    // The rule takes the rest of the row, which is what makes the eyebrow read as a
+    // section break instead of a button.
+    &__rule {
+        flex: 1;
+        min-width: var(--space-2);
+        height: 1px;
+        background: var(--color-bg-hover);
     }
 
     &__content {
@@ -1057,21 +1073,12 @@ $pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Chec
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
     }
 
-    .properties-node-section {
-        border-top-color: #333;
-
-        &__header {
-            background: #252525;
-            color: #888;
-
-            &:hover {
-                background: #2a2a2a;
-            }
-
-            i {
-                color: #6b7280;
-            }
-        }
+    // The disclosure row has no fill and no top border left to re-colour, and its
+    // hairline uses `--color-bg-hover`, which does follow the theme. Only the hover
+    // needs flipping: `--color-slate-*` is a raw palette, so the light rule would
+    // darken the label against a dark surface instead of lifting it.
+    .properties-node-section__header:hover {
+        color: var(--color-slate-300);
     }
 
     .tree-view-panel-container {
