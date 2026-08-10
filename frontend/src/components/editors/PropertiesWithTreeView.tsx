@@ -196,10 +196,11 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
 
     // Expert/Advanced mode — controls visibility of NODE section
     const advanced = useSelector((state: any) => state.advanced);
-    // Open by default, and deliberately NOT persisted: the storage inventory of
-    // R-RAIL-11 is one visibility plus one width, and a disclosure that starts closed
-    // would put NodeEditor one click further away than the section has ever been.
-    const [nodeOpen, setNodeOpen] = useState(true);
+    // Closed by default (R-RAIL-24): it is the state the section has always had, so
+    // the disclosure restyle changes how the row looks and not what it shows. Not
+    // persisted either — the storage inventory of R-RAIL-11 is one visibility plus one
+    // width, and this state does not join it.
+    const [nodeOpen, setNodeOpen] = useState(false);
 
     // The Basic/Advanced control lives in the app bar (Navbar), which also owns the
     // once-per-mount restore of the persisted mode: the interface mode is global and the
