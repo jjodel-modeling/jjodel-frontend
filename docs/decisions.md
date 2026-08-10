@@ -270,6 +270,75 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   che calza ed è usato; 10px di radius e 12px di font sono fuori dalle scale (4/8/12/16 e
   11/13/15) e vengono dallo spec ratificato.
 
+## Arco rail destro — preset 2a (dal 2026-08-10)
+
+- **R-RAIL-1** (2026-08-10) — Il rail è un guscio, l'inspector uno slot; l'arco 1 scrive un
+  solo renderer, quello dell'elemento di metamodello. Il dispatch polimorfo **esiste già** in
+  `editors/Info.tsx:1172-1235` (la view vince sul model element, poi si discrimina su
+  `className` del `__raw`): si riusa, non si riscrive. C1.1 i pannelli di authoring non si
+  toccano. C1.2 l'identity block si calcola da `view.ir.kind` e `view.ir.metaclasses` per le
+  view con IR; per le view legacy (`!view.ir`) non si rende affatto — niente placeholder,
+  niente spazio riservato.
+- **R-RAIL-2** (2026-08-10) — U-2 è superato **solo nella parte posizionale** del breadcrumb,
+  non contraddetto: l'identity block del rail sostituisce la riga che dichiara dove sta
+  l'elemento, ma il breadcrumb di «Applies to» è **semantica della view** — dice a quali
+  metaclassi la view si applica, non dove si trova — e sopravvive invariato.
+- **R-RAIL-3** (2026-08-10) — Arco 1 realizza solo il preset `2a`. C3.1 niente gear, niente
+  popover, nessuna chiave di storage bruciata per il preset. C3.2 si introducono il tipo
+  `RailPreset` e la costante `PRESET_2A`, e nient'altro: nessuno `switch` con casi vuoti,
+  nessun `2b` abbozzato. C3.3 il segmented Basic/Advanced resta nella top bar.
+- **R-RAIL-4** (2026-08-10) — Si consumano `--color-selection-bg` e `--color-selection-bar`,
+  mai letterali; i tre cyan restano distinti, nessuna unificazione né migrazione verso
+  `--color-sky-500`. Risolta con R-RAIL-8, che è posteriore: poiché la barra non si fa, l'arco
+  consuma di fatto solo `--color-selection-bg`, e `--color-selection-bar` resta a zero
+  consumatori senza che se ne introducano.
+- **R-RAIL-5** (2026-08-10) — C5.1 si consumano `var(--font-sans)` e `var(--font-mono)`, mai
+  nomi di famiglia. **C5.2 è annullato**: i font sono già caricati da
+  `styles/tokens/_typography.scss:81,84`, due `@import url(...)` da Google per Inter e IBM
+  Plex Mono, quindi non esiste alcuna dipendenza da introdurre. C5.3 la verifica è sul
+  computed style in devtools, non sulla dichiarazione.
+- **R-RAIL-6** (2026-08-10) — Token per lista nera, non per scelta di sistema: il rail consuma
+  da entrambi i sistemi (`styles/tokens/*.scss` e `styles/tokens.css`) evitando i 13 nomi che
+  i due definiscono con valori diversi — `--color-bg-primary`, `--color-bg-secondary`,
+  `--color-border-focus`, `--color-border-primary`, `--color-border-secondary`,
+  `--color-text-secondary`, `--color-text-tertiary`, `--shadow-*`, `--transition-fast`,
+  `--transition-slow` — perché su quelli il vincitore della cascata dipende da
+  `localStorage.theme`. Nota strutturale: `styles/variables.scss` è dichiarato su `body` e per
+  ereditarietà batte entrambi i `:root` sui nomi condivisi (`--input-height` vale 36px, non 40).
+- **R-RAIL-7** (2026-08-10) — Il tree pane **riusa `TreeViewContent`**, non lo riscrive; si
+  adotta solo il restyle: suffisso di tipo in `var(--font-mono)`, riga 26px, nome 13px peso
+  500, peso 600 sull'elemento selezionato. Rinviati badge lettera, filtro che appiattisce
+  l'albero, conteggio totale, cambio di indent. C7.1 `TreeViewSidebar.tsx` è codice morto a
+  backlog e non si tocca.
+- **R-RAIL-8** (2026-08-10) — Nessuna barra di selezione, contro il design: resta la pill
+  esistente più il peso 600, che soddisfa lo stesso requisito di accessibilità senza ribaltare
+  la Fase 2 C1 del 2026-07-28. Il triplo ruolo di `#0891B2` resta inerte e non si tocca.
+- **R-RAIL-9** (2026-08-10) — I 7 valori `nuovo` della tabella D3: le tre altezze (26, 28,
+  44px) restano **letterali** nel foglio del rail, raccolte in un unico blocco di commento in
+  testa al foglio che le elenca e ne dichiara la ragione (la scala dei token parte da 32 e
+  sale di 8, quindi non ha gradini vicini); le quattro coppie entity sono già token dal commit
+  `4d215ff0e` (C9.1) e si consumano, senza ridefinirle né duplicarle in locale.
+- **R-RAIL-10** (2026-08-10) — I 14 valori `snap` vanno **sempre** al gradino vicino della
+  scala: si emenda il design, non si estende la scala per far combaciare il mockup. Due sole
+  eccezioni: `letter-spacing: 0.08em` resta letterale, e le quattro ombre si compongono a mano
+  — geometria scritta per esteso, colore da `--color-accent-subtle` e `--color-node-shadow` —
+  mai `var(--shadow-*)`.
+- **R-RAIL-11** (2026-08-10) — Sopravvivono due chiavi di storage, e solo quelle:
+  `jjodel_property_panel_visible` e `jjodel_property_overlay_width`, quest'ultima con
+  **minimo 360**, clampato sia in lettura sia durante il resize. Spariscono lo stato
+  `cardMaximized`, i due `toggleMaximize*`, lo splitter e i due `CollapsedPanelToggle`. Non si
+  toccano `jjodel_treeview_visible` né `TreeViewPanelContext`. `--jj-canvas-right-inset` resta
+  il contratto verso il canvas, scritto con la semantica di oggi: il canvas non deve spostarsi
+  in modo diverso da prima quando il rail si apre e si chiude. Una chiave resa inerte dal
+  ritiro e non nominata qui **non si rimuove**: si annota nell'entry di log.
+- **R-RAIL-12** (2026-08-10) — La sezione NODE resta nel guscio, gated su `advanced`,
+  restilata come disclosure. Spostarla dentro l'inspector cambierebbe *quando* compare, non
+  solo *dove*.
+- **R-RAIL-13** (2026-08-10) — Il rail legge **solo** Redux `state.advanced`; nessun
+  consumatore nuovo di `useInterfaceMode`. In `editors/Info.tsx` i due sistemi di modalità
+  convivono a poche righe di distanza: non si «aggiusta» nulla, si evita soltanto di
+  aggiungere consumatori del secondo.
+
 ## Superate
 
 - **D3** (2026-07-26, routing congelato in v1) — superata da E-route il 2026-08-06.
