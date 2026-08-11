@@ -412,6 +412,16 @@ Discovery sessions on sorting bugs must include at least one end-to-end trace fr
 
 When a previous session's discovery describes a specific bad state ("the two anchors collide at coordinate (X, Y)"), that description is a hypothesis about a past version of the code, not a fact about the current version. Before building a fix on top of it, **reproduce the bad state on the current code**: run the scenario, capture the DOM/Redux state, confirm the numbers match. If the bad state cannot be reproduced, the underlying bug may have changed or never existed in the form described.
 
+**Sub-rule: an assertion of absence requires proof that the search ran**
+
+"Nothing found" and "the command never ran" produce identical output. A glob that failed to expand, a path that does not exist, a filter that excluded the answer, a read that stopped short of the relevant line: each returns a silence that reads exactly like a negative result.
+
+Before writing "X does not exist", "X is not used anywhere", or "X is not loaded", do one of:
+- check the exit status of the command that produced the silence, or
+- run a **positive control** on the same command: search for something you know is present. If the control comes back empty, the search is broken, not the subject.
+
+A positive control is only a control if it has signal, and it must run through the same tool as the search it validates. In Codex's shell `grep` is a function wrapping `ugrep --ignore-files` (confirm with `type grep`), so a recursive search from the repo root silently skips every gitignored path — `node_modules` included — while an explicitly named path inside one is still searched. Measured 2026-08-11: `grep -rn "(a)" --include="*.md" .` returns 513 lines, none of them from `node_modules`, and adding `--exclude-dir=node_modules` changes nothing. A search that cannot reach its subject returns the same silence as a subject that is not there. The same applies to partial reads: a count taken over lines 1-62 of a 157-line file is a count over that window, and must be reported as such or not reported at all.
+
 ---
 
 ## 6. Commit discipline
