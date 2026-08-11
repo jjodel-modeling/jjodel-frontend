@@ -61,3 +61,61 @@ Registro dei debiti tecnici noti. Ogni entry deve indicare: data, origine, stato
 - `frontend/src/styles/tokens/_typography.scss:70-84`
 - `docs/claude-code-log.md` — entry del 2026-08-11, nota (15), e la sua correzione nell'entry del passo 6
 - `docs/decisions.md` — R-RAIL-5, clausola C5.3
+
+---
+
+## I campi di colore di `entityMeta.ts` sono codice morto
+
+**Registrato:** 2026-08-11
+**Origine:** passo 3 dell'arco 2 del rail destro. Il commit D del passo 2 — che doveva far consumare `entityMeta.ts` ai token — è stato saltato proprio per questa misura: non c'è niente da far consumare, perché nessuno legge quei campi.
+**Stato attuale:** `frontend/src/common/entityMeta.ts` espone `ENTITY_META` (interfaccia `EntityMeta`, `:35-47`) con cinque campi di colore per kind — `color`, `badgeBg`, `badgeText`, `badgeBgDark`, `badgeTextDark` — e tre helper, `entityColor`, `entityIcon`, `entityIsAbstract`. Misurato l'11 agosto con `command grep -rn` su `frontend/src`: **zero** consumatori di `ENTITY_META` fuori dal file, **zero** chiamanti dei tre helper. L'unico importatore vivo è `frontend/src/components/common/ElementBadge.tsx:9`, che prende soltanto `resolveEntityType` e `entityLetter` — cioè la parte semantica, non quella cromatica. Il `badgeBg` letto in `frontend/src/pages/components/Navbar.tsx:290` è il campo omonimo di `constants/documentTypes.ts`, un oggetto diverso, già tokenizzato. Restano riferimenti a `entityMeta` in commenti: `_colors-light.scss:329-330`, `_colors-dark.scss:235`, `documentTypes.ts:44`.
+**Fix strutturale raccomandato:** cancellare i cinque campi di colore dall'interfaccia e dalle diciotto voci di `ENTITY_META`, e i tre helper senza chiamanti, tenendo `EntityType`, `resolveEntityType` ed `entityLetter`. Prima però va sciolto l'equivoco dei commenti nei due file di token, che dichiarano di ricopiare `entityMeta` verbatim: dopo la rigenerazione OKLCH della scala (R-RAIL-30) non è più vero, e i commenti vanno riscritti nello stesso passo, altrimenti la cancellazione fa sparire l'unico posto dove quei valori sono ancora leggibili.
+**Priorità:** media — non è un difetto visibile, è una sorgente di verità apparente che invita a modifiche inerti.
+**Effort stimato:** un'ora, più la riscrittura dei tre commenti.
+**Riferimenti:**
+- `frontend/src/common/entityMeta.ts:35-47`, `:60`
+- `frontend/src/components/common/ElementBadge.tsx:9`
+- `docs/decisions.md` — R-RAIL-30
+
+---
+
+## Il teal duplicato per copia indipendente in dodici file
+
+**Registrato:** 2026-08-11
+**Origine:** passo 3 dell'arco 2. Cercando i consumatori della scala entity sono emerse due coppie teal ripetute a mano, che nessuno consuma da `entityMeta.ts` né dai token.
+**Stato attuale:** misurato l'11 agosto, **dopo** i commit `70409831e` e `0f1197a7e`. Le due coppie sono `#CCFBF1 / #0D9488` (Teal-100 / Teal-600) e `#E1F5EE / #0F6E56`. Compaiono come coppia bg/fg adiacente in sei file vivi — `components/abstract/tabs/tab-title.scss:83-84`, `components/common/element-badge.scss:85-86` e `:98-99` (entrambe le coppie), `pages/components/navbar.scss:1819-1820`, `components/editor-v2/_color-schemes.scss:176` e `:185` (come `--enum-header-bg` / `--enum-accent`, minuscolo), `components/megamodel/MegamodelView.scss:261-262`, `components/project/project-editor.scss:695-696` e `:795` — più `common/entityMeta.ts:84-85` e `:187-188`, che è morto (voce precedente). Occorrenze singole, non in coppia: `components/abstract/tabs/EditorSwitch.scss:52`, `components/editor-v2/EditorV2.scss:481`, `components/editors/views/nestedView.scss:2942`, `pages/components/navbar.scss:1774`, `components/Jodie/ActionSuggestion.css:87`, `constants/avatarConfig.ts:14`. Dodici file in tutto. **Correzione a quanto scritto nel prompt del passo:** i due fogli del rail non sono più fra questi — `tree-view-sidebar.scss` e `properties-with-tree-view.scss` consumano i token da questo passo, e il `#0D9488` che stava in `properties-with-tree-view.scss:925` non c'è più; in compenso `_color-schemes.scss` e `EditorSwitch.scss` non erano nell'elenco e ci sono.
+**Fix strutturale raccomandato:** non è una migrazione meccanica, perché i dodici usi non significano tutti la stessa cosa: `element-badge` e `tab-title` sono badge di entità e vanno ai token entity; `_color-schemes.scss` colora l'header degli enum sul canvas ed è un'altra scala; `avatarConfig.ts` è una tavolozza di avatar e non c'entra. Prima si classifica uso per uso, poi si tokenizza solo ciò che è colore di entità.
+**Priorità:** media.
+**Effort stimato:** mezza giornata, di cui la classificazione è la parte cara.
+**Riferimenti:**
+- `docs/decisions.md` — R-RAIL-30
+- `docs/claude-code-log.md` — entry del 2026-08-11, passo 3 dell'arco 2
+
+---
+
+## Commento fuorviante a `documentTypes.ts:44`
+
+**Registrato:** 2026-08-11
+**Origine:** passo 3 dell'arco 2, verifica dei consumatori della scala.
+**Stato attuale:** `frontend/src/constants/documentTypes.ts:44` dice «Pink from common/entityMeta.ts viewpoint entry (badgeBg: #FCE7F3, badgeText: #DB2777)». I due valori corrispondono ancora alla voce `viewpoint` di `entityMeta.ts:93-94`, ma la voce `viewpoint` di `documentTypes.ts` consuma i token da `:55-56` e non quei letterali, `entityMeta` è morto (prima voce di questo registro), e nella scala rigenerata il viewpoint non è più rosa: è un alias della famiglia contenitori, cioè slate. Il commento indica quindi una sorgente che non è consultata e un colore che non è quello reso. Stessa specie del commento a `_typography.scss:72`, di cui alla voce sugli `@import`.
+**Fix strutturale raccomandato:** cancellare la prima riga del commento. Le righe successive (`:45-50`) sono la nota TODO sul wiring di `onCreate`, che è viva e va tenuta.
+**Priorità:** bassa.
+**Effort stimato:** due minuti, da accodare al primo passo che tocchi il file.
+**Riferimenti:**
+- `frontend/src/constants/documentTypes.ts:44-56`
+- `frontend/src/common/entityMeta.ts:93-94`
+
+---
+
+## Il colore non distingue più i cinque tipi nel menu «New document»
+
+**Registrato:** 2026-08-11
+**Origine:** passo 3 dell'arco 2. È la superficie che ha fatto nascere R-RAIL-32: i cinque tipi di documento vi compaiono come fratelli simultanei, e la regola di famiglia dei contenitori non l'aveva prevista.
+**Stato attuale:** `frontend/src/constants/documentTypes.ts:14-69` definisce cinque tipi — metamodel, model, transformation, viewpoint, refactoring — e tutti e cinque sono alias della famiglia contenitori nella scala rigenerata, quindi condividono una coppia sola: in light `#E2EAF5 / #45566F`, in dark `#242E3D / #BBCEE8`. `Navbar.tsx:290` rende il badge con `background: entry.badgeBg` e `color: entry.badgeColor`, cioè cinque pastiglie identiche. **Precisazione rispetto a come la voce era stata formulata:** i cinque tipi restano distinguibili, perché il badge porta la lettera (`M`, `m`, `T`, `V`, `R`, da `:20/29/38/54/63`) e accanto ci sono etichetta e descrizione (`Navbar.tsx:292-298`). Ciò che si è perso è il colore come canale di tipo, non la leggibilità del menu. Seconda superficie con lo stesso effetto, trovata nello stesso passo: le icone del tree, dove metamodel, package e model-M1 collassano sulla stessa coppia e restano separate dalla sola lettera (`M`, `P`, `m` corsivo).
+**Fix strutturale raccomandato:** decidere se il colore deve tornare a portare il tipo su queste due superfici. Se sì, il canale è **un'icona per tipo, non la tinta**: la sfumatura dentro la famiglia è già stata misurata e scartata, cinque gradini di chiarezza sulla tinta 257 distano 0.016 in OKLab, sotto il percepibile a distanza. Se no, la voce si chiude documentando che nei contenitori il tipo è portato da lettera ed etichetta.
+**Priorità:** media — è una decisione di design aperta, non un difetto.
+**Effort stimato:** la decisione; poi mezza giornata se si va sulle icone per tipo.
+**Riferimenti:**
+- `docs/decisions.md` — R-RAIL-30, R-RAIL-32
+- `frontend/src/constants/documentTypes.ts:14-69`
+- `frontend/src/pages/components/Navbar.tsx:288-298`

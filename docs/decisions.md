@@ -434,6 +434,18 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   sotto-entità prendono la tinta del genitore a croma ridotto. I kind mappano su **nove
   coppie**; la mappatura vive nei file di token come alias, non si duplica altrove e non si
   ricopia a registro. Contrasto minimo misurato 5.96 su tutte le coppie e su entrambi i temi.
+- **R-RAIL-31** (2026-08-11) — Ogni comando di shell scritto in un prompt quota i suoi glob e
+  usa `-E` con barre nude per le alternanze. Terza occorrenza in un arco della stessa specie di
+  errore, cioè un'affermazione scritta con la sicurezza di una misura e mai misurata. La regola
+  vive anche nel template di prompt, che è dove l'attore che deve obbedirla la legge; qui sta
+  come traccia, non come sede.
+- **R-RAIL-32** (2026-08-11) — Una regola di famiglia vale finché i membri non compaiono come
+  fratelli simultanei. La superficie che li affianca si cerca **prima** di ratificare la regola,
+  non dopo. Nata dal menu «New document», unica superficie in cui i cinque tipi di documento si
+  vedono insieme, e che la giustificazione della famiglia contenitori non aveva previsto.
+  Corollario misurato nello stesso passo: le superfici erano **due**, non una — nel tree le
+  icone di metamodel, package e model-M1 collassano sulla stessa coppia. Cercarne una e
+  fermarsi non soddisfa la regola.
 
 ## Superate
 
