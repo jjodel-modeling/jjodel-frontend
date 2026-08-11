@@ -343,6 +343,17 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   consumatore nuovo di `useInterfaceMode`. In `editors/Info.tsx` i due sistemi di modalità
   convivono a poche righe di distanza: non si «aggiusta» nulla, si evita soltanto di
   aggiungere consumatori del secondo.
+- **R-RAIL-19** (2026-08-10, forma fissata il 2026-08-11) — Le grep di conformità dell'arco
+  girano sul **diff staged**, mai sul file intero: il foglio del rail ha 82 letterali
+  esadecimali preesistenti che renderebbero rossa la grep sempre. Le occorrenze preesistenti si
+  riferiscono nell'entry di log, non si correggono. Il quartetto originario non era stato messo
+  a registro e non è più stato recuperabile dalle fonti autorizzate; l'11 agosto si è fissato
+  il **quintetto** che lo sostituisce, preso da
+  `docs/discovery/discovery_2026-08-10_arco1_ancoraggio.md` §8: (1) i 13 nomi in lista nera di
+  R-RAIL-6; (2) `var(--shadow-`; (3) letterali esadecimali `#[0-9a-fA-F]{3,8}`; (4) `z-index`;
+  (5) `font-family:`. La quinta ha atteso **diverso da zero** quando il passo aggiunge una
+  famiglia: la verifica è che la riga consumi `var(--font-mono)` e non un nome in chiaro. Forma
+  sul diff: `git diff --cached -U0 -- <file> | grep '^+' | grep -v '^+++' | grep …`.
 - **R-RAIL-23** (2026-08-10) — Il controllo di collasso in header **commuta solo la
   visibilità dell'inspector** (`jjodel_property_panel_visible`). Con R-RAIL-18 l'header
   appartiene al guscio e resta a schermo finché almeno uno dei due pane è montato, quindi
