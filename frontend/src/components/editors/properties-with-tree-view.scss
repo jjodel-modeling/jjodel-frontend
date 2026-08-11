@@ -913,22 +913,28 @@ $pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Chec
         flex-shrink: 0;
         background: transparent;
 
-        // Per-type calm palette (2026-07-28 round 2), scoped to the panel copy to
-        // match the sidebar tree. The global --color-entity-* tokens (canvas nodes)
-        // stay untouched.
-        &.tree-DModel { color: #6366F1; }
-        &.tree-DPackage { color: #D97706; }
+        // Per-type palette: the -fg half of each entity token pair (R-RAIL-30).
+        // This copy is the live tree — it wins the cascade over the sidebar sheet
+        // at (0,3,0) — and it stays text-only in both themes, so each kind repeats
+        // `background: transparent` at the same specificity as its colour, holding
+        // it against the -bg the sidebar sheet sets on the same element.
+        &.tree-DModel { background: transparent; color: var(--color-entity-metamodel-fg); }
+        &.tree-DPackage { background: transparent; color: var(--color-entity-package-fg); }
         &.tree-DClass {
-            color: #2563EB;
+            background: transparent;
+            color: var(--color-entity-class-fg);
             &.abstract-class { font-style: italic; }
         }
-        &.tree-DAttribute { color: #0D9488; }
-        &.tree-DReference { color: #7C3AED; }
-        &.tree-DEnumerator, &.tree-DEnum { color: #D4537E; }
-        &.tree-DEnumLiteral { color: #D4537E; }
-        &.tree-DOperation { color: #06b6d4; }
-        &.tree-DParameter { color: #9ca3af; }
-        &.tree-DObject { color: #6b7280; }
+        &.tree-DAttribute { background: transparent; color: var(--color-entity-attribute-fg); }
+        &.tree-DReference { background: transparent; color: var(--color-entity-reference-fg); }
+        &.tree-DEnumerator, &.tree-DEnum { background: transparent; color: var(--color-entity-enum-fg); }
+        &.tree-DEnumLiteral { background: transparent; color: var(--color-entity-literal-fg); }
+        &.tree-DOperation { background: transparent; color: var(--color-entity-operation-fg); }
+        &.tree-DParameter { background: transparent; color: var(--color-entity-parameter-fg); }
+        &.tree-DObject { background: transparent; color: var(--color-entity-object-fg); }
+        // Added here so the M1 nested-model icon is bare like its siblings: the
+        // panel copy had no entry for it, leaving it on the sidebar's -bg rule.
+        &.tree-nested-model { background: transparent; color: var(--color-entity-model-fg); }
     }
 
     // Tree node name
