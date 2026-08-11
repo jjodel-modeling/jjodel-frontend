@@ -119,3 +119,17 @@ Registro dei debiti tecnici noti. Ogni entry deve indicare: data, origine, stato
 - `docs/decisions.md` — R-RAIL-30, R-RAIL-32
 - `frontend/src/constants/documentTypes.ts:14-69`
 - `frontend/src/pages/components/Navbar.tsx:288-298`
+
+---
+
+## I selettori entity dei glifi nel tree non producono colore a video
+
+**Registrato:** 2026-08-11
+**Origine:** passo 3 dell'arco 2. I commit `70409831e` e `0f1197a7e` hanno portato gli undici kind a `-fg` con fondo trasparente; la verifica visiva dell'11 agosto ha mostrato che nel tree i glifi restano monocromi.
+**Stato attuale:** il CSS dichiara un colore per tipo che a video non si vede. Causa **non accertata** — questa voce non la diagnostica, la registra: possibile mancata ereditarietà di `color` sul glifo, specificità superiore altrove, oppure selettore che non colpisce la superficie viva. Con R-RAIL-33 l'esito a video è quello **voluto**, quindi non c'è difetto da riparare; il problema è che il foglio dichiara un'intenzione che non realizza, e chiunque legga quei selettori in futuro li «correggerà», riportando il colore nel tree contro R-RAIL-33.
+**Fix strutturale raccomandato:** **rimuovere i selettori, non farli funzionare.** I tre blocchi sono `tree-view-sidebar.scss:649-709` (light) e `:1054-1064` (dark), più `properties-with-tree-view.scss:919-931` (la copia viva). La rimozione va fatta misurando la resa prima e dopo, non leggendo il CSS: se un glifo prendesse colore da uno di quei blocchi, togliendolo lo perderebbe, e la verifica a video è l'unica che lo dice. Vanno tenuti fuori dalla rimozione le righe viewpoint e view-leaf (`:1481-1498`), che sono a pastiglia per progetto e consumano i token da prima dell'arco.
+**Priorità:** media — nessun effetto visibile, ma è una trappola per il passo successivo.
+**Effort stimato:** un'ora, di cui la maggior parte è la verifica a video prima e dopo.
+**Riferimenti:**
+- `docs/decisions.md` — R-RAIL-33, R-RAIL-28 e il suo emendamento
+- `docs/claude-code-log.md` — entry del 2026-08-11, passo 3 dell'arco 2, e questa chiusura

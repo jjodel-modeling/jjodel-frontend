@@ -422,6 +422,15 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   comando. **Testo normativo in `CLAUDE.md` §5**, sotto-regola «an assertion of absence
   requires proof that the search ran»: qui non si duplica, per non creare la solita coppia che
   diverge. Ratificata dopo quattro occorrenze in due giorni.
+  - **Emendamento del 2026-08-11** — La regola vale per le asserzioni di **presenza** quanto per
+    quelle di assenza. Un path, un conteggio di file, l'elenco dei siti di una duplicazione e
+    **la descrizione di una resa a video** sono misure. Cinque occorrenze in questo arco: un path
+    di cartella inferito da un file vicino; tredici variabili dichiarate consumate e in realtà
+    morte; otto fogli col teal che erano dodici; una voce di debito già a registro proposta come
+    nuova; un report di esecuzione che descriveva glifi colorati a token, ratificato senza
+    guardare lo schermo, dove i glifi sono monocromi. L'ultima porta il corollario più utile:
+    **un report di esecuzione non è una misura della resa.** Solo la verifica visiva lo è, e
+    nessuna descrizione la sostituisce.
 - **R-RAIL-29** (2026-08-11) — L'`grep` interattivo di questa macchina è un wrapper di
   `ugrep --ignore-files`: `--exclude-dir` è inerte e `--include` non filtra. `command grep`
   risolve a BSD grep, che li onora entrambi. Testo normativo in `CLAUDE.md` §5, sotto-regola
@@ -446,6 +455,19 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   Corollario misurato nello stesso passo: le superfici erano **due**, non una — nel tree le
   icone di metamodel, package e model-M1 collassano sulla stessa coppia. Cercarne una e
   fermarsi non soddisfa la regola.
+- **R-RAIL-33** (2026-08-11) — **La scala entity non entra nel tree.** Il colore di tipo vive
+  dove l'elemento è isolato e non ha contesto strutturale che ne dichiari la natura: badge del
+  pannello properties, navbar, badge `view`, tutti in registro a **pastiglia**, fondo `-bg` più
+  testo `-fg`. Nel tree la natura è già dichiarata da due canali, la forma dell'icona e
+  l'indentazione, quindi il colore sarebbe un terzo canale ridondante su una lista che può
+  essere lunga centinaia di righe; e una campitura piena dentro una fascia che porta hover e
+  selezione competerebbe con lo stato invece di aggiungersi. **Il tree resta monocromo.** Primo
+  corollario: la collisione dei contenitori prevista da R-RAIL-32 non si presenta nel tree, dove
+  metamodel, package e model annidato hanno icone diverse; resta aperta nel menu «New document»,
+  che è superficie a pastiglia. Secondo corollario: i contrasti misurati in R-RAIL-30 descrivono
+  il solo registro a pastiglia, dove `-fg` poggia sulla sua `-bg`. Prima del 2026-08-11 il tree
+  era colorato: questa voce ratifica il cambiamento come scelta, non lo registra come
+  regressione da riparare.
 
 ## Superate
 
