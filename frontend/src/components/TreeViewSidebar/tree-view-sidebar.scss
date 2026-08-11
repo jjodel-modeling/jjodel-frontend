@@ -1699,6 +1699,7 @@ html[data-theme="dark"] {
 .tree-row {
     display: flex;
     align-items: center;
+    height: 26px; // literal by R-RAIL-9 — see the block at frontend/src/components/editors/properties-with-tree-view.scss:15
     gap: 4px;
     user-select: none;
     padding-top: 4px;
@@ -1749,6 +1750,10 @@ html[data-theme="dark"] {
         background-color: var(--color-selection-bg);
     }
 
+    &--selected .tree-row__name {
+        font-weight: 600;
+    }
+
     &--feature {
         cursor: pointer;
     }
@@ -1763,7 +1768,8 @@ html[data-theme="dark"] {
     }
 
     &__name {
-        font-size: 11px;
+        font-size: 13px;
+        font-weight: 500;
         color: var(--color-text-primary);
         white-space: nowrap;
         overflow: hidden;
@@ -1906,6 +1912,7 @@ html[data-theme="dark"] {
 
 .tree-feature__type {
     font-size: 11px;
+    font-family: var(--font-mono);
     color: var(--color-text-tertiary);
     margin-left: 2px;
     white-space: nowrap;
