@@ -343,6 +343,19 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   consumatore nuovo di `useInterfaceMode`. In `editors/Info.tsx` i due sistemi di modalità
   convivono a poche righe di distanza: non si «aggiusta» nulla, si evita soltanto di
   aggiungere consumatori del secondo.
+- **R-RAIL-14** (2026-08-10) — Postura Browse/Focus **fuori dall'arco 1** (per R-RAIL-12).
+  `PRESET_2A` codifica solo geometria. Tree 392px quando entrambi i pane sono montati; altezza
+  intera al pane superstite; nessuna altezza trascinabile.
+- **R-RAIL-15** (2026-08-10) — Il restyle del tree si scrive in `tree-view-sidebar.scss`
+  (ampliamento di scope dichiarato). Vietati gli override di specificità dal foglio del rail.
+- **R-RAIL-16** (2026-08-10) — Identity block = `PropertiesHeader`, restilato in loco nel ramo
+  model element; niente blocco nel guscio; **niente chip di firma**. **Superata per l'arco 1 da
+  R-RAIL-26**.
+- **R-RAIL-17** (2026-08-10) — Default larghezza **400** (già a codice); `MIN_OVERLAY_WIDTH` da
+  320 a **360**.
+- **R-RAIL-18** (2026-08-10) — Header unico: si riusa quello della card PROPERTIES; l'header
+  del tree diventa label di sezione senza azioni; pin e HelpButton restano dove sono; **footer
+  fuori arco**.
 - **R-RAIL-19** (2026-08-10, forma fissata il 2026-08-11) — Le grep di conformità dell'arco
   girano sul **diff staged**, mai sul file intero: il foglio del rail ha 82 letterali
   esadecimali preesistenti che renderebbero rossa la grep sempre. Le occorrenze preesistenti si
@@ -354,6 +367,12 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   (5) `font-family:`. La quinta ha atteso **diverso da zero** quando il passo aggiunge una
   famiglia: la verifica è che la riga consumi `var(--font-mono)` e non un nome in chiaro. Forma
   sul diff: `git diff --cached -U0 -- <file> | grep '^+' | grep -v '^+++' | grep …`.
+- **R-RAIL-20** (2026-08-10) — Il report di discovery si committa a sé, prima del passo di
+  registro.
+- **R-RAIL-21** (2026-08-10) — `jjodel_property_tree_height`: sparisce il codice, **resta il
+  dato** nei `localStorage`; nessun cleanup, annotazione in log.
+- **R-RAIL-22** (2026-08-10) — L'espressione di `overlayShown` non si tocca; il guscio si monta
+  sulla condizione di oggi; i due pane si rendono ciascuno sulla propria visibilità.
 - **R-RAIL-23** (2026-08-10) — Il controllo di collasso in header **commuta solo la
   visibilità dell'inspector** (`jjodel_property_panel_visible`). Con R-RAIL-18 l'header
   appartiene al guscio e resta a schermo finché almeno uno dei due pane è montato, quindi
