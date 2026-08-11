@@ -329,30 +329,43 @@ $gradient-hover: linear-gradient(180deg, $slate-100 0%, $slate-200 100%);
      Allineata a frontend/src/common/entityMeta.ts
      NON modificare senza aggiornare anche entityMeta.ts
      ============================================ */
-  --color-entity-metamodel-bg: #EEEDFE;
-  --color-entity-metamodel-fg: #534AB7;
-  --color-entity-package-bg: #DBEAFE;
-  --color-entity-package-fg: #2563EB;
-  --color-entity-class-bg: #FEE2E2;
-  --color-entity-class-fg: #DC2626;
-  --color-entity-model-bg: #FAEEDA;
-  --color-entity-model-fg: #854F0B;
-  --color-entity-viewpoint-bg: #FCE7F3;
-  --color-entity-viewpoint-fg: #DB2777;
-  --color-entity-attribute-bg: #D1FAE5;
-  --color-entity-attribute-fg: #059669;
-  --color-entity-reference-bg: #CFFAFE;
-  --color-entity-reference-fg: #0891B2;
-  --color-entity-operation-bg: #E0E7FF;
-  --color-entity-operation-fg: #4F46E5;
-  --color-entity-enum-bg: #FEF3C7;
-  --color-entity-enum-fg: #D97706;
+  /* Coppie canoniche (R-RAIL-30) */
+  --color-entity-container-bg: #E2EAF5;
+  --color-entity-container-fg: #45566F;
+  --color-entity-class-bg: #FCE1EA;
+  --color-entity-class-fg: #7A4056;
+  --color-entity-object-bg: #F4E5EA;
+  --color-entity-object-fg: #6B4B56;
+  --color-entity-enum-bg: #FBE5D6;
+  --color-entity-enum-fg: #794821;
+  --color-entity-literal-bg: #F3E7DF;
+  --color-entity-literal-fg: #6A4F3C;
+  --color-entity-attribute-bg: #D5F1E8;
+  --color-entity-attribute-fg: #006453;
+  --color-entity-parameter-bg: #DEEDE9;
+  --color-entity-parameter-fg: #385E54;
+  --color-entity-reference-bg: #E8ECD5;
+  --color-entity-reference-fg: #535B1D;
+  --color-entity-operation-bg: #EBE6FC;
+  --color-entity-operation-fg: #5A4A7F;
 
-  /* Saturated variants — used for "alive" signaling (pulsing dot indicator
-     dell'entity attiva in editor). Più saturi dei bg pastello, meno scuri
-     dei fg, sit "in the middle" del visual register. */
-  --color-entity-viewpoint-saturated: #ec4899;
-  --color-entity-model-saturated: #eab308;
+  /* Alias — sei contenitori, la classe astratta, il tipo di dato */
+  --color-entity-metamodel-bg: var(--color-entity-container-bg);
+  --color-entity-metamodel-fg: var(--color-entity-container-fg);
+  --color-entity-model-bg: var(--color-entity-container-bg);
+  --color-entity-model-fg: var(--color-entity-container-fg);
+  --color-entity-package-bg: var(--color-entity-container-bg);
+  --color-entity-package-fg: var(--color-entity-container-fg);
+  --color-entity-viewpoint-bg: var(--color-entity-container-bg);
+  --color-entity-viewpoint-fg: var(--color-entity-container-fg);
+  --color-entity-transformation-bg: var(--color-entity-container-bg);
+  --color-entity-transformation-fg: var(--color-entity-container-fg);
+  --color-entity-view-bg: var(--color-entity-container-bg);
+  --color-entity-view-fg: var(--color-entity-container-fg);
+  --color-entity-abstract-class-bg: var(--color-entity-class-bg);
+  --color-entity-abstract-class-fg: var(--color-entity-class-fg);
+  --color-entity-data-type-bg: var(--color-entity-parameter-bg);
+  --color-entity-data-type-fg: var(--color-entity-parameter-fg);
 
   /* Selection (cyan family — distinto da --color-info che è blu informazionale)
      TODO: questi token sono attualmente usati solo da .tree-row--selected;

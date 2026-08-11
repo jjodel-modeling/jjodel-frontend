@@ -236,29 +236,43 @@
      fg shade-400. Divergenza deliberata (C9.1): allineare enum alla regola
      shade-300 lo renderebbe identico a model.
      ============================================ */
-  --color-entity-metamodel-bg: rgba(83, 74, 183, 0.18);
-  --color-entity-metamodel-fg: #A99DFD;
-  --color-entity-package-bg: rgba(37, 99, 235, 0.18);
-  --color-entity-package-fg: #93C5FD;
-  --color-entity-class-bg: rgba(220, 38, 38, 0.18);
-  --color-entity-class-fg: #FCA5A5;
-  --color-entity-model-bg: rgba(133, 79, 11, 0.18);
-  --color-entity-model-fg: #FCD34D;
-  --color-entity-viewpoint-bg: rgba(219, 39, 119, 0.18);
-  --color-entity-viewpoint-fg: #F472B6;
-  --color-entity-attribute-bg: rgba(16, 185, 129, 0.15);
-  --color-entity-attribute-fg: #34D399;
-  --color-entity-reference-bg: rgba(6, 182, 212, 0.15);
-  --color-entity-reference-fg: #22D3EE;
-  --color-entity-operation-bg: rgba(99, 102, 241, 0.15);
-  --color-entity-operation-fg: #818CF8;
-  --color-entity-enum-bg: rgba(245, 158, 11, 0.15);
-  --color-entity-enum-fg: #FBBF24;
+  /* Coppie canoniche (R-RAIL-30) */
+  --color-entity-container-bg: #242E3D;
+  --color-entity-container-fg: #BBCEE8;
+  --color-entity-class-bg: #44212E;
+  --color-entity-class-fg: #F6B8CD;
+  --color-entity-object-bg: #3B272E;
+  --color-entity-object-fg: #E4C1CD;
+  --color-entity-enum-bg: #43260F;
+  --color-entity-enum-fg: #F4C09C;
+  --color-entity-literal-bg: #3A2A1F;
+  --color-entity-literal-fg: #E3C6B2;
+  --color-entity-attribute-bg: #01372C;
+  --color-entity-attribute-fg: #95DDCA;
+  --color-entity-parameter-bg: #1C332D;
+  --color-entity-parameter-fg: #B0D6CB;
+  --color-entity-reference-bg: #2D310C;
+  --color-entity-reference-fg: #C9D399;
+  --color-entity-operation-bg: #312746;
+  --color-entity-operation-fg: #D1C2F9;
 
-  /* Saturated variants (dark mode) — leggermente più chiari del light per
-     mantenere contrasto su background scuro. */
-  --color-entity-viewpoint-saturated: #f472b6;
-  --color-entity-model-saturated: #facc15;
+  /* Alias — sei contenitori, la classe astratta, il tipo di dato */
+  --color-entity-metamodel-bg: var(--color-entity-container-bg);
+  --color-entity-metamodel-fg: var(--color-entity-container-fg);
+  --color-entity-model-bg: var(--color-entity-container-bg);
+  --color-entity-model-fg: var(--color-entity-container-fg);
+  --color-entity-package-bg: var(--color-entity-container-bg);
+  --color-entity-package-fg: var(--color-entity-container-fg);
+  --color-entity-viewpoint-bg: var(--color-entity-container-bg);
+  --color-entity-viewpoint-fg: var(--color-entity-container-fg);
+  --color-entity-transformation-bg: var(--color-entity-container-bg);
+  --color-entity-transformation-fg: var(--color-entity-container-fg);
+  --color-entity-view-bg: var(--color-entity-container-bg);
+  --color-entity-view-fg: var(--color-entity-container-fg);
+  --color-entity-abstract-class-bg: var(--color-entity-class-bg);
+  --color-entity-abstract-class-fg: var(--color-entity-class-fg);
+  --color-entity-data-type-bg: var(--color-entity-parameter-bg);
+  --color-entity-data-type-fg: var(--color-entity-parameter-fg);
 
   /* Selection (cyan dark variant) */
   --color-selection-bg: rgba(8, 145, 178, 0.18);
