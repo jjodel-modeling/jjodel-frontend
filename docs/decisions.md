@@ -417,6 +417,11 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   e quali fermano il task, altrimenti si compra uno stop falso a ogni passo; (c) una divergenza
   di guard diagnosticata e a riduzione di lavoro non è un hard stop, ma va riportata. Estende
   alle **letture** la regola già in vigore per le scritture git dal bridge.
+- **R-RAIL-28** (2026-08-11) — Un'asserzione di assenza vale solo se la ricerca che la sostiene
+  è provata: exit status verificato, oppure un controllo positivo con segnale sullo stesso
+  comando. **Testo normativo in `CLAUDE.md` §5**, sotto-regola «an assertion of absence
+  requires proof that the search ran»: qui non si duplica, per non creare la solita coppia che
+  diverge. Ratificata dopo quattro occorrenze in due giorni.
 
 ## Superate
 
