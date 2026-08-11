@@ -1248,15 +1248,15 @@ html[data-theme="dark"] {
   letter-spacing: 0.3px;
 }
 
-.jj-type-badge--package { background: #f1f5f9; color: #475569; }
-.jj-type-badge--class { background: #e0f2fe; color: #0369a1; }
-.jj-type-badge--attribute { background: #fef3c7; color: #92400e; }
-.jj-type-badge--reference { background: #fce7f3; color: #9d174d; }
-.jj-type-badge--operation { background: #ede9fe; color: #6d28d9; }
-.jj-type-badge--enum { background: #d1fae5; color: #065f46; }
-.jj-type-badge--literal { background: #e0e7ff; color: #3730a3; }
-.jj-type-badge--metamodel { background: #f1f5f9; color: #475569; }
-.jj-type-badge--model { background: #dbeafe; color: #1e40af; }
+.jj-type-badge--package { background: var(--color-entity-package-bg); color: var(--color-entity-package-fg); }
+.jj-type-badge--class { background: var(--color-entity-class-bg); color: var(--color-entity-class-fg); }
+.jj-type-badge--attribute { background: var(--color-entity-attribute-bg); color: var(--color-entity-attribute-fg); }
+.jj-type-badge--reference { background: var(--color-entity-reference-bg); color: var(--color-entity-reference-fg); }
+.jj-type-badge--operation { background: var(--color-entity-operation-bg); color: var(--color-entity-operation-fg); }
+.jj-type-badge--enum { background: var(--color-entity-enum-bg); color: var(--color-entity-enum-fg); }
+.jj-type-badge--literal { background: var(--color-entity-literal-bg); color: var(--color-entity-literal-fg); }
+.jj-type-badge--metamodel { background: var(--color-entity-metamodel-bg); color: var(--color-entity-metamodel-fg); }
+.jj-type-badge--model { background: var(--color-entity-model-bg); color: var(--color-entity-model-fg); }
 
 // Divider between toggle rows
 .jj-divider {

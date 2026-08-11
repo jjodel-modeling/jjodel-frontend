@@ -3706,8 +3706,8 @@ html[data-theme="dark"] {
 // 2026-07-29 (mockup alignment): the VIEW chip becomes a soft cyan pill, matching
 // the `--class` badge language (`_form-system.scss:1252`) — a tint, never a solid
 // accent fill (design system §7.1). VIEWPOINT keeps its violet.
-.jj-type-badge--view { background: rgba(14, 165, 233, 0.12); color: #0369a1; }
-.jj-type-badge--viewpoint { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
+.jj-type-badge--view { background: var(--color-entity-view-bg); color: var(--color-entity-view-fg); }
+.jj-type-badge--viewpoint { background: var(--color-entity-viewpoint-bg); color: var(--color-entity-viewpoint-fg); }
 
 // 2026-07-29 (mockup alignment) — breadcrumb inside the single-row view header:
 // lighter separators and the trailing element (the view being edited) emphasized,
