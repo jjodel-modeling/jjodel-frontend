@@ -31,3 +31,33 @@ Registro dei debiti tecnici noti. Ogni entry deve indicare: data, origine, stato
 **Riferimenti:**
 - `docs/decisions.md` — R-RAIL-25, R-RAIL-9 (annotazione), R-RAIL-26
 - `docs/discovery/discovery_2026-08-10_rail_fase0.md` — nota sulle tre palette entity
+
+---
+
+## Portata parziale del restyle del tree pane
+
+**Registrato:** 2026-08-11
+**Origine:** passo 4 dell'arco rail destro (R-RAIL-7). I quattro valori di restyle sono stati applicati a `frontend/src/components/TreeViewSidebar/tree-view-sidebar.scss` (commit `df8850653`), e il perimetro di selettori fissato dalla ratifica lascia fuori una parte delle righe del tree.
+**Stato attuale:** «nome 13px peso 500» e «peso 600 sul selezionato» agiscono su `.tree-row__name`, cioè le righe di nodo (`TreeViewContent.tsx:654`) e le rule e gli helper JjTL (`:1470`, `:1479`). Le righe di istanza e di feature usano un'altra classe, `.tree-feature__name` (`tree-view-sidebar.scss:1899`), e restano a **11px** senza peso dichiarato; il peso 600 non le raggiunge nemmeno per via della selezione, perché marcano lo stato selezionato con `tree-row__content--selected` (`TreeViewContent.tsx:718`) e non con `tree-row--selected`. Il suffisso di tipo invece le raggiunge, perché `.tree-feature__type` è in perimetro e rende in mono su istanze e feature. Ne risulta, sulle righe di feature, un nome a 11px accanto a fratelli a 13px.
+**Fix strutturale raccomandato:** è una **decisione di design**, non una svista di implementazione: R-RAIL-7 elencava quattro valori su quattro selettori e sono stati applicati esattamente quelli. Va deciso nell'arco 2 se uniformare `.tree-feature__name` a `.tree-row__name` — allineando anche la classe di selezione, che è la parte non banale — oppure se la differenza fra righe di struttura e righe di istanza è voluta, e in quel caso documentarla.
+**Priorità:** bassa — disomogeneità visiva, non difetto funzionale.
+**Effort stimato:** un'ora per allineare i due valori tipografici; la parte cara è la selezione, che passerebbe da `tree-row__content--selected` a `tree-row--selected` e tocca il markup di `TreeViewContent`, oggi fuori scope.
+**Riferimenti:**
+- `docs/decisions.md` — R-RAIL-7, R-RAIL-15
+- `docs/claude-code-log.md` — entry del 2026-08-11, nota (14)
+- `docs/discovery/discovery_2026-08-11_rimando_blocco_altezze.md`
+
+---
+
+## Validità degli `@import` di Google Fonts in `_typography.scss`
+
+**Registrato:** 2026-08-11
+**Origine:** verifica della nota (15) dell'entry di log del 2026-08-11, che dava IBM Plex Mono per non caricato. L'affermazione è falsa — l'import c'è — ma la verifica ha fatto emergere una questione di validità che nessuno aveva posto.
+**Stato attuale:** `frontend/src/styles/tokens/_typography.scss` carica i due font applicativi con `@import url(...)` da Google Fonts: Inter a `:81`, IBM Plex Mono a `:84`. Entrambi seguono **cinque** blocchi `:root { }` dello stesso file (`:11`, `:27`, `:41`, `:54`, `:64`). Per specifica CSS un `@import` che compare dopo una regola di stile è invalido e viene scartato dal parser: i due sopravvivono solo se il bundler li risale in testa alla CSS emessa. Non è decidibile leggendo il sorgente. Nota accessoria: il commento di sezione a `:72` dice «Load Inter and JetBrains Mono», ma l'import è di IBM Plex Mono; JetBrains Mono arriva da `frontend/index.html:11`, per gli editor Monaco.
+**Fix strutturale raccomandato:** prima si misura, poi si decide. Verifica: DevTools, tab Network, filtro `fonts.googleapis`, hard refresh su `localhost:3001`. Due richieste: i font si caricano, la voce si chiude senza debito e resta solo il commento da correggere. Zero richieste: non si carica nemmeno Inter, quindi il difetto è di tipografia globale e non del solo suffisso mono, la voce va promossa da backlog a bug, e il fix è spostare i due `@import` in testa al file oppure in `index.html` accanto a JetBrains Mono, dove la validità non dipende dal bundler.
+**Priorità:** media in attesa della misura; alta se la misura dà zero richieste.
+**Effort stimato:** cinque minuti la verifica; mezz'ora lo spostamento, se serve.
+**Riferimenti:**
+- `frontend/src/styles/tokens/_typography.scss:70-84`
+- `docs/claude-code-log.md` — entry del 2026-08-11, nota (15), e la sua correzione nell'entry del passo 6
+- `docs/decisions.md` — R-RAIL-5, clausola C5.3
