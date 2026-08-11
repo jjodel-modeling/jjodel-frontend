@@ -431,9 +431,9 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   `_colors-light.scss` e `_colors-dark.scss`, generata in OKLCH a chiarezza e croma fissi:
   cinque tinte cromatiche equispaziate a 59.6 gradi, banda cyan 210-250 esclusa perché
   prenotata dalla selezione, e una coppia neutra slate per la famiglia dei contenitori. Le
-  sotto-entità prendono la tinta del genitore a croma ridotto. Sedici kind mappano su **nove
+  sotto-entità prendono la tinta del genitore a croma ridotto. I kind mappano su **nove
   coppie**; la mappatura vive nei file di token come alias, non si duplica altrove e non si
-  ricopia a registro. Contrasto minimo misurato 5.96, su sedici kind e due temi.
+  ricopia a registro. Contrasto minimo misurato 5.96 su tutte le coppie e su entrambi i temi.
 
 ## Superate
 
