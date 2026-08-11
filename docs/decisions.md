@@ -409,6 +409,14 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   smontate dall'arco 2. Vanno insieme all'arco 2: collocazione del blocco nel guscio, decisione
   sulla palette, chip di firma, padding del form body sotto modificatore.
   `editors/info-improvements.scss` **non si tocca in questo arco**.
+- **R-RAIL-27** (2026-08-11) — Lo stato del working tree **non è invariante per macchina**:
+  `git status` risente del gitignore globale `~/.config/git/ignore`, che è per utente e per
+  macchina. Un working tree osservato dal bridge di Cowork non descrive quello che Claude Code
+  vede sul Mac. Conseguenze: (a) un guard di prompt non elenca file ignorati fra le righe
+  attese; (b) ogni guard dichiara la propria **tolleranza**, cioè quali divergenze sono ammesse
+  e quali fermano il task, altrimenti si compra uno stop falso a ogni passo; (c) una divergenza
+  di guard diagnosticata e a riduzione di lavoro non è un hard stop, ma va riportata. Estende
+  alle **letture** la regola già in vigore per le scritture git dal bridge.
 
 ## Superate
 
