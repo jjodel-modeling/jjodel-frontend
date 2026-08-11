@@ -422,6 +422,18 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   comando. **Testo normativo in `CLAUDE.md` §5**, sotto-regola «an assertion of absence
   requires proof that the search ran»: qui non si duplica, per non creare la solita coppia che
   diverge. Ratificata dopo quattro occorrenze in due giorni.
+- **R-RAIL-29** (2026-08-11) — L'`grep` interattivo di questa macchina è un wrapper di
+  `ugrep --ignore-files`: `--exclude-dir` è inerte e `--include` non filtra. `command grep`
+  risolve a BSD grep, che li onora entrambi. Testo normativo in `CLAUDE.md` §5, sotto-regola
+  «the interactive grep is not the system grep». Corollario retroattivo: chi cita una vecchia
+  asserzione di assenza come autorità la rifà prima di citarla.
+- **R-RAIL-30** (2026-08-11) — La scala entity ha **una sorgente sola**, i token in
+  `_colors-light.scss` e `_colors-dark.scss`, generata in OKLCH a chiarezza e croma fissi:
+  cinque tinte cromatiche equispaziate a 59.6 gradi, banda cyan 210-250 esclusa perché
+  prenotata dalla selezione, e una coppia neutra slate per la famiglia dei contenitori. Le
+  sotto-entità prendono la tinta del genitore a croma ridotto. Sedici kind mappano su **nove
+  coppie**; la mappatura vive nei file di token come alias, non si duplica altrove e non si
+  ricopia a registro. Contrasto minimo misurato 5.96, su sedici kind e due temi.
 
 ## Superate
 

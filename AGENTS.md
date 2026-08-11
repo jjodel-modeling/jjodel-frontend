@@ -422,6 +422,17 @@ Before writing "X does not exist", "X is not used anywhere", or "X is not loaded
 
 A positive control is only a control if it has signal, and it must run through the same tool as the search it validates. In Codex's shell `grep` is a function wrapping `ugrep --ignore-files` (confirm with `type grep`), so a recursive search from the repo root silently skips every gitignored path — `node_modules` included — while an explicitly named path inside one is still searched. Measured 2026-08-11: `grep -rn "(a)" --include="*.md" .` returns 513 lines, none of them from `node_modules`, and adding `--exclude-dir=node_modules` changes nothing. A search that cannot reach its subject returns the same silence as a subject that is not there. The same applies to partial reads: a count taken over lines 1-62 of a 157-line file is a count over that window, and must be reported as such or not reported at all.
 
+**Sub-rule: the interactive `grep` is not the system `grep`**
+
+In an interactive shell here, `grep` resolves to a wrapper around `ugrep --ignore-files`. Two consequences, both measured:
+
+- Gitignored paths are skipped by default. `--exclude-dir=node_modules` is a no-op, and a search for something that lives under an ignored path returns a silence that is not evidence.
+- `--include=<glob>` does not filter. ugrep reads it as a file name and warns. Searches written that way are wider than declared, not narrower.
+
+`command grep` bypasses the wrapper and resolves to BSD grep 2.6.0-FreeBSD, which honours both flags. Use it when those flags carry the meaning of the search. Do not go looking for GNU grep: it is not installed here.
+
+A search scope written into a prompt is a claim about what the command does. If the command does something else, the scope was never enforced.
+
 ---
 
 ## 6. Commit discipline
