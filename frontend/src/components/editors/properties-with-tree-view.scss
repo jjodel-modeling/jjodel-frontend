@@ -371,8 +371,8 @@ $pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Chec
         }
 
         .jj-type-badge--view {
-            background: $pc-accent-soft;
-            color: $pc-accent-strong;
+            background: var(--color-entity-view-bg);
+            color: var(--color-entity-view-fg);
         }
     }
 
