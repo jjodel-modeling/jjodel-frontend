@@ -327,6 +327,79 @@ $pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Chec
         gap: 4px;
     }
 
+    // ─── Element identity block: two rows (arco 2, passo 4 — 2026-08-11) ───
+    // Row 1 is name + type badge, row 2 is signature + breadcrumb. D8: the shell stops
+    // declaring its own height, so the icon removal (D1) and the new signature row (D5)
+    // can actually move it; no total height is declared here, not even a `min-height`.
+    //
+    // `:not(.props-header--view)` is load-bearing, and corrects the addendum: the view
+    // editor header is mounted INSIDE this same container (its block sits right below),
+    // so anchoring on the container alone would reach it and break the collapsed single
+    // row it is designed as. The base `.props-header*` in `info-improvements.scss` and
+    // the global `.jj-context-bar` in `_form-system.scss` stay untouched (R-RAIL-25):
+    // everything here is additive and scoped to the rail.
+    .props-header:not(.props-header--view) {
+        height: auto;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 4px;
+        padding: 10px 12px;
+        margin-bottom: 16px;      // D7: the shell/form boundary is a step, not a rule
+
+        .props-header__identity {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .props-header__context {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        // D5: the line the tree gave you. Slate rather than `--color-text-secondary`,
+        // which is one of the 13 names R-RAIL-6 blacklists — three definitions with
+        // three values, so the winner would depend on `localStorage.theme`. The slate
+        // grades are theme-invariant: a declared choice, not an automatic dark.
+        .props-header__signature {
+            flex: 0 0 auto;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--color-slate-500);
+        }
+
+        // D4: the breadcrumb gives up its own surface — in this zone the badge is the
+        // only element entitled to colour. The bottom border goes with the background,
+        // or it would draw the boundary that D7 assigns to spacing.
+        .jj-context-bar {
+            flex: 0 1 auto;
+            min-width: 0;
+            margin-left: auto;
+            padding: 0;
+            background: transparent;
+            border-bottom: none;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .jj-context-bar__sep { color: var(--color-slate-400); }
+
+        // D6: a path sacrifices its beginning, never its leaf. The trailing segment is
+        // the only one that never shrinks, so truncation always falls on the segments
+        // closest to the root.
+        .jj-context-bar__segment {
+            flex: 0 1 auto;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .jj-context-bar__segment:last-of-type { flex: 0 0 auto; }
+    }
+
     // ─── Header row 2: breadcrumb + VIEW chip ───
     // No `.command-bar` rules here: inside the card the view panel is mounted with
     // `showBack={false}` (the Tree above it is what navigates away), so this row hosts

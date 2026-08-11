@@ -30,6 +30,7 @@ import { Toggle as JoinerToggle } from '../../joiner/components';
 import { Button, EmptyState, Toggle, NumberInput, JjSelect, InfoTooltip } from '../ui';
 import { M2AnalyticsModal, M2AnalyticsData } from '../M2AnalyticsModal';
 import { useInterfaceMode } from '../../hooks/useInterfaceMode';
+import { getTypeName, getMultiplicity, formatFeatureSignature } from '../../common/featureSignature';
 
 // Collapsible section for properties panel grouping
 function CollapsibleSection(props: { title: string; defaultOpen?: boolean; headerRight?: React.ReactNode; children: React.ReactNode }) {
@@ -873,9 +874,30 @@ function getElementTypeInfo(className: string): { badge: string; badgeClass: str
     }
 }
 
-// Header component with icon, name, and badge
-function PropertiesHeader(props: { data: LModelElement; className: string; isMetamodel?: boolean }) {
-    const { data, className, isMetamodel } = props;
+// Signature chip (D5, arco 2 passo 4): what the tree tells you and the panel used to
+// drop. Selecting from the canvas you have no tree in front of you, so the shell repeats
+// the one line the tree carried. Two kinds are covered — structural features by their
+// type suffix, metaclasses by the count of the features they own. Every other kind
+// returns the empty string and renders no chip at all: coverage for the remaining kinds
+// is a debt entry, not a silent fallback.
+function elementSignature(data: LModelElement, className: string): string {
+    switch (className) {
+        case 'DAttribute':
+        case 'DReference':
+            return formatFeatureSignature(getTypeName(data), getMultiplicity(data));
+        case 'DClass': {
+            const cls = data as LClass;
+            const owned = (cls.attributes?.length || 0) + (cls.references?.length || 0);
+            return `${owned} feature${owned === 1 ? '' : 's'}`;
+        }
+        default:
+            return '';
+    }
+}
+
+// Header component with name, badge, signature and breadcrumb (two rows)
+function PropertiesHeader(props: { data: LModelElement; className: string; isMetamodel?: boolean; breadcrumb?: ReactNode }) {
+    const { data, className, isMetamodel, breadcrumb } = props;
     const typeInfo = getElementTypeInfo(className);
 
     // Override badge for DModel: distinguish Model vs Metamodel
@@ -886,15 +908,26 @@ function PropertiesHeader(props: { data: LModelElement; className: string; isMet
         ? (isMetamodel ? 'metamodel' : 'model')
         : typeInfo.badgeClass;
 
+    let signature = '';
+    try { signature = elementSignature(data, className); } catch { /* signature not available */ }
+
+    // D1: no type glyph here. The badge already carries the type as text and colour, and
+    // in the shell the element is isolated, so the glyph was a third channel for the same
+    // fact. The breadcrumb keeps its own segment glyphs, where they read as a path.
     return (
         <div className="props-header">
-            <div className="props-header__icon">
-                <i className={`bi ${typeInfo.icon}`} />
+            <div className="props-header__identity">
+                <span className="props-header__name">{data.name || 'Unnamed'}</span>
+                <span className={`jj-type-badge jj-type-badge--${badgeClass}`}>
+                    {badge}
+                </span>
             </div>
-            <span className="props-header__name">{data.name || 'Unnamed'}</span>
-            <span className={`jj-type-badge jj-type-badge--${badgeClass}`}>
-                {badge}
-            </span>
+            {(signature || breadcrumb) && (
+                <div className="props-header__context">
+                    {signature && <span className="props-header__signature">{signature}</span>}
+                    {breadcrumb}
+                </div>
+            )}
             {/* No help button here (Q4): the card's contextual help is rendered once by
                 the host, in the PROPERTIES row (PropertiesWithTreeView.tsx). Keeping it
                 here too would show the same `properties-panel` help twice. */}
@@ -1250,20 +1283,32 @@ function InfoComponent(props: AllProps) {
         const isMetamodel = showOverview && !!(data as LModel).isMetamodel;
         // const showActions = ['DModel', 'DClass', 'DEnumerator', 'DAttribute', 'DReference', 'DOperation', 'DEnumLiteral', 'DPackage'].includes(ddata.className);
 
-        // Build breadcrumb path with type icons and element IDs for navigation
-        const breadcrumbParts: Array<{ name: string; icon: string; elementId?: string }> = [];
+        // Build breadcrumb path with type icons and element IDs for navigation.
+        // D2: ancestors only. The current element is not a segment — it is the name on
+        // row 1, at a larger size. A breadcrumb says where you are, not who you are.
+        // D3: homonym segments collapse on a structural predicate, not a textual one —
+        // the root package inherits the metamodel's name by construction in Jjodel, so
+        // that pair spends a segment to say nothing. Collapsing any consecutive
+        // duplicate would instead swallow a real nesting level when a user names a
+        // nested package after its parent, which is why the class names travel here.
+        const breadcrumbParts: Array<{ name: string; icon: string; className: string; elementId?: string }> = [];
         try {
             const father = (data as any).father;
             if (father && father.name) {
                 const grandFather = (father as any).father;
                 if (grandFather && grandFather.name) {
                     const gfClass = grandFather.__raw?.className || '';
-                    breadcrumbParts.push({ name: grandFather.name, icon: getElementTypeInfo(gfClass).icon, elementId: grandFather.__raw?.id || grandFather.id });
+                    breadcrumbParts.push({ name: grandFather.name, icon: getElementTypeInfo(gfClass).icon, className: gfClass, elementId: grandFather.__raw?.id || grandFather.id });
                 }
                 const fClass = father.__raw?.className || '';
-                breadcrumbParts.push({ name: father.name, icon: getElementTypeInfo(fClass).icon, elementId: father.__raw?.id || father.id });
+                breadcrumbParts.push({ name: father.name, icon: getElementTypeInfo(fClass).icon, className: fClass, elementId: father.__raw?.id || father.id });
             }
-            breadcrumbParts.push({ name: data.name || 'Unnamed', icon: getElementTypeInfo(ddata.className).icon });
+            if (breadcrumbParts.length === 2
+                && breadcrumbParts[0].className === 'DModel'
+                && breadcrumbParts[1].className === 'DPackage'
+                && breadcrumbParts[0].name === breadcrumbParts[1].name) {
+                breadcrumbParts.splice(1, 1);
+            }
         } catch { /* breadcrumb not available */ }
 
         const handleBreadcrumbClick = (elementId?: string) => {
@@ -1277,32 +1322,31 @@ function InfoComponent(props: AllProps) {
             props.onInternalNavigate?.({ node: '', view: '', modelElement: elementId });
         };
 
+        // Gate at `> 0`, not `> 1`: after D2 and D3 a metaclass under the root package is
+        // left with a single segment, and that is the most frequent case of all.
+        // Every remaining segment is an ancestor, so every one of them navigates.
+        const breadcrumb = breadcrumbParts.length > 0 ? (
+            <div className="jj-context-bar">
+                {breadcrumbParts.map((part, i) => (
+                    <React.Fragment key={i}>
+                        {i > 0 && <span className="jj-context-bar__sep">›</span>}
+                        <span
+                            className="jj-context-bar__segment"
+                            onClick={() => handleBreadcrumbClick(part.elementId)}
+                        >
+                            <i className={`bi ${part.icon}`} />
+                            {part.name}
+                        </span>
+                    </React.Fragment>
+                ))}
+            </div>
+        ) : undefined;
+
         return (
             <>
                 <section className="properties-tab properties-panel">
-                    {/* Header */}
-                    <PropertiesHeader data={data} className={ddata.className} isMetamodel={isMetamodel} />
-
-                    {/* Breadcrumb */}
-                    {breadcrumbParts.length > 1 && (
-                        <div className="jj-context-bar">
-                            {breadcrumbParts.map((part, i) => {
-                                const isCurrent = i === breadcrumbParts.length - 1;
-                                return (
-                                    <React.Fragment key={i}>
-                                        {i > 0 && <span className="jj-context-bar__sep">›</span>}
-                                        <span
-                                            className={`jj-context-bar__segment${isCurrent ? ' jj-context-bar__segment--current' : ''}`}
-                                            onClick={!isCurrent ? () => handleBreadcrumbClick(part.elementId) : undefined}
-                                        >
-                                            <i className={`bi ${part.icon}`} />
-                                            {part.name}
-                                        </span>
-                                    </React.Fragment>
-                                );
-                            })}
-                        </div>
-                    )}
+                    {/* Header: name + badge, then signature + breadcrumb */}
+                    <PropertiesHeader data={data} className={ddata.className} isMetamodel={isMetamodel} breadcrumb={breadcrumb} />
 
                     {/* Overview - only for Models */}
                     {showOverview && <PropertiesOverview data={data as LModel} isMetamodel={isMetamodel} onViewAnalytics={openM2Analytics} />}

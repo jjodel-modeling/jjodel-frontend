@@ -24,6 +24,7 @@ import { useTreeViewPanel, ElementAction } from '../../contexts/TreeViewPanelCon
 import { getLastEditedViewpointId, createViewInWorkbench, createBlankViewInViewpoint } from '../../utils/lastViewpoint';
 import { JjodelEvents, SystemEvents } from '../../events/registry';
 import { useNodeProblems } from '../editor-v2/problems/useNodeProblems';
+import { getTypeName, getMultiplicity, formatFeatureSignature } from '../../common/featureSignature';
 import type { NodeProblem } from '../editor-v2/problems/registry';
 
 /**
@@ -762,7 +763,7 @@ const StructuralFeatureRow = memo(function StructuralFeatureRow({
                 nameOverride={(
                     <>
                         <span className="tree-feature__name">{renderHighlightedName(feature.name, highlightQuery)}</span>
-                        <span className="tree-feature__type">: {feature.typeName} [{feature.multiplicity}]</span>
+                        <span className="tree-feature__type">{formatFeatureSignature(feature.typeName, feature.multiplicity)}</span>
                     </>
                 )}
             />
@@ -2086,20 +2087,6 @@ function buildPackageData(lPkg: any, parentFqn: string): TreePackageData {
             const isEdgeView = !!(view && (view as any).isEdge);
             const attributes: TreeStructuralFeatureData[] = [];
             const references: TreeStructuralFeatureData[] = [];
-
-            const getTypeName = (feature: any): string => {
-                const rawType = feature?.type;
-                if (typeof rawType === 'string') return rawType;
-                if (rawType?.name) return rawType.name;
-                return 'any';
-            };
-
-            const getMultiplicity = (feature: any): string => {
-                const lower = typeof feature?.lowerBound === 'number' ? feature.lowerBound : 0;
-                const upperRaw = feature?.upperBound;
-                const upper = upperRaw === -1 ? '*' : (typeof upperRaw === 'number' ? String(upperRaw) : '1');
-                return `${lower}..${upper}`;
-            };
 
             try {
                 const attrs = c.attributes || [];
