@@ -133,3 +133,35 @@ Registro dei debiti tecnici noti. Ogni entry deve indicare: data, origine, stato
 **Riferimenti:**
 - `docs/decisions.md` — R-RAIL-33, R-RAIL-28 e il suo emendamento
 - `docs/claude-code-log.md` — entry del 2026-08-11, passo 3 dell'arco 2, e questa chiusura
+
+---
+
+## La firma del guscio properties copre due kind su undici
+
+**Registrato:** 2026-08-12
+**Origine:** passo 4 dell'arco 2, D5. La decisione dichiarava la copertura parziale e chiedeva di aprire la voce contestualmente all'implementazione.
+**Stato attuale:** `elementSignature` (`frontend/src/components/editors/Info.tsx:883-896`) rende un chip per tre dei kind che `getElementTypeInfo` (`:847-874`) riconosce: `DAttribute` e `DReference` con il suffisso di tipo `: EString [0..1]`, `DClass` col conteggio delle feature possedute. Gli altri **otto** — `DModel`, `DPackage`, `DEnumerator`, `DOperation`, `DParameter`, `DEnumLiteral`, `DObject`, `DValue` — ritornano stringa vuota e non rendono alcun chip, per scelta dichiarata: vuoto significa riga non renderizzata, mai un segnaposto. La riga 2 del guscio resta comunque montata quando c'è il breadcrumb, quindi la geometria non oscilla. `DObject` e `DValue` sono gli oggetti M1 e passano dal guscio come gli altri: l'esclusione di `useNewDesign` (`:1208`) riguarda il form sottostante, non l'header.
+**Fix strutturale raccomandato:** decidere kind per kind quale sia la riga che il tree dà e il pannello non ripete, non inventare una firma per simmetria. Tre casi hanno una risposta già scritta altrove e sono i primi da fare: `DObject`, per cui il tree rende `: {metaclassName}` (`TreeViewContent.tsx:721`) e basterebbe estendere `common/featureSignature.ts` con quel secondo formatter; `DParameter`, che ha tipo e bound come le feature e riuserebbe `formatFeatureSignature` senza aggiungere nulla; `DEnumerator`, per cui il conteggio dei literal è l'analogo esatto del conteggio feature delle metaclassi. Restano senza risposta ovvia `DModel`, `DPackage`, `DOperation`, `DEnumLiteral`, `DValue`: per questi la voce si può chiudere anche dichiarando che non hanno firma.
+**Priorità:** media — nessun difetto a video, ma la copertura parziale è una decisione a scadenza, non uno stato stabile.
+**Effort stimato:** mezza giornata per i tre casi con risposta già scritta, più la decisione sugli altri cinque.
+**Riferimenti:**
+- `docs/decisions.md` — R-RAIL-7 (il suffisso di tipo del tree), R-RAIL-26
+- `frontend/src/common/featureSignature.ts`
+- `frontend/src/components/editors/Info.tsx:847-874`, `:881-895`
+- `frontend/src/components/TreeViewSidebar/TreeViewContent.tsx:721`, `:766`
+
+---
+
+## `.jj-context-bar` dichiara un fondo che nessuno dei suoi consumatori vuole
+
+**Registrato:** 2026-08-12
+**Origine:** passo 4 dell'arco 2, D4. Lo hard stop A5 del prompt era scattato proprio su questo: la classe che porta il fondo è condivisa.
+**Stato attuale:** `frontend/src/styles/components/_form-system.scss:1197-1206` porta `background: #f1f5f9` e `border-bottom: 1px solid #e2e8f0`; entrambi i consumatori li spengono, `viewParenting.scss:158-162` per il ramo view e `properties-with-tree-view.scss` per il guscio dopo questo passo. Quando tutti i consumatori spengono la stessa proprietà, la proprietà va tolta dalla base e non spenta due volte. Non risolta qui perché il foglio è globale, importato da `styles/style.scss:2` (R-RAIL-25). Conteggio aggiornato dopo il passo 4: le occorrenze di `jj-context-bar` sono **18** su cinque file, e i consumatori che montano il contenitore restano **due** — `Info.tsx:1329` e `ViewParentingFields.tsx:76`; le altre sedici sono definizioni di regola e sotto-elementi `__segment` / `__sep`, e **non sono state contate una per una**. Vanno contate prima di togliere qualcosa dalla base.
+**Fix strutturale raccomandato:** censire le sedici occorrenze non-contenitore, verificare che nessuna dipenda dal fondo, poi togliere `background` e `border-bottom` dalla base e ritirare le due neutralizzazioni. La verifica è a video su entrambe le superfici, non sulla lettura del CSS.
+**Priorità:** media.
+**Effort stimato:** un'ora, quasi tutta di censimento e verifica visiva.
+**Riferimenti:**
+- `docs/decisions.md` — R-RAIL-25
+- `frontend/src/styles/components/_form-system.scss:1197-1206`
+- `frontend/src/components/viewParenting/viewParenting.scss:158-162`
+- `frontend/src/components/editors/properties-with-tree-view.scss` — blocco dell'identity block

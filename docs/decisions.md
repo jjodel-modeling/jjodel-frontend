@@ -468,6 +468,11 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   il solo registro a pastiglia, dove `-fg` poggia sulla sua `-bg`. Prima del 2026-08-11 il tree
   era colorato: questa voce ratifica il cambiamento come scelta, non lo registra come
   regressione da riparare.
+  - **Emendamento (2) del 2026-08-11** — «Il tree resta monocromo» vale per le righe di
+    **elemento**. Le righe viewpoint e view-leaf fanno eccezione: sono a pastiglia da prima
+    dell'arco e restano, perché sono righe di documento e non di elemento, e lì il colore è
+    l'unico canale che le stacca dalla lista. La rimozione dei selettori prevista dalla voce di
+    debito dell'11 agosto non le tocca.
 
 ## Superate
 
