@@ -24,7 +24,14 @@
 //
 //       18px — header entity badge (design §1)
 //       26px — header icon button (design §1); same number as the tree row above
-//       22px — Focus bar "Back" chip (design §6)
+//       22px — Focus bar "Back" chip (design §6), and the Focus bar steppers
+//       22px / 34px — identity badge, Browse and Focus (design §7)
+//
+// (e) The identity block's two paddings, `11px 14px 10px` in Browse and
+//     `18px 14px 14px` in Focus (design §7). They are off the 4px grid on three
+//     sides out of four, and the design gives them verbatim as the geometry the
+//     250ms transition runs between, so they are taken as they are rather than
+//     snapped one side at a time into a shape the design never drew.
 //
 // (c) Border widths (1px) and the hand-composed shadow geometry (`0 4px 16px`,
 //     colour from `--color-node-shadow`), the latter required verbatim by the
@@ -334,10 +341,16 @@ $pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Chec
         gap: 4px;
     }
 
-    // ─── Element identity block: two rows (arco 2, passo 4 — 2026-08-11) ───
-    // Row 1 is name + type badge, row 2 is signature + breadcrumb. D8: the shell stops
-    // declaring its own height, so the icon removal (D1) and the new signature row (D5)
-    // can actually move it; no total height is declared here, not even a `min-height`.
+    // ─── Element identity block (arco 2, passo 10 — design §7, R-RAIL-40) ───
+    // One row, three columns: letter badge, then name over kind, then the signature.
+    // It replaces the two-row arrangement of the passo 4, which was the same content
+    // laid out before the design's own geometry was in scope. D8 still holds: no total
+    // height is declared here, so what the block contains is what moves it.
+    //
+    // The posture arrives through the shell's own modifier, `--rail-focus`, and never
+    // as a prop: `Info` has no business knowing where the rail's height went, and a
+    // prop would be exactly the drilling the project's conventions forbid. That is why
+    // the block can stay in the element branch and still animate with the shell.
     //
     // `:not(.props-header--view)` is load-bearing, and corrects the addendum: the view
     // editor header is mounted INSIDE this same container (its block sits right below),
@@ -347,16 +360,53 @@ $pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Chec
     // everything here is additive and scoped to the rail.
     .props-header:not(.props-header--view) {
         height: auto;
-        flex-direction: column;
-        align-items: stretch;
-        gap: 4px;
-        padding: 10px 12px;
-        margin-bottom: 16px;      // D7: the shell/form boundary is a step, not a rule
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 11px 14px 10px;   // design §7, Browse
+        margin-bottom: 16px;       // D7: the shell/form boundary is a step, not a rule
+        transition: padding var(--duration-normal) var(--ease-out);
+
+        // Letter badge. Colour comes from `jj-type-badge--<kind>`, i.e. from the entity
+        // tokens; only the geometry is declared here.
+        //
+        // The class is `__glyph` and not `__badge` because `.props-header__badge` is
+        // already taken: `info-improvements.scss:903` declares it with a transparent
+        // background, a tertiary colour and a hairline border. Reusing the name would
+        // have produced exactly the failure the conventions warn about — a rule that
+        // compiles, applies, and quietly wins on the two properties this block does not
+        // restate. Checked with a global search before choosing the name.
+        .props-header__glyph {
+            flex: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+            padding: 0;
+            border-radius: var(--radius-md);   // design 7px, snapped (R-RAIL-10)
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-bold);
+            line-height: 1;
+            transition: width var(--duration-normal) var(--ease-out),
+                        height var(--duration-normal) var(--ease-out),
+                        font-size var(--duration-normal) var(--ease-out);
+        }
 
         .props-header__identity {
             display: flex;
-            align-items: center;
-            gap: 8px;
+            flex-direction: column;
+            gap: 1px;
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+
+        .props-header__name {
+            font-size: var(--font-size-md);
+            font-weight: var(--font-weight-semibold);
+            letter-spacing: -0.015em;
+            line-height: 1.2;
+            transition: font-size var(--duration-normal) var(--ease-out);
         }
 
         // D10: abstract metaclasses in italic, the same channel the tree uses on its own
@@ -364,11 +414,19 @@ $pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Chec
         // do not get a badge of their own.
         .props-header__name.is-abstract { font-style: italic; }
 
-        .props-header__context {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            min-width: 0;
+        // The kind as text, in the entity foreground. It reuses the same modifier as the
+        // badge, so the pair reads as one colour and no second mapping is introduced;
+        // the background the modifier also sets is neutralised right here, at the same
+        // specificity as the colour it comes with.
+        .props-header__kind {
+            background: none;
+            padding: 0;
+            border-radius: 0;
+            font-size: var(--font-size-xs);
+            font-weight: var(--font-weight-semibold);
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            line-height: 1.2;
         }
 
         // D5: the line the tree gave you. Slate rather than `--color-text-secondary`,
@@ -377,40 +435,49 @@ $pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Chec
         // grades are theme-invariant: a declared choice, not an automatic dark.
         .props-header__signature {
             flex: 0 0 auto;
+            align-self: center;
             font-family: var(--font-mono);
-            font-size: 11px;
+            font-size: var(--font-size-xs);
             color: var(--color-slate-500);
         }
 
-        // D4: the breadcrumb gives up its own surface — in this zone the badge is the
-        // only element entitled to colour. The bottom border goes with the background,
-        // or it would draw the boundary that D7 assigns to spacing.
-        .jj-context-bar {
-            flex: 0 1 auto;
-            min-width: 0;
-            margin-left: auto;
-            padding: 0;
-            background: transparent;
-            border-bottom: none;
-            overflow: hidden;
-            white-space: nowrap;
+        // ...and it becomes a chip only where a signature really exists, i.e. on the
+        // typed features. A class's "N features" is a count and keeps the plain form.
+        // The chip's ground is `--color-bg-hover` and not `--color-slate-100`, which is
+        // the design's literal (#f1f5f9) and matches it exactly in light. The slate
+        // grades are raw palette: they do not follow the theme, so in dark the chip
+        // would keep a near-white ground on a dark panel. That is the same defect the
+        // `--color-slate-400` caret already carries as a debt entry, and repeating it
+        // knowingly would be worse than the two shades of difference in light.
+        .props-header__signature--chip {
+            padding: 3px 7px;
+            border-radius: var(--radius-sm);   // design 5px, snapped (R-RAIL-10)
+            background: var(--color-bg-hover);
         }
 
-        .jj-context-bar__sep { color: var(--color-slate-400); }
-
-        // D6: a path sacrifices its beginning, never its leaf. The trailing segment is
-        // the only one that never shrinks, so truncation always falls on the segments
-        // closest to the root.
-        .jj-context-bar__segment {
-            flex: 0 1 auto;
-            min-width: 0;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .jj-context-bar__segment:last-of-type { flex: 0 0 auto; }
+        // R-RAIL-39: the positional breadcrumb does not render in the rail. In Browse the
+        // tree row already says where the element sits; in Focus the Focus bar does. It
+        // is kept in the DOM and hidden here, scoped to the rail, so the same block keeps
+        // rendering its breadcrumb everywhere else it is mounted.
+        .props-header__context { display: none; }
     }
+
+    // Form body: of the design's `4px 14px 18px` (§7) only the bottom is applied, and
+    // the reason is a measure and not a preference. R-RAIL-26 had recorded the value as
+    // "not applicable yet"; measured on the product, the horizontal half is already
+    // there — the first field's box starts at exactly 14px from the rail's edge, carried
+    // by the fields themselves — so declaring it here would double it to 28. The top 4px
+    // is likewise already covered, by the identity block's own 16px bottom margin (D7).
+    // What is genuinely missing is the bottom air: without it the last control ends
+    // flush against the shell's edge.
+    //
+    // It is declared on the body and not on `.properties-tab`, where the design puts it,
+    // because that class carries `padding: 0px !important` from `_form-system.scss:678`,
+    // a global sheet this arc does not touch (R-RAIL-25). Landing it here reaches the
+    // same pixels without either an `!important` duel or an edit to that sheet — and it
+    // corrects the note in the passo 4 memo, which supposed the zero came from the rail's
+    // own sheet. It does not: it comes from the global one.
+    .properties-panel-body { padding-bottom: 18px; }
 
     // ─── Header row 2: breadcrumb + VIEW chip ───
     // No `.command-bar` rules here: inside the card the view panel is mounted with
@@ -1578,6 +1645,28 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
     }
 }
 
+// ─── Identity block in Focus posture (design §7) ─────────────────────────────
+// Written as a full selector and not nested in the block above, because that block is
+// anchored on `.properties-panel-container` and `&` there would compose the posture
+// class onto the container, which never carries it: the modifier lives on the shell.
+// One step of specificity above the Browse rule, (0,4,0) against (0,3,0), which is the
+// least it can take and still win.
+//
+// Only the block's own padding and type change. The definition of done asks that
+// switching posture move nothing but the tree pane's height, and these are inside the
+// block, not around it.
+.properties-with-tree-view--rail-focus .properties-panel-container .props-header:not(.props-header--view) {
+    padding: 18px 14px 14px;   // design §7, Focus
+
+    .props-header__glyph {
+        width: 34px;
+        height: 34px;
+        font-size: var(--font-size-lg);   // design 15px, snapped (R-RAIL-10)
+    }
+
+    .props-header__name { font-size: var(--font-size-xl); }   // design 19px, snapped
+}
+
 // ─── Focus breadcrumb bar (only while the tree pane is collapsed) ────────────
 .properties-with-tree-view--rail .rail-focusbar {
     display: flex;
@@ -1660,4 +1749,26 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
 
         i { font-size: var(--font-size-xs); }
     }
+}
+
+// ─── Focus bar and posture button in dark ────────────────────────────────────
+// The values above are the design's, and the design is drawn in light: `--color-slate-50`
+// and the slate text grades are raw palette and do not follow the theme, so in dark the
+// bar rendered a near-white ground under near-white text, and the Back chip dark text on
+// a dark ground. Measured, not supposed: the bar computed `rgb(248,250,252)` under
+// `rgb(240,240,240)`. This block corrects the three colours for dark only, leaving the
+// light rendering — the one already approved — byte for byte as it was.
+[data-theme="dark"] .properties-with-tree-view--rail {
+    .rail-focusbar {
+        background: var(--color-bg-hover);
+        border-bottom-color: var(--color-panel-border);
+    }
+
+    .rail-focusbar__back,
+    .rail-focusbar__step,
+    .rail-header__btn {
+        color: var(--color-slate-300);
+    }
+
+    .rail-focusbar__current { color: var(--color-slate-100); }
 }

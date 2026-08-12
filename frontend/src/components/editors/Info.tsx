@@ -31,6 +31,7 @@ import { Button, EmptyState, Toggle, NumberInput, JjSelect, InfoTooltip } from '
 import { M2AnalyticsModal, M2AnalyticsData } from '../M2AnalyticsModal';
 import { useInterfaceMode } from '../../hooks/useInterfaceMode';
 import { getTypeName, getMultiplicity, formatFeatureSignature } from '../../common/featureSignature';
+import { resolveEntityType, entityLetter } from '../../common/entityMeta';
 
 // Collapsible section for properties panel grouping
 function CollapsibleSection(props: { title: string; defaultOpen?: boolean; headerRight?: React.ReactNode; children: React.ReactNode }) {
@@ -915,23 +916,35 @@ function PropertiesHeader(props: { data: LModelElement; className: string; isMet
     // (`is-abstract` on the name). The badge carries the kind, never the modifiers.
     const isAbstract = className === 'DClass' && !!(data as any).abstract;
 
-    // D1: no type glyph here. The badge already carries the type as text and colour, and
-    // in the shell the element is isolated, so the glyph was a third channel for the same
-    // fact. The breadcrumb keeps its own segment glyphs, where they read as a path.
+    // The signature chip is a chip only where a real signature exists, i.e. on the typed
+    // features (R-RAIL-16, clause dropped by R-RAIL-41). A class has no type and no
+    // multiplicity: its "N features" is a count, not a signature, so it keeps the plain
+    // secondary treatment instead of borrowing a language that means something else.
+    const isTypedFeature = className === 'DAttribute' || className === 'DReference' || className === 'DParameter';
+
+    // Identity block, design §7 (arc 2, R-RAIL-40): a letter badge on the left, the name,
+    // the kind as text under it in the entity foreground, and the signature chip on the
+    // right. The badge is the ONLY glyph here — D1 still holds, in the sense that no
+    // second type icon joins it: the letter and the kind text are one channel drawn twice
+    // at two sizes, which is what the design asks for on an isolated element.
+    // Colours come from `jj-type-badge--<kind>`, i.e. from the entity tokens, so this
+    // introduces no palette of its own (R-RAIL-30).
+    const entityType = resolveEntityType(badgeClass === 'literal' ? 'enumLiteral' : badgeClass);
+    const letter = entityType ? entityLetter(entityType) : (badge.charAt(0) || '?');
+
     return (
         <div className="props-header">
+            <span className={`props-header__glyph jj-type-badge--${badgeClass}`} aria-hidden="true">{letter}</span>
             <div className="props-header__identity">
                 <span className={`props-header__name${isAbstract ? ' is-abstract' : ''}`}>{data.name || 'Unnamed'}</span>
-                <span className={`jj-type-badge jj-type-badge--${badgeClass}`}>
-                    {badge}
-                </span>
+                <span className={`props-header__kind jj-type-badge--${badgeClass}`}>{badge}</span>
             </div>
-            {(signature || breadcrumb) && (
-                <div className="props-header__context">
-                    {signature && <span className="props-header__signature">{signature}</span>}
-                    {breadcrumb}
-                </div>
+            {signature && (
+                <span className={`props-header__signature${isTypedFeature ? ' props-header__signature--chip' : ''}`}>
+                    {signature}
+                </span>
             )}
+            {breadcrumb && <div className="props-header__context">{breadcrumb}</div>}
             {/* No help button here (Q4): the card's contextual help is rendered once by
                 the host, in the PROPERTIES row (PropertiesWithTreeView.tsx). Keeping it
                 here too would show the same `properties-panel` help twice. */}
