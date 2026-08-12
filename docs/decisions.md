@@ -419,6 +419,16 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   e quali fermano il task, altrimenti si compra uno stop falso a ogni passo; (c) una divergenza
   di guard diagnosticata e a riduzione di lavoro non è un hard stop, ma va riportata. Estende
   alle **letture** la regola già in vigore per le scritture git dal bridge.
+  - **Emendamento del 2026-08-13** — Il meccanismo, misurato e non inferito: `core.excludesFile`
+    è **vuoto su entrambe le macchine**, quindi non è quella chiave a distinguerle. Non essendo
+    impostata, git risolve il path di default degli esclusi da `$XDG_CONFIG_HOME` o, mancando
+    anche quello, da `~/.config/git/ignore`, cioè **da `HOME`**. Il bridge monta la cartella del
+    repo ma non la home dell'utente e punta `HOME` dentro la sessione, dove quel file non esiste.
+    Riprodotto sul Mac spostando la sola `HOME`: `git check-ignore -v .claude/settings.local.json`
+    passa da exit 0 a exit 1, e `git status --short` fa comparire `?? .claude/settings.local.json`,
+    che in condizioni normali non c'è. **Conseguenza operativa: un `git status` dal bridge
+    sovrastima sempre i file non tracciati.** Un elenco di residuo del working tree prodotto da lì
+    va confrontato con quello locale prima di diventare una richiesta di decisione.
 - **R-RAIL-28** (2026-08-11) — Un'asserzione di assenza vale solo se la ricerca che la sostiene
   è provata: exit status verificato, oppure un controllo positivo con segnale sullo stesso
   comando. **Testo normativo in `CLAUDE.md` §5**, sotto-regola «an assertion of absence
@@ -547,6 +557,20 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   scuro. Nessuno l'aveva vista perché nessuno l'aveva aperta in dark. È la stessa specie del debito
   già a registro sul caret `--color-slate-400`. Rimedio adottato: i valori del design restano per
   light, e un blocco `[data-theme="dark"]` corregge i soli colori che il tema deve cambiare.
+- **R-RAIL-43** (2026-08-13) — **Un rinvio che ripete la motivazione di un rinvio precedente la
+  rimette alla prova, oppure la cita come ereditata e non verificata.** Una stima di costo non
+  provata non è una misura, e propagandola la fa degradare. Il caso che l'ha prodotta: i tre
+  paragrafi mancanti del preambolo dell'archivio, rinviati due volte con la stessa motivazione,
+  «ricostruirli è archeologia su git». Il ventunesimo lotto non l'ha riderivata, l'ha copiata dal
+  ventesimo, e nel copiarla ne ha anche corrotto il conteggio, da tre paragrafi dovuti a quattro.
+  Messa alla prova in `e88fca7df`, la motivazione è caduta in pieno: sono bastati due fatti già
+  scritti nei due file — l'archivio è append-only in coda, quindi la posizione di una entry non
+  cambia più una volta accodata, e ogni lotto registra nelle proprie note il conteggio dell'archivio
+  prima e dopo — e **zero comandi git**. È la firma di un'affermazione ereditata: degrada mentre si
+  propaga. Rapporto con le regole vicine, da non lasciare implicito: R-RAIL-28 copre le asserzioni
+  di assenza e di presenza, R-RAIL-36 il caso in cui si misura l'elemento sbagliato; R-RAIL-43
+  copre il terzo caso, **la stima mai eseguita**, e ha in più la parte sulla propagazione, che le
+  altre due non hanno.
 
 ## Superate
 
