@@ -203,6 +203,26 @@ the twentieth: those batches were executed and logged but never described here, 
 reconstructing them means reading three cuts out of git that nobody documented at the
 time. It is a task of its own, not a side effect of this rotation.
 
+Twenty-second batch (2026-08-13): the four oldest by active-file position, leaving 20
+(23 - 4 + 1, where the +1 is this rotation's own entry and the 23 already includes the triage
+addendum entry added by the commit right before this one, under the same prompt). Four rather
+than one because this is a standalone rotation commit, as in the seventh, twentieth and
+twenty-first batches. Position and "Prompt document name" agree here, so the cut needs no
+tie-break and there is no inversion to declare: the four moved entries are named 2026-08-10
+20:00, 19:30, 16:30 and 10:30, while every kept entry is named 2026-08-11 00:55 or later.
+Appended below in their active-file order.
+
+Numbering, read from this preamble again. The count above was taken here and not from the log
+notes, and this is the first batch since the seventeenth able to do that — the seventeenth was
+the last one for which reading here still yielded the right number, and from the eighteenth on it
+did not, because the seventeenth had not written its own paragraph. The seventeenth,
+eighteenth and nineteenth paragraphs were written in commit e88fca7df, so the series is once
+more continuous from one to twenty-one and the rule recorded in an earlier note — take the
+progressive from this preamble — works again. The twentieth batch's instruction, "until the
+three missing paragraphs are written, the count comes from the log notes, not from here", is
+hereby spent: they are written. This also closes the case R-RAIL-43 was drawn from, since that
+rule was born precisely from the two deferrals that had left the gap open.
+
 ## 2026-07-29 — refactor: narrow PropertiesWithTreeView mode union to floating
 **Prompt**: Post-fase floating, Task 2 — restringere l'union `PropertiesWithTreeViewProps.mode` da `'popup' | 'tab' | 'inline' | 'floating'` a `'floating'` (unico valore istanziato). Fallout guidato dal compilatore: rimuovere solo i rami morti flaggati da typecheck.
 **Files touched**: `editors/PropertiesWithTreeView.tsx` (union ristretta a `'floating'` :65; rimosso il ramo dispatch popup/inline morto `if (mode !== 'tab' && mode !== 'floating') return <Info mode={mode}/>` alle righe 393-395 + la sua docstring a :391 — TS2367 su `mode !== 'tab'` era l'unico errore flaggato dal compilatore), `docs/claude-code-log.md`.
@@ -10132,4 +10152,56 @@ Dark mode overrides for `.toolbar-btn` also scoped under `.documentation-toolbar
 **Layer Impact Report**: not-required — nessun file di §3.1; nessun write path D/L, nessun `jsxString`.
 **Smoke visivo**: in attesa — HARD STOP visivo di Alfonso previsto dal prompt: header della view con back funzionante, help raggiungibile dalla riga PROPERTIES, nessun elemento duplicato, su entrambe le card (Q7). Campo da aggiornare col verdetto.
 **Notes**: (1) **Il difetto di Q4 aveva un effetto osservabile, non solo teorico**: `ViewData` è montato da due host (`Info.tsx:1194` dentro la card, `NestedView.tsx:493` nel tab «Viewpoints»), e con `document.querySelector` globale il `ViewData` di NestedView portalava back e help **dentro la card Properties**, cioè in un header non suo. Il ritiro corregge anche questo. (2) **Il viewpoint selezionato guadagna un help che non aveva**: `ViewpointProperties` non rende alcun header, quindi finora quello stato della card era senza help; ora lo eredita dalla riga dell'host. Non è un duplicato. (3) **In NestedView il back resta incorniciato**: le due regole SCSS sono scoped a `.properties-panel-container`, come lo erano prima del portale — comportamento pre-`cc1cb51b1`, non una regressione introdotta qui. (4) **Commento stale non toccato**: `properties-with-tree-view.scss:335` dice ancora «pushed right, before the help button» sul badge, riferito a un help che ha lasciato la riga 2 il 31/7; non l'ho corretto per non allargare il diff, è segnalato nel report (§6, R2).
+**Prompt document name**: 2026-08-10 10:30
+
+## 2026-08-10 — docs: rotazione del log a 20 entry attive (decimo lotto)
+**Prompt**: «rotazione standard del log a 20 entry attive», documento prompt «2026-08-10 20:00», commit unico solo-docs. Rotazione dovuta dopo che l'entry di C9.1 ha portato il file attivo a 22 entry, come la nota (6) di quella stessa entry dichiarava.
+**Files touched**: `docs/claude-code-log.md` (tolte le 3 entry più vecchie per posizione, aggiunta questa), `docs/claude-code-log-archive.md` (le 3 entry appese in coda più il paragrafo di lotto nel preambolo).
+**Outcome**: ✅ completed — attivo a 20 entry, archivio da 730 a 733, conservazione verificata sui conteggi.
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessuna entry persa, modificata o duplicata: 23 = 20 + 3 sui conteggi, e il blocco spostato è stato estratto e appeso senza editing, con confronto byte per byte fra ciò che è uscito dall'attivo e ciò che è entrato nell'archivio. Nessun file sorgente nel diff.
+**Out-of-scope changes**: no — solo i due file di log.
+**Layer Impact Report**: not-required — nessun file di §3.1.
+**Smoke visivo**: non applicabile — nessuna modifica di resa.
+**Notes**: (1) **Il progressivo del lotto è stato ricavato dall'archivio, non assunto dal prompt**: il preambolo di `claude-code-log-archive.md` numera i lotti in inglese e l'ultimo presente è il nono (`:76`), quindi questo è il decimo. (2) **Taglio posizionale come dal quarto lotto in poi**, ed è l'unico praticabile: tre delle entry tenute al confine portano un `**Prompt document name**` con suffisso descrittivo e **senza HH:mm** (`2026-08-10 fase0 triage residuo serie U`, `2026-08-10 fase2 sliceB2 A3bis ripresa`, `2026-08-09 fusione spec IR v1.2 e ritiro di docs/specs`), quindi il criterio del timestamp non riesce a ordinare il confine. (3) **QUESTO LOTTO INVERTE UNA COPPIA, dichiarata invece che nascosta**: le tre entry spostate sono nominate 2026-08-09 22:43, 23:28 e 23:57, mentre resta attiva la entry dell'archivio del Project Knowledge, nominata 2026-08-09 00:00. **L'inversione è preesistente, non creata qui**: quella entry era stata appesa fuori ordine nel file attivo, come mostra già il suo stesso disallineamento fra intestazione (2026-08-10) e nome di documento (2026-08-09 00:00). Riordinare il file attivo significherebbe spostare entry che non sono le più vecchie, cioè un'operazione diversa dalla rotazione e fuori dal mandato di questo commit; ed è inerte per l'unico uso del file attivo (P9/Regola 16, leggere le ultime 5-10 entry a inizio sessione), perché le entry coinvolte sono tutte ugualmente lontane dalla testa. Stesso trattamento del sesto e settimo lotto. (4) **CONTEGGIO**: 22 - 3 + 1 = 20, dove il +1 è questa entry, com'è precedente costante dal terzo lotto in poi. (5) **La verifica d'ingresso è passata con uno scostamento in meglio**: il prompt attendeva il residuo noto nel working tree (CSS serie U modificati, path docs non tracciati), mentre `git status --porcelain` era **vuoto**; il residuo era già stato consumato dai commit precedenti. Nessun file inatteso, quindi nessun hard stop. (6) **`check:docs` dà 0 warning, non i due attesi dal prompt**: il Check B scansiona le sole entry attive dal 2026-08-02, e le entry che li generavano sono uscite dal perimetro con le rotazioni precedenti — l'ultima a farlo è il nono lotto. Nessun warning è stato risolto qui e nessuno è comparso.
+**Prompt document name**: 2026-08-10 20:00
+
+## 2026-08-10 — refactor(tokens): complete le coppie `--color-entity-*` da entityMeta (C9.1)
+**Prompt**: «C9.1, completare le coppie `--color-entity-*` da `entityMeta.ts`», documento prompt «2026-08-10 19:30», commit unico. Ratifica C9.1 del memo `claude/2026-08-10_memo_ratifica_2_rail_fase0.md`. Chiude un debito dichiarato dai commenti di sincronia dei due file, precedente all'arco del rail.
+**Files touched**: `frontend/src/styles/tokens/_colors-light.scss` (+8 righe), `frontend/src/styles/tokens/_colors-dark.scss` (+8 righe, più il commento di header del blocco riscritto), questo file (entry).
+**Outcome**: ✅ completed — quattro coppie aggiunte (attribute, reference, operation, enum) in entrambi i temi; il lato CSS passa da 5 a 9 tipi coperti sugli 11 di `ENTITY_META`.
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — `build` verde col solo warning chunk-size, `typecheck` 33 (baseline, Δ0), `check:docs` 2/2. I diff sono puramente additivi tranne il commento di header dark: nessuna delle cinque coppie preesistenti è toccata, in nessuno dei due file, quindi nessun consumatore attuale cambia colore. I quattro nomi nuovi non avevano occorrenze in `frontend/src` prima del commit (grep di controllo pre-scrittura, come da vincolo del prompt) e non ne hanno dopo: sono token senza consumatori, li introdurrà l'arco del rail.
+**Out-of-scope changes**: no — i due file di token previsti più questa entry. `entityMeta.ts` non toccato: è la fonte ed è già completa.
+**Layer Impact Report**: not-required — nessun file di §3.1; solo custom property CSS, nessun write path.
+**Smoke visivo**: non applicabile — i quattro token non hanno ancora consumatori, quindi non esiste resa da guardare.
+**Notes**: (1) **I 16 valori sono stati verificati sulla fonte prima di scriverli**, come chiesto dal prompt: `entityMeta.ts:133-136` (enum), `:151-154` (attribute), `:160-163` (reference), `:169-172` (operation). Coincidono tutti con quelli dettati dal prompt, quindi nessuna divergenza da segnalare e nessun adattamento. (2) **Verificati anche nel bundle di build**: 16 dichiarazioni emesse, 8 light e 8 dark, con i valori attesi (il minifier accorcia `0.15` in `.15` nelle `rgba`, unica differenza testuale). (3) **La divergenza di regola nel blocco dark è deliberata e ora documentata nel file**: le cinque coppie preesistenti seguono «bg rgba 0.18 del fg light, fg shade-300», le quattro nuove copiano `badgeBgDark`/`badgeTextDark` verbatim (alpha 0.15, fg shade-400). Il commento di header è stato riscritto perché descrivesse entrambe le metà invece di una regola ormai valida per la sola prima. (4) **La ragione della divergenza è verificata sul file, non assunta**: `--color-entity-model-fg` vale `#FCD34D` (`_colors-dark.scss:242` prima del commit), che è esattamente l'amber shade-300 che la regola produrrebbe per `enum` — i due tipi sarebbero indistinguibili in dark mode. (5) **Restano scoperti due tipi degli undici di `ENTITY_META`**: `transformation` e `parameter` (più gli alias `abstractClass`, `enumLiteral`, `object`, `dataType`, che hanno coppie proprie). Non erano nel perimetro di C9.1, che nomina i quattro tipi usati dal rail; se servissero, sono un altro commit. (6) **Con questa entry le attive salgono a 22**: la rotazione resta dovuta come commit a sé, non fatta qui perché fuori dal perimetro di un prompt a commit unico.
+**Prompt document name**: 2026-08-10 19:30
+
+## 2026-08-10 — docs: fase 0 discovery dell'arco rail destro
+**Prompt**: «Fase 0 (discovery read-only) dell'arco rail destro», documento prompt «2026-08-10 16:30». Sette accertamenti D1..D7 a supporto del redesign del rail destro, preset `2a`. Read-only su `frontend/src/`, hard stop sul report.
+**Files touched**: `docs/discovery/discovery_2026-08-10_rail_fase0.md` (nuovo), questo file (entry).
+**Outcome**: ✅ completed — report scritto, D1..D7 accertati, tabella D3 con 56 righe e conteggi 35 `token` / 14 `snap` / 7 `nuovo`.
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessun file sorgente nel diff; `git status --short` a fine task mostra i soli due file di docs. Nessuna modifica di comportamento possibile.
+**Out-of-scope changes**: no — i due file previsti dal prompt.
+**Layer Impact Report**: not-required — nessun file di §3.1 nel perimetro, e nessuna scrittura in alcun layer.
+**Smoke visivo**: non applicabile — nessuna modifica di resa.
+**Notes**: (1) **Tre ancore su tredici della §5 del prompt sono false a HEAD** (report §9). La più rilevante: «font non caricati» è smentita da `_typography.scss:81,84`, due `@import url()` verso Google Fonts per Inter e IBM Plex Mono, che il bundle di build hoista in testa al file subito dopo `@charset` — quindi validi e onorati. Le altre due: il portale header di `ViewData.tsx` è già ritirato dal commit `6b8e91d73` (quindi lo slot a `:459`, oggi `:461`, non è più un bersaglio di portale), e i conteggi di riga sono quelli di `abc0182` (652 e 1366, non 648 e 1375). (2) **D2 non ha una risposta deducibile dal codice, e il report lo dichiara** come previsto dalla clausola del prompt: i sistemi di token vivi sono **quattro**, non due — `tokens/*.scss`, `tokens.css`, `variables.scss` su selettore `body` (che batte entrambi per ereditarietà, es. `--input-height` = 36px e non 40), più il pattern delle `$`-vars locali per file, adottato proprio da `tree-view-sidebar.scss:5-41` con valori divergenti dal canone. (3) **Il ribaltamento theme-dipendente della cascata** è il singolo accertamento più pesante: `_colors-light.scss:75-76` dichiara `:root, :root[data-theme="light"]`, e `index.html:14-19` scrive l'attributo solo se `localStorage.theme` esiste. Senza attributo vince `tokens.css` (caricato dopo, specificità pari); con `data-theme="light"` vince il blocco SCSS (specificità 0,2,0). Verificato non per lettura ma misurando gli offset in byte delle dichiarazioni in conflitto nel bundle `dist/assets/index-C-yuxLjX.css`: `--color-bg-primary`, `--color-text-secondary`, `--color-border-primary`, `--shadow-*` e `--transition-fast` risolvono a valori diversi nei due regimi. (4) **Due punti del design ribaltano decisioni recenti e documentate**, non adottano token esistenti: la barra di selezione (`--color-selection-bar` ha **zero** consumatori, rimossa da Fase 2 C1 il 2026-07-28 con TODO di ritiro tuttora aperto in tre file) e il badge lettera (sostituito da glifi Bootstrap da Fase 2 C3 lo stesso giorno, per risolvere le collisioni C e R). Sono le domande aperte 3 e 4. (5) **Correzione al prompt sui raggi**: dei quattro dati per fuori scala (6, 7, 9, 10) il 6 esiste, come `--radius-base` in `tokens.css:185` — fuori dalla scala SCSS, dentro quella CSS. Fuori scala sono tre. (6) **Tre palette entity, non una**: `ENTITY_META` porta `badgeBg`/`badgeText` (quella usata dal design) e `color`, che per cinque tipi su sette appartiene a una famiglia cromatica diversa dal proprio badge; e il tree oggi non consuma né l'una né l'altra, ma le `$color-*` locali di `tree-view-sidebar.scss:36-41`. Inoltre solo 3 delle 7 coppie del design hanno una CSS custom property: le quattro dei feature (attribute, reference, operation, enum) esistono solo in TypeScript. (7) **`entityMeta.ts` non è importato da `TreeViewContent.tsx`**, contrariamente a quanto la domanda D5 lasciava aperto. (8) **Working tree pulito a inizio task**, quindi la clausola «se c'è lavoro non committato preesistente non committare affatto» non è scattata: i sei commit locali di Slice C sono committati e non pushati, non sporchi. (9) **Nessun concetto di «elemento a fuoco» distinto da «selezionato»** esiste nel codice; la postura Focus di `2a` dovrà derivare il tipo della selezione risolvendo il proxy su `_lastSelected`, come già fa `Info.tsx:1211`.
+**Prompt document name**: 2026-08-10 16:30
+
+## 2026-08-10 — docs: rotazione del log a 20 entry attive (nono lotto)
+**Prompt**: «Se le entry attive superano 20, la rotazione è un commit a sé», clausola di chiusura del documento prompt «2026-08-10 10:30». Rotazione standard dopo che i tre commit della Slice C più i due delle correzioni al gate hanno portato il file attivo a 25 entry.
+**Files touched**: `docs/claude-code-log.md` (tolte le 6 entry più vecchie per posizione, aggiunta questa), `docs/claude-code-log-archive.md` (le 6 entry appese in coda più il paragrafo di lotto nel preambolo).
+**Outcome**: ✅ completed — attivo a 20 entry, archivio da 724 a 730, conservazione verificata sui conteggi.
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessuna entry persa, modificata o duplicata: 25 = 19 + 6 sui conteggi e il blocco spostato è stato estratto e appeso senza editing. Nessun file sorgente nel diff.
+**Out-of-scope changes**: no — solo i due file di log.
+**Layer Impact Report**: not-required — nessun file di §3.1.
+**Smoke visivo**: non applicabile — nessuna modifica di resa.
+**Notes**: Taglio posizionale come dal quarto lotto in poi, e stavolta i due criteri concordano senza attriti: le sei entry spostate portano nomi 2026-08-09 18:00 (cinque, il grappolo voce 6) e 21:00, mentre la più vecchia delle tenute è 22:43 dello stesso giorno. Nessuna inversione da dichiarare, a differenza del sesto e settimo lotto.
 **Prompt document name**: 2026-08-10 10:30
