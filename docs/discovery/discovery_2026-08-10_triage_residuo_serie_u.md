@@ -308,3 +308,53 @@ head/tail/sed/wc/grep su file di documentazione e sullo scss
 
 Nessun `git add`, nessun `git checkout --`, nessun `git clean`, nessun `git stash`,
 nessun commit. HARD STOP rispettato.
+
+---
+
+## Addendum 2026-08-12: la domanda sul contenuto perso ha una risposta
+
+Il paragrafo su `docs/_to_delete/` (§ Passo 3) chiude con «se conteneva qualcosa di
+significativo, quel qualcosa è perso». Per due file almeno, non lo è. Il paragrafo
+originale resta com'è scritto: un report di discovery è una fotografia datata, e si
+corregge in coda con la data della correzione.
+
+Trovati in `.git/_to_delete/` durante la chiusura dell'arco 2 (commit `9031c6ce6`):
+`migrated_design_doc_orig.md` (21 824 B, 268 righe) e `retired_spec_v12.md`
+(14 832 B, 214 righe), entrambi datati 24 luglio 14:15. Non stanno nel working tree, e
+`git status` non scandisce mai `.git/`: per questo non sono comparsi in nessun triage,
+compreso questo.
+
+Nessuno dei due è contenuto unico, misurato:
+
+- `git hash-object` dà `9a540c9543baf8c2…` e `f968e41c802dbd5a…`, e `git cat-file -e`
+  conferma che **entrambi gli oggetti sono già in git**. `git log --all --find-object`
+  li colloca in `b0292b863` («docs: retire docs/specs/, migrate the slice-1 design doc,
+  redirect note») e in `03363ce6a` («docs: merge the two divergent copies of the
+  ViewpointIR v1.2 spec»). Sono gli originali messi da parte prima delle due operazioni
+  che il loro nome annuncia, non contenuto unico.
+- Le copie vive nel repo li contengono per intero.
+  `docs/spec/design_2026-07-21_ir_authoring_surface_slice1.md` diverge per **una riga
+  sola**: il path del companion spec, che passa da `docs/specs/` a `docs/spec/`. È la
+  migrazione stessa.
+  `docs/spec/claude_spec_2026-07-18_ir_schema_v1_2.md` è un **soprainsieme stretto**,
+  divergente per quattro hunk tutti nella direzione del più: la riga `**Emendamenti**`,
+  l'annotazione «emendamento 2026-07-18» sul fallback normativo della palette derivata,
+  il paragrafo su `DVertex.irEdgeLayout` che sostituisce una nota al futuro sul gap #6,
+  e la frase su `DVertex.irCollapsed`. Sono le ratifiche R-FS1..R-FS7: l'orfano è la
+  copia **pre-fusione**.
+  Misura dei due diff, per renderli riproducibili: `diff <orfano> <copia viva> | wc -l`
+  dà **4** e **17**, cioè l'output completo di `diff`, intestazioni di hunk e separatori
+  compresi. In righe cambiate sono 1+1 e 5+5. I byte vanno da 21 824 a 21 830 e da
+  14 832 a 15 833.
+
+**Non stabilito**: da quale `_to_delete/` vengano. Questo report parla di
+`docs/_to_delete/`, i due file stanno in `.git/_to_delete/`. Non è stato accertato, e la
+conclusione qui sopra non dipende dalla risposta: la domanda resta aperta.
+
+**Registrato per inciso**, perché è il resto del contenuto della stessa cartella:
+`.git/_to_delete/` raccoglie **32 file**, di cui **30 sono detriti di git** — 6
+`HEAD.lock.*`, 7 `index.lock.*`, 4 `maintenance.lock.*`, 13 `tmp_obj_*` — cioè i file su
+cui git fa `unlink` e che il mount del bridge Cowork non può cancellare (più una cartella
+vuota, `specs_dir_4129`). È la traccia accumulata di R-RAIL-27 attraverso le sessioni.
+Non va ripulita in questo passo: è inerte, sta fuori dal working tree, e come evidenza
+vale più di quanto costi.
