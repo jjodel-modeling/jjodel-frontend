@@ -499,6 +499,13 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   Gradino successivo dell'emendamento a R-RAIL-28, che aveva stabilito che un report di esecuzione
   non è una misura della resa: anche una misura vera, presa sull'elemento sbagliato, non lo è.
   Nata dal caso dei glifi del tree, dove un `color` che passa da bordeaux a cyan non muove un pixel.
+- **R-RAIL-37** (2026-08-12) — Prima di rimuovere una dichiarazione si enumerano **tutte** le regole
+  che sta battendo, non solo quella che il commento accanto nomina. Le undici `background:
+  transparent` della copia del pannello ne tenevano due, la `-bg` del foglio del tree e la metà
+  dark della quarta palette, e il commento ne dichiarava una: la seconda non era stata costata da
+  nessuno. La verifica è meccanica e costa un giro di build: si toglie, si ricostruisce, si
+  confronta lo stile computato **su ogni tema**, non sul tema che si ha davanti. Nata dall'hard stop
+  del passo 7.
 
 ## Superate
 
