@@ -521,6 +521,32 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   del tree mostra già dove sta l'elemento, e ripeterlo sotto il titolo è la terza dichiarazione
   della stessa cosa in 40px, cioè il problema 5 che il redesign è nato per togliere. In Focus il
   tree non c'è, e il contesto torna come Focus bar, che è un canale solo e non un duplicato.
+- **R-RAIL-40** (2026-08-12) — **L'identity block resta dov'è e la postura lo raggiunge dal CSS.**
+  Il memo del perimetro residuo proponeva di farlo salire dal ramo model element al guscio, con
+  l'argomento che un blocco dentro il ramo non può animare su uno stato del guscio senza far
+  passare la postura attraverso `Info`, cioè senza il props drilling che le convenzioni vietano.
+  L'argomento assume che la postura debba viaggiare in JavaScript. Non deve: il guscio scrive già
+  `--rail-focus` su di sé, e da lì la postura raggiunge qualunque discendente per cascata, che è il
+  canale che il progetto usa. Il costo evitato è quello vero: salire nel guscio significava un
+  blocco unico che rende due rami, `ViewData` che perde il suo header, e un secondo lettore del
+  modello dentro il guscio per nome, kind, astrattezza e firma. Il beneficio era la sola
+  collocazione. Conseguenza operativa: le regole di forma vivono nel foglio del rail, scopate a
+  `.props-header:not(.props-header--view)`, e `_form-system.scss` e `info-improvements.scss`
+  restano intoccati (R-RAIL-25).
+- **R-RAIL-41** (2026-08-12) — **Il chip di firma si fa, e solo dove una firma esiste**: attribute,
+  reference, parameter. Una classe, un package, un metamodello non hanno tipo né molteplicità, e per
+  essi il chip non si rende affatto, senza placeholder e senza spazio riservato: è lo stesso criterio
+  già ratificato da R-RAIL-1 C1.2 per l'identity block delle view legacy. Il conteggio «N features»
+  che una classe mostra **non** è una firma e tiene il trattamento secondario piano, non il chip: la
+  stessa forma per due significati diversi è il difetto che il redesign toglie, non uno che aggiunge.
+  La clausola «niente chip di firma» di R-RAIL-16 cade qui, come R-RAIL-26 aveva annunciato.
+- **R-RAIL-42** (2026-08-12) — **Una superficie nuova del rail si guarda nei due temi prima di
+  dichiararla finita**, e i grade `--color-slate-*` sono palette grezza: non seguono il tema. La
+  Focus bar era stata scritta nell'arco 1 con i valori del design, che è disegnato in light, e in
+  dark rendeva un fondo quasi bianco sotto testo quasi bianco, più un chip con testo scuro su fondo
+  scuro. Nessuno l'aveva vista perché nessuno l'aveva aperta in dark. È la stessa specie del debito
+  già a registro sul caret `--color-slate-400`. Rimedio adottato: i valori del design restano per
+  light, e un blocco `[data-theme="dark"]` corregge i soli colori che il tema deve cambiare.
 
 ## Superate
 
