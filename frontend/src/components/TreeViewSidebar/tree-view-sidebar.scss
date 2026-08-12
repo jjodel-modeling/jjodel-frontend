@@ -627,69 +627,16 @@ $transition-normal: 250ms ease;
     // Matches viewpoint tree badge pattern (ViewTreeNode)
     border: none;
 
-    // Per-type palette: one pair of entity tokens per metaclass, consumed from
-    // the global scale (R-RAIL-30 — single source). The tokens are already
-    // designed as a background/foreground pair, so the tinted background is the
-    // -bg token directly, with no alpha applied on top of it.
-    &.tree-DModel {
-        color: var(--color-entity-metamodel-fg);
-        background-color: var(--color-entity-metamodel-bg);
-    }
-
-    &.tree-DPackage {
-        color: var(--color-entity-package-fg);
-        background-color: var(--color-entity-package-bg);
-    }
-
-    &.tree-DClass {
-        color: var(--color-entity-class-fg);
-        background-color: var(--color-entity-class-bg);
-
-        &.abstract-class {
-            font-style: italic;
-        }
-    }
-
-    &.tree-DAttribute {
-        color: var(--color-entity-attribute-fg);
-        background-color: var(--color-entity-attribute-bg);
-    }
-
-    &.tree-DReference {
-        color: var(--color-entity-reference-fg);
-        background-color: var(--color-entity-reference-bg);
-    }
-
-    &.tree-DEnumerator,
-    &.tree-DEnum {
-        color: var(--color-entity-enum-fg);
-        background-color: var(--color-entity-enum-bg);
-    }
-
-    &.tree-DEnumLiteral {
-        color: var(--color-entity-literal-fg);
-        background-color: var(--color-entity-literal-bg);
-    }
-
-    &.tree-DOperation {
-        color: var(--color-entity-operation-fg);
-        background-color: var(--color-entity-operation-bg);
-    }
-
-    &.tree-DParameter {
-        color: var(--color-entity-parameter-fg);
-        background-color: var(--color-entity-parameter-bg);
-    }
-
-    &.tree-DObject {
-        color: var(--color-entity-object-fg);
-        background-color: var(--color-entity-object-bg);
-    }
-
-    // Nested M1 model icon — lowercase "m"
+    // Palette per tipo rimossa il 2026-08-12, in esecuzione di R-RAIL-33: la scala
+    // entity non entra nel tree. Non rimetterla. Le regole coloravano questo <span>,
+    // mentre a dipingere e' l'<i class="bi"> interno, che prende il colore da
+    // styles/style.scss:790 (R-RAIL-36): la rimozione ha cambiato zero pixel, misurati.
+    // Restano fuori le righe viewpoint e view-leaf, che sono pastiglie e colorano il
+    // fondo (emendamento (2) a R-RAIL-33).
+    // Dopo la rimozione vince components/forEndUser/tree.scss, quarta palette entity
+    // globale e non scopata (voce a TECH-DEBT). Non dipinge nemmeno lei.
+    // Il corsivo del glifo M1 annidato non e' colore e resta.
     &.tree-nested-model {
-        color: var(--color-entity-model-fg);
-        background-color: var(--color-entity-model-bg);
         font-style: italic;
     }
 }
@@ -1032,21 +979,7 @@ $color-highlight-unknown: #f59e0b; // Amber - unknown action
         background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
     }
 
-    // Dark mode — bare colored glyphs: the background stays transparent here, so
-    // only the -fg half of each entity token pair is consumed (R-RAIL-30). The
-    // dark -fg values are light pastels, legible directly on the sidebar surface.
     .tree-node__icon {
-        &.tree-DModel { background: transparent; color: var(--color-entity-metamodel-fg); }
-        &.tree-DPackage { background: transparent; color: var(--color-entity-package-fg); }
-        &.tree-DClass { background: transparent; color: var(--color-entity-class-fg); }
-        &.tree-DAttribute { background: transparent; color: var(--color-entity-attribute-fg); }
-        &.tree-DReference { background: transparent; color: var(--color-entity-reference-fg); }
-        &.tree-DEnumerator, &.tree-DEnum { background: transparent; color: var(--color-entity-enum-fg); }
-        &.tree-DEnumLiteral { background: transparent; color: var(--color-entity-literal-fg); }
-        &.tree-DOperation { background: transparent; color: var(--color-entity-operation-fg); }
-        &.tree-DParameter { background: transparent; color: var(--color-entity-parameter-fg); }
-        &.tree-DObject { background: transparent; color: var(--color-entity-object-fg); }
-        &.tree-nested-model { background: transparent; color: var(--color-entity-model-fg); }
     }
 
     .tree-nested-model__badge {

@@ -991,28 +991,32 @@ $pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Chec
         flex-shrink: 0;
         background: transparent;
 
-        // Per-type palette: the -fg half of each entity token pair (R-RAIL-30).
-        // This copy is the live tree — it wins the cascade over the sidebar sheet
-        // at (0,3,0) — and it stays text-only in both themes, so each kind repeats
-        // `background: transparent` at the same specificity as its colour, holding
-        // it against the -bg the sidebar sheet sets on the same element.
-        &.tree-DModel { background: transparent; color: var(--color-entity-metamodel-fg); }
-        &.tree-DPackage { background: transparent; color: var(--color-entity-package-fg); }
-        &.tree-DClass {
+        // Palette per tipo rimossa il 2026-08-12, in esecuzione di R-RAIL-33. Questa era
+        // la copia che vinceva la cascata a (0,3,0); il colore non arrivava comunque al
+        // glifo, perche' a dipingere e' l'<i class="bi"> e non questo <span> (R-RAIL-36).
+        // Rimozione misurata: zero pixel di differenza. Non rimetterla.
+        // Dopo la rimozione la regola che vince su questi <span> e' quella di
+        // components/forEndUser/tree.scss, quarta palette entity globale e non scopata
+        // (voce a TECH-DEBT). Sul colore non cambia niente, perche' nessuna delle due
+        // dipinge il glifo. Sul FONDO invece cambia, ma solo in dark: quel foglio scopa
+        // la sua meta' scura come `html[data-theme="dark"] { .tree-DClass { ... } }`,
+        // cioe' (0,2,1), e batte il `background: transparent` di base qui sopra, che e'
+        // (0,2,0). Le undici dichiarazioni rimosse tenevano anche questo, oltre alla -bg
+        // del foglio del tree: era il loro secondo mestiere, e il commento precedente ne
+        // nominava uno solo. Misurato in dark senza la riga qui sotto: sei kind passano
+        // da trasparente a una pastiglia traslucida (DClass rgba(14,165,233,.2), DModel
+        // rgba(100,116,139,.2), DPackage rgba(245,158,11,.2), e cosi' via).
+        // Il :not() e' obbligatorio: senza, questa riga a (0,5,0) spegnerebbe anche il
+        // fondo di tree-viewpoint e tree-leaf-view, che stanno a (0,2,0) e sono le due
+        // pastiglie ratificate dall'emendamento (2) a R-RAIL-33.
+        [data-theme="dark"] &:not(.tree-viewpoint):not(.tree-leaf-view) {
             background: transparent;
-            color: var(--color-entity-class-fg);
+        }
+
+        // Il corsivo della classe astratta non e' colore e resta.
+        &.tree-DClass {
             &.abstract-class { font-style: italic; }
         }
-        &.tree-DAttribute { background: transparent; color: var(--color-entity-attribute-fg); }
-        &.tree-DReference { background: transparent; color: var(--color-entity-reference-fg); }
-        &.tree-DEnumerator, &.tree-DEnum { background: transparent; color: var(--color-entity-enum-fg); }
-        &.tree-DEnumLiteral { background: transparent; color: var(--color-entity-literal-fg); }
-        &.tree-DOperation { background: transparent; color: var(--color-entity-operation-fg); }
-        &.tree-DParameter { background: transparent; color: var(--color-entity-parameter-fg); }
-        &.tree-DObject { background: transparent; color: var(--color-entity-object-fg); }
-        // Added here so the M1 nested-model icon is bare like its siblings: the
-        // panel copy had no entry for it, leaving it on the sidebar's -bg rule.
-        &.tree-nested-model { background: transparent; color: var(--color-entity-model-fg); }
     }
 
     // Tree node name
