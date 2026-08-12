@@ -4257,6 +4257,27 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
         return ret;
     }
 
+    /** Required boolean attributes carry `false`, never an empty slot: a mandatory feature has
+     *  no "unset" state, so a three-state boolean (true / false / absent) is not in the domain.
+     *  Returns the initial slot values for a feature, or an empty array for every other case
+     *  (optional, non-boolean, reference) — callers pass the result straight to addValue.
+     *
+     *  The value is a STRING, not a boolean: U.initializeValue is the existing canon for slot
+     *  initialisation (U.tsx:798, already the source for Info.tsx's "+" button on a value), and
+     *  readers normalise it via U.fromBoolString (get_values ~:7337 maps 'false' -> false).
+     *  Deriving it from U.initializeValue rather than hardcoding keeps the rule following that
+     *  table if it ever changes. The type guard is by NAME, matching Info.tsx:609-619 and
+     *  ObjectNode.tsx:179; the className guard is what keeps LReference out, since the caller's
+     *  idmap holds both allAttributes and allReferences (L-proxies report the D-layer className,
+     *  CLAUDE.md §3.13). */
+    public static requiredBooleanInitialValues(feature: LAttribute | LReference | undefined): PrimitiveType[] {
+        if (!feature || feature.className !== DAttribute.cname) return [];
+        const raw = (feature as LAttribute).__raw;
+        if (!raw || raw.lowerBound < 1) return [];
+        if (feature.type?.name !== ShortAttribETypes.EBoolean) return [];
+        return [U.initializeValue(raw.type)];
+    }
+
     protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}, deep: boolean = true, crossRef: boolean = true): Json {
         if (loopDetectionObj[c.data.id]) return Log.exx('Cannot serialize in ecore, found loop', {loopDetectionObj, c});
         loopDetectionObj[c.data.id] = c.data;
@@ -6327,7 +6348,9 @@ export class LObject<Context extends LogicContext<DObject> = any, C extends Cont
         // console.log("forceconformity", {attrs, refs, valuesPre: values.map(v => v && v.__raw.instanceof), toadd:idmap});
         for (let id in idmap) {
             // let l = idmap[id];
-            let v = context.proxyObject.addValue(undefined, id, [], true);
+            // A required boolean is born carrying `false`, never an empty slot: see
+            // LAttribute.requiredBooleanInitialValues. Every other feature keeps the empty slot.
+            let v = context.proxyObject.addValue(undefined, id, LAttribute.requiredBooleanInitialValues(idmap[id]), true);
             if (out) out.featureCreated.push(v);
         }
     }
