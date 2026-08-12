@@ -122,16 +122,17 @@ Registro dei debiti tecnici noti. Ogni entry deve indicare: data, origine, stato
 
 ---
 
-## I selettori entity dei glifi nel tree non producono colore a video
+## I selettori entity del tree colorano il contenitore, non il glifo
 
 **Registrato:** 2026-08-11
 **Origine:** passo 3 dell'arco 2. I commit `70409831e` e `0f1197a7e` hanno portato gli undici kind a `-fg` con fondo trasparente; la verifica visiva dell'11 agosto ha mostrato che nel tree i glifi restano monocromi.
-**Stato attuale:** il CSS dichiara un colore per tipo che a video non si vede. Causa **non accertata** — questa voce non la diagnostica, la registra: possibile mancata ereditarietà di `color` sul glifo, specificità superiore altrove, oppure selettore che non colpisce la superficie viva. Con R-RAIL-33 l'esito a video è quello **voluto**, quindi non c'è difetto da riparare; il problema è che il foglio dichiara un'intenzione che non realizza, e chiunque legga quei selettori in futuro li «correggerà», riportando il colore nel tree contro R-RAIL-33.
-**Fix strutturale raccomandato:** **rimuovere i selettori, non farli funzionare.** I tre blocchi sono `tree-view-sidebar.scss:649-709` (light) e `:1054-1064` (dark), più `properties-with-tree-view.scss:919-931` (la copia viva). La rimozione va fatta misurando la resa prima e dopo, non leggendo il CSS: se un glifo prendesse colore da uno di quei blocchi, togliendolo lo perderebbe, e la verifica a video è l'unica che lo dice. Vanno tenuti fuori dalla rimozione le righe viewpoint e view-leaf (`:1481-1498`), che sono a pastiglia per progetto e consumano i token da prima dell'arco.
-**Priorità:** media — nessun effetto visibile, ma è una trappola per il passo successivo.
+**Stato attuale:** causa **accertata** il 2026-08-12. Il glifo è `<span class="tree-node__icon tree-DClass"><i class="bi bi-…"></i></span>`. I selettori entity mettono `color` sul `<span>`; a dipingere è l'`<i>`, che prende il colore da una regola globale, `frontend/src/styles/style.scss:790-791`, `i.bi { color: var(--font-color-1) }`, cioè `#0F172A`. Una dichiarazione diretta batte l'ereditarietà a qualunque specificità stia il genitore, quindi il colore entity non raggiunge mai il pixel. Misure: sul `<span>` `.tree-DClass` computa `rgb(122, 64, 86)`; sull'`<i>` dentro di esso, `rgb(15, 23, 42)`. Rimuovendo i tre blocchi e ricostruendo, il `<span>` passa a `rgb(14, 165, 233)` e la schermata resta **identica**: 153.258 pixel campionati, zero diversi, delta massimo 0. I tre blocchi sono `tree-view-sidebar.scss:634-694` (light: ogni kind dichiara `color` **più** `background-color`, non solo il colore), `:1038-1050` (dark) e `properties-with-tree-view.scss:999-1015` (copia del pannello, che vince per specificità (0,3,0) su entrambe le proprietà). Restano fuori le righe viewpoint e view-leaf, `tree-view-sidebar.scss:1466-1472` e `:1477-1483`, che sono pastiglie e colorano il **fondo** del `<span>`, quindi funzionano; è la stessa eccezione che l'emendamento (2) a R-RAIL-33 ha appena messo a registro.
+**Fix strutturale raccomandato:** rimuovere i tre blocchi, in esecuzione di R-RAIL-33. La previsione «nessun effetto visibile» della formulazione precedente era **giusta**, ed è ora misurata: si può fare senza rischio visivo. Ordine: i tre blocchi insieme, in un commit solo. Rimuovere la sola copia del pannello lascerebbe vincere il blocco light del foglio del tree, che dichiara anche un `background-color`, e quello un pixel lo muove. Da non fare in questo giro: far arrivare il colore al glifo. Richiederebbe di disinnescare `i.bi` nel perimetro del rail, che è un cambio globale, e farebbe emergere la quarta palette della voce seguente.
+**Priorità:** bassa — nessun effetto a video, è igiene del foglio in esecuzione di R-RAIL-33.
 **Effort stimato:** un'ora, di cui la maggior parte è la verifica a video prima e dopo.
 **Riferimenti:**
-- `docs/decisions.md` — R-RAIL-33, R-RAIL-28 e il suo emendamento
+- `docs/decisions.md` — R-RAIL-33 e il suo emendamento (2), R-RAIL-28 e il suo emendamento, R-RAIL-36
+- `docs/discovery/discovery_2026-08-12_harness_visivo_e_scala_entity_nel_tree.md` §4
 - `docs/claude-code-log.md` — entry del 2026-08-11, passo 3 dell'arco 2, e questa chiusura
 
 ---
