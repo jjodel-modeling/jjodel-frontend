@@ -4278,6 +4278,65 @@ export class LAttribute <Context extends LogicContext<DAttribute> = any, C exten
         return [U.initializeValue(raw.type)];
     }
 
+    // requiredBooleanInitialValues covers slots at birth, but _forceConformity skips features
+    // that are already instantiated, so it never reaches a slot created before the attribute
+    // became a required boolean. That is the normal history of one: an attribute is born
+    // EString [0..1] (DAttribute.new / lowerBound = 0), turns boolean by an explicit type change
+    // or by name inference, and turns required only when someone raises lowerBound. The two
+    // overrides below catch those two transitions and heal the slots left behind.
+    //
+    // Both use the super-then-extra shape of set_name above, with the same reason: TRANSACTION
+    // commits asynchronously (END() runs after the await in action.ts, and the dispatch itself is
+    // deferred by a setTimeout), so after super returns c.data STILL HOLDS THE PRE-STATE. The
+    // condition must be decided from the pre-state plus the incoming value, never by re-reading
+    // c.data afterwards. super runs its own TRANSACTION and is never wrapped in an outer one
+    // (CLAUDE.md §3.3).
+
+    protected set_lowerBound(val: this["lowerBound"], c: Context): boolean {
+        // The type does not change here, so the pre-state type is also the final one.
+        const becomesRequired = Math.max(0, +val || 0) >= 1 && c.data.lowerBound < 1;
+        const isBoolean = this.get_type(c)?.name === ShortAttribETypes.EBoolean;
+        const ret = super.set_lowerBound(val, c);
+        if (becomesRequired && isBoolean) this.fillEmptyBooleanSlots(c, c.data.type);
+        return ret;
+    }
+
+    // Known limit, deliberately not solved here: this only fires when the caller passes a
+    // pointer. set_type also accepts plain type NAMES ('boolean', 'ebool', ...) and resolves
+    // them through its own alias table, which runs inside super — out of reach from here. The
+    // main UI flow passes a pointer (canvasToJjom.ts uses `pointerId || value`), so the common
+    // path is covered; a name-based caller leaves the slot empty until the multiplicity is
+    // touched, which set_lowerBound then heals. Duplicating the alias table to close the gap
+    // would put the same mapping in two places, which costs more than the gap.
+    protected set_type(val: Pack1<this["type"]>, c: Context): boolean {
+        // lowerBound does not change here, so the pre-state bound is also the final one.
+        const Defaults: typeof TDefaults = windoww.Defaults;
+        const isRequired = c.data.lowerBound >= 1;
+        const newType = Pointers.from(val as any);
+        const targetsBoolean = newType === Defaults.Pointer_EBOOLEAN;
+        const ret = super.set_type(val, c);
+        // newType is passed explicitly: c.data.type still holds the OLD type here, so deriving
+        // the initial value from it would write the previous type's initial value (an empty
+        // string, on the usual EString -> EBoolean change) instead of 'false'.
+        if (isRequired && targetsBoolean) this.fillEmptyBooleanSlots(c, newType);
+        return ret;
+    }
+
+    /** Writes the initial value into every instance slot of this attribute that is still empty.
+     *  Slots already holding a value are left untouched: this initialises, it does not overwrite,
+     *  so a boolean the user has already set to true survives a multiplicity change.
+     *  `type` is a parameter and not read from c.data because a caller may have just changed it
+     *  and the write has not committed yet. The TRANSACTION is a SIBLING of super's, never nested
+     *  inside it, and holds only SetFieldActions — the shape CLAUDE.md §3.3 marks safe. */
+    private fillEmptyBooleanSlots(c: Context, type: DAttribute["type"]): void {
+        const initial = U.initializeValue(type);
+        const empty = (this.get_instances(c) as LValue[]).filter(lval => lval?.__raw?.values?.length === 0);
+        if (!empty.length) return;
+        TRANSACTION(this.get_name(c) + '.initialiseRequiredBooleanSlots', () => {
+            for (const lval of empty) SetFieldAction.new(lval.__raw, 'values', [initial], '', false);
+        });
+    }
+
     protected generateEcoreJson_impl(c: Context, loopDetectionObj: Dictionary<Pointer, DModelElement> = {}, deep: boolean = true, crossRef: boolean = true): Json {
         if (loopDetectionObj[c.data.id]) return Log.exx('Cannot serialize in ecore, found loop', {loopDetectionObj, c});
         loopDetectionObj[c.data.id] = c.data;
