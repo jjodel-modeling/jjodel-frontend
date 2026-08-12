@@ -285,10 +285,16 @@ function NewDocumentButton({ project, metamodels }: NewDocumentButtonProps) {
                                     disabled={!entry.available}
                                     title={entry.disabledReason}
                                 >
+                                    {/* R-RAIL-32: the five types are one colour family, so here the
+                                        badge carries the glyph and not the letter — the shape is the
+                                        channel that tells them apart on the one surface that shows
+                                        all five at once. The letter stays the badge's identity
+                                        everywhere a type appears alone. */}
                                     <span
                                         className="new-document__badge"
                                         style={{ background: entry.badgeBg, color: entry.badgeColor }}
-                                    >{entry.badge}</span>
+                                        aria-hidden="true"
+                                    ><i className={`bi bi-${entry.icon}`} /></span>
                                     <span className="new-document__text">
                                         <span className="new-document__label">
                                             {entry.label}

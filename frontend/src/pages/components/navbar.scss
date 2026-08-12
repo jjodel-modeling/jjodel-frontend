@@ -2009,6 +2009,11 @@ $transition-menu: 150ms ease;
     line-height: 1;
     flex-shrink: 0;
     margin-top: 1px;
+
+    // The document-type badges carry a glyph (R-RAIL-32); the submenu ones, which list
+    // existing metamodels, still carry the initial of a name. The rule is on the `i`, so
+    // it reaches the first and leaves the second alone.
+    i { font-size: 12px; }
   }
 
   &__text {
