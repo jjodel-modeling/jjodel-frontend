@@ -5,6 +5,19 @@
   gap: var(--spacing-3);
 }
 
+/* U-7 (2026-08-12). With a label the wrapper has two children and `space-between`
+   puts the switch on the right edge. Q5 removed the redundant labels from five
+   sites, and there the switch became the only child: `space-between` then leaves it
+   on the LEFT, under its own field label, while the toggles that kept their label
+   stay against the right border. The defect is not left versus right — it is that
+   one panel holds both alignments, so the vertical column of switches, which is
+   what lets the eye scan the section, breaks halfway down.
+   One additive rule, no DOM change and no renaming: an only child is pushed to the
+   right edge, where every other switch already is. */
+.wrapper > .toggle:only-child {
+  margin-left: auto;
+}
+
 .labelWrapper {
   display: flex;
   flex-direction: column;
