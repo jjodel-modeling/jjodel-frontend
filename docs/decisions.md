@@ -346,7 +346,8 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   aggiungere consumatori del secondo.
 - **R-RAIL-14** (2026-08-10) — Postura Browse/Focus **fuori dall'arco 1** (per R-RAIL-12).
   `PRESET_2A` codifica solo geometria. Tree 392px quando entrambi i pane sono montati; altezza
-  intera al pane superstite; nessuna altezza trascinabile.
+  intera al pane superstite; nessuna altezza trascinabile. **Ricollocata all'arco 2 da
+  R-RAIL-38**: la clausola che vale ancora è l'assenza di altezza trascinabile.
 - **R-RAIL-15** (2026-08-10) — Il restyle del tree si scrive in `tree-view-sidebar.scss`
   (ampliamento di scope dichiarato). Vietati gli override di specificità dal foglio del rail.
 - **R-RAIL-16** (2026-08-10) — Identity block = `PropertiesHeader`, restilato in loco nel ramo
@@ -506,6 +507,20 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   nessuno. La verifica è meccanica e costa un giro di build: si toglie, si ricostruisce, si
   confronta lo stile computato **su ogni tema**, non sul tema che si ha davanti. Nata dall'hard stop
   del passo 7.
+- **R-RAIL-38** (2026-08-12) — **La postura Browse/Focus rientra nell'arco 2**, e con essa la Focus
+  bar di design §6. R-RAIL-14 la mandava fuori dall'**arco 1** e nessuna voce l'aveva poi
+  ricollocata, quindi il registro la dava per esclusa da un arco che non era il suo. La
+  ricollocazione non è un allargamento di perimetro: senza postura il preset `2a` non esiste, è il
+  preset `1a` senza divider, e il design lo dice a §5 e §«Suggested build order» punto 5, «this
+  yields preset 2a, the default». Non è nemmeno sviluppo nuovo: il codice era stato scritto in
+  `bcc68da8f` e ritirato in `77e2bb6a6` con un commit additivo, apposta perché restasse
+  recuperabile. Di R-RAIL-14 resta in vigore la clausola sulla geometria non trascinabile; cade la
+  sola collocazione d'arco.
+- **R-RAIL-39** (2026-08-12) — **Il breadcrumb posizionale non si rende in postura Browse.**
+  Design §7: «this block replaces the current title row **and** the breadcrumb». In Browse la riga
+  del tree mostra già dove sta l'elemento, e ripeterlo sotto il titolo è la terza dichiarazione
+  della stessa cosa in 40px, cioè il problema 5 che il redesign è nato per togliere. In Focus il
+  tree non c'è, e il contesto torna come Focus bar, che è un canale solo e non un duplicato.
 
 ## Superate
 
