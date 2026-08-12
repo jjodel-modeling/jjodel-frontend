@@ -53,12 +53,13 @@ Registro dei debiti tecnici noti. Ogni entry deve indicare: data, origine, stato
 
 **Registrato:** 2026-08-11
 **Origine:** verifica della nota (15) dell'entry di log del 2026-08-11, che dava IBM Plex Mono per non caricato. L'affermazione è falsa — l'import c'è — ma la verifica ha fatto emergere una questione di validità che nessuno aveva posto.
-**Stato attuale:** `frontend/src/styles/tokens/_typography.scss` carica i due font applicativi con `@import url(...)` da Google Fonts: Inter a `:81`, IBM Plex Mono a `:84`. Entrambi seguono **cinque** blocchi `:root { }` dello stesso file (`:11`, `:27`, `:41`, `:54`, `:64`). Per specifica CSS un `@import` che compare dopo una regola di stile è invalido e viene scartato dal parser: i due sopravvivono solo se il bundler li risale in testa alla CSS emessa. Non è decidibile leggendo il sorgente. Nota accessoria: il commento di sezione a `:72` dice «Load Inter and JetBrains Mono», ma l'import è di IBM Plex Mono; JetBrains Mono arriva da `frontend/index.html:11`, per gli editor Monaco.
-**Fix strutturale raccomandato:** prima si misura, poi si decide. Verifica: DevTools, tab Network, filtro `fonts.googleapis`, hard refresh su `localhost:3001`. Due richieste: i font si caricano, la voce si chiude senza debito e resta solo il commento da correggere. Zero richieste: non si carica nemmeno Inter, quindi il difetto è di tipografia globale e non del solo suffisso mono, la voce va promossa da backlog a bug, e il fix è spostare i due `@import` in testa al file oppure in `index.html` accanto a JetBrains Mono, dove la validità non dipende dal bundler.
-**Priorità:** media in attesa della misura; alta se la misura dà zero richieste.
+**Stato attuale:** **chiusa il 2026-08-12, misurata.** I font si caricano su entrambi i percorsi. In produzione i due `@import` sono le prime cose in `frontend/dist/assets/index-*.css`, subito dopo `@charset "UTF-8"` e prima di qualunque regola. In sviluppo, misurato su un progetto vite minimo che importa quel solo partial, lo `<style>` iniettato espone due `CSSImportRule` come prime due regole e le due richieste a `fonts.googleapis.com` partono. Il rialzo è della compilazione Sass, non del bundler, quindi vale su entrambi i percorsi. Controprova sulla stessa macchina: uno `<style>` in cui l'`@import` segue una regola di stile perde l'import dal CSSOM e non emette richieste, quindi la misura sa distinguere i due esiti.
+**Fix strutturale raccomandato:** nessuno sul caricamento. Resta il commento a `frontend/src/styles/tokens/_typography.scss:72`, che dice «Load Inter and JetBrains Mono» mentre l'import a `:84` è di IBM Plex Mono; JetBrains Mono arriva da `frontend/index.html:11` per Monaco. Correzione già prevista nel passo 6.
+**Priorità:** chiusa.
 **Effort stimato:** cinque minuti la verifica; mezz'ora lo spostamento, se serve.
 **Riferimenti:**
 - `frontend/src/styles/tokens/_typography.scss:70-84`
+- `docs/discovery/discovery_2026-08-12_harness_visivo_e_scala_entity_nel_tree.md` §6.2
 - `docs/claude-code-log.md` — entry del 2026-08-11, nota (15), e la sua correzione nell'entry del passo 6
 - `docs/decisions.md` — R-RAIL-5, clausola C5.3
 

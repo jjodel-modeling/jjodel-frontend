@@ -299,6 +299,7 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   `styles/tokens/_typography.scss:81,84`, due `@import url(...)` da Google per Inter e IBM
   Plex Mono, quindi non esiste alcuna dipendenza da introdurre. C5.3 la verifica è sul
   computed style in devtools, non sulla dichiarazione.
+  **Verificato il 2026-08-12**: C5.2 misurata su entrambi i percorsi, voce di debito chiusa.
 - **R-RAIL-6** (2026-08-10) — Token per lista nera, non per scelta di sistema: il rail consuma
   da entrambi i sistemi (`styles/tokens/*.scss` e `styles/tokens.css`) evitando i 13 nomi che
   i due definiscono con valori diversi — `--color-bg-primary`, `--color-bg-secondary`,
