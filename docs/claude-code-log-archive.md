@@ -9957,3 +9957,17 @@ Dark mode overrides for `.toolbar-btn` also scoped under `.documentation-toolbar
 **Smoke visivo**: passato — verdetto di Alfonso del 10/8 mattina, smoke di non regressione: pannello Properties e Select «Parent view» regolari. Il caso rotto (catena `father` dangling o ciclica, dati sporchi non creabili dalla UI) resta non riproducibile a video: lì il fix sostituisce il crash del render con una lista di parent senza la voce del viewpoint. [Campo aggiornato da «non applicabile» col verdetto, 10/8 mattina, pattern del verdetto U-2.]
 **Notes**: (1) **La voce 4 non aveva toccato il getter**: bug vivo a HEAD, verificato prima del fix (`get_viewpoint` ritorna `undefined as any` su ciclo o su pointer dangling, la riga 447 faceva `vp.id` senza guardia). Root cause e superficie di innesco nel report di discovery. (2) **Nessun test aggiunto**: una fixture con catena dangling sul proxy L ha costo sproporzionato per una guardia di una riga; motivato nel report, con follow-up facoltativo (warn nel ramo `!vp`). (3) **Commit senza push**: smoke visivo e push restano ad Alfonso, coerente col mandato della notte. (4) Con questa entry le attive salgono a 21: rotazione nel commit successivo, come da prassi di questo repo.
 **Prompt document name**: 2026-08-10 02:25
+
+## 2026-08-10 — docs: rotazione del log a 20 entry attive (settimo lotto)
+**Prompt**: «rotazione dopo la entry del fix null-check», sessione Cowork notturna del 10/8. Rotazione standard dopo che il commit precedente ha portato il file attivo a 21 entry.
+**Files touched**: `docs/claude-code-log.md` (tolte le 2 entry più vecchie per posizione, aggiunta questa), `docs/claude-code-log-archive.md` (le 2 entry appese in coda più il paragrafo di lotto nel preambolo).
+**Outcome**: ✅ completed — attivo a 20 entry, archivio da 719 a 721, conservazione verificata sui conteggi.
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessuna entry persa, modificata o duplicata: 22 = 20 + 2 sui conteggi e le entry spostate sono byte-identiche al blocco estratto. Nessun file sorgente nel diff.
+**Out-of-scope changes**: no — solo i due file di log.
+**Layer Impact Report**: not-required — nessun file di §3.1.
+**Smoke visivo**: non applicabile — nessuna modifica di resa.
+**Notes**: L'inversione pre-esistente flaggata dal sesto lotto ricorre: le due entry spostate portano nomi 2026-08-09 22:10 e 21:30 contro le 15:59-17:32 tenute dello stesso giorno; il cluster era stato appeso fuori ordine nel file attivo e la rotazione posizionale lo registra senza risort.
+**Prompt document name**: 2026-08-10 02:40
+

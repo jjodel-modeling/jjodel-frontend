@@ -473,6 +473,25 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
     dell'arco e restano, perché sono righe di documento e non di elemento, e lì il colore è
     l'unico canale che le stacca dalla lista. La rimozione dei selettori prevista dalla voce di
     debito dell'11 agosto non le tocca.
+- **R-RAIL-34** (2026-08-12, «D9» nel prompt) — **Il segmento del metamodel cade sempre nel
+  breadcrumb del guscio**, non solo quando il package radice ne ripete il nome: il rail porta
+  già il nome del `DModel` proprietario nel proprio header, in cima alla stessa colonna e
+  sempre visibile, quindi quel segmento ripeteva l'header per costruzione. Restano i package,
+  e nel caso comune il breadcrumb si svuota. Il prompt numera le decisioni di questo passo
+  D1..D10; il registro dell'arco usa una serie sola, `R-RAIL-*`, e questa è la corrispondenza.
+  **Caveat misurato**: `railTitle` (`PropertiesWithTreeView.tsx:277-289`) risale la catena
+  `father` da `state._lastSelected.modelElement`, mentre il pannello rende `overrideSelected`
+  quando il pin è attivo (`Info.tsx:1445-1448`). Stesso campo — `DModel.name` — ma ancore
+  diverse: col pin acceso su un elemento e la selezione spostata su un altro metamodello, i due
+  divergono. La divergenza **preesiste** a questa voce, che non la crea: toglie però l'unico
+  punto in cui il pannello dichiarava il proprio metamodello, quindi la rende meno visibile.
+  Non corretta qui.
+- **R-RAIL-35** (2026-08-12, «D10» nel prompt) — **L'astrattezza si vede nel guscio**, col
+  corsivo sul nome: stesso canale che il tree usa già (`is-abstract`, `tree-view-sidebar.scss:1763`),
+  e non un badge, perché il badge porta il kind e mai i modificatori. Il dato era già in mano al
+  componente (`data.abstract`, la stessa lettura che `Info.tsx` fa a `:229` e `:1106`), quindi la
+  clausola di rinuncia del prompt — nessun accesso nuovo al modello per questa voce — non è
+  scattata.
 
 ## Superate
 

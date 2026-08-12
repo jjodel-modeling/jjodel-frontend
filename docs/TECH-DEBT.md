@@ -165,3 +165,31 @@ Registro dei debiti tecnici noti. Ogni entry deve indicare: data, origine, stato
 - `frontend/src/styles/components/_form-system.scss:1197-1206`
 - `frontend/src/components/viewParenting/viewParenting.scss:158-162`
 - `frontend/src/components/editors/properties-with-tree-view.scss` — blocco dell'identity block
+
+---
+
+## `.props-header__icon` è senza consumatori
+
+**Registrato:** 2026-08-12
+**Origine:** passo 4 dell'arco 2, D1. Il markup dell'icona è uscito dal guscio, la regola CSS è rimasta.
+**Stato attuale:** `frontend/src/components/editors/info-improvements.scss:880-890` definisce `.props-header__icon` (glifo a 20px, colore), più la variante dark a `:816`. L'unico consumatore era `Info.tsx`, riga rimossa dal commit `d729c9a2f`; l'header del view editor (`ViewData.tsx:212`) usa `.props-header` ma non quella classe. Non rimossa nello stesso passo perché R-RAIL-26 tiene `info-improvements.scss` fuori dall'arco e la regola 9 vieta di togliere il codice apparentemente morto senza mandato.
+**Fix strutturale raccomandato:** **rimuoverla, non ricollegarla.** L'icona è stata tolta per decisione — il badge di tipo porta già kind, testo e colore, e nel guscio l'elemento è isolato — non per errore. Stessa specie della voce sui selettori entity dei glifi nel tree: CSS che dichiara un'intenzione senza consumatori, e che il passaggio successivo rischia di «riparare» riportando ciò che una ratifica aveva tolto.
+**Priorità:** bassa.
+**Effort stimato:** dieci minuti, da accodare al primo passo autorizzato a toccare `info-improvements.scss`.
+**Riferimenti:**
+- `docs/decisions.md` — R-RAIL-26 (il foglio fuori dall'arco), R-RAIL-16
+- `frontend/src/components/editors/info-improvements.scss:816`, `:880-890`
+
+---
+
+## La sezione `NODE` non appartiene alla famiglia delle altre sezioni
+
+**Registrato:** 2026-08-12
+**Origine:** passo 4 dell'arco 2, coda. Osservazione a pannello intero, fuori dal perimetro del passo. **Voce di backlog, non di debito**: registrata qui perché il repo non ha un file di backlog separato, e questo è il registro più vicino.
+**Stato attuale:** `GENERAL`, `INHERITANCE`, `FLAGS` e `ADVANCED STATE` condividono una forma sola; `NODE` no — grigio invece che nero, filo orizzontale che attraversa la riga, chevron a sinistra invece che a destra. La sezione vive nel guscio e non nell'inspector per ratifica esplicita (R-RAIL-12: spostarla cambierebbe *quando* compare, non solo dove), quindi la difformità è di resa, non di collocazione.
+**Fix strutturale raccomandato:** decidere se `NODE` entra nella famiglia delle altre sezioni o se la differenza è voluta perché la sezione appartiene al guscio e non al form — e in quel caso documentarla. Da guardare prima che la difformità si consolidi.
+**Priorità:** backlog — nessun difetto, una difformità visiva su una sezione gated su `advanced`.
+**Effort stimato:** la decisione; poi un'ora scarsa se si allinea.
+**Riferimenti:**
+- `docs/decisions.md` — R-RAIL-12, R-RAIL-24
+- `frontend/src/components/editors/PropertiesWithTreeView.tsx` — blocco `properties-node-section`
