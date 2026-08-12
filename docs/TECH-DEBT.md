@@ -195,3 +195,17 @@ Registro dei debiti tecnici noti. Ogni entry deve indicare: data, origine, stato
 **Riferimenti:**
 - `docs/decisions.md` — R-RAIL-12, R-RAIL-24
 - `frontend/src/components/editors/PropertiesWithTreeView.tsx` — blocco `properties-node-section`
+
+---
+
+## Una quarta palette entity, globale e non scopata
+
+**Registrato:** 2026-08-12
+**Origine:** accertamento della causa dei glifi monocromi. Cercando quale regola vincesse su `.tree-node__icon.tree-DClass` è emerso un concorrente che nessun documento nominava.
+**Stato attuale:** `frontend/src/components/forEndUser/tree.scss` dichiara **ventitré** selettori entity senza alcuno scoping, con una palette propria: ambra per i package, **cyan `#0ea5e9` per le classi**, verde per gli attributi, viola per le reference, cyan più scuro per le operation, grigio per i parameter. Il foglio è importato da `components/forEndUser/Tree.tsx:16`, cioè dal tree legacy per end user, ma i selettori sono globali e colpiscono anche il tree del rail, dove perdono per specificità (0,1,0 contro 0,2,0 e 0,3,0). Misurato: rimuovendo i tre blocchi entity del rail, `.tree-DClass` passa a `rgb(14, 165, 233)`. È il cyan che R-RAIL-30 ha escluso dalla scala perché prenotato dalla selezione. Oggi non dipinge, per la stessa ragione della voce precedente.
+**Fix strutturale raccomandato:** scopare i selettori sotto la radice del componente legacy, non cancellarli: quel tree è vivo. Va fatto **prima** di qualunque intervento che porti il colore ai glifi, altrimenti il primo che disinnesca `i.bi` nel rail si ritrova la palette del 2023 con il cyan sulle classi.
+**Priorità:** bassa oggi, alta il giorno in cui si tocca `i.bi`.
+**Effort stimato:** mezza giornata.
+**Riferimenti:**
+- `docs/decisions.md` — R-RAIL-30, R-RAIL-33, R-RAIL-34
+- `docs/discovery/discovery_2026-08-12_harness_visivo_e_scala_entity_nel_tree.md` §5
