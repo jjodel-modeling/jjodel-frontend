@@ -1,5 +1,19 @@
 # Claude Code Session Log
 
+## 2026-08-12 — docs: rotazione del log a 20 entry attive (ventesimo lotto)
+**Prompt**: rotazione dovuta dalla nota (8) dell'entry del passo 7, che lasciava l'attivo a 21. Commit a sé, come la nota prescriveva. Preparata dalla sessione Cowork sul clone e scritta sul disco via bridge; nessun comando git eseguito dal bridge (R-RAIL-27 e l'incidente dell'`index.lock` stantio della nota (13) dell'entry del 2026-08-11).
+**Files touched**: `docs/claude-code-log.md` (due entry rimosse), `docs/claude-code-log-archive.md` (le stesse due in coda, più un paragrafo di preambolo), questo file (entry).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — solo spostamento di testo fra due file di documentazione, con conteggio verificato prima e dopo.
+**Out-of-scope changes**: no
+**Layer Impact Report**: not-required — nessun file di §3.1.
+**Smoke visivo**: non applicabile — nessuna modifica di resa.
+**Notes**: (1) **Due entry e non una**, perché la rotazione è un commit a sé e aggiunge la propria entry: 21 − 2 + 1 = 20. È lo stesso conto del settimo lotto, l'ultimo che sia stato eseguito come commit isolato; i lotti dal quattordicesimo in poi ne spostavano una sola perché erano note dentro l'entry di un altro task, che partiva da 20. (2) **Conservazione verificata meccanicamente**: 763 intestazioni `## 20` prima, 763 dopo, insieme di partenza e di arrivo identici, nessuna persa e nessuna inventata; il delta di byte complessivo fra i due file è **+1186**, cioè il solo paragrafo di preambolo, perché i byte delle due entry si annullano fra il file che le perde e quello che le riceve. (3) **Il preambolo dell'archivio era fermo da tre rotazioni.** Nomina i lotti fino al sedicesimo; il diciassettesimo, il diciottesimo e il diciannovesimo sono stati eseguiti e annotati nel log ma non vi hanno mai avuto un paragrafo. La regola registrata in una nota precedente — «progressivo del lotto ricavato dal preambolo dell'archivio» — oggi dà il numero sbagliato: applicata alla lettera direbbe «diciassettesimo». Il paragrafo scritto da questo lotto dichiara la discrepanza invece di sanarla di nascosto, e rimanda i tre paragrafi mancanti a un commit suo, perché scriverli vuol dire ricostruire da git tre tagli che nessuno ha documentato allora. (4) **Il conteggio da usare, finché i tre paragrafi mancano, è quello delle note del log**, che corrono in ordinali italiani e sono arrivate al diciannovesimo con l'entry del passo 5. Questo è il ventesimo. (5) **Attivo da 21 a 20, archivio da 742 a 744**, totale 764.
+**Prompt document name**: 2026-08-12 rotazione ventesimo lotto
+
+
 ## 2026-08-12 — refactor: via i tre blocchi entity dal tree, con guardia dark (arco 2, passo 7)
 **Prompt**: «arco 2, passo 7: esecuzione di R-RAIL-33, via i tre blocchi entity dal tree», rev 2 sopra `b89b5e46`, con diff allegata. La rev 1 era stata fermata dall'hard stop 2 nella sessione precedente: regrediva il tema dark. Un commit, due fogli SCSS, nessun `.tsx`.
 **Files touched**: `frontend/src/components/TreeViewSidebar/tree-view-sidebar.scss` (blocco light: 11 regole `&.tree-D*` più il commento; blocco dark: le 11 dichiarazioni a una riga più il commento), `frontend/src/components/editors/properties-with-tree-view.scss` (le 11 dichiarazioni della copia del pannello, più la riga di guardia dark aggiunta), questo file (entry). Commit `6383e97e6`.
@@ -246,29 +260,3 @@
 **Smoke visivo**: in attesa — HARD STOP visivo di Alfonso previsto dal prompt: header della view con back funzionante, help raggiungibile dalla riga PROPERTIES, nessun elemento duplicato, su entrambe le card (Q7). Campo da aggiornare col verdetto.
 **Notes**: (1) **Il difetto di Q4 aveva un effetto osservabile, non solo teorico**: `ViewData` è montato da due host (`Info.tsx:1194` dentro la card, `NestedView.tsx:493` nel tab «Viewpoints»), e con `document.querySelector` globale il `ViewData` di NestedView portalava back e help **dentro la card Properties**, cioè in un header non suo. Il ritiro corregge anche questo. (2) **Il viewpoint selezionato guadagna un help che non aveva**: `ViewpointProperties` non rende alcun header, quindi finora quello stato della card era senza help; ora lo eredita dalla riga dell'host. Non è un duplicato. (3) **In NestedView il back resta incorniciato**: le due regole SCSS sono scoped a `.properties-panel-container`, come lo erano prima del portale — comportamento pre-`cc1cb51b1`, non una regressione introdotta qui. (4) **Commento stale non toccato**: `properties-with-tree-view.scss:335` dice ancora «pushed right, before the help button» sul badge, riferito a un help che ha lasciato la riga 2 il 31/7; non l'ho corretto per non allargare il diff, è segnalato nel report (§6, R2).
 **Prompt document name**: 2026-08-10 10:30
-
-## 2026-08-10 — docs: rotazione del log a 20 entry attive (ottavo lotto)
-**Prompt**: «rotazione dopo le due entry della fusione spec», sessione Cowork del 10/8 mattina. Rotazione standard dopo che i due commit della Fase 2 hanno portato il file attivo a 22 entry.
-**Files touched**: `docs/claude-code-log.md` (tolte le 3 entry più vecchie per posizione, aggiunta questa), `docs/claude-code-log-archive.md` (le 3 entry appese in coda più il paragrafo di lotto nel preambolo).
-**Outcome**: ✅ completed — attivo a 20 entry, archivio da 721 a 724, conservazione verificata sui conteggi.
-**Corregge**: —
-**Causa**: —
-**Regressions**: no — nessuna entry persa, modificata o duplicata: 23 = 20 + 3 sui conteggi e le entry spostate sono byte-identiche al blocco estratto. Nessun file sorgente nel diff.
-**Out-of-scope changes**: no — solo i due file di log.
-**Layer Impact Report**: not-required — nessun file di §3.1.
-**Smoke visivo**: non applicabile — nessuna modifica di resa.
-**Notes**: A differenza del sesto e settimo lotto, qui taglio posizionale e criterio del timestamp coincidono senza inversioni: le tre entry spostate (15:59, 16:32, 17:32 del 9/8) sono le più vecchie anche per «Prompt document name», perché il cluster fuori ordine è uscito col settimo lotto.
-**Prompt document name**: 2026-08-10 04:05
-
-## 2026-08-10 — docs: ritiro di docs/specs/, migrazione del design doc slice-1, nota di reindirizzamento
-**Prompt**: `claude/2026-08-10_prompt_fusione_spec_v12_fase2.md` («2026-08-10 03:05»), Commit 2 di 2.
-**Files touched**: `docs/specs/design_2026-07-21_ir_authoring_surface_slice1.md` → `docs/spec/design_2026-07-21_ir_authoring_surface_slice1.md` (`git mv`, nome conservato per R-FS6; dentro, il riferimento companion aggiornato al path canonico completo), `docs/spec/claude_spec_2026-07-26_ir_edge_authoring_addendum.md` (unica occorrenza → path canonico completo; R-FS4, opzione (i): nessun registro o documento chiuso toccato), `docs/spec/spec_attive.md` (riga di reindirizzamento in coda alla sezione ViewpointIR v1.2, R-FS5; nessuna indicizzazione del design doc, R-FS7), questo file (entry).
-**Outcome**: ✅ completed
-**Corregge**: —
-**Causa**: —
-**Regressions**: no — solo documenti; verifica finale: `grep -rn "docs/specs/" docs/spec/ frontend/src` restituisce la sola riga di reindirizzamento (che nomina il path per definizione) e zero hit nel codice; la cartella `docs/specs/` non esiste più.
-**Out-of-scope changes**: no — i path del DOVE più questa entry.
-**Layer Impact Report**: not-required — nessun file di §3.1.
-**Smoke visivo**: non applicabile — nessuna modifica di resa.
-**Notes**: La sostituzione è stata di **path completo** (`docs/specs/spec_...` → `docs/spec/claude_spec_...`), mai di sola directory, come impone l'ostacolo (a) della discovery: una sostituzione di directory avrebbe prodotto riferimenti a un file inesistente.
-**Prompt document name**: 2026-08-10 03:05

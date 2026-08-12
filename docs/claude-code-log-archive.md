@@ -144,6 +144,23 @@ is named "2026-08-10 giro docs fusione triage rotazione", with a descriptive suf
 entry kept just above it is "2026-08-10 02:25". Same calendar day, so no inversion is detectable
 and none is created. Appended below.
 
+Twentieth batch (2026-08-12): the two oldest by active-file position, leaving 20
+(21 - 2 + 1, where the +1 is this rotation's own entry). Two rather than one because this is a
+standalone rotation commit, as in the seventh batch; batches fourteen to nineteen moved a single
+entry each because they rode inside another task's entry and started from 20.
+
+Numbering, and a gap this batch declares rather than back-fills. This preamble names batches up
+to the sixteenth. The seventeenth, eighteenth and nineteenth were performed and logged but never
+given a paragraph here, so the preamble stopped describing its own contents three rotations ago.
+The count used above is the one carried by the log notes, which run in Italian ordinals and
+reached «diciannovesimo» in the passo 5 entry of 2026-08-12. The two series therefore disagree by
+three, and the rule recorded in an earlier note — take the progressive from this preamble — now
+yields the wrong number: applied today it would say "seventeenth". Until the three missing
+paragraphs are written, **the count comes from the log notes, not from here**. Writing them is a
+separate commit: it means reading three rotations out of git and describing cuts nobody documented
+at the time, which is archaeology and does not belong in a rotation.
+
+
 ## 2026-07-29 — refactor: narrow PropertiesWithTreeView mode union to floating
 **Prompt**: Post-fase floating, Task 2 — restringere l'union `PropertiesWithTreeViewProps.mode` da `'popup' | 'tab' | 'inline' | 'floating'` a `'floating'` (unico valore istanziato). Fallout guidato dal compilatore: rimuovere solo i rami morti flaggati da typecheck.
 **Files touched**: `editors/PropertiesWithTreeView.tsx` (union ristretta a `'floating'` :65; rimosso il ramo dispatch popup/inline morto `if (mode !== 'tab' && mode !== 'floating') return <Info mode={mode}/>` alle righe 393-395 + la sua docstring a :391 — TS2367 su `mode !== 'tab'` era l'unico errore flaggato dal compilatore), `docs/claude-code-log.md`.
@@ -9984,3 +10001,28 @@ Dark mode overrides for `.toolbar-btn` also scoped under `.documentation-toolbar
 **Notes**: (1) La blockquote repo dell'hunk 5 (perimetro `persistWaypoints`) NON è stata aggiunta: verificato testualmente che il suo contenuto è già dichiarato verbatim dal bullet riscritto della copia KB (R-FS3). (2) **Adattamento di contenuto piccolo e deliberato** (precedente della nota Select): l'header **Emendamenti** ora elenca anche il 2026-07-21 (con l'hash `a479e489d`) e registra la fusione con le sigle R-FS; senza, l'header avrebbe dichiarato meno emendamenti di quelli che il documento contiene. (3) Il cross-ref dell'hunk 7 («vedi la nota in sez. 12») è coerente: l'hunk 8 atterra in sez. 12 della canonica. (4) Esecuzione via bridge Cowork sul working tree del Mac, gate rieseguiti nel clone cloud; nessun push.
 **Prompt document name**: 2026-08-10 03:05
 
+## 2026-08-10 — docs: rotazione del log a 20 entry attive (ottavo lotto)
+**Prompt**: «rotazione dopo le due entry della fusione spec», sessione Cowork del 10/8 mattina. Rotazione standard dopo che i due commit della Fase 2 hanno portato il file attivo a 22 entry.
+**Files touched**: `docs/claude-code-log.md` (tolte le 3 entry più vecchie per posizione, aggiunta questa), `docs/claude-code-log-archive.md` (le 3 entry appese in coda più il paragrafo di lotto nel preambolo).
+**Outcome**: ✅ completed — attivo a 20 entry, archivio da 721 a 724, conservazione verificata sui conteggi.
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — nessuna entry persa, modificata o duplicata: 23 = 20 + 3 sui conteggi e le entry spostate sono byte-identiche al blocco estratto. Nessun file sorgente nel diff.
+**Out-of-scope changes**: no — solo i due file di log.
+**Layer Impact Report**: not-required — nessun file di §3.1.
+**Smoke visivo**: non applicabile — nessuna modifica di resa.
+**Notes**: A differenza del sesto e settimo lotto, qui taglio posizionale e criterio del timestamp coincidono senza inversioni: le tre entry spostate (15:59, 16:32, 17:32 del 9/8) sono le più vecchie anche per «Prompt document name», perché il cluster fuori ordine è uscito col settimo lotto.
+**Prompt document name**: 2026-08-10 04:05
+
+## 2026-08-10 — docs: ritiro di docs/specs/, migrazione del design doc slice-1, nota di reindirizzamento
+**Prompt**: `claude/2026-08-10_prompt_fusione_spec_v12_fase2.md` («2026-08-10 03:05»), Commit 2 di 2.
+**Files touched**: `docs/specs/design_2026-07-21_ir_authoring_surface_slice1.md` → `docs/spec/design_2026-07-21_ir_authoring_surface_slice1.md` (`git mv`, nome conservato per R-FS6; dentro, il riferimento companion aggiornato al path canonico completo), `docs/spec/claude_spec_2026-07-26_ir_edge_authoring_addendum.md` (unica occorrenza → path canonico completo; R-FS4, opzione (i): nessun registro o documento chiuso toccato), `docs/spec/spec_attive.md` (riga di reindirizzamento in coda alla sezione ViewpointIR v1.2, R-FS5; nessuna indicizzazione del design doc, R-FS7), questo file (entry).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — solo documenti; verifica finale: `grep -rn "docs/specs/" docs/spec/ frontend/src` restituisce la sola riga di reindirizzamento (che nomina il path per definizione) e zero hit nel codice; la cartella `docs/specs/` non esiste più.
+**Out-of-scope changes**: no — i path del DOVE più questa entry.
+**Layer Impact Report**: not-required — nessun file di §3.1.
+**Smoke visivo**: non applicabile — nessuna modifica di resa.
+**Notes**: La sostituzione è stata di **path completo** (`docs/specs/spec_...` → `docs/spec/claude_spec_...`), mai di sola directory, come impone l'ostacolo (a) della discovery: una sostituzione di directory avrebbe prodotto riferimenti a un file inesistente.
+**Prompt document name**: 2026-08-10 03:05
