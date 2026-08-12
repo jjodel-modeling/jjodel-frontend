@@ -492,6 +492,12 @@ Le sigle `Q1..Q7` sono le domande aperte di quel report; le `U-1..U-8` i punti d
   componente (`data.abstract`, la stessa lettura che `Info.tsx` fa a `:229` e `:1106`), quindi la
   clausola di rinuncia del prompt — nessun accesso nuovo al modello per questa voce — non è
   scattata.
+- **R-RAIL-36** (2026-08-12) — Lo stile computato di un elemento è una misura della resa **solo se
+  quell'elemento è quello che dipinge**. Altrimenti la misura sono i pixel. Un `color` letto su un
+  contenitore non dice nulla del glifo che contiene, se il glifo ha una dichiarazione propria.
+  Gradino successivo dell'emendamento a R-RAIL-28, che aveva stabilito che un report di esecuzione
+  non è una misura della resa: anche una misura vera, presa sull'elemento sbagliato, non lo è.
+  Nata dal caso dei glifi del tree, dove un `color` che passa da bordeaux a cyan non muove un pixel.
 
 ## Superate
 

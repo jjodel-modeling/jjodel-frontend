@@ -433,6 +433,10 @@ Before writing "X does not exist", "X is not used anywhere", or "X is not loaded
 
 A positive control is only a control if it has signal, and it must run through the same tool as the search it validates. In Claude Code's shell `grep` is a function wrapping `ugrep --ignore-files` (confirm with `type grep`), so a recursive search from the repo root silently skips every gitignored path — `node_modules` included — while an explicitly named path inside one is still searched. Measured 2026-08-11: `grep -rn "(a)" --include="*.md" .` returns 513 lines, none of them from `node_modules`, and adding `--exclude-dir=node_modules` changes nothing. A search that cannot reach its subject returns the same silence as a subject that is not there. The same applies to partial reads: a count taken over lines 1-62 of a 157-line file is a count over that window, and must be reported as such or not reported at all.
 
+The same discipline applies to visual verification, twice over. First, a screenshot is evidence only of the state it contains: before writing "X does not render", build the state where X would render if the claim were false. A colour rule that only distinguishes two kinds proves nothing on a screen showing one of them.
+
+Second, a computed style is a measure of the rendering only when the element you measured is the one that paints. Measured 2026-08-12: the tree glyph is `<span class="tree-node__icon tree-DClass"><i class="bi bi-…"></i></span>`; the entity rules set `color` on the span, `i.bi` in `styles/style.scss:790` sets it on the `<i>`, and a direct declaration always beats inheritance. Removing every entity rule moves the span's computed colour from `#7A4056` to `#0ea5e9` and changes zero pixels. When a style and a pixel disagree, the pixel is the measurement.
+
 **Sub-rule: the interactive `grep` is not the system `grep`**
 
 In an interactive shell here, `grep` resolves to a wrapper around `ugrep --ignore-files`. Two consequences, both measured:
