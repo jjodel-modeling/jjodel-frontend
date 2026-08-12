@@ -1629,4 +1629,35 @@ body[data-active-tab="documentation"] .properties-tree-overlay {
         overflow: hidden;
         text-overflow: ellipsis;
     }
+
+    &__spacer {
+        flex: 1;
+        min-width: var(--space-2);
+    }
+
+    // Sibling steppers (design §6): 22x22, same chip language as the Back button so the
+    // two ends of the bar read as one control surface.
+    &__step {
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        padding: 0;
+        border: 1px solid var(--color-panel-border);
+        border-radius: var(--radius-base);
+        background: var(--color-panel-bg);
+        color: var(--color-slate-500);
+        cursor: pointer;
+        transition: border-color var(--duration-fast) var(--ease-out),
+                    color var(--duration-fast) var(--ease-out);
+
+        &:hover {
+            border-color: var(--color-slate-400);
+            color: var(--color-text-primary);
+        }
+
+        i { font-size: var(--font-size-xs); }
+    }
 }

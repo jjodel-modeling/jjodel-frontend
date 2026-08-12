@@ -359,6 +359,60 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
         return () => window.removeEventListener('keydown', onKeyDown);
     }, []);
 
+    /**
+     * Sibling stepping (design §6). R-RAIL-7 says the order of the siblings is the one
+     * `TreeViewContent` RENDERS, and that rebuilding it here would duplicate the model.
+     * So this does not rebuild it: it reads the rendered rows in document order, and
+     * the only thing it takes from the store is which of them are siblings — `father`,
+     * the same field the rail already reads for the Focus bar. The order is the DOM's.
+     *
+     * Two consequences worth naming. First, in Focus posture the tree pane is 0px tall
+     * but still mounted, so the rows are there to be read (that is the whole reason the
+     * pane is a height and not a mount). Second, the step does not write the selection
+     * itself: it clicks the target row, so selection keeps travelling through the tree's
+     * own handler and there is no second writer.
+     */
+    const stepSibling = useCallback((dir: 1 | -1) => {
+        const body = containerRef.current?.querySelector('.tree-view-panel-body');
+        if (!body) return;
+        // One row per element: the same element can be rendered by more than one section
+        // of the tree, and the first occurrence is the one the user is looking at.
+        const seen = new Set<string>();
+        const rows = (Array.from(body.querySelectorAll('.tree-row[data-element-id]')) as HTMLElement[])
+            .filter(r => {
+                const id = r.dataset.elementId;
+                if (!id || seen.has(id)) return false;
+                seen.add(id);
+                return true;
+            });
+        const state: any = store.getState();
+        const lookup = state.idlookup || {};
+        const currentId: string | undefined = state._lastSelected?.modelElement;
+        const father: string | undefined = currentId ? lookup[currentId]?.father : undefined;
+        if (!currentId || !father) return;
+        const siblings = rows.filter(r => lookup[r.dataset.elementId as string]?.father === father);
+        if (siblings.length < 2) return;
+        const idx = siblings.findIndex(r => r.dataset.elementId === currentId);
+        if (idx < 0) return;
+        // Wrapping at the ends, as the design prescribes.
+        const target = siblings[(idx + dir + siblings.length) % siblings.length];
+        (target.querySelector('.tree-row__content') as HTMLElement | null)?.click();
+    }, [store]);
+
+    // J/↓ next, K/↑ previous, only while the Focus bar is the one showing the position,
+    // and never while a field owns the key. Arrow keys are left alone in Browse, where
+    // the tree is on screen and owns them.
+    useEffect(() => {
+        if (posture !== 'focus') return;
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (isTypingTarget(e.target)) return;
+            if (e.key === 'j' || e.key === 'J' || e.key === 'ArrowDown') { e.preventDefault(); stepSibling(1); }
+            else if (e.key === 'k' || e.key === 'K' || e.key === 'ArrowUp') { e.preventDefault(); stepSibling(-1); }
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [posture, stepSibling]);
+
     // Effective visibility (rail-based collapse model 2026-05-13): un pannello
     // "showXxx = true" significa espanso, "false" significa rail collassata.
     const showPropertiesPanel = isPropertiesVisible;
@@ -550,6 +604,25 @@ export const PropertiesWithTreeView: React.FC<PropertiesWithTreeViewProps> = ({ 
                     </button>
                     <i className="bi bi-chevron-right rail-focusbar__sep" aria-hidden="true" />
                     <span className="rail-focusbar__current">{selectedName}</span>
+                    <div className="rail-focusbar__spacer" />
+                    <button
+                        type="button"
+                        className="rail-focusbar__step"
+                        onClick={() => stepSibling(-1)}
+                        aria-label="Previous sibling"
+                        title="Previous sibling (K)"
+                    >
+                        <i className="bi bi-chevron-up" aria-hidden="true" />
+                    </button>
+                    <button
+                        type="button"
+                        className="rail-focusbar__step"
+                        onClick={() => stepSibling(1)}
+                        aria-label="Next sibling"
+                        title="Next sibling (J)"
+                    >
+                        <i className="bi bi-chevron-down" aria-hidden="true" />
+                    </button>
                 </div>
             )}
 
