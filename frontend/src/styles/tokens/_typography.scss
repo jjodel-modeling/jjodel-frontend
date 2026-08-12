@@ -69,17 +69,17 @@
 
 /* ============================================
    FONT LOADING
-   Load Inter and IBM Plex Mono from Google Fonts.
+
+   Inter Variable: self-hosted, importato da src/index.tsx accanto agli altri CSS
+   di pacchetto (@fontsource-variable/inter, gia' in package.json). E' il primo nome
+   di --font-sans: prima del 2026-08-12 il pacchetto era installato ma mai importato,
+   quindi quel nome non risolveva e la resa cadeva sul secondo, Inter da Google.
+
+   IBM Plex Mono: ancora da Google. Portarlo in locale richiede una dipendenza nuova
+   e non e' stato fatto qui.
+
    JetBrains Mono non arriva da qui: e caricato da frontend/index.html per Monaco.
-
-   TODO: Consider self-hosting for:
-   - Better performance
-   - Privacy compliance
-   - Offline support
    ============================================ */
-
-/* Inter Variable - Full variable font for smooth weight transitions and superior 5K rendering */
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 
 /* IBM Plex Mono - Monospace for code (no ligatures) */
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
