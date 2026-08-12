@@ -144,6 +144,39 @@ is named "2026-08-10 giro docs fusione triage rotazione", with a descriptive suf
 entry kept just above it is "2026-08-10 02:25". Same calendar day, so no inversion is detectable
 and none is created. Appended below.
 
+Seventeenth batch (2026-08-12): the single oldest by active-file position, leaving 20
+(20 - 1 + 1, where the +1 is the arco 2 passo 4 entry added by this same commit, the two-row
+properties shell). Positional cut as in batches four to sixteen. The "Prompt document name"
+criterion can rank this boundary and agrees with position: the moved entry is named
+"2026-08-10 02:25", the entry kept just above it "2026-08-10 02:40". No inversion. Appended
+below.
+
+Eighteenth batch (2026-08-12): the single oldest by active-file position, leaving 20
+(20 - 1 + 1, where the +1 is the passo 4 tail entry added by this same commit, the metamodel
+breadcrumb segment and the italic abstract classes). Positional cut. Position and "Prompt
+document name" agree again: moved "2026-08-10 02:40", kept just above "2026-08-10 03:05". No
+inversion. Appended below.
+
+Nineteenth batch (2026-08-12): the single oldest by active-file position, leaving 20
+(20 - 1 + 1, where the +1 is the passo 5 entry added by this same commit, R-RAIL-36 and the
+fourth entity palette). Positional cut. Position and "Prompt document name" agree: moved
+"2026-08-10 03:05", kept just above "2026-08-10 04:05". No inversion. Appended below.
+
+Numbering, reconciled (2026-08-12). The three paragraphs above were written after the fact,
+in a commit of their own, and they close the gap the twentieth batch declared. Both the
+twentieth and the twenty-first deferred them on the ground that writing them meant reading
+cuts out of git that nobody had documented at the time. That premise does not hold, and
+saying so is the useful part of this reconciliation: the archive is append-only at its tail,
+so a batch is identifiable by the positions it added, and every batch recorded its own
+before-and-after archive count in the log notes. The three cuts were arithmetic, not
+archaeology. Positive control: the same arithmetic puts the twentieth batch's two entries at
+positions 743 and 744, which is what that batch's entry says it moved; and the sixteenth
+paragraph names "2026-08-10 02:25" as the entry left just above its cut, which is the entry
+at position 740, the one the seventeenth then moved. Two independent chains agree. One
+residual correction: the twenty-first paragraph says the preamble owes four paragraphs, "the
+seventeenth through the twentieth". It owed three. The twentieth has its paragraph, directly
+above the twenty-first, and that paragraph's own closing sentence stands as written.
+
 Twentieth batch (2026-08-12): the two oldest by active-file position, leaving 20
 (21 - 2 + 1, where the +1 is this rotation's own entry). Two rather than one because this is a
 standalone rotation commit, as in the seventh batch; batches fourteen to nineteen moved a single

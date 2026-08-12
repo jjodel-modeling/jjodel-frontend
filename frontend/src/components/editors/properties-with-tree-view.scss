@@ -1080,9 +1080,11 @@ $pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Chec
         // nominava uno solo. Misurato in dark senza la riga qui sotto: sei kind passano
         // da trasparente a una pastiglia traslucida (DClass rgba(14,165,233,.2), DModel
         // rgba(100,116,139,.2), DPackage rgba(245,158,11,.2), e cosi' via).
-        // Il :not() e' obbligatorio: senza, questa riga a (0,5,0) spegnerebbe anche il
-        // fondo di tree-viewpoint e tree-leaf-view, che stanno a (0,2,0) e sono le due
-        // pastiglie ratificate dall'emendamento (2) a R-RAIL-33.
+        // Il :not() e' obbligatorio, ma non per specificita'. Senza, la riga sta a
+        // (0,3,0) e batte comunque tree-viewpoint e tree-leaf-view, che stanno a
+        // (0,2,0) e sono le due pastiglie ratificate dall'emendamento (2) a
+        // R-RAIL-33: ne spegnerebbe il fondo. Il :not() non abbassa la specificita',
+        // la alza a (0,5,0); quello che fa e' escludere le due classi dal match.
         [data-theme="dark"] &:not(.tree-viewpoint):not(.tree-leaf-view) {
             background: transparent;
         }
