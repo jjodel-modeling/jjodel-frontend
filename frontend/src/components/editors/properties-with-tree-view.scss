@@ -352,6 +352,11 @@ $pc-hint-indent: 26px;        // 18px checkbox + 8px gap (the design-system Chec
             gap: 8px;
         }
 
+        // D10: abstract metaclasses in italic, the same channel the tree uses on its own
+        // names (`tree-view-sidebar.scss:1763`). The badge stays on the kind: modifiers
+        // do not get a badge of their own.
+        .props-header__name.is-abstract { font-style: italic; }
+
         .props-header__context {
             display: flex;
             align-items: center;

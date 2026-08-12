@@ -911,13 +911,17 @@ function PropertiesHeader(props: { data: LModelElement; className: string; isMet
     let signature = '';
     try { signature = elementSignature(data, className); } catch { /* signature not available */ }
 
+    // D10: abstract metaclasses read in italic, the same channel the tree already uses
+    // (`is-abstract` on the name). The badge carries the kind, never the modifiers.
+    const isAbstract = className === 'DClass' && !!(data as any).abstract;
+
     // D1: no type glyph here. The badge already carries the type as text and colour, and
     // in the shell the element is isolated, so the glyph was a third channel for the same
     // fact. The breadcrumb keeps its own segment glyphs, where they read as a path.
     return (
         <div className="props-header">
             <div className="props-header__identity">
-                <span className="props-header__name">{data.name || 'Unnamed'}</span>
+                <span className={`props-header__name${isAbstract ? ' is-abstract' : ''}`}>{data.name || 'Unnamed'}</span>
                 <span className={`jj-type-badge jj-type-badge--${badgeClass}`}>
                     {badge}
                 </span>
@@ -1308,6 +1312,15 @@ function InfoComponent(props: AllProps) {
                 && breadcrumbParts[1].className === 'DPackage'
                 && breadcrumbParts[0].name === breadcrumbParts[1].name) {
                 breadcrumbParts.splice(1, 1);
+            }
+            // D9: the metamodel segment falls in every case, not only when the root
+            // package shares its name. The rail header already carries the name of the
+            // owning DModel, at the top of the same column and always on screen, so this
+            // segment repeated it by construction. It can only ever be first — it is the
+            // root of the containment chain. In the common case what is left is nothing,
+            // and row 2 stays with the signature alone.
+            if (breadcrumbParts.length && breadcrumbParts[0].className === 'DModel') {
+                breadcrumbParts.shift();
             }
         } catch { /* breadcrumb not available */ }
 
