@@ -9971,3 +9971,16 @@ Dark mode overrides for `.toolbar-btn` also scoped under `.documentation-toolbar
 **Notes**: L'inversione pre-esistente flaggata dal sesto lotto ricorre: le due entry spostate portano nomi 2026-08-09 22:10 e 21:30 contro le 15:59-17:32 tenute dello stesso giorno; il cluster era stato appeso fuori ordine nel file attivo e la rotazione posizionale lo registra senza risort.
 **Prompt document name**: 2026-08-10 02:40
 
+## 2026-08-10 — docs: fusione delle due copie della spec ViewpointIR v1.2 (Fase 2, R-FS1..R-FS7)
+**Prompt**: `claude/2026-08-10_prompt_fusione_spec_v12_fase2.md`, eseguito dalla sessione Cowork del 10/8 mattina dopo la ratifica esplicita di Alfonso di R-FS1..R-FS7 (memo `claude/2026-08-10_memo_fusione_spec_v12.md`). Commit 1 di 2: fusione nella copia canonica e ritiro della copia divergente.
+**Files touched**: `docs/spec/claude_spec_2026-07-18_ir_schema_v1_2.md` (hunk 2-3: wildcard `metaclasses: '*'` in sez. 2 e 4, dal COSA originario; hunk 7: frase multi-hop in sez. 9; hunk 8: emendamento 2026-07-21 in sez. 12, verbatim dalla copia repo, R-FS1; header **Emendamenti** aggiornato), `docs/specs/spec_2026-07-18_ir_schema_v1_2.md` (rimosso), questo file (entry).
+**Outcome**: ✅ completed
+**Corregge**: —
+**Causa**: —
+**Regressions**: no — solo documenti; prima del ritiro, `diff` fra le due copie ridotto ai soli hunk KB tenuti (1, 4, 5, 6), come da ratifiche; `check:docs` 2/2.
+**Out-of-scope changes**: no — i due file del DOVE più questa entry.
+**Layer Impact Report**: not-required — nessun file di §3.1.
+**Smoke visivo**: non applicabile — nessuna modifica di resa.
+**Notes**: (1) La blockquote repo dell'hunk 5 (perimetro `persistWaypoints`) NON è stata aggiunta: verificato testualmente che il suo contenuto è già dichiarato verbatim dal bullet riscritto della copia KB (R-FS3). (2) **Adattamento di contenuto piccolo e deliberato** (precedente della nota Select): l'header **Emendamenti** ora elenca anche il 2026-07-21 (con l'hash `a479e489d`) e registra la fusione con le sigle R-FS; senza, l'header avrebbe dichiarato meno emendamenti di quelli che il documento contiene. (3) Il cross-ref dell'hunk 7 («vedi la nota in sez. 12») è coerente: l'hunk 8 atterra in sez. 12 della canonica. (4) Esecuzione via bridge Cowork sul working tree del Mac, gate rieseguiti nel clone cloud; nessun push.
+**Prompt document name**: 2026-08-10 03:05
+
