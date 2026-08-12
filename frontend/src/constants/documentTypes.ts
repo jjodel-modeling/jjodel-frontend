@@ -41,7 +41,6 @@ export const DOCUMENT_TYPES: readonly DocumentTypeEntry[] = [
         available: true,
     },
     {
-        // Pink from common/entityMeta.ts viewpoint entry (badgeBg: #FCE7F3, badgeText: #DB2777).
         // TODO: wire onCreate when a standalone viewpoint creation path is exposed.
         // DockManager.openViewpoint(vp) opens an EXISTING viewpoint — it does not create one.
         // Creation today goes through <NewViewpointDialog>, whose open state lives in ProjectEditor

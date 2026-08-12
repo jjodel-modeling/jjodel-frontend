@@ -326,8 +326,9 @@ $gradient-hover: linear-gradient(180deg, $slate-100 0%, $slate-200 100%);
 
   /* ============================================
      ENTITY CATEGORICAL PALETTE
-     Allineata a frontend/src/common/entityMeta.ts
-     NON modificare senza aggiornare anche entityMeta.ts
+     Sorgente unica della scala entity (R-RAIL-30). Generata in OKLCH a
+     chiarezza e croma fisse; i valori non si copiano da nessun altro file.
+     entityMeta.ts non contiene piu colori dal 2026-08-12.
      ============================================ */
   /* Coppie canoniche (R-RAIL-30) */
   --color-entity-container-bg: #E2EAF5;

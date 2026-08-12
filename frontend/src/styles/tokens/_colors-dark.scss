@@ -230,11 +230,10 @@
 
   /* ============================================
      ENTITY CATEGORICAL PALETTE — dark variant
-     Le prime cinque coppie seguono: bg rgba 0.18 del fg light, fg shade-300.
-     Le quattro aggiunte il 2026-08-10 (attribute, reference, operation, enum)
-     copiano badgeBgDark/badgeTextDark di entityMeta.ts verbatim: alpha 0.15,
-     fg shade-400. Divergenza deliberata (C9.1): allineare enum alla regola
-     shade-300 lo renderebbe identico a model.
+     Sorgente unica della scala entity (R-RAIL-30). Rigenerata in OKLCH il
+     2026-08-11: chiarezza fondo 0.300 e testo 0.845, croma massima comune a
+     tutte le tinte. Le coppie non discendono piu da entityMeta.ts, che dal
+     2026-08-12 non contiene colori.
      ============================================ */
   /* Coppie canoniche (R-RAIL-30) */
   --color-entity-container-bg: #242E3D;
